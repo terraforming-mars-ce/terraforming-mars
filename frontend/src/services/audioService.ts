@@ -49,6 +49,7 @@ class AudioService {
       },
       { key: "water-placement", path: "/sounds/water-placement.mp3", volumeMultiplier: 1.0 },
       { key: "oxygen-increase", path: "/sounds/oxygen-increase.mp3", volumeMultiplier: 1.0 },
+      { key: "card-hover", path: "/sounds/card-hover.mp3", volumeMultiplier: 0.5 },
     ];
 
     audioFiles.forEach(({ key, path, volumeMultiplier }) => {
@@ -105,6 +106,10 @@ class AudioService {
 
   public async playOxygenSound(): Promise<void> {
     return this.playSound("oxygen-increase");
+  }
+
+  public async playCardHoverSound(): Promise<void> {
+    return this.playSound("card-hover");
   }
 
   public playAmbient(): void {

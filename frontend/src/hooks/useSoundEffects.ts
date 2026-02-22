@@ -26,11 +26,16 @@ export function useSoundEffects() {
     return audioService.playOxygenSound();
   }, []);
 
+  const playCardHoverSound = useCallback(() => {
+    return audioService.playCardHoverSound();
+  }, []);
+
   return {
     playSound,
     playProductionSound,
     playTemperatureSound,
     playWaterPlacementSound,
     playOxygenSound,
+    playCardHoverSound,
   };
 }

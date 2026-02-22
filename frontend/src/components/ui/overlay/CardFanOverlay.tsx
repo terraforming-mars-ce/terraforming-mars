@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import GameCard from "../cards/GameCard.tsx";
 import { PlayerCardDto } from "@/types/generated/api-types.ts";
+import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(Math.max(n, min), max);
@@ -81,6 +82,8 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
   const dragIntentRef = useRef(false);
   const capturedCardRef = useRef<HTMLDivElement | null>(null);
   const lastPointerXRef = useRef(0);
+
+  const { playCardHoverSound } = useSoundEffects();
 
   useEffect(() => {
     cardsRef.current = cards;
@@ -286,6 +289,7 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
         if (highlightedCard === cardId) {
           setHighlightedCard(null);
         } else {
+          void playCardHoverSound();
           setHighlightedCard(cardId);
           onCardSelect?.(cardId);
         }
@@ -325,7 +329,7 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
         setReturningCard(null);
       }, 400);
     },
-    [draggedCard, dragStartPosition, highlightedCard, onPlayCard, onCardSelect],
+    [draggedCard, dragStartPosition, highlightedCard, onPlayCard, onCardSelect, playCardHoverSound],
   );
 
   // --- Click outside to deselect ---
