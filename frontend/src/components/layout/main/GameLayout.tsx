@@ -18,7 +18,13 @@ import {
   TriggeredEffectDto,
 } from "../../../types/generated/api-types.ts";
 
-export type TransitionPhase = "idle" | "lobby" | "fadeOutLobby" | "animateUI" | "complete";
+export type TransitionPhase =
+  | "idle"
+  | "lobby"
+  | "loading"
+  | "fadeOutLobby"
+  | "animateUI"
+  | "complete";
 
 interface GameLayoutProps {
   gameState: GameDto;
@@ -36,6 +42,7 @@ interface GameLayoutProps {
   onStandardProjectSelect?: (project: StandardProject) => void;
   onLeaveGame?: () => void;
   onSkyboxReady?: () => void;
+  onGpuReady?: () => void;
 }
 
 const GameLayout: React.FC<GameLayoutProps> = ({
@@ -54,6 +61,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   onStandardProjectSelect,
   onLeaveGame,
   onSkyboxReady,
+  onGpuReady,
 }) => {
   // Create a map of all players (current + others) for easy lookup
   const playerMap = new Map<string, PlayerDto | OtherPlayerDto>();
@@ -98,6 +106,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             vpIndicators={vpIndicators}
             animateHexEntrance={animateHexEntrance}
             onSkyboxReady={onSkyboxReady}
+            onGpuReady={onGpuReady}
             showUI={showUI}
             uiAnimationClass={uiAnimationClass}
           />

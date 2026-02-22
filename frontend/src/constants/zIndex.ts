@@ -48,6 +48,12 @@ export const Z_INDEX = {
   POPOVER: 10001,
   SELECTION_POPOVER: 10002,
 
+  // Debug Windows Layer (20000-20099)
+  DEBUG_WINDOWS: 20000,
+
+  // Always-on-top UI (above debug windows)
+  TOP_MENU_ALWAYS_ON_TOP: 20100,
+
   // Critical Layer (9000-9999)
   SYSTEM_NOTIFICATIONS: 9000,
   ERROR_OVERLAYS: 9500,

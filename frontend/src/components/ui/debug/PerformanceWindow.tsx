@@ -1,15 +1,18 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, { useRef, useMemo } from "react";
 import Sparkline from "./Sparkline.tsx";
 import { usePerformanceMetrics } from "@/hooks/usePerformanceMetrics.ts";
+import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
 
 interface PerformanceWindowProps {
   isVisible: boolean;
   onClose: () => void;
 }
 
+const WINDOW_ID = "performance";
 const WINDOW_WIDTH = 320;
 const ACCENT = "#00d4aa";
 const ACCENT_SHADOW = "rgba(0, 212, 170, 0.3)";
+const EXCLUDE_SELECTORS = [".perf-content-area"];
 
 const hasMemoryApi =
   typeof performance !== "undefined" &&
@@ -18,85 +21,21 @@ const hasMemoryApi =
 
 const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClose }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState(() => {
-    if (typeof window === "undefined") return { x: 100, y: 60 };
-    return {
-      x: window.innerWidth - WINDOW_WIDTH - 20,
-      y: 60,
-    };
+
+  const { position, isDragging, handleMouseDown } = useWindowDrag({
+    windowId: WINDOW_ID,
+    width: WINDOW_WIDTH,
+    height: () => window.innerHeight * 0.5,
+    defaultPosition:
+      typeof window !== "undefined"
+        ? { x: window.innerWidth - WINDOW_WIDTH - 20, y: 60 }
+        : undefined,
+    excludeSelectors: EXCLUDE_SELECTORS,
+    isVisible,
   });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
+  const { getZIndex } = useWindowManager();
   const { snapshots, latest } = usePerformanceMetrics();
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === "BUTTON" ||
-        target.closest("button") ||
-        target.closest(".perf-content-area")
-      ) {
-        return;
-      }
-      e.preventDefault();
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
-    },
-    [position],
-  );
-
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isDragging) return;
-      const screenW = window.innerWidth;
-      const screenH = window.innerHeight;
-      const minX = -(WINDOW_WIDTH / 2);
-      const maxX = screenW - WINDOW_WIDTH / 2;
-      const minY = -(screenH * 0.25);
-      const maxY = screenH - 40;
-
-      setPosition({
-        x: Math.max(minX, Math.min(maxX, e.clientX - dragStart.x)),
-        y: Math.max(minY, Math.min(maxY, e.clientY - dragStart.y)),
-      });
-    },
-    [isDragging, dragStart],
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    if (!isDragging) return;
-    document.body.style.userSelect = "none";
-    document.body.style.cursor = "grabbing";
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setPosition((prev) => {
-        const screenW = window.innerWidth;
-        const screenH = window.innerHeight;
-        return {
-          x: Math.max(-(WINDOW_WIDTH / 2), Math.min(screenW - WINDOW_WIDTH / 2, prev.x)),
-          y: Math.max(-(screenH * 0.25), Math.min(screenH - 40, prev.y)),
-        };
-      });
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const fpsData = useMemo(() => snapshots.map((s) => s.fps), [snapshots]);
   const frameTimeData = useMemo(() => snapshots.map((s) => s.frameTimeMs), [snapshots]);
@@ -121,7 +60,7 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
         border: `2px solid ${ACCENT}`,
         borderRadius: "8px",
         padding: "12px 16px",
-        zIndex: 999999,
+        zIndex: getZIndex(WINDOW_ID),
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -130,7 +69,6 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
         transition: isDragging ? "none" : "top 0.2s ease-out, left 0.2s ease-out",
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -187,7 +125,6 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
         </button>
       </div>
 
-      {/* Content */}
       <div
         className="perf-content-area"
         style={{
@@ -199,7 +136,6 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
           gap: "10px",
         }}
       >
-        {/* FPS & Frame Time Summary */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <div>
             <span className="font-orbitron" style={{ color: "#00ff88", fontSize: "24px" }}>
@@ -219,7 +155,6 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
           </div>
         </div>
 
-        {/* FPS Graph */}
         <Sparkline
           data={fpsData}
           width={sparklineWidth}
@@ -231,7 +166,6 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
           currentValue={latest ? `${Math.round(latest.fps)}` : ""}
         />
 
-        {/* Frame Time Graph */}
         <Sparkline
           data={frameTimeData}
           width={sparklineWidth}
@@ -244,7 +178,6 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
           currentValue={latest ? `${latest.frameTimeMs.toFixed(1)}ms` : ""}
         />
 
-        {/* Memory Section (Chrome only) */}
         {hasMemoryApi && (
           <>
             <div
@@ -275,7 +208,6 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
           </>
         )}
 
-        {/* GPU Section */}
         <div
           style={{
             borderTop: "1px solid #222",

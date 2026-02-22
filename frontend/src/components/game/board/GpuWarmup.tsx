@@ -1,7 +1,9 @@
 import { useMemo, useRef, useLayoutEffect } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { SkeletonUtils } from "three-stdlib";
-import { createOceanMaterial } from "./shaders";
+import { createOceanMaterial, createVolcanoMaterial } from "./shaders";
+import { computeFlowMap } from "./volcanoFlowMap";
 import {
   variantCache,
   createVariantsFromScene,
@@ -14,12 +16,34 @@ import { useModels } from "../../../hooks/useModels";
 import { useTextures } from "../../../hooks/useTextures";
 
 const WARMUP_SCALE = 0.001;
+const WARMUP_FRAMES = 3;
 
-export default function GpuWarmup() {
+interface GpuWarmupProps {
+  onReady?: () => void;
+}
+
+export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   const { treesScene, rockScene, cityScene } = useModels();
-  const { rock: rockTexture, sand: sandTexture, waterNormals, smoke: smokeTexture } = useTextures();
+  const {
+    rock: rockTexture,
+    sand: sandTexture,
+    waterNormals,
+    smoke: smokeTexture,
+    grass: grassTexture,
+  } = useTextures();
 
-  // Populate variant cache (same logic as GreeneryRenderer — if already cached, returns instantly)
+  const frameCount = useRef(0);
+  const readyFired = useRef(false);
+
+  useFrame(() => {
+    if (readyFired.current) return;
+    frameCount.current++;
+    if (frameCount.current >= WARMUP_FRAMES) {
+      readyFired.current = true;
+      onReady?.();
+    }
+  });
+
   const treeVariants = useMemo(() => {
     if (!variantCache.trees) {
       variantCache.trees = createVariantsFromScene(treesScene, TREE_NAMES, 0.08);
@@ -41,7 +65,6 @@ export default function GpuWarmup() {
     return variantCache.clover;
   }, [treesScene]);
 
-  // Rock geometry + material (same as GreeneryRenderer)
   const { geometry: rockGeometry, material: rockMaterial } = useMemo(() => {
     if (variantCache.rock) return variantCache.rock;
 
@@ -90,14 +113,12 @@ export default function GpuWarmup() {
     return variantCache.rock;
   }, [rockScene, rockTexture]);
 
-  // City model clone (same materials as real city tiles)
   const warmupCity = useMemo(() => {
     const cloned = SkeletonUtils.clone(cityScene);
     cloned.scale.setScalar(WARMUP_SCALE);
     return cloned;
   }, [cityScene]);
 
-  // Ocean water ShaderMaterial (exact same shaders as real ocean tiles)
   const oceanWarmupMaterial = useMemo(() => {
     waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping;
     return createOceanMaterial(waterNormals, sandTexture, {
@@ -108,7 +129,6 @@ export default function GpuWarmup() {
 
   const oceanGeometry = useMemo(() => new THREE.CircleGeometry(0.3, 32), []);
 
-  // Smoke MeshBasicMaterial (same defines as DustEffect)
   const smokeWarmupMaterial = useMemo(() => {
     return new THREE.MeshBasicMaterial({
       map: smokeTexture,
@@ -123,13 +143,29 @@ export default function GpuWarmup() {
 
   const smokeGeometry = useMemo(() => new THREE.PlaneGeometry(0.3, 0.3), []);
 
-  // Refs for InstancedMesh setup
+  const volcanoFlowTexture = useMemo(() => computeFlowMap(42), []);
+  const volcanoWarmupMaterial = useMemo(() => {
+    return createVolcanoMaterial(grassTexture, volcanoFlowTexture, 42);
+  }, [grassTexture, volcanoFlowTexture]);
+
+  const volcanoGeometry = useMemo(() => new THREE.CircleGeometry(0.15, 32), []);
+
+  const volcanoSmokeWarmupMaterial = useMemo(() => {
+    return new THREE.SpriteMaterial({
+      map: smokeTexture,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      color: new THREE.Color(0.03, 0.025, 0.02),
+    });
+  }, [smokeTexture]);
+
   const treeRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const bushRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const cloverRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const rockRef = useRef<THREE.InstancedMesh>(null);
 
-  // Set instance matrices and colors for trees (uses instanceColor like real code)
   useLayoutEffect(() => {
     const matrix = new THREE.Matrix4().compose(
       new THREE.Vector3(0, 0, 0),
@@ -145,7 +181,6 @@ export default function GpuWarmup() {
     }
   }, [treeVariants]);
 
-  // Set instance matrices and colors for bushes (uses instanceColor like real code)
   useLayoutEffect(() => {
     const matrix = new THREE.Matrix4().compose(
       new THREE.Vector3(0, 0, 0),
@@ -161,7 +196,6 @@ export default function GpuWarmup() {
     }
   }, [bushVariants]);
 
-  // Set instance matrices for clover (NO instanceColor — matches real code)
   useLayoutEffect(() => {
     const matrix = new THREE.Matrix4().compose(
       new THREE.Vector3(0, 0, 0),
@@ -175,7 +209,6 @@ export default function GpuWarmup() {
     }
   }, [cloverVariants]);
 
-  // Set instance matrix for rock (NO instanceColor — matches real code)
   useLayoutEffect(() => {
     if (!rockRef.current) return;
     const matrix = new THREE.Matrix4().compose(
@@ -187,7 +220,6 @@ export default function GpuWarmup() {
     rockRef.current.instanceMatrix.needsUpdate = true;
   }, [rockGeometry]);
 
-  // Helpers to build the element arrays
   const renderVariants = (
     variants: TreeVariant[],
     prefix: string,
@@ -213,26 +245,18 @@ export default function GpuWarmup() {
 
   return (
     <group>
-      {/* Trees — InstancedMesh + instanceColor (matches real code) */}
       {renderVariants(treeVariants, "warmup-tree", treeRefs)}
-
-      {/* Bushes — InstancedMesh + instanceColor (matches real code) */}
       {renderVariants(bushVariants, "warmup-bush", bushRefs)}
-
-      {/* Clover — InstancedMesh, NO instanceColor (matches real code) */}
       {renderVariants(cloverVariants, "warmup-clover", cloverRefs)}
-
-      {/* Rock — InstancedMesh, NO instanceColor */}
       <instancedMesh ref={rockRef} args={[rockGeometry, rockMaterial, 1]} frustumCulled={false} />
-
-      {/* City model — regular Mesh (matches real code) */}
       <primitive object={warmupCity} />
-
-      {/* Ocean water — exact same ShaderMaterial */}
       <mesh geometry={oceanGeometry} material={oceanWarmupMaterial} frustumCulled={false} />
-
-      {/* Smoke particle — MeshBasicMaterial with texture */}
       <mesh geometry={smokeGeometry} material={smokeWarmupMaterial} frustumCulled={false} />
+      <mesh geometry={volcanoGeometry} material={volcanoWarmupMaterial} frustumCulled={false} />
+      <sprite
+        material={volcanoSmokeWarmupMaterial}
+        scale={[WARMUP_SCALE, WARMUP_SCALE, WARMUP_SCALE]}
+      />
     </group>
   );
 }

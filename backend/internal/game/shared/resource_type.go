@@ -25,10 +25,12 @@ const (
 	ResourceCityPlacement     ResourceType = "city-placement"
 	ResourceOceanPlacement    ResourceType = "ocean-placement"
 	ResourceGreeneryPlacement ResourceType = "greenery-placement"
+	ResourceVolcanoPlacement  ResourceType = "volcano-placement"
 
 	ResourceCityTile     ResourceType = "city-tile"
 	ResourceOceanTile    ResourceType = "ocean-tile"
 	ResourceGreeneryTile ResourceType = "greenery-tile"
+	ResourceVolcanoTile  ResourceType = "volcano-tile"
 	ResourceColonyTile   ResourceType = "colony-tile"
 
 	ResourceLandTile   ResourceType = "land"

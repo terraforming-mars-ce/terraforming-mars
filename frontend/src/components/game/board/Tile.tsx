@@ -6,6 +6,7 @@ import { HexTile2D } from "../../../utils/hex-grid-2d";
 import { panState } from "../controls/PanControls";
 import OceanTile from "./OceanTile";
 import BuildingTile from "./BuildingTile";
+import VolcanoTile from "./VolcanoTile";
 import { useTextures } from "../../../hooks/useTextures";
 import {
   sphereProjectionVertex,
@@ -159,11 +160,54 @@ interface TileData3D extends HexTile2D {
   normal: THREE.Vector3;
 }
 
+function ClampedBillboard({
+  children,
+  damping = 0.175,
+  ...groupProps
+}: {
+  children: React.ReactNode;
+  damping?: number;
+} & React.JSX.IntrinsicElements["group"]) {
+  const ref = useRef<THREE.Group>(null);
+  const billboardQuat = useMemo(() => new THREE.Quaternion(), []);
+  const flatQuat = useMemo(() => new THREE.Quaternion(), []);
+  useFrame(({ camera }) => {
+    const group = ref.current;
+    if (!group) return;
+
+    group.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.material) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        for (const mat of materials) {
+          mat.depthTest = false;
+          mat.depthWrite = false;
+        }
+      }
+    });
+
+    group.lookAt(camera.position);
+    billboardQuat.copy(group.quaternion);
+
+    const angle = flatQuat.angleTo(billboardQuat);
+    if (angle > 0.001) {
+      const dampedAngle = damping * Math.atan(angle / damping);
+      const t = dampedAngle / angle;
+      group.quaternion.copy(flatQuat).slerp(billboardQuat, t);
+    }
+  });
+
+  return (
+    <group ref={ref} {...groupProps}>
+      {children}
+    </group>
+  );
+}
+
 export type TileHighlightMode = "greenery" | "city" | "adjacent" | null;
 
 interface TileProps {
   tileData: TileData3D;
-  tileType: "empty" | "ocean" | "greenery" | "city" | "special";
+  tileType: "empty" | "ocean" | "greenery" | "city" | "special" | "volcano";
   ownerId?: string | null;
   reservedById?: string | null;
   displayName?: string;
@@ -175,6 +219,7 @@ interface TileProps {
   animateEntrance?: boolean;
   entranceDelay?: number;
   isNewlyPlaced?: boolean;
+  isVolcanic?: boolean;
 }
 
 export default function Tile({
@@ -191,6 +236,7 @@ export default function Tile({
   animateEntrance = false,
   entranceDelay = 0,
   isNewlyPlaced = false,
+  isVolcanic = false,
 }: TileProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const vpTextRef = useRef<THREE.Group>(null);
@@ -278,6 +324,31 @@ export default function Tile({
       depthWrite: false,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
+    });
+  }, []);
+
+  const volcanicTintMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      vertexShader: sphereProjectionVertex,
+      fragmentShader: `
+        precision highp float;
+        varying vec2 vUv;
+        void main() {
+          vec2 center = vUv - 0.5;
+          float distFromCenter = length(center);
+          float gradient = smoothstep(0.2, 0.45, distFromCenter);
+          vec3 color = vec3(0.75, 0.12, 0.05);
+          float alpha = gradient * 0.4;
+          gl_FragColor = vec4(color, alpha);
+        }
+      `,
+      uniforms: {
+        uSphereRadius: { value: SPHERE_RADIUS },
+        uZOffset: { value: CHROME_Z_BASE + 0.004 },
+      },
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
     });
   }, []);
 
@@ -393,6 +464,8 @@ export default function Tile({
         return new THREE.Color("#ff6f00");
       case "special":
         return new THREE.Color("#8e24aa");
+      case "volcano":
+        return new THREE.Color("#4a3728");
       default:
         return tileData.isOceanSpace
           ? new THREE.Color("#6d4c41").multiplyScalar(0.8)
@@ -410,7 +483,12 @@ export default function Tile({
     const material = new THREE.MeshStandardMaterial({
       color: tileColor,
       transparent: true,
-      opacity: isGreenery || tileType === "city" ? 0 : tileType === "empty" ? 0.3 : 0.7,
+      opacity:
+        isGreenery || tileType === "city" || tileType === "volcano"
+          ? 0
+          : tileType === "empty"
+            ? 0.3
+            : 0.7,
       depthWrite: false,
       roughness: 0.7,
       metalness: 0.1,
@@ -536,6 +614,11 @@ export default function Tile({
         onHoverChange={setHovered}
       />
 
+      {/* Volcanic space indicator - red tint for unoccupied volcanic tiles */}
+      {tileType === "empty" && isVolcanic && (
+        <mesh geometry={overlayGeometry} material={volcanicTintMaterial} renderOrder={21} />
+      )}
+
       {/* Hover glow effect - hidden for ocean tiles */}
       {tileType !== "ocean" && (
         <mesh geometry={overlayGeometry} material={hoverGlowMaterial} renderOrder={22} />
@@ -561,6 +644,15 @@ export default function Tile({
         />
       )}
 
+      {/* Volcano 3D tile */}
+      {tileType === "volcano" && (
+        <VolcanoTile
+          isNewlyPlaced={isNewlyPlaced}
+          surfaceNormal={tileData.normal}
+          worldPosition={adjustedPosition}
+        />
+      )}
+
       {/* Special tile fallback */}
       {tileType === "special" && (
         <Text
@@ -574,68 +666,60 @@ export default function Tile({
         </Text>
       )}
 
-      {/* Display name and bonus icons layout */}
-      {tileType !== "greenery" && (
-        <>
-          {displayName && bonusIconGroups.length > 0 ? (
-            <>
-              <Text
-                position={[0, 0.03, 0.01]}
-                fontSize={0.035}
-                font="/assets/Prototype.ttf"
-                color="white"
-                outlineWidth={0.003}
-                outlineColor="black"
-                anchorX="center"
-                anchorY="middle"
-                textAlign="center"
-                maxWidth={0.25}
-              >
-                {displayName}
-              </Text>
+      {/* Billboard display name for named tiles */}
+      {displayName && (
+        <ClampedBillboard position={[0, 0, 0.02]} renderOrder={110}>
+          <Text
+            fontSize={0.045}
+            font="/assets/Prototype.ttf"
+            color="white"
+            outlineWidth={0.004}
+            outlineColor="black"
+            anchorX="center"
+            anchorY="middle"
+            textAlign="center"
+            maxWidth={0.18}
+            renderOrder={110}
+          >
+            {displayName}
+          </Text>
+        </ClampedBillboard>
+      )}
 
-              {(() => {
-                const positions = calculateIconPositions(bonusIconGroups);
-                return positions.map((pos) => (
-                  <BonusIcon
-                    key={`${pos.group.type}-${pos.indexInGroup}`}
-                    texture={pos.group.texture}
-                    position={[pos.x, -0.03, 0.01]}
-                    isCredits={pos.group.isCredits}
-                    creditAmount={pos.group.isCredits ? pos.group.count : undefined}
-                  />
-                ));
-              })()}
-            </>
-          ) : displayName ? (
-            <Text
-              position={[0, 0, 0.01]}
-              fontSize={0.04}
-              font="/assets/Prototype.ttf"
-              color="white"
-              outlineWidth={0.003}
-              outlineColor="black"
-              anchorX="center"
-              anchorY="middle"
-              textAlign="center"
-              maxWidth={0.25}
-            >
-              {displayName}
-            </Text>
-          ) : (
-            (() => {
-              const positions = calculateIconPositions(bonusIconGroups);
-              return positions.map((pos) => (
-                <BonusIcon
-                  key={`${pos.group.type}-${pos.indexInGroup}`}
-                  texture={pos.group.texture}
-                  position={[pos.x, 0, 0.01]}
-                  isCredits={pos.group.isCredits}
-                  creditAmount={pos.group.isCredits ? pos.group.count : undefined}
-                />
-              ));
-            })()
-          )}
+      {/* Bonus icons for non-greenery, non-volcano tiles */}
+      {tileType !== "greenery" && tileType !== "volcano" && bonusIconGroups.length > 0 && (
+        <>
+          {(() => {
+            const yOffset = displayName ? -0.03 : 0;
+            const positions = calculateIconPositions(bonusIconGroups);
+            return positions.map((pos) => (
+              <BonusIcon
+                key={`${pos.group.type}-${pos.indexInGroup}`}
+                texture={pos.group.texture}
+                position={[pos.x, yOffset, 0.01]}
+                isCredits={pos.group.isCredits}
+                creditAmount={pos.group.isCredits ? pos.group.count : undefined}
+              />
+            ));
+          })()}
+        </>
+      )}
+
+      {/* Bonus icons for volcano tiles (kept flat on tile) */}
+      {tileType === "volcano" && bonusIconGroups.length > 0 && (
+        <>
+          {(() => {
+            const positions = calculateIconPositions(bonusIconGroups);
+            return positions.map((pos) => (
+              <BonusIcon
+                key={`${pos.group.type}-${pos.indexInGroup}`}
+                texture={pos.group.texture}
+                position={[pos.x, 0, 0.01]}
+                isCredits={pos.group.isCredits}
+                creditAmount={pos.group.isCredits ? pos.group.count : undefined}
+              />
+            ));
+          })()}
         </>
       )}
 

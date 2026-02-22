@@ -5854,7 +5854,7 @@
     "name": "Lava Flows",
     "type": "event",
     "cost": 18,
-    "description": "Raise temperature 2 steps and place this tile **on either tharsis tholus, ascraeus mons, pavonis mons or arsia mons**.",
+    "description": "Raise temperature 2 steps. Place a volcano tile **on either Tharsis Tholus, Ascraeus Mons, Pavonis Mons or Arsia Mons**.",
     "pack": "base-game",
     "behaviors": [
       {
@@ -5868,9 +5868,17 @@
             "type": "temperature",
             "amount": 2,
             "target": "none"
+          },
+          {
+            "type": "volcano-placement",
+            "amount": 1,
+            "target": "none",
+            "tileRestrictions": {
+              "boardTags": ["volcanic"]
+            }
           }
         ],
-        "description": "Raise temperature 2 steps and place this tile **on either tharsis tholus, ascraeus mons, pavonis mons or arsia mons**."
+        "description": "Raise temperature 2 steps. Place a volcano tile **on either Tharsis Tholus, Ascraeus Mons, Pavonis Mons or Arsia Mons**."
       }
     ]
   },
@@ -15176,7 +15184,7 @@
     "name": "Lava Tube Settlement",
     "type": "automated",
     "cost": 15,
-    "description": "Decrease your energy production 1 step. Increase your M€ production 2 steps. Place a city tile **on a volcanic area**, same as Lava Flows, regardless of adjacent cities.",
+    "description": "Decrease your energy production 1 step. Increase your M€ production 2 steps. Place a city tile **on a volcanic area**, regardless of adjacent cities.",
     "pack": "prelude",
     "tags": [
       "building",
@@ -15203,10 +15211,13 @@
           {
             "type": "city-placement",
             "amount": 1,
-            "target": "none"
+            "target": "none",
+            "tileRestrictions": {
+              "boardTags": ["volcanic"]
+            }
           }
         ],
-        "description": "Decrease your energy production 1 step. Increase your M€ production 2 steps. Place a city tile **on a volcanic area**, same as Lava Flows, regardless of adjacent cities."
+        "description": "Decrease your energy production 1 step. Increase your M€ production 2 steps. Place a city tile **on a volcanic area**, regardless of adjacent cities."
       }
     ]
   },

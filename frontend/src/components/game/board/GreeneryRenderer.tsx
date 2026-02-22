@@ -229,7 +229,7 @@ function createNoisyHexGeometry(
   return geometry;
 }
 
-function addSphereProjectionWithSoftEdges(
+export function addSphereProjectionWithSoftEdges(
   material: THREE.Material,
   zOffset: number,
   noiseMap: THREE.Texture,
@@ -369,12 +369,14 @@ interface GreeneryTileData {
 
 interface GreeneryRendererProps {
   tiles: GreeneryTileData[];
+  volcanoTiles?: GreeneryTileData[];
   newTileKeys: Set<string>;
   hexRadius?: number;
 }
 
 export default function GreeneryRenderer({
   tiles,
+  volcanoTiles = [],
   newTileKeys,
   hexRadius = 0.166,
 }: GreeneryRendererProps) {
@@ -723,8 +725,70 @@ export default function GreeneryRenderer({
         }
       }
 
+      // === Volcano tiles: trees + bushes OUTSIDE the dark volcano area ===
+      const volcanoExclusionRadius = 0.105;
+      for (const tile of volcanoTiles) {
+        const tileKey = `${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`;
+        const seed = getTileSeed(tile.coordinate.q, tile.coordinate.r, tile.coordinate.s);
+
+        const isInsideVolcano = (x: number, y: number): boolean => {
+          return x * x + y * y < volcanoExclusionRadius * volcanoExclusionRadius;
+        };
+
+        const tileMatrix = new THREE.Matrix4().compose(
+          tile.worldPosition,
+          new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
+          new THREE.Vector3(1, 1, 1),
+        );
+
+        // Trees around volcano (80% scale, placed outside exclusion zone)
+        const vTreeRng = mulberry32(seed + 77777);
+        const vTreeCount = 8 + Math.floor(vTreeRng() * 6);
+        const vTreePositions: { x: number; y: number }[] = [];
+
+        for (let i = 0; i < vTreeCount; i++) {
+          const pos = randomHexPosition(vTreeRng, hexRadius * 0.9, 0.012, vTreePositions, 0.025);
+          if (pos) {
+            if (isInsideVolcano(pos.x, pos.y)) continue;
+            vTreePositions.push(pos);
+            const worldPos = new THREE.Vector3(pos.x, pos.y, 0.003).applyMatrix4(tileMatrix);
+            const tint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
+            treeInstances.push({
+              position: worldPos,
+              rotation: vTreeRng() * Math.PI * 2,
+              scale: (0.9 + vTreeRng() * 0.2) * 0.8,
+              variantIdx: Math.floor(vTreeRng() * 4),
+              tint,
+              tileKey,
+            });
+          }
+        }
+
+        // Bushes around volcano (placed outside exclusion zone)
+        const vBushRng = mulberry32(seed + 88888);
+        const vBushPositions: { x: number; y: number }[] = [];
+
+        for (let i = 0; i < 200; i++) {
+          const pos = randomHexPosition(vBushRng, hexRadius * 0.92, 0.003, vBushPositions, 0.006);
+          if (pos) {
+            if (isInsideVolcano(pos.x, pos.y)) continue;
+            vBushPositions.push(pos);
+            const worldPos = new THREE.Vector3(pos.x, pos.y, 0.001).applyMatrix4(tileMatrix);
+            const bushTint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
+            bushInstances.push({
+              position: worldPos,
+              rotation: vBushRng() * Math.PI * 2,
+              scale: 0.6 + vBushRng() * 0.5,
+              variantIdx: Math.floor(vBushRng() * 5),
+              tint: bushTint,
+              tileKey,
+            });
+          }
+        }
+      }
+
       return { treeInstances, bushInstances, cloverInstances, rockInstances, groundData };
-    }, [tiles, hexRadius]);
+    }, [tiles, volcanoTiles, hexRadius]);
 
   // Group instances by variant
   const treesByVariant = useMemo(() => {

@@ -30,6 +30,7 @@ import {
 interface AdminCommandPanelProps {
   gameState: GameDto;
   onClose?: () => void;
+  onOpenTilePlacer?: (playerId: string) => void;
 }
 
 // Global parameters min/max bounds
@@ -39,7 +40,11 @@ const GLOBAL_PARAM_BOUNDS = {
   oceans: { min: 0, max: 9 },
 } as const;
 
-const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({ gameState, onClose }) => {
+const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
+  gameState,
+  onClose,
+  onOpenTilePlacer,
+}) => {
   const [selectedCommand, setSelectedCommand] = useState<string>("");
   const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
 
@@ -1295,11 +1300,32 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({ gameState, onClos
               <option value="city">City</option>
               <option value="greenery">Greenery</option>
               <option value="ocean">Ocean</option>
+              <option value="volcano">Volcano</option>
             </select>
           </div>
-          <button onClick={handleStartTileSelection} style={buttonStyle}>
-            Start Tile Selection
-          </button>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button onClick={handleStartTileSelection} style={buttonStyle}>
+              Start Tile Selection
+            </button>
+            <button
+              onClick={() => {
+                if (!tileSelectionForm.playerId) {
+                  setValidationErrors({ tileSelectionPlayerId: true });
+                  setTimeout(() => setValidationErrors({}), 3000);
+                  return;
+                }
+                onOpenTilePlacer?.(tileSelectionForm.playerId);
+              }}
+              style={{
+                ...buttonStyle,
+                background:
+                  "linear-gradient(135deg, rgba(200, 50, 50, 0.8), rgba(200, 50, 50, 0.6))",
+                border: "1px solid rgba(200, 50, 50, 0.5)",
+              }}
+            >
+              Tile Placer
+            </button>
+          </div>
           <div
             style={{
               marginTop: "8px",

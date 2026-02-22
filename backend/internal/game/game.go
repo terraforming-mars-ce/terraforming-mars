@@ -881,6 +881,10 @@ func (g *Game) ProcessNextTile(ctx context.Context, playerID string) error {
 
 	availableHexes := g.calculateAvailableHexesForTile(nextTileType, playerID, tileRestrictions)
 
+	if len(availableHexes) == 0 {
+		return g.ProcessNextTile(ctx, playerID)
+	}
+
 	err := g.SetPendingTileSelection(ctx, playerID, &player.PendingTileSelection{
 		TileType:       nextTileType,
 		AvailableHexes: availableHexes,
@@ -953,6 +957,14 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 	}
 
 	for _, tile := range tiles {
+		// Clear targets occupied tiles (inverse of normal placement)
+		if tileType == "clear" {
+			if tile.OccupiedBy != nil {
+				availableHexes = append(availableHexes, tile.Coordinates.String())
+			}
+			continue
+		}
+
 		// Skip tiles that are already occupied
 		if tile.OccupiedBy != nil {
 			continue
@@ -1082,6 +1094,14 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 
 		case "ocean":
 			if tile.Type == shared.ResourceOceanSpace {
+				availableHexes = append(availableHexes, tile.Coordinates.String())
+			}
+
+		case "volcano":
+			if !tileHasRequiredTag(tile, []string{board.BoardTagVolcanic}) {
+				continue
+			}
+			if tile.Type == shared.ResourceLandTile {
 				availableHexes = append(availableHexes, tile.Coordinates.String())
 			}
 

@@ -65,6 +65,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
       type === "ocean-placement" ||
       type === "greenery-tile" ||
       type === "greenery-placement" ||
+      type === "volcano-placement" ||
       type === "land-claim"
     );
   };

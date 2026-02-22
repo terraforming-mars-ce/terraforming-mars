@@ -7,6 +7,7 @@ interface DustEffectProps {
   position: THREE.Vector3;
   normal: THREE.Vector3;
   duration?: number;
+  particleColor?: THREE.Color;
   onComplete?: () => void;
 }
 
@@ -23,6 +24,7 @@ export default function DustEffect({
   position,
   normal,
   duration = 2600,
+  particleColor,
   onComplete,
 }: DustEffectProps) {
   const { scene } = useThree();
@@ -60,7 +62,7 @@ export default function DustEffect({
         depthTest: false,
         blending: THREE.NormalBlending,
         side: THREE.DoubleSide,
-        color: new THREE.Color(0.72, 0.35, 0.18),
+        color: particleColor ?? new THREE.Color(0.72, 0.35, 0.18),
       });
 
       const mesh = new THREE.Mesh(geometry, material);

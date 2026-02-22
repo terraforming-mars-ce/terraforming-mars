@@ -7,5 +7,6 @@ export const TILE_PLACEMENT_TYPES = [
   "city-placement",
   "greenery-placement",
   "ocean-placement",
+  "volcano-placement",
   "land-claim",
 ];

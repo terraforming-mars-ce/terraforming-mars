@@ -40,10 +40,12 @@ func (a *StartTileSelectionAction) Execute(ctx context.Context, gameID string, p
 		"city":     true,
 		"greenery": true,
 		"ocean":    true,
+		"volcano":  true,
+		"clear":    true,
 	}
 	if !validTileTypes[tileType] {
 		log.Error("Invalid tile type", zap.String("tile_type", tileType))
-		return fmt.Errorf("invalid tile type: %s (valid types: city, greenery, ocean)", tileType)
+		return fmt.Errorf("invalid tile type: %s (valid types: city, greenery, ocean, volcano, clear)", tileType)
 	}
 
 	g, err := a.gameRepo.Get(ctx, gameID)

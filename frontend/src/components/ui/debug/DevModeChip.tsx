@@ -17,7 +17,7 @@ const DevModeChip: React.FC = () => {
       style={{
         minWidth: "120px",
         textAlign: "center",
-        zIndex: Z_INDEX.DEBUG_OVERLAY,
+        zIndex: Z_INDEX.TOP_MENU_ALWAYS_ON_TOP,
       }}
     >
       <span className="transition-opacity duration-200" style={{ opacity: isHovered ? 0 : 1 }}>

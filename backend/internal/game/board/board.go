@@ -23,6 +23,7 @@ type BoardTag = string
 const (
 	BoardTagNoctisCity     BoardTag = "noctis-city"
 	BoardTagGanymedeColony BoardTag = "ganymede-colony"
+	BoardTagVolcanic       BoardTag = "volcanic"
 )
 
 // TileLocation represents the celestial body where tiles are located
@@ -122,6 +123,10 @@ func GenerateMarsBoard() []Tile {
 	taggedTiles := map[shared.HexPosition]taggedTileInfo{
 		{Q: -4, R: 2, S: 2}:  {Tags: []string{BoardTagNoctisCity}, DisplayName: "Noctis City"},
 		{Q: 4, R: -2, S: -2}: {Tags: []string{BoardTagGanymedeColony}, DisplayName: "Ganymede Colony"},
+		{Q: 0, R: -2, S: 2}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Tharsis Tholus"},
+		{Q: -1, R: 0, S: 1}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Ascraeus Mons"},
+		{Q: -2, R: 1, S: 1}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Pavonis Mons"},
+		{Q: -3, R: 2, S: 1}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Arsia Mons"},
 	}
 
 	radius := 4
@@ -260,6 +265,39 @@ func (b *Board) UpdateTileOccupancy(ctx context.Context, coords shared.HexPositi
 			Q:        coords.Q,
 			R:        coords.R,
 			S:        coords.S,
+		})
+	}
+
+	return nil
+}
+
+// ClearTileOccupant removes the occupant and owner from a tile (admin debug tool)
+func (b *Board) ClearTileOccupant(ctx context.Context, coords shared.HexPosition) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	var found bool
+
+	b.mu.Lock()
+	for i := range b.tiles {
+		if b.tiles[i].Coordinates == coords {
+			b.tiles[i].OccupiedBy = nil
+			b.tiles[i].OwnerID = nil
+			found = true
+			break
+		}
+	}
+	b.mu.Unlock()
+
+	if !found {
+		return fmt.Errorf("tile not found at coordinates %v", coords)
+	}
+
+	if b.eventBus != nil {
+		events.Publish(b.eventBus, events.GameStateChangedEvent{
+			GameID:    b.gameID,
+			Timestamp: time.Now(),
 		})
 	}
 

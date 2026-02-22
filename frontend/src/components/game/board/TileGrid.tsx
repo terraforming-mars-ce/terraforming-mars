@@ -28,7 +28,7 @@ interface ProjectedTile {
 }
 
 // Type for the tile data returned by getTileData
-type TileType = "city" | "empty" | "ocean" | "greenery" | "special";
+type TileType = "city" | "empty" | "ocean" | "greenery" | "special" | "volcano";
 
 interface TileData {
   type: TileType;
@@ -153,6 +153,12 @@ export default function TileGrid({
               ownerId: backendTile.ownerId || null,
               specialType: null,
             };
+          case "volcano-tile":
+            return {
+              type: "volcano",
+              ownerId: backendTile.ownerId || null,
+              specialType: null,
+            };
           default:
             return {
               type: "special",
@@ -191,12 +197,29 @@ export default function TileGrid({
       }));
   }, [projectedHexGrid]);
 
+  // Collect volcano tiles for vegetation around them
+  const volcanoTiles = useMemo(() => {
+    return projectedHexGrid
+      .filter((tile) => {
+        const tileData = getTileData(tile);
+        return tileData.type === "volcano";
+      })
+      .map((tile) => ({
+        coordinate: tile.coordinate,
+        worldPosition: tile.spherePosition,
+        normal: tile.normal,
+      }));
+  }, [projectedHexGrid]);
+
   // Detect newly placed greenery tiles
   const knownGreeneryRef = useRef<Set<string>>(new Set());
   const greeneryInitializedRef = useRef(false);
   const newGreeneryKeys = useMemo(() => {
     const currentKeys = new Set<string>();
     for (const tile of greeneryTiles) {
+      currentKeys.add(`${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`);
+    }
+    for (const tile of volcanoTiles) {
       currentKeys.add(`${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`);
     }
 
@@ -212,12 +235,16 @@ export default function TileGrid({
     }
     knownGreeneryRef.current = currentKeys;
     return added;
-  }, [greeneryTiles]);
+  }, [greeneryTiles, volcanoTiles]);
 
   return (
     <>
-      {/* Single GreeneryRenderer handles ALL greenery tiles */}
-      <GreeneryRenderer tiles={greeneryTiles} newTileKeys={newGreeneryKeys} />
+      {/* Single GreeneryRenderer handles ALL greenery + volcano vegetation */}
+      <GreeneryRenderer
+        tiles={greeneryTiles}
+        volcanoTiles={volcanoTiles}
+        newTileKeys={newGreeneryKeys}
+      />
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
         const tileData = getTileData(tile);
@@ -232,6 +259,7 @@ export default function TileGrid({
             ownerId={tileData.ownerId}
             reservedById={tile.backendTile?.reservedBy || null}
             displayName={tile.backendTile?.displayName}
+            isVolcanic={tile.backendTile?.tags?.includes("volcanic") ?? false}
             onClick={() => {
               onHexClick?.(hexKey);
             }}

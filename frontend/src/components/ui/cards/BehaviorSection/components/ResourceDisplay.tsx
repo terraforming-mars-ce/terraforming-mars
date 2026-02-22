@@ -312,6 +312,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     resourceType === "city-placement" ||
     resourceType === "greenery-placement" ||
     resourceType === "ocean-placement" ||
+    resourceType === "volcano-placement" ||
     resourceType === "land-claim";
 
   const hasTileRestrictions =

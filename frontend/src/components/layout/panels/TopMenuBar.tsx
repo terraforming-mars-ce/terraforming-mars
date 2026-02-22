@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { GameDto, PlayerDto } from "@/types/generated/api-types.ts";
 import { StandardProject } from "@/types/cards.tsx";
+import { Z_INDEX } from "@/constants/zIndex";
 import SoundToggleButton from "../../ui/buttons/SoundToggleButton.tsx";
 import StandardProjectPopover from "../../ui/popover/StandardProjectPopover.tsx";
 import MilestonePopover from "../../ui/popover/MilestonePopover.tsx";
@@ -196,7 +197,10 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   const buttonHeight = 40;
 
   return (
-    <div className="bg-transparent relative z-[100] pointer-events-none">
+    <div
+      className="bg-transparent relative pointer-events-none"
+      style={{ zIndex: Z_INDEX.TOP_MENU_ALWAYS_ON_TOP }}
+    >
       <div className="flex justify-between items-center px-2 h-[60px] max-lg:h-[50px] max-md:flex-wrap">
         <div
           className="flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left"
@@ -249,6 +253,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
           maxHeight="auto"
           animation="slideDown"
           excludeRef={hamburgerButtonRef}
+          zIndex={Z_INDEX.TOP_MENU_ALWAYS_ON_TOP + 1}
         >
           <div className="py-1">
             <button

@@ -55,6 +55,7 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
     cleanType === "city-placement" ||
     cleanType === "greenery-placement" ||
     cleanType === "ocean-placement" ||
+    cleanType === "volcano-placement" ||
     cleanType === "land-claim";
   const isTR = cleanType === "tr";
   const isCard =
@@ -64,7 +65,10 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
     cleanType === "card";
 
   const isStandaloneTile =
-    cleanType === "city-tile" || cleanType === "greenery-tile" || cleanType === "ocean-tile";
+    cleanType === "city-tile" ||
+    cleanType === "greenery-tile" ||
+    cleanType === "ocean-tile" ||
+    cleanType === "volcano-tile";
   const isStandaloneCard = cleanType === "card-draw" || cleanType === "card";
   const shouldUseStandaloneSize =
     context === "standalone" && (isStandaloneTile || isStandaloneCard);
