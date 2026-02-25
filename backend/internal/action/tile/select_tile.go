@@ -204,9 +204,16 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 					continue
 				}
 
-				for _, cardID := range cardIDs {
-					p.Hand().AddCard(cardID)
-				}
+				baseaction.AddCardsToPlayerHand(cardIDs, p, g, a.CardRegistry(), log)
+
+				g.AddTriggeredEffect(game.TriggeredEffect{
+					CardName:   "Tile Bonus",
+					PlayerID:   playerID,
+					SourceType: game.SourceTypeCardPlay,
+					CalculatedOutputs: []game.CalculatedOutput{
+						{ResourceType: string(shared.ResourceCardDraw), Amount: len(cardIDs)},
+					},
+				})
 
 				log.Info("🃏 Awarded card draw bonus",
 					zap.Int("cards_drawn", len(cardIDs)),
@@ -347,6 +354,6 @@ func mapTileTypeToResourceType(tileType string) shared.ResourceType {
 	case "volcano":
 		return shared.ResourceVolcanoTile
 	default:
-		return shared.ResourceType(tileType)
+		return shared.ResourceType(tileType + "-tile")
 	}
 }

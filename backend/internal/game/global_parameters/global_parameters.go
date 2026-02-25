@@ -14,6 +14,8 @@ const (
 	MaxOxygen      = 14
 	MinOceans      = 0
 	MaxOceans      = 9
+	MinVenus       = 0
+	MaxVenus       = 30
 )
 
 // GlobalParameters represents the terraforming progress with encapsulated state
@@ -23,6 +25,7 @@ type GlobalParameters struct {
 	temperature int // Range: -30 to +8°C
 	oxygen      int // Range: 0-14%
 	oceans      int // Range: 0-9
+	venus       int // Range: 0-30%
 	eventBus    *events.EventBusImpl
 }
 
@@ -33,17 +36,19 @@ func NewGlobalParameters(gameID string, eventBus *events.EventBusImpl) *GlobalPa
 		temperature: MinTemperature,
 		oxygen:      MinOxygen,
 		oceans:      MinOceans,
+		venus:       MinVenus,
 		eventBus:    eventBus,
 	}
 }
 
 // NewGlobalParametersWithValues creates a new GlobalParameters instance with custom starting values
-func NewGlobalParametersWithValues(gameID string, temperature, oxygen, oceans int, eventBus *events.EventBusImpl) *GlobalParameters {
+func NewGlobalParametersWithValues(gameID string, temperature, oxygen, oceans, venus int, eventBus *events.EventBusImpl) *GlobalParameters {
 	return &GlobalParameters{
 		gameID:      gameID,
 		temperature: temperature,
 		oxygen:      oxygen,
 		oceans:      oceans,
+		venus:       venus,
 		eventBus:    eventBus,
 	}
 }
@@ -67,6 +72,13 @@ func (gp *GlobalParameters) Oceans() int {
 	gp.mu.RLock()
 	defer gp.mu.RUnlock()
 	return gp.oceans
+}
+
+// Venus returns the current venus level
+func (gp *GlobalParameters) Venus() int {
+	gp.mu.RLock()
+	defer gp.mu.RUnlock()
+	return gp.venus
 }
 
 // IsMaxed returns true if all global parameters have reached their maximum values
@@ -253,6 +265,63 @@ func (gp *GlobalParameters) SetOceans(ctx context.Context, newOceans int) error 
 			GameID:   gp.gameID,
 			OldValue: oldOceans,
 			NewValue: newOceans,
+		})
+	}
+
+	return nil
+}
+
+// IncreaseVenus raises the venus level by the specified number of steps
+// Each step is 2%. Returns the actual number of steps raised (may be less if limit reached)
+// Publishes VenusChangedEvent after state change
+func (gp *GlobalParameters) IncreaseVenus(ctx context.Context, steps int) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+
+	var oldVenus, newVenus int
+	var actualSteps int
+
+	gp.mu.Lock()
+	oldVenus = gp.venus
+	newVenus = gp.venus + (steps * 2)
+	if newVenus > MaxVenus {
+		newVenus = MaxVenus
+	}
+	gp.venus = newVenus
+	actualSteps = (newVenus - oldVenus) / 2
+	gp.mu.Unlock()
+
+	if gp.eventBus != nil && oldVenus != newVenus {
+		events.Publish(gp.eventBus, events.VenusChangedEvent{
+			GameID:   gp.gameID,
+			OldValue: oldVenus,
+			NewValue: newVenus,
+		})
+	}
+
+	return actualSteps, nil
+}
+
+// SetVenus sets the venus level to a specific value (for admin/testing)
+// Publishes VenusChangedEvent if value changed
+func (gp *GlobalParameters) SetVenus(ctx context.Context, newVenus int) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	var oldVenus int
+
+	gp.mu.Lock()
+	oldVenus = gp.venus
+	gp.venus = newVenus
+	gp.mu.Unlock()
+
+	if gp.eventBus != nil && oldVenus != newVenus {
+		events.Publish(gp.eventBus, events.VenusChangedEvent{
+			GameID:   gp.gameID,
+			OldValue: oldVenus,
+			NewValue: newVenus,
 		})
 	}
 

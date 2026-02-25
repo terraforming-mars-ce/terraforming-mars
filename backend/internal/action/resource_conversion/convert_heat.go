@@ -132,6 +132,14 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 			ResourceType: string(shared.ResourceTR), Amount: 1, IsScaled: false,
 		})
 	}
+
+	g.AddTriggeredEffect(game.TriggeredEffect{
+		CardName:          "Convert Heat",
+		PlayerID:          playerID,
+		SourceType:        game.SourceTypeResourceConvert,
+		CalculatedOutputs: calculatedOutputs,
+	})
+
 	displayData := baseaction.GetStandardProjectDisplayData("Convert Heat")
 	a.WriteStateLogFull(ctx, g, "Convert Heat", game.SourceTypeResourceConvert, playerID, "Converted heat to raise temperature", nil, calculatedOutputs, displayData)
 

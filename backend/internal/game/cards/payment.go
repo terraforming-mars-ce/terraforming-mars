@@ -8,17 +8,18 @@ import (
 
 // CardPayment represents how a player is paying for a card
 type CardPayment struct {
-	Credits     int
-	Steel       int
-	Titanium    int
-	Substitutes map[shared.ResourceType]int
+	Credits            int
+	Steel              int
+	Titanium           int
+	Substitutes        map[shared.ResourceType]int
+	StorageSubstitutes map[string]int // cardID -> amount of storage resources to use as payment
 }
 
 // TotalValue calculates the total MC value of this payment.
 // playerSubstitutes MUST include steel and titanium with their effective values
 // (base value + any modifiers from cards like Phobolog or Advanced Alloys).
 // All payment values (steel, titanium, other substitutes) are looked up from playerSubstitutes.
-func (p CardPayment) TotalValue(playerSubstitutes []shared.PaymentSubstitute) int {
+func (p CardPayment) TotalValue(playerSubstitutes []shared.PaymentSubstitute, storageSubstitutes []shared.StoragePaymentSubstitute) int {
 	total := p.Credits
 
 	substituteValues := make(map[shared.ResourceType]int)
@@ -38,6 +39,19 @@ func (p CardPayment) TotalValue(playerSubstitutes []shared.PaymentSubstitute) in
 		for resourceType, amount := range p.Substitutes {
 			if conversionRate, ok := substituteValues[resourceType]; ok {
 				total += amount * conversionRate
+			}
+		}
+	}
+
+	// Add storage substitute values (e.g., Dirigibles floaters at 3 M€ each)
+	if p.StorageSubstitutes != nil {
+		storageSubValues := make(map[string]int)
+		for _, sub := range storageSubstitutes {
+			storageSubValues[sub.CardID] = sub.ConversionRate
+		}
+		for cardID, amount := range p.StorageSubstitutes {
+			if rate, ok := storageSubValues[cardID]; ok {
+				total += amount * rate
 			}
 		}
 	}
@@ -65,11 +79,20 @@ func (p CardPayment) Validate() error {
 		}
 	}
 
+	if p.StorageSubstitutes != nil {
+		for cardID, amount := range p.StorageSubstitutes {
+			if amount < 0 {
+				return fmt.Errorf("storage payment substitute from card %s cannot be negative: %d", cardID, amount)
+			}
+		}
+	}
+
 	return nil
 }
 
-// CanAfford checks if a player has sufficient resources for this payment
-func (p CardPayment) CanAfford(playerResources shared.Resources) error {
+// CanAfford checks if a player has sufficient resources for this payment.
+// storageGetter provides access to card storage amounts (cardID -> stored amount).
+func (p CardPayment) CanAfford(playerResources shared.Resources, storageGetter func(cardID string) int) error {
 	if playerResources.Credits < p.Credits {
 		return fmt.Errorf("insufficient credits: need %d, have %d", p.Credits, playerResources.Credits)
 	}
@@ -100,11 +123,20 @@ func (p CardPayment) CanAfford(playerResources shared.Resources) error {
 		}
 	}
 
+	if p.StorageSubstitutes != nil && storageGetter != nil {
+		for cardID, amount := range p.StorageSubstitutes {
+			available := storageGetter(cardID)
+			if available < amount {
+				return fmt.Errorf("insufficient storage on card %s: need %d, have %d", cardID, amount, available)
+			}
+		}
+	}
+
 	return nil
 }
 
 // CoversCardCost checks if this payment covers the card cost
-func (p CardPayment) CoversCardCost(cardCost int, allowSteel, allowTitanium bool, playerSubstitutes []shared.PaymentSubstitute) error {
+func (p CardPayment) CoversCardCost(cardCost int, allowSteel, allowTitanium bool, playerSubstitutes []shared.PaymentSubstitute, storageSubstitutes []shared.StoragePaymentSubstitute) error {
 	if err := p.Validate(); err != nil {
 		return err
 	}
@@ -131,7 +163,23 @@ func (p CardPayment) CoversCardCost(cardCost int, allowSteel, allowTitanium bool
 		}
 	}
 
-	totalValue := p.TotalValue(playerSubstitutes)
+	// Validate storage substitutes are from valid cards
+	if p.StorageSubstitutes != nil {
+		for cardID := range p.StorageSubstitutes {
+			found := false
+			for _, sub := range storageSubstitutes {
+				if sub.CardID == cardID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("player cannot use storage from card %s as payment", cardID)
+			}
+		}
+	}
+
+	totalValue := p.TotalValue(playerSubstitutes, storageSubstitutes)
 	if totalValue < cardCost {
 		return fmt.Errorf("payment insufficient: card costs %d MC, payment provides %d MC", cardCost, totalValue)
 	}

@@ -42,18 +42,18 @@ type SkipAction struct {
 
 // PlayCardAction represents playing a card from hand
 type PlayCardAction struct {
-	CardID            string         `json:"cardId" ts:"string"`
-	Payment           CardPaymentDto `json:"payment" ts:"CardPaymentDto"`                         // Required: payment breakdown (credits, steel, titanium)
-	ChoiceIndex       *int           `json:"choiceIndex,omitempty" ts:"number | undefined"`       // Optional: index of choice to play (for cards with choices)
-	CardStorageTarget *string        `json:"cardStorageTarget,omitempty" ts:"string | undefined"` // Optional: target card ID for resource storage (for outputs with target "any-card")
+	CardID             string         `json:"cardId" ts:"string"`
+	Payment            CardPaymentDto `json:"payment" ts:"CardPaymentDto"`                            // Required: payment breakdown (credits, steel, titanium)
+	ChoiceIndex        *int           `json:"choiceIndex,omitempty" ts:"number | undefined"`          // Optional: index of choice to play (for cards with choices)
+	CardStorageTargets []string       `json:"cardStorageTargets,omitempty" ts:"string[] | undefined"` // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 
 // PlayCardActionAction represents playing a card action from player's action list
 type PlayCardActionAction struct {
-	CardID            string  `json:"cardId" ts:"string"`
-	BehaviorIndex     int     `json:"behaviorIndex" ts:"number"`
-	ChoiceIndex       *int    `json:"choiceIndex,omitempty" ts:"number | undefined"`       // Optional: index of choice to play (for actions with choices)
-	CardStorageTarget *string `json:"cardStorageTarget,omitempty" ts:"string | undefined"` // Optional: target card ID for resource storage (for outputs with target "any-card")
+	CardID             string   `json:"cardId" ts:"string"`
+	BehaviorIndex      int      `json:"behaviorIndex" ts:"number"`
+	ChoiceIndex        *int     `json:"choiceIndex,omitempty" ts:"number | undefined"`          // Optional: index of choice to play (for actions with choices)
+	CardStorageTargets []string `json:"cardStorageTargets,omitempty" ts:"string[] | undefined"` // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 
 // HexPositionDto represents a position on the Mars board
@@ -149,30 +149,30 @@ type ConfirmDemoSetupRequest struct {
 
 // ActionPlayCardRequest contains the action data for play card actions
 type ActionPlayCardRequest struct {
-	Type              ActionType     `json:"type" ts:"ActionType"`
-	CardID            string         `json:"cardId" ts:"string"`
-	Payment           CardPaymentDto `json:"payment" ts:"CardPaymentDto"`                         // Required: payment breakdown (credits, steel, titanium)
-	ChoiceIndex       *int           `json:"choiceIndex,omitempty" ts:"number | undefined"`       // Optional: index of choice to play (for cards with choices)
-	CardStorageTarget *string        `json:"cardStorageTarget,omitempty" ts:"string | undefined"` // Optional: target card ID for resource storage (for outputs with target "any-card")
+	Type               ActionType     `json:"type" ts:"ActionType"`
+	CardID             string         `json:"cardId" ts:"string"`
+	Payment            CardPaymentDto `json:"payment" ts:"CardPaymentDto"`                            // Required: payment breakdown (credits, steel, titanium)
+	ChoiceIndex        *int           `json:"choiceIndex,omitempty" ts:"number | undefined"`          // Optional: index of choice to play (for cards with choices)
+	CardStorageTargets []string       `json:"cardStorageTargets,omitempty" ts:"string[] | undefined"` // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 
 // GetAction returns the play card action
 func (ap *ActionPlayCardRequest) GetAction() *PlayCardAction {
-	return &PlayCardAction{CardID: ap.CardID, Payment: ap.Payment, ChoiceIndex: ap.ChoiceIndex, CardStorageTarget: ap.CardStorageTarget}
+	return &PlayCardAction{CardID: ap.CardID, Payment: ap.Payment, ChoiceIndex: ap.ChoiceIndex, CardStorageTargets: ap.CardStorageTargets}
 }
 
 // ActionPlayCardActionRequest contains the action data for play card action actions
 type ActionPlayCardActionRequest struct {
-	Type              ActionType `json:"type" ts:"ActionType"`
-	CardID            string     `json:"cardId" ts:"string"`
-	BehaviorIndex     int        `json:"behaviorIndex" ts:"number"`
-	ChoiceIndex       *int       `json:"choiceIndex,omitempty" ts:"number | undefined"`       // Optional: index of choice to play (for actions with choices)
-	CardStorageTarget *string    `json:"cardStorageTarget,omitempty" ts:"string | undefined"` // Optional: target card ID for resource storage (for outputs with target "any-card")
+	Type               ActionType `json:"type" ts:"ActionType"`
+	CardID             string     `json:"cardId" ts:"string"`
+	BehaviorIndex      int        `json:"behaviorIndex" ts:"number"`
+	ChoiceIndex        *int       `json:"choiceIndex,omitempty" ts:"number | undefined"`          // Optional: index of choice to play (for actions with choices)
+	CardStorageTargets []string   `json:"cardStorageTargets,omitempty" ts:"string[] | undefined"` // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 
 // GetAction returns the play card action action
 func (ap *ActionPlayCardActionRequest) GetAction() *PlayCardActionAction {
-	return &PlayCardActionAction{CardID: ap.CardID, BehaviorIndex: ap.BehaviorIndex, ChoiceIndex: ap.ChoiceIndex, CardStorageTarget: ap.CardStorageTarget}
+	return &PlayCardActionAction{CardID: ap.CardID, BehaviorIndex: ap.BehaviorIndex, ChoiceIndex: ap.ChoiceIndex, CardStorageTargets: ap.CardStorageTargets}
 }
 
 // Standard Project Action Requests

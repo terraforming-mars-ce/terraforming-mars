@@ -127,6 +127,7 @@ func NewGame(
 	initTemp := DefaultTemperature
 	initOxy := DefaultOxygen
 	initOcean := DefaultOceans
+	initVenus := DefaultVenus
 	if settings.Temperature != nil {
 		initTemp = *settings.Temperature
 	}
@@ -135,6 +136,9 @@ func NewGame(
 	}
 	if settings.Oceans != nil {
 		initOcean = *settings.Oceans
+	}
+	if settings.Venus != nil {
+		initVenus = *settings.Venus
 	}
 
 	g := &Game{
@@ -145,7 +149,7 @@ func NewGame(
 		settings:                   settings,
 		hostPlayerID:               hostPlayerID,
 		currentPhase:               GamePhaseWaitingForGameStart,
-		globalParameters:           global_parameters.NewGlobalParametersWithValues(id, initTemp, initOxy, initOcean, eventBus),
+		globalParameters:           global_parameters.NewGlobalParametersWithValues(id, initTemp, initOxy, initOcean, initVenus, eventBus),
 		generation:                 1,
 		board:                      board.NewBoardWithTiles(id, board.GenerateMarsBoard(), eventBus),
 		deck:                       nil,
@@ -956,6 +960,112 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 		return tile.ReservedBy != nil && *tile.ReservedBy != playerID
 	}
 
+	// Helper to count adjacent occupied tiles of a specific type
+	countAdjacentOfType := func(tile board.Tile, tileOccupantType string) int {
+		count := 0
+		var targetType shared.ResourceType
+		switch tileOccupantType {
+		case "city":
+			targetType = shared.ResourceCityTile
+		case "greenery":
+			targetType = shared.ResourceGreeneryTile
+		case "ocean":
+			targetType = shared.ResourceOceanTile
+		default:
+			targetType = shared.ResourceType(tileOccupantType + "-tile")
+		}
+		for _, neighborPos := range tile.Coordinates.GetNeighbors() {
+			for _, neighborTile := range tiles {
+				if neighborTile.Coordinates.Equals(neighborPos) && neighborTile.OccupiedBy != nil && neighborTile.OccupiedBy.Type == targetType {
+					count++
+					break
+				}
+			}
+		}
+		return count
+	}
+
+	// Helper to check if tile has an adjacent tile of a specific type owned by the player
+	hasAdjacentOwnedOfType := func(tile board.Tile, tileOccupantType string) bool {
+		var targetType shared.ResourceType
+		switch tileOccupantType {
+		case "city":
+			targetType = shared.ResourceCityTile
+		case "greenery":
+			targetType = shared.ResourceGreeneryTile
+		case "ocean":
+			targetType = shared.ResourceOceanTile
+		default:
+			targetType = shared.ResourceType(tileOccupantType + "-tile")
+		}
+		for _, neighborPos := range tile.Coordinates.GetNeighbors() {
+			for _, neighborTile := range tiles {
+				if neighborTile.Coordinates.Equals(neighborPos) &&
+					neighborTile.OccupiedBy != nil &&
+					neighborTile.OccupiedBy.Type == targetType &&
+					neighborTile.OwnerID != nil &&
+					*neighborTile.OwnerID == playerID {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	// Helper to check if tile has any adjacent tile owned by the player (regardless of type)
+	hasAnyAdjacentOwned := func(tile board.Tile) bool {
+		for _, neighborPos := range tile.Coordinates.GetNeighbors() {
+			for _, neighborTile := range tiles {
+				if neighborTile.Coordinates.Equals(neighborPos) &&
+					neighborTile.OccupiedBy != nil &&
+					neighborTile.OwnerID != nil &&
+					*neighborTile.OwnerID == playerID {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	// Helper to check if a tile has one of the specified bonus types
+	hasBonusOfType := func(tile board.Tile, bonusTypes []string) bool {
+		for _, bonus := range tile.Bonuses {
+			for _, bonusType := range bonusTypes {
+				if string(bonus.Type) == bonusType {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	// Helper to check if a tile passes adjacentToType/minAdjacentOfType/adjacentToOwned restrictions
+	passesAdjacentRestrictions := func(tile board.Tile) bool {
+		if tileRestrictions == nil {
+			return true
+		}
+		// Check adjacentToType + minAdjacentOfType
+		if tileRestrictions.AdjacentToType != "" {
+			minRequired := 1
+			if tileRestrictions.MinAdjacentOfType != nil {
+				minRequired = *tileRestrictions.MinAdjacentOfType
+			}
+			if countAdjacentOfType(tile, tileRestrictions.AdjacentToType) < minRequired {
+				return false
+			}
+			// If both adjacentToType and adjacentToOwned are set, check owned of that type
+			if tileRestrictions.AdjacentToOwned && !hasAdjacentOwnedOfType(tile, tileRestrictions.AdjacentToType) {
+				return false
+			}
+		} else if tileRestrictions.AdjacentToOwned {
+			// AdjacentToOwned without AdjacentToType: adjacent to any owned tile
+			if !hasAnyAdjacentOwned(tile) {
+				return false
+			}
+		}
+		return true
+	}
+
 	for _, tile := range tiles {
 		// Clear targets occupied tiles (inverse of normal placement)
 		if tileType == "clear" {
@@ -1025,6 +1135,15 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 				continue // Skip normal city adjacency rules
 			}
 
+			// Handle adjacentToType restriction (e.g., Urbanized Area: adjacent to 2+ cities)
+			// This overrides the normal "no adjacent cities" rule
+			if tileRestrictions != nil && tileRestrictions.AdjacentToType != "" {
+				if passesAdjacentRestrictions(tile) {
+					availableHexes = append(availableHexes, tile.Coordinates.String())
+				}
+				continue
+			}
+
 			// Check city adjacency rule (no adjacent cities)
 			hasAdjacentCity := false
 			neighbors := tile.Coordinates.GetNeighbors()
@@ -1089,6 +1208,10 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 				continue
 			}
 			if tile.Type == shared.ResourceLandTile {
+				// Apply adjacency restrictions if set (e.g., Ecological Zone: adjacent to greenery)
+				if !passesAdjacentRestrictions(tile) {
+					continue
+				}
 				availableHexes = append(availableHexes, tile.Coordinates.String())
 			}
 
@@ -1106,17 +1229,58 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			}
 
 		default:
+			// Handle ocean-space placement (e.g., Mohole Area)
+			if tileRestrictions != nil && tileRestrictions.OnTileType == "ocean" {
+				if tile.Type == shared.ResourceOceanSpace {
+					availableHexes = append(availableHexes, tile.Coordinates.String())
+				}
+				continue
+			}
+
 			// Skip tiles reserved by other players (current player can use their own reserved tiles)
 			if isReservedByOther(tile) {
 				continue
 			}
-			// Exclude reserved areas from normal placement
-			if len(boardTags) == 0 && tileHasAnyTag(tile) {
+
+			// If boardTags specified, only allow tiles with matching tags
+			if len(boardTags) > 0 {
+				if tileHasRequiredTag(tile, boardTags) {
+					availableHexes = append(availableHexes, tile.Coordinates.String())
+				}
 				continue
 			}
-			if tile.Type == shared.ResourceLandTile {
-				availableHexes = append(availableHexes, tile.Coordinates.String())
+
+			// Exclude reserved areas from normal placement
+			if tileHasAnyTag(tile) {
+				continue
 			}
+
+			// Must be on land
+			if tile.Type != shared.ResourceLandTile {
+				continue
+			}
+
+			// Check bonus type restriction (e.g., Mining Area/Mining Rights)
+			if tileRestrictions != nil && len(tileRestrictions.OnBonusType) > 0 {
+				if !hasBonusOfType(tile, tileRestrictions.OnBonusType) {
+					continue
+				}
+			}
+
+			// Handle "no adjacent tiles" restriction (e.g., Natural Preserve)
+			if adjacency == "none" {
+				if !hasAnyAdjacentOccupied(tile) {
+					availableHexes = append(availableHexes, tile.Coordinates.String())
+				}
+				continue
+			}
+
+			// Apply adjacency restrictions if set
+			if !passesAdjacentRestrictions(tile) {
+				continue
+			}
+
+			availableHexes = append(availableHexes, tile.Coordinates.String())
 		}
 	}
 
@@ -1138,11 +1302,20 @@ func (g *Game) CountAvailableHexesForTile(tileType string, playerID string, tile
 	return len(g.calculateAvailableHexesForTile(tileType, playerID, tileRestrictions))
 }
 
+// CalculateAvailableHexesForTile returns the list of valid hex coordinate strings for placing a tile
+func (g *Game) CalculateAvailableHexesForTile(tileType string, playerID string, tileRestrictions *shared.TileRestrictions) []string {
+	return g.calculateAvailableHexesForTile(tileType, playerID, tileRestrictions)
+}
+
 // TriggeredEffect represents a card effect that was triggered (for frontend notifications)
 type TriggeredEffect struct {
-	CardName string
-	PlayerID string
-	Outputs  []shared.ResourceCondition
+	CardName          string
+	PlayerID          string
+	SourceType        SourceType
+	Outputs           []shared.ResourceCondition
+	CalculatedOutputs []CalculatedOutput
+	Behaviors         []shared.CardBehavior
+	VPConditions      []VPConditionForLog
 }
 
 // AddTriggeredEffect records a triggered effect for notification
@@ -1295,6 +1468,10 @@ func (g *Game) subscribeToGenerationalEvents() {
 	events.Subscribe(g.eventBus, func(e events.GenerationAdvancedEvent) {
 		for _, p := range g.GetAllPlayers() {
 			p.GenerationalEvents().Clear()
+			// Clear temporary "generation-end" effects
+			p.Effects().RemoveTemporaryEffects(shared.TemporaryGenerationEnd)
+			// Also clear any "next-card" effects that weren't consumed
+			p.Effects().RemoveTemporaryEffects(shared.TemporaryNextCard)
 		}
 	})
 }

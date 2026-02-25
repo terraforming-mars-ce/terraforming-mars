@@ -56,6 +56,12 @@ func (cb CardBehavior) DeepCopy() CardBehavior {
 				}
 			}
 
+			if choice.Requirements != nil {
+				items := make([]ChoiceRequirement, len(choice.Requirements.Items))
+				copy(items, choice.Requirements.Items)
+				choiceCopy.Requirements = &ChoiceRequirements{Items: items}
+			}
+
 			result.Choices[i] = choiceCopy
 		}
 	}

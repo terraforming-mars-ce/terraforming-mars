@@ -117,6 +117,14 @@ func (a *LaunchAsteroidAction) Execute(ctx context.Context, gameID string, playe
 			ResourceType: string(shared.ResourceTR), Amount: 1, IsScaled: false,
 		})
 	}
+
+	g.AddTriggeredEffect(game.TriggeredEffect{
+		CardName:          "Asteroid",
+		PlayerID:          playerID,
+		SourceType:        game.SourceTypeStandardProject,
+		CalculatedOutputs: calculatedOutputs,
+	})
+
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: Asteroid")
 	a.WriteStateLogFull(ctx, g, "Standard Project: Asteroid", game.SourceTypeStandardProject, playerID, "Launched asteroid", nil, calculatedOutputs, displayData)
 

@@ -19,6 +19,8 @@ const (
 	ErrorCodeOxygenTooHigh      StateErrorCode = "oxygen-too-high"
 	ErrorCodeOceansTooLow       StateErrorCode = "oceans-too-low"
 	ErrorCodeOceansTooHigh      StateErrorCode = "oceans-too-high"
+	ErrorCodeVenusTooLow        StateErrorCode = "venus-too-low"
+	ErrorCodeVenusTooHigh       StateErrorCode = "venus-too-high"
 	ErrorCodeTRTooLow           StateErrorCode = "tr-too-low"
 	ErrorCodeTRTooHigh          StateErrorCode = "tr-too-high"
 
@@ -29,6 +31,7 @@ const (
 	ErrorCodeNoOceanTiles         StateErrorCode = "no-ocean-tiles"
 	ErrorCodeNoCityPlacements     StateErrorCode = "no-city-placements"
 	ErrorCodeNoGreeneryPlacements StateErrorCode = "no-greenery-placements"
+	ErrorCodeNoTilePlacements     StateErrorCode = "no-tile-placements"
 	ErrorCodeNoCardsInHand        StateErrorCode = "no-cards-in-hand"
 	ErrorCodeInvalidProjectType   StateErrorCode = "invalid-project-type"
 	ErrorCodeInvalidRequirement   StateErrorCode = "invalid-requirement"
@@ -66,7 +69,3 @@ const (
 // StateWarningCode represents warning codes for entity state validation.
 // All codes use kebab-case for consistency with JSON serialization.
 type StateWarningCode string
-
-const (
-	WarningCodeNoValidTilePlacements StateWarningCode = "no-valid-tile-placements"
-)

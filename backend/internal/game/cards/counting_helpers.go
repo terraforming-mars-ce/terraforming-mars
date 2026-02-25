@@ -85,3 +85,15 @@ func CountAllPlayersTagsByType(players []*player.Player, cardRegistry CardRegist
 	}
 	return count
 }
+
+// CountOtherPlayersTagsByType sums tag counts of a specific type across all players except the given one.
+func CountOtherPlayersTagsByType(players []*player.Player, excludePlayerID string, cardRegistry CardRegistryInterface, tagType shared.CardTag) int {
+	count := 0
+	for _, p := range players {
+		if p.ID() == excludePlayerID {
+			continue
+		}
+		count += CountPlayerTagsByType(p, cardRegistry, tagType)
+	}
+	return count
+}

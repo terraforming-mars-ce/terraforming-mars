@@ -32,6 +32,15 @@ type OceansChangedEvent struct {
 	Timestamp time.Time
 }
 
+// VenusChangedEvent is published when the global venus parameter changes
+type VenusChangedEvent struct {
+	GameID    string
+	OldValue  int
+	NewValue  int
+	ChangedBy string // PlayerID who triggered the change (empty if system-triggered)
+	Timestamp time.Time
+}
+
 // GamePhaseChangedEvent is published when the game phase transitions
 type GamePhaseChangedEvent struct {
 	GameID    string

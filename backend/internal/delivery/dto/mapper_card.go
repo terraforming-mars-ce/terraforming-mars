@@ -155,11 +155,17 @@ func toMinMaxValueDto(v shared.MinMaxValue) MinMaxValueDto {
 }
 
 func toTileRestrictionsDto(tr shared.TileRestrictions) TileRestrictionsDto {
-	return TileRestrictionsDto{
-		BoardTags:  tr.BoardTags,
-		Adjacency:  tr.Adjacency,
-		OnTileType: tr.OnTileType,
+	dto := TileRestrictionsDto{
+		BoardTags:         tr.BoardTags,
+		Adjacency:         tr.Adjacency,
+		OnTileType:        tr.OnTileType,
+		AdjacentToType:    tr.AdjacentToType,
+		MinAdjacentOfType: tr.MinAdjacentOfType,
 	}
+	if tr.AdjacentToOwned {
+		dto.AdjacentToOwned = &tr.AdjacentToOwned
+	}
+	return dto
 }
 
 func toSelectorDto(sel shared.Selector) SelectorDto {
@@ -173,7 +179,7 @@ func toSelectorDto(sel shared.Selector) SelectorDto {
 }
 
 func toResourceConditionDto(rc shared.ResourceCondition) ResourceConditionDto {
-	return ResourceConditionDto{
+	dto := ResourceConditionDto{
 		Type:             ResourceType(rc.ResourceType),
 		Amount:           rc.Amount,
 		Target:           TargetType(rc.Target),
@@ -182,12 +188,45 @@ func toResourceConditionDto(rc shared.ResourceCondition) ResourceConditionDto {
 		Per:              ptrCast(rc.Per, toPerConditionDto),
 		TileRestrictions: ptrCast(rc.TileRestrictions, toTileRestrictionsDto),
 	}
+	if rc.VariableAmount {
+		dto.VariableAmount = &rc.VariableAmount
+	}
+	if rc.Optional {
+		dto.Optional = &rc.Optional
+	}
+	if len(rc.PaymentAllowed) > 0 {
+		dto.PaymentAllowed = mapSlice(rc.PaymentAllowed, func(rt shared.ResourceType) ResourceType { return ResourceType(rt) })
+	}
+	return dto
 }
 
 func toChoiceDto(choice shared.Choice) ChoiceDto {
 	return ChoiceDto{
-		Inputs:  mapSlice(choice.Inputs, toResourceConditionDto),
-		Outputs: mapSlice(choice.Outputs, toResourceConditionDto),
+		Inputs:       mapSlice(choice.Inputs, toResourceConditionDto),
+		Outputs:      mapSlice(choice.Outputs, toResourceConditionDto),
+		Requirements: toChoiceRequirementsDto(choice.Requirements),
+		Available:    true,
+		Errors:       []StateErrorDto{},
+	}
+}
+
+func toChoiceRequirementsDto(reqs *shared.ChoiceRequirements) *CardRequirementsDto {
+	if reqs == nil {
+		return nil
+	}
+	return &CardRequirementsDto{
+		Items: mapSlice(reqs.Items, toChoiceRequirementDto),
+	}
+}
+
+func toChoiceRequirementDto(req shared.ChoiceRequirement) RequirementDto {
+	return RequirementDto{
+		Type:     RequirementType(req.Type),
+		Min:      req.Min,
+		Max:      req.Max,
+		Location: ptrCast(req.Location, func(l string) CardApplyLocation { return CardApplyLocation(l) }),
+		Tag:      ptrCast(req.Tag, func(t shared.CardTag) CardTag { return CardTag(t) }),
+		Resource: ptrCast(req.Resource, func(r shared.ResourceType) ResourceType { return ResourceType(r) }),
 	}
 }
 

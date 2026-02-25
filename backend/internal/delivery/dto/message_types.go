@@ -37,12 +37,14 @@ const (
 
 	MessageTypeActionTileSelected MessageType = "action.tile-selection.tile-selected"
 
-	MessageTypeActionPlayCard               MessageType = "action.card.play-card"
-	MessageTypeActionCardAction             MessageType = "action.card.card-action"
-	MessageTypeActionSelectStartingCard     MessageType = "action.card.select-starting-card"
-	MessageTypeActionSelectCards            MessageType = "action.card.select-cards"
-	MessageTypeActionConfirmProductionCards MessageType = "action.card.confirm-production-cards"
-	MessageTypeActionCardDrawConfirmed      MessageType = "action.card.card-draw-confirmed"
+	MessageTypeActionPlayCard                MessageType = "action.card.play-card"
+	MessageTypeActionCardAction              MessageType = "action.card.card-action"
+	MessageTypeActionSelectStartingCard      MessageType = "action.card.select-starting-card"
+	MessageTypeActionSelectCards             MessageType = "action.card.select-cards"
+	MessageTypeActionConfirmProductionCards  MessageType = "action.card.confirm-production-cards"
+	MessageTypeActionCardDrawConfirmed       MessageType = "action.card.card-draw-confirmed"
+	MessageTypeActionCardDiscardConfirmed    MessageType = "action.card.card-discard-confirmed"
+	MessageTypeActionBehaviorChoiceConfirmed MessageType = "action.card.behavior-choice-confirmed"
 
 	MessageTypeAdminCommand MessageType = "admin-command"
 

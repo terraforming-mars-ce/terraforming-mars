@@ -77,3 +77,39 @@ func (e *Effects) RemoveEffectsByCardID(cardID string) {
 		delete(e.subscriptions, cardID)
 	}
 }
+
+// RemoveTemporaryEffects removes all effects that have outputs with the given temporary type.
+// Returns the card IDs of removed effects (for logging/event publishing).
+func (e *Effects) RemoveTemporaryEffects(temporaryType string) []string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	var removedCardIDs []string
+	filtered := make([]CardEffect, 0, len(e.effects))
+
+	for _, effect := range e.effects {
+		hasTemporary := false
+		for _, output := range effect.Behavior.Outputs {
+			if output.Temporary == temporaryType {
+				hasTemporary = true
+				break
+			}
+		}
+
+		if hasTemporary {
+			removedCardIDs = append(removedCardIDs, effect.CardID)
+			// Also unsubscribe from events
+			if subs, exists := e.subscriptions[effect.CardID]; exists {
+				for _, subID := range subs {
+					e.eventBus.Unsubscribe(subID)
+				}
+				delete(e.subscriptions, effect.CardID)
+			}
+		} else {
+			filtered = append(filtered, effect)
+		}
+	}
+
+	e.effects = filtered
+	return removedCardIDs
+}

@@ -123,10 +123,12 @@ func main() {
 	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
 	selectStartingCardsAction := turnAction.NewSelectStartingCardsAction(gameRepo, cardRegistry, log)
 
-	// Confirmations (3)
+	// Confirmations (4)
 	confirmSellPatentsAction := confirmAction.NewConfirmSellPatentsAction(gameRepo, log)
 	confirmProductionCardsAction := confirmAction.NewConfirmProductionCardsAction(gameRepo, cardRegistry, log)
 	confirmCardDrawAction := confirmAction.NewConfirmCardDrawAction(gameRepo, cardRegistry, log)
+	confirmCardDiscardAction := confirmAction.NewConfirmCardDiscardAction(gameRepo, cardRegistry, log)
+	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, log)
 
 	// Connection management (4)
 	playerReconnectedAction := connAction.NewPlayerReconnectedAction(gameRepo, log)
@@ -159,7 +161,7 @@ func main() {
 	log.Info("   📌 Resource Conversions (2): ConvertHeat, ConvertPlants")
 	log.Info("   📌 Tile Selection (1): SelectTile")
 	log.Info("   📌 Turn Management (3): StartGame, SkipAction, SelectStartingCards")
-	log.Info("   📌 Confirmations (3): ConfirmSellPatents, ConfirmProductionCards, ConfirmCardDraw")
+	log.Info("   📌 Confirmations (5): ConfirmSellPatents, ConfirmProductionCards, ConfirmCardDraw, ConfirmCardDiscard, ConfirmBehaviorChoice")
 	log.Info("   📌 Connection Management (4): PlayerReconnected, PlayerDisconnected, PlayerTakeover, KickPlayer")
 	log.Info("   📌 Milestones & Awards (2): ClaimMilestone, FundAward")
 	log.Info("   📌 Admin Actions (9): SetPhase, SetCurrentTurn, SetResources, SetProduction, SetGlobalParameters, GiveCard, SetCorporation, StartTileSelection, SetTR")
@@ -196,6 +198,8 @@ func main() {
 		confirmSellPatentsAction,
 		confirmProductionCardsAction,
 		confirmCardDrawAction,
+		confirmCardDiscardAction,
+		confirmBehaviorChoiceAction,
 		// Connection
 		playerReconnectedAction,
 		playerDisconnectedAction,
@@ -216,7 +220,7 @@ func main() {
 		adminSetTRAction,
 	)
 
-	log.Info("🎯 Migration handlers registered with WebSocket hub (26 handlers)")
+	log.Info("🎯 Migration handlers registered with WebSocket hub (28 handlers)")
 
 	// ========== Start WebSocket Hub ==========
 	ctx, cancel := context.WithCancel(context.Background())

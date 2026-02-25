@@ -120,6 +120,14 @@ func (a *BuildPowerPlantAction) Execute(
 	calculatedOutputs := []game.CalculatedOutput{
 		{ResourceType: string(shared.ResourceEnergyProduction), Amount: 1, IsScaled: false},
 	}
+
+	g.AddTriggeredEffect(game.TriggeredEffect{
+		CardName:          "Power Plant",
+		PlayerID:          playerID,
+		SourceType:        game.SourceTypeStandardProject,
+		CalculatedOutputs: calculatedOutputs,
+	})
+
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: Power Plant")
 	a.WriteStateLogFull(ctx, g, "Standard Project: Power Plant", game.SourceTypeStandardProject, playerID, "Built power plant", nil, calculatedOutputs, displayData)
 

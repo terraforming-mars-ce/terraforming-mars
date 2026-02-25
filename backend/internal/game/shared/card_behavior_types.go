@@ -41,10 +41,20 @@ type ResourceTriggerCondition struct {
 
 // TileRestrictions represents restrictions for tile placement
 type TileRestrictions struct {
-	BoardTags  []string `json:"boardTags,omitempty" ts:"string[]"`
-	Adjacency  string   `json:"adjacency,omitempty" ts:"string"`  // "none" = no adjacent occupied tiles
-	OnTileType string   `json:"onTileType,omitempty" ts:"string"` // "ocean" = only on ocean spaces
+	BoardTags         []string `json:"boardTags,omitempty" ts:"string[]"`
+	Adjacency         string   `json:"adjacency,omitempty" ts:"string"`                     // "none" = no adjacent occupied tiles
+	OnTileType        string   `json:"onTileType,omitempty" ts:"string"`                    // "ocean" = only on ocean spaces
+	AdjacentToType    string   `json:"adjacentToType,omitempty" ts:"string"`                // "city", "greenery" = must be adjacent to this tile type
+	MinAdjacentOfType *int     `json:"minAdjacentOfType,omitempty" ts:"number | undefined"` // min count of adjacent tiles of AdjacentToType
+	AdjacentToOwned   bool     `json:"adjacentToOwned,omitempty" ts:"boolean | undefined"`  // must be adjacent to a tile owned by the placing player
+	OnBonusType       []string `json:"onBonusType,omitempty" ts:"string[]"`                 // tile must have one of these bonus types (e.g., "steel", "titanium")
 }
+
+// Temporary effect expiry constants
+const (
+	TemporaryNextCard      = "next-card"      // Effect expires after the next card is played
+	TemporaryGenerationEnd = "generation-end" // Effect expires at end of generation
+)
 
 // ResourceCondition represents a resource amount (input or output)
 type ResourceCondition struct {
@@ -55,6 +65,11 @@ type ResourceCondition struct {
 	MaxTrigger       *int              `json:"maxTrigger,omitempty"`
 	Per              *PerCondition     `json:"per,omitempty"`
 	TileRestrictions *TileRestrictions `json:"tileRestrictions,omitempty" ts:"TileRestrictions | undefined"`
+	TileType         string            `json:"tileType,omitempty" ts:"string | undefined"` // For tile-placement: specifies the tile type to place
+	VariableAmount   bool              `json:"variableAmount,omitempty" ts:"boolean | undefined"`
+	Temporary        string            `json:"temporary,omitempty" ts:"string | undefined"`              // "next-card" or "generation-end"
+	Optional         bool              `json:"optional,omitempty" ts:"boolean | undefined"`              // Player can skip this input
+	PaymentAllowed   []ResourceType    `json:"paymentAllowed,omitempty" ts:"ResourceType[] | undefined"` // Alternative resources accepted as payment (e.g., ["titanium"] for "titanium may be used")
 }
 
 // PerCondition represents what to count for conditional resource gains
@@ -66,8 +81,25 @@ type PerCondition struct {
 	Tag          *CardTag     `json:"tag,omitempty"`
 }
 
+// ChoiceRequirement represents a requirement that gates whether a choice is available to a player.
+// Uses raw string types to avoid circular dependency with cards/ package.
+type ChoiceRequirement struct {
+	Type     string        `json:"type"`                                             // Same values as cards.RequirementType (e.g. "tags", "temperature")
+	Min      *int          `json:"min,omitempty"`                                    // Minimum value
+	Max      *int          `json:"max,omitempty"`                                    // Maximum value
+	Location *string       `json:"location,omitempty"`                               // Location constraint (e.g. "mars", "anywhere")
+	Tag      *CardTag      `json:"tag,omitempty"`                                    // Tag to count (for type "tags")
+	Resource *ResourceType `json:"resource,omitempty" ts:"ResourceType | undefined"` // Resource type (for type "production" or "resource")
+}
+
+// ChoiceRequirements wraps a list of requirements for a choice option
+type ChoiceRequirements struct {
+	Items []ChoiceRequirement `json:"items"`
+}
+
 // Choice represents a player choice option
 type Choice struct {
-	Inputs  []ResourceCondition `json:"inputs,omitempty"`
-	Outputs []ResourceCondition `json:"outputs,omitempty"`
+	Inputs       []ResourceCondition `json:"inputs,omitempty"`
+	Outputs      []ResourceCondition `json:"outputs,omitempty"`
+	Requirements *ChoiceRequirements `json:"requirements,omitempty"` // If set, choice is only available when requirements are met
 }

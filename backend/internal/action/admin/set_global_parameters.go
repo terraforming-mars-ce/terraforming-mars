@@ -13,6 +13,7 @@ type SetGlobalParametersRequest struct {
 	Temperature int
 	Oxygen      int
 	Oceans      int
+	Venus       int
 }
 
 // SetGlobalParametersAction handles the admin action to set global parameters
@@ -40,6 +41,7 @@ func (a *SetGlobalParametersAction) Execute(ctx context.Context, gameID string, 
 		zap.Int("temperature", params.Temperature),
 		zap.Int("oxygen", params.Oxygen),
 		zap.Int("oceans", params.Oceans),
+		zap.Int("venus", params.Venus),
 	)
 	log.Info("🌍 Admin: Setting global parameters")
 
@@ -70,6 +72,14 @@ func (a *SetGlobalParametersAction) Execute(ctx context.Context, gameID string, 
 		if err != nil {
 			log.Error("Failed to update oceans", zap.Error(err))
 			return fmt.Errorf("failed to update oceans: %w", err)
+		}
+	}
+
+	if params.Venus != 0 {
+		err := game.GlobalParameters().SetVenus(ctx, params.Venus)
+		if err != nil {
+			log.Error("Failed to update venus", zap.Error(err))
+			return fmt.Errorf("failed to update venus: %w", err)
 		}
 	}
 

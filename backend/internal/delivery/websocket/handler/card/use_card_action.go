@@ -6,6 +6,7 @@ import (
 	cardaction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/logger"
 
 	"go.uber.org/zap"
@@ -70,9 +71,13 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 		choiceIndex = &idx
 	}
 
-	var cardStorageTarget *string
-	if target, ok := payload["cardStorageTarget"].(string); ok && target != "" {
-		cardStorageTarget = &target
+	var cardStorageTargets []string
+	if targetsRaw, ok := payload["cardStorageTargets"].([]interface{}); ok {
+		for _, t := range targetsRaw {
+			if s, ok := t.(string); ok {
+				cardStorageTargets = append(cardStorageTargets, s)
+			}
+		}
 	}
 
 	var targetPlayerID *string
@@ -85,6 +90,27 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 		stealSourceCardID = &scfi
 	}
 
+	var selectedAmount *int
+	if saFloat, ok := payload["selectedAmount"].(float64); ok {
+		sa := int(saFloat)
+		selectedAmount = &sa
+	}
+
+	var actionPayment *gamecards.CardPayment
+	if paymentMap, ok := payload["payment"].(map[string]interface{}); ok {
+		payment := &gamecards.CardPayment{}
+		if credits, ok := paymentMap["credits"].(float64); ok {
+			payment.Credits = int(credits)
+		}
+		if steel, ok := paymentMap["steel"].(float64); ok {
+			payment.Steel = int(steel)
+		}
+		if titanium, ok := paymentMap["titanium"].(float64); ok {
+			payment.Titanium = int(titanium)
+		}
+		actionPayment = payment
+	}
+
 	log = log.With(
 		zap.String("card_id", cardID),
 		zap.Int("behavior_index", behaviorIndex),
@@ -92,8 +118,8 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 	if choiceIndex != nil {
 		log = log.With(zap.Int("choice_index", *choiceIndex))
 	}
-	if cardStorageTarget != nil {
-		log = log.With(zap.String("card_storage_target", *cardStorageTarget))
+	if len(cardStorageTargets) > 0 {
+		log = log.With(zap.Strings("card_storage_targets", cardStorageTargets))
 	}
 	if targetPlayerID != nil {
 		log = log.With(zap.String("target_player_id", *targetPlayerID))
@@ -102,7 +128,7 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 		log = log.With(zap.String("source_card_for_input", *stealSourceCardID))
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, behaviorIndex, choiceIndex, cardStorageTarget, targetPlayerID, stealSourceCardID)
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, behaviorIndex, choiceIndex, cardStorageTargets, targetPlayerID, stealSourceCardID, selectedAmount, actionPayment)
 	if err != nil {
 		log.Error("Failed to execute use card action", zap.Error(err))
 		h.sendError(connection, err.Error())

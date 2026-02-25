@@ -191,6 +191,28 @@ func (c *RequirementModifierCalculator) CalculateCardDiscounts(p *player.Player,
 	return totalDiscount
 }
 
+// CalculateGlobalParameterLenience computes the total lenience for global parameter requirements.
+// Lenience widens the min/max window: min is lowered, max is raised.
+// Returns the total lenience amount from all player effects.
+func (c *RequirementModifierCalculator) CalculateGlobalParameterLenience(p *player.Player) int {
+	if p == nil {
+		return 0
+	}
+
+	totalLenience := 0
+	effects := p.Effects().List()
+
+	for _, effect := range effects {
+		for _, output := range effect.Behavior.Outputs {
+			if output.ResourceType == shared.ResourceGlobalParameterLenience {
+				totalLenience += output.Amount
+			}
+		}
+	}
+
+	return totalLenience
+}
+
 // CalculateStandardProjectDiscounts computes discounts for a specific standard project.
 // Returns a map of resource type to discount amount.
 // For example, Ecoline's discount on PlantGreenery returns {"plants": 1}.

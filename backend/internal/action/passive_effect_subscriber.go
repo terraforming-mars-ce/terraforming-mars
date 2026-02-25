@@ -119,7 +119,8 @@ func subscribePlacementBonusEffect(
 
 		applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
 			WithSourceCardID(effect.CardID).
-			WithCardRegistry(cr)
+			WithCardRegistry(cr).
+			WithSourceType(game.SourceTypePassiveEffect)
 		if err := applier.ApplyOutputs(context.Background(), effect.Behavior.Outputs); err != nil {
 			log.Error("Failed to apply passive effect outputs",
 				zap.String("card_name", effect.CardName),
@@ -186,7 +187,8 @@ func subscribeCityPlacedEffect(
 
 		applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
 			WithSourceCardID(effect.CardID).
-			WithCardRegistry(cr)
+			WithCardRegistry(cr).
+			WithSourceType(game.SourceTypePassiveEffect)
 		if err := applier.ApplyOutputs(context.Background(), effect.Behavior.Outputs); err != nil {
 			log.Error("Failed to apply passive effect outputs",
 				zap.String("card_name", effect.CardName),
@@ -248,9 +250,22 @@ func subscribeTagPlayedEffect(
 			zap.String("tag_played_by", event.PlayerID),
 			zap.String("tag", event.Tag))
 
+		// Check if this effect requires card-discard input (e.g., Mars University)
+		if gamecards.HasCardDiscardInput(effect.Behavior) {
+			createPassiveCardDiscard(p, effect, log)
+			return
+		}
+
+		// Check if this effect has choices requiring player selection (e.g., Olympus Conference, Viral Enhancers)
+		if gamecards.HasChoices(effect.Behavior) {
+			createPassiveBehaviorChoice(p, effect, log)
+			return
+		}
+
 		applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
 			WithSourceCardID(effect.CardID).
-			WithCardRegistry(cr)
+			WithCardRegistry(cr).
+			WithSourceType(game.SourceTypePassiveEffect)
 		if err := applier.ApplyOutputs(context.Background(), effect.Behavior.Outputs); err != nil {
 			log.Error("Failed to apply passive effect outputs",
 				zap.String("card_name", effect.CardName),
@@ -309,9 +324,15 @@ func subscribeCardPlayedEffect(
 			zap.String("card_played_by", event.PlayerID),
 			zap.String("card_played", event.CardName))
 
+		if gamecards.HasChoices(effect.Behavior) {
+			createPassiveBehaviorChoice(p, effect, log)
+			return
+		}
+
 		applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
 			WithSourceCardID(effect.CardID).
-			WithCardRegistry(cr)
+			WithCardRegistry(cr).
+			WithSourceType(game.SourceTypePassiveEffect)
 		if err := applier.ApplyOutputs(context.Background(), effect.Behavior.Outputs); err != nil {
 			log.Error("Failed to apply passive effect outputs",
 				zap.String("card_name", effect.CardName),
@@ -383,7 +404,8 @@ func subscribeStandardProjectPlayedEffect(
 
 		applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
 			WithSourceCardID(effect.CardID).
-			WithCardRegistry(cr)
+			WithCardRegistry(cr).
+			WithSourceType(game.SourceTypePassiveEffect)
 		if err := applier.ApplyOutputs(context.Background(), effect.Behavior.Outputs); err != nil {
 			log.Error("Failed to apply passive effect outputs",
 				zap.String("card_name", effect.CardName),
@@ -395,4 +417,55 @@ func subscribeStandardProjectPlayedEffect(
 		zap.String("card_name", effect.CardName))
 
 	return subID
+}
+
+// createPassiveCardDiscard creates a pending card discard selection from a passive effect
+// Used for effects like Mars University that require player to optionally discard before gaining outputs
+func createPassiveCardDiscard(p *player.Player, effect player.CardEffect, log *zap.Logger) {
+	// Find card-discard inputs to determine min/max
+	minCards := 0
+	maxCards := 0
+	for _, input := range effect.Behavior.Inputs {
+		if input.ResourceType == shared.ResourceCardDiscard {
+			if !input.Optional {
+				minCards = input.Amount
+			}
+			maxCards = input.Amount
+			break
+		}
+	}
+
+	// Skip if player has no cards to discard
+	if len(p.Hand().Cards()) == 0 {
+		log.Info("🗑️ Skipping card discard - player has no cards in hand",
+			zap.String("card_name", effect.CardName))
+		return
+	}
+
+	p.Selection().SetPendingCardDiscardSelection(&player.PendingCardDiscardSelection{
+		MinCards:       minCards,
+		MaxCards:       maxCards,
+		Source:         effect.CardName,
+		SourceCardID:   effect.CardID,
+		PendingOutputs: effect.Behavior.Outputs,
+	})
+
+	log.Info("🗑️ Created pending card discard selection from passive effect",
+		zap.String("card_name", effect.CardName),
+		zap.Int("min_cards", minCards),
+		zap.Int("max_cards", maxCards))
+}
+
+// createPassiveBehaviorChoice creates a pending behavior choice selection from a passive effect
+// Used for effects like Viral Enhancers and Olympus Conference that require player to choose between options
+func createPassiveBehaviorChoice(p *player.Player, effect player.CardEffect, log *zap.Logger) {
+	p.Selection().SetPendingBehaviorChoiceSelection(&player.PendingBehaviorChoiceSelection{
+		Choices:      effect.Behavior.Choices,
+		Source:       effect.CardName,
+		SourceCardID: effect.CardID,
+	})
+
+	log.Info("🔀 Created pending behavior choice selection from passive effect",
+		zap.String("card_name", effect.CardName),
+		zap.Int("num_choices", len(effect.Behavior.Choices)))
 }

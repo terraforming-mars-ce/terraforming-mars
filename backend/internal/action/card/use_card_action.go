@@ -40,9 +40,11 @@ func (a *UseCardActionAction) Execute(
 	cardID string,
 	behaviorIndex int,
 	choiceIndex *int,
-	cardStorageTarget *string,
+	cardStorageTargets []string,
 	targetPlayerID *string,
 	stealSourceCardID *string,
+	selectedAmount *int,
+	actionPayment *gamecards.CardPayment,
 ) error {
 	log := a.InitLogger(gameID, playerID).With(
 		zap.String("card_id", cardID),
@@ -52,8 +54,8 @@ func (a *UseCardActionAction) Execute(
 	if choiceIndex != nil {
 		log = log.With(zap.Int("choice_index", *choiceIndex))
 	}
-	if cardStorageTarget != nil {
-		log = log.With(zap.String("card_storage_target", *cardStorageTarget))
+	if len(cardStorageTargets) > 0 {
+		log = log.With(zap.Strings("card_storage_targets", cardStorageTargets))
 	}
 	if targetPlayerID != nil {
 		log = log.With(zap.String("target_player_id", *targetPlayerID))
@@ -103,15 +105,22 @@ func (a *UseCardActionAction) Execute(
 	applier := gamecards.NewBehaviorApplier(p, g, cardAction.CardName, log).
 		WithSourceCardID(cardID).
 		WithSourceBehaviorIndex(behaviorIndex).
-		WithCardRegistry(a.CardRegistry())
-	if cardStorageTarget != nil {
-		applier = applier.WithTargetCardID(*cardStorageTarget)
+		WithCardRegistry(a.CardRegistry()).
+		WithSourceType(game.SourceTypeCardAction)
+	if len(cardStorageTargets) > 0 {
+		applier = applier.WithTargetCardIDs(cardStorageTargets)
 	}
 	if targetPlayerID != nil {
 		applier = applier.WithTargetPlayerID(*targetPlayerID)
 	}
 	if stealSourceCardID != nil {
 		applier = applier.WithStealSourceCardID(*stealSourceCardID)
+	}
+	if selectedAmount != nil {
+		applier = applier.WithSelectedAmount(*selectedAmount)
+	}
+	if actionPayment != nil {
+		applier = applier.WithActionPayment(actionPayment)
 	}
 
 	inputs, outputs := cardAction.Behavior.ExtractInputsOutputs(choiceIndex)
@@ -121,6 +130,11 @@ func (a *UseCardActionAction) Execute(
 			zap.Int("choice_index", *choiceIndex),
 			zap.Int("input_count", len(inputs)),
 			zap.Int("output_count", len(outputs)))
+	}
+
+	if hasVariableAmount(inputs, outputs) && selectedAmount == nil {
+		log.Warn("Variable-amount action requires selectedAmount")
+		return fmt.Errorf("must select an amount for this action")
 	}
 
 	if err := applier.ApplyInputs(ctx, inputs); err != nil {
@@ -211,6 +225,20 @@ func (a *UseCardActionAction) incrementUsageCounts(
 func (a *UseCardActionAction) hasManualTrigger(behavior shared.CardBehavior) bool {
 	for _, trigger := range behavior.Triggers {
 		if trigger.Type == shared.TriggerTypeManual {
+			return true
+		}
+	}
+	return false
+}
+
+func hasVariableAmount(inputs, outputs []shared.ResourceCondition) bool {
+	for _, input := range inputs {
+		if input.VariableAmount {
+			return true
+		}
+	}
+	for _, output := range outputs {
+		if output.VariableAmount {
 			return true
 		}
 	}
