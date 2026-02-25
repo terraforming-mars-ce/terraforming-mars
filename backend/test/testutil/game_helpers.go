@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -51,6 +52,39 @@ func StartTestGame(t *testing.T, g *game.Game) {
 			t.Fatalf("Failed to set current turn: %v", err)
 		}
 	}
+}
+
+// SetupTwoPlayerGame creates a started 2-player game with card registry.
+func SetupTwoPlayerGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string, string) {
+	t.Helper()
+
+	broadcaster := NewMockBroadcaster()
+	testGame, repo := CreateTestGameWithPlayers(t, 2, broadcaster)
+	cardRegistry := CreateTestCardRegistry()
+	StartTestGame(t, testGame)
+
+	turnOrder := testGame.TurnOrder()
+
+	return testGame, repo, cardRegistry, turnOrder[0], turnOrder[1]
+}
+
+// SetupSoloGame creates a started 1-player game with unlimited actions.
+func SetupSoloGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string) {
+	t.Helper()
+
+	broadcaster := NewMockBroadcaster()
+	testGame, repo := CreateTestGameWithPlayers(t, 1, broadcaster)
+	cardRegistry := CreateTestCardRegistry()
+	StartTestGame(t, testGame)
+
+	turnOrder := testGame.TurnOrder()
+	playerID := turnOrder[0]
+	err := testGame.SetCurrentTurn(context.Background(), playerID, -1)
+	if err != nil {
+		t.Fatalf("Failed to set solo unlimited actions: %v", err)
+	}
+
+	return testGame, repo, cardRegistry, playerID
 }
 
 // SetPlayerHeat sets a player's heat resource

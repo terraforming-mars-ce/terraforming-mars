@@ -1,4 +1,4 @@
-package action_test
+package payment_test
 
 import (
 	"context"
@@ -188,7 +188,7 @@ func TestValueModifier_PaymentTotalValue(t *testing.T) {
 
 	// Calculate total value with player's substitutes
 	substitutes := player.Resources().PaymentSubstitutes()
-	totalValue := payment.TotalValue(substitutes)
+	totalValue := payment.TotalValue(substitutes, nil)
 
 	// 3 titanium * 4 MC each = 12 MC
 	testutil.AssertEqual(t, 12, totalValue, "3 titanium at value 4 should equal 12 MC")
@@ -215,7 +215,7 @@ func TestValueModifier_PaymentWithModifiedSteel(t *testing.T) {
 
 	// Calculate total value
 	substitutes := player.Resources().PaymentSubstitutes()
-	totalValue := payment.TotalValue(substitutes)
+	totalValue := payment.TotalValue(substitutes, nil)
 
 	// 3 steel * 3 MC each = 9 MC
 	testutil.AssertEqual(t, 9, totalValue, "3 steel at value 3 should equal 9 MC")
@@ -242,11 +242,11 @@ func TestValueModifier_PaymentCoversCardCost(t *testing.T) {
 	substitutes := player.Resources().PaymentSubstitutes()
 
 	// Test: Can cover 12 MC cost with titanium (3 * 4 = 12)
-	err := payment.CoversCardCost(12, false, true, substitutes)
+	err := payment.CoversCardCost(12, false, true, substitutes, nil)
 	testutil.AssertNoError(t, err, "Payment of 3 titanium at value 4 should cover 12 MC cost")
 
 	// Test: Cannot cover 13 MC cost with same payment
-	err = payment.CoversCardCost(13, false, true, substitutes)
+	err = payment.CoversCardCost(13, false, true, substitutes, nil)
 	testutil.AssertError(t, err, "Payment of 3 titanium at value 4 should NOT cover 13 MC cost")
 }
 
@@ -270,7 +270,7 @@ func TestValueModifier_PaymentInsufficientWithModifier(t *testing.T) {
 	substitutes := player.Resources().PaymentSubstitutes()
 
 	// 2 steel * 3 = 6 MC, cannot cover 8 MC
-	err := payment.CoversCardCost(8, true, false, substitutes)
+	err := payment.CoversCardCost(8, true, false, substitutes, nil)
 	testutil.AssertError(t, err, "Payment of 2 steel at value 3 (6 MC) should NOT cover 8 MC cost")
 }
 
@@ -294,11 +294,11 @@ func TestValueModifier_SteelRestrictedToBuildingTags(t *testing.T) {
 	substitutes := player.Resources().PaymentSubstitutes()
 
 	// Steel not allowed (no building tag) - should fail regardless of modifier
-	err := payment.CoversCardCost(9, false, false, substitutes)
+	err := payment.CoversCardCost(9, false, false, substitutes, nil)
 	testutil.AssertError(t, err, "Steel should not be allowed for non-building cards even with value modifier")
 
 	// Steel allowed (building tag) - should pass
-	err = payment.CoversCardCost(9, true, false, substitutes)
+	err = payment.CoversCardCost(9, true, false, substitutes, nil)
 	testutil.AssertNoError(t, err, "Steel should be allowed for building cards with value modifier")
 }
 
@@ -322,11 +322,11 @@ func TestValueModifier_TitaniumRestrictedToSpaceTags(t *testing.T) {
 	substitutes := player.Resources().PaymentSubstitutes()
 
 	// Titanium not allowed (no space tag) - should fail regardless of modifier
-	err := payment.CoversCardCost(12, false, false, substitutes)
+	err := payment.CoversCardCost(12, false, false, substitutes, nil)
 	testutil.AssertError(t, err, "Titanium should not be allowed for non-space cards even with value modifier")
 
 	// Titanium allowed (space tag) - should pass
-	err = payment.CoversCardCost(12, false, true, substitutes)
+	err = payment.CoversCardCost(12, false, true, substitutes, nil)
 	testutil.AssertNoError(t, err, "Titanium should be allowed for space cards with value modifier")
 }
 
@@ -364,7 +364,7 @@ func TestValueModifier_PlayCardWithModifiedTitanium(t *testing.T) {
 		Titanium: 4, // 4 titanium at 4 MC each = 16 MC
 	}
 
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-asteroid", payment, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-asteroid", payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should be able to play 14-cost card with 4 titanium at value 4")
 
 	// Verify titanium was deducted
@@ -409,7 +409,7 @@ func TestValueModifier_MixedPaymentWithModifier(t *testing.T) {
 		Titanium: 2, // 2 titanium at 4 MC each = 8 MC
 	}
 
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-asteroid", payment, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-asteroid", payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should be able to play 14-cost card with 2 titanium (8) + 6 credits")
 
 	// Verify resources were deducted
@@ -451,7 +451,7 @@ func TestValueModifier_InsufficientPaymentRejected(t *testing.T) {
 		Titanium: 3, // 3 titanium at 4 MC each = 12 MC (not enough for 14)
 	}
 
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-asteroid", payment, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-asteroid", payment, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Should reject payment of 12 MC for 14 cost card")
 
 	// Verify titanium was NOT deducted (action failed)
@@ -476,7 +476,7 @@ func TestValueModifier_NoModifierUsesBaseValue(t *testing.T) {
 
 	// Calculate total value with base values
 	substitutes := player.Resources().PaymentSubstitutes()
-	totalValue := payment.TotalValue(substitutes)
+	totalValue := payment.TotalValue(substitutes, nil)
 
 	// 3 titanium * 3 MC each (base) = 9 MC
 	testutil.AssertEqual(t, 9, totalValue, "3 titanium at base value 3 should equal 9 MC")

@@ -1,7 +1,8 @@
-package action_test
+package card_effects_test
 
 import (
 	"context"
+	"terraforming-mars-backend/test/testutil"
 	"testing"
 	"time"
 
@@ -45,7 +46,7 @@ func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
 		Type: gamecards.CardTypeAutomated,
 		Cost: 10,
 		Requirements: &gamecards.CardRequirements{Items: []gamecards.Requirement{
-			{Type: gamecards.RequirementTemperature, Min: intPtr(-10)},
+			{Type: gamecards.RequirementTemperature, Min: testutil.IntPtr(-10)},
 		}},
 	}
 
@@ -383,7 +384,7 @@ func TestPlayerCard_MultipleCardsIndependentState(t *testing.T) {
 		Type: gamecards.CardTypeAutomated,
 		Cost: 10,
 		Requirements: &gamecards.CardRequirements{Items: []gamecards.Requirement{
-			{Type: gamecards.RequirementTemperature, Min: intPtr(-10)},
+			{Type: gamecards.RequirementTemperature, Min: testutil.IntPtr(-10)},
 		}},
 	}
 
@@ -393,7 +394,7 @@ func TestPlayerCard_MultipleCardsIndependentState(t *testing.T) {
 		Type: gamecards.CardTypeAutomated,
 		Cost: 10,
 		Requirements: &gamecards.CardRequirements{Items: []gamecards.Requirement{
-			{Type: gamecards.RequirementTemperature, Min: intPtr(10)},
+			{Type: gamecards.RequirementTemperature, Min: testutil.IntPtr(10)},
 		}},
 	}
 

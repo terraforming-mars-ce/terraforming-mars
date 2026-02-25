@@ -732,8 +732,109 @@ func CreateTestCardRegistry() cards.CardRegistry {
 			},
 		},
 	}
+	testCards = append(testCards, gamecards.Card{
+		ID:          "card-insulation",
+		Name:        "Insulation",
+		Type:        gamecards.CardTypeAutomated,
+		Pack:        "base",
+		Cost:        2,
+		Description: "Decrease your heat production any number of steps and increase your M€ production the same number of steps.",
+		Behaviors: []shared.CardBehavior{
+			{
+				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
+				Outputs: []shared.ResourceCondition{
+					{ResourceType: shared.ResourceHeatProduction, Amount: -1, Target: "self-player", VariableAmount: true},
+					{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player", VariableAmount: true},
+				},
+			},
+		},
+	})
+
+	// Indentured Workers: next card costs 8 M€ less (temporary discount)
+	testCards = append(testCards, gamecards.Card{
+		ID:          "card-indentured-workers",
+		Name:        "Indentured Workers",
+		Type:        gamecards.CardTypeEvent,
+		Pack:        "corporate-era",
+		Cost:        0,
+		Description: "The next card you play this generation costs 8 M€ less.",
+		Behaviors: []shared.CardBehavior{
+			{
+				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
+				Outputs: []shared.ResourceCondition{
+					{ResourceType: shared.ResourceDiscount, Amount: 8, Target: "self-player", Temporary: shared.TemporaryNextCard},
+				},
+			},
+		},
+	})
+
+	// Special Design: next card has +/- 2 global parameter lenience (temporary)
+	testCards = append(testCards, gamecards.Card{
+		ID:          "card-special-design",
+		Name:        "Special Design",
+		Type:        gamecards.CardTypeEvent,
+		Pack:        "base",
+		Cost:        4,
+		Tags:        []shared.CardTag{shared.TagScience},
+		Description: "The next card you play this generation is +2 or -2 in global requirements, your choice.",
+		Behaviors: []shared.CardBehavior{
+			{
+				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
+				Outputs: []shared.ResourceCondition{
+					{ResourceType: shared.ResourceGlobalParameterLenience, Amount: 2, Target: "self-player", Temporary: shared.TemporaryNextCard},
+				},
+			},
+		},
+	})
+
+	// Test card with temperature requirement for testing lenience
+	minTemp := -24
+	testCards = append(testCards, gamecards.Card{
+		ID:          "card-temp-req-test",
+		Name:        "Temperature Requirement Test",
+		Type:        gamecards.CardTypeAutomated,
+		Pack:        "base",
+		Cost:        5,
+		Description: "Requires temperature >= -24°C.",
+		Requirements: &gamecards.CardRequirements{Items: []gamecards.Requirement{
+			{Type: gamecards.RequirementTemperature, Min: &minTemp},
+		}},
+	})
+
+	// Test card with max oxygen requirement for testing lenience
+	maxOxygen := 5
+	testCards = append(testCards, gamecards.Card{
+		ID:          "card-oxygen-max-req-test",
+		Name:        "Max Oxygen Requirement Test",
+		Type:        gamecards.CardTypeAutomated,
+		Pack:        "base",
+		Cost:        5,
+		Description: "Requires oxygen <= 5%.",
+		Requirements: &gamecards.CardRequirements{Items: []gamecards.Requirement{
+			{Type: gamecards.RequirementOxygen, Max: &maxOxygen},
+		}},
+	})
+
+	// Venus-tagged card for testing storage payment substitutes (Dirigibles)
+	testCards = append(testCards, gamecards.Card{
+		ID:          "card-venus-test",
+		Name:        "Venus Test Card",
+		Type:        gamecards.CardTypeAutomated,
+		Pack:        "base",
+		Cost:        7,
+		Tags:        []shared.CardTag{shared.TagVenus},
+		Description: "A Venus-tagged card for testing.",
+	})
 
 	return cards.NewInMemoryCardRegistry(testCards)
+}
+
+// CreateTestCardRegistryWithAdditionalCards creates a card registry with standard test cards plus additional cards
+func CreateTestCardRegistryWithAdditionalCards(additionalCards []gamecards.Card) cards.CardRegistry {
+	baseRegistry := CreateTestCardRegistry()
+	allCards := baseRegistry.GetAll()
+	allCards = append(allCards, additionalCards...)
+	return cards.NewInMemoryCardRegistry(allCards)
 }
 
 // CreateTestGameWithPlayers creates a game with specified number of players
@@ -851,6 +952,18 @@ func AssertFalse(t *testing.T, condition bool, message string) {
 		t.Fatalf("%s: expected false, got true", message)
 	}
 }
+
+// IntPtr returns a pointer to the given int value.
+func IntPtr(v int) *int { return &v }
+
+// StrPtr returns a pointer to the given string value.
+func StrPtr(v string) *string { return &v }
+
+// TagPtr returns a pointer to the given CardTag value.
+func TagPtr(v shared.CardTag) *shared.CardTag { return &v }
+
+// ResourceTypePtr returns a pointer to the given ResourceType value.
+func ResourceTypePtr(v shared.ResourceType) *shared.ResourceType { return &v }
 
 func ptrTargetType(t gamecards.TargetType) *gamecards.TargetType {
 	return &t

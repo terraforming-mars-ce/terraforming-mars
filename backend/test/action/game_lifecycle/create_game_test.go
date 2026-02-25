@@ -1,4 +1,4 @@
-package action_test
+package game_lifecycle_test
 
 import (
 	"context"
