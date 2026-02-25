@@ -371,7 +371,7 @@
         "outputs": [
           {
             "type": "plant",
-            "amount": 3,
+            "amount": -3,
             "target": "any-player"
           },
           {
@@ -419,7 +419,7 @@
           },
           {
             "type": "plant",
-            "amount": 3,
+            "amount": -3,
             "target": "any-player"
           }
         ],
@@ -487,7 +487,10 @@
           {
             "type": "credit",
             "amount": 12,
-            "target": "self-player"
+            "target": "self-player",
+            "paymentAllowed": [
+              "titanium"
+            ]
           }
         ],
         "outputs": [
@@ -917,6 +920,16 @@
             "type": "titanium-production",
             "amount": 1,
             "target": "self-player"
+          },
+          {
+            "type": "city-placement",
+            "amount": 1,
+            "target": "none",
+            "tileRestrictions": {
+              "boardTags": [
+                "phobos-space-haven"
+              ]
+            }
           }
         ],
         "description": "Increase your titanium production 1 step and place a city tile **on the reserved area**."
@@ -1214,6 +1227,11 @@
     "tags": [
       "space"
     ],
+    "resourceStorage": {
+      "type": "fighter",
+      "starting": 0,
+      "description": "This card stores fighters."
+    },
     "behaviors": [
       {
         "triggers": [
@@ -1230,7 +1248,7 @@
         ],
         "outputs": [
           {
-            "type": "credit",
+            "type": "fighter",
             "amount": 1,
             "target": "self-card"
           }
@@ -1244,7 +1262,7 @@
         "condition": "per",
         "maxTrigger": -1,
         "per": {
-          "type": "asteroid",
+          "type": "fighter",
           "amount": 1,
           "location": "anywhere",
           "target": "self-card"
@@ -1737,7 +1755,7 @@
         "outputs": [
           {
             "type": "plant",
-            "amount": 8,
+            "amount": -8,
             "target": "any-player"
           },
           {
@@ -1933,6 +1951,15 @@
             "type": "credit-production",
             "amount": 1,
             "target": "self-player"
+          },
+          {
+            "type": "tile-placement",
+            "amount": 1,
+            "target": "none",
+            "tileType": "natural-preserve",
+            "tileRestrictions": {
+              "adjacency": "none"
+            }
           }
         ],
         "description": "Place this tile **next to no other tile**. Increase your M€ production 1 step."
@@ -2762,7 +2789,7 @@
         "outputs": [
           {
             "type": "plant",
-            "amount": 2,
+            "amount": -2,
             "target": "any-player"
           },
           {
@@ -2817,7 +2844,22 @@
             ]
           }
         ],
-        "description": "Place this tile on an area with a steel or titanium placement bonus, adjacent to another of your tiles. Increase your production of that resource 1 step."
+        "description": "Place this tile on an area with a steel or titanium placement bonus, adjacent to another of your tiles. Increase your production of that resource 1 step.",
+        "outputs": [
+          {
+            "type": "tile-placement",
+            "amount": 1,
+            "target": "none",
+            "tileType": "mining",
+            "tileRestrictions": {
+              "onBonusType": [
+                "steel",
+                "titanium"
+              ],
+              "adjacentToOwned": true
+            }
+          }
+        ]
       }
     ]
   },
@@ -2916,7 +2958,21 @@
             ]
           }
         ],
-        "description": "Place this tile on an area with a steel or titanium placement bonus. Increase that production 1 step."
+        "description": "Place this tile on an area with a steel or titanium placement bonus. Increase that production 1 step.",
+        "outputs": [
+          {
+            "type": "tile-placement",
+            "amount": 1,
+            "target": "none",
+            "tileType": "mining",
+            "tileRestrictions": {
+              "onBonusType": [
+                "steel",
+                "titanium"
+              ]
+            }
+          }
+        ]
       }
     ]
   },
@@ -3195,7 +3251,25 @@
       {
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "tag-played",
+              "selectors": [
+                {
+                  "tags": [
+                    "science"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "inputs": [
+          {
+            "type": "card-discard",
+            "amount": 1,
+            "target": "self-player",
+            "optional": true
           }
         ],
         "outputs": [
@@ -3233,7 +3307,7 @@
           {
             "type": "auto",
             "condition": {
-              "type": "card-played",
+              "type": "tag-played",
               "selectors": [
                 {
                   "tags": [
@@ -3506,7 +3580,7 @@
           },
           {
             "type": "plant",
-            "amount": 6,
+            "amount": -6,
             "target": "any-player"
           }
         ],
@@ -4091,11 +4165,11 @@
         "maxTrigger": -1,
         "per": {
           "type": "science",
-          "amount": 2,
+          "amount": 1,
           "location": "anywhere",
           "target": "self-card"
         },
-        "description": "2 VP per 2 science resources on this card"
+        "description": "2 VP for each science resource on this card"
       }
     ]
   },
@@ -4155,6 +4229,12 @@
             "type": "temperature",
             "amount": 2,
             "target": "none"
+          },
+          {
+            "type": "tile-placement",
+            "amount": 1,
+            "target": "none",
+            "tileType": "nuclear-zone"
           }
         ],
         "description": "Place this tile and raise temperature 2 steps."
@@ -4227,7 +4307,7 @@
               "type": "tag",
               "amount": 1,
               "location": "anywhere",
-              "target": "self-player",
+              "target": "other-players",
               "tag": "space"
             }
           }
@@ -4597,7 +4677,18 @@
       {
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "card-played",
+              "target": "self-player",
+              "selectors": [
+                {
+                  "cardTypes": [
+                    "event"
+                  ]
+                }
+              ]
+            }
           }
         ],
         "outputs": [
@@ -5007,7 +5098,11 @@
           {
             "type": "city-placement",
             "amount": 1,
-            "target": "none"
+            "target": "none",
+            "tileRestrictions": {
+              "adjacentToType": "city",
+              "minAdjacentOfType": 2
+            }
           }
         ],
         "description": "Decrease your energy production 1 step and increase your M€ production 2 steps. Place a city tile **adjacent to at least** 2 **other city tiles**."
@@ -5292,6 +5387,15 @@
             "type": "animal",
             "amount": 2,
             "target": "self-card"
+          },
+          {
+            "type": "tile-placement",
+            "amount": 1,
+            "target": "none",
+            "tileType": "ecological-zone",
+            "tileRestrictions": {
+              "adjacentToType": "greenery"
+            }
           }
         ],
         "description": "Add 2 animals to this card"
@@ -5427,7 +5531,7 @@
             "target": "self-player",
             "per": {
               "type": "tag",
-              "amount": 1,
+              "amount": 2,
               "location": "anywhere",
               "target": "self-player",
               "tag": "microbe"
@@ -5933,6 +6037,15 @@
             "type": "heat-production",
             "amount": 4,
             "target": "self-player"
+          },
+          {
+            "type": "tile-placement",
+            "amount": 1,
+            "target": "none",
+            "tileType": "mohole",
+            "tileRestrictions": {
+              "onTileType": "ocean"
+            }
           }
         ],
         "description": "Increase your heat production 4 steps. Place this tile **on an area reserved for ocean**."
@@ -6256,7 +6369,7 @@
         ],
         "outputs": [
           {
-            "type": "credit",
+            "type": "card-resource",
             "amount": 1,
             "target": "any-card"
           }
@@ -6349,7 +6462,31 @@
     "type": "automated",
     "cost": 2,
     "description": "Decrease your heat production any number of steps and increase your M€ production the same number of steps.",
-    "pack": "base-game"
+    "pack": "base-game",
+    "behaviors": [
+      {
+        "description": "Decrease your heat production any number of steps and increase your M€ production the same number of steps.",
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "heat-production",
+            "amount": -1,
+            "target": "self-player",
+            "variableAmount": true
+          },
+          {
+            "type": "credit-production",
+            "amount": 1,
+            "target": "self-player",
+            "variableAmount": true
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "153",
@@ -6482,7 +6619,22 @@
       {
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "standard-project-played",
+              "target": "self-player",
+              "selectors": [
+                {
+                  "standardProjects": [
+                    "power-plant",
+                    "asteroid",
+                    "aquifer",
+                    "greenery",
+                    "city"
+                  ]
+                }
+              ]
+            }
           }
         ],
         "outputs": [
@@ -7865,7 +8017,7 @@
         "outputs": [
           {
             "type": "credit",
-            "amount": 4,
+            "amount": -4,
             "target": "any-player"
           },
           {
@@ -8071,6 +8223,32 @@
     "tags": [
       "building",
       "power"
+    ],
+    "behaviors": [
+      {
+        "description": "Spend any number of energy to gain that amount of M€.",
+        "triggers": [
+          {
+            "type": "manual"
+          }
+        ],
+        "inputs": [
+          {
+            "type": "energy",
+            "amount": 1,
+            "target": "self-player",
+            "variableAmount": true
+          }
+        ],
+        "outputs": [
+          {
+            "type": "credit",
+            "amount": 1,
+            "target": "self-player",
+            "variableAmount": true
+          }
+        ]
+      }
     ]
   },
   {
@@ -8079,7 +8257,25 @@
     "type": "event",
     "cost": 0,
     "description": "The next card you play this generation costs 8 M€ less.",
-    "pack": "corporate-era"
+    "pack": "corporate-era",
+    "behaviors": [
+      {
+        "description": "The next card you play this generation costs 8 M€ less.",
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "discount",
+            "amount": 8,
+            "target": "self-player",
+            "temporary": "next-card"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "196",
@@ -8234,6 +8430,22 @@
           }
         ],
         "description": "Spend 2 M€ to draw a card. Place this tile."
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "tile-placement",
+            "amount": 1,
+            "target": "none",
+            "tileType": "restricted"
+          }
+        ],
+        "description": "Place this tile."
       }
     ]
   },
@@ -8463,6 +8675,24 @@
     "pack": "base-game",
     "tags": [
       "science"
+    ],
+    "behaviors": [
+      {
+        "description": "The next card you play this generation is +2 or -2 in global requirements, your choice.",
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "global-parameter-lenience",
+            "amount": 2,
+            "target": "self-player",
+            "temporary": "next-card"
+          }
+        ]
+      }
     ]
   },
   {
@@ -8490,7 +8720,7 @@
             "target": "self-player",
             "per": {
               "type": "tag",
-              "amount": 1,
+              "amount": 2,
               "location": "anywhere",
               "target": "self-player",
               "tag": "building"
@@ -8589,7 +8819,7 @@
         "outputs": [
           {
             "type": "plant",
-            "amount": 2,
+            "amount": -2,
             "target": "any-player"
           },
           {
@@ -8881,6 +9111,11 @@
         ],
         "outputs": [
           {
+            "type": "venus",
+            "amount": 1,
+            "target": "none"
+          },
+          {
             "type": "floater",
             "amount": 3,
             "target": "any-card",
@@ -9028,8 +9263,13 @@
         ],
         "outputs": [
           {
+            "type": "venus",
+            "amount": 1,
+            "target": "none"
+          },
+          {
             "type": "credit",
-            "amount": 4,
+            "amount": -4,
             "target": "any-player"
           }
         ],
@@ -9061,7 +9301,7 @@
             "target": "self-player"
           },
           {
-            "type": "credit",
+            "type": "card-resource",
             "amount": 1,
             "target": "any-card",
             "selectors": [
@@ -9115,6 +9355,16 @@
             "type": "energy-production",
             "amount": -1,
             "target": "self-player"
+          },
+          {
+            "type": "city-placement",
+            "amount": 1,
+            "target": "none",
+            "tileRestrictions": {
+              "boardTags": [
+                "dawn-city"
+              ]
+            }
           }
         ],
         "description": "Decrease your energy production 1 step. Increase your titanium production 1 step. Place a city tile **on the reserved area**"
@@ -9202,9 +9452,15 @@
         ],
         "outputs": [
           {
-            "type": "floater",
-            "amount": 1,
-            "target": "self-card"
+            "type": "storage-payment-substitute",
+            "amount": 3,
+            "selectors": [
+              {
+                "tags": [
+                  "venus"
+                ]
+              }
+            ]
           }
         ],
         "description": "When playing a Venus tag, floaters here may be used as payment, and are worth 3 M€ each."
@@ -9638,6 +9894,18 @@
             }
           },
           {
+            "type": "credit-production",
+            "amount": 1,
+            "target": "self-player",
+            "per": {
+              "type": "tag",
+              "amount": 1,
+              "location": "anywhere",
+              "target": "self-player",
+              "tag": "venus"
+            }
+          },
+          {
             "type": "energy-production",
             "amount": -2,
             "target": "self-player"
@@ -9670,6 +9938,11 @@
           }
         ],
         "outputs": [
+          {
+            "type": "venus",
+            "amount": 1,
+            "target": "none"
+          },
           {
             "type": "floater",
             "amount": 1,
@@ -9726,10 +9999,19 @@
             "outputs": [
               {
                 "type": "card-draw",
-                "amount": 2,
+                "amount": 3,
                 "target": "self-player"
               }
-            ]
+            ],
+            "requirements": {
+              "items": [
+                {
+                  "type": "tags",
+                  "min": 3,
+                  "tag": "venus"
+                }
+              ]
+            }
           }
         ],
         "description": "Draw 1 card, or draw 3 cards if you have at least 3 Venus tags."
@@ -10004,9 +10286,19 @@
             "type": "energy-production",
             "amount": -1,
             "target": "self-player"
+          },
+          {
+            "type": "city-placement",
+            "amount": 1,
+            "target": "none",
+            "tileRestrictions": {
+              "boardTags": [
+                "maxwell-base"
+              ]
+            }
           }
         ],
-        "description": "Decrease your energy production 1 step"
+        "description": "Decrease your energy production 1 step. Place a city tile **on the reserved area**."
       },
       {
         "triggers": [
@@ -10016,7 +10308,7 @@
         ],
         "outputs": [
           {
-            "type": "credit",
+            "type": "card-resource",
             "amount": 1,
             "target": "any-card",
             "selectors": [
@@ -10028,7 +10320,7 @@
             ]
           }
         ],
-        "description": "Add 1 resource to **another venus card**"
+        "description": "Add 1 resource to **another venus card**."
       }
     ],
     "vpConditions": [
@@ -10105,7 +10397,24 @@
           "min": 10
         }
       ]
-    }
+    },
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "venus",
+            "amount": 1,
+            "target": "none"
+          }
+        ],
+        "description": "Increase Venus 1 step."
+      }
+    ]
   },
   {
     "id": "241",
@@ -10216,7 +10525,10 @@
               {
                 "type": "credit",
                 "amount": 6,
-                "target": "self-player"
+                "target": "self-player",
+                "paymentAllowed": [
+                  "titanium"
+                ]
               }
             ],
             "outputs": [
@@ -10374,9 +10686,19 @@
         ],
         "outputs": [
           {
-            "type": "card-draw",
-            "amount": 2,
+            "type": "card-discard",
+            "amount": 1,
             "target": "self-player"
+          },
+          {
+            "type": "card-draw",
+            "amount": 3,
+            "target": "self-player"
+          },
+          {
+            "type": "card-draw",
+            "amount": 1,
+            "target": "all-opponents"
           }
         ],
         "description": "Discard 1 card from hand and **then** draw 3 cards. All **opponents** draw 1 card."
@@ -10423,6 +10745,16 @@
             "type": "credit-production",
             "amount": 2,
             "target": "self-player"
+          },
+          {
+            "type": "city-placement",
+            "amount": 1,
+            "target": "none",
+            "tileRestrictions": {
+              "boardTags": [
+                "stratopolis"
+              ]
+            }
           }
         ],
         "description": "Increase your M€ production 2 steps."
@@ -10605,11 +10937,33 @@
             "type": "manual"
           }
         ],
-        "outputs": [
+        "choices": [
           {
-            "type": "microbe",
-            "amount": 1,
-            "target": "self-card"
+            "outputs": [
+              {
+                "type": "microbe",
+                "amount": 1,
+                "target": "self-card"
+              }
+            ]
+          },
+          {
+            "inputs": [
+              {
+                "type": "microbe",
+                "amount": 1,
+                "target": "self-card",
+                "variableAmount": true
+              }
+            ],
+            "outputs": [
+              {
+                "type": "credit",
+                "amount": 3,
+                "target": "self-player",
+                "variableAmount": true
+              }
+            ]
           }
         ],
         "description": "Add 1 microbe to this card, or spend any number of microbes here to gain triple that amount of M€."
@@ -10631,6 +10985,15 @@
     "tags": [
       "earth"
     ],
+    "requirements": {
+      "description": "Requires that you have at least 25 TR.",
+      "items": [
+        {
+          "type": "tr",
+          "min": 25
+        }
+      ]
+    },
     "behaviors": [
       {
         "triggers": [
@@ -10907,7 +11270,18 @@
       {
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "tag-played",
+              "target": "self-player",
+              "selectors": [
+                {
+                  "tags": [
+                    "science"
+                  ]
+                }
+              ]
+            }
           }
         ],
         "outputs": [
@@ -12406,7 +12780,7 @@
           },
           {
             "type": "plant",
-            "amount": 2,
+            "amount": -2,
             "target": "any-player"
           }
         ],
@@ -15742,7 +16116,7 @@
           },
           {
             "type": "plant",
-            "amount": 2,
+            "amount": -2,
             "target": "any-player"
           }
         ],
@@ -17975,7 +18349,7 @@
         "outputs": [
           {
             "type": "plant",
-            "amount": 6,
+            "amount": -6,
             "target": "any-player"
           },
           {
