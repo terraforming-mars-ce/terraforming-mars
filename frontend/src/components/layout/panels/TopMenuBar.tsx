@@ -53,9 +53,7 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
   const rightEdge = { x1: width - ANGLE_INDENT, y1: 0, x2: width, y2: height };
 
   // Left edge for non-first: from (0, 0) to (ANGLE_INDENT, height) - same slant direction as right
-  const leftEdge = isFirst
-    ? null
-    : { x1: 0, y1: 0, x2: ANGLE_INDENT, y2: height };
+  const leftEdge = isFirst ? null : { x1: 0, y1: 0, x2: ANGLE_INDENT, y2: height };
 
   return (
     <button
@@ -143,18 +141,14 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [hamburgerHovered, setHamburgerHovered] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(
-    !!document.fullscreenElement,
-  );
+  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
   const hamburgerButtonRef = useRef<HTMLButtonElement>(null);
   const menuItemHover = useHoverSound();
 
   useEffect(() => {
-    const handleFullscreenChange = () =>
-      setIsFullscreen(!!document.fullscreenElement);
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () =>
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   const handleToggleFullscreen = useCallback(() => {
@@ -166,8 +160,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     setMenuOpen(false);
   }, [isFullscreen]);
 
-  const [showStandardProjectsPopover, setShowStandardProjectsPopover] =
-    useState(false);
+  const [showStandardProjectsPopover, setShowStandardProjectsPopover] = useState(false);
   const [showMilestonePopover, setShowMilestonePopover] = useState(false);
   const [showAwardPopover, setShowAwardPopover] = useState(false);
   const standardProjectsButtonRef = useRef<HTMLButtonElement>(null);
@@ -249,21 +242,14 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               height={buttonHeight}
               color={item.color}
               onClick={() => handleTabClick(item.id)}
-              buttonRef={
-                getButtonRef(
-                  item.id,
-                ) as React.RefObject<HTMLButtonElement | null>
-              }
+              buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
             >
               {item.label}
             </ParallelogramButton>
           ))}
         </div>
 
-        <div
-          className="origin-top-right"
-          style={{ transform: `scale(${topBarScale})` }}
-        >
+        <div className="origin-top-right" style={{ transform: `scale(${topBarScale})` }}>
           <button
             ref={hamburgerButtonRef}
             onClick={() => setMenuOpen(!menuOpen)}
@@ -280,11 +266,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
             >
               <polygon
                 points={`${ANGLE_INDENT},0 ${HAMBURGER_WIDTH},0 ${HAMBURGER_WIDTH},${buttonHeight} 0,${buttonHeight}`}
-                fill={
-                  hamburgerHovered
-                    ? "rgba(20,20,25,0.95)"
-                    : "rgba(10,10,15,0.95)"
-                }
+                fill={hamburgerHovered ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
               />
               <line
                 x1={ANGLE_INDENT}
@@ -415,9 +397,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               onClick={() => {
                 menuItemHover.onClick?.();
                 setMenuOpen(false);
-                window.dispatchEvent(
-                  new CustomEvent("toggle-performance-window"),
-                );
+                window.dispatchEvent(new CustomEvent("toggle-performance-window"));
               }}
               onMouseEnter={menuItemHover.onMouseEnter}
               className="w-full flex items-center gap-3 px-4 py-3 text-white text-sm hover:bg-white/10 transition-colors text-left"

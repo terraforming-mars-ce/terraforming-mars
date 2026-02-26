@@ -385,7 +385,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const contentScale = panelWidth / MAX_PANEL_WIDTH;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 flex justify-between pointer-events-none">
+    <div className="fixed bottom-0 left-0 right-0 z-[1200] flex justify-between pointer-events-none">
       {/* Spectating banner */}
       {isSpectating && (
         <div

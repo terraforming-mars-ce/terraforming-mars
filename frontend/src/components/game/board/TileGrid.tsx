@@ -200,7 +200,7 @@ export default function TileGrid({
             return {
               type: "volcano",
               ownerId: backendTile.ownerId || null,
-              specialType: null,
+              specialLabel: null,
             };
           default:
             return {

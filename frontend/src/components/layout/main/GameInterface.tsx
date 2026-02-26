@@ -890,7 +890,13 @@ export default function GameInterface() {
         throw error; // Re-throw to allow CardFanOverlay to handle the error
       }
     },
-    [currentPlayer?.cards, getAllAnyCardStorageSelections, finalizePlayCard],
+    [
+      currentPlayer?.cards,
+      getAllAnyCardStorageSelections,
+      finalizePlayCard,
+      game?.currentTurn,
+      game?.viewingPlayerId,
+    ],
   );
 
   const handleChoiceSelect = useCallback(
@@ -2349,12 +2355,6 @@ export default function GameInterface() {
           vpIndicators={vpIndicators}
           triggeredEffects={triggeredEffects}
           bottomBarCallbacks={bottomBarCallbacks}
-          cards={!spectatePlayerId ? currentPlayer?.cards || [] : []}
-          hideCardFan={
-            showCardSelection || showPendingCardSelection || showCardDrawSelection || isPreGamePhase
-          }
-          onCardSelect={(_cardId) => {}}
-          onPlayCard={handlePlayCard}
           onStandardProjectSelect={handleStandardProjectSelect}
           onLeaveGame={handleLeaveGame}
           onSkyboxReady={handleSkyboxReady}
@@ -2623,8 +2623,8 @@ export default function GameInterface() {
         />
       )}
 
-      {/* Card fan overlay for hand cards */}
-      {game && currentPlayer && (
+      {/* Card fan overlay for hand cards (hidden when spectating another player) */}
+      {game && currentPlayer && !spectatePlayerId && (
         <div
           className={
             transitionPhase === "animateUI"

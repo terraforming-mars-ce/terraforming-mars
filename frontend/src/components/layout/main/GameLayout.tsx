@@ -5,7 +5,6 @@ import RightSidebar from "../panels/RightSidebar.tsx";
 import MainContentDisplay from "../../ui/display/MainContentDisplay.tsx";
 import { TileHighlightMode } from "../../game/board/Tile.tsx";
 import { TileVPIndicator } from "../../ui/overlay/EndGameOverlay.tsx";
-import CardFanOverlay from "../../ui/overlay/CardFanOverlay.tsx";
 import BottomResourceBar, {
   BottomResourceBarCallbacks,
 } from "../../ui/overlay/BottomResourceBar.tsx";
@@ -16,7 +15,6 @@ import {
   PlayerDto,
   OtherPlayerDto,
   CardDto,
-  PlayerCardDto,
   TriggeredEffectDto,
 } from "../../../types/generated/api-types.ts";
 
@@ -41,10 +39,6 @@ interface GameLayoutProps {
   vpIndicators?: TileVPIndicator[];
   triggeredEffects?: TriggeredEffectDto[];
   bottomBarCallbacks?: BottomResourceBarCallbacks;
-  cards?: PlayerCardDto[];
-  hideCardFan?: boolean;
-  onCardSelect?: (cardId: string) => void;
-  onPlayCard?: (cardId: string) => Promise<void>;
   onStandardProjectSelect?: (project: StandardProject) => void;
   onLeaveGame?: () => void;
   onSkyboxReady?: () => void;
@@ -69,10 +63,6 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   vpIndicators = [],
   triggeredEffects = [],
   bottomBarCallbacks,
-  cards = [],
-  hideCardFan = false,
-  onCardSelect,
-  onPlayCard,
   onStandardProjectSelect,
   onLeaveGame,
   onSkyboxReady,
@@ -166,17 +156,6 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           />
 
           <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
-        </div>
-      )}
-
-      {showUI && !showCardSelection && (
-        <div className={uiAnimationClass}>
-          <CardFanOverlay
-            cards={cards}
-            hideWhenModalOpen={hideCardFan}
-            onCardSelect={onCardSelect}
-            onPlayCard={onPlayCard}
-          />
         </div>
       )}
 
