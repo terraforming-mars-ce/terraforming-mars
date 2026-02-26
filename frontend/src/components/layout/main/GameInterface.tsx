@@ -402,6 +402,7 @@ export default function GameInterface() {
     // Check if current player has production phase data
     const hasProductionData =
       currentPlayer.productionPhase &&
+      !currentPlayer.productionPhase.selectionComplete &&
       currentPlayer.productionPhase.availableCards &&
       currentPlayer.productionPhase.availableCards.length >= 0;
 
