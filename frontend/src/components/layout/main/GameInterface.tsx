@@ -387,13 +387,14 @@ export default function GameInterface() {
   const handleLogUpdate = useCallback(
     (logs: StateDiffDto[]) => {
       const ASTEROID_IMPACT_PATTERN = /asteroid|comet|impactor/i;
-      const hasAsteroidAction = logs.some(
+      const hasAsteroidPlacement = logs.some(
         (log) =>
           (log.sourceType === "card_play" ||
             log.sourceType === "standard_project") &&
-          ASTEROID_IMPACT_PATTERN.test(log.source),
+          ASTEROID_IMPACT_PATTERN.test(log.source) &&
+          (log.changes.boardChanges?.tilesPlaced?.length ?? 0) > 0,
       );
-      if (hasAsteroidAction) {
+      if (hasAsteroidPlacement) {
         void playAsteroidImpactSound();
       }
     },
