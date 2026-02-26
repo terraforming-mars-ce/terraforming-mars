@@ -70,7 +70,13 @@ export default function TileGrid({
           break;
       }
     }
-  }, [newlyPlacedTiles, gameState?.board?.tiles, playWaterPlacementSound, playOxygenSound, playConstructionSound]);
+  }, [
+    newlyPlacedTiles,
+    gameState?.board?.tiles,
+    playWaterPlacementSound,
+    playOxygenSound,
+    playConstructionSound,
+  ]);
 
   // Create lookup map for VP indicators by coordinate
   const vpIndicatorMap = useMemo(() => {
