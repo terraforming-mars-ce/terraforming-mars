@@ -34,7 +34,7 @@ func CalculatePlayerCardState(
 		metadata["discounts"] = discounts
 	}
 
-	errors = append(errors, validateAffordabilityWithSubstitutes(p, costMap)...)
+	errors = append(errors, validateAffordabilityWithSubstitutes(p, costMap, card)...)
 	errors = append(errors, validateRequirements(card, p, g, cardRegistry)...)
 	errors = append(errors, validateProductionOutputs(card, p)...)
 
@@ -872,10 +872,14 @@ func validateAffordabilityMap(p *player.Player, costMap map[string]int) []player
 
 // validateAffordabilityWithSubstitutes checks if player can afford a multi-resource cost,
 // considering payment substitutes like Helion's heat-to-credit conversion.
-func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]int) []player.StateError {
+// Steel is only counted for Building-tagged cards, titanium only for Space-tagged cards.
+func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]int, card *gamecards.Card) []player.StateError {
 	var errors []player.StateError
 	resources := p.Resources().Get()
 	substitutes := p.Resources().PaymentSubstitutes()
+
+	allowSteel := cardHasTag(card, shared.TagBuilding)
+	allowTitanium := cardHasTag(card, shared.TagSpace)
 
 	for resourceType, cost := range costMap {
 		if shared.ResourceType(resourceType) == shared.ResourceCredit {
@@ -885,16 +889,20 @@ func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]i
 			// Add substitute resources at their conversion rates
 			for _, sub := range substitutes {
 				switch sub.ResourceType {
+				case shared.ResourceSteel:
+					if allowSteel {
+						effectiveCredits += resources.Steel * sub.ConversionRate
+					}
+				case shared.ResourceTitanium:
+					if allowTitanium {
+						effectiveCredits += resources.Titanium * sub.ConversionRate
+					}
 				case shared.ResourceHeat:
 					effectiveCredits += resources.Heat * sub.ConversionRate
 				case shared.ResourceEnergy:
 					effectiveCredits += resources.Energy * sub.ConversionRate
 				case shared.ResourcePlant:
 					effectiveCredits += resources.Plants * sub.ConversionRate
-				case shared.ResourceSteel:
-					effectiveCredits += resources.Steel * sub.ConversionRate
-				case shared.ResourceTitanium:
-					effectiveCredits += resources.Titanium * sub.ConversionRate
 				}
 			}
 
@@ -918,6 +926,16 @@ func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]i
 		}
 	}
 	return errors
+}
+
+// cardHasTag checks if a card has a specific tag.
+func cardHasTag(card *gamecards.Card, tag shared.CardTag) bool {
+	for _, cardTag := range card.Tags {
+		if cardTag == tag {
+			return true
+		}
+	}
+	return false
 }
 
 // getStandardProjectBaseCosts returns the base cost map for a standard project.
