@@ -1697,11 +1697,12 @@ func TestNeutralizerFactory_IncreaseVenus(t *testing.T) {
 
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard("card-neutralizer-factory-test")
+	testGame.GlobalParameters().SetVenus(ctx, 10)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 7}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-neutralizer-factory-test", payment, nil, nil, nil, nil)
-	testutil.AssertNoError(t, err, "Neutralizer Factory should play successfully (Venus requirement currently skipped)")
+	testutil.AssertNoError(t, err, "Neutralizer Factory should play successfully")
 }
 
 // =============================================================================
@@ -2824,13 +2825,14 @@ func TestMaxwellBase_DecreaseEnergyProductionAndCityPlacement(t *testing.T) {
 		shared.ResourceEnergyProduction: 2,
 	})
 	p.Hand().AddCard("card-maxwell-base-test")
+	testGame.GlobalParameters().SetVenus(ctx, 12)
 
 	prodBefore := p.Resources().Production()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 18}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-maxwell-base-test", payment, nil, nil, nil, nil)
-	testutil.AssertNoError(t, err, "Maxwell Base should play successfully (Venus req skipped)")
+	testutil.AssertNoError(t, err, "Maxwell Base should play successfully")
 
 	prodAfter := p.Resources().Production()
 	testutil.AssertEqual(t, prodBefore.Energy-1, prodAfter.Energy,
@@ -2974,11 +2976,12 @@ func TestVenusianAnimals_PlaysAndRegistersEffect(t *testing.T) {
 
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard("card-venusian-animals-test")
+	testGame.GlobalParameters().SetVenus(ctx, 18)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 15}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-venusian-animals-test", payment, nil, nil, nil, nil)
-	testutil.AssertNoError(t, err, "Venusian Animals should play successfully (Venus req skipped)")
+	testutil.AssertNoError(t, err, "Venusian Animals should play successfully")
 }
 
 // =============================================================================
@@ -3050,12 +3053,13 @@ func TestVenusianPlants_RaiseVenusWithAnimalChoice(t *testing.T) {
 
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard("card-venusian-plants-test")
+	testGame.GlobalParameters().SetVenus(ctx, 16)
 
 	choiceIndex := 0 // choose animal
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 13}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-venusian-plants-test", payment, &choiceIndex, nil, nil, nil)
-	testutil.AssertNoError(t, err, "Venusian Plants should play with animal choice (Venus req skipped)")
+	testutil.AssertNoError(t, err, "Venusian Plants should play with animal choice")
 }
 
 // =============================================================================
