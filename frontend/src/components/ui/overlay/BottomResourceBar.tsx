@@ -115,9 +115,7 @@ interface ResourceData {
 }
 
 export interface BottomResourceBarCallbacks {
-  onOpenCardEffectsModal?: () => void;
   onOpenCardsPlayedModal?: () => void;
-  onOpenActionsModal?: () => void;
   onActionSelect?: (action: PlayerActionDto) => void;
   onConvertPlantsToGreenery?: () => void;
   onConvertHeatToTemperature?: () => void;
@@ -158,9 +156,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const displayPlayedCards = isSpectating ? (spectatingPlayer?.playedCards ?? []) : playedCards;
 
   const {
-    onOpenCardEffectsModal,
     onOpenCardsPlayedModal,
-    onOpenActionsModal,
     onActionSelect,
     onConvertPlantsToGreenery,
     onConvertHeatToTemperature,
@@ -389,7 +385,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const contentScale = panelWidth / MAX_PANEL_WIDTH;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 flex justify-between pointer-events-none">
+    <div className="fixed bottom-0 left-0 right-0 z-[1200] flex justify-between pointer-events-none">
       {/* Spectating banner */}
       {isSpectating && (
         <div
@@ -827,7 +823,6 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           onActionSelect?.(action);
           setShowActionsPopover(false);
         }}
-        onOpenDetails={onOpenActionsModal}
         anchorRef={actionsButtonRef as React.RefObject<HTMLElement>}
         gameState={gameState}
       />
@@ -835,9 +830,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       <EffectsPopover
         isVisible={showEffectsPopover}
         onClose={() => setShowEffectsPopover(false)}
-        effects={displayPlayer?.effects || []}
-        playerName={displayPlayer?.name}
-        onOpenDetails={isSpectating ? undefined : onOpenCardEffectsModal}
+        effects={currentPlayer?.effects || []}
+        playerName={currentPlayer?.name}
         anchorRef={effectsButtonRef as React.RefObject<HTMLElement>}
       />
 

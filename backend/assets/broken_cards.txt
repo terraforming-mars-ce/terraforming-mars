@@ -1,0 +1,66 @@
+Water Import From Europa: Needs titanium mapping
+Research Output: Missing city icon on card with asterix
+Phobos Space Heaven: Missing city icon on card with asterix, might need extra modelling due to the moon placement
+Predators: Should be <animal tag any> -> <animal tag>, now its wrong
+Optimal Aerobreaking: Layout broken
+Security Fleet: Wrong icon on card, should be fighter (it is now titanium in action box and asteroid in VP box)
+Ants: Should be <microbe tag any> -> <microbe tag>, now its wrong
+Natural Reserve: We can't place that tile at all. It is a "nature tile", should be like Research output (next to no other tile)
+Virus: Should be a minus sign on 2 <animal icon> and 5 <plant icon>. It looks now like it is given to other players in stead of removing resources
+Mining Expedition: Should be a minus sign infront of plants icon
+Mining Area: We can't place that tile at all. Will need a mining tile and a mining model for Mars
+Mining Rights: We can't place that tile at all. Will need a mining tile and a mining model for Mars
+Land Claim: We need a 3D model for this so it is easy to say it is reseved, could be completley virtual with a lock or something
+Mars University: Completely missing the logic, needs full check
+Mars Converter: Missing "Increase energy production 6 stpes"
+Physics Complex: Should be 2 VP per science resource, NOT per 2 science resource
+Greenhouses: City tile on the card should have "any city" mark (red outline)
+Nuclear Zone: We can't place that tile at all. Need tile for nuclear zone and a model + nuke animation, maybe a bomb flying in?
+Toll station: Titanium tag icon in the behavior on the card should have "any titanium tag" (so red tint behind it)
+Media Group: Should have "After you play an event card" effect
+Urbanized Area: Need to add support for condition of being next to a min/max struct, for this card min 2 other tiles, so we could do a selector struct here
+Sabotage: Should say "minus" sign in front of the resources
+Hired Raiders: Card does not convey stealing, it should be conveyed on the card
+Ecological Zone: We need to be able to place a tile of "animal / ecozone" next to another tile (in this case greenery type), and it needs some nice 3D model too, with animals maybe?
+Zeppelins: Needs "any other city" red tint on the city icon
+Worms: It is plant per 2 microbe, not per 1 microbe
+Mohole: We can't place that tile at all, it can reuse the volcanic tile icon. It should have some "dried lake" kind of 3D model
+Herbivores: Missing greenery tile icon left of ":" in the effect box.
+CEO's Favorite Project: We dont support this at all, we need to add support for placing +X resource in ANY storage
+Insulation: Missing behavior completely, and we dont support such logic either. User should be prompted to select how "strong" the effect is. 
+Standard Technology: Should be a trigger that triggers by stadnard proejcts being played, I think we already support such thing, but we need it modelled for this card.
+Olympus Conference: A big weird card layout, should show science square resource icon on first row, and the right side of slash should show 
+Flooding: Card looks strange, it should have minus sign outside the credits icon (we should fix this for ALL credits icons), and it has a weird "+" in front of the ocean tile placement icon
+Energy Saving: City tile icon should have "any city tile" red glow
+Invention Contest: Should separate more the icons on the card to make it more obvious this is 3 of one kind and 1 of the other, now it looks like 3 of that pair of icons
+Power Infrastructure: Missing behavior completely, and we dont support such logic either. User should be prompted to select how "strong" the effect is. 
+Indentured Workers: Missing behavior completely, "discount on next card", we need to have some state stored on a players
+Restricted Area: We can't place that tile at all. We need a "restricted" tile icon and we need a 3D model with fences or something
+Underground City: Should be two heat icons, we dont need a "2" here when we only have two icons needed in the action box
+Special Design: Needs a lenience effect for next card only, we don't support that
+Medical Lab: Should be every 2 building tag, not every building tag
+Small Asteroid: Should not have a plus on the temperature on the "plus" row. Global params and tile placements are not part of minus and plus rows
+Aerial Mappers: Should not have "1" in font of the card icon
+Aerosport Tournament: Should have "any city tile" red tint behind the city tile icon
+Air-Scrapping Expedition: Missing Venus icon
+Atmoscroop: Missing Venus icon (has venus tag icon instead)
+Comet for Venus: Missing Veus icon AND we need to add support for removing resource IF target player HAS something, like in this case, venus tag
+Corroder Suits: Missing behavior for "Adding any resource to a Venus card"
+Dawn City: Missing "Dawn City" tile support. Card is also missing city tile icon
+Dirigibles: Missing support for using resource storage as payment
+Extractor Balloons: Wrong Venus icon, is using Venus tag icon now
+Freyla Biodomes: Missing support for putting resources on a specific card type, needs Selector struct here
+Gyropolis: Game card layout broken, we need three rows in this case (we have 2 per conditions giving production)
+Hydrogen To Venus: Missing support for adding X resources PER something, in this case X floaters per X Jovian tags on self-player
+IO Sulphur Research: Game card layout broken for "OR condition" with cards involved, we show numbers "1" for no reason, and we show them without any backlight. Also we need support for "If you satisy X, you can do the other choice", in this case, if you have 3 Venus tags in play
+Local Shading: Missing number in credits production icon
+Maxwell Base: Missing City tile icon on game card layout
+Neutralizer Factory: Venus is requirement box should say X%, not just X
+Rotator Impcats: Missing support for alternative currency to be used as payment for an action
+Sponsored Academies: Add support for Discard card and Opponent draw card
+Stratopolis: Missing city tile icon in layout (we need support for the tile too)
+Stratosphereic Birds: We need support for spending resoruces from a resource storage as part of playing a card
+Sulphur-Eating Bacteria: Spend card storage resource X amount for 3X gold is not supported
+Terraforming Contract: Add support for TR min max requirement
+Venusian Animals: Missing "when science tag is played by self-player", left side of ":" in the card Layout
+Venusian Plants: Missing the small Venus icon as a "modifier" icon for the animal and microbe resource icon. It should be similar to what we do we card icons, where we have peek/draw/buy "modifiers" tags on the icon

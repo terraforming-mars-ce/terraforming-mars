@@ -19,12 +19,13 @@ export const analyzeResourceDisplayWithConstraints = (
   const hasPer = resource.per;
   const isProduction = resourceType?.includes("-production");
 
-  // Card resources (card-draw, card-peek, card-take, card-buy) always use number mode
+  // Card resources (card-draw, card-peek, card-take, card-buy, card-discard) always use number mode
   const isCardResource =
     resourceType === "card-draw" ||
     resourceType === "card-peek" ||
     resourceType === "card-take" ||
-    resourceType === "card-buy";
+    resourceType === "card-buy" ||
+    resourceType === "card-discard";
 
   if (isCardResource) {
     return {
@@ -109,71 +110,102 @@ export const coordinateDisplayModes = (resources: any[]): Map<any, IconDisplayIn
  */
 export interface CardDisplayItem {
   amount: number;
-  badgeType: "peek" | "take" | "buy" | "none";
+  badgeType: "peek" | "take" | "buy" | "discard" | "none";
+  isAttack: boolean;
 }
 
+const isAttackTarget = (target: string | undefined): boolean =>
+  target === "any-player" || target === "all-opponents" || (target?.startsWith("steal-") ?? false);
+
 export const analyzeCardOutputs = (outputs: any[]): CardDisplayItem[] => {
-  // Find card-related outputs
-  let cardDraw = 0;
-  let cardPeek = 0;
-  let cardTake = 0;
-  let cardBuy = 0;
+  // Separate card outputs by target (self vs opponents)
+  let selfDraw = 0;
+  let selfPeek = 0;
+  let selfTake = 0;
+  let selfBuy = 0;
+  let selfDiscard = 0;
+  let attackDraw = 0;
+  let attackPeek = 0;
+  let attackTake = 0;
+  let attackBuy = 0;
+  let attackDiscard = 0;
 
   outputs.forEach((output) => {
     const type = output.resourceType || output.type;
     const amount = output.amount ?? 0;
+    const attack = isAttackTarget(output.target);
 
     switch (type) {
       case "card-draw":
-        cardDraw = amount;
+        if (attack) attackDraw += amount;
+        else selfDraw += amount;
         break;
       case "card-peek":
-        cardPeek = amount;
+        if (attack) attackPeek += amount;
+        else selfPeek += amount;
         break;
       case "card-take":
-        cardTake = amount;
+        if (attack) attackTake += amount;
+        else selfTake += amount;
         break;
       case "card-buy":
-        cardBuy = amount;
+        if (attack) attackBuy += amount;
+        else selfBuy += amount;
+        break;
+      case "card-discard":
+        if (attack) attackDiscard += amount;
+        else selfDiscard += amount;
         break;
     }
   });
 
-  // No card outputs
-  if (cardDraw === 0 && cardPeek === 0 && cardTake === 0 && cardBuy === 0) {
-    return [];
-  }
+  const hasSelf = selfDraw + selfPeek + selfTake + selfBuy + selfDiscard > 0;
+  const hasAttack = attackDraw + attackPeek + attackTake + attackBuy + attackDiscard > 0;
+
+  if (!hasSelf && !hasAttack) return [];
 
   const result: CardDisplayItem[] = [];
 
-  // Rule 1: Pure card-draw (no peek/take/buy)
-  if (cardDraw > 0 && cardPeek === 0 && cardTake === 0 && cardBuy === 0) {
-    result.push({ amount: cardDraw, badgeType: "none" });
-    return result;
-  }
+  const consolidateGroup = (
+    draw: number,
+    peek: number,
+    take: number,
+    buy: number,
+    discard: number,
+    isAttack: boolean,
+  ) => {
+    if (discard > 0) {
+      result.push({ amount: discard, badgeType: "discard", isAttack });
+    }
 
-  // Rule 2: Peek + Buy with equal amounts -> consolidate to buy only
-  if (cardPeek > 0 && cardBuy > 0 && cardPeek === cardBuy && cardTake === 0) {
-    result.push({ amount: cardBuy, badgeType: "buy" });
-    return result;
-  }
+    // Pure card-draw (no peek/take/buy)
+    if (draw > 0 && peek === 0 && take === 0 && buy === 0) {
+      result.push({ amount: draw, badgeType: "none", isAttack });
+      return;
+    }
 
-  // Rule 3: Peek + Take with equal amounts -> consolidate to take only
-  if (cardPeek > 0 && cardTake > 0 && cardPeek === cardTake && cardBuy === 0) {
-    result.push({ amount: cardTake, badgeType: "take" });
-    return result;
-  }
+    // Peek + Buy with equal amounts -> consolidate to buy only
+    if (peek > 0 && buy > 0 && peek === buy && take === 0) {
+      result.push({ amount: buy, badgeType: "buy", isAttack });
+      return;
+    }
 
-  // Rule 4: Show peek and buy/take separately (different amounts)
-  if (cardPeek > 0) {
-    result.push({ amount: cardPeek, badgeType: "peek" });
-  }
-  if (cardTake > 0) {
-    result.push({ amount: cardTake, badgeType: "take" });
-  }
-  if (cardBuy > 0) {
-    result.push({ amount: cardBuy, badgeType: "buy" });
-  }
+    // Peek + Take with equal amounts -> consolidate to take only
+    if (peek > 0 && take > 0 && peek === take && buy === 0) {
+      result.push({ amount: take, badgeType: "take", isAttack });
+      return;
+    }
+
+    // Show separately
+    if (peek > 0) result.push({ amount: peek, badgeType: "peek", isAttack });
+    if (take > 0) result.push({ amount: take, badgeType: "take", isAttack });
+    if (buy > 0) result.push({ amount: buy, badgeType: "buy", isAttack });
+    if (draw > 0) result.push({ amount: draw, badgeType: "none", isAttack });
+  };
+
+  if (hasSelf) consolidateGroup(selfDraw, selfPeek, selfTake, selfBuy, selfDiscard, false);
+  if (hasAttack)
+    consolidateGroup(attackDraw, attackPeek, attackTake, attackBuy, attackDiscard, true);
 
   return result;
 };

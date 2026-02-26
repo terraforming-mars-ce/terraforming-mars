@@ -65,9 +65,9 @@ func TestGenerateMarsBoard_UntaggedTilesHaveNoTags(t *testing.T) {
 		}
 	}
 
-	// Noctis City, Ganymede Colony, and 4 volcanic tiles should be tagged
-	if taggedCount != 6 {
-		t.Errorf("expected exactly 6 tagged tiles (Noctis City, Ganymede Colony, 4 volcanic), got %d", taggedCount)
+	// Noctis City, Ganymede Colony, 4 volcanic tiles, and 4 off-Mars tiles should be tagged
+	if taggedCount != 10 {
+		t.Errorf("expected exactly 10 tagged tiles (Noctis City, Ganymede Colony, 4 volcanic, 4 off-Mars), got %d", taggedCount)
 	}
 
 	// All other tiles should have empty tags
@@ -79,9 +79,8 @@ func TestGenerateMarsBoard_UntaggedTilesHaveNoTags(t *testing.T) {
 func TestGenerateMarsBoard_TotalTileCount(t *testing.T) {
 	tiles := board.GenerateMarsBoard()
 
-	// Standard Mars board with radius 4 has 61 tiles
-	// Formula: 3*r^2 + 3*r + 1 where r=4 gives 3*16 + 12 + 1 = 61
-	expectedCount := 61
+	// Standard Mars board with radius 4 has 61 hex tiles + 4 off-Mars tiles = 65
+	expectedCount := 65
 	if len(tiles) != expectedCount {
 		t.Errorf("expected %d tiles, got %d", expectedCount, len(tiles))
 	}

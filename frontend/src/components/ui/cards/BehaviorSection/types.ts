@@ -6,6 +6,7 @@ export interface BehaviorSectionProps {
   resourceStorage?: { [cardId: string]: number };
   cardId?: string;
   greyOutAll?: boolean;
+  hideActionChip?: boolean;
 }
 
 export interface ClassifiedBehavior {

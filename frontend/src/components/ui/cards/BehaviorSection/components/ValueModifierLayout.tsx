@@ -1,5 +1,6 @@
 import React from "react";
 import GameIcon from "../../../display/GameIcon.tsx";
+import Slash from "./Slash.tsx";
 
 interface ValueModifierLayoutProps {
   behavior: any;
@@ -41,11 +42,7 @@ const ValueModifierLayout: React.FC<ValueModifierLayoutProps> = ({ behavior }) =
       <div className="flex gap-[3px] items-center">
         {affectedResources.map((resourceType: string, resIndex: number) => (
           <React.Fragment key={`res-${resIndex}`}>
-            {resIndex > 0 && (
-              <span className="text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-                /
-              </span>
-            )}
+            {resIndex > 0 && <Slash />}
             <GameIcon iconType={resourceType} size="small" />
           </React.Fragment>
         ))}

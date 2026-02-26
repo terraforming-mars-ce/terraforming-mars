@@ -97,6 +97,20 @@ func registerPlayerCardEventListeners(
 		}
 	})
 	pc.AddUnsubscriber(func() { eventBus.Unsubscribe(subID8) })
+
+	subID9 := events.Subscribe(eventBus, func(event events.ProductionChangedEvent) {
+		if event.PlayerID == p.ID() {
+			recalculatePlayerCard(pc, p, g, cardRegistry)
+		}
+	})
+	pc.AddUnsubscriber(func() { eventBus.Unsubscribe(subID9) })
+
+	subID10 := events.Subscribe(eventBus, func(event events.TilePlacedEvent) {
+		if event.GameID == g.ID() {
+			recalculatePlayerCard(pc, p, g, cardRegistry)
+		}
+	})
+	pc.AddUnsubscriber(func() { eventBus.Unsubscribe(subID10) })
 }
 
 // recalculatePlayerCard recalculates and updates PlayerCard state.

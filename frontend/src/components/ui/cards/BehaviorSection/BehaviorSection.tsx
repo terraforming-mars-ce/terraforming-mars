@@ -22,6 +22,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   resourceStorage,
   cardId,
   greyOutAll = false,
+  hideActionChip = false,
 }) => {
   const [hoveredBehaviorIndex, setHoveredBehaviorIndex] = useState<number | null>(null);
   const handleBehaviorHover = useCallback((index: number | null) => {
@@ -99,6 +100,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
             isResourceAffordable={checkResourceAffordable}
             analyzeResourceDisplayWithConstraints={analyzeResourceDisplayWithConstraints}
             tileScaleInfo={tileScaleInfo}
+            hideActionChip={hideActionChip}
           />
         );
         break;

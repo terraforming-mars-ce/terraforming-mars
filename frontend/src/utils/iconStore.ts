@@ -63,6 +63,7 @@ export const TILE_ICONS: { [key: string]: string } = {
   "ocean-placement": "/assets/tiles/ocean.png",
   "greenery-placement": "/assets/tiles/greenery_no_O2.png",
   "land-claim": "/assets/tiles/special.png",
+  "tile-placement": "/assets/tiles/special.png",
   "city-tile": "/assets/tiles/city.png",
   "ocean-tile": "/assets/tiles/ocean.png",
   "greenery-tile": "/assets/tiles/greenery_no_O2.png",
@@ -93,6 +94,7 @@ export const SPECIAL_ICONS: { [key: string]: string } = {
   asterisc: "/assets/misc/asterisc.png", // Support both spellings
   mars: "/assets/mars.png",
   arrow: "/assets/misc/arrow.png",
+  "card-resource": "/assets/resources/wild.png",
 };
 
 /**
@@ -104,27 +106,22 @@ export const SPECIAL_ICONS: { [key: string]: string } = {
 export function getIconPath(iconType: string): string | null {
   const cleanType = iconType?.toLowerCase().replace(/[_\s]/g, "-");
 
-  // Check resources first (used in card behaviors for inputs/outputs)
   if (RESOURCE_ICONS[cleanType]) {
     return RESOURCE_ICONS[cleanType];
   }
 
-  // Check tags (for tag displays on cards)
-  if (TAG_ICONS[cleanType]) {
-    return TAG_ICONS[cleanType];
-  }
-
-  // Check tiles
   if (TILE_ICONS[cleanType]) {
     return TILE_ICONS[cleanType];
   }
 
-  // Check global parameters
   if (GLOBAL_PARAMETER_ICONS[cleanType]) {
     return GLOBAL_PARAMETER_ICONS[cleanType];
   }
 
-  // Check special icons
+  if (TAG_ICONS[cleanType]) {
+    return TAG_ICONS[cleanType];
+  }
+
   if (SPECIAL_ICONS[cleanType]) {
     return SPECIAL_ICONS[cleanType];
   }

@@ -574,20 +574,24 @@ const CardsPage: React.FC = () => {
               )}
             </div>
             {isPermalinkView && (
-              <button
-                className="clear-view-button"
-                onClick={handleClearView}
-                title="Clear permalink view and return to all cards"
-              >
+              <button className="clear-view-button" onClick={handleClearView}>
                 Clear View
               </button>
             )}
             {selectedCards.size > 0 && !isPermalinkView && (
-              <CopyLinkButton
-                textToCopy={generatePermalinkUrl()}
-                defaultText={`Link (${selectedCards.size})`}
-                className="link-button"
-              />
+              <div className="flex items-center gap-1">
+                <CopyLinkButton
+                  textToCopy={generatePermalinkUrl()}
+                  defaultText={`Link (${selectedCards.size})`}
+                  className="link-button"
+                />
+                <button
+                  className="clear-selection-button"
+                  onClick={() => setSelectedCards(new Set())}
+                >
+                  ✕
+                </button>
+              </div>
             )}
             <button className="filter-toggle-button" onClick={() => setShowFilters(!showFilters)}>
               <span className={`filter-arrow ${showFilters ? "open" : ""}`}>▶</span>
@@ -901,6 +905,24 @@ const CardsPage: React.FC = () => {
             rgba(255, 107, 107, 0.4) 50%,
             rgba(255, 107, 107, 0.3) 100%
           );
+        }
+
+        .clear-selection-button {
+          background: rgba(255, 255, 255, 0.1);
+          border: 2px solid rgba(255, 255, 255, 0.2);
+          border-radius: 8px;
+          padding: 12px 12px;
+          color: rgba(255, 255, 255, 0.6);
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-size: 14px;
+          line-height: 1;
+        }
+
+        .clear-selection-button:hover {
+          border-color: rgba(255, 107, 107, 0.6);
+          color: rgba(255, 107, 107, 0.9);
+          background: rgba(255, 107, 107, 0.15);
         }
 
         h1 {

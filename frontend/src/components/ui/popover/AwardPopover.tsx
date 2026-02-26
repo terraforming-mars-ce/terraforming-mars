@@ -32,7 +32,6 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
 
   const awards = gameState?.currentPlayer?.awards ?? [];
   const fundedCount = awards.filter((a) => a.isFunded).length;
-  const availableCount = awards.filter((a) => a.available && !a.isFunded).length;
 
   const getPlayerName = (playerId: string | undefined): string => {
     if (!playerId || !gameState) return "Unknown";
@@ -55,16 +54,7 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
       excludeRef={anchorRef}
       header={{
         title: "Awards",
-        badge: (
-          <div className="flex gap-2">
-            <span>{fundedCount}/3 Funded</span>
-            {availableCount > 0 && (
-              <span className="bg-green-500/20 border border-green-500/30 rounded px-2 py-0.5 text-green-400">
-                {availableCount} Available
-              </span>
-            )}
-          </div>
-        ),
+        badge: <span>{fundedCount}/3 Funded</span>,
         showCloseButton: true,
       }}
       width={500}

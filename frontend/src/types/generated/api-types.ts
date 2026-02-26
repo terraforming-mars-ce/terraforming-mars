@@ -48,7 +48,7 @@ export interface PlayCardAction {
   cardId: string;
   payment: CardPaymentDto; // Required: payment breakdown (credits, steel, titanium)
   choiceIndex?: number /* int */; // Optional: index of choice to play (for cards with choices)
-  cardStorageTarget?: string; // Optional: target card ID for resource storage (for outputs with target "any-card")
+  cardStorageTargets?: string[]; // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 /**
  * PlayCardActionAction represents playing a card action from player's action list
@@ -57,7 +57,7 @@ export interface PlayCardActionAction {
   cardId: string;
   behaviorIndex: number /* int */;
   choiceIndex?: number /* int */; // Optional: index of choice to play (for actions with choices)
-  cardStorageTarget?: string; // Optional: target card ID for resource storage (for outputs with target "any-card")
+  cardStorageTargets?: string[]; // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 /**
  * HexPositionDto represents a position on the Mars board
@@ -153,7 +153,7 @@ export interface ActionPlayCardRequest {
   cardId: string;
   payment: CardPaymentDto; // Required: payment breakdown (credits, steel, titanium)
   choiceIndex?: number /* int */; // Optional: index of choice to play (for cards with choices)
-  cardStorageTarget?: string; // Optional: target card ID for resource storage (for outputs with target "any-card")
+  cardStorageTargets?: string[]; // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 /**
  * ActionPlayCardActionRequest contains the action data for play card action actions
@@ -163,7 +163,7 @@ export interface ActionPlayCardActionRequest {
   cardId: string;
   behaviorIndex: number /* int */;
   choiceIndex?: number /* int */; // Optional: index of choice to play (for actions with choices)
-  cardStorageTarget?: string; // Optional: target card ID for resource storage (for outputs with target "any-card")
+  cardStorageTargets?: string[]; // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 /**
  * ActionSellPatentsRequest contains the action data for sell patents actions (initiates card selection)
@@ -389,6 +389,7 @@ export const ResourceTypeAnimal: ResourceType = "animal";
 export const ResourceTypeFloater: ResourceType = "floater";
 export const ResourceTypeScience: ResourceType = "science";
 export const ResourceTypeAsteroid: ResourceType = "asteroid";
+export const ResourceTypeFighter: ResourceType = "fighter";
 export const ResourceTypeDisease: ResourceType = "disease";
 export const ResourceTypeCardDraw: ResourceType = "card-draw";
 export const ResourceTypeCardTake: ResourceType = "card-take";
@@ -492,6 +493,9 @@ export interface TileRestrictionsDto {
   boardTags?: string[];
   adjacency?: string; // "none" = no adjacent occupied tiles
   onTileType?: string; // "ocean" = only on ocean spaces
+  adjacentToType?: string; // "city", "greenery" = must be adjacent to this tile type
+  minAdjacentOfType?: number /* int */; // min count of adjacent tiles of AdjacentToType
+  adjacentToOwned?: boolean; // must be adjacent to a tile owned by the placing player
 }
 /**
  * SelectorDto represents matching criteria for cards, resources, or projects.
@@ -516,6 +520,9 @@ export interface ResourceConditionDto {
   maxTrigger?: number /* int */;
   per?: PerConditionDto;
   tileRestrictions?: TileRestrictionsDto;
+  variableAmount?: boolean;
+  optional?: boolean;
+  paymentAllowed?: ResourceType[];
 }
 /**
  * PerConditionDto represents a per condition for client consumption
@@ -533,6 +540,9 @@ export interface PerConditionDto {
 export interface ChoiceDto {
   inputs?: ResourceConditionDto[];
   outputs?: ResourceConditionDto[];
+  requirements?: CardRequirementsDto;
+  available: boolean;
+  errors: StateErrorDto[];
 }
 /**
  * TriggerDto represents a trigger for client consumption
@@ -673,6 +683,7 @@ export interface GlobalParametersDto {
   temperature: number /* int */; // Range: -30 to +8°C
   oxygen: number /* int */; // Range: 0-14%
   oceans: number /* int */; // Range: 0-9
+  venus: number /* int */; // Range: 0-30%
 }
 /**
  * ResourcesDto represents a player's resources
@@ -700,6 +711,14 @@ export interface ProductionDto {
  * PaymentSubstituteDto represents an alternative resource that can be used as payment for credits
  */
 export interface PaymentSubstituteDto {
+  resourceType: ResourceType;
+  conversionRate: number /* int */;
+}
+/**
+ * StoragePaymentSubstituteDto represents card storage resources that can be used as M€ payment
+ */
+export interface StoragePaymentSubstituteDto {
+  cardId: string;
   resourceType: ResourceType;
   conversionRate: number /* int */;
 }
@@ -758,7 +777,6 @@ export interface StateErrorDto {
  * All codes use kebab-case for consistency with JSON serialization.
  */
 export type StateWarningCode = string;
-export const WarningCodeNoValidTilePlacements: StateWarningCode = "no-valid-tile-placements";
 /**
  * StateWarningDto represents a non-blocking warning about an action
  * Warnings inform the player of potential issues without preventing the action
@@ -865,6 +883,23 @@ export interface PendingCardDrawSelectionDto {
   source: string; // Card ID or action that triggered this
 }
 /**
+ * PendingCardDiscardSelectionDto represents a pending card discard action from card effects
+ */
+export interface PendingCardDiscardSelectionDto {
+  minCards: number /* int */; // 0 if optional (player can skip)
+  maxCards: number /* int */; // Maximum cards to discard
+  source: string; // Card name that triggered this
+  sourceCardId: string; // Card ID that triggered this
+}
+/**
+ * PendingBehaviorChoiceSelectionDto represents a pending behavior choice from a passive triggered effect
+ */
+export interface PendingBehaviorChoiceSelectionDto {
+  choices: ChoiceDto[];
+  source: string;
+  sourceCardId: string;
+}
+/**
  * PlayerStatus represents the current status of a player in the game
  */
 export type PlayerStatus = string;
@@ -899,9 +934,12 @@ export interface PlayerDto {
   pendingTileSelection?: PendingTileSelectionDto;
   pendingCardSelection?: PendingCardSelectionDto;
   pendingCardDrawSelection?: PendingCardDrawSelectionDto;
+  pendingCardDiscardSelection?: PendingCardDiscardSelectionDto;
+  pendingBehaviorChoiceSelection?: PendingBehaviorChoiceSelectionDto;
   forcedFirstAction?: ForcedFirstActionDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
+  storagePaymentSubstitutes: StoragePaymentSubstituteDto[];
   generationalEvents: PlayerGenerationalEventEntryDto[];
   vpGranters: VPGranterDto[];
 }
@@ -927,6 +965,7 @@ export interface OtherPlayerDto {
   productionPhase?: ProductionPhaseOtherPlayerDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
+  storagePaymentSubstitutes: StoragePaymentSubstituteDto[];
 }
 /**
  * GameDto represents a game for client consumption (clean architecture)
@@ -1133,7 +1172,11 @@ export interface FinalScoreDto {
 export interface TriggeredEffectDto {
   cardName: string;
   playerId: string;
+  sourceType: string;
   outputs: ResourceConditionDto[];
+  calculatedOutputs?: CalculatedOutputDto[];
+  behaviors?: CardBehaviorDto[];
+  vpConditions?: VPConditionDto[];
 }
 /**
  * GenerationalEvent represents events tracked within a generation for conditional card behaviors
@@ -1286,6 +1329,10 @@ export const MessageTypeActionSelectCards: MessageType = "action.card.select-car
 export const MessageTypeActionConfirmProductionCards: MessageType =
   "action.card.confirm-production-cards";
 export const MessageTypeActionCardDrawConfirmed: MessageType = "action.card.card-draw-confirmed";
+export const MessageTypeActionCardDiscardConfirmed: MessageType =
+  "action.card.card-discard-confirmed";
+export const MessageTypeActionBehaviorChoiceConfirmed: MessageType =
+  "action.card.behavior-choice-confirmed";
 export const MessageTypeAdminCommand: MessageType = "admin-command";
 export const MessageTypePlayerTakeover: MessageType = "player-takeover";
 export const MessageTypeKickPlayer: MessageType = "kick-player";

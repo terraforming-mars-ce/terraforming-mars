@@ -4,7 +4,7 @@ import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import GameIcon from "@/components/ui/display/GameIcon.tsx";
 import VictoryPointIcon from "@/components/ui/display/VictoryPointIcon.tsx";
 import BehaviorSection from "@/components/ui/cards/BehaviorSection";
-import { GamePopover, GamePopoverEmpty } from "../GamePopover";
+import { GamePopover } from "../GamePopover";
 
 interface LogPopoverProps {
   isVisible: boolean;
@@ -242,7 +242,7 @@ const LogEntry: React.FC<LogEntryProps> = ({ diff, playerNames }) => {
         <span className="text-xs text-[#64c8ff] font-medium shrink-0">{playerName}</span>
         <span className="text-sm text-white truncate font-medium">{diff.source}</span>
         {isCardAction && (
-          <span className="bg-[linear-gradient(135deg,rgba(255,100,100,0.8)_0%,rgba(200,60,60,0.9)_100%)] text-white/90 text-[8px] font-semibold uppercase tracking-[0.3px] py-0.5 px-1.5 rounded-lg border border-[rgba(255,100,100,0.6)] shrink-0">
+          <span className="bg-[linear-gradient(135deg,rgba(100,200,255,0.3)_0%,rgba(80,160,220,0.4)_100%)] text-[#64c8ff] text-[8px] font-semibold uppercase tracking-[0.3px] py-0.5 px-1.5 rounded-lg border border-[rgba(100,200,255,0.4)] shrink-0">
             action
           </span>
         )}
@@ -328,7 +328,6 @@ const LogPopover: React.FC<LogPopoverProps> = ({
   gameState,
 }) => {
   const [logs, setLogs] = useState<StateDiffDto[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const lastSequenceRef = useRef<number>(0);
 
   const playerNames = useMemo(() => {
@@ -359,7 +358,6 @@ const LogPopover: React.FC<LogPopoverProps> = ({
         lastSequenceRef.current = maxSeq;
       }
     }
-    setIsLoading(false);
   }, []);
 
   // Subscribe to WebSocket log updates
@@ -374,7 +372,6 @@ const LogPopover: React.FC<LogPopoverProps> = ({
   useEffect(() => {
     setLogs([]);
     lastSequenceRef.current = 0;
-    setIsLoading(true);
   }, [gameId]);
 
   const groupedLogs = useMemo(() => groupLogsByGeneration(logs), [logs]);
@@ -406,14 +403,10 @@ const LogPopover: React.FC<LogPopoverProps> = ({
       width={350}
       maxHeight={400}
     >
-      {isLoading && logs.length === 0 ? (
-        <div className="text-center text-gray-400 py-8">Loading...</div>
-      ) : logs.length === 0 ? (
-        <GamePopoverEmpty
-          icon={<GameIcon iconType="card" size="medium" />}
-          title="No log entries yet"
-          description="Actions will appear here as the game progresses"
-        />
+      {logs.length === 0 ? (
+        <div className="flex items-center justify-center py-10 px-5">
+          <span className="font-orbitron text-sm text-white/50">No logs</span>
+        </div>
       ) : (
         <div className="flex flex-col">
           {groupedLogs.map((group) => {

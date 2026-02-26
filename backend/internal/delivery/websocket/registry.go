@@ -55,6 +55,8 @@ func RegisterHandlers(
 	confirmSellPatentsAction *confirmAction.ConfirmSellPatentsAction,
 	confirmProductionCardsAction *confirmAction.ConfirmProductionCardsAction,
 	confirmCardDrawAction *confirmAction.ConfirmCardDrawAction,
+	confirmCardDiscardAction *confirmAction.ConfirmCardDiscardAction,
+	confirmBehaviorChoiceAction *confirmAction.ConfirmBehaviorChoiceAction,
 	playerReconnectedAction *connAction.PlayerReconnectedAction,
 	playerDisconnectedAction *connAction.PlayerDisconnectedAction,
 	playerTakeoverAction *connAction.PlayerTakeoverAction,
@@ -135,6 +137,12 @@ func RegisterHandlers(
 	confirmCardDrawHandler := confirmation.NewConfirmCardDrawHandler(confirmCardDrawAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionCardDrawConfirmed, confirmCardDrawHandler)
 
+	confirmCardDiscardHandler := confirmation.NewConfirmCardDiscardHandler(confirmCardDiscardAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionCardDiscardConfirmed, confirmCardDiscardHandler)
+
+	confirmBehaviorChoiceHandler := confirmation.NewConfirmBehaviorChoiceHandler(confirmBehaviorChoiceAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionBehaviorChoiceConfirmed, confirmBehaviorChoiceHandler)
+
 	// NOTE: PlayerReconnectedHandler is NOT registered separately because:
 	// - JoinGameHandler (on 'player-connect') handles BOTH new joins AND reconnections
 	// - It checks for playerID in payload to determine if it's a reconnect
@@ -178,11 +186,11 @@ func RegisterHandlers(
 	log.Info("   ✅ Resource Conversions (2): ConvertHeat, ConvertPlants")
 	log.Info("   ✅ Tile Selection (1): SelectTile")
 	log.Info("   ✅ Turn Management (3): StartGame, SkipAction, SelectStartingCards")
-	log.Info("   ✅ Confirmations (3): ConfirmSellPatents, ConfirmProductionCards, ConfirmCardDraw")
+	log.Info("   ✅ Confirmations (5): ConfirmSellPatents, ConfirmProductionCards, ConfirmCardDraw, ConfirmCardDiscard, ConfirmBehaviorChoice")
 	log.Info("   ✅ Connection (3): PlayerDisconnected, PlayerTakeover, KickPlayer")
 	log.Info("   ✅ Milestones & Awards (2): ClaimMilestone, FundAward")
 	log.Info("   ✅ Admin (1): AdminCommand (routes to 9 sub-commands)")
-	log.Info("   📌 Total: 26 handlers registered")
+	log.Info("   📌 Total: 28 handlers registered")
 }
 
 // MigrateSingleHandler migrates a specific message type from old to new handler

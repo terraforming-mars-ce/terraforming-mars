@@ -64,10 +64,11 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 	}
 
 	payment := cardaction.PaymentRequest{
-		Credits:     0,
-		Steel:       0,
-		Titanium:    0,
-		Substitutes: make(map[shared.ResourceType]int),
+		Credits:            0,
+		Steel:              0,
+		Titanium:           0,
+		Substitutes:        make(map[shared.ResourceType]int),
+		StorageSubstitutes: make(map[string]int),
 	}
 
 	if paymentData, ok := payload["payment"].(map[string]interface{}); ok {
@@ -88,6 +89,13 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 				}
 			}
 		}
+		if storageSubs, ok := paymentData["storageSubstitutes"].(map[string]interface{}); ok {
+			for cardID, amountVal := range storageSubs {
+				if amount, ok := amountVal.(float64); ok && amount > 0 {
+					payment.StorageSubstitutes[cardID] = int(amount)
+				}
+			}
+		}
 	}
 
 	var choiceIndex *int
@@ -96,14 +104,24 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 		choiceIndex = &idx
 	}
 
-	var cardStorageTarget *string
-	if target, ok := payload["cardStorageTarget"].(string); ok && target != "" {
-		cardStorageTarget = &target
+	var cardStorageTargets []string
+	if targetsRaw, ok := payload["cardStorageTargets"].([]interface{}); ok {
+		for _, t := range targetsRaw {
+			if s, ok := t.(string); ok {
+				cardStorageTargets = append(cardStorageTargets, s)
+			}
+		}
 	}
 
 	var targetPlayerID *string
 	if tpID, ok := payload["targetPlayerId"].(string); ok && tpID != "" {
 		targetPlayerID = &tpID
+	}
+
+	var selectedAmount *int
+	if saFloat, ok := payload["selectedAmount"].(float64); ok {
+		sa := int(saFloat)
+		selectedAmount = &sa
 	}
 
 	log.Debug("Payment extracted",
@@ -114,14 +132,14 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 	if choiceIndex != nil {
 		log.Debug("Choice index extracted", zap.Int("choice_index", *choiceIndex))
 	}
-	if cardStorageTarget != nil {
-		log.Debug("Card storage target extracted", zap.String("card_storage_target", *cardStorageTarget))
+	if len(cardStorageTargets) > 0 {
+		log.Debug("Card storage targets extracted", zap.Strings("card_storage_targets", cardStorageTargets))
 	}
 	if targetPlayerID != nil {
 		log.Debug("Target player extracted", zap.String("target_player_id", *targetPlayerID))
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, payment, choiceIndex, cardStorageTarget, targetPlayerID)
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, payment, choiceIndex, cardStorageTargets, targetPlayerID, selectedAmount)
 	if err != nil {
 		log.Error("Failed to execute play card action", zap.Error(err))
 		h.sendError(connection, err.Error())

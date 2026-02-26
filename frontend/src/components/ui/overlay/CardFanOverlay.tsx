@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import GameCard from "../cards/GameCard.tsx";
 import { PlayerCardDto } from "@/types/generated/api-types.ts";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
@@ -7,15 +7,22 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(Math.max(n, min), max);
 }
 
-// --- Layout constants ---
+// --- Fan layout constants ---
 const SPACING = 120;
+const CARD_WIDTH = 200;
+const CARD_HEIGHT = 280;
+const MAX_PANEL_WIDTH = 640;
+const FAN_PADDING = 40;
 const FLAT_RADIUS = 2.5;
 const TURN_RADIUS = 4;
 const MAX_ROTATE = 22;
 const EDGE_DROP = 18;
 const BASE_Y_OFFSET = 160;
-const VISIBLE_RADIUS = 4;
+const VISIBLE_RADIUS = 3;
 const CULL_RADIUS = VISIBLE_RADIUS + 1;
+
+// --- Expanded layout constants ---
+const EXPANDED_SPACING = 216;
 
 const SELECTED_LIFT = -180;
 const SELECTED_SCALE = 1.12;
@@ -76,8 +83,8 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
   const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
   const [isInThrowZone, setIsInThrowZone] = useState(false);
   const [returningCard, setReturningCard] = useState<string | null>(null);
-  const [throwError, setThrowError] = useState<string | null>(null);
-  const throwErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const handRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef(cards);
@@ -86,6 +93,73 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
   const lastPointerXRef = useRef(0);
 
   const { playCardHoverSound } = useSoundEffects();
+
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      setWindowHeight(window.innerHeight);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const fanScale = useMemo(() => {
+    const panelWidth = Math.min(MAX_PANEL_WIDTH, Math.max(480, (windowWidth - 700) / 2));
+    const availableWidth = windowWidth - 2 * panelWidth - FAN_PADDING;
+    const maxVisibleWidth = 2 * VISIBLE_RADIUS * SPACING + CARD_WIDTH;
+    if (maxVisibleWidth <= availableWidth) return 1;
+    return Math.min(1, Math.max(0.5, (availableWidth / maxVisibleWidth) * 1.2));
+  }, [windowWidth]);
+
+  const expandedBaseY = useMemo(() => {
+    return -(windowHeight / 2 - CARD_HEIGHT / 2 - 48);
+  }, [windowHeight]);
+
+  const expandedCullRadius = useMemo(() => {
+    return Math.ceil(windowWidth / EXPANDED_SPACING / 2) + 2;
+  }, [windowWidth]);
+
+  // --- Expand / Collapse ---
+  const handleExpand = useCallback(() => {
+    setIsTransitioning(true);
+    setIsExpanded(true);
+    setHighlightedCard(null);
+    setTimeout(() => setIsTransitioning(false), 350);
+  }, []);
+
+  const scrollTargetRef = useRef(0);
+  const scrollAnimRef = useRef(0);
+  const isAnimatingRef = useRef(false);
+
+  const handleCollapse = useCallback(
+    (cardId?: string) => {
+      setIsTransitioning(true);
+      setIsExpanded(false);
+      if (cardId) {
+        const cardIndex = cardOrder.indexOf(cardId);
+        if (cardIndex >= 0) {
+          scrollTargetRef.current = cardIndex;
+          setScrollPos(cardIndex);
+          setHighlightedCard(cardId);
+        }
+      }
+      setTimeout(() => setIsTransitioning(false), 350);
+    },
+    [cardOrder],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isExpanded) {
+        handleCollapse();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isExpanded, handleCollapse]);
 
   useEffect(() => {
     cardsRef.current = cards;
@@ -126,10 +200,6 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
   }, [cardOrder, highlightedCard]);
 
   // --- Wheel scrolling ---
-  const scrollTargetRef = useRef(0);
-  const scrollAnimRef = useRef(0);
-  const isAnimatingRef = useRef(false);
-
   const animateScroll = useCallback(() => {
     setScrollPos((prev) => {
       const diff = scrollTargetRef.current - prev;
@@ -179,8 +249,9 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
     return () => el.removeEventListener("wheel", handleWheel);
   }, [handleWheel]);
 
-  // --- Pointer events for drag ---
+  // --- Pointer events for drag (collapsed mode only) ---
   const handlePointerDown = (cardId: string, e: React.PointerEvent<HTMLDivElement>) => {
+    if (isExpanded) return;
     e.preventDefault();
     const cardEl = e.currentTarget;
     cardEl.setPointerCapture(e.pointerId);
@@ -318,16 +389,6 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
             return;
           } catch (error) {
             console.error("Failed to play card:", error);
-            if (error instanceof Error) {
-              if (throwErrorTimeoutRef.current) {
-                clearTimeout(throwErrorTimeoutRef.current);
-              }
-              setThrowError(error.message);
-              throwErrorTimeoutRef.current = setTimeout(() => {
-                setThrowError(null);
-                throwErrorTimeoutRef.current = null;
-              }, 2000);
-            }
           }
         }
       }
@@ -359,121 +420,203 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
     return null;
   }
 
+  const activeCullRadius = isExpanded ? expandedCullRadius : CULL_RADIUS;
+  const activeVisibleRadius = isExpanded ? expandedCullRadius : VISIBLE_RADIUS;
+
   return (
-    <div className="card-fan-overlay" ref={handRef}>
-      {throwError && <div className="card-fan-throw-error">{throwError}</div>}
+    <>
+      {/* Backdrop with blur */}
+      <div
+        className={`card-fan-backdrop ${isExpanded ? "is-visible" : ""}`}
+        onClick={() => handleCollapse()}
+      />
 
-      {cards.map((card) => {
-        const index = cardOrder.indexOf(card.id);
-        if (index === -1) return null;
+      <div className="card-fan-overlay" ref={handRef}>
+        {/* Expand button */}
+        <button
+          className={`card-fan-toggle-btn card-fan-expand-btn ${isExpanded ? "is-hidden" : ""}`}
+          onClick={handleExpand}
+        >
+          <svg width="18" height="20" viewBox="0 0 18 20" fill="none" style={{ marginTop: 3 }}>
+            <path
+              d="M4 13L9 8L14 13"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M4 7L9 2L14 7"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
 
-        const isDraggedCard = draggedCard === card.id;
+        {/* Collapse button */}
+        <button
+          className={`card-fan-toggle-btn card-fan-collapse-btn ${isExpanded ? "" : "is-hidden"}`}
+          onClick={() => handleCollapse()}
+          style={{ bottom: `${-expandedBaseY - 56}px` }}
+        >
+          <svg width="18" height="20" viewBox="0 0 18 20" fill="none" style={{ marginTop: 3 }}>
+            <path
+              d="M4 2L9 7L14 2"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M4 8L9 13L14 8"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
 
-        const absD = Math.abs(index - scrollPos);
-        if (absD > CULL_RADIUS && !isDraggedCard) return null;
+        {cards.map((card) => {
+          const index = cardOrder.indexOf(card.id);
+          if (index === -1) return null;
 
-        const edgeOpacity = isDraggedCard || absD <= VISIBLE_RADIUS ? 1 : 0;
-        const isDragging = isDraggedCard && dragIntentRef.current;
-        const isReturning = returningCard === card.id;
-        const isHighlighted = highlightedCard === card.id;
+          const isDraggedCard = draggedCard === card.id;
 
-        const base = getCardTransform(index, scrollPos);
-        let finalX = base.x;
-        let finalY = base.y;
-        let finalRotation = base.rotation;
-        let finalScale = base.scale;
-        let finalZ = base.z;
+          const absD = Math.abs(index - scrollPos);
+          if (absD > activeCullRadius && !isDraggedCard) return null;
 
-        // Selected overlay (click to raise)
-        if (isHighlighted && !isDraggedCard) {
-          finalY += SELECTED_LIFT;
-          finalScale = SELECTED_SCALE;
-          finalRotation = 0;
-          finalZ = 2000;
-        }
+          const edgeOpacity = isExpanded || isDraggedCard || absD <= activeVisibleRadius ? 1 : 0;
+          const isDragging = isDraggedCard && dragIntentRef.current;
+          const isReturning = returningCard === card.id;
+          const isHighlighted = highlightedCard === card.id;
 
-        // Dragged card follows pointer
-        let isDragRaised = false;
-        if (isDraggedCard && !isReturning) {
-          const containerRect = handRef.current?.getBoundingClientRect();
-          if (containerRect) {
-            finalX = dragPosition.x + dragOffset.x - (containerRect.left + containerRect.width / 2);
-            finalY = dragPosition.y + dragOffset.y - containerRect.bottom;
+          let finalX: number;
+          let finalY: number;
+          let finalRotation: number;
+          let finalScale: number;
+          let finalZ: number;
+          let showErrors = false;
+
+          if (isExpanded) {
+            const d = index - scrollPos;
+            finalX = d * EXPANDED_SPACING;
+            finalY = expandedBaseY;
             finalRotation = 0;
             finalScale = 1;
-            finalZ = 3000;
+            finalZ = index;
+          } else {
+            const base = getCardTransform(index, scrollPos);
+            finalX = base.x * fanScale;
+            finalY = base.y * fanScale;
+            finalRotation = base.rotation;
+            finalScale = fanScale;
+            finalZ = base.z;
 
-            const dragDeltaY = dragPosition.y - dragStartPosition.y;
-            isDragRaised = dragIntentRef.current && dragDeltaY < DRAG_RAISE_THRESHOLD;
+            if (isHighlighted && !isDraggedCard) {
+              finalY += SELECTED_LIFT * fanScale;
+              finalScale = SELECTED_SCALE * fanScale;
+              finalRotation = 0;
+              finalZ = 2000;
+            }
+
+            let isDragRaised = false;
+            if (isDraggedCard && !isReturning) {
+              const containerRect = handRef.current?.getBoundingClientRect();
+              if (containerRect) {
+                finalX =
+                  dragPosition.x + dragOffset.x - (containerRect.left + containerRect.width / 2);
+                finalY = dragPosition.y + dragOffset.y - containerRect.bottom;
+                finalRotation = 0;
+                finalScale = fanScale;
+                finalZ = 3000;
+
+                const dragDeltaY = dragPosition.y - dragStartPosition.y;
+                isDragRaised = dragIntentRef.current && dragDeltaY < DRAG_RAISE_THRESHOLD;
+              }
+            }
+
+            showErrors =
+              !card.available &&
+              card.errors.length > 0 &&
+              (isHighlighted || (isDraggedCard && isDragRaised));
           }
+
+          const staggerDelay = isTransitioning
+            ? `${Math.abs(index - Math.round(scrollPos)) * 25}ms`
+            : undefined;
+
+          const classNames = [
+            "card-fan-card",
+            isTransitioning ? "is-mode-transition" : "",
+            !isExpanded && isDragging && !isReturning ? "is-dragging" : "",
+            !isExpanded && !isDraggedCard && draggedCard ? "is-reordering" : "",
+            !isExpanded && isReturning ? "is-returning" : "",
+            !isExpanded && isDraggedCard && isInThrowZone && card.available ? "is-throw-zone" : "",
+            isExpanded ? "is-expanded" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+
+          return (
+            <div
+              key={card.id}
+              data-card-id={card.id}
+              className={classNames}
+              style={{
+                transform: `translate(${finalX}px, ${finalY}px) rotate(${finalRotation}deg) scale(${finalScale})`,
+                zIndex: finalZ,
+                opacity: edgeOpacity,
+                pointerEvents: edgeOpacity === 0 ? "none" : undefined,
+                transitionDelay: staggerDelay,
+              }}
+              onPointerDown={isExpanded ? undefined : (e) => handlePointerDown(card.id, e)}
+              onPointerMove={isExpanded ? undefined : handlePointerMove}
+              onPointerUp={isExpanded ? undefined : handlePointerUp}
+              onClick={isExpanded ? () => handleCollapse(card.id) : undefined}
+            >
+              <GameCard
+                card={card}
+                isSelected={
+                  !isExpanded &&
+                  (isHighlighted || (isDraggedCard && isInThrowZone && card.available === true))
+                }
+                onSelect={() => {}}
+                animationDelay={-1}
+              />
+              {!isExpanded && !card.available && card.errors.length > 0 && (
+                <div className={`card-fan-error-panel ${showErrors ? "is-visible" : ""}`}>
+                  {card.errors.map((err, i) => (
+                    <div key={i} className="card-fan-error-item">
+                      {err.message}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <style>{`
+        .card-fan-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(6px);
+          z-index: 1099;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 245ms ease;
         }
 
-        const showErrors =
-          !card.available &&
-          card.errors.length > 0 &&
-          (isHighlighted || (isDraggedCard && isDragRaised));
+        .card-fan-backdrop.is-visible {
+          opacity: 1;
+          pointer-events: auto;
+          cursor: default;
+        }
 
-        const showWarnings =
-          card.warnings &&
-          card.warnings.length > 0 &&
-          (isHighlighted || (isDraggedCard && isDragRaised));
-
-        const classNames = [
-          "card-fan-card",
-          isDragging && !isReturning ? "is-dragging" : "",
-          !isDraggedCard && draggedCard ? "is-reordering" : "",
-          isReturning ? "is-returning" : "",
-          isDraggedCard && isInThrowZone && card.available ? "is-throw-zone" : "",
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        return (
-          <div
-            key={card.id}
-            data-card-id={card.id}
-            className={classNames}
-            style={{
-              transform: `translate(${finalX}px, ${finalY}px) rotate(${finalRotation}deg) scale(${finalScale})`,
-              zIndex: finalZ,
-              opacity: edgeOpacity,
-              pointerEvents: edgeOpacity === 0 ? "none" : undefined,
-            }}
-            onPointerDown={(e) => handlePointerDown(card.id, e)}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-          >
-            <GameCard
-              card={card}
-              isSelected={
-                isHighlighted || (isDraggedCard && isInThrowZone && card.available === true)
-              }
-              onSelect={() => {}}
-              animationDelay={-1}
-            />
-            {!card.available && card.errors.length > 0 && (
-              <div className={`card-fan-error-panel ${showErrors ? "is-visible" : ""}`}>
-                {card.errors.map((err, i) => (
-                  <div key={i} className="card-fan-error-item">
-                    {err.message}
-                  </div>
-                ))}
-              </div>
-            )}
-            {card.warnings && card.warnings.length > 0 && (
-              <div className={`card-fan-warning-panel ${showWarnings ? "is-visible" : ""}`}>
-                {card.warnings.map((warn, i) => (
-                  <div key={i} className="card-fan-warning-item">
-                    {warn.message}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      <style>{`
         .card-fan-overlay {
           position: fixed;
           bottom: 48px;
@@ -481,6 +624,7 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
           transform: translateX(-50%);
           width: 0;
           height: 300px;
+          z-index: 1100;
           pointer-events: none;
         }
 
@@ -495,6 +639,15 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
           user-select: none;
           touch-action: none;
           transition: transform 180ms ease, filter 180ms ease, opacity 180ms ease;
+        }
+
+        .card-fan-card.is-mode-transition {
+          transition: transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                      opacity 210ms ease !important;
+        }
+
+        .card-fan-card.is-expanded {
+          cursor: pointer;
         }
 
         .card-fan-card.is-dragging {
@@ -514,6 +667,46 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
 
         .card-fan-card.is-throw-zone {
           filter: brightness(1.15);
+        }
+
+        /* --- Toggle buttons --- */
+        .card-fan-toggle-btn {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 10;
+          pointer-events: auto;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
+          padding: 0;
+          color: rgba(200, 200, 220, 0.95);
+          background: rgba(10, 10, 15, 0.85);
+          border: 1px solid rgba(80, 80, 90, 0.5);
+          border-radius: 50%;
+          opacity: 1;
+          transition: background 200ms ease, border-color 200ms ease, opacity 300ms ease;
+        }
+
+        .card-fan-toggle-btn.is-hidden {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .card-fan-toggle-btn:hover {
+          background: rgba(30, 30, 40, 0.95);
+          border-color: rgba(120, 120, 140, 0.7);
+        }
+
+        .card-fan-expand-btn {
+          bottom: 160px;
+        }
+
+        .card-fan-collapse-btn {
+          /* bottom set via inline style */
         }
 
         .card-fan-error-panel {
@@ -578,30 +771,6 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
           white-space: normal;
         }
 
-        .card-fan-throw-error {
-          position: fixed;
-          top: 40%;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 1200;
-          background: rgba(10, 10, 15, 0.95);
-          border: 1px solid rgba(231, 76, 60, 0.6);
-          border-left: 4px solid #e74c3c;
-          color: rgba(255, 255, 255, 0.9);
-          font-family: 'Orbitron', sans-serif;
-          font-size: 14px;
-          font-weight: 600;
-          padding: 12px 20px;
-          pointer-events: none;
-          animation: throwErrorFadeIn 200ms ease-out;
-          white-space: nowrap;
-        }
-
-        @keyframes throwErrorFadeIn {
-          from { opacity: 0; transform: translateX(-50%) translateY(8px); }
-          to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-
         @media (max-width: 1200px) {
           .card-fan-overlay {
             height: 250px;
@@ -614,7 +783,8 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
           }
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 };
 

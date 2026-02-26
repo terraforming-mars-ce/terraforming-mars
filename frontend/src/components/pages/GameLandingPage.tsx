@@ -201,7 +201,6 @@ const GameLandingPage: React.FC = () => {
                 <button
                   onClick={handleDismiss}
                   className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/10"
-                  title="Dismiss"
                 >
                   <svg
                     width="16"

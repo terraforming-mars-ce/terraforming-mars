@@ -1,4 +1,4 @@
-package action_test
+package core_test
 
 import (
 	"context"
@@ -11,46 +11,12 @@ import (
 	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
 	spAction "terraforming-mars-backend/internal/action/standard_project"
 	turnmgmt "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/cards"
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/test/testutil"
 )
 
-func setupTwoPlayerGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string, string) {
-	t.Helper()
-
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
-	cardRegistry := testutil.CreateTestCardRegistry()
-	testutil.StartTestGame(t, testGame)
-
-	turnOrder := testGame.TurnOrder()
-
-	return testGame, repo, cardRegistry, turnOrder[0], turnOrder[1]
-}
-
-func setupSoloGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string) {
-	t.Helper()
-
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
-	cardRegistry := testutil.CreateTestCardRegistry()
-	testutil.StartTestGame(t, testGame)
-
-	// Solo mode: set unlimited actions
-	turnOrder := testGame.TurnOrder()
-	playerID := turnOrder[0]
-	err := testGame.SetCurrentTurn(context.Background(), playerID, -1)
-	if err != nil {
-		t.Fatalf("Failed to set solo unlimited actions: %v", err)
-	}
-
-	return testGame, repo, cardRegistry, playerID
-}
-
 func TestPlayCardConsumesAction(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := setupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	p, _ := testGame.GetPlayer(playerID)
@@ -60,7 +26,7 @@ func TestPlayCardConsumesAction(t *testing.T) {
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err := playAction.Execute(context.Background(), testGame.ID(), playerID, "card-power-plant", payment, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), playerID, "card-power-plant", payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing card should succeed")
 
 	turn := testGame.CurrentTurn()
@@ -68,7 +34,7 @@ func TestPlayCardConsumesAction(t *testing.T) {
 }
 
 func TestZeroActionsBlocksCardPlay(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := setupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	// Set actions to 0
@@ -82,12 +48,12 @@ func TestZeroActionsBlocksCardPlay(t *testing.T) {
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err = playAction.Execute(context.Background(), testGame.ID(), playerID, "card-power-plant", payment, nil, nil, nil)
+	err = playAction.Execute(context.Background(), testGame.ID(), playerID, "card-power-plant", payment, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
 }
 
 func TestZeroActionsBlocksStandardProject(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := setupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	err := testGame.SetCurrentTurn(context.Background(), playerID, 0)
@@ -103,7 +69,7 @@ func TestZeroActionsBlocksStandardProject(t *testing.T) {
 }
 
 func TestZeroActionsBlocksConvertHeat(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := setupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	err := testGame.SetCurrentTurn(context.Background(), playerID, 0)
@@ -119,7 +85,7 @@ func TestZeroActionsBlocksConvertHeat(t *testing.T) {
 }
 
 func TestAutoAdvanceAfterSecondAction(t *testing.T) {
-	testGame, repo, cardRegistry, player1ID, player2ID := setupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, player1ID, player2ID := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	p1, _ := testGame.GetPlayer(player1ID)
@@ -130,7 +96,7 @@ func TestAutoAdvanceAfterSecondAction(t *testing.T) {
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-power-plant", payment, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-power-plant", payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "First card play should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "Should have 1 action after first play")
 	testutil.AssertEqual(t, player1ID, testGame.CurrentTurn().PlayerID(), "Should still be player 1's turn")
@@ -138,7 +104,7 @@ func TestAutoAdvanceAfterSecondAction(t *testing.T) {
 	// Play second card
 	p1.Hand().AddCard("card-asteroid")
 	payment2 := cardAction.PaymentRequest{Credits: 14}
-	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-asteroid", payment2, nil, nil, nil)
+	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-asteroid", payment2, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Second card play should succeed")
 
 	// Should auto-advance to player 2
@@ -147,7 +113,7 @@ func TestAutoAdvanceAfterSecondAction(t *testing.T) {
 }
 
 func TestSoloUnlimitedActionsNotBlocked(t *testing.T) {
-	testGame, repo, cardRegistry, playerID := setupSoloGame(t)
+	testGame, repo, cardRegistry, playerID := testutil.SetupSoloGame(t)
 	logger := testutil.TestLogger()
 
 	p, _ := testGame.GetPlayer(playerID)
@@ -161,7 +127,7 @@ func TestSoloUnlimitedActionsNotBlocked(t *testing.T) {
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err := playAction.Execute(context.Background(), testGame.ID(), playerID, "card-power-plant", payment, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), playerID, "card-power-plant", payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Solo card play should succeed")
 
 	testutil.AssertEqual(t, -1, testGame.CurrentTurn().ActionsRemaining(), "Solo should still have unlimited actions")
@@ -169,7 +135,7 @@ func TestSoloUnlimitedActionsNotBlocked(t *testing.T) {
 }
 
 func TestStateCalculatorReportsNoActionsRemaining(t *testing.T) {
-	testGame, _, cardRegistry, playerID, _ := setupTwoPlayerGame(t)
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 
 	err := testGame.SetCurrentTurn(context.Background(), playerID, 0)
 	testutil.AssertNoError(t, err, "Setting turn should succeed")
@@ -196,7 +162,7 @@ func TestStateCalculatorReportsNoActionsRemaining(t *testing.T) {
 }
 
 func TestAutoAdvanceWaitsForPendingTileSelection(t *testing.T) {
-	testGame, _, _, player1ID, _ := setupTwoPlayerGame(t)
+	testGame, _, _, player1ID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	// Set pending tile selection for player 1
@@ -218,7 +184,7 @@ func TestAutoAdvanceWaitsForPendingTileSelection(t *testing.T) {
 }
 
 func TestSkipWithOneActionAdvancesToNextPlayer(t *testing.T) {
-	testGame, repo, cardRegistry, player1ID, player2ID := setupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, player1ID, player2ID := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	// Set player 1 to have 1 action remaining
@@ -239,7 +205,7 @@ func TestSkipWithOneActionAdvancesToNextPlayer(t *testing.T) {
 }
 
 func TestAutoAdvanceGrantsUnlimitedActionsToLastNonPassedPlayer(t *testing.T) {
-	testGame, repo, cardRegistry, player1ID, player2ID := setupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, player1ID, player2ID := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	// Player 2 passes
@@ -255,14 +221,14 @@ func TestAutoAdvanceGrantsUnlimitedActionsToLastNonPassedPlayer(t *testing.T) {
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-power-plant", payment, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-power-plant", payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "First card play should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "Should have 1 action after first play")
 
 	// Play second card - this should auto-advance and grant unlimited actions to player 1
 	p1.Hand().AddCard("card-asteroid")
 	payment2 := cardAction.PaymentRequest{Credits: 14}
-	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-asteroid", payment2, nil, nil, nil)
+	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-asteroid", payment2, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Second card play should succeed")
 
 	// Player 1 should now have unlimited actions since they're the last non-passed player
@@ -271,7 +237,7 @@ func TestAutoAdvanceGrantsUnlimitedActionsToLastNonPassedPlayer(t *testing.T) {
 }
 
 func TestSkipGrantsUnlimitedActionsToLastNonPassedPlayer(t *testing.T) {
-	testGame, repo, cardRegistry, player1ID, player2ID := setupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, player1ID, player2ID := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	// Player 2 passes
@@ -296,7 +262,7 @@ func TestSkipGrantsUnlimitedActionsToLastNonPassedPlayer(t *testing.T) {
 }
 
 func TestTurnOrderRotatesAfterGeneration(t *testing.T) {
-	testGame, repo, cardRegistry, player1ID, player2ID := setupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, player1ID, player2ID := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
 	// Verify initial turn order
@@ -324,7 +290,7 @@ func TestTurnOrderRotatesAfterGeneration(t *testing.T) {
 }
 
 func TestForcedFirstActionDoesNotConsumePlayerAction(t *testing.T) {
-	testGame, _, _, player1ID, _ := setupTwoPlayerGame(t)
+	testGame, _, _, player1ID, _ := testutil.SetupTwoPlayerGame(t)
 	ctx := context.Background()
 
 	// Set a forced first action for player 1 (simulating Tharsis Republic)

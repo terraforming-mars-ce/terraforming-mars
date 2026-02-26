@@ -56,16 +56,16 @@ const GameModal: React.FC<GameModalProps> = ({
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center p-5 animate-[modalFadeIn_0.3s_ease-out]"
+      className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center p-5"
       style={{ zIndex }}
     >
       <div
-        className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 cursor-pointer"
+        className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 cursor-default animate-[modalFadeIn_0.3s_ease-out]"
         onClick={handleBackdropClick}
       />
 
       <div
-        className={`relative w-full ${sizeClasses[size]} max-h-[90vh] bg-space-black-darker/95 border-2 border-[var(--modal-accent)] rounded-[20px] overflow-hidden ${glow ? "shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_30px_var(--modal-accent)]" : "shadow-[0_20px_60px_rgba(0,0,0,0.6)]"} backdrop-blur-space ${animationClass} flex flex-col ${className}`}
+        className={`relative w-full ${sizeClasses[size]} max-h-[90vh] bg-space-black-darker/95 border-2 border-[var(--modal-accent)] rounded-[20px] overflow-hidden ${glow ? "shadow-[0_10px_40px_rgba(0,0,0,0.8),0_0_15px_rgba(var(--modal-accent-rgb),0.5)]" : "shadow-[0_10px_40px_rgba(0,0,0,0.8)]"} backdrop-blur-space ${animationClass} flex flex-col ${className}`}
         style={themeStyles}
       >
         {children}

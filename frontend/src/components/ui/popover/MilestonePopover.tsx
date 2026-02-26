@@ -32,7 +32,6 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
 
   const milestones = gameState?.currentPlayer?.milestones ?? [];
   const claimedCount = milestones.filter((m) => m.isClaimed).length;
-  const availableCount = milestones.filter((m) => m.available && !m.isClaimed).length;
 
   const getPlayerName = (playerId: string | undefined): string => {
     if (!playerId || !gameState) return "Unknown";
@@ -55,16 +54,7 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
       excludeRef={anchorRef}
       header={{
         title: "Milestones",
-        badge: (
-          <div className="flex gap-2">
-            <span>{claimedCount}/3 Claimed</span>
-            {availableCount > 0 && (
-              <span className="bg-green-500/20 border border-green-500/30 rounded px-2 py-0.5 text-green-400">
-                {availableCount} Available
-              </span>
-            )}
-          </div>
-        ),
+        badge: <span>{claimedCount}/3 Claimed</span>,
         showCloseButton: true,
       }}
       width={500}

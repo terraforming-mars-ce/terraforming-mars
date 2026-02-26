@@ -94,12 +94,20 @@ const GameIcon: React.FC<GameIconProps> = ({
   }
 
   const sizeMap = {
-    small: { icon: 24, fontSize: "12px" },
-    medium: { icon: 32, fontSize: "16px" },
-    large: { icon: 40, fontSize: "20px" },
+    small: { icon: 24, baseFontSize: 12 },
+    medium: { icon: 32, baseFontSize: 16 },
+    large: { icon: 40, baseFontSize: 20 },
   };
 
   const dimensions = sizeMap[size];
+
+  const getCreditFontSize = () => {
+    if (amount === undefined) return dimensions.baseFontSize;
+    const digits = String(Math.abs(amount)).length;
+    if (digits <= 1) return dimensions.baseFontSize;
+    if (digits === 2) return dimensions.baseFontSize;
+    return Math.round(dimensions.baseFontSize * 0.85);
+  };
 
   const attackGlow = isAttack
     ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite]"
@@ -128,7 +136,7 @@ const GameIcon: React.FC<GameIconProps> = ({
           />
           <span
             className="absolute top-0 left-0 right-0 bottom-0 text-black font-black font-[Prototype,Arial_Black,Arial,sans-serif] flex items-center justify-center text-center leading-none [text-shadow:0_0_2px_rgba(255,255,255,0.3)] tracking-[0.5px] [-webkit-font-smoothing:antialiased] [-moz-osx-font-smoothing:grayscale] [text-rendering:optimizeLegibility]"
-            style={{ fontSize: dimensions.fontSize }}
+            style={{ fontSize: `${getCreditFontSize()}px` }}
           >
             {amount}
           </span>
@@ -152,7 +160,7 @@ const GameIcon: React.FC<GameIconProps> = ({
         {amount !== undefined && amount > 1 && !isCredits && (
           <span
             className="absolute bottom-0 right-0 text-white font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] bg-black/50 rounded-full px-1 min-w-[16px] text-center leading-none"
-            style={{ fontSize: dimensions.fontSize }}
+            style={{ fontSize: `${dimensions.baseFontSize}px` }}
           >
             {amount}
           </span>

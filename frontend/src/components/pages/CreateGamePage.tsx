@@ -227,7 +227,6 @@ const CreateGamePage: React.FC = () => {
                   type="submit"
                   disabled={isLoading || !playerName.trim()}
                   className="bg-transparent border-none py-4 px-5 cursor-pointer flex items-center justify-center transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60 group"
-                  title="Connect"
                 >
                   <div className="w-4 h-6 brightness-0 invert transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] group-hover:scale-110">
                     <GameIcon iconType="arrow" size="small" />

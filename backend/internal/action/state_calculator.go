@@ -34,13 +34,13 @@ func CalculatePlayerCardState(
 		metadata["discounts"] = discounts
 	}
 
-	errors = append(errors, validateAffordabilityWithSubstitutes(p, costMap, card)...)
+	errors = append(errors, validateAffordabilityWithSubstitutes(p, costMap, card.Tags)...)
 	errors = append(errors, validateRequirements(card, p, g, cardRegistry)...)
 	errors = append(errors, validateProductionOutputs(card, p)...)
+	errors = append(errors, validateCardResourceOutputs(card, p, cardRegistry)...)
+	errors = append(errors, validateCardDiscardOutputs(card, p)...)
 
-	tileErrors, tileWarnings := validateTileOutputs(card, p, g)
-	errors = append(errors, tileErrors...)
-	warnings = append(warnings, tileWarnings...)
+	errors = append(errors, ValidateTileOutputs(card, p, g)...)
 
 	return player.EntityState{
 		Errors:         errors,
@@ -75,6 +75,46 @@ func CalculatePlayerCardActionState(
 
 	resources := p.Resources().Get()
 	for _, input := range behavior.Inputs {
+		// Skip variable-amount inputs — the player selects how much to spend (can be 0)
+		if input.VariableAmount {
+			continue
+		}
+
+		// Storage resource inputs (target: "self-card") check card storage instead of player resources
+		if input.Target == "self-card" && isStorageResourceType(input.ResourceType) {
+			storage := p.Resources().GetCardStorage(cardID)
+			if storage < input.Amount {
+				errors = append(errors, player.StateError{
+					Code:     player.ErrorCodeInsufficientResources,
+					Category: player.ErrorCategoryInput,
+					Message:  fmt.Sprintf("Not enough %s on card", input.ResourceType),
+				})
+			}
+			continue
+		}
+
+		// Credit inputs with paymentAllowed consider alternative resources (e.g., titanium)
+		if input.ResourceType == shared.ResourceCredit && len(input.PaymentAllowed) > 0 {
+			effectiveCredits := resources.Credits
+			substitutes := p.Resources().PaymentSubstitutes()
+			for _, allowed := range input.PaymentAllowed {
+				for _, sub := range substitutes {
+					if sub.ResourceType == allowed {
+						available := getResourceAmount(resources, allowed)
+						effectiveCredits += available * sub.ConversionRate
+					}
+				}
+			}
+			if effectiveCredits < input.Amount {
+				errors = append(errors, player.StateError{
+					Code:     player.ErrorCodeInsufficientResources,
+					Category: player.ErrorCategoryInput,
+					Message:  fmt.Sprintf("Not enough %s", input.ResourceType),
+				})
+			}
+			continue
+		}
+
 		available := getResourceAmount(resources, input.ResourceType)
 		if available < input.Amount {
 			errors = append(errors, player.StateError{
@@ -298,7 +338,7 @@ func validateActionUsageLimit(
 }
 
 // validateRequirements checks all card requirements.
-// Extracted from PlayCardAction.validateCardRequirements() lines 209-321.
+// Includes global parameter lenience from temporary effects (e.g., Special Design).
 func validateRequirements(
 	card *gamecards.Card,
 	p *player.Player,
@@ -309,10 +349,14 @@ func validateRequirements(
 		return nil
 	}
 
+	// Calculate global parameter lenience from player effects
+	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
+	lenience := calculator.CalculateGlobalParameterLenience(p)
+
 	var errors []player.StateError
 
 	for _, req := range card.Requirements.Items {
-		err := checkRequirement(req, p, g, cardRegistry)
+		err := checkRequirement(req, p, g, cardRegistry, lenience)
 		if err != nil {
 			errors = append(errors, *err)
 		}
@@ -344,6 +388,10 @@ func validateProductionOutputs(
 
 		// Check outputs for negative production
 		for _, output := range behavior.Outputs {
+			// Skip variable-amount outputs — the player controls the amount
+			if output.VariableAmount {
+				continue
+			}
 			// Only check production resource types with negative amounts
 			if output.Amount >= 0 {
 				continue
@@ -394,59 +442,144 @@ func validateProductionOutputs(
 	return errors
 }
 
-// validateTileOutputs checks that the board has available placements for any tile outputs.
-// If a card outputs city/greenery/ocean tiles, the player must have valid placement locations.
-// Returns both errors (blocking) and warnings (non-blocking).
-// If tile restrictions are specified (e.g., adjacency="none"), missing placements become warnings.
-func validateTileOutputs(
+// validateCardResourceOutputs checks that the player has at least one valid target card
+// with resource storage for card-resource outputs with any-card target.
+func validateCardResourceOutputs(
 	card *gamecards.Card,
 	p *player.Player,
-	g *game.Game,
-) ([]player.StateError, []player.StateWarning) {
-	if len(card.Behaviors) == 0 || g == nil {
-		return nil, nil
+	cardRegistry cards.CardRegistry,
+) []player.StateError {
+	if len(card.Behaviors) == 0 || cardRegistry == nil {
+		return nil
 	}
 
-	var errors []player.StateError
-	var warnings []player.StateWarning
-
-	// Check all behaviors for auto-triggers with tile placement outputs
 	for _, behavior := range card.Behaviors {
-		// Only check auto-trigger behaviors (immediate effects when card is played)
 		if !gamecards.HasAutoTrigger(behavior) {
 			continue
 		}
 
-		// Check outputs for tile placements
+		// Check both direct outputs and choice outputs
+		allOutputs := behavior.Outputs
+		for _, choice := range behavior.Choices {
+			allOutputs = append(allOutputs, choice.Outputs...)
+		}
+
+		for _, output := range allOutputs {
+			if output.ResourceType != shared.ResourceCardResource || output.Target != "any-card" {
+				continue
+			}
+
+			// Check if player has any played card with resource storage matching selectors
+			hasValidTarget := false
+			for _, playedCardID := range p.PlayedCards().Cards() {
+				playedCard, err := cardRegistry.GetByID(playedCardID)
+				if err != nil {
+					continue
+				}
+				if playedCard.ResourceStorage == nil {
+					continue
+				}
+				// If selectors specified, card must match
+				if len(output.Selectors) > 0 && !gamecards.MatchesAnySelector(playedCard, output.Selectors) {
+					continue
+				}
+				hasValidTarget = true
+				break
+			}
+
+			if !hasValidTarget {
+				return []player.StateError{{
+					Code:     player.ErrorCodeInsufficientResources,
+					Category: player.ErrorCategoryAvailability,
+					Message:  "No valid card with resource storage",
+				}}
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateCardDiscardOutputs checks that the player has enough cards in hand to satisfy
+// card-discard outputs when playing a card.
+func validateCardDiscardOutputs(
+	card *gamecards.Card,
+	p *player.Player,
+) []player.StateError {
+	if len(card.Behaviors) == 0 {
+		return nil
+	}
+
+	totalDiscard := 0
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+
+		for _, output := range behavior.Outputs {
+			if output.ResourceType == shared.ResourceCardDiscard && output.Target == "self-player" {
+				totalDiscard += output.Amount
+			}
+		}
+
+		for _, choice := range behavior.Choices {
+			for _, output := range choice.Outputs {
+				if output.ResourceType == shared.ResourceCardDiscard && output.Target == "self-player" {
+					totalDiscard += output.Amount
+				}
+			}
+		}
+	}
+
+	if totalDiscard == 0 {
+		return nil
+	}
+
+	// The card being played leaves the hand first, so available cards = hand - 1
+	availableCards := p.Hand().CardCount() - 1
+	if availableCards < totalDiscard {
+		return []player.StateError{{
+			Code:     player.ErrorCodeNoCardsInHand,
+			Category: player.ErrorCategoryAvailability,
+			Message:  "Not enough cards to discard",
+		}}
+	}
+
+	return nil
+}
+
+// ValidateTileOutputs checks that the board has available placements for any tile outputs.
+// If a card outputs city/greenery/ocean tiles, the player must have valid placement locations.
+func ValidateTileOutputs(
+	card *gamecards.Card,
+	p *player.Player,
+	g *game.Game,
+) []player.StateError {
+	if len(card.Behaviors) == 0 || g == nil {
+		return nil
+	}
+
+	var errors []player.StateError
+
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+
 		for _, output := range behavior.Outputs {
 			switch output.ResourceType {
 			case shared.ResourceCityPlacement:
-				// Extract tile restrictions
-				var tileRestrictions *shared.TileRestrictions
-				if output.TileRestrictions != nil {
-					tileRestrictions = output.TileRestrictions
-				}
-
-				cityPlacements := g.CountAvailableHexesForTile("city", p.ID(), tileRestrictions)
+				cityPlacements := g.CountAvailableHexesForTile("city", p.ID(), output.TileRestrictions)
 				if cityPlacements == 0 {
-					// If restrictions exist, it's a warning (card still playable)
-					// If no restrictions, it's an error (normal city rules blocked)
-					if tileRestrictions != nil && (len(tileRestrictions.BoardTags) > 0 || tileRestrictions.Adjacency != "") {
-						warnings = append(warnings, player.StateWarning{
-							Code:    player.WarningCodeNoValidTilePlacements,
-							Message: "No valid city placements available",
-						})
-					} else {
-						errors = append(errors, player.StateError{
-							Code:     player.ErrorCodeNoCityPlacements,
-							Category: player.ErrorCategoryAvailability,
-							Message:  "No valid city placements",
-						})
-					}
+					errors = append(errors, player.StateError{
+						Code:     player.ErrorCodeNoCityPlacements,
+						Category: player.ErrorCategoryAvailability,
+						Message:  "No valid city placements",
+					})
 				}
 
 			case shared.ResourceGreeneryPlacement:
-				greeneryPlacements := g.CountAvailableHexesForTile("greenery", p.ID(), nil)
+				greeneryPlacements := g.CountAvailableHexesForTile("greenery", p.ID(), output.TileRestrictions)
 				if greeneryPlacements == 0 {
 					errors = append(errors, player.StateError{
 						Code:     player.ErrorCodeNoGreeneryPlacements,
@@ -468,16 +601,31 @@ func validateTileOutputs(
 			case shared.ResourceVolcanoPlacement:
 				volcanoPlacements := g.CountAvailableHexesForTile("volcano", p.ID(), nil)
 				if volcanoPlacements == 0 {
-					warnings = append(warnings, player.StateWarning{
-						Code:    player.WarningCodeNoValidTilePlacements,
-						Message: "No valid volcanic placements available",
+					errors = append(errors, player.StateError{
+						Code:     player.ErrorCodeNoTilePlacements,
+						Category: player.ErrorCategoryAvailability,
+						Message:  "No valid volcanic placements",
+					})
+				}
+
+			case shared.ResourceTilePlacement:
+				tileType := output.TileType
+				if tileType == "" {
+					continue
+				}
+				tilePlacements := g.CountAvailableHexesForTile(tileType, p.ID(), output.TileRestrictions)
+				if tilePlacements == 0 {
+					errors = append(errors, player.StateError{
+						Code:     player.ErrorCodeNoTilePlacements,
+						Category: player.ErrorCategoryAvailability,
+						Message:  "No valid tile placements",
 					})
 				}
 			}
 		}
 	}
 
-	return errors, warnings
+	return errors
 }
 
 func validateGenerationalEventRequirements(
@@ -573,6 +721,23 @@ func validateBehaviorTileOutputs(
 					Message:  "No ocean tiles remaining",
 				})
 			}
+		case shared.ResourceTilePlacement:
+			tileType := output.TileType
+			if tileType == "" {
+				continue
+			}
+			var tileRestrictions *shared.TileRestrictions
+			if output.TileRestrictions != nil {
+				tileRestrictions = output.TileRestrictions
+			}
+			tilePlacements := g.CountAvailableHexesForTile(tileType, p.ID(), tileRestrictions)
+			if tilePlacements == 0 {
+				errors = append(errors, player.StateError{
+					Code:     player.ErrorCodeNoTilePlacements,
+					Category: player.ErrorCategoryAvailability,
+					Message:  "No valid tile placements",
+				})
+			}
 		}
 	}
 
@@ -580,24 +745,25 @@ func validateBehaviorTileOutputs(
 }
 
 // checkRequirement validates a single requirement.
-// Extracted from PlayCardAction - contains the switch statement for all requirement types.
+// lenience widens global parameter requirements (min lowered, max raised) from temporary effects.
 func checkRequirement(
 	req gamecards.Requirement,
 	p *player.Player,
 	g *game.Game,
 	cardRegistry cards.CardRegistry,
+	lenience int,
 ) *player.StateError {
 	switch req.Type {
 	case gamecards.RequirementTemperature:
 		temp := g.GlobalParameters().Temperature()
-		if req.Min != nil && temp < *req.Min {
+		if req.Min != nil && temp < *req.Min-lenience {
 			return &player.StateError{
 				Code:     player.ErrorCodeTemperatureTooLow,
 				Category: player.ErrorCategoryRequirement,
 				Message:  "Temperature too low",
 			}
 		}
-		if req.Max != nil && temp > *req.Max {
+		if req.Max != nil && temp > *req.Max+lenience {
 			return &player.StateError{
 				Code:     player.ErrorCodeTemperatureTooHigh,
 				Category: player.ErrorCategoryRequirement,
@@ -607,14 +773,14 @@ func checkRequirement(
 
 	case gamecards.RequirementOxygen:
 		oxygen := g.GlobalParameters().Oxygen()
-		if req.Min != nil && oxygen < *req.Min {
+		if req.Min != nil && oxygen < *req.Min-lenience {
 			return &player.StateError{
 				Code:     player.ErrorCodeOxygenTooLow,
 				Category: player.ErrorCategoryRequirement,
 				Message:  "Oxygen too low",
 			}
 		}
-		if req.Max != nil && oxygen > *req.Max {
+		if req.Max != nil && oxygen > *req.Max+lenience {
 			return &player.StateError{
 				Code:     player.ErrorCodeOxygenTooHigh,
 				Category: player.ErrorCategoryRequirement,
@@ -624,14 +790,14 @@ func checkRequirement(
 
 	case gamecards.RequirementOceans:
 		oceans := g.GlobalParameters().Oceans()
-		if req.Min != nil && oceans < *req.Min {
+		if req.Min != nil && oceans < *req.Min-lenience {
 			return &player.StateError{
 				Code:     player.ErrorCodeOceansTooLow,
 				Category: player.ErrorCategoryRequirement,
 				Message:  "Too few oceans",
 			}
 		}
-		if req.Max != nil && oceans > *req.Max {
+		if req.Max != nil && oceans > *req.Max+lenience {
 			return &player.StateError{
 				Code:     player.ErrorCodeOceansTooHigh,
 				Category: player.ErrorCategoryRequirement,
@@ -767,8 +933,21 @@ func checkRequirement(
 		// For now, skip these validations (same as PlayCardAction line 310-312)
 
 	case gamecards.RequirementVenus:
-		// TODO: Implement Venus track when expansion is supported
-		// For now, skip Venus validation (same as PlayCardAction line 314-316)
+		venus := g.GlobalParameters().Venus()
+		if req.Min != nil && venus < *req.Min-lenience {
+			return &player.StateError{
+				Code:     player.ErrorCodeVenusTooLow,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Venus too low",
+			}
+		}
+		if req.Max != nil && venus > *req.Max+lenience {
+			return &player.StateError{
+				Code:     player.ErrorCodeVenusTooHigh,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Venus too high",
+			}
+		}
 	}
 
 	return nil
@@ -872,14 +1051,14 @@ func validateAffordabilityMap(p *player.Player, costMap map[string]int) []player
 
 // validateAffordabilityWithSubstitutes checks if player can afford a multi-resource cost,
 // considering payment substitutes like Helion's heat-to-credit conversion.
-// Steel is only counted for Building-tagged cards, titanium only for Space-tagged cards.
-func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]int, card *gamecards.Card) []player.StateError {
+// Steel is only counted for cards with the Building tag, titanium only for Space tag.
+func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]int, tags []shared.CardTag) []player.StateError {
 	var errors []player.StateError
 	resources := p.Resources().Get()
 	substitutes := p.Resources().PaymentSubstitutes()
 
-	allowSteel := cardHasTag(card, shared.TagBuilding)
-	allowTitanium := cardHasTag(card, shared.TagSpace)
+	allowSteel := hasCardTag(tags, shared.TagBuilding)
+	allowTitanium := hasCardTag(tags, shared.TagSpace)
 
 	for resourceType, cost := range costMap {
 		if shared.ResourceType(resourceType) == shared.ResourceCredit {
@@ -964,6 +1143,16 @@ func getStandardProjectBaseCosts(projectType shared.StandardProject) map[string]
 // GetStandardProjectBaseCosts is an exported version for use by mappers.
 func GetStandardProjectBaseCosts(projectType shared.StandardProject) map[string]int {
 	return getStandardProjectBaseCosts(projectType)
+}
+
+// hasCardTag checks if a tag list contains a specific tag.
+func hasCardTag(tags []shared.CardTag, tag shared.CardTag) bool {
+	for _, t := range tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
 }
 
 // getResourceAmount extracts the amount of a specific resource from Resources.
@@ -1074,14 +1263,23 @@ func formatInsufficientProductionMessage(resourceType shared.ResourceType) strin
 	return fmt.Sprintf("Not enough %s production", getResourceDisplayName(resourceType))
 }
 
-// formatInsufficientTagsMessage returns "Not enough {tag} tags" with the tag name lowercased.
-func formatInsufficientTagsMessage(tag string) string {
-	return fmt.Sprintf("Not enough %s tags", strings.ToLower(tag))
+// formatTagDisplayName returns a human-readable tag name.
+// Proper nouns (Venus, Earth, Jovian) get capitalized; other tags stay lowercase.
+func formatTagDisplayName(tag string) string {
+	switch strings.ToLower(tag) {
+	case "venus", "earth", "jovian":
+		return strings.ToUpper(tag[:1]) + strings.ToLower(tag[1:])
+	default:
+		return strings.ToLower(tag)
+	}
 }
 
-// formatTooManyTagsMessage returns "Too many {tag} tags" with the tag name lowercased.
+func formatInsufficientTagsMessage(tag string) string {
+	return fmt.Sprintf("Not enough %s tags", formatTagDisplayName(tag))
+}
+
 func formatTooManyTagsMessage(tag string) string {
-	return fmt.Sprintf("Too many %s tags", strings.ToLower(tag))
+	return fmt.Sprintf("Too many %s tags", formatTagDisplayName(tag))
 }
 
 // CalculateMilestoneState computes eligibility state for claiming a milestone.
@@ -1227,6 +1425,198 @@ func CalculateAwardState(
 		Metadata:       metadata,
 		LastCalculated: time.Now(),
 	}
+}
+
+// isStorageResourceType returns true for resource types that are stored on cards
+func isStorageResourceType(rt shared.ResourceType) bool {
+	switch rt {
+	case shared.ResourceMicrobe, shared.ResourceAnimal, shared.ResourceFloater,
+		shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceFighter, shared.ResourceDisease:
+		return true
+	}
+	return false
+}
+
+// CalculateChoiceErrors validates a single choice's requirements against the player/game state.
+// Returns a list of errors explaining why the choice is unavailable (empty if available).
+func CalculateChoiceErrors(choice shared.Choice, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []player.StateError {
+	if choice.Requirements == nil || len(choice.Requirements.Items) == 0 {
+		return nil
+	}
+
+	var errors []player.StateError
+	for _, req := range choice.Requirements.Items {
+		if err := checkChoiceRequirement(req, p, g, cardRegistry); err != nil {
+			errors = append(errors, *err)
+		}
+	}
+	return errors
+}
+
+// checkChoiceRequirement validates a single choice requirement and returns a StateError if not met.
+func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) *player.StateError {
+	switch req.Type {
+	case "tags":
+		if req.Tag == nil {
+			return &player.StateError{
+				Code:     player.ErrorCodeInvalidRequirement,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Invalid tag requirement",
+			}
+		}
+		tagCount := countPlayerTags(*req.Tag, p, cardRegistry)
+		if req.Min != nil && tagCount < *req.Min {
+			return &player.StateError{
+				Code:     player.ErrorCodeInsufficientTags,
+				Category: player.ErrorCategoryRequirement,
+				Message:  formatInsufficientTagsMessage(string(*req.Tag)),
+			}
+		}
+		if req.Max != nil && tagCount > *req.Max {
+			return &player.StateError{
+				Code:     player.ErrorCodeTooManyTags,
+				Category: player.ErrorCategoryRequirement,
+				Message:  formatTooManyTagsMessage(string(*req.Tag)),
+			}
+		}
+
+	case "temperature":
+		temp := g.GlobalParameters().Temperature()
+		if req.Min != nil && temp < *req.Min {
+			return &player.StateError{
+				Code:     player.ErrorCodeTemperatureTooLow,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Temperature too low",
+			}
+		}
+		if req.Max != nil && temp > *req.Max {
+			return &player.StateError{
+				Code:     player.ErrorCodeTemperatureTooHigh,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Temperature too high",
+			}
+		}
+
+	case "oxygen":
+		oxygen := g.GlobalParameters().Oxygen()
+		if req.Min != nil && oxygen < *req.Min {
+			return &player.StateError{
+				Code:     player.ErrorCodeOxygenTooLow,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Oxygen too low",
+			}
+		}
+		if req.Max != nil && oxygen > *req.Max {
+			return &player.StateError{
+				Code:     player.ErrorCodeOxygenTooHigh,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Oxygen too high",
+			}
+		}
+
+	case "ocean":
+		oceans := g.GlobalParameters().Oceans()
+		if req.Min != nil && oceans < *req.Min {
+			return &player.StateError{
+				Code:     player.ErrorCodeOceansTooLow,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Too few oceans",
+			}
+		}
+		if req.Max != nil && oceans > *req.Max {
+			return &player.StateError{
+				Code:     player.ErrorCodeOceansTooHigh,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Too many oceans",
+			}
+		}
+
+	case "tr":
+		tr := p.Resources().TerraformRating()
+		if req.Min != nil && tr < *req.Min {
+			return &player.StateError{
+				Code:     player.ErrorCodeTRTooLow,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "TR too low",
+			}
+		}
+		if req.Max != nil && tr > *req.Max {
+			return &player.StateError{
+				Code:     player.ErrorCodeTRTooHigh,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "TR too high",
+			}
+		}
+
+	case "production":
+		if req.Resource == nil {
+			return &player.StateError{
+				Code:     player.ErrorCodeInvalidRequirement,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Invalid production requirement",
+			}
+		}
+		production := p.Resources().Production()
+		amount := getProductionAmount(production, *req.Resource)
+		if req.Min != nil && amount < *req.Min {
+			return &player.StateError{
+				Code:     player.ErrorCodeInsufficientProduction,
+				Category: player.ErrorCategoryRequirement,
+				Message:  formatInsufficientProductionMessage(*req.Resource),
+			}
+		}
+
+	case "resource":
+		if req.Resource == nil {
+			return &player.StateError{
+				Code:     player.ErrorCodeInvalidRequirement,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Invalid resource requirement",
+			}
+		}
+		resources := p.Resources().Get()
+		amount := getResourceAmount(resources, *req.Resource)
+		if req.Min != nil && amount < *req.Min {
+			return &player.StateError{
+				Code:     player.ErrorCodeInsufficientResources,
+				Category: player.ErrorCategoryRequirement,
+				Message:  formatInsufficientResourceMessage(*req.Resource),
+			}
+		}
+	}
+
+	return nil
+}
+
+// countPlayerTags counts the number of a specific tag across all played cards and corporation.
+func countPlayerTags(tag shared.CardTag, p *player.Player, cardRegistry cards.CardRegistry) int {
+	tagCount := 0
+	for _, playedCardID := range p.PlayedCards().Cards() {
+		if cardRegistry == nil {
+			continue
+		}
+		card, err := cardRegistry.GetByID(playedCardID)
+		if err != nil {
+			continue
+		}
+		for _, cardTag := range card.Tags {
+			if cardTag == tag || cardTag == shared.TagWild {
+				tagCount++
+			}
+		}
+	}
+
+	if corpID := p.CorporationID(); corpID != "" && cardRegistry != nil {
+		if corp, err := cardRegistry.GetByID(corpID); err == nil {
+			for _, corpTag := range corp.Tags {
+				if corpTag == tag || corpTag == shared.TagWild {
+					tagCount++
+				}
+			}
+		}
+	}
+
+	return tagCount
 }
 
 // formatMilestoneRequirementError returns a short error message for milestone requirements.

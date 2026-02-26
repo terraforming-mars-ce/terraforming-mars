@@ -30,7 +30,7 @@ export interface WebSocketConnection {
     cardId: string,
     payment: CardPaymentDto,
     choiceIndex?: number,
-    cardStorageTarget?: string,
+    cardStorageTargets?: string[],
   ): Promise<string>;
   selectStartingCard(cardIds: string[], corporationId: string): Promise<string>;
   selectCards(cardIds: string[]): Promise<string>;

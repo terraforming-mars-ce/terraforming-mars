@@ -186,7 +186,6 @@ const TreeNode: React.FC<TreeNodeProps> = ({
       <div
         className="treeNodeContent flex items-center py-0.5 px-1 rounded relative select-text"
         onDoubleClick={handleCopy}
-        title="Double-click to copy value"
       >
         {renderExpandToggle()}
         {renderKey()}

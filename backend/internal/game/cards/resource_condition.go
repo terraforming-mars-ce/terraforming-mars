@@ -8,12 +8,13 @@ import (
 type TargetType string
 
 const (
-	TargetSelfPlayer TargetType = "self-player"
-	TargetSelfCard   TargetType = "self-card"
-	TargetAnyCard    TargetType = "any-card"
-	TargetAnyPlayer  TargetType = "any-player"
-	TargetOpponent   TargetType = "opponent"
-	TargetNone       TargetType = "none"
+	TargetSelfPlayer   TargetType = "self-player"
+	TargetSelfCard     TargetType = "self-card"
+	TargetAnyCard      TargetType = "any-card"
+	TargetAnyPlayer    TargetType = "any-player"
+	TargetOtherPlayers TargetType = "other-players"
+	TargetOpponent     TargetType = "opponent"
+	TargetNone         TargetType = "none"
 )
 
 // TileRestrictions represents restrictions for tile placement

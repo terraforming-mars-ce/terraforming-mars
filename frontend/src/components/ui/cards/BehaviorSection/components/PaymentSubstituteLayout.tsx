@@ -1,9 +1,26 @@
 import React from "react";
 import GameIcon from "../../../display/GameIcon.tsx";
+import Slash from "./Slash.tsx";
 
 interface PaymentSubstituteLayoutProps {
   behavior: any;
 }
+
+const getResourcesFromSelectors = (selectors: any[]): string[] => {
+  const resources: string[] = [];
+  const seen = new Set<string>();
+  selectors.forEach((selector: any) => {
+    if (selector.resources) {
+      selector.resources.forEach((r: string) => {
+        if (!seen.has(r)) {
+          seen.add(r);
+          resources.push(r);
+        }
+      });
+    }
+  });
+  return resources;
+};
 
 const PaymentSubstituteLayout: React.FC<PaymentSubstituteLayoutProps> = ({ behavior }) => {
   if (!behavior.outputs || behavior.outputs.length === 0) return null;
@@ -14,7 +31,9 @@ const PaymentSubstituteLayout: React.FC<PaymentSubstituteLayoutProps> = ({ behav
   if (!paymentSubOutput) return null;
 
   const amount = paymentSubOutput.amount ?? 1;
-  const affectedResources = paymentSubOutput.affectedResources || [];
+  const affectedResources = paymentSubOutput.selectors
+    ? getResourcesFromSelectors(paymentSubOutput.selectors)
+    : [];
 
   // Calculate ratio display
   // If amount < 1, invert the ratio and show multiplier on left side
@@ -44,11 +63,7 @@ const PaymentSubstituteLayout: React.FC<PaymentSubstituteLayoutProps> = ({ behav
         </span>
         {affectedResources.map((resourceType: string, resIndex: number) => (
           <React.Fragment key={`res-${resIndex}`}>
-            {resIndex > 0 && (
-              <span className="text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-                /
-              </span>
-            )}
+            {resIndex > 0 && <Slash />}
             <GameIcon iconType={resourceType} size="small" />
           </React.Fragment>
         ))}

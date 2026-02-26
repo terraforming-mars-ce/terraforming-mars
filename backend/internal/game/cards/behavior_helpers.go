@@ -88,12 +88,38 @@ func GetPassiveBehaviors(card *Card) []shared.CardBehavior {
 }
 
 // HasPersistentEffects checks if a behavior has persistent outputs that should be
-// registered as effects (e.g., discount, payment-substitute)
+// registered as effects (e.g., discount, payment-substitute, global-parameter-lenience)
 // These are different from immediate resource gains - they modify future actions
 func HasPersistentEffects(behavior shared.CardBehavior) bool {
 	for _, output := range behavior.Outputs {
 		switch output.ResourceType {
-		case shared.ResourceDiscount, shared.ResourcePaymentSubstitute:
+		case shared.ResourceDiscount, shared.ResourcePaymentSubstitute, shared.ResourceGlobalParameterLenience, shared.ResourceStoragePaymentSubstitute:
+			return true
+		}
+	}
+	return false
+}
+
+// HasTemporaryOutputs checks if a behavior has any outputs marked as temporary
+func HasTemporaryOutputs(behavior shared.CardBehavior) bool {
+	for _, output := range behavior.Outputs {
+		if output.Temporary != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// HasChoices checks if a behavior has player choices
+func HasChoices(behavior shared.CardBehavior) bool {
+	return len(behavior.Choices) > 0
+}
+
+// HasCardDiscardInput checks if a behavior has card-discard type inputs
+// These require a pending selection before outputs can be applied
+func HasCardDiscardInput(behavior shared.CardBehavior) bool {
+	for _, input := range behavior.Inputs {
+		if input.ResourceType == shared.ResourceCardDiscard {
 			return true
 		}
 	}

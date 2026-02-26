@@ -8,13 +8,15 @@ import (
 
 // Selection manages player-specific card selection state
 type Selection struct {
-	mu                       sync.RWMutex
-	selectStartingCardsPhase *SelectStartingCardsPhase
-	pendingCardSelection     *PendingCardSelection
-	pendingCardDrawSelection *PendingCardDrawSelection
-	eventBus                 *events.EventBusImpl
-	gameID                   string
-	playerID                 string
+	mu                             sync.RWMutex
+	selectStartingCardsPhase       *SelectStartingCardsPhase
+	pendingCardSelection           *PendingCardSelection
+	pendingCardDrawSelection       *PendingCardDrawSelection
+	pendingCardDiscardSelection    *PendingCardDiscardSelection
+	pendingBehaviorChoiceSelection *PendingBehaviorChoiceSelection
+	eventBus                       *events.EventBusImpl
+	gameID                         string
+	playerID                       string
 }
 
 func newSelection(eventBus *events.EventBusImpl, gameID, playerID string) *Selection {
@@ -64,6 +66,36 @@ func (s *Selection) GetPendingCardDrawSelection() *PendingCardDrawSelection {
 func (s *Selection) SetPendingCardDrawSelection(selection *PendingCardDrawSelection) {
 	s.mu.Lock()
 	s.pendingCardDrawSelection = selection
+	s.mu.Unlock()
+
+	if s.eventBus != nil {
+	}
+}
+
+func (s *Selection) GetPendingCardDiscardSelection() *PendingCardDiscardSelection {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pendingCardDiscardSelection
+}
+
+func (s *Selection) SetPendingCardDiscardSelection(selection *PendingCardDiscardSelection) {
+	s.mu.Lock()
+	s.pendingCardDiscardSelection = selection
+	s.mu.Unlock()
+
+	if s.eventBus != nil {
+	}
+}
+
+func (s *Selection) GetPendingBehaviorChoiceSelection() *PendingBehaviorChoiceSelection {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pendingBehaviorChoiceSelection
+}
+
+func (s *Selection) SetPendingBehaviorChoiceSelection(selection *PendingBehaviorChoiceSelection) {
+	s.mu.Lock()
+	s.pendingBehaviorChoiceSelection = selection
 	s.mu.Unlock()
 
 	if s.eventBus != nil {
@@ -128,6 +160,24 @@ type PendingTileSelectionQueue struct {
 	Source           string
 	OnComplete       *TileCompletionCallback
 	TileRestrictions *shared.TileRestrictions
+}
+
+// PendingCardDiscardSelection represents a pending card discard action
+// The player must select card(s) to discard from hand, after which pending outputs are applied.
+type PendingCardDiscardSelection struct {
+	MinCards       int                        // 0 if optional (player can skip), 1+ if mandatory
+	MaxCards       int                        // Maximum cards to discard
+	Source         string                     // Card name that triggered this selection
+	SourceCardID   string                     // Card ID that triggered this selection
+	PendingOutputs []shared.ResourceCondition // Outputs to apply after discard completes
+}
+
+// PendingBehaviorChoiceSelection represents a pending behavior choice from a passive triggered effect.
+// The player must select which choice to apply.
+type PendingBehaviorChoiceSelection struct {
+	Choices      []shared.Choice
+	Source       string // Card name that owns the effect
+	SourceCardID string // Card ID that owns the effect
 }
 
 // ForcedFirstAction represents an action that must be completed as first action

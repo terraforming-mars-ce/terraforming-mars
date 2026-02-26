@@ -84,6 +84,8 @@ const (
 	SourceTypeInitial         SourceType = "initial"
 	SourceTypeAward           SourceType = "award"
 	SourceTypeMilestone       SourceType = "milestone"
+	SourceTypeActionAdded     SourceType = "action_added"
+	SourceTypeEffectAdded     SourceType = "effect_added"
 )
 
 // CalculatedOutput represents an actual output value that was applied

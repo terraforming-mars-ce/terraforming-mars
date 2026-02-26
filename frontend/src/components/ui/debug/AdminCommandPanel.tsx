@@ -38,6 +38,7 @@ const GLOBAL_PARAM_BOUNDS = {
   temperature: { min: -30, max: 8 },
   oxygen: { min: 0, max: 14 },
   oceans: { min: 0, max: 9 },
+  venus: { min: 0, max: 30 },
 } as const;
 
 const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
@@ -135,6 +136,7 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
     temperature: gameState.globalParameters.temperature.toString(),
     oxygen: gameState.globalParameters.oxygen.toString(),
     oceans: gameState.globalParameters.oceans.toString(),
+    venus: gameState.globalParameters.venus.toString(),
   });
   const [tileSelectionForm, setTileSelectionForm] = useState({
     playerId: "",
@@ -243,6 +245,7 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
       temperature: gameState.globalParameters.temperature.toString(),
       oxygen: gameState.globalParameters.oxygen.toString(),
       oceans: gameState.globalParameters.oceans.toString(),
+      venus: gameState.globalParameters.venus.toString(),
     });
   }, [gameState.globalParameters]);
 
@@ -551,6 +554,7 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
         temperature: parseInt(globalParamsForm.temperature, 10) || -30,
         oxygen: parseInt(globalParamsForm.oxygen, 10) || 0,
         oceans: parseInt(globalParamsForm.oceans, 10) || 0,
+        venus: parseInt(globalParamsForm.venus, 10) || 0,
       },
     };
 
@@ -577,6 +581,7 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
       temperature: GLOBAL_PARAM_BOUNDS.temperature.min.toString(),
       oxygen: GLOBAL_PARAM_BOUNDS.oxygen.min.toString(),
       oceans: GLOBAL_PARAM_BOUNDS.oceans.min.toString(),
+      venus: GLOBAL_PARAM_BOUNDS.venus.min.toString(),
     });
   };
 
@@ -585,6 +590,7 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
       temperature: GLOBAL_PARAM_BOUNDS.temperature.max.toString(),
       oxygen: GLOBAL_PARAM_BOUNDS.oxygen.max.toString(),
       oceans: GLOBAL_PARAM_BOUNDS.oceans.max.toString(),
+      venus: GLOBAL_PARAM_BOUNDS.venus.max.toString(),
     });
   };
 
@@ -1236,6 +1242,44 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
                 Min
               </button>
               <button onClick={() => setGlobalParamMax("oceans")} style={smallButtonStyle}>
+                Max
+              </button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <label
+                style={{
+                  color: "#cbd5e1",
+                  fontSize: "12px",
+                  minWidth: "140px",
+                }}
+              >
+                Venus (0-30%):
+              </label>
+              <input
+                type="text"
+                value={globalParamsForm.venus}
+                onChange={(e) =>
+                  setGlobalParamsForm({
+                    ...globalParamsForm,
+                    venus: filterNumericInput(e.target.value),
+                  })
+                }
+                onBlur={(e) =>
+                  setGlobalParamsForm({
+                    ...globalParamsForm,
+                    venus: clampValue(e.target.value, 0, 30, 0),
+                  })
+                }
+                onKeyDown={handleGlobalParamsKeyDown}
+                style={{
+                  ...getInputStyle(),
+                  width: "70px",
+                }}
+              />
+              <button onClick={() => setGlobalParamMin("venus")} style={smallButtonStyle}>
+                Min
+              </button>
+              <button onClick={() => setGlobalParamMax("venus")} style={smallButtonStyle}>
                 Max
               </button>
             </div>

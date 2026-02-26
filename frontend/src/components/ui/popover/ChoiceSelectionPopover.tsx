@@ -177,7 +177,7 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
         {/* Header */}
         <div className="py-[15px] px-5 bg-black/40 border-b border-b-space-blue-500/60">
           <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
-            {isAction ? "Choose Action Effect" : "Choose One Effect"}
+            {isAction ? "Choose Action" : "Choose One Effect"}
           </h3>
           <div className="text-white/60 text-xs text-shadow-glow mt-1">{cardName}</div>
         </div>
@@ -195,11 +195,14 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
 
             const delay = index * 0.05;
             const isAffordable = isChoiceAffordable(choice);
+            const hasBackendErrors = choice.errors && choice.errors.length > 0;
+            const isSelectable = isAffordable && !hasBackendErrors;
 
             return (
               <div
                 key={index}
                 className={`
+                  relative
                   bg-black/30
                   border-2 border-space-blue-500/40
                   rounded-[10px] px-3.5 py-3
@@ -207,15 +210,20 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
                   transition-all duration-[250ms] ease-out
                   animate-choiceSlideIn
                   ${
-                    isAffordable
-                      ? "cursor-pointer hover:translate-y-[-2px] hover:scale-[1.01] hover:border-space-blue-500/80 hover:bg-black/50 hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]"
-                      : "cursor-default"
+                    isSelectable
+                      ? "cursor-pointer hover:border-space-blue-500/80 hover:bg-black/50 hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]"
+                      : "cursor-default opacity-60"
                   }
                 `}
                 style={{ animationDelay: `${delay}s` }}
-                onClick={() => isAffordable && handleChoiceClick(index)}
-                title={isAffordable ? "Click to select this choice" : "Cannot afford this choice"}
+                onClick={() => isSelectable && handleChoiceClick(index)}
               >
+                {hasBackendErrors && (
+                  <div className="absolute top-2 right-2 z-[4] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(231,76,60,0.8)] shadow-[0_2px_8px_rgba(231,76,60,0.4)] flex items-center gap-1">
+                    <span>⚠</span>
+                    <span className="max-w-[140px] truncate">{choice.errors[0].message}</span>
+                  </div>
+                )}
                 <div className="text-white/60 text-[11px] font-semibold uppercase tracking-wider mb-3 text-shadow-glow">
                   Choice {index + 1}
                 </div>
@@ -225,7 +233,8 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
                     playerResources={playerResources}
                     resourceStorage={resourceStorage}
                     cardId={cardId}
-                    greyOutAll={!isAffordable}
+                    greyOutAll={!isSelectable}
+                    hideActionChip
                   />
                 </div>
               </div>
@@ -246,7 +255,6 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
               shadow-[0_0_8px_rgba(30,60,150,0.4)]
               hover:bg-space-blue-500/60
               hover:border-space-blue-500/80
-              hover:translate-y-[-2px]
               hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
             "
             onClick={handleCancelClick}

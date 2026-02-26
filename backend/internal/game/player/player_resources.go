@@ -10,16 +10,17 @@ import (
 
 // PlayerResources manages player resources, production, scoring
 type PlayerResources struct {
-	mu                 sync.RWMutex
-	resources          shared.Resources
-	production         shared.Production
-	terraformRating    int
-	resourceStorage    map[string]int
-	paymentSubstitutes []shared.PaymentSubstitute
-	valueModifiers     map[shared.ResourceType]int // e.g., {"titanium": 1, "steel": 1} for cards like Phobolog, Advanced Alloys
-	eventBus           *events.EventBusImpl
-	gameID             string
-	playerID           string
+	mu                        sync.RWMutex
+	resources                 shared.Resources
+	production                shared.Production
+	terraformRating           int
+	resourceStorage           map[string]int
+	paymentSubstitutes        []shared.PaymentSubstitute
+	storagePaymentSubstitutes []shared.StoragePaymentSubstitute
+	valueModifiers            map[shared.ResourceType]int // e.g., {"titanium": 1, "steel": 1} for cards like Phobolog, Advanced Alloys
+	eventBus                  *events.EventBusImpl
+	gameID                    string
+	playerID                  string
 }
 
 func newResources(eventBus *events.EventBusImpl, gameID, playerID string) *PlayerResources {
@@ -380,4 +381,32 @@ func (r *PlayerResources) ClearValueModifiers() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.valueModifiers = make(map[shared.ResourceType]int)
+}
+
+// AddStoragePaymentSubstitute registers a card's storage resources as usable for payment
+func (r *PlayerResources) AddStoragePaymentSubstitute(sub shared.StoragePaymentSubstitute) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.storagePaymentSubstitutes = append(r.storagePaymentSubstitutes, sub)
+}
+
+// StoragePaymentSubstitutes returns all storage payment substitutes
+func (r *PlayerResources) StoragePaymentSubstitutes() []shared.StoragePaymentSubstitute {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	result := make([]shared.StoragePaymentSubstitute, len(r.storagePaymentSubstitutes))
+	copy(result, r.storagePaymentSubstitutes)
+	return result
+}
+
+// GetStoragePaymentSubstitute returns the storage payment substitute for a specific card, or nil
+func (r *PlayerResources) GetStoragePaymentSubstitute(cardID string) *shared.StoragePaymentSubstitute {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, sub := range r.storagePaymentSubstitutes {
+		if sub.CardID == cardID {
+			return &sub
+		}
+	}
+	return nil
 }

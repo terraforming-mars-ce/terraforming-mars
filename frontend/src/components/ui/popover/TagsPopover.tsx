@@ -1,6 +1,6 @@
 import React from "react";
 import GameIcon from "../display/GameIcon.tsx";
-import { GamePopover } from "../GamePopover";
+import { GamePopover, GamePopoverItem } from "../GamePopover";
 
 interface TagCount {
   tag: string;
@@ -24,23 +24,34 @@ const TagsPopover: React.FC<TagsPopoverProps> = ({ isVisible, onClose, tagCounts
       onClose={onClose}
       position={{ type: "anchor", anchorRef, placement: "above" }}
       theme="tags"
-      header={{ title: `${totalTags} tags` }}
-      width="auto"
-      maxHeight="none"
+      header={{ title: "Tags", badge: `${totalTags} total` }}
+      arrow={{ enabled: true, position: "right", offset: 30 }}
+      width={320}
+      maxHeight={400}
     >
       {visibleTags.length === 0 ? (
-        <div className="py-8 px-5 text-center">
-          <div className="text-white/40 text-sm">No Tags</div>
+        <div className="flex items-center justify-center py-10 px-5">
+          <span className="font-orbitron text-sm text-white/50">No tags</span>
         </div>
       ) : (
-        <div className="p-3 flex flex-col gap-2">
-          {visibleTags.map((tagData) => (
-            <div key={tagData.tag} className="flex items-center gap-3 p-2">
-              <span className="min-w-[28px] text-center text-base font-bold text-white text-shadow-glow">
-                {tagData.count}
-              </span>
-              <GameIcon iconType={tagData.tag} size="medium" />
-            </div>
+        <div className="p-2 flex flex-col gap-2">
+          {visibleTags.map((tagData, index) => (
+            <GamePopoverItem
+              key={tagData.tag}
+              state="available"
+              hoverEffect="glow"
+              animationDelay={index * 0.05}
+            >
+              <div className="flex items-center gap-3 flex-1">
+                <GameIcon iconType={`${tagData.tag}-tag`} size="medium" />
+                <span className="text-white/90 text-sm font-semibold font-orbitron [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+                  {tagData.tag.charAt(0).toUpperCase() + tagData.tag.slice(1)}
+                </span>
+                <span className="ml-auto text-base font-bold text-white font-orbitron [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+                  {tagData.count}
+                </span>
+              </div>
+            </GamePopoverItem>
           ))}
         </div>
       )}

@@ -12,18 +12,28 @@ import (
 
 // Tile type string constants for placement operations
 const (
-	TileTypeCity     = "city"
-	TileTypeGreenery = "greenery"
-	TileTypeOcean    = "ocean"
+	TileTypeCity            = "city"
+	TileTypeGreenery        = "greenery"
+	TileTypeOcean           = "ocean"
+	TileTypeNaturalPreserve = "natural-preserve"
+	TileTypeMining          = "mining"
+	TileTypeNuclearZone     = "nuclear-zone"
+	TileTypeEcologicalZone  = "ecological-zone"
+	TileTypeMohole          = "mohole"
+	TileTypeRestricted      = "restricted"
 )
 
 // BoardTag represents a tag on a board tile for reserved areas
 type BoardTag = string
 
 const (
-	BoardTagNoctisCity     BoardTag = "noctis-city"
-	BoardTagGanymedeColony BoardTag = "ganymede-colony"
-	BoardTagVolcanic       BoardTag = "volcanic"
+	BoardTagNoctisCity       BoardTag = "noctis-city"
+	BoardTagGanymedeColony   BoardTag = "ganymede-colony"
+	BoardTagVolcanic         BoardTag = "volcanic"
+	BoardTagPhobosSpaceHaven BoardTag = "phobos-space-haven"
+	BoardTagDawnCity         BoardTag = "dawn-city"
+	BoardTagMaxwellBase      BoardTag = "maxwell-base"
+	BoardTagStratopolis      BoardTag = "stratopolis"
 )
 
 // TileLocation represents the celestial body where tiles are located
@@ -176,6 +186,31 @@ func GenerateMarsBoard() []Tile {
 
 			tiles = append(tiles, tile)
 		}
+	}
+
+	// Add off-Mars reserved area tiles (outside main grid)
+	offMarsTiles := []struct {
+		Pos         shared.HexPosition
+		Tags        []string
+		DisplayName string
+	}{
+		{shared.HexPosition{Q: 0, R: -5, S: 5}, []string{BoardTagPhobosSpaceHaven}, "Phobos Space Haven"},
+		{shared.HexPosition{Q: -5, R: 0, S: 5}, []string{BoardTagDawnCity}, "Dawn City"},
+		{shared.HexPosition{Q: 5, R: 0, S: -5}, []string{BoardTagMaxwellBase}, "Maxwell Base"},
+		{shared.HexPosition{Q: -5, R: 5, S: 0}, []string{BoardTagStratopolis}, "Stratopolis"},
+	}
+	for _, ot := range offMarsTiles {
+		displayName := ot.DisplayName
+		tiles = append(tiles, Tile{
+			Coordinates: ot.Pos,
+			Type:        shared.ResourceLandTile,
+			Location:    TileLocationMars,
+			Tags:        ot.Tags,
+			DisplayName: &displayName,
+			Bonuses:     nil,
+			OccupiedBy:  nil,
+			OwnerID:     nil,
+		})
 	}
 
 	return tiles

@@ -1,0 +1,14 @@
+Development Center: Make sure card draw works
+Regolith Eaters: Make sure storage and depletion of storage works
+GHG Producing Bacteria: Make sure storage and depletion of storage works
+Rover Construction: Make sure you get 2 gold when a city is placed
+Miranda Resort: Make sure tags are counted correctly and gain is correctly
+Mangrove: Make sure correct tiles are given by backend, should be oceans
+Great Escarpment Consortium: Make sure it actually reduces another players steel production and increase self
+Land Claim: Make sure the reservation of land works between players
+Electro Catapult: Make sure the choice in the action works
+Viral Enhancers: Make sure resources are actually added to card being played it is "self-card"
+Artifical Lake: Make sure we validate this gets correct ocean placement option, i.e. not on ocean tile
+Imported Nitrogen: We need to make sure it handle 2 selectors of stuff in the UI
+Olympus Conference: Ensure it triggers a card draw when a science tag is played
+Terraforming Ganymede: Ensure it gives TR per jovian tag on self-player, not other players

@@ -1,6 +1,7 @@
 import React from "react";
 import ResourceDisplay from "./ResourceDisplay.tsx";
 import CardIcon from "./CardIcon.tsx";
+import OrChip from "./OrChip.tsx";
 import { analyzeCardOutputs } from "../utils/displayAnalysis.ts";
 
 interface IconDisplayInfo {
@@ -31,7 +32,71 @@ interface ManualActionLayoutProps {
     forceCompact: boolean,
   ) => IconDisplayInfo;
   tileScaleInfo: TileScaleInfo;
+  hideActionChip?: boolean;
 }
+
+const isCardResourceType = (type: string): boolean =>
+  type === "card-draw" ||
+  type === "card-peek" ||
+  type === "card-take" ||
+  type === "card-buy" ||
+  type === "card-discard";
+
+const getCardBadgeType = (type: string): "peek" | "take" | "buy" | "discard" | "none" =>
+  type === "card-peek"
+    ? "peek"
+    : type === "card-take"
+      ? "take"
+      : type === "card-buy"
+        ? "buy"
+        : type === "card-discard"
+          ? "discard"
+          : "none";
+
+const isAttackTarget = (target: string | undefined): boolean =>
+  target === "any-player" || target === "all-opponents" || (target?.startsWith("steal-") ?? false);
+
+const renderChoiceOutputs = (
+  outputs: any[],
+  choiceIndex: number,
+  isResourceAffordable: (resource: any, isInput: boolean) => boolean,
+  analyzeResourceDisplayWithConstraints: (
+    resource: any,
+    availableSpace: number,
+    forceCompact: boolean,
+  ) => IconDisplayInfo,
+  tileScaleInfo: TileScaleInfo,
+): React.ReactNode => {
+  if (!outputs) return null;
+  return outputs.map((output: any, outputIndex: number) => {
+    const resourceType = output.resourceType || output.type || "";
+    if (isCardResourceType(resourceType)) {
+      return (
+        <CardIcon
+          key={`choice-${choiceIndex}-output-${outputIndex}`}
+          amount={Math.abs(output.amount ?? 1)}
+          badgeType={getCardBadgeType(resourceType)}
+          isAffordable={isResourceAffordable(output, false)}
+          isAttack={isAttackTarget(output.target)}
+          totalCardTypes={1}
+        />
+      );
+    }
+    const displayInfo = analyzeResourceDisplayWithConstraints(output, 3, false);
+    return (
+      <ResourceDisplay
+        key={`choice-${choiceIndex}-output-${outputIndex}`}
+        displayInfo={displayInfo}
+        isInput={false}
+        resource={output}
+        isGroupedWithOtherNegatives={false}
+        context="action"
+        isAffordable={isResourceAffordable(output, false)}
+        tileScaleInfo={tileScaleInfo}
+      />
+    );
+  });
+};
 
 const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
   behavior,
@@ -39,6 +104,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
   isResourceAffordable,
   analyzeResourceDisplayWithConstraints,
   tileScaleInfo,
+  hideActionChip = false,
 }) => {
   // Handle choice-based behaviors
   if (behavior.choices && behavior.choices.length > 0) {
@@ -57,11 +123,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
           <div className="flex items-center gap-[6px]">
             {behavior.choices.map((choice: any, choiceIndex: number) => (
               <React.Fragment key={`choice-input-${choiceIndex}`}>
-                {choiceIndex > 0 && (
-                  <span className="text-white font-bold text-base [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                    /
-                  </span>
-                )}
+                {choiceIndex > 0 && <OrChip />}
                 <div className="flex gap-[3px] items-center">
                   {choice.inputs &&
                     choice.inputs.map((input: any, inputIndex: number) => {
@@ -139,11 +201,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
           {behavior.choices.map((choice: any, choiceIndex: number) => (
             <React.Fragment key={`choice-${choiceIndex}`}>
               {/* OR separator between choices */}
-              {choiceIndex > 0 && (
-                <div className="text-[10px] font-semibold text-white [text-shadow:0_0_2px_rgba(0,0,0,0.6)] mx-1 bg-white/10 py-0.5 px-1.5 rounded backdrop-blur-[2px]">
-                  OR
-                </div>
-              )}
+              {choiceIndex > 0 && <OrChip />}
 
               {/* Choice content (inputs -> outputs) */}
               <div className="flex items-center gap-1">
@@ -172,21 +230,13 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
                 )}
 
                 {/* Outputs */}
-                {choice.outputs?.map((output: any, outputIndex: number) => {
-                  const displayInfo = analyzeResourceDisplayWithConstraints(output, 3, false);
-                  return (
-                    <ResourceDisplay
-                      key={`choice-${choiceIndex}-output-${outputIndex}`}
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={false}
-                      context="action"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                    />
-                  );
-                })}
+                {renderChoiceOutputs(
+                  choice.outputs,
+                  choiceIndex,
+                  isResourceAffordable,
+                  analyzeResourceDisplayWithConstraints,
+                  tileScaleInfo,
+                )}
               </div>
             </React.Fragment>
           ))}
@@ -236,23 +286,13 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
 
             {/* Output side for this choice */}
             <div className="flex flex-col gap-0.5 items-center min-w-0">
-              {choice.outputs &&
-                choice.outputs.map((output: any, outputIndex: number) => {
-                  const displayInfo = analyzeResourceDisplayWithConstraints(output, 3, false);
-                  return (
-                    <React.Fragment key={`choice-${choiceIndex}-output-${outputIndex}`}>
-                      <ResourceDisplay
-                        displayInfo={displayInfo}
-                        isInput={false}
-                        resource={output}
-                        isGroupedWithOtherNegatives={false}
-                        context="action"
-                        isAffordable={isResourceAffordable(output, false)}
-                        tileScaleInfo={tileScaleInfo}
-                      />
-                    </React.Fragment>
-                  );
-                })}
+              {renderChoiceOutputs(
+                choice.outputs,
+                choiceIndex,
+                isResourceAffordable,
+                analyzeResourceDisplayWithConstraints,
+                tileScaleInfo,
+              )}
             </div>
 
             {behavior.generationalEventRequirements?.length > 0 && (
@@ -260,11 +300,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
             )}
 
             {/* Add "OR" separator between choices (except for the last one) */}
-            {choiceIndex < behavior.choices.length - 1 && (
-              <div className="text-[10px] font-semibold text-white [text-shadow:0_0_2px_rgba(0,0,0,0.6)] my-0.5 mx-2 bg-white/10 py-0.5 px-1.5 rounded backdrop-blur-[2px]">
-                OR
-              </div>
-            )}
+            {choiceIndex < behavior.choices.length - 1 && <OrChip />}
           </div>
         ))}
       </div>
@@ -279,7 +315,11 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
   const isCardResource = (output: any): boolean => {
     const type = output.resourceType || output.type || "";
     return (
-      type === "card-draw" || type === "card-peek" || type === "card-take" || type === "card-buy"
+      type === "card-draw" ||
+      type === "card-peek" ||
+      type === "card-take" ||
+      type === "card-buy" ||
+      type === "card-discard"
     );
   };
 
@@ -311,11 +351,11 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
               </React.Fragment>
             );
           })
-        ) : (
+        ) : !hideActionChip ? (
           <span className="text-[10px] font-semibold text-white bg-[rgba(33,150,243,0.5)] px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
             Action
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Arrow separator - only show when there are inputs */}
@@ -352,6 +392,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
               amount={cardItem.amount}
               badgeType={cardItem.badgeType}
               isAffordable={true}
+              isAttack={cardItem.isAttack}
               totalCardTypes={consolidatedCards.length}
             />
           </React.Fragment>

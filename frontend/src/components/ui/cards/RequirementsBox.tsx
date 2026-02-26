@@ -118,6 +118,14 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
         } else if (amount !== undefined) {
           displayText = `${amount}°C`;
         }
+      } else if (type === "venus") {
+        if (min !== undefined && min > 0) {
+          displayText = `${min}%+`;
+        } else if (max !== undefined) {
+          displayText = `≤${max}%`;
+        } else if (amount !== undefined) {
+          displayText = `${amount}%`;
+        }
       } else {
         // Regular resources
         if (min !== undefined && min > 0) {

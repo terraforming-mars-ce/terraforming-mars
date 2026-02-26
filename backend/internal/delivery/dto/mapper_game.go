@@ -50,6 +50,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		Temperature: globalParams.Temperature(),
 		Oxygen:      globalParams.Oxygen(),
 		Oceans:      globalParams.Oceans(),
+		Venus:       globalParams.Venus(),
 	}
 
 	board := g.Board()
@@ -375,9 +376,42 @@ func ToTriggeredEffectDto(effect game.TriggeredEffect) TriggeredEffectDto {
 	for i, output := range effect.Outputs {
 		outputDtos[i] = toResourceConditionDto(output)
 	}
+
+	var calculatedOutputDtos []CalculatedOutputDto
+	if len(effect.CalculatedOutputs) > 0 {
+		calculatedOutputDtos = make([]CalculatedOutputDto, len(effect.CalculatedOutputs))
+		for i, co := range effect.CalculatedOutputs {
+			calculatedOutputDtos[i] = CalculatedOutputDto{
+				ResourceType: co.ResourceType,
+				Amount:       co.Amount,
+				IsScaled:     co.IsScaled,
+			}
+		}
+	}
+
+	var behaviorDtos []CardBehaviorDto
+	if len(effect.Behaviors) > 0 {
+		behaviorDtos = make([]CardBehaviorDto, len(effect.Behaviors))
+		for i, b := range effect.Behaviors {
+			behaviorDtos[i] = toCardBehaviorDto(b)
+		}
+	}
+
+	var vpConditionDtos []VPConditionDto
+	if len(effect.VPConditions) > 0 {
+		vpConditionDtos = make([]VPConditionDto, len(effect.VPConditions))
+		for i, vp := range effect.VPConditions {
+			vpConditionDtos[i] = toVPConditionForLogDto(vp)
+		}
+	}
+
 	return TriggeredEffectDto{
-		CardName: effect.CardName,
-		PlayerID: effect.PlayerID,
-		Outputs:  outputDtos,
+		CardName:          effect.CardName,
+		PlayerID:          effect.PlayerID,
+		SourceType:        string(effect.SourceType),
+		Outputs:           outputDtos,
+		CalculatedOutputs: calculatedOutputDtos,
+		Behaviors:         behaviorDtos,
+		VPConditions:      vpConditionDtos,
 	}
 }

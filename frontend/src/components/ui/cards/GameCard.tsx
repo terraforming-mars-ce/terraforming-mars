@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import GameIcon from "../display/GameIcon.tsx";
-import { FormattedDescription } from "../display/FormattedDescription.tsx";
+import VPDescriptionTooltip from "../display/VPDescriptionTooltip.tsx";
 import VictoryPointIcon from "../display/VictoryPointIcon.tsx";
 import BehaviorSection from "./BehaviorSection";
 import RequirementsBox from "./RequirementsBox.tsx";
@@ -152,25 +151,18 @@ const GameCard: React.FC<GameCardProps> = ({
       </div>
 
       {/* Cost in top-left */}
-      {actualDiscountAmount > 0 ? (
-        <div className="absolute top-2 left-2 flex flex-col items-center z-[2] shrink-0">
-          <div className="grayscale-[0.7]">
-            <GameIcon iconType={ResourceTypeCredit} amount={displayCost} size="medium" />
-          </div>
-          <div className="w-full flex justify-center items-center">
-            <svg width="12" height="8" viewBox="0 0 12 8" className="opacity-70 my-[6px]">
-              <path d="M6 8 L0 0 L3 0 L6 5 L9 0 L12 0 Z" fill="rgba(76, 175, 80, 0.9)" />
-            </svg>
-          </div>
-          <div>
-            <GameIcon iconType={ResourceTypeCredit} amount={effectiveCost} size="medium" />
-          </div>
-        </div>
-      ) : (
-        <div className="absolute top-2 left-2 flex items-center justify-start z-[2] shrink-0">
+      <div
+        className={`absolute top-2 left-2 flex items-center justify-start z-[2] shrink-0 group/cost ${actualDiscountAmount > 0 ? "animate-[goldenPulse_2.5s_ease-in-out_infinite]" : ""}`}
+      >
+        <div className={actualDiscountAmount > 0 ? "group-hover/cost:hidden" : ""}>
           <GameIcon iconType={ResourceTypeCredit} amount={effectiveCost} size="medium" />
         </div>
-      )}
+        {actualDiscountAmount > 0 && (
+          <div className="hidden group-hover/cost:block [filter:none]">
+            <GameIcon iconType={ResourceTypeCredit} amount={displayCost} size="medium" />
+          </div>
+        )}
+      </div>
 
       {/* Card type accent stripe on left side */}
       {cardType && accentColors[cardType] && (
@@ -266,51 +258,7 @@ const GameCard: React.FC<GameCardProps> = ({
             vpConditions={card.vpConditions}
             onHoverDescription={setVpDescription}
           />
-          {vpDescription &&
-            vpTooltipPos &&
-            createPortal(
-              <div
-                className="fixed w-max max-w-40 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
-                style={{ left: vpTooltipPos.x, top: vpTooltipPos.y, zIndex: 99999 }}
-              >
-                <div
-                  className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
-                  style={{
-                    clipPath:
-                      "polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px))",
-                  }}
-                >
-                  <FormattedDescription text={vpDescription} />
-                  <svg
-                    className="absolute top-0 right-0 w-[14px] h-[14px] pointer-events-none"
-                    viewBox="0 0 14 14"
-                  >
-                    <line
-                      x1="0"
-                      y1="0"
-                      x2="14"
-                      y2="14"
-                      stroke="rgba(60,60,70,0.7)"
-                      strokeWidth="1.5"
-                    />
-                  </svg>
-                  <svg
-                    className="absolute bottom-0 left-0 w-[14px] h-[14px] pointer-events-none"
-                    viewBox="0 0 14 14"
-                  >
-                    <line
-                      x1="0"
-                      y1="0"
-                      x2="14"
-                      y2="14"
-                      stroke="rgba(60,60,70,0.7)"
-                      strokeWidth="1.5"
-                    />
-                  </svg>
-                </div>
-              </div>,
-              document.body,
-            )}
+          <VPDescriptionTooltip description={vpDescription} position={vpTooltipPos} />
         </div>
       </div>
 

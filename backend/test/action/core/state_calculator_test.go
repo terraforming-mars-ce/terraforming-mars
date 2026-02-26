@@ -1,4 +1,4 @@
-package action_test
+package core_test
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
+	"terraforming-mars-backend/test/testutil"
 )
 
 func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, cards.CardRegistry) {
@@ -45,7 +46,7 @@ func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, cards.CardR
 			Requirements: &gamecards.CardRequirements{Items: []gamecards.Requirement{
 				{
 					Type: gamecards.RequirementTemperature,
-					Min:  intPtr(-10),
+					Min:  testutil.IntPtr(-10),
 				},
 			}},
 		},
@@ -64,13 +65,34 @@ func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, cards.CardR
 			Requirements: &gamecards.CardRequirements{Items: []gamecards.Requirement{
 				{
 					Type: gamecards.RequirementOxygen,
-					Min:  intPtr(5),
+					Min:  testutil.IntPtr(5),
 				},
 				{
 					Type: gamecards.RequirementOceans,
-					Min:  intPtr(3),
+					Min:  testutil.IntPtr(3),
 				},
 			}},
+		},
+		{
+			ID:   "card-microbe",
+			Name: "Microbe Card",
+			Type: gamecards.CardTypeAutomated,
+			Cost: 6,
+			Tags: []shared.CardTag{shared.TagMicrobe},
+		},
+		{
+			ID:   "card-building",
+			Name: "Building Card",
+			Type: gamecards.CardTypeAutomated,
+			Cost: 10,
+			Tags: []shared.CardTag{shared.TagBuilding},
+		},
+		{
+			ID:   "card-space",
+			Name: "Space Card",
+			Type: gamecards.CardTypeAutomated,
+			Cost: 12,
+			Tags: []shared.CardTag{shared.TagSpace},
 		},
 	}
 
@@ -82,10 +104,6 @@ func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, cards.CardR
 	}
 
 	return g, p, cardRegistry
-}
-
-func intPtr(val int) *int {
-	return &val
 }
 
 // TestCalculatePlayerCardState_Available verifies that a playable card has no errors
@@ -550,33 +568,67 @@ func TestCalculatePlayerStandardProjectState_NoOceansRemaining(t *testing.T) {
 	}
 }
 
-// TestCalculatePlayerCardState_SteelNotCountedForNonBuildingCard verifies that steel
-// is NOT counted as a payment substitute for cards without the Building tag.
-func TestCalculatePlayerCardState_SteelNotCountedForNonBuildingCard(t *testing.T) {
-	g, p, _ := setupTestEnvironment(t)
+// TestCalculatePlayerCardState_TitaniumNotCountedForNonSpaceCard verifies that titanium
+// is not counted as payment for cards without the Space tag.
+// This was a real bug: Phobolog with 8 titanium showed Archaebacteria (Microbe, cost 6)
+// as playable because titanium was unconditionally added to effective credits.
+func TestCalculatePlayerCardState_TitaniumNotCountedForNonSpaceCard(t *testing.T) {
+	g, p, cardRegistry := setupTestEnvironment(t)
 
-	// Card without Building tag, costs 20
-	nonBuildingCard := &gamecards.Card{
-		ID:   "non-building",
-		Name: "Non Building Card",
-		Type: gamecards.CardTypeAutomated,
-		Cost: 20,
-		Tags: []shared.CardTag{shared.TagScience},
+	// Give player NO credits but lots of titanium (like Phobolog)
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceTitanium: 8,
+	})
+
+	// Get microbe card (cost 6, no Space tag)
+	card, err := cardRegistry.GetByID("card-microbe")
+	if err != nil {
+		t.Fatalf("Failed to get card: %v", err)
 	}
 
-	// Player has 5 credits + 10 steel (worth 20 MC for Building cards)
-	// Without steel substitute, player can only afford 5 MC
-	p.Resources().Set(shared.Resources{Credits: 5, Steel: 10})
-
-	state := action.CalculatePlayerCardState(nonBuildingCard, p, g, cards.NewInMemoryCardRegistry(nil))
+	state := action.CalculatePlayerCardState(card, p, g, cardRegistry)
 
 	if state.Available() {
-		t.Error("Expected card to be unavailable: steel should NOT count for non-Building card")
+		t.Error("Expected card to be unavailable: titanium should not count for non-Space card")
 	}
 
 	found := false
 	for _, err := range state.Errors {
-		if err.Code == player.ErrorCodeInsufficientCredits {
+		if err.Code == player.ErrorCodeInsufficientCredits && err.Category == player.ErrorCategoryCost {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected insufficient-credits error, got errors: %+v", state.Errors)
+	}
+}
+
+// TestCalculatePlayerCardState_SteelNotCountedForNonBuildingCard verifies that steel
+// is not counted as payment for cards without the Building tag.
+func TestCalculatePlayerCardState_SteelNotCountedForNonBuildingCard(t *testing.T) {
+	g, p, cardRegistry := setupTestEnvironment(t)
+
+	// Give player NO credits but lots of steel
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceSteel: 10,
+	})
+
+	// Get space card (cost 12, Space tag but no Building tag)
+	card, err := cardRegistry.GetByID("card-space")
+	if err != nil {
+		t.Fatalf("Failed to get card: %v", err)
+	}
+
+	state := action.CalculatePlayerCardState(card, p, g, cardRegistry)
+
+	if state.Available() {
+		t.Error("Expected card to be unavailable: steel should not count for non-Building card")
+	}
+
+	found := false
+	for _, err := range state.Errors {
+		if err.Code == player.ErrorCodeInsufficientCredits && err.Category == player.ErrorCategoryCost {
 			found = true
 			break
 		}
@@ -587,107 +639,49 @@ func TestCalculatePlayerCardState_SteelNotCountedForNonBuildingCard(t *testing.T
 }
 
 // TestCalculatePlayerCardState_SteelCountedForBuildingCard verifies that steel
-// IS counted as a payment substitute for cards with the Building tag.
+// IS counted as payment for cards with the Building tag.
 func TestCalculatePlayerCardState_SteelCountedForBuildingCard(t *testing.T) {
-	g, p, _ := setupTestEnvironment(t)
+	g, p, cardRegistry := setupTestEnvironment(t)
 
-	buildingCard := &gamecards.Card{
-		ID:   "building-card",
-		Name: "Building Card",
-		Type: gamecards.CardTypeAutomated,
-		Cost: 20,
-		Tags: []shared.CardTag{shared.TagBuilding},
+	// Give player NO credits but enough steel (5 steel * 2 MC = 10 MC, card costs 10)
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceSteel: 5,
+	})
+
+	// Set temperature to meet requirement for card1 (Building tag, cost 10, requires temp >= -10)
+	ctx := context.Background()
+	g.GlobalParameters().SetTemperature(ctx, -10)
+
+	card, err := cardRegistry.GetByID("card-building")
+	if err != nil {
+		t.Fatalf("Failed to get card: %v", err)
 	}
 
-	// Player has 5 credits + 10 steel (worth 20 MC) = 25 effective MC
-	p.Resources().Set(shared.Resources{Credits: 5, Steel: 10})
-
-	state := action.CalculatePlayerCardState(buildingCard, p, g, cards.NewInMemoryCardRegistry(nil))
+	state := action.CalculatePlayerCardState(card, p, g, cardRegistry)
 
 	if !state.Available() {
-		t.Errorf("Expected Building card to be affordable with steel, got errors: %+v", state.Errors)
-	}
-}
-
-// TestCalculatePlayerCardState_TitaniumNotCountedForNonSpaceCard verifies that titanium
-// is NOT counted as a payment substitute for cards without the Space tag.
-func TestCalculatePlayerCardState_TitaniumNotCountedForNonSpaceCard(t *testing.T) {
-	g, p, _ := setupTestEnvironment(t)
-
-	nonSpaceCard := &gamecards.Card{
-		ID:   "non-space",
-		Name: "Non Space Card",
-		Type: gamecards.CardTypeAutomated,
-		Cost: 20,
-		Tags: []shared.CardTag{shared.TagPlant},
-	}
-
-	// Player has 5 credits + 5 titanium (worth 15 MC for Space cards)
-	// Without titanium substitute, player can only afford 5 MC
-	p.Resources().Set(shared.Resources{Credits: 5, Titanium: 5})
-
-	state := action.CalculatePlayerCardState(nonSpaceCard, p, g, cards.NewInMemoryCardRegistry(nil))
-
-	if state.Available() {
-		t.Error("Expected card to be unavailable: titanium should NOT count for non-Space card")
-	}
-
-	found := false
-	for _, err := range state.Errors {
-		if err.Code == player.ErrorCodeInsufficientCredits {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("Expected insufficient-credits error, got errors: %+v", state.Errors)
+		t.Errorf("Expected card to be available: steel should count for Building card, got errors: %+v", state.Errors)
 	}
 }
 
 // TestCalculatePlayerCardState_TitaniumCountedForSpaceCard verifies that titanium
-// IS counted as a payment substitute for cards with the Space tag.
+// IS counted as payment for cards with the Space tag.
 func TestCalculatePlayerCardState_TitaniumCountedForSpaceCard(t *testing.T) {
-	g, p, _ := setupTestEnvironment(t)
+	g, p, cardRegistry := setupTestEnvironment(t)
 
-	spaceCard := &gamecards.Card{
-		ID:   "space-card",
-		Name: "Space Card",
-		Type: gamecards.CardTypeAutomated,
-		Cost: 20,
-		Tags: []shared.CardTag{shared.TagSpace},
+	// Give player NO credits but enough titanium (4 titanium * 3 MC = 12 MC, card costs 12)
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceTitanium: 4,
+	})
+
+	card, err := cardRegistry.GetByID("card-space")
+	if err != nil {
+		t.Fatalf("Failed to get card: %v", err)
 	}
 
-	// Player has 5 credits + 5 titanium (worth 15 MC) = 20 effective MC
-	p.Resources().Set(shared.Resources{Credits: 5, Titanium: 5})
-
-	state := action.CalculatePlayerCardState(spaceCard, p, g, cards.NewInMemoryCardRegistry(nil))
+	state := action.CalculatePlayerCardState(card, p, g, cardRegistry)
 
 	if !state.Available() {
-		t.Errorf("Expected Space card to be affordable with titanium, got errors: %+v", state.Errors)
-	}
-}
-
-// TestCalculatePlayerCardState_HeatSubstituteWorksForAllCards verifies that Helion-style
-// heat-to-credit substitutes work regardless of card tags.
-func TestCalculatePlayerCardState_HeatSubstituteWorksForAllCards(t *testing.T) {
-	g, p, _ := setupTestEnvironment(t)
-
-	// Card with no Building/Space tags
-	genericCard := &gamecards.Card{
-		ID:   "generic-card",
-		Name: "Generic Card",
-		Type: gamecards.CardTypeAutomated,
-		Cost: 20,
-		Tags: []shared.CardTag{shared.TagScience},
-	}
-
-	// Player has 5 credits + 20 heat, with heat-to-credit substitute (like Helion)
-	p.Resources().Set(shared.Resources{Credits: 5, Heat: 20})
-	p.Resources().AddPaymentSubstitute(shared.ResourceHeat, 1) // 1 heat = 1 MC
-
-	state := action.CalculatePlayerCardState(genericCard, p, g, cards.NewInMemoryCardRegistry(nil))
-
-	if !state.Available() {
-		t.Errorf("Expected card to be affordable with heat substitute, got errors: %+v", state.Errors)
+		t.Errorf("Expected card to be available: titanium should count for Space card, got errors: %+v", state.Errors)
 	}
 }

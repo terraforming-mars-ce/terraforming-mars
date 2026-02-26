@@ -56,7 +56,6 @@ const MainMenuSettingsButton: React.FC = () => {
           size="sm"
           onClick={() => setMenuOpen(!menuOpen)}
           className="p-2.5"
-          title="Settings"
         >
           <svg
             width="20"

@@ -1,4 +1,4 @@
-package action_test
+package tiles_test
 
 import (
 	"context"
@@ -24,7 +24,6 @@ func TestSelectTileAction_BonusesRemovedAfterClaim(t *testing.T) {
 	// Start the game to get to action phase
 	testutil.StartTestGame(t, testGame)
 
-	players := testGame.GetAllPlayers()
 	playerID := testGame.TurnOrder()[0]
 	p, _ := testGame.GetPlayer(playerID)
 
@@ -57,7 +56,7 @@ func TestSelectTileAction_BonusesRemovedAfterClaim(t *testing.T) {
 		AvailableHexes: []string{hexStr},
 		Source:         "test",
 	}
-	testGame.SetPendingTileSelection(ctx, players[0].ID(), pendingSelection)
+	testGame.SetPendingTileSelection(ctx, playerID, pendingSelection)
 
 	// Execute tile placement
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)

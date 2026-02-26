@@ -242,6 +242,7 @@ func (h *AdminCommandHandler) handleSetGlobalParams(ctx context.Context, gameID 
 		Temperature: getIntFromMap(globalParamsData, "temperature"),
 		Oxygen:      getIntFromMap(globalParamsData, "oxygen"),
 		Oceans:      getIntFromMap(globalParamsData, "oceans"),
+		Venus:       getIntFromMap(globalParamsData, "venus"),
 	}
 
 	return h.setGlobalParametersAction.Execute(ctx, gameID, params)

@@ -54,7 +54,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 	corporation := getCorporationCard(p, cardRegistry)
 	playedCardIDs := p.PlayedCards().Cards()
 	playedCards := getPlayedCards(playedCardIDs, cardRegistry)
-	handCards := mapPlayerCards(p)
+	handCards := mapPlayerCards(p, g, cardRegistry)
 	standardProjects := mapPlayerStandardProjects(p, g, cardRegistry)
 	milestones := mapPlayerMilestones(p, g, cardRegistry)
 	awards := mapPlayerAwards(p, g)
@@ -85,17 +85,20 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		Milestones:       milestones,       // PlayerMilestoneDto[] with eligibility
 		Awards:           awards,           // PlayerAwardDto[] with eligibility
 
-		SelectStartingCardsPhase: convertSelectStartingCardsPhase(g.GetSelectStartingCardsPhase(p.ID()), cardRegistry),
-		ProductionPhase:          convertProductionPhase(g.GetProductionPhase(p.ID()), cardRegistry),
-		StartingCards:            []CardDto{},
-		PendingTileSelection:     pendingTileSelection,
-		PendingCardSelection:     convertPendingCardSelection(p.Selection().GetPendingCardSelection(), cardRegistry),
-		PendingCardDrawSelection: convertPendingCardDrawSelection(p.Selection().GetPendingCardDrawSelection(), cardRegistry),
-		ForcedFirstAction:        forcedFirstAction,
-		ResourceStorage:          p.Resources().Storage(),
-		PaymentSubstitutes:       convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
-		GenerationalEvents:       convertGenerationalEvents(p.GenerationalEvents().GetAll()),
-		VPGranters:               toVPGranterDtos(p.VPGranters().GetAll()),
+		SelectStartingCardsPhase:       convertSelectStartingCardsPhase(g.GetSelectStartingCardsPhase(p.ID()), cardRegistry),
+		ProductionPhase:                convertProductionPhase(g.GetProductionPhase(p.ID()), cardRegistry),
+		StartingCards:                  []CardDto{},
+		PendingTileSelection:           pendingTileSelection,
+		PendingCardSelection:           convertPendingCardSelection(p.Selection().GetPendingCardSelection(), cardRegistry),
+		PendingCardDrawSelection:       convertPendingCardDrawSelection(p.Selection().GetPendingCardDrawSelection(), cardRegistry),
+		PendingCardDiscardSelection:    convertPendingCardDiscardSelection(p.Selection().GetPendingCardDiscardSelection()),
+		PendingBehaviorChoiceSelection: convertPendingBehaviorChoiceSelection(p.Selection().GetPendingBehaviorChoiceSelection(), p, g, cardRegistry),
+		ForcedFirstAction:              forcedFirstAction,
+		ResourceStorage:                p.Resources().Storage(),
+		PaymentSubstitutes:             convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
+		StoragePaymentSubstitutes:      convertStoragePaymentSubstitutes(p.Resources().StoragePaymentSubstitutes()),
+		GenerationalEvents:             convertGenerationalEvents(p.GenerationalEvents().GetAll()),
+		VPGranters:                     toVPGranterDtos(p.VPGranters().GetAll()),
 	}
 }
 
@@ -126,10 +129,11 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		Effects:          convertPlayerEffects(p.Effects().List()),
 		Actions:          convertPlayerActions(p.Actions().List(), p, g),
 
-		SelectStartingCardsPhase: convertSelectStartingCardsPhaseForOtherPlayer(g.GetSelectStartingCardsPhase(p.ID())),
-		ProductionPhase:          convertProductionPhaseForOtherPlayer(g.GetProductionPhase(p.ID())),
-		ResourceStorage:          p.Resources().Storage(),
-		PaymentSubstitutes:       convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
+		SelectStartingCardsPhase:  convertSelectStartingCardsPhaseForOtherPlayer(g.GetSelectStartingCardsPhase(p.ID())),
+		ProductionPhase:           convertProductionPhaseForOtherPlayer(g.GetProductionPhase(p.ID())),
+		ResourceStorage:           p.Resources().Storage(),
+		PaymentSubstitutes:        convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
+		StoragePaymentSubstitutes: convertStoragePaymentSubstitutes(p.Resources().StoragePaymentSubstitutes()),
 	}
 }
 
@@ -261,6 +265,23 @@ func convertPaymentSubstitutes(substitutes []shared.PaymentSubstitute) []Payment
 	return dtos
 }
 
+// convertStoragePaymentSubstitutes converts StoragePaymentSubstitute slice to DTO slice
+func convertStoragePaymentSubstitutes(substitutes []shared.StoragePaymentSubstitute) []StoragePaymentSubstituteDto {
+	if len(substitutes) == 0 {
+		return []StoragePaymentSubstituteDto{}
+	}
+
+	dtos := make([]StoragePaymentSubstituteDto, len(substitutes))
+	for i, sub := range substitutes {
+		dtos[i] = StoragePaymentSubstituteDto{
+			CardID:         sub.CardID,
+			ResourceType:   ResourceType(sub.ResourceType),
+			ConversionRate: sub.ConversionRate,
+		}
+	}
+	return dtos
+}
+
 // convertPendingCardSelection converts PendingCardSelection to DTO
 func convertPendingCardSelection(selection *player.PendingCardSelection, cardRegistry cards.CardRegistry) *PendingCardSelectionDto {
 	if selection == nil {
@@ -293,6 +314,49 @@ func convertPendingCardDrawSelection(selection *player.PendingCardDrawSelection,
 		MaxBuyCount:    selection.MaxBuyCount,
 		CardBuyCost:    selection.CardBuyCost,
 		Source:         selection.Source,
+	}
+}
+
+// convertPendingCardDiscardSelection converts PendingCardDiscardSelection to DTO
+func convertPendingCardDiscardSelection(selection *player.PendingCardDiscardSelection) *PendingCardDiscardSelectionDto {
+	if selection == nil {
+		return nil
+	}
+
+	return &PendingCardDiscardSelectionDto{
+		MinCards:     selection.MinCards,
+		MaxCards:     selection.MaxCards,
+		Source:       selection.Source,
+		SourceCardID: selection.SourceCardID,
+	}
+}
+
+func convertPendingBehaviorChoiceSelection(selection *player.PendingBehaviorChoiceSelection, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) *PendingBehaviorChoiceSelectionDto {
+	if selection == nil {
+		return nil
+	}
+
+	choices := make([]ChoiceDto, len(selection.Choices))
+	for i, choice := range selection.Choices {
+		choices[i] = toChoiceDtoWithState(choice, p, g, cardRegistry)
+	}
+
+	return &PendingBehaviorChoiceSelectionDto{
+		Choices:      choices,
+		Source:       selection.Source,
+		SourceCardID: selection.SourceCardID,
+	}
+}
+
+// toChoiceDtoWithState maps a choice to DTO with computed errors from the state calculator.
+func toChoiceDtoWithState(choice shared.Choice, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) ChoiceDto {
+	errors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
+	return ChoiceDto{
+		Inputs:       mapSlice(choice.Inputs, toResourceConditionDto),
+		Outputs:      mapSlice(choice.Outputs, toResourceConditionDto),
+		Requirements: toChoiceRequirementsDto(choice.Requirements),
+		Available:    len(errors) == 0,
+		Errors:       convertStateErrors(errors),
 	}
 }
 
@@ -445,8 +509,9 @@ func ToPlayerCardDto(pc *player.PlayerCard) PlayerCardDto {
 	}
 }
 
-// mapPlayerCards converts cached PlayerCard instances from hand to DTOs
-func mapPlayerCards(p *player.Player) []PlayerCardDto {
+// mapPlayerCards converts cached PlayerCard instances from hand to DTOs.
+// Enriches behavior choices with computed errors from the state calculator.
+func mapPlayerCards(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []PlayerCardDto {
 	handCardIDs := p.Hand().Cards()
 	result := make([]PlayerCardDto, 0, len(handCardIDs))
 
@@ -458,7 +523,24 @@ func mapPlayerCards(p *player.Player) []PlayerCardDto {
 			continue
 		}
 
-		result = append(result, ToPlayerCardDto(pc))
+		dto := ToPlayerCardDto(pc)
+
+		// Enrich choices with computed errors
+		if card, ok := pc.Card().(*gamecards.Card); ok {
+			for bi, behavior := range card.Behaviors {
+				if bi < len(dto.Behaviors) {
+					for ci, choice := range behavior.Choices {
+						if ci < len(dto.Behaviors[bi].Choices) {
+							choiceErrors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
+							dto.Behaviors[bi].Choices[ci].Available = len(choiceErrors) == 0
+							dto.Behaviors[bi].Choices[ci].Errors = convertStateErrors(choiceErrors)
+						}
+					}
+				}
+			}
+		}
+
+		result = append(result, dto)
 	}
 
 	return result
