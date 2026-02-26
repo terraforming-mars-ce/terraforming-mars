@@ -19,5 +19,9 @@ EOF
 echo "Runtime config generated at $CONFIG_FILE"
 echo "  API_URL: ${API_URL:-'(not set, will use default)'}"
 
+# Cache-bust the runtime-config.js reference in index.html
+CACHE_BUST=$(date +%s)
+sed -i "s|runtime-config.js|runtime-config.js?v=${CACHE_BUST}|g" /usr/share/nginx/html/index.html
+
 # Execute the CMD (nginx)
 exec "$@"
