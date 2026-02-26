@@ -96,23 +96,16 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const allPlayers: (PlayerDto | OtherPlayerDto)[] =
     (gameState?.turnOrder
       ?.map((playerId) => playerMap.get(playerId))
-      .filter((player) => player !== undefined) as (
-      | PlayerDto
-      | OtherPlayerDto
-    )[]) || [];
+      .filter((player) => player !== undefined) as (PlayerDto | OtherPlayerDto)[]) || [];
 
   // Find the current turn player for the right sidebar
   const currentTurnPlayer =
     allPlayers.find((player) => player.id === gameState?.currentTurn) || null;
 
   const showUI =
-    transitionPhase === "animateUI" ||
-    transitionPhase === "complete" ||
-    transitionPhase === "idle";
+    transitionPhase === "animateUI" || transitionPhase === "complete" || transitionPhase === "idle";
   const isAnimatingIn = transitionPhase === "animateUI";
-  const uiAnimationClass = isAnimatingIn
-    ? "animate-[uiFadeIn_1200ms_ease-out_both]"
-    : "";
+  const uiAnimationClass = isAnimatingIn ? "animate-[uiFadeIn_1200ms_ease-out_both]" : "";
 
   return (
     <div className="relative w-screen h-screen bg-[#000000] text-white overflow-hidden">

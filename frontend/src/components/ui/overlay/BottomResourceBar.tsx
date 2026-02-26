@@ -42,13 +42,7 @@ const ANGLE_INDENT = 42;
 
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
 
-const AngledPanel: React.FC<AngledPanelProps> = ({
-  side,
-  corpColor,
-  width,
-  height,
-  children,
-}) => {
+const AngledPanel: React.FC<AngledPanelProps> = ({ side, corpColor, width, height, children }) => {
   const fillPoints =
     side === "left"
       ? `0,0 ${width - ANGLE_INDENT},0 ${width},${height} 0,${height}`
@@ -89,12 +83,8 @@ const AngledPanel: React.FC<AngledPanelProps> = ({
           )}
         </defs>
         <polygon points={fillPoints} fill="rgba(10,10,15,0.95)" />
-        {side === "left" && (
-          <polygon points={fillPoints} fill={`url(#${gradientId})`} />
-        )}
-        {side === "right" && (
-          <polygon points={fillPoints} fill={`url(#${whiteGlowId})`} />
-        )}
+        {side === "left" && <polygon points={fillPoints} fill={`url(#${gradientId})`} />}
+        {side === "right" && <polygon points={fillPoints} fill={`url(#${whiteGlowId})`} />}
         <line
           x1={topEdge.x1}
           y1={topEdge.y1}
@@ -161,12 +151,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   onStopSpectating,
 }) => {
   const isSpectating = !!spectatingPlayer;
-  const displayPlayer: PlayerDto | OtherPlayerDto | null | undefined =
-    isSpectating ? spectatingPlayer : currentPlayer;
+  const displayPlayer: PlayerDto | OtherPlayerDto | null | undefined = isSpectating
+    ? spectatingPlayer
+    : currentPlayer;
   const displayCorporation = isSpectating ? spectatingCorporation : corporation;
-  const displayPlayedCards = isSpectating
-    ? (spectatingPlayer?.playedCards ?? [])
-    : playedCards;
+  const displayPlayedCards = isSpectating ? (spectatingPlayer?.playedCards ?? []) : playedCards;
 
   const {
     onOpenCardEffectsModal,
@@ -220,10 +209,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        corpContainerRef.current &&
-        !corpContainerRef.current.contains(event.target as Node)
-      ) {
+      if (corpContainerRef.current && !corpContainerRef.current.contains(event.target as Node)) {
         handleCorpClose();
       }
     };
@@ -373,14 +359,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     setShowTagsPopover(!showTagsPopover);
   };
 
-  const vpGranters =
-    displayPlayer && "vpGranters" in displayPlayer
-      ? displayPlayer.vpGranters
-      : [];
-  const totalVP = (vpGranters || []).reduce(
-    (sum, g) => sum + g.computedValue,
-    0,
-  );
+  const vpGranters = displayPlayer && "vpGranters" in displayPlayer ? displayPlayer.vpGranters : [];
+  const totalVP = (vpGranters || []).reduce((sum, g) => sum + g.computedValue, 0);
 
   const handleOpenVPPopover = () => {
     setShowVPPopover(!showVPPopover);
@@ -428,19 +408,12 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               </span>
             )}
           </span>
-          <span className="text-white/50 text-[10px] font-orbitron">
-            ESC to close
-          </span>
+          <span className="text-white/50 text-[10px] font-orbitron">ESC to close</span>
         </div>
       )}
 
       {/* LEFT PANEL: Corporation + Resources */}
-      <AngledPanel
-        side="left"
-        corpColor={corpColor}
-        width={LEFT_PANEL_WIDTH}
-        height={BAR_HEIGHT}
-      >
+      <AngledPanel side="left" corpColor={corpColor} width={LEFT_PANEL_WIDTH} height={BAR_HEIGHT}>
         <div
           className="flex items-center h-full origin-left"
           style={{
@@ -477,9 +450,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                 {showCorpExpanded && (
                   <div
                     className={`absolute bottom-[100%] left-4 mb-2 origin-bottom-left transition-all duration-200 ${
-                      isCorpExpanded
-                        ? "opacity-100 scale-100"
-                        : "opacity-0 scale-90"
+                      isCorpExpanded ? "opacity-100 scale-100" : "opacity-0 scale-90"
                     }`}
                   >
                     <button
@@ -496,10 +467,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                         id: displayCorporation.id,
                         name: displayCorporation.name,
                         description: displayCorporation.description,
-                        startingMegaCredits:
-                          displayCorporation.startingResources?.credits || 0,
-                        startingProduction:
-                          displayCorporation.startingProduction,
+                        startingMegaCredits: displayCorporation.startingResources?.credits || 0,
+                        startingProduction: displayCorporation.startingProduction,
                         startingResources: displayCorporation.startingResources,
                         behaviors: displayCorporation.behaviors,
                       }}
@@ -526,12 +495,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           {/* Resources Section */}
           <div className="flex items-center justify-evenly flex-1">
             {playerResources.map((resource, index) => {
-              const resourceChanged = hasPathChanged(
-                `currentPlayer.resources.${resource.id}`,
-              );
-              const productionChanged = hasPathChanged(
-                `currentPlayer.production.${resource.id}`,
-              );
+              const resourceChanged = hasPathChanged(`currentPlayer.resources.${resource.id}`);
+              const productionChanged = hasPathChanged(`currentPlayer.production.${resource.id}`);
 
               const showConversionButton =
                 (resource.id === "plant" && canConvertPlants) ||
@@ -551,23 +516,18 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                         }`}
                       >
                         <button
-                          disabled={
-                            isConversionDisabled || !showConversionButton
-                          }
+                          disabled={isConversionDisabled || !showConversionButton}
                           className={`flex items-center justify-center gap-0.5 px-1.5 py-0.5 bg-black/80 border border-white/20 transition-all duration-200 ${
                             isConversionDisabled || !showConversionButton
                               ? "opacity-40 cursor-not-allowed"
                               : "cursor-pointer hover:bg-white/10 hover:border-white/40"
                           }`}
                           style={{
-                            borderColor: showConversionButton
-                              ? `${corpColor}60`
-                              : undefined,
+                            borderColor: showConversionButton ? `${corpColor}60` : undefined,
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (isConversionDisabled || !showConversionButton)
-                              return;
+                            if (isConversionDisabled || !showConversionButton) return;
                             hoverSound.onClick?.();
                             if (resource.id === "plant") {
                               void onConvertPlantsToGreenery?.();
@@ -581,9 +541,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                               : hoverSound.onMouseEnter
                           }
                         >
-                          <span className="text-[10px] font-bold text-white/90">
-                            +
-                          </span>
+                          <span className="text-[10px] font-bold text-white/90">+</span>
                           <GameIcon
                             iconType={
                               resource.id === "plant"
@@ -600,9 +558,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                     <div className="inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.5)_0%,rgba(139,89,42,0.45)_100%)] border border-[rgba(160,110,60,0.6)] px-3 py-0.5 w-[32px] mb-1">
                       <span
                         className={`text-[10px] font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none tabular-nums ${
-                          productionChanged
-                            ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                            : ""
+                          productionChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
                         }`}
                       >
                         {resource.production}
@@ -620,15 +576,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                       </div>
                     ) : (
                       <div className="flex items-center gap-1 w-[48px] justify-center scale-[0.85]">
-                        <GameIcon
-                          iconType={getResourceType(resource.id)}
-                          size="small"
-                        />
+                        <GameIcon iconType={getResourceType(resource.id)} size="small" />
                         <span
                           className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] tabular-nums w-[24px] text-left ${
-                            resourceChanged
-                              ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                              : ""
+                            resourceChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
                           }`}
                         >
                           {resource.current}
@@ -654,12 +605,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       </AngledPanel>
 
       {/* RIGHT PANEL: Action Buttons */}
-      <AngledPanel
-        side="right"
-        corpColor={corpColor}
-        width={RIGHT_PANEL_WIDTH}
-        height={BAR_HEIGHT}
-      >
+      <AngledPanel side="right" corpColor={corpColor} width={RIGHT_PANEL_WIDTH} height={BAR_HEIGHT}>
         <div
           className="flex items-center h-full justify-evenly"
           style={{
@@ -678,12 +624,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             onMouseEnter={hoverSound.onMouseEnter}
           >
             <div className="font-bold flex items-center gap-[2px] h-[24px] w-[24px] justify-center text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-              <span className="text-[7px] leading-none translate-y-[1px]">
-                ●
-              </span>
-              <span className="text-[7px] leading-none translate-y-[1px]">
-                ●
-              </span>
+              <span className="text-[7px] leading-none translate-y-[1px]">●</span>
+              <span className="text-[7px] leading-none translate-y-[1px]">●</span>
               <span className="text-[18px] leading-none">→</span>
             </div>
             <div
