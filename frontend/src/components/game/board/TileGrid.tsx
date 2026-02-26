@@ -1,10 +1,11 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import Tile, { TileHighlightMode } from "./Tile";
 import { TileVPIndicator } from "../../ui/overlay/EndGameOverlay";
 import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
+import { useSoundEffects } from "../../../hooks/useSoundEffects";
 import GreeneryRenderer from "./GreeneryRenderer";
 import { SPHERE_RADIUS } from "./boardConstants";
 
@@ -44,6 +45,38 @@ export default function TileGrid({
   animateHexEntrance = false,
 }: TileGridProps) {
   const newlyPlacedTiles = usePreviousTiles(gameState?.board?.tiles);
+  const { playWaterPlacementSound, playOxygenSound, playConstructionSound } = useSoundEffects();
+
+  // Play placement sounds for newly placed tiles
+  useEffect(() => {
+    if (newlyPlacedTiles.size === 0 || !gameState?.board?.tiles) return;
+
+    for (const hexKey of newlyPlacedTiles) {
+      const tile = gameState.board.tiles.find(
+        (t) => HexGrid2D.coordinateToKey(t.coordinates) === hexKey,
+      );
+      if (!tile?.occupiedBy) continue;
+
+      switch (tile.occupiedBy.type) {
+        case "ocean-tile":
+          void playWaterPlacementSound();
+          break;
+        case "greenery-tile":
+          void playOxygenSound();
+          break;
+        case "city-tile":
+        case "special-tile":
+          void playConstructionSound();
+          break;
+      }
+    }
+  }, [
+    newlyPlacedTiles,
+    gameState?.board?.tiles,
+    playWaterPlacementSound,
+    playOxygenSound,
+    playConstructionSound,
+  ]);
 
   // Create lookup map for VP indicators by coordinate
   const vpIndicatorMap = useMemo(() => {
