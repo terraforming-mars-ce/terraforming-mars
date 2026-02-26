@@ -72,7 +72,7 @@ export class ApiService {
 
   async getGame(gameId: string, playerId?: string): Promise<GameDto | null> {
     try {
-      const url = new URL(`${this.baseUrl}/games/${gameId}`);
+      const url = new URL(`${this.baseUrl}/games/${gameId}`, window.location.origin);
       if (playerId) {
         url.searchParams.set("playerId", playerId);
       }
@@ -98,7 +98,7 @@ export class ApiService {
 
   async listGames(status?: string): Promise<GameDto[]> {
     try {
-      const url = new URL(`${this.baseUrl}/games`);
+      const url = new URL(`${this.baseUrl}/games`, window.location.origin);
       if (status) {
         url.searchParams.set("status", status);
       }
@@ -120,7 +120,7 @@ export class ApiService {
 
   async listCards(offset: number = 0, limit: number = 50): Promise<ListCardsResponse> {
     try {
-      const url = new URL(`${this.baseUrl}/cards`);
+      const url = new URL(`${this.baseUrl}/cards`, window.location.origin);
       url.searchParams.set("offset", offset.toString());
       url.searchParams.set("limit", limit.toString());
 
@@ -141,7 +141,7 @@ export class ApiService {
 
   async getGameLogs(gameId: string, since?: number): Promise<StateDiffDto[]> {
     try {
-      const url = new URL(`${this.baseUrl}/games/${gameId}/logs`);
+      const url = new URL(`${this.baseUrl}/games/${gameId}/logs`, window.location.origin);
       if (since !== undefined) {
         url.searchParams.set("since", since.toString());
       }
