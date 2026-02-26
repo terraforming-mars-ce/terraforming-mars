@@ -49,6 +49,8 @@ class AudioService {
       },
       { key: "water-placement", path: "/sounds/water-placement.mp3", volumeMultiplier: 1.0 },
       { key: "oxygen-increase", path: "/sounds/oxygen-increase.mp3", volumeMultiplier: 1.0 },
+      { key: "button-hover", path: "/sounds/button-hover.mp3", volumeMultiplier: 0.4 },
+      { key: "button-click", path: "/sounds/button-click.mp3", volumeMultiplier: 0.5 },
       { key: "card-hover", path: "/sounds/card-hover.mp3", volumeMultiplier: 0.5 },
     ];
 
@@ -106,6 +108,14 @@ class AudioService {
 
   public async playOxygenSound(): Promise<void> {
     return this.playSound("oxygen-increase");
+  }
+
+  public async playButtonHoverSound(): Promise<void> {
+    return this.playSound("button-hover");
+  }
+
+  public async playButtonClickSound(): Promise<void> {
+    return this.playSound("button-click");
   }
 
   public async playCardHoverSound(): Promise<void> {

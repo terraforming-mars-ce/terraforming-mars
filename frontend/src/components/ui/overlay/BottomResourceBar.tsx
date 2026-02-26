@@ -27,6 +27,7 @@ import {
   calculatePlantsForGreenery,
   calculateHeatForTemperature,
 } from "@/utils/resourceConversionUtils.ts";
+import { useHoverSound } from "@/hooks/useHoverSound.ts";
 
 interface AngledPanelProps {
   side: "left" | "right";
@@ -156,6 +157,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const [showVPPopover, setShowVPPopover] = useState(false);
   const [isCorpExpanded, setIsCorpExpanded] = useState(false);
   const [showCorpExpanded, setShowCorpExpanded] = useState(false);
+  const hoverSound = useHoverSound();
   const actionsButtonRef = useRef<HTMLButtonElement>(null);
   const effectsButtonRef = useRef<HTMLButtonElement>(null);
   const tagsButtonRef = useRef<HTMLButtonElement>(null);
@@ -385,7 +387,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                 {/* Corporation Logo Button */}
                 <div
                   className="cursor-pointer p-2 transition-all duration-200 hover:brightness-110"
-                  onClick={handleCorpToggle}
+                  onClick={(e) => {
+                    hoverSound.onClick?.();
+                    handleCorpToggle(e);
+                  }}
+                  onMouseEnter={hoverSound.onMouseEnter}
                   style={{
                     filter: `drop-shadow(0 0 8px ${corpColor}50)`,
                   }}
@@ -477,12 +483,18 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                           onClick={(e) => {
                             e.stopPropagation();
                             if (isConversionDisabled || !showConversionButton) return;
+                            hoverSound.onClick?.();
                             if (resource.id === "plant") {
                               void onConvertPlantsToGreenery?.();
                             } else if (resource.id === "heat") {
                               void onConvertHeatToTemperature?.();
                             }
                           }}
+                          onMouseEnter={
+                            isConversionDisabled || !showConversionButton
+                              ? undefined
+                              : hoverSound.onMouseEnter
+                          }
                         >
                           <span className="text-[10px] font-bold text-white/90">+</span>
                           <GameIcon
@@ -557,7 +569,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           <button
             ref={actionsButtonRef}
             className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={handleOpenActionsPopover}
+            onClick={() => {
+              hoverSound.onClick?.();
+              handleOpenActionsPopover();
+            }}
+            onMouseEnter={hoverSound.onMouseEnter}
           >
             <div className="font-bold flex items-center gap-[2px] h-[24px] w-[24px] justify-center text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
               <span className="text-[7px] leading-none translate-y-[1px]">●</span>
@@ -582,7 +598,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           <button
             ref={effectsButtonRef}
             className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={handleOpenEffectsPopover}
+            onClick={() => {
+              hoverSound.onClick?.();
+              handleOpenEffectsPopover();
+            }}
+            onMouseEnter={hoverSound.onMouseEnter}
           >
             <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
               <div className="absolute w-[20px] h-[20px] rounded-full border-2 border-current" />
@@ -609,7 +629,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           <button
             ref={tagsButtonRef}
             className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={handleOpenTagsPopover}
+            onClick={() => {
+              hoverSound.onClick?.();
+              handleOpenTagsPopover();
+            }}
+            onMouseEnter={hoverSound.onMouseEnter}
           >
             <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
               <div className="absolute w-[20px] h-[20px] rounded-full border-2 border-current" />
@@ -637,7 +661,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           <button
             ref={storagesButtonRef}
             className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={handleOpenStoragesPopover}
+            onClick={() => {
+              hoverSound.onClick?.();
+              handleOpenStoragesPopover();
+            }}
+            onMouseEnter={hoverSound.onMouseEnter}
           >
             <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
               <div className="absolute w-[20px] h-[20px] border-2 border-current" />
@@ -664,7 +692,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           {/* Played Cards Button */}
           <button
             className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={handleOpenCardsModal}
+            onClick={() => {
+              hoverSound.onClick?.();
+              handleOpenCardsModal();
+            }}
+            onMouseEnter={hoverSound.onMouseEnter}
           >
             <div className="text-lg font-bold flex items-center justify-center h-[24px] w-[24px] text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
               ↓
@@ -687,7 +719,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           <button
             ref={vpButtonRef}
             className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={handleOpenVPPopover}
+            onClick={() => {
+              hoverSound.onClick?.();
+              handleOpenVPPopover();
+            }}
+            onMouseEnter={hoverSound.onMouseEnter}
           >
             <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
               <span className="text-xl absolute">○</span>
@@ -713,7 +749,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             <button
               ref={logButtonRef}
               className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-              onClick={() => setShowLogPopover(!showLogPopover)}
+              onClick={() => {
+                hoverSound.onClick?.();
+                setShowLogPopover(!showLogPopover);
+              }}
+              onMouseEnter={hoverSound.onMouseEnter}
             >
               <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-base text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
                 ☰

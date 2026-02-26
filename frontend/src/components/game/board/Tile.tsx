@@ -8,6 +8,7 @@ import OceanTile from "./OceanTile";
 import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import { useTextures } from "../../../hooks/useTextures";
+import { useHoverSound } from "../../../hooks/useHoverSound";
 import {
   sphereProjectionVertex,
   hoverGlowFragment,
@@ -242,6 +243,7 @@ export default function Tile({
   const vpTextRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
   const animationStartTimeRef = useRef<number | null>(null);
+  const hoverSound = useHoverSound();
 
   const [entranceScale, setEntranceScale] = useState(animateEntrance ? 0 : 1);
   const entranceStartRef = useRef<number | null>(null);
@@ -587,7 +589,12 @@ export default function Tile({
           material={hexTileMaterial}
           renderOrder={10}
           onPointerEnter={() => {
-            if (!panState.isPanning) setHovered(true);
+            if (!panState.isPanning) {
+              setHovered(true);
+              if (isAvailableForPlacement) {
+                hoverSound.onMouseEnter?.();
+              }
+            }
           }}
           onPointerLeave={() => {
             setHovered(false);
@@ -595,6 +602,9 @@ export default function Tile({
           onClick={(event) => {
             if (panState.isPanning) return;
             event.stopPropagation();
+            if (isAvailableForPlacement) {
+              hoverSound.onClick?.();
+            }
             onClick();
           }}
         />

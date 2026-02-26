@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { PlayerDto, OtherPlayerDto, TriggeredEffectDto } from "@/types/generated/api-types.ts";
 import BehaviorSection from "./BehaviorSection";
+import { useHoverSound } from "@/hooks/useHoverSound.ts";
 
 interface EffectNotification {
   id: string;
@@ -30,6 +31,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   hasPendingTilePlacement = false,
   triggeredEffects = [],
 }) => {
+  const hoverSound = useHoverSound(hasPendingTilePlacement);
   const isPassed = player.passed;
   const isDisconnected = !player.isConnected;
   const hasUnlimitedActions = player.availableActions === -1;
@@ -142,7 +144,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 ? "bg-[rgba(40,40,45,0.9)] text-[rgb(100,100,110)] border border-[rgba(60,60,70,0.5)] cursor-not-allowed"
                 : "bg-[rgba(50,100,160,0.95)] text-white border border-[rgba(80,140,200,0.8)] cursor-pointer hover:bg-[rgba(60,120,180,1)] hover:border-[rgba(100,160,220,0.9)]"
             }`}
-            onClick={hasPendingTilePlacement ? undefined : onSkipAction}
+            onClick={() => {
+              if (hasPendingTilePlacement) return;
+              hoverSound.onClick?.();
+              onSkipAction?.();
+            }}
+            onMouseEnter={hoverSound.onMouseEnter}
             disabled={hasPendingTilePlacement}
           >
             {buttonText}

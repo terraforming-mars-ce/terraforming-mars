@@ -26,6 +26,14 @@ export function useSoundEffects() {
     return audioService.playOxygenSound();
   }, []);
 
+  const playButtonHoverSound = useCallback(() => {
+    return audioService.playButtonHoverSound();
+  }, []);
+
+  const playButtonClickSound = useCallback(() => {
+    return audioService.playButtonClickSound();
+  }, []);
+
   const playCardHoverSound = useCallback(() => {
     return audioService.playCardHoverSound();
   }, []);
@@ -36,6 +44,8 @@ export function useSoundEffects() {
     playTemperatureSound,
     playWaterPlacementSound,
     playOxygenSound,
+    playButtonHoverSound,
+    playButtonClickSound,
     playCardHoverSound,
   };
 }

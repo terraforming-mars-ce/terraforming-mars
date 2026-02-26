@@ -1,5 +1,6 @@
 import React from "react";
 import { useSound } from "../../../contexts/SoundContext.tsx";
+import { useHoverSound } from "@/hooks/useHoverSound.ts";
 
 const sliderClassName =
   "w-full h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:hover:bg-space-blue-400 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:hover:bg-space-blue-400";
@@ -111,6 +112,7 @@ const SoundToggleButton: React.FC = () => {
     setVolume,
     setMusicVolume,
   } = useSound();
+  const hoverSound = useHoverSound();
 
   const handleSfxVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setVolume(parseFloat(e.target.value));
@@ -124,7 +126,11 @@ const SoundToggleButton: React.FC = () => {
     <div className="flex flex-col gap-2 px-4 py-3 text-white">
       <div className="flex items-center gap-3">
         <button
-          onClick={toggleMute}
+          onClick={() => {
+            hoverSound.onClick?.();
+            toggleMute();
+          }}
+          onMouseEnter={hoverSound.onMouseEnter}
           className="flex-shrink-0 w-5 h-5 flex items-center justify-center hover:text-space-blue-400 transition-colors cursor-pointer"
           aria-label={enabled ? "Mute sound" : "Unmute sound"}
         >
@@ -143,7 +149,11 @@ const SoundToggleButton: React.FC = () => {
       </div>
       <div className="flex items-center gap-3">
         <button
-          onClick={toggleMusicMute}
+          onClick={() => {
+            hoverSound.onClick?.();
+            toggleMusicMute();
+          }}
+          onMouseEnter={hoverSound.onMouseEnter}
           className="flex-shrink-0 w-5 h-5 flex items-center justify-center hover:text-space-blue-400 transition-colors cursor-pointer"
           aria-label={musicEnabled ? "Mute music" : "Unmute music"}
         >
