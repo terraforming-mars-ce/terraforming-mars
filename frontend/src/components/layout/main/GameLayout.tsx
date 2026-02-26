@@ -5,6 +5,7 @@ import RightSidebar from "../panels/RightSidebar.tsx";
 import MainContentDisplay from "../../ui/display/MainContentDisplay.tsx";
 import { TileHighlightMode } from "../../game/board/Tile.tsx";
 import { TileVPIndicator } from "../../ui/overlay/EndGameOverlay.tsx";
+import CardFanOverlay from "../../ui/overlay/CardFanOverlay.tsx";
 import BottomResourceBar, {
   BottomResourceBarCallbacks,
 } from "../../ui/overlay/BottomResourceBar.tsx";
@@ -15,6 +16,7 @@ import {
   PlayerDto,
   OtherPlayerDto,
   CardDto,
+  PlayerCardDto,
   TriggeredEffectDto,
 } from "../../../types/generated/api-types.ts";
 
@@ -39,6 +41,10 @@ interface GameLayoutProps {
   vpIndicators?: TileVPIndicator[];
   triggeredEffects?: TriggeredEffectDto[];
   bottomBarCallbacks?: BottomResourceBarCallbacks;
+  cards?: PlayerCardDto[];
+  hideCardFan?: boolean;
+  onCardSelect?: (cardId: string) => void;
+  onPlayCard?: (cardId: string) => Promise<void>;
   onStandardProjectSelect?: (project: StandardProject) => void;
   onLeaveGame?: () => void;
   onSkyboxReady?: () => void;
@@ -63,6 +69,10 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   vpIndicators = [],
   triggeredEffects = [],
   bottomBarCallbacks,
+  cards = [],
+  hideCardFan = false,
+  onCardSelect,
+  onPlayCard,
   onStandardProjectSelect,
   onLeaveGame,
   onSkyboxReady,
@@ -86,16 +96,23 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const allPlayers: (PlayerDto | OtherPlayerDto)[] =
     (gameState?.turnOrder
       ?.map((playerId) => playerMap.get(playerId))
-      .filter((player) => player !== undefined) as (PlayerDto | OtherPlayerDto)[]) || [];
+      .filter((player) => player !== undefined) as (
+      | PlayerDto
+      | OtherPlayerDto
+    )[]) || [];
 
   // Find the current turn player for the right sidebar
   const currentTurnPlayer =
     allPlayers.find((player) => player.id === gameState?.currentTurn) || null;
 
   const showUI =
-    transitionPhase === "animateUI" || transitionPhase === "complete" || transitionPhase === "idle";
+    transitionPhase === "animateUI" ||
+    transitionPhase === "complete" ||
+    transitionPhase === "idle";
   const isAnimatingIn = transitionPhase === "animateUI";
-  const uiAnimationClass = isAnimatingIn ? "animate-[uiFadeIn_1200ms_ease-out_both]" : "";
+  const uiAnimationClass = isAnimatingIn
+    ? "animate-[uiFadeIn_1200ms_ease-out_both]"
+    : "";
 
   return (
     <div className="relative w-screen h-screen bg-[#000000] text-white overflow-hidden">
@@ -156,6 +173,17 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           />
 
           <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
+        </div>
+      )}
+
+      {showUI && !showCardSelection && (
+        <div className={uiAnimationClass}>
+          <CardFanOverlay
+            cards={cards}
+            hideWhenModalOpen={hideCardFan}
+            onCardSelect={onCardSelect}
+            onPlayCard={onPlayCard}
+          />
         </div>
       )}
 
