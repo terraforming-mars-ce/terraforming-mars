@@ -84,7 +84,7 @@ export function useTextures(): TextureAssets {
     mars.wrapS = mars.wrapT = THREE.ClampToEdgeWrapping;
 
     grass.wrapS = grass.wrapT = THREE.RepeatWrapping;
-    grass.repeat.set(2.67, 2.67);
+    grass.repeat.set(6.9, 6.9);
 
     sand.wrapS = sand.wrapT = THREE.RepeatWrapping;
     sand.colorSpace = THREE.SRGBColorSpace;

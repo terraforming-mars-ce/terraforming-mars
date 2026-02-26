@@ -34,6 +34,10 @@ export function useSoundEffects() {
     return audioService.playButtonClickSound();
   }, []);
 
+  const playCardHoverSound = useCallback(() => {
+    return audioService.playCardHoverSound();
+  }, []);
+
   return {
     playSound,
     playProductionSound,
@@ -42,5 +46,6 @@ export function useSoundEffects() {
     playOxygenSound,
     playButtonHoverSound,
     playButtonClickSound,
+    playCardHoverSound,
   };
 }

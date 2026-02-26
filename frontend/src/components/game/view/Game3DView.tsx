@@ -90,6 +90,7 @@ interface Game3DViewProps {
   vpIndicators?: TileVPIndicator[];
   animateHexEntrance?: boolean;
   onSkyboxReady?: () => void;
+  onGpuReady?: () => void;
   showUI?: boolean;
   uiAnimationClass?: string;
 }
@@ -100,6 +101,7 @@ export default function Game3DView({
   vpIndicators = [],
   animateHexEntrance = false,
   onSkyboxReady,
+  onGpuReady,
   showUI = true,
   uiAnimationClass = "",
 }: Game3DViewProps) {
@@ -170,6 +172,8 @@ export default function Game3DView({
         return "greenery-tile";
       case "ocean":
         return "ocean-tile";
+      case "volcano":
+        return "volcano-tile";
       default:
         return "city-tile"; // fallback
     }
@@ -246,8 +250,7 @@ export default function Game3DView({
               animateHexEntrance={animateHexEntrance}
             />
 
-            {/* GPU warmup — pre-compiles all tile shaders to prevent first-placement lag */}
-            <GpuWarmup />
+            <GpuWarmup onReady={onGpuReady} />
 
             <PerformanceProbe />
 

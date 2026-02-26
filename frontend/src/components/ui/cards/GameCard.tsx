@@ -7,6 +7,7 @@ import BehaviorSection from "./BehaviorSection";
 import RequirementsBox from "./RequirementsBox.tsx";
 import { getTagIconPath } from "@/utils/iconStore.ts";
 import { CardDto, PlayerCardDto, ResourceTypeCredit } from "@/types/generated/api-types.ts";
+import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 
 interface GameCardProps {
   card: CardDto | PlayerCardDto;
@@ -35,6 +36,7 @@ const GameCard: React.FC<GameCardProps> = ({
   const [vpDescription, setVpDescription] = useState<string | null>(null);
   const [vpTooltipPos, setVpTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const vpRef = useRef<HTMLDivElement>(null);
+  const { playCardHoverSound } = useSoundEffects();
 
   useEffect(() => {
     if (vpDescription && vpRef.current) {
@@ -55,6 +57,7 @@ const GameCard: React.FC<GameCardProps> = ({
   const actualDiscountAmount = displayCost - effectiveCost;
 
   const handleClick = () => {
+    void playCardHoverSound();
     onSelect(card.id);
   };
 

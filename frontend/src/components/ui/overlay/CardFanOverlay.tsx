@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import GameCard from "../cards/GameCard.tsx";
 import { PlayerCardDto } from "@/types/generated/api-types.ts";
+import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(Math.max(n, min), max);
@@ -81,6 +82,8 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
   const dragIntentRef = useRef(false);
   const capturedCardRef = useRef<HTMLDivElement | null>(null);
   const lastPointerXRef = useRef(0);
+
+  const { playCardHoverSound } = useSoundEffects();
 
   useEffect(() => {
     cardsRef.current = cards;
@@ -286,6 +289,7 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
         if (highlightedCard === cardId) {
           setHighlightedCard(null);
         } else {
+          void playCardHoverSound();
           setHighlightedCard(cardId);
           onCardSelect?.(cardId);
         }
@@ -325,7 +329,7 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
         setReturningCard(null);
       }, 400);
     },
-    [draggedCard, dragStartPosition, highlightedCard, onPlayCard, onCardSelect],
+    [draggedCard, dragStartPosition, highlightedCard, onPlayCard, onCardSelect, playCardHoverSound],
   );
 
   // --- Click outside to deselect ---
@@ -395,6 +399,11 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
           card.errors.length > 0 &&
           (isHighlighted || (isDraggedCard && isDragRaised));
 
+        const showWarnings =
+          card.warnings &&
+          card.warnings.length > 0 &&
+          (isHighlighted || (isDraggedCard && isDragRaised));
+
         const classNames = [
           "card-fan-card",
           isDragging && !isReturning ? "is-dragging" : "",
@@ -433,6 +442,15 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
                 {card.errors.map((err, i) => (
                   <div key={i} className="card-fan-error-item">
                     {err.message}
+                  </div>
+                ))}
+              </div>
+            )}
+            {card.warnings && card.warnings.length > 0 && (
+              <div className={`card-fan-warning-panel ${showWarnings ? "is-visible" : ""}`}>
+                {card.warnings.map((warn, i) => (
+                  <div key={i} className="card-fan-warning-item">
+                    {warn.message}
                   </div>
                 ))}
               </div>
@@ -509,6 +527,37 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
           background: rgba(10, 10, 15, 0.95);
           border: 1px solid rgba(231, 76, 60, 0.6);
           border-left: 3px solid #e74c3c;
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 12px;
+          line-height: 1.4;
+          padding: 8px 10px;
+          white-space: normal;
+        }
+
+        .card-fan-warning-panel {
+          position: absolute;
+          left: 100%;
+          top: 0;
+          margin-left: 10px;
+          width: 180px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          pointer-events: none;
+          opacity: 0;
+          transform: translateX(-6px);
+          transition: opacity 200ms ease, transform 200ms ease;
+        }
+
+        .card-fan-warning-panel.is-visible {
+          opacity: 1;
+          transform: translateX(0);
+        }
+
+        .card-fan-warning-item {
+          background: rgba(10, 10, 15, 0.95);
+          border: 1px solid rgba(255, 193, 7, 0.6);
+          border-left: 3px solid #ffc107;
           color: rgba(255, 255, 255, 0.9);
           font-size: 12px;
           line-height: 1.4;

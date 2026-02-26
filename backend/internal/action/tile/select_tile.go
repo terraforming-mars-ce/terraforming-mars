@@ -94,6 +94,38 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 
 	tileType := pendingTileSelection.TileType
 
+	// Handle clear differently - removes occupant from a tile (admin debug tool)
+	if tileType == "clear" {
+		if err := g.Board().ClearTileOccupant(ctx, *coords); err != nil {
+			log.Warn("Failed to clear tile occupant", zap.Error(err))
+			return nil, fmt.Errorf("failed to clear tile: %w", err)
+		}
+
+		log.Info("🧹 Tile cleared",
+			zap.String("position", selectedHex))
+
+		result := &TilePlacementResult{
+			TileType:   tileType,
+			Source:     pendingTileSelection.Source,
+			Hex:        selectedHex,
+			OnComplete: pendingTileSelection.OnComplete,
+		}
+
+		if err := g.SetPendingTileSelection(ctx, playerID, nil); err != nil {
+			return nil, fmt.Errorf("failed to clear pending tile selection: %w", err)
+		}
+
+		if err := g.ProcessNextTile(ctx, playerID); err != nil {
+			return nil, fmt.Errorf("failed to process next tile: %w", err)
+		}
+
+		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+
+		log.Info("✅ Tile cleared successfully",
+			zap.String("position", selectedHex))
+		return result, nil
+	}
+
 	// Handle land claims differently - they reserve a tile instead of placing an occupant
 	if tileType == "land-claim" {
 		if err := g.Board().ReserveTile(ctx, *coords, playerID); err != nil {
@@ -250,6 +282,9 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		} else {
 			log.Info("🌊 Ocean placed but ocean count already maxed")
 		}
+
+	case "volcano":
+		log.Info("🌋 Volcano placed (no TR bonus)")
 	}
 
 	if err := g.SetPendingTileSelection(ctx, playerID, nil); err != nil {
@@ -309,6 +344,8 @@ func mapTileTypeToResourceType(tileType string) shared.ResourceType {
 		return shared.ResourceGreeneryTile
 	case "ocean":
 		return shared.ResourceOceanTile
+	case "volcano":
+		return shared.ResourceVolcanoTile
 	default:
 		return shared.ResourceType(tileType)
 	}

@@ -8,6 +8,8 @@ import availableGlowFragmentRaw from "./available-glow.frag.glsl?raw";
 import endgameHighlightFragmentRaw from "./endgame-highlight.frag.glsl?raw";
 import tileBorderVertexRaw from "./tile-border.vert.glsl?raw";
 import tileBorderFragmentRaw from "./tile-border.frag.glsl?raw";
+import volcanoVertexRaw from "./volcano.vert.glsl?raw";
+import volcanoFragmentRaw from "./volcano.frag.glsl?raw";
 
 export { default as tileSurfaceVertexSnippet } from "./tile-surface.vert.glsl?raw";
 export { default as greeneryGroundVertexSnippet } from "./greenery-ground.vert.glsl?raw";
@@ -27,6 +29,8 @@ export const availableGlowFragment = stripVersion(availableGlowFragmentRaw);
 export const endgameHighlightFragment = stripVersion(endgameHighlightFragmentRaw);
 export const tileBorderVertex = stripVersion(tileBorderVertexRaw);
 export const tileBorderFragment = stripVersion(tileBorderFragmentRaw);
+export const volcanoVertex = stripVersion(volcanoVertexRaw);
+export const volcanoFragment = stripVersion(volcanoFragmentRaw);
 
 export function splitSnippet(raw: string): { header: string; body: string } {
   const marker = "//#pragma body\n";
@@ -91,5 +95,35 @@ export function createOceanMaterial(
     premultipliedAlpha: true,
     side: THREE.DoubleSide,
     depthWrite: false,
+  });
+}
+
+export function createVolcanoMaterial(
+  grassTexture: THREE.Texture,
+  flowTexture: THREE.Texture,
+  seed: number,
+): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    vertexShader: volcanoVertex,
+    fragmentShader: volcanoFragment,
+    uniforms: {
+      uSphereRadius: { value: 2.02 },
+      uHeight: { value: 0.14 },
+      uCraterRadius: { value: 0.22 },
+      uCraterDepth: { value: 0.08 },
+      uEmergence: { value: 1.0 },
+      uTime: { value: 0.0 },
+      uSeed: { value: seed },
+      uSunDirection: { value: new THREE.Vector3(0.9, 0.0, 0.8).normalize() },
+      uSunIntensity: { value: 1.0 },
+      uSunColor: { value: new THREE.Vector3(1.0, 0.86, 0.72) },
+      uGrassTexture: { value: grassTexture },
+      uFlowTex: { value: flowTexture },
+      uDebugMode: { value: 0 },
+    },
+    transparent: true,
+    depthWrite: true,
+    depthTest: true,
+    side: THREE.DoubleSide,
   });
 }

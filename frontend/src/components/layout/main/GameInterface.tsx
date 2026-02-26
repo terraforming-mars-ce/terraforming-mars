@@ -9,6 +9,8 @@ import PaymentSelectionPopover from "../../ui/popover/PaymentSelectionPopover.ts
 import DebugDropdown from "../../ui/debug/DebugDropdown.tsx";
 import DevModeChip from "../../ui/debug/DevModeChip.tsx";
 import PerformanceWindow from "../../ui/debug/PerformanceWindow.tsx";
+import TilePlacerWindow from "../../ui/debug/TilePlacerWindow.tsx";
+import { WindowManagerProvider } from "../../ui/debug/WindowManager.tsx";
 import WaitingRoomOverlay from "../../ui/overlay/WaitingRoomOverlay.tsx";
 import PlayerSelectionOverlay from "../../ui/overlay/PlayerSelectionOverlay.tsx";
 import JoinGameOverlay from "../../ui/overlay/JoinGameOverlay.tsx";
@@ -59,7 +61,7 @@ import { shouldShowPaymentModal, createDefaultPayment } from "@/utils/paymentUti
 import { deepClone, findChangedPaths } from "@/utils/deepCompare.ts";
 import { StandardProject } from "@/types/cards.tsx";
 
-type TransitionPhase = "idle" | "lobby" | "fadeOutLobby" | "animateUI" | "complete";
+type TransitionPhase = "idle" | "lobby" | "loading" | "fadeOutLobby" | "animateUI" | "complete";
 
 type LoadingPhase = "checking" | "selecting" | "joining" | "connecting" | "ready";
 
@@ -89,6 +91,7 @@ export default function GameInterface() {
   const [showActionsModal, setShowActionsModal] = useState(false);
   const [showDebugDropdown, setShowDebugDropdown] = useState(false);
   const [showPerformanceWindow, setShowPerformanceWindow] = useState(false);
+  const [tilePlacerPlayerId, setTilePlacerPlayerId] = useState<string | null>(null);
 
   // Set corporation data directly from player (backend now sends full CardDto)
   useEffect(() => {
@@ -209,16 +212,28 @@ export default function GameInterface() {
   // Triggered effects notifications
   const [triggeredEffects, setTriggeredEffects] = useState<TriggeredEffectDto[]>([]);
 
-  // Skybox readiness tracking for smooth loading overlay
   const [isSkyboxReady, setIsSkyboxReady] = useState(() => skyboxCache.isReady());
+  const [isGpuReady, setIsGpuReady] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const { isLoaded: isSpaceBgLoaded } = useSpaceBackground();
   const handleSkyboxReady = useCallback(() => setIsSkyboxReady(true), []);
+  const handleGpuReady = useCallback(() => setIsGpuReady(true), []);
+  const handleLoadingTransitionEnd = useCallback(() => {
+    if (transitionPhase === "loading") {
+      setTransitionPhase("fadeOutLobby");
+    } else {
+      setOverlayVisible(false);
+    }
+  }, [transitionPhase]);
 
   const isFullyLoaded =
     (loadingPhase === "selecting" && isSpaceBgLoaded) ||
     (loadingPhase === "joining" && isSpaceBgLoaded) ||
-    (isConnected && !!game && !isReconnecting && (isSkyboxReady || transitionPhase === "lobby"));
+    (isConnected &&
+      !!game &&
+      !isReconnecting &&
+      (isSkyboxReady || transitionPhase === "lobby") &&
+      (isGpuReady || transitionPhase === "lobby"));
 
   // WebSocket stability
   const isWebSocketInitialized = useRef(false);
@@ -1747,7 +1762,7 @@ export default function GameInterface() {
     if (isLobbyPhase) setLobbyMounted(true);
   }, [isLobbyPhase]);
 
-  // Transition state machine: lobby → fadeOutLobby → animateUI → complete
+  // Transition state machine: lobby → loading → fadeOutLobby → animateUI → complete
   useEffect(() => {
     if (isPreGamePhase) {
       setTransitionPhase("lobby");
@@ -1757,8 +1772,13 @@ export default function GameInterface() {
 
     if (!wasInLobby.current || transitionPhase !== "lobby") return;
 
-    setTransitionPhase("fadeOutLobby");
+    setTransitionPhase("loading");
+    setOverlayVisible(true);
     audioService.stopAmbientWithDuration(2000);
+  }, [isPreGamePhase]);
+
+  useEffect(() => {
+    if (transitionPhase !== "fadeOutLobby") return;
 
     const animateTimer = setTimeout(() => {
       setTransitionPhase("animateUI");
@@ -1772,7 +1792,7 @@ export default function GameInterface() {
       clearTimeout(animateTimer);
       clearTimeout(completeTimer);
     };
-  }, [isPreGamePhase]);
+  }, [transitionPhase]);
 
   // On mount: if game is already active (reload/reconnect), stop ambient immediately
   useEffect(() => {
@@ -1846,6 +1866,7 @@ export default function GameInterface() {
           onStandardProjectSelect={handleStandardProjectSelect}
           onLeaveGame={handleLeaveGame}
           onSkyboxReady={handleSkyboxReady}
+          onGpuReady={handleGpuReady}
         />
       )}
 
@@ -1884,19 +1905,34 @@ export default function GameInterface() {
         openDirectlyToCardSelection={openProductionToCardSelection}
       />
 
-      <DebugDropdown
-        isVisible={showDebugDropdown}
-        onClose={() => setShowDebugDropdown(false)}
-        gameState={game}
-        changedPaths={changedPaths}
-      />
+      <WindowManagerProvider>
+        <DebugDropdown
+          isVisible={showDebugDropdown}
+          onClose={() => setShowDebugDropdown(false)}
+          gameState={game}
+          changedPaths={changedPaths}
+          onOpenTilePlacer={(playerId) => setTilePlacerPlayerId(playerId)}
+        />
 
-      <PerformanceWindow
-        isVisible={showPerformanceWindow}
-        onClose={() => setShowPerformanceWindow(false)}
-      />
+        <PerformanceWindow
+          isVisible={showPerformanceWindow}
+          onClose={() => setShowPerformanceWindow(false)}
+        />
+
+        {tilePlacerPlayerId && game && (
+          <TilePlacerWindow
+            playerId={tilePlacerPlayerId}
+            playerName={
+              [game.currentPlayer, ...game.otherPlayers].find((p) => p.id === tilePlacerPlayerId)
+                ?.name || tilePlacerPlayerId
+            }
+            onClose={() => setTilePlacerPlayerId(null)}
+          />
+        )}
+      </WindowManagerProvider>
 
       {(transitionPhase === "lobby" ||
+        transitionPhase === "loading" ||
         transitionPhase === "fadeOutLobby" ||
         loadingPhase === "selecting" ||
         loadingPhase === "joining") && (
@@ -2100,7 +2136,7 @@ export default function GameInterface() {
           className={
             transitionPhase === "animateUI"
               ? "animate-[uiFadeIn_1200ms_ease-out_both]"
-              : transitionPhase === "fadeOutLobby"
+              : transitionPhase === "loading" || transitionPhase === "fadeOutLobby"
                 ? "opacity-0"
                 : ""
           }
@@ -2319,7 +2355,7 @@ export default function GameInterface() {
         <LoadingOverlay
           isLoaded={isFullyLoaded}
           message={loadingMessage}
-          onTransitionEnd={() => setOverlayVisible(false)}
+          onTransitionEnd={handleLoadingTransitionEnd}
         />
       )}
     </>

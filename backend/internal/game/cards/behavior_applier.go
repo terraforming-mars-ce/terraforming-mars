@@ -738,7 +738,7 @@ func (a *BehaviorApplier) applyOutput(
 		log.Info("🏴 Added land claim tile selection to queue",
 			zap.Int("count", output.Amount))
 
-	case shared.ResourceCityPlacement, shared.ResourceGreeneryPlacement, shared.ResourceOceanPlacement:
+	case shared.ResourceCityPlacement, shared.ResourceGreeneryPlacement, shared.ResourceOceanPlacement, shared.ResourceVolcanoPlacement:
 		if a.game == nil {
 			return fmt.Errorf("cannot apply tile placement: no game context")
 		}
@@ -755,6 +755,8 @@ func (a *BehaviorApplier) applyOutput(
 			tileType = "greenery"
 		case shared.ResourceOceanPlacement:
 			tileType = "ocean"
+		case shared.ResourceVolcanoPlacement:
+			tileType = "volcano"
 		}
 
 		// Build array of tile types to append (for multiple placements)

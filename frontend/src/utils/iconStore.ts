@@ -69,6 +69,8 @@ export const TILE_ICONS: { [key: string]: string } = {
   "greenery-placed": "/assets/tiles/greenery_no_O2.png", // For triggered effects
   "ocean-placed": "/assets/tiles/ocean.png", // For triggered effects
   "city-placed": "/assets/tiles/city.png", // For triggered effects
+  "volcano-tile": "/assets/tiles/hazard.png",
+  "volcano-placement": "/assets/tiles/hazard.png",
 };
 
 export const GLOBAL_PARAMETER_ICONS: { [key: string]: string } = {

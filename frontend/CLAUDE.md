@@ -111,6 +111,7 @@ Uses React Three Fiber for Three.js integration. Hex coordinates use cube system
 
 **Controls**: Custom pan/zoom (no orbital rotation), parallax background for depth.
 
+
 ### Sound System
 
 ```tsx

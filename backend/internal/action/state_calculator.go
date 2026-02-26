@@ -464,6 +464,15 @@ func validateTileOutputs(
 						Message:  "No ocean tiles remaining",
 					})
 				}
+
+			case shared.ResourceVolcanoPlacement:
+				volcanoPlacements := g.CountAvailableHexesForTile("volcano", p.ID(), nil)
+				if volcanoPlacements == 0 {
+					warnings = append(warnings, player.StateWarning{
+						Code:    player.WarningCodeNoValidTilePlacements,
+						Message: "No valid volcanic placements available",
+					})
+				}
 			}
 		}
 	}

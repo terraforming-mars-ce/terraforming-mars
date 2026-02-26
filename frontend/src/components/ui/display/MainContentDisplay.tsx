@@ -10,6 +10,7 @@ interface MainContentDisplayProps {
   vpIndicators?: TileVPIndicator[];
   animateHexEntrance?: boolean;
   onSkyboxReady?: () => void;
+  onGpuReady?: () => void;
   showUI?: boolean;
   uiAnimationClass?: string;
 }
@@ -20,6 +21,7 @@ const MainContentDisplay: React.FC<MainContentDisplayProps> = ({
   vpIndicators = [],
   animateHexEntrance = false,
   onSkyboxReady,
+  onGpuReady,
   showUI = true,
   uiAnimationClass = "",
 }) => {
@@ -30,6 +32,7 @@ const MainContentDisplay: React.FC<MainContentDisplayProps> = ({
       vpIndicators={vpIndicators}
       animateHexEntrance={animateHexEntrance}
       onSkyboxReady={onSkyboxReady}
+      onGpuReady={onGpuReady}
       showUI={showUI}
       uiAnimationClass={uiAnimationClass}
     />
