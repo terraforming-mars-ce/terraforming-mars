@@ -1,5 +1,6 @@
 import React from "react";
 import { PlayerDto, OtherPlayerDto } from "../../../types/generated/api-types.ts";
+import { getPlayerColor } from "@/utils/playerColors.ts";
 
 interface PlayerOverlayProps {
   players: (PlayerDto | OtherPlayerDto)[];
@@ -7,16 +8,6 @@ interface PlayerOverlayProps {
 }
 
 const PlayerOverlay: React.FC<PlayerOverlayProps> = ({ players, currentPlayer }) => {
-  // Player color system - 6 distinct colors for up to 6 players
-  const playerColors = [
-    "#ff4757", // Red
-    "#3742fa", // Blue
-    "#5fb85f", // Green
-    "#ffa502", // Orange
-    "#a55eea", // Purple
-    "#26d0ce", // Cyan
-  ];
-
   // Corporation logo mapping from available assets
   const corporationLogos: { [key: string]: string } = {
     polaris: "/assets/pathfinders/corp-logo-polaris.png",
@@ -36,10 +27,6 @@ const PlayerOverlay: React.FC<PlayerOverlayProps> = ({ players, currentPlayer })
   const getCorpLogo = (corporationId?: string) => {
     if (!corporationId) return "/assets/pathfinders/corp-logo-polaris.png"; // Default
     return corporationLogos[corporationId] || "/assets/pathfinders/corp-logo-polaris.png";
-  };
-
-  const getPlayerColor = (index: number) => {
-    return playerColors[index % playerColors.length];
   };
 
   const playersToShow = players.length > 0 ? players : [];

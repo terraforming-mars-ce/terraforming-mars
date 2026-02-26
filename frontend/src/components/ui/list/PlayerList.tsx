@@ -7,6 +7,7 @@ import {
 } from "@/types/generated/api-types.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import PlayerCard from "../cards/PlayerCard.tsx";
+import { getPlayerColor } from "@/utils/playerColors.ts";
 
 interface PlayerListProps {
   players: (PlayerDto | OtherPlayerDto)[];
@@ -26,19 +27,6 @@ const PlayerList: React.FC<PlayerListProps> = ({
   triggeredEffects = [],
 }) => {
   const isActionPhase = currentPhase === "action";
-
-  const playerColors = [
-    "#b91c2b", // Red
-    "#232dc7", // Blue
-    "#3abe3a", // Green
-    "#ffa502", // Orange
-    "#a55eea", // Purple
-    "#26d0ce", // Cyan
-  ];
-
-  const getPlayerColor = (index: number) => {
-    return playerColors[index % playerColors.length];
-  };
 
   const handleSkipAction = async () => {
     try {
