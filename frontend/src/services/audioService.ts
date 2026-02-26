@@ -52,6 +52,7 @@ class AudioService {
       { key: "button-hover", path: "/sounds/button-hover.mp3", volumeMultiplier: 0.4 },
       { key: "button-click", path: "/sounds/button-click.mp3", volumeMultiplier: 0.5 },
       { key: "card-hover", path: "/sounds/card-hover.mp3", volumeMultiplier: 0.5 },
+      { key: "construction", path: "/sounds/construction.mp3", volumeMultiplier: 1.0 },
     ];
 
     audioFiles.forEach(({ key, path, volumeMultiplier }) => {
@@ -120,6 +121,10 @@ class AudioService {
 
   public async playCardHoverSound(): Promise<void> {
     return this.playSound("card-hover");
+  }
+
+  public async playConstructionSound(): Promise<void> {
+    return this.playSound("construction");
   }
 
   public playAmbient(): void {
