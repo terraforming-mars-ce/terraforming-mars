@@ -19,6 +19,7 @@ interface PlayerCardProps {
   onSkipAction?: () => void;
   hasPendingTilePlacement?: boolean;
   triggeredEffects?: TriggeredEffectDto[];
+  onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
@@ -30,6 +31,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onSkipAction,
   hasPendingTilePlacement = false,
   triggeredEffects = [],
+  onPlayerClick,
 }) => {
   const hoverSound = useHoverSound(hasPendingTilePlacement);
   const isPassed = player.passed;
@@ -102,12 +104,15 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <div
       ref={cardRef}
-      className={`relative w-full h-[60px] overflow-visible pointer-events-auto ${isCurrentTurn ? "mb-1.5" : "mb-2"}`}
+      className={`relative w-full h-[60px] overflow-visible pointer-events-auto ${isCurrentTurn ? "mb-1.5" : "mb-2"} ${onPlayerClick ? "cursor-pointer" : ""}`}
+      onClick={() => onPlayerClick?.(player)}
     >
       {/* Main player card with angled edge */}
       <div
         className={`relative h-full bg-[rgba(10,10,15,0.95)] border-l-[6px] border-t border-t-[rgba(60,60,70,0.7)] pl-2 pr-2 transition-all duration-300 flex items-center [clip-path:polygon(0_0,calc(100%-8px)_0,100%_100%,0_100%)] max-w-[270px] z-[2] shadow-[0_2px_8px_rgba(0,0,0,0.5),-2px_0_6px_var(--player-color)] ${isDisconnected ? "opacity-20" : ""} ${!isCurrentTurn ? "opacity-60" : ""} ${isCurrentTurn ? "border-l-8 shadow-[0_4px_16px_rgba(0,0,0,0.6),-4px_0_12px_var(--player-color)]" : ""}`}
-        style={{ "--player-color": playerColor } as React.CSSProperties}
+        style={
+          { "--player-color": playerColor, borderLeftColor: playerColor } as React.CSSProperties
+        }
       >
         <div className="flex flex-col items-start justify-center w-full gap-1">
           <div className="flex gap-1 flex-wrap justify-start items-center relative z-[2]">
@@ -144,7 +149,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 ? "bg-[rgba(40,40,45,0.9)] text-[rgb(100,100,110)] border border-[rgba(60,60,70,0.5)] cursor-not-allowed"
                 : "bg-[rgba(50,100,160,0.95)] text-white border border-[rgba(80,140,200,0.8)] cursor-pointer hover:bg-[rgba(60,120,180,1)] hover:border-[rgba(100,160,220,0.9)]"
             }`}
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (hasPendingTilePlacement) return;
               hoverSound.onClick?.();
               onSkipAction?.();

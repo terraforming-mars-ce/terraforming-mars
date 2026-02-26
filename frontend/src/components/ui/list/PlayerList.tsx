@@ -7,6 +7,7 @@ import {
 } from "@/types/generated/api-types.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import PlayerCard from "../cards/PlayerCard.tsx";
+import { getPlayerColor } from "@/utils/playerColors.ts";
 
 interface PlayerListProps {
   players: (PlayerDto | OtherPlayerDto)[];
@@ -15,6 +16,7 @@ interface PlayerListProps {
   currentPhase?: GamePhase;
   hasPendingTilePlacement?: boolean;
   triggeredEffects?: TriggeredEffectDto[];
+  onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({
@@ -24,21 +26,9 @@ const PlayerList: React.FC<PlayerListProps> = ({
   currentPhase,
   hasPendingTilePlacement = false,
   triggeredEffects = [],
+  onPlayerClick,
 }) => {
   const isActionPhase = currentPhase === "action";
-
-  const playerColors = [
-    "#b91c2b", // Red
-    "#232dc7", // Blue
-    "#3abe3a", // Green
-    "#ffa502", // Orange
-    "#a55eea", // Purple
-    "#26d0ce", // Cyan
-  ];
-
-  const getPlayerColor = (index: number) => {
-    return playerColors[index % playerColors.length];
-  };
 
   const handleSkipAction = async () => {
     try {
@@ -61,6 +51,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
           onSkipAction={handleSkipAction}
           hasPendingTilePlacement={hasPendingTilePlacement}
           triggeredEffects={triggeredEffects}
+          onPlayerClick={onPlayerClick}
         />
       ))}
     </div>
