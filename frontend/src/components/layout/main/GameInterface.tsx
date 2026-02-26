@@ -659,7 +659,13 @@ export default function GameInterface() {
         throw error; // Re-throw to allow CardFanOverlay to handle the error
       }
     },
-    [currentPlayer?.cards, needsCardStorageSelection, finalizePlayCard, game?.currentTurn, game?.viewingPlayerId],
+    [
+      currentPlayer?.cards,
+      needsCardStorageSelection,
+      finalizePlayCard,
+      game?.currentTurn,
+      game?.viewingPlayerId,
+    ],
   );
 
   const handleChoiceSelect = useCallback(

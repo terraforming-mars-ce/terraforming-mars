@@ -361,11 +361,7 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
 
   return (
     <div className="card-fan-overlay" ref={handRef}>
-      {throwError && (
-        <div className="card-fan-throw-error">
-          {throwError}
-        </div>
-      )}
+      {throwError && <div className="card-fan-throw-error">{throwError}</div>}
 
       {cards.map((card) => {
         const index = cardOrder.indexOf(card.id);

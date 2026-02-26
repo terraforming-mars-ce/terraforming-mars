@@ -71,11 +71,15 @@ const material = useMemo(() => {
   materialRef.current = mat; // overwrites with discarded 2nd run
   return mat;
 }, [deps]);
-useFrame(() => { materialRef.current.uniforms.uFoo.value = x; }); // ghost material
+useFrame(() => {
+  materialRef.current.uniforms.uFoo.value = x;
+}); // ghost material
 
 // GOOD — use the useMemo return value directly
 const material = useMemo(() => createMyMaterial(), [deps]);
-useFrame(() => { material.uniforms.uFoo.value = x; }); // always the real material
+useFrame(() => {
+  material.uniforms.uFoo.value = x;
+}); // always the real material
 ```
 
 ## Asset Loading
