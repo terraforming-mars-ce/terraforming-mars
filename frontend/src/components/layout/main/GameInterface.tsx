@@ -571,6 +571,11 @@ export default function GameInterface() {
   const handlePlayCard = useCallback(
     async (cardId: string) => {
       try {
+        // Block card plays when it's not your turn
+        if (game?.currentTurn !== game?.viewingPlayerId) {
+          throw new Error("Not your turn");
+        }
+
         // Block card plays when tile selection is pending
         if (currentPlayer?.pendingTileSelection) {
           return;
@@ -654,7 +659,7 @@ export default function GameInterface() {
         throw error; // Re-throw to allow CardFanOverlay to handle the error
       }
     },
-    [currentPlayer?.cards, needsCardStorageSelection, finalizePlayCard],
+    [currentPlayer?.cards, needsCardStorageSelection, finalizePlayCard, game?.currentTurn, game?.viewingPlayerId],
   );
 
   const handleChoiceSelect = useCallback(

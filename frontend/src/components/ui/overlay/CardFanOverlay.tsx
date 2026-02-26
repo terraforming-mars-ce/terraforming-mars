@@ -76,6 +76,8 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
   const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
   const [isInThrowZone, setIsInThrowZone] = useState(false);
   const [returningCard, setReturningCard] = useState<string | null>(null);
+  const [throwError, setThrowError] = useState<string | null>(null);
+  const throwErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef(cards);
@@ -316,6 +318,16 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
             return;
           } catch (error) {
             console.error("Failed to play card:", error);
+            if (error instanceof Error) {
+              if (throwErrorTimeoutRef.current) {
+                clearTimeout(throwErrorTimeoutRef.current);
+              }
+              setThrowError(error.message);
+              throwErrorTimeoutRef.current = setTimeout(() => {
+                setThrowError(null);
+                throwErrorTimeoutRef.current = null;
+              }, 2000);
+            }
           }
         }
       }
@@ -349,6 +361,12 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
 
   return (
     <div className="card-fan-overlay" ref={handRef}>
+      {throwError && (
+        <div className="card-fan-throw-error">
+          {throwError}
+        </div>
+      )}
+
       {cards.map((card) => {
         const index = cardOrder.indexOf(card.id);
         if (index === -1) return null;
@@ -563,6 +581,30 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
           line-height: 1.4;
           padding: 8px 10px;
           white-space: normal;
+        }
+
+        .card-fan-throw-error {
+          position: fixed;
+          top: 40%;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 1200;
+          background: rgba(10, 10, 15, 0.95);
+          border: 1px solid rgba(231, 76, 60, 0.6);
+          border-left: 4px solid #e74c3c;
+          color: rgba(255, 255, 255, 0.9);
+          font-family: 'Orbitron', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          padding: 12px 20px;
+          pointer-events: none;
+          animation: throwErrorFadeIn 200ms ease-out;
+          white-space: nowrap;
+        }
+
+        @keyframes throwErrorFadeIn {
+          from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+          to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
 
         @media (max-width: 1200px) {
