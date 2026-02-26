@@ -549,3 +549,145 @@ func TestCalculatePlayerStandardProjectState_NoOceansRemaining(t *testing.T) {
 		t.Errorf("Expected oceansRemaining=0 in metadata, got %v", state.Metadata["oceansRemaining"])
 	}
 }
+
+// TestCalculatePlayerCardState_SteelNotCountedForNonBuildingCard verifies that steel
+// is NOT counted as a payment substitute for cards without the Building tag.
+func TestCalculatePlayerCardState_SteelNotCountedForNonBuildingCard(t *testing.T) {
+	g, p, _ := setupTestEnvironment(t)
+
+	// Card without Building tag, costs 20
+	nonBuildingCard := &gamecards.Card{
+		ID:   "non-building",
+		Name: "Non Building Card",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 20,
+		Tags: []shared.CardTag{shared.TagScience},
+	}
+
+	// Player has 5 credits + 10 steel (worth 20 MC for Building cards)
+	// Without steel substitute, player can only afford 5 MC
+	p.Resources().Set(shared.Resources{Credits: 5, Steel: 10})
+
+	state := action.CalculatePlayerCardState(nonBuildingCard, p, g, cards.NewInMemoryCardRegistry(nil))
+
+	if state.Available() {
+		t.Error("Expected card to be unavailable: steel should NOT count for non-Building card")
+	}
+
+	found := false
+	for _, err := range state.Errors {
+		if err.Code == player.ErrorCodeInsufficientCredits {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected insufficient-credits error, got errors: %+v", state.Errors)
+	}
+}
+
+// TestCalculatePlayerCardState_SteelCountedForBuildingCard verifies that steel
+// IS counted as a payment substitute for cards with the Building tag.
+func TestCalculatePlayerCardState_SteelCountedForBuildingCard(t *testing.T) {
+	g, p, _ := setupTestEnvironment(t)
+
+	buildingCard := &gamecards.Card{
+		ID:   "building-card",
+		Name: "Building Card",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 20,
+		Tags: []shared.CardTag{shared.TagBuilding},
+	}
+
+	// Player has 5 credits + 10 steel (worth 20 MC) = 25 effective MC
+	p.Resources().Set(shared.Resources{Credits: 5, Steel: 10})
+
+	state := action.CalculatePlayerCardState(buildingCard, p, g, cards.NewInMemoryCardRegistry(nil))
+
+	if !state.Available() {
+		t.Errorf("Expected Building card to be affordable with steel, got errors: %+v", state.Errors)
+	}
+}
+
+// TestCalculatePlayerCardState_TitaniumNotCountedForNonSpaceCard verifies that titanium
+// is NOT counted as a payment substitute for cards without the Space tag.
+func TestCalculatePlayerCardState_TitaniumNotCountedForNonSpaceCard(t *testing.T) {
+	g, p, _ := setupTestEnvironment(t)
+
+	nonSpaceCard := &gamecards.Card{
+		ID:   "non-space",
+		Name: "Non Space Card",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 20,
+		Tags: []shared.CardTag{shared.TagPlant},
+	}
+
+	// Player has 5 credits + 5 titanium (worth 15 MC for Space cards)
+	// Without titanium substitute, player can only afford 5 MC
+	p.Resources().Set(shared.Resources{Credits: 5, Titanium: 5})
+
+	state := action.CalculatePlayerCardState(nonSpaceCard, p, g, cards.NewInMemoryCardRegistry(nil))
+
+	if state.Available() {
+		t.Error("Expected card to be unavailable: titanium should NOT count for non-Space card")
+	}
+
+	found := false
+	for _, err := range state.Errors {
+		if err.Code == player.ErrorCodeInsufficientCredits {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected insufficient-credits error, got errors: %+v", state.Errors)
+	}
+}
+
+// TestCalculatePlayerCardState_TitaniumCountedForSpaceCard verifies that titanium
+// IS counted as a payment substitute for cards with the Space tag.
+func TestCalculatePlayerCardState_TitaniumCountedForSpaceCard(t *testing.T) {
+	g, p, _ := setupTestEnvironment(t)
+
+	spaceCard := &gamecards.Card{
+		ID:   "space-card",
+		Name: "Space Card",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 20,
+		Tags: []shared.CardTag{shared.TagSpace},
+	}
+
+	// Player has 5 credits + 5 titanium (worth 15 MC) = 20 effective MC
+	p.Resources().Set(shared.Resources{Credits: 5, Titanium: 5})
+
+	state := action.CalculatePlayerCardState(spaceCard, p, g, cards.NewInMemoryCardRegistry(nil))
+
+	if !state.Available() {
+		t.Errorf("Expected Space card to be affordable with titanium, got errors: %+v", state.Errors)
+	}
+}
+
+// TestCalculatePlayerCardState_HeatSubstituteWorksForAllCards verifies that Helion-style
+// heat-to-credit substitutes work regardless of card tags.
+func TestCalculatePlayerCardState_HeatSubstituteWorksForAllCards(t *testing.T) {
+	g, p, _ := setupTestEnvironment(t)
+
+	// Card with no Building/Space tags
+	genericCard := &gamecards.Card{
+		ID:   "generic-card",
+		Name: "Generic Card",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 20,
+		Tags: []shared.CardTag{shared.TagScience},
+	}
+
+	// Player has 5 credits + 20 heat, with heat-to-credit substitute (like Helion)
+	p.Resources().Set(shared.Resources{Credits: 5, Heat: 20})
+	p.Resources().AddPaymentSubstitute(shared.ResourceHeat, 1) // 1 heat = 1 MC
+
+	state := action.CalculatePlayerCardState(genericCard, p, g, cards.NewInMemoryCardRegistry(nil))
+
+	if !state.Available() {
+		t.Errorf("Expected card to be affordable with heat substitute, got errors: %+v", state.Errors)
+	}
+}
