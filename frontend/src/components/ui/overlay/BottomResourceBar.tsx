@@ -394,6 +394,9 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
         >
           <span className="text-white/90 text-xs font-orbitron">
             Viewing <span className="font-bold" style={{ color: spectatePlayerColor }}>{displayPlayer?.name}</span>
+            {displayPlayer && "handCardCount" in displayPlayer && (
+              <span className="text-white/50 ml-2">({displayPlayer.handCardCount} cards in hand)</span>
+            )}
           </span>
           <span className="text-white/50 text-[10px] font-orbitron">ESC to close</span>
         </div>
