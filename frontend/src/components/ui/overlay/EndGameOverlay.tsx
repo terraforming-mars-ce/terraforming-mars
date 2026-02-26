@@ -544,7 +544,6 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
         <button
           onClick={() => setIsDrawerHidden(false)}
           className="fixed right-0 top-1/2 -translate-y-1/2 z-[1001] bg-black/85 backdrop-blur-md border border-white/10 border-r-0 rounded-l-lg px-2 py-4 text-white/70 hover:text-white hover:bg-black/95 transition-colors"
-          title="Show Results"
         >
           <span className="text-lg">◀</span>
         </button>
@@ -563,7 +562,6 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
             <button
               onClick={() => setIsDrawerHidden(true)}
               className="text-white/50 hover:text-white p-1 -ml-1"
-              title="Hide Results"
             >
               <span className="text-lg">▶</span>
             </button>
@@ -579,7 +577,6 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
               <button
                 onClick={replayAnimation}
                 className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded transition-colors"
-                title="Replay Animation"
               >
                 <span className="text-base">↻</span>
               </button>

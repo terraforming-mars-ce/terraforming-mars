@@ -224,7 +224,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
                     transition-all duration-[250ms] ease-out
                     animate-choiceSlideIn
                     flex items-center justify-between gap-3
-                    cursor-pointer hover:translate-y-[-2px] hover:scale-[1.01] hover:border-space-blue-500/80 hover:bg-black/50 hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]
+                    cursor-pointer hover:border-space-blue-500/80 hover:bg-black/50 hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]
                   "
                   style={{ animationDelay: `${delay}s` }}
                   onClick={() => handleCardClick(card.id)}
@@ -267,7 +267,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
                     transition-all duration-[250ms] ease-out
                     animate-choiceSlideIn
                     flex items-center justify-between gap-3
-                    cursor-pointer hover:translate-y-[-2px] hover:scale-[1.01] hover:border-space-blue-500/80 hover:bg-black/50 hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]
+                    cursor-pointer hover:border-space-blue-500/80 hover:bg-black/50 hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]
                   "
                   style={{ animationDelay: `${delay}s` }}
                   onClick={() => handlePlayerClick(player.id)}
@@ -298,8 +298,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
                   shadow-[0_0_8px_rgba(180,120,0,0.4)]
                   hover:bg-yellow-500/60
                   hover:border-yellow-500/80
-                  hover:translate-y-[-2px]
-                  hover:shadow-[0_0_12px_rgba(180,120,0,0.6)]
+                                   hover:shadow-[0_0_12px_rgba(180,120,0,0.6)]
                 "
                 onClick={handleContinueAnyway}
               >
@@ -316,8 +315,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
                   shadow-[0_0_8px_rgba(30,60,150,0.4)]
                   hover:bg-space-blue-500/60
                   hover:border-space-blue-500/80
-                  hover:translate-y-[-2px]
-                  hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
+                                   hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
                 "
                 onClick={handleCancelClick}
               >
@@ -336,8 +334,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
                 shadow-[0_0_8px_rgba(30,60,150,0.4)]
                 hover:bg-space-blue-500/60
                 hover:border-space-blue-500/80
-                hover:translate-y-[-2px]
-                hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
+                               hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
               "
               onClick={handleCancelClick}
             >

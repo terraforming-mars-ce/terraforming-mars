@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { PlayerDto } from "../../../types/generated/api-types.ts";
+import { CardTag, PlayerDto } from "../../../types/generated/api-types.ts";
 import { fetchAllCards } from "../../../utils/cardPlayabilityUtils.ts";
 import GameIcon from "../display/GameIcon.tsx";
-import { GamePopover, GamePopoverEmpty, GamePopoverItem } from "../GamePopover";
+import { getTagIconPath } from "../../../utils/iconStore.ts";
+import { GamePopover, GamePopoverItem } from "../GamePopover";
 
 interface StorageItem {
   cardId: string;
   cardName: string;
   resourceType: string;
   count: number;
+  tags: CardTag[];
 }
 
 interface StoragesPopoverProps {
@@ -45,6 +47,7 @@ const StoragesPopover: React.FC<StoragesPopoverProps> = ({
               cardName: card.name,
               resourceType: card.resourceStorage.type,
               count,
+              tags: card.tags ?? [],
             });
           }
         }
@@ -75,11 +78,9 @@ const StoragesPopover: React.FC<StoragesPopoverProps> = ({
       maxHeight={400}
     >
       {storageItems.length === 0 ? (
-        <GamePopoverEmpty
-          icon={<GameIcon iconType="card" size="medium" />}
-          title="No card storages"
-          description="Play cards with resource storage to see them here"
-        />
+        <div className="flex items-center justify-center py-10 px-5">
+          <span className="font-orbitron text-sm text-white/50">No storages</span>
+        </div>
       ) : (
         <div className="p-2 flex flex-col gap-2">
           {storageItems.map((storage, index) => (
@@ -90,8 +91,26 @@ const StoragesPopover: React.FC<StoragesPopoverProps> = ({
               animationDelay={index * 0.05}
             >
               <div className="flex justify-between items-center flex-1">
-                <div className="text-white/90 text-[13px] font-medium [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex-1 max-[768px]:text-xs">
-                  {storage.cardName}
+                <div className="flex flex-col gap-1">
+                  <div className="text-white/90 text-sm font-semibold font-orbitron [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] max-[768px]:text-xs">
+                    {storage.cardName}
+                  </div>
+                  {storage.tags.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      {storage.tags.map((tag, tagIndex) => {
+                        const tagIcon = getTagIconPath(tag);
+                        if (!tagIcon) return null;
+                        return (
+                          <img
+                            key={`${storage.cardId}-tag-${tagIndex}`}
+                            src={tagIcon}
+                            alt={tag}
+                            className="w-[16px] h-[16px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] max-[768px]:w-[14px] max-[768px]:h-[14px]"
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1.5 py-1 px-2 bg-[rgba(20,30,40,0.6)] border border-[rgba(100,150,200,0.4)] rounded-md">

@@ -2,7 +2,7 @@ import { CardBehaviorDto } from "@/types/generated/api-types.ts";
 import { ClassifiedBehavior } from "../types.ts";
 
 export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehavior[] => {
-  return behaviors.map((behavior) => {
+  return behaviors.flatMap((behavior): ClassifiedBehavior | ClassifiedBehavior[] => {
     const hasTrigger = behavior.triggers && behavior.triggers.length > 0;
     const triggerType = hasTrigger ? behavior.triggers?.[0]?.type : null;
     const hasCondition = behavior.triggers?.[0]?.condition !== undefined;
@@ -27,7 +27,23 @@ export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehav
     const { description } = behavior;
 
     if (hasDiscount) {
-      return { behavior, type: "discount", description };
+      const discountOutputs = behavior.outputs?.filter((o: any) => o.type === "discount") ?? [];
+      const otherOutputs = behavior.outputs?.filter((o: any) => o.type !== "discount") ?? [];
+
+      if (otherOutputs.length > 0) {
+        const discountBehavior = { ...behavior, outputs: discountOutputs };
+        const remainderBehavior = { ...behavior, outputs: otherOutputs };
+        return [
+          { behavior: discountBehavior, type: "discount" as const, description },
+          {
+            behavior: remainderBehavior,
+            type: "auto-no-background" as const,
+            description: undefined,
+          },
+        ];
+      }
+
+      return [{ behavior, type: "discount" as const, description }];
     }
 
     if (hasPaymentSubstitute) {

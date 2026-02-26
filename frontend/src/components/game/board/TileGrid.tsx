@@ -31,10 +31,20 @@ interface ProjectedTile {
 // Type for the tile data returned by getTileData
 type TileType = "city" | "empty" | "ocean" | "greenery" | "special" | "volcano";
 
+// Labels for special tile types (keyed by occupant type from backend)
+const SPECIAL_TILE_LABELS: Record<string, string> = {
+  "natural-preserve-tile": "Nature\nPreserve",
+  "mining-tile": "Mining",
+  "nuclear-zone-tile": "Nuclear\nZone",
+  "ecological-zone-tile": "Eco Zone",
+  "mohole-tile": "Mohole",
+  "restricted-tile": "Restricted",
+};
+
 interface TileData {
   type: TileType;
   ownerId: string | null;
-  specialType: null;
+  specialLabel: string | null;
 }
 
 export default function TileGrid({
@@ -172,19 +182,19 @@ export default function TileGrid({
             return {
               type: "ocean",
               ownerId: backendTile.ownerId || null,
-              specialType: null,
+              specialLabel: null,
             };
           case "city-tile":
             return {
               type: "city",
               ownerId: backendTile.ownerId || null,
-              specialType: null,
+              specialLabel: null,
             };
           case "greenery-tile":
             return {
               type: "greenery",
               ownerId: backendTile.ownerId || null,
-              specialType: null,
+              specialLabel: null,
             };
           case "volcano-tile":
             return {
@@ -196,21 +206,31 @@ export default function TileGrid({
             return {
               type: "special",
               ownerId: backendTile.ownerId || null,
-              specialType: null,
+              specialLabel:
+                SPECIAL_TILE_LABELS[backendTile.occupiedBy.type] || backendTile.occupiedBy.type,
             };
         }
+      }
+
+      // Reserved (land claim) but not occupied - show as purple "Claimed" tile
+      if (backendTile.reservedBy) {
+        return {
+          type: "special",
+          ownerId: backendTile.reservedBy,
+          specialLabel: "Claimed",
+        };
       }
 
       // Empty tile
       return {
         type: "empty",
         ownerId: backendTile.ownerId || null,
-        specialType: null,
+        specialLabel: null,
       };
     }
 
     // Fallback for hardcoded tiles
-    return { type: "empty", ownerId: null, specialType: null };
+    return { type: "empty", ownerId: null, specialLabel: null };
   };
 
   // Get available hexes from current player's pending tile selection
@@ -291,7 +311,7 @@ export default function TileGrid({
             tileType={tileData.type}
             ownerId={tileData.ownerId}
             reservedById={tile.backendTile?.reservedBy || null}
-            displayName={tile.backendTile?.displayName}
+            displayName={tileData.specialLabel || tile.backendTile?.displayName}
             isVolcanic={tile.backendTile?.tags?.includes("volcanic") ?? false}
             onClick={() => {
               onHexClick?.(hexKey);

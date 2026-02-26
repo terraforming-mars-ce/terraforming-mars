@@ -6,6 +6,7 @@ import { Z_INDEX } from "@/constants/zIndex";
 interface CardStorageSelectionPopoverProps {
   resourceType: ResourceType;
   amount: number;
+  selectorTags?: string[];
   playedCards: CardDto[];
   resourceStorage?: { [cardId: string]: number }; // Map of cardId to current storage count
   onCardSelect: (cardId: string) => void;
@@ -21,6 +22,7 @@ interface CardStorageOption {
 const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = ({
   resourceType,
   amount,
+  selectorTags,
   playedCards,
   resourceStorage,
   onCardSelect,
@@ -30,12 +32,28 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isClosing, setIsClosing] = useState(false);
 
-  // Filter played cards to only those with matching resource storage type
+  // Filter played cards to only those with matching resource storage
+  // For "card-resource" type, match by selector tags instead of storage type
+  // For specific resource types (floater, animal, etc.), match storage type AND selector tags if present
   const validCards: CardStorageOption[] = playedCards
-    .filter((card) => card.resourceStorage && card.resourceStorage.type === resourceType)
+    .filter((card) => {
+      if (!card.resourceStorage) return false;
+      if (resourceType === "card-resource") {
+        // Match cards that have resource storage AND match the selector tags
+        if (!selectorTags || selectorTags.length === 0) return true;
+        return selectorTags.some((tag) => card.tags?.includes(tag as any));
+      }
+      // Match by storage type
+      if (card.resourceStorage.type !== resourceType) return false;
+      // Also filter by selector tags if present (e.g., "any venus card" for floaters)
+      if (selectorTags && selectorTags.length > 0) {
+        return selectorTags.some((tag) => card.tags?.includes(tag as any));
+      }
+      return true;
+    })
     .map((card) => ({
       card,
-      currentStorage: resourceStorage?.[card.id] || 0, // Get actual storage count from player.resourceStorage
+      currentStorage: resourceStorage?.[card.id] || 0,
     }));
 
   const handleCancelClick = () => {
@@ -131,11 +149,19 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
           </h3>
           <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
             {hasNoStorage ? (
-              `You have no cards that can store ${resourceType}`
+              resourceType === "card-resource" ? (
+                "You have no matching cards with resource storage"
+              ) : (
+                `You have no cards that can store ${resourceType}`
+              )
             ) : (
               <>
-                <span>Place {amount}</span>
-                <GameIcon iconType={resourceType} size="small" />
+                <span>
+                  Place {amount} resource{amount !== 1 ? "s" : ""}
+                </span>
+                {resourceType !== "card-resource" && (
+                  <GameIcon iconType={resourceType} size="small" />
+                )}
               </>
             )}
           </div>
@@ -147,14 +173,18 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
             <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <div className="text-yellow-400 text-4xl">⚠️</div>
-                <GameIcon iconType={resourceType} size="large" />
+                <GameIcon
+                  iconType={resourceType === "card-resource" ? "card" : resourceType}
+                  size="large"
+                />
               </div>
               <div className="text-white text-sm mb-3 font-semibold">
-                No {resourceType} storage available
+                No {resourceType === "card-resource" ? "matching" : resourceType} storage available
               </div>
               <div className="text-white/70 text-xs mb-4 max-w-[280px]">
-                You don't have any cards with {resourceType} storage. If you continue, the{" "}
-                {resourceType} will be lost.
+                {resourceType === "card-resource"
+                  ? "You don't have any matching cards with resource storage. If you continue, the resource will be lost."
+                  : `You don't have any cards with ${resourceType} storage. If you continue, the ${resourceType} will be lost.`}
               </div>
               <div className="text-white/50 text-xs italic">
                 Play cards with resource storage first to avoid losing resources
@@ -173,7 +203,6 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
                   rounded-[10px] px-3.5 py-3
                   mb-2 cursor-pointer
                   transition-all duration-[250ms] ease-out
-                  hover:translate-y-[-2px] hover:scale-[1.01]
                   hover:border-space-blue-500/80
                   hover:bg-black/50
                   hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]
@@ -186,7 +215,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
                   <div className="text-white font-semibold text-sm">{card.name}</div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <span className="text-white/60 text-xs font-medium">{currentStorage}</span>
-                    <GameIcon iconType={resourceType} size="small" />
+                    <GameIcon iconType={card.resourceStorage?.type || resourceType} size="small" />
                   </div>
                 </div>
               );
@@ -209,8 +238,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
                   shadow-[0_0_8px_rgba(180,120,0,0.4)]
                   hover:bg-yellow-500/60
                   hover:border-yellow-500/80
-                  hover:translate-y-[-2px]
-                  hover:shadow-[0_0_12px_rgba(180,120,0,0.6)]
+                                   hover:shadow-[0_0_12px_rgba(180,120,0,0.6)]
                 "
                 onClick={handleContinueWithoutStorage}
               >
@@ -227,8 +255,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
                   shadow-[0_0_8px_rgba(30,60,150,0.4)]
                   hover:bg-space-blue-500/60
                   hover:border-space-blue-500/80
-                  hover:translate-y-[-2px]
-                  hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
+                                   hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
                 "
                 onClick={handleCancelClick}
               >
@@ -247,8 +274,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
                 shadow-[0_0_8px_rgba(30,60,150,0.4)]
                 hover:bg-space-blue-500/60
                 hover:border-space-blue-500/80
-                hover:translate-y-[-2px]
-                hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
+                               hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
               "
               onClick={handleCancelClick}
             >

@@ -38,6 +38,8 @@ import {
   MessageTypeActionClaimMilestone,
   MessageTypeActionFundAward,
   MessageTypeKickPlayer,
+  MessageTypeActionBehaviorChoiceConfirmed,
+  MessageTypeActionCardDiscardConfirmed,
   // Payload types
   PlayerConnectedPayload,
   PlayerDisconnectedPayload,
@@ -256,16 +258,18 @@ export class WebSocketService {
     cardId: string,
     payment: CardPaymentDto,
     choiceIndex?: number,
-    cardStorageTarget?: string,
+    cardStorageTargets?: string[],
     targetPlayerId?: string,
+    selectedAmount?: number,
   ): string {
     return this.send(MessageTypeActionPlayCard, {
       type: "play-card",
       cardId,
       payment,
       ...(choiceIndex !== undefined && { choiceIndex }),
-      ...(cardStorageTarget !== undefined && { cardStorageTarget }),
+      ...(cardStorageTargets !== undefined && { cardStorageTargets }),
       ...(targetPlayerId !== undefined && { targetPlayerId }),
+      ...(selectedAmount !== undefined && { selectedAmount }),
     });
   }
 
@@ -273,18 +277,22 @@ export class WebSocketService {
     cardId: string,
     behaviorIndex: number,
     choiceIndex?: number,
-    cardStorageTarget?: string,
+    cardStorageTargets?: string[],
     targetPlayerId?: string,
     sourceCardForInput?: string,
+    selectedAmount?: number,
+    payment?: CardPaymentDto,
   ): string {
     return this.send(MessageTypeActionCardAction, {
       type: "card-action",
       cardId,
       behaviorIndex,
       ...(choiceIndex !== undefined && { choiceIndex }),
-      ...(cardStorageTarget !== undefined && { cardStorageTarget }),
+      ...(cardStorageTargets !== undefined && { cardStorageTargets }),
       ...(targetPlayerId !== undefined && { targetPlayerId }),
       ...(sourceCardForInput !== undefined && { sourceCardForInput }),
+      ...(selectedAmount !== undefined && { selectedAmount }),
+      ...(payment !== undefined && { payment }),
     });
   }
 
@@ -332,6 +340,17 @@ export class WebSocketService {
   playerTakeover(targetPlayerId: string, gameId: string): void {
     this.send("player-takeover" as MessageType, { targetPlayerId, gameId }, gameId);
     this.currentGameId = gameId;
+  }
+
+  confirmCardDiscard(cardsToDiscard: string[]): string {
+    return this.send(MessageTypeActionCardDiscardConfirmed, { cardsToDiscard });
+  }
+
+  confirmBehaviorChoice(choiceIndex: number, cardStorageTargets?: string[]): string {
+    return this.send(MessageTypeActionBehaviorChoiceConfirmed, {
+      choiceIndex,
+      ...(cardStorageTargets !== undefined && { cardStorageTargets }),
+    });
   }
 
   kickPlayer(targetPlayerId: string): string {

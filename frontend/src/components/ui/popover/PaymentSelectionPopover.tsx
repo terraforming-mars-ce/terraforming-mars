@@ -483,8 +483,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
               shadow-[0_0_8px_rgba(30,60,150,0.4)]
               hover:bg-space-blue-500/60
               hover:border-space-blue-500/80
-              hover:translate-y-[-2px]
-              hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
+                           hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
             "
           >
             Cancel
@@ -499,7 +498,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
               text-shadow-glow font-orbitron
               ${
                 canConfirm
-                  ? "bg-green-600/80 border-green-500/60 shadow-[0_0_8px_rgba(34,197,94,0.4)] hover:bg-green-500/80 hover:border-green-500/80 hover:translate-y-[-2px] hover:shadow-[0_0_12px_rgba(34,197,94,0.6)]"
+                  ? "bg-green-600/80 border-green-500/60 shadow-[0_0_8px_rgba(34,197,94,0.4)] hover:bg-green-500/80 hover:border-green-500/80 hover:shadow-[0_0_12px_rgba(34,197,94,0.6)]"
                   : "bg-gray-600/50 border-gray-500/40 opacity-50 cursor-not-allowed"
               }
             `}

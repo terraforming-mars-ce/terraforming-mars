@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { GameDto, PlayerDto } from "@/types/generated/api-types.ts";
 import { StandardProject } from "@/types/cards.tsx";
 import { Z_INDEX } from "@/constants/zIndex";
@@ -7,12 +7,13 @@ import StandardProjectPopover from "../../ui/popover/StandardProjectPopover.tsx"
 import MilestonePopover from "../../ui/popover/MilestonePopover.tsx";
 import AwardPopover from "../../ui/popover/AwardPopover.tsx";
 import { GamePopover } from "../../ui/GamePopover";
-import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
 
 const ANGLE_INDENT = 20;
 const BUTTON_SPACING = 6;
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
+const HAMBURGER_WIDTH = 56;
+const HAMBURGER_COLOR = "#ffffff";
 
 interface ParallelogramButtonProps {
   index: number;
@@ -52,7 +53,9 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
   const rightEdge = { x1: width - ANGLE_INDENT, y1: 0, x2: width, y2: height };
 
   // Left edge for non-first: from (0, 0) to (ANGLE_INDENT, height) - same slant direction as right
-  const leftEdge = isFirst ? null : { x1: 0, y1: 0, x2: ANGLE_INDENT, y2: height };
+  const leftEdge = isFirst
+    ? null
+    : { x1: 0, y1: 0, x2: ANGLE_INDENT, y2: height };
 
   return (
     <button
@@ -139,10 +142,32 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   gameId,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hamburgerHovered, setHamburgerHovered] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(
+    !!document.fullscreenElement,
+  );
   const hamburgerButtonRef = useRef<HTMLButtonElement>(null);
   const menuItemHover = useHoverSound();
 
-  const [showStandardProjectsPopover, setShowStandardProjectsPopover] = useState(false);
+  useEffect(() => {
+    const handleFullscreenChange = () =>
+      setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const handleToggleFullscreen = useCallback(() => {
+    if (isFullscreen) {
+      void document.exitFullscreen();
+    } else {
+      void document.documentElement.requestFullscreen();
+    }
+    setMenuOpen(false);
+  }, [isFullscreen]);
+
+  const [showStandardProjectsPopover, setShowStandardProjectsPopover] =
+    useState(false);
   const [showMilestonePopover, setShowMilestonePopover] = useState(false);
   const [showAwardPopover, setShowAwardPopover] = useState(false);
   const standardProjectsButtonRef = useRef<HTMLButtonElement>(null);
@@ -224,39 +249,89 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               height={buttonHeight}
               color={item.color}
               onClick={() => handleTabClick(item.id)}
-              buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
+              buttonRef={
+                getButtonRef(
+                  item.id,
+                ) as React.RefObject<HTMLButtonElement | null>
+              }
             >
               {item.label}
             </ParallelogramButton>
           ))}
         </div>
 
-        <GameMenuButton
-          ref={hamburgerButtonRef}
-          variant="toolbar"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Menu"
-          className="pointer-events-auto !p-2"
+        <div
+          className="origin-top-right"
+          style={{ transform: `scale(${topBarScale})` }}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
+          <button
+            ref={hamburgerButtonRef}
+            onClick={() => setMenuOpen(!menuOpen)}
+            onMouseEnter={() => setHamburgerHovered(true)}
+            onMouseLeave={() => setHamburgerHovered(false)}
+            aria-label="Menu"
+            className="relative pointer-events-auto cursor-pointer"
+            style={{ width: HAMBURGER_WIDTH, height: buttonHeight }}
           >
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </GameMenuButton>
+            <svg
+              className="absolute inset-0 w-full h-full"
+              viewBox={`0 0 ${HAMBURGER_WIDTH} ${buttonHeight}`}
+              preserveAspectRatio="none"
+            >
+              <polygon
+                points={`${ANGLE_INDENT},0 ${HAMBURGER_WIDTH},0 ${HAMBURGER_WIDTH},${buttonHeight} 0,${buttonHeight}`}
+                fill={
+                  hamburgerHovered
+                    ? "rgba(20,20,25,0.95)"
+                    : "rgba(10,10,15,0.95)"
+                }
+              />
+              <line
+                x1={ANGLE_INDENT}
+                y1={0}
+                x2={HAMBURGER_WIDTH}
+                y2={0}
+                stroke={hamburgerHovered ? HAMBURGER_COLOR : BORDER_COLOR}
+                strokeWidth="3"
+              />
+              <line
+                x1={ANGLE_INDENT}
+                y1={0}
+                x2={0}
+                y2={buttonHeight}
+                stroke={BORDER_COLOR}
+                strokeWidth="2"
+              />
+            </svg>
+            <div
+              className="relative z-10 h-full flex items-center justify-center"
+              style={{ paddingLeft: ANGLE_INDENT / 2 }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={hamburgerHovered ? "white" : "rgba(255,255,255,0.8)"}
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </div>
+          </button>
+        </div>
 
         <GamePopover
           isVisible={menuOpen}
           onClose={() => setMenuOpen(false)}
-          position={{ type: "anchor", anchorRef: hamburgerButtonRef, placement: "below" }}
+          position={{
+            type: "anchor",
+            anchorRef: hamburgerButtonRef,
+            placement: "below",
+          }}
           theme="menu"
           width={200}
           maxHeight="auto"
@@ -288,14 +363,61 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               </svg>
               Copy game link
             </button>
-            <div className="border-t border-[#333] mx-2" />
+            <div className="border-t border-[#333]" />
             <SoundToggleButton />
-            <div className="border-t border-[#333] mx-2" />
+            <div className="border-t border-[#333]" />
+            <button
+              onClick={handleToggleFullscreen}
+              className="w-full flex items-center gap-3 px-4 py-3 text-white text-sm hover:bg-white/10 transition-colors text-left"
+            >
+              {isFullscreen ? (
+                <>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="4 14 10 14 10 20" />
+                    <polyline points="20 10 14 10 14 4" />
+                    <line x1="14" y1="10" x2="21" y2="3" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                  Exit Fullscreen
+                </>
+              ) : (
+                <>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="15 3 21 3 21 9" />
+                    <polyline points="9 21 3 21 3 15" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                  Fullscreen
+                </>
+              )}
+            </button>
+            <div className="border-t border-[#333]" />
             <button
               onClick={() => {
                 menuItemHover.onClick?.();
                 setMenuOpen(false);
-                window.dispatchEvent(new CustomEvent("toggle-performance-window"));
+                window.dispatchEvent(
+                  new CustomEvent("toggle-performance-window"),
+                );
               }}
               onMouseEnter={menuItemHover.onMouseEnter}
               className="w-full flex items-center gap-3 px-4 py-3 text-white text-sm hover:bg-white/10 transition-colors text-left"
@@ -314,7 +436,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               </svg>
               Performance
             </button>
-            <div className="border-t border-[#333] mx-2" />
+            <div className="border-t border-[#333]" />
             <button
               onClick={() => {
                 menuItemHover.onClick?.();

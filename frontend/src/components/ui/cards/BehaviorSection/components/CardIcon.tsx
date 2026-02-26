@@ -3,8 +3,9 @@ import { getIconPath } from "@/utils/iconStore.ts";
 
 interface CardIconProps {
   amount: number;
-  badgeType: "peek" | "take" | "buy" | "none";
+  badgeType: "peek" | "take" | "buy" | "discard" | "none";
   isAffordable?: boolean;
+  isAttack?: boolean;
   totalCardTypes?: number;
 }
 
@@ -12,6 +13,7 @@ const CardIcon: React.FC<CardIconProps> = ({
   amount,
   badgeType,
   isAffordable = true,
+  isAttack = false,
   totalCardTypes = 1,
 }) => {
   const cardIcon = getIconPath("card-draw");
@@ -22,16 +24,20 @@ const CardIcon: React.FC<CardIconProps> = ({
     peek: "⦿", // Eye-like circle
     take: "↓", // Down arrow
     buy: "$", // Dollar sign
+    discard: "✕", // X mark
     none: "",
   };
 
   const badge = badgeSymbols[badgeType];
 
-  const glowFilter =
-    "drop-shadow(0_1px_3px_rgba(0,0,0,0.6))_drop-shadow(0_0_1px_rgba(255,248,220,0.6))_drop-shadow(0_0_2px_rgba(255,248,220,0.4))";
+  const glowFilter = isAttack
+    ? "drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))"
+    : "drop-shadow(0_1px_3px_rgba(0,0,0,0.6))_drop-shadow(0_0_1px_rgba(255,248,220,0.6))_drop-shadow(0_0_2px_rgba(255,248,220,0.4))";
+
+  const attackAnimation = isAttack ? " animate-[attackPulse_2s_ease-in-out_infinite]" : "";
 
   const iconClass = isAffordable
-    ? `w-[26px] h-[26px] object-contain [filter:${glowFilter}] max-md:w-[22px] max-md:h-[22px]`
+    ? `w-[26px] h-[26px] object-contain [filter:${glowFilter}]${attackAnimation} max-md:w-[22px] max-md:h-[22px]`
     : `w-[26px] h-[26px] object-contain opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[22px] max-md:h-[22px]`;
 
   const renderSingleIcon = () => (
@@ -53,12 +59,13 @@ const CardIcon: React.FC<CardIconProps> = ({
     return <div className="flex items-center gap-0.5 relative">{renderSingleIcon()}</div>;
   }
 
-  // Amount 2 with single card type: Show 2 icons side by side, no number
-  if (amount === 2 && totalCardTypes === 1) {
+  // Amount 2-3 with single card type: Show individual icons side by side, no number
+  if (amount <= 3 && totalCardTypes === 1) {
     return (
       <div className="flex items-center gap-0.5 relative">
-        {renderSingleIcon()}
-        {renderSingleIcon()}
+        {Array.from({ length: amount }, (_, i) => (
+          <React.Fragment key={i}>{renderSingleIcon()}</React.Fragment>
+        ))}
       </div>
     );
   }

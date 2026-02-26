@@ -1,13 +1,100 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { PlayerDto, OtherPlayerDto, TriggeredEffectDto } from "@/types/generated/api-types.ts";
+import {
+  PlayerDto,
+  OtherPlayerDto,
+  TriggeredEffectDto,
+  CalculatedOutputDto,
+  CardBehaviorDto,
+  VPConditionDto,
+} from "@/types/generated/api-types.ts";
 import BehaviorSection from "./BehaviorSection";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
+import GameIcon from "@/components/ui/display/GameIcon.tsx";
+import CardIcon from "./BehaviorSection/components/CardIcon.tsx";
+import VictoryPointIcon from "@/components/ui/display/VictoryPointIcon.tsx";
 
-interface EffectNotification {
+const resourceTypeToIconType: Record<string, string> = {
+  credit: "credit",
+  steel: "steel",
+  titanium: "titanium",
+  plant: "plant",
+  energy: "energy",
+  heat: "heat",
+  microbe: "microbe",
+  animal: "animal",
+  floater: "floater",
+  science: "science",
+  asteroid: "asteroid",
+  fighter: "fighter",
+  disease: "disease",
+  "credit-production": "credit-production",
+  "steel-production": "steel-production",
+  "titanium-production": "titanium-production",
+  "plant-production": "plant-production",
+  "energy-production": "energy-production",
+  "heat-production": "heat-production",
+  tr: "tr",
+  oxygen: "oxygen",
+  temperature: "temperature",
+  "ocean-placement": "ocean-placement",
+  "greenery-placement": "greenery-placement",
+  "city-placement": "city-placement",
+  "card-draw": "card-draw",
+};
+
+const cardResourceTypes: Record<string, "peek" | "take" | "buy" | "discard" | "none"> = {
+  "card-draw": "none",
+  "card-peek": "peek",
+  "card-take": "take",
+  "card-buy": "buy",
+  "card-discard": "discard",
+};
+
+const GainedDisplay: React.FC<{
+  outputs: CalculatedOutputDto[];
+  vpConditions?: VPConditionDto[];
+}> = ({ outputs, vpConditions }) => {
+  const nonZero = outputs.filter((o) => o.amount !== 0);
+  const hasVP = vpConditions && vpConditions.length > 0;
+  if (nonZero.length === 0 && !hasVP) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[9px] text-gray-400 uppercase tracking-wider font-orbitron">
+        Gained:
+      </span>
+      {nonZero.map((output, index) => {
+        const badgeType = cardResourceTypes[output.resourceType];
+        if (badgeType !== undefined) {
+          return (
+            <CardIcon
+              key={index}
+              amount={Math.abs(output.amount)}
+              badgeType={badgeType}
+              totalCardTypes={1}
+            />
+          );
+        }
+        const iconType = resourceTypeToIconType[output.resourceType] || output.resourceType;
+        return (
+          <div key={index} className="flex items-center gap-0.5">
+            <GameIcon iconType={iconType} amount={output.amount} size="small" />
+          </div>
+        );
+      })}
+      {hasVP && <VictoryPointIcon vpConditions={vpConditions} />}
+    </div>
+  );
+};
+
+interface NotificationItem {
   id: string;
-  effect: TriggeredEffectDto;
-  visible: boolean;
+  cardName: string;
+  sourceType: string;
+  calculatedOutputs: CalculatedOutputDto[];
+  behaviors: CardBehaviorDto[];
+  vpConditions: VPConditionDto[];
 }
 
 interface PlayerCardProps {
@@ -39,67 +126,94 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   const hasUnlimitedActions = player.availableActions === -1;
   const actionsRemaining = player.availableActions;
 
-  // Determine button text - PASS for unlimited actions or 2 actions remaining, otherwise SKIP
   const buttonText = hasUnlimitedActions || actionsRemaining === 2 ? "PASS" : "SKIP";
 
-  // Notification state for triggered effects
-  const [notifications, setNotifications] = useState<EffectNotification[]>([]);
+  const [queue, setQueue] = useState<NotificationItem[]>([]);
+  const [active, setActive] = useState<{ item: NotificationItem; visible: boolean } | null>(null);
+  const prevTriggeredEffectsRef = useRef<TriggeredEffectDto[]>([]);
 
-  // Track processed effect batches to avoid duplicates
-  const processedBatchesRef = useRef<Set<string>>(new Set());
-
-  // Filter effects for this player and manage notifications
+  // Process incoming triggered effects into the notification queue
   useEffect(() => {
+    if (triggeredEffects === prevTriggeredEffectsRef.current) return;
+    prevTriggeredEffectsRef.current = triggeredEffects;
+
     const playerEffects = triggeredEffects.filter((e) => e.playerId === player.id);
     if (playerEffects.length === 0) return;
 
-    // Create a unique batch ID based on the effects
-    const batchId = playerEffects
-      .map((e) => `${e.cardName}-${e.outputs.map((o) => `${o.type}:${o.amount}`).join(",")}`)
-      .join("|");
+    // Group by cardName + sourceType so different notification types stay separate
+    const grouped = new Map<string, NotificationItem>();
+    for (const effect of playerEffects) {
+      const key = `${effect.cardName}::${effect.sourceType}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        if (effect.calculatedOutputs) existing.calculatedOutputs.push(...effect.calculatedOutputs);
+        if (effect.behaviors) existing.behaviors.push(...effect.behaviors);
+        if (effect.vpConditions) existing.vpConditions.push(...effect.vpConditions);
+      } else {
+        grouped.set(key, {
+          id: `${Date.now()}-${Math.random()}`,
+          cardName: effect.cardName,
+          sourceType: effect.sourceType || "",
+          calculatedOutputs: effect.calculatedOutputs ? [...effect.calculatedOutputs] : [],
+          behaviors: effect.behaviors ? [...effect.behaviors] : [],
+          vpConditions: effect.vpConditions ? [...effect.vpConditions] : [],
+        });
+      }
+    }
 
-    // Skip if we've already processed this exact batch
-    if (processedBatchesRef.current.has(batchId)) return;
-    processedBatchesRef.current.add(batchId);
-
-    // Add new notifications
-    const newNotificationIds: string[] = [];
-    const newNotifications = playerEffects.map((effect, i) => {
-      const id = `${Date.now()}-${i}-${Math.random()}`;
-      newNotificationIds.push(id);
-      return {
-        id,
-        effect,
-        visible: true,
-      };
+    // Filter out items with no content to display
+    const items = Array.from(grouped.values()).filter((item) => {
+      const hasOutputs = item.calculatedOutputs.some((o) => o.amount !== 0);
+      const hasVP = item.vpConditions.length > 0;
+      const hasBehaviors = item.behaviors.length > 0;
+      return hasOutputs || hasVP || hasBehaviors;
     });
 
-    setNotifications((prev) => [...prev, ...newNotifications]);
-
-    // Auto-dismiss after 3 seconds (not tied to effect cleanup)
-    setTimeout(() => {
-      setNotifications((prev) =>
-        prev.map((n) => (newNotificationIds.includes(n.id) ? { ...n, visible: false } : n)),
-      );
-      // Remove from DOM after fade out
-      setTimeout(() => {
-        setNotifications((prev) => prev.filter((n) => !newNotificationIds.includes(n.id)));
-        // Clean up processed batch after removal
-        processedBatchesRef.current.delete(batchId);
-      }, 300);
-    }, 3000);
+    if (items.length > 0) {
+      setQueue((prev) => [...prev, ...items]);
+    }
   }, [triggeredEffects, player.id]);
 
-  // Ref for positioning notifications relative to the card
+  // Show next item from queue when nothing is active
+  const showNext = useCallback(() => {
+    setQueue((prev) => {
+      if (prev.length === 0) return prev;
+      const [next, ...rest] = prev;
+      setActive({ item: next, visible: true });
+      return rest;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (active === null && queue.length > 0) {
+      showNext();
+    }
+  }, [active, queue.length, showNext]);
+
+  // Auto-dismiss active notification
+  useEffect(() => {
+    if (!active) return;
+
+    if (active.visible) {
+      const timer = setTimeout(() => {
+        setActive((prev) => (prev ? { ...prev, visible: false } : null));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+
+    // Fade-out finished, clear active to trigger next
+    const timer = setTimeout(() => setActive(null), 300);
+    return () => clearTimeout(timer);
+  }, [active]);
+
   const cardRef = useRef<HTMLDivElement>(null);
   const [cardRect, setCardRect] = useState<DOMRect | null>(null);
 
-  // Update card position when notifications change
   useEffect(() => {
-    if (notifications.length > 0 && cardRef.current) {
+    if (active && cardRef.current) {
       setCardRect(cardRef.current.getBoundingClientRect());
     }
-  }, [notifications.length]);
+  }, [active]);
 
   return (
     <div
@@ -163,12 +277,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         )}
       </div>
 
-      {/* Triggered effect notifications - rendered via portal to avoid clipping */}
-      {notifications.length > 0 &&
+      {/* Triggered effect notification - rendered via portal to avoid clipping */}
+      {active &&
         cardRect &&
         createPortal(
           <div
-            className="fixed flex flex-row gap-1 z-[9999] pointer-events-none"
+            className="fixed z-[9999] pointer-events-none"
             style={{
               left: `${cardRect.right + 10}px`,
               top: `${cardRect.top + cardRect.height / 2}px`,
@@ -196,10 +310,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 transform: translateX(-50px);
               }
             }
-            .notification-content img {
-              min-width: 32px !important;
-              min-height: 32px !important;
-            }
             .notification-content div {
               flex-wrap: nowrap !important;
             }
@@ -209,48 +319,75 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
               box-shadow: none !important;
             }
           `}</style>
-            {/* Group notifications by card name */}
             {(() => {
-              const grouped = new Map<
-                string,
-                {
-                  ids: string[];
-                  outputs: (typeof notifications)[0]["effect"]["outputs"];
-                  visible: boolean;
-                }
-              >();
+              const { item, visible } = active;
+              const isActionAdded = item.sourceType === "action_added";
+              const isEffectAdded = item.sourceType === "effect_added";
+              const hasBehaviors = item.behaviors.length > 0;
 
-              for (const { id, effect, visible } of notifications) {
-                const existing = grouped.get(effect.cardName);
-                if (existing) {
-                  existing.ids.push(id);
-                  existing.outputs.push(...effect.outputs);
-                  existing.visible = existing.visible && visible;
-                } else {
-                  grouped.set(effect.cardName, {
-                    ids: [id],
-                    outputs: [...effect.outputs],
-                    visible,
-                  });
-                }
-              }
-
-              return Array.from(grouped.entries()).map(([cardName, { ids, outputs, visible }]) => (
+              return (
                 <div
-                  key={ids.join("-")}
-                  className="notification-content flex flex-col items-center gap-1 px-3 py-2 bg-[rgba(10,10,15,0.95)] border border-[rgba(60,60,70,0.7)] shadow-lg"
+                  key={item.id}
+                  className="notification-content relative flex flex-col items-center gap-1 px-3 py-2 bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
                   style={{
+                    clipPath:
+                      "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))",
                     animation: visible
                       ? "notificationEnter 0.3s ease-out forwards"
                       : "notificationExit 0.3s ease-in forwards",
                   }}
                 >
+                  <svg
+                    className="absolute top-0 right-0 w-[10px] h-[10px] pointer-events-none"
+                    viewBox="0 0 10 10"
+                  >
+                    <line
+                      x1="0"
+                      y1="0"
+                      x2="10"
+                      y2="10"
+                      stroke="rgba(60,60,70,0.7)"
+                      strokeWidth="1.5"
+                    />
+                  </svg>
+                  <svg
+                    className="absolute bottom-0 left-0 w-[10px] h-[10px] pointer-events-none"
+                    viewBox="0 0 10 10"
+                  >
+                    <line
+                      x1="0"
+                      y1="0"
+                      x2="10"
+                      y2="10"
+                      stroke="rgba(60,60,70,0.7)"
+                      strokeWidth="1.5"
+                    />
+                  </svg>
                   <span className="text-white text-xs font-bold font-orbitron [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
-                    {cardName}
+                    {item.cardName}
                   </span>
-                  <BehaviorSection behaviors={[{ outputs }]} />
+                  {isActionAdded && hasBehaviors ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[9px] text-gray-400 uppercase tracking-wider font-orbitron">
+                        New Action:
+                      </span>
+                      <BehaviorSection behaviors={item.behaviors} />
+                    </div>
+                  ) : isEffectAdded && hasBehaviors ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[9px] text-gray-400 uppercase tracking-wider font-orbitron">
+                        New Effect:
+                      </span>
+                      <BehaviorSection behaviors={item.behaviors} />
+                    </div>
+                  ) : (
+                    <GainedDisplay
+                      outputs={item.calculatedOutputs}
+                      vpConditions={item.vpConditions.length > 0 ? item.vpConditions : undefined}
+                    />
+                  )}
                 </div>
-              ));
+              );
             })()}
           </div>,
           document.body,

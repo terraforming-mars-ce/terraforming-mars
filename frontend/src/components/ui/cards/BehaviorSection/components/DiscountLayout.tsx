@@ -1,5 +1,6 @@
 import React from "react";
 import GameIcon from "../../../display/GameIcon.tsx";
+import Slash from "./Slash.tsx";
 
 interface DiscountLayoutProps {
   behavior: any;
@@ -38,7 +39,14 @@ const DiscountAmount: React.FC<{
   resourceType: string;
 }> = ({ amount, resourceType }) => {
   if (resourceType === "credit") {
-    return <GameIcon iconType="credit" amount={-amount} size="small" />;
+    return (
+      <div className="flex items-center gap-0.5">
+        <span className="text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+          -
+        </span>
+        <GameIcon iconType="credit" amount={amount} size="small" />
+      </div>
+    );
   }
 
   return (
@@ -131,11 +139,7 @@ const DiscountLayout: React.FC<DiscountLayoutProps> = ({ behavior }) => {
   if (selectors.length > 0) {
     const selectorIcons = selectors.map((selector: any, selectorIndex: number) => (
       <React.Fragment key={`selector-${selectorIndex}`}>
-        {selectorIndex > 0 && (
-          <span className="text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-            /
-          </span>
-        )}
+        {selectorIndex > 0 && <Slash />}
         <div className="flex gap-[2px] items-center">{renderSelectorIcons(selector)}</div>
       </React.Fragment>
     ));

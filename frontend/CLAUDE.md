@@ -51,7 +51,8 @@ frontend/
 1. **Inspect existing design language** before creating new components
 2. **Reuse over creation**: Check for existing components first
 3. **No emojis in UI**: Use GameIcon component or assets instead
-4. Use `void <function>()` to explicitly discard promises in event handlers
+4. **No browser tooltips**: NEVER use `title` attributes on HTML elements for hover tooltips. The UI should be self-explanatory without them.
+5. Use `void <function>()` to explicitly discard promises in event handlers
 
 ### Displaying Resources, Costs, and Gains
 

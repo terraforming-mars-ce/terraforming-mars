@@ -211,16 +211,18 @@ class GlobalWebSocketManager implements WebSocketConnection {
     cardId: string,
     payment: CardPaymentDto,
     choiceIndex?: number,
-    cardStorageTarget?: string,
+    cardStorageTargets?: string[],
     targetPlayerId?: string,
+    selectedAmount?: number,
   ): Promise<string> {
     await this.ensureConnected();
     return webSocketService.playCard(
       cardId,
       payment,
       choiceIndex,
-      cardStorageTarget,
+      cardStorageTargets,
       targetPlayerId,
+      selectedAmount,
     );
   }
 
@@ -228,18 +230,22 @@ class GlobalWebSocketManager implements WebSocketConnection {
     cardId: string,
     behaviorIndex: number,
     choiceIndex?: number,
-    cardStorageTarget?: string,
+    cardStorageTargets?: string[],
     targetPlayerId?: string,
     sourceCardForInput?: string,
+    selectedAmount?: number,
+    payment?: CardPaymentDto,
   ): Promise<string> {
     await this.ensureConnected();
     return webSocketService.playCardAction(
       cardId,
       behaviorIndex,
       choiceIndex,
-      cardStorageTarget,
+      cardStorageTargets,
       targetPlayerId,
       sourceCardForInput,
+      selectedAmount,
+      payment,
     );
   }
 
@@ -282,6 +288,16 @@ class GlobalWebSocketManager implements WebSocketConnection {
   async playerTakeover(targetPlayerId: string, gameId: string): Promise<void> {
     await this.ensureConnected();
     return webSocketService.playerTakeover(targetPlayerId, gameId);
+  }
+
+  async confirmCardDiscard(cardsToDiscard: string[]): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.confirmCardDiscard(cardsToDiscard);
+  }
+
+  async confirmBehaviorChoice(choiceIndex: number, cardStorageTargets?: string[]): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.confirmBehaviorChoice(choiceIndex, cardStorageTargets);
   }
 
   async kickPlayer(targetPlayerId: string): Promise<string> {

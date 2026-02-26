@@ -601,9 +601,10 @@ func ValidateTileOutputs(
 			case shared.ResourceVolcanoPlacement:
 				volcanoPlacements := g.CountAvailableHexesForTile("volcano", p.ID(), nil)
 				if volcanoPlacements == 0 {
-					warnings = append(warnings, player.StateWarning{
-						Code:    player.WarningCodeNoValidTilePlacements,
-						Message: "No valid volcanic placements available",
+					errors = append(errors, player.StateError{
+						Code:     player.ErrorCodeNoTilePlacements,
+						Category: player.ErrorCategoryAvailability,
+						Message:  "No valid volcanic placements",
 					})
 				}
 
@@ -1081,14 +1082,6 @@ func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]i
 					effectiveCredits += resources.Energy * sub.ConversionRate
 				case shared.ResourcePlant:
 					effectiveCredits += resources.Plants * sub.ConversionRate
-				case shared.ResourceSteel:
-					if allowSteel {
-						effectiveCredits += resources.Steel * sub.ConversionRate
-					}
-				case shared.ResourceTitanium:
-					if allowTitanium {
-						effectiveCredits += resources.Titanium * sub.ConversionRate
-					}
 				}
 			}
 

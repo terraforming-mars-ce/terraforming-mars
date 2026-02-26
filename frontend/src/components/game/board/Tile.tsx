@@ -663,18 +663,7 @@ export default function Tile({
         />
       )}
 
-      {/* Special tile fallback */}
-      {tileType === "special" && (
-        <Text
-          position={[0, 0, 0.01]}
-          fontSize={0.08}
-          color="white"
-          anchorX="center"
-          anchorY="middle"
-        >
-          ⭐
-        </Text>
-      )}
+      {/* Special tile label (rendered via displayName below) */}
 
       {/* Billboard display name for named tiles */}
       {displayName && (
