@@ -23,6 +23,8 @@ services:
       dockerfile: Dockerfile
     container_name: tm-frontend
     restart: unless-stopped
+    environment:
+      - API_URL=/api/v1
     depends_on:
       - backend
     networks:

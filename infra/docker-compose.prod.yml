@@ -17,6 +17,8 @@ services:
     image: ghcr.io/rackaracka123/terraforming-mars-frontend:latest
     container_name: tm-frontend
     restart: unless-stopped
+    environment:
+      - API_URL=/api/v1
     depends_on:
       - backend
     networks:
