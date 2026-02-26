@@ -392,7 +392,7 @@ export default function GameInterface() {
           (log.sourceType === "card_play" ||
             log.sourceType === "standard_project") &&
           ASTEROID_IMPACT_PATTERN.test(log.source) &&
-          (log.changes.boardChanges?.tilesPlaced?.length ?? 0) > 0,
+          (log.changes?.boardChanges?.tilesPlaced?.length ?? 0) > 0,
       );
       if (hasAsteroidPlacement) {
         void playAsteroidImpactSound();
