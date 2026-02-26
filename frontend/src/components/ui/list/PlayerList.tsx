@@ -16,6 +16,7 @@ interface PlayerListProps {
   currentPhase?: GamePhase;
   hasPendingTilePlacement?: boolean;
   triggeredEffects?: TriggeredEffectDto[];
+  onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({
@@ -25,6 +26,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
   currentPhase,
   hasPendingTilePlacement = false,
   triggeredEffects = [],
+  onPlayerClick,
 }) => {
   const isActionPhase = currentPhase === "action";
 
@@ -49,6 +51,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
           onSkipAction={handleSkipAction}
           hasPendingTilePlacement={hasPendingTilePlacement}
           triggeredEffects={triggeredEffects}
+          onPlayerClick={onPlayerClick}
         />
       ))}
     </div>

@@ -43,6 +43,11 @@ interface GameLayoutProps {
   onLeaveGame?: () => void;
   onSkyboxReady?: () => void;
   onGpuReady?: () => void;
+  onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
+  spectatingPlayer?: PlayerDto | OtherPlayerDto | null;
+  spectatingCorporation?: CardDto | null;
+  spectatePlayerColor?: string;
+  onStopSpectating?: () => void;
 }
 
 const GameLayout: React.FC<GameLayoutProps> = ({
@@ -62,6 +67,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   onLeaveGame,
   onSkyboxReady,
   onGpuReady,
+  onPlayerClick,
+  spectatingPlayer,
+  spectatingCorporation,
+  spectatePlayerColor,
+  onStopSpectating,
 }) => {
   // Create a map of all players (current + others) for easy lookup
   const playerMap = new Map<string, PlayerDto | OtherPlayerDto>();
@@ -136,6 +146,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             currentPhase={gameState?.currentPhase}
             hasPendingTilePlacement={!!currentPlayer?.pendingTileSelection}
             triggeredEffects={triggeredEffects}
+            onPlayerClick={onPlayerClick}
           />
 
           <RightSidebar
@@ -158,6 +169,10 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             callbacks={bottomBarCallbacks}
             gameId={gameState?.id}
             corporation={corporationCard}
+            spectatingPlayer={spectatingPlayer}
+            spectatingCorporation={spectatingCorporation}
+            spectatePlayerColor={spectatePlayerColor}
+            onStopSpectating={onStopSpectating}
           />
         </div>
       )}

@@ -53,11 +53,13 @@ import {
   GameStatusLobby,
   PlayerDisconnectedPayload,
   PlayerDto,
+  OtherPlayerDto,
   PlayerActionDto,
   ResourceType,
   TriggeredEffectDto,
 } from "@/types/generated/api-types.ts";
 import { shouldShowPaymentModal, createDefaultPayment } from "@/utils/paymentUtils.ts";
+import { getPlayerColor } from "@/utils/playerColors.ts";
 import { deepClone, findChangedPaths } from "@/utils/deepCompare.ts";
 import { StandardProject } from "@/types/cards.tsx";
 
@@ -92,6 +94,7 @@ export default function GameInterface() {
   const [showDebugDropdown, setShowDebugDropdown] = useState(false);
   const [showPerformanceWindow, setShowPerformanceWindow] = useState(false);
   const [tilePlacerPlayerId, setTilePlacerPlayerId] = useState<string | null>(null);
+  const [spectatePlayerId, setSpectatePlayerId] = useState<string | null>(null);
 
   // Set corporation data directly from player (backend now sends full CardDto)
   useEffect(() => {
@@ -1742,6 +1745,38 @@ export default function GameInterface() {
   })();
 
   // Check if game is in lobby phase
+  // Spectate: derive player from live game state so data stays fresh via WebSocket
+  const spectatePlayer = useMemo(() => {
+    if (!spectatePlayerId || !game) return null;
+    if (game.currentPlayer?.id === spectatePlayerId) return game.currentPlayer;
+    return game.otherPlayers?.find((p) => p.id === spectatePlayerId) ?? null;
+  }, [spectatePlayerId, game]);
+
+  const spectatePlayerColor = useMemo(() => {
+    if (!spectatePlayerId || !game?.turnOrder) return "#6496ff";
+    const index = game.turnOrder.indexOf(spectatePlayerId);
+    if (index === -1) return "#6496ff";
+    return getPlayerColor(index);
+  }, [spectatePlayerId, game?.turnOrder]);
+
+  const handlePlayerClick = useCallback((player: PlayerDto | OtherPlayerDto) => {
+    setSpectatePlayerId((prev) => prev === player.id ? null : player.id);
+  }, []);
+
+  const handleStopSpectating = useCallback(() => {
+    setSpectatePlayerId(null);
+  }, []);
+
+  // ESC key to stop spectating
+  useEffect(() => {
+    if (!spectatePlayerId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSpectatePlayerId(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [spectatePlayerId]);
+
   const isLobbyPhase = game?.status === GameStatusLobby;
 
   // Pre-game phase covers both lobby AND starting card selection
@@ -1867,6 +1902,11 @@ export default function GameInterface() {
           onLeaveGame={handleLeaveGame}
           onSkyboxReady={handleSkyboxReady}
           onGpuReady={handleGpuReady}
+          onPlayerClick={handlePlayerClick}
+          spectatingPlayer={spectatePlayer}
+          spectatingCorporation={spectatePlayer?.corporation ?? null}
+          spectatePlayerColor={spectatePlayerColor}
+          onStopSpectating={handleStopSpectating}
         />
       )}
 
@@ -2130,8 +2170,8 @@ export default function GameInterface() {
         />
       )}
 
-      {/* Card fan overlay for hand cards */}
-      {game && currentPlayer && (
+      {/* Card fan overlay for hand cards (hidden when spectating another player) */}
+      {game && currentPlayer && !spectatePlayerId && (
         <div
           className={
             transitionPhase === "animateUI"

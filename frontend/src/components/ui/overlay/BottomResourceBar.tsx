@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import {
   PlayerDto,
+  OtherPlayerDto,
   PlayerActionDto,
   GameDto,
   CardDto,
@@ -130,6 +131,10 @@ interface BottomResourceBarProps {
   callbacks?: BottomResourceBarCallbacks;
   gameId?: string;
   corporation?: CardDto | null;
+  spectatingPlayer?: PlayerDto | OtherPlayerDto | null;
+  spectatingCorporation?: CardDto | null;
+  spectatePlayerColor?: string;
+  onStopSpectating?: () => void;
 }
 
 const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
@@ -140,7 +145,16 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   callbacks = {},
   gameId,
   corporation,
+  spectatingPlayer,
+  spectatingCorporation,
+  spectatePlayerColor,
+  onStopSpectating,
 }) => {
+  const isSpectating = !!spectatingPlayer;
+  const displayPlayer: PlayerDto | OtherPlayerDto | null | undefined = isSpectating ? spectatingPlayer : currentPlayer;
+  const displayCorporation = isSpectating ? spectatingCorporation : corporation;
+  const displayPlayedCards = isSpectating ? (spectatingPlayer?.playedCards ?? []) : playedCards;
+
   const {
     onOpenCardEffectsModal,
     onOpenCardsPlayedModal,
@@ -166,7 +180,9 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const vpButtonRef = useRef<HTMLButtonElement>(null);
   const corpContainerRef = useRef<HTMLDivElement>(null);
 
-  const corpColor = corporation ? getCorporationBorderColor(corporation.name) : "#ffc107";
+  const corpColor = isSpectating
+    ? (spectatePlayerColor ?? "#ffc107")
+    : (corporation ? getCorporationBorderColor(corporation.name) : "#ffc107");
 
   const handleCorpToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -220,11 +236,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   };
 
   const tagCounts = React.useMemo(() => {
-    if (!playedCards || playedCards.length === 0) return [];
+    if (!displayPlayedCards || displayPlayedCards.length === 0) return [];
 
     const counts: { [key: string]: number } = {};
 
-    playedCards.forEach((card) => {
+    displayPlayedCards.forEach((card) => {
       if (card.tags) {
         card.tags.forEach((tag) => {
           const tagKey = tag.toLowerCase();
@@ -257,14 +273,14 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       tag,
       count: counts[tag] || 0,
     }));
-  }, [playedCards]);
+  }, [displayPlayedCards]);
 
   const storageCardsCount = React.useMemo(() => {
-    if (!currentPlayer?.resourceStorage) return 0;
-    return Object.keys(currentPlayer.resourceStorage).length;
-  }, [currentPlayer?.resourceStorage]);
+    if (!displayPlayer?.resourceStorage) return 0;
+    return Object.keys(displayPlayer.resourceStorage).length;
+  }, [displayPlayer?.resourceStorage]);
 
-  if (!currentPlayer?.resources || !currentPlayer?.production) {
+  if (!displayPlayer?.resources || !displayPlayer?.production) {
     return null;
   }
 
@@ -272,49 +288,50 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     {
       id: "credit",
       name: "Credits",
-      current: currentPlayer.resources.credits,
-      production: currentPlayer.production.credits,
+      current: displayPlayer.resources.credits,
+      production: displayPlayer.production.credits,
     },
     {
       id: "steel",
       name: "Steel",
-      current: currentPlayer.resources.steel,
-      production: currentPlayer.production.steel,
+      current: displayPlayer.resources.steel,
+      production: displayPlayer.production.steel,
     },
     {
       id: "titanium",
       name: "Titanium",
-      current: currentPlayer.resources.titanium,
-      production: currentPlayer.production.titanium,
+      current: displayPlayer.resources.titanium,
+      production: displayPlayer.production.titanium,
     },
     {
       id: "plant",
       name: "Plants",
-      current: currentPlayer.resources.plants,
-      production: currentPlayer.production.plants,
+      current: displayPlayer.resources.plants,
+      production: displayPlayer.production.plants,
     },
     {
       id: "energy",
       name: "Energy",
-      current: currentPlayer.resources.energy,
-      production: currentPlayer.production.energy,
+      current: displayPlayer.resources.energy,
+      production: displayPlayer.production.energy,
     },
     {
       id: "heat",
       name: "Heat",
-      current: currentPlayer.resources.heat,
-      production: currentPlayer.production.heat,
+      current: displayPlayer.resources.heat,
+      production: displayPlayer.production.heat,
     },
   ];
 
-  const playedCardsCount = currentPlayer?.playedCards?.length || 0;
+  const playedCardsCount = displayPlayer?.playedCards?.length || 0;
 
-  const requiredPlants = calculatePlantsForGreenery(currentPlayer?.effects);
-  const requiredHeat = calculateHeatForTemperature(currentPlayer?.effects);
+  const requiredPlants = calculatePlantsForGreenery(displayPlayer?.effects);
+  const requiredHeat = calculateHeatForTemperature(displayPlayer?.effects);
 
-  const canConvertPlants = (currentPlayer?.resources.plants ?? 0) >= requiredPlants;
+  const canConvertPlants = !isSpectating && (displayPlayer?.resources.plants ?? 0) >= requiredPlants;
   const canConvertHeat =
-    (currentPlayer?.resources.heat ?? 0) >= requiredHeat &&
+    !isSpectating &&
+    (displayPlayer?.resources.heat ?? 0) >= requiredHeat &&
     (gameState?.globalParameters?.temperature ?? -30) < 8;
 
   const handleOpenCardsModal = () => {
@@ -337,7 +354,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     setShowTagsPopover(!showTagsPopover);
   };
 
-  const totalVP = (currentPlayer?.vpGranters || []).reduce((sum, g) => sum + g.computedValue, 0);
+  const vpGranters = displayPlayer && 'vpGranters' in displayPlayer ? displayPlayer.vpGranters : [];
+  const totalVP = (vpGranters || []).reduce((sum, g) => sum + g.computedValue, 0);
 
   const handleOpenVPPopover = () => {
     setShowVPPopover(!showVPPopover);
@@ -367,6 +385,20 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[1000] flex justify-between pointer-events-none">
+      {/* Spectating banner */}
+      {isSpectating && (
+        <div
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex items-center gap-3 px-4 py-2 bg-[rgba(10,10,15,0.95)] border border-[rgba(60,60,70,0.7)] pointer-events-auto cursor-pointer hover:bg-[rgba(20,20,25,0.95)] transition-colors"
+          style={{ borderLeftColor: spectatePlayerColor, borderLeftWidth: 3 }}
+          onClick={onStopSpectating}
+        >
+          <span className="text-white/90 text-xs font-orbitron">
+            Viewing <span className="font-bold" style={{ color: spectatePlayerColor }}>{displayPlayer?.name}</span>
+          </span>
+          <span className="text-white/50 text-[10px] font-orbitron">ESC to close</span>
+        </div>
+      )}
+
       {/* LEFT PANEL: Corporation + Resources */}
       <AngledPanel side="left" corpColor={corpColor} width={LEFT_PANEL_WIDTH} height={BAR_HEIGHT}>
         <div
@@ -382,7 +414,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             ref={corpContainerRef}
             className="flex items-center relative w-[120px] justify-center"
           >
-            {corporation && (
+            {displayCorporation && (
               <>
                 {/* Corporation Logo Button */}
                 <div
@@ -397,7 +429,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                   }}
                 >
                   <div className="flex items-center justify-center min-h-[50px] [&>*]:scale-65 [&>*]:origin-center">
-                    {getCorporationLogo(corporation.name.toLowerCase())}
+                    {getCorporationLogo(displayCorporation.name.toLowerCase())}
                   </div>
                 </div>
 
@@ -419,13 +451,13 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                     </button>
                     <CorporationCard
                       corporation={{
-                        id: corporation.id,
-                        name: corporation.name,
-                        description: corporation.description,
-                        startingMegaCredits: corporation.startingResources?.credits || 0,
-                        startingProduction: corporation.startingProduction,
-                        startingResources: corporation.startingResources,
-                        behaviors: corporation.behaviors,
+                        id: displayCorporation.id,
+                        name: displayCorporation.name,
+                        description: displayCorporation.description,
+                        startingMegaCredits: displayCorporation.startingResources?.credits || 0,
+                        startingProduction: displayCorporation.startingProduction,
+                        startingResources: displayCorporation.startingResources,
+                        behaviors: displayCorporation.behaviors,
                       }}
                       isSelected={false}
                       onSelect={() => {}}
@@ -587,7 +619,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                   : ""
               }`}
             >
-              {currentPlayer?.actions?.length || 0}
+              {displayPlayer?.actions?.length || 0}
             </div>
             <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
               Actions
@@ -618,7 +650,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                   : ""
               }`}
             >
-              {currentPlayer?.effects?.length || 0}
+              {displayPlayer?.effects?.length || 0}
             </div>
             <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
               Effects
@@ -771,10 +803,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
       {/* Popovers */}
       <ActionsPopover
-        isVisible={showActionsPopover}
+        isVisible={showActionsPopover && !isSpectating}
         onClose={() => setShowActionsPopover(false)}
-        actions={currentPlayer?.actions || []}
-        playerName={currentPlayer?.name}
+        actions={displayPlayer?.actions || []}
+        playerName={displayPlayer?.name}
         onActionSelect={(action) => {
           onActionSelect?.(action);
           setShowActionsPopover(false);
@@ -787,9 +819,9 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       <EffectsPopover
         isVisible={showEffectsPopover}
         onClose={() => setShowEffectsPopover(false)}
-        effects={currentPlayer?.effects || []}
-        playerName={currentPlayer?.name}
-        onOpenDetails={onOpenCardEffectsModal}
+        effects={displayPlayer?.effects || []}
+        playerName={displayPlayer?.name}
+        onOpenDetails={isSpectating ? undefined : onOpenCardEffectsModal}
         anchorRef={effectsButtonRef as React.RefObject<HTMLElement>}
       />
 
@@ -800,17 +832,19 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
         anchorRef={tagsButtonRef as React.RefObject<HTMLElement>}
       />
 
-      <StoragesPopover
-        isVisible={showStoragesPopover}
-        onClose={() => setShowStoragesPopover(false)}
-        player={currentPlayer}
-        anchorRef={storagesButtonRef as React.RefObject<HTMLElement>}
-      />
+      {currentPlayer && (
+        <StoragesPopover
+          isVisible={showStoragesPopover && !isSpectating}
+          onClose={() => setShowStoragesPopover(false)}
+          player={currentPlayer}
+          anchorRef={storagesButtonRef as React.RefObject<HTMLElement>}
+        />
+      )}
 
       <VictoryPointsPopover
-        isVisible={showVPPopover}
+        isVisible={showVPPopover && !isSpectating}
         onClose={() => setShowVPPopover(false)}
-        vpGranters={currentPlayer?.vpGranters || []}
+        vpGranters={vpGranters || []}
         totalVP={totalVP}
         anchorRef={vpButtonRef as React.RefObject<HTMLElement>}
       />

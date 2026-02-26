@@ -14,6 +14,7 @@ interface LeftSidebarProps {
   currentPhase?: GamePhase;
   hasPendingTilePlacement?: boolean;
   triggeredEffects?: TriggeredEffectDto[];
+  onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
 }
 
 const LeftSidebar: React.FC<LeftSidebarProps> = ({
@@ -23,6 +24,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   currentPhase,
   hasPendingTilePlacement = false,
   triggeredEffects = [],
+  onPlayerClick,
 }) => {
   return (
     <div className="absolute top-[15%] left-0 z-10 w-[240px] h-[calc(85vh-120px)] bg-transparent py-[15px] flex flex-col overflow-visible pointer-events-none">
@@ -33,6 +35,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
         currentPhase={currentPhase}
         hasPendingTilePlacement={hasPendingTilePlacement}
         triggeredEffects={triggeredEffects}
+        onPlayerClick={onPlayerClick}
       />
     </div>
   );
