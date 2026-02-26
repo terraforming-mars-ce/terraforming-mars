@@ -42,6 +42,10 @@ export function useSoundEffects() {
     return audioService.playConstructionSound();
   }, []);
 
+  const playAsteroidImpactSound = useCallback(() => {
+    return audioService.playAsteroidImpactSound();
+  }, []);
+
   return {
     playSound,
     playProductionSound,
@@ -52,5 +56,6 @@ export function useSoundEffects() {
     playButtonClickSound,
     playCardHoverSound,
     playConstructionSound,
+    playAsteroidImpactSound,
   };
 }

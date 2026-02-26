@@ -55,6 +55,7 @@ import {
   PlayerDto,
   PlayerActionDto,
   ResourceType,
+  StateDiffDto,
   TriggeredEffectDto,
 } from "@/types/generated/api-types.ts";
 import { shouldShowPaymentModal, createDefaultPayment } from "@/utils/paymentUtils.ts";
@@ -69,8 +70,13 @@ export default function GameInterface() {
   const location = useLocation();
   const navigate = useNavigate();
   const { gameId: urlGameId } = useParams<{ gameId?: string }>();
-  const { playProductionSound, playTemperatureSound, playWaterPlacementSound, playOxygenSound } =
-    useSoundEffects();
+  const {
+    playProductionSound,
+    playTemperatureSound,
+    playWaterPlacementSound,
+    playOxygenSound,
+    playAsteroidImpactSound,
+  } = useSoundEffects();
   const { showNotification } = useNotifications();
   const [game, setGame] = useState<GameDto | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -312,6 +318,21 @@ export default function GameInterface() {
     [isReconnecting, playTemperatureSound, playWaterPlacementSound, playOxygenSound],
   );
 
+  const handleLogUpdate = useCallback(
+    (logs: StateDiffDto[]) => {
+      const ASTEROID_IMPACT_PATTERN = /asteroid|comet|impactor/i;
+      const hasAsteroidAction = logs.some(
+        (log) =>
+          (log.sourceType === "card_play" || log.sourceType === "standard_project") &&
+          ASTEROID_IMPACT_PATTERN.test(log.source),
+      );
+      if (hasAsteroidAction) {
+        void playAsteroidImpactSound();
+      }
+    },
+    [playAsteroidImpactSound],
+  );
+
   const handleFullState = useCallback(
     (statePayload: FullStatePayload) => {
       // Handle full-state message (e.g., on reconnection)
@@ -381,6 +402,7 @@ export default function GameInterface() {
     // Check if current player has production phase data
     const hasProductionData =
       currentPlayer.productionPhase &&
+      !currentPlayer.productionPhase.selectionComplete &&
       currentPlayer.productionPhase.availableCards &&
       currentPlayer.productionPhase.availableCards.length >= 0;
 
@@ -1191,6 +1213,7 @@ export default function GameInterface() {
 
     globalWebSocketManager.on("game-updated", handleGameUpdated);
     globalWebSocketManager.on("full-state", handleFullState);
+    globalWebSocketManager.on("log-update", handleLogUpdate);
     globalWebSocketManager.on("player-disconnected", handlePlayerDisconnected);
     globalWebSocketManager.on("player-kicked", handlePlayerKicked);
     globalWebSocketManager.on("error", handleError);
@@ -1202,6 +1225,7 @@ export default function GameInterface() {
     return () => {
       globalWebSocketManager.off("game-updated", handleGameUpdated);
       globalWebSocketManager.off("full-state", handleFullState);
+      globalWebSocketManager.off("log-update", handleLogUpdate);
       globalWebSocketManager.off("player-disconnected", handlePlayerDisconnected);
       globalWebSocketManager.off("player-kicked", handlePlayerKicked);
       globalWebSocketManager.off("error", handleError);
@@ -1212,6 +1236,7 @@ export default function GameInterface() {
   }, [
     handleGameUpdated,
     handleFullState,
+    handleLogUpdate,
     handlePlayerDisconnected,
     handlePlayerKicked,
     handleError,
