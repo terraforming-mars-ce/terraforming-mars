@@ -1759,13 +1759,16 @@ export default function GameInterface() {
     return getPlayerColor(index);
   }, [spectatePlayerId, game?.turnOrder]);
 
-  const handlePlayerClick = useCallback((player: PlayerDto | OtherPlayerDto) => {
-    if (player.id === game?.currentPlayer?.id) {
-      setSpectatePlayerId(null);
-      return;
-    }
-    setSpectatePlayerId((prev) => prev === player.id ? null : player.id);
-  }, [game?.currentPlayer?.id]);
+  const handlePlayerClick = useCallback(
+    (player: PlayerDto | OtherPlayerDto) => {
+      if (player.id === game?.currentPlayer?.id) {
+        setSpectatePlayerId(null);
+        return;
+      }
+      setSpectatePlayerId((prev) => (prev === player.id ? null : player.id));
+    },
+    [game?.currentPlayer?.id],
+  );
 
   const handleStopSpectating = useCallback(() => {
     setSpectatePlayerId(null);

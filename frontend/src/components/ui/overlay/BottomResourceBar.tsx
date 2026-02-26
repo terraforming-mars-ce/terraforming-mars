@@ -151,7 +151,9 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   onStopSpectating,
 }) => {
   const isSpectating = !!spectatingPlayer;
-  const displayPlayer: PlayerDto | OtherPlayerDto | null | undefined = isSpectating ? spectatingPlayer : currentPlayer;
+  const displayPlayer: PlayerDto | OtherPlayerDto | null | undefined = isSpectating
+    ? spectatingPlayer
+    : currentPlayer;
   const displayCorporation = isSpectating ? spectatingCorporation : corporation;
   const displayPlayedCards = isSpectating ? (spectatingPlayer?.playedCards ?? []) : playedCards;
 
@@ -182,7 +184,9 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
   const corpColor = isSpectating
     ? (spectatePlayerColor ?? "#ffc107")
-    : (corporation ? getCorporationBorderColor(corporation.name) : "#ffc107");
+    : corporation
+      ? getCorporationBorderColor(corporation.name)
+      : "#ffc107";
 
   const handleCorpToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -328,7 +332,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const requiredPlants = calculatePlantsForGreenery(displayPlayer?.effects);
   const requiredHeat = calculateHeatForTemperature(displayPlayer?.effects);
 
-  const canConvertPlants = !isSpectating && (displayPlayer?.resources.plants ?? 0) >= requiredPlants;
+  const canConvertPlants =
+    !isSpectating && (displayPlayer?.resources.plants ?? 0) >= requiredPlants;
   const canConvertHeat =
     !isSpectating &&
     (displayPlayer?.resources.heat ?? 0) >= requiredHeat &&
@@ -354,7 +359,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     setShowTagsPopover(!showTagsPopover);
   };
 
-  const vpGranters = displayPlayer && 'vpGranters' in displayPlayer ? displayPlayer.vpGranters : [];
+  const vpGranters = displayPlayer && "vpGranters" in displayPlayer ? displayPlayer.vpGranters : [];
   const totalVP = (vpGranters || []).reduce((sum, g) => sum + g.computedValue, 0);
 
   const handleOpenVPPopover = () => {
@@ -393,9 +398,14 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           onClick={onStopSpectating}
         >
           <span className="text-white/90 text-xs font-orbitron">
-            Viewing <span className="font-bold" style={{ color: spectatePlayerColor }}>{displayPlayer?.name}</span>
+            Viewing{" "}
+            <span className="font-bold" style={{ color: spectatePlayerColor }}>
+              {displayPlayer?.name}
+            </span>
             {displayPlayer && "handCardCount" in displayPlayer && (
-              <span className="text-white/50 ml-2">({displayPlayer.handCardCount} cards in hand)</span>
+              <span className="text-white/50 ml-2">
+                ({displayPlayer.handCardCount} cards in hand)
+              </span>
             )}
           </span>
           <span className="text-white/50 text-[10px] font-orbitron">ESC to close</span>
