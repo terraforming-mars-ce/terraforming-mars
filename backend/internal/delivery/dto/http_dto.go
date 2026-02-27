@@ -2,7 +2,7 @@ package dto
 
 // CreateGameRequest represents the request body for creating a game
 type CreateGameRequest struct {
-	MaxPlayers      int      `json:"maxPlayers" binding:"required,min=1,max=5" ts:"number"`
+	MaxPlayers      int      `json:"maxPlayers" binding:"required,min=1,max=10" ts:"number"`
 	DevelopmentMode bool     `json:"developmentMode" ts:"boolean"`
 	CardPacks       []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
 }
