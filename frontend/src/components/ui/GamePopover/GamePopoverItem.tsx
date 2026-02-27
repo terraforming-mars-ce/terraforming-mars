@@ -25,13 +25,17 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   const getStateClasses = () => {
     switch (state) {
       case "available":
-        return `border-[rgba(var(--popover-accent-rgb),0.3)] bg-[rgba(var(--popover-accent-rgb),0.2)] cursor-pointer ${
-          hoverEffect === "translate-x"
-            ? "hover:translate-x-1 hover:shadow-[0_4px_15px_rgba(var(--popover-accent-rgb),0.4)]"
-            : hoverEffect === "glow"
-              ? "hover:shadow-[0_4px_15px_rgba(var(--popover-accent-rgb),0.4)]"
-              : ""
-        } hover:border-[var(--popover-accent)] hover:bg-[rgba(var(--popover-accent-rgb),0.3)]`;
+        return `border-[rgba(var(--popover-accent-rgb),0.3)] bg-[rgba(var(--popover-accent-rgb),0.2)] ${
+          isClickable
+            ? `cursor-pointer ${
+                hoverEffect === "translate-x"
+                  ? "hover:translate-x-1 hover:shadow-[0_4px_15px_rgba(var(--popover-accent-rgb),0.4)]"
+                  : hoverEffect === "glow"
+                    ? "hover:shadow-[0_4px_15px_rgba(var(--popover-accent-rgb),0.4)]"
+                    : ""
+              } hover:border-[var(--popover-accent)] hover:bg-[rgba(var(--popover-accent-rgb),0.3)]`
+            : "cursor-default"
+        }`;
       case "disabled":
         return "border-[rgba(var(--popover-accent-rgb),0.15)] bg-[rgba(var(--popover-accent-rgb),0.1)] opacity-60 cursor-default";
       case "claimed":

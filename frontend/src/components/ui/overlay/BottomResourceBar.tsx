@@ -62,7 +62,7 @@ const AngledPanel: React.FC<AngledPanelProps> = ({ side, corpColor, width, heigh
   const whiteGlowId = `whiteGlow-${side}`;
 
   return (
-    <div className="relative pointer-events-auto" style={{ width, height }}>
+    <div className="relative pointer-events-auto z-[2]" style={{ width, height }}>
       <svg
         className="absolute inset-0 w-full h-full"
         viewBox={`0 0 ${width} ${height}`}
@@ -178,11 +178,9 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const vpButtonRef = useRef<HTMLButtonElement>(null);
   const corpContainerRef = useRef<HTMLDivElement>(null);
 
-  const corpColor = isSpectating
-    ? (spectatePlayerColor ?? "#ffc107")
-    : corporation
-      ? getCorporationBorderColor(corporation.name)
-      : "#ffc107";
+  const corpColor = displayCorporation
+    ? getCorporationBorderColor(displayCorporation.name)
+    : "#ffc107";
 
   const handleCorpToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -388,24 +386,52 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     <div className="fixed bottom-0 left-0 right-0 z-[1200] flex justify-between pointer-events-none">
       {/* Spectating banner */}
       {isSpectating && (
-        <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex items-center gap-3 px-4 py-2 bg-[rgba(10,10,15,0.95)] border border-[rgba(60,60,70,0.7)] pointer-events-auto cursor-pointer hover:bg-[rgba(20,20,25,0.95)] transition-colors"
-          style={{ borderLeftColor: spectatePlayerColor, borderLeftWidth: 3 }}
-          onClick={onStopSpectating}
-        >
-          <span className="text-white/90 text-xs font-orbitron">
-            Viewing{" "}
-            <span className="font-bold" style={{ color: spectatePlayerColor }}>
-              {displayPlayer?.name}
-            </span>
-            {displayPlayer && "handCardCount" in displayPlayer && (
-              <span className="text-white/50 ml-2">
-                ({displayPlayer.handCardCount} cards in hand)
-              </span>
-            )}
-          </span>
-          <span className="text-white/50 text-[10px] font-orbitron">ESC to close</span>
-        </div>
+        <>
+          <style>{`
+            @keyframes spectate-banner-enter {
+              from { opacity: 0; transform: translateY(16px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+          <div
+            className="absolute left-0 right-0 bottom-0 z-[1] flex items-center justify-center pointer-events-auto cursor-pointer"
+            style={{
+              height: 64,
+              background: `linear-gradient(to top, ${spectatePlayerColor ?? "#6496ff"}2b, transparent 60%), rgba(10,10,15,0.95)`,
+              borderLeft: `1px solid ${BORDER_COLOR}`,
+              borderRight: `1px solid ${BORDER_COLOR}`,
+              animation: "spectate-banner-enter 300ms ease-out",
+            }}
+            onClick={onStopSpectating}
+          >
+            {/* Top border gradient: grey sides → player color center */}
+            <div
+              className="absolute top-0 left-0 right-0 h-[2px]"
+              style={{
+                background: `linear-gradient(to right, ${BORDER_COLOR} 15%, ${spectatePlayerColor ?? "#6496ff"} 50%, ${BORDER_COLOR} 85%)`,
+              }}
+            />
+            <div className="flex items-center gap-8">
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-white/40 text-xs font-orbitron tracking-widest uppercase">
+                    Viewing
+                  </span>
+                  <span className="text-white text-sm font-orbitron font-bold">
+                    {displayPlayer?.name}
+                  </span>
+                </div>
+                {displayPlayer && "handCardCount" in displayPlayer && (
+                  <span className="text-white/50 text-[11px] font-orbitron mt-0.5">
+                    {displayPlayer.handCardCount}{" "}
+                    {displayPlayer.handCardCount === 1 ? "card" : "cards"}
+                  </span>
+                )}
+              </div>
+              <span className="text-white/30 text-[10px] font-orbitron">ESC to close</span>
+            </div>
+          </div>
+        </>
       )}
 
       {/* LEFT PANEL: Corporation + Resources */}
@@ -815,14 +841,18 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
       {/* Popovers */}
       <ActionsPopover
-        isVisible={showActionsPopover && !isSpectating}
+        isVisible={showActionsPopover}
         onClose={() => setShowActionsPopover(false)}
         actions={displayPlayer?.actions || []}
         playerName={displayPlayer?.name}
-        onActionSelect={(action) => {
-          onActionSelect?.(action);
-          setShowActionsPopover(false);
-        }}
+        onActionSelect={
+          isSpectating
+            ? undefined
+            : (action) => {
+                onActionSelect?.(action);
+                setShowActionsPopover(false);
+              }
+        }
         anchorRef={actionsButtonRef as React.RefObject<HTMLElement>}
         gameState={gameState}
       />
@@ -830,8 +860,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       <EffectsPopover
         isVisible={showEffectsPopover}
         onClose={() => setShowEffectsPopover(false)}
-        effects={currentPlayer?.effects || []}
-        playerName={currentPlayer?.name}
+        effects={displayPlayer?.effects || []}
+        playerName={displayPlayer?.name}
         anchorRef={effectsButtonRef as React.RefObject<HTMLElement>}
       />
 
@@ -842,17 +872,17 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
         anchorRef={tagsButtonRef as React.RefObject<HTMLElement>}
       />
 
-      {currentPlayer && (
+      {displayPlayer && (
         <StoragesPopover
-          isVisible={showStoragesPopover && !isSpectating}
+          isVisible={showStoragesPopover}
           onClose={() => setShowStoragesPopover(false)}
-          player={currentPlayer}
+          player={displayPlayer as PlayerDto}
           anchorRef={storagesButtonRef as React.RefObject<HTMLElement>}
         />
       )}
 
       <VictoryPointsPopover
-        isVisible={showVPPopover && !isSpectating}
+        isVisible={showVPPopover}
         onClose={() => setShowVPPopover(false)}
         vpGranters={vpGranters || []}
         totalVP={totalVP}

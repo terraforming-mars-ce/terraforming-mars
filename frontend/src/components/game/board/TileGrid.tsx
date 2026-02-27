@@ -8,6 +8,7 @@ import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import { useSoundEffects } from "../../../hooks/useSoundEffects";
 import GreeneryRenderer from "./GreeneryRenderer";
 import { SPHERE_RADIUS } from "./boardConstants";
+import { getPlayerColor } from "../../../utils/playerColors";
 
 interface TileGridProps {
   gameState?: GameDto;
@@ -87,6 +88,16 @@ export default function TileGrid({
     playOxygenSound,
     playConstructionSound,
   ]);
+
+  const playerColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (gameState?.turnOrder) {
+      gameState.turnOrder.forEach((playerId, index) => {
+        map.set(playerId, getPlayerColor(index));
+      });
+    }
+    return map;
+  }, [gameState?.turnOrder]);
 
   // Create lookup map for VP indicators by coordinate
   const vpIndicatorMap = useMemo(() => {
@@ -310,6 +321,7 @@ export default function TileGrid({
             tileData={tile}
             tileType={tileData.type}
             ownerId={tileData.ownerId}
+            ownerColor={tileData.ownerId ? playerColorMap.get(tileData.ownerId) : undefined}
             reservedById={tile.backendTile?.reservedBy || null}
             displayName={tileData.specialLabel || tile.backendTile?.displayName}
             isVolcanic={tile.backendTile?.tags?.includes("volcanic") ?? false}
