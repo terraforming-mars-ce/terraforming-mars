@@ -16,19 +16,52 @@ interface TilePlacerWindowProps {
 const WINDOW_ID = "tile-placer";
 const WINDOW_WIDTH = 220;
 
-const TILE_TYPES = [
-  { type: "city", label: "City" },
-  { type: "greenery", label: "Greenery" },
-  { type: "ocean", label: "Ocean" },
-  { type: "volcano", label: "Volcano" },
-  { type: "clear", label: "Clear" },
+interface TileGroup {
+  label: string;
+  tiles: { type: string; label: string }[];
+}
+
+const TILE_GROUPS: TileGroup[] = [
+  {
+    label: "Base",
+    tiles: [
+      { type: "city", label: "City" },
+      { type: "greenery", label: "Greenery" },
+      { type: "ocean", label: "Ocean" },
+    ],
+  },
+  {
+    label: "Special",
+    tiles: [
+      { type: "natural-preserve", label: "Natural Preserve" },
+      { type: "ecological-zone", label: "Ecological Zone" },
+      { type: "mining", label: "Mining" },
+      { type: "colony", label: "Colony" },
+    ],
+  },
+  {
+    label: "Industrial",
+    tiles: [
+      { type: "volcano", label: "Volcano" },
+      { type: "nuclear-zone", label: "Nuclear Zone" },
+      { type: "mohole", label: "Mohole" },
+      { type: "restricted", label: "Restricted" },
+    ],
+  },
+  {
+    label: "Tools",
+    tiles: [
+      { type: "land-claim", label: "Land Claim" },
+      { type: "clear", label: "Clear" },
+    ],
+  },
 ];
 
 const TilePlacerWindow: React.FC<TilePlacerWindowProps> = ({ playerId, playerName, onClose }) => {
   const { position, isDragging, handleMouseDown } = useWindowDrag({
     windowId: WINDOW_ID,
     width: WINDOW_WIDTH,
-    height: 300,
+    height: 600,
     defaultPosition:
       typeof window !== "undefined"
         ? { x: window.innerWidth - WINDOW_WIDTH - 40, y: 60 }
@@ -119,35 +152,62 @@ const TilePlacerWindow: React.FC<TilePlacerWindowProps> = ({ playerId, playerNam
         </button>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        {TILE_TYPES.map((tile) => (
-          <button
-            key={tile.type}
-            onClick={() => void handleTileClick(tile.type)}
-            onMouseDown={(e) => e.stopPropagation()}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(200, 50, 50, 0.25)";
-              e.currentTarget.style.borderColor = "rgba(200, 50, 50, 0.6)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(200, 50, 50, 0.1)";
-              e.currentTarget.style.borderColor = "rgba(200, 50, 50, 0.3)";
-            }}
-            style={{
-              padding: "10px 14px",
-              background: "rgba(200, 50, 50, 0.1)",
-              border: "1px solid rgba(200, 50, 50, 0.3)",
-              borderRadius: "6px",
-              color: "white",
-              fontSize: "13px",
-              fontWeight: "500",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              textAlign: "left",
-            }}
-          >
-            {tile.label}
-          </button>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          maxHeight: "400px",
+          overflowY: "auto",
+        }}
+      >
+        {TILE_GROUPS.map((group) => (
+          <div key={group.label}>
+            <div
+              style={{
+                color: "#888",
+                fontSize: "10px",
+                fontWeight: "600",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                marginBottom: "4px",
+                paddingLeft: "2px",
+              }}
+            >
+              {group.label}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              {group.tiles.map((tile) => (
+                <button
+                  key={tile.type}
+                  onClick={() => void handleTileClick(tile.type)}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(200, 50, 50, 0.25)";
+                    e.currentTarget.style.borderColor = "rgba(200, 50, 50, 0.6)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(200, 50, 50, 0.1)";
+                    e.currentTarget.style.borderColor = "rgba(200, 50, 50, 0.3)";
+                  }}
+                  style={{
+                    padding: "8px 12px",
+                    background: "rgba(200, 50, 50, 0.1)",
+                    border: "1px solid rgba(200, 50, 50, 0.3)",
+                    borderRadius: "6px",
+                    color: "white",
+                    fontSize: "12px",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    textAlign: "left",
+                  }}
+                >
+                  {tile.label}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>
