@@ -34,7 +34,7 @@ func (h *ConvertPlantsHandler) HandleMessage(ctx context.Context, connection *co
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🌿 Processing convert plants request (migrated)")
+	log.Info("🌿 Processing convert plants request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

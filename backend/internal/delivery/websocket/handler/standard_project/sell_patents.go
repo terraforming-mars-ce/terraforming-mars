@@ -34,7 +34,7 @@ func (h *SellPatentsHandler) HandleMessage(ctx context.Context, connection *core
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🏛️ Processing sell patents request (migrated)")
+	log.Info("🏛️ Processing sell patents request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

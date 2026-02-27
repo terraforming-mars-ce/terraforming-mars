@@ -32,7 +32,7 @@ func (h *PlayerReconnectedHandler) HandleMessage(ctx context.Context, connection
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🔗 Processing player reconnected request (migrated)")
+	log.Info("🔗 Processing player reconnected request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

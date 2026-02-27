@@ -45,7 +45,7 @@ func calculateResourceDelta(before, after shared.Resources) ResourcesDto {
 	}
 }
 
-// ToPlayerDto converts migration Player to PlayerDto
+// ToPlayerDto converts Player to PlayerDto
 func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) PlayerDto {
 	resourcesComponent := p.Resources()
 	resources := resourcesComponent.Get()
@@ -102,7 +102,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 	}
 }
 
-// ToOtherPlayerDto converts migration Player to OtherPlayerDto
+// ToOtherPlayerDto converts Player to OtherPlayerDto
 func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) OtherPlayerDto {
 	resourcesComponent := p.Resources()
 	resources := resourcesComponent.Get()

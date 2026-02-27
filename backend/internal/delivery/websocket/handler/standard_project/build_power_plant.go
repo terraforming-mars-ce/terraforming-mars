@@ -34,7 +34,7 @@ func (h *BuildPowerPlantHandler) HandleMessage(ctx context.Context, connection *
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("⚡ Processing build power plant request (migrated)")
+	log.Info("⚡ Processing build power plant request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

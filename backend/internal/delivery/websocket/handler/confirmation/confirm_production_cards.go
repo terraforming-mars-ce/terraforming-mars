@@ -34,7 +34,7 @@ func (h *ConfirmProductionCardsHandler) HandleMessage(ctx context.Context, conne
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🎴 Processing confirm production cards request (migrated)")
+	log.Info("🎴 Processing confirm production cards request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

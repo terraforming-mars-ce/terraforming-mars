@@ -39,7 +39,7 @@ func (h *SelectStartingCardsHandler) HandleMessage(ctx context.Context, connecti
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🃏 Processing select starting cards request (migrated)")
+	log.Info("🃏 Processing select starting cards request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

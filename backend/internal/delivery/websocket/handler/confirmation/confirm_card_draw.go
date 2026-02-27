@@ -39,7 +39,7 @@ func (h *ConfirmCardDrawHandler) HandleMessage(ctx context.Context, connection *
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🎴 Processing confirm card draw request (migrated)")
+	log.Info("🎴 Processing confirm card draw request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

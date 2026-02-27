@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// CreateGameHandler handles create game requests using the migrated architecture
+// CreateGameHandler handles create game requests.
 type CreateGameHandler struct {
 	createGameAction *gameaction.CreateGameAction
 	broadcaster      Broadcaster
@@ -25,7 +25,7 @@ type Broadcaster interface {
 	SendInitialLogs(gameID string, playerID string)
 }
 
-// NewCreateGameHandler creates a new create game handler for migrated actions
+// NewCreateGameHandler creates a new create game handler.
 func NewCreateGameHandler(createGameAction *gameaction.CreateGameAction, broadcaster Broadcaster) *CreateGameHandler {
 	return &CreateGameHandler{
 		createGameAction: createGameAction,
@@ -41,7 +41,7 @@ func (h *CreateGameHandler) HandleMessage(ctx context.Context, connection *core.
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🎮 Processing create game request (migrated)")
+	log.Info("🎮 Processing create game request")
 
 	settings := game.GameSettings{
 		MaxPlayers: game.DefaultMaxPlayers,

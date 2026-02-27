@@ -34,7 +34,7 @@ func (h *SkipActionHandler) HandleMessage(ctx context.Context, connection *core.
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("⏭️ Processing skip action request (migrated)")
+	log.Info("⏭️ Processing skip action request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

@@ -34,7 +34,7 @@ func (h *LaunchAsteroidHandler) HandleMessage(ctx context.Context, connection *c
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("☄️ Processing launch asteroid request (migrated)")
+	log.Info("☄️ Processing launch asteroid request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
