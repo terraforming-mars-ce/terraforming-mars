@@ -7,6 +7,7 @@ import (
 	"terraforming-mars-backend/internal/action/query"
 	"terraforming-mars-backend/internal/cards"
 	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
+	"terraforming-mars-backend/internal/service/bugreport"
 
 	"github.com/gorilla/mux"
 )
@@ -22,10 +23,12 @@ func SetupRouter(
 	listCardsAction *query.ListCardsAction,
 	getPlayerAction *query.GetPlayerAction,
 	cardRegistry cards.CardRegistry,
+	bugReportService *bugreport.Service,
 ) *mux.Router {
 	gameHandler := NewGameHandler(createGameAction, createDemoLobbyAction, getGameAction, getGameLogsAction, listGamesAction, listCardsAction, cardRegistry)
 	playerHandler := NewPlayerHandler(getPlayerAction, getGameAction, cardRegistry)
 	healthHandler := NewHealthHandler()
+	bugReportHandler := NewBugReportHandler(bugReportService)
 
 	router := mux.NewRouter()
 	router.Use(httpmiddleware.Recovery)
@@ -49,6 +52,10 @@ func SetupRouter(
 	playerRoutes.HandleFunc("/{playerId}", playerHandler.GetPlayer).Methods(http.MethodGet)
 
 	api.HandleFunc("/cards", gameHandler.ListCards).Methods(http.MethodGet)
+
+	api.HandleFunc("/bugs", bugReportHandler.SubmitBugReport).Methods(http.MethodPost)
+	api.HandleFunc("/bugs/status", bugReportHandler.GetStatus).Methods(http.MethodGet)
+	api.HandleFunc("/bugs/{id}", bugReportHandler.GetReport).Methods(http.MethodGet)
 
 	return router
 }

@@ -1,5 +1,7 @@
 package dto
 
+import "encoding/json"
+
 // CreateGameRequest represents the request body for creating a game
 type CreateGameRequest struct {
 	MaxPlayers      int      `json:"maxPlayers" binding:"required,min=1,max=10" ts:"number"`
@@ -64,4 +66,33 @@ type CreateDemoLobbyRequest struct {
 type CreateDemoLobbyResponse struct {
 	Game     GameDto `json:"game" ts:"GameDto"`
 	PlayerID string  `json:"playerId" ts:"string"`
+}
+
+// BugReportRequest represents the request body for submitting a bug report
+type BugReportRequest struct {
+	Description       string          `json:"description" ts:"string"`
+	Author            string          `json:"author,omitempty" ts:"string | undefined"`
+	IncludeScreenshot bool            `json:"includeScreenshot" ts:"boolean"`
+	Screenshot        string          `json:"screenshot,omitempty" ts:"string | undefined"`
+	GameState         json.RawMessage `json:"gameState,omitempty" ts:"GameDto | undefined"`
+}
+
+// BugReportDto represents a bug report's current state
+type BugReportDto struct {
+	ID            string `json:"id" ts:"string"`
+	Status        string `json:"status" ts:"string"`
+	StatusMessage string `json:"statusMessage" ts:"string"`
+	IssueURL      string `json:"issueUrl,omitempty" ts:"string | undefined"`
+}
+
+// BugReportResponse represents the response for bug report operations
+type BugReportResponse struct {
+	Report BugReportDto `json:"report" ts:"BugReportDto"`
+}
+
+// BugReportStatusResponse represents the response for bug report availability status
+type BugReportStatusResponse struct {
+	Available bool   `json:"available" ts:"boolean"`
+	Claude    bool   `json:"claude" ts:"boolean"`
+	Reason    string `json:"reason,omitempty" ts:"string | undefined"`
 }
