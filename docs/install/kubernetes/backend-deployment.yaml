@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: terraforming-mars-backend
+  labels:
+    app.kubernetes.io/name: terraforming-mars-backend
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: terraforming-mars
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: terraforming-mars-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: terraforming-mars-backend
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/part-of: terraforming-mars
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      volumes:
+        - name: github-key
+          secret:
+            secretName: terraforming-mars-github-app
+            items:
+              - key: private-key
+                path: private-key.pem
+      containers:
+        - name: terraforming-mars-backend
+          image: ghcr.io/rackaracka123/terraforming-mars-backend:latest
+          ports:
+            - containerPort: 3001
+              name: http
+          volumeMounts:
+            - name: github-key
+              mountPath: /etc/secrets/github
+              readOnly: true
+          env:
+            - name: GITHUB_APP_ID
+              value: "<app-id>"
+            - name: GITHUB_INSTALLATION_ID
+              value: "<installation-id>"
+            - name: GITHUB_PRIVATE_KEY_PATH
+              value: /etc/secrets/github/private-key.pem
+            - name: GITHUB_REPO_OWNER
+              value: <owner>
+            - name: GITHUB_REPO_NAME
+              value: <repo>
+            - name: CLAUDE_CODE_OAUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: terraforming-mars-claude
+                  key: oauth-token

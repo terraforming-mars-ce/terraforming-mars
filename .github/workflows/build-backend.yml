@@ -22,6 +22,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute build version
+        id: version
+        run: |
+          GIT_DESCRIBE=$(git describe --tags --always)
+          if echo "$GIT_DESCRIBE" | grep -q '-'; then
+            TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            BUILD_VERSION="${GIT_DESCRIBE}_${TIMESTAMP}"
+          else
+            BUILD_VERSION="$GIT_DESCRIBE"
+          fi
+          echo "build_version=$BUILD_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -39,9 +53,12 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: .
+          file: backend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            BUILD_VERSION=${{ steps.version.outputs.build_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

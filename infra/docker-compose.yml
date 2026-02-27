@@ -1,22 +1,23 @@
-version: '3.8'
-
 services:
-  # Backend - Go server
   backend:
     build:
-      context: ../backend
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: backend/Dockerfile
     container_name: tm-backend
     restart: unless-stopped
+    ports:
+      - "3001:3001"
     environment:
       - TM_LOG_LEVEL=${TM_LOG_LEVEL:-info}
-      - PORT=3001
-    networks:
-      - tm-network
-    labels:
-      - "traefik.enable=false"
+      - GITHUB_APP_ID=${GITHUB_APP_ID:-}
+      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}
+      - GITHUB_PRIVATE_KEY_PATH=/etc/secrets/github/private-key.pem
+      - GITHUB_REPO_OWNER=${GITHUB_REPO_OWNER:-}
+      - GITHUB_REPO_NAME=${GITHUB_REPO_NAME:-}
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
+    volumes:
+      - ${GITHUB_PRIVATE_KEY_FILE:-/dev/null}:/etc/secrets/github/private-key.pem:ro
 
-  # Frontend - React + Nginx
   frontend:
     build:
       context: ../frontend
@@ -25,31 +26,9 @@ services:
     restart: unless-stopped
     environment:
       - API_URL=/api/v1
+    ports:
+      - "3000:3000"
     depends_on:
       - backend
-    networks:
-      - tm-network
-    labels:
-      - "traefik.enable=false"
-
-  # Cloudflare Tunnel
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: tm-cloudflared
-    restart: unless-stopped
-    command: tunnel run
     environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
-    depends_on:
-      - frontend
-    networks:
-      - tm-network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    labels:
-      - "traefik.enable=false"
-
-networks:
-  tm-network:
-    driver: bridge
-    name: tm-network
+      - API_URL=http://localhost:3001/api/v1

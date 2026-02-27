@@ -7,6 +7,7 @@ services:
       - "3001:3001"
     environment:
       - TM_LOG_LEVEL=${TM_LOG_LEVEL:-info}
+      # Bug reporting (optional -- game works without these)
       - GITHUB_APP_ID=${GITHUB_APP_ID:-}
       - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}
       - GITHUB_PRIVATE_KEY_PATH=/etc/secrets/github/private-key.pem
@@ -14,17 +15,19 @@ services:
       - GITHUB_REPO_NAME=${GITHUB_REPO_NAME:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
     volumes:
+      # Mount your GitHub App private key here if using bug reporting.
+      # Comment out if not needed.
       - ${GITHUB_PRIVATE_KEY_FILE:-/dev/null}:/etc/secrets/github/private-key.pem:ro
 
   frontend:
     image: ghcr.io/rackaracka123/terraforming-mars-frontend:latest
     container_name: tm-frontend
     restart: unless-stopped
-    environment:
-      - API_URL=/api/v1
     ports:
       - "3000:3000"
     depends_on:
       - backend
     environment:
+      # Point at the backend since they're on separate ports here.
+      # Behind a reverse proxy, remove this -- the default /api/v1 works.
       - API_URL=http://localhost:3001/api/v1

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: terraforming-mars-frontend
+  labels:
+    app.kubernetes.io/name: terraforming-mars-frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: terraforming-mars
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: terraforming-mars-frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: terraforming-mars-frontend
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/part-of: terraforming-mars
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: terraforming-mars-frontend
+          image: ghcr.io/rackaracka123/terraforming-mars-frontend:latest
+          ports:
+            - containerPort: 3000
+              name: http
