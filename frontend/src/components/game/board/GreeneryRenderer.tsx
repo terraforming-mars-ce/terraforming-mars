@@ -370,6 +370,7 @@ interface GreeneryTileData {
 interface GreeneryRendererProps {
   tiles: GreeneryTileData[];
   volcanoTiles?: GreeneryTileData[];
+  livingGreeneryTiles?: GreeneryTileData[];
   newTileKeys: Set<string>;
   hexRadius?: number;
 }
@@ -377,6 +378,7 @@ interface GreeneryRendererProps {
 export default function GreeneryRenderer({
   tiles,
   volcanoTiles = [],
+  livingGreeneryTiles = [],
   newTileKeys,
   hexRadius = 0.166,
 }: GreeneryRendererProps) {
@@ -511,9 +513,14 @@ export default function GreeneryRenderer({
         tileKey: string;
       }[] = [];
 
+      const livingGreeneryKeys = new Set(
+        livingGreeneryTiles.map((t) => `${t.coordinate.q},${t.coordinate.r},${t.coordinate.s}`),
+      );
+
       for (const tile of tiles) {
         const tileKey = `${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`;
         const seed = getTileSeed(tile.coordinate.q, tile.coordinate.r, tile.coordinate.s);
+        const isLivingGreenery = livingGreeneryKeys.has(tileKey);
 
         // Get biome value for this tile (0-1)
         // High = forested (more trees), Low = scrubland (more bushes/rocks)
@@ -606,11 +613,12 @@ export default function GreeneryRenderer({
           return false;
         };
 
-        // Generate trees - more in high biome areas, boosted near mountains
+        // Generate trees - more in high biome areas, boosted near mountains/living greenery
         const treeRng = mulberry32(seed);
+        const livingMult = isLivingGreenery ? 1.3 : 1.0;
         const treeMult = hasMountain ? 1.8 : hasBigRock ? 1.4 : 1.0;
         const baseTreeCount = Math.floor(treeRng() * 10) + 9;
-        const treeCount = Math.floor(baseTreeCount * (0.3 + biome * 1.4) * treeMult);
+        const treeCount = Math.floor(baseTreeCount * (0.3 + biome * 1.4) * treeMult * livingMult);
         const treePositions: { x: number; y: number }[] = [];
 
         for (let i = 0; i < treeCount; i++) {
@@ -643,7 +651,8 @@ export default function GreeneryRenderer({
                 rockProximityBoost = Math.max(rockProximityBoost, proximity * 0.5);
               }
             }
-            const baseTreeScale = hasMountain ? 1.3 + treeRng() * 0.3 : 1.1 + treeRng() * 0.3;
+            const rawTreeScale = hasMountain ? 1.3 + treeRng() * 0.3 : 1.1 + treeRng() * 0.3;
+            const baseTreeScale = isLivingGreenery ? rawTreeScale * 1.2 : rawTreeScale;
             const treeScale = baseTreeScale + rockProximityBoost;
             treeInstances.push({
               position: worldPos,
@@ -788,7 +797,7 @@ export default function GreeneryRenderer({
       }
 
       return { treeInstances, bushInstances, cloverInstances, rockInstances, groundData };
-    }, [tiles, volcanoTiles, hexRadius]);
+    }, [tiles, volcanoTiles, livingGreeneryTiles, hexRadius]);
 
   // Group instances by variant
   const treesByVariant = useMemo(() => {

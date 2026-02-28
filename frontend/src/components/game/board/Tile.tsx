@@ -8,6 +8,7 @@ import OceanTile from "./OceanTile";
 import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
+import LivingGreeneryTile from "./LivingGreeneryTile";
 import MiningTile from "./MiningTile";
 import ReservedAreaTile from "./ReservedAreaTile";
 import { useTextures } from "../../../hooks/useTextures";
@@ -220,7 +221,9 @@ interface TileProps {
     | "volcano"
     | "nuclear-zone"
     | "mining"
-    | "restricted";
+    | "restricted"
+    | "ecological-zone"
+    | "natural-preserve";
   ownerId?: string | null;
   ownerColor?: string;
   reservedById?: string | null;
@@ -488,6 +491,9 @@ export default function Tile({
         return new THREE.Color("#5c3a1e");
       case "restricted":
         return new THREE.Color("#5a4030");
+      case "ecological-zone":
+      case "natural-preserve":
+        return new THREE.Color("#2d6e2e");
       default:
         return tileData.isOceanSpace
           ? new THREE.Color("#6d4c41").multiplyScalar(0.8)
@@ -512,7 +518,9 @@ export default function Tile({
         tileType === "volcano" ||
         tileType === "nuclear-zone" ||
         tileType === "mining" ||
-        tileType === "restricted"
+        tileType === "restricted" ||
+        tileType === "ecological-zone" ||
+        tileType === "natural-preserve"
           ? 0
           : tileType === "empty"
             ? 0.3
@@ -717,6 +725,17 @@ export default function Tile({
         />
       )}
 
+      {/* Living Greenery (ecological zone / natural preserve) */}
+      {(tileType === "ecological-zone" || tileType === "natural-preserve") && (
+        <LivingGreeneryTile
+          seed={
+            Math.abs(tileData.coordinate.q * 73856093) ^
+            (tileData.coordinate.r * 19349663) ^
+            (tileData.coordinate.s * 83492791)
+          }
+        />
+      )}
+
       {/* Special tile label (rendered via displayName below) */}
 
       {/* Billboard display name for named tiles */}
@@ -739,11 +758,13 @@ export default function Tile({
         </ClampedBillboard>
       )}
 
-      {/* Bonus icons for non-greenery, non-volcano, non-nuclear-zone, non-mining tiles */}
+      {/* Bonus icons for standard tiles (excludes tiles with 3D components) */}
       {tileType !== "greenery" &&
         tileType !== "volcano" &&
         tileType !== "nuclear-zone" &&
         tileType !== "mining" &&
+        tileType !== "ecological-zone" &&
+        tileType !== "natural-preserve" &&
         bonusIconGroups.length > 0 && (
           <>
             {(() => {

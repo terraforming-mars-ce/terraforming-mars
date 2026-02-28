@@ -39,12 +39,12 @@ type TileType =
   | "volcano"
   | "nuclear-zone"
   | "mining"
-  | "restricted";
+  | "restricted"
+  | "ecological-zone"
+  | "natural-preserve";
 
 // Labels for special tile types (keyed by occupant type from backend)
 const SPECIAL_TILE_LABELS: Record<string, string> = {
-  "natural-preserve-tile": "Nature\nPreserve",
-  "ecological-zone-tile": "Eco Zone",
   "mohole-tile": "Mohole",
 };
 
@@ -79,6 +79,8 @@ export default function TileGrid({
           void playWaterPlacementSound();
           break;
         case "greenery-tile":
+        case "ecological-zone-tile":
+        case "natural-preserve-tile":
           void playOxygenSound();
           break;
         case "city-tile":
@@ -228,6 +230,18 @@ export default function TileGrid({
               ownerId: backendTile.ownerId || null,
               specialLabel: null,
             };
+          case "ecological-zone-tile":
+            return {
+              type: "ecological-zone",
+              ownerId: backendTile.ownerId || null,
+              specialLabel: null,
+            };
+          case "natural-preserve-tile":
+            return {
+              type: "natural-preserve",
+              ownerId: backendTile.ownerId || null,
+              specialLabel: null,
+            };
           case "mining-tile":
             return {
               type: "mining",
@@ -274,12 +288,30 @@ export default function TileGrid({
   // Get available hexes from current player's pending tile selection
   const availableHexes = gameState?.currentPlayer?.pendingTileSelection?.availableHexes || [];
 
-  // Collect all greenery tiles for the GreeneryRenderer
+  // Collect all greenery tiles for the GreeneryRenderer (includes living greenery types)
   const greeneryTiles = useMemo(() => {
     return projectedHexGrid
       .filter((tile) => {
         const tileData = getTileData(tile);
-        return tileData.type === "greenery";
+        return (
+          tileData.type === "greenery" ||
+          tileData.type === "ecological-zone" ||
+          tileData.type === "natural-preserve"
+        );
+      })
+      .map((tile) => ({
+        coordinate: tile.coordinate,
+        worldPosition: tile.spherePosition,
+        normal: tile.normal,
+      }));
+  }, [projectedHexGrid]);
+
+  // Collect living greenery tiles (ecological-zone, natural-preserve) for boosted vegetation
+  const livingGreeneryTiles = useMemo(() => {
+    return projectedHexGrid
+      .filter((tile) => {
+        const tileData = getTileData(tile);
+        return tileData.type === "ecological-zone" || tileData.type === "natural-preserve";
       })
       .map((tile) => ({
         coordinate: tile.coordinate,
@@ -313,6 +345,9 @@ export default function TileGrid({
     for (const tile of volcanoTiles) {
       currentKeys.add(`${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`);
     }
+    for (const tile of livingGreeneryTiles) {
+      currentKeys.add(`${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`);
+    }
 
     if (!greeneryInitializedRef.current) {
       knownGreeneryRef.current = currentKeys;
@@ -326,7 +361,7 @@ export default function TileGrid({
     }
     knownGreeneryRef.current = currentKeys;
     return added;
-  }, [greeneryTiles, volcanoTiles]);
+  }, [greeneryTiles, volcanoTiles, livingGreeneryTiles]);
 
   return (
     <>
@@ -334,6 +369,7 @@ export default function TileGrid({
       <GreeneryRenderer
         tiles={greeneryTiles}
         volcanoTiles={volcanoTiles}
+        livingGreeneryTiles={livingGreeneryTiles}
         newTileKeys={newGreeneryKeys}
       />
       {projectedHexGrid.map((tile, index) => {
