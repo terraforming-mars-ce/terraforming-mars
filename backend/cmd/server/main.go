@@ -145,8 +145,7 @@ func main() {
 	confirmCardDiscardAction := confirmAction.NewConfirmCardDiscardAction(gameRepo, cardRegistry, log)
 	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, log)
 
-	// Connection management (4)
-	playerReconnectedAction := connAction.NewPlayerReconnectedAction(gameRepo, log)
+	// Connection management (3)
 	playerDisconnectedAction := connAction.NewPlayerDisconnectedAction(gameRepo, log)
 	playerTakeoverAction := connAction.NewPlayerTakeoverAction(gameRepo, cardRegistry, log)
 	kickPlayerAction := connAction.NewKickPlayerAction(gameRepo, log)
@@ -205,7 +204,6 @@ func main() {
 		confirmCardDiscardAction,
 		confirmBehaviorChoiceAction,
 		// Connection
-		playerReconnectedAction,
 		playerDisconnectedAction,
 		playerTakeoverAction,
 		kickPlayerAction,

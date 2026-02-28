@@ -1367,6 +1367,7 @@ export const MessageTypeActionCardDiscardConfirmed: MessageType =
 export const MessageTypeActionBehaviorChoiceConfirmed: MessageType =
   "action.card.behavior-choice-confirmed";
 export const MessageTypeAdminCommand: MessageType = "admin-command";
+export const MessageTypeRequestLogs: MessageType = "request-logs";
 export const MessageTypePlayerTakeover: MessageType = "player-takeover";
 export const MessageTypeKickPlayer: MessageType = "kick-player";
 export const MessageTypePlayerKicked: MessageType = "player-kicked";
