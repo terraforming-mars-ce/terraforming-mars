@@ -8,6 +8,7 @@ import OceanTile from "./OceanTile";
 import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
+import ReservedAreaTile from "./ReservedAreaTile";
 import { useTextures } from "../../../hooks/useTextures";
 import { useHoverSound } from "../../../hooks/useHoverSound";
 import {
@@ -209,7 +210,15 @@ export type TileHighlightMode = "greenery" | "city" | "adjacent" | null;
 
 interface TileProps {
   tileData: TileData3D;
-  tileType: "empty" | "ocean" | "greenery" | "city" | "special" | "volcano" | "nuclear-zone";
+  tileType:
+    | "empty"
+    | "ocean"
+    | "greenery"
+    | "city"
+    | "special"
+    | "volcano"
+    | "nuclear-zone"
+    | "restricted";
   ownerId?: string | null;
   ownerColor?: string;
   reservedById?: string | null;
@@ -473,6 +482,8 @@ export default function Tile({
         return new THREE.Color("#4a3728");
       case "nuclear-zone":
         return new THREE.Color("#2a1a0f");
+      case "restricted":
+        return new THREE.Color("#5a4030");
       default:
         return tileData.isOceanSpace
           ? new THREE.Color("#6d4c41").multiplyScalar(0.8)
@@ -492,7 +503,11 @@ export default function Tile({
       color: tileColor,
       transparent: true,
       opacity:
-        isGreenery || tileType === "city" || tileType === "volcano" || tileType === "nuclear-zone"
+        isGreenery ||
+        tileType === "city" ||
+        tileType === "volcano" ||
+        tileType === "nuclear-zone" ||
+        tileType === "restricted"
           ? 0
           : tileType === "empty"
             ? 0.3
@@ -678,6 +693,16 @@ export default function Tile({
         />
       )}
 
+      {/* Reserved Area fence tile */}
+      {tileType === "restricted" && (
+        <ReservedAreaTile
+          isNewlyPlaced={isNewlyPlaced}
+          ownerColor={ownerColor}
+          surfaceNormal={tileData.normal}
+          worldPosition={adjustedPosition}
+        />
+      )}
+
       {/* Special tile label (rendered via displayName below) */}
 
       {/* Billboard display name for named tiles */}
@@ -759,7 +784,8 @@ export default function Tile({
       )}
 
       {/* Reserved tile marker (land claim) */}
-      {reservedById && !ownerId && (
+      {/* Reserved tile marker (fallback for non-fence reserved tiles) */}
+      {reservedById && !ownerId && tileType !== "restricted" && (
         <group position={[0, 0, 0.01]}>
           <mesh position={[0.08, 0.05, 0]}>
             <boxGeometry args={[0.004, 0.06, 0.004]} />

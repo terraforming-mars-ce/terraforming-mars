@@ -30,7 +30,15 @@ interface ProjectedTile {
 }
 
 // Type for the tile data returned by getTileData
-type TileType = "city" | "empty" | "ocean" | "greenery" | "special" | "volcano" | "nuclear-zone";
+type TileType =
+  | "city"
+  | "empty"
+  | "ocean"
+  | "greenery"
+  | "special"
+  | "volcano"
+  | "nuclear-zone"
+  | "restricted";
 
 // Labels for special tile types (keyed by occupant type from backend)
 const SPECIAL_TILE_LABELS: Record<string, string> = {
@@ -38,7 +46,6 @@ const SPECIAL_TILE_LABELS: Record<string, string> = {
   "mining-tile": "Mining",
   "ecological-zone-tile": "Eco Zone",
   "mohole-tile": "Mohole",
-  "restricted-tile": "Restricted",
 };
 
 interface TileData {
@@ -77,6 +84,7 @@ export default function TileGrid({
         case "city-tile":
         case "special-tile":
         case "nuclear-zone-tile":
+        case "restricted-tile":
           void playConstructionSound();
           break;
       }
@@ -219,6 +227,12 @@ export default function TileGrid({
               ownerId: backendTile.ownerId || null,
               specialLabel: null,
             };
+          case "restricted-tile":
+            return {
+              type: "restricted",
+              ownerId: backendTile.ownerId || null,
+              specialLabel: null,
+            };
           default:
             return {
               type: "special",
@@ -229,12 +243,12 @@ export default function TileGrid({
         }
       }
 
-      // Reserved (land claim) but not occupied - show as purple "Claimed" tile
+      // Reserved (land claim) but not occupied - show as fence tile
       if (backendTile.reservedBy) {
         return {
-          type: "special",
+          type: "restricted",
           ownerId: backendTile.reservedBy,
-          specialLabel: "Claimed",
+          specialLabel: null,
         };
       }
 
