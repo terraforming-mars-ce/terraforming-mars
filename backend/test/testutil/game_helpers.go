@@ -68,6 +68,22 @@ func SetupTwoPlayerGame(t *testing.T) (*game.Game, game.GameRepository, cards.Ca
 	return testGame, repo, cardRegistry, turnOrder[0], turnOrder[1]
 }
 
+// SetupMultiPlayerGame creates a started N-player game with card registry.
+// Returns the game, repo, card registry, and player IDs in turn order.
+func SetupMultiPlayerGame(t *testing.T, numPlayers int) (*game.Game, game.GameRepository, cards.CardRegistry, []string) {
+	t.Helper()
+
+	broadcaster := NewMockBroadcaster()
+	testGame, repo := CreateTestGameWithPlayers(t, numPlayers, broadcaster)
+	cardRegistry := CreateTestCardRegistry()
+	StartTestGame(t, testGame)
+
+	turnOrder := make([]string, len(testGame.TurnOrder()))
+	copy(turnOrder, testGame.TurnOrder())
+
+	return testGame, repo, cardRegistry, turnOrder
+}
+
 // SetupSoloGame creates a started 1-player game with unlimited actions.
 func SetupSoloGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string) {
 	t.Helper()

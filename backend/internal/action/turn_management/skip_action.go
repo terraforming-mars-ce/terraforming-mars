@@ -270,7 +270,9 @@ func (a *SkipActionAction) executeProductionPhase(ctx context.Context, gameInsta
 	// Rotate turn order for new generation (starting player rotates each generation)
 	turnOrder := gameInstance.TurnOrder()
 	if len(turnOrder) > 1 {
-		rotatedOrder := append(turnOrder[1:], turnOrder[0])
+		rotatedOrder := make([]string, len(turnOrder))
+		copy(rotatedOrder, turnOrder[1:])
+		rotatedOrder[len(turnOrder)-1] = turnOrder[0]
 		if err := gameInstance.SetTurnOrder(ctx, rotatedOrder); err != nil {
 			return fmt.Errorf("failed to rotate turn order: %w", err)
 		}

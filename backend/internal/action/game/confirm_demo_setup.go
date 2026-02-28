@@ -253,11 +253,11 @@ func (a *ConfirmDemoSetupAction) Execute(
 		log.Info("🎉 All players confirmed, transitioning to Action phase")
 
 		// Set first player turn with appropriate action count
-		allPlayers := g.GetAllPlayers()
-		if len(allPlayers) > 0 {
-			firstPlayerID := allPlayers[0].ID()
+		turnOrder := g.TurnOrder()
+		if len(turnOrder) > 0 {
+			firstPlayerID := turnOrder[0]
 			availableActions := 2
-			if len(allPlayers) == 1 {
+			if len(turnOrder) == 1 {
 				availableActions = -1 // Unlimited for solo mode
 			}
 			if err := g.SetCurrentTurn(ctx, firstPlayerID, availableActions); err != nil {
