@@ -10,7 +10,6 @@ import {
   GetGameResponse,
   ListGamesResponse,
   ListCardsResponse,
-  StateDiffDto,
 } from "../types/generated/api-types.ts";
 import { config } from "../config";
 
@@ -204,26 +203,6 @@ export class ApiService {
     }
   }
 
-  async getGameLogs(gameId: string, since?: number): Promise<StateDiffDto[]> {
-    try {
-      const url = new URL(`${this.baseUrl}/games/${gameId}/logs`, window.location.origin);
-      if (since !== undefined) {
-        url.searchParams.set("since", since.toString());
-      }
-
-      const response = await fetch(url.toString());
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Failed to get game logs:", error);
-      throw error;
-    }
-  }
 }
 
 // Singleton instance

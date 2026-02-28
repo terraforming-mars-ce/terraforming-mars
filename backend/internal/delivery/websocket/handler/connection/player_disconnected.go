@@ -21,6 +21,7 @@ type PlayerDisconnectedHandler struct {
 // Broadcaster interface for explicit broadcasting
 type Broadcaster interface {
 	BroadcastGameState(gameID string, playerIDs []string)
+	SendInitialLogs(gameID string, playerID string)
 }
 
 // NewPlayerDisconnectedHandler creates a new player disconnected handler

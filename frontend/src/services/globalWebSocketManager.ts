@@ -305,6 +305,11 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.kickPlayer(targetPlayerId);
   }
 
+  async requestLogs(): Promise<void> {
+    await this.ensureConnected();
+    webSocketService.requestLogs();
+  }
+
   get connected() {
     return webSocketService.connected;
   }

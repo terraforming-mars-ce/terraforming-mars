@@ -54,7 +54,6 @@ func RegisterHandlers(
 	confirmCardDrawAction *confirmAction.ConfirmCardDrawAction,
 	confirmCardDiscardAction *confirmAction.ConfirmCardDiscardAction,
 	confirmBehaviorChoiceAction *confirmAction.ConfirmBehaviorChoiceAction,
-	playerReconnectedAction *connAction.PlayerReconnectedAction,
 	playerDisconnectedAction *connAction.PlayerDisconnectedAction,
 	playerTakeoverAction *connAction.PlayerTakeoverAction,
 	kickPlayerAction *connAction.KickPlayerAction,
@@ -140,12 +139,8 @@ func RegisterHandlers(
 	confirmBehaviorChoiceHandler := confirmation.NewConfirmBehaviorChoiceHandler(confirmBehaviorChoiceAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionBehaviorChoiceConfirmed, confirmBehaviorChoiceHandler)
 
-	// NOTE: PlayerReconnectedHandler is NOT registered separately because:
-	// - JoinGameHandler (on 'player-connect') handles BOTH new joins AND reconnections
-	// - It checks for playerID in payload to determine if it's a reconnect
-	// - MessageTypePlayerReconnected is a SERVER->CLIENT response type, not CLIENT->SERVER request
-	// If reconnection logic needs to be different, integrate it into JoinGameHandler
-	_ = playerReconnectedAction // Keep action available for future use
+	requestLogsHandler := connection.NewRequestLogsHandler(broadcaster)
+	hub.RegisterHandler(dto.MessageTypeRequestLogs, requestLogsHandler)
 
 	playerDisconnectedHandler := connection.NewPlayerDisconnectedHandler(playerDisconnectedAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypePlayerDisconnected, playerDisconnectedHandler)
@@ -178,13 +173,3 @@ func RegisterHandlers(
 
 	log.Info("🎯 WebSocket handlers registered")
 }
-
-// - ConfirmSellPatentsHandler ✓
-// - SkipActionHandler ✓
-// - StartGameHandler ✓
-// - SelectStartingCardsHandler ✓
-// - ConfirmProductionCardsHandler ✓
-// - ConfirmCardDrawHandler ✓
-// - PlayerReconnectedHandler ✓ (handled by JoinGameHandler)
-// - PlayerDisconnectedHandler ✓
-// - Admin handlers (SetPhase, SetResources, SetProduction, SetGlobalParameters, GiveCard, SetCorporation, SetCurrentTurn) ✓

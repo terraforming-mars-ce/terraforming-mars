@@ -368,10 +368,13 @@ const LogPopover: React.FC<LogPopoverProps> = ({
     };
   }, [handleLogUpdate]);
 
-  // Clear logs when game changes
+  // Clear logs when game changes, then request all logs from backend
   useEffect(() => {
     setLogs([]);
     lastSequenceRef.current = 0;
+    if (gameId) {
+      void globalWebSocketManager.requestLogs();
+    }
   }, [gameId]);
 
   const groupedLogs = useMemo(() => groupLogsByGeneration(logs), [logs]);

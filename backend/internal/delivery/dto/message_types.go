@@ -48,6 +48,8 @@ const (
 
 	MessageTypeAdminCommand MessageType = "admin-command"
 
+	MessageTypeRequestLogs MessageType = "request-logs"
+
 	MessageTypePlayerTakeover MessageType = "player-takeover"
 	MessageTypeKickPlayer     MessageType = "kick-player"
 	MessageTypePlayerKicked   MessageType = "player-kicked"

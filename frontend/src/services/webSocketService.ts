@@ -40,6 +40,7 @@ import {
   MessageTypeKickPlayer,
   MessageTypeActionBehaviorChoiceConfirmed,
   MessageTypeActionCardDiscardConfirmed,
+  MessageTypeRequestLogs,
   // Payload types
   PlayerConnectedPayload,
   PlayerDisconnectedPayload,
@@ -355,6 +356,10 @@ export class WebSocketService {
 
   kickPlayer(targetPlayerId: string): string {
     return this.send(MessageTypeKickPlayer, { targetPlayerId });
+  }
+
+  requestLogs(): void {
+    this.send(MessageTypeRequestLogs, {});
   }
 
   on(event: string, callback: EventCallback) {
