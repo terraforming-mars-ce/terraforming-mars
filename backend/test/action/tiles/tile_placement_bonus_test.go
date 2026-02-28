@@ -138,6 +138,141 @@ func TestSelectTileAction_CardDrawBonusRemovedAfterClaim(t *testing.T) {
 		"Card draw bonus should be cleared after placement")
 }
 
+func TestSelectTileAction_OceanAdjacencyBonus(t *testing.T) {
+	ctx := context.Background()
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	logger := testutil.TestLogger()
+	cardRegistry := testutil.CreateTestCardRegistry()
+	stateRepo := game.NewInMemoryGameStateRepository()
+
+	testutil.StartTestGame(t, testGame)
+
+	playerID := testGame.TurnOrder()[0]
+	p, _ := testGame.GetPlayer(playerID)
+	testutil.SetPlayerCredits(ctx, p, 100)
+
+	// Place an ocean tile at (1,1,-2) directly on the board
+	oceanCoords := shared.HexPosition{Q: 1, R: 1, S: -2}
+	err := testGame.Board().UpdateTileOccupancy(ctx, oceanCoords,
+		board.TileOccupant{Type: shared.ResourceOceanTile}, playerID)
+	testutil.AssertNoError(t, err, "Should place ocean tile")
+
+	// Record credits before placing the adjacent city
+	initialCredits := p.Resources().Get().Credits
+
+	// Place a city adjacent to the ocean at (2,0,-2) — neighbor of (1,1,-2)
+	cityCoords := shared.HexPosition{Q: 2, R: 0, S: -2}
+	hexStr := formatHexCoords(cityCoords)
+	pendingSelection := &player.PendingTileSelection{
+		TileType:       "city",
+		AvailableHexes: []string{hexStr},
+		Source:         "test",
+	}
+	testGame.SetPendingTileSelection(ctx, playerID, pendingSelection)
+
+	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
+	_, err = selectTileAction.Execute(ctx, testGame.ID(), playerID, hexStr)
+	testutil.AssertNoError(t, err, "Failed to place city tile")
+
+	// Verify player received +2 M€ for one adjacent ocean
+	finalCredits := p.Resources().Get().Credits
+	testutil.AssertEqual(t, initialCredits+2, finalCredits,
+		"Player should receive +2 M€ for one adjacent ocean tile")
+}
+
+func TestSelectTileAction_OceanAdjacencyBonus_MultipleOceans(t *testing.T) {
+	ctx := context.Background()
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	logger := testutil.TestLogger()
+	cardRegistry := testutil.CreateTestCardRegistry()
+	stateRepo := game.NewInMemoryGameStateRepository()
+
+	testutil.StartTestGame(t, testGame)
+
+	playerID := testGame.TurnOrder()[0]
+	p, _ := testGame.GetPlayer(playerID)
+	testutil.SetPlayerCredits(ctx, p, 100)
+
+	// Place two ocean tiles adjacent to the same land tile (1,2,-3)
+	// Ocean at (1,1,-2) — neighbor via East direction
+	ocean1 := shared.HexPosition{Q: 1, R: 1, S: -2}
+	err := testGame.Board().UpdateTileOccupancy(ctx, ocean1,
+		board.TileOccupant{Type: shared.ResourceOceanTile}, playerID)
+	testutil.AssertNoError(t, err, "Should place first ocean tile")
+
+	// Ocean at (0,3,-3) — neighbor via West direction
+	ocean2 := shared.HexPosition{Q: 0, R: 3, S: -3}
+	err = testGame.Board().UpdateTileOccupancy(ctx, ocean2,
+		board.TileOccupant{Type: shared.ResourceOceanTile}, playerID)
+	testutil.AssertNoError(t, err, "Should place second ocean tile")
+
+	initialCredits := p.Resources().Get().Credits
+
+	// Place a greenery at (1,2,-3) — adjacent to both oceans
+	greeneryCoords := shared.HexPosition{Q: 1, R: 2, S: -3}
+	hexStr := formatHexCoords(greeneryCoords)
+	pendingSelection := &player.PendingTileSelection{
+		TileType:       "greenery",
+		AvailableHexes: []string{hexStr},
+		Source:         "test",
+	}
+	testGame.SetPendingTileSelection(ctx, playerID, pendingSelection)
+
+	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
+	_, err = selectTileAction.Execute(ctx, testGame.ID(), playerID, hexStr)
+	testutil.AssertNoError(t, err, "Failed to place greenery tile")
+
+	// Verify player received +4 M€ for two adjacent oceans
+	finalCredits := p.Resources().Get().Credits
+	testutil.AssertEqual(t, initialCredits+4, finalCredits,
+		"Player should receive +4 M€ for two adjacent ocean tiles")
+}
+
+func TestSelectTileAction_OceanAdjacencyBonus_OceanTileDoesNotGetBonus(t *testing.T) {
+	ctx := context.Background()
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	logger := testutil.TestLogger()
+	cardRegistry := testutil.CreateTestCardRegistry()
+	stateRepo := game.NewInMemoryGameStateRepository()
+
+	testutil.StartTestGame(t, testGame)
+
+	playerID := testGame.TurnOrder()[0]
+	p, _ := testGame.GetPlayer(playerID)
+	testutil.SetPlayerCredits(ctx, p, 100)
+
+	// Place an ocean tile at (2,-1,-1)
+	ocean1 := shared.HexPosition{Q: 2, R: -1, S: -1}
+	err := testGame.Board().UpdateTileOccupancy(ctx, ocean1,
+		board.TileOccupant{Type: shared.ResourceOceanTile}, playerID)
+	testutil.AssertNoError(t, err, "Should place first ocean tile")
+
+	initialCredits := p.Resources().Get().Credits
+
+	// Place another ocean adjacent to the first at (3,-2,-1) — also an ocean space, neighbor via East
+	ocean2Coords := shared.HexPosition{Q: 3, R: -2, S: -1}
+	hexStr := formatHexCoords(ocean2Coords)
+	pendingSelection := &player.PendingTileSelection{
+		TileType:       "ocean",
+		AvailableHexes: []string{hexStr},
+		Source:         "test",
+	}
+	testGame.SetPendingTileSelection(ctx, playerID, pendingSelection)
+
+	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
+	_, err = selectTileAction.Execute(ctx, testGame.ID(), playerID, hexStr)
+	testutil.AssertNoError(t, err, "Failed to place ocean tile")
+
+	// Ocean tiles should NOT receive adjacency bonus
+	// Credits change only by TR bonus (+1 TR from ocean placement), not adjacency
+	finalCredits := p.Resources().Get().Credits
+	testutil.AssertEqual(t, initialCredits, finalCredits,
+		"Ocean tile placement should not receive adjacency bonus credits")
+}
+
 func getResourceAmount(p *player.Player, resourceType shared.ResourceType) int {
 	resources := p.Resources().Get()
 	switch resourceType {

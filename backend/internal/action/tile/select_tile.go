@@ -246,6 +246,40 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		}
 	}
 
+	// Award 2 M€ per adjacent ocean tile
+	if tileType != "ocean" {
+		neighbors := coords.GetNeighbors()
+		adjacentOceanCount := 0
+		for _, neighbor := range neighbors {
+			neighborTile, err := g.Board().GetTile(neighbor)
+			if err != nil {
+				continue
+			}
+			if neighborTile.OccupiedBy != nil && neighborTile.OccupiedBy.Type == shared.ResourceOceanTile {
+				adjacentOceanCount++
+			}
+		}
+		if adjacentOceanCount > 0 {
+			oceanBonus := adjacentOceanCount * 2
+			p.Resources().Add(map[shared.ResourceType]int{
+				shared.ResourceCredit: oceanBonus,
+			})
+
+			g.AddTriggeredEffect(game.TriggeredEffect{
+				CardName:   "Ocean Adjacency",
+				PlayerID:   playerID,
+				SourceType: game.SourceTypeGameEvent,
+				CalculatedOutputs: []game.CalculatedOutput{
+					{ResourceType: string(shared.ResourceCredit), Amount: oceanBonus},
+				},
+			})
+
+			log.Info("🌊 Awarded ocean adjacency bonus",
+				zap.Int("adjacent_oceans", adjacentOceanCount),
+				zap.Int("credits_awarded", oceanBonus))
+		}
+	}
+
 	result := &TilePlacementResult{
 		TileType:   tileType,
 		Source:     pendingTileSelection.Source,
