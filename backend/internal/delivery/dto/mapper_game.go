@@ -109,7 +109,6 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		for i, effect := range triggeredEffects {
 			triggeredEffectDtos[i] = ToTriggeredEffectDto(effect)
 		}
-		g.ClearTriggeredEffects()
 	}
 
 	return GameDto{
