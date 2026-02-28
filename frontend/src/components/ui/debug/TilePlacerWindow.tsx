@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
 import {
   AdminCommandRequest,
   AdminCommandTypeStartTileSelection,
+  PlaceableTileTypeDto,
   StartTileSelectionAdminCommand,
 } from "../../../types/generated/api-types.ts";
 import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
@@ -10,6 +11,7 @@ import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
 interface TilePlacerWindowProps {
   playerId: string;
   playerName: string;
+  placeableTileTypes: PlaceableTileTypeDto[];
   onClose: () => void;
 }
 
@@ -21,43 +23,24 @@ interface TileGroup {
   tiles: { type: string; label: string }[];
 }
 
-const TILE_GROUPS: TileGroup[] = [
-  {
-    label: "Base",
-    tiles: [
-      { type: "city", label: "City" },
-      { type: "greenery", label: "Greenery" },
-      { type: "ocean", label: "Ocean" },
-    ],
-  },
-  {
-    label: "Special",
-    tiles: [
-      { type: "natural-preserve", label: "Natural Preserve" },
-      { type: "ecological-zone", label: "Ecological Zone" },
-      { type: "mining", label: "Mining" },
-      { type: "colony", label: "Colony" },
-    ],
-  },
-  {
-    label: "Industrial",
-    tiles: [
-      { type: "volcano", label: "Volcano" },
-      { type: "nuclear-zone", label: "Nuclear Zone" },
-      { type: "mohole", label: "Mohole" },
-      { type: "restricted", label: "Restricted" },
-    ],
-  },
-  {
-    label: "Tools",
-    tiles: [
-      { type: "land-claim", label: "Land Claim" },
-      { type: "clear", label: "Clear" },
-    ],
-  },
-];
-
-const TilePlacerWindow: React.FC<TilePlacerWindowProps> = ({ playerId, playerName, onClose }) => {
+const TilePlacerWindow: React.FC<TilePlacerWindowProps> = ({
+  playerId,
+  playerName,
+  placeableTileTypes,
+  onClose,
+}) => {
+  const tileGroups = useMemo((): TileGroup[] => {
+    const groupMap = new Map<string, { type: string; label: string }[]>();
+    const groupOrder: string[] = [];
+    for (const tile of placeableTileTypes) {
+      if (!groupMap.has(tile.group)) {
+        groupMap.set(tile.group, []);
+        groupOrder.push(tile.group);
+      }
+      groupMap.get(tile.group)!.push({ type: tile.type, label: tile.label });
+    }
+    return groupOrder.map((group) => ({ label: group, tiles: groupMap.get(group)! }));
+  }, [placeableTileTypes]);
   const { position, isDragging, handleMouseDown } = useWindowDrag({
     windowId: WINDOW_ID,
     width: WINDOW_WIDTH,
@@ -161,7 +144,7 @@ const TilePlacerWindow: React.FC<TilePlacerWindowProps> = ({ playerId, playerNam
           overflowY: "auto",
         }}
       >
-        {TILE_GROUPS.map((group) => (
+        {tileGroups.map((group) => (
           <div key={group.label}>
             <div
               style={{
