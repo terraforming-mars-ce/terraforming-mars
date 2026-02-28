@@ -212,7 +212,7 @@ export default function ReservedAreaTile({
                 geometry={railGeometry}
                 material={fenceMaterial}
                 position={[midX, midY, railZ]}
-                rotation={[0, 0, angle]}
+                rotation={[0, 0, angle - Math.PI / 2]}
                 scale={[1, length, railProgressRef.current]}
                 renderOrder={14}
               />
