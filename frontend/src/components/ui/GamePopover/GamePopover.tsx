@@ -19,6 +19,7 @@ const GamePopover: React.FC<GamePopoverProps> = ({
   children,
   className = "",
   excludeRef,
+  contentRef,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [computedPosition, setComputedPosition] = useState<{
@@ -141,7 +142,10 @@ const GamePopover: React.FC<GamePopoverProps> = ({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--popover-accent)_rgba(30,60,150,0.3)] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-[rgba(30,60,150,0.3)] [&::-webkit-scrollbar-track]:rounded [&::-webkit-scrollbar-thumb]:bg-[var(--popover-accent)]/70 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb:hover]:bg-[var(--popover-accent)]">
+      <div
+        ref={contentRef}
+        className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--popover-accent)_rgba(30,60,150,0.3)] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-[rgba(30,60,150,0.3)] [&::-webkit-scrollbar-track]:rounded [&::-webkit-scrollbar-thumb]:bg-[var(--popover-accent)]/70 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb:hover]:bg-[var(--popover-accent)]"
+      >
         {children}
       </div>
     </div>,
