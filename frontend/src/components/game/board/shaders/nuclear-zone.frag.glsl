@@ -92,13 +92,18 @@ void main() {
   float slope = 1.0 - abs(dot(n, up));
   surfaceColor *= mix(0.8, 1.0, 1.0 - slope * 0.5);
 
-  // === Radioactive glow — pulsing green-yellow emissive in crater center ===
+  // === Molten/radioactive glow — fiery orange core fading to green at edges ===
   float glowMask = smoothstep(craterRad * 0.9, craterRad * 0.1, craterDist);
   glowMask *= glowMask;
   float glowPulse = 0.5 + 0.5 * sin(uTime * 1.8 + snoise(centered * 3.0 + seedOff) * 2.0);
   float glowDetail = snoise(centered * 5.0 + vec2(uTime * 0.15, -uTime * 0.1) + seedOff) * 0.3 + 0.7;
+
+  // Hot molten core (orange-red) at center, radioactive green at crater edges
+  float coreMask = smoothstep(craterRad * 0.5, craterRad * 0.05, craterDist);
+  vec3 moltenColor = mix(vec3(0.8, 0.25, 0.02), vec3(1.0, 0.6, 0.1), glowPulse * 0.6);
   vec3 radioactiveColor = mix(vec3(0.15, 0.8, 0.1), vec3(0.6, 0.9, 0.1), glowPulse * 0.5);
-  float glowIntensity = glowMask * glowDetail * (0.3 + glowPulse * 0.4);
+  vec3 glowColor = mix(radioactiveColor, moltenColor, coreMask);
+  float glowIntensity = glowMask * glowDetail * (0.35 + glowPulse * 0.45);
 
   // === Lighting: wrap diffuse + AO (same pattern as volcano) ===
   vec3 sunDir = normalize(uSunDirection);
@@ -115,9 +120,9 @@ void main() {
   // === Combine ===
   vec3 color = surfaceColor * lighting * ao;
 
-  // Radioactive emissive (ignores lighting, scales with emergence)
+  // Molten/radioactive emissive (ignores lighting, scales with emergence)
   float emissiveFade = smoothstep(0.3, 0.8, vEmergence);
-  color += radioactiveColor * glowIntensity * 1.5 * emissiveFade;
+  color += glowColor * glowIntensity * 1.8 * emissiveFade;
 
   // Faint rim glow (green tint at crater edge)
   float rimGlow = smoothstep(craterRad * 1.4, craterRad, craterDist)

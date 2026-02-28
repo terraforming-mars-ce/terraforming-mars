@@ -154,7 +154,7 @@ export default function NuclearZoneTile({
 
     nuclearZoneMaterial.uniforms.uEmergence.value = eased;
 
-    const shakeIntensity = 0.008 * (1 - eased);
+    const shakeIntensity = 0.015 * (1 - eased);
     const shakeX = (Math.random() - 0.5) * 2 * shakeIntensity;
     const shakeY = (Math.random() - 0.5) * 2 * shakeIntensity;
     groupRef.current.position.set(shakeX, shakeY, 0);
