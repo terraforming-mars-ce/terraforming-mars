@@ -81,6 +81,9 @@ func (b *Broadcaster) BroadcastGameState(gameID string, playerIDs []string) {
 		}
 	}
 
+	// Clear triggered effects after all players have received them
+	g.ClearTriggeredEffects()
+
 	// Broadcast any new log entries since the last broadcast
 	b.broadcastNewLogs(gameID, playerIDs)
 
