@@ -133,12 +133,12 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 	playerID := "player-1"
 
 	// Set up the starting cards phase with 10 available project cards and 2 corporations
+	// Using real card IDs from the card database
 	availableCards := []string{
-		"card-power-plant", "card-asteroid", "card-water-import", "card-ai-central",
-		"card-aquifer-pumping", "card-asteroid-mining", "card-biomass-combustors",
-		"card-building-industries", "card-capital", "card-carbonate-processing",
+		"001", "002", "003", "004", "005",
+		"006", "007", "008", "009", "010",
 	}
-	availableCorps := []string{"corp-tharsis-republic", "corp-mining-guild"}
+	availableCorps := []string{"B08", "B06"} // Tharsis Republic, Mining Guild
 
 	err = testGame.SetSelectStartingCardsPhase(ctx, playerID, &player.SelectStartingCardsPhase{
 		AvailableCards:        availableCards,
@@ -150,9 +150,9 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 100)
 
 	// Player selects 3 out of 10 project cards
-	selectedCards := []string{"card-power-plant", "card-asteroid", "card-water-import"}
+	selectedCards := []string{"001", "002", "003"}
 	action := turn_management.NewSelectStartingCardsAction(repo, cardRegistry, log)
-	err = action.Execute(ctx, testGame.ID(), playerID, selectedCards, "corp-tharsis-republic")
+	err = action.Execute(ctx, testGame.ID(), playerID, selectedCards, "B08")
 	testutil.AssertNoError(t, err, "select starting cards")
 
 	discardPile := testGame.Deck().DiscardPile()
@@ -173,9 +173,9 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 	}
 
 	// Verify corporations are NOT in the discard pile
-	testutil.AssertFalse(t, slices.Contains(discardPile, "corp-tharsis-republic"),
+	testutil.AssertFalse(t, slices.Contains(discardPile, "B08"),
 		"discard pile should not contain selected corporation")
-	testutil.AssertFalse(t, slices.Contains(discardPile, "corp-mining-guild"),
+	testutil.AssertFalse(t, slices.Contains(discardPile, "B06"),
 		"discard pile should not contain unselected corporation")
 }
 
