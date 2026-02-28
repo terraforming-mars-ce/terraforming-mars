@@ -15,6 +15,7 @@ const CreateGamePage: React.FC = () => {
   const { showNotification } = useNotifications();
   const [playerName, setPlayerName] = useState("");
   const [developmentMode, setDevelopmentMode] = useState(true);
+  const [maxPlayers, setMaxPlayers] = useState(4);
   const [selectedPacks, setSelectedPacks] = useState<string[]>(["base-game"]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState<"game" | "environment" | null>(null);
@@ -53,7 +54,7 @@ const CreateGamePage: React.FC = () => {
     try {
       // Step 1: Create game
       const gameSettings: GameSettingsDto = {
-        maxPlayers: 4, // Default max players
+        maxPlayers: maxPlayers,
         developmentMode: developmentMode,
         cardPacks: selectedPacks,
         demoGame: false,
@@ -257,6 +258,23 @@ const CreateGamePage: React.FC = () => {
               >
                 <div className="mb-4">
                   <h3 className="text-white text-sm font-semibold mb-3 text-center">Settings</h3>
+                  <label className="flex items-center gap-3 py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
+                    <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2">
+                      Max Players
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={maxPlayers}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (val >= 1 && val <= 10) setMaxPlayers(val);
+                      }}
+                      disabled={isLoading}
+                      className="w-16 bg-black/50 border border-white/20 rounded-lg py-1 px-2 text-white text-sm text-center outline-none focus:border-white/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    />
+                  </label>
                   <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
                     <input
                       type="checkbox"

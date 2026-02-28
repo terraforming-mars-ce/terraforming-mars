@@ -99,7 +99,7 @@ const JoinGamePage: React.FC = () => {
   const selectedPlayerCount = selectedGame
     ? (selectedGame.currentPlayer ? 1 : 0) + (selectedGame.otherPlayers?.length || 0)
     : 0;
-  const selectedMaxPlayers = selectedGame?.settings?.maxPlayers || 4;
+  const selectedMaxPlayers = selectedGame?.settings?.maxPlayers || 10;
 
   return (
     <div
@@ -208,7 +208,7 @@ const JoinGamePage: React.FC = () => {
                       .map((game, index) => {
                         const playerCount =
                           (game.currentPlayer ? 1 : 0) + (game.otherPlayers?.length || 0);
-                        const maxPlayers = game.settings?.maxPlayers || 4;
+                        const maxPlayers = game.settings?.maxPlayers || 10;
                         const hostName =
                           game.currentPlayer?.name || game.otherPlayers?.[0]?.name || "Unknown";
                         const isActive = game.status === "active";
