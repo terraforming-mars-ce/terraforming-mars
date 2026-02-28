@@ -227,6 +227,26 @@ func (a *SelectStartingCardsAction) Execute(ctx context.Context, gameID string, 
 		zap.Strings("card_ids_added", cardIDs),
 		zap.Int("card_count", len(cardIDs)))
 
+	// 12a. BUSINESS LOGIC: Discard unselected project cards back to the deck
+	selectedSet := make(map[string]bool, len(cardIDs))
+	for _, id := range cardIDs {
+		selectedSet[id] = true
+	}
+	var unselectedProjectCards []string
+	for _, cardID := range selectionPhase.AvailableCards {
+		if !selectedSet[cardID] {
+			unselectedProjectCards = append(unselectedProjectCards, cardID)
+		}
+	}
+	if len(unselectedProjectCards) > 0 {
+		if err := g.Deck().Discard(ctx, unselectedProjectCards); err != nil {
+			log.Error("Failed to discard unselected project cards", zap.Error(err))
+			return fmt.Errorf("failed to discard unselected project cards: %w", err)
+		}
+		log.Info("🗑️ Unselected project cards added to discard pile",
+			zap.Int("count", len(unselectedProjectCards)))
+	}
+
 	// Note: RequirementModifier recalculation removed - discounts are now calculated on-demand during EntityState calculation
 
 	// 13. BUSINESS LOGIC: Setup forced first action if corporation requires it

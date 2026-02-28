@@ -127,7 +127,11 @@ func (d *Deck) DrawProjectCards(ctx context.Context, count int) ([]string, error
 
 	available := len(d.projectCards)
 	if count > available {
-		return nil, fmt.Errorf("not enough cards available: requested %d, have %d", count, available)
+		d.shuffleLocked()
+		available = len(d.projectCards)
+		if count > available {
+			return nil, fmt.Errorf("not enough cards available: requested %d, have %d", count, available)
+		}
 	}
 
 	drawnCards := make([]string, count)
@@ -186,6 +190,14 @@ func (d *Deck) Remove(ctx context.Context, cardIDs []string) error {
 	return nil
 }
 
+// shuffleLocked reshuffles the discard pile back into the project cards.
+// Must be called while d.mu is already held.
+func (d *Deck) shuffleLocked() {
+	d.projectCards = append(d.projectCards, d.discardPile...)
+	d.discardPile = make([]string, 0)
+	d.shuffleCount++
+}
+
 // Shuffle reshuffles the discard pile back into the project cards
 func (d *Deck) Shuffle(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
@@ -195,9 +207,6 @@ func (d *Deck) Shuffle(ctx context.Context) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.projectCards = append(d.projectCards, d.discardPile...)
-	d.discardPile = make([]string, 0)
-	d.shuffleCount++
-
+	d.shuffleLocked()
 	return nil
 }
