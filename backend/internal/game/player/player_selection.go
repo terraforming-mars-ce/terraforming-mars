@@ -151,6 +151,7 @@ type PendingTileSelection struct {
 	TileType       string
 	AvailableHexes []string
 	Source         string
+	SourceCardID   string
 	OnComplete     *TileCompletionCallback
 }
 
@@ -158,6 +159,7 @@ type PendingTileSelection struct {
 type PendingTileSelectionQueue struct {
 	Items            []string
 	Source           string
+	SourceCardID     string
 	OnComplete       *TileCompletionCallback
 	TileRestrictions *shared.TileRestrictions
 }

@@ -682,7 +682,7 @@ func (g *Game) SetPendingTileSelectionQueue(ctx context.Context, playerID string
 // AppendToPendingTileSelectionQueue atomically appends tile types to a player's tile selection queue
 // This is thread-safe and prevents race conditions when multiple tiles need to be queued
 // tileRestrictions restricts placement based on board tags or adjacency rules (nil for normal placement)
-func (g *Game) AppendToPendingTileSelectionQueue(ctx context.Context, playerID string, tileTypes []string, source string, tileRestrictions *shared.TileRestrictions) error {
+func (g *Game) AppendToPendingTileSelectionQueue(ctx context.Context, playerID string, tileTypes []string, source string, sourceCardID string, tileRestrictions *shared.TileRestrictions) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -695,15 +695,18 @@ func (g *Game) AppendToPendingTileSelectionQueue(ctx context.Context, playerID s
 	existingQueue, exists := g.pendingTileSelectionQueues[playerID]
 	var items []string
 	var queueSource string
+	var queueSourceCardID string
 	var queueTileRestrictions *shared.TileRestrictions
 
 	if exists && existingQueue != nil {
 		items = existingQueue.Items
 		queueSource = existingQueue.Source
+		queueSourceCardID = existingQueue.SourceCardID
 		queueTileRestrictions = existingQueue.TileRestrictions
 	} else {
 		items = []string{}
 		queueSource = source
+		queueSourceCardID = sourceCardID
 		queueTileRestrictions = tileRestrictions
 	}
 
@@ -713,6 +716,7 @@ func (g *Game) AppendToPendingTileSelectionQueue(ctx context.Context, playerID s
 		Items:            items,
 		TileRestrictions: queueTileRestrictions,
 		Source:           queueSource,
+		SourceCardID:     queueSourceCardID,
 	}
 	g.updatedAt = time.Now()
 	g.mu.Unlock()
@@ -868,6 +872,7 @@ func (g *Game) ProcessNextTile(ctx context.Context, playerID string) error {
 	nextTileType := queue.Items[0]
 	remainingItems := queue.Items[1:]
 	source := queue.Source
+	sourceCardID := queue.SourceCardID
 	onComplete := queue.OnComplete
 	tileRestrictions := queue.TileRestrictions
 
@@ -876,6 +881,7 @@ func (g *Game) ProcessNextTile(ctx context.Context, playerID string) error {
 			Items:            remainingItems,
 			TileRestrictions: tileRestrictions,
 			Source:           source,
+			SourceCardID:     sourceCardID,
 			OnComplete:       onComplete,
 		}
 	} else {
@@ -893,6 +899,7 @@ func (g *Game) ProcessNextTile(ctx context.Context, playerID string) error {
 		TileType:       nextTileType,
 		AvailableHexes: availableHexes,
 		Source:         source,
+		SourceCardID:   sourceCardID,
 		OnComplete:     onComplete,
 	})
 

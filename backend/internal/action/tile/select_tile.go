@@ -228,13 +228,14 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 
 		if len(resourceBonuses) > 0 {
 			events.Publish(g.EventBus(), events.PlacementBonusGainedEvent{
-				GameID:    gameID,
-				PlayerID:  playerID,
-				Resources: resourceBonuses,
-				Q:         coords.Q,
-				R:         coords.R,
-				S:         coords.S,
-				Timestamp: time.Now(),
+				GameID:       gameID,
+				PlayerID:     playerID,
+				Resources:    resourceBonuses,
+				SourceCardID: pendingTileSelection.SourceCardID,
+				Q:            coords.Q,
+				R:            coords.R,
+				S:            coords.S,
+				Timestamp:    time.Now(),
 			})
 			log.Info("📢 Published PlacementBonusGainedEvent",
 				zap.Any("resources", resourceBonuses))

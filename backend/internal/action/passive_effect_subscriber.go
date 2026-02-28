@@ -59,6 +59,11 @@ func SubscribePassiveEffectToEvents(
 			subID = subscribeStandardProjectPlayedEffect(ctx, g, p, effect, trigger, log, cr)
 		}
 
+		// Handle tile-placed trigger (production based on placement bonus type)
+		if trigger.Condition.Type == "tile-placed" {
+			subID = subscribeTilePlacedEffect(ctx, g, p, effect, trigger, log, cr)
+		}
+
 		// Register subscription for cleanup when effect is removed
 		if subID != "" {
 			p.Effects().RegisterSubscription(effect.CardID, subID)
@@ -414,6 +419,68 @@ func subscribeStandardProjectPlayedEffect(
 	})
 
 	log.Debug("📬 Subscribed passive effect to StandardProjectPlayedEvent",
+		zap.String("card_name", effect.CardName))
+
+	return subID
+}
+
+func subscribeTilePlacedEffect(
+	_ context.Context,
+	g *game.Game,
+	p *player.Player,
+	effect player.CardEffect,
+	trigger shared.Trigger,
+	log *zap.Logger,
+	cr gamecards.CardRegistryInterface,
+) events.SubscriptionID {
+	subID := events.Subscribe(g.EventBus(), func(event events.PlacementBonusGainedEvent) {
+		if event.GameID != g.ID() {
+			return
+		}
+
+		target := "self-player"
+		if trigger.Condition.Target != nil {
+			target = *trigger.Condition.Target
+		}
+
+		if target == "self-card" {
+			if event.SourceCardID != effect.CardID {
+				return
+			}
+		} else if target == "self-player" && event.PlayerID != p.ID() {
+			return
+		}
+
+		if len(trigger.Condition.OnBonusType) > 0 {
+			matchFound := false
+			for _, requiredBonus := range trigger.Condition.OnBonusType {
+				if _, exists := event.Resources[requiredBonus]; exists {
+					matchFound = true
+					break
+				}
+			}
+			if !matchFound {
+				return
+			}
+		}
+
+		log.Info("🎴 Passive effect triggered (tile placed on bonus)",
+			zap.String("card_name", effect.CardName),
+			zap.String("trigger_type", trigger.Condition.Type),
+			zap.Any("bonus_resources", event.Resources))
+
+		applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
+			WithSourceCardID(effect.CardID).
+			WithCardRegistry(cr).
+			WithSourceType(game.SourceTypePassiveEffect)
+		if err := applier.ApplyOutputs(context.Background(), effect.Behavior.Outputs); err != nil {
+			log.Error("Failed to apply passive effect outputs",
+				zap.String("card_name", effect.CardName),
+				zap.Error(err))
+		}
+	})
+
+	log.Debug("📬 Subscribed passive effect to PlacementBonusGainedEvent (tile-placed)",
 		zap.String("card_name", effect.CardName))
 
 	return subID

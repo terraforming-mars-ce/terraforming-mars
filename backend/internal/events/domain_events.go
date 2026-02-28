@@ -85,13 +85,14 @@ type GenerationAdvancedEvent struct {
 
 // PlacementBonusGainedEvent is published when a player gains resources from tile placement bonuses
 type PlacementBonusGainedEvent struct {
-	GameID    string
-	PlayerID  string
-	Resources map[string]int // Map of resource type to amount (e.g., {"steel": 2, "titanium": 1})
-	Q         int            // Hex coordinate Q
-	R         int            // Hex coordinate R
-	S         int            // Hex coordinate S
-	Timestamp time.Time
+	GameID       string
+	PlayerID     string
+	Resources    map[string]int // Map of resource type to amount (e.g., {"steel": 2, "titanium": 1})
+	SourceCardID string         // Card ID that triggered the tile placement (empty for standard projects)
+	Q            int            // Hex coordinate Q
+	R            int            // Hex coordinate R
+	S            int            // Hex coordinate S
+	Timestamp    time.Time
 }
 
 // PlayerJoinedEvent is published when a player joins a game

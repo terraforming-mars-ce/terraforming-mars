@@ -2824,27 +2824,7 @@
             "type": "auto"
           }
         ],
-        "choices": [
-          {
-            "outputs": [
-              {
-                "type": "steel-production",
-                "amount": 1,
-                "target": "self-player"
-              }
-            ]
-          },
-          {
-            "outputs": [
-              {
-                "type": "titanium-production",
-                "amount": 1,
-                "target": "self-player"
-              }
-            ]
-          }
-        ],
-        "description": "Place this tile on an area with a steel or titanium placement bonus, adjacent to another of your tiles. Increase your production of that resource 1 step.",
+        "description": "Place this tile on an area with a steel or titanium placement bonus, adjacent to another of your tiles.",
         "outputs": [
           {
             "type": "tile-placement",
@@ -2858,6 +2838,46 @@
               ],
               "adjacentToOwned": true
             }
+          }
+        ]
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "tile-placed",
+              "onBonusType": ["steel"],
+              "target": "self-card"
+            }
+          }
+        ],
+        "description": "Increase your steel production 1 step.",
+        "outputs": [
+          {
+            "type": "steel-production",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ]
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "tile-placed",
+              "onBonusType": ["titanium"],
+              "target": "self-card"
+            }
+          }
+        ],
+        "description": "Increase your titanium production 1 step.",
+        "outputs": [
+          {
+            "type": "titanium-production",
+            "amount": 1,
+            "target": "self-player"
           }
         ]
       }
@@ -2938,27 +2958,7 @@
             "type": "auto"
           }
         ],
-        "choices": [
-          {
-            "outputs": [
-              {
-                "type": "steel-production",
-                "amount": 1,
-                "target": "self-player"
-              }
-            ]
-          },
-          {
-            "outputs": [
-              {
-                "type": "titanium-production",
-                "amount": 1,
-                "target": "self-player"
-              }
-            ]
-          }
-        ],
-        "description": "Place this tile on an area with a steel or titanium placement bonus. Increase that production 1 step.",
+        "description": "Place this tile on an area with a steel or titanium placement bonus.",
         "outputs": [
           {
             "type": "tile-placement",
@@ -2971,6 +2971,46 @@
                 "titanium"
               ]
             }
+          }
+        ]
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "tile-placed",
+              "onBonusType": ["steel"],
+              "target": "self-card"
+            }
+          }
+        ],
+        "description": "Increase your steel production 1 step.",
+        "outputs": [
+          {
+            "type": "steel-production",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ]
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "tile-placed",
+              "onBonusType": ["titanium"],
+              "target": "self-card"
+            }
+          }
+        ],
+        "description": "Increase your titanium production 1 step.",
+        "outputs": [
+          {
+            "type": "titanium-production",
+            "amount": 1,
+            "target": "self-player"
           }
         ]
       }
