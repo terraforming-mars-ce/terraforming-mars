@@ -2427,6 +2427,7 @@ export default function GameInterface() {
               [game.currentPlayer, ...game.otherPlayers].find((p) => p.id === tilePlacerPlayerId)
                 ?.name || tilePlacerPlayerId
             }
+            placeableTileTypes={game.placeableTileTypes}
             onClose={() => setTilePlacerPlayerId(null)}
           />
         )}

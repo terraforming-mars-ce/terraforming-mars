@@ -990,6 +990,15 @@ export interface GameDto {
   awardResults: AwardResultDto[]; // Current award placements (1st/2nd place per award)
   finalScores?: FinalScoreDto[]; // Final scores (only when game completed)
   triggeredEffects?: TriggeredEffectDto[]; // Recently triggered passive effects
+  placeableTileTypes: PlaceableTileTypeDto[]; // Available tile types for the demo tile picker
+}
+/**
+ * PlaceableTileTypeDto represents a tile type available for placement in the demo tile picker
+ */
+export interface PlaceableTileTypeDto {
+  type: string;
+  label: string;
+  group: string;
 }
 /**
  * TileBonusDto represents a resource bonus provided by a tile when occupied
