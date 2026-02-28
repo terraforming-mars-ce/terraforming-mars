@@ -7,6 +7,7 @@ import { panState } from "../controls/PanControls";
 import OceanTile from "./OceanTile";
 import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
+import NuclearZoneTile from "./NuclearZoneTile";
 import { useTextures } from "../../../hooks/useTextures";
 import { useHoverSound } from "../../../hooks/useHoverSound";
 import {
@@ -208,7 +209,7 @@ export type TileHighlightMode = "greenery" | "city" | "adjacent" | null;
 
 interface TileProps {
   tileData: TileData3D;
-  tileType: "empty" | "ocean" | "greenery" | "city" | "special" | "volcano";
+  tileType: "empty" | "ocean" | "greenery" | "city" | "special" | "volcano" | "nuclear-zone";
   ownerId?: string | null;
   ownerColor?: string;
   reservedById?: string | null;
@@ -470,6 +471,8 @@ export default function Tile({
         return new THREE.Color("#8e24aa");
       case "volcano":
         return new THREE.Color("#4a3728");
+      case "nuclear-zone":
+        return new THREE.Color("#2a1a0f");
       default:
         return tileData.isOceanSpace
           ? new THREE.Color("#6d4c41").multiplyScalar(0.8)
@@ -489,7 +492,7 @@ export default function Tile({
       color: tileColor,
       transparent: true,
       opacity:
-        isGreenery || tileType === "city" || tileType === "volcano"
+        isGreenery || tileType === "city" || tileType === "volcano" || tileType === "nuclear-zone"
           ? 0
           : tileType === "empty"
             ? 0.3
@@ -666,6 +669,15 @@ export default function Tile({
         />
       )}
 
+      {/* Nuclear Zone 3D tile */}
+      {tileType === "nuclear-zone" && (
+        <NuclearZoneTile
+          isNewlyPlaced={isNewlyPlaced}
+          surfaceNormal={tileData.normal}
+          worldPosition={adjustedPosition}
+        />
+      )}
+
       {/* Special tile label (rendered via displayName below) */}
 
       {/* Billboard display name for named tiles */}
@@ -688,17 +700,38 @@ export default function Tile({
         </ClampedBillboard>
       )}
 
-      {/* Bonus icons for non-greenery, non-volcano tiles */}
-      {tileType !== "greenery" && tileType !== "volcano" && bonusIconGroups.length > 0 && (
+      {/* Bonus icons for non-greenery, non-volcano, non-nuclear-zone tiles */}
+      {tileType !== "greenery" &&
+        tileType !== "volcano" &&
+        tileType !== "nuclear-zone" &&
+        bonusIconGroups.length > 0 && (
+          <>
+            {(() => {
+              const yOffset = displayName ? -0.03 : 0;
+              const positions = calculateIconPositions(bonusIconGroups);
+              return positions.map((pos) => (
+                <BonusIcon
+                  key={`${pos.group.type}-${pos.indexInGroup}`}
+                  texture={pos.group.texture}
+                  position={[pos.x, yOffset, 0.01]}
+                  isCredits={pos.group.isCredits}
+                  creditAmount={pos.group.isCredits ? pos.group.count : undefined}
+                />
+              ));
+            })()}
+          </>
+        )}
+
+      {/* Bonus icons for nuclear-zone tiles (kept flat on tile) */}
+      {tileType === "nuclear-zone" && bonusIconGroups.length > 0 && (
         <>
           {(() => {
-            const yOffset = displayName ? -0.03 : 0;
             const positions = calculateIconPositions(bonusIconGroups);
             return positions.map((pos) => (
               <BonusIcon
                 key={`${pos.group.type}-${pos.indexInGroup}`}
                 texture={pos.group.texture}
-                position={[pos.x, yOffset, 0.01]}
+                position={[pos.x, 0, 0.01]}
                 isCredits={pos.group.isCredits}
                 creditAmount={pos.group.isCredits ? pos.group.count : undefined}
               />

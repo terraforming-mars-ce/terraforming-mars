@@ -30,13 +30,12 @@ interface ProjectedTile {
 }
 
 // Type for the tile data returned by getTileData
-type TileType = "city" | "empty" | "ocean" | "greenery" | "special" | "volcano";
+type TileType = "city" | "empty" | "ocean" | "greenery" | "special" | "volcano" | "nuclear-zone";
 
 // Labels for special tile types (keyed by occupant type from backend)
 const SPECIAL_TILE_LABELS: Record<string, string> = {
   "natural-preserve-tile": "Nature\nPreserve",
   "mining-tile": "Mining",
-  "nuclear-zone-tile": "Nuclear\nZone",
   "ecological-zone-tile": "Eco Zone",
   "mohole-tile": "Mohole",
   "restricted-tile": "Restricted",
@@ -77,6 +76,7 @@ export default function TileGrid({
           break;
         case "city-tile":
         case "special-tile":
+        case "nuclear-zone-tile":
           void playConstructionSound();
           break;
       }
@@ -210,6 +210,12 @@ export default function TileGrid({
           case "volcano-tile":
             return {
               type: "volcano",
+              ownerId: backendTile.ownerId || null,
+              specialLabel: null,
+            };
+          case "nuclear-zone-tile":
+            return {
+              type: "nuclear-zone",
               ownerId: backendTile.ownerId || null,
               specialLabel: null,
             };

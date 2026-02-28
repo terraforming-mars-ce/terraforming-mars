@@ -2,7 +2,7 @@ import { useMemo, useRef, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { SkeletonUtils } from "three-stdlib";
-import { createOceanMaterial, createVolcanoMaterial } from "./shaders";
+import { createOceanMaterial, createVolcanoMaterial, createNuclearZoneMaterial } from "./shaders";
 import { computeFlowMap } from "./volcanoFlowMap";
 import {
   variantCache,
@@ -150,6 +150,12 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
 
   const volcanoGeometry = useMemo(() => new THREE.CircleGeometry(0.15, 32), []);
 
+  const nuclearZoneWarmupMaterial = useMemo(() => {
+    return createNuclearZoneMaterial(42);
+  }, []);
+
+  const nuclearZoneGeometry = useMemo(() => new THREE.CircleGeometry(0.14, 32), []);
+
   const volcanoSmokeWarmupMaterial = useMemo(() => {
     return new THREE.SpriteMaterial({
       map: smokeTexture,
@@ -253,6 +259,11 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
       <mesh geometry={oceanGeometry} material={oceanWarmupMaterial} frustumCulled={false} />
       <mesh geometry={smokeGeometry} material={smokeWarmupMaterial} frustumCulled={false} />
       <mesh geometry={volcanoGeometry} material={volcanoWarmupMaterial} frustumCulled={false} />
+      <mesh
+        geometry={nuclearZoneGeometry}
+        material={nuclearZoneWarmupMaterial}
+        frustumCulled={false}
+      />
       <sprite
         material={volcanoSmokeWarmupMaterial}
         scale={[WARMUP_SCALE, WARMUP_SCALE, WARMUP_SCALE]}
