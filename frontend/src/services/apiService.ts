@@ -202,7 +202,6 @@ export class ApiService {
       throw error;
     }
   }
-
 }
 
 // Singleton instance
