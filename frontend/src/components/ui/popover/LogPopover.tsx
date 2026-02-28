@@ -329,6 +329,7 @@ const LogPopover: React.FC<LogPopoverProps> = ({
 }) => {
   const [logs, setLogs] = useState<StateDiffDto[]>([]);
   const lastSequenceRef = useRef<number>(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const playerNames = useMemo(() => {
     const names = new Map<string, string>();
@@ -374,6 +375,16 @@ const LogPopover: React.FC<LogPopoverProps> = ({
     lastSequenceRef.current = 0;
   }, [gameId]);
 
+  useEffect(() => {
+    if (!isVisible || logs.length === 0) return;
+    requestAnimationFrame(() => {
+      const el = scrollContainerRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+  }, [isVisible, logs]);
+
   const groupedLogs = useMemo(() => groupLogsByGeneration(logs), [logs]);
 
   const playerColorMap = useMemo(() => {
@@ -402,6 +413,7 @@ const LogPopover: React.FC<LogPopoverProps> = ({
       arrow={{ enabled: true, position: "right", offset: 30 }}
       width={350}
       maxHeight={400}
+      contentRef={scrollContainerRef}
     >
       {logs.length === 0 ? (
         <div className="flex items-center justify-center py-10 px-5">
