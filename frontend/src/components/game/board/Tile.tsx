@@ -8,6 +8,7 @@ import OceanTile from "./OceanTile";
 import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
+import MiningTile from "./MiningTile";
 import ReservedAreaTile from "./ReservedAreaTile";
 import { useTextures } from "../../../hooks/useTextures";
 import { useHoverSound } from "../../../hooks/useHoverSound";
@@ -218,6 +219,7 @@ interface TileProps {
     | "special"
     | "volcano"
     | "nuclear-zone"
+    | "mining"
     | "restricted";
   ownerId?: string | null;
   ownerColor?: string;
@@ -482,6 +484,8 @@ export default function Tile({
         return new THREE.Color("#4a3728");
       case "nuclear-zone":
         return new THREE.Color("#2a1a0f");
+      case "mining":
+        return new THREE.Color("#5c3a1e");
       case "restricted":
         return new THREE.Color("#5a4030");
       default:
@@ -507,6 +511,7 @@ export default function Tile({
         tileType === "city" ||
         tileType === "volcano" ||
         tileType === "nuclear-zone" ||
+        tileType === "mining" ||
         tileType === "restricted"
           ? 0
           : tileType === "empty"
@@ -693,6 +698,15 @@ export default function Tile({
         />
       )}
 
+      {/* Mining 3D tile */}
+      {tileType === "mining" && (
+        <MiningTile
+          isNewlyPlaced={isNewlyPlaced}
+          surfaceNormal={tileData.normal}
+          worldPosition={adjustedPosition}
+        />
+      )}
+
       {/* Reserved Area fence tile */}
       {tileType === "restricted" && (
         <ReservedAreaTile
@@ -725,10 +739,11 @@ export default function Tile({
         </ClampedBillboard>
       )}
 
-      {/* Bonus icons for non-greenery, non-volcano, non-nuclear-zone tiles */}
+      {/* Bonus icons for non-greenery, non-volcano, non-nuclear-zone, non-mining tiles */}
       {tileType !== "greenery" &&
         tileType !== "volcano" &&
         tileType !== "nuclear-zone" &&
+        tileType !== "mining" &&
         bonusIconGroups.length > 0 && (
           <>
             {(() => {
@@ -749,6 +764,24 @@ export default function Tile({
 
       {/* Bonus icons for nuclear-zone tiles (kept flat on tile) */}
       {tileType === "nuclear-zone" && bonusIconGroups.length > 0 && (
+        <>
+          {(() => {
+            const positions = calculateIconPositions(bonusIconGroups);
+            return positions.map((pos) => (
+              <BonusIcon
+                key={`${pos.group.type}-${pos.indexInGroup}`}
+                texture={pos.group.texture}
+                position={[pos.x, 0, 0.01]}
+                isCredits={pos.group.isCredits}
+                creditAmount={pos.group.isCredits ? pos.group.count : undefined}
+              />
+            ));
+          })()}
+        </>
+      )}
+
+      {/* Bonus icons for mining tiles (kept flat on tile) */}
+      {tileType === "mining" && bonusIconGroups.length > 0 && (
         <>
           {(() => {
             const positions = calculateIconPositions(bonusIconGroups);

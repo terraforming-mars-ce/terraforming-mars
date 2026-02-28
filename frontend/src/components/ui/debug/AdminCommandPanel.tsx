@@ -30,7 +30,6 @@ import {
 interface AdminCommandPanelProps {
   gameState: GameDto;
   onClose?: () => void;
-  onOpenTilePlacer?: (playerId: string) => void;
 }
 
 // Global parameters min/max bounds
@@ -41,11 +40,7 @@ const GLOBAL_PARAM_BOUNDS = {
   venus: { min: 0, max: 30 },
 } as const;
 
-const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
-  gameState,
-  onClose,
-  onOpenTilePlacer,
-}) => {
+const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({ gameState, onClose }) => {
   const [selectedCommand, setSelectedCommand] = useState<string>("");
   const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
 
@@ -594,11 +589,12 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
     });
   };
 
-  const handleStartTileSelection = async () => {
+  const handleStartTileSelection = async (tileTypeOverride?: string) => {
+    const tileType = tileTypeOverride || tileSelectionForm.tileType;
     const errors: Record<string, boolean> = {};
 
     if (!tileSelectionForm.playerId) errors.tileSelectionPlayerId = true;
-    if (!tileSelectionForm.tileType) errors.tileSelectionTileType = true;
+    if (!tileType) errors.tileSelectionTileType = true;
 
     setValidationErrors(errors);
 
@@ -609,14 +605,11 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
 
     const command: StartTileSelectionAdminCommand = {
       playerId: tileSelectionForm.playerId,
-      tileType: tileSelectionForm.tileType,
+      tileType: tileType,
     };
 
     await sendAdminCommand(AdminCommandTypeStartTileSelection, command);
-    // Keep player selected, only clear tile type
-    setTileSelectionForm({ ...tileSelectionForm, tileType: "" });
 
-    // Close the admin panel after starting tile selection
     if (onClose) {
       onClose();
     }
@@ -1309,7 +1302,7 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
 
       {selectedCommand === "start-tile-selection" && (
         <div style={{ marginBottom: "16px" }}>
-          <h4 style={{ color: "#9b59b6", margin: "0 0 12px 0" }}>Start Tile Selection (Demo)</h4>
+          <h4 style={{ color: "#9b59b6", margin: "0 0 12px 0" }}>Place Tile</h4>
           <div style={{ marginBottom: "8px" }}>
             <select
               value={tileSelectionForm.playerId}
@@ -1329,61 +1322,38 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({
               ))}
             </select>
           </div>
-          <div style={{ marginBottom: "8px" }}>
-            <select
-              value={tileSelectionForm.tileType}
-              onChange={(e) =>
-                setTileSelectionForm({
-                  ...tileSelectionForm,
-                  tileType: e.target.value,
-                })
-              }
-              style={getSelectStyle(validationErrors.tileSelectionTileType)}
-            >
-              <option value="">Select tile type...</option>
-              <option value="city">City</option>
-              <option value="greenery">Greenery</option>
-              <option value="ocean">Ocean</option>
-              <option value="volcano">Volcano</option>
-            </select>
-          </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <button onClick={handleStartTileSelection} style={buttonStyle}>
-              Start Tile Selection
-            </button>
-            <button
-              onClick={() => {
-                if (!tileSelectionForm.playerId) {
-                  setValidationErrors({ tileSelectionPlayerId: true });
-                  setTimeout(() => setValidationErrors({}), 3000);
-                  return;
-                }
-                onOpenTilePlacer?.(tileSelectionForm.playerId);
-              }}
-              style={{
-                ...buttonStyle,
-                background:
-                  "linear-gradient(135deg, rgba(200, 50, 50, 0.8), rgba(200, 50, 50, 0.6))",
-                border: "1px solid rgba(200, 50, 50, 0.5)",
-              }}
-            >
-              Tile Placer
-            </button>
-          </div>
-          <div
-            style={{
-              marginTop: "8px",
-              padding: "8px",
-              background: "rgba(255, 193, 7, 0.1)",
-              border: "1px solid rgba(255, 193, 7, 0.3)",
-              borderRadius: "4px",
-              fontSize: "11px",
-              color: "#ffc107",
-            }}
-          >
-            <strong>Demo:</strong> This will trigger tile selection for the chosen player. Available
-            hexes will be highlighted on the Mars board. Click a highlighted hex to complete the
-            tile placement.
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+            {[
+              { type: "city", label: "City" },
+              { type: "greenery", label: "Greenery" },
+              { type: "ocean", label: "Ocean" },
+              { type: "volcano", label: "Volcano" },
+              { type: "nuclear-zone", label: "Nuclear Zone" },
+              { type: "mining", label: "Mining" },
+              { type: "natural-preserve", label: "Nat. Preserve" },
+              { type: "ecological-zone", label: "Eco Zone" },
+              { type: "mohole", label: "Mohole" },
+              { type: "restricted", label: "Restricted" },
+              { type: "colony", label: "Colony" },
+              { type: "land-claim", label: "Land Claim" },
+              { type: "clear", label: "Clear" },
+            ].map((tile) => (
+              <button
+                key={tile.type}
+                onClick={() => {
+                  setTileSelectionForm((prev) => ({ ...prev, tileType: tile.type }));
+                  void handleStartTileSelection(tile.type);
+                }}
+                style={{
+                  ...buttonStyle,
+                  padding: "6px 10px",
+                  fontSize: "11px",
+                  flex: "0 0 auto",
+                }}
+              >
+                {tile.label}
+              </button>
+            ))}
           </div>
         </div>
       )}

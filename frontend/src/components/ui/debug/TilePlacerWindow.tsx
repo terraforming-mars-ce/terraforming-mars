@@ -1,9 +1,8 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
 import {
   AdminCommandRequest,
   AdminCommandTypeStartTileSelection,
-  PlaceableTileTypeDto,
   StartTileSelectionAdminCommand,
 } from "../../../types/generated/api-types.ts";
 import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
@@ -11,36 +10,29 @@ import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
 interface TilePlacerWindowProps {
   playerId: string;
   playerName: string;
-  placeableTileTypes: PlaceableTileTypeDto[];
   onClose: () => void;
 }
 
 const WINDOW_ID = "tile-placer";
 const WINDOW_WIDTH = 220;
 
-interface TileGroup {
-  label: string;
-  tiles: { type: string; label: string }[];
-}
+const ALL_TILES = [
+  { type: "city", label: "City" },
+  { type: "greenery", label: "Greenery" },
+  { type: "ocean", label: "Ocean" },
+  { type: "volcano", label: "Volcano" },
+  { type: "nuclear-zone", label: "Nuclear Zone" },
+  { type: "mining", label: "Mining" },
+  { type: "natural-preserve", label: "Natural Preserve" },
+  { type: "ecological-zone", label: "Ecological Zone" },
+  { type: "mohole", label: "Mohole" },
+  { type: "restricted", label: "Restricted" },
+  { type: "colony", label: "Colony" },
+  { type: "land-claim", label: "Land Claim" },
+  { type: "clear", label: "Clear" },
+];
 
-const TilePlacerWindow: React.FC<TilePlacerWindowProps> = ({
-  playerId,
-  playerName,
-  placeableTileTypes,
-  onClose,
-}) => {
-  const tileGroups = useMemo((): TileGroup[] => {
-    const groupMap = new Map<string, { type: string; label: string }[]>();
-    const groupOrder: string[] = [];
-    for (const tile of placeableTileTypes) {
-      if (!groupMap.has(tile.group)) {
-        groupMap.set(tile.group, []);
-        groupOrder.push(tile.group);
-      }
-      groupMap.get(tile.group)!.push({ type: tile.type, label: tile.label });
-    }
-    return groupOrder.map((group) => ({ label: group, tiles: groupMap.get(group)! }));
-  }, [placeableTileTypes]);
+const TilePlacerWindow: React.FC<TilePlacerWindowProps> = ({ playerId, playerName, onClose }) => {
   const { position, isDragging, handleMouseDown } = useWindowDrag({
     windowId: WINDOW_ID,
     width: WINDOW_WIDTH,
@@ -139,58 +131,39 @@ const TilePlacerWindow: React.FC<TilePlacerWindowProps> = ({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "10px",
+          gap: "4px",
           maxHeight: "400px",
           overflowY: "auto",
         }}
       >
-        {tileGroups.map((group) => (
-          <div key={group.label}>
-            <div
-              style={{
-                color: "#888",
-                fontSize: "10px",
-                fontWeight: "600",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                marginBottom: "4px",
-                paddingLeft: "2px",
-              }}
-            >
-              {group.label}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              {group.tiles.map((tile) => (
-                <button
-                  key={tile.type}
-                  onClick={() => void handleTileClick(tile.type)}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(200, 50, 50, 0.25)";
-                    e.currentTarget.style.borderColor = "rgba(200, 50, 50, 0.6)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(200, 50, 50, 0.1)";
-                    e.currentTarget.style.borderColor = "rgba(200, 50, 50, 0.3)";
-                  }}
-                  style={{
-                    padding: "8px 12px",
-                    background: "rgba(200, 50, 50, 0.1)",
-                    border: "1px solid rgba(200, 50, 50, 0.3)",
-                    borderRadius: "6px",
-                    color: "white",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                    textAlign: "left",
-                  }}
-                >
-                  {tile.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {ALL_TILES.map((tile) => (
+          <button
+            key={tile.type}
+            onClick={() => void handleTileClick(tile.type)}
+            onMouseDown={(e) => e.stopPropagation()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(200, 50, 50, 0.25)";
+              e.currentTarget.style.borderColor = "rgba(200, 50, 50, 0.6)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(200, 50, 50, 0.1)";
+              e.currentTarget.style.borderColor = "rgba(200, 50, 50, 0.3)";
+            }}
+            style={{
+              padding: "8px 12px",
+              background: "rgba(200, 50, 50, 0.1)",
+              border: "1px solid rgba(200, 50, 50, 0.3)",
+              borderRadius: "6px",
+              color: "white",
+              fontSize: "12px",
+              fontWeight: "500",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              textAlign: "left",
+            }}
+          >
+            {tile.label}
+          </button>
         ))}
       </div>
     </div>

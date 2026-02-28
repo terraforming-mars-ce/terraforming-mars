@@ -38,12 +38,12 @@ type TileType =
   | "special"
   | "volcano"
   | "nuclear-zone"
+  | "mining"
   | "restricted";
 
 // Labels for special tile types (keyed by occupant type from backend)
 const SPECIAL_TILE_LABELS: Record<string, string> = {
   "natural-preserve-tile": "Nature\nPreserve",
-  "mining-tile": "Mining",
   "ecological-zone-tile": "Eco Zone",
   "mohole-tile": "Mohole",
 };
@@ -84,6 +84,7 @@ export default function TileGrid({
         case "city-tile":
         case "special-tile":
         case "nuclear-zone-tile":
+        case "mining-tile":
         case "restricted-tile":
           void playConstructionSound();
           break;
@@ -224,6 +225,12 @@ export default function TileGrid({
           case "nuclear-zone-tile":
             return {
               type: "nuclear-zone",
+              ownerId: backendTile.ownerId || null,
+              specialLabel: null,
+            };
+          case "mining-tile":
+            return {
+              type: "mining",
               ownerId: backendTile.ownerId || null,
               specialLabel: null,
             };
