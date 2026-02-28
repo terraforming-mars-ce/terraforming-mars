@@ -14,7 +14,6 @@ interface DebugDropdownProps {
   onClose: () => void;
   gameState: GameDto | null;
   changedPaths?: Set<string>;
-  onOpenTilePlacer?: (playerId: string) => void;
 }
 
 const DebugDropdown: React.FC<DebugDropdownProps> = ({
@@ -22,7 +21,6 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
   onClose,
   gameState,
   changedPaths = new Set(),
-  onOpenTilePlacer,
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -363,11 +361,7 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
       )}
 
       {activeTab === "admin" && gameState?.settings.developmentMode && (
-        <AdminCommandPanel
-          gameState={gameState}
-          onClose={onClose}
-          onOpenTilePlacer={onOpenTilePlacer}
-        />
+        <AdminCommandPanel gameState={gameState} onClose={onClose} />
       )}
 
       {activeTab === "3d-world" && <World3DSettingsPanel />}

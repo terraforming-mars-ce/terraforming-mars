@@ -671,25 +671,33 @@ type OtherPlayerDto struct {
 
 // GameDto represents a game for client consumption (clean architecture)
 type GameDto struct {
-	ID               string               `json:"id" ts:"string"`
-	Status           GameStatus           `json:"status" ts:"GameStatus"`
-	Settings         GameSettingsDto      `json:"settings" ts:"GameSettingsDto"`
-	HostPlayerID     string               `json:"hostPlayerId" ts:"string"`
-	CurrentPhase     GamePhase            `json:"currentPhase" ts:"GamePhase"`
-	GlobalParameters GlobalParametersDto  `json:"globalParameters" ts:"GlobalParametersDto"`
-	CurrentPlayer    PlayerDto            `json:"currentPlayer" ts:"PlayerDto"`       // Viewing player's full data
-	OtherPlayers     []OtherPlayerDto     `json:"otherPlayers" ts:"OtherPlayerDto[]"` // Other players' limited data
-	ViewingPlayerID  string               `json:"viewingPlayerId" ts:"string"`        // The player viewing this game state
-	CurrentTurn      *string              `json:"currentTurn" ts:"string|null"`       // Whose turn it is (nullable)
-	Generation       int                  `json:"generation" ts:"number"`
-	TurnOrder        []string             `json:"turnOrder" ts:"string[]"`                                          // Turn order of all players in game
-	Board            BoardDto             `json:"board" ts:"BoardDto"`                                              // Game board with tiles and occupancy state
-	PaymentConstants PaymentConstantsDto  `json:"paymentConstants" ts:"PaymentConstantsDto"`                        // Conversion rates for alternative payments
-	Milestones       []MilestoneDto       `json:"milestones" ts:"MilestoneDto[]"`                                   // All milestones with claim status
-	Awards           []AwardDto           `json:"awards" ts:"AwardDto[]"`                                           // All awards with funding status
-	AwardResults     []AwardResultDto     `json:"awardResults" ts:"AwardResultDto[]"`                               // Current award placements (1st/2nd place per award)
-	FinalScores      []FinalScoreDto      `json:"finalScores,omitempty" ts:"FinalScoreDto[] | undefined"`           // Final scores (only when game completed)
-	TriggeredEffects []TriggeredEffectDto `json:"triggeredEffects,omitempty" ts:"TriggeredEffectDto[] | undefined"` // Recently triggered passive effects
+	ID                 string                 `json:"id" ts:"string"`
+	Status             GameStatus             `json:"status" ts:"GameStatus"`
+	Settings           GameSettingsDto        `json:"settings" ts:"GameSettingsDto"`
+	HostPlayerID       string                 `json:"hostPlayerId" ts:"string"`
+	CurrentPhase       GamePhase              `json:"currentPhase" ts:"GamePhase"`
+	GlobalParameters   GlobalParametersDto    `json:"globalParameters" ts:"GlobalParametersDto"`
+	CurrentPlayer      PlayerDto              `json:"currentPlayer" ts:"PlayerDto"`       // Viewing player's full data
+	OtherPlayers       []OtherPlayerDto       `json:"otherPlayers" ts:"OtherPlayerDto[]"` // Other players' limited data
+	ViewingPlayerID    string                 `json:"viewingPlayerId" ts:"string"`        // The player viewing this game state
+	CurrentTurn        *string                `json:"currentTurn" ts:"string|null"`       // Whose turn it is (nullable)
+	Generation         int                    `json:"generation" ts:"number"`
+	TurnOrder          []string               `json:"turnOrder" ts:"string[]"`                                          // Turn order of all players in game
+	Board              BoardDto               `json:"board" ts:"BoardDto"`                                              // Game board with tiles and occupancy state
+	PaymentConstants   PaymentConstantsDto    `json:"paymentConstants" ts:"PaymentConstantsDto"`                        // Conversion rates for alternative payments
+	Milestones         []MilestoneDto         `json:"milestones" ts:"MilestoneDto[]"`                                   // All milestones with claim status
+	Awards             []AwardDto             `json:"awards" ts:"AwardDto[]"`                                           // All awards with funding status
+	AwardResults       []AwardResultDto       `json:"awardResults" ts:"AwardResultDto[]"`                               // Current award placements (1st/2nd place per award)
+	FinalScores        []FinalScoreDto        `json:"finalScores,omitempty" ts:"FinalScoreDto[] | undefined"`           // Final scores (only when game completed)
+	TriggeredEffects   []TriggeredEffectDto   `json:"triggeredEffects,omitempty" ts:"TriggeredEffectDto[] | undefined"` // Recently triggered passive effects
+	PlaceableTileTypes []PlaceableTileTypeDto `json:"placeableTileTypes" ts:"PlaceableTileTypeDto[]"`                   // Available tile types for the demo tile picker
+}
+
+// PlaceableTileTypeDto represents a tile type available for placement in the demo tile picker
+type PlaceableTileTypeDto struct {
+	Type  string `json:"type" ts:"string"`
+	Label string `json:"label" ts:"string"`
+	Group string `json:"group" ts:"string"`
 }
 
 // Board-related DTOs for tygo generation

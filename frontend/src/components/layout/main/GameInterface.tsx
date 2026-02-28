@@ -8,7 +8,7 @@ import DebugDropdown from "../../ui/debug/DebugDropdown.tsx";
 import DevModeChip from "../../ui/debug/DevModeChip.tsx";
 import PerformanceWindow from "../../ui/debug/PerformanceWindow.tsx";
 import BugReportWindow from "../../ui/debug/BugReportWindow.tsx";
-import TilePlacerWindow from "../../ui/debug/TilePlacerWindow.tsx";
+
 import { WindowManagerProvider } from "../../ui/debug/WindowManager.tsx";
 import WaitingRoomOverlay from "../../ui/overlay/WaitingRoomOverlay.tsx";
 import PlayerSelectionOverlay from "../../ui/overlay/PlayerSelectionOverlay.tsx";
@@ -99,7 +99,6 @@ export default function GameInterface() {
   const [showDebugDropdown, setShowDebugDropdown] = useState(false);
   const [showPerformanceWindow, setShowPerformanceWindow] = useState(false);
   const [showBugReportWindow, setShowBugReportWindow] = useState(false);
-  const [tilePlacerPlayerId, setTilePlacerPlayerId] = useState<string | null>(null);
   const [spectatePlayerId, setSpectatePlayerId] = useState<string | null>(null);
 
   // Set corporation data directly from player (backend now sends full CardDto)
@@ -2406,7 +2405,6 @@ export default function GameInterface() {
           onClose={() => setShowDebugDropdown(false)}
           gameState={game}
           changedPaths={changedPaths}
-          onOpenTilePlacer={(playerId) => setTilePlacerPlayerId(playerId)}
         />
 
         <PerformanceWindow
@@ -2419,17 +2417,6 @@ export default function GameInterface() {
           onClose={() => setShowBugReportWindow(false)}
           gameState={game}
         />
-
-        {tilePlacerPlayerId && game && (
-          <TilePlacerWindow
-            playerId={tilePlacerPlayerId}
-            playerName={
-              [game.currentPlayer, ...game.otherPlayers].find((p) => p.id === tilePlacerPlayerId)
-                ?.name || tilePlacerPlayerId
-            }
-            onClose={() => setTilePlacerPlayerId(null)}
-          />
-        )}
       </WindowManagerProvider>
 
       {(transitionPhase === "lobby" ||

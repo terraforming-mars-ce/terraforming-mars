@@ -120,20 +120,34 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		GlobalParameters: globalParamsDto,
 		CurrentPlayer:    currentPlayer,
 		OtherPlayers:     otherPlayers,
-		ViewingPlayerID:  playerID, // The player viewing this game state
+		ViewingPlayerID:  playerID,
 		CurrentTurn:      getCurrentTurnPlayerID(g),
 		Generation:       g.Generation(),
 		TurnOrder:        g.TurnOrder(),
 		Board: BoardDto{
 			Tiles: tileDtos,
 		},
-		PaymentConstants: paymentConstants,
-		Milestones:       ToMilestonesDto(g.Milestones()),
-		Awards:           ToAwardsDto(g.Awards()),
-		AwardResults:     ToAwardResultsDto(g, cardRegistry),
-		FinalScores:      finalScoreDtos,
-		TriggeredEffects: triggeredEffectDtos,
+		PaymentConstants:   paymentConstants,
+		Milestones:         ToMilestonesDto(g.Milestones()),
+		Awards:             ToAwardsDto(g.Awards()),
+		AwardResults:       ToAwardResultsDto(g, cardRegistry),
+		FinalScores:        finalScoreDtos,
+		TriggeredEffects:   triggeredEffectDtos,
+		PlaceableTileTypes: ToPlaceableTileTypeDtos(),
 	}
+}
+
+// ToPlaceableTileTypeDtos converts the board PlaceableTileTypes registry to DTOs
+func ToPlaceableTileTypeDtos() []PlaceableTileTypeDto {
+	dtos := make([]PlaceableTileTypeDto, len(board.PlaceableTileTypes))
+	for i, pt := range board.PlaceableTileTypes {
+		dtos[i] = PlaceableTileTypeDto{
+			Type:  pt.Type,
+			Label: pt.Label,
+			Group: pt.Group,
+		}
+	}
+	return dtos
 }
 
 // getCurrentTurnPlayerID extracts the player ID from the current turn

@@ -9,6 +9,8 @@ import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
 import LivingGreeneryTile from "./LivingGreeneryTile";
+import MiningTile from "./MiningTile";
+import ReservedAreaTile from "./ReservedAreaTile";
 import { useTextures } from "../../../hooks/useTextures";
 import { useHoverSound } from "../../../hooks/useHoverSound";
 import {
@@ -218,6 +220,8 @@ interface TileProps {
     | "special"
     | "volcano"
     | "nuclear-zone"
+    | "mining"
+    | "restricted"
     | "ecological-zone"
     | "natural-preserve";
   ownerId?: string | null;
@@ -483,6 +487,10 @@ export default function Tile({
         return new THREE.Color("#4a3728");
       case "nuclear-zone":
         return new THREE.Color("#2a1a0f");
+      case "mining":
+        return new THREE.Color("#5c3a1e");
+      case "restricted":
+        return new THREE.Color("#5a4030");
       case "ecological-zone":
       case "natural-preserve":
         return new THREE.Color("#2d6e2e");
@@ -509,6 +517,8 @@ export default function Tile({
         tileType === "city" ||
         tileType === "volcano" ||
         tileType === "nuclear-zone" ||
+        tileType === "mining" ||
+        tileType === "restricted" ||
         tileType === "ecological-zone" ||
         tileType === "natural-preserve"
           ? 0
@@ -696,6 +706,25 @@ export default function Tile({
         />
       )}
 
+      {/* Mining 3D tile */}
+      {tileType === "mining" && (
+        <MiningTile
+          isNewlyPlaced={isNewlyPlaced}
+          surfaceNormal={tileData.normal}
+          worldPosition={adjustedPosition}
+        />
+      )}
+
+      {/* Reserved Area fence tile */}
+      {tileType === "restricted" && (
+        <ReservedAreaTile
+          isNewlyPlaced={isNewlyPlaced}
+          ownerColor={ownerColor}
+          surfaceNormal={tileData.normal}
+          worldPosition={adjustedPosition}
+        />
+      )}
+
       {/* Living Greenery (ecological zone / natural preserve) */}
       {(tileType === "ecological-zone" || tileType === "natural-preserve") && (
         <LivingGreeneryTile
@@ -729,10 +758,11 @@ export default function Tile({
         </ClampedBillboard>
       )}
 
-      {/* Bonus icons for non-greenery, non-volcano, non-nuclear-zone, non-living-greenery tiles */}
+      {/* Bonus icons for standard tiles (excludes tiles with 3D components) */}
       {tileType !== "greenery" &&
         tileType !== "volcano" &&
         tileType !== "nuclear-zone" &&
+        tileType !== "mining" &&
         tileType !== "ecological-zone" &&
         tileType !== "natural-preserve" &&
         bonusIconGroups.length > 0 && (
@@ -771,6 +801,24 @@ export default function Tile({
         </>
       )}
 
+      {/* Bonus icons for mining tiles (kept flat on tile) */}
+      {tileType === "mining" && bonusIconGroups.length > 0 && (
+        <>
+          {(() => {
+            const positions = calculateIconPositions(bonusIconGroups);
+            return positions.map((pos) => (
+              <BonusIcon
+                key={`${pos.group.type}-${pos.indexInGroup}`}
+                texture={pos.group.texture}
+                position={[pos.x, 0, 0.01]}
+                isCredits={pos.group.isCredits}
+                creditAmount={pos.group.isCredits ? pos.group.count : undefined}
+              />
+            ));
+          })()}
+        </>
+      )}
+
       {/* Bonus icons for volcano tiles (kept flat on tile) */}
       {tileType === "volcano" && bonusIconGroups.length > 0 && (
         <>
@@ -790,7 +838,8 @@ export default function Tile({
       )}
 
       {/* Reserved tile marker (land claim) */}
-      {reservedById && !ownerId && (
+      {/* Reserved tile marker (fallback for non-fence reserved tiles) */}
+      {reservedById && !ownerId && tileType !== "restricted" && (
         <group position={[0, 0, 0.01]}>
           <mesh position={[0.08, 0.05, 0]}>
             <boxGeometry args={[0.004, 0.06, 0.004]} />

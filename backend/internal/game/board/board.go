@@ -21,7 +21,46 @@ const (
 	TileTypeEcologicalZone  = "ecological-zone"
 	TileTypeMohole          = "mohole"
 	TileTypeRestricted      = "restricted"
+	TileTypeVolcano         = "volcano"
+	TileTypeColony          = "colony"
+	TileTypeLandClaim       = "land-claim"
+	TileTypeClear           = "clear"
 )
+
+// PlaceableTileType describes a tile type available in the demo tile picker
+type PlaceableTileType struct {
+	Type  string
+	Label string
+	Group string
+}
+
+// PlaceableTileTypes is the single registry of all tile types available for placement.
+// Adding a new entry here automatically updates backend validation and frontend UI.
+var PlaceableTileTypes = []PlaceableTileType{
+	{Type: TileTypeCity, Label: "City", Group: "Base"},
+	{Type: TileTypeGreenery, Label: "Greenery", Group: "Base"},
+	{Type: TileTypeOcean, Label: "Ocean", Group: "Base"},
+	{Type: TileTypeNaturalPreserve, Label: "Natural Preserve", Group: "Special"},
+	{Type: TileTypeEcologicalZone, Label: "Ecological Zone", Group: "Special"},
+	{Type: TileTypeMining, Label: "Mining", Group: "Special"},
+	{Type: TileTypeColony, Label: "Colony", Group: "Special"},
+	{Type: TileTypeVolcano, Label: "Volcano", Group: "Industrial"},
+	{Type: TileTypeNuclearZone, Label: "Nuclear Zone", Group: "Industrial"},
+	{Type: TileTypeMohole, Label: "Mohole", Group: "Industrial"},
+	{Type: TileTypeRestricted, Label: "Restricted", Group: "Industrial"},
+	{Type: TileTypeLandClaim, Label: "Land Claim", Group: "Tools"},
+	{Type: TileTypeClear, Label: "Clear", Group: "Tools"},
+}
+
+// ValidPlaceableTileType returns true if the given tile type is in the PlaceableTileTypes registry
+func ValidPlaceableTileType(tileType string) bool {
+	for _, pt := range PlaceableTileTypes {
+		if pt.Type == tileType {
+			return true
+		}
+	}
+	return false
+}
 
 // BoardTag represents a tag on a board tile for reserved areas
 type BoardTag = string
