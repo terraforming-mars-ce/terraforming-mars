@@ -8,6 +8,7 @@ import OceanTile from "./OceanTile";
 import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
+import LivingGreeneryTile from "./LivingGreeneryTile";
 import { useTextures } from "../../../hooks/useTextures";
 import { useHoverSound } from "../../../hooks/useHoverSound";
 import {
@@ -209,7 +210,16 @@ export type TileHighlightMode = "greenery" | "city" | "adjacent" | null;
 
 interface TileProps {
   tileData: TileData3D;
-  tileType: "empty" | "ocean" | "greenery" | "city" | "special" | "volcano" | "nuclear-zone";
+  tileType:
+    | "empty"
+    | "ocean"
+    | "greenery"
+    | "city"
+    | "special"
+    | "volcano"
+    | "nuclear-zone"
+    | "ecological-zone"
+    | "natural-preserve";
   ownerId?: string | null;
   ownerColor?: string;
   reservedById?: string | null;
@@ -473,6 +483,9 @@ export default function Tile({
         return new THREE.Color("#4a3728");
       case "nuclear-zone":
         return new THREE.Color("#2a1a0f");
+      case "ecological-zone":
+      case "natural-preserve":
+        return new THREE.Color("#2d6e2e");
       default:
         return tileData.isOceanSpace
           ? new THREE.Color("#6d4c41").multiplyScalar(0.8)
@@ -492,7 +505,12 @@ export default function Tile({
       color: tileColor,
       transparent: true,
       opacity:
-        isGreenery || tileType === "city" || tileType === "volcano" || tileType === "nuclear-zone"
+        isGreenery ||
+        tileType === "city" ||
+        tileType === "volcano" ||
+        tileType === "nuclear-zone" ||
+        tileType === "ecological-zone" ||
+        tileType === "natural-preserve"
           ? 0
           : tileType === "empty"
             ? 0.3
@@ -678,6 +696,17 @@ export default function Tile({
         />
       )}
 
+      {/* Living Greenery (ecological zone / natural preserve) */}
+      {(tileType === "ecological-zone" || tileType === "natural-preserve") && (
+        <LivingGreeneryTile
+          seed={
+            Math.abs(tileData.coordinate.q * 73856093) ^
+            (tileData.coordinate.r * 19349663) ^
+            (tileData.coordinate.s * 83492791)
+          }
+        />
+      )}
+
       {/* Special tile label (rendered via displayName below) */}
 
       {/* Billboard display name for named tiles */}
@@ -700,10 +729,12 @@ export default function Tile({
         </ClampedBillboard>
       )}
 
-      {/* Bonus icons for non-greenery, non-volcano, non-nuclear-zone tiles */}
+      {/* Bonus icons for non-greenery, non-volcano, non-nuclear-zone, non-living-greenery tiles */}
       {tileType !== "greenery" &&
         tileType !== "volcano" &&
         tileType !== "nuclear-zone" &&
+        tileType !== "ecological-zone" &&
+        tileType !== "natural-preserve" &&
         bonusIconGroups.length > 0 && (
           <>
             {(() => {
