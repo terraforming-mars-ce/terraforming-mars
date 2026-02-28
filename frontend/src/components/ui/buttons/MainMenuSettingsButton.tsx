@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import SoundToggleButton from "./SoundToggleButton.tsx";
 import GameMenuButton from "./GameMenuButton.tsx";
 import { GamePopover } from "../GamePopover";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 const MainMenuSettingsButton: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -23,7 +24,10 @@ const MainMenuSettingsButton: React.FC = () => {
   return (
     <>
       {!isFullscreen && (
-        <div className="fixed top-[30px] left-1/2 -translate-x-1/2 z-50">
+        <div
+          className="fixed top-[30px] left-1/2 -translate-x-1/2"
+          style={{ zIndex: Z_INDEX.POPOVER }}
+        >
           <GameMenuButton
             variant="secondary"
             size="sm"
@@ -49,7 +53,7 @@ const MainMenuSettingsButton: React.FC = () => {
           </GameMenuButton>
         </div>
       )}
-      <div className="fixed top-[30px] right-[30px] z-50">
+      <div className="fixed top-[30px] right-[30px]" style={{ zIndex: Z_INDEX.POPOVER }}>
         <GameMenuButton
           ref={gearButtonRef}
           variant="secondary"

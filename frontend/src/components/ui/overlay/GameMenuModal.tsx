@@ -101,11 +101,7 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
           &larr; Back
         </GameMenuButton>
       )}
-      {showSettings && (
-        <div className="z-[10000]">
-          <MainMenuSettingsButton />
-        </div>
-      )}
+      {showSettings && <MainMenuSettingsButton />}
       <div
         className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] max-w-[90vw] ${animationClass}`}
         style={{ zIndex }}

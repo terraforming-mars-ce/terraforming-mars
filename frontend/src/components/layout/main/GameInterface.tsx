@@ -2516,9 +2516,7 @@ export default function GameInterface() {
       {/* Waiting for other players to finish card selection */}
       {showWaitingForPlayers && game && (
         <>
-          <div className="z-[10000]">
-            <MainMenuSettingsButton />
-          </div>
+          <MainMenuSettingsButton />
           <div className="fixed inset-0 z-[1000] flex items-center justify-center">
             <div className="w-[450px] max-w-[90vw] bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] p-8 backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(30,60,150,0.3)] animate-[modalFadeIn_0.3s_ease-out]">
               <div className="text-center mb-6">
