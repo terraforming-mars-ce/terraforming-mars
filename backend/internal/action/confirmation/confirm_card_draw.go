@@ -132,7 +132,11 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 	}
 
 	if len(unselectedCards) > 0 {
-		log.Debug("🗑️ Discarded unselected cards",
+		if err := g.Deck().Discard(ctx, unselectedCards); err != nil {
+			log.Error("Failed to discard unselected cards", zap.Error(err))
+			return fmt.Errorf("failed to discard unselected cards: %w", err)
+		}
+		log.Debug("🗑️ Discarded unselected cards to discard pile",
 			zap.Int("count", len(unselectedCards)),
 			zap.Strings("card_ids", unselectedCards))
 	}

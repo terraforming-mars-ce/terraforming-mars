@@ -114,7 +114,12 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 		}
 	}
 
-	log.Info("🗑️ Removed sold cards from hand", zap.Int("cards_removed", len(selectedCardIDs)))
+	if err := g.Deck().Discard(ctx, selectedCardIDs); err != nil {
+		log.Error("Failed to discard sold cards to discard pile", zap.Error(err))
+		return fmt.Errorf("failed to discard sold cards: %w", err)
+	}
+
+	log.Info("🗑️ Sold cards added to discard pile", zap.Int("cards_removed", len(selectedCardIDs)))
 
 	player.Selection().SetPendingCardSelection(nil)
 

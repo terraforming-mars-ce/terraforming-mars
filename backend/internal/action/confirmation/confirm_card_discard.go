@@ -86,7 +86,11 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 	}
 
 	if len(cardsToDiscard) > 0 {
-		log.Info("🗑️ Discarded cards from hand",
+		if err := g.Deck().Discard(ctx, cardsToDiscard); err != nil {
+			log.Error("Failed to discard cards to discard pile", zap.Error(err))
+			return fmt.Errorf("failed to discard cards: %w", err)
+		}
+		log.Info("🗑️ Discarded cards from hand to discard pile",
 			zap.Int("count", len(cardsToDiscard)),
 			zap.Strings("card_ids", cardsToDiscard))
 	}
