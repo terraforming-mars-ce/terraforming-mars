@@ -107,9 +107,9 @@ func TestPerCondition_TagSelfPlayer(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	// Add cards with earth tags to played cards
-	p.PlayedCards().AddCard("card-earth-catapult", "Earth Catapult", "active", []string{"earth"})
-	p.PlayedCards().AddCard("card-earth-office", "Earth Office", "active", []string{"earth"})
-	p.PlayedCards().AddCard("card-sponsors", "Sponsors", "automated", []string{"earth"})
+	p.PlayedCards().AddCard(testutil.CardID("Earth Catapult"), "Earth Catapult", "active", []string{"earth"})
+	p.PlayedCards().AddCard(testutil.CardID("Earth Office"), "Earth Office", "active", []string{"earth"})
+	p.PlayedCards().AddCard(testutil.CardID("Sponsors"), "Sponsors", "automated", []string{"earth"})
 
 	testutil.SetPlayerCredits(ctx, p, 0)
 
@@ -147,11 +147,11 @@ func TestPerCondition_TagAnyPlayer(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	// Player 1 has 2 earth tags
-	p1.PlayedCards().AddCard("card-earth-catapult", "Earth Catapult", "active", []string{"earth"})
-	p1.PlayedCards().AddCard("card-earth-office", "Earth Office", "active", []string{"earth"})
+	p1.PlayedCards().AddCard(testutil.CardID("Earth Catapult"), "Earth Catapult", "active", []string{"earth"})
+	p1.PlayedCards().AddCard(testutil.CardID("Earth Office"), "Earth Office", "active", []string{"earth"})
 
 	// Player 2 has 1 earth tag
-	p2.PlayedCards().AddCard("card-sponsors", "Sponsors", "automated", []string{"earth"})
+	p2.PlayedCards().AddCard(testutil.CardID("Sponsors"), "Sponsors", "automated", []string{"earth"})
 
 	testutil.SetPlayerCredits(ctx, p1, 0)
 
@@ -188,7 +188,7 @@ func TestPerCondition_CardResourceSelfCard(t *testing.T) {
 	log := testutil.TestLogger()
 
 	// Add 5 floaters to a card
-	sourceCardID := "card-saturn-surfing"
+	sourceCardID := testutil.CardID("Saturn Surfing")
 	p.Resources().AddToStorage(sourceCardID, 5)
 
 	testutil.SetPlayerCredits(ctx, p, 0)

@@ -62,7 +62,7 @@ func TestChoiceRequirements_Choice0AlwaysAvailable(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	player := players[0]
-	player.SetCorporationID("corp-tharsis-republic")
+	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -95,7 +95,7 @@ func TestChoiceRequirements_Choice1RejectedWithoutEnoughTags(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	player := players[0]
-	player.SetCorporationID("corp-tharsis-republic")
+	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -143,7 +143,7 @@ func TestChoiceRequirements_Choice1SucceedsWithEnoughTags(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	player := players[0]
-	player.SetCorporationID("corp-tharsis-republic")
+	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -181,7 +181,7 @@ func TestChoiceRequirements_Choice0DrawsCard(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	player := players[0]
-	player.SetCorporationID("corp-tharsis-republic")
+	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -231,7 +231,7 @@ func TestChoiceRequirements_Choice1DrawsThreeCards(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	player := players[0]
-	player.SetCorporationID("corp-tharsis-republic")
+	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -282,7 +282,7 @@ func TestChoiceRequirements_Choice1FailsWithTwoTags(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	player := players[0]
-	player.SetCorporationID("corp-tharsis-republic")
+	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)

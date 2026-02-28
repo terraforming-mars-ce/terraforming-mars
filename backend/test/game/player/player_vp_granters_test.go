@@ -68,28 +68,28 @@ func TestFixedVPConditions(t *testing.T) {
 	}{
 		{
 			name:       "Dust Seals awards 1 VP",
-			cardID:     "card-dust-seals",
+			cardID:     testutil.CardID("Dust Seals"),
 			cardName:   "Dust Seals",
 			vpAmount:   1,
 			expectedVP: 1,
 		},
 		{
 			name:       "Farming awards 2 VP",
-			cardID:     "card-farming",
+			cardID:     testutil.CardID("Farming"),
 			cardName:   "Farming",
 			vpAmount:   2,
 			expectedVP: 2,
 		},
 		{
 			name:       "Anti-Gravity Technology awards 3 VP",
-			cardID:     "card-anti-gravity-technology",
+			cardID:     testutil.CardID("Anti-Gravity Technology"),
 			cardName:   "Anti-Gravity Technology",
 			vpAmount:   3,
 			expectedVP: 3,
 		},
 		{
 			name:       "Earth Elevator awards 4 VP",
-			cardID:     "card-earth-elevator",
+			cardID:     testutil.CardID("Earth Elevator"),
 			cardName:   "Earth Elevator",
 			vpAmount:   4,
 			expectedVP: 4,
@@ -140,7 +140,7 @@ func TestPerTagVPConditions(t *testing.T) {
 	}{
 		{
 			name:       "Ganymede Colony: 1 VP per 1 jovian tag, 3 jovian tags = 3 VP",
-			cardID:     "card-ganymede-colony",
+			cardID:     testutil.CardID("Ganymede Colony"),
 			cardName:   "Ganymede Colony",
 			tag:        shared.TagJovian,
 			vpAmount:   1,
@@ -150,7 +150,7 @@ func TestPerTagVPConditions(t *testing.T) {
 		},
 		{
 			name:       "Water Import From Europa: 1 VP per 1 jovian tag, 0 tags = 0 VP",
-			cardID:     "card-water-import-from-europa",
+			cardID:     testutil.CardID("Water Import From Europa"),
 			cardName:   "Water Import From Europa",
 			tag:        shared.TagJovian,
 			vpAmount:   1,
@@ -209,7 +209,7 @@ func TestPerTileVPConditions(t *testing.T) {
 	}{
 		{
 			name:       "Immigration Shuttles: 1 VP per 3 city tiles, 6 cities = 2 VP",
-			cardID:     "card-immigration-shuttles",
+			cardID:     testutil.CardID("Immigration Shuttles"),
 			cardName:   "Immigration Shuttles",
 			tileType:   shared.ResourceCityTile,
 			vpAmount:   1,
@@ -219,7 +219,7 @@ func TestPerTileVPConditions(t *testing.T) {
 		},
 		{
 			name:       "Space Port Colony: 1 VP per 2 colony tiles, 4 colonies = 2 VP",
-			cardID:     "card-space-port-colony",
+			cardID:     testutil.CardID("Space Port Colony"),
 			cardName:   "Space Port Colony",
 			tileType:   shared.ResourceColonyTile,
 			vpAmount:   1,
@@ -281,7 +281,7 @@ func TestMaxTriggerCap(t *testing.T) {
 	}{
 		{
 			name:         "Search For Life: 3 VP per 3 science, maxTrigger 1, 3+ science = 3 VP (capped)",
-			cardID:       "card-search-for-life",
+			cardID:       testutil.CardID("Search For Life"),
 			cardName:     "Search For Life",
 			vpAmount:     3,
 			perAmount:    3,
@@ -291,7 +291,7 @@ func TestMaxTriggerCap(t *testing.T) {
 		},
 		{
 			name:         "Search For Life: 3 VP per 3 science, maxTrigger 1, 2 science = 0 VP (not met)",
-			cardID:       "card-search-for-life",
+			cardID:       testutil.CardID("Search For Life"),
 			cardName:     "Search For Life",
 			vpAmount:     3,
 			perAmount:    3,
@@ -301,7 +301,7 @@ func TestMaxTriggerCap(t *testing.T) {
 		},
 		{
 			name:         "Zero resources on per-condition card = 0 VP",
-			cardID:       "card-birds",
+			cardID:       testutil.CardID("Birds"),
 			cardName:     "Birds",
 			vpAmount:     1,
 			perAmount:    1,
@@ -386,14 +386,14 @@ func TestVPOrderingPrependThenAdd(t *testing.T) {
 	p := players[0]
 
 	corpGranter := player.VPGranter{
-		CardID:   "corp-arklight",
+		CardID:   testutil.CardID("Arklight"),
 		CardName: "Arklight",
 		VPConditions: []player.VPCondition{
 			{Amount: 1, Condition: player.VPConditionFixed},
 		},
 	}
 	cardGranter := player.VPGranter{
-		CardID:   "card-birds",
+		CardID:   testutil.CardID("Birds"),
 		CardName: "Birds",
 		VPConditions: []player.VPCondition{
 			{Amount: 1, Condition: player.VPConditionFixed},
@@ -417,15 +417,18 @@ func TestMultipleGrantersTotalComputedVP(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
+	birdsID := testutil.CardID("Birds")
+	ganymedeID := testutil.CardID("Ganymede Colony")
+
 	fixedGranter := player.VPGranter{
-		CardID:   "card-dust-seals",
+		CardID:   testutil.CardID("Dust Seals"),
 		CardName: "Dust Seals",
 		VPConditions: []player.VPCondition{
 			{Amount: 2, Condition: player.VPConditionFixed},
 		},
 	}
 	perGranter := player.VPGranter{
-		CardID:   "card-birds",
+		CardID:   birdsID,
 		CardName: "Birds",
 		VPConditions: []player.VPCondition{
 			{
@@ -440,7 +443,7 @@ func TestMultipleGrantersTotalComputedVP(t *testing.T) {
 		},
 	}
 	tagGranter := player.VPGranter{
-		CardID:   "card-ganymede-colony",
+		CardID:   ganymedeID,
 		CardName: "Ganymede Colony",
 		VPConditions: []player.VPCondition{
 			{
@@ -459,7 +462,7 @@ func TestMultipleGrantersTotalComputedVP(t *testing.T) {
 	p.VPGranters().Add(tagGranter)
 
 	ctx := newMockVPRecalculationContext()
-	ctx.setCardStorage(p.ID(), "card-birds", 3)
+	ctx.setCardStorage(p.ID(), birdsID, 3)
 	ctx.setTagCount(p.ID(), shared.TagJovian, 2)
 	p.VPGranters().RecalculateAll(ctx)
 
@@ -481,18 +484,19 @@ func TestIntegrationCardPlayedRegistersVPGranterAndResourceRecalculates(t *testi
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
-	p.PlayedCards().AddCard("card-birds", "Birds", "active", []string{"animal"})
+	birdsID := testutil.CardID("Birds")
+	p.PlayedCards().AddCard(birdsID, "Birds", "active", []string{"animal"})
 
 	granters := p.VPGranters().GetAll()
 	testutil.AssertEqual(t, 1, len(granters), "Playing Birds should register 1 VP granter")
 	testutil.AssertEqual(t, "Birds", granters[0].CardName, "VP granter should be for Birds")
 	testutil.AssertEqual(t, 0, granters[0].ComputedValue, "VP should be 0 with no animals stored")
 
-	p.Resources().AddToStorage("card-birds", 3)
+	p.Resources().AddToStorage(birdsID, 3)
 	events.Publish(testGame.EventBus(), events.ResourceStorageChangedEvent{
 		GameID:    testGame.ID(),
 		PlayerID:  p.ID(),
-		CardID:    "card-birds",
+		CardID:    birdsID,
 		Timestamp: time.Now(),
 	})
 
@@ -507,20 +511,27 @@ func TestIntegrationTagPlayedRecalculatesVP(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
-	p.PlayedCards().AddCard("card-ganymede-colony", "Ganymede Colony", "automated", []string{"jovian", "space"})
+	ganymedeID := testutil.CardID("Ganymede Colony")
+	p.PlayedCards().AddCard(ganymedeID, "Ganymede Colony", "automated", []string{"city", "jovian", "space"})
 
 	granters := p.VPGranters().GetAll()
 	testutil.AssertEqual(t, 1, len(granters), "Playing Ganymede Colony should register 1 VP granter")
 
 	initialVP := granters[0].ComputedValue
 
-	p.PlayedCards().AddCard("card-io-mining-industries", "Io Mining Industries", "automated", []string{"jovian", "space"})
+	ioMiningID := testutil.CardID("Io Mining Industries")
+	p.PlayedCards().AddCard(ioMiningID, "Io Mining Industries", "automated", []string{"jovian", "space"})
 
 	granters = p.VPGranters().GetAll()
 	testutil.AssertTrue(t, granters[0].ComputedValue > initialVP,
 		"VP should increase after playing another card with jovian tag")
-	testutil.AssertEqual(t, granters[0].ComputedValue, p.VPGranters().TotalComputedVP(),
-		"TotalComputedVP should match granter's computed value")
+	// Io Mining Industries also has a VP granter (1 VP per jovian tag),
+	// so TotalComputedVP is the sum of both granters
+	testutil.AssertEqual(t, 2, len(granters), "Should have 2 VP granters (Ganymede Colony + Io Mining Industries)")
+	testutil.AssertEqual(t, 2, granters[0].ComputedValue, "Ganymede Colony should be 2 VP (2 jovian tags)")
+	testutil.AssertEqual(t, 2, granters[1].ComputedValue, "Io Mining Industries should be 2 VP (2 jovian tags)")
+	testutil.AssertEqual(t, 4, p.VPGranters().TotalComputedVP(),
+		"TotalComputedVP should be sum of both granters")
 }
 
 func TestIntegrationTilePlacedRecalculatesAllPlayersVP(t *testing.T) {
@@ -531,8 +542,9 @@ func TestIntegrationTilePlacedRecalculatesAllPlayersVP(t *testing.T) {
 	player1 := players[0]
 	player2 := players[1]
 
-	player1.PlayedCards().AddCard("card-immigration-shuttles", "Immigration Shuttles", "automated", []string{"space"})
-	player2.PlayedCards().AddCard("card-immigration-shuttles", "Immigration Shuttles", "automated", []string{"space"})
+	immigrationID := testutil.CardID("Immigration Shuttles")
+	player1.PlayedCards().AddCard(immigrationID, "Immigration Shuttles", "automated", []string{"earth", "space"})
+	player2.PlayedCards().AddCard(immigrationID, "Immigration Shuttles", "automated", []string{"earth", "space"})
 
 	testutil.AssertEqual(t, 0, player1.VPGranters().TotalComputedVP(), "Player 1 VP should be 0 before tiles")
 	testutil.AssertEqual(t, 0, player2.VPGranters().TotalComputedVP(), "Player 2 VP should be 0 before tiles")
@@ -574,7 +586,7 @@ func TestCorporationVPConditions(t *testing.T) {
 	}{
 		{
 			name:         "Arklight: 1 VP per 2 animals on self-card, 4 animals = 2 VP",
-			cardID:       "corp-arklight",
+			cardID:       testutil.CardID("Arklight"),
 			cardName:     "Arklight",
 			resourceType: shared.ResourceAnimal,
 			vpAmount:     1,
@@ -584,7 +596,7 @@ func TestCorporationVPConditions(t *testing.T) {
 		},
 		{
 			name:         "Celestic: 1 VP per 3 floaters on self-card, 9 floaters = 3 VP",
-			cardID:       "corp-celestic",
+			cardID:       testutil.CardID("Celestic"),
 			cardName:     "Celestic",
 			resourceType: shared.ResourceFloater,
 			vpAmount:     1,
@@ -640,7 +652,7 @@ func TestCorporationVPGranterIsPrepended(t *testing.T) {
 	p := players[0]
 
 	cardGranter := player.VPGranter{
-		CardID:   "card-birds",
+		CardID:   testutil.CardID("Birds"),
 		CardName: "Birds",
 		VPConditions: []player.VPCondition{
 			{
@@ -655,7 +667,7 @@ func TestCorporationVPGranterIsPrepended(t *testing.T) {
 		},
 	}
 	corpGranter := player.VPGranter{
-		CardID:   "corp-arklight",
+		CardID:   testutil.CardID("Arklight"),
 		CardName: "Arklight",
 		VPConditions: []player.VPCondition{
 			{
@@ -685,10 +697,11 @@ func TestIntegrationCorporationSelectedRegistersVPGranterAndResourceRecalculates
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
+	arklightID := testutil.CardID("Arklight")
 	events.Publish(testGame.EventBus(), events.CorporationSelectedEvent{
 		GameID:          testGame.ID(),
 		PlayerID:        p.ID(),
-		CorporationID:   "corp-arklight",
+		CorporationID:   arklightID,
 		CorporationName: "Arklight",
 		Timestamp:       time.Now(),
 	})
@@ -698,11 +711,11 @@ func TestIntegrationCorporationSelectedRegistersVPGranterAndResourceRecalculates
 	testutil.AssertEqual(t, "Arklight", granters[0].CardName, "VP granter should be for Arklight")
 	testutil.AssertEqual(t, 0, granters[0].ComputedValue, "VP should be 0 with no animals stored")
 
-	p.Resources().AddToStorage("corp-arklight", 4)
+	p.Resources().AddToStorage(arklightID, 4)
 	events.Publish(testGame.EventBus(), events.ResourceStorageChangedEvent{
 		GameID:    testGame.ID(),
 		PlayerID:  p.ID(),
-		CardID:    "corp-arklight",
+		CardID:    arklightID,
 		Timestamp: time.Now(),
 	})
 
@@ -710,7 +723,8 @@ func TestIntegrationCorporationSelectedRegistersVPGranterAndResourceRecalculates
 	testutil.AssertEqual(t, 2, granters[0].ComputedValue, "VP should be 2 after adding 4 animals (1 VP per 2 animals)")
 	testutil.AssertEqual(t, 2, p.VPGranters().TotalComputedVP(), "TotalComputedVP should be 2")
 
-	p.PlayedCards().AddCard("card-birds", "Birds", "active", []string{"animal"})
+	birdsID := testutil.CardID("Birds")
+	p.PlayedCards().AddCard(birdsID, "Birds", "active", []string{"animal"})
 
 	granters = p.VPGranters().GetAll()
 	testutil.AssertEqual(t, 2, len(granters), "Should have 2 VP granters after playing Birds")
@@ -733,7 +747,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 	}{
 		{
 			name:         "Birds: 1 VP per 1 animal, 5 animals = 5 VP",
-			cardID:       "card-birds",
+			cardID:       testutil.CardID("Birds"),
 			cardName:     "Birds",
 			resourceType: shared.ResourceAnimal,
 			vpAmount:     1,
@@ -743,7 +757,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 		},
 		{
 			name:         "Small Animals: 1 VP per 2 animals, 5 animals = 2 VP",
-			cardID:       "card-small-animals",
+			cardID:       testutil.CardID("Small Animals"),
 			cardName:     "Small Animals",
 			resourceType: shared.ResourceAnimal,
 			vpAmount:     1,
@@ -753,7 +767,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 		},
 		{
 			name:         "Ants: 1 VP per 2 microbes, 6 microbes = 3 VP",
-			cardID:       "card-ants",
+			cardID:       testutil.CardID("Ants"),
 			cardName:     "Ants",
 			resourceType: shared.ResourceMicrobe,
 			vpAmount:     1,
@@ -763,7 +777,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 		},
 		{
 			name:         "Decomposers: 1 VP per 3 microbes, 9 microbes = 3 VP",
-			cardID:       "card-decomposers",
+			cardID:       testutil.CardID("Decomposers"),
 			cardName:     "Decomposers",
 			resourceType: shared.ResourceMicrobe,
 			vpAmount:     1,
@@ -773,7 +787,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 		},
 		{
 			name:         "Tardigrades: 1 VP per 4 microbes, 8 microbes = 2 VP",
-			cardID:       "card-tardigrades",
+			cardID:       testutil.CardID("Tardigrades"),
 			cardName:     "Tardigrades",
 			resourceType: shared.ResourceMicrobe,
 			vpAmount:     1,
@@ -783,7 +797,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 		},
 		{
 			name:         "Floating Habs: 1 VP per 2 floaters, 6 floaters = 3 VP",
-			cardID:       "card-floating-habs",
+			cardID:       testutil.CardID("Floating Habs"),
 			cardName:     "Floating Habs",
 			resourceType: shared.ResourceFloater,
 			vpAmount:     1,
@@ -793,7 +807,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 		},
 		{
 			name:         "Physics Complex: 2 VP per 2 science, 4 science = 4 VP",
-			cardID:       "card-physics-complex",
+			cardID:       testutil.CardID("Physics Complex"),
 			cardName:     "Physics Complex",
 			resourceType: shared.ResourceScience,
 			vpAmount:     2,
@@ -803,7 +817,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 		},
 		{
 			name:         "Security Fleet: 1 VP per 1 asteroid, 3 asteroids = 3 VP",
-			cardID:       "card-security-fleet",
+			cardID:       testutil.CardID("Security Fleet"),
 			cardName:     "Security Fleet",
 			resourceType: shared.ResourceAsteroid,
 			vpAmount:     1,

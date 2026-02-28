@@ -35,7 +35,7 @@ func TestMarsUniversity_CreatesDiscardSelectionOnScienceTag(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	// Give player some cards in hand to discard
@@ -119,7 +119,7 @@ func TestMarsUniversity_SkipsDiscardWhenNoCardsInHand(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	// Do NOT add cards to hand - player has empty hand
@@ -186,7 +186,7 @@ func TestMarsUniversity_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	owner.Hand().AddCard("some-card-1")
@@ -255,7 +255,7 @@ func TestConfirmCardDiscard_DiscardAndDraw(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	// Give player a card to discard
@@ -312,7 +312,7 @@ func TestConfirmCardDiscard_SkipOptionalDiscard(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	owner.Hand().AddCard("card-to-keep")
@@ -357,7 +357,7 @@ func TestConfirmCardDiscard_RejectsNonHandCard(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	owner.Hand().AddCard("real-card")
@@ -394,7 +394,7 @@ func TestConfirmCardDiscard_RejectsWithoutPendingSelection(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	// No pending selection set
@@ -420,7 +420,7 @@ func TestConfirmCardDiscard_RejectsTooManyCards(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	owner.Hand().AddCard("card-1")

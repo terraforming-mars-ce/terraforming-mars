@@ -28,7 +28,7 @@ func TestGameLifecycle_CreateJoinStartPlay(t *testing.T) {
 	// Step 1: Create game
 	settings := game.GameSettings{
 		MaxPlayers: 4,
-		CardPacks:  []string{"base"},
+		CardPacks:  []string{"base-game"},
 	}
 
 	createdGame, err := createAction.Execute(ctx, settings)
@@ -58,7 +58,7 @@ func TestGameLifecycle_CreateJoinStartPlay(t *testing.T) {
 
 	// Step 3: Select corporations
 	for _, p := range players {
-		p.SetCorporationID("corp-tharsis-republic")
+		p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	}
 
 	// Step 4: Start game
@@ -96,13 +96,13 @@ func TestGameLifecycle_MultipleGames(t *testing.T) {
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Create 3 games
-	game1, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base"}})
+	game1, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game 1")
 
-	game2, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base"}})
+	game2, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game 2")
 
-	game3, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base"}})
+	game3, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game 3")
 
 	// Add players to each game
@@ -139,7 +139,7 @@ func TestGameLifecycle_PlayerReconnection(t *testing.T) {
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Create game
-	createdGame, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base"}})
+	createdGame, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game")
 
 	// Player joins
@@ -172,7 +172,7 @@ func TestGameLifecycle_SoloMode(t *testing.T) {
 	startAction := turnAction.NewStartGameAction(repo, logger)
 
 	// Create game
-	createdGame, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 1, CardPacks: []string{"base"}})
+	createdGame, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 1, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game")
 
 	// Single player joins
@@ -183,7 +183,7 @@ func TestGameLifecycle_SoloMode(t *testing.T) {
 	// Set corporation
 	gameState, _ := repo.Get(ctx, createdGame.ID())
 	players := gameState.GetAllPlayers()
-	players[0].SetCorporationID("corp-tharsis-republic")
+	players[0].SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	// Start game
 	err = startAction.Execute(ctx, createdGame.ID(), gameState.HostPlayerID())
@@ -207,7 +207,7 @@ func TestGameLifecycle_GameStateConsistency(t *testing.T) {
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Create game
-	createdGame, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 4, CardPacks: []string{"base"}})
+	createdGame, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 4, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game")
 	gameID := createdGame.ID()
 

@@ -36,8 +36,8 @@ func TestRoverConstruction_GainCreditsOnAnyCityPlacement(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	owner := players[0]
 	other := players[1]
-	owner.SetCorporationID("corp-tharsis-republic")
-	other.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	other.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	// Register Rover Construction passive effect
@@ -99,7 +99,7 @@ func TestRoverConstruction_TriggersOnSelfCityToo(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	effect := player.CardEffect{
@@ -158,7 +158,7 @@ func TestRoverConstruction_DoesNotTriggerOnGreenery(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	effect := player.CardEffect{
@@ -226,7 +226,7 @@ func TestOlympusConference_AddScienceOnScienceTagPlayed(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	// Set up Olympus Conference as played with resource storage
@@ -291,7 +291,7 @@ func TestOlympusConference_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	owner.PlayedCards().AddCard("card-olympus-conference", "Olympus Conference", "active", []string{"building", "earth", "science"})
@@ -366,7 +366,7 @@ func TestViralEnhancers_GainPlantOnPlantTagPlayed(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	owner.PlayedCards().AddCard("card-viral-enhancers", "Viral Enhancers", "active", []string{"microbe", "science"})
@@ -441,7 +441,7 @@ func TestViralEnhancers_DoesNotTriggerOnBuildingTag(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	owner := players[0]
-	owner.SetCorporationID("corp-tharsis-republic")
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
 	owner.PlayedCards().AddCard("card-viral-enhancers", "Viral Enhancers", "active", []string{"microbe", "science"})

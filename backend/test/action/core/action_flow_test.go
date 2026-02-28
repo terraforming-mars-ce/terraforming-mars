@@ -21,12 +21,12 @@ func TestPlayCardConsumesAction(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(context.Background(), p, 100)
-	p.Hand().AddCard("card-power-plant")
+	p.Hand().AddCard(testutil.CardID("Power Plant"))
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err := playAction.Execute(context.Background(), testGame.ID(), playerID, "card-power-plant", payment, nil, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing card should succeed")
 
 	turn := testGame.CurrentTurn()
@@ -43,12 +43,12 @@ func TestZeroActionsBlocksCardPlay(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(context.Background(), p, 100)
-	p.Hand().AddCard("card-power-plant")
+	p.Hand().AddCard(testutil.CardID("Power Plant"))
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err = playAction.Execute(context.Background(), testGame.ID(), playerID, "card-power-plant", payment, nil, nil, nil, nil)
+	err = playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
 }
 
@@ -92,19 +92,19 @@ func TestAutoAdvanceAfterSecondAction(t *testing.T) {
 	testutil.SetPlayerCredits(context.Background(), p1, 200)
 
 	// Play first card
-	p1.Hand().AddCard("card-power-plant")
+	p1.Hand().AddCard(testutil.CardID("Power Plant"))
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-power-plant", payment, nil, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "First card play should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "Should have 1 action after first play")
 	testutil.AssertEqual(t, player1ID, testGame.CurrentTurn().PlayerID(), "Should still be player 1's turn")
 
 	// Play second card
-	p1.Hand().AddCard("card-asteroid")
+	p1.Hand().AddCard(testutil.CardID("Asteroid"))
 	payment2 := cardAction.PaymentRequest{Credits: 14}
-	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-asteroid", payment2, nil, nil, nil, nil)
+	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Asteroid"), payment2, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Second card play should succeed")
 
 	// Should auto-advance to player 2
@@ -123,11 +123,11 @@ func TestSoloUnlimitedActionsNotBlocked(t *testing.T) {
 	testutil.AssertEqual(t, -1, testGame.CurrentTurn().ActionsRemaining(), "Solo should have unlimited actions")
 
 	// Play card - should succeed and remain unlimited
-	p.Hand().AddCard("card-power-plant")
+	p.Hand().AddCard(testutil.CardID("Power Plant"))
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err := playAction.Execute(context.Background(), testGame.ID(), playerID, "card-power-plant", payment, nil, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Solo card play should succeed")
 
 	testutil.AssertEqual(t, -1, testGame.CurrentTurn().ActionsRemaining(), "Solo should still have unlimited actions")
@@ -217,18 +217,18 @@ func TestAutoAdvanceGrantsUnlimitedActionsToLastNonPassedPlayer(t *testing.T) {
 	testutil.SetPlayerCredits(context.Background(), p1, 200)
 
 	// Play first card
-	p1.Hand().AddCard("card-power-plant")
+	p1.Hand().AddCard(testutil.CardID("Power Plant"))
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 4}
 
-	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-power-plant", payment, nil, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "First card play should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "Should have 1 action after first play")
 
 	// Play second card - this should auto-advance and grant unlimited actions to player 1
-	p1.Hand().AddCard("card-asteroid")
+	p1.Hand().AddCard(testutil.CardID("Asteroid"))
 	payment2 := cardAction.PaymentRequest{Credits: 14}
-	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, "card-asteroid", payment2, nil, nil, nil, nil)
+	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Asteroid"), payment2, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Second card play should succeed")
 
 	// Player 1 should now have unlimited actions since they're the last non-passed player
@@ -296,7 +296,7 @@ func TestForcedFirstActionDoesNotConsumePlayerAction(t *testing.T) {
 	// Set a forced first action for player 1 (simulating Tharsis Republic)
 	forcedAction := &player.ForcedFirstAction{
 		ActionType:    "city-placement",
-		CorporationID: "corp-tharsis-republic",
+		CorporationID: testutil.CardID("Tharsis Republic"),
 		Source:        "corporation-starting-action",
 		Completed:     false,
 		Description:   "Place a city tile (Tharsis Republic starting action)",
