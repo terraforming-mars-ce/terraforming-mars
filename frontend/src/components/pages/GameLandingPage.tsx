@@ -8,6 +8,9 @@ import { useNotifications } from "../../contexts/NotificationContext.tsx";
 import { GameDto } from "../../types/generated/api-types.ts";
 import { getCorporationLogo } from "../../utils/corporationLogos.tsx";
 import { clearGameSession } from "../../utils/sessionStorage.ts";
+import { APP_VERSION } from "../../config.ts";
+import { WindowManagerProvider } from "../ui/debug/WindowManager.tsx";
+import BugReportWindow from "../ui/debug/BugReportWindow.tsx";
 
 const FADE_DURATION_MS = 300;
 
@@ -24,8 +27,15 @@ const GameLandingPage: React.FC = () => {
     playerName: string;
   } | null>(null);
   const [isDismissing, setIsDismissing] = useState(false);
+  const [showBugReportWindow, setShowBugReportWindow] = useState(false);
   const reconnectCardRef = useRef<HTMLDivElement>(null);
   const processedErrorRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const handleToggleBugReport = () => setShowBugReportWindow((prev) => !prev);
+    window.addEventListener("toggle-bug-report-window", handleToggleBugReport);
+    return () => window.removeEventListener("toggle-bug-report-window", handleToggleBugReport);
+  }, []);
 
   useEffect(() => {
     const checkExistingGame = async () => {
@@ -287,6 +297,25 @@ const GameLandingPage: React.FC = () => {
         >
           View Cards
         </Link>
+
+        <span className="fixed bottom-[16px] left-[16px] text-white/30 text-xs select-none">
+          {APP_VERSION}
+          <span className="mx-1">|</span>
+          <button
+            className="hover:text-white/70 transition-colors cursor-pointer"
+            onClick={() => window.dispatchEvent(new CustomEvent("toggle-bug-report-window"))}
+          >
+            Bug report
+          </button>
+        </span>
+
+        <WindowManagerProvider>
+          <BugReportWindow
+            isVisible={showBugReportWindow}
+            onClose={() => setShowBugReportWindow(false)}
+            gameState={null}
+          />
+        </WindowManagerProvider>
       </div>
     </div>
   );

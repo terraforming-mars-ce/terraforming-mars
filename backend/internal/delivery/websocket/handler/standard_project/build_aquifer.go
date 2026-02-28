@@ -39,7 +39,7 @@ func (h *BuildAquiferHandler) HandleMessage(ctx context.Context, connection *cor
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("💧 Processing build aquifer request (migrated)")
+	log.Info("💧 Processing build aquifer request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

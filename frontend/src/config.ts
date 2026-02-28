@@ -14,24 +14,26 @@ declare global {
   }
 }
 
-const DEFAULT_API_URL = "http://localhost:3001/api/v1";
+const DEFAULT_API_URL = "/api/v1";
 
 /**
  * Get the runtime configuration.
  * Priority:
  * 1. window.__RUNTIME_CONFIG__ (set by runtime-config.js at container startup)
- * 2. import.meta.env.VITE_APP_BACKEND_URL (build-time env var, for development)
+ * 2. import.meta.env.VITE_API_URL (build-time env var, for development)
  * 3. Default fallback
  */
 function getConfig(): RuntimeConfig {
   const runtimeConfig = window.__RUNTIME_CONFIG__;
 
   return {
-    apiUrl: runtimeConfig?.apiUrl || import.meta.env.VITE_APP_BACKEND_URL || DEFAULT_API_URL,
+    apiUrl: runtimeConfig?.apiUrl || import.meta.env.VITE_API_URL || DEFAULT_API_URL,
   };
 }
 
 export const config = getConfig();
+
+export const APP_VERSION: string = import.meta.env.VITE_APP_VERSION || "localbuild";
 
 /**
  * Derives the WebSocket URL from the API URL.

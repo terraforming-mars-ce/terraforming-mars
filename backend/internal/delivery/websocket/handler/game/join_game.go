@@ -12,14 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// JoinGameHandler handles join game requests using the migrated architecture
+// JoinGameHandler handles join game requests.
 type JoinGameHandler struct {
 	joinGameAction *gameaction.JoinGameAction
 	broadcaster    Broadcaster
 	logger         *zap.Logger
 }
 
-// NewJoinGameHandler creates a new join game handler for migrated actions
+// NewJoinGameHandler creates a new join game handler
 func NewJoinGameHandler(
 	joinGameAction *gameaction.JoinGameAction,
 	broadcaster Broadcaster,
@@ -38,7 +38,7 @@ func (h *JoinGameHandler) HandleMessage(ctx context.Context, connection *core.Co
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🎮 Processing join game request (migrated)")
+	log.Info("🎮 Processing join game request")
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {

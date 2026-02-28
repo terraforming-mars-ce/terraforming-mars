@@ -7,6 +7,7 @@ import PaymentSelectionPopover from "../../ui/popover/PaymentSelectionPopover.ts
 import DebugDropdown from "../../ui/debug/DebugDropdown.tsx";
 import DevModeChip from "../../ui/debug/DevModeChip.tsx";
 import PerformanceWindow from "../../ui/debug/PerformanceWindow.tsx";
+import BugReportWindow from "../../ui/debug/BugReportWindow.tsx";
 import TilePlacerWindow from "../../ui/debug/TilePlacerWindow.tsx";
 import { WindowManagerProvider } from "../../ui/debug/WindowManager.tsx";
 import WaitingRoomOverlay from "../../ui/overlay/WaitingRoomOverlay.tsx";
@@ -97,6 +98,7 @@ export default function GameInterface() {
   const [showCardsPlayedModal, setShowCardsPlayedModal] = useState(false);
   const [showDebugDropdown, setShowDebugDropdown] = useState(false);
   const [showPerformanceWindow, setShowPerformanceWindow] = useState(false);
+  const [showBugReportWindow, setShowBugReportWindow] = useState(false);
   const [tilePlacerPlayerId, setTilePlacerPlayerId] = useState<string | null>(null);
   const [spectatePlayerId, setSpectatePlayerId] = useState<string | null>(null);
 
@@ -2079,6 +2081,16 @@ export default function GameInterface() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleToggleBugReport = () => {
+      setShowBugReportWindow((prev) => !prev);
+    };
+    window.addEventListener("toggle-bug-report-window", handleToggleBugReport);
+    return () => {
+      window.removeEventListener("toggle-bug-report-window", handleToggleBugReport);
+    };
+  }, []);
+
   // Extract card details directly from game data (backend now sends full card objects)
   const extractCardDetails = useCallback((cards: CardDto[]) => {
     setCardDetails(cards);
@@ -2402,6 +2414,12 @@ export default function GameInterface() {
           onClose={() => setShowPerformanceWindow(false)}
         />
 
+        <BugReportWindow
+          isVisible={showBugReportWindow}
+          onClose={() => setShowBugReportWindow(false)}
+          gameState={game}
+        />
+
         {tilePlacerPlayerId && game && (
           <TilePlacerWindow
             playerId={tilePlacerPlayerId}
@@ -2623,16 +2641,18 @@ export default function GameInterface() {
         />
       )}
 
-      {/* Card fan overlay for hand cards (hidden when spectating another player) */}
-      {game && currentPlayer && !spectatePlayerId && (
+      {/* Card fan overlay for hand cards (animated out when spectating another player) */}
+      {game && currentPlayer && (
         <div
-          className={
-            transitionPhase === "animateUI"
-              ? "animate-[uiFadeIn_1200ms_ease-out_both]"
-              : transitionPhase === "loading" || transitionPhase === "fadeOutLobby"
-                ? "opacity-0"
-                : ""
-          }
+          className={`transition-all duration-300 ease-in-out ${
+            spectatePlayerId
+              ? "opacity-0 pointer-events-none"
+              : transitionPhase === "animateUI"
+                ? "animate-[uiFadeIn_1200ms_ease-out_both]"
+                : transitionPhase === "loading" || transitionPhase === "fadeOutLobby"
+                  ? "opacity-0"
+                  : ""
+          }`}
         >
           <CardFanOverlay
             cards={currentPlayer.cards || []}

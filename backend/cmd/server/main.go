@@ -28,15 +28,22 @@ import (
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/logger"
 	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
+	"terraforming-mars-backend/internal/service/bugreport"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
+var Version = "localbuild"
+
 func main() {
+	// Load env from dev.env if present (does not override existing env vars)
+	_ = godotenv.Load("dev.env")
+
 	logLevel := os.Getenv("TM_LOG_LEVEL")
 	if logLevel == "" {
-		logLevel = "debug"
+		logLevel = "info"
 	}
 
 	// Initialize logger
@@ -47,6 +54,7 @@ func main() {
 
 	log := logger.Get()
 	log.Info("🚀 Starting Terraforming Mars backend server")
+	log.Info("Version: " + Version)
 	log.Info("Log level set to " + logLevel)
 
 	// Setup graceful shutdown
@@ -77,6 +85,13 @@ func main() {
 	// ========== Initialize Game State Repository (Diff Logging) ==========
 	stateRepo := game.NewInMemoryGameStateRepository()
 	log.Info("📊 Game state repository initialized")
+
+	// ========== Initialize Bug Report Service ==========
+	bugReportService := bugreport.NewService(log)
+	caps := bugReportService.Capabilities()
+	log.Info("🐛 Bug report service",
+		zap.Bool("github_app", caps.GitHubApp),
+		zap.Bool("claude", caps.Claude))
 
 	// ========== Initialize WebSocket Hub ==========
 	hub := core.NewHub()
@@ -154,20 +169,9 @@ func main() {
 	listCardsAction := query.NewListCardsAction(cardRegistry, log)
 	getPlayerAction := query.NewGetPlayerAction(gameRepo, log)
 
-	log.Info("✅ All migration actions initialized")
-	log.Info("   📌 Game Lifecycle (5): CreateGame, CreateDemoLobby, JoinGame, ConfirmDemoSetup, FinalScoring")
-	log.Info("   📌 Card Actions (2): PlayCard, UseCardAction")
-	log.Info("   📌 Standard Projects (6): LaunchAsteroid, BuildPowerPlant, BuildAquifer, BuildCity, PlantGreenery, SellPatents")
-	log.Info("   📌 Resource Conversions (2): ConvertHeat, ConvertPlants")
-	log.Info("   📌 Tile Selection (1): SelectTile")
-	log.Info("   📌 Turn Management (3): StartGame, SkipAction, SelectStartingCards")
-	log.Info("   📌 Confirmations (5): ConfirmSellPatents, ConfirmProductionCards, ConfirmCardDraw, ConfirmCardDiscard, ConfirmBehaviorChoice")
-	log.Info("   📌 Connection Management (4): PlayerReconnected, PlayerDisconnected, PlayerTakeover, KickPlayer")
-	log.Info("   📌 Milestones & Awards (2): ClaimMilestone, FundAward")
-	log.Info("   📌 Admin Actions (9): SetPhase, SetCurrentTurn, SetResources, SetProduction, SetGlobalParameters, GiveCard, SetCorporation, StartTileSelection, SetTR")
-	log.Info("   📌 Query Actions (5): GetGame, GetGameLogs, ListGames, ListCards, GetPlayer")
+	log.Info("✅ All actions initialized")
 
-	// ========== Register Migration Handlers with WebSocket Hub ==========
+	// ========== Register WebSocket Handlers ==========
 	wsHandler.RegisterHandlers(
 		hub,
 		broadcaster,
@@ -220,7 +224,7 @@ func main() {
 		adminSetTRAction,
 	)
 
-	log.Info("🎯 Migration handlers registered with WebSocket hub (28 handlers)")
+	log.Info("🎯 WebSocket handlers registered")
 
 	// ========== Start WebSocket Hub ==========
 	ctx, cancel := context.WithCancel(context.Background())
@@ -233,7 +237,6 @@ func main() {
 	mainRouter := mux.NewRouter()
 	mainRouter.Use(httpmiddleware.CORS) // Apply CORS to all routes
 
-	// Setup API router with migration actions
 	apiRouter := httpHandler.SetupRouter(
 		createGameAction,
 		createDemoLobbyAction,
@@ -243,6 +246,7 @@ func main() {
 		listCardsAction,
 		getPlayerAction,
 		cardRegistry,
+		bugReportService,
 	)
 
 	// Mount API router
@@ -262,6 +266,7 @@ func main() {
 	log.Info("   📌 GET  /api/v1/games/{gameId}/logs - Get game logs")
 	log.Info("   📌 GET  /api/v1/cards - List cards")
 	log.Info("   📌 GET  /api/v1/games/{gameId}/players/{playerId} - Get player")
+	log.Info("   📌 POST /api/v1/bugs - Submit bug report")
 	log.Info("   📌 WS   /ws - WebSocket endpoint")
 	log.Info("   ℹ️  Game creation available via both HTTP POST and WebSocket 'create-game'")
 
@@ -283,7 +288,6 @@ func main() {
 	}()
 
 	log.Info("✅ Server started successfully")
-	log.Info("🎮 Using migration architecture - all old code removed")
 
 	// Wait for shutdown signal
 	<-quit

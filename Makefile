@@ -40,7 +40,7 @@ run:
 	@echo "   Press Ctrl+C to stop both servers"
 	@echo ""
 	@trap 'kill 0' SIGINT; \
-		(cd backend && $(shell go env GOPATH)/bin/air) & \
+		(cd backend && TM_REPO_PATH=../ $(shell go env GOPATH)/bin/air) & \
 		(cd frontend && npm start) & \
 		wait
 
@@ -50,12 +50,12 @@ frontend:
 
 backend:
 	@echo "🚀 Starting backend server..."
-	cd backend && go run cmd/server/main.go
+	cd backend && TM_REPO_PATH=../ go run cmd/server/main.go
 
 backend-live:
 	@echo "🔄 Starting backend server with hot reload..."
 	@echo "   Watching for changes in backend/ directory"
-	cd backend && $(shell go env GOPATH)/bin/air
+	cd backend && TM_REPO_PATH=../ $(shell go env GOPATH)/bin/air
 
 kill:
 	@echo "🛑 Killing all development servers..."

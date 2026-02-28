@@ -210,6 +210,7 @@ interface TileProps {
   tileData: TileData3D;
   tileType: "empty" | "ocean" | "greenery" | "city" | "special" | "volcano";
   ownerId?: string | null;
+  ownerColor?: string;
   reservedById?: string | null;
   displayName?: string;
   onClick: () => void;
@@ -227,6 +228,7 @@ export default function Tile({
   tileData,
   tileType,
   ownerId,
+  ownerColor,
   reservedById,
   displayName,
   onClick,
@@ -477,8 +479,9 @@ export default function Tile({
 
   const borderColor = useMemo(() => {
     if (hovered) return new THREE.Color("#ffffff");
+    if (ownerColor) return new THREE.Color(ownerColor);
     return tileColor.clone().multiplyScalar(0.25);
-  }, [tileColor, hovered]);
+  }, [tileColor, hovered, ownerColor]);
 
   const hexTileMaterial = useMemo(() => {
     const isGreenery = tileType === "greenery";
@@ -720,14 +723,6 @@ export default function Tile({
             ));
           })()}
         </>
-      )}
-
-      {/* Owner indicator */}
-      {ownerId && (
-        <mesh position={[0.1, 0.1, 0.01]}>
-          <circleGeometry args={[0.02, 16]} />
-          <meshBasicMaterial color={`hsl(${(ownerId.charCodeAt(0) * 137.5) % 360}, 70%, 50%)`} />
-        </mesh>
       )}
 
       {/* Reserved tile marker (land claim) */}

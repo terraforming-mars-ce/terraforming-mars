@@ -1282,6 +1282,39 @@ export interface CreateDemoLobbyResponse {
   game: GameDto;
   playerId: string;
 }
+/**
+ * BugReportRequest represents the request body for submitting a bug report
+ */
+export interface BugReportRequest {
+  description: string;
+  author?: string;
+  includeScreenshot: boolean;
+  screenshot?: string;
+  gameState?: any /* json.RawMessage */;
+}
+/**
+ * BugReportDto represents a bug report's current state
+ */
+export interface BugReportDto {
+  id: string;
+  status: string;
+  statusMessage: string;
+  issueUrl?: string;
+}
+/**
+ * BugReportResponse represents the response for bug report operations
+ */
+export interface BugReportResponse {
+  report: BugReportDto;
+}
+/**
+ * BugReportStatusResponse represents the response for bug report availability status
+ */
+export interface BugReportStatusResponse {
+  available: boolean;
+  claude: boolean;
+  reason?: string;
+}
 
 //////////
 // source: message_types.go

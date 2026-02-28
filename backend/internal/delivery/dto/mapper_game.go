@@ -10,7 +10,7 @@ import (
 	"terraforming-mars-backend/internal/game/player"
 )
 
-// ToGameDto converts migration Game to GameDto with personalized view
+// ToGameDto converts Game to GameDto with personalized view
 // The playerID parameter determines which player is "currentPlayer" vs "otherPlayers"
 func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) GameDto {
 	players := g.GetAllPlayers()
@@ -147,7 +147,7 @@ func getCurrentTurnPlayerID(g *game.Game) *string {
 	return &playerID
 }
 
-// convertTileBonuses converts migration TileBonus to DTO
+// convertTileBonuses converts TileBonus to DTO
 func convertTileBonuses(bonuses []board.TileBonus) []TileBonusDto {
 	dtos := make([]TileBonusDto, len(bonuses))
 	for i, bonus := range bonuses {

@@ -39,7 +39,7 @@ func (h *ConvertHeatHandler) HandleMessage(ctx context.Context, connection *core
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🔥 Processing convert heat request (migrated)")
+	log.Info("🔥 Processing convert heat request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

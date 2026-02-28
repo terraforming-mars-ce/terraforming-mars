@@ -34,7 +34,7 @@ func (h *PlantGreeneryHandler) HandleMessage(ctx context.Context, connection *co
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🌱 Processing plant greenery request (migrated)")
+	log.Info("🌱 Processing plant greenery request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")

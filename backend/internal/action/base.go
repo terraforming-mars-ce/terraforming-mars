@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// BaseAction provides common dependencies for all migrated actions
+// BaseAction provides common dependencies for all actions.
 // Following the new architecture: actions use ONLY GameRepository (+ logger + card registry)
 // Broadcasting happens automatically via events published by Game methods
 type BaseAction struct {

@@ -26,12 +26,9 @@ import (
 	"terraforming-mars-backend/internal/delivery/websocket/handler/tile"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/turn_management"
 	"terraforming-mars-backend/internal/logger"
-
-	"go.uber.org/zap"
 )
 
-// RegisterHandlers registers migrated action handlers with the hub
-// Handlers call broadcaster explicitly after actions complete
+// RegisterHandlers registers all action handlers with the hub.
 func RegisterHandlers(
 	hub *core.Hub,
 	broadcaster *Broadcaster,
@@ -74,7 +71,7 @@ func RegisterHandlers(
 	adminSetTRAction *adminAction.SetTRAction,
 ) {
 	log := logger.Get()
-	log.Info("🔄 Registering migration handlers with explicit broadcasting")
+	log.Info("🔄 Registering WebSocket handlers")
 
 	createGameHandler := game.NewCreateGameHandler(createGameAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeCreateGame, createGameHandler)
@@ -179,44 +176,9 @@ func RegisterHandlers(
 	)
 	hub.RegisterHandler(dto.MessageTypeAdminCommand, adminCommandHandler)
 
-	log.Info("🎯 Migration handlers registered successfully")
-	log.Info("   ✅ Game Lifecycle (3): create-game, player-connect/join-game, confirm-demo-setup")
-	log.Info("   ✅ Card Actions (2): PlayCard, UseCardAction")
-	log.Info("   ✅ Standard Projects (6): LaunchAsteroid, BuildPowerPlant, BuildAquifer, BuildCity, PlantGreenery, SellPatents")
-	log.Info("   ✅ Resource Conversions (2): ConvertHeat, ConvertPlants")
-	log.Info("   ✅ Tile Selection (1): SelectTile")
-	log.Info("   ✅ Turn Management (3): StartGame, SkipAction, SelectStartingCards")
-	log.Info("   ✅ Confirmations (5): ConfirmSellPatents, ConfirmProductionCards, ConfirmCardDraw, ConfirmCardDiscard, ConfirmBehaviorChoice")
-	log.Info("   ✅ Connection (3): PlayerDisconnected, PlayerTakeover, KickPlayer")
-	log.Info("   ✅ Milestones & Awards (2): ClaimMilestone, FundAward")
-	log.Info("   ✅ Admin (1): AdminCommand (routes to 9 sub-commands)")
-	log.Info("   📌 Total: 28 handlers registered")
+	log.Info("🎯 WebSocket handlers registered")
 }
 
-// MigrateSingleHandler migrates a specific message type from old to new handler
-// This allows for gradual, controlled migration of individual handlers
-func MigrateSingleHandler(
-	hub *core.Hub,
-	messageType dto.MessageType,
-	newHandler core.MessageHandler,
-) {
-	log := logger.Get().With(zap.String("message_type", string(messageType)))
-
-	log.Info("🔄 Migrating handler to new architecture")
-	hub.RegisterHandler(messageType, newHandler)
-	log.Info("✅ Handler migration complete")
-}
-
-// NOTE: All handlers have been migrated. The TODO list below is preserved for reference.
-// Completed migrations:
-// - ConvertHeatHandler ✓
-// - ConvertPlantsHandler ✓
-// - BuildPowerPlantHandler ✓
-// - BuildCityHandler ✓
-// - BuildAquiferHandler ✓
-// - PlantGreeneryHandler ✓
-// - LaunchAsteroidHandler ✓
-// - SellPatentsHandler ✓
 // - ConfirmSellPatentsHandler ✓
 // - SkipActionHandler ✓
 // - StartGameHandler ✓

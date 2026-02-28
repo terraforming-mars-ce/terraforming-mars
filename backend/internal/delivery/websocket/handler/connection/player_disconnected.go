@@ -39,7 +39,7 @@ func (h *PlayerDisconnectedHandler) HandleMessage(ctx context.Context, connectio
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("⛓️‍💥 Processing player disconnected request (migrated)")
+	log.Info("⛓️‍💥 Processing player disconnected request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context - connection closing anyway")

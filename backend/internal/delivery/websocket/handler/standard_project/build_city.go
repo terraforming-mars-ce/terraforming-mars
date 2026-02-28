@@ -34,7 +34,7 @@ func (h *BuildCityHandler) HandleMessage(ctx context.Context, connection *core.C
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🏙️ Processing build city request (migrated)")
+	log.Info("🏙️ Processing build city request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
