@@ -15,7 +15,7 @@ interface ReservedAreaTileProps {
 
 const HEX_RADIUS = 0.166;
 const FENCE_INSET = 0.145;
-const POST_HEIGHT = 0.035;
+const POST_HEIGHT = 0.05;
 const POST_RADIUS = 0.003;
 const RAIL_RADIUS = 0.0015;
 
@@ -204,7 +204,7 @@ export default function ReservedAreaTile({
           const length = Math.sqrt(dx * dx + dy * dy);
           const angle = Math.atan2(dy, dx);
 
-          return [0.35, 0.7].map((heightFraction, ri) => {
+          return [0.25, 0.5, 0.75].map((heightFraction, ri) => {
             const railZ = POST_HEIGHT * heightFraction * railProgressRef.current;
             return (
               <mesh
