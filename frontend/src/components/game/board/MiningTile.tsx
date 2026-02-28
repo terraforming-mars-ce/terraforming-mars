@@ -213,8 +213,10 @@ export default function MiningTile({
       const cycle = (Math.sin(time * 1.2) + 1) / 2;
       // Extend slightly past t=1 so the cart disappears into the hill
       const t = cycle * 1.3;
-      cartRef.current.position.y = trackY(Math.min(t, 1)) + (t > 1 ? (t - 1) * TRACK_LENGTH * 0.3 : 0);
-      cartRef.current.position.z = trackZ(Math.min(t, 1)) + 0.005 + (t > 1 ? (t - 1) * (CAVE_Z - GROUND_Z) * 0.3 : 0);
+      cartRef.current.position.y =
+        trackY(Math.min(t, 1)) + (t > 1 ? (t - 1) * TRACK_LENGTH * 0.3 : 0);
+      cartRef.current.position.z =
+        trackZ(Math.min(t, 1)) + 0.005 + (t > 1 ? (t - 1) * (CAVE_Z - GROUND_Z) * 0.3 : 0);
       cartRef.current.scale.setScalar(emergenceRef.current);
 
       // Track direction: going down (toward cave) vs coming up (from cave)
@@ -276,11 +278,7 @@ export default function MiningTile({
         {/* Everything rotated to random cave direction */}
         <group rotation={[0, 0, caveAngle - Math.PI / 2]}>
           {/* Solid hill behind cave arch — occludes the cart */}
-          <mesh
-            geometry={hillGeometry}
-            position={[0, 0.045, CAVE_Z]}
-            renderOrder={12}
-          >
+          <mesh geometry={hillGeometry} position={[0, 0.045, CAVE_Z]} renderOrder={12}>
             <meshStandardMaterial
               color={new THREE.Color(0.32, 0.2, 0.11)}
               roughness={0.95}
@@ -289,11 +287,7 @@ export default function MiningTile({
           </mesh>
 
           {/* Cave entrance arch at bottom of slope (Y=0, Z=CAVE_Z) */}
-          <mesh
-            geometry={caveArchGeometry}
-            position={[0, 0, CAVE_Z]}
-            renderOrder={14}
-          >
+          <mesh geometry={caveArchGeometry} position={[0, 0, CAVE_Z]} renderOrder={14}>
             <meshStandardMaterial
               color={new THREE.Color(0.25, 0.16, 0.09)}
               roughness={0.9}
@@ -407,16 +401,17 @@ export default function MiningTile({
                     renderOrder={13}
                   >
                     <cylinderGeometry args={[0.003, 0.003, 0.003, 6]} />
-                    <meshStandardMaterial color="#333333" roughness={0.5} metalness={0.5} side={THREE.DoubleSide} />
+                    <meshStandardMaterial
+                      color="#333333"
+                      roughness={0.5}
+                      metalness={0.5}
+                      side={THREE.DoubleSide}
+                    />
                   </mesh>
                 ))}
                 <group ref={oreGroupRef}>
                   {oreRocks.map((rock, ri) => (
-                    <mesh
-                      key={`ore-${ri}`}
-                      position={[rock.x, rock.z, 0.008]}
-                      renderOrder={13}
-                    >
+                    <mesh key={`ore-${ri}`} position={[rock.x, rock.z, 0.008]} renderOrder={13}>
                       <dodecahedronGeometry args={[rock.scale, 0]} />
                       <meshStandardMaterial color={rock.color} roughness={0.8} metalness={0.2} />
                     </mesh>
