@@ -1,0 +1,217 @@
+---
+name: github
+description: Interact with GitHub issues and pull requests using the gh CLI. This skill should be used when the user references issues or PRs (e.g., "view this PR", "check my issue", "pick an issue for me", "what's in PR #42"), or asks to create issues/PRs (e.g., "create an issue for me", "create a ticket"). Triggered by common git-related phrases involving issues, PRs, tickets, or pull requests. Assumes gh CLI is already installed and authenticated.
+---
+
+# GitHub CLI Skill
+
+Interact with GitHub issues and pull requests using the `gh` CLI tool.
+
+## Prerequisites
+
+The `gh` CLI is assumed to be already installed and authenticated. Do NOT attempt to install it. If `gh` is not available, inform the user that it needs to be installed and authenticated separately.
+
+To verify availability:
+
+```bash
+gh --version
+```
+
+If this fails, stop and tell the user: "The `gh` CLI is not installed. Please install it from https://cli.github.com/ and run `gh auth login` before using this skill."
+
+## Trigger Phrases
+
+Activate this skill when the user says things like:
+
+- **Viewing**: "view this PR", "check my issue", "show me PR #42", "what's in issue #10", "look at this PR", "read this issue"
+- **Browsing**: "pick an issue for me", "what issues are open", "show me open PRs", "list my PRs", "find issues labeled bug"
+- **Creating**: "create an issue", "create a ticket", "open a PR", "make an issue for this"
+- **Any URL reference**: When the user pastes a GitHub URL like `https://github.com/owner/repo/issues/123` or `https://github.com/owner/repo/pull/45`
+
+## Reading Issues and PRs
+
+### When the user references an issue or PR by number
+
+```bash
+gh issue view <number>
+gh pr view <number>
+```
+
+### When the user pastes a GitHub URL
+
+Extract the owner, repo, and number from the URL and use:
+
+```bash
+gh issue view <number> --repo <owner>/<repo>
+gh pr view <number> --repo <owner>/<repo>
+```
+
+### When the user asks to browse or pick issues
+
+```bash
+# List open issues
+gh issue list
+
+# List open issues with labels
+gh issue list --label "bug"
+gh issue list --label "good first issue"
+
+# List issues assigned to the user
+gh issue list --assignee "@me"
+
+# List open PRs
+gh pr list
+
+# List PRs by the user
+gh pr list --author "@me"
+
+# List PRs awaiting review
+gh pr list --search "review-requested:@me"
+```
+
+### Viewing details with comments
+
+```bash
+gh issue view <number> --comments
+gh pr view <number> --comments
+```
+
+### Viewing PR diff
+
+```bash
+gh pr diff <number>
+```
+
+## Creating Issues
+
+Only create issues when the user explicitly asks (e.g., "create an issue", "create a ticket", "file a bug").
+
+### Auto-labeling
+
+Before creating an issue, always fetch available labels and select the most appropriate ones:
+
+```bash
+gh label list
+```
+
+Choose labels that best match the issue content. Apply one or more labels using `--label` flags. If no labels fit, omit labels entirely — do not invent labels that don't exist in the repo.
+
+### Creating the issue
+
+```bash
+gh issue create --title "<title>" --label "<label1>" --label "<label2>" --body "<body>"
+```
+
+For structured bodies, use a heredoc:
+
+```bash
+gh issue create --title "<title>" --label "<label1>" --body "$(cat <<'EOF'
+## Description
+<description>
+
+## Steps to Reproduce
+<steps>
+
+## Expected Behavior
+<expected>
+EOF
+)"
+```
+
+Optional flags:
+
+- `--label <label>` to add labels (repeat for multiple)
+- `--assignee <user>` to assign (use `@me` for self)
+- `--milestone <name>` to set milestone
+
+### Auto-dependencies
+
+After creating an issue, check whether it has a logical dependency on an existing issue. If creating multiple issues in a batch, wire up blocked-by relationships between them for any sequential dependencies. Do NOT mention blockers in the issue body — use GitHub's native dependency feature instead (see "Issue Dependencies" section below).
+
+## Creating Pull Requests
+
+Only create PRs when the user explicitly asks. Follow the PR creation workflow documented in the system instructions (commit changes, push branch, then create PR).
+
+```bash
+gh pr create --title "<title>" --body "$(cat <<'EOF'
+## Summary
+<summary>
+
+## Test plan
+<test plan>
+EOF
+)"
+```
+
+## Checking CI/PR Status
+
+```bash
+gh pr checks <number>
+gh pr status
+```
+
+## Issue Dependencies (Blocked By / Blocking)
+
+The `gh` CLI does not have native flags for issue dependencies. Use `gh api` with the REST API instead.
+
+### Add a "blocked by" dependency
+
+To mark issue B as blocked by issue A, first get A's numeric REST ID, then create the dependency:
+
+```bash
+# Get the numeric REST API ID for the blocking issue
+gh api /repos/{owner}/{repo}/issues/<blocking_number> -q '.id'
+
+# Add the dependency (issue_id must be an integer, use --input for JSON)
+gh api --method POST /repos/{owner}/{repo}/issues/<blocked_number>/dependencies/blocked_by \
+  --input - <<< '{"issue_id": <blocking_issue_rest_id>}'
+```
+
+### List dependencies
+
+```bash
+# List what blocks an issue
+gh api /repos/{owner}/{repo}/issues/<number>/dependencies/blocked_by
+
+# List what an issue blocks
+gh api /repos/{owner}/{repo}/issues/<number>/dependencies/blocking
+```
+
+### Remove a dependency
+
+```bash
+gh api --method DELETE /repos/{owner}/{repo}/issues/<blocked_number>/dependencies/blocked_by/<blocking_issue_rest_id>
+```
+
+**Important**: The `issue_id` parameter must be the numeric REST API ID (not the issue number). Always fetch it first with `gh api /repos/{owner}/{repo}/issues/<number> -q '.id'`.
+
+## Useful Patterns
+
+### Get issue/PR as JSON for programmatic use
+
+```bash
+gh issue view <number> --json title,body,labels,assignees,state
+gh pr view <number> --json title,body,labels,state,mergeable,reviewDecision
+```
+
+### Search issues
+
+```bash
+gh issue list --search "<query>"
+gh issue list --search "is:open sort:updated-desc"
+```
+
+### View PR review comments
+
+```bash
+gh api repos/{owner}/{repo}/pulls/<number>/comments
+```
+
+## Guidelines
+
+1. **Always read first**: When the user references an issue or PR, fetch and display it before taking any action.
+2. **Never create without explicit request**: Only create issues or PRs when the user explicitly says "create", "open", "file", or "make".
+3. **Summarize clearly**: After fetching an issue or PR, provide a concise summary of the title, state, description, and any relevant labels or assignees.
+4. **Respect repo context**: When inside a git repository, `gh` automatically detects the repo. Only use `--repo` when the user references a different repository.
+5. **Handle errors gracefully**: If `gh` commands fail (auth issues, not found, etc.), explain the error clearly and suggest next steps.
+6. **Wire up dependencies automatically**: When creating issues that have sequential dependencies (e.g., "3D animations" depends on "game mechanics"), use GitHub's native blocked-by API to link them. When creating a single new issue, check if any existing open issues are logical blockers and add the relationship. Never put dependency info in the issue body — use the API.

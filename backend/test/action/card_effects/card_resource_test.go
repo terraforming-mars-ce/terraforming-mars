@@ -47,7 +47,7 @@ func TestCardResource_CEOsFavoriteProject_AddsToAnimalCard(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -105,7 +105,7 @@ func TestCardResource_CEOsFavoriteProject_AddsToMicrobeCard(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -173,7 +173,7 @@ func TestCardResource_CorroderSuits_AddsToVenusCard(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -252,7 +252,7 @@ func TestCardResource_MaxwellBase_ActionAddsToVenusCard(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -319,7 +319,7 @@ func TestCardResource_FailsWithoutTargetCard(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -371,7 +371,7 @@ func TestCardResource_FailsWhenTargetHasNoStorage(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -437,7 +437,7 @@ func TestCardResource_AnyCardTarget_SkipsWhenNoTargetCard(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)

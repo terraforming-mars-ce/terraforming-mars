@@ -19,7 +19,7 @@ func StartTestGame(t *testing.T, g *game.Game) {
 	players := g.GetAllPlayers()
 	for _, p := range players {
 		if !p.HasCorporation() {
-			p.SetCorporationID("corp-tharsis-republic")
+			p.SetCorporationID(CardID("Tharsis Republic"))
 		}
 	}
 

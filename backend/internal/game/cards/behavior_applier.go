@@ -797,7 +797,14 @@ func (a *BehaviorApplier) applyAnyPlayerResource(
 		current = resources.Heat
 	}
 
-	removeAmount := min(amount, current)
+	// Card data uses negative amounts for removal (e.g., Deimos Down: amount=-8).
+	// Normalize to positive for clamping.
+	absAmount := amount
+	if absAmount < 0 {
+		absAmount = -absAmount
+	}
+
+	removeAmount := min(absAmount, current)
 
 	if removeAmount > 0 {
 		targetPlayer.Resources().Add(map[shared.ResourceType]int{
@@ -808,7 +815,7 @@ func (a *BehaviorApplier) applyAnyPlayerResource(
 	log.Info("🎯 Removed resource from target player",
 		zap.String("target_player_id", a.targetPlayerID),
 		zap.String("resource_type", string(resourceType)),
-		zap.Int("requested", amount),
+		zap.Int("requested", absAmount),
 		zap.Int("removed", removeAmount))
 	return nil
 }
@@ -1029,7 +1036,10 @@ func (a *BehaviorApplier) applyOutput(
 		if err != nil {
 			return fmt.Errorf("failed to increase oxygen: %w", err)
 		}
-		log.Info("🌊 Increased oxygen", zap.Int("steps", actualSteps))
+		if actualSteps > 0 && a.player != nil {
+			a.player.Resources().UpdateTerraformRating(actualSteps)
+		}
+		log.Info("🌊 Increased oxygen", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
 
 	case shared.ResourceTemperature:
 		if a.game == nil {
@@ -1039,7 +1049,10 @@ func (a *BehaviorApplier) applyOutput(
 		if err != nil {
 			return fmt.Errorf("failed to increase temperature: %w", err)
 		}
-		log.Info("🌡️ Increased temperature", zap.Int("steps", actualSteps))
+		if actualSteps > 0 && a.player != nil {
+			a.player.Resources().UpdateTerraformRating(actualSteps)
+		}
+		log.Info("🌡️ Increased temperature", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
 
 	case shared.ResourceVenus:
 		if a.game == nil {
@@ -1049,7 +1062,10 @@ func (a *BehaviorApplier) applyOutput(
 		if err != nil {
 			return fmt.Errorf("failed to increase venus: %w", err)
 		}
-		log.Info("♀ Increased venus", zap.Int("steps", actualSteps))
+		if actualSteps > 0 && a.player != nil {
+			a.player.Resources().UpdateTerraformRating(actualSteps)
+		}
+		log.Info("♀ Increased venus", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
 
 	case shared.ResourceLandClaim:
 		if a.game == nil {
@@ -1066,7 +1082,7 @@ func (a *BehaviorApplier) applyOutput(
 		}
 
 		// Atomically append to queue (thread-safe)
-		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, nil); err != nil {
+		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, nil); err != nil {
 			return fmt.Errorf("failed to append land claim to pending tile selection queue: %w", err)
 		}
 
@@ -1107,7 +1123,7 @@ func (a *BehaviorApplier) applyOutput(
 		}
 
 		// Atomically append to queue (thread-safe)
-		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, tileRestrictions); err != nil {
+		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, tileRestrictions); err != nil {
 			return fmt.Errorf("failed to append to pending tile selection queue: %w", err)
 		}
 
@@ -1158,7 +1174,7 @@ func (a *BehaviorApplier) applyOutput(
 		}
 
 		// Atomically append to queue (thread-safe)
-		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, tileRestrictions); err != nil {
+		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, tileRestrictions); err != nil {
 			return fmt.Errorf("failed to append to pending tile selection queue: %w", err)
 		}
 

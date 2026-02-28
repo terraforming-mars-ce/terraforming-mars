@@ -44,8 +44,8 @@ func TestPlayCard_AllOpponentsDrawCard_TwoPlayers(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	player1 := players[0]
 	player2 := players[1]
-	player1.SetCorporationID("corp-tharsis-republic")
-	player2.SetCorporationID("corp-tharsis-republic")
+	player1.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	player2.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -87,9 +87,9 @@ func TestPlayCard_AllOpponentsDrawCard_ThreePlayers(t *testing.T) {
 	player1 := players[0]
 	player2 := players[1]
 	player3 := players[2]
-	player1.SetCorporationID("corp-tharsis-republic")
-	player2.SetCorporationID("corp-tharsis-republic")
-	player3.SetCorporationID("corp-tharsis-republic")
+	player1.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	player2.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	player3.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
@@ -128,7 +128,7 @@ func TestPlayCard_AllOpponentsDrawCard_SoloMode(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	player1 := players[0]
-	player1.SetCorporationID("corp-tharsis-republic")
+	player1.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)

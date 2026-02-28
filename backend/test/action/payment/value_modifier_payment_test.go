@@ -342,10 +342,12 @@ func TestValueModifier_PlayCardWithModifiedTitanium(t *testing.T) {
 	// Get player and set corporation
 	players := testGame.GetAllPlayers()
 	player := players[0]
-	player.SetCorporationID("corp-tharsis-republic")
+	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	// Start the game
 	testutil.StartTestGame(t, testGame)
+
+	asteroidID := testutil.CardID("Asteroid")
 
 	// Give player titanium and add value modifier
 	player.Resources().Add(map[shared.ResourceType]int{
@@ -355,7 +357,7 @@ func TestValueModifier_PlayCardWithModifiedTitanium(t *testing.T) {
 	player.Resources().AddValueModifier(shared.ResourceTitanium, 1) // +1 titanium value
 
 	// Add a space-tagged card to hand that costs 14 (asteroid)
-	player.Hand().AddCard("card-asteroid")
+	player.Hand().AddCard(asteroidID)
 
 	// Play card with 4 titanium (4 * 4 MC = 16 MC covers 14 cost)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -364,7 +366,7 @@ func TestValueModifier_PlayCardWithModifiedTitanium(t *testing.T) {
 		Titanium: 4, // 4 titanium at 4 MC each = 16 MC
 	}
 
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-asteroid", payment, nil, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), asteroidID, payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should be able to play 14-cost card with 4 titanium at value 4")
 
 	// Verify titanium was deducted
@@ -372,7 +374,7 @@ func TestValueModifier_PlayCardWithModifiedTitanium(t *testing.T) {
 	testutil.AssertEqual(t, 3, resources.Titanium, "Should have 3 titanium remaining (5 - 4 + 2 from Asteroid behavior)")
 
 	// Verify card is no longer in hand
-	testutil.AssertFalse(t, player.Hand().HasCard("card-asteroid"), "Card should be removed from hand")
+	testutil.AssertFalse(t, player.Hand().HasCard(asteroidID), "Card should be removed from hand")
 }
 
 // TestValueModifier_MixedPaymentWithModifier tests mixed payment (credits + modified titanium)
@@ -387,10 +389,12 @@ func TestValueModifier_MixedPaymentWithModifier(t *testing.T) {
 	// Get player and set corporation
 	players := testGame.GetAllPlayers()
 	player := players[0]
-	player.SetCorporationID("corp-tharsis-republic")
+	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	// Start the game
 	testutil.StartTestGame(t, testGame)
+
+	asteroidID := testutil.CardID("Asteroid")
 
 	// Give player resources and value modifier
 	player.Resources().Add(map[shared.ResourceType]int{
@@ -400,7 +404,7 @@ func TestValueModifier_MixedPaymentWithModifier(t *testing.T) {
 	player.Resources().AddValueModifier(shared.ResourceTitanium, 1) // +1 titanium value
 
 	// Add a space-tagged card to hand that costs 14
-	player.Hand().AddCard("card-asteroid")
+	player.Hand().AddCard(asteroidID)
 
 	// Play card with 2 titanium (8 MC) + 6 credits = 14 MC exactly
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -409,7 +413,7 @@ func TestValueModifier_MixedPaymentWithModifier(t *testing.T) {
 		Titanium: 2, // 2 titanium at 4 MC each = 8 MC
 	}
 
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-asteroid", payment, nil, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), asteroidID, payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should be able to play 14-cost card with 2 titanium (8) + 6 credits")
 
 	// Verify resources were deducted
@@ -430,10 +434,12 @@ func TestValueModifier_InsufficientPaymentRejected(t *testing.T) {
 	// Get player and set corporation
 	players := testGame.GetAllPlayers()
 	player := players[0]
-	player.SetCorporationID("corp-tharsis-republic")
+	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	// Start the game
 	testutil.StartTestGame(t, testGame)
+
+	asteroidID := testutil.CardID("Asteroid")
 
 	// Give player resources and value modifier
 	player.Resources().Add(map[shared.ResourceType]int{
@@ -443,7 +449,7 @@ func TestValueModifier_InsufficientPaymentRejected(t *testing.T) {
 	player.Resources().AddValueModifier(shared.ResourceTitanium, 1) // +1 titanium value
 
 	// Add a space-tagged card to hand that costs 14
-	player.Hand().AddCard("card-asteroid")
+	player.Hand().AddCard(asteroidID)
 
 	// Try to play card with only 3 titanium (12 MC) - not enough for 14 cost
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -451,7 +457,7 @@ func TestValueModifier_InsufficientPaymentRejected(t *testing.T) {
 		Titanium: 3, // 3 titanium at 4 MC each = 12 MC (not enough for 14)
 	}
 
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-asteroid", payment, nil, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), asteroidID, payment, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Should reject payment of 12 MC for 14 cost card")
 
 	// Verify titanium was NOT deducted (action failed)

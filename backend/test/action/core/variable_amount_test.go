@@ -29,13 +29,13 @@ func TestInsulation_DecreaseHeatProductionIncreaseCreditProduction(t *testing.T)
 	})
 
 	// Add Insulation to hand
-	p.Hand().AddCard("card-insulation")
+	p.Hand().AddCard(testutil.CardID("Insulation"))
 
 	// Play Insulation with selectedAmount=3 (decrease 3 heat production, increase 3 credit production)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 2}
 	selectedAmount := 3
-	err := playCardAction.Execute(ctx, testGame.ID(), playerID, "card-insulation", payment, nil, nil, nil, &selectedAmount)
+	err := playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Insulation"), payment, nil, nil, nil, &selectedAmount)
 	testutil.AssertNoError(t, err, "Insulation should play successfully")
 
 	// Verify production changes
@@ -58,13 +58,13 @@ func TestInsulation_SelectAmountZero(t *testing.T) {
 		shared.ResourceHeatProduction: 5,
 	})
 
-	p.Hand().AddCard("card-insulation")
+	p.Hand().AddCard(testutil.CardID("Insulation"))
 
 	// Play Insulation with selectedAmount=0 (no change)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 2}
 	selectedAmount := 0
-	err := playCardAction.Execute(ctx, testGame.ID(), playerID, "card-insulation", payment, nil, nil, nil, &selectedAmount)
+	err := playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Insulation"), payment, nil, nil, nil, &selectedAmount)
 	testutil.AssertNoError(t, err, "Insulation with 0 amount should play successfully")
 
 	// Verify no production changes
@@ -87,13 +87,13 @@ func TestInsulation_SelectMaxAmount(t *testing.T) {
 		shared.ResourceHeatProduction: 3,
 	})
 
-	p.Hand().AddCard("card-insulation")
+	p.Hand().AddCard(testutil.CardID("Insulation"))
 
 	// Play Insulation with selectedAmount=3 (all heat production)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 2}
 	selectedAmount := 3
-	err := playCardAction.Execute(ctx, testGame.ID(), playerID, "card-insulation", payment, nil, nil, nil, &selectedAmount)
+	err := playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Insulation"), payment, nil, nil, nil, &selectedAmount)
 	testutil.AssertNoError(t, err, "Insulation with max amount should play successfully")
 
 	production := p.Resources().Production()

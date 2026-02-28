@@ -28,7 +28,7 @@ func setupActiveGameForGlobalParams(t *testing.T) (*game.Game, game.GameReposito
 
 	settings := game.GameSettings{
 		MaxPlayers: 2,
-		CardPacks:  []string{"base"},
+		CardPacks:  []string{"base-game"},
 	}
 
 	createdGame, _ := createAction.Execute(ctx, settings)
@@ -44,7 +44,7 @@ func setupActiveGameForGlobalParams(t *testing.T) (*game.Game, game.GameReposito
 	gameState, _ := repo.Get(ctx, gameID)
 	players := gameState.GetAllPlayers()
 	for _, p := range players {
-		p.SetCorporationID("corp-tharsis-republic")
+		p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	}
 
 	startAction.Execute(ctx, gameID, gameState.HostPlayerID())

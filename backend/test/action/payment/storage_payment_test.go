@@ -67,7 +67,7 @@ func TestStoragePaymentSubstitute_RegisteredOnCardPlay(t *testing.T) {
 }
 
 func TestStoragePaymentSubstitute_UsedForCardPayment(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, _, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -86,8 +86,17 @@ func TestStoragePaymentSubstitute_UsedForCardPayment(t *testing.T) {
 		Selectors:      []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}},
 	})
 
-	// Play a Venus-tagged card (card-venus-test, cost 7) with storage payment substitutes
-	venusCardID := "card-venus-test"
+	// Define a synthetic Venus-tagged card for this test
+	venusCardID := "test-venus-card"
+	syntheticVenusCard := gamecards.Card{
+		ID:   venusCardID,
+		Name: "Test Venus Card",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 7,
+		Tags: []shared.CardTag{shared.TagVenus},
+	}
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards([]gamecards.Card{syntheticVenusCard})
+
 	p.Hand().AddCard(venusCardID)
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
