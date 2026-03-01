@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   GameDto,
   GameStatusActive,
@@ -18,6 +18,12 @@ interface MilestonePopoverProps {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
 }
 
+interface PlayerInfo {
+  id: string;
+  name: string;
+  color: string;
+}
+
 const MilestonePopover: React.FC<MilestonePopoverProps> = ({
   isVisible,
   onClose,
@@ -31,13 +37,27 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
     isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
 
   const milestones = gameState?.currentPlayer?.milestones ?? [];
+  const globalMilestones = gameState?.milestones ?? [];
   const claimedCount = milestones.filter((m) => m.isClaimed).length;
 
+  const allPlayers: PlayerInfo[] = useMemo(() => {
+    if (!gameState) return [];
+    const players: PlayerInfo[] = [
+      {
+        id: gameState.currentPlayer.id,
+        name: gameState.currentPlayer.name,
+        color: gameState.currentPlayer.color,
+      },
+    ];
+    for (const p of gameState.otherPlayers) {
+      players.push({ id: p.id, name: p.name, color: p.color });
+    }
+    return players;
+  }, [gameState]);
+
   const getPlayerName = (playerId: string | undefined): string => {
-    if (!playerId || !gameState) return "Unknown";
-    if (playerId === gameState.currentPlayer.id) return gameState.currentPlayer.name;
-    const otherPlayer = gameState.otherPlayers.find((p) => p.id === playerId);
-    return otherPlayer?.name ?? "Unknown";
+    if (!playerId) return "Unknown";
+    return allPlayers.find((p) => p.id === playerId)?.name ?? "Unknown";
   };
 
   const handleClaimMilestone = (milestoneId: string) => {
@@ -66,10 +86,14 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
           const isClaimed = milestone.isClaimed;
           const isAvailable = milestone.available && !isClaimed;
           const isExecutable = canClaimMilestones && isAvailable;
-          const progressMet =
-            milestone.progress !== undefined &&
-            milestone.required !== undefined &&
-            milestone.progress >= milestone.required;
+
+          const globalData = globalMilestones.find((m) => m.type === milestone.type);
+          const playerProgress = globalData?.playerProgress ?? {};
+          const required = globalData?.required ?? 0;
+
+          const sortedPlayers = [...allPlayers].sort(
+            (a, b) => (playerProgress[b.id] ?? 0) - (playerProgress[a.id] ?? 0),
+          );
 
           const getState = () => {
             if (isClaimed) return "claimed" as const;
@@ -109,27 +133,6 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
                       <span className="text-white/60 text-xs">→</span>
                       <span className="text-amber-400 text-xs font-semibold">5 VP</span>
                     </div>
-
-                    {milestone.progress !== undefined &&
-                      milestone.required !== undefined &&
-                      !isClaimed && (
-                        <div className="mt-2">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className={progressMet ? "text-green-400" : "text-amber-400"}>
-                              Progress: {milestone.progress}/{milestone.required}
-                            </span>
-                            {progressMet && <span className="text-green-400">Ready!</span>}
-                          </div>
-                          <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${progressMet ? "bg-green-500" : "bg-amber-500"}`}
-                              style={{
-                                width: `${Math.min(100, (milestone.progress / milestone.required) * 100)}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
                   </div>
 
                   {canClaimMilestones && !isClaimed && (
@@ -157,6 +160,29 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
                 {isClaimed && milestone.claimedBy && (
                   <div className="mt-2 text-xs text-blue-400/80 italic">
                     Claimed by {getPlayerName(milestone.claimedBy)}
+                  </div>
+                )}
+
+                {!isClaimed && required > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {sortedPlayers.map((player) => {
+                      const progress = playerProgress[player.id] ?? 0;
+                      const met = progress >= required;
+                      return (
+                        <div key={player.id} className="flex items-center gap-2 text-xs">
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: player.color }}
+                          />
+                          <span className="text-white/80 truncate min-w-0">{player.name}</span>
+                          <span
+                            className={`ml-auto font-orbitron font-semibold ${met ? "text-green-400" : "text-white/50"}`}
+                          >
+                            {progress}/{required}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

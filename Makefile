@@ -49,8 +49,9 @@ frontend:
 	cd frontend && npm start
 
 backend:
-	@echo "🚀 Starting backend server..."
-	cd backend && TM_REPO_PATH=../ go run cmd/server/main.go
+	@echo "🔄 Starting backend server with hot reload..."
+	@echo "   Watching for changes in backend/ directory"
+	cd backend && TM_REPO_PATH=../ $(shell go env GOPATH)/bin/air
 
 backend-live:
 	@echo "🔄 Starting backend server with hot reload..."

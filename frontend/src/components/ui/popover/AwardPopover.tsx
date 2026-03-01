@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   GameDto,
   GameStatusActive,
@@ -18,6 +18,12 @@ interface AwardPopoverProps {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
 }
 
+interface PlayerInfo {
+  id: string;
+  name: string;
+  color: string;
+}
+
 const AwardPopover: React.FC<AwardPopoverProps> = ({
   isVisible,
   onClose,
@@ -31,13 +37,27 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
     isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
 
   const awards = gameState?.currentPlayer?.awards ?? [];
+  const globalAwards = gameState?.awards ?? [];
   const fundedCount = awards.filter((a) => a.isFunded).length;
 
+  const allPlayers: PlayerInfo[] = useMemo(() => {
+    if (!gameState) return [];
+    const players: PlayerInfo[] = [
+      {
+        id: gameState.currentPlayer.id,
+        name: gameState.currentPlayer.name,
+        color: gameState.currentPlayer.color,
+      },
+    ];
+    for (const p of gameState.otherPlayers) {
+      players.push({ id: p.id, name: p.name, color: p.color });
+    }
+    return players;
+  }, [gameState]);
+
   const getPlayerName = (playerId: string | undefined): string => {
-    if (!playerId || !gameState) return "Unknown";
-    if (playerId === gameState.currentPlayer.id) return gameState.currentPlayer.name;
-    const otherPlayer = gameState.otherPlayers.find((p) => p.id === playerId);
-    return otherPlayer?.name ?? "Unknown";
+    if (!playerId) return "Unknown";
+    return allPlayers.find((p) => p.id === playerId)?.name ?? "Unknown";
   };
 
   const handleFundAward = (awardId: string) => {
@@ -66,6 +86,13 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
           const isFunded = award.isFunded;
           const isAvailable = award.available && !isFunded;
           const isExecutable = canFundAwards && isAvailable;
+
+          const globalData = globalAwards.find((a) => a.type === award.type);
+          const playerProgress = globalData?.playerProgress ?? {};
+
+          const sortedPlayers = [...allPlayers].sort(
+            (a, b) => (playerProgress[b.id] ?? 0) - (playerProgress[a.id] ?? 0),
+          );
 
           const getState = () => {
             if (isFunded) return "claimed" as const;
@@ -136,6 +163,24 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
                     Funded by {getPlayerName(award.fundedBy)}
                   </div>
                 )}
+
+                <div className="mt-2 space-y-1">
+                  {sortedPlayers.map((player) => {
+                    const score = playerProgress[player.id] ?? 0;
+                    return (
+                      <div key={player.id} className="flex items-center gap-2 text-xs">
+                        <span
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: player.color }}
+                        />
+                        <span className="text-white/80 truncate min-w-0">{player.name}</span>
+                        <span className="ml-auto font-orbitron font-semibold text-white/50">
+                          {score}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </GamePopoverItem>
           );
