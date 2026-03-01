@@ -320,11 +320,9 @@ export interface CardPaymentDto {
  */
 export type GamePhase = string;
 export const GamePhaseWaitingForGameStart: GamePhase = "waiting_for_game_start";
-export const GamePhaseCorporationSelection: GamePhase = "corporation_selection";
-export const GamePhaseStartingCardSelection: GamePhase = "starting_card_selection";
+export const GamePhaseStartingSelection: GamePhase = "starting_selection";
 export const GamePhaseStartGameSelection: GamePhase = "start_game_selection";
 export const GamePhaseDemoSetup: GamePhase = "demo_setup";
-export const GamePhasePreludeSelection: GamePhase = "prelude_selection";
 export const GamePhaseAction: GamePhase = "action";
 export const GamePhaseProductionAndCardDraw: GamePhase = "production_and_card_draw";
 export const GamePhaseComplete: GamePhase = "complete";
@@ -1397,9 +1395,8 @@ export const MessageTypeActionFundAward: MessageType = "action.award.fund-award"
 export const MessageTypeActionTileSelected: MessageType = "action.tile-selection.tile-selected";
 export const MessageTypeActionPlayCard: MessageType = "action.card.play-card";
 export const MessageTypeActionCardAction: MessageType = "action.card.card-action";
-export const MessageTypeActionSelectCorporation: MessageType = "action.card.select-corporation";
-export const MessageTypeActionSelectStartingCard: MessageType = "action.card.select-starting-card";
-export const MessageTypeActionSelectPreludeCards: MessageType = "action.card.select-prelude-cards";
+export const MessageTypeActionSelectStartingChoices: MessageType =
+  "action.card.select-starting-choices";
 export const MessageTypeActionSelectCards: MessageType = "action.card.select-cards";
 export const MessageTypeActionConfirmProductionCards: MessageType =
   "action.card.confirm-production-cards";

@@ -121,7 +121,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 		}
 		log.Info("🎮 Demo game entering setup phase")
 	} else {
-		if err := g.UpdatePhase(ctx, game.GamePhaseCorporationSelection); err != nil {
+		if err := g.UpdatePhase(ctx, game.GamePhaseStartingSelection); err != nil {
 			log.Error("Failed to update game phase", zap.Error(err))
 			return fmt.Errorf("failed to update game phase: %w", err)
 		}
@@ -131,15 +131,28 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 			return fmt.Errorf("failed to distribute corporations: %w", err)
 		}
 		log.Info("✅ Corporations distributed to all players")
+
+		if g.Settings().HasPrelude() {
+			if err := a.distributePreludeCards(ctx, g, players); err != nil {
+				log.Error("Failed to distribute prelude cards", zap.Error(err))
+				return fmt.Errorf("failed to distribute prelude cards: %w", err)
+			}
+			log.Info("✅ Prelude cards distributed to all players")
+		}
+
+		if err := a.distributeProjectCards(ctx, g, players); err != nil {
+			log.Error("Failed to distribute project cards", zap.Error(err))
+			return fmt.Errorf("failed to distribute project cards: %w", err)
+		}
+		log.Info("✅ Project cards distributed to all players")
 	}
 
 	log.Info("🎉 Game started successfully")
 	return nil
 }
 
-// distributeCorporations gives each player 2 corporation cards to choose from
-func (a *StartGameAction) distributeCorporations(ctx context.Context, gameInstance *game.Game, players []*playerPkg.Player) error {
-	deck := gameInstance.Deck()
+func (a *StartGameAction) distributeCorporations(ctx context.Context, g *game.Game, players []*playerPkg.Player) error {
+	deck := g.Deck()
 	if deck == nil {
 		return fmt.Errorf("game deck is nil")
 	}
@@ -153,8 +166,55 @@ func (a *StartGameAction) distributeCorporations(ctx context.Context, gameInstan
 		phase := &playerPkg.SelectCorporationPhase{
 			AvailableCorporations: corporationIDs,
 		}
-		if err := gameInstance.SetSelectCorporationPhase(ctx, p.ID(), phase); err != nil {
+		if err := g.SetSelectCorporationPhase(ctx, p.ID(), phase); err != nil {
 			return fmt.Errorf("failed to set corporation phase for player %s: %w", p.ID(), err)
+		}
+	}
+
+	return nil
+}
+
+func (a *StartGameAction) distributePreludeCards(ctx context.Context, g *game.Game, players []*playerPkg.Player) error {
+	deck := g.Deck()
+	if deck == nil {
+		return fmt.Errorf("game deck is nil")
+	}
+
+	for _, p := range players {
+		preludeIDs, err := deck.DrawPreludeCards(ctx, 4)
+		if err != nil {
+			return fmt.Errorf("failed to draw prelude cards for player %s: %w", p.ID(), err)
+		}
+
+		phase := &playerPkg.SelectPreludeCardsPhase{
+			AvailablePreludes: preludeIDs,
+			MaxSelectable:     2,
+		}
+		if err := g.SetSelectPreludeCardsPhase(ctx, p.ID(), phase); err != nil {
+			return fmt.Errorf("failed to set prelude phase for player %s: %w", p.ID(), err)
+		}
+	}
+
+	return nil
+}
+
+func (a *StartGameAction) distributeProjectCards(ctx context.Context, g *game.Game, players []*playerPkg.Player) error {
+	deck := g.Deck()
+	if deck == nil {
+		return fmt.Errorf("game deck is nil")
+	}
+
+	for _, p := range players {
+		projectCardIDs, err := deck.DrawProjectCards(ctx, 10)
+		if err != nil {
+			return fmt.Errorf("failed to draw project cards for player %s: %w", p.ID(), err)
+		}
+
+		phase := &playerPkg.SelectStartingCardsPhase{
+			AvailableCards: projectCardIDs,
+		}
+		if err := g.SetSelectStartingCardsPhase(ctx, p.ID(), phase); err != nil {
+			return fmt.Errorf("failed to set selection phase for player %s: %w", p.ID(), err)
 		}
 	}
 

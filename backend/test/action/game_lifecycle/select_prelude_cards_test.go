@@ -10,9 +10,8 @@ import (
 	"terraforming-mars-backend/test/testutil"
 )
 
-// setupPreludeGame creates a game in prelude selection phase with prelude cards dealt.
-// Players already have corporations set (simulating Corp → Prelude flow).
-func setupPreludeGame(t *testing.T) (*game.Game, game.GameRepository, *turnAction.SelectStartingCardsAction, *turnAction.SelectPreludeCardsAction, string, string) {
+// setupStartingSelectionGame creates a game in starting_selection phase with all phase data populated.
+func setupStartingSelectionGame(t *testing.T, hasPrelude bool) (*game.Game, *turnAction.SelectStartingChoicesAction, string, string) {
 	t.Helper()
 
 	broadcaster := testutil.NewMockBroadcaster()
@@ -21,15 +20,20 @@ func setupPreludeGame(t *testing.T) (*game.Game, game.GameRepository, *turnActio
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	ctx := context.Background()
+
+	packs := []string{"base-game"}
+	if hasPrelude {
+		packs = append(packs, "prelude")
+	}
 	testGame.UpdateSettings(ctx, game.GameSettings{
 		MaxPlayers: 4,
-		CardPacks:  []string{"base-game", "prelude"},
+		CardPacks:  packs,
 	})
 
 	err := testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testutil.AssertNoError(t, err, "Failed to set active status")
-	err = testGame.UpdatePhase(ctx, game.GamePhasePreludeSelection)
-	testutil.AssertNoError(t, err, "Failed to set prelude selection phase")
+	err = testGame.UpdatePhase(ctx, game.GamePhaseStartingSelection)
+	testutil.AssertNoError(t, err, "Failed to set starting selection phase")
 
 	players := testGame.GetAllPlayers()
 	playerIDs := make([]string, len(players))
@@ -39,91 +43,34 @@ func setupPreludeGame(t *testing.T) (*game.Game, game.GameRepository, *turnActio
 	err = testGame.SetTurnOrder(ctx, playerIDs)
 	testutil.AssertNoError(t, err, "Failed to set turn order")
 
-	// Set corporations on players (Corp selection already done before prelude phase)
-	corpIDs := []string{"B08", "B06"} // Tharsis Republic, Mining Guild
+	// Set up corporation phase for all players (use corps without forced first actions)
+	corpIDs := []string{"B01", "B02"}
 	for i, p := range players {
-		p.SetCorporationID(corpIDs[i])
 		testutil.SetPlayerCredits(ctx, p, 100)
+
+		err = testGame.SetSelectCorporationPhase(ctx, p.ID(), &player.SelectCorporationPhase{
+			AvailableCorporations: []string{corpIDs[i], "B03"},
+		})
+		testutil.AssertNoError(t, err, "Failed to set corporation phase")
 	}
 
-	// Deal prelude cards
-	deck := testGame.Deck()
-	for _, p := range players {
-		preludeIDs, err := deck.DrawPreludeCards(ctx, 4)
-		testutil.AssertNoError(t, err, "Failed to draw prelude cards")
+	// Set up prelude phase if enabled
+	if hasPrelude {
+		deck := testGame.Deck()
+		for _, p := range players {
+			preludeIDs, err := deck.DrawPreludeCards(ctx, 4)
+			testutil.AssertNoError(t, err, "Failed to draw prelude cards")
 
-		phase := &player.SelectPreludeCardsPhase{
-			AvailablePreludes: preludeIDs,
-			MaxSelectable:     2,
+			phase := &player.SelectPreludeCardsPhase{
+				AvailablePreludes: preludeIDs,
+				MaxSelectable:     2,
+			}
+			err = testGame.SetSelectPreludeCardsPhase(ctx, p.ID(), phase)
+			testutil.AssertNoError(t, err, "Failed to set prelude phase")
 		}
-		err = testGame.SetSelectPreludeCardsPhase(ctx, p.ID(), phase)
-		testutil.AssertNoError(t, err, "Failed to set prelude phase")
 	}
 
-	selectStartingCardsAction := turnAction.NewSelectStartingCardsAction(repo, cardRegistry, logger)
-	selectPreludeCardsAction := turnAction.NewSelectPreludeCardsAction(repo, cardRegistry, logger)
-
-	return testGame, repo, selectStartingCardsAction, selectPreludeCardsAction, playerIDs[0], playerIDs[1]
-}
-
-func completePreludeSelection(t *testing.T, g *game.Game, action *turnAction.SelectPreludeCardsAction, playerID string) {
-	t.Helper()
-	ctx := context.Background()
-
-	// Override with safe preludes (no tile placements)
-	safePreludes := []string{"P01", "P03", "P04", "P07"}
-	g.SetSelectPreludeCardsPhase(ctx, playerID, &player.SelectPreludeCardsPhase{
-		AvailablePreludes: safePreludes,
-		MaxSelectable:     2,
-	})
-
-	err := action.Execute(ctx, g.ID(), playerID, []string{"P01", "P03"})
-	testutil.AssertNoError(t, err, "Failed to complete prelude selection")
-}
-
-func TestSelectPreludeCards_TransitionToStartingCards(t *testing.T) {
-	testGame, _, _, selectPreludeCardsAction, playerID1, playerID2 := setupPreludeGame(t)
-
-	// Both players complete prelude selection
-	completePreludeSelection(t, testGame, selectPreludeCardsAction, playerID1)
-	completePreludeSelection(t, testGame, selectPreludeCardsAction, playerID2)
-
-	// Game should transition to starting card selection phase
-	testutil.AssertEqual(t, game.GamePhaseStartingCardSelection, testGame.CurrentPhase(), "Game should be in starting card selection phase")
-
-	// Both players should have starting cards (project cards only, no corporations)
-	phase1 := testGame.GetSelectStartingCardsPhase(playerID1)
-	phase2 := testGame.GetSelectStartingCardsPhase(playerID2)
-	testutil.AssertTrue(t, phase1 != nil, "Player 1 should have starting cards phase")
-	testutil.AssertTrue(t, phase2 != nil, "Player 2 should have starting cards phase")
-	testutil.AssertEqual(t, 10, len(phase1.AvailableCards), "Player 1 should have 10 project cards")
-}
-
-func TestSelectPreludeCards_NoPreludePackSkipsPhase(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
-	logger := testutil.TestLogger()
-	cardRegistry := testutil.CreateTestCardRegistry()
-	ctx := context.Background()
-
-	testGame.UpdateSettings(ctx, game.GameSettings{
-		MaxPlayers: 4,
-		CardPacks:  []string{"base-game"},
-	})
-
-	err := testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testutil.AssertNoError(t, err, "Failed to set active status")
-	err = testGame.UpdatePhase(ctx, game.GamePhaseStartingCardSelection)
-	testutil.AssertNoError(t, err, "Failed to set phase")
-
-	players := testGame.GetAllPlayers()
-	playerIDs := make([]string, len(players))
-	for i, p := range players {
-		playerIDs[i] = p.ID()
-	}
-	err = testGame.SetTurnOrder(ctx, playerIDs)
-	testutil.AssertNoError(t, err, "Failed to set turn order")
-
+	// Set up starting cards phase for all players
 	deck := testGame.Deck()
 	for _, p := range players {
 		projectCards, err := deck.DrawProjectCards(ctx, 10)
@@ -134,61 +81,14 @@ func TestSelectPreludeCards_NoPreludePackSkipsPhase(t *testing.T) {
 		}
 		err = testGame.SetSelectStartingCardsPhase(ctx, p.ID(), phase)
 		testutil.AssertNoError(t, err, "Failed to set starting cards phase")
-
-		// Players already have corporations (from corp selection phase)
-		p.SetCorporationID("B08")
-		testutil.SetPlayerCredits(ctx, p, 100)
 	}
 
-	selectStartingCardsAction := turnAction.NewSelectStartingCardsAction(repo, cardRegistry, logger)
-
-	// Both players complete starting card selection (no corporationID needed)
-	for _, pid := range playerIDs {
-		err := selectStartingCardsAction.Execute(ctx, testGame.ID(), pid, []string{})
-		testutil.AssertNoError(t, err, "Failed to complete starting card selection")
-	}
-
-	// Should go straight to action phase
-	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Game should be in action phase without prelude pack")
+	action := turnAction.NewSelectStartingChoicesAction(repo, cardRegistry, logger)
+	return testGame, action, playerIDs[0], playerIDs[1]
 }
 
-func TestSelectPreludeCards_HappyPath(t *testing.T) {
-	testGame, _, _, selectPreludeCardsAction, playerID1, _ := setupPreludeGame(t)
-
-	// Player 1 selects their preludes
-	phase1 := testGame.GetSelectPreludeCardsPhase(playerID1)
-	selected := []string{phase1.AvailablePreludes[0], phase1.AvailablePreludes[1]}
-	unselected := []string{phase1.AvailablePreludes[2], phase1.AvailablePreludes[3]}
-
-	ctx := context.Background()
-	err := selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID1, selected)
-	testutil.AssertNoError(t, err, "Failed to select prelude cards")
-
-	// Player 1 should have their phase cleared
-	testutil.AssertTrue(t, testGame.GetSelectPreludeCardsPhase(playerID1) == nil, "Player 1 prelude phase should be cleared")
-
-	// Selected preludes should be in played cards
-	p1, _ := testGame.GetPlayer(playerID1)
-	for _, id := range selected {
-		testutil.AssertTrue(t, p1.PlayedCards().Contains(id), "Selected prelude should be in played cards")
-	}
-
-	// Unselected preludes should be in discard pile
-	discardPile := testGame.Deck().DiscardPile()
-	discardSet := make(map[string]bool)
-	for _, id := range discardPile {
-		discardSet[id] = true
-	}
-	for _, id := range unselected {
-		testutil.AssertTrue(t, discardSet[id], "Unselected prelude should be in discard pile")
-	}
-
-	// Game should still be in prelude phase (player 2 hasn't selected)
-	testutil.AssertEqual(t, game.GamePhasePreludeSelection, testGame.CurrentPhase(), "Game should still be in prelude selection phase")
-}
-
-func TestSelectPreludeCards_AllPlayersComplete_AdvancesToStartingCards(t *testing.T) {
-	testGame, _, _, selectPreludeCardsAction, playerID1, playerID2 := setupPreludeGame(t)
+func TestSelectStartingChoices_HappyPath_WithPreludes(t *testing.T) {
+	testGame, action, playerID1, playerID2 := setupStartingSelectionGame(t, true)
 	ctx := context.Background()
 
 	// Override prelude phases with known safe cards (no tile placements)
@@ -202,54 +102,37 @@ func TestSelectPreludeCards_AllPlayersComplete_AdvancesToStartingCards(t *testin
 		MaxSelectable:     2,
 	})
 
-	// Both players select preludes
-	err := selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID1, []string{"P01", "P03"})
-	testutil.AssertNoError(t, err, "Failed to select preludes for player 1")
+	// Player 1 selects corporation, preludes, and cards in one call
+	corpPhase1 := testGame.GetSelectCorporationPhase(playerID1)
+	cardsPhase1 := testGame.GetSelectStartingCardsPhase(playerID1)
+	corpID1 := corpPhase1.AvailableCorporations[0]
 
-	err = selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID2, []string{"P04", "P07"})
-	testutil.AssertNoError(t, err, "Failed to select preludes for player 2")
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{"P01", "P03"}, cardsPhase1.AvailableCards[:2])
+	testutil.AssertNoError(t, err, "Failed to select starting choices for player 1")
 
-	// Game should now be in starting card selection phase
-	testutil.AssertEqual(t, game.GamePhaseStartingCardSelection, testGame.CurrentPhase(), "Game should advance to starting card selection phase")
+	// Player 1 phases should be cleared
+	testutil.AssertTrue(t, testGame.GetSelectCorporationPhase(playerID1) == nil, "Player 1 corp phase should be cleared")
+	testutil.AssertTrue(t, testGame.GetSelectPreludeCardsPhase(playerID1) == nil, "Player 1 prelude phase should be cleared")
+	testutil.AssertTrue(t, testGame.GetSelectStartingCardsPhase(playerID1) == nil, "Player 1 starting cards phase should be cleared")
 
-	// Both players should have starting cards dealt (project cards only)
-	phase1 := testGame.GetSelectStartingCardsPhase(playerID1)
-	phase2 := testGame.GetSelectStartingCardsPhase(playerID2)
-	testutil.AssertTrue(t, phase1 != nil, "Player 1 should have starting cards phase")
-	testutil.AssertTrue(t, phase2 != nil, "Player 2 should have starting cards phase")
-}
+	// Player 1 should have corporation set
+	p1, _ := testGame.GetPlayer(playerID1)
+	testutil.AssertEqual(t, corpID1, p1.CorporationID(), "Player 1 should have corporation set")
 
-func TestSelectPreludeCards_FullFlow_PreludeToAction(t *testing.T) {
-	testGame, _, selectStartingCardsAction, selectPreludeCardsAction, playerID1, playerID2 := setupPreludeGame(t)
-	ctx := context.Background()
+	// Selected preludes should be in played cards
+	testutil.AssertTrue(t, p1.PlayedCards().Contains("P01"), "P01 should be in played cards")
+	testutil.AssertTrue(t, p1.PlayedCards().Contains("P03"), "P03 should be in played cards")
 
-	// Override prelude phases with known safe cards
-	safePreludes := []string{"P01", "P03", "P04", "P07"}
-	testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &player.SelectPreludeCardsPhase{
-		AvailablePreludes: safePreludes,
-		MaxSelectable:     2,
-	})
-	testGame.SetSelectPreludeCardsPhase(ctx, playerID2, &player.SelectPreludeCardsPhase{
-		AvailablePreludes: safePreludes,
-		MaxSelectable:     2,
-	})
+	// Game should still be in starting_selection (player 2 hasn't selected)
+	testutil.AssertEqual(t, game.GamePhaseStartingSelection, testGame.CurrentPhase(), "Game should still be in starting selection phase")
 
-	// Step 1: Both players complete prelude selection
-	err := selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID1, []string{"P01", "P03"})
-	testutil.AssertNoError(t, err, "Failed to select preludes for player 1")
-	err = selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID2, []string{"P04", "P07"})
-	testutil.AssertNoError(t, err, "Failed to select preludes for player 2")
+	// Player 2 completes selection
+	corpPhase2 := testGame.GetSelectCorporationPhase(playerID2)
+	corpID2 := corpPhase2.AvailableCorporations[0]
+	err = action.Execute(ctx, testGame.ID(), playerID2, corpID2, []string{"P04", "P07"}, []string{})
+	testutil.AssertNoError(t, err, "Failed to select starting choices for player 2")
 
-	testutil.AssertEqual(t, game.GamePhaseStartingCardSelection, testGame.CurrentPhase(), "Should be in starting card selection after preludes")
-
-	// Step 2: Both players complete starting card selection (no corporationID needed)
-	err = selectStartingCardsAction.Execute(ctx, testGame.ID(), playerID1, []string{})
-	testutil.AssertNoError(t, err, "Failed to complete starting cards for player 1")
-
-	err = selectStartingCardsAction.Execute(ctx, testGame.ID(), playerID2, []string{})
-	testutil.AssertNoError(t, err, "Failed to complete starting cards for player 2")
-
-	// Game should now be in action phase
+	// Game should advance to action phase
 	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Game should advance to action phase")
 
 	// Current turn should be set
@@ -258,68 +141,144 @@ func TestSelectPreludeCards_FullFlow_PreludeToAction(t *testing.T) {
 	testutil.AssertEqual(t, playerID1, currentTurn.PlayerID(), "First player should have the turn")
 }
 
-func TestSelectPreludeCards_Validation_WrongCount(t *testing.T) {
-	testGame, _, _, selectPreludeCardsAction, playerID1, _ := setupPreludeGame(t)
+func TestSelectStartingChoices_HappyPath_NoPreludes(t *testing.T) {
+	testGame, action, playerID1, playerID2 := setupStartingSelectionGame(t, false)
 	ctx := context.Background()
 
-	phase := testGame.GetSelectPreludeCardsPhase(playerID1)
+	// Player 1 selects corporation and cards (no preludes)
+	corpPhase1 := testGame.GetSelectCorporationPhase(playerID1)
+	corpID1 := corpPhase1.AvailableCorporations[0]
 
-	// Selecting only 1 should fail
-	err := selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID1, phase.AvailablePreludes[:1])
-	testutil.AssertError(t, err, "Should fail with wrong number of preludes")
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{}, []string{})
+	testutil.AssertNoError(t, err, "Failed to select starting choices for player 1")
 
-	// Selecting 3 should fail
-	err = selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID1, append(phase.AvailablePreludes[:2], phase.AvailablePreludes[2]))
-	testutil.AssertError(t, err, "Should fail with too many preludes")
+	// Player 2 selects
+	corpPhase2 := testGame.GetSelectCorporationPhase(playerID2)
+	corpID2 := corpPhase2.AvailableCorporations[0]
+	err = action.Execute(ctx, testGame.ID(), playerID2, corpID2, []string{}, []string{})
+	testutil.AssertNoError(t, err, "Failed to select starting choices for player 2")
+
+	// Should go straight to action phase
+	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Game should be in action phase without prelude pack")
 }
 
-func TestSelectPreludeCards_Validation_InvalidID(t *testing.T) {
-	testGame, _, _, selectPreludeCardsAction, playerID1, _ := setupPreludeGame(t)
+func TestSelectStartingChoices_PreludeEffects(t *testing.T) {
+	testGame, action, playerID1, _ := setupStartingSelectionGame(t, true)
 	ctx := context.Background()
 
-	phase := testGame.GetSelectPreludeCardsPhase(playerID1)
-
-	// Selecting an invalid ID should fail
-	err := selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID1, []string{phase.AvailablePreludes[0], "invalid-prelude-id"})
-	testutil.AssertError(t, err, "Should fail with invalid prelude ID")
-}
-
-func TestSelectPreludeCards_Validation_WrongPhase(t *testing.T) {
-	testGame, _, _, selectPreludeCardsAction, playerID1, playerID2 := setupPreludeGame(t)
-	ctx := context.Background()
-
-	// Override to starting card selection phase
-	testGame.UpdatePhase(ctx, game.GamePhaseStartingCardSelection)
-
-	// Try to select preludes in wrong phase
-	err := selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID1, []string{"P01", "P02"})
-	testutil.AssertError(t, err, "Should fail when not in prelude selection phase")
-
-	// Switch back to prelude phase
-	testGame.UpdatePhase(ctx, game.GamePhasePreludeSelection)
-
-	// Now select preludes for player 1 (with safe cards)
+	// Override with safe preludes
 	safePreludes := []string{"P01", "P03", "P04", "P07"}
 	testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &player.SelectPreludeCardsPhase{
 		AvailablePreludes: safePreludes,
 		MaxSelectable:     2,
 	})
-	testGame.SetSelectPreludeCardsPhase(ctx, playerID2, &player.SelectPreludeCardsPhase{
+
+	corpPhase1 := testGame.GetSelectCorporationPhase(playerID1)
+	corpID1 := corpPhase1.AvailableCorporations[0]
+
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{"P01", "P03"}, []string{})
+	testutil.AssertNoError(t, err, "Failed to select starting choices")
+
+	// Selected preludes should be in played cards
+	p1, _ := testGame.GetPlayer(playerID1)
+	testutil.AssertTrue(t, p1.PlayedCards().Contains("P01"), "P01 should be in played cards")
+	testutil.AssertTrue(t, p1.PlayedCards().Contains("P03"), "P03 should be in played cards")
+
+	// Unselected preludes should be in discard pile
+	discardPile := testGame.Deck().DiscardPile()
+	discardSet := make(map[string]bool)
+	for _, id := range discardPile {
+		discardSet[id] = true
+	}
+	testutil.AssertTrue(t, discardSet["P04"], "P04 should be in discard pile")
+	testutil.AssertTrue(t, discardSet["P07"], "P07 should be in discard pile")
+}
+
+func TestSelectStartingChoices_Validation_WrongPreludeCount(t *testing.T) {
+	testGame, action, playerID1, _ := setupStartingSelectionGame(t, true)
+	ctx := context.Background()
+
+	safePreludes := []string{"P01", "P03", "P04", "P07"}
+	testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &player.SelectPreludeCardsPhase{
 		AvailablePreludes: safePreludes,
 		MaxSelectable:     2,
 	})
-	err = selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID1, []string{"P01", "P03"})
-	testutil.AssertNoError(t, err, "Should succeed in prelude phase")
 
-	// Trying again should fail (phase already cleared)
-	err = selectPreludeCardsAction.Execute(ctx, testGame.ID(), playerID1, []string{"P01", "P03"})
-	testutil.AssertError(t, err, "Should fail when prelude phase already cleared")
+	corpPhase := testGame.GetSelectCorporationPhase(playerID1)
+	corpID := corpPhase.AvailableCorporations[0]
+
+	// Selecting only 1 prelude should fail
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01"}, []string{})
+	testutil.AssertError(t, err, "Should fail with wrong number of preludes")
+
+	// Selecting 3 preludes should fail
+	err = action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01", "P03", "P04"}, []string{})
+	testutil.AssertError(t, err, "Should fail with too many preludes")
 }
 
-func TestSelectPreludeCards_Validation_NoPlayer(t *testing.T) {
-	testGame, _, _, selectPreludeCardsAction, _, _ := setupPreludeGame(t)
+func TestSelectStartingChoices_Validation_InvalidPreludeID(t *testing.T) {
+	testGame, action, playerID1, _ := setupStartingSelectionGame(t, true)
 	ctx := context.Background()
 
-	err := selectPreludeCardsAction.Execute(ctx, testGame.ID(), "nonexistent-player", []string{"P01", "P02"})
+	safePreludes := []string{"P01", "P03", "P04", "P07"}
+	testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &player.SelectPreludeCardsPhase{
+		AvailablePreludes: safePreludes,
+		MaxSelectable:     2,
+	})
+
+	corpPhase := testGame.GetSelectCorporationPhase(playerID1)
+	corpID := corpPhase.AvailableCorporations[0]
+
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01", "invalid-prelude"}, []string{})
+	testutil.AssertError(t, err, "Should fail with invalid prelude ID")
+}
+
+func TestSelectStartingChoices_Validation_WrongPhase(t *testing.T) {
+	testGame, action, playerID1, _ := setupStartingSelectionGame(t, false)
+	ctx := context.Background()
+
+	// Change to action phase
+	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+
+	corpPhase := testGame.GetSelectCorporationPhase(playerID1)
+	corpID := corpPhase.AvailableCorporations[0]
+
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{})
+	testutil.AssertError(t, err, "Should fail when not in starting selection phase")
+}
+
+func TestSelectStartingChoices_Validation_InvalidCorporation(t *testing.T) {
+	testGame, action, playerID1, _ := setupStartingSelectionGame(t, false)
+	ctx := context.Background()
+
+	// Use a corporation ID not in the available list
+	err := action.Execute(ctx, testGame.ID(), playerID1, "invalid-corp", []string{}, []string{})
+	testutil.AssertError(t, err, "Should fail with invalid corporation ID")
+
+	// Corporation phase should still be present
+	testutil.AssertTrue(t, testGame.GetSelectCorporationPhase(playerID1) != nil, "Corporation phase should still be present")
+}
+
+func TestSelectStartingChoices_Validation_NoPlayer(t *testing.T) {
+	testGame, action, _, _ := setupStartingSelectionGame(t, false)
+	ctx := context.Background()
+
+	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", "B08", []string{}, []string{})
 	testutil.AssertError(t, err, "Should fail with nonexistent player")
+}
+
+func TestSelectStartingChoices_Validation_AlreadyCompleted(t *testing.T) {
+	testGame, action, playerID1, _ := setupStartingSelectionGame(t, false)
+	ctx := context.Background()
+
+	corpPhase := testGame.GetSelectCorporationPhase(playerID1)
+	corpID := corpPhase.AvailableCorporations[0]
+
+	// Complete selection
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{})
+	testutil.AssertNoError(t, err, "First selection should succeed")
+
+	// Try again — should fail (phase already cleared)
+	err = action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{})
+	testutil.AssertError(t, err, "Should fail when selection already completed")
 }

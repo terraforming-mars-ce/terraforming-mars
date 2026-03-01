@@ -19,7 +19,7 @@ import {
   StartTileSelectionAdminCommand,
   SetTRAdminCommand,
   GamePhaseWaitingForGameStart,
-  GamePhaseStartingCardSelection,
+  GamePhaseStartingSelection,
   GamePhaseAction,
   GamePhaseProductionAndCardDraw,
   GamePhaseComplete,
@@ -685,7 +685,7 @@ const AdminCommandPanel: React.FC<AdminCommandPanelProps> = ({ gameState, onClos
 
   const phaseOptions = [
     { value: GamePhaseWaitingForGameStart, label: "Waiting for Game Start" },
-    { value: GamePhaseStartingCardSelection, label: "Starting Card Selection" },
+    { value: GamePhaseStartingSelection, label: "Starting Card Selection" },
     { value: GamePhaseAction, label: "Action Phase" },
     {
       value: GamePhaseProductionAndCardDraw,

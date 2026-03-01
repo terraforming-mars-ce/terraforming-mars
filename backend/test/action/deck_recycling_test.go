@@ -127,7 +127,7 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 
 	err := testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testutil.AssertNoError(t, err, "update game status")
-	err = testGame.UpdatePhase(ctx, game.GamePhaseStartingCardSelection)
+	err = testGame.UpdatePhase(ctx, game.GamePhaseStartingSelection)
 	testutil.AssertNoError(t, err, "update game phase")
 
 	playerID := "player-1"
@@ -142,14 +142,19 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 	})
 	testutil.AssertNoError(t, err, "set starting cards phase")
 
+	// Also set corporation phase (required by combined action)
+	err = testGame.SetSelectCorporationPhase(ctx, playerID, &player.SelectCorporationPhase{
+		AvailableCorporations: []string{"B08", "B06"},
+	})
+	testutil.AssertNoError(t, err, "set corporation phase")
+
 	p, _ := testGame.GetPlayer(playerID)
-	p.SetCorporationID("B08")
 	testutil.SetPlayerCredits(ctx, p, 100)
 
-	// Player selects 3 out of 10 project cards
+	// Player selects corporation B08 and 3 out of 10 project cards
 	selectedCards := []string{"001", "002", "003"}
-	action := turn_management.NewSelectStartingCardsAction(repo, cardRegistry, log)
-	err = action.Execute(ctx, testGame.ID(), playerID, selectedCards)
+	action := turn_management.NewSelectStartingChoicesAction(repo, cardRegistry, log)
+	err = action.Execute(ctx, testGame.ID(), playerID, "B08", []string{}, selectedCards)
 	testutil.AssertNoError(t, err, "select starting cards")
 
 	discardPile := testGame.Deck().DiscardPile()

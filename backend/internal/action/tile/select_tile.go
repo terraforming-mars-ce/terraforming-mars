@@ -57,7 +57,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return nil, err
 	}
 
-	if g.CurrentPhase() != game.GamePhasePreludeSelection {
+	if g.CurrentPhase() != game.GamePhaseStartingSelection {
 		if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
 			return nil, err
 		}
@@ -344,8 +344,8 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		log.Warn("Failed to handle completion callback", zap.Error(err))
 	}
 
-	if g.CurrentPhase() == game.GamePhasePreludeSelection {
-		a.checkPreludePhaseCompletion(ctx, g, log)
+	if g.CurrentPhase() == game.GamePhaseStartingSelection {
+		a.checkStartingSelectionCompletion(ctx, g, log)
 	} else {
 		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 	}
@@ -356,12 +356,18 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 	return result, nil
 }
 
-// checkPreludePhaseCompletion checks if all players finished prelude selection and tile placements,
-// then advances to starting card selection
-func (a *SelectTileAction) checkPreludePhaseCompletion(ctx context.Context, g *game.Game, log *zap.Logger) {
+// checkStartingSelectionCompletion checks if all players finished starting selection and tile placements,
+// then advances to action phase
+func (a *SelectTileAction) checkStartingSelectionCompletion(ctx context.Context, g *game.Game, log *zap.Logger) {
 	allPlayers := g.GetAllPlayers()
 	for _, p := range allPlayers {
+		if g.GetSelectCorporationPhase(p.ID()) != nil {
+			return
+		}
 		if g.GetSelectPreludeCardsPhase(p.ID()) != nil {
+			return
+		}
+		if g.GetSelectStartingCardsPhase(p.ID()) != nil {
 			return
 		}
 		if g.GetPendingTileSelection(p.ID()) != nil {
@@ -372,36 +378,28 @@ func (a *SelectTileAction) checkPreludePhaseCompletion(ctx context.Context, g *g
 		}
 	}
 
-	log.Info("🎉 All prelude tiles resolved, advancing to starting card selection")
+	log.Info("🎉 All starting selections and tiles resolved, advancing to action phase")
 
-	if err := g.UpdatePhase(ctx, game.GamePhaseStartingCardSelection); err != nil {
-		log.Error("Failed to transition to starting card selection phase", zap.Error(err))
+	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+		log.Error("Failed to transition to action phase", zap.Error(err))
 		return
 	}
 
-	deck := g.Deck()
-	if deck == nil {
-		log.Error("Game deck is nil")
-		return
-	}
+	turnOrder := g.TurnOrder()
+	if len(turnOrder) > 0 {
+		firstPlayerID := turnOrder[0]
 
-	for _, p := range allPlayers {
-		projectCardIDs, err := deck.DrawProjectCards(ctx, 10)
-		if err != nil {
-			log.Error("Failed to draw project cards", zap.Error(err), zap.String("player_id", p.ID()))
-			return
+		availableActions := 2
+		if len(allPlayers) == 1 {
+			availableActions = -1
 		}
 
-		selectionPhase := &player.SelectStartingCardsPhase{
-			AvailableCards: projectCardIDs,
-		}
-		if err := g.SetSelectStartingCardsPhase(ctx, p.ID(), selectionPhase); err != nil {
-			log.Error("Failed to set selection phase", zap.Error(err), zap.String("player_id", p.ID()))
+		if err := g.SetCurrentTurn(ctx, firstPlayerID, availableActions); err != nil {
+			log.Error("Failed to set current turn", zap.Error(err))
 			return
 		}
 	}
 
-	log.Info("✅ Project cards distributed to all players")
 }
 
 func parseHexPosition(hexStr string) (*shared.HexPosition, error) {

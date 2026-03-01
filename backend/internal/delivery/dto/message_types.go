@@ -39,9 +39,7 @@ const (
 
 	MessageTypeActionPlayCard                MessageType = "action.card.play-card"
 	MessageTypeActionCardAction              MessageType = "action.card.card-action"
-	MessageTypeActionSelectCorporation       MessageType = "action.card.select-corporation"
-	MessageTypeActionSelectStartingCard      MessageType = "action.card.select-starting-card"
-	MessageTypeActionSelectPreludeCards      MessageType = "action.card.select-prelude-cards"
+	MessageTypeActionSelectStartingChoices   MessageType = "action.card.select-starting-choices"
 	MessageTypeActionSelectCards             MessageType = "action.card.select-cards"
 	MessageTypeActionConfirmProductionCards  MessageType = "action.card.confirm-production-cards"
 	MessageTypeActionCardDrawConfirmed       MessageType = "action.card.card-draw-confirmed"

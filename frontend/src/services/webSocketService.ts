@@ -27,9 +27,7 @@ import {
   MessageTypeActionSkipAction,
   MessageTypeActionPlayCard,
   MessageTypeActionCardAction,
-  MessageTypeActionSelectCorporation,
-  MessageTypeActionSelectStartingCard,
-  MessageTypeActionSelectPreludeCards,
+  MessageTypeActionSelectStartingChoices,
   MessageTypeActionConfirmSellPatents,
   MessageTypeActionConfirmProductionCards,
   MessageTypeActionCardDrawConfirmed,
@@ -299,21 +297,11 @@ export class WebSocketService {
     });
   }
 
-  selectCorporation(corporationId: string): string {
-    return this.send(MessageTypeActionSelectCorporation, {
+  selectStartingChoices(corporationId: string, preludeIds: string[], cardIds: string[]): string {
+    return this.send(MessageTypeActionSelectStartingChoices, {
       corporationId,
-    });
-  }
-
-  selectStartingCard(cardIds: string[]): string {
-    return this.send(MessageTypeActionSelectStartingCard, {
-      cardIds,
-    });
-  }
-
-  selectPreludeCards(preludeIds: string[]): string {
-    return this.send(MessageTypeActionSelectPreludeCards, {
       preludeIds,
+      cardIds,
     });
   }
 
