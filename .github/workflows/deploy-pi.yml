@@ -1,16 +1,11 @@
 name: Deploy to Raspberry Pi
 
 on:
-  workflow_run:
-    workflows: ["Build Backend", "Build Frontend"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     environment: raspberry-pi
     steps:
       - name: Set up SSH key
