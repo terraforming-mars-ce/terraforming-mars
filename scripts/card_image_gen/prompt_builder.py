@@ -103,6 +103,7 @@ _NAME_OVERRIDES = {
     "078": "two massive ice asteroids impacting Martian polar region, twin explosions, water ice scattered everywhere",
     "080": "colossal ice asteroid devastating Martian landscape, enormous impact crater forming, tidal wave of meltwater",
     "170": "asteroid with glowing ammonia trail entering Martian atmosphere, fiery reentry, microbe-filled debris",
+    "097": "nuclear detonation on Martian surface, massive mushroom cloud rising from blast crater, intense heat shockwave, scorched barren terrain",
     "209": "small asteroid striking Martian terrain, localized explosion, dust plume rising from impact crater",
     "218": "comet plunging into Venus thick atmosphere, brilliant fireball visible from orbit",
     "246": "huge asteroid slamming into Venus surface at oblique angle, enormous explosion, debris cloud engulfing the planet",
