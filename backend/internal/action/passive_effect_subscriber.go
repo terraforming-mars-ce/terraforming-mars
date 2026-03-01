@@ -44,6 +44,11 @@ func SubscribePassiveEffectToEvents(
 			subID = subscribeCityPlacedEffect(ctx, g, p, effect, trigger, log, cr)
 		}
 
+		// Handle ocean-placed trigger
+		if trigger.Condition.Type == "ocean-placed" {
+			subID = subscribeOceanPlacedEffect(ctx, g, p, effect, trigger, log, cr)
+		}
+
 		// Handle tag-played trigger
 		if trigger.Condition.Type == "tag-played" {
 			subID = subscribeTagPlayedEffect(ctx, g, p, effect, trigger, log, cr)
@@ -202,6 +207,66 @@ func subscribeCityPlacedEffect(
 	})
 
 	log.Debug("📬 Subscribed passive effect to TilePlacedEvent (city)",
+		zap.String("card_name", effect.CardName))
+
+	return subID
+}
+
+// subscribeOceanPlacedEffect subscribes to TilePlacedEvent for ocean placements
+func subscribeOceanPlacedEffect(
+	_ context.Context,
+	g *game.Game,
+	p *player.Player,
+	effect player.CardEffect,
+	trigger shared.Trigger,
+	log *zap.Logger,
+	cr gamecards.CardRegistryInterface,
+) events.SubscriptionID {
+	subID := events.Subscribe(g.EventBus(), func(event events.TilePlacedEvent) {
+		if event.GameID != g.ID() {
+			return
+		}
+
+		if event.TileType != string(shared.ResourceOceanTile) {
+			return
+		}
+
+		target := "self-player"
+		if trigger.Condition.Target != nil {
+			target = *trigger.Condition.Target
+		}
+
+		if target == "self-player" && event.PlayerID != p.ID() {
+			return
+		}
+
+		location := "anywhere"
+		if trigger.Condition.Location != nil {
+			location = *trigger.Condition.Location
+		}
+
+		if location != "anywhere" && location != "mars" {
+			return
+		}
+
+		log.Info("🎴 Passive effect triggered (ocean placement)",
+			zap.String("card_name", effect.CardName),
+			zap.String("player_id", p.ID()),
+			zap.String("placed_by", event.PlayerID),
+			zap.String("tile_type", event.TileType))
+
+		applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
+			WithSourceCardID(effect.CardID).
+			WithCardRegistry(cr).
+			WithSourceType(game.SourceTypePassiveEffect)
+		if err := applier.ApplyOutputs(context.Background(), effect.Behavior.Outputs); err != nil {
+			log.Error("Failed to apply passive effect outputs",
+				zap.String("card_name", effect.CardName),
+				zap.Error(err))
+		}
+	})
+
+	log.Debug("📬 Subscribed passive effect to TilePlacedEvent (ocean)",
 		zap.String("card_name", effect.CardName))
 
 	return subID
