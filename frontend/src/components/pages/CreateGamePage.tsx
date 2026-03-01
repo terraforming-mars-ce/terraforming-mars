@@ -16,6 +16,7 @@ const CreateGamePage: React.FC = () => {
   const [playerName, setPlayerName] = useState("");
   const [developmentMode, setDevelopmentMode] = useState(true);
   const [maxPlayers, setMaxPlayers] = useState(4);
+  const [venusNextEnabled, setVenusEnabled] = useState(false);
   const [selectedPacks, setSelectedPacks] = useState<string[]>(["base-game"]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState<"game" | "environment" | null>(null);
@@ -55,6 +56,7 @@ const CreateGamePage: React.FC = () => {
       // Step 1: Create game
       const gameSettings: GameSettingsDto = {
         maxPlayers: maxPlayers,
+        venusNextEnabled: venusNextEnabled,
         developmentMode: developmentMode,
         cardPacks: selectedPacks,
         demoGame: false,
@@ -335,6 +337,23 @@ const CreateGamePage: React.FC = () => {
                         <InfoTooltip size="small">
                           Each player receives 4 prelude cards and keeps 2 for free. These give an
                           early boost with resources, production, or other effects.
+                        </InfoTooltip>
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
+                      <input
+                        type="checkbox"
+                        checked={venusNextEnabled}
+                        onChange={(e) => setVenusEnabled(e.target.checked)}
+                        disabled={isLoading}
+                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                      />
+                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
+                        Venus Next
+                        <InfoTooltip size="small">
+                          Adds the Venus globe with tile placements and the Venus global parameter
+                          track. Venus Next expansion cards are automatically included.
                         </InfoTooltip>
                       </span>
                     </label>

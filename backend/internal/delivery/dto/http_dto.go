@@ -4,9 +4,10 @@ import "encoding/json"
 
 // CreateGameRequest represents the request body for creating a game
 type CreateGameRequest struct {
-	MaxPlayers      int      `json:"maxPlayers" binding:"required,min=1,max=10" ts:"number"`
-	DevelopmentMode bool     `json:"developmentMode" ts:"boolean"`
-	CardPacks       []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
+	MaxPlayers       int      `json:"maxPlayers" binding:"required,min=1,max=10" ts:"number"`
+	VenusNextEnabled bool     `json:"venusNextEnabled" ts:"boolean"`
+	DevelopmentMode  bool     `json:"developmentMode" ts:"boolean"`
+	CardPacks        []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
 }
 
 // CreateGameResponse represents the response for creating a game

@@ -52,6 +52,9 @@ func (h *CreateGameHandler) HandleMessage(ctx context.Context, connection *core.
 		if maxPlayers, ok := payloadMap["maxPlayers"].(float64); ok {
 			settings.MaxPlayers = int(maxPlayers)
 		}
+		if venusNextEnabled, ok := payloadMap["venusNextEnabled"].(bool); ok {
+			settings.VenusNextEnabled = venusNextEnabled
+		}
 		if cardPacks, ok := payloadMap["cardPacks"].([]interface{}); ok {
 			packs := make([]string, len(cardPacks))
 			for i, pack := range cardPacks {

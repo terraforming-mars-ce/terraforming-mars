@@ -16,7 +16,6 @@ import { webSocketService } from "../../../services/webSocketService.ts";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext.tsx";
 import GpuWarmup from "../board/GpuWarmup.tsx";
 import PerformanceProbe from "../board/PerformanceProbe.tsx";
-import { VENUS_ENABLED } from "../../../constants/featureFlags.ts";
 
 function SkyboxRotation() {
   const { scene } = useThree();
@@ -174,6 +173,7 @@ export default function Game3DView({
   showUI = true,
   uiAnimationClass = "",
 }: Game3DViewProps) {
+  const venusNextEnabled = gameState.settings?.venusNextEnabled ?? false;
   const containerRef = useRef<HTMLDivElement>(null);
   const [cameraConfig, setCameraConfig] = useState({
     position: [0, 0, 8] as [number, number, number],
@@ -275,8 +275,8 @@ export default function Game3DView({
           </div>
         )}
 
-        {VENUS_ENABLED && <AutoNavigateForTileSelection gameState={gameState} />}
-        {VENUS_ENABLED && <ReturnToMarsButton />}
+        {venusNextEnabled && <AutoNavigateForTileSelection gameState={gameState} />}
+        {venusNextEnabled && <ReturnToMarsButton />}
 
         <Canvas
           camera={{
@@ -312,7 +312,7 @@ export default function Game3DView({
                 animateHexEntrance={animateHexEntrance}
               />
 
-              {VENUS_ENABLED && (
+              {venusNextEnabled && (
                 <VenusSphere
                   gameState={gameState}
                   onHexClick={handleHexClick}

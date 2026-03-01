@@ -137,8 +137,9 @@ func NewBoardWithTiles(gameID string, tiles []Tile, eventBus *events.EventBusImp
 }
 
 // GenerateMarsBoard creates the standard Terraforming Mars board layout
-// Returns a hexagonal grid with ocean spaces, bonus tiles, and land tiles
-func GenerateMarsBoard() []Tile {
+// Returns a hexagonal grid with ocean spaces, bonus tiles, and land tiles.
+// When includeVenus is true, Venus tiles are also included.
+func GenerateMarsBoard(includeVenus bool) []Tile {
 	tiles := []Tile{}
 
 	oceanSpaces := map[shared.HexPosition]bool{
@@ -248,6 +249,10 @@ func GenerateMarsBoard() []Tile {
 			OccupiedBy:  nil,
 			OwnerID:     nil,
 		})
+	}
+
+	if !includeVenus {
+		return tiles
 	}
 
 	// Venus tiles (non-adjacent coordinates so cities can't neighbor each other)

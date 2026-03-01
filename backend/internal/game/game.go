@@ -153,7 +153,7 @@ func NewGame(
 		currentPhase:               GamePhaseWaitingForGameStart,
 		globalParameters:           global_parameters.NewGlobalParametersWithValues(id, initTemp, initOxy, initOcean, initVenus, eventBus),
 		generation:                 1,
-		board:                      board.NewBoardWithTiles(id, board.GenerateMarsBoard(), eventBus),
+		board:                      board.NewBoardWithTiles(id, board.GenerateMarsBoard(settings.VenusNextEnabled), eventBus),
 		deck:                       nil,
 		players:                    make(map[string]*player.Player),
 		turnOrder:                  []string{},
