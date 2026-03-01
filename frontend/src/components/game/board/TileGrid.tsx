@@ -154,14 +154,9 @@ export default function TileGrid({
     [playerNameMap, playerColorMap],
   );
 
-  const handleTileHoverMove = useCallback(
-    (position: { x: number; y: number }) => {
-      if (tooltipData) {
-        setTooltipData((prev) => (prev ? { ...prev, position } : null));
-      }
-    },
-    [tooltipData],
-  );
+  const handleTileHoverMove = useCallback((position: { x: number; y: number }) => {
+    setTooltipData((prev) => (prev ? { ...prev, position } : null));
+  }, []);
 
   const handleTileHoverLeave = useCallback(() => {
     if (hoverTimerRef.current) {

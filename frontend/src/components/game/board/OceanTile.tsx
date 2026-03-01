@@ -1,7 +1,6 @@
 import { useMemo, useRef, useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { panState } from "../controls/PanControls";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext";
 import { useTextures } from "../../../hooks/useTextures";
 import { sphereProjectionVertex, oceanBorderFragment, createOceanMaterial } from "./shaders";
@@ -13,23 +12,9 @@ interface OceanTileProps {
   overlayGeometry: THREE.BufferGeometry;
   isOceanSpace: boolean;
   tileType: string;
-  onClick: () => void;
-  onHoverChange: (hovered: boolean) => void;
-  onPointerEnterCapture?: (event: THREE.Event & { nativeEvent: PointerEvent }) => void;
-  onPointerMoveCapture?: (event: THREE.Event & { nativeEvent: PointerEvent }) => void;
-  onPointerLeaveCapture?: () => void;
 }
 
-export default function OceanTile({
-  overlayGeometry,
-  isOceanSpace,
-  tileType,
-  onClick,
-  onHoverChange,
-  onPointerEnterCapture,
-  onPointerMoveCapture,
-  onPointerLeaveCapture,
-}: OceanTileProps) {
+export default function OceanTile({ overlayGeometry, isOceanSpace, tileType }: OceanTileProps) {
   const { camera } = useThree();
   const { settings: world3DSettings } = useWorld3DSettings();
 
@@ -188,26 +173,7 @@ export default function OceanTile({
           geometry={oceanWaterGeometry}
           material={oceanWaterMaterial}
           renderOrder={12}
-          onPointerEnter={(event: any) => {
-            if (!panState.isPanning) {
-              onHoverChange(true);
-              onPointerEnterCapture?.(event);
-            }
-          }}
-          onPointerMove={(event: any) => {
-            if (!panState.isPanning) {
-              onPointerMoveCapture?.(event);
-            }
-          }}
-          onPointerLeave={() => {
-            onHoverChange(false);
-            onPointerLeaveCapture?.();
-          }}
-          onClick={(event) => {
-            if (panState.isPanning) return;
-            event.stopPropagation();
-            onClick();
-          }}
+          raycast={() => {}}
         />
       )}
     </>
