@@ -41,5 +41,5 @@ const (
 
 // DefaultCardPacks returns the default card packs
 func DefaultCardPacks() []string {
-	return []string{PackBaseGame}
+	return []string{PackBaseGame, PackPrelude}
 }
