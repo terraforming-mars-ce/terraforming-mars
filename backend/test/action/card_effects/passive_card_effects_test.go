@@ -489,3 +489,183 @@ func TestViralEnhancers_DoesNotTriggerOnBuildingTag(t *testing.T) {
 	testutil.AssertEqual(t, plantsBefore, plantsAfter,
 		"Viral Enhancers should NOT trigger on building tag")
 }
+
+// --- Arctic Algae (023) ---
+// "Effect: When anyone places an ocean tile, gain 2 plants."
+
+func TestArcticAlgae_GainPlantsOnAnyOceanPlacement(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	anyPlayerTarget := "any-player"
+	arcticAlgaeCard := gamecards.Card{
+		ID:   "card-arctic-algae",
+		Name: "Arctic Algae",
+		Type: gamecards.CardTypeActive,
+		Cost: 12,
+		Tags: []shared.CardTag{shared.TagPlant},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{arcticAlgaeCard})
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	other := players[1]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	other.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	effect := player.CardEffect{
+		CardID:        "card-arctic-algae",
+		CardName:      "Arctic Algae",
+		BehaviorIndex: 0,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:   "ocean-placed",
+						Target: &anyPlayerTarget,
+					},
+				},
+			},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourcePlant, Amount: 2, Target: "self-player"},
+			},
+		},
+	}
+	owner.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
+
+	plantsBefore := owner.Resources().Get().Plants
+
+	// Another player places an ocean tile
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: other.ID(),
+		TileType: string(shared.ResourceOceanTile),
+	})
+
+	time.Sleep(20 * time.Millisecond)
+
+	plantsAfter := owner.Resources().Get().Plants
+	testutil.AssertEqual(t, plantsBefore+2, plantsAfter,
+		"Arctic Algae owner should gain 2 plants when any player places an ocean")
+}
+
+func TestArcticAlgae_TriggersOnSelfOceanToo(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	anyPlayerTarget := "any-player"
+	arcticAlgaeCard := gamecards.Card{
+		ID:   "card-arctic-algae",
+		Name: "Arctic Algae",
+		Type: gamecards.CardTypeActive,
+		Cost: 12,
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{arcticAlgaeCard})
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	effect := player.CardEffect{
+		CardID:        "card-arctic-algae",
+		CardName:      "Arctic Algae",
+		BehaviorIndex: 0,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:   "ocean-placed",
+						Target: &anyPlayerTarget,
+					},
+				},
+			},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourcePlant, Amount: 2, Target: "self-player"},
+			},
+		},
+	}
+	owner.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
+
+	plantsBefore := owner.Resources().Get().Plants
+
+	// Owner places an ocean tile
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: owner.ID(),
+		TileType: string(shared.ResourceOceanTile),
+	})
+
+	time.Sleep(20 * time.Millisecond)
+
+	plantsAfter := owner.Resources().Get().Plants
+	testutil.AssertEqual(t, plantsBefore+2, plantsAfter,
+		"Arctic Algae should also trigger when owner places an ocean")
+}
+
+func TestArcticAlgae_DoesNotTriggerOnCityPlacement(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	anyPlayerTarget := "any-player"
+	arcticAlgaeCard := gamecards.Card{
+		ID:   "card-arctic-algae",
+		Name: "Arctic Algae",
+		Type: gamecards.CardTypeActive,
+		Cost: 12,
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{arcticAlgaeCard})
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	effect := player.CardEffect{
+		CardID:        "card-arctic-algae",
+		CardName:      "Arctic Algae",
+		BehaviorIndex: 0,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:   "ocean-placed",
+						Target: &anyPlayerTarget,
+					},
+				},
+			},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourcePlant, Amount: 2, Target: "self-player"},
+			},
+		},
+	}
+	owner.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
+
+	plantsBefore := owner.Resources().Get().Plants
+
+	// Place a city (not an ocean)
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: owner.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+
+	time.Sleep(20 * time.Millisecond)
+
+	plantsAfter := owner.Resources().Get().Plants
+	testutil.AssertEqual(t, plantsBefore, plantsAfter,
+		"Arctic Algae should NOT trigger on city placement")
+}
