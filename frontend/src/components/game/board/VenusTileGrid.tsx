@@ -1,11 +1,12 @@
-import { useMemo, type RefObject } from "react";
+import { useCallback, useMemo, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import Tile, { TileHighlightMode } from "./Tile";
 import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
 import { VENUS_RADIUS, VENUS_POSITION } from "./boardConstants";
-import { getPlayerColor } from "../../../utils/playerColors";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
+import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
+import { Html } from "@react-three/drei";
 
 interface VenusTileGridProps {
   gameState?: GameDto;
@@ -87,13 +88,69 @@ export default function VenusTileGrid({
 
   const playerColorMap = useMemo(() => {
     const map = new Map<string, string>();
-    if (gameState?.turnOrder) {
-      gameState.turnOrder.forEach((playerId, index) => {
-        map.set(playerId, getPlayerColor(index));
+    if (gameState) {
+      if (gameState.currentPlayer?.color) {
+        map.set(gameState.currentPlayer.id, gameState.currentPlayer.color);
+      }
+      gameState.otherPlayers?.forEach((p) => {
+        if (p.color) map.set(p.id, p.color);
       });
     }
     return map;
-  }, [gameState?.turnOrder]);
+  }, [gameState]);
+
+  const playerNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (gameState) {
+      if (gameState.currentPlayer) {
+        map.set(gameState.currentPlayer.id, gameState.currentPlayer.name);
+      }
+      gameState.otherPlayers?.forEach((p) => {
+        map.set(p.id, p.name);
+      });
+    }
+    return map;
+  }, [gameState]);
+
+  const [tooltipData, setTooltipData] = useState<TileTooltipData | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleTileHoverInfo = useCallback(
+    (
+      data: Omit<TileTooltipData, "ownerName" | "ownerColor" | "reservedByName"> & {
+        ownerId: string | null;
+        reservedById: string | null;
+      },
+    ) => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = setTimeout(() => {
+        setTooltipData({
+          position: data.position,
+          tileType: data.tileType,
+          displayName: data.displayName,
+          ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
+          ownerColor: data.ownerId ? playerColorMap.get(data.ownerId) : undefined,
+          reservedByName: data.reservedById ? playerNameMap.get(data.reservedById) : undefined,
+          isOceanSpace: data.isOceanSpace,
+          isVolcanic: data.isVolcanic,
+          bonuses: data.bonuses,
+        });
+      }, 200);
+    },
+    [playerNameMap, playerColorMap],
+  );
+
+  const handleTileHoverMove = useCallback((position: { x: number; y: number }) => {
+    setTooltipData((prev) => (prev ? { ...prev, position } : null));
+  }, []);
+
+  const handleTileHoverLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    setTooltipData(null);
+  }, []);
 
   const venusTiles = useMemo((): ProjectedVenusTile[] => {
     if (!gameState?.board?.tiles) return [];
@@ -128,6 +185,9 @@ export default function VenusTileGrid({
 
   return (
     <>
+      <Html>
+        <TileTooltip data={tooltipData} />
+      </Html>
       {venusTiles.map((tile) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
         const tileType = getTileType(tile);
@@ -153,6 +213,9 @@ export default function VenusTileGrid({
             sphereRadius={VENUS_RADIUS}
             sphereCenter={venusWorldCenter}
             tileOpacity={tileOpacity}
+            onHoverInfo={handleTileHoverInfo}
+            onHoverMove={handleTileHoverMove}
+            onHoverLeave={handleTileHoverLeave}
           />
         );
       })}

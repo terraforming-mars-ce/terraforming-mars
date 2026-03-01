@@ -131,11 +131,11 @@ export default function VenusSphere({
       <mesh
         geometry={geometry}
         material={material}
-        onPointerEnter={() => {
-          if (activePlanet === "mars") {
-            setHovered(true);
-            gl.domElement.style.cursor = "pointer";
-          }
+        onPointerEnter={(e) => {
+          if (activePlanet !== "mars") return;
+          if (e.intersections[0]?.object !== e.object) return;
+          setHovered(true);
+          gl.domElement.style.cursor = "pointer";
         }}
         onPointerLeave={() => {
           setHovered(false);
@@ -143,10 +143,10 @@ export default function VenusSphere({
         }}
         onClick={(e) => {
           e.stopPropagation();
-          if (activePlanet === "mars") {
-            gl.domElement.style.cursor = "grab";
-            setActivePlanet("venus");
-          }
+          if (activePlanet !== "mars") return;
+          if (e.intersections[0]?.object !== e.object) return;
+          gl.domElement.style.cursor = "grab";
+          setActivePlanet("venus");
         }}
       />
       <VenusTileGrid
