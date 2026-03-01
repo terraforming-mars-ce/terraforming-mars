@@ -132,27 +132,24 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 
 	playerID := "player-1"
 
-	// Set up the starting cards phase with 10 available project cards and 2 corporations
-	// Using real card IDs from the card database
 	availableCards := []string{
 		"001", "002", "003", "004", "005",
 		"006", "007", "008", "009", "010",
 	}
-	availableCorps := []string{"B08", "B06"} // Tharsis Republic, Mining Guild
 
 	err = testGame.SetSelectStartingCardsPhase(ctx, playerID, &player.SelectStartingCardsPhase{
-		AvailableCards:        availableCards,
-		AvailableCorporations: availableCorps,
+		AvailableCards: availableCards,
 	})
 	testutil.AssertNoError(t, err, "set starting cards phase")
 
 	p, _ := testGame.GetPlayer(playerID)
+	p.SetCorporationID("B08")
 	testutil.SetPlayerCredits(ctx, p, 100)
 
 	// Player selects 3 out of 10 project cards
 	selectedCards := []string{"001", "002", "003"}
 	action := turn_management.NewSelectStartingCardsAction(repo, cardRegistry, log)
-	err = action.Execute(ctx, testGame.ID(), playerID, selectedCards, "B08")
+	err = action.Execute(ctx, testGame.ID(), playerID, selectedCards)
 	testutil.AssertNoError(t, err, "select starting cards")
 
 	discardPile := testGame.Deck().DiscardPile()
