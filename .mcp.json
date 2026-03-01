@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "terraforming-mars": {
+      "command": "npx",
+      "args": ["tsx", "mcp-server/src/index.ts"],
+      "cwd": "/home/mafs/Documents/Repositories/terraforming-mars"
+    }
+  }
+}

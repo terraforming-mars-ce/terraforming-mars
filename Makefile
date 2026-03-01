@@ -1,7 +1,7 @@
 # Terraforming Mars - Unified Development Makefile
 # Run from project root directory
 
-.PHONY: help run frontend backend kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi
+.PHONY: help run frontend backend kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi mcp-setup
 
 # Default target - show help
 help:
@@ -157,6 +157,12 @@ generate:
 	@echo "🔄 Generating TypeScript types from Go structs..."
 	cd backend && tygo generate
 	@echo "✅ TypeScript types generated"
+
+# MCP server setup
+mcp-setup:
+	@echo "Setting up MCP server..."
+	cd mcp-server && npm install
+	@echo "MCP server ready. Restart Claude Code to pick up .mcp.json"
 
 # Raspberry Pi deployment
 deploy-pi:
