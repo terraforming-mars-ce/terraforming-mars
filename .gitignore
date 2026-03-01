@@ -87,3 +87,6 @@ __pycache__/
 
 # Playwright
 .playwright-cli
+
+# Deploy
+.deploy-staging/
