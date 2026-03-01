@@ -249,9 +249,19 @@ class GlobalWebSocketManager implements WebSocketConnection {
     );
   }
 
-  async selectStartingCard(cardIds: string[], corporationId: string): Promise<string> {
+  async selectCorporation(corporationId: string): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.selectStartingCard(cardIds, corporationId);
+    return webSocketService.selectCorporation(corporationId);
+  }
+
+  async selectStartingCard(cardIds: string[]): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.selectStartingCard(cardIds);
+  }
+
+  async selectPreludeCards(preludeIds: string[]): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.selectPreludeCards(preludeIds);
   }
 
   async selectCards(cardIds: string[]): Promise<string> {
