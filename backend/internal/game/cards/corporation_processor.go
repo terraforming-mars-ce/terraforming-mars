@@ -213,7 +213,9 @@ func (p *CorporationProcessor) GetManualActions(card *Card) []player.CardAction 
 	return actions
 }
 
-// createForcedAction creates a forced first action based on the output
+// createForcedAction creates a forced first action based on the output.
+// During starting_selection, only stores the ForcedFirstAction metadata without creating tile queues.
+// Tile queues are created when transitioning to action phase to avoid conflicts with prelude tile placements.
 func (p *CorporationProcessor) createForcedAction(
 	ctx context.Context,
 	output shared.ResourceCondition,
@@ -222,6 +224,8 @@ func (p *CorporationProcessor) createForcedAction(
 	playerID string,
 	log *zap.Logger,
 ) error {
+	inStartingSelection := g.CurrentPhase() == game.GamePhaseStartingSelection
+
 	switch output.ResourceType {
 	case shared.ResourceCityPlacement:
 		action := &player.ForcedFirstAction{
@@ -237,17 +241,19 @@ func (p *CorporationProcessor) createForcedAction(
 		log.Info("🏙️ Set forced city placement action",
 			zap.String("description", action.Description))
 
-		// Create tile placement queue to trigger actual placement UI
-		queue := &player.PendingTileSelectionQueue{
-			Items:  []string{"city"},
-			Source: "corporation-starting-action",
+		if !inStartingSelection {
+			queue := &player.PendingTileSelectionQueue{
+				Items:  []string{"city"},
+				Source: "corporation-starting-action",
+			}
+			if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
+				return fmt.Errorf("failed to queue tile placement: %w", err)
+			}
+			log.Info("🎯 Queued city tile for placement")
+		} else {
+			log.Info("⏳ Deferred city tile queue to action phase")
 		}
-		if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
-			return fmt.Errorf("failed to queue tile placement: %w", err)
-		}
-		log.Info("🎯 Queued city tile for placement")
 
-		// Subscribe to TilePlacedEvent to handle completion and action consumption
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
 
 	case shared.ResourceGreeneryPlacement:
@@ -264,17 +270,19 @@ func (p *CorporationProcessor) createForcedAction(
 		log.Info("🌳 Set forced greenery placement action",
 			zap.String("description", action.Description))
 
-		// Create tile placement queue to trigger actual placement UI
-		queue := &player.PendingTileSelectionQueue{
-			Items:  []string{"greenery"},
-			Source: "corporation-starting-action",
+		if !inStartingSelection {
+			queue := &player.PendingTileSelectionQueue{
+				Items:  []string{"greenery"},
+				Source: "corporation-starting-action",
+			}
+			if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
+				return fmt.Errorf("failed to queue tile placement: %w", err)
+			}
+			log.Info("🎯 Queued greenery tile for placement")
+		} else {
+			log.Info("⏳ Deferred greenery tile queue to action phase")
 		}
-		if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
-			return fmt.Errorf("failed to queue tile placement: %w", err)
-		}
-		log.Info("🎯 Queued greenery tile for placement")
 
-		// Subscribe to TilePlacedEvent to handle completion and action consumption
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
 
 	case shared.ResourceOceanPlacement:
@@ -291,17 +299,19 @@ func (p *CorporationProcessor) createForcedAction(
 		log.Info("🌊 Set forced ocean placement action",
 			zap.String("description", action.Description))
 
-		// Create tile placement queue to trigger actual placement UI
-		queue := &player.PendingTileSelectionQueue{
-			Items:  []string{"ocean"},
-			Source: "corporation-starting-action",
+		if !inStartingSelection {
+			queue := &player.PendingTileSelectionQueue{
+				Items:  []string{"ocean"},
+				Source: "corporation-starting-action",
+			}
+			if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
+				return fmt.Errorf("failed to queue tile placement: %w", err)
+			}
+			log.Info("🎯 Queued ocean tile for placement")
+		} else {
+			log.Info("⏳ Deferred ocean tile queue to action phase")
 		}
-		if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
-			return fmt.Errorf("failed to queue tile placement: %w", err)
-		}
-		log.Info("🎯 Queued ocean tile for placement")
 
-		// Subscribe to TilePlacedEvent to handle completion and action consumption
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
 
 	default:
