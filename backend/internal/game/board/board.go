@@ -79,8 +79,8 @@ const (
 type TileLocation string
 
 const (
-	// TileLocationMars represents tiles on the Mars surface
-	TileLocationMars TileLocation = "mars"
+	TileLocationMars  TileLocation = "mars"
+	TileLocationVenus TileLocation = "venus"
 )
 
 // TileBonus represents a resource bonus provided by a tile when occupied
@@ -235,8 +235,6 @@ func GenerateMarsBoard() []Tile {
 	}{
 		{shared.HexPosition{Q: 0, R: -5, S: 5}, []string{BoardTagPhobosSpaceHaven}, "Phobos Space Haven"},
 		{shared.HexPosition{Q: -5, R: 0, S: 5}, []string{BoardTagDawnCity}, "Dawn City"},
-		{shared.HexPosition{Q: 5, R: 0, S: -5}, []string{BoardTagMaxwellBase}, "Maxwell Base"},
-		{shared.HexPosition{Q: -5, R: 5, S: 0}, []string{BoardTagStratopolis}, "Stratopolis"},
 	}
 	for _, ot := range offMarsTiles {
 		displayName := ot.DisplayName
@@ -245,6 +243,29 @@ func GenerateMarsBoard() []Tile {
 			Type:        shared.ResourceLandTile,
 			Location:    TileLocationMars,
 			Tags:        ot.Tags,
+			DisplayName: &displayName,
+			Bonuses:     nil,
+			OccupiedBy:  nil,
+			OwnerID:     nil,
+		})
+	}
+
+	// Venus tiles (non-adjacent coordinates so cities can't neighbor each other)
+	venusTiles := []struct {
+		Pos         shared.HexPosition
+		Tags        []string
+		DisplayName string
+	}{
+		{shared.HexPosition{Q: 100, R: 0, S: -100}, []string{BoardTagMaxwellBase}, "Maxwell Base"},
+		{shared.HexPosition{Q: 102, R: 0, S: -102}, []string{BoardTagStratopolis}, "Stratopolis"},
+	}
+	for _, vt := range venusTiles {
+		displayName := vt.DisplayName
+		tiles = append(tiles, Tile{
+			Coordinates: vt.Pos,
+			Type:        shared.ResourceLandTile,
+			Location:    TileLocationVenus,
+			Tags:        vt.Tags,
 			DisplayName: &displayName,
 			Bonuses:     nil,
 			OccupiedBy:  nil,
