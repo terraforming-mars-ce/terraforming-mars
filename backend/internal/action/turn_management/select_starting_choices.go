@@ -417,9 +417,41 @@ func (a *SelectStartingChoicesAction) checkAndAdvancePhase(ctx context.Context, 
 
 	log.Info("🎉 All players completed starting selection, advancing to action phase")
 
+	AdvanceToActionPhase(ctx, g, allPlayers, log)
+}
+
+// AdvanceToActionPhase transitions the game from starting_selection to action phase.
+// It creates deferred forced first action tile queues and sets the first player's turn.
+func AdvanceToActionPhase(ctx context.Context, g *game.Game, allPlayers []*player.Player, log *zap.Logger) {
 	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
 		log.Error("Failed to transition game phase", zap.Error(err))
 		return
+	}
+
+	for _, p := range allPlayers {
+		forcedAction := g.GetForcedFirstAction(p.ID())
+		if forcedAction == nil || forcedAction.Completed {
+			continue
+		}
+
+		tileType := forcedActionToTileType(forcedAction.ActionType)
+		if tileType == "" {
+			continue
+		}
+
+		queue := &player.PendingTileSelectionQueue{
+			Items:  []string{tileType},
+			Source: "corporation-starting-action",
+		}
+		if err := g.SetPendingTileSelectionQueue(ctx, p.ID(), queue); err != nil {
+			log.Error("Failed to create deferred forced action tile queue",
+				zap.String("player_id", p.ID()),
+				zap.Error(err))
+			continue
+		}
+		log.Info("🎯 Created deferred forced action tile queue",
+			zap.String("player_id", p.ID()),
+			zap.String("tile_type", tileType))
 	}
 
 	turnOrder := g.TurnOrder()
@@ -440,5 +472,18 @@ func (a *SelectStartingChoicesAction) checkAndAdvancePhase(ctx context.Context, 
 		log.Info("✅ Set first player turn with actions",
 			zap.String("first_player_id", firstPlayerID),
 			zap.Int("available_actions", availableActions))
+	}
+}
+
+func forcedActionToTileType(actionType string) string {
+	switch actionType {
+	case "city-placement":
+		return "city"
+	case "greenery-placement":
+		return "greenery"
+	case "ocean-placement":
+		return "ocean"
+	default:
+		return ""
 	}
 }

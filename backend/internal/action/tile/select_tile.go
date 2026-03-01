@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	baseaction "terraforming-mars-backend/internal/action"
+	"terraforming-mars-backend/internal/action/turn_management"
 	"time"
 
 	"go.uber.org/zap"
@@ -380,26 +381,7 @@ func (a *SelectTileAction) checkStartingSelectionCompletion(ctx context.Context,
 
 	log.Info("🎉 All starting selections and tiles resolved, advancing to action phase")
 
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
-		log.Error("Failed to transition to action phase", zap.Error(err))
-		return
-	}
-
-	turnOrder := g.TurnOrder()
-	if len(turnOrder) > 0 {
-		firstPlayerID := turnOrder[0]
-
-		availableActions := 2
-		if len(allPlayers) == 1 {
-			availableActions = -1
-		}
-
-		if err := g.SetCurrentTurn(ctx, firstPlayerID, availableActions); err != nil {
-			log.Error("Failed to set current turn", zap.Error(err))
-			return
-		}
-	}
-
+	turn_management.AdvanceToActionPhase(ctx, g, allPlayers, log)
 }
 
 func parseHexPosition(hexStr string) (*shared.HexPosition, error) {

@@ -2255,6 +2255,7 @@ export default function GameInterface() {
     game?.status === GameStatusActive &&
     game?.currentPhase === GamePhaseStartingSelection &&
     !game?.currentPlayer?.selectCorporationPhase &&
+    !game?.currentPlayer?.selectPreludeCardsPhase &&
     !game?.currentPlayer?.selectStartingCardsPhase &&
     !game?.currentPlayer?.pendingTileSelection;
 
@@ -2530,6 +2531,7 @@ export default function GameInterface() {
                         name: game.currentPlayer.name,
                         isReady:
                           !game.currentPlayer.selectCorporationPhase &&
+                          !game.currentPlayer.selectPreludeCardsPhase &&
                           !game.currentPlayer.selectStartingCardsPhase &&
                           !!game.currentPlayer.corporation,
                         isSelf: true,
@@ -2543,6 +2545,7 @@ export default function GameInterface() {
                         isReady:
                           !other.selectStartingCardsPhase &&
                           !other.selectCorporationPhase &&
+                          !other.selectPreludeCardsPhase &&
                           !!other.corporation,
                         isSelf: false,
                       });
