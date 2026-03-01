@@ -1,61 +1,18 @@
 name: Deploy to Raspberry Pi
 
 on:
+  workflow_run:
+    workflows: ["Build Backend", "Build Frontend"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Build backend (linux/arm64)
-        working-directory: backend
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o bin/server-arm64 cmd/server/main.go
-
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pi-deploy
-          path: |
-            backend/bin/server-arm64
-            backend/assets/terraforming_mars_cards.json
-            frontend/build/
-            frontend/nginx.conf
-            frontend/docker-entrypoint.sh
-
   deploy:
-    needs: build
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     environment: raspberry-pi
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: pi-deploy
-
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
@@ -64,7 +21,18 @@ jobs:
           ssh-keyscan -H ssh.mh-hemma.rackaracka.net >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Deploy to Pi
+        env:
+          PI_HOST: mhm@ssh.mh-hemma.rackaracka.net
+          PI_COMPOSE_DIR: /home/mhm/terraforming-mars
         run: |
-          chmod +x scripts/deploy-pi.sh
-          chmod +x backend/bin/server-arm64
-          SKIP_BUILD=1 ./scripts/deploy-pi.sh
+          ssh "$PI_HOST" bash <<'REMOTE'
+          set -euo pipefail
+          cd /home/mhm/terraforming-mars
+          echo "Pulling latest images..."
+          docker compose pull
+          echo "Restarting containers..."
+          docker compose up -d
+          echo "Pruning old images..."
+          docker image prune -f
+          echo "Deploy complete"
+          REMOTE
