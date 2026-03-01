@@ -90,6 +90,9 @@ export default function BuildingTile({
 
     clonedScene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
+        child.material = Array.isArray(child.material)
+          ? child.material.map((m) => m.clone())
+          : child.material.clone();
         child.castShadow = true;
         child.receiveShadow = true;
       }
