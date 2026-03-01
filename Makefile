@@ -1,7 +1,7 @@
 # Terraforming Mars - Unified Development Makefile
 # Run from project root directory
 
-.PHONY: help run frontend backend backend-live kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi
+.PHONY: help run frontend backend kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi
 
 # Default target - show help
 help:
@@ -10,8 +10,7 @@ help:
 	@echo "🎯 Main Commands:"
 	@echo "  make run          - Run both frontend and backend with hot reload"
 	@echo "  make frontend     - Run frontend development server (port 3000)"
-	@echo "  make backend      - Run backend server (port 3001)"
-	@echo "  make backend-live - Run backend server with hot reload (port 3001)"
+	@echo "  make backend      - Build backend binary"
 	@echo "  make kill         - Kill all frontend and backend development processes"
 	@echo ""
 	@echo "🧪 Testing:"
@@ -48,15 +47,7 @@ frontend:
 	@echo "🎨 Starting frontend development server..."
 	cd frontend && npm start
 
-backend:
-	@echo "🔄 Starting backend server with hot reload..."
-	@echo "   Watching for changes in backend/ directory"
-	cd backend && TM_REPO_PATH=../ $(shell go env GOPATH)/bin/air
-
-backend-live:
-	@echo "🔄 Starting backend server with hot reload..."
-	@echo "   Watching for changes in backend/ directory"
-	cd backend && TM_REPO_PATH=../ $(shell go env GOPATH)/bin/air
+backend: build-backend
 
 kill:
 	@echo "🛑 Killing all development servers..."
