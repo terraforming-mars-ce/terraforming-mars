@@ -57,8 +57,10 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return nil, err
 	}
 
-	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
-		return nil, err
+	if g.CurrentPhase() != game.GamePhasePreludeSelection {
+		if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
+			return nil, err
+		}
 	}
 
 	p, err := a.GetPlayerFromGame(g, playerID, log)
@@ -342,12 +344,64 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		log.Warn("Failed to handle completion callback", zap.Error(err))
 	}
 
-	baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+	if g.CurrentPhase() == game.GamePhasePreludeSelection {
+		a.checkPreludePhaseCompletion(ctx, g, log)
+	} else {
+		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+	}
 
 	log.Info("✅ Tile selected and placed successfully",
 		zap.String("tile_type", tileType),
 		zap.String("position", selectedHex))
 	return result, nil
+}
+
+// checkPreludePhaseCompletion checks if all players finished prelude selection and tile placements,
+// then advances to starting card selection
+func (a *SelectTileAction) checkPreludePhaseCompletion(ctx context.Context, g *game.Game, log *zap.Logger) {
+	allPlayers := g.GetAllPlayers()
+	for _, p := range allPlayers {
+		if g.GetSelectPreludeCardsPhase(p.ID()) != nil {
+			return
+		}
+		if g.GetPendingTileSelection(p.ID()) != nil {
+			return
+		}
+		if g.GetPendingTileSelectionQueue(p.ID()) != nil {
+			return
+		}
+	}
+
+	log.Info("🎉 All prelude tiles resolved, advancing to starting card selection")
+
+	if err := g.UpdatePhase(ctx, game.GamePhaseStartingCardSelection); err != nil {
+		log.Error("Failed to transition to starting card selection phase", zap.Error(err))
+		return
+	}
+
+	deck := g.Deck()
+	if deck == nil {
+		log.Error("Game deck is nil")
+		return
+	}
+
+	for _, p := range allPlayers {
+		projectCardIDs, err := deck.DrawProjectCards(ctx, 10)
+		if err != nil {
+			log.Error("Failed to draw project cards", zap.Error(err), zap.String("player_id", p.ID()))
+			return
+		}
+
+		selectionPhase := &player.SelectStartingCardsPhase{
+			AvailableCards: projectCardIDs,
+		}
+		if err := g.SetSelectStartingCardsPhase(ctx, p.ID(), selectionPhase); err != nil {
+			log.Error("Failed to set selection phase", zap.Error(err), zap.String("player_id", p.ID()))
+			return
+		}
+	}
+
+	log.Info("✅ Project cards distributed to all players")
 }
 
 func parseHexPosition(hexStr string) (*shared.HexPosition, error) {

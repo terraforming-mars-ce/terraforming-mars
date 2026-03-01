@@ -2847,7 +2847,9 @@
             "type": "auto",
             "condition": {
               "type": "tile-placed",
-              "onBonusType": ["steel"],
+              "onBonusType": [
+                "steel"
+              ],
               "target": "self-card"
             }
           }
@@ -2867,7 +2869,9 @@
             "type": "auto",
             "condition": {
               "type": "tile-placed",
-              "onBonusType": ["titanium"],
+              "onBonusType": [
+                "titanium"
+              ],
               "target": "self-card"
             }
           }
@@ -2980,7 +2984,9 @@
             "type": "auto",
             "condition": {
               "type": "tile-placed",
-              "onBonusType": ["steel"],
+              "onBonusType": [
+                "steel"
+              ],
               "target": "self-card"
             }
           }
@@ -3000,7 +3006,9 @@
             "type": "auto",
             "condition": {
               "type": "tile-placed",
-              "onBonusType": ["titanium"],
+              "onBonusType": [
+                "titanium"
+              ],
               "target": "self-card"
             }
           }
@@ -6018,7 +6026,9 @@
             "amount": 1,
             "target": "none",
             "tileRestrictions": {
-              "boardTags": ["volcanic"]
+              "boardTags": [
+                "volcanic"
+              ]
             }
           }
         ],
@@ -14792,7 +14802,14 @@
           {
             "type": "card-draw",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "tags": [
+                  "plant"
+                ]
+              }
+            ]
           }
         ],
         "description": "Place a greenery tile and increase oxygen 1 step. Reveal cards from the deck until you have revealed 2 plant-tag cards. Take these into your hand, and discard the rest."
@@ -15551,7 +15568,14 @@
           {
             "type": "card-draw",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "tags": [
+                  "space"
+                ]
+              }
+            ]
           }
         ],
         "description": "Gain 6 titanium. Reveal cards from the deck until you have revealed 2 space cards. Take those into hand, and discard the rest."
@@ -15627,7 +15651,9 @@
             "amount": 1,
             "target": "none",
             "tileRestrictions": {
-              "boardTags": ["volcanic"]
+              "boardTags": [
+                "volcanic"
+              ]
             }
           }
         ],

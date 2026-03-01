@@ -133,10 +133,12 @@ func main() {
 	// Tile selection (1)
 	selectTileAction := tileAction.NewSelectTileAction(gameRepo, cardRegistry, stateRepo, log)
 
-	// Turn management (3)
+	// Turn management (5)
 	startGameAction := turnAction.NewStartGameAction(gameRepo, log)
 	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
+	selectCorporationAction := turnAction.NewSelectCorporationAction(gameRepo, cardRegistry, log)
 	selectStartingCardsAction := turnAction.NewSelectStartingCardsAction(gameRepo, cardRegistry, log)
+	selectPreludeCardsAction := turnAction.NewSelectPreludeCardsAction(gameRepo, cardRegistry, log)
 
 	// Confirmations (4)
 	confirmSellPatentsAction := confirmAction.NewConfirmSellPatentsAction(gameRepo, log)
@@ -196,7 +198,9 @@ func main() {
 		// Turn management
 		startGameAction,
 		skipActionAction,
+		selectCorporationAction,
 		selectStartingCardsAction,
+		selectPreludeCardsAction,
 		// Confirmations
 		confirmSellPatentsAction,
 		confirmProductionCardsAction,

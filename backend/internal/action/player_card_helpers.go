@@ -130,6 +130,20 @@ func recalculatePlayerCard(
 	pc.UpdateState(state)
 }
 
+// MakeCardDrawCallback returns a callback for the BehaviorApplier that creates PlayerCard
+// caches when cards are drawn directly to hand via card-draw outputs.
+func MakeCardDrawCallback(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) func(cardIDs []string) {
+	return func(cardIDs []string) {
+		for _, cardID := range cardIDs {
+			card, err := cardRegistry.GetByID(cardID)
+			if err != nil {
+				continue
+			}
+			CreateAndCachePlayerCard(card, p, g, cardRegistry)
+		}
+	}
+}
+
 // AddCardsToPlayerHand adds multiple cards to a player's hand and creates PlayerCard instances.
 // This is a convenience function that consolidates the common pattern of:
 // 1. Adding card ID to hand (triggers events)

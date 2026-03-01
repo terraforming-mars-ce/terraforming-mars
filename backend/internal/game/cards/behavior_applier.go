@@ -14,20 +14,21 @@ import (
 // BehaviorApplier handles applying card behavior inputs and outputs
 // This is the single source of truth for all input/output application
 type BehaviorApplier struct {
-	player            *player.Player        // Player affected by the behavior (may be nil for game-only effects)
-	game              *game.Game            // Game context for global params/tiles (may be nil for player-only effects)
-	source            string                // Source identifier for logging (card name, action name, etc.)
-	sourceCardID      string                // Card ID for self-card targeting (optional)
-	targetCardIDs     []string              // Card IDs for any-card targeting (positional, one per any-card output)
-	anyCardTargetIdx  int                   // Index into targetCardIDs, incremented each time an any-card output is processed
-	targetPlayerID    string                // Player ID for any-player targeting (optional, set by caller)
-	stealSourceCardID string                // Card ID to steal resources from for steal-from-any-card outputs (optional)
-	sourceBehaviorIdx int                   // Behavior index for card draw selection tracking
-	selectedAmount    int                   // Player-selected amount for variable-amount behaviors (0 = not applicable)
-	actionPayment     *CardPayment          // Optional payment for action inputs with paymentAllowed (e.g., titanium for Water Import From Europa)
-	cardRegistry      CardRegistryInterface // Card registry for tag counting in per conditions (optional)
-	sourceType        game.SourceType       // Source type for triggered effect classification
-	logger            *zap.Logger
+	player             *player.Player         // Player affected by the behavior (may be nil for game-only effects)
+	game               *game.Game             // Game context for global params/tiles (may be nil for player-only effects)
+	source             string                 // Source identifier for logging (card name, action name, etc.)
+	sourceCardID       string                 // Card ID for self-card targeting (optional)
+	targetCardIDs      []string               // Card IDs for any-card targeting (positional, one per any-card output)
+	anyCardTargetIdx   int                    // Index into targetCardIDs, incremented each time an any-card output is processed
+	targetPlayerID     string                 // Player ID for any-player targeting (optional, set by caller)
+	stealSourceCardID  string                 // Card ID to steal resources from for steal-from-any-card outputs (optional)
+	sourceBehaviorIdx  int                    // Behavior index for card draw selection tracking
+	selectedAmount     int                    // Player-selected amount for variable-amount behaviors (0 = not applicable)
+	actionPayment      *CardPayment           // Optional payment for action inputs with paymentAllowed (e.g., titanium for Water Import From Europa)
+	cardRegistry       CardRegistryInterface  // Card registry for tag counting in per conditions (optional)
+	sourceType         game.SourceType        // Source type for triggered effect classification
+	onCardsAddedToHand func(cardIDs []string) // Callback when cards are drawn to hand (for PlayerCard caching)
+	logger             *zap.Logger
 }
 
 // NewBehaviorApplier creates a new behavior applier
@@ -109,6 +110,13 @@ func (a *BehaviorApplier) WithActionPayment(payment *CardPayment) *BehaviorAppli
 // WithSourceType sets the source type for triggered effect classification
 func (a *BehaviorApplier) WithSourceType(sourceType game.SourceType) *BehaviorApplier {
 	a.sourceType = sourceType
+	return a
+}
+
+// WithOnCardsAddedToHand sets a callback invoked when cards are drawn directly to a player's hand.
+// Used by the action layer to create PlayerCard caches for drawn cards.
+func (a *BehaviorApplier) WithOnCardsAddedToHand(fn func(cardIDs []string)) *BehaviorApplier {
+	a.onCardsAddedToHand = fn
 	return a
 }
 
@@ -1387,6 +1395,31 @@ func (a *BehaviorApplier) applyOutput(
 					zap.String("opponent_id", opponent.ID()),
 					zap.Int("amount", len(drawnCards)))
 			}
+		} else if HasCardSelectors(output.Selectors) && a.cardRegistry != nil {
+			matcher := func(cardID string) bool {
+				card, err := a.cardRegistry.GetByID(cardID)
+				if err != nil || card == nil {
+					return false
+				}
+				return MatchesAnySelector(card, output.Selectors)
+			}
+			matched, discarded, err := a.game.Deck().DrawProjectCardsUntilMatching(ctx, output.Amount, matcher)
+			if err != nil {
+				log.Warn("Failed to draw matching cards", zap.Error(err))
+				return nil
+			}
+			for _, cardID := range matched {
+				a.player.Hand().AddCard(cardID)
+			}
+			if a.onCardsAddedToHand != nil && len(matched) > 0 {
+				a.onCardsAddedToHand(matched)
+			}
+			if len(discarded) > 0 {
+				_ = a.game.Deck().Discard(ctx, discarded)
+			}
+			log.Info("🃏 Drew matching cards (draw-until)",
+				zap.Int("matched", len(matched)),
+				zap.Int("discarded", len(discarded)))
 		} else {
 			drawnCards, err := a.game.Deck().DrawProjectCards(ctx, output.Amount)
 			if err != nil {
@@ -1395,6 +1428,9 @@ func (a *BehaviorApplier) applyOutput(
 			}
 			for _, cardID := range drawnCards {
 				a.player.Hand().AddCard(cardID)
+			}
+			if a.onCardsAddedToHand != nil && len(drawnCards) > 0 {
+				a.onCardsAddedToHand(drawnCards)
 			}
 			log.Info("🃏 Drew cards and added to hand",
 				zap.Int("amount", len(drawnCards)))

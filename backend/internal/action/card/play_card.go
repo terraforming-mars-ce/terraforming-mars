@@ -478,7 +478,8 @@ func (a *PlayCardAction) applyCardBehaviors(
 			applier := gamecards.NewBehaviorApplier(p, g, card.Name, log).
 				WithSourceCardID(card.ID).
 				WithCardRegistry(a.CardRegistry()).
-				WithSourceType(game.SourceTypeCardPlay)
+				WithSourceType(game.SourceTypeCardPlay).
+				WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
 			if len(cardStorageTargets) > 0 {
 				applier = applier.WithTargetCardIDs(cardStorageTargets)
 			}
