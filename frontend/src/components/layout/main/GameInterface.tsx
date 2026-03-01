@@ -77,7 +77,6 @@ export default function GameInterface() {
   const {
     playProductionSound,
     playTemperatureSound,
-    playWaterPlacementSound,
     playOxygenSound,
     playAsteroidImpactSound,
     playYourTurnSound,
@@ -307,13 +306,6 @@ export default function GameInterface() {
           void playTemperatureSound();
         }
 
-        // Play water placement sound when ocean count increases
-        const prevOceans = previousGameRef.current.globalParameters?.oceans;
-        const newOceans = updatedGame.globalParameters?.oceans;
-        if (prevOceans !== undefined && newOceans !== undefined && newOceans > prevOceans) {
-          void playWaterPlacementSound();
-        }
-
         // Play oxygen increase sound when oxygen goes up
         const prevOxygen = previousGameRef.current.globalParameters?.oxygen;
         const newOxygen = updatedGame.globalParameters?.oxygen;
@@ -371,13 +363,7 @@ export default function GameInterface() {
         setShowCorporationModal(false);
       }
     },
-    [
-      isReconnecting,
-      playTemperatureSound,
-      playWaterPlacementSound,
-      playOxygenSound,
-      playYourTurnSound,
-    ],
+    [isReconnecting, playTemperatureSound, playOxygenSound, playYourTurnSound],
   );
 
   const handleLogUpdate = useCallback(
