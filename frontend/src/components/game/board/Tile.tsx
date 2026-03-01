@@ -535,6 +535,7 @@ export default function Tile({
       transparent: true,
       opacity:
         isGreenery ||
+        tileType === "ocean" ||
         tileType === "city" ||
         tileType === "volcano" ||
         tileType === "nuclear-zone" ||
@@ -636,50 +637,48 @@ export default function Tile({
       quaternion={surfaceQuaternion}
       scale={[entranceScale, entranceScale, entranceScale]}
     >
-      {/* Main hex tile - hidden for ocean (water mesh handles rendering) */}
-      {tileType !== "ocean" && (
-        <mesh
-          ref={meshRef}
-          geometry={hexGeometry}
-          material={hexTileMaterial}
-          renderOrder={10}
-          onPointerEnter={(event) => {
-            if (!panState.isPanning) {
-              setHovered(true);
-              if (isAvailableForPlacement) {
-                hoverSound.onMouseEnter?.();
-              }
-              onHoverInfo?.({
-                position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
-                tileType,
-                displayName,
-                ownerId: ownerId || null,
-                reservedById: reservedById || null,
-                isOceanSpace,
-                isVolcanic,
-                bonuses,
-              });
-            }
-          }}
-          onPointerMove={(event) => {
-            if (!panState.isPanning) {
-              onHoverMove?.({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
-            }
-          }}
-          onPointerLeave={() => {
-            setHovered(false);
-            onHoverLeave?.();
-          }}
-          onClick={(event) => {
-            if (panState.isPanning) return;
-            event.stopPropagation();
+      {/* Main hex tile - always rendered; invisible for ocean but still receives raycasts */}
+      <mesh
+        ref={meshRef}
+        geometry={hexGeometry}
+        material={hexTileMaterial}
+        renderOrder={10}
+        onPointerEnter={(event) => {
+          if (!panState.isPanning) {
+            setHovered(true);
             if (isAvailableForPlacement) {
-              hoverSound.onClick?.();
+              hoverSound.onMouseEnter?.();
             }
-            onClick();
-          }}
-        />
-      )}
+            onHoverInfo?.({
+              position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
+              tileType,
+              displayName,
+              ownerId: ownerId || null,
+              reservedById: reservedById || null,
+              isOceanSpace,
+              isVolcanic,
+              bonuses,
+            });
+          }
+        }}
+        onPointerMove={(event) => {
+          if (!panState.isPanning) {
+            onHoverMove?.({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
+          }
+        }}
+        onPointerLeave={() => {
+          setHovered(false);
+          onHoverLeave?.();
+        }}
+        onClick={(event) => {
+          if (panState.isPanning) return;
+          event.stopPropagation();
+          if (isAvailableForPlacement) {
+            hoverSound.onClick?.();
+          }
+          onClick();
+        }}
+      />
 
       {/* Hex border - hidden for ocean tiles */}
       {tileType !== "ocean" && (
@@ -691,26 +690,6 @@ export default function Tile({
         overlayGeometry={overlayGeometry}
         isOceanSpace={tileData.isOceanSpace}
         tileType={tileType}
-        onClick={onClick}
-        onHoverChange={setHovered}
-        onPointerEnterCapture={(event: any) => {
-          onHoverInfo?.({
-            position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
-            tileType,
-            displayName,
-            ownerId: ownerId || null,
-            reservedById: reservedById || null,
-            isOceanSpace,
-            isVolcanic,
-            bonuses,
-          });
-        }}
-        onPointerMoveCapture={(event: any) => {
-          onHoverMove?.({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
-        }}
-        onPointerLeaveCapture={() => {
-          onHoverLeave?.();
-        }}
       />
 
       {/* Volcanic space indicator - red tint for unoccupied volcanic tiles */}

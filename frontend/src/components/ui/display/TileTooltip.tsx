@@ -49,7 +49,7 @@ const TileTooltip: React.FC<{ data: TileTooltipData | null }> = ({ data }) => {
         }}
       >
         <div className="font-orbitron font-bold text-xs text-white mb-1">
-          {isEmptySpace ? spaceLabel : label}
+          {isEmptySpace && !data.displayName ? spaceLabel : label}
         </div>
 
         {data.isVolcanic && isEmptySpace && (
