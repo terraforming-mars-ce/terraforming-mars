@@ -36,6 +36,17 @@ class AudioService {
       navigator.mediaSession.setActionHandler("nexttrack", noop);
     }
 
+    const unlockAudio = () => {
+      const ctx = new AudioContext();
+      void ctx.resume().then(() => ctx.close());
+      document.removeEventListener("click", unlockAudio);
+      document.removeEventListener("touchstart", unlockAudio);
+      document.removeEventListener("keydown", unlockAudio);
+    };
+    document.addEventListener("click", unlockAudio);
+    document.addEventListener("touchstart", unlockAudio);
+    document.addEventListener("keydown", unlockAudio);
+
     this.preloadAudioFiles();
   }
 
