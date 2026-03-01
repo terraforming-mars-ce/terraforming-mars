@@ -3,6 +3,7 @@ package deck
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
 )
 
@@ -23,12 +24,15 @@ type Deck struct {
 func NewDeck(gameID string, projectCardIDs, corpIDs, preludeIDs []string) *Deck {
 	projectCopy := make([]string, len(projectCardIDs))
 	copy(projectCopy, projectCardIDs)
+	rand.Shuffle(len(projectCopy), func(i, j int) { projectCopy[i], projectCopy[j] = projectCopy[j], projectCopy[i] })
 
 	corpCopy := make([]string, len(corpIDs))
 	copy(corpCopy, corpIDs)
+	rand.Shuffle(len(corpCopy), func(i, j int) { corpCopy[i], corpCopy[j] = corpCopy[j], corpCopy[i] })
 
 	preludeCopy := make([]string, len(preludeIDs))
 	copy(preludeCopy, preludeIDs)
+	rand.Shuffle(len(preludeCopy), func(i, j int) { preludeCopy[i], preludeCopy[j] = preludeCopy[j], preludeCopy[i] })
 
 	return &Deck{
 		gameID:         gameID,
@@ -194,6 +198,7 @@ func (d *Deck) Remove(ctx context.Context, cardIDs []string) error {
 // Must be called while d.mu is already held.
 func (d *Deck) shuffleLocked() {
 	d.projectCards = append(d.projectCards, d.discardPile...)
+	rand.Shuffle(len(d.projectCards), func(i, j int) { d.projectCards[i], d.projectCards[j] = d.projectCards[j], d.projectCards[i] })
 	d.discardPile = make([]string, 0)
 	d.shuffleCount++
 }
