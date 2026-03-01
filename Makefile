@@ -1,7 +1,7 @@
 # Terraforming Mars - Unified Development Makefile
 # Run from project root directory
 
-.PHONY: help run frontend backend backend-live kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit
+.PHONY: help run frontend backend backend-live kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi
 
 # Default target - show help
 help:
@@ -166,6 +166,10 @@ generate:
 	@echo "🔄 Generating TypeScript types from Go structs..."
 	cd backend && tygo generate
 	@echo "✅ TypeScript types generated"
+
+# Raspberry Pi deployment
+deploy-pi:
+	./scripts/deploy-pi.sh
 
 # Watch for changes (requires entr: apt install entr)
 test-watch:
