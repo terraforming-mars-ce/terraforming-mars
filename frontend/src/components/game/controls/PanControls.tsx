@@ -2,12 +2,21 @@ import { useRef, useEffect, useState } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext";
+import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
+import { VENUS_POSITION } from "../board/boardConstants";
 
 export const panState = { isPanning: false };
+
+const MARS_CENTER = new THREE.Vector3(0, 0, 0);
+const VENUS_CENTER = new THREE.Vector3(VENUS_POSITION[0], VENUS_POSITION[1], VENUS_POSITION[2]);
+
+const MARS_ORBIT = { minDistance: 2.4, maxDistance: 20, defaultRadius: 8 };
+const VENUS_ORBIT = { minDistance: 2.4, maxDistance: 20, defaultRadius: 6.5 };
 
 export function PanControls() {
   const { camera, gl, size } = useThree();
   const { settings, storedCameraState, setStoredCameraState } = useWorld3DSettings();
+  const { activePlanet, isTransitioning, setIsTransitioning } = usePlanetFocus();
   const isPointerDown = useRef(false);
   const previousPointer = useRef({ x: 0, y: 0 });
   const [shouldRecenter, setShouldRecenter] = useState(false);
@@ -24,20 +33,25 @@ export function PanControls() {
     new THREE.Spherical(spherical.radius, spherical.phi, spherical.theta),
   );
 
-  const marsCenter = new THREE.Vector3(0, 0, 0);
+  const orbitCenter = useRef(new THREE.Vector3(0, 0, 0));
+  const targetOrbitCenter = useRef(new THREE.Vector3(0, 0, 0));
+  const previousPlanet = useRef(activePlanet);
+  const activePlanetRef = useRef(activePlanet);
+  const isTransitioningRef = useRef(isTransitioning);
+  activePlanetRef.current = activePlanet;
+  isTransitioningRef.current = isTransitioning;
+
   const wasFreeCameraEnabled = useRef(settings.freeCameraEnabled);
 
   useFrame(() => {
     // Handle free camera toggle
     if (settings.freeCameraEnabled && !wasFreeCameraEnabled.current) {
-      // Switching TO free camera - store current state
       setStoredCameraState({
         position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
         spherical: { radius: spherical.radius, phi: spherical.phi, theta: spherical.theta },
       });
       wasFreeCameraEnabled.current = true;
     } else if (!settings.freeCameraEnabled && wasFreeCameraEnabled.current) {
-      // Switching FROM free camera - restore state
       if (storedCameraState) {
         spherical.radius = storedCameraState.spherical.radius;
         spherical.phi = storedCameraState.spherical.phi;
@@ -49,9 +63,20 @@ export function PanControls() {
       wasFreeCameraEnabled.current = false;
     }
 
-    // Skip normal controls when free camera is enabled
     if (settings.freeCameraEnabled) {
       return;
+    }
+
+    // Detect planet change and start transition
+    if (activePlanet !== previousPlanet.current) {
+      previousPlanet.current = activePlanet;
+      setIsTransitioning(true);
+
+      const orbit = activePlanet === "venus" ? VENUS_ORBIT : MARS_ORBIT;
+      targetOrbitCenter.current.copy(activePlanet === "venus" ? VENUS_CENTER : MARS_CENTER);
+      targetSpherical.current.radius = orbit.defaultRadius;
+      targetSpherical.current.phi = Math.PI / 2;
+      targetSpherical.current.theta = 0;
     }
 
     if (size.width !== previousSize.current.width || size.height !== previousSize.current.height) {
@@ -65,20 +90,32 @@ export function PanControls() {
       setShouldRecenter(false);
     }
 
-    const lerpFactor = 0.1;
+    const lerpFactor = isTransitioning ? 0.03 : 0.1;
+
+    orbitCenter.current.lerp(targetOrbitCenter.current, lerpFactor);
 
     spherical.theta += (targetSpherical.current.theta - spherical.theta) * lerpFactor;
     spherical.phi += (targetSpherical.current.phi - spherical.phi) * lerpFactor;
     spherical.radius += (targetSpherical.current.radius - spherical.radius) * lerpFactor;
 
-    camera.position.setFromSpherical(spherical);
-    camera.lookAt(marsCenter);
+    const offset = new THREE.Vector3().setFromSpherical(spherical);
+    camera.position.copy(orbitCenter.current).add(offset);
+    camera.lookAt(orbitCenter.current);
+
+    if (isTransitioning) {
+      const centerDist = orbitCenter.current.distanceTo(targetOrbitCenter.current);
+      const radiusDiff = Math.abs(spherical.radius - targetSpherical.current.radius);
+      if (centerDist < 0.01 && radiusDiff < 0.01) {
+        setIsTransitioning(false);
+      }
+    }
   });
 
   useEffect(() => {
     if (!settings.freeCameraEnabled) {
-      camera.position.setFromSpherical(spherical);
-      camera.lookAt(marsCenter);
+      const offset = new THREE.Vector3().setFromSpherical(spherical);
+      camera.position.copy(orbitCenter.current).add(offset);
+      camera.lookAt(orbitCenter.current);
     }
 
     const handleWindowResize = () => {
@@ -86,7 +123,7 @@ export function PanControls() {
     };
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (settings.freeCameraEnabled) return;
+      if (settings.freeCameraEnabled || isTransitioningRef.current) return;
       isPointerDown.current = true;
       panState.isPanning = true;
       previousPointer.current = { x: event.clientX, y: event.clientY };
@@ -131,18 +168,17 @@ export function PanControls() {
     };
 
     const handleWheel = (event: WheelEvent) => {
-      if (settings.freeCameraEnabled) return;
+      if (settings.freeCameraEnabled || isTransitioningRef.current) return;
       event.preventDefault();
 
+      const orbit = activePlanetRef.current === "venus" ? VENUS_ORBIT : MARS_ORBIT;
       const zoomSpeed = 0.5;
       const zoomDelta = event.deltaY * zoomSpeed * 0.01;
-      const minDistance = 2.4;
-      const maxDistance = 20;
 
       targetSpherical.current.radius += zoomDelta;
       targetSpherical.current.radius = Math.max(
-        minDistance,
-        Math.min(maxDistance, targetSpherical.current.radius),
+        orbit.minDistance,
+        Math.min(orbit.maxDistance, targetSpherical.current.radius),
       );
     };
 
@@ -164,7 +200,7 @@ export function PanControls() {
       document.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("resize", handleWindowResize);
     };
-  }, [camera, gl, spherical, marsCenter, settings.freeCameraEnabled]);
+  }, [camera, gl, spherical, settings.freeCameraEnabled]);
 
   return null;
 }
