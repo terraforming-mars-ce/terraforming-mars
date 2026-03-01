@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import Tile, { TileHighlightMode } from "./Tile";
@@ -8,8 +8,8 @@ import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import { useSoundEffects } from "../../../hooks/useSoundEffects";
 import GreeneryRenderer from "./GreeneryRenderer";
 import { SPHERE_RADIUS } from "./boardConstants";
-import { getPlayerColor } from "../../../utils/playerColors";
-
+import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
+import { Html } from "@react-three/drei";
 interface TileGridProps {
   gameState?: GameDto;
   onHexClick?: (hexCoordinate: string) => void;
@@ -102,13 +102,74 @@ export default function TileGrid({
 
   const playerColorMap = useMemo(() => {
     const map = new Map<string, string>();
-    if (gameState?.turnOrder) {
-      gameState.turnOrder.forEach((playerId, index) => {
-        map.set(playerId, getPlayerColor(index));
+    if (gameState) {
+      if (gameState.currentPlayer?.color) {
+        map.set(gameState.currentPlayer.id, gameState.currentPlayer.color);
+      }
+      gameState.otherPlayers?.forEach((p) => {
+        if (p.color) map.set(p.id, p.color);
       });
     }
     return map;
-  }, [gameState?.turnOrder]);
+  }, [gameState]);
+
+  const playerNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (gameState) {
+      if (gameState.currentPlayer) {
+        map.set(gameState.currentPlayer.id, gameState.currentPlayer.name);
+      }
+      gameState.otherPlayers?.forEach((p) => {
+        map.set(p.id, p.name);
+      });
+    }
+    return map;
+  }, [gameState]);
+
+  const [tooltipData, setTooltipData] = useState<TileTooltipData | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleTileHoverInfo = useCallback(
+    (
+      data: Omit<TileTooltipData, "ownerName" | "ownerColor" | "reservedByName"> & {
+        ownerId: string | null;
+        reservedById: string | null;
+      },
+    ) => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = setTimeout(() => {
+        setTooltipData({
+          position: data.position,
+          tileType: data.tileType,
+          displayName: data.displayName,
+          ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
+          ownerColor: data.ownerId ? playerColorMap.get(data.ownerId) : undefined,
+          reservedByName: data.reservedById ? playerNameMap.get(data.reservedById) : undefined,
+          isOceanSpace: data.isOceanSpace,
+          isVolcanic: data.isVolcanic,
+          bonuses: data.bonuses,
+        });
+      }, 200);
+    },
+    [playerNameMap, playerColorMap],
+  );
+
+  const handleTileHoverMove = useCallback(
+    (position: { x: number; y: number }) => {
+      if (tooltipData) {
+        setTooltipData((prev) => (prev ? { ...prev, position } : null));
+      }
+    },
+    [tooltipData],
+  );
+
+  const handleTileHoverLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    setTooltipData(null);
+  }, []);
 
   // Create lookup map for VP indicators by coordinate
   const vpIndicatorMap = useMemo(() => {
@@ -365,6 +426,10 @@ export default function TileGrid({
 
   return (
     <>
+      {/* Tile hover tooltip (portal escapes R3F Canvas) */}
+      <Html>
+        <TileTooltip data={tooltipData} />
+      </Html>
       {/* Single GreeneryRenderer handles ALL greenery + volcano vegetation */}
       <GreeneryRenderer
         tiles={greeneryTiles}
@@ -388,6 +453,8 @@ export default function TileGrid({
             reservedById={tile.backendTile?.reservedBy || null}
             displayName={tileData.specialLabel || tile.backendTile?.displayName}
             isVolcanic={tile.backendTile?.tags?.includes("volcanic") ?? false}
+            isOceanSpace={tile.isOceanSpace}
+            bonuses={tile.bonuses}
             onClick={() => {
               onHexClick?.(hexKey);
             }}
@@ -398,6 +465,9 @@ export default function TileGrid({
             animateEntrance={animateHexEntrance}
             entranceDelay={index * 15}
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
+            onHoverInfo={handleTileHoverInfo}
+            onHoverMove={handleTileHoverMove}
+            onHoverLeave={handleTileHoverLeave}
           />
         );
       })}

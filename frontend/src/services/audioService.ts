@@ -54,6 +54,7 @@ class AudioService {
       { key: "card-hover", path: "/sounds/card-hover.mp3", volumeMultiplier: 0.2 },
       { key: "construction", path: "/sounds/construction.mp3", volumeMultiplier: 1.0 },
       { key: "asteroid-impact", path: "/sounds/asteroid-impact.mp3", volumeMultiplier: 1.0 },
+      { key: "your-turn", path: "/sounds/your-turn.mp3", volumeMultiplier: 1.0 },
     ];
 
     audioFiles.forEach(({ key, path, volumeMultiplier }) => {
@@ -130,6 +131,10 @@ class AudioService {
 
   public async playAsteroidImpactSound(): Promise<void> {
     return this.playSound("asteroid-impact");
+  }
+
+  public async playYourTurnSound(): Promise<void> {
+    return this.playSound("your-turn");
   }
 
   public playAmbient(): void {

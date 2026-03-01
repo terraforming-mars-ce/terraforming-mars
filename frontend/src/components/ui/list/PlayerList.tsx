@@ -7,7 +7,6 @@ import {
 } from "@/types/generated/api-types.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import PlayerCard from "../cards/PlayerCard.tsx";
-import { getPlayerColor } from "@/utils/playerColors.ts";
 
 interface PlayerListProps {
   players: (PlayerDto | OtherPlayerDto)[];
@@ -40,11 +39,11 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
   return (
     <div className="flex flex-col w-full gap-0 overflow-y-auto overflow-x-visible max-h-[calc(100vh-200px)] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-      {players.map((player, index) => (
+      {players.map((player) => (
         <PlayerCard
           key={player.id}
           player={player}
-          playerColor={getPlayerColor(index)}
+          playerColor={player.color || "#6496ff"}
           isCurrentPlayer={player.id === currentPlayer?.id}
           isCurrentTurn={player.id === turnPlayerId}
           isActionPhase={isActionPhase}

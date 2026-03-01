@@ -1,6 +1,5 @@
 import React from "react";
 import { PlayerDto, OtherPlayerDto } from "../../../types/generated/api-types.ts";
-import { getPlayerColor } from "@/utils/playerColors.ts";
 
 interface PlayerOverlayProps {
   players: (PlayerDto | OtherPlayerDto)[];
@@ -36,7 +35,7 @@ const PlayerOverlay: React.FC<PlayerOverlayProps> = ({ players, currentPlayer })
       <div className="flex gap-2 items-center justify-center">
         {playersToShow.map((player, index) => {
           const isCurrentPlayer = player.id === currentPlayer?.id;
-          const playerColor = getPlayerColor(index);
+          const playerColor = player.color || "#6496ff";
           const corpLogo = getCorpLogo(player.corporation?.id);
           const isPassed = player.passed || false;
 

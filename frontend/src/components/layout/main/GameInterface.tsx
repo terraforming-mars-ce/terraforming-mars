@@ -21,6 +21,7 @@ import CardDrawSelectionOverlay from "../../ui/overlay/CardDrawSelectionOverlay.
 import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOverlay.tsx";
 import CardFanOverlay from "../../ui/overlay/CardFanOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
+import YourTurnBanner from "../../ui/overlay/YourTurnBanner.tsx";
 import MainMenuSettingsButton from "../../ui/buttons/MainMenuSettingsButton.tsx";
 import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
@@ -46,6 +47,7 @@ import {
   CardPaymentDto,
   FullStatePayload,
   GameDto,
+  GamePhaseAction,
   GamePhaseComplete,
   GamePhaseDemoSetup,
   GamePhaseStartingCardSelection,
@@ -61,7 +63,6 @@ import {
   TriggeredEffectDto,
 } from "@/types/generated/api-types.ts";
 import { shouldShowPaymentModal, createDefaultPayment } from "@/utils/paymentUtils.ts";
-import { getPlayerColor } from "@/utils/playerColors.ts";
 import { deepClone, findChangedPaths } from "@/utils/deepCompare.ts";
 import { StandardProject } from "@/types/cards.tsx";
 
@@ -79,9 +80,11 @@ export default function GameInterface() {
     playWaterPlacementSound,
     playOxygenSound,
     playAsteroidImpactSound,
+    playYourTurnSound,
   } = useSoundEffects();
   const { showNotification } = useNotifications();
   const [game, setGame] = useState<GameDto | null>(null);
+  const [showYourTurnBanner, setShowYourTurnBanner] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>("idle");
   const wasInLobby = useRef(false);
@@ -318,6 +321,18 @@ export default function GameInterface() {
           void playOxygenSound();
         }
 
+        // Detect when it becomes this player's action turn
+        const prevTurn = previousGameRef.current.currentTurn;
+        const prevPhase = previousGameRef.current.currentPhase;
+        const newTurn = updatedGame.currentTurn;
+        const newPhase = updatedGame.currentPhase;
+        const isNowMyActionTurn = newTurn === playerId && newPhase === GamePhaseAction;
+        const wasMyActionTurn = prevTurn === playerId && prevPhase === GamePhaseAction;
+        if (isNowMyActionTurn && !wasMyActionTurn) {
+          void playYourTurnSound();
+          setShowYourTurnBanner(true);
+        }
+
         // Clear changed paths after animation completes
         if (changes.size > 0) {
           setTimeout(() => {
@@ -356,7 +371,13 @@ export default function GameInterface() {
         setShowCorporationModal(false);
       }
     },
-    [isReconnecting, playTemperatureSound, playWaterPlacementSound, playOxygenSound],
+    [
+      isReconnecting,
+      playTemperatureSound,
+      playWaterPlacementSound,
+      playOxygenSound,
+      playYourTurnSound,
+    ],
   );
 
   const handleLogUpdate = useCallback(
@@ -2216,11 +2237,11 @@ export default function GameInterface() {
   }, [spectatePlayerId, game]);
 
   const spectatePlayerColor = useMemo(() => {
-    if (!spectatePlayerId || !game?.turnOrder) return "#6496ff";
-    const index = game.turnOrder.indexOf(spectatePlayerId);
-    if (index === -1) return "#6496ff";
-    return getPlayerColor(index);
-  }, [spectatePlayerId, game?.turnOrder]);
+    if (!spectatePlayerId || !game) return "#6496ff";
+    if (game.currentPlayer?.id === spectatePlayerId) return game.currentPlayer.color || "#6496ff";
+    const other = game.otherPlayers?.find((p) => p.id === spectatePlayerId);
+    return other?.color || "#6496ff";
+  }, [spectatePlayerId, game]);
 
   const handlePlayerClick = useCallback(
     (player: PlayerDto | OtherPlayerDto) => {
@@ -2892,6 +2913,8 @@ export default function GameInterface() {
           Return to Production
         </GameMenuButton>
       )}
+
+      <YourTurnBanner visible={showYourTurnBanner} onDismiss={() => setShowYourTurnBanner(false)} />
 
       {/* Loading overlay rendered LAST to ensure it covers all UI elements */}
       {overlayVisible && (

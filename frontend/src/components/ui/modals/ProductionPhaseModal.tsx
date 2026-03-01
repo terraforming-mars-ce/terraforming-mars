@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   GameDto,
   ProductionPhaseDto,
@@ -40,6 +40,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
     "initial" | "fadeOut" | "fadeIn"
   >("initial");
   const [showCardSelection, setShowCardSelection] = useState(false);
+  const prevSelectionCompleteRef = useRef<boolean | undefined>(undefined);
 
   const handleCardSelection = useCallback(
     async (selectedCardIds: string[]) => {
@@ -62,11 +63,22 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   }, [onHide]);
 
   useEffect(() => {
-    if (isOpen && gameState?.currentPlayer?.productionPhase) {
+    const selectionComplete = gameState?.currentPlayer?.productionPhase?.selectionComplete;
+    const prev = prevSelectionCompleteRef.current;
+
+    // Only reset when selectionComplete transitions to false from undefined (phase appearing)
+    // or from true (new generation starting)
+    if (isOpen && selectionComplete === false && (prev === undefined || prev === true)) {
       setHasSubmittedCardSelection(false);
       setShowCardSelection(openDirectlyToCardSelection);
     }
-  }, [isOpen, gameState?.currentPlayer?.productionPhase, openDirectlyToCardSelection]);
+
+    prevSelectionCompleteRef.current = selectionComplete;
+  }, [
+    isOpen,
+    gameState?.currentPlayer?.productionPhase?.selectionComplete,
+    openDirectlyToCardSelection,
+  ]);
 
   const modalProductionData = useMemo(() => {
     if (!gameState || !gameState.currentPlayer?.productionPhase) {

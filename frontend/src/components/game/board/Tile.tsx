@@ -210,6 +210,17 @@ function ClampedBillboard({
 
 export type TileHighlightMode = "greenery" | "city" | "adjacent" | null;
 
+interface TileHoverInfo {
+  position: { x: number; y: number };
+  tileType: string;
+  displayName?: string;
+  ownerId: string | null;
+  reservedById: string | null;
+  isOceanSpace: boolean;
+  isVolcanic: boolean;
+  bonuses: { [key: string]: number };
+}
+
 interface TileProps {
   tileData: TileData3D;
   tileType:
@@ -228,6 +239,8 @@ interface TileProps {
   ownerColor?: string;
   reservedById?: string | null;
   displayName?: string;
+  isOceanSpace?: boolean;
+  bonuses?: { [key: string]: number };
   onClick: () => void;
   isAvailableForPlacement?: boolean;
   highlightMode?: TileHighlightMode;
@@ -237,6 +250,9 @@ interface TileProps {
   entranceDelay?: number;
   isNewlyPlaced?: boolean;
   isVolcanic?: boolean;
+  onHoverInfo?: (data: TileHoverInfo) => void;
+  onHoverMove?: (position: { x: number; y: number }) => void;
+  onHoverLeave?: () => void;
 }
 
 export default function Tile({
@@ -246,6 +262,8 @@ export default function Tile({
   ownerColor,
   reservedById,
   displayName,
+  isOceanSpace = false,
+  bonuses = {},
   onClick,
   isAvailableForPlacement = false,
   highlightMode = null,
@@ -255,6 +273,9 @@ export default function Tile({
   entranceDelay = 0,
   isNewlyPlaced = false,
   isVolcanic = false,
+  onHoverInfo,
+  onHoverMove,
+  onHoverLeave,
 }: TileProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const vpTextRef = useRef<THREE.Group>(null);
@@ -622,16 +643,32 @@ export default function Tile({
           geometry={hexGeometry}
           material={hexTileMaterial}
           renderOrder={10}
-          onPointerEnter={() => {
+          onPointerEnter={(event) => {
             if (!panState.isPanning) {
               setHovered(true);
               if (isAvailableForPlacement) {
                 hoverSound.onMouseEnter?.();
               }
+              onHoverInfo?.({
+                position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
+                tileType,
+                displayName,
+                ownerId: ownerId || null,
+                reservedById: reservedById || null,
+                isOceanSpace,
+                isVolcanic,
+                bonuses,
+              });
+            }
+          }}
+          onPointerMove={(event) => {
+            if (!panState.isPanning) {
+              onHoverMove?.({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
             }
           }}
           onPointerLeave={() => {
             setHovered(false);
+            onHoverLeave?.();
           }}
           onClick={(event) => {
             if (panState.isPanning) return;
@@ -656,6 +693,24 @@ export default function Tile({
         tileType={tileType}
         onClick={onClick}
         onHoverChange={setHovered}
+        onPointerEnterCapture={(event: any) => {
+          onHoverInfo?.({
+            position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
+            tileType,
+            displayName,
+            ownerId: ownerId || null,
+            reservedById: reservedById || null,
+            isOceanSpace,
+            isVolcanic,
+            bonuses,
+          });
+        }}
+        onPointerMoveCapture={(event: any) => {
+          onHoverMove?.({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
+        }}
+        onPointerLeaveCapture={() => {
+          onHoverLeave?.();
+        }}
       />
 
       {/* Volcanic space indicator - red tint for unoccupied volcanic tiles */}

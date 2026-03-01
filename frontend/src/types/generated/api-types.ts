@@ -913,6 +913,7 @@ export const PlayerStatusActive: PlayerStatus = "active";
 export interface PlayerDto {
   id: string;
   name: string;
+  color: string;
   status: PlayerStatus;
   corporation?: CardDto;
   cards: PlayerCardDto[]; // Hand cards with playability state (Player-Scoped Architecture)
@@ -949,6 +950,7 @@ export interface PlayerDto {
 export interface OtherPlayerDto {
   id: string;
   name: string;
+  color: string;
   status: PlayerStatus;
   corporation?: CardDto;
   handCardCount: number /* int */; // Number of cards in hand (private)

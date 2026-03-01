@@ -15,6 +15,9 @@ interface OceanTileProps {
   tileType: string;
   onClick: () => void;
   onHoverChange: (hovered: boolean) => void;
+  onPointerEnterCapture?: (event: THREE.Event & { nativeEvent: PointerEvent }) => void;
+  onPointerMoveCapture?: (event: THREE.Event & { nativeEvent: PointerEvent }) => void;
+  onPointerLeaveCapture?: () => void;
 }
 
 export default function OceanTile({
@@ -23,6 +26,9 @@ export default function OceanTile({
   tileType,
   onClick,
   onHoverChange,
+  onPointerEnterCapture,
+  onPointerMoveCapture,
+  onPointerLeaveCapture,
 }: OceanTileProps) {
   const { camera } = useThree();
   const { settings: world3DSettings } = useWorld3DSettings();
@@ -182,11 +188,20 @@ export default function OceanTile({
           geometry={oceanWaterGeometry}
           material={oceanWaterMaterial}
           renderOrder={12}
-          onPointerEnter={() => {
-            if (!panState.isPanning) onHoverChange(true);
+          onPointerEnter={(event: any) => {
+            if (!panState.isPanning) {
+              onHoverChange(true);
+              onPointerEnterCapture?.(event);
+            }
+          }}
+          onPointerMove={(event: any) => {
+            if (!panState.isPanning) {
+              onPointerMoveCapture?.(event);
+            }
           }}
           onPointerLeave={() => {
             onHoverChange(false);
+            onPointerLeaveCapture?.();
           }}
           onClick={(event) => {
             if (panState.isPanning) return;

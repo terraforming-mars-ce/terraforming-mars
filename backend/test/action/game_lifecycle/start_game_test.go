@@ -125,6 +125,32 @@ func TestStartGameAction_MinimumPlayers(t *testing.T) {
 	testutil.AssertEqual(t, game.GameStatusActive, fetchedGame.Status(), "Game should be active after start")
 }
 
+func TestStartGameAction_AssignsPlayerColors(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	logger := testutil.TestLogger()
+
+	players := testGame.GetAllPlayers()
+	for _, p := range players {
+		p.SetCorporationID("corp-tharsis-republic")
+	}
+
+	startAction := turnAction.NewStartGameAction(repo, logger)
+	err := startAction.Execute(context.Background(), testGame.ID(), testGame.HostPlayerID())
+	testutil.AssertNoError(t, err, "Failed to start game")
+
+	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
+	fetchedPlayers := fetchedGame.GetAllPlayers()
+
+	colors := make(map[string]bool)
+	for _, p := range fetchedPlayers {
+		testutil.AssertTrue(t, p.Color() != "", "Player should have a color assigned")
+		testutil.AssertTrue(t, p.Color()[0] == '#', "Color should be a hex string")
+		colors[p.Color()] = true
+	}
+	testutil.AssertEqual(t, 3, len(colors), "Each player should have a unique color")
+}
+
 func TestStartGameAction_InitialResourcesSet(t *testing.T) {
 	// Setup
 	broadcaster := testutil.NewMockBroadcaster()

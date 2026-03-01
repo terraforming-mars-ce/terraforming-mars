@@ -69,6 +69,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 	return PlayerDto{
 		ID:               p.ID(),
 		Name:             p.Name(),
+		Color:            p.Color(),
 		Resources:        toResourcesDto(resources),
 		Production:       toProductionDto(production),
 		TerraformRating:  resourcesComponent.TerraformRating(),
@@ -116,6 +117,7 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 	return OtherPlayerDto{
 		ID:               p.ID(),
 		Name:             p.Name(),
+		Color:            p.Color(),
 		Resources:        toResourcesDto(resources),
 		Production:       toProductionDto(production),
 		TerraformRating:  resourcesComponent.TerraformRating(),
