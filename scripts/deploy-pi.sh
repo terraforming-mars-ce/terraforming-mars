@@ -9,8 +9,19 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 STAGING_DIR="$PROJECT_ROOT/.deploy-staging"
 
-BACKEND_IMAGE="ghcr.io/rackaracka123/terraforming-mars-backend:latest"
-FRONTEND_IMAGE="ghcr.io/rackaracka123/terraforming-mars-frontend:latest"
+BACKEND_IMAGE_BASE="ghcr.io/rackaracka123/terraforming-mars-backend"
+FRONTEND_IMAGE_BASE="ghcr.io/rackaracka123/terraforming-mars-frontend"
+
+GIT_DESCRIBE=$(git -C "$PROJECT_ROOT" describe --tags --always)
+if echo "$GIT_DESCRIBE" | grep -q '-'; then
+    TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    BUILD_VERSION="${GIT_DESCRIBE}_${TIMESTAMP}-local"
+else
+    BUILD_VERSION="${GIT_DESCRIBE}-local"
+fi
+
+BACKEND_IMAGE="${BACKEND_IMAGE_BASE}:latest"
+FRONTEND_IMAGE="${FRONTEND_IMAGE_BASE}:latest"
 
 usage() {
     echo "Usage: $0 [--build-only]"
@@ -25,14 +36,18 @@ usage() {
 }
 
 build() {
+    echo "==> Build version: $BUILD_VERSION"
+
     echo "==> Building backend (linux/arm64)..."
     cd "$PROJECT_ROOT/backend"
-    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o bin/server-arm64 cmd/server/main.go
+    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
+        -ldflags="-w -s -X main.Version=${BUILD_VERSION}" \
+        -o bin/server-arm64 cmd/server/main.go
     echo "    backend/bin/server-arm64 ready"
 
     echo "==> Building frontend..."
     cd "$PROJECT_ROOT/frontend"
-    npm run build
+    VITE_APP_VERSION="$BUILD_VERSION" npm run build
     echo "    frontend/build/ ready"
 }
 
@@ -78,7 +93,7 @@ deploy() {
     echo "==> Uploading to $PI_HOST..."
     rsync -az --delete "$STAGING_DIR/" "$PI_HOST:/tmp/tm-deploy/"
 
-    echo "==> Building Docker images on Pi..."
+    echo "==> Building Docker images on Pi (version: $BUILD_VERSION)..."
     ssh "$PI_HOST" bash <<REMOTE
 set -euo pipefail
 
