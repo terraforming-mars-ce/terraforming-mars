@@ -1046,6 +1046,8 @@ export interface MilestoneDto {
   isClaimed: boolean;
   claimedBy?: string;
   claimCost: number /* int */;
+  required: number /* int */;
+  playerProgress: { [key: string]: number /* int */ };
 }
 /**
  * AwardDto represents an award for client consumption
@@ -1057,6 +1059,7 @@ export interface AwardDto {
   isFunded: boolean;
   fundedBy?: string;
   fundingCost: number /* int */;
+  playerProgress: { [key: string]: number /* int */ };
 }
 /**
  * AwardResultDto represents the placement results for a single funded award

@@ -736,22 +736,25 @@ type BoardDto struct {
 
 // MilestoneDto represents a milestone for client consumption
 type MilestoneDto struct {
-	Type        string  `json:"type" ts:"string"`
-	Name        string  `json:"name" ts:"string"`
-	Description string  `json:"description" ts:"string"`
-	IsClaimed   bool    `json:"isClaimed" ts:"boolean"`
-	ClaimedBy   *string `json:"claimedBy" ts:"string | null"`
-	ClaimCost   int     `json:"claimCost" ts:"number"`
+	Type           string         `json:"type" ts:"string"`
+	Name           string         `json:"name" ts:"string"`
+	Description    string         `json:"description" ts:"string"`
+	IsClaimed      bool           `json:"isClaimed" ts:"boolean"`
+	ClaimedBy      *string        `json:"claimedBy" ts:"string | null"`
+	ClaimCost      int            `json:"claimCost" ts:"number"`
+	Required       int            `json:"required" ts:"number"`
+	PlayerProgress map[string]int `json:"playerProgress" ts:"Record<string, number>"`
 }
 
 // AwardDto represents an award for client consumption
 type AwardDto struct {
-	Type        string  `json:"type" ts:"string"`
-	Name        string  `json:"name" ts:"string"`
-	Description string  `json:"description" ts:"string"`
-	IsFunded    bool    `json:"isFunded" ts:"boolean"`
-	FundedBy    *string `json:"fundedBy" ts:"string | null"`
-	FundingCost int     `json:"fundingCost" ts:"number"`
+	Type           string         `json:"type" ts:"string"`
+	Name           string         `json:"name" ts:"string"`
+	Description    string         `json:"description" ts:"string"`
+	IsFunded       bool           `json:"isFunded" ts:"boolean"`
+	FundedBy       *string        `json:"fundedBy" ts:"string | null"`
+	FundingCost    int            `json:"fundingCost" ts:"number"`
+	PlayerProgress map[string]int `json:"playerProgress" ts:"Record<string, number>"`
 }
 
 // AwardResultDto represents the placement results for a single funded award

@@ -128,8 +128,8 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 			Tiles: tileDtos,
 		},
 		PaymentConstants:   paymentConstants,
-		Milestones:         ToMilestonesDto(g.Milestones()),
-		Awards:             ToAwardsDto(g.Awards()),
+		Milestones:         ToMilestonesDto(g, cardRegistry),
+		Awards:             ToAwardsDto(g, cardRegistry),
 		AwardResults:       ToAwardResultsDto(g, cardRegistry),
 		FinalScores:        finalScoreDtos,
 		TriggeredEffects:   triggeredEffectDtos,
@@ -172,14 +172,17 @@ func convertTileBonuses(bonuses []board.TileBonus) []TileBonusDto {
 	return dtos
 }
 
-// ToMilestonesDto converts all milestones to DTOs including claim status
-func ToMilestonesDto(milestones *game.Milestones) []MilestoneDto {
+// ToMilestonesDto converts all milestones to DTOs including claim status and per-player progress
+func ToMilestonesDto(g *game.Game, cardRegistry cards.CardRegistry) []MilestoneDto {
+	milestones := g.Milestones()
+	players := g.GetAllPlayers()
+	b := g.Board()
+
 	dtos := make([]MilestoneDto, len(game.AllMilestones))
 	for i, info := range game.AllMilestones {
 		var claimedBy *string
 		isClaimed := milestones.IsClaimed(info.Type)
 		if isClaimed {
-			// Find who claimed it
 			for _, claimed := range milestones.ClaimedMilestones() {
 				if claimed.Type == info.Type {
 					claimedBy = &claimed.PlayerID
@@ -187,30 +190,41 @@ func ToMilestonesDto(milestones *game.Milestones) []MilestoneDto {
 				}
 			}
 		}
+
+		playerProgress := make(map[string]int, len(players))
+		for _, p := range players {
+			playerProgress[p.ID()] = gamecards.GetPlayerMilestoneProgress(info.Type, p, b, cardRegistry)
+		}
+
 		dtos[i] = MilestoneDto{
-			Type:        string(info.Type),
-			Name:        info.Name,
-			Description: info.Description,
-			IsClaimed:   isClaimed,
-			ClaimedBy:   claimedBy,
-			ClaimCost:   game.MilestoneClaimCost,
+			Type:           string(info.Type),
+			Name:           info.Name,
+			Description:    info.Description,
+			IsClaimed:      isClaimed,
+			ClaimedBy:      claimedBy,
+			ClaimCost:      game.MilestoneClaimCost,
+			Required:       info.Requirement,
+			PlayerProgress: playerProgress,
 		}
 	}
 	return dtos
 }
 
-// ToAwardsDto converts all awards to DTOs including funding status
-func ToAwardsDto(awards *game.Awards) []AwardDto {
+// ToAwardsDto converts all awards to DTOs including funding status and per-player scores
+func ToAwardsDto(g *game.Game, cardRegistry cards.CardRegistry) []AwardDto {
+	awards := g.Awards()
+	players := g.GetAllPlayers()
+	b := g.Board()
+
 	dtos := make([]AwardDto, len(game.AllAwards))
 	fundedCount := awards.FundedCount()
 
 	for i, info := range game.AllAwards {
 		var fundedBy *string
 		isFunded := awards.IsFunded(info.Type)
-		fundingCost := game.AwardFundingCosts[0] // Default cost for first award
+		fundingCost := game.AwardFundingCosts[0]
 
 		if isFunded {
-			// Find who funded it and what the cost was
 			for _, funded := range awards.FundedAwards() {
 				if funded.Type == info.Type {
 					fundedBy = &funded.FundedByPlayer
@@ -219,19 +233,24 @@ func ToAwardsDto(awards *game.Awards) []AwardDto {
 				}
 			}
 		} else {
-			// Calculate cost for next award
 			if fundedCount < game.MaxFundedAwards {
 				fundingCost = game.AwardFundingCosts[fundedCount]
 			}
 		}
 
+		playerProgress := make(map[string]int, len(players))
+		for _, p := range players {
+			playerProgress[p.ID()] = gamecards.CalculateAwardScore(info.Type, p, b, cardRegistry)
+		}
+
 		dtos[i] = AwardDto{
-			Type:        string(info.Type),
-			Name:        info.Name,
-			Description: info.Description,
-			IsFunded:    isFunded,
-			FundedBy:    fundedBy,
-			FundingCost: fundingCost,
+			Type:           string(info.Type),
+			Name:           info.Name,
+			Description:    info.Description,
+			IsFunded:       isFunded,
+			FundedBy:       fundedBy,
+			FundingCost:    fundingCost,
+			PlayerProgress: playerProgress,
 		}
 	}
 	return dtos
