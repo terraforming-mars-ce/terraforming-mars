@@ -31,6 +31,7 @@ export interface GameModalProps {
   preventClose?: boolean;
   onPreventedClose?: () => void;
   glow?: boolean;
+  outerContent?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }
