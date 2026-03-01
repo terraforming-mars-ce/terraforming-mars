@@ -4,16 +4,19 @@ import * as THREE from "three";
 import { PanControls } from "../controls/PanControls.tsx";
 import { FreeCamera, CameraFrustumHelper } from "../controls/FreeCamera.tsx";
 import MarsSphere from "../board/MarsSphere.tsx";
+import VenusSphere from "../board/VenusSphere.tsx";
 import { TileHighlightMode } from "../board/Tile.tsx";
 import { TileVPIndicator } from "../../ui/overlay/EndGameOverlay.tsx";
 import SkyboxLoader from "./SkyboxLoader.tsx";
 import GameIcon from "../../ui/display/GameIcon.tsx";
 import { GameDto } from "@/types/generated/api-types.ts";
 import { MarsRotationProvider } from "../../../contexts/MarsRotationContext.tsx";
+import { PlanetFocusProvider, usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
 import { webSocketService } from "../../../services/webSocketService.ts";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext.tsx";
 import GpuWarmup from "../board/GpuWarmup.tsx";
 import PerformanceProbe from "../board/PerformanceProbe.tsx";
+import { VENUS_ENABLED } from "../../../constants/featureFlags.ts";
 
 function SkyboxRotation() {
   const { scene } = useThree();
@@ -81,6 +84,72 @@ function DynamicSunLight() {
       shadow-camera-top={20}
       shadow-camera-bottom={-20}
     />
+  );
+}
+
+function AutoNavigateForTileSelection({ gameState }: { gameState: GameDto }) {
+  const { activePlanet, setActivePlanet } = usePlanetFocus();
+  const pendingTileSelection = gameState.currentPlayer?.pendingTileSelection;
+
+  useEffect(() => {
+    if (!pendingTileSelection || !gameState.board?.tiles) return;
+
+    const venusTileKeys = new Set(
+      gameState.board.tiles
+        .filter((t) => t.location === "venus")
+        .map((t) => `${t.coordinates.q},${t.coordinates.r},${t.coordinates.s}`),
+    );
+
+    const hasVenusHex = pendingTileSelection.availableHexes.some((hex) => venusTileKeys.has(hex));
+    const hasNonVenusHex = pendingTileSelection.availableHexes.some(
+      (hex) => !venusTileKeys.has(hex),
+    );
+
+    if (hasVenusHex && !hasNonVenusHex && activePlanet !== "venus") {
+      setActivePlanet("venus");
+    } else if (!hasVenusHex && hasNonVenusHex && activePlanet !== "mars") {
+      setActivePlanet("mars");
+    }
+  }, [pendingTileSelection, gameState.board?.tiles, activePlanet, setActivePlanet]);
+
+  return null;
+}
+
+function ReturnToMarsButton() {
+  const { activePlanet, setActivePlanet } = usePlanetFocus();
+  const showButton = activePlanet === "venus";
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (showButton) {
+      setMounted(true);
+      requestAnimationFrame(() => setVisible(true));
+      return;
+    }
+    setVisible(false);
+    const timeout = setTimeout(() => setMounted(false), 300);
+    return () => clearTimeout(timeout);
+  }, [showButton]);
+
+  if (!mounted) return null;
+  return (
+    <div
+      className="absolute right-[15%] top-1/2 transform -translate-y-1/2 z-50"
+      style={{
+        opacity: visible ? 1 : 0,
+        transition: "opacity 0.3s ease-out",
+      }}
+    >
+      <button
+        onClick={() => setActivePlanet("mars")}
+        className="bg-space-black/90 backdrop-blur-space border border-space-blue-500
+                   rounded-lg px-6 py-3 shadow-glow-lg font-orbitron text-sm text-white
+                   tracking-wider-2xl hover:border-white/50 transition-colors cursor-pointer"
+      >
+        RETURN TO MARS
+      </button>
+    </div>
   );
 }
 
@@ -182,85 +251,85 @@ export default function Game3DView({
   const pendingTileSelection = gameState.currentPlayer?.pendingTileSelection;
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        flex: 1,
-        height: "100%",
-        width: "100%",
-        minHeight: 0,
-        position: "relative",
-      }}
-    >
-      {/* Tile Selection Banner */}
-      {showUI && pendingTileSelection && (
-        <div
-          className={`absolute top-[66px] left-1/2 transform -translate-x-1/2 z-50
-                     bg-space-black/90 backdrop-blur-space border border-space-blue-500
-                     rounded-lg px-6 py-3 shadow-glow-lg ${uiAnimationClass}`}
-        >
-          <div className="flex items-center gap-2">
-            <span className="font-orbitron text-lg text-white tracking-wider-2xl">Place</span>
-            <GameIcon iconType={getTileIconType(pendingTileSelection.tileType)} size="medium" />
-          </div>
-        </div>
-      )}
-
-      <Canvas
-        camera={{
-          position: cameraConfig.position,
-          fov: cameraConfig.fov,
-        }}
+    <PlanetFocusProvider>
+      <div
+        ref={containerRef}
         style={{
-          background: "#000000", // Fallback background
-          width: "100%",
+          flex: 1,
           height: "100%",
+          width: "100%",
+          minHeight: 0,
           position: "relative",
-          zIndex: 0,
         }}
-        resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
-        dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
-        shadows
       >
-        <MarsRotationProvider>
-          <Suspense fallback={null}>
-            {/* EXR Skybox - now uses cached texture */}
-            <SkyboxLoader onReady={onSkyboxReady} />
-            <SkyboxRotation />
+        {showUI && pendingTileSelection && (
+          <div
+            className={`absolute top-[66px] left-1/2 transform -translate-x-1/2 z-50
+                       bg-space-black/90 backdrop-blur-space border border-space-blue-500
+                       rounded-lg px-6 py-3 shadow-glow-lg ${uiAnimationClass}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-orbitron text-lg text-white tracking-wider-2xl">Place</span>
+              <GameIcon iconType={getTileIconType(pendingTileSelection.tileType)} size="medium" />
+            </div>
+          </div>
+        )}
 
-            {/* Realistic Lighting Setup */}
-            {/* Ambient light - enough to keep shadow side of vegetation visible */}
-            <ambientLight intensity={0.4} color="#2a2a3e" />
+        {VENUS_ENABLED && <AutoNavigateForTileSelection gameState={gameState} />}
+        {VENUS_ENABLED && <ReturnToMarsButton />}
 
-            {/* Main sun light - controlled by 3D World settings */}
-            <DynamicSunLight />
+        <Canvas
+          camera={{
+            position: cameraConfig.position,
+            fov: cameraConfig.fov,
+          }}
+          style={{
+            background: "#000000",
+            width: "100%",
+            height: "100%",
+            position: "relative",
+            zIndex: 0,
+          }}
+          resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
+          dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
+          shadows
+        >
+          <MarsRotationProvider>
+            <Suspense fallback={null}>
+              <SkyboxLoader onReady={onSkyboxReady} />
+              <SkyboxRotation />
 
-            {/* Cool blue rim light for moody atmosphere */}
-            <directionalLight position={[-8, -3, -10]} intensity={0.35} color="#4488ff" />
+              <ambientLight intensity={0.4} color="#2a2a3e" />
+              <DynamicSunLight />
+              <directionalLight position={[-8, -3, -10]} intensity={0.35} color="#4488ff" />
+              <fog attach="fog" args={["#0a0a1a", 8, 25]} />
 
-            {/* Atmospheric fog for depth and mood */}
-            <fog attach="fog" args={["#0a0a1a", 8, 25]} />
+              <MarsSphere
+                gameState={gameState}
+                onHexClick={handleHexClick}
+                tileHighlightMode={tileHighlightMode}
+                vpIndicators={vpIndicators}
+                animateHexEntrance={animateHexEntrance}
+              />
 
-            {/* Mars with hexagonal tiles */}
-            <MarsSphere
-              gameState={gameState}
-              onHexClick={handleHexClick}
-              tileHighlightMode={tileHighlightMode}
-              vpIndicators={vpIndicators}
-              animateHexEntrance={animateHexEntrance}
-            />
+              {VENUS_ENABLED && (
+                <VenusSphere
+                  gameState={gameState}
+                  onHexClick={handleHexClick}
+                  tileHighlightMode={tileHighlightMode}
+                />
+              )}
 
-            <GpuWarmup onReady={onGpuReady} />
+              <GpuWarmup onReady={onGpuReady} />
+              <PerformanceProbe />
 
-            <PerformanceProbe />
-
-            {/* Camera controls */}
-            <PanControls />
-            <FreeCamera />
-            <FreeCameraFrustum fov={cameraConfig.fov} />
-          </Suspense>
-        </MarsRotationProvider>
-      </Canvas>
-    </div>
+              <PanControls />
+              <FreeCamera />
+              <FreeCameraFrustum fov={cameraConfig.fov} />
+            </Suspense>
+          </MarsRotationProvider>
+        </Canvas>
+      </div>
+    </PlanetFocusProvider>
   );
 }

@@ -5,6 +5,7 @@ import * as THREE from "three";
 
 const TEXTURE_PATHS = {
   mars: "/assets/textures/mars_8k.jpg",
+  venus: "/assets/textures/4k_venus_atmosphere.jpg",
   grass: "/assets/textures/grass.jpg",
   rock: "/assets/textures/rock.jpg",
   sand: "/assets/textures/sand.jpg",
@@ -36,6 +37,7 @@ const BONUS_TYPE_TO_ICON: Record<string, ResourceIconName> = {
 
 // Module-level preloads
 useTexture.preload(TEXTURE_PATHS.mars);
+useTexture.preload(TEXTURE_PATHS.venus);
 useTexture.preload(TEXTURE_PATHS.grass);
 useTexture.preload(TEXTURE_PATHS.rock);
 useTexture.preload(TEXTURE_PATHS.sand);
@@ -51,6 +53,7 @@ useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.card);
 
 interface TextureAssets {
   mars: THREE.Texture;
+  venus: THREE.Texture;
   grass: THREE.Texture;
   rock: THREE.Texture;
   sand: THREE.Texture;
@@ -64,6 +67,7 @@ interface TextureAssets {
 
 export function useTextures(): TextureAssets {
   const mars = useTexture(TEXTURE_PATHS.mars);
+  const venus = useTexture(TEXTURE_PATHS.venus);
   const grass = useTexture(TEXTURE_PATHS.grass);
   const rock = useTexture(TEXTURE_PATHS.rock);
   const sand = useTexture(TEXTURE_PATHS.sand);
@@ -83,6 +87,9 @@ export function useTextures(): TextureAssets {
     mars.colorSpace = THREE.SRGBColorSpace;
     mars.wrapS = mars.wrapT = THREE.ClampToEdgeWrapping;
 
+    venus.colorSpace = THREE.SRGBColorSpace;
+    venus.wrapS = venus.wrapT = THREE.ClampToEdgeWrapping;
+
     grass.wrapS = grass.wrapT = THREE.RepeatWrapping;
     grass.repeat.set(6.9, 6.9);
 
@@ -93,7 +100,7 @@ export function useTextures(): TextureAssets {
 
     noiseMid.wrapS = noiseMid.wrapT = THREE.RepeatWrapping;
     noiseHigh.wrapS = noiseHigh.wrapT = THREE.RepeatWrapping;
-  }, [mars, grass, sand, waterNormals, noiseMid, noiseHigh]);
+  }, [mars, venus, grass, sand, waterNormals, noiseMid, noiseHigh]);
 
   const resourceIcons = useMemo(
     () => ({
@@ -117,6 +124,7 @@ export function useTextures(): TextureAssets {
 
   return {
     mars,
+    venus,
     grass,
     rock,
     sand,
