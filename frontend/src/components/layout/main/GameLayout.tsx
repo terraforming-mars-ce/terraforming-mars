@@ -153,6 +153,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             globalParameters={gameState?.globalParameters}
             generation={gameState?.generation}
             currentPlayer={currentTurnPlayer}
+            showVenus={true}
           />
 
           <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
