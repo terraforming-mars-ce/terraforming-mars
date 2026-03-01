@@ -320,7 +320,7 @@ export interface CardPaymentDto {
  */
 export type GamePhase = string;
 export const GamePhaseWaitingForGameStart: GamePhase = "waiting_for_game_start";
-export const GamePhaseStartingCardSelection: GamePhase = "starting_card_selection";
+export const GamePhaseStartingSelection: GamePhase = "starting_selection";
 export const GamePhaseStartGameSelection: GamePhase = "start_game_selection";
 export const GamePhaseDemoSetup: GamePhase = "demo_setup";
 export const GamePhaseAction: GamePhase = "action";
@@ -642,11 +642,31 @@ export interface CardDto {
   startingResources?: ResourceSet;
   startingProduction?: ResourceSet;
 }
+/**
+ * SelectCorporationPhaseDto represents corporation selection state for the current player
+ */
+export interface SelectCorporationPhaseDto {
+  availableCorporations: CardDto[];
+}
+/**
+ * SelectCorporationOtherPlayerDto represents corporation selection state for other players
+ */
+export interface SelectCorporationOtherPlayerDto {}
 export interface SelectStartingCardsPhaseDto {
-  availableCards: CardDto[]; // Cards available for selection
-  availableCorporations: CardDto[]; // Corporation cards available for selection (2 corporations)
+  availableCards: CardDto[];
 }
 export interface SelectStartingCardsOtherPlayerDto {}
+/**
+ * SelectPreludeCardsPhaseDto represents prelude card selection state for the current player
+ */
+export interface SelectPreludeCardsPhaseDto {
+  availablePreludes: CardDto[];
+  maxSelectable: number /* int */;
+}
+/**
+ * SelectPreludeCardsOtherPlayerDto represents prelude card selection state for other players
+ */
+export interface SelectPreludeCardsOtherPlayerDto {}
 /**
  * ProductionPhaseDto represents card selection and production phase state for a player
  */
@@ -929,7 +949,9 @@ export interface PlayerDto {
   standardProjects: PlayerStandardProjectDto[]; // Standard projects with availability state (Player-Scoped Architecture)
   milestones: PlayerMilestoneDto[]; // Milestones with player eligibility state
   awards: PlayerAwardDto[]; // Awards with player eligibility state
+  selectCorporationPhase?: SelectCorporationPhaseDto;
   selectStartingCardsPhase?: SelectStartingCardsPhaseDto;
+  selectPreludeCardsPhase?: SelectPreludeCardsPhaseDto;
   productionPhase?: ProductionPhaseDto;
   startingCards: CardDto[];
   pendingTileSelection?: PendingTileSelectionDto;
@@ -963,7 +985,9 @@ export interface OtherPlayerDto {
   isConnected: boolean;
   effects: PlayerEffectDto[];
   actions: PlayerActionDto[];
+  selectCorporationPhase?: SelectCorporationOtherPlayerDto;
   selectStartingCardsPhase?: SelectStartingCardsOtherPlayerDto;
+  selectPreludeCardsPhase?: SelectPreludeCardsOtherPlayerDto;
   productionPhase?: ProductionPhaseOtherPlayerDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
@@ -1371,7 +1395,8 @@ export const MessageTypeActionFundAward: MessageType = "action.award.fund-award"
 export const MessageTypeActionTileSelected: MessageType = "action.tile-selection.tile-selected";
 export const MessageTypeActionPlayCard: MessageType = "action.card.play-card";
 export const MessageTypeActionCardAction: MessageType = "action.card.card-action";
-export const MessageTypeActionSelectStartingCard: MessageType = "action.card.select-starting-card";
+export const MessageTypeActionSelectStartingChoices: MessageType =
+  "action.card.select-starting-choices";
 export const MessageTypeActionSelectCards: MessageType = "action.card.select-cards";
 export const MessageTypeActionConfirmProductionCards: MessageType =
   "action.card.confirm-production-cards";

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import GameIcon from "../display/GameIcon.tsx";
 import VPDescriptionTooltip from "../display/VPDescriptionTooltip.tsx";
 import VictoryPointIcon from "../display/VictoryPointIcon.tsx";
@@ -36,6 +36,7 @@ const GameCard: React.FC<GameCardProps> = ({
   const [vpTooltipPos, setVpTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const vpRef = useRef<HTMLDivElement>(null);
   const { playCardHoverSound } = useSoundEffects();
+  const pendingSoundRef = useRef(false);
 
   useEffect(() => {
     if (vpDescription && vpRef.current) {
@@ -46,6 +47,13 @@ const GameCard: React.FC<GameCardProps> = ({
     }
   }, [vpDescription]);
 
+  useEffect(() => {
+    if (pendingSoundRef.current) {
+      pendingSoundRef.current = false;
+      void playCardHoverSound();
+    }
+  }, [isSelected, playCardHoverSound]);
+
   // Determine if card has state information (PlayerCardDto)
   const hasState = isPlayerCardDto(card);
   const isAvailable = hasState ? card.available : true;
@@ -55,10 +63,10 @@ const GameCard: React.FC<GameCardProps> = ({
   const effectiveCost = hasState ? card.effectiveCost : card.cost;
   const actualDiscountAmount = displayCost - effectiveCost;
 
-  const handleClick = () => {
-    void playCardHoverSound();
+  const handleClick = useCallback(() => {
+    pendingSoundRef.current = true;
     onSelect(card.id);
-  };
+  }, [onSelect, card.id]);
 
   const handleImageLoad = () => {
     setImageLoaded(true);
@@ -150,19 +158,21 @@ const GameCard: React.FC<GameCardProps> = ({
         </svg>
       </div>
 
-      {/* Cost in top-left */}
-      <div
-        className={`absolute top-2 left-2 flex items-center justify-start z-[2] shrink-0 group/cost ${actualDiscountAmount > 0 ? "animate-[goldenPulse_2.5s_ease-in-out_infinite]" : ""}`}
-      >
-        <div className={actualDiscountAmount > 0 ? "group-hover/cost:hidden" : ""}>
-          <GameIcon iconType={ResourceTypeCredit} amount={effectiveCost} size="medium" />
-        </div>
-        {actualDiscountAmount > 0 && (
-          <div className="hidden group-hover/cost:block [filter:none]">
-            <GameIcon iconType={ResourceTypeCredit} amount={displayCost} size="medium" />
+      {/* Cost in top-left (hidden for prelude cards) */}
+      {card.type !== "prelude" && (
+        <div
+          className={`absolute top-2 left-2 flex items-center justify-start z-[2] shrink-0 group/cost ${actualDiscountAmount > 0 ? "animate-[goldenPulse_2.5s_ease-in-out_infinite]" : ""}`}
+        >
+          <div className={actualDiscountAmount > 0 ? "group-hover/cost:hidden" : ""}>
+            <GameIcon iconType={ResourceTypeCredit} amount={effectiveCost} size="medium" />
           </div>
-        )}
-      </div>
+          {actualDiscountAmount > 0 && (
+            <div className="hidden group-hover/cost:block [filter:none]">
+              <GameIcon iconType={ResourceTypeCredit} amount={displayCost} size="medium" />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Card type accent stripe on left side */}
       {cardType && accentColors[cardType] && (

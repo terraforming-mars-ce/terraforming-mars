@@ -65,6 +65,9 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		pendingTileSelection = convertPendingTileSelection(g.GetPendingTileSelection(p.ID()))
 		forcedFirstAction = convertForcedFirstAction(g.GetForcedFirstAction(p.ID()))
 	}
+	if g.CurrentPhase() == game.GamePhaseStartingSelection {
+		pendingTileSelection = convertPendingTileSelection(g.GetPendingTileSelection(p.ID()))
+	}
 
 	return PlayerDto{
 		ID:               p.ID(),
@@ -86,7 +89,9 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		Milestones:       milestones,       // PlayerMilestoneDto[] with eligibility
 		Awards:           awards,           // PlayerAwardDto[] with eligibility
 
+		SelectCorporationPhase:         convertSelectCorporationPhase(g.GetSelectCorporationPhase(p.ID()), cardRegistry),
 		SelectStartingCardsPhase:       convertSelectStartingCardsPhase(g.GetSelectStartingCardsPhase(p.ID()), cardRegistry),
+		SelectPreludeCardsPhase:        convertSelectPreludeCardsPhase(g.GetSelectPreludeCardsPhase(p.ID()), cardRegistry),
 		ProductionPhase:                convertProductionPhase(g.GetProductionPhase(p.ID()), cardRegistry),
 		StartingCards:                  []CardDto{},
 		PendingTileSelection:           pendingTileSelection,
@@ -131,7 +136,9 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		Effects:          convertPlayerEffects(p.Effects().List()),
 		Actions:          convertPlayerActions(p.Actions().List(), p, g),
 
+		SelectCorporationPhase:    convertSelectCorporationPhaseForOtherPlayer(g.GetSelectCorporationPhase(p.ID())),
 		SelectStartingCardsPhase:  convertSelectStartingCardsPhaseForOtherPlayer(g.GetSelectStartingCardsPhase(p.ID())),
+		SelectPreludeCardsPhase:   convertSelectPreludeCardsPhaseForOtherPlayer(g.GetSelectPreludeCardsPhase(p.ID())),
 		ProductionPhase:           convertProductionPhaseForOtherPlayer(g.GetProductionPhase(p.ID())),
 		ResourceStorage:           p.Resources().Storage(),
 		PaymentSubstitutes:        convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
@@ -139,33 +146,61 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 	}
 }
 
-// convertSelectStartingCardsPhase converts SelectStartingCardsPhase to DTO
+func convertSelectCorporationPhase(phase *player.SelectCorporationPhase, cardRegistry cards.CardRegistry) *SelectCorporationPhaseDto {
+	if phase == nil {
+		return nil
+	}
+
+	return &SelectCorporationPhaseDto{
+		AvailableCorporations: getPlayedCards(phase.AvailableCorporations, cardRegistry),
+	}
+}
+
+func convertSelectCorporationPhaseForOtherPlayer(phase *player.SelectCorporationPhase) *SelectCorporationOtherPlayerDto {
+	if phase == nil {
+		return nil
+	}
+
+	return &SelectCorporationOtherPlayerDto{}
+}
+
 func convertSelectStartingCardsPhase(phase *player.SelectStartingCardsPhase, cardRegistry cards.CardRegistry) *SelectStartingCardsPhaseDto {
 	if phase == nil {
 		return nil
 	}
 
-	// Get full card details for available cards
-	availableCards := getPlayedCards(phase.AvailableCards, cardRegistry)
-
-	// Get full card details for available corporations
-	availableCorporations := getPlayedCards(phase.AvailableCorporations, cardRegistry)
-
-	result := &SelectStartingCardsPhaseDto{
-		AvailableCards:        availableCards,
-		AvailableCorporations: availableCorporations,
+	return &SelectStartingCardsPhaseDto{
+		AvailableCards: getPlayedCards(phase.AvailableCards, cardRegistry),
 	}
-
-	return result
 }
 
-// convertSelectStartingCardsPhaseForOtherPlayer converts SelectStartingCardsPhase to DTO for other players (empty)
 func convertSelectStartingCardsPhaseForOtherPlayer(phase *player.SelectStartingCardsPhase) *SelectStartingCardsOtherPlayerDto {
 	if phase == nil {
 		return nil
 	}
 
 	return &SelectStartingCardsOtherPlayerDto{}
+}
+
+// convertSelectPreludeCardsPhase converts SelectPreludeCardsPhase to DTO
+func convertSelectPreludeCardsPhase(phase *player.SelectPreludeCardsPhase, cardRegistry cards.CardRegistry) *SelectPreludeCardsPhaseDto {
+	if phase == nil {
+		return nil
+	}
+
+	return &SelectPreludeCardsPhaseDto{
+		AvailablePreludes: getPlayedCards(phase.AvailablePreludes, cardRegistry),
+		MaxSelectable:     phase.MaxSelectable,
+	}
+}
+
+// convertSelectPreludeCardsPhaseForOtherPlayer converts SelectPreludeCardsPhase to DTO for other players
+func convertSelectPreludeCardsPhaseForOtherPlayer(phase *player.SelectPreludeCardsPhase) *SelectPreludeCardsOtherPlayerDto {
+	if phase == nil {
+		return nil
+	}
+
+	return &SelectPreludeCardsOtherPlayerDto{}
 }
 
 // convertProductionPhase converts production phase data to DTO for current player

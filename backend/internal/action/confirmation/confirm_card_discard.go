@@ -159,7 +159,8 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 		applier := gamecards.NewBehaviorApplier(p, g, selection.Source, log).
 			WithSourceCardID(selection.SourceCardID).
 			WithCardRegistry(a.CardRegistry()).
-			WithSourceType(game.SourceTypePassiveEffect)
+			WithSourceType(game.SourceTypePassiveEffect).
+			WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
 		if err := applier.ApplyOutputs(ctx, []shared.ResourceCondition{output}); err != nil {
 			return err
 		}

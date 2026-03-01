@@ -146,6 +146,39 @@ func (d *Deck) DrawProjectCards(ctx context.Context, count int) ([]string, error
 	return drawnCards, nil
 }
 
+// DrawProjectCardsUntilMatching draws cards one at a time until the desired number of
+// matching cards is found. Returns matching cards and discarded (non-matching) cards separately.
+// The matcher function determines whether a card ID matches the criteria.
+func (d *Deck) DrawProjectCardsUntilMatching(ctx context.Context, count int, matcher func(cardID string) bool) (matched []string, discarded []string, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	for len(matched) < count {
+		if len(d.projectCards) == 0 {
+			d.shuffleLocked()
+			if len(d.projectCards) == 0 {
+				break
+			}
+		}
+
+		cardID := d.projectCards[0]
+		d.projectCards = d.projectCards[1:]
+		d.drawnCardCount++
+
+		if matcher(cardID) {
+			matched = append(matched, cardID)
+		} else {
+			discarded = append(discarded, cardID)
+		}
+	}
+
+	return matched, discarded, nil
+}
+
 // DrawCorporations draws N corporation cards
 // Returns the drawn corporation IDs or error if not enough available
 func (d *Deck) DrawCorporations(ctx context.Context, count int) ([]string, error) {
@@ -166,6 +199,27 @@ func (d *Deck) DrawCorporations(ctx context.Context, count int) ([]string, error
 	d.corporations = d.corporations[count:]
 
 	return drawnCorps, nil
+}
+
+// DrawPreludeCards draws N prelude cards from the deck
+func (d *Deck) DrawPreludeCards(ctx context.Context, count int) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	available := len(d.preludeCards)
+	if count > available {
+		return nil, fmt.Errorf("not enough prelude cards available: requested %d, have %d", count, available)
+	}
+
+	drawnPreludes := make([]string, count)
+	copy(drawnPreludes, d.preludeCards[:count])
+	d.preludeCards = d.preludeCards[count:]
+
+	return drawnPreludes, nil
 }
 
 // Discard adds cards to the discard pile

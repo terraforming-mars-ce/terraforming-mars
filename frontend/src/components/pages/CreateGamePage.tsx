@@ -321,6 +321,27 @@ const CreateGamePage: React.FC = () => {
                     <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
                       <input
                         type="checkbox"
+                        checked={selectedPacks.includes("prelude")}
+                        onChange={() => handlePackToggle("prelude")}
+                        disabled={
+                          isLoading ||
+                          (selectedPacks.includes("prelude") && selectedPacks.length === 1)
+                        }
+                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                      />
+                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
+                        Prelude
+                        <span className="text-white/50 text-xs">(35 cards)</span>
+                        <InfoTooltip size="small">
+                          Each player receives 4 prelude cards and keeps 2 for free. These give an
+                          early boost with resources, production, or other effects.
+                        </InfoTooltip>
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
+                      <input
+                        type="checkbox"
                         checked={selectedPacks.includes("future")}
                         onChange={() => handlePackToggle("future")}
                         disabled={

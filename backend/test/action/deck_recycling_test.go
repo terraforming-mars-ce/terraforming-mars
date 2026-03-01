@@ -127,32 +127,34 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 
 	err := testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testutil.AssertNoError(t, err, "update game status")
-	err = testGame.UpdatePhase(ctx, game.GamePhaseStartingCardSelection)
+	err = testGame.UpdatePhase(ctx, game.GamePhaseStartingSelection)
 	testutil.AssertNoError(t, err, "update game phase")
 
 	playerID := "player-1"
 
-	// Set up the starting cards phase with 10 available project cards and 2 corporations
-	// Using real card IDs from the card database
 	availableCards := []string{
 		"001", "002", "003", "004", "005",
 		"006", "007", "008", "009", "010",
 	}
-	availableCorps := []string{"B08", "B06"} // Tharsis Republic, Mining Guild
 
 	err = testGame.SetSelectStartingCardsPhase(ctx, playerID, &player.SelectStartingCardsPhase{
-		AvailableCards:        availableCards,
-		AvailableCorporations: availableCorps,
+		AvailableCards: availableCards,
 	})
 	testutil.AssertNoError(t, err, "set starting cards phase")
+
+	// Also set corporation phase (required by combined action)
+	err = testGame.SetSelectCorporationPhase(ctx, playerID, &player.SelectCorporationPhase{
+		AvailableCorporations: []string{"B08", "B06"},
+	})
+	testutil.AssertNoError(t, err, "set corporation phase")
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 100)
 
-	// Player selects 3 out of 10 project cards
+	// Player selects corporation B08 and 3 out of 10 project cards
 	selectedCards := []string{"001", "002", "003"}
-	action := turn_management.NewSelectStartingCardsAction(repo, cardRegistry, log)
-	err = action.Execute(ctx, testGame.ID(), playerID, selectedCards, "B08")
+	action := turn_management.NewSelectStartingChoicesAction(repo, cardRegistry, log)
+	err = action.Execute(ctx, testGame.ID(), playerID, "B08", []string{}, selectedCards)
 	testutil.AssertNoError(t, err, "select starting cards")
 
 	discardPile := testGame.Deck().DiscardPile()

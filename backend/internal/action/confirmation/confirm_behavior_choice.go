@@ -72,7 +72,8 @@ func (a *ConfirmBehaviorChoiceAction) Execute(ctx context.Context, gameID string
 	applier := gamecards.NewBehaviorApplier(p, g, selection.Source, log).
 		WithSourceCardID(selection.SourceCardID).
 		WithCardRegistry(a.CardRegistry()).
-		WithSourceType(game.SourceTypePassiveEffect)
+		WithSourceType(game.SourceTypePassiveEffect).
+		WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
 
 	if len(cardStorageTargets) > 0 {
 		applier = applier.WithTargetCardIDs(cardStorageTargets)

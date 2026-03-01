@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"terraforming-mars-backend/internal/game/global_parameters"
 )
 
@@ -20,7 +22,13 @@ type GameSettings struct {
 const (
 	PackBaseGame = "base-game" // Tested simple cards only
 	PackFuture   = "future"    // Untested/complex cards for future implementation
+	PackPrelude  = "prelude"   // Prelude expansion cards
 )
+
+// HasPrelude returns true if the prelude card pack is enabled
+func (s GameSettings) HasPrelude() bool {
+	return slices.Contains(s.CardPacks, PackPrelude)
+}
 
 // Default values for game settings
 const (

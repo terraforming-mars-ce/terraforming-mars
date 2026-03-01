@@ -57,8 +57,10 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return nil, err
 	}
 
-	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
-		return nil, err
+	if g.CurrentPhase() != game.GamePhaseStartingSelection {
+		if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
+			return nil, err
+		}
 	}
 
 	p, err := a.GetPlayerFromGame(g, playerID, log)
@@ -342,12 +344,62 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		log.Warn("Failed to handle completion callback", zap.Error(err))
 	}
 
-	baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+	if g.CurrentPhase() == game.GamePhaseStartingSelection {
+		a.checkStartingSelectionCompletion(ctx, g, log)
+	} else {
+		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+	}
 
 	log.Info("✅ Tile selected and placed successfully",
 		zap.String("tile_type", tileType),
 		zap.String("position", selectedHex))
 	return result, nil
+}
+
+// checkStartingSelectionCompletion checks if all players finished starting selection and tile placements,
+// then advances to action phase
+func (a *SelectTileAction) checkStartingSelectionCompletion(ctx context.Context, g *game.Game, log *zap.Logger) {
+	allPlayers := g.GetAllPlayers()
+	for _, p := range allPlayers {
+		if g.GetSelectCorporationPhase(p.ID()) != nil {
+			return
+		}
+		if g.GetSelectPreludeCardsPhase(p.ID()) != nil {
+			return
+		}
+		if g.GetSelectStartingCardsPhase(p.ID()) != nil {
+			return
+		}
+		if g.GetPendingTileSelection(p.ID()) != nil {
+			return
+		}
+		if g.GetPendingTileSelectionQueue(p.ID()) != nil {
+			return
+		}
+	}
+
+	log.Info("🎉 All starting selections and tiles resolved, advancing to action phase")
+
+	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+		log.Error("Failed to transition to action phase", zap.Error(err))
+		return
+	}
+
+	turnOrder := g.TurnOrder()
+	if len(turnOrder) > 0 {
+		firstPlayerID := turnOrder[0]
+
+		availableActions := 2
+		if len(allPlayers) == 1 {
+			availableActions = -1
+		}
+
+		if err := g.SetCurrentTurn(ctx, firstPlayerID, availableActions); err != nil {
+			log.Error("Failed to set current turn", zap.Error(err))
+			return
+		}
+	}
+
 }
 
 func parseHexPosition(hexStr string) (*shared.HexPosition, error) {

@@ -106,7 +106,8 @@ func (a *UseCardActionAction) Execute(
 		WithSourceCardID(cardID).
 		WithSourceBehaviorIndex(behaviorIndex).
 		WithCardRegistry(a.CardRegistry()).
-		WithSourceType(game.SourceTypeCardAction)
+		WithSourceType(game.SourceTypeCardAction).
+		WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
 	if len(cardStorageTargets) > 0 {
 		applier = applier.WithTargetCardIDs(cardStorageTargets)
 	}

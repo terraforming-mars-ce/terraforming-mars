@@ -31,7 +31,7 @@ interface GameLayoutProps {
   currentPlayer: PlayerDto | null;
   playedCards?: CardDto[];
   corporationCard?: CardDto | null;
-  showCardSelection?: boolean;
+  showStartingSelection?: boolean;
   transitionPhase?: TransitionPhase;
   animateHexEntrance?: boolean;
   changedPaths?: Set<string>;
@@ -55,7 +55,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   currentPlayer,
   playedCards = [],
   corporationCard = null,
-  showCardSelection = false,
+  showStartingSelection = false,
   transitionPhase = "idle",
   animateHexEntrance = false,
   changedPaths = new Set(),
@@ -124,7 +124,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       )}
 
       {/* TopMenuBar overlays on top */}
-      {showUI && !showCardSelection && (
+      {showUI && !showStartingSelection && (
         <div className={uiAnimationClass}>
           <TopMenuBar
             gameState={gameState}
@@ -159,7 +159,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         </div>
       )}
 
-      {showUI && !showCardSelection && (
+      {showUI && !showStartingSelection && (
         <div className={uiAnimationClass}>
           <BottomResourceBar
             currentPlayer={currentPlayer}

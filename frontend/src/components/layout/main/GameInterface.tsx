@@ -50,7 +50,7 @@ import {
   GamePhaseAction,
   GamePhaseComplete,
   GamePhaseDemoSetup,
-  GamePhaseStartingCardSelection,
+  GamePhaseStartingSelection,
   GameStatusActive,
   GameStatusCompleted,
   GameStatusLobby,
@@ -119,9 +119,8 @@ export default function GameInterface() {
   const [openProductionToCardSelection, setOpenProductionToCardSelection] = useState(false);
   const isInitialMount = useRef(true);
 
-  // Card selection state
-  const [showCardSelection, setShowCardSelection] = useState(false);
-  const [cardDetails, setCardDetails] = useState<CardDto[]>([]);
+  // Starting selection state (corporation + preludes + project cards)
+  const [showStartingSelection, setShowStartingSelection] = useState(false);
 
   // Pending card selection state (for sell patents, etc.)
   const [showPendingCardSelection, setShowPendingCardSelection] = useState(false);
@@ -491,14 +490,12 @@ export default function GameInterface() {
     }
   }, [currentPlayer?.productionPhase, game, showProductionPhaseModal, playProductionSound]);
 
-  const handleCardSelection = useCallback(
-    async (selectedCardIds: string[], corporationId: string) => {
+  const handleStartingChoicesConfirm = useCallback(
+    async (corporationId: string, preludeIds: string[], cardIds: string[]) => {
       try {
-        // Send card and corporation selection to server - commits immediately
-        await globalWebSocketManager.selectStartingCard(selectedCardIds, corporationId);
-        // Modal will close automatically when backend clears startingSelection
+        await globalWebSocketManager.selectStartingChoices(corporationId, preludeIds, cardIds);
       } catch (error) {
-        console.error("Failed to select cards:", error);
+        console.error("Failed to select starting choices:", error);
       }
     },
     [],
@@ -2111,33 +2108,25 @@ export default function GameInterface() {
     };
   }, []);
 
-  // Extract card details directly from game data (backend now sends full card objects)
-  const extractCardDetails = useCallback((cards: CardDto[]) => {
-    setCardDetails(cards);
-  }, []);
-
-  // Show/hide starting card selection overlay based on backend state
+  // Show/hide starting selection overlay based on backend state
   useEffect(() => {
-    const cards = game?.currentPlayer?.selectStartingCardsPhase?.availableCards;
-    const hasCardSelection = cards && cards.length > 0;
-
-    if (
-      game?.currentPhase === GamePhaseStartingCardSelection &&
+    const corpPhase = game?.currentPlayer?.selectCorporationPhase;
+    const hasStartingData =
+      game?.currentPhase === GamePhaseStartingSelection &&
       game?.status === GameStatusActive &&
-      hasCardSelection &&
-      !showCardSelection
-    ) {
-      extractCardDetails(cards);
-      setShowCardSelection(true);
-    } else if (showCardSelection && !hasCardSelection) {
-      setShowCardSelection(false);
+      corpPhase &&
+      corpPhase.availableCorporations.length > 0;
+
+    if (hasStartingData && !showStartingSelection) {
+      setShowStartingSelection(true);
+    } else if (showStartingSelection && !corpPhase) {
+      setShowStartingSelection(false);
     }
   }, [
     game?.currentPhase,
     game?.status,
-    game?.currentPlayer?.selectStartingCardsPhase?.availableCards,
-    showCardSelection,
-    extractCardDetails,
+    game?.currentPlayer?.selectCorporationPhase,
+    showStartingSelection,
   ]);
 
   // Show/hide pending card selection overlay (sell patents, etc.)
@@ -2270,17 +2259,18 @@ export default function GameInterface() {
 
   const isLobbyPhase = game?.status === GameStatusLobby;
 
-  // Pre-game phase covers both lobby AND starting card selection
+  // Pre-game phase covers lobby and starting selection
   const isPreGamePhase =
     isLobbyPhase ||
-    (game?.status === GameStatusActive && game?.currentPhase === GamePhaseStartingCardSelection);
+    (game?.status === GameStatusActive && game?.currentPhase === GamePhaseStartingSelection);
 
-  // Show waiting modal when player has finished card selection but others haven't
+  // Show waiting modal when player has finished selection but others haven't
   const showWaitingForPlayers =
     game?.status === GameStatusActive &&
-    game?.currentPhase === GamePhaseStartingCardSelection &&
+    game?.currentPhase === GamePhaseStartingSelection &&
+    !game?.currentPlayer?.selectCorporationPhase &&
     !game?.currentPlayer?.selectStartingCardsPhase &&
-    !!currentPlayer?.corporation;
+    !game?.currentPlayer?.pendingTileSelection;
 
   const [lobbyMounted, setLobbyMounted] = useState(false);
 
@@ -2338,7 +2328,7 @@ export default function GameInterface() {
   );
 
   // Check if we need the persistent backdrop (during overlay transitions)
-  const shouldShowBackdrop = showCardSelection;
+  const shouldShowBackdrop = showStartingSelection;
 
   return (
     <>
@@ -2375,7 +2365,7 @@ export default function GameInterface() {
           currentPlayer={currentPlayer}
           playedCards={currentPlayer?.playedCards || []}
           corporationCard={corporationData}
-          showCardSelection={showCardSelection}
+          showStartingSelection={showStartingSelection}
           transitionPhase={transitionPhase}
           animateHexEntrance={
             transitionPhase === "fadeOutLobby" ||
@@ -2510,15 +2500,17 @@ export default function GameInterface() {
         </GameMenuModal>
       )}
 
-      {/* Starting card selection overlay */}
+      {/* Starting selection overlay (corporation + preludes + project cards) */}
       <StartingCardSelectionOverlay
-        isOpen={showCardSelection}
-        cards={cardDetails}
+        isOpen={showStartingSelection}
         availableCorporations={
-          game?.currentPlayer?.selectStartingCardsPhase?.availableCorporations || []
+          game?.currentPlayer?.selectCorporationPhase?.availableCorporations || []
         }
+        availablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.availablePreludes || []}
+        maxSelectablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.maxSelectable || 2}
+        cards={game?.currentPlayer?.selectStartingCardsPhase?.availableCards || []}
         playerCredits={currentPlayer?.resources?.credits || 40}
-        onSelectCards={handleCardSelection}
+        onConfirm={handleStartingChoicesConfirm}
       />
 
       {/* Waiting for other players to finish card selection */}
@@ -2551,6 +2543,7 @@ export default function GameInterface() {
                         id: game.currentPlayer.id,
                         name: game.currentPlayer.name,
                         isReady:
+                          !game.currentPlayer.selectCorporationPhase &&
                           !game.currentPlayer.selectStartingCardsPhase &&
                           !!game.currentPlayer.corporation,
                         isSelf: true,
@@ -2561,7 +2554,10 @@ export default function GameInterface() {
                       allPlayers.push({
                         id: other.id,
                         name: other.name,
-                        isReady: !other.selectStartingCardsPhase && !!other.corporation,
+                        isReady:
+                          !other.selectStartingCardsPhase &&
+                          !other.selectCorporationPhase &&
+                          !!other.corporation,
                         isSelf: false,
                       });
                     });
@@ -2663,7 +2659,7 @@ export default function GameInterface() {
           <CardFanOverlay
             cards={currentPlayer.cards || []}
             hideWhenModalOpen={
-              showCardSelection ||
+              showStartingSelection ||
               showPendingCardSelection ||
               showCardDrawSelection ||
               showCardDiscardSelection ||

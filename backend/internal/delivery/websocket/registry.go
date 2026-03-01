@@ -48,7 +48,7 @@ func RegisterHandlers(
 	selectTileAction *tileAction.SelectTileAction,
 	startGameAction *turnAction.StartGameAction,
 	skipActionAction *turnAction.SkipActionAction,
-	selectStartingCardsAction *turnAction.SelectStartingCardsAction,
+	selectStartingChoicesAction *turnAction.SelectStartingChoicesAction,
 	confirmSellPatentsAction *confirmAction.ConfirmSellPatentsAction,
 	confirmProductionCardsAction *confirmAction.ConfirmProductionCardsAction,
 	confirmCardDrawAction *confirmAction.ConfirmCardDrawAction,
@@ -121,8 +121,8 @@ func RegisterHandlers(
 	skipActionHandler := turn_management.NewSkipActionHandler(skipActionAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionSkipAction, skipActionHandler)
 
-	selectStartingCardsHandler := turn_management.NewSelectStartingCardsHandler(selectStartingCardsAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeActionSelectStartingCard, selectStartingCardsHandler)
+	selectStartingChoicesHandler := turn_management.NewSelectStartingChoicesHandler(selectStartingChoicesAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionSelectStartingChoices, selectStartingChoicesHandler)
 
 	confirmSellPatentsHandler := confirmation.NewConfirmSellPatentsHandler(confirmSellPatentsAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConfirmSellPatents, confirmSellPatentsHandler)

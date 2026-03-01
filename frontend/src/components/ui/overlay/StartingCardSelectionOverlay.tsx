@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
-import GameCard from "../cards/GameCard.tsx";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import CorporationCard from "../cards/CorporationCard.tsx";
+import GameCard from "../cards/GameCard.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { CardDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
@@ -19,57 +19,83 @@ import MainMenuSettingsButton from "../buttons/MainMenuSettingsButton.tsx";
 
 interface StartingCardSelectionOverlayProps {
   isOpen: boolean;
-  cards: CardDto[];
   availableCorporations: CardDto[];
+  availablePreludes: CardDto[];
+  maxSelectablePreludes: number;
+  cards: CardDto[];
   playerCredits: number;
-  onSelectCards: (selectedCardIds: string[], corporationId: string) => void;
+  onConfirm: (corporationId: string, preludeIds: string[], cardIds: string[]) => void;
 }
 
 const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> = ({
   isOpen,
-  cards,
   availableCorporations,
+  availablePreludes,
+  maxSelectablePreludes,
+  cards,
   playerCredits,
-  onSelectCards,
+  onConfirm,
 }) => {
   const [selectedCorporationId, setSelectedCorporationId] = useState<string | null>(null);
+  const [selectedPreludeIds, setSelectedPreludeIds] = useState<string[]>([]);
+
+  const selectedCorp = useMemo(
+    () => availableCorporations.find((c) => c.id === selectedCorporationId),
+    [availableCorporations, selectedCorporationId],
+  );
+
+  const effectiveCredits = selectedCorp?.startingResources?.credits ?? playerCredits;
 
   const {
     selectedCardIds,
     totalCost,
     showConfirmation,
-    isValidSelection,
+    isValidSelection: isValidCardSelection,
     handleCardSelect,
     handleConfirm: handleCardConfirm,
   } = useCardSelection({
     cards,
     isOpen,
-    playerCredits,
+    playerCredits: effectiveCredits,
     costPerCard: 3,
     minCards: 0,
   });
 
   useEffect(() => {
-    if (isOpen && cards.length > 0) {
+    if (isOpen) {
       setSelectedCorporationId(null);
+      setSelectedPreludeIds([]);
     }
-  }, [isOpen, cards]);
+  }, [isOpen]);
 
-  if (!isOpen || cards.length === 0) return null;
+  const handlePreludeSelect = useCallback(
+    (cardId: string) => {
+      setSelectedPreludeIds((prev) => {
+        if (prev.includes(cardId)) {
+          return prev.filter((id) => id !== cardId);
+        }
+        if (prev.length >= maxSelectablePreludes) {
+          return prev;
+        }
+        return [...prev, cardId];
+      });
+    },
+    [maxSelectablePreludes],
+  );
 
-  const handleCorporationSelect = (corporationId: string) => {
-    setSelectedCorporationId(corporationId);
-  };
+  const hasPreludes = availablePreludes.length > 0;
+  const preludesValid = !hasPreludes || selectedPreludeIds.length === maxSelectablePreludes;
+  const allValid = !!selectedCorporationId && preludesValid && isValidCardSelection;
 
   const handleConfirm = () => {
-    if (!selectedCorporationId) {
-      return;
-    }
+    if (!selectedCorporationId) return;
 
     handleCardConfirm((cardIds) => {
-      onSelectCards(cardIds, selectedCorporationId);
+      onConfirm(selectedCorporationId, selectedPreludeIds, cardIds);
     });
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
@@ -78,7 +104,9 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
         <div className={OVERLAY_HEADER_CLASS}>
           <h2 className={OVERLAY_TITLE_CLASS}>Select Starting Cards</h2>
           <p className={OVERLAY_DESCRIPTION_CLASS}>
-            Choose your corporation and starting project cards. Each project card costs 3 MC.
+            Choose your corporation
+            {hasPreludes ? ", prelude cards," : ""} and starting project cards. Each project card
+            costs 3 MC.
           </p>
         </div>
 
@@ -121,13 +149,39 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
                         logoPath: undefined,
                       }}
                       isSelected={selectedCorporationId === corp.id}
-                      onSelect={handleCorporationSelect}
+                      onSelect={setSelectedCorporationId}
                       borderColor={getCorporationBorderColor(corp.name)}
                     />
                   </div>
                 ))}
               </div>
             </div>
+          )}
+
+          {hasPreludes && (
+            <>
+              <div className="border-t border-white/10 my-6" />
+              <div>
+                <h3 className="text-white/60 text-sm font-orbitron font-bold uppercase tracking-widest mb-4">
+                  Prelude Cards
+                  <span className="ml-2 text-white/40 text-xs normal-case">
+                    {selectedPreludeIds.length} / {maxSelectablePreludes} selected
+                  </span>
+                </h3>
+                <div className="flex gap-6 justify-center flex-wrap max-[768px]:gap-4">
+                  {availablePreludes.map((card, index) => (
+                    <GameCard
+                      key={card.id}
+                      card={card}
+                      isSelected={selectedPreludeIds.includes(card.id)}
+                      onSelect={handlePreludeSelect}
+                      animationDelay={index * 100}
+                      showCheckbox={true}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
           <div className="border-t border-white/10 my-6" />
@@ -159,7 +213,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
           <div className="flex gap-8 items-center max-[768px]:w-full max-[768px]:justify-between">
             <div className={RESOURCE_DISPLAY_CLASS}>
               <span className={RESOURCE_LABEL_CLASS}>Your Credits:</span>
-              <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size="large" />
+              <GameIcon iconType={ResourceTypeCredit} amount={effectiveCredits} size="large" />
             </div>
             <div className={RESOURCE_DISPLAY_CLASS}>
               <span className={RESOURCE_LABEL_CLASS}>Total Cost:</span>
@@ -194,7 +248,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
               variant="primary"
               size="lg"
               onClick={handleConfirm}
-              disabled={!selectedCorporationId || !isValidSelection}
+              disabled={!allValid}
               className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
             >
               {showConfirmation ? "Confirm Skip" : "Confirm Selection"}

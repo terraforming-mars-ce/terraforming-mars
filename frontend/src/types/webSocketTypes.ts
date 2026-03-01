@@ -32,7 +32,11 @@ export interface WebSocketConnection {
     choiceIndex?: number,
     cardStorageTargets?: string[],
   ): Promise<string>;
-  selectStartingCard(cardIds: string[], corporationId: string): Promise<string>;
+  selectStartingChoices(
+    corporationId: string,
+    preludeIds: string[],
+    cardIds: string[],
+  ): Promise<string>;
   selectCards(cardIds: string[]): Promise<string>;
   confirmProductionCards(cardIds: string[]): Promise<string>;
 
