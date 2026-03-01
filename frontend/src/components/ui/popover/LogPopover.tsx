@@ -93,13 +93,22 @@ interface LogGroup {
   playerTurns: PlayerTurnGroup[];
 }
 
-const PLAYER_COLORS = [
-  { border: "rgba(100, 200, 255, 0.4)", bg: "rgba(100, 200, 255, 0.05)", text: "#64c8ff" },
-  { border: "rgba(255, 180, 100, 0.4)", bg: "rgba(255, 180, 100, 0.05)", text: "#ffb464" },
-  { border: "rgba(180, 255, 100, 0.4)", bg: "rgba(180, 255, 100, 0.05)", text: "#b4ff64" },
-  { border: "rgba(255, 100, 180, 0.4)", bg: "rgba(255, 100, 180, 0.05)", text: "#ff64b4" },
-  { border: "rgba(180, 100, 255, 0.4)", bg: "rgba(180, 100, 255, 0.05)", text: "#b464ff" },
-];
+function hexToPlayerStyle(hex: string): { border: string; bg: string; text: string } {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return {
+    border: `rgba(${r}, ${g}, ${b}, 0.4)`,
+    bg: `rgba(${r}, ${g}, ${b}, 0.05)`,
+    text: hex,
+  };
+}
+
+const DEFAULT_PLAYER_STYLE = {
+  border: "rgba(100, 200, 255, 0.4)",
+  bg: "rgba(100, 200, 255, 0.05)",
+  text: "#64c8ff",
+};
 
 const groupLogsByGeneration = (logs: StateDiffDto[]): LogGroup[] => {
   if (logs.length === 0) return [];
@@ -149,17 +158,17 @@ const GenerationDivider: React.FC<GenerationDividerProps> = ({ generation, entry
 interface PlayerTurnSectionProps {
   playerName: string;
   entries: StateDiffDto[];
-  colorIndex: number;
+  playerColor: string | undefined;
   playerNames: Map<string, string>;
 }
 
 const PlayerTurnSection: React.FC<PlayerTurnSectionProps> = ({
   playerName,
   entries,
-  colorIndex,
+  playerColor,
   playerNames,
 }) => {
-  const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+  const color = playerColor ? hexToPlayerStyle(playerColor) : DEFAULT_PLAYER_STYLE;
 
   return (
     <div
@@ -391,17 +400,15 @@ const LogPopover: React.FC<LogPopoverProps> = ({
   const groupedLogs = useMemo(() => groupLogsByGeneration(logs), [logs]);
 
   const playerColorMap = useMemo(() => {
-    const map = new Map<string, number>();
-    let colorIndex = 0;
-    for (const group of groupedLogs) {
-      for (const turn of group.playerTurns) {
-        if (!map.has(turn.playerId)) {
-          map.set(turn.playerId, colorIndex++);
-        }
-      }
+    const map = new Map<string, string>();
+    if (gameState?.currentPlayer?.color) {
+      map.set(gameState.currentPlayer.id, gameState.currentPlayer.color);
     }
+    gameState?.otherPlayers?.forEach((p) => {
+      if (p.color) map.set(p.id, p.color);
+    });
     return map;
-  }, [groupedLogs]);
+  }, [gameState]);
 
   return (
     <GamePopover
@@ -435,7 +442,7 @@ const LogPopover: React.FC<LogPopoverProps> = ({
                       key={`${turn.playerId}-${turnIndex}`}
                       playerName={playerNames.get(turn.playerId) || "Unknown"}
                       entries={turn.entries}
-                      colorIndex={playerColorMap.get(turn.playerId) || 0}
+                      playerColor={playerColorMap.get(turn.playerId)}
                       playerNames={playerNames}
                     />
                   ))}

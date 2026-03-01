@@ -132,7 +132,11 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
                 disabled={!isValidSelection}
                 className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
               >
-                {showConfirmation ? "Confirm Skip" : "Buy Cards"}
+                {showConfirmation
+                  ? "Confirm Skip"
+                  : selectedCardIds.length === 0
+                    ? "Skip Buy Cards"
+                    : "Buy Cards"}
               </GameMenuButton>
             </div>
           </div>

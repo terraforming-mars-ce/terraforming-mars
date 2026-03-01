@@ -613,6 +613,7 @@ const (
 type PlayerDto struct {
 	ID               string                     `json:"id" ts:"string"`
 	Name             string                     `json:"name" ts:"string"`
+	Color            string                     `json:"color" ts:"string"`
 	Status           PlayerStatus               `json:"status" ts:"PlayerStatus"`
 	Corporation      *CardDto                   `json:"corporation" ts:"CardDto | null"`
 	Cards            []PlayerCardDto            `json:"cards" ts:"PlayerCardDto[]"` // Hand cards with playability state (Player-Scoped Architecture)
@@ -649,6 +650,7 @@ type PlayerDto struct {
 type OtherPlayerDto struct {
 	ID               string            `json:"id" ts:"string"`
 	Name             string            `json:"name" ts:"string"`
+	Color            string            `json:"color" ts:"string"`
 	Status           PlayerStatus      `json:"status" ts:"PlayerStatus"`
 	Corporation      *CardDto          `json:"corporation" ts:"CardDto | null"`
 	HandCardCount    int               `json:"handCardCount" ts:"number"` // Number of cards in hand (private)

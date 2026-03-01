@@ -79,6 +79,17 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 	}
 	log.Info("🎲 Randomized turn order", zap.Strings("turn_order", playerIDs))
 
+	// 5b. BUSINESS LOGIC: Assign stable colors based on turn order
+	playerColors := []string{"#b91c2b", "#232dc7", "#3abe3a", "#ffa502", "#a55eea", "#26d0ce"}
+	for i, pid := range playerIDs {
+		p, err := g.GetPlayer(pid)
+		if err != nil {
+			log.Error("Failed to get player for color assignment", zap.Error(err))
+			return fmt.Errorf("failed to get player for color assignment: %w", err)
+		}
+		p.SetColor(playerColors[i%len(playerColors)])
+	}
+
 	// 6. BUSINESS LOGIC: Ensure deck is initialized
 	deck := g.Deck()
 	if deck == nil {

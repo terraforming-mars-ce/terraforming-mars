@@ -12,6 +12,7 @@ type Player struct {
 	connected          bool
 	eventBus           *events.EventBusImpl
 	corporationID      string
+	color              string
 	hasPassed          bool
 	demoSetupConfirmed bool
 
@@ -112,6 +113,14 @@ func (p *Player) GenerationalEvents() *GenerationalEvents {
 
 func (p *Player) VPGranters() *VPGranters {
 	return p.vpGranters
+}
+
+func (p *Player) Color() string {
+	return p.color
+}
+
+func (p *Player) SetColor(color string) {
+	p.color = color
 }
 
 func (p *Player) HasPassed() bool {
