@@ -110,7 +110,9 @@ type Game struct {
 	pendingTileSelectionQueues map[string]*player.PendingTileSelectionQueue
 	forcedFirstActions         map[string]*player.ForcedFirstAction
 	productionPhases           map[string]*player.ProductionPhase
+	selectCorporationPhases    map[string]*player.SelectCorporationPhase
 	selectStartingCardsPhases  map[string]*player.SelectStartingCardsPhase
+	selectPreludeCardsPhases   map[string]*player.SelectPreludeCardsPhase
 }
 
 // NewGame creates a new game with the given settings
@@ -162,7 +164,9 @@ func NewGame(
 		pendingTileSelectionQueues: make(map[string]*player.PendingTileSelectionQueue),
 		forcedFirstActions:         make(map[string]*player.ForcedFirstAction),
 		productionPhases:           make(map[string]*player.ProductionPhase),
+		selectCorporationPhases:    make(map[string]*player.SelectCorporationPhase),
 		selectStartingCardsPhases:  make(map[string]*player.SelectStartingCardsPhase),
+		selectPreludeCardsPhases:   make(map[string]*player.SelectPreludeCardsPhase),
 	}
 
 	g.subscribeToGenerationalEvents()
@@ -201,6 +205,13 @@ func (g *Game) Settings() GameSettings {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.settings
+}
+
+// UpdateSettings updates the game settings
+func (g *Game) UpdateSettings(ctx context.Context, settings GameSettings) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.settings = settings
 }
 
 // HostPlayerID returns the host player ID
@@ -816,6 +827,45 @@ func (g *Game) SetProductionPhase(ctx context.Context, playerID string, phase *p
 	return nil
 }
 
+// GetSelectCorporationPhase returns the corporation selection phase state for a player
+func (g *Game) GetSelectCorporationPhase(playerID string) *player.SelectCorporationPhase {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	phase, exists := g.selectCorporationPhases[playerID]
+	if !exists || phase == nil {
+		return nil
+	}
+	phaseCopy := *phase
+	return &phaseCopy
+}
+
+// SetSelectCorporationPhase sets the corporation selection phase state for a player
+func (g *Game) SetSelectCorporationPhase(ctx context.Context, playerID string, phase *player.SelectCorporationPhase) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	if phase == nil {
+		delete(g.selectCorporationPhases, playerID)
+	} else {
+		phaseCopy := *phase
+		g.selectCorporationPhases[playerID] = &phaseCopy
+	}
+	g.updatedAt = time.Now()
+	g.mu.Unlock()
+
+	if g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{
+			GameID:    g.id,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return nil
+}
+
 // GetSelectStartingCardsPhase returns the select starting cards phase state for a player
 func (g *Game) GetSelectStartingCardsPhase(playerID string) *player.SelectStartingCardsPhase {
 	g.mu.RLock()
@@ -841,6 +891,45 @@ func (g *Game) SetSelectStartingCardsPhase(ctx context.Context, playerID string,
 	} else {
 		phaseCopy := *phase
 		g.selectStartingCardsPhases[playerID] = &phaseCopy
+	}
+	g.updatedAt = time.Now()
+	g.mu.Unlock()
+
+	if g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{
+			GameID:    g.id,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return nil
+}
+
+// GetSelectPreludeCardsPhase returns the prelude card selection phase state for a player
+func (g *Game) GetSelectPreludeCardsPhase(playerID string) *player.SelectPreludeCardsPhase {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	phase, exists := g.selectPreludeCardsPhases[playerID]
+	if !exists || phase == nil {
+		return nil
+	}
+	phaseCopy := *phase
+	return &phaseCopy
+}
+
+// SetSelectPreludeCardsPhase sets the prelude card selection phase state for a player
+func (g *Game) SetSelectPreludeCardsPhase(ctx context.Context, playerID string, phase *player.SelectPreludeCardsPhase) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	if phase == nil {
+		delete(g.selectPreludeCardsPhases, playerID)
+	} else {
+		phaseCopy := *phase
+		g.selectPreludeCardsPhases[playerID] = &phaseCopy
 	}
 	g.updatedAt = time.Now()
 	g.mu.Unlock()

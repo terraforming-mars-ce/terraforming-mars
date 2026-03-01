@@ -9,7 +9,9 @@ import (
 // Selection manages player-specific card selection state
 type Selection struct {
 	mu                             sync.RWMutex
+	selectCorporationPhase         *SelectCorporationPhase
 	selectStartingCardsPhase       *SelectStartingCardsPhase
+	selectPreludeCardsPhase        *SelectPreludeCardsPhase
 	pendingCardSelection           *PendingCardSelection
 	pendingCardDrawSelection       *PendingCardDrawSelection
 	pendingCardDiscardSelection    *PendingCardDiscardSelection
@@ -27,6 +29,18 @@ func newSelection(eventBus *events.EventBusImpl, gameID, playerID string) *Selec
 	}
 }
 
+func (s *Selection) GetSelectCorporationPhase() *SelectCorporationPhase {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.selectCorporationPhase
+}
+
+func (s *Selection) SetSelectCorporationPhase(phase *SelectCorporationPhase) {
+	s.mu.Lock()
+	s.selectCorporationPhase = phase
+	s.mu.Unlock()
+}
+
 func (s *Selection) GetSelectStartingCardsPhase() *SelectStartingCardsPhase {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -40,6 +54,18 @@ func (s *Selection) SetSelectStartingCardsPhase(phase *SelectStartingCardsPhase)
 
 	if s.eventBus != nil {
 	}
+}
+
+func (s *Selection) GetSelectPreludeCardsPhase() *SelectPreludeCardsPhase {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.selectPreludeCardsPhase
+}
+
+func (s *Selection) SetSelectPreludeCardsPhase(phase *SelectPreludeCardsPhase) {
+	s.mu.Lock()
+	s.selectPreludeCardsPhase = phase
+	s.mu.Unlock()
 }
 
 func (s *Selection) GetPendingCardSelection() *PendingCardSelection {
@@ -123,11 +149,21 @@ type PendingCardDrawSelection struct {
 	SourceBehaviorIndex int    // Behavior index of the card action
 }
 
+// SelectCorporationPhase represents the corporation selection phase state
+type SelectCorporationPhase struct {
+	AvailableCorporations []string
+}
+
 // SelectStartingCardsPhase represents the starting cards selection phase state
 type SelectStartingCardsPhase struct {
-	AvailableCards        []string
-	AvailableCorporations []string
-	SelectionComplete     bool
+	AvailableCards    []string
+	SelectionComplete bool
+}
+
+// SelectPreludeCardsPhase represents the prelude card selection phase state
+type SelectPreludeCardsPhase struct {
+	AvailablePreludes []string
+	MaxSelectable     int
 }
 
 // ProductionPhase represents the production phase state for a player

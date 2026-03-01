@@ -5,9 +5,11 @@ type GamePhase string
 
 const (
 	GamePhaseWaitingForGameStart   GamePhase = "waiting_for_game_start"
+	GamePhaseCorporationSelection  GamePhase = "corporation_selection"
 	GamePhaseStartingCardSelection GamePhase = "starting_card_selection"
 	GamePhaseStartGameSelection    GamePhase = "start_game_selection"
 	GamePhaseDemoSetup             GamePhase = "demo_setup"
+	GamePhasePreludeSelection      GamePhase = "prelude_selection"
 	GamePhaseAction                GamePhase = "action"
 	GamePhaseProductionAndCardDraw GamePhase = "production_and_card_draw"
 	GamePhaseComplete              GamePhase = "complete"
@@ -342,13 +344,29 @@ type CardDto struct {
 	StartingProduction *ResourceSet `json:"startingProduction,omitempty" ts:"ResourceSet | undefined"`
 }
 
-type SelectStartingCardsPhaseDto struct {
-	AvailableCards        []CardDto `json:"availableCards" ts:"CardDto[]"`        // Cards available for selection
-	AvailableCorporations []CardDto `json:"availableCorporations" ts:"CardDto[]"` // Corporation cards available for selection (2 corporations)
+// SelectCorporationPhaseDto represents corporation selection state for the current player
+type SelectCorporationPhaseDto struct {
+	AvailableCorporations []CardDto `json:"availableCorporations" ts:"CardDto[]"`
 }
 
-type SelectStartingCardsOtherPlayerDto struct {
-	// Empty - other players don't see any selection details
+// SelectCorporationOtherPlayerDto represents corporation selection state for other players
+type SelectCorporationOtherPlayerDto struct{}
+
+type SelectStartingCardsPhaseDto struct {
+	AvailableCards []CardDto `json:"availableCards" ts:"CardDto[]"`
+}
+
+type SelectStartingCardsOtherPlayerDto struct{}
+
+// SelectPreludeCardsPhaseDto represents prelude card selection state for the current player
+type SelectPreludeCardsPhaseDto struct {
+	AvailablePreludes []CardDto `json:"availablePreludes" ts:"CardDto[]"`
+	MaxSelectable     int       `json:"maxSelectable" ts:"number"`
+}
+
+// SelectPreludeCardsOtherPlayerDto represents prelude card selection state for other players
+type SelectPreludeCardsOtherPlayerDto struct {
+	// Empty - other players don't see selection details
 }
 
 // ProductionPhaseDto represents card selection and production phase state for a player
@@ -630,7 +648,9 @@ type PlayerDto struct {
 	Milestones       []PlayerMilestoneDto       `json:"milestones" ts:"PlayerMilestoneDto[]"`             // Milestones with player eligibility state
 	Awards           []PlayerAwardDto           `json:"awards" ts:"PlayerAwardDto[]"`                     // Awards with player eligibility state
 
+	SelectCorporationPhase         *SelectCorporationPhaseDto         `json:"selectCorporationPhase" ts:"SelectCorporationPhaseDto | null"`
 	SelectStartingCardsPhase       *SelectStartingCardsPhaseDto       `json:"selectStartingCardsPhase" ts:"SelectStartingCardsPhaseDto | null"`
+	SelectPreludeCardsPhase        *SelectPreludeCardsPhaseDto        `json:"selectPreludeCardsPhase" ts:"SelectPreludeCardsPhaseDto | null"`
 	ProductionPhase                *ProductionPhaseDto                `json:"productionPhase" ts:"ProductionPhaseDto | null"`
 	StartingCards                  []CardDto                          `json:"startingCards" ts:"CardDto[]"`
 	PendingTileSelection           *PendingTileSelectionDto           `json:"pendingTileSelection" ts:"PendingTileSelectionDto | null"`
@@ -664,7 +684,9 @@ type OtherPlayerDto struct {
 	Effects          []PlayerEffectDto `json:"effects" ts:"PlayerEffectDto[]"`
 	Actions          []PlayerActionDto `json:"actions" ts:"PlayerActionDto[]"`
 
+	SelectCorporationPhase    *SelectCorporationOtherPlayerDto   `json:"selectCorporationPhase" ts:"SelectCorporationOtherPlayerDto | null"`
 	SelectStartingCardsPhase  *SelectStartingCardsOtherPlayerDto `json:"selectStartingCardsPhase" ts:"SelectStartingCardsOtherPlayerDto | null"`
+	SelectPreludeCardsPhase   *SelectPreludeCardsOtherPlayerDto  `json:"selectPreludeCardsPhase" ts:"SelectPreludeCardsOtherPlayerDto | null"`
 	ProductionPhase           *ProductionPhaseOtherPlayerDto     `json:"productionPhase" ts:"ProductionPhaseOtherPlayerDto | null"`
 	ResourceStorage           map[string]int                     `json:"resourceStorage" ts:"Record<string, number>"`
 	PaymentSubstitutes        []PaymentSubstituteDto             `json:"paymentSubstitutes" ts:"PaymentSubstituteDto[]"`
