@@ -24,7 +24,7 @@ func setupActiveGameForGlobalParams(t *testing.T) (*game.Game, game.GameReposito
 	// Create and start game
 	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
-	startAction := turnAction.NewStartGameAction(repo, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, logger)
 
 	settings := game.GameSettings{
 		MaxPlayers: 2,
