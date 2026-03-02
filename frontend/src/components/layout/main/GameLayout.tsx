@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import LeftSidebar from "../panels/LeftSidebar.tsx";
 import TopMenuBar from "../panels/TopMenuBar.tsx";
 import RightSidebar from "../panels/RightSidebar.tsx";
@@ -17,6 +17,9 @@ import {
   CardDto,
   TriggeredEffectDto,
 } from "../../../types/generated/api-types.ts";
+import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
+import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
+import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
 
 export type TransitionPhase =
   | "idle"
@@ -41,6 +44,7 @@ interface GameLayoutProps {
   bottomBarCallbacks?: BottomResourceBarCallbacks;
   onStandardProjectSelect?: (project: StandardProject) => void;
   onLeaveGame?: () => void;
+  onEndGame?: () => void;
   onSkyboxReady?: () => void;
   onGpuReady?: () => void;
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
@@ -65,6 +69,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   bottomBarCallbacks,
   onStandardProjectSelect,
   onLeaveGame,
+  onEndGame,
   onSkyboxReady,
   onGpuReady,
   onPlayerClick,
@@ -91,6 +96,42 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   // Find the current turn player for the right sidebar
   const currentTurnPlayer =
     allPlayers.find((player) => player.id === gameState?.currentTurn) || null;
+
+  const [pendingAction, setPendingAction] = useState<{
+    type: "kick" | "convertToBot";
+    playerId: string;
+    playerName: string;
+  } | null>(null);
+
+  const handleKickPlayer = useCallback(
+    (playerId: string) => {
+      const player = allPlayers.find((p) => p.id === playerId);
+      setPendingAction({ type: "kick", playerId, playerName: player?.name || "Unknown" });
+    },
+    [allPlayers],
+  );
+
+  const handleConvertToBot = useCallback(
+    (playerId: string) => {
+      const player = allPlayers.find((p) => p.id === playerId);
+      setPendingAction({ type: "convertToBot", playerId, playerName: player?.name || "Unknown" });
+    },
+    [allPlayers],
+  );
+
+  const handleConfirmAction = async () => {
+    if (!pendingAction) return;
+    setPendingAction(null);
+    try {
+      if (pendingAction.type === "kick") {
+        await globalWebSocketManager.kickPlayer(pendingAction.playerId);
+      } else {
+        await globalWebSocketManager.convertToBot(pendingAction.playerId);
+      }
+    } catch (error) {
+      console.error("Failed to execute action:", error);
+    }
+  };
 
   const showUI =
     transitionPhase === "animateUI" || transitionPhase === "complete" || transitionPhase === "idle";
@@ -131,6 +172,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             currentPlayer={currentPlayer}
             onStandardProjectSelect={onStandardProjectSelect}
             onLeaveGame={onLeaveGame}
+            onEndGame={onEndGame}
             gameId={gameState?.id}
           />
         </div>
@@ -144,16 +186,19 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             currentPlayer={currentPlayer}
             turnPlayerId={gameState?.currentTurn || ""}
             currentPhase={gameState?.currentPhase}
+            hostPlayerId={gameState?.hostPlayerId}
             hasPendingTilePlacement={!!currentPlayer?.pendingTileSelection}
             triggeredEffects={triggeredEffects}
             onPlayerClick={onPlayerClick}
+            onKickPlayer={handleKickPlayer}
+            onConvertToBot={handleConvertToBot}
           />
 
           <RightSidebar
             globalParameters={gameState?.globalParameters}
             generation={gameState?.generation}
             currentPlayer={currentTurnPlayer}
-            showVenus={true}
+            showVenus={gameState?.settings?.venusNextEnabled}
           />
 
           <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
@@ -176,6 +221,50 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             onStopSpectating={onStopSpectating}
           />
         </div>
+      )}
+
+      {pendingAction?.type === "kick" && (
+        <GameMenuModal
+          title="Kick player?"
+          showBackdrop={true}
+          onClose={() => setPendingAction(null)}
+          zIndex={10000}
+        >
+          <p className="text-white/80 text-center mb-6">
+            <span className="font-bold text-white">{pendingAction.playerName}</span> will be removed
+            from the game and cannot rejoin.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <GameMenuButton variant="secondary" onClick={() => setPendingAction(null)}>
+              Cancel
+            </GameMenuButton>
+            <GameMenuButton variant="error" onClick={() => void handleConfirmAction()}>
+              Kick
+            </GameMenuButton>
+          </div>
+        </GameMenuModal>
+      )}
+
+      {pendingAction?.type === "convertToBot" && (
+        <GameMenuModal
+          title="Convert to bot?"
+          showBackdrop={true}
+          onClose={() => setPendingAction(null)}
+          zIndex={10000}
+        >
+          <p className="text-white/80 text-center mb-6">
+            <span className="font-bold text-white">{pendingAction.playerName}</span> will be
+            replaced by a bot. This cannot be undone.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <GameMenuButton variant="secondary" onClick={() => setPendingAction(null)}>
+              Cancel
+            </GameMenuButton>
+            <GameMenuButton variant="error" onClick={() => void handleConfirmAction()}>
+              Convert
+            </GameMenuButton>
+          </div>
+        </GameMenuModal>
       )}
     </div>
   );

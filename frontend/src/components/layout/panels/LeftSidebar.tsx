@@ -12,9 +12,12 @@ interface LeftSidebarProps {
   currentPlayer: PlayerDto | null;
   turnPlayerId: string;
   currentPhase?: GamePhase;
+  hostPlayerId?: string;
   hasPendingTilePlacement?: boolean;
   triggeredEffects?: TriggeredEffectDto[];
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
+  onKickPlayer?: (playerId: string) => void;
+  onConvertToBot?: (playerId: string) => void;
 }
 
 const LeftSidebar: React.FC<LeftSidebarProps> = ({
@@ -22,9 +25,12 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   currentPlayer,
   turnPlayerId,
   currentPhase,
+  hostPlayerId,
   hasPendingTilePlacement = false,
   triggeredEffects = [],
   onPlayerClick,
+  onKickPlayer,
+  onConvertToBot,
 }) => {
   return (
     <div className="absolute top-[15%] left-0 z-10 w-[240px] h-[calc(85vh-120px)] bg-transparent py-[15px] flex flex-col overflow-visible pointer-events-none">
@@ -33,9 +39,12 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
         currentPlayer={currentPlayer}
         turnPlayerId={turnPlayerId}
         currentPhase={currentPhase}
+        hostPlayerId={hostPlayerId}
         hasPendingTilePlacement={hasPendingTilePlacement}
         triggeredEffects={triggeredEffects}
         onPlayerClick={onPlayerClick}
+        onKickPlayer={onKickPlayer}
+        onConvertToBot={onConvertToBot}
       />
     </div>
   );

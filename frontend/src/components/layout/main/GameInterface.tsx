@@ -24,6 +24,7 @@ import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import YourTurnBanner from "../../ui/overlay/YourTurnBanner.tsx";
 import MainMenuSettingsButton from "../../ui/buttons/MainMenuSettingsButton.tsx";
 import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
+import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import SpaceBackground from "../../3d/SpaceBackground.tsx";
 import EndGameOverlay, { TileVPIndicator } from "../../ui/overlay/EndGameOverlay.tsx";
@@ -252,6 +253,8 @@ export default function GameInterface() {
 
   // Leave game confirmation
   const [showLeaveGameConfirm, setShowLeaveGameConfirm] = useState(false);
+  // End game confirmation
+  const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
 
   // Change detection
   const previousGameRef = useRef<GameDto | null>(null);
@@ -401,6 +404,16 @@ export default function GameInterface() {
     navigate("/", { replace: true });
     showNotification({
       message: "You were kicked from the game",
+      type: "info",
+    });
+  }, [navigate, showNotification]);
+
+  const handleGameEnded = useCallback(() => {
+    clearGameSession();
+    globalWebSocketManager.disconnect();
+    navigate("/", { replace: true });
+    showNotification({
+      message: "The host ended the game",
       type: "info",
     });
   }, [navigate, showNotification]);
@@ -1587,6 +1600,7 @@ export default function GameInterface() {
     globalWebSocketManager.on("log-update", handleLogUpdate);
     globalWebSocketManager.on("player-disconnected", handlePlayerDisconnected);
     globalWebSocketManager.on("player-kicked", handlePlayerKicked);
+    globalWebSocketManager.on("game-ended", handleGameEnded);
     globalWebSocketManager.on("error", handleError);
     globalWebSocketManager.on("disconnect", handleDisconnect);
     globalWebSocketManager.on("max-reconnects-reached", handleMaxReconnectsReached);
@@ -1599,6 +1613,7 @@ export default function GameInterface() {
       globalWebSocketManager.off("log-update", handleLogUpdate);
       globalWebSocketManager.off("player-disconnected", handlePlayerDisconnected);
       globalWebSocketManager.off("player-kicked", handlePlayerKicked);
+      globalWebSocketManager.off("game-ended", handleGameEnded);
       globalWebSocketManager.off("error", handleError);
       globalWebSocketManager.off("disconnect", handleDisconnect);
       globalWebSocketManager.off("max-reconnects-reached", handleMaxReconnectsReached);
@@ -1610,6 +1625,7 @@ export default function GameInterface() {
     handleLogUpdate,
     handlePlayerDisconnected,
     handlePlayerKicked,
+    handleGameEnded,
     handleError,
     handleDisconnect,
     handleMaxReconnectsReached,
@@ -1810,6 +1826,17 @@ export default function GameInterface() {
       navigate("/", { replace: true });
     }, 100);
   }, [navigate]);
+
+  // End game handler - shows confirmation dialog (host only)
+  const handleEndGame = useCallback(() => {
+    setShowEndGameConfirm(true);
+  }, []);
+
+  // Confirm end game - sends end-game message to server
+  const handleConfirmEndGame = useCallback(() => {
+    setShowEndGameConfirm(false);
+    void globalWebSocketManager.endGame();
+  }, []);
 
   // Tab conflict handlers
   const handleTabTakeOver = () => {
@@ -2365,6 +2392,7 @@ export default function GameInterface() {
           bottomBarCallbacks={bottomBarCallbacks}
           onStandardProjectSelect={handleStandardProjectSelect}
           onLeaveGame={handleLeaveGame}
+          onEndGame={handleEndGame}
           onSkyboxReady={handleSkyboxReady}
           onGpuReady={handleGpuReady}
           onPlayerClick={handlePlayerClick}
@@ -2378,7 +2406,7 @@ export default function GameInterface() {
       <CardsPlayedModal
         isVisible={showCardsPlayedModal}
         onClose={() => setShowCardsPlayedModal(false)}
-        cards={currentPlayer?.playedCards || []}
+        cards={(spectatePlayer?.playedCards ?? currentPlayer?.playedCards) || []}
       />
 
       <ProductionPhaseModal
@@ -2486,6 +2514,28 @@ export default function GameInterface() {
         </GameMenuModal>
       )}
 
+      {/* End game confirmation dialog (host only) */}
+      {showEndGameConfirm && (
+        <GameMenuModal
+          title="End game?"
+          showBackdrop={true}
+          onClose={() => setShowEndGameConfirm(false)}
+          zIndex={10000}
+        >
+          <p className="text-white/80 text-center mb-6">
+            This will end the game for all players. This action cannot be undone.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <GameMenuButton variant="secondary" onClick={() => setShowEndGameConfirm(false)}>
+              Cancel
+            </GameMenuButton>
+            <GameMenuButton variant="error" onClick={handleConfirmEndGame}>
+              End game
+            </GameMenuButton>
+          </div>
+        </GameMenuModal>
+      )}
+
       {/* Starting selection overlay (corporation + preludes + project cards) */}
       <StartingCardSelectionOverlay
         isOpen={showStartingSelection}
@@ -2522,6 +2572,9 @@ export default function GameInterface() {
                       name: string;
                       isReady: boolean;
                       isSelf: boolean;
+                      playerType: string;
+                      botDifficulty?: string;
+                      botSpeed?: string;
                     }[] = [];
 
                     if (game.currentPlayer) {
@@ -2534,6 +2587,9 @@ export default function GameInterface() {
                           !game.currentPlayer.selectStartingCardsPhase &&
                           !!game.currentPlayer.corporation,
                         isSelf: true,
+                        playerType: game.currentPlayer.playerType,
+                        botDifficulty: game.currentPlayer.botDifficulty || undefined,
+                        botSpeed: game.currentPlayer.botSpeed || undefined,
                       });
                     }
 
@@ -2547,6 +2603,9 @@ export default function GameInterface() {
                           !other.selectPreludeCardsPhase &&
                           !!other.corporation,
                         isSelf: false,
+                        playerType: other.playerType,
+                        botDifficulty: other.botDifficulty || undefined,
+                        botSpeed: other.botSpeed || undefined,
                       });
                     });
 
@@ -2567,6 +2626,12 @@ export default function GameInterface() {
                             <span className="bg-space-blue-800 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
                               You
                             </span>
+                          )}
+                          {player.playerType === "bot" && (
+                            <>
+                              <BotDifficultyChip difficulty={player.botDifficulty} />
+                              <BotSpeedChip speed={player.botSpeed} />
+                            </>
                           )}
                           {player.isReady ? (
                             <span className="flex items-center gap-1 bg-emerald-700/80 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">

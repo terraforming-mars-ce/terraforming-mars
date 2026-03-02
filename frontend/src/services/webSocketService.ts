@@ -37,7 +37,11 @@ import {
   MessageTypeActionConfirmDemoSetup,
   MessageTypeActionClaimMilestone,
   MessageTypeActionFundAward,
+  MessageTypeAddBot,
   MessageTypeKickPlayer,
+  MessageTypeEndGame,
+  MessageTypeGameEnded,
+  MessageTypeConvertToBot,
   MessageTypeActionBehaviorChoiceConfirmed,
   MessageTypeActionCardDiscardConfirmed,
   MessageTypeRequestLogs,
@@ -176,6 +180,10 @@ export class WebSocketService {
       }
       case MessageTypePlayerKicked: {
         this.emit("player-kicked", message.payload);
+        break;
+      }
+      case MessageTypeGameEnded: {
+        this.emit("game-ended", message.payload);
         break;
       }
       default:
@@ -355,8 +363,24 @@ export class WebSocketService {
     });
   }
 
+  addBot(botName?: string, difficulty?: string, speed?: string): string {
+    return this.send(MessageTypeAddBot, {
+      botName: botName || "",
+      difficulty: difficulty || "normal",
+      speed: speed || "normal",
+    });
+  }
+
   kickPlayer(targetPlayerId: string): string {
     return this.send(MessageTypeKickPlayer, { targetPlayerId });
+  }
+
+  endGame(): string {
+    return this.send(MessageTypeEndGame, {});
+  }
+
+  convertToBot(targetPlayerId: string): string {
+    return this.send(MessageTypeConvertToBot, { targetPlayerId });
   }
 
   requestLogs(): void {

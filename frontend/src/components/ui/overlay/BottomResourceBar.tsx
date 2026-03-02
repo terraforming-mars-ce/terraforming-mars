@@ -541,7 +541,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                           disabled={isConversionDisabled || !showConversionButton}
                           className={`flex items-center justify-center gap-0.5 px-1.5 py-0.5 bg-black/80 border border-white/20 transition-all duration-200 ${
                             isConversionDisabled || !showConversionButton
-                              ? "opacity-40 cursor-not-allowed"
+                              ? "opacity-40 cursor-default"
                               : "cursor-pointer hover:bg-white/10 hover:border-white/40"
                           }`}
                           style={{

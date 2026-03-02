@@ -24,6 +24,7 @@ const CreateGamePage: React.FC = () => {
   const [isFadedIn, setIsFadedIn] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [isCreatingDemo, setIsCreatingDemo] = useState(false);
+  const [claudeApiKey, setClaudeApiKey] = useState("");
 
   // Check if skybox is already loaded on component mount
   useEffect(() => {
@@ -60,9 +61,10 @@ const CreateGamePage: React.FC = () => {
         developmentMode: developmentMode,
         cardPacks: selectedPacks,
         demoGame: false,
+        hasClaudeApiKey: !!claudeApiKey.trim(),
       };
 
-      const game = await apiService.createGame(gameSettings);
+      const game = await apiService.createGame(gameSettings, claudeApiKey.trim() || undefined);
 
       // Step 2: Load 3D environment if not already loaded
       if (!skyboxReady) {
@@ -229,7 +231,7 @@ const CreateGamePage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isLoading || !playerName.trim()}
-                  className="bg-transparent border-none py-4 px-5 cursor-pointer flex items-center justify-center transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60 group"
+                  className="bg-transparent border-none py-4 px-5 cursor-pointer flex items-center justify-center transition-all duration-200 disabled:cursor-default disabled:opacity-60 group"
                 >
                   <div className="w-4 h-6 brightness-0 invert transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] group-hover:scale-110">
                     <GameIcon iconType="arrow" size="small" />
@@ -249,7 +251,7 @@ const CreateGamePage: React.FC = () => {
                   type="button"
                   onClick={() => void handleDemoGame()}
                   disabled={isCreatingDemo}
-                  className="text-white/50 text-sm py-1 px-3 cursor-pointer hover:text-white/70 transition-colors bg-transparent border-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-white/50 text-sm py-1 px-3 cursor-pointer hover:text-white/70 transition-colors bg-transparent border-none disabled:opacity-50 disabled:cursor-default"
                 >
                   {isCreatingDemo ? "Creating..." : "Demo game"}
                 </button>
@@ -274,7 +276,7 @@ const CreateGamePage: React.FC = () => {
                         if (val >= 1 && val <= 10) setMaxPlayers(val);
                       }}
                       disabled={isLoading}
-                      className="w-16 bg-black/50 border border-white/20 rounded-lg py-1 px-2 text-white text-sm text-center outline-none focus:border-white/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-16 bg-black/50 border border-white/20 rounded-lg py-1 px-2 text-white text-sm text-center outline-none focus:border-white/60 transition-colors disabled:opacity-60 disabled:cursor-default"
                     />
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
@@ -283,7 +285,7 @@ const CreateGamePage: React.FC = () => {
                       checked={developmentMode}
                       onChange={(e) => setDevelopmentMode(e.target.checked)}
                       disabled={isLoading}
-                      className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
                     />
                     <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2">
                       Development Mode
@@ -308,7 +310,7 @@ const CreateGamePage: React.FC = () => {
                           isLoading ||
                           (selectedPacks.includes("base-game") && selectedPacks.length === 1)
                         }
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
                       />
                       <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
                         Base Game
@@ -329,7 +331,7 @@ const CreateGamePage: React.FC = () => {
                           isLoading ||
                           (selectedPacks.includes("prelude") && selectedPacks.length === 1)
                         }
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
                       />
                       <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
                         Prelude
@@ -347,7 +349,7 @@ const CreateGamePage: React.FC = () => {
                         checked={venusNextEnabled}
                         onChange={(e) => setVenusEnabled(e.target.checked)}
                         disabled={isLoading}
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
                       />
                       <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
                         Venus Next
@@ -367,7 +369,7 @@ const CreateGamePage: React.FC = () => {
                           isLoading ||
                           (selectedPacks.includes("future") && selectedPacks.length === 1)
                         }
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
                       />
                       <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
                         Future Content
@@ -379,6 +381,29 @@ const CreateGamePage: React.FC = () => {
                       </span>
                     </label>
                   </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <h3 className="text-white text-sm font-semibold mb-3 text-center">AI Bot</h3>
+                  <label className="flex flex-col gap-2 py-2 px-2 rounded">
+                    <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2">
+                      Claude token
+                      <InfoTooltip size="small">
+                        Provide your own Claude token to enable AI bot players. The token is sent
+                        with the game settings and used server-side for Claude invocations.
+                      </InfoTooltip>
+                    </span>
+                    <input
+                      type="password"
+                      value={claudeApiKey}
+                      onChange={(e) => setClaudeApiKey(e.target.value)}
+                      placeholder="sk-ant-..."
+                      disabled={isLoading}
+                      spellCheck={false}
+                      autoComplete="off"
+                      className="w-full bg-black/50 border border-white/20 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-white/60 transition-colors disabled:opacity-60 disabled:cursor-default placeholder:text-white/30"
+                    />
+                  </label>
                 </div>
               </div>
             </form>

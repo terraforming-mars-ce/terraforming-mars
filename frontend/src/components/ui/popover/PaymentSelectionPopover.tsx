@@ -499,7 +499,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
               ${
                 canConfirm
                   ? "bg-green-600/80 border-green-500/60 shadow-[0_0_8px_rgba(34,197,94,0.4)] hover:bg-green-500/80 hover:border-green-500/80 hover:shadow-[0_0_12px_rgba(34,197,94,0.6)]"
-                  : "bg-gray-600/50 border-gray-500/40 opacity-50 cursor-not-allowed"
+                  : "bg-gray-600/50 border-gray-500/40 opacity-50 cursor-default"
               }
             `}
           >

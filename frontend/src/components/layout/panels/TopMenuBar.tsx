@@ -130,6 +130,7 @@ interface TopMenuBarProps {
   currentPlayer?: PlayerDto | null;
   onStandardProjectSelect?: (project: StandardProject) => void;
   onLeaveGame?: () => void;
+  onEndGame?: () => void;
   gameId?: string;
 }
 
@@ -138,6 +139,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   currentPlayer,
   onStandardProjectSelect,
   onLeaveGame,
+  onEndGame,
   gameId,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -179,6 +181,11 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   const handleLeaveGame = () => {
     setMenuOpen(false);
     onLeaveGame?.();
+  };
+
+  const handleEndGame = () => {
+    setMenuOpen(false);
+    onEndGame?.();
   };
 
   const handleStandardProjectSelect = (project: StandardProject) => {
@@ -476,6 +483,35 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               </svg>
               Leave game
             </button>
+            {currentPlayer?.id === gameState.hostPlayerId && (
+              <>
+                <div className="border-t border-[#333]" />
+                <button
+                  onClick={() => {
+                    menuItemHover.onClick?.();
+                    handleEndGame();
+                  }}
+                  onMouseEnter={menuItemHover.onMouseEnter}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-red-400 text-sm hover:bg-white/10 transition-colors text-left"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                  </svg>
+                  End game
+                </button>
+              </>
+            )}
             <div className="border-t border-[#333]" />
             <div className="px-4 py-2 text-white/25 text-xs text-center select-none">
               {APP_VERSION}

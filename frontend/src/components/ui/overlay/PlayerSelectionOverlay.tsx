@@ -42,8 +42,9 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
         <h3 className="text-white text-sm font-semibold mb-2 uppercase tracking-wide">Players</h3>
         <div className="flex flex-col gap-2">
           {orderedPlayers.map((player) => {
+            const isExited = player.isExited;
             const isConnected = player.isConnected;
-            const canSelect = !isConnected;
+            const canSelect = !isConnected && !isExited;
 
             return (
               <button
@@ -53,7 +54,7 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
                 className={`flex justify-between items-center py-3 px-4 bg-black/40 rounded-lg border transition-all text-left w-full ${
                   canSelect
                     ? "border-space-blue-600/50 hover:border-space-blue-400 hover:bg-black/60 cursor-pointer"
-                    : "border-white/10 opacity-50 cursor-not-allowed"
+                    : "border-white/10 opacity-50 cursor-default"
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -70,11 +71,15 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
                   )}
                   <span className="text-white text-sm font-medium">{player.name}</span>
                 </div>
-                {!isConnected && (
+                {isExited ? (
+                  <span className="px-1.5 py-px rounded-lg text-[8px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white border border-[rgba(231,76,60,0.5)]">
+                    EXITED
+                  </span>
+                ) : !isConnected ? (
                   <span className="px-1.5 py-px rounded-lg text-[8px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white border border-[rgba(231,76,60,0.5)]">
                     DISCONNECTED
                   </span>
-                )}
+                ) : null}
               </button>
             );
           })}
