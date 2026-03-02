@@ -41,6 +41,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   >("initial");
   const [showCardSelection, setShowCardSelection] = useState(false);
   const prevSelectionCompleteRef = useRef<boolean | undefined>(undefined);
+  const prevIsOpenRef = useRef(false);
 
   const handleCardSelection = useCallback(
     async (selectedCardIds: string[]) => {
@@ -65,15 +66,19 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   useEffect(() => {
     const selectionComplete = gameState?.currentPlayer?.productionPhase?.selectionComplete;
     const prev = prevSelectionCompleteRef.current;
+    const wasOpen = prevIsOpenRef.current;
 
-    // Only reset when selectionComplete transitions to false from undefined (phase appearing)
-    // or from true (new generation starting)
-    if (isOpen && selectionComplete === false && (prev === undefined || prev === true)) {
+    const selectionTransitioned =
+      selectionComplete === false && (prev === undefined || prev === true);
+    const modalJustOpened = isOpen && !wasOpen && selectionComplete === false;
+
+    if (isOpen && (selectionTransitioned || modalJustOpened)) {
       setHasSubmittedCardSelection(false);
       setShowCardSelection(openDirectlyToCardSelection);
     }
 
     prevSelectionCompleteRef.current = selectionComplete;
+    prevIsOpenRef.current = isOpen;
   }, [
     isOpen,
     gameState?.currentPlayer?.productionPhase?.selectionComplete,
@@ -519,6 +524,16 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
     );
   };
 
+  const nextButton =
+    !hasSubmittedCardSelection && !showCardSelection ? (
+      <button
+        className="ml-5 flex-shrink-0 bg-[linear-gradient(135deg,rgba(30,60,150,0.8)_0%,rgba(20,40,120,0.9)_100%)] border-2 border-space-blue-400 rounded-full text-white text-[32px] font-bold w-[60px] h-[60px] cursor-pointer transition-all duration-300 text-shadow-dark shadow-[0_4px_15px_rgba(0,0,0,0.4)] flex items-center justify-center p-0 hover:bg-[linear-gradient(135deg,rgba(40,70,160,0.9)_0%,rgba(30,50,130,1)_100%)] hover:border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-95 active:shadow-[0_2px_10px_rgba(0,0,0,0.3)]"
+        onClick={() => setShowCardSelection(true)}
+      >
+        →
+      </button>
+    ) : null;
+
   return (
     <>
       <GameModal
@@ -530,6 +545,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
         closeOnBackdrop={false}
         closeOnEscape={false}
         className="!max-w-[800px] !min-w-[600px]"
+        outerContent={nextButton}
       >
         <div className="text-center py-[30px] px-[30px] pb-5 bg-black/40 border-b border-[var(--modal-accent)]/60 relative">
           <h2 className="text-[28px] font-orbitron text-white font-bold text-shadow-glow tracking-wider m-0 mb-2">
@@ -564,15 +580,6 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
           </div>
         </GameModalContent>
       </GameModal>
-
-      {!hasSubmittedCardSelection && !showCardSelection && isOpen && (
-        <button
-          className="fixed left-1/2 top-1/2 -translate-y-1/2 translate-x-[calc(400px+40px)] bg-[linear-gradient(135deg,rgba(30,60,150,0.8)_0%,rgba(20,40,120,0.9)_100%)] border-2 border-space-blue-400 rounded-full text-white text-[32px] font-bold w-[60px] h-[60px] cursor-pointer transition-all duration-300 text-shadow-dark shadow-[0_4px_15px_rgba(0,0,0,0.4)] flex items-center justify-center z-[3001] p-0 hover:bg-[linear-gradient(135deg,rgba(40,70,160,0.9)_0%,rgba(30,50,130,1)_100%)] hover:border-space-blue-500 hover:translate-x-[calc(400px+45px)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:translate-x-[calc(400px+40px)] active:scale-95 active:shadow-[0_2px_10px_rgba(0,0,0,0.3)]"
-          onClick={() => setShowCardSelection(true)}
-        >
-          →
-        </button>
-      )}
 
       {showCardSelection && (
         <ProductionCardSelectionOverlay

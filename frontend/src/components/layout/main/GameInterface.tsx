@@ -454,8 +454,7 @@ export default function GameInterface() {
     const hasProductionData =
       currentPlayer.productionPhase &&
       !currentPlayer.productionPhase.selectionComplete &&
-      currentPlayer.productionPhase.availableCards &&
-      currentPlayer.productionPhase.availableCards.length >= 0;
+      currentPlayer.productionPhase.availableCards;
 
     if (hasProductionData && !showProductionPhaseModal) {
       // Only play sound if this is not the initial mount (skip on page reload)
