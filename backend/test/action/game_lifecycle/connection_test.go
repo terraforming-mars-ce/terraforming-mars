@@ -18,7 +18,7 @@ func TestKickPlayerAction_HostKicksNonHostInLobby_Success(t *testing.T) {
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
 	logger := testutil.TestLogger()
 
-	kickAction := connection.NewKickPlayerAction(repo, logger)
+	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
 
 	hostPlayerID := testGame.HostPlayerID()
 	players := testGame.GetAllPlayers()
@@ -48,7 +48,7 @@ func TestKickPlayerAction_NonHostCannotKick_Error(t *testing.T) {
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
 	logger := testutil.TestLogger()
 
-	kickAction := connection.NewKickPlayerAction(repo, logger)
+	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
 
 	hostPlayerID := testGame.HostPlayerID()
 	players := testGame.GetAllPlayers()
@@ -77,7 +77,7 @@ func TestKickPlayerAction_HostCannotKickSelf_Error(t *testing.T) {
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	logger := testutil.TestLogger()
 
-	kickAction := connection.NewKickPlayerAction(repo, logger)
+	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
 
 	hostPlayerID := testGame.HostPlayerID()
 
@@ -89,14 +89,14 @@ func TestKickPlayerAction_HostCannotKickSelf_Error(t *testing.T) {
 	testutil.AssertEqual(t, 2, len(fetchedGame.GetAllPlayers()), "No player should be removed")
 }
 
-func TestKickPlayerAction_CannotKickInActiveGame_Error(t *testing.T) {
+func TestKickPlayerAction_ActiveGameKick_MarksAsExited(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	logger := testutil.TestLogger()
 
 	testutil.StartTestGame(t, testGame)
 
-	kickAction := connection.NewKickPlayerAction(repo, logger)
+	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
 
 	hostPlayerID := testGame.HostPlayerID()
 	players := testGame.GetAllPlayers()
@@ -110,17 +110,22 @@ func TestKickPlayerAction_CannotKickInActiveGame_Error(t *testing.T) {
 
 	err := kickAction.Execute(context.Background(), testGame.ID(), hostPlayerID, nonHostPlayerID)
 
-	testutil.AssertError(t, err, "Should not be able to kick players in active game")
+	testutil.AssertNoError(t, err, "Should be able to kick players in active game")
 
 	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
-	testutil.AssertEqual(t, 2, len(fetchedGame.GetAllPlayers()), "No player should be removed")
+	testutil.AssertEqual(t, 2, len(fetchedGame.GetAllPlayers()), "Player should still be in game (marked as exited)")
+
+	kickedPlayer, _ := fetchedGame.GetPlayer(nonHostPlayerID)
+	testutil.AssertTrue(t, kickedPlayer.HasExited(), "Kicked player should be marked as exited")
+	testutil.AssertFalse(t, kickedPlayer.IsConnected(), "Kicked player should be disconnected")
+	testutil.AssertTrue(t, kickedPlayer.HasPassed(), "Kicked player should be marked as passed")
 }
 
 func TestKickPlayerAction_GameNotFound_Error(t *testing.T) {
 	repo := game.NewInMemoryGameRepository()
 	logger := testutil.TestLogger()
 
-	kickAction := connection.NewKickPlayerAction(repo, logger)
+	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
 
 	err := kickAction.Execute(context.Background(), "non-existent-game", "host-id", "target-id")
 
@@ -132,7 +137,7 @@ func TestKickPlayerAction_PlayerNotFound_Error(t *testing.T) {
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	logger := testutil.TestLogger()
 
-	kickAction := connection.NewKickPlayerAction(repo, logger)
+	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
 
 	hostPlayerID := testGame.HostPlayerID()
 
@@ -149,7 +154,7 @@ func TestKickPlayerAction_KickLeavesHostAlone_Success(t *testing.T) {
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	logger := testutil.TestLogger()
 
-	kickAction := connection.NewKickPlayerAction(repo, logger)
+	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
 
 	hostPlayerID := testGame.HostPlayerID()
 	players := testGame.GetAllPlayers()

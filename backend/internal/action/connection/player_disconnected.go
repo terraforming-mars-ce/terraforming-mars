@@ -59,11 +59,28 @@ func (a *PlayerDisconnectedAction) Execute(ctx context.Context, gameID string, p
 		}
 
 		if wasHost {
-			if err := g.SetHostPlayerID(ctx, remaining[0].ID()); err != nil {
+			var newHost string
+			for _, p := range remaining {
+				if !p.IsBot() {
+					newHost = p.ID()
+					break
+				}
+			}
+
+			if newHost == "" {
+				if err := a.gameRepo.Delete(ctx, gameID); err != nil {
+					log.Error("Failed to delete game with only bots", zap.Error(err))
+					return fmt.Errorf("failed to delete game: %w", err)
+				}
+				log.Info("🗑️ Game deleted (no human players remaining)")
+				return nil
+			}
+
+			if err := g.SetHostPlayerID(ctx, newHost); err != nil {
 				log.Error("Failed to reassign host", zap.Error(err))
 				return fmt.Errorf("failed to reassign host: %w", err)
 			}
-			log.Info("👑 Host reassigned", zap.String("new_host", remaining[0].ID()))
+			log.Info("👑 Host reassigned to human player", zap.String("new_host", newHost))
 		}
 
 		log.Info("✅ Player removed from lobby")
@@ -74,6 +91,11 @@ func (a *PlayerDisconnectedAction) Execute(ctx context.Context, gameID string, p
 	if err != nil {
 		log.Error("Player not found in game", zap.Error(err))
 		return fmt.Errorf("player not found: %s", playerID)
+	}
+
+	if player.IsBot() {
+		log.Debug("Skipping disconnect for bot player", zap.String("player_id", playerID))
+		return nil
 	}
 
 	player.SetConnected(false)

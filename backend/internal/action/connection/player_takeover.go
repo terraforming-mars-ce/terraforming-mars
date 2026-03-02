@@ -58,6 +58,16 @@ func (a *PlayerTakeoverAction) Execute(ctx context.Context, gameID string, targe
 		return nil, fmt.Errorf("player not found: %s", targetPlayerID)
 	}
 
+	if player.HasExited() {
+		log.Warn("Cannot take over an exited player")
+		return nil, fmt.Errorf("player has been kicked from the game")
+	}
+
+	if player.IsBot() {
+		log.Warn("Cannot take over a bot player")
+		return nil, fmt.Errorf("cannot take over a bot player")
+	}
+
 	if player.IsConnected() {
 		log.Warn("Cannot take over a connected player")
 		return nil, fmt.Errorf("player is already connected")

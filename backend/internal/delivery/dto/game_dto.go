@@ -394,6 +394,8 @@ type GameSettingsDto struct {
 	DevelopmentMode  bool     `json:"developmentMode" ts:"boolean"`
 	DemoGame         bool     `json:"demoGame" ts:"boolean"`
 	CardPacks        []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
+	HasClaudeAPIKey  bool     `json:"hasClaudeApiKey" ts:"boolean"`
+	ClaudeModel      string   `json:"claudeModel,omitempty" ts:"string | undefined"`
 }
 
 // GlobalParametersDto represents the terraforming progress
@@ -624,12 +626,17 @@ const (
 	PlayerStatusSelectingProductionCards PlayerStatus = "selecting-production-cards"
 	PlayerStatusWaiting                  PlayerStatus = "waiting"
 	PlayerStatusActive                   PlayerStatus = "active"
+	PlayerStatusExited                   PlayerStatus = "exited"
 )
 
 // PlayerDto represents a player in the game for client consumption
 type PlayerDto struct {
 	ID               string                     `json:"id" ts:"string"`
 	Name             string                     `json:"name" ts:"string"`
+	PlayerType       string                     `json:"playerType" ts:"string"`
+	BotStatus        string                     `json:"botStatus,omitempty" ts:"string | undefined"`
+	BotDifficulty    string                     `json:"botDifficulty,omitempty" ts:"string | undefined"`
+	BotSpeed         string                     `json:"botSpeed,omitempty" ts:"string | undefined"`
 	Color            string                     `json:"color" ts:"string"`
 	Status           PlayerStatus               `json:"status" ts:"PlayerStatus"`
 	Corporation      *CardDto                   `json:"corporation" ts:"CardDto | null"`
@@ -641,6 +648,7 @@ type PlayerDto struct {
 	Passed           bool                       `json:"passed" ts:"boolean"`
 	AvailableActions int                        `json:"availableActions" ts:"number"`
 	IsConnected      bool                       `json:"isConnected" ts:"boolean"`
+	IsExited         bool                       `json:"isExited" ts:"boolean"`
 	Effects          []PlayerEffectDto          `json:"effects" ts:"PlayerEffectDto[]"`                   // Active ongoing effects (discounts, special abilities, etc.)
 	Actions          []PlayerActionDto          `json:"actions" ts:"PlayerActionDto[]"`                   // Available actions from played cards with manual triggers
 	StandardProjects []PlayerStandardProjectDto `json:"standardProjects" ts:"PlayerStandardProjectDto[]"` // Standard projects with availability state (Player-Scoped Architecture)
@@ -669,6 +677,10 @@ type PlayerDto struct {
 type OtherPlayerDto struct {
 	ID               string            `json:"id" ts:"string"`
 	Name             string            `json:"name" ts:"string"`
+	PlayerType       string            `json:"playerType" ts:"string"`
+	BotStatus        string            `json:"botStatus,omitempty" ts:"string | undefined"`
+	BotDifficulty    string            `json:"botDifficulty,omitempty" ts:"string | undefined"`
+	BotSpeed         string            `json:"botSpeed,omitempty" ts:"string | undefined"`
 	Color            string            `json:"color" ts:"string"`
 	Status           PlayerStatus      `json:"status" ts:"PlayerStatus"`
 	Corporation      *CardDto          `json:"corporation" ts:"CardDto | null"`
@@ -680,6 +692,7 @@ type OtherPlayerDto struct {
 	Passed           bool              `json:"passed" ts:"boolean"`
 	AvailableActions int               `json:"availableActions" ts:"number"`
 	IsConnected      bool              `json:"isConnected" ts:"boolean"`
+	IsExited         bool              `json:"isExited" ts:"boolean"`
 	Effects          []PlayerEffectDto `json:"effects" ts:"PlayerEffectDto[]"`
 	Actions          []PlayerActionDto `json:"actions" ts:"PlayerActionDto[]"`
 

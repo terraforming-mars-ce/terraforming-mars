@@ -1264,9 +1264,6 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 
 						if neighborTile.OccupiedBy != nil && neighborTile.OccupiedBy.Type == shared.ResourceCityTile {
 							hasAdjacentCity = true
-							logger.Get().Info("🚫 City adjacency violation detected",
-								zap.String("tile", tile.Coordinates.String()),
-								zap.String("adjacent_city", neighborTile.Coordinates.String()))
 							break
 						}
 					}

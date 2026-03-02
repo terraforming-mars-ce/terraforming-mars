@@ -72,17 +72,22 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 	return PlayerDto{
 		ID:               p.ID(),
 		Name:             p.Name(),
+		PlayerType:       string(p.PlayerType()),
+		BotStatus:        string(p.BotStatus()),
+		BotDifficulty:    string(p.BotDifficulty()),
+		BotSpeed:         string(p.BotSpeed()),
 		Color:            p.Color(),
 		Resources:        toResourcesDto(resources),
 		Production:       toProductionDto(production),
 		TerraformRating:  resourcesComponent.TerraformRating(),
-		Status:           PlayerStatusWaiting, // Default status
+		Status:           playerStatus(p),
 		Corporation:      corporation,
 		Cards:            handCards, // PlayerCardDto[] with state
 		PlayedCards:      playedCards,
 		Passed:           p.HasPassed(),
 		AvailableActions: getAvailableActionsForPlayer(g, p.ID()),
 		IsConnected:      p.IsConnected(),
+		IsExited:         p.HasExited(),
 		Effects:          convertPlayerEffects(p.Effects().List()),
 		Actions:          convertPlayerActions(p.Actions().List(), p, g),
 		StandardProjects: standardProjects, // PlayerStandardProjectDto[] with state
@@ -122,17 +127,22 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 	return OtherPlayerDto{
 		ID:               p.ID(),
 		Name:             p.Name(),
+		PlayerType:       string(p.PlayerType()),
+		BotStatus:        string(p.BotStatus()),
+		BotDifficulty:    string(p.BotDifficulty()),
+		BotSpeed:         string(p.BotSpeed()),
 		Color:            p.Color(),
 		Resources:        toResourcesDto(resources),
 		Production:       toProductionDto(production),
 		TerraformRating:  resourcesComponent.TerraformRating(),
-		Status:           PlayerStatusWaiting,
+		Status:           playerStatus(p),
 		Corporation:      corporation,
 		HandCardCount:    handCardCount,
 		PlayedCards:      playedCards,
 		Passed:           p.HasPassed(),
 		AvailableActions: getAvailableActionsForPlayer(g, p.ID()),
 		IsConnected:      p.IsConnected(),
+		IsExited:         p.HasExited(),
 		Effects:          convertPlayerEffects(p.Effects().List()),
 		Actions:          convertPlayerActions(p.Actions().List(), p, g),
 
@@ -144,6 +154,13 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		PaymentSubstitutes:        convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
 		StoragePaymentSubstitutes: convertStoragePaymentSubstitutes(p.Resources().StoragePaymentSubstitutes()),
 	}
+}
+
+func playerStatus(p *player.Player) PlayerStatus {
+	if p.HasExited() {
+		return PlayerStatusExited
+	}
+	return PlayerStatusWaiting
 }
 
 func convertSelectCorporationPhase(phase *player.SelectCorporationPhase, cardRegistry cards.CardRegistry) *SelectCorporationPhaseDto {
