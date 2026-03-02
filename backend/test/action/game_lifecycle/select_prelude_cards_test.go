@@ -115,13 +115,18 @@ func TestSelectStartingChoices_HappyPath_WithPreludes(t *testing.T) {
 	testutil.AssertTrue(t, testGame.GetSelectPreludeCardsPhase(playerID1) == nil, "Player 1 prelude phase should be cleared")
 	testutil.AssertTrue(t, testGame.GetSelectStartingCardsPhase(playerID1) == nil, "Player 1 starting cards phase should be cleared")
 
-	// Player 1 should have corporation set
+	// Player 1 should have corporation ID set (for display)
 	p1, _ := testGame.GetPlayer(playerID1)
 	testutil.AssertEqual(t, corpID1, p1.CorporationID(), "Player 1 should have corporation set")
 
-	// Selected preludes should be in played cards
-	testutil.AssertTrue(t, p1.PlayedCards().Contains("P01"), "P01 should be in played cards")
-	testutil.AssertTrue(t, p1.PlayedCards().Contains("P03"), "P03 should be in played cards")
+	// Preludes should NOT be in played cards yet (deferred to init_apply_prelude)
+	testutil.AssertFalse(t, p1.PlayedCards().Contains("P01"), "P01 should NOT be in played cards yet")
+	testutil.AssertFalse(t, p1.PlayedCards().Contains("P03"), "P03 should NOT be in played cards yet")
+
+	// Deferred choices should be stored
+	deferred1 := testGame.GetDeferredStartingChoices(playerID1)
+	testutil.AssertTrue(t, deferred1 != nil, "Deferred choices should be stored for player 1")
+	testutil.AssertEqual(t, corpID1, deferred1.CorporationID, "Deferred corp should match")
 
 	// Game should still be in starting_selection (player 2 hasn't selected)
 	testutil.AssertEqual(t, game.GamePhaseStartingSelection, testGame.CurrentPhase(), "Game should still be in starting selection phase")
@@ -132,13 +137,11 @@ func TestSelectStartingChoices_HappyPath_WithPreludes(t *testing.T) {
 	err = action.Execute(ctx, testGame.ID(), playerID2, corpID2, []string{"P04", "P07"}, []string{})
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 2")
 
-	// Game should advance to action phase
-	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Game should advance to action phase")
+	// Game should advance to init_apply_corp (not action phase)
+	testutil.AssertEqual(t, game.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Game should advance to init_apply_corp phase")
 
-	// Current turn should be set
-	currentTurn := testGame.CurrentTurn()
-	testutil.AssertTrue(t, currentTurn != nil, "Current turn should be set")
-	testutil.AssertEqual(t, playerID1, currentTurn.PlayerID(), "First player should have the turn")
+	// No effects applied yet - waiting for first confirm
+	testutil.AssertTrue(t, testGame.InitPhaseWaitingForConfirm(), "Should be waiting for confirm")
 }
 
 func TestSelectStartingChoices_HappyPath_NoPreludes(t *testing.T) {
@@ -158,11 +161,11 @@ func TestSelectStartingChoices_HappyPath_NoPreludes(t *testing.T) {
 	err = action.Execute(ctx, testGame.ID(), playerID2, corpID2, []string{}, []string{})
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 2")
 
-	// Should go straight to action phase
-	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Game should be in action phase without prelude pack")
+	// Should go to init_apply_corp (not directly to action phase)
+	testutil.AssertEqual(t, game.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Game should be in init_apply_corp phase")
 }
 
-func TestSelectStartingChoices_PreludeEffects(t *testing.T) {
+func TestSelectStartingChoices_DeferredStorage(t *testing.T) {
 	testGame, action, playerID1, _ := setupStartingSelectionGame(t, true)
 	ctx := context.Background()
 
@@ -179,10 +182,16 @@ func TestSelectStartingChoices_PreludeEffects(t *testing.T) {
 	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{"P01", "P03"}, []string{})
 	testutil.AssertNoError(t, err, "Failed to select starting choices")
 
-	// Selected preludes should be in played cards
+	// Preludes should NOT be in played cards (deferred)
 	p1, _ := testGame.GetPlayer(playerID1)
-	testutil.AssertTrue(t, p1.PlayedCards().Contains("P01"), "P01 should be in played cards")
-	testutil.AssertTrue(t, p1.PlayedCards().Contains("P03"), "P03 should be in played cards")
+	testutil.AssertFalse(t, p1.PlayedCards().Contains("P01"), "P01 should NOT be in played cards yet")
+	testutil.AssertFalse(t, p1.PlayedCards().Contains("P03"), "P03 should NOT be in played cards yet")
+
+	// Deferred choices should store the selected preludes
+	deferred := testGame.GetDeferredStartingChoices(playerID1)
+	testutil.AssertTrue(t, deferred != nil, "Deferred choices should be stored")
+	testutil.AssertEqual(t, corpID1, deferred.CorporationID, "Deferred corp ID should match")
+	testutil.AssertEqual(t, 2, len(deferred.PreludeIDs), "Should have 2 deferred preludes")
 
 	// Unselected preludes should be in discard pile
 	discardPile := testGame.Deck().DiscardPile()

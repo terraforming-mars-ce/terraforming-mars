@@ -20,7 +20,7 @@ func TestDispatcher_UnknownType(t *testing.T) {
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
-		logger,
+		nil, logger,
 	)
 
 	rawCmd := json.RawMessage(`{"type": "unknown.command", "payload": {}}`)
@@ -36,7 +36,7 @@ func TestDispatcher_InvalidJSON(t *testing.T) {
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
-		logger,
+		nil, logger,
 	)
 
 	rawCmd := json.RawMessage(`not json`)
@@ -56,7 +56,7 @@ func TestDispatcher_SkipAction(t *testing.T) {
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
-		logger,
+		nil, logger,
 	)
 
 	rawCmd := json.RawMessage(`{"type": "action.game-management.skip-action", "payload": {}}`)
