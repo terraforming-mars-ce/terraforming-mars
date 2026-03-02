@@ -39,10 +39,11 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 
 	settings := g.Settings()
 	settingsDto := GameSettingsDto{
-		MaxPlayers:      settings.MaxPlayers,
-		DevelopmentMode: settings.DevelopmentMode,
-		DemoGame:        settings.DemoGame,
-		CardPacks:       settings.CardPacks,
+		MaxPlayers:       settings.MaxPlayers,
+		VenusNextEnabled: settings.VenusNextEnabled,
+		DevelopmentMode:  settings.DevelopmentMode,
+		DemoGame:         settings.DemoGame,
+		CardPacks:        settings.CardPacks,
 	}
 
 	globalParams := g.GlobalParameters()

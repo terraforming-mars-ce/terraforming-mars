@@ -69,6 +69,12 @@ func registerPlayerCardEventListeners(
 	})
 	pc.AddUnsubscriber(func() { eventBus.Unsubscribe(subID4) })
 
+	// When venus changes, recalculate requirements
+	subIDVenus := events.Subscribe(eventBus, func(event events.VenusChangedEvent) {
+		recalculatePlayerCard(pc, p, g, cardRegistry)
+	})
+	pc.AddUnsubscriber(func() { eventBus.Unsubscribe(subIDVenus) })
+
 	// When player effects change (requirement modifiers), recalculate cost
 	subID5 := events.Subscribe(eventBus, func(event events.PlayerEffectsChangedEvent) {
 		if event.PlayerID == p.ID() {

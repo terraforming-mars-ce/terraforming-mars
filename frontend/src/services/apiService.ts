@@ -24,6 +24,7 @@ export class ApiService {
     try {
       const request: CreateGameRequest = {
         maxPlayers: settings.maxPlayers,
+        venusNextEnabled: settings.venusNextEnabled,
         developmentMode: settings.developmentMode,
         cardPacks: settings.cardPacks,
       };

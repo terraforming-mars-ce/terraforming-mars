@@ -10,7 +10,7 @@ help:
 	@echo "🎯 Main Commands:"
 	@echo "  make run          - Run both frontend and backend with hot reload"
 	@echo "  make frontend     - Run frontend development server (port 3000)"
-	@echo "  make backend      - Build backend binary"
+	@echo "  make backend      - Build and run backend (port 3001)"
 	@echo "  make kill         - Kill all frontend and backend development processes"
 	@echo ""
 	@echo "🧪 Testing:"
@@ -48,6 +48,8 @@ frontend:
 	cd frontend && npm start
 
 backend: build-backend
+	@echo "🚀 Running backend (port 3001)..."
+	cd backend && TM_REPO_PATH=../ ./bin/server
 
 kill:
 	@echo "🛑 Killing all development servers..."

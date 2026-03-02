@@ -6,19 +6,21 @@ interface GlobalParameters {
   temperature: number;
   oxygen: number;
   oceans: number;
+  venus: number;
 }
 
 interface RightSidebarProps {
   globalParameters?: GlobalParameters;
   generation?: number;
   currentPlayer?: PlayerDto | OtherPlayerDto | null;
+  showVenus?: boolean;
 }
 
 const ANGLE_INDENT = 20;
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
 const THICK_BORDER_COLOR = "rgba(80,80,90,0.9)";
 const BACKGROUND_COLOR = "rgba(10,10,15,0.95)";
-const SIDEBAR_WIDTH = 50;
+const SIDEBAR_WIDTH = 65;
 const GAUGE_GAP = 2;
 
 interface GenerationPanelProps {
@@ -140,16 +142,14 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({ oxygen, temperature, widt
             className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-0" : "opacity-100"}`}
           >
             {oxygenSteps.map((o) => {
+              if (o === 0 || o === 14) return null;
               const position = (o / 14) * 100;
-              const isFirst = o === 0;
-              const isLast = o === 14;
-              const adjustedPosition = isFirst ? 2 : isLast ? 96 : position;
               return (
                 <div
                   key={o}
                   className="absolute w-full text-[8px] font-orbitron font-bold text-[#00ff00] [text-shadow:0_0_3px_rgba(0,255,0,0.8)] text-center transition-opacity duration-300"
                   style={{
-                    bottom: `${adjustedPosition}%`,
+                    bottom: `${position}%`,
                     transform: "translateY(50%)",
                     opacity: oxygen >= o ? 0.3 : 1,
                   }}
@@ -161,11 +161,7 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({ oxygen, temperature, widt
           </div>
           {/* Current value indicator */}
           <div
-            className={`absolute w-full z-20 text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] text-center pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
-            style={{
-              bottom: `${oxygenPercent}%`,
-              transform: "translateY(50%)",
-            }}
+            className={`absolute inset-0 w-full z-20 flex items-center justify-center text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
           >
             {oxygen}%
           </div>
@@ -187,16 +183,14 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({ oxygen, temperature, widt
             className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-0" : "opacity-100"}`}
           >
             {tempSteps.map((t) => {
+              if (t === -30 || t === 8) return null;
               const position = ((t + 30) / 38) * 100;
-              const isFirst = t === -30;
-              const isLast = t === 6;
-              const adjustedPosition = isFirst ? 2 : isLast ? 96 : position;
               return (
                 <div
                   key={t}
                   className="absolute w-full text-[8px] font-orbitron font-bold text-[#ff8c00] [text-shadow:0_0_3px_rgba(255,140,0,0.8)] text-center transition-opacity duration-300"
                   style={{
-                    bottom: `${adjustedPosition}%`,
+                    bottom: `${position}%`,
                     transform: "translateY(50%)",
                     opacity: temperature >= t ? 0.3 : 1,
                   }}
@@ -208,14 +202,145 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({ oxygen, temperature, widt
           </div>
           {/* Current value indicator */}
           <div
-            className={`absolute w-full z-20 text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] text-center pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
-            style={{
-              bottom: `${temperaturePercent}%`,
-              transform: "translateY(50%)",
-            }}
+            className={`absolute inset-0 w-full z-20 flex items-center justify-center text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
           >
             {temperature}°
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const VENUS_ANGLE = 10;
+const VENUS_CAP_HEIGHT = 30;
+
+interface VenusCapProps {
+  width: number;
+}
+
+const VenusTopCap: React.FC<VenusCapProps> = ({ width }) => {
+  const h = VENUS_CAP_HEIGHT;
+  const a = VENUS_ANGLE;
+  const fillPoints = `0,${a} ${width},0 ${width},${h - a} 0,${h}`;
+
+  return (
+    <div className="relative transition-[width] duration-300 ease-out" style={{ width, height: h }}>
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox={`0 0 ${width} ${h}`}
+        preserveAspectRatio="none"
+      >
+        <polygon points={fillPoints} fill={BACKGROUND_COLOR} />
+        <line x1={0} y1={a} x2={width} y2={0} stroke={BORDER_COLOR} strokeWidth="2" />
+        <line x1={width} y1={0} x2={width} y2={h - a} stroke={BORDER_COLOR} strokeWidth="2" />
+        <line x1={width} y1={h - a} x2={0} y2={h} stroke={THICK_BORDER_COLOR} strokeWidth="4" />
+        <line x1={0} y1={h} x2={0} y2={a} stroke={BORDER_COLOR} strokeWidth="2" />
+      </svg>
+    </div>
+  );
+};
+
+const VenusBottomCap: React.FC<VenusCapProps> = ({ width }) => {
+  const h = VENUS_CAP_HEIGHT;
+  const a = VENUS_ANGLE;
+  const fillPoints = `0,0 ${width},${a} ${width},${h} 0,${h - a}`;
+
+  return (
+    <div className="relative transition-[width] duration-300 ease-out" style={{ width, height: h }}>
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox={`0 0 ${width} ${h}`}
+        preserveAspectRatio="none"
+      >
+        <polygon points={fillPoints} fill={BACKGROUND_COLOR} />
+        <line x1={0} y1={0} x2={width} y2={a} stroke={THICK_BORDER_COLOR} strokeWidth="4" />
+        <line x1={width} y1={a} x2={width} y2={h} stroke={BORDER_COLOR} strokeWidth="2" />
+        <line x1={width} y1={h} x2={0} y2={h - a} stroke={BORDER_COLOR} strokeWidth="2" />
+        <line x1={0} y1={h - a} x2={0} y2={0} stroke={BORDER_COLOR} strokeWidth="2" />
+      </svg>
+      <div className="relative z-10 h-full flex items-center justify-center">
+        <div style={{ transform: "translateY(2px) scale(0.7)" }}>
+          <GameIcon iconType="venus" size="small" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface VenusGaugeSectionProps {
+  venus: number;
+  width: number;
+  isHovered: boolean;
+}
+
+const VenusGaugeSection: React.FC<VenusGaugeSectionProps> = ({ venus, width, isHovered }) => {
+  const venusPercent = Math.max(0, (venus / 30) * 100);
+  const venusSteps = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];
+
+  return (
+    <div
+      className="relative pointer-events-auto flex-1 transition-[width] duration-300 ease-out"
+      style={{ width }}
+    >
+      <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+        <line
+          x1={0}
+          y1={VENUS_ANGLE}
+          x2={width}
+          y2={0}
+          stroke={THICK_BORDER_COLOR}
+          strokeWidth="4"
+        />
+        <line x1={width} y1={0} x2={width} y2="100%" stroke={BORDER_COLOR} strokeWidth="2" />
+        <line
+          x1={width}
+          y1="100%"
+          x2={0}
+          y2={`calc(100% - ${VENUS_ANGLE}px)`}
+          stroke={BORDER_COLOR}
+          strokeWidth="2"
+        />
+        <line
+          x1={0}
+          y1={`calc(100% - ${VENUS_ANGLE}px)`}
+          x2={0}
+          y2={VENUS_ANGLE}
+          stroke={BORDER_COLOR}
+          strokeWidth="2"
+        />
+      </svg>
+
+      <div className="relative z-10 h-full bg-[linear-gradient(to_right,#1a1a1a_0%,#0a0a0a_50%,#1a1a1a_100%)] overflow-hidden">
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-[linear-gradient(to_top,#8B6914_0%,#DAA520_50%,#FFD700_100%)] transition-[height] duration-500 ease-[ease] shadow-[0_0_8px_rgba(255,215,0,1),0_0_15px_rgba(218,165,32,0.8),inset_0_1px_2px_rgba(255,255,255,0.3)]"
+          style={{ height: `${venusPercent}%` }}
+        />
+        <div
+          className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-0" : "opacity-100"}`}
+        >
+          {venusSteps.map((v) => {
+            if (v === 0 || v === 30) return null;
+            const position = (v / 30) * 100;
+            return (
+              <div
+                key={v}
+                className="absolute w-full text-[8px] font-orbitron font-bold text-[#FFD700] [text-shadow:0_0_3px_rgba(255,215,0,0.8)] text-center transition-opacity duration-300"
+                style={{
+                  bottom: `${position}%`,
+                  transform: "translateY(50%)",
+                  opacity: venus >= v ? 0.3 : 1,
+                }}
+              >
+                {v}
+              </div>
+            );
+          })}
+        </div>
+        <div
+          className={`absolute inset-0 w-full z-20 flex items-center justify-center text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+        >
+          {venus}%
         </div>
       </div>
     </div>
@@ -366,6 +491,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   globalParameters,
   generation,
   currentPlayer: _currentPlayer,
+  showVenus = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -373,47 +499,84 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const LEGEND_PANEL_HEIGHT = 60;
   const OCEANS_PANEL_HEIGHT = 80;
 
-  const currentWidth = isHovered ? Math.round(SIDEBAR_WIDTH * 1.4) : SIDEBAR_WIDTH;
+  const currentWidth = isHovered ? Math.round(SIDEBAR_WIDTH * 1.5) : SIDEBAR_WIDTH;
+  const venusWidth = (currentWidth - GAUGE_GAP) / 2;
 
   return (
     <div
-      className="fixed right-0 z-10 flex flex-col pointer-events-auto top-1/2 -translate-y-1/2 transition-all duration-300 ease-out"
+      className="fixed right-0 z-10 flex flex-row items-center pointer-events-auto top-1/2 -translate-y-1/2 transition-all duration-300 ease-out"
       style={{ height: "70vh" }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div style={{ marginBottom: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
-        <GenerationPanel
-          generation={generation || 1}
-          width={currentWidth}
-          height={GEN_PANEL_HEIGHT}
-        />
-      </div>
-      <div
-        style={{
-          zIndex: 1,
-          position: "relative",
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <GaugesSection
-          oxygen={globalParameters?.oxygen || 0}
-          temperature={globalParameters?.temperature || -30}
-          width={currentWidth}
-          isHovered={isHovered}
-        />
-      </div>
-      <div style={{ marginTop: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
-        <GaugeLegendPanel width={currentWidth} height={LEGEND_PANEL_HEIGHT} />
-      </div>
-      <div style={{ marginTop: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
-        <OceansPanel
-          oceans={globalParameters?.oceans || 0}
-          width={currentWidth}
-          height={OCEANS_PANEL_HEIGHT}
-        />
+      {showVenus && (
+        <div
+          className="flex flex-col self-center"
+          style={{
+            height: "55%",
+            marginRight: 0,
+            marginTop: -(GEN_PANEL_HEIGHT - ANGLE_INDENT),
+            borderRight: `${GAUGE_GAP}px solid ${BORDER_COLOR}`,
+          }}
+        >
+          <div style={{ marginBottom: -VENUS_ANGLE, zIndex: 2, position: "relative" }}>
+            <VenusTopCap width={venusWidth} />
+          </div>
+          <div
+            style={{
+              zIndex: 1,
+              position: "relative",
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <VenusGaugeSection
+              venus={globalParameters?.venus || 0}
+              width={venusWidth}
+              isHovered={isHovered}
+            />
+          </div>
+          <div style={{ marginTop: -VENUS_ANGLE, zIndex: 2, position: "relative" }}>
+            <VenusBottomCap width={venusWidth} />
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col h-full">
+        <div style={{ marginBottom: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
+          <GenerationPanel
+            generation={generation || 1}
+            width={currentWidth}
+            height={GEN_PANEL_HEIGHT}
+          />
+        </div>
+        <div
+          style={{
+            zIndex: 1,
+            position: "relative",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <GaugesSection
+            oxygen={globalParameters?.oxygen || 0}
+            temperature={globalParameters?.temperature || -30}
+            width={currentWidth}
+            isHovered={isHovered}
+          />
+        </div>
+        <div style={{ marginTop: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
+          <GaugeLegendPanel width={currentWidth} height={LEGEND_PANEL_HEIGHT} />
+        </div>
+        <div style={{ marginTop: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
+          <OceansPanel
+            oceans={globalParameters?.oceans || 0}
+            width={currentWidth}
+            height={OCEANS_PANEL_HEIGHT}
+          />
+        </div>
       </div>
     </div>
   );

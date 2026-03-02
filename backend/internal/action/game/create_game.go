@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"slices"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -51,6 +52,9 @@ func (a *CreateGameAction) Execute(
 	}
 	if len(settings.CardPacks) == 0 {
 		settings.CardPacks = game.DefaultCardPacks()
+	}
+	if settings.VenusNextEnabled && !slices.Contains(settings.CardPacks, game.PackVenus) {
+		settings.CardPacks = append(settings.CardPacks, game.PackVenus)
 	}
 
 	// 3. Create game entity

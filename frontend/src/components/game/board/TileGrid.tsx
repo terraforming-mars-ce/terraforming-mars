@@ -216,24 +216,26 @@ export default function TileGrid({
 
   // Use backend board tiles or fallback to hardcoded generation
   const projectedHexGrid = useMemo((): ProjectedTile[] => {
-    // Use backend tiles if available
+    // Use backend tiles if available (filter to Mars-only)
     if (gameState?.board?.tiles) {
-      return gameState.board.tiles.map((tile: TileDto): ProjectedTile => {
-        // Convert hex coordinate to 2D position for projection
-        const position2D = hexToPixel(tile.coordinates);
-        const spherePosition = projectToSphere(position2D, SPHERE_RADIUS);
+      return gameState.board.tiles
+        .filter((tile: TileDto) => tile.location !== "venus")
+        .map((tile: TileDto): ProjectedTile => {
+          // Convert hex coordinate to 2D position for projection
+          const position2D = hexToPixel(tile.coordinates);
+          const spherePosition = projectToSphere(position2D, SPHERE_RADIUS);
 
-        return {
-          backendTile: tile,
-          coordinate: tile.coordinates,
-          position: position2D,
-          spherePosition,
-          normal: spherePosition.clone().normalize(),
-          // Convert backend tile data to legacy interface for compatibility
-          isOceanSpace: tile.type === "ocean-space",
-          bonuses: convertBackendBonuses(tile.bonuses),
-        };
-      });
+          return {
+            backendTile: tile,
+            coordinate: tile.coordinates,
+            position: position2D,
+            spherePosition,
+            normal: spherePosition.clone().normalize(),
+            // Convert backend tile data to legacy interface for compatibility
+            isOceanSpace: tile.type === "ocean-space",
+            bonuses: convertBackendBonuses(tile.bonuses),
+          };
+        });
     }
 
     // Fallback to hardcoded generation if backend data not available

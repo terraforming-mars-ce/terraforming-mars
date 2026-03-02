@@ -389,10 +389,11 @@ type ProductionPhaseOtherPlayerDto struct {
 
 // GameSettingsDto contains configurable game parameters
 type GameSettingsDto struct {
-	MaxPlayers      int      `json:"maxPlayers" ts:"number"`
-	DevelopmentMode bool     `json:"developmentMode" ts:"boolean"`
-	DemoGame        bool     `json:"demoGame" ts:"boolean"`
-	CardPacks       []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
+	MaxPlayers       int      `json:"maxPlayers" ts:"number"`
+	VenusNextEnabled bool     `json:"venusNextEnabled" ts:"boolean"`
+	DevelopmentMode  bool     `json:"developmentMode" ts:"boolean"`
+	DemoGame         bool     `json:"demoGame" ts:"boolean"`
+	CardPacks        []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
 }
 
 // GlobalParametersDto represents the terraforming progress

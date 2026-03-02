@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo, useEffect } from "react";
+import { useRef, useState, useMemo, useEffect, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -29,6 +29,7 @@ const HIGHLIGHT_COLOR_GREENERY = new THREE.Vector3(0.13, 0.77, 0.27);
 const HIGHLIGHT_COLOR_CITY = new THREE.Vector3(0.58, 0.64, 0.7);
 const HIGHLIGHT_COLOR_ADJACENT = new THREE.Vector3(1.0, 0.84, 0.0);
 const BONUS_ICON_TINT = new THREE.Color(0.7, 0.7, 0.7);
+const ORIGIN = new THREE.Vector3(0, 0, 0);
 
 function createSubdividedHexagonGeometry(radius: number, rings: number): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -253,6 +254,9 @@ interface TileProps {
   onHoverInfo?: (data: TileHoverInfo) => void;
   onHoverMove?: (position: { x: number; y: number }) => void;
   onHoverLeave?: () => void;
+  sphereRadius?: number;
+  sphereCenter?: THREE.Vector3;
+  tileOpacity?: RefObject<number>;
 }
 
 export default function Tile({
@@ -276,7 +280,11 @@ export default function Tile({
   onHoverInfo,
   onHoverMove,
   onHoverLeave,
+  sphereRadius = SPHERE_RADIUS,
+  sphereCenter = ORIGIN,
+  tileOpacity,
 }: TileProps) {
+  const tileGroupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const vpTextRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -323,15 +331,16 @@ export default function Tile({
       uniforms: {
         time: { value: 0.0 },
         opacity: { value: 0.0 },
-        uSphereRadius: { value: SPHERE_RADIUS },
+        uSphereRadius: { value: sphereRadius },
         uZOffset: { value: CHROME_Z_BASE + 0.003 },
+        uSphereCenter: { value: sphereCenter },
       },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
     });
-  }, []);
+  }, [sphereRadius, sphereCenter]);
 
   const availableGlowMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
@@ -339,15 +348,16 @@ export default function Tile({
       fragmentShader: availableGlowFragment,
       uniforms: {
         time: { value: 0.0 },
-        uSphereRadius: { value: SPHERE_RADIUS },
+        uSphereRadius: { value: sphereRadius },
         uZOffset: { value: CHROME_Z_BASE + 0.005 },
+        uSphereCenter: { value: sphereCenter },
       },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
     });
-  }, []);
+  }, [sphereRadius, sphereCenter]);
 
   const endGameHighlightMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
@@ -357,15 +367,16 @@ export default function Tile({
         time: { value: 0.0 },
         highlightColor: { value: new THREE.Vector3(0.13, 0.77, 0.27) },
         opacity: { value: 0.0 },
-        uSphereRadius: { value: SPHERE_RADIUS },
+        uSphereRadius: { value: sphereRadius },
         uZOffset: { value: CHROME_Z_BASE + 0.006 },
+        uSphereCenter: { value: sphereCenter },
       },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
     });
-  }, []);
+  }, [sphereRadius, sphereCenter]);
 
   const volcanicTintMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
@@ -383,14 +394,15 @@ export default function Tile({
         }
       `,
       uniforms: {
-        uSphereRadius: { value: SPHERE_RADIUS },
+        uSphereRadius: { value: sphereRadius },
         uZOffset: { value: CHROME_Z_BASE + 0.004 },
+        uSphereCenter: { value: sphereCenter },
       },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-  }, []);
+  }, [sphereRadius, sphereCenter]);
 
   useFrame((state) => {
     if (animateEntrance && !entranceDoneRef.current) {
@@ -479,6 +491,35 @@ export default function Tile({
       vpTextRef.current.scale.setScalar(vpAmount !== undefined ? 1 : 0);
       vpTextRef.current.position.z = 0.07;
     }
+
+    if (tileOpacity && tileGroupRef.current) {
+      const o = tileOpacity.current;
+      hexTileMaterial.opacity = baseHexOpacity * o;
+      borderMaterial.uniforms.uOpacity.value = 0.9 * o;
+      hoverGlowMaterial.uniforms.opacity.value *= o;
+      endGameHighlightMaterial.uniforms.opacity.value *= o;
+
+      const knownMats = new Set([
+        hexTileMaterial,
+        borderMaterial,
+        hoverGlowMaterial,
+        availableGlowMaterial,
+        endGameHighlightMaterial,
+        volcanicTintMaterial,
+      ]);
+      tileGroupRef.current.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const mat of mats) {
+          if (knownMats.has(mat)) continue;
+          if (!mat.transparent) {
+            mat.transparent = true;
+            mat.needsUpdate = true;
+          }
+          mat.opacity = o;
+        }
+      });
+    }
   });
 
   const surfaceQuaternion = useMemo(() => {
@@ -555,8 +596,9 @@ export default function Tile({
 
     const snippet = splitSnippet(tileSurfaceVertexSnippet);
     material.onBeforeCompile = (shader) => {
-      shader.uniforms.uSphereRadius = { value: SPHERE_RADIUS };
+      shader.uniforms.uSphereRadius = { value: sphereRadius };
       shader.uniforms.uZOffset = { value: CHROME_Z_BASE + 0.002 };
+      shader.uniforms.uSphereCenter = { value: sphereCenter };
       shader.vertexShader =
         snippet.header +
         "\n" +
@@ -564,24 +606,37 @@ export default function Tile({
     };
 
     return material;
-  }, [tileColor, tileType]);
+  }, [tileColor, tileType, sphereRadius, sphereCenter]);
+
+  const baseHexOpacity = useMemo(() => {
+    if (
+      tileType === "greenery" ||
+      tileType === "city" ||
+      tileType === "volcano" ||
+      tileType === "nuclear-zone"
+    )
+      return 0;
+    if (tileType === "empty") return 0.3;
+    return 0.7;
+  }, [tileType]);
 
   const borderMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       vertexShader: tileBorderVertex,
       fragmentShader: tileBorderFragment,
       uniforms: {
-        uSphereRadius: { value: SPHERE_RADIUS },
+        uSphereRadius: { value: sphereRadius },
         uZOffset: { value: CHROME_Z_BASE + 0.0025 },
         uColor: { value: new THREE.Color(borderColor.r, borderColor.g, borderColor.b) },
         uOpacity: { value: 0.9 },
         uNoiseTex: { value: borderNoiseTexture },
+        uSphereCenter: { value: sphereCenter },
       },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-  }, [borderColor, borderNoiseTexture]);
+  }, [borderColor, borderNoiseTexture, sphereRadius, sphereCenter]);
 
   interface BonusIconGroup {
     type: string;
@@ -633,52 +688,57 @@ export default function Tile({
 
   return (
     <group
+      ref={tileGroupRef}
       position={adjustedPosition}
       quaternion={surfaceQuaternion}
       scale={[entranceScale, entranceScale, entranceScale]}
     >
-      {/* Main hex tile - always rendered; invisible for ocean but still receives raycasts */}
-      <mesh
-        ref={meshRef}
-        geometry={hexGeometry}
-        material={hexTileMaterial}
-        renderOrder={10}
-        onPointerEnter={(event) => {
-          if (!panState.isPanning) {
-            setHovered(true);
-            if (isAvailableForPlacement) {
-              hoverSound.onMouseEnter?.();
+      {/* Main hex tile - hidden for ocean (water mesh handles rendering) */}
+      {tileType !== "ocean" && (
+        <mesh
+          ref={meshRef}
+          geometry={hexGeometry}
+          material={hexTileMaterial}
+          renderOrder={10}
+          onPointerEnter={(event) => {
+            if (tileOpacity && tileOpacity.current < 0.5) return;
+            if (!panState.isPanning) {
+              setHovered(true);
+              if (isAvailableForPlacement) {
+                hoverSound.onMouseEnter?.();
+              }
+              onHoverInfo?.({
+                position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
+                tileType,
+                displayName,
+                ownerId: ownerId || null,
+                reservedById: reservedById || null,
+                isOceanSpace,
+                isVolcanic,
+                bonuses,
+              });
             }
-            onHoverInfo?.({
-              position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
-              tileType,
-              displayName,
-              ownerId: ownerId || null,
-              reservedById: reservedById || null,
-              isOceanSpace,
-              isVolcanic,
-              bonuses,
-            });
-          }
-        }}
-        onPointerMove={(event) => {
-          if (!panState.isPanning) {
-            onHoverMove?.({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
-          }
-        }}
-        onPointerLeave={() => {
-          setHovered(false);
-          onHoverLeave?.();
-        }}
-        onClick={(event) => {
-          if (panState.isPanning) return;
-          event.stopPropagation();
-          if (isAvailableForPlacement) {
-            hoverSound.onClick?.();
-          }
-          onClick();
-        }}
-      />
+          }}
+          onPointerMove={(event) => {
+            if (!panState.isPanning) {
+              onHoverMove?.({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
+            }
+          }}
+          onPointerLeave={() => {
+            setHovered(false);
+            onHoverLeave?.();
+          }}
+          onClick={(event) => {
+            if (tileOpacity && tileOpacity.current < 0.5) return;
+            if (panState.isPanning) return;
+            event.stopPropagation();
+            if (isAvailableForPlacement) {
+              hoverSound.onClick?.();
+            }
+            onClick();
+          }}
+        />
+      )}
 
       {/* Hex border - hidden for ocean tiles */}
       {tileType !== "ocean" && (

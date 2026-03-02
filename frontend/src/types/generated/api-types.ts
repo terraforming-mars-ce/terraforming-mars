@@ -692,6 +692,7 @@ export interface ProductionPhaseOtherPlayerDto {
  */
 export interface GameSettingsDto {
   maxPlayers: number /* int */;
+  venusNextEnabled: boolean;
   developmentMode: boolean;
   demoGame: boolean;
   cardPacks?: string[];
@@ -1248,6 +1249,7 @@ export interface GenerationalEventRequirementDto {
  */
 export interface CreateGameRequest {
   maxPlayers: number /* int */;
+  venusNextEnabled: boolean;
   developmentMode: boolean;
   cardPacks?: string[];
 }

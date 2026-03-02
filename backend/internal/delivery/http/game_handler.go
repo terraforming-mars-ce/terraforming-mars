@@ -143,9 +143,10 @@ func (h *GameHandler) CreateGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	settings := game.GameSettings{
-		MaxPlayers:      req.MaxPlayers,
-		DevelopmentMode: req.DevelopmentMode,
-		CardPacks:       req.CardPacks,
+		MaxPlayers:       req.MaxPlayers,
+		VenusNextEnabled: req.VenusNextEnabled,
+		DevelopmentMode:  req.DevelopmentMode,
+		CardPacks:        req.CardPacks,
 	}
 
 	// Execute create game action
