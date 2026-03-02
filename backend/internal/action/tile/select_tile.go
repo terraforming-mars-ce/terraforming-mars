@@ -58,7 +58,10 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return nil, err
 	}
 
-	if g.CurrentPhase() != game.GamePhaseStartingSelection {
+	phase := g.CurrentPhase()
+	if phase != game.GamePhaseStartingSelection &&
+		phase != game.GamePhaseInitApplyCorp &&
+		phase != game.GamePhaseInitApplyPrelude {
 		if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
 			return nil, err
 		}
@@ -345,9 +348,12 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		log.Warn("Failed to handle completion callback", zap.Error(err))
 	}
 
-	if g.CurrentPhase() == game.GamePhaseStartingSelection {
+	switch g.CurrentPhase() {
+	case game.GamePhaseStartingSelection:
 		a.checkStartingSelectionCompletion(ctx, g, log)
-	} else {
+	case game.GamePhaseInitApplyCorp, game.GamePhaseInitApplyPrelude:
+		// During init phases, tile placement completes and the frontend sends the next confirm
+	default:
 		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 	}
 
