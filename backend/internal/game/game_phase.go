@@ -8,6 +8,8 @@ const (
 	GamePhaseStartingSelection     GamePhase = "starting_selection"
 	GamePhaseStartGameSelection    GamePhase = "start_game_selection"
 	GamePhaseDemoSetup             GamePhase = "demo_setup"
+	GamePhaseInitApplyCorp         GamePhase = "init_apply_corp"
+	GamePhaseInitApplyPrelude      GamePhase = "init_apply_prelude"
 	GamePhaseAction                GamePhase = "action"
 	GamePhaseProductionAndCardDraw GamePhase = "production_and_card_draw"
 	GamePhaseComplete              GamePhase = "complete"
