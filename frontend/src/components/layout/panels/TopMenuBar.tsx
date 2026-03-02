@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { GameDto, PlayerDto } from "@/types/generated/api-types.ts";
+import {
+  GameDto,
+  GamePhaseInitApplyCorp,
+  GamePhaseInitApplyPrelude,
+  PlayerDto,
+} from "@/types/generated/api-types.ts";
 import { StandardProject } from "@/types/cards.tsx";
 import { Z_INDEX } from "@/constants/zIndex";
 import SoundToggleButton from "../../ui/buttons/SoundToggleButton.tsx";
@@ -193,6 +198,10 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     onStandardProjectSelect?.(project);
   };
 
+  const isInitPhase =
+    gameState?.currentPhase === GamePhaseInitApplyCorp ||
+    gameState?.currentPhase === GamePhaseInitApplyPrelude;
+
   const menuItems = [
     { id: "projects" as const, label: "STANDARD PROJECTS", color: "#4a90e2" },
     { id: "milestones" as const, label: "MILESTONES", color: "#ff6b35" },
@@ -241,20 +250,21 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
           className="flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left"
           style={{ transform: `scale(${topBarScale})` }}
         >
-          {menuItems.map((item, index) => (
-            <ParallelogramButton
-              key={item.id}
-              index={index}
-              total={menuItems.length}
-              width={buttonWidths[index]}
-              height={buttonHeight}
-              color={item.color}
-              onClick={() => handleTabClick(item.id)}
-              buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
-            >
-              {item.label}
-            </ParallelogramButton>
-          ))}
+          {!isInitPhase &&
+            menuItems.map((item, index) => (
+              <ParallelogramButton
+                key={item.id}
+                index={index}
+                total={menuItems.length}
+                width={buttonWidths[index]}
+                height={buttonHeight}
+                color={item.color}
+                onClick={() => handleTabClick(item.id)}
+                buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
+              >
+                {item.label}
+              </ParallelogramButton>
+            ))}
         </div>
 
         <div className="origin-top-right" style={{ transform: `scale(${topBarScale})` }}>

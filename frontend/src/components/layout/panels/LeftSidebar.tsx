@@ -13,7 +13,7 @@ interface LeftSidebarProps {
   turnPlayerId: string;
   currentPhase?: GamePhase;
   hostPlayerId?: string;
-  hasPendingTilePlacement?: boolean;
+  pendingTilePlayerId?: string;
   triggeredEffects?: TriggeredEffectDto[];
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
   onKickPlayer?: (playerId: string) => void;
@@ -26,7 +26,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   turnPlayerId,
   currentPhase,
   hostPlayerId,
-  hasPendingTilePlacement = false,
+  pendingTilePlayerId,
   triggeredEffects = [],
   onPlayerClick,
   onKickPlayer,
@@ -40,7 +40,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
         turnPlayerId={turnPlayerId}
         currentPhase={currentPhase}
         hostPlayerId={hostPlayerId}
-        hasPendingTilePlacement={hasPendingTilePlacement}
+        pendingTilePlayerId={pendingTilePlayerId}
         triggeredEffects={triggeredEffects}
         onPlayerClick={onPlayerClick}
         onKickPlayer={onKickPlayer}

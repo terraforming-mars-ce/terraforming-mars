@@ -262,6 +262,11 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.selectStartingChoices(corporationId, preludeIds, cardIds);
   }
 
+  async confirmInitAdvance(): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.confirmInitAdvance();
+  }
+
   async selectCards(cardIds: string[]): Promise<string> {
     await this.ensureConnected();
     return webSocketService.selectCards(cardIds);

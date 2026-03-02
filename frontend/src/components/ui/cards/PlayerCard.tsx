@@ -105,7 +105,7 @@ interface PlayerCardProps {
   isActionPhase: boolean;
   isHost?: boolean;
   onSkipAction?: () => void;
-  hasPendingTilePlacement?: boolean;
+  hasPendingTile?: boolean;
   triggeredEffects?: TriggeredEffectDto[];
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
   onKickPlayer?: (playerId: string) => void;
@@ -120,13 +120,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   isActionPhase,
   isHost = false,
   onSkipAction,
-  hasPendingTilePlacement = false,
+  hasPendingTile = false,
   triggeredEffects = [],
   onPlayerClick,
   onKickPlayer,
   onConvertToBot,
 }) => {
-  const hoverSound = useHoverSound(hasPendingTilePlacement);
+  const hoverSound = useHoverSound(hasPendingTile);
   const isPassed = player.passed;
   const isDisconnected = !player.isConnected;
   const isExited = player.isExited;
@@ -249,13 +249,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <div
       ref={cardRef}
-      className={`relative w-full h-[60px] overflow-visible pointer-events-auto ${isCurrentTurn ? "mb-1.5" : "mb-2"} ${onPlayerClick ? "cursor-pointer" : ""}`}
+      className={`relative w-full h-[66px] overflow-visible pointer-events-auto ${isCurrentTurn ? "mb-1.5" : "mb-2"} ${onPlayerClick ? "cursor-pointer" : ""}`}
       onClick={() => onPlayerClick?.(player)}
       onContextMenu={handleContextMenu}
     >
       {/* Main player card with angled edge */}
       <div
-        className={`relative h-full bg-[rgba(10,10,15,0.95)] border-l-[6px] border-t border-t-[rgba(60,60,70,0.7)] pl-2 pr-2 transition-all duration-300 flex items-center [clip-path:polygon(0_0,calc(100%-8px)_0,100%_100%,0_100%)] max-w-[270px] z-[2] shadow-[0_2px_8px_rgba(0,0,0,0.5),-2px_0_6px_var(--player-color)] ${isExited || isDisconnected ? "opacity-20" : ""} ${!isCurrentTurn ? "opacity-60" : ""} ${isCurrentTurn ? "border-l-8 shadow-[0_4px_16px_rgba(0,0,0,0.6),-4px_0_12px_var(--player-color)]" : ""}`}
+        className={`relative h-full bg-[rgba(10,10,15,0.95)] border-l-[6px] border-t border-t-[rgba(60,60,70,0.7)] pl-2 pr-2 transition-all duration-300 flex items-center [clip-path:polygon(0_0,calc(100%-8px)_0,100%_100%,0_100%)] max-w-[324px] z-[2] shadow-[0_2px_8px_rgba(0,0,0,0.5),-2px_0_6px_var(--player-color)] ${isExited || isDisconnected ? "opacity-20" : ""} ${!isCurrentTurn ? "opacity-60" : ""} ${isCurrentTurn ? "border-l-8 shadow-[0_4px_16px_rgba(0,0,0,0.6),-4px_0_12px_var(--player-color)]" : ""}`}
         style={
           { "--player-color": playerColor, borderLeftColor: playerColor } as React.CSSProperties
         }
@@ -308,6 +308,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 ERROR
               </span>
             )}
+            {hasPendingTile && (
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,140,50,0.6)] text-[rgb(255,220,140)] border border-[rgba(180,140,50,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+                TILE
+              </span>
+            )}
           </div>
           <span className="text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] tracking-[0.3px] shrink-0">
             {player.name}
@@ -322,18 +327,18 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         {isCurrentPlayer && isCurrentTurn && isActionPhase && (
           <button
             className={`absolute right-5 top-1/2 -translate-y-1/2 py-1.5 px-3 text-[9px] font-bold font-orbitron uppercase tracking-[0.5px] transition-all duration-200 ${
-              hasPendingTilePlacement
+              hasPendingTile
                 ? "bg-[rgba(40,40,45,0.9)] text-[rgb(100,100,110)] border border-[rgba(60,60,70,0.5)] cursor-default"
                 : "bg-[rgba(50,100,160,0.95)] text-white border border-[rgba(80,140,200,0.8)] cursor-pointer hover:bg-[rgba(60,120,180,1)] hover:border-[rgba(100,160,220,0.9)]"
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              if (hasPendingTilePlacement) return;
+              if (hasPendingTile) return;
               hoverSound.onClick?.();
               onSkipAction?.();
             }}
             onMouseEnter={hoverSound.onMouseEnter}
-            disabled={hasPendingTilePlacement}
+            disabled={hasPendingTile}
           >
             {buttonText}
           </button>
