@@ -191,7 +191,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             triggeredEffects={triggeredEffects}
             onPlayerClick={onPlayerClick}
             onKickPlayer={handleKickPlayer}
-            onConvertToBot={handleConvertToBot}
+            onConvertToBot={gameState?.settings?.hasClaudeApiKey ? handleConvertToBot : undefined}
           />
 
           <RightSidebar
