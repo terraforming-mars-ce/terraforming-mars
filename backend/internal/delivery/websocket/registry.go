@@ -50,6 +50,7 @@ func RegisterHandlers(
 	startGameAction *turnAction.StartGameAction,
 	skipActionAction *turnAction.SkipActionAction,
 	selectStartingChoicesAction *turnAction.SelectStartingChoicesAction,
+	confirmInitAdvanceAction *turnAction.ConfirmInitAdvanceAction,
 	confirmSellPatentsAction *confirmAction.ConfirmSellPatentsAction,
 	confirmProductionCardsAction *confirmAction.ConfirmProductionCardsAction,
 	confirmCardDrawAction *confirmAction.ConfirmCardDrawAction,
@@ -129,6 +130,9 @@ func RegisterHandlers(
 
 	selectStartingChoicesHandler := turn_management.NewSelectStartingChoicesHandler(selectStartingChoicesAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionSelectStartingChoices, selectStartingChoicesHandler)
+
+	confirmInitAdvanceHandler := turn_management.NewConfirmInitAdvanceHandler(confirmInitAdvanceAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionConfirmInitAdvance, confirmInitAdvanceHandler)
 
 	confirmSellPatentsHandler := confirmation.NewConfirmSellPatentsHandler(confirmSellPatentsAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConfirmSellPatents, confirmSellPatentsHandler)

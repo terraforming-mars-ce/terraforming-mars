@@ -323,6 +323,8 @@ export const GamePhaseWaitingForGameStart: GamePhase = "waiting_for_game_start";
 export const GamePhaseStartingSelection: GamePhase = "starting_selection";
 export const GamePhaseStartGameSelection: GamePhase = "start_game_selection";
 export const GamePhaseDemoSetup: GamePhase = "demo_setup";
+export const GamePhaseInitApplyCorp: GamePhase = "init_apply_corp";
+export const GamePhaseInitApplyPrelude: GamePhase = "init_apply_prelude";
 export const GamePhaseAction: GamePhase = "action";
 export const GamePhaseProductionAndCardDraw: GamePhase = "production_and_card_draw";
 export const GamePhaseComplete: GamePhase = "complete";
@@ -1031,6 +1033,7 @@ export interface GameDto {
   finalScores?: FinalScoreDto[]; // Final scores (only when game completed)
   triggeredEffects?: TriggeredEffectDto[]; // Recently triggered passive effects
   placeableTileTypes: PlaceableTileTypeDto[]; // Available tile types for the demo tile picker
+  initPhase?: InitPhaseDto;
 }
 /**
  * PlaceableTileTypeDto represents a tile type available for placement in the demo tile picker
@@ -1039,6 +1042,17 @@ export interface PlaceableTileTypeDto {
   type: string;
   label: string;
   group: string;
+}
+/**
+ * InitPhaseDto represents the state of the init_apply_corp or init_apply_prelude phase
+ */
+export interface InitPhaseDto {
+  currentPlayerId: string;
+  currentPlayerIndex: number /* int */;
+  totalPlayers: number /* int */;
+  waitingForConfirm: boolean;
+  hasPreludePhase: boolean;
+  hasPendingTiles: boolean;
 }
 /**
  * TileBonusDto represents a resource bonus provided by a tile when occupied
@@ -1407,6 +1421,8 @@ export const MessageTypeActionStartGame: MessageType = "action.game-management.s
 export const MessageTypeActionSkipAction: MessageType = "action.game-management.skip-action";
 export const MessageTypeActionConfirmDemoSetup: MessageType =
   "action.game-management.confirm-demo-setup";
+export const MessageTypeActionConfirmInitAdvance: MessageType =
+  "action.game-management.confirm-init-advance";
 export const MessageTypeActionClaimMilestone: MessageType = "action.milestone.claim-milestone";
 export const MessageTypeActionFundAward: MessageType = "action.award.fund-award";
 export const MessageTypeActionTileSelected: MessageType = "action.tile-selection.tile-selected";

@@ -27,11 +27,12 @@ const (
 	MessageTypeActionConvertPlantsToGreenery  MessageType = "action.resource-conversion.convert-plants-to-greenery"
 	MessageTypeActionConvertHeatToTemperature MessageType = "action.resource-conversion.convert-heat-to-temperature"
 
-	MessageTypeCreateGame             MessageType = "create-game"
-	MessageTypeAddBot                 MessageType = "add-bot"
-	MessageTypeActionStartGame        MessageType = "action.game-management.start-game"
-	MessageTypeActionSkipAction       MessageType = "action.game-management.skip-action"
-	MessageTypeActionConfirmDemoSetup MessageType = "action.game-management.confirm-demo-setup"
+	MessageTypeCreateGame               MessageType = "create-game"
+	MessageTypeAddBot                   MessageType = "add-bot"
+	MessageTypeActionStartGame          MessageType = "action.game-management.start-game"
+	MessageTypeActionSkipAction         MessageType = "action.game-management.skip-action"
+	MessageTypeActionConfirmDemoSetup   MessageType = "action.game-management.confirm-demo-setup"
+	MessageTypeActionConfirmInitAdvance MessageType = "action.game-management.confirm-init-advance"
 
 	MessageTypeActionClaimMilestone MessageType = "action.milestone.claim-milestone"
 	MessageTypeActionFundAward      MessageType = "action.award.fund-award"

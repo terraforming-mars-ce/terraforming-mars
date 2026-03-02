@@ -114,6 +114,39 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		}
 	}
 
+	var initPhaseDto *InitPhaseDto
+	phase := g.CurrentPhase()
+	if phase == game.GamePhaseInitApplyCorp || phase == game.GamePhaseInitApplyPrelude {
+		turnOrder := g.TurnOrder()
+		idx := g.InitPhasePlayerIndex()
+		currentInitPlayerID := ""
+		if idx < len(turnOrder) {
+			currentInitPlayerID = turnOrder[idx]
+		}
+
+		activePlayers := 0
+		for _, p := range players {
+			if !p.HasExited() {
+				activePlayers++
+			}
+		}
+
+		hasPendingTiles := false
+		if currentInitPlayerID != "" {
+			hasPendingTiles = g.GetPendingTileSelection(currentInitPlayerID) != nil ||
+				g.GetPendingTileSelectionQueue(currentInitPlayerID) != nil
+		}
+
+		initPhaseDto = &InitPhaseDto{
+			CurrentPlayerID:    currentInitPlayerID,
+			CurrentPlayerIndex: idx,
+			TotalPlayers:       activePlayers,
+			WaitingForConfirm:  g.InitPhaseWaitingForConfirm(),
+			HasPreludePhase:    g.Settings().HasPrelude(),
+			HasPendingTiles:    hasPendingTiles,
+		}
+	}
+
 	return GameDto{
 		ID:               g.ID(),
 		Status:           GameStatus(g.Status()),
@@ -137,6 +170,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		FinalScores:        finalScoreDtos,
 		TriggeredEffects:   triggeredEffectDtos,
 		PlaceableTileTypes: ToPlaceableTileTypeDtos(),
+		InitPhase:          initPhaseDto,
 	}
 }
 
