@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 FROM alpine:latest
 WORKDIR /app
 
-RUN apk --no-cache add ca-certificates tzdata nodejs npm && \
+RUN apk --no-cache add ca-certificates tzdata nodejs npm bash && \
     addgroup -g 1000 appuser && \
     adduser -D -u 1000 -G appuser appuser
 
@@ -33,6 +33,7 @@ COPY backend/assets/ /repo/backend/assets/
 COPY frontend/src/ /repo/frontend/src/
 
 ENV TM_REPO_PATH=/repo
+ENV SHELL=/bin/bash
 
 RUN chown -R appuser:appuser /app /repo
 USER appuser
