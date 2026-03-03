@@ -4,9 +4,7 @@ import (
 	"context"
 	"testing"
 
-	gameAction "terraforming-mars-backend/internal/action/game"
 	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/global_parameters"
@@ -16,41 +14,13 @@ import (
 func setupActiveGameForGlobalParams(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string) {
 	t.Helper()
 
-	repo := game.NewInMemoryGameRepository()
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	cardRegistry := testutil.CreateTestCardRegistry()
-	logger := testutil.TestLogger()
-	ctx := context.Background()
+	testutil.StartTestGame(t, testGame)
 
-	// Create and start game
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
-	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
-	startAction := turnAction.NewStartGameAction(repo, nil, logger)
-
-	settings := game.GameSettings{
-		MaxPlayers: 2,
-		CardPacks:  []string{"base-game"},
-	}
-
-	createdGame, _ := createAction.Execute(ctx, settings)
-	gameID := createdGame.ID()
-
-	// Add players
-	player1ID := "player-1"
-	player2ID := "player-2"
-	joinAction.Execute(ctx, gameID, "Player1", player1ID)
-	joinAction.Execute(ctx, gameID, "Player2", player2ID)
-
-	// Set corporations and start
-	gameState, _ := repo.Get(ctx, gameID)
-	players := gameState.GetAllPlayers()
-	for _, p := range players {
-		p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	}
-
-	startAction.Execute(ctx, gameID, gameState.HostPlayerID())
-
-	gameAfterStart, _ := repo.Get(ctx, gameID)
-	return gameAfterStart, repo, cardRegistry, player1ID
+	playerID := testGame.CurrentTurn().PlayerID()
+	return testGame, repo, cardRegistry, playerID
 }
 
 // TestGlobalParameters_TemperatureProgression tests temperature increases

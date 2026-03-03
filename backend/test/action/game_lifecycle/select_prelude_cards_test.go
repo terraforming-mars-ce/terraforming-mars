@@ -193,14 +193,14 @@ func TestSelectStartingChoices_DeferredStorage(t *testing.T) {
 	testutil.AssertEqual(t, corpID1, deferred.CorporationID, "Deferred corp ID should match")
 	testutil.AssertEqual(t, 2, len(deferred.PreludeIDs), "Should have 2 deferred preludes")
 
-	// Unselected preludes should be in discard pile
+	// Unselected preludes should be removed from the game entirely (not in discard pile)
 	discardPile := testGame.Deck().DiscardPile()
 	discardSet := make(map[string]bool)
 	for _, id := range discardPile {
 		discardSet[id] = true
 	}
-	testutil.AssertTrue(t, discardSet["P04"], "P04 should be in discard pile")
-	testutil.AssertTrue(t, discardSet["P07"], "P07 should be in discard pile")
+	testutil.AssertFalse(t, discardSet["P04"], "P04 should NOT be in discard pile (removed from game)")
+	testutil.AssertFalse(t, discardSet["P07"], "P07 should NOT be in discard pile (removed from game)")
 }
 
 func TestSelectStartingChoices_Validation_WrongPreludeCount(t *testing.T) {
