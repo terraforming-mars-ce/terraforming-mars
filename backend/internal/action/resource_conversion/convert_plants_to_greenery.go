@@ -48,6 +48,10 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 		return err
 	}
 
+	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+		return err
+	}
+
 	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
 		return err
 	}

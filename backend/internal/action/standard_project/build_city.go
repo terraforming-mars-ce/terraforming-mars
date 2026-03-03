@@ -45,6 +45,10 @@ func (a *BuildCityAction) Execute(ctx context.Context, gameID string, playerID s
 		return err
 	}
 
+	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+		return err
+	}
+
 	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
 		return err
 	}
