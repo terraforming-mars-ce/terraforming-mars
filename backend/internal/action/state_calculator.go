@@ -146,6 +146,7 @@ func CalculatePlayerCardActionState(
 	errors = append(errors, validateActionUsageLimit(behavior, timesUsedThisGeneration)...)
 	errors = append(errors, validateBehaviorTileOutputs(behavior, p, g)...)
 	errors = append(errors, validateGenerationalEventRequirements(behavior, p)...)
+	errors = append(errors, validateNegativeResourceOutputs(behavior, p)...)
 
 	return player.EntityState{
 		Errors:         errors,
@@ -439,6 +440,47 @@ func validateProductionOutputs(
 		}
 	}
 
+	return errors
+}
+
+// isBasicPlayerResource returns true for the 6 basic player resource types.
+func isBasicPlayerResource(rt shared.ResourceType) bool {
+	switch rt {
+	case shared.ResourceCredit, shared.ResourceSteel, shared.ResourceTitanium,
+		shared.ResourcePlant, shared.ResourceEnergy, shared.ResourceHeat:
+		return true
+	}
+	return false
+}
+
+// validateNegativeResourceOutputs checks that the player has enough resources for negative
+// resource outputs in a card action behavior's base outputs.
+// This is a defense-in-depth check: card costs should normally be modeled as inputs,
+// but this catches any negative resource outputs that slip through.
+func validateNegativeResourceOutputs(
+	behavior shared.CardBehavior,
+	p *player.Player,
+) []player.StateError {
+	var errors []player.StateError
+	resources := p.Resources().Get()
+
+	for _, output := range behavior.Outputs {
+		if output.VariableAmount || output.Amount >= 0 {
+			continue
+		}
+		if !isBasicPlayerResource(output.ResourceType) {
+			continue
+		}
+		available := getResourceAmount(resources, output.ResourceType)
+		required := -output.Amount
+		if available < required {
+			errors = append(errors, player.StateError{
+				Code:     player.ErrorCodeInsufficientResources,
+				Category: player.ErrorCategoryInput,
+				Message:  fmt.Sprintf("Not enough %s", output.ResourceType),
+			})
+		}
+	}
 	return errors
 }
 
@@ -1440,16 +1482,51 @@ func isStorageResourceType(rt shared.ResourceType) bool {
 // CalculateChoiceErrors validates a single choice's requirements against the player/game state.
 // Returns a list of errors explaining why the choice is unavailable (empty if available).
 func CalculateChoiceErrors(choice shared.Choice, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []player.StateError {
-	if choice.Requirements == nil || len(choice.Requirements.Items) == 0 {
-		return nil
-	}
-
 	var errors []player.StateError
-	for _, req := range choice.Requirements.Items {
-		if err := checkChoiceRequirement(req, p, g, cardRegistry); err != nil {
-			errors = append(errors, *err)
+
+	if choice.Requirements != nil && len(choice.Requirements.Items) > 0 {
+		for _, req := range choice.Requirements.Items {
+			if err := checkChoiceRequirement(req, p, g, cardRegistry); err != nil {
+				errors = append(errors, *err)
+			}
 		}
 	}
+
+	resources := p.Resources().Get()
+	for _, output := range choice.Outputs {
+		if output.VariableAmount || output.Amount >= 0 {
+			continue
+		}
+		if !isBasicPlayerResource(output.ResourceType) {
+			continue
+		}
+		available := getResourceAmount(resources, output.ResourceType)
+		if available < -output.Amount {
+			errors = append(errors, player.StateError{
+				Code:     player.ErrorCodeInsufficientResources,
+				Category: player.ErrorCategoryInput,
+				Message:  fmt.Sprintf("Not enough %s", output.ResourceType),
+			})
+		}
+	}
+
+	for _, input := range choice.Inputs {
+		if input.VariableAmount || input.Amount <= 0 {
+			continue
+		}
+		if !isBasicPlayerResource(input.ResourceType) {
+			continue
+		}
+		available := getResourceAmount(resources, input.ResourceType)
+		if available < input.Amount {
+			errors = append(errors, player.StateError{
+				Code:     player.ErrorCodeInsufficientResources,
+				Category: player.ErrorCategoryInput,
+				Message:  fmt.Sprintf("Not enough %s", input.ResourceType),
+			})
+		}
+	}
+
 	return errors
 }
 
