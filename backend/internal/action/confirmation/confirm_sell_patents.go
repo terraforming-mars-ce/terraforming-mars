@@ -19,10 +19,11 @@ type ConfirmSellPatentsAction struct {
 // NewConfirmSellPatentsAction creates a new confirm sell patents action
 func NewConfirmSellPatentsAction(
 	gameRepo game.GameRepository,
+	stateRepo game.GameStateRepository,
 	logger *zap.Logger,
 ) *ConfirmSellPatentsAction {
 	return &ConfirmSellPatentsAction{
-		BaseAction: baseaction.NewBaseAction(gameRepo, nil),
+		BaseAction: baseaction.NewBaseActionWithStateRepo(gameRepo, nil, stateRepo),
 	}
 }
 
@@ -36,6 +37,10 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
+		return err
+	}
+
+	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -125,6 +130,29 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 
 	if len(selectedCardIDs) > 0 {
 		a.ConsumePlayerAction(g, log)
+
+		cardsSold := len(selectedCardIDs)
+		creditOutputs := []game.CalculatedOutput{
+			{ResourceType: string(shared.ResourceCredit), Amount: totalReward, IsScaled: false},
+		}
+
+		g.AddTriggeredEffect(game.TriggeredEffect{
+			CardName:          "Sell Patents",
+			PlayerID:          playerID,
+			SourceType:        game.SourceTypeStandardProject,
+			CalculatedOutputs: creditOutputs,
+		})
+
+		displayData := &game.LogDisplayData{
+			Behaviors: []shared.CardBehavior{{
+				Outputs: []shared.ResourceCondition{{
+					ResourceType: shared.ResourceCardDraw,
+					Amount:       cardsSold,
+					Target:       "self-player",
+				}},
+			}},
+		}
+		a.WriteStateLogFull(ctx, g, "Standard Project: Sell Patents", game.SourceTypeStandardProject, playerID, "Sold patents", nil, creditOutputs, displayData)
 	}
 
 	log.Info("✅ Sell patents completed successfully",

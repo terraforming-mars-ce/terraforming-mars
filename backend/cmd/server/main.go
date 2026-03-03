@@ -137,7 +137,7 @@ func main() {
 	selectTileAction := tileAction.NewSelectTileAction(gameRepo, cardRegistry, stateRepo, log)
 
 	// Confirmations (5)
-	confirmSellPatentsAction := confirmAction.NewConfirmSellPatentsAction(gameRepo, log)
+	confirmSellPatentsAction := confirmAction.NewConfirmSellPatentsAction(gameRepo, stateRepo, log)
 	confirmProductionCardsAction := confirmAction.NewConfirmProductionCardsAction(gameRepo, cardRegistry, log)
 	confirmCardDrawAction := confirmAction.NewConfirmCardDrawAction(gameRepo, cardRegistry, log)
 	confirmCardDiscardAction := confirmAction.NewConfirmCardDiscardAction(gameRepo, cardRegistry, log)
