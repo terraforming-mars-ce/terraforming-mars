@@ -3,6 +3,7 @@ import { StateDiffDto, GameDto, CalculatedOutputDto } from "@/types/generated/ap
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import GameIcon from "@/components/ui/display/GameIcon.tsx";
 import VictoryPointIcon from "@/components/ui/display/VictoryPointIcon.tsx";
+import CardIcon from "@/components/ui/cards/BehaviorSection/components/CardIcon.tsx";
 import BehaviorSection from "@/components/ui/cards/BehaviorSection";
 import { GamePopover } from "../GamePopover";
 
@@ -39,6 +40,14 @@ const resourceTypeToIconType: Record<string, string> = {
   "city-placement": "city-placement",
 };
 
+const cardResourceTypes: Record<string, "peek" | "take" | "buy" | "discard" | "none"> = {
+  "card-draw": "none",
+  "card-peek": "peek",
+  "card-take": "take",
+  "card-buy": "buy",
+  "card-discard": "discard",
+};
+
 const TILE_PLACEMENT_TYPES = ["ocean-placement", "greenery-placement", "city-placement"];
 const GLOBAL_PARAMETER_TYPES = ["temperature", "oxygen"];
 
@@ -67,6 +76,17 @@ const CalculatedOutputsDisplay: React.FC<{
     <div className="mt-1 flex flex-wrap items-center gap-2 px-1">
       <span className="text-[10px] text-gray-400 uppercase tracking-wider">Gained:</span>
       {outputsToShow.map((output, index) => {
+        const badgeType = cardResourceTypes[output.resourceType];
+        if (badgeType !== undefined) {
+          return (
+            <CardIcon
+              key={index}
+              amount={Math.abs(output.amount)}
+              badgeType={badgeType}
+              totalCardTypes={1}
+            />
+          );
+        }
         const iconType = resourceTypeToIconType[output.resourceType] || output.resourceType;
         return (
           <div key={index} className="flex items-center gap-0.5">
