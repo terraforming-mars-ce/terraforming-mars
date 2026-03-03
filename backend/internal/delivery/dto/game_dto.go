@@ -720,6 +720,7 @@ type GameDto struct {
 	ViewingPlayerID    string                 `json:"viewingPlayerId" ts:"string"`        // The player viewing this game state
 	CurrentTurn        *string                `json:"currentTurn" ts:"string|null"`       // Whose turn it is (nullable)
 	Generation         int                    `json:"generation" ts:"number"`
+	PlayerOrder        []string               `json:"playerOrder" ts:"string[]"`                                        // Player IDs in join order
 	TurnOrder          []string               `json:"turnOrder" ts:"string[]"`                                          // Turn order of all players in game
 	Board              BoardDto               `json:"board" ts:"BoardDto"`                                              // Game board with tiles and occupancy state
 	PaymentConstants   PaymentConstantsDto    `json:"paymentConstants" ts:"PaymentConstantsDto"`                        // Conversion rates for alternative payments

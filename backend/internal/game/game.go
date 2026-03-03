@@ -92,6 +92,7 @@ type Game struct {
 	board            *board.Board
 	deck             *deck.Deck
 	players          map[string]*player.Player
+	playerOrder      []string // Ordered list of player IDs by join order
 	turnOrder        []string // Ordered list of player IDs for turn sequence
 	eventBus         *events.EventBusImpl
 
@@ -160,6 +161,7 @@ func NewGame(
 		board:                      board.NewBoardWithTiles(id, board.GenerateMarsBoard(settings.VenusNextEnabled), eventBus),
 		deck:                       nil,
 		players:                    make(map[string]*player.Player),
+		playerOrder:                []string{},
 		turnOrder:                  []string{},
 		eventBus:                   eventBus,
 		milestones:                 NewMilestones(id, eventBus),
@@ -243,6 +245,15 @@ func (g *Game) Generation() int {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.generation
+}
+
+// PlayerOrder returns a copy of the player join order
+func (g *Game) PlayerOrder() []string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	order := make([]string, len(g.playerOrder))
+	copy(order, g.playerOrder)
+	return order
 }
 
 // TurnOrder returns a copy of the turn order
@@ -342,14 +353,16 @@ func (g *Game) GetPlayer(playerID string) (*player.Player, error) {
 	return p, nil
 }
 
-// GetAllPlayers returns all players in the game
+// GetAllPlayers returns all players in the game in join order
 func (g *Game) GetAllPlayers() []*player.Player {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	players := make([]*player.Player, 0, len(g.players))
-	for _, p := range g.players {
-		players = append(players, p)
+	players := make([]*player.Player, 0, len(g.playerOrder))
+	for _, id := range g.playerOrder {
+		if p, exists := g.players[id]; exists {
+			players = append(players, p)
+		}
 	}
 	return players
 }
@@ -367,6 +380,7 @@ func (g *Game) AddPlayer(ctx context.Context, p *player.Player) error {
 	}
 
 	g.players[p.ID()] = p
+	g.playerOrder = append(g.playerOrder, p.ID())
 	g.updatedAt = time.Now()
 	g.mu.Unlock()
 
@@ -393,6 +407,12 @@ func (g *Game) RemovePlayer(ctx context.Context, playerID string) error {
 	}
 
 	delete(g.players, playerID)
+	for i, id := range g.playerOrder {
+		if id == playerID {
+			g.playerOrder = append(g.playerOrder[:i], g.playerOrder[i+1:]...)
+			break
+		}
+	}
 	g.updatedAt = time.Now()
 	g.mu.Unlock()
 
