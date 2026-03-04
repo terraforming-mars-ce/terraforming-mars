@@ -19,7 +19,7 @@ interface RightSidebarProps {
 const ANGLE_INDENT = 20;
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
 const THICK_BORDER_COLOR = "rgba(80,80,90,0.9)";
-const BACKGROUND_COLOR = "rgba(10,10,15,0.95)";
+const BACKGROUND_COLOR = "rgba(10,10,15,1)";
 const SIDEBAR_WIDTH = 65;
 const GAUGE_GAP = 2;
 

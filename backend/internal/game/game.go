@@ -1556,13 +1556,19 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 		}
 	}
 
-	// If boardTags specified but no matching tiles found (e.g., Noctis City already occupied),
-	// fall back to normal placement rules
-	if len(boardTags) > 0 && len(availableHexes) == 0 {
-		logger.Get().Info("🔄 No tiles match board tags, falling back to normal placement",
-			zap.Strings("board_tags", boardTags),
-			zap.String("tile_type", tileType))
-		return g.calculateAvailableHexesForTile(tileType, playerID, nil)
+	if len(availableHexes) == 0 && tileRestrictions != nil {
+		// Board tags fallback (e.g., Noctis City already occupied)
+		canFallback := len(boardTags) > 0
+		// AdjacentToOwned-only fallback: greenery must be placed adjacent to own tiles if possible,
+		// but if no owned tiles exist, placement is allowed anywhere (TM rules)
+		if tileRestrictions.AdjacentToOwned && tileRestrictions.AdjacentToType == "" && len(tileRestrictions.OnBonusType) == 0 {
+			canFallback = true
+		}
+		if canFallback {
+			logger.Get().Info("🔄 No tiles match restrictions, falling back to normal placement",
+				zap.String("tile_type", tileType))
+			return g.calculateAvailableHexesForTile(tileType, playerID, nil)
+		}
 	}
 
 	return availableHexes

@@ -100,6 +100,9 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 		OnComplete: &playerPkg.TileCompletionCallback{
 			Type: "convert-plants-to-greenery",
 		},
+		TileRestrictions: &shared.TileRestrictions{
+			AdjacentToOwned: true,
+		},
 	}
 	if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
 		return fmt.Errorf("failed to queue tile placement: %w", err)
