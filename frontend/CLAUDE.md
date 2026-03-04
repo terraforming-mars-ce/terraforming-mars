@@ -67,6 +67,15 @@ frontend/
   const result = hasA ? a : hasB ? b : fallback;
   ```
 
+### Cursor Policy
+
+**CRITICAL**: Only use these three cursor types:
+- `cursor-default` — default arrow cursor
+- `cursor-pointer` — clickable/interactive elements
+- `cursor-text` — text inputs
+
+NEVER use `cursor-not-allowed`, `cursor-grab`, `cursor-wait`, or any other custom cursor types.
+
 ### Component Development
 
 1. **Inspect existing design language** before creating new components

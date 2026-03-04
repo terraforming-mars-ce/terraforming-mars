@@ -1,7 +1,7 @@
 # Terraforming Mars - Unified Development Makefile
 # Run from project root directory
 
-.PHONY: help run frontend backend kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi mcp-setup bot-setup bot-run
+.PHONY: help run frontend backend kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi mcp-setup bot-setup bot-run deps
 
 # Default target - show help
 help:
@@ -145,6 +145,11 @@ clean:
 	cd frontend && rm -rf dist build
 	cd backend && go clean
 	@echo "✅ Cleanup complete"
+
+# Install dependencies
+deps:
+	cd backend && go mod tidy
+	cd frontend && npm install
 
 # Development helpers
 dev-setup:

@@ -69,6 +69,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		g.CurrentPhase() == game.GamePhaseInitApplyCorp ||
 		g.CurrentPhase() == game.GamePhaseInitApplyPrelude {
 		pendingTileSelection = convertPendingTileSelection(g.GetPendingTileSelection(p.ID()))
+		forcedFirstAction = convertForcedFirstAction(g.GetForcedFirstAction(p.ID()))
 	}
 
 	return PlayerDto{
