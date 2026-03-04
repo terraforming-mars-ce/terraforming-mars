@@ -113,6 +113,10 @@ type Game struct {
 	selectCorporationPhases    map[string]*player.SelectCorporationPhase
 	selectStartingCardsPhases  map[string]*player.SelectStartingCardsPhase
 	selectPreludeCardsPhases   map[string]*player.SelectPreludeCardsPhase
+
+	deferredStartingChoices    map[string]*DeferredStartingChoices
+	initPhasePlayerIndex       int
+	initPhaseWaitingForConfirm bool
 }
 
 // NewGame creates a new game with the given settings
@@ -167,6 +171,7 @@ func NewGame(
 		selectCorporationPhases:    make(map[string]*player.SelectCorporationPhase),
 		selectStartingCardsPhases:  make(map[string]*player.SelectStartingCardsPhase),
 		selectPreludeCardsPhases:   make(map[string]*player.SelectPreludeCardsPhase),
+		deferredStartingChoices:    make(map[string]*DeferredStartingChoices),
 	}
 
 	g.subscribeToGenerationalEvents()
@@ -1418,6 +1423,18 @@ func (g *Game) AddTriggeredEffect(effect TriggeredEffect) {
 	g.triggeredEffects = append(g.triggeredEffects, effect)
 }
 
+// AppendToLastTriggeredEffect appends calculated outputs to the last triggered effect for a player
+func (g *Game) AppendToLastTriggeredEffect(playerID string, outputs []CalculatedOutput) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	for i := len(g.triggeredEffects) - 1; i >= 0; i-- {
+		if g.triggeredEffects[i].PlayerID == playerID {
+			g.triggeredEffects[i].CalculatedOutputs = append(g.triggeredEffects[i].CalculatedOutputs, outputs...)
+			return
+		}
+	}
+}
+
 // GetTriggeredEffects returns all triggered effects since last clear
 func (g *Game) GetTriggeredEffects() []TriggeredEffect {
 	g.mu.RLock()
@@ -1567,4 +1584,126 @@ func (g *Game) subscribeToGenerationalEvents() {
 			p.Effects().RemoveTemporaryEffects(shared.TemporaryNextCard)
 		}
 	})
+}
+
+// DeferredStartingChoices stores a player's starting selections before effects are applied
+type DeferredStartingChoices struct {
+	CorporationID   string
+	PreludeIDs      []string
+	CardIDs         []string
+	CorpApplied     bool
+	PreludesApplied bool
+}
+
+// GetDeferredStartingChoices returns the deferred starting choices for a player
+func (g *Game) GetDeferredStartingChoices(playerID string) *DeferredStartingChoices {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	choices, exists := g.deferredStartingChoices[playerID]
+	if !exists || choices == nil {
+		return nil
+	}
+	choicesCopy := *choices
+	return &choicesCopy
+}
+
+// SetDeferredStartingChoices sets the deferred starting choices for a player
+func (g *Game) SetDeferredStartingChoices(ctx context.Context, playerID string, choices *DeferredStartingChoices) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	if choices == nil {
+		delete(g.deferredStartingChoices, playerID)
+	} else {
+		choicesCopy := *choices
+		g.deferredStartingChoices[playerID] = &choicesCopy
+	}
+	g.updatedAt = time.Now()
+	g.mu.Unlock()
+
+	if g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{
+			GameID:    g.id,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return nil
+}
+
+// MarkCorpApplied marks a player's corporation as applied in their deferred choices
+func (g *Game) MarkCorpApplied(playerID string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if choices, ok := g.deferredStartingChoices[playerID]; ok && choices != nil {
+		choices.CorpApplied = true
+	}
+}
+
+// MarkPreludesApplied marks a player's preludes as applied in their deferred choices
+func (g *Game) MarkPreludesApplied(playerID string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if choices, ok := g.deferredStartingChoices[playerID]; ok && choices != nil {
+		choices.PreludesApplied = true
+	}
+}
+
+// InitPhasePlayerIndex returns the current player index in the init phase
+func (g *Game) InitPhasePlayerIndex() int {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.initPhasePlayerIndex
+}
+
+// SetInitPhasePlayerIndex sets the current player index in the init phase
+func (g *Game) SetInitPhasePlayerIndex(ctx context.Context, index int) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	g.initPhasePlayerIndex = index
+	g.updatedAt = time.Now()
+	g.mu.Unlock()
+
+	if g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{
+			GameID:    g.id,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return nil
+}
+
+// InitPhaseWaitingForConfirm returns whether the init phase is waiting for frontend confirmation
+func (g *Game) InitPhaseWaitingForConfirm() bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.initPhaseWaitingForConfirm
+}
+
+// SetInitPhaseWaitingForConfirm sets whether the init phase is waiting for frontend confirmation
+func (g *Game) SetInitPhaseWaitingForConfirm(ctx context.Context, waiting bool) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	g.initPhaseWaitingForConfirm = waiting
+	g.updatedAt = time.Now()
+	g.mu.Unlock()
+
+	if g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{
+			GameID:    g.id,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return nil
 }

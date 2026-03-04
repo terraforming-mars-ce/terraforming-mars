@@ -44,6 +44,7 @@ import {
   MessageTypeConvertToBot,
   MessageTypeActionBehaviorChoiceConfirmed,
   MessageTypeActionCardDiscardConfirmed,
+  MessageTypeActionConfirmInitAdvance,
   MessageTypeRequestLogs,
   // Payload types
   PlayerConnectedPayload,
@@ -311,6 +312,10 @@ export class WebSocketService {
       preludeIds,
       cardIds,
     });
+  }
+
+  confirmInitAdvance(): string {
+    return this.send(MessageTypeActionConfirmInitAdvance, {});
   }
 
   selectCards(cardIds: string[]): string {

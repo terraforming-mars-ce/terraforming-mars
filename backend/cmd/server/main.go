@@ -143,9 +143,10 @@ func main() {
 	confirmCardDiscardAction := confirmAction.NewConfirmCardDiscardAction(gameRepo, cardRegistry, log)
 	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, log)
 
-	// Turn management (3)
+	// Turn management (4)
 	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
 	selectStartingChoicesAction := turnAction.NewSelectStartingChoicesAction(gameRepo, cardRegistry, log)
+	confirmInitAdvanceAction := turnAction.NewConfirmInitAdvanceAction(gameRepo, cardRegistry, log)
 
 	// Bot service
 	commandDispatcher := bot.NewCommandDispatcher(
@@ -160,6 +161,7 @@ func main() {
 		sellPatentsAction,
 		convertHeatAction, convertPlantsAction,
 		claimMilestoneAction, fundAwardAction,
+		confirmInitAdvanceAction,
 		log,
 	)
 	botController := bot.NewBotController(gameRepo, cardRegistry, commandDispatcher, broadcaster, log)
@@ -224,6 +226,7 @@ func main() {
 		startGameAction,
 		skipActionAction,
 		selectStartingChoicesAction,
+		confirmInitAdvanceAction,
 		// Confirmations
 		confirmSellPatentsAction,
 		confirmProductionCardsAction,

@@ -14,7 +14,7 @@ interface PlayerListProps {
   turnPlayerId: string;
   currentPhase?: GamePhase;
   hostPlayerId?: string;
-  hasPendingTilePlacement?: boolean;
+  pendingTilePlayerId?: string;
   triggeredEffects?: TriggeredEffectDto[];
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
   onKickPlayer?: (playerId: string) => void;
@@ -27,7 +27,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
   turnPlayerId,
   currentPhase,
   hostPlayerId,
-  hasPendingTilePlacement = false,
+  pendingTilePlayerId,
   triggeredEffects = [],
   onPlayerClick,
   onKickPlayer,
@@ -55,7 +55,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
           isActionPhase={isActionPhase}
           isHost={currentPlayer?.id === hostPlayerId}
           onSkipAction={handleSkipAction}
-          hasPendingTilePlacement={hasPendingTilePlacement}
+          hasPendingTile={player.id === pendingTilePlayerId}
           triggeredEffects={triggeredEffects}
           onPlayerClick={onPlayerClick}
           onKickPlayer={onKickPlayer}

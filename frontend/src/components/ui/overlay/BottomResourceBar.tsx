@@ -36,13 +36,21 @@ interface AngledPanelProps {
   width: number;
   height: number;
   children: React.ReactNode;
+  showGradient?: boolean;
 }
 
 const ANGLE_INDENT = 42;
 
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
 
-const AngledPanel: React.FC<AngledPanelProps> = ({ side, corpColor, width, height, children }) => {
+const AngledPanel: React.FC<AngledPanelProps> = ({
+  side,
+  corpColor,
+  width,
+  height,
+  children,
+  showGradient = true,
+}) => {
   const fillPoints =
     side === "left"
       ? `0,0 ${width - ANGLE_INDENT},0 ${width},${height} 0,${height}`
@@ -58,7 +66,8 @@ const AngledPanel: React.FC<AngledPanelProps> = ({ side, corpColor, width, heigh
       ? { x1: width - ANGLE_INDENT, y1: 0, x2: width, y2: height }
       : { x1: 0, y1: height, x2: ANGLE_INDENT, y2: 0 };
 
-  const gradientId = `corpGradient-${side}`;
+  const corpGradientId = `corpGradient-${side}`;
+  const whiteBaseId = `whiteBase-${side}`;
   const whiteGlowId = `whiteGlow-${side}`;
 
   return (
@@ -70,10 +79,16 @@ const AngledPanel: React.FC<AngledPanelProps> = ({ side, corpColor, width, heigh
       >
         <defs>
           {side === "left" && (
-            <linearGradient id={gradientId} x1="0%" y1="0%" x2="30%" y2="0%">
-              <stop offset="0%" stopColor={corpColor} stopOpacity="0.17" />
-              <stop offset="100%" stopColor={corpColor} stopOpacity="0" />
-            </linearGradient>
+            <>
+              <linearGradient id={whiteBaseId} x1="0%" y1="0%" x2="30%" y2="0%">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient id={corpGradientId} x1="0%" y1="0%" x2="30%" y2="0%">
+                <stop offset="0%" stopColor={corpColor} stopOpacity="0.17" />
+                <stop offset="100%" stopColor={corpColor} stopOpacity="0" />
+              </linearGradient>
+            </>
           )}
           {side === "right" && (
             <linearGradient id={whiteGlowId} x1="70%" y1="0%" x2="100%" y2="0%">
@@ -83,7 +98,20 @@ const AngledPanel: React.FC<AngledPanelProps> = ({ side, corpColor, width, heigh
           )}
         </defs>
         <polygon points={fillPoints} fill="rgba(10,10,15,0.95)" />
-        {side === "left" && <polygon points={fillPoints} fill={`url(#${gradientId})`} />}
+        {side === "left" && (
+          <>
+            <polygon
+              points={fillPoints}
+              fill={`url(#${whiteBaseId})`}
+              style={{ opacity: showGradient ? 0 : 1, transition: "opacity 800ms ease-in" }}
+            />
+            <polygon
+              points={fillPoints}
+              fill={`url(#${corpGradientId})`}
+              style={{ opacity: showGradient ? 1 : 0, transition: "opacity 800ms ease-in" }}
+            />
+          </>
+        )}
         {side === "right" && <polygon points={fillPoints} fill={`url(#${whiteGlowId})`} />}
         <line
           x1={topEdge.x1}
@@ -129,6 +157,7 @@ interface BottomResourceBarProps {
   callbacks?: BottomResourceBarCallbacks;
   gameId?: string;
   corporation?: CardDto | null;
+  showCorporation?: boolean;
   spectatingPlayer?: PlayerDto | OtherPlayerDto | null;
   spectatingCorporation?: CardDto | null;
   spectatePlayerColor?: string;
@@ -143,6 +172,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   callbacks = {},
   gameId,
   corporation,
+  showCorporation = true,
   spectatingPlayer,
   spectatingCorporation,
   spectatePlayerColor,
@@ -181,6 +211,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const corpColor = displayCorporation
     ? getCorporationBorderColor(displayCorporation.name)
     : "#ffc107";
+
+  const accentColor = showCorporation ? corpColor : "#ffffff";
 
   const handleCorpToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -435,7 +467,13 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       )}
 
       {/* LEFT PANEL: Corporation + Resources */}
-      <AngledPanel side="left" corpColor={corpColor} width={LEFT_PANEL_WIDTH} height={BAR_HEIGHT}>
+      <AngledPanel
+        side="left"
+        corpColor={corpColor}
+        width={LEFT_PANEL_WIDTH}
+        height={BAR_HEIGHT}
+        showGradient={showCorporation}
+      >
         <div
           className="flex items-center h-full origin-left"
           style={{
@@ -447,7 +485,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           {/* Corporation Section */}
           <div
             ref={corpContainerRef}
-            className="flex items-center relative w-[120px] justify-center"
+            className="flex items-center relative w-[120px] justify-center transition-opacity duration-800 ease-in"
+            style={{ opacity: showCorporation ? 1 : 0 }}
           >
             {displayCorporation && (
               <>
@@ -510,7 +549,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
           <div
             className="w-[1px] h-[50px] self-center mx-2"
             style={{
-              background: `linear-gradient(transparent, ${corpColor}40, transparent)`,
+              background: `linear-gradient(transparent, ${accentColor}40, transparent)`,
+              transition: "background 800ms ease-in",
             }}
           />
 

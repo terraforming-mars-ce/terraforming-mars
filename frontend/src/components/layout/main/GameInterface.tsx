@@ -51,6 +51,9 @@ import {
   GamePhaseAction,
   GamePhaseComplete,
   GamePhaseDemoSetup,
+  GamePhaseProductionAndCardDraw,
+  GamePhaseInitApplyCorp,
+  GamePhaseInitApplyPrelude,
   GamePhaseStartingSelection,
   GameStatusActive,
   GameStatusCompleted,
@@ -103,6 +106,8 @@ export default function GameInterface() {
   const [showPerformanceWindow, setShowPerformanceWindow] = useState(false);
   const [showBugReportWindow, setShowBugReportWindow] = useState(false);
   const [spectatePlayerId, setSpectatePlayerId] = useState<string | null>(null);
+  const [showCorp, setShowCorp] = useState(false);
+  const [displayedInitPlayerId, setDisplayedInitPlayerId] = useState<string | null>(null);
 
   // Set corporation data directly from player (backend now sends full CardDto)
   useEffect(() => {
@@ -112,6 +117,40 @@ export default function GameInterface() {
       setCorporationData(null);
     }
   }, [currentPlayer?.corporation]);
+
+  // Corp reveal: set to true when entering a phase where the corp has been applied (handles reconnection)
+  useEffect(() => {
+    if (!game) return;
+    const phase = game.currentPhase;
+    if (
+      phase === GamePhaseInitApplyPrelude ||
+      phase === GamePhaseAction ||
+      phase === GamePhaseProductionAndCardDraw ||
+      phase === GamePhaseComplete
+    ) {
+      setShowCorp(true);
+    }
+  }, [game?.currentPhase]);
+
+  // Delay init phase turn highlight until notification queue drains
+  useEffect(() => {
+    const initPlayerId = game?.initPhase?.currentPlayerId ?? null;
+    const phase = game?.currentPhase;
+    if (phase !== GamePhaseInitApplyCorp && phase !== GamePhaseInitApplyPrelude) {
+      setDisplayedInitPlayerId(null);
+      return;
+    }
+    const now = Date.now();
+    const queueRemaining = Math.max(0, notificationQueueDoneAt.current - now);
+    if (queueRemaining === 0) {
+      setDisplayedInitPlayerId(initPlayerId);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setDisplayedInitPlayerId(initPlayerId);
+    }, queueRemaining);
+    return () => clearTimeout(timer);
+  }, [game?.currentPhase, game?.initPhase?.currentPlayerId]);
 
   // Production phase modal state
   const [showProductionPhaseModal, setShowProductionPhaseModal] = useState(false);
@@ -262,6 +301,7 @@ export default function GameInterface() {
 
   // Triggered effects notifications
   const [triggeredEffects, setTriggeredEffects] = useState<TriggeredEffectDto[]>([]);
+  const notificationQueueDoneAt = useRef<number>(0);
 
   const [isSkyboxReady, setIsSkyboxReady] = useState(() => skyboxCache.isReady());
   const [isGpuReady, setIsGpuReady] = useState(false);
@@ -341,8 +381,17 @@ export default function GameInterface() {
       // Extract triggered effects for notifications (clear after short delay to allow component to process)
       if (updatedGame.triggeredEffects && updatedGame.triggeredEffects.length > 0) {
         setTriggeredEffects(updatedGame.triggeredEffects);
-        // Clear after component has processed them
+        const notificationCount = updatedGame.triggeredEffects.length;
+        notificationQueueDoneAt.current = Date.now() + notificationCount * 2500;
         setTimeout(() => setTriggeredEffects([]), 100);
+
+        // Reveal corp logo when we see triggered effects for our player during init_apply_corp
+        if (updatedGame.currentPhase === GamePhaseInitApplyCorp) {
+          const hasMyEffect = updatedGame.triggeredEffects.some(
+            (e) => e.playerId === updatedGame.currentPlayer?.id,
+          );
+          if (hasMyEffect) setShowCorp(true);
+        }
       }
 
       setGame(updatedGame);
@@ -2246,13 +2295,15 @@ export default function GameInterface() {
 
   const handlePlayerClick = useCallback(
     (player: PlayerDto | OtherPlayerDto) => {
+      const phase = game?.currentPhase;
+      if (phase === GamePhaseInitApplyCorp || phase === GamePhaseInitApplyPrelude) return;
       if (player.id === game?.currentPlayer?.id) {
         setSpectatePlayerId(null);
         return;
       }
       setSpectatePlayerId((prev) => (prev === player.id ? null : player.id));
     },
-    [game?.currentPlayer?.id],
+    [game?.currentPlayer?.id, game?.currentPhase],
   );
 
   const handleStopSpectating = useCallback(() => {
@@ -2275,6 +2326,11 @@ export default function GameInterface() {
   const isPreGamePhase =
     isLobbyPhase ||
     (game?.status === GameStatusActive && game?.currentPhase === GamePhaseStartingSelection);
+
+  const isInitApplyPhase =
+    game?.status === GameStatusActive &&
+    (game?.currentPhase === GamePhaseInitApplyCorp ||
+      game?.currentPhase === GamePhaseInitApplyPrelude);
 
   // Show waiting modal when player has finished selection but others haven't
   const showWaitingForPlayers =
@@ -2307,20 +2363,15 @@ export default function GameInterface() {
   }, [isPreGamePhase]);
 
   useEffect(() => {
-    if (transitionPhase !== "fadeOutLobby") return;
-
-    const animateTimer = setTimeout(() => {
-      setTransitionPhase("animateUI");
-    }, 1500);
-
-    const completeTimer = setTimeout(() => {
-      setTransitionPhase("complete");
-    }, 1500 + 2500);
-
-    return () => {
-      clearTimeout(animateTimer);
-      clearTimeout(completeTimer);
-    };
+    if (transitionPhase === "fadeOutLobby") {
+      const timer = setTimeout(() => setTransitionPhase("animateUI"), 1500);
+      return () => clearTimeout(timer);
+    }
+    if (transitionPhase === "animateUI") {
+      const timer = setTimeout(() => setTransitionPhase("complete"), 2500);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
   }, [transitionPhase]);
 
   // On mount: if game is already active (reload/reconnect), stop ambient immediately
@@ -2329,6 +2380,38 @@ export default function GameInterface() {
       audioService.stopAmbient();
     }
   }, [game, isPreGamePhase]);
+
+  // Auto-advance init phase after transition animation and notification queue complete
+  // Only the first player in turn order sends confirms to prevent duplicate advances
+  useEffect(() => {
+    if (!isInitApplyPhase || !game?.initPhase?.waitingForConfirm) return;
+    if (!game.turnOrder?.length || game.turnOrder[0] !== currentPlayer?.id) return;
+
+    const animationDone = transitionPhase === "complete" || transitionPhase === "idle";
+    if (!animationDone) return;
+
+    if (game.initPhase.hasPendingTiles) return;
+
+    // Wait for any notification queue to finish before confirming
+    const now = Date.now();
+    const queueRemaining = Math.max(0, notificationQueueDoneAt.current - now);
+    const delay = queueRemaining + 750;
+
+    const timer = setTimeout(() => {
+      void globalWebSocketManager.confirmInitAdvance();
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [
+    isInitApplyPhase,
+    game?.initPhase?.waitingForConfirm,
+    game?.initPhase?.currentPlayerId,
+    game?.initPhase?.currentPlayerIndex,
+    game?.initPhase?.hasPendingTiles,
+    game?.turnOrder,
+    currentPlayer?.id,
+    transitionPhase,
+  ]);
 
   const bottomBarCallbacks = useMemo(
     () => ({
@@ -2378,6 +2461,8 @@ export default function GameInterface() {
           currentPlayer={currentPlayer}
           playedCards={currentPlayer?.playedCards || []}
           corporationCard={corporationData}
+          showCorporation={showCorp}
+          initTurnPlayerId={displayedInitPlayerId}
           showStartingSelection={showStartingSelection}
           transitionPhase={transitionPhase}
           animateHexEntrance={

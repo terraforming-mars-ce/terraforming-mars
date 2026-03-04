@@ -8,6 +8,8 @@ const (
 	GamePhaseStartingSelection     GamePhase = "starting_selection"
 	GamePhaseStartGameSelection    GamePhase = "start_game_selection"
 	GamePhaseDemoSetup             GamePhase = "demo_setup"
+	GamePhaseInitApplyCorp         GamePhase = "init_apply_corp"
+	GamePhaseInitApplyPrelude      GamePhase = "init_apply_prelude"
 	GamePhaseAction                GamePhase = "action"
 	GamePhaseProductionAndCardDraw GamePhase = "production_and_card_draw"
 	GamePhaseComplete              GamePhase = "complete"
@@ -727,6 +729,7 @@ type GameDto struct {
 	FinalScores        []FinalScoreDto        `json:"finalScores,omitempty" ts:"FinalScoreDto[] | undefined"`           // Final scores (only when game completed)
 	TriggeredEffects   []TriggeredEffectDto   `json:"triggeredEffects,omitempty" ts:"TriggeredEffectDto[] | undefined"` // Recently triggered passive effects
 	PlaceableTileTypes []PlaceableTileTypeDto `json:"placeableTileTypes" ts:"PlaceableTileTypeDto[]"`                   // Available tile types for the demo tile picker
+	InitPhase          *InitPhaseDto          `json:"initPhase,omitempty" ts:"InitPhaseDto | undefined"`
 }
 
 // PlaceableTileTypeDto represents a tile type available for placement in the demo tile picker
@@ -734,6 +737,16 @@ type PlaceableTileTypeDto struct {
 	Type  string `json:"type" ts:"string"`
 	Label string `json:"label" ts:"string"`
 	Group string `json:"group" ts:"string"`
+}
+
+// InitPhaseDto represents the state of the init_apply_corp or init_apply_prelude phase
+type InitPhaseDto struct {
+	CurrentPlayerID    string `json:"currentPlayerId" ts:"string"`
+	CurrentPlayerIndex int    `json:"currentPlayerIndex" ts:"number"`
+	TotalPlayers       int    `json:"totalPlayers" ts:"number"`
+	WaitingForConfirm  bool   `json:"waitingForConfirm" ts:"boolean"`
+	HasPreludePhase    bool   `json:"hasPreludePhase" ts:"boolean"`
+	HasPendingTiles    bool   `json:"hasPendingTiles" ts:"boolean"`
 }
 
 // Board-related DTOs for tygo generation

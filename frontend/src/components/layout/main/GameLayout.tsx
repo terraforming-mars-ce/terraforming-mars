@@ -12,6 +12,8 @@ import PlayerOverlay from "../../ui/overlay/PlayerOverlay.tsx";
 import { StandardProject } from "../../../types/cards.tsx";
 import {
   GameDto,
+  GamePhaseInitApplyCorp,
+  GamePhaseInitApplyPrelude,
   PlayerDto,
   OtherPlayerDto,
   CardDto,
@@ -34,6 +36,8 @@ interface GameLayoutProps {
   currentPlayer: PlayerDto | null;
   playedCards?: CardDto[];
   corporationCard?: CardDto | null;
+  showCorporation?: boolean;
+  initTurnPlayerId?: string | null;
   showStartingSelection?: boolean;
   transitionPhase?: TransitionPhase;
   animateHexEntrance?: boolean;
@@ -59,6 +63,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   currentPlayer,
   playedCards = [],
   corporationCard = null,
+  showCorporation = true,
+  initTurnPlayerId = null,
   showStartingSelection = false,
   transitionPhase = "idle",
   animateHexEntrance = false,
@@ -184,10 +190,21 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <LeftSidebar
             players={allPlayers}
             currentPlayer={currentPlayer}
-            turnPlayerId={gameState?.currentTurn || ""}
+            turnPlayerId={
+              gameState?.currentPhase === GamePhaseInitApplyCorp ||
+              gameState?.currentPhase === GamePhaseInitApplyPrelude
+                ? initTurnPlayerId || ""
+                : gameState?.currentTurn || ""
+            }
             currentPhase={gameState?.currentPhase}
             hostPlayerId={gameState?.hostPlayerId}
-            hasPendingTilePlacement={!!currentPlayer?.pendingTileSelection}
+            pendingTilePlayerId={
+              gameState?.initPhase?.hasPendingTiles
+                ? gameState.initPhase.currentPlayerId
+                : currentPlayer?.pendingTileSelection
+                  ? currentPlayer.id
+                  : undefined
+            }
             triggeredEffects={triggeredEffects}
             onPlayerClick={onPlayerClick}
             onKickPlayer={handleKickPlayer}
@@ -215,6 +232,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             callbacks={bottomBarCallbacks}
             gameId={gameState?.id}
             corporation={corporationCard}
+            showCorporation={showCorporation}
             spectatingPlayer={spectatingPlayer}
             spectatingCorporation={spectatingCorporation}
             spectatePlayerColor={spectatePlayerColor}

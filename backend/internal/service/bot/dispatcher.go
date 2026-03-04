@@ -42,6 +42,7 @@ type CommandDispatcher struct {
 	convertPlants          *resconvAction.ConvertPlantsToGreeneryAction
 	claimMilestone         *milestoneAction.ClaimMilestoneAction
 	fundAward              *awardAction.FundAwardAction
+	confirmInitAdvance     *turnAction.ConfirmInitAdvanceAction
 	logger                 *zap.Logger
 }
 
@@ -67,6 +68,7 @@ func NewCommandDispatcher(
 	convertPlants *resconvAction.ConvertPlantsToGreeneryAction,
 	claimMilestone *milestoneAction.ClaimMilestoneAction,
 	fundAward *awardAction.FundAwardAction,
+	confirmInitAdvance *turnAction.ConfirmInitAdvanceAction,
 	logger *zap.Logger,
 ) *CommandDispatcher {
 	return &CommandDispatcher{
@@ -90,6 +92,7 @@ func NewCommandDispatcher(
 		convertPlants:          convertPlants,
 		claimMilestone:         claimMilestone,
 		fundAward:              fundAward,
+		confirmInitAdvance:     confirmInitAdvance,
 		logger:                 logger,
 	}
 }
@@ -148,6 +151,8 @@ func (d *CommandDispatcher) Dispatch(ctx context.Context, gameID, playerID strin
 		return d.convertHeat.Execute(ctx, gameID, playerID)
 	case "action.resource-conversion.convert-plants-to-greenery":
 		return d.convertPlants.Execute(ctx, gameID, playerID)
+	case "action.game-management.confirm-init-advance":
+		return d.confirmInitAdvance.Execute(ctx, gameID, playerID)
 	case "action.milestone.claim-milestone":
 		return d.dispatchClaimMilestone(ctx, gameID, playerID, envelope.Payload)
 	case "action.award.fund-award":
