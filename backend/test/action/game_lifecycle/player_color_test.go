@@ -156,8 +156,7 @@ func TestSetPlayerColor_NonHostCannotChangeBotColor(t *testing.T) {
 	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	ctx := testutil.TestContext()
 
-	players := g.GetAllPlayers()
-	nonHost := players[1]
+	nonHost, _ := g.GetPlayer("player-2")
 	bot := testutil.AddBotToGame(t, g, repo, "TestBot", "normal", "fast")
 
 	action := newSetPlayerColorAction(repo)
@@ -171,9 +170,8 @@ func TestSetPlayerColor_CannotChangeOtherHumanColor(t *testing.T) {
 	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	ctx := testutil.TestContext()
 
-	players := g.GetAllPlayers()
-	host := players[0]
-	otherHuman := players[1]
+	host, _ := g.GetPlayer("player-1")
+	otherHuman, _ := g.GetPlayer("player-2")
 
 	action := newSetPlayerColorAction(repo)
 	err := action.Execute(ctx, g.ID(), host.ID(), otherHuman.ID(), game.PlayerColors[5])
