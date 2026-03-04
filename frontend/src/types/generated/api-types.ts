@@ -1009,6 +1009,7 @@ export interface OtherPlayerDto {
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
   storagePaymentSubstitutes: StoragePaymentSubstituteDto[];
+  vpGranters: VPGranterDto[];
 }
 /**
  * GameDto represents a game for client consumption (clean architecture)

@@ -706,6 +706,7 @@ type OtherPlayerDto struct {
 	ResourceStorage           map[string]int                     `json:"resourceStorage" ts:"Record<string, number>"`
 	PaymentSubstitutes        []PaymentSubstituteDto             `json:"paymentSubstitutes" ts:"PaymentSubstituteDto[]"`
 	StoragePaymentSubstitutes []StoragePaymentSubstituteDto      `json:"storagePaymentSubstitutes" ts:"StoragePaymentSubstituteDto[]"`
+	VPGranters                []VPGranterDto                     `json:"vpGranters" ts:"VPGranterDto[]"`
 }
 
 // GameDto represents a game for client consumption (clean architecture)
