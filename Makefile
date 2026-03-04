@@ -1,7 +1,7 @@
 # Terraforming Mars - Unified Development Makefile
 # Run from project root directory
 
-.PHONY: help run frontend backend kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi mcp-setup bot-setup bot-run deps
+.PHONY: help run frontend backend kill lint typecheck test test-clean test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi mcp-setup bot-setup bot-run deps
 
 # Default target - show help
 help:
@@ -15,6 +15,7 @@ help:
 	@echo ""
 	@echo "🧪 Testing:"
 	@echo "  make test         - Run all tests (backend + frontend)"
+	@echo "  make test-clean   - Run backend tests with clean cache"
 	@echo "  make test-backend - Run backend tests only"
 	@echo "  make test-verbose - Run backend tests with verbose output"
 	@echo "  make test-coverage- Run backend tests with coverage report"
@@ -67,6 +68,10 @@ test-frontend:
 	@echo "⚠️  No test script found in frontend package.json"
 	@echo "ℹ️  Running linter instead..."
 	cd frontend && npm run lint
+
+test-clean:
+	@echo "🧪 Running backend tests (clean, no cache)..."
+	cd backend && go clean -testcache && go test ./test/...
 
 test-verbose:
 	@echo "🧪 Running backend tests (verbose)..."
