@@ -40,7 +40,7 @@ const ActionsPopover: React.FC<ActionsPopoverProps> = ({
       theme="actions"
       header={{
         title: "Card Actions",
-        badge: `${actions.length} available`,
+        badge: `${actions.filter((a) => a.available).length} available`,
       }}
       arrow={{ enabled: true, position: "right", offset: 30 }}
       width={320}
