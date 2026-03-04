@@ -20,6 +20,7 @@ import (
 type VPCardInfo struct {
 	CardID       string
 	CardName     string
+	CardType     string
 	Description  string
 	VPConditions []player.VPCondition
 	Tags         []shared.CardTag
@@ -53,6 +54,9 @@ func (ctx *gameVPRecalculationContext) CountPlayerTagsByType(playerID string, ta
 	for _, cardID := range p.PlayedCards().Cards() {
 		cardInfo, err := ctx.game.vpCardLookup.LookupVPCard(cardID)
 		if err != nil {
+			continue
+		}
+		if cardInfo.CardType == "event" && tagType != shared.TagEvent {
 			continue
 		}
 		for _, tag := range cardInfo.Tags {

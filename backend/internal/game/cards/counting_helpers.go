@@ -35,7 +35,10 @@ func CountPlayerTagsByType(p *player.Player, cardRegistry CardRegistryInterface,
 	for _, cardID := range playedCardIDs {
 		card, err := cardRegistry.GetByID(cardID)
 		if err != nil {
-			continue // Skip cards not in registry
+			continue
+		}
+		if card.Type == CardTypeEvent && tagType != shared.TagEvent {
+			continue
 		}
 		for _, tag := range card.Tags {
 			if tag == tagType {

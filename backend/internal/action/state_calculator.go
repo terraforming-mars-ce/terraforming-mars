@@ -1676,6 +1676,9 @@ func countPlayerTags(tag shared.CardTag, p *player.Player, cardRegistry cards.Ca
 		if err != nil {
 			continue
 		}
+		if card.Type == gamecards.CardTypeEvent {
+			continue
+		}
 		for _, cardTag := range card.Tags {
 			if cardTag == tag || cardTag == shared.TagWild {
 				tagCount++

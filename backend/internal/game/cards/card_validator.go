@@ -147,6 +147,9 @@ func validateTagsRequirement(req Requirement, playedCards []*Card) error {
 func countTags(tag shared.CardTag, playedCards []*Card) int {
 	count := 0
 	for _, card := range playedCards {
+		if card.Type == CardTypeEvent {
+			continue
+		}
 		for _, cardTag := range card.Tags {
 			if cardTag == tag {
 				count++
