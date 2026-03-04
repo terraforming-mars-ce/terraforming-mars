@@ -93,6 +93,9 @@ func (a *PlantGreeneryAction) Execute(ctx context.Context, gameID string, player
 		OnComplete: &playerPkg.TileCompletionCallback{
 			Type: "standard-project-greenery",
 		},
+		TileRestrictions: &shared.TileRestrictions{
+			AdjacentToOwned: true,
+		},
 	}
 	if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
 		return fmt.Errorf("failed to queue tile placement: %w", err)

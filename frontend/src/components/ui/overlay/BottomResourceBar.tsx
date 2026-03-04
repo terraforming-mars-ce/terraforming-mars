@@ -274,6 +274,9 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     const counts: { [key: string]: number } = {};
 
     displayPlayedCards.forEach((card) => {
+      if (card.type === "event") {
+        return;
+      }
       if (card.tags) {
         card.tags.forEach((tag) => {
           const tagKey = tag.toLowerCase();

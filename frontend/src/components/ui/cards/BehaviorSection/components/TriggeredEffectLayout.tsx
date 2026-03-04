@@ -222,6 +222,31 @@ const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode 
     );
   }
 
+  // Handle tile-placed condition with onBonusType (e.g., Mining Rights)
+  const isTilePlaced = trigger.condition?.type === "tile-placed";
+  if (isTilePlaced && trigger.condition?.onBonusType) {
+    const bonusTypes: string[] = trigger.condition.onBonusType;
+    const target = trigger.condition?.target || "self-player";
+    const isAnyPlayer = target === "any-player";
+
+    const redGlowClass = isAnyPlayer
+      ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_2px_rgba(244,67,54,0.9))_drop-shadow(0_0_4px_rgba(244,67,54,0.7))]"
+      : "";
+
+    return (
+      <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
+        <div className={`flex items-center gap-[2px] ${redGlowClass}`}>
+          {bonusTypes.map((bonusType: string, idx: number) => (
+            <React.Fragment key={`bonus-${triggerIndex}-${idx}`}>
+              {idx > 0 && <Slash />}
+              <GameIcon iconType={bonusType} size="small" />
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // Check if trigger has requiredOriginalCost (from selectors or legacy condition level)
   const requiredOriginalCost = getRequiredOriginalCost(
     trigger.condition?.selectors,

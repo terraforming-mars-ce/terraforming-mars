@@ -9894,6 +9894,11 @@
             "type": "heat-production",
             "amount": 3,
             "target": "self-player"
+          },
+          {
+            "type": "venus",
+            "amount": 1,
+            "target": "none"
           }
         ],
         "description": "Raise Venus 1 step. Increase your heat production 3 steps."
@@ -9910,6 +9915,23 @@
     "tags": [
       "space",
       "venus"
+    ],
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "venus",
+            "amount": 3,
+            "target": "none"
+          }
+        ],
+        "description": "Raise Venus 3 steps."
+      }
     ]
   },
   {
@@ -10537,6 +10559,11 @@
             "type": "heat-production",
             "amount": 2,
             "target": "self-player"
+          },
+          {
+            "type": "venus",
+            "amount": 2,
+            "target": "none"
           }
         ],
         "description": "Raise Venus 2 steps. Increase your heat production 2 steps."
@@ -10714,7 +10741,24 @@
           "max": 10
         }
       ]
-    }
+    },
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "venus",
+            "amount": 2,
+            "target": "none"
+          }
+        ],
+        "description": "Raise Venus 2 steps."
+      }
+    ]
   },
   {
     "id": "247",
@@ -11141,6 +11185,23 @@
     "pack": "venus-next",
     "tags": [
       "space"
+    ],
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "venus",
+            "amount": 1,
+            "target": "none"
+          }
+        ],
+        "description": "Raise Venus 1 step."
+      }
     ]
   },
   {
@@ -11246,6 +11307,11 @@
             "type": "microbe",
             "amount": 2,
             "target": "any-card"
+          },
+          {
+            "type": "venus",
+            "amount": 1,
+            "target": "none"
           }
         ],
         "description": "Raise Venus 1 step. Increase your plant production 1 step. Add 2 microbes to **another** card."

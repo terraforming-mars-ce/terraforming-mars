@@ -27,3 +27,23 @@ func (r Resources) DeepCopy() Resources {
 		Heat:     r.Heat,
 	}
 }
+
+// GetAmount returns the amount of a specific resource type.
+func (r Resources) GetAmount(resourceType ResourceType) int {
+	switch resourceType {
+	case ResourceCredit:
+		return r.Credits
+	case ResourceSteel:
+		return r.Steel
+	case ResourceTitanium:
+		return r.Titanium
+	case ResourcePlant:
+		return r.Plants
+	case ResourceEnergy:
+		return r.Energy
+	case ResourceHeat:
+		return r.Heat
+	default:
+		return 0
+	}
+}

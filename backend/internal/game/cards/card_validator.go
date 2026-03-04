@@ -130,7 +130,7 @@ func validateTagsRequirement(req Requirement, playedCards []*Card) error {
 		return fmt.Errorf("tags requirement missing tag specification")
 	}
 
-	tagCount := countTags(*req.Tag, playedCards)
+	tagCount := countTagsInPlayedCards(*req.Tag, playedCards)
 
 	if req.Min != nil && tagCount < *req.Min {
 		return fmt.Errorf("tag %s count %d is below required minimum %d", *req.Tag, tagCount, *req.Min)
@@ -143,17 +143,15 @@ func validateTagsRequirement(req Requirement, playedCards []*Card) error {
 	return nil
 }
 
-// countTags counts occurrences of a specific tag in played cards
-func countTags(tag shared.CardTag, playedCards []*Card) int {
+// countTagsInPlayedCards counts occurrences of a specific tag in played cards (excluding events).
+// Wild tags count toward any tag type.
+func countTagsInPlayedCards(tag shared.CardTag, playedCards []*Card) int {
 	count := 0
 	for _, card := range playedCards {
-		for _, cardTag := range card.Tags {
-			if cardTag == tag {
-				count++
-			} else if cardTag == shared.TagWild {
-				count++
-			}
+		if card.Type == CardTypeEvent {
+			continue
 		}
+		count += countTagsInList(card.Tags, tag)
 	}
 	return count
 }

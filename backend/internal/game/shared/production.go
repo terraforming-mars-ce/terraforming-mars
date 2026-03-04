@@ -28,3 +28,24 @@ func (p Production) DeepCopy() Production {
 		Heat:     p.Heat,
 	}
 }
+
+// GetAmount returns the production amount for a specific resource type.
+// Accepts both base resources (e.g., "titanium") and production types (e.g., "titanium-production").
+func (p Production) GetAmount(resourceType ResourceType) int {
+	switch resourceType {
+	case ResourceCredit, ResourceCreditProduction:
+		return p.Credits
+	case ResourceSteel, ResourceSteelProduction:
+		return p.Steel
+	case ResourceTitanium, ResourceTitaniumProduction:
+		return p.Titanium
+	case ResourcePlant, ResourcePlantProduction:
+		return p.Plants
+	case ResourceEnergy, ResourceEnergyProduction:
+		return p.Energy
+	case ResourceHeat, ResourceHeatProduction:
+		return p.Heat
+	default:
+		return 0
+	}
+}

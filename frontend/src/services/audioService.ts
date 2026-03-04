@@ -16,6 +16,8 @@ class AudioService {
   private volumeMultipliers: Map<string, number> = new Map();
   private ambientVolumeMultiplier: number = 0.3;
   private fadeOutInterval: ReturnType<typeof setInterval> | null = null;
+  private ambientTracks: string[] = ["/sounds/main-ambient.mp3", "/sounds/choral-chambers.mp3"];
+  private currentTrackIndex: number = 0;
 
   constructor() {
     const settings = getSoundSettings();
@@ -148,16 +150,28 @@ class AudioService {
     return this.playSound("your-turn");
   }
 
+  private createAmbientAudio(): HTMLAudioElement {
+    const audio = new Audio(this.ambientTracks[this.currentTrackIndex]);
+    audio.loop = false;
+    audio.addEventListener("ended", () => {
+      this.currentTrackIndex = (this.currentTrackIndex + 1) % this.ambientTracks.length;
+      this.ambientAudio = this.createAmbientAudio();
+      this.ambientAudio.volume = this.musicVolume * this.ambientVolumeMultiplier;
+      if (this.isMusicEnabled) {
+        void this.ambientAudio.play().catch(() => {});
+      }
+    });
+    return audio;
+  }
+
   public playAmbient(): void {
-    // Cancel any in-progress fadeOut to prevent it from killing playback
     if (this.fadeOutInterval !== null) {
       clearInterval(this.fadeOutInterval);
       this.fadeOutInterval = null;
     }
 
     if (!this.ambientAudio) {
-      this.ambientAudio = new Audio("/sounds/main-ambient.mp3");
-      this.ambientAudio.loop = true;
+      this.ambientAudio = this.createAmbientAudio();
     }
     this.ambientAudio.volume = this.musicVolume * this.ambientVolumeMultiplier;
 
