@@ -25,6 +25,7 @@ import (
 	"terraforming-mars-backend/internal/delivery/websocket/handler/standard_project"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/tile"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/turn_management"
+	gameModel "terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/logger"
 )
 
@@ -32,6 +33,7 @@ import (
 func RegisterHandlers(
 	hub *core.Hub,
 	broadcaster *Broadcaster,
+	gameRepo gameModel.GameRepository,
 	createGameAction *gameAction.CreateGameAction,
 	joinGameAction *gameAction.JoinGameAction,
 	addBotAction *gameAction.AddBotAction,
@@ -60,6 +62,11 @@ func RegisterHandlers(
 	playerTakeoverAction *connAction.PlayerTakeoverAction,
 	kickPlayerAction *connAction.KickPlayerAction,
 	endGameAction *connAction.EndGameAction,
+	setPlayerColorAction *connAction.SetPlayerColorAction,
+	spectateGameAction *connAction.SpectateGameAction,
+	spectatorDisconnectedAction *connAction.SpectatorDisconnectedAction,
+	kickSpectatorAction *connAction.KickSpectatorAction,
+	sendChatMessageAction *connAction.SendChatMessageAction,
 	convertToBotAction *gameAction.ConvertToBotAction,
 	claimMilestoneAction *milestoneAction.ClaimMilestoneAction,
 	fundAwardAction *awardAction.FundAwardAction,
@@ -163,6 +170,21 @@ func RegisterHandlers(
 
 	endGameHandler := connection.NewEndGameHandler(endGameAction, hub)
 	hub.RegisterHandler(dto.MessageTypeEndGame, endGameHandler)
+
+	setPlayerColorHandler := connection.NewSetPlayerColorHandler(setPlayerColorAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeSetPlayerColor, setPlayerColorHandler)
+
+	spectateGameHandler := connection.NewSpectateGameHandler(spectateGameAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeSpectatorConnect, spectateGameHandler)
+
+	spectatorDisconnectedHandler := connection.NewSpectatorDisconnectedHandler(spectatorDisconnectedAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeSpectatorDisconnected, spectatorDisconnectedHandler)
+
+	kickSpectatorHandler := connection.NewKickSpectatorHandler(kickSpectatorAction, broadcaster, hub)
+	hub.RegisterHandler(dto.MessageTypeKickSpectator, kickSpectatorHandler)
+
+	chatMessageHandler := connection.NewChatMessageHandler(sendChatMessageAction, broadcaster, gameRepo)
+	hub.RegisterHandler(dto.MessageTypeChatMessage, chatMessageHandler)
 
 	convertToBotHandler := game.NewConvertToBotHandler(convertToBotAction, broadcaster, hub)
 	hub.RegisterHandler(dto.MessageTypeConvertToBot, convertToBotHandler)

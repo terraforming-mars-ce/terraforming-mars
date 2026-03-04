@@ -94,7 +94,10 @@ func (b *Broadcaster) BroadcastGameState(gameID string, playerIDs []string) {
 		}
 	}
 
-	// Clear triggered effects after all players have received them
+	// Broadcast to all spectators (before clearing triggered effects so spectators see them)
+	b.broadcastToSpectators(g)
+
+	// Clear triggered effects after all players and spectators have received them
 	g.ClearTriggeredEffects()
 
 	// Broadcast any new log entries since the last broadcast
@@ -163,6 +166,11 @@ func (b *Broadcaster) broadcastNewLogs(gameID string, playerIDs []string) {
 		}
 	}
 
+	spectatorConns := b.hub.GetManager().GetSpectatorConnections(gameID)
+	for _, conn := range spectatorConns {
+		conn.SendMessage(message)
+	}
+
 	log.Debug("📜 Broadcasted new logs", zap.Int("log_count", len(newLogs)))
 }
 
@@ -228,6 +236,108 @@ func (b *Broadcaster) SendInitialLogs(gameID string, playerID string) {
 	log.Debug("📜 Sent initial logs to player", zap.Int("log_count", len(logDtos)))
 }
 
+// broadcastToSpectators sends spectator-specific game state to all spectator connections.
+func (b *Broadcaster) broadcastToSpectators(g *game.Game) {
+	spectators := g.GetAllSpectators()
+	if len(spectators) == 0 {
+		return
+	}
+
+	gameDto := dto.ToSpectatorGameDto(g, b.cardRegistry)
+	message := dto.WebSocketMessage{
+		Type:   dto.MessageTypeGameUpdated,
+		GameID: g.ID(),
+		Payload: dto.GameUpdatedPayload{
+			Game: gameDto,
+		},
+	}
+
+	for _, s := range spectators {
+		if err := b.hub.SendToSpectator(g.ID(), s.ID(), message); err != nil {
+			b.logger.Error("Failed to send game state to spectator",
+				zap.String("game_id", g.ID()),
+				zap.String("spectator_id", s.ID()),
+				zap.Error(err))
+		}
+	}
+
+	b.logger.Debug("👁️ Broadcasted to spectators",
+		zap.String("game_id", g.ID()),
+		zap.Int("spectator_count", len(spectators)))
+}
+
+// BroadcastChatMessage broadcasts a chat message to all players and spectators in a game.
+func (b *Broadcaster) BroadcastChatMessage(gameID string, chatMsg dto.ChatMessageDto) {
+	ctx := context.Background()
+	log := b.logger.With(zap.String("game_id", gameID))
+
+	g, err := b.gameRepo.Get(ctx, gameID)
+	if err != nil {
+		log.Error("Failed to get game for chat broadcast", zap.Error(err))
+		return
+	}
+
+	message := dto.WebSocketMessage{
+		Type:   dto.MessageTypeChatUpdate,
+		GameID: gameID,
+		Payload: dto.ChatUpdatePayload{
+			ChatMessage: chatMsg,
+		},
+	}
+
+	for _, p := range g.GetAllPlayers() {
+		if !p.HasExited() {
+			if err := b.hub.SendToPlayer(gameID, p.ID(), message); err != nil {
+				log.Error("Failed to send chat to player",
+					zap.String("player_id", p.ID()),
+					zap.Error(err))
+			}
+		}
+	}
+
+	spectatorConns := b.hub.GetManager().GetSpectatorConnections(gameID)
+	for _, conn := range spectatorConns {
+		conn.SendMessage(message)
+	}
+
+	log.Debug("💬 Broadcasted chat message")
+}
+
+// SendInitialLogsToSpectator sends all game logs to a spectator (used on connect).
+func (b *Broadcaster) SendInitialLogsToSpectator(gameID string, spectatorID string) {
+	ctx := context.Background()
+	log := b.logger.With(
+		zap.String("game_id", gameID),
+		zap.String("spectator_id", spectatorID),
+	)
+
+	diffs, err := b.stateRepo.GetDiff(ctx, gameID)
+	if err != nil {
+		log.Debug("No logs to send to spectator", zap.Error(err))
+		return
+	}
+
+	if len(diffs) == 0 {
+		return
+	}
+
+	logDtos := dto.ToStateDiffDtos(diffs)
+	message := dto.WebSocketMessage{
+		Type:   dto.MessageTypeLogUpdate,
+		GameID: gameID,
+		Payload: dto.LogUpdatePayload{
+			Logs: logDtos,
+		},
+	}
+
+	if err := b.hub.SendToSpectator(gameID, spectatorID, message); err != nil {
+		log.Error("Failed to send initial logs to spectator", zap.Error(err))
+		return
+	}
+
+	log.Debug("📜 Sent initial logs to spectator", zap.Int("log_count", len(logDtos)))
+}
+
 // BroadcastLogUpdate broadcasts a single log entry to all players in a game
 func (b *Broadcaster) BroadcastLogUpdate(gameID string, logEntry *game.StateDiff) {
 	ctx := context.Background()
@@ -255,6 +365,11 @@ func (b *Broadcaster) BroadcastLogUpdate(gameID string, logEntry *game.StateDiff
 				zap.String("player_id", player.ID()),
 				zap.Error(err))
 		}
+	}
+
+	spectatorConns := b.hub.GetManager().GetSpectatorConnections(gameID)
+	for _, conn := range spectatorConns {
+		conn.SendMessage(message)
 	}
 
 	log.Debug("📜 Broadcasted log update", zap.Int64("sequence", logEntry.SequenceNumber))

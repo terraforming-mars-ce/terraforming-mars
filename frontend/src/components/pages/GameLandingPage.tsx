@@ -25,6 +25,7 @@ const GameLandingPage: React.FC = () => {
     game: GameDto;
     playerId: string;
     playerName: string;
+    isSpectator?: boolean;
   } | null>(null);
   const [isDismissing, setIsDismissing] = useState(false);
   const [showBugReportWindow, setShowBugReportWindow] = useState(false);
@@ -46,20 +47,19 @@ const GameLandingPage: React.FC = () => {
         // Check localStorage for existing game
         const savedGameDataString = localStorage.getItem("terraforming-mars-game");
         if (savedGameDataString) {
-          const { gameId, playerId, playerName } = JSON.parse(savedGameDataString);
+          const { gameId, playerId, playerName, isSpectator } = JSON.parse(savedGameDataString);
 
-          if (gameId && playerId) {
-            // Try to get the current game state from server with player ID for personalized view
-            const game = await apiService.getGame(gameId, playerId);
+          if (gameId && (playerId || isSpectator)) {
+            const game = await apiService.getGame(gameId, isSpectator ? undefined : playerId);
             if (!game) {
               throw new Error("Saved game not found on server");
             }
 
-            // Show reconnect card instead of auto-reconnecting
             setSavedGameData({
               game: game,
               playerId: playerId,
               playerName: playerName,
+              isSpectator: isSpectator,
             });
           }
         }
@@ -115,13 +115,14 @@ const GameLandingPage: React.FC = () => {
   const handleReconnect = async () => {
     if (!savedGameData) return;
 
+    const isSpectator = !!savedGameData.isSpectator;
+
     setIsFadingOut(true);
     setTimeout(async () => {
       try {
         // Verify game still exists before attempting reconnection
         const game = await apiService.getGame(savedGameData.game.id);
         if (!game) {
-          // Game no longer exists, clear storage and show error
           clearGameSession();
           showNotification({ message: "Game no longer exists", type: "error" });
           setIsFadingOut(false);
@@ -129,21 +130,25 @@ const GameLandingPage: React.FC = () => {
           return;
         }
 
-        // Reconnect to the game using global WebSocket manager
-        await globalWebSocketManager.playerConnect(
-          savedGameData.playerName,
-          savedGameData.game.id,
-          savedGameData.playerId,
-        );
+        if (isSpectator) {
+          navigate(`/game/${savedGameData.game.id}`, {
+            state: { spectatorName: savedGameData.playerName },
+          });
+        } else {
+          await globalWebSocketManager.playerConnect(
+            savedGameData.playerName,
+            savedGameData.game.id,
+            savedGameData.playerId,
+          );
 
-        // Navigate to game interface with the retrieved game state
-        navigate("/game", {
-          state: {
-            game: savedGameData.game,
-            playerId: savedGameData.playerId,
-            playerName: savedGameData.playerName,
-          },
-        });
+          navigate("/game", {
+            state: {
+              game: savedGameData.game,
+              playerId: savedGameData.playerId,
+              playerName: savedGameData.playerName,
+            },
+          });
+        }
       } catch {
         showNotification({ message: "Failed to reconnect to game", type: "error" });
         setIsFadingOut(false);
@@ -158,6 +163,7 @@ const GameLandingPage: React.FC = () => {
   const handleDismissTransitionEnd = () => {
     if (isDismissing) {
       clearGameSession();
+      globalWebSocketManager.disconnect();
       setSavedGameData(null);
       setIsDismissing(false);
     }
@@ -228,13 +234,20 @@ const GameLandingPage: React.FC = () => {
 
                 {(() => {
                   const isLobby = savedGameData.game.currentPhase === "waiting_for_game_start";
+                  const isSpectator = !!savedGameData.isSpectator;
                   const playerCount =
                     (savedGameData.game.currentPlayer ? 1 : 0) +
                     (savedGameData.game.otherPlayers?.length || 0);
 
+                  const buttonLabel = isSpectator
+                    ? "RETURN AS SPECTATOR"
+                    : isLobby
+                      ? "RETURN TO LOBBY"
+                      : "RECONNECT";
+
                   return (
                     <>
-                      {!isLobby && (
+                      {!isLobby && !isSpectator && (
                         <div className="mb-6 flex justify-center">
                           {savedGameData.game.currentPlayer?.corporation ? (
                             getCorporationLogo(
@@ -281,7 +294,7 @@ const GameLandingPage: React.FC = () => {
                         onClick={() => void handleReconnect()}
                         className="w-full"
                       >
-                        {isLobby ? "RETURN TO LOBBY" : "RECONNECT"}
+                        {buttonLabel}
                       </GameMenuButton>
                     </>
                   );

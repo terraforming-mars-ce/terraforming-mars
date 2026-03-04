@@ -164,7 +164,7 @@ func main() {
 		confirmInitAdvanceAction,
 		log,
 	)
-	botController := bot.NewBotController(gameRepo, cardRegistry, commandDispatcher, broadcaster, log)
+	botController := bot.NewBotController(gameRepo, stateRepo, cardRegistry, commandDispatcher, broadcaster, log)
 	broadcaster.SetBotNotifier(botController)
 
 	startGameAction := turnAction.NewStartGameAction(gameRepo, botController, log)
@@ -177,6 +177,13 @@ func main() {
 	playerTakeoverAction := connAction.NewPlayerTakeoverAction(gameRepo, cardRegistry, log)
 	kickPlayerAction := connAction.NewKickPlayerAction(gameRepo, botController, finalScoringAction, log)
 	endGameAction := connAction.NewEndGameAction(gameRepo, botController, log)
+
+	// Spectator & chat actions (5)
+	setPlayerColorAction := connAction.NewSetPlayerColorAction(gameRepo, log)
+	spectateGameAction := connAction.NewSpectateGameAction(gameRepo, log)
+	spectatorDisconnectedAction := connAction.NewSpectatorDisconnectedAction(gameRepo, log)
+	kickSpectatorAction := connAction.NewKickSpectatorAction(gameRepo, log)
+	sendChatMessageAction := connAction.NewSendChatMessageAction(gameRepo, log)
 
 	// Admin actions (9)
 	adminSetPhaseAction := admin.NewSetPhaseAction(gameRepo, log)
@@ -202,6 +209,7 @@ func main() {
 	wsHandler.RegisterHandlers(
 		hub,
 		broadcaster,
+		gameRepo,
 		// Game lifecycle
 		createGameAction,
 		joinGameAction,
@@ -238,6 +246,12 @@ func main() {
 		playerTakeoverAction,
 		kickPlayerAction,
 		endGameAction,
+		// Spectator & chat
+		setPlayerColorAction,
+		spectateGameAction,
+		spectatorDisconnectedAction,
+		kickSpectatorAction,
+		sendChatMessageAction,
 		// Convert to bot
 		convertToBotAction,
 		// Milestones & Awards

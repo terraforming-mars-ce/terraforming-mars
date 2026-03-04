@@ -4,7 +4,8 @@ import { apiService } from "../../services/apiService";
 import { GameDto } from "../../types/generated/api-types.ts";
 import GameMenuButton from "../ui/buttons/GameMenuButton.tsx";
 import EnterCodePopover from "../ui/popover/EnterCodePopover.tsx";
-import JoinGameOverlay from "../ui/overlay/JoinGameOverlay.tsx";
+import SpectatePopover from "../ui/popover/SpectatePopover.tsx";
+import JoinGamePopover from "../ui/popover/JoinGamePopover.tsx";
 import { useNotifications } from "../../contexts/NotificationContext.tsx";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -16,16 +17,17 @@ const JoinGamePage: React.FC = () => {
   const [availableGames, setAvailableGames] = useState<GameDto[]>([]);
   const [isLoadingGames, setIsLoadingGames] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [selectedGame, setSelectedGame] = useState<GameDto | null>(null);
   const [initialCode, setInitialCode] = useState<string | undefined>(undefined);
   const [isFadedIn, setIsFadedIn] = useState(false);
 
-  const [showEnterName, setShowEnterName] = useState(false);
-  const [joinOverlayMounted, setJoinOverlayMounted] = useState(false);
   const [showEnterCodePopover, setShowEnterCodePopover] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [animationKey, setAnimationKey] = useState(0);
+  const [spectateGameId, setSpectateGameId] = useState<string | null>(null);
+  const [joinGame, setJoinGame] = useState<GameDto | null>(null);
   const enterCodeButtonRef = useRef<HTMLButtonElement>(null);
+  const spectateButtonRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+  const joinButtonRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
   useEffect(() => {
     setTimeout(() => {
@@ -38,14 +40,8 @@ const JoinGamePage: React.FC = () => {
     try {
       const games = await apiService.listGames();
       const lobbyGames = games.filter((g) => g.status === "lobby");
-      const reconnectGames = games.filter(
-        (g) =>
-          g.status === "active" &&
-          [...(g.otherPlayers || []), ...(g.currentPlayer ? [g.currentPlayer] : [])].some(
-            (p) => !p.isConnected,
-          ),
-      );
-      setAvailableGames([...lobbyGames, ...reconnectGames]);
+      const activeGames = games.filter((g) => g.status === "active");
+      setAvailableGames([...lobbyGames, ...activeGames]);
       setAnimationKey((prev) => prev + 1);
       setIsInitialLoad(false);
     } catch {
@@ -75,9 +71,7 @@ const JoinGamePage: React.FC = () => {
 
   const handleGameValidated = (game: GameDto) => {
     setShowEnterCodePopover(false);
-    setSelectedGame(game);
-    setShowEnterName(true);
-    setJoinOverlayMounted(true);
+    setJoinGame(game);
   };
 
   const handleJoinGame = async (game: GameDto) => {
@@ -87,19 +81,8 @@ const JoinGamePage: React.FC = () => {
       void fetchGames();
       return;
     }
-    setSelectedGame(game);
-    setShowEnterName(true);
-    setJoinOverlayMounted(true);
+    setJoinGame(game);
   };
-
-  const handleBackFromEnterName = () => {
-    setShowEnterName(false);
-  };
-
-  const selectedPlayerCount = selectedGame
-    ? (selectedGame.currentPlayer ? 1 : 0) + (selectedGame.otherPlayers?.length || 0)
-    : 0;
-  const selectedMaxPlayers = selectedGame?.settings?.maxPlayers || 10;
 
   return (
     <div
@@ -224,27 +207,35 @@ const JoinGamePage: React.FC = () => {
                               </span>
                               <span className="text-white/50 text-xs">
                                 {playerCount}/{maxPlayers} Players
+                                {isActive && game.generation != null && (
+                                  <span className="ml-2 text-white/35">Gen {game.generation}</span>
+                                )}
                               </span>
                             </div>
-                            {isActive ? (
+                            <div className="flex gap-2 shrink-0 ml-4">
                               <GameMenuButton
-                                variant="action"
+                                ref={(el) => {
+                                  spectateButtonRefs.current.set(game.id, el);
+                                }}
+                                variant="secondary"
                                 size="sm"
-                                onClick={() => navigate(`/game/${game.id}`)}
-                                className="shrink-0 ml-4"
+                                onClick={() => setSpectateGameId(game.id)}
                               >
-                                Reconnect
+                                Spectate
                               </GameMenuButton>
-                            ) : (
-                              <GameMenuButton
-                                variant="action"
-                                size="sm"
-                                onClick={() => void handleJoinGame(game)}
-                                className="shrink-0 ml-4"
-                              >
-                                Join
-                              </GameMenuButton>
-                            )}
+                              {!isActive && (
+                                <GameMenuButton
+                                  ref={(el) => {
+                                    joinButtonRefs.current.set(game.id, el);
+                                  }}
+                                  variant="action"
+                                  size="sm"
+                                  onClick={() => void handleJoinGame(game)}
+                                >
+                                  Join
+                                </GameMenuButton>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -256,17 +247,14 @@ const JoinGamePage: React.FC = () => {
         </div>
       </div>
 
-      {joinOverlayMounted && selectedGame && (
-        <JoinGameOverlay
-          game={selectedGame}
-          onCancel={handleBackFromEnterName}
-          visible={showEnterName}
-          onExited={() => {
-            setJoinOverlayMounted(false);
-            setSelectedGame(null);
+      {joinGame && (
+        <JoinGamePopover
+          isVisible={!!joinGame}
+          onClose={() => setJoinGame(null)}
+          game={joinGame}
+          anchorRef={{
+            current: joinButtonRefs.current.get(joinGame.id) ?? enterCodeButtonRef.current,
           }}
-          title="Join Game"
-          subtitle={`${selectedPlayerCount}/${selectedMaxPlayers} players`}
         />
       )}
 
@@ -277,6 +265,15 @@ const JoinGamePage: React.FC = () => {
         initialCode={initialCode}
         anchorRef={enterCodeButtonRef}
       />
+
+      {spectateGameId && (
+        <SpectatePopover
+          isVisible={!!spectateGameId}
+          onClose={() => setSpectateGameId(null)}
+          gameId={spectateGameId}
+          anchorRef={{ current: spectateButtonRefs.current.get(spectateGameId) ?? null }}
+        />
+      )}
     </div>
   );
 };

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"terraforming-mars-backend/internal/delivery/dto"
+	"terraforming-mars-backend/internal/game"
 )
 
 // SummarizeGameState produces a human-readable text summary of the game state.
@@ -620,4 +621,49 @@ func findPlayerName(game *dto.GameDto, playerID string) string {
 		}
 	}
 	return playerID
+}
+
+func formatRecentLog(diffs []game.StateDiff, maxEntries int) string {
+	if len(diffs) == 0 {
+		return ""
+	}
+
+	start := 0
+	if len(diffs) > maxEntries {
+		start = len(diffs) - maxEntries
+	}
+	recent := diffs[start:]
+
+	var lines []string
+	for _, d := range recent {
+		if d.Description == "" {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("  - %s", d.Description))
+	}
+
+	if len(lines) == 0 {
+		return ""
+	}
+
+	return "=== RECENT GAME LOG ===\n" + strings.Join(lines, "\n")
+}
+
+func formatRecentChat(messages []game.ChatMessage, maxEntries int) string {
+	if len(messages) == 0 {
+		return ""
+	}
+
+	start := 0
+	if len(messages) > maxEntries {
+		start = len(messages) - maxEntries
+	}
+	recent := messages[start:]
+
+	var lines []string
+	for _, m := range recent {
+		lines = append(lines, fmt.Sprintf("  %s: %s", m.SenderName, m.Message))
+	}
+
+	return "=== RECENT CHAT ===\n" + strings.Join(lines, "\n")
 }

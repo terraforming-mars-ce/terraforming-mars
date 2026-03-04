@@ -2,6 +2,7 @@ package dto
 
 import (
 	"fmt"
+	"time"
 
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
@@ -39,13 +40,14 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 
 	settings := g.Settings()
 	settingsDto := GameSettingsDto{
-		MaxPlayers:       settings.MaxPlayers,
-		VenusNextEnabled: settings.VenusNextEnabled,
-		DevelopmentMode:  settings.DevelopmentMode,
-		DemoGame:         settings.DemoGame,
-		CardPacks:        settings.CardPacks,
-		HasClaudeAPIKey:  settings.ClaudeAPIKey != "",
-		ClaudeModel:      settings.ClaudeModel,
+		MaxPlayers:            settings.MaxPlayers,
+		VenusNextEnabled:      settings.VenusNextEnabled,
+		DevelopmentMode:       settings.DevelopmentMode,
+		DemoGame:              settings.DemoGame,
+		CardPacks:             settings.CardPacks,
+		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
+		ClaudeModel:           settings.ClaudeModel,
+		AvailablePlayerColors: game.PlayerColors,
 	}
 
 	globalParams := g.GlobalParameters()
@@ -142,6 +144,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 			CurrentPlayerIndex: idx,
 			TotalPlayers:       activePlayers,
 			WaitingForConfirm:  g.InitPhaseWaitingForConfirm(),
+			ConfirmVersion:     g.InitPhaseConfirmVersion(),
 			HasPreludePhase:    g.Settings().HasPrelude(),
 			HasPendingTiles:    hasPendingTiles,
 		}
@@ -172,7 +175,38 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		TriggeredEffects:   triggeredEffectDtos,
 		PlaceableTileTypes: ToPlaceableTileTypeDtos(),
 		InitPhase:          initPhaseDto,
+		Spectators:         toSpectatorDtos(g),
+		ChatMessages:       toChatMessageDtos(g),
 	}
+}
+
+func toSpectatorDtos(g *game.Game) []SpectatorDto {
+	spectators := g.GetAllSpectators()
+	dtos := make([]SpectatorDto, len(spectators))
+	for i, s := range spectators {
+		dtos[i] = SpectatorDto{
+			ID:    s.ID(),
+			Name:  s.Name(),
+			Color: s.Color(),
+		}
+	}
+	return dtos
+}
+
+func toChatMessageDtos(g *game.Game) []ChatMessageDto {
+	messages := g.GetChatMessages()
+	dtos := make([]ChatMessageDto, len(messages))
+	for i, msg := range messages {
+		dtos[i] = ChatMessageDto{
+			SenderID:    msg.SenderID,
+			SenderName:  msg.SenderName,
+			SenderColor: msg.SenderColor,
+			Message:     msg.Message,
+			Timestamp:   msg.Timestamp.Format(time.RFC3339),
+			IsSpectator: msg.IsSpectator,
+		}
+	}
+	return dtos
 }
 
 // ToPlaceableTileTypeDtos converts the board PlaceableTileTypes registry to DTOs

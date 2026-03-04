@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { GameDto, OtherPlayerDto, PlayerDto } from "../../../types/generated/api-types.ts";
 import { getCorporationLogo } from "../../../utils/corporationLogos.tsx";
+import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
+import { saveGameSession } from "../../../utils/sessionStorage.ts";
 import GameMenuModal from "./GameMenuModal.tsx";
 
 interface PlayerSelectionOverlayProps {
   game: GameDto;
   onSelectPlayer: (playerId: string, playerName: string) => void;
+  onSpectate: () => void;
   onCancel: () => void;
   visible?: boolean;
   onExited?: () => void;
@@ -14,10 +17,22 @@ interface PlayerSelectionOverlayProps {
 const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
   game,
   onSelectPlayer,
+  onSpectate,
   onCancel,
   visible,
   onExited,
 }) => {
+  const [spectatorName, setSpectatorName] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const handleSpectate = async () => {
+    const name = spectatorName.trim();
+    if (!name) return;
+    setIsConnecting(true);
+    saveGameSession({ gameId: game.id, playerId: "", playerName: name, isSpectator: true });
+    await globalWebSocketManager.spectatorConnect(name, game.id);
+    onSpectate();
+  };
   const allPlayers: (PlayerDto | OtherPlayerDto)[] = [
     ...(game.currentPlayer ? [game.currentPlayer] : []),
     ...(game.otherPlayers || []),
@@ -79,14 +94,47 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
                   <span className="px-1.5 py-px rounded-lg text-[8px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white border border-[rgba(231,76,60,0.5)]">
                     DISCONNECTED
                   </span>
-                ) : null}
+                ) : (
+                  <span className="px-1.5 py-px rounded-lg text-[8px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#3498db,#2980b9)] text-white border border-[rgba(52,152,219,0.5)]">
+                    CONNECTED
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      <p className="text-white/40 text-xs text-center">Only disconnected players can be selected</p>
+      <div className="flex items-center gap-3 my-5">
+        <div className="flex-1 h-px bg-white/15" />
+        <span className="text-white/30 text-xs font-orbitron uppercase tracking-wider">or</span>
+        <div className="flex-1 h-px bg-white/15" />
+      </div>
+
+      <div className="flex flex-row gap-3 items-center">
+        <input
+          type="text"
+          value={spectatorName}
+          onChange={(e) => setSpectatorName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void handleSpectate();
+          }}
+          placeholder="Enter your name"
+          disabled={isConnecting}
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          maxLength={50}
+          className="flex-1 bg-black/50 border border-white/20 rounded-lg py-3 px-4 text-white text-base outline-none placeholder:text-white/50 focus:border-white/60 focus:shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all duration-200 disabled:opacity-60"
+        />
+        <button
+          onClick={() => void handleSpectate()}
+          disabled={isConnecting || !spectatorName.trim()}
+          className="font-orbitron bg-white/10 border border-white/20 rounded-lg py-3 px-6 text-white text-sm font-medium hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-default"
+        >
+          {isConnecting ? "Joining..." : "Spectate"}
+        </button>
+      </div>
     </GameMenuModal>
   );
 };

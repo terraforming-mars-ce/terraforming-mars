@@ -46,7 +46,15 @@ import {
   MessageTypeActionCardDiscardConfirmed,
   MessageTypeActionConfirmInitAdvance,
   MessageTypeRequestLogs,
+  MessageTypeSetPlayerColor,
+  MessageTypeSpectatorConnect,
+  MessageTypeSpectatorConnected,
+  MessageTypeChatMessage,
+  MessageTypeChatUpdate,
+  MessageTypeKickSpectator,
+  MessageTypeSpectatorKicked,
   // Payload types
+  ChatUpdatePayload,
   PlayerConnectedPayload,
   PlayerDisconnectedPayload,
   WebSocketMessage,
@@ -185,6 +193,19 @@ export class WebSocketService {
       }
       case MessageTypeGameEnded: {
         this.emit("game-ended", message.payload);
+        break;
+      }
+      case MessageTypeSpectatorConnected: {
+        this.emit("spectator-connected", message.payload);
+        break;
+      }
+      case MessageTypeChatUpdate: {
+        const chatPayload = message.payload as ChatUpdatePayload;
+        this.emit("chat-update", chatPayload.chatMessage);
+        break;
+      }
+      case MessageTypeSpectatorKicked: {
+        this.emit("spectator-kicked", message.payload);
         break;
       }
       default:
@@ -390,6 +411,23 @@ export class WebSocketService {
 
   requestLogs(): void {
     this.send(MessageTypeRequestLogs, {});
+  }
+
+  setPlayerColor(color: string, targetPlayerId?: string): void {
+    this.send(MessageTypeSetPlayerColor, { color, targetPlayerId });
+  }
+
+  spectatorConnect(spectatorName: string, gameId: string): void {
+    this.send(MessageTypeSpectatorConnect, { spectatorName, gameId }, gameId);
+    this.currentGameId = gameId;
+  }
+
+  sendChatMessage(message: string): string {
+    return this.send(MessageTypeChatMessage, { message });
+  }
+
+  kickSpectator(targetSpectatorId: string): string {
+    return this.send(MessageTypeKickSpectator, { targetSpectatorId });
   }
 
   on(event: string, callback: EventCallback) {

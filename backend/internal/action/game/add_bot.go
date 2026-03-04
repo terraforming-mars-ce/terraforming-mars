@@ -22,14 +22,15 @@ var botNames = []string{
 	"R2-D2", "C-3PO", "Wall-E", "Bender", "Sonny",
 }
 
-// BotHealthChecker verifies that a Claude API key is valid.
+// BotHealthChecker verifies that a Claude API key is valid and generates a greeting.
 type BotHealthChecker interface {
-	CheckHealth(ctx context.Context, apiKey string, model string) error
+	CheckHealth(ctx context.Context, apiKey, model, botName, difficulty string) (string, error)
 }
 
-// BotBroadcaster broadcasts game state updates.
+// BotBroadcaster broadcasts game state and chat updates.
 type BotBroadcaster interface {
 	BroadcastGameState(gameID string, playerIDs []string)
+	BroadcastChatMessage(gameID string, chatMsg dto.ChatMessageDto)
 }
 
 // AddBotAction handles adding a bot player to a game lobby
@@ -123,7 +124,7 @@ func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName strin
 
 	if a.healthChecker != nil && a.broadcaster != nil {
 		settings := g.Settings()
-		go a.runHealthCheck(gameID, botID, settings.ClaudeAPIKey, settings.ClaudeModel, log)
+		go a.runHealthCheck(gameID, botID, botName, difficulty, settings.ClaudeAPIKey, settings.ClaudeModel, log)
 	}
 
 	gameDto := dto.ToGameDto(g, a.cardRegistry, botID)
@@ -133,13 +134,13 @@ func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName strin
 	}, nil
 }
 
-func (a *AddBotAction) runHealthCheck(gameID, botID, apiKey, model string, log *zap.Logger) {
+func (a *AddBotAction) runHealthCheck(gameID, botID, botName, difficulty, apiKey, model string, log *zap.Logger) {
 	log.Info("🤖 Running Claude health check for bot", zap.String("bot_id", botID))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	err := a.healthChecker.CheckHealth(ctx, apiKey, model)
+	greeting, err := a.healthChecker.CheckHealth(ctx, apiKey, model, botName, difficulty)
 
 	g, gErr := a.gameRepo.Get(ctx, gameID)
 	if gErr != nil {
@@ -156,12 +157,31 @@ func (a *AddBotAction) runHealthCheck(gameID, botID, apiKey, model string, log *
 	if err != nil {
 		log.Error("🤖 Health check failed for bot", zap.String("bot_id", botID), zap.Error(err))
 		bot.SetBotStatus(playerPkg.BotStatusFailed)
-	} else {
-		log.Info("✅ Bot health check passed", zap.String("bot_id", botID))
-		bot.SetBotStatus(playerPkg.BotStatusReady)
+		a.broadcaster.BroadcastGameState(gameID, nil)
+		return
 	}
 
+	log.Info("✅ Bot health check passed", zap.String("bot_id", botID))
+	bot.SetBotStatus(playerPkg.BotStatusReady)
 	a.broadcaster.BroadcastGameState(gameID, nil)
+
+	if greeting != "" {
+		chatMsg := game.ChatMessage{
+			SenderID:    botID,
+			SenderName:  botName,
+			SenderColor: bot.Color(),
+			Message:     greeting,
+			Timestamp:   time.Now(),
+		}
+		g.AddChatMessage(ctx, chatMsg)
+		a.broadcaster.BroadcastChatMessage(gameID, dto.ChatMessageDto{
+			SenderID:    chatMsg.SenderID,
+			SenderName:  chatMsg.SenderName,
+			SenderColor: chatMsg.SenderColor,
+			Message:     chatMsg.Message,
+			Timestamp:   chatMsg.Timestamp.Format(time.RFC3339),
+		})
+	}
 }
 
 func (a *AddBotAction) generateBotName(existingPlayers []*playerPkg.Player) string {

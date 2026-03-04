@@ -81,3 +81,31 @@ type PlayerTakeoverPayload struct {
 	GameID         string `json:"gameId" ts:"string"`
 	TargetPlayerID string `json:"targetPlayerId" ts:"string"`
 }
+
+// SpectatorConnectPayload contains spectator connection data.
+type SpectatorConnectPayload struct {
+	SpectatorName string `json:"spectatorName" ts:"string"`
+	GameID        string `json:"gameId" ts:"string"`
+}
+
+// SpectatorConnectedPayload contains data about a newly connected spectator.
+type SpectatorConnectedPayload struct {
+	SpectatorID string  `json:"spectatorId" ts:"string"`
+	Game        GameDto `json:"game" ts:"GameDto"`
+}
+
+// SpectatorDisconnectedPayload contains data about a disconnected spectator.
+type SpectatorDisconnectedPayload struct {
+	SpectatorID string `json:"spectatorId" ts:"string"`
+	GameID      string `json:"gameId" ts:"string"`
+}
+
+// ChatMessagePayload contains a chat message from a client.
+type ChatMessagePayload struct {
+	Message string `json:"message" ts:"string"`
+}
+
+// ChatUpdatePayload contains a new chat message broadcast to all clients.
+type ChatUpdatePayload struct {
+	ChatMessage ChatMessageDto `json:"chatMessage" ts:"ChatMessageDto"`
+}

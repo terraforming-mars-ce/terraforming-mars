@@ -17,14 +17,16 @@ import (
 	"go.uber.org/zap"
 )
 
-// Broadcaster is used by the controller to broadcast game state after dispatched commands.
+// Broadcaster is used by the controller to broadcast game state and chat after dispatched commands.
 type Broadcaster interface {
 	BroadcastGameState(gameID string, playerIDs []string)
+	BroadcastChatMessage(gameID string, chatMsg dto.ChatMessageDto)
 }
 
 // BotController manages all bot sessions and coordinates the turn-play loop.
 type BotController struct {
 	gameRepo     game.GameRepository
+	stateRepo    game.GameStateRepository
 	cardRegistry cards.CardRegistry
 	dispatcher   *CommandDispatcher
 	broadcaster  Broadcaster
@@ -56,6 +58,7 @@ type BotSession struct {
 // NewBotController creates a new bot controller.
 func NewBotController(
 	gameRepo game.GameRepository,
+	stateRepo game.GameStateRepository,
 	cardRegistry cards.CardRegistry,
 	dispatcher *CommandDispatcher,
 	broadcaster Broadcaster,
@@ -63,6 +66,7 @@ func NewBotController(
 ) *BotController {
 	return &BotController{
 		gameRepo:     gameRepo,
+		stateRepo:    stateRepo,
 		cardRegistry: cardRegistry,
 		dispatcher:   dispatcher,
 		broadcaster:  broadcaster,
@@ -295,6 +299,16 @@ func (bc *BotController) handleTurn(ctx context.Context, session *BotSession, lo
 		}
 
 		summary := SummarizeGameState(&gameDto, session.playerID)
+
+		// Append recent action log and chat messages
+		if diffs, err := bc.stateRepo.GetDiff(ctx, session.gameID); err == nil {
+			summary += "\n\n" + formatRecentLog(diffs, 20)
+		}
+		chatMessages := g.GetChatMessages()
+		if len(chatMessages) > 0 {
+			summary += "\n\n" + formatRecentChat(chatMessages, 10)
+		}
+
 		if err := session.stateWriter.WriteState(summary); err != nil {
 			log.Error("Failed to write state", zap.Error(err))
 			return
@@ -352,6 +366,21 @@ func (bc *BotController) processCommands(ctx context.Context, session *BotSessio
 func (bc *BotController) executeCommand(ctx context.Context, session *BotSession, rawCmd json.RawMessage, log *zap.Logger) {
 	session.historyWriter.WriteSent("command", rawCmd)
 
+	var envelope struct {
+		Type    string          `json:"type"`
+		Payload json.RawMessage `json:"payload"`
+	}
+	if err := json.Unmarshal(rawCmd, &envelope); err != nil {
+		log.Error("🤖 Failed to parse command envelope", zap.Error(err))
+		return
+	}
+
+	// Handle chat messages directly (not through dispatcher to avoid import cycle)
+	if envelope.Type == "chat.send-message" {
+		bc.handleChatMessage(ctx, session, envelope.Payload, log)
+		return
+	}
+
 	err := bc.dispatcher.Dispatch(ctx, session.gameID, session.playerID, rawCmd)
 	if err != nil {
 		log.Error("🤖 Command dispatch failed", zap.Error(err))
@@ -377,6 +406,57 @@ func (bc *BotController) executeCommand(ctx context.Context, session *BotSession
 			log.Error("Failed to update state file after command", zap.Error(err))
 		}
 	}
+}
+
+func (bc *BotController) handleChatMessage(ctx context.Context, session *BotSession, payload json.RawMessage, log *zap.Logger) {
+	var p struct {
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(payload, &p); err != nil {
+		log.Error("🤖 Failed to parse chat message payload", zap.Error(err))
+		return
+	}
+
+	if len(p.Message) == 0 {
+		return
+	}
+	if len(p.Message) > game.MaxChatMessageLength {
+		p.Message = p.Message[:game.MaxChatMessageLength]
+	}
+
+	g, err := bc.gameRepo.Get(ctx, session.gameID)
+	if err != nil {
+		log.Error("Failed to get game for chat", zap.Error(err))
+		return
+	}
+
+	bot, err := g.GetPlayer(session.playerID)
+	if err != nil {
+		log.Error("Failed to get bot player for chat", zap.Error(err))
+		return
+	}
+
+	chatMsg := game.ChatMessage{
+		SenderID:    session.playerID,
+		SenderName:  bot.Name(),
+		SenderColor: bot.Color(),
+		Message:     p.Message,
+		Timestamp:   time.Now(),
+	}
+	g.AddChatMessage(ctx, chatMsg)
+
+	successPayload, _ := json.Marshal(map[string]string{
+		"type": "action-success",
+	})
+	session.historyWriter.WriteReceived("action-success", successPayload)
+
+	bc.broadcaster.BroadcastChatMessage(session.gameID, dto.ChatMessageDto{
+		SenderID:    chatMsg.SenderID,
+		SenderName:  chatMsg.SenderName,
+		SenderColor: chatMsg.SenderColor,
+		Message:     chatMsg.Message,
+		Timestamp:   chatMsg.Timestamp.Format(time.RFC3339),
+	})
 }
 
 func (bc *BotController) cleanupSession(session *BotSession) {

@@ -62,6 +62,7 @@ const CreateGamePage: React.FC = () => {
         cardPacks: selectedPacks,
         demoGame: false,
         hasClaudeApiKey: !!claudeApiKey.trim(),
+        availablePlayerColors: [],
       };
 
       const game = await apiService.createGame(gameSettings, claudeApiKey.trim() || undefined);
