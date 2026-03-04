@@ -13,6 +13,11 @@ import (
 	"go.uber.org/zap"
 )
 
+// BotNotifier is called after every game state broadcast to notify bot controller.
+type BotNotifier interface {
+	OnGameBroadcast(gameID string)
+}
+
 // Broadcaster handles game state broadcasting to WebSocket clients
 // Called explicitly by WebSocket handlers after actions complete
 type Broadcaster struct {
@@ -20,6 +25,7 @@ type Broadcaster struct {
 	stateRepo           game.GameStateRepository
 	hub                 *core.Hub
 	cardRegistry        cards.CardRegistry
+	botNotifier         BotNotifier
 	logger              *zap.Logger
 	lastBroadcastedSeq  map[string]int64 // gameID -> last broadcasted log sequence
 	lastBroadcastedLock sync.RWMutex
@@ -46,6 +52,11 @@ func NewBroadcaster(
 	return broadcaster
 }
 
+// SetBotNotifier registers a bot notifier to be called after every broadcast.
+func (b *Broadcaster) SetBotNotifier(notifier BotNotifier) {
+	b.botNotifier = notifier
+}
+
 // BroadcastGameState broadcasts game state to specified players (nil = all players)
 // Called explicitly by WebSocket handlers after action execution completes
 // Also broadcasts any new log entries since the last broadcast
@@ -60,11 +71,13 @@ func (b *Broadcaster) BroadcastGameState(gameID string, playerIDs []string) {
 	}
 
 	if playerIDs == nil {
-		// Broadcast to all players in the game
+		// Broadcast to all players in the game (skip exited - no active connection)
 		players := g.GetAllPlayers()
-		playerIDs = make([]string, len(players))
-		for i, player := range players {
-			playerIDs[i] = player.ID()
+		playerIDs = make([]string, 0, len(players))
+		for _, player := range players {
+			if !player.HasExited() {
+				playerIDs = append(playerIDs, player.ID())
+			}
 		}
 		log.Debug("📢 Broadcasting to all players", zap.Int("player_count", len(playerIDs)))
 	} else {
@@ -88,6 +101,10 @@ func (b *Broadcaster) BroadcastGameState(gameID string, playerIDs []string) {
 	b.broadcastNewLogs(gameID, playerIDs)
 
 	log.Debug("✅ Broadcast completed", zap.Int("player_count", len(playerIDs)))
+
+	if b.botNotifier != nil {
+		b.botNotifier.OnGameBroadcast(gameID)
+	}
 }
 
 // broadcastNewLogs sends any new log entries to the specified players

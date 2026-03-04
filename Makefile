@@ -1,7 +1,7 @@
 # Terraforming Mars - Unified Development Makefile
 # Run from project root directory
 
-.PHONY: help run frontend backend kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi mcp-setup
+.PHONY: help run frontend backend kill lint typecheck test test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi mcp-setup bot-setup bot-run
 
 # Default target - show help
 help:
@@ -169,6 +169,22 @@ mcp-setup:
 # Raspberry Pi deployment
 deploy-pi:
 	./scripts/deploy-pi.sh
+
+# Claude Bot
+bot-setup:
+	@echo "Setting up claude-bot..."
+	cd claude-bot && go mod tidy
+	@echo "Claude bot ready"
+
+bot-run:
+	@if [ -z "$(GAME)" ]; then \
+		echo "Usage: make bot-run GAME=<game-id> [NAME='Claude Bot'] [MODEL=sonnet]"; \
+		exit 1; \
+	fi
+	cd claude-bot && go run cmd/bot/main.go \
+		--game "$(GAME)" \
+		--name "$(or $(NAME),Claude Bot)" \
+		--model "$(or $(MODEL),sonnet)"
 
 # Watch for changes (requires entr: apt install entr)
 test-watch:

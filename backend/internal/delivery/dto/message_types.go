@@ -28,6 +28,7 @@ const (
 	MessageTypeActionConvertHeatToTemperature MessageType = "action.resource-conversion.convert-heat-to-temperature"
 
 	MessageTypeCreateGame             MessageType = "create-game"
+	MessageTypeAddBot                 MessageType = "add-bot"
 	MessageTypeActionStartGame        MessageType = "action.game-management.start-game"
 	MessageTypeActionSkipAction       MessageType = "action.game-management.skip-action"
 	MessageTypeActionConfirmDemoSetup MessageType = "action.game-management.confirm-demo-setup"
@@ -53,4 +54,7 @@ const (
 	MessageTypePlayerTakeover MessageType = "player-takeover"
 	MessageTypeKickPlayer     MessageType = "kick-player"
 	MessageTypePlayerKicked   MessageType = "player-kicked"
+	MessageTypeConvertToBot   MessageType = "convert-to-bot"
+	MessageTypeEndGame        MessageType = "end-game"
+	MessageTypeGameEnded      MessageType = "game-ended"
 )

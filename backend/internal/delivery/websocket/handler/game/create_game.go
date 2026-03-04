@@ -66,6 +66,12 @@ func (h *CreateGameHandler) HandleMessage(ctx context.Context, connection *core.
 				settings.CardPacks = packs
 			}
 		}
+		if claudeAPIKey, ok := payloadMap["claudeApiKey"].(string); ok {
+			settings.ClaudeAPIKey = claudeAPIKey
+		}
+		if claudeModel, ok := payloadMap["claudeModel"].(string); ok {
+			settings.ClaudeModel = claudeModel
+		}
 	}
 
 	log.Debug("Parsed create game settings",

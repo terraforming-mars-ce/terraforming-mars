@@ -117,6 +117,9 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 	allPlayers := g.GetAllPlayers()
 	allComplete := true
 	for _, p := range allPlayers {
+		if p.HasExited() {
+			continue
+		}
 		pPhase := g.GetProductionPhase(p.ID())
 		if pPhase == nil || !pPhase.SelectionComplete {
 			allComplete = false
@@ -133,10 +136,20 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		}
 
 		turnOrder := g.TurnOrder()
-		if len(turnOrder) > 0 {
-			firstPlayerID := turnOrder[0]
+		activeCount := 0
+		firstPlayerID := ""
+		for _, id := range turnOrder {
+			p, _ := g.GetPlayer(id)
+			if p != nil && !p.HasExited() {
+				activeCount++
+				if firstPlayerID == "" {
+					firstPlayerID = id
+				}
+			}
+		}
+		if firstPlayerID != "" {
 			availableActions := 2
-			if len(turnOrder) == 1 {
+			if activeCount == 1 {
 				availableActions = -1
 			}
 			if err := g.SetCurrentTurn(ctx, firstPlayerID, availableActions); err != nil {
@@ -149,9 +162,9 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		}
 
 		for _, p := range allPlayers {
-			p.Actions().ResetGenerationCounts()
-			log.Debug("🔄 Reset action generation counts for player",
-				zap.String("player_id", p.ID()))
+			if !p.HasExited() {
+				p.Actions().ResetGenerationCounts()
+			}
 		}
 
 		for _, p := range allPlayers {

@@ -93,6 +93,10 @@ class GlobalWebSocketManager implements WebSocketConnection {
       this.emit("player-kicked", payload);
     });
 
+    webSocketService.on("game-ended", (payload: any) => {
+      this.emit("game-ended", payload);
+    });
+
     webSocketService.on("log-update", (logs: StateDiffDto[]) => {
       this.emit("log-update", logs);
     });
@@ -304,9 +308,24 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.confirmBehaviorChoice(choiceIndex, cardStorageTargets);
   }
 
+  async addBot(botName?: string, difficulty?: string, speed?: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.addBot(botName, difficulty, speed);
+  }
+
   async kickPlayer(targetPlayerId: string): Promise<string> {
     await this.ensureConnected();
     return webSocketService.kickPlayer(targetPlayerId);
+  }
+
+  async endGame(): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.endGame();
+  }
+
+  async convertToBot(targetPlayerId: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.convertToBot(targetPlayerId);
   }
 
   async requestLogs(): Promise<void> {

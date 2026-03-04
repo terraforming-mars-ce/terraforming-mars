@@ -17,6 +17,8 @@ type GameSettings struct {
 	DevelopmentMode  bool     // Default: false
 	DemoGame         bool     // Default: false - enables lobby corp/card selection
 	CardPacks        []string // Default: ["base-game"]
+	ClaudeAPIKey     string   // API key for Claude bot invocations (secret, never exposed in DTOs)
+	ClaudeModel      string   // Claude model to use for bots (default: "sonnet")
 }
 
 // Card pack constants

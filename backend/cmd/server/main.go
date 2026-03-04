@@ -28,6 +28,7 @@ import (
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/logger"
 	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
+	"terraforming-mars-backend/internal/service/bot"
 	"terraforming-mars-backend/internal/service/bugreport"
 
 	"github.com/gorilla/mux"
@@ -103,10 +104,12 @@ func main() {
 
 	// ========== Initialize Game Actions ==========
 
-	// Game lifecycle (5)
+	// Game lifecycle (6)
 	createGameAction := gameAction.NewCreateGameAction(gameRepo, cardRegistry, log)
 	createDemoLobbyAction := gameAction.NewCreateDemoLobbyAction(gameRepo, cardRegistry, log)
 	joinGameAction := gameAction.NewJoinGameAction(gameRepo, cardRegistry, log)
+	healthChecker := bot.NewHealthChecker(log)
+	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, healthChecker, broadcaster, log)
 	confirmDemoSetupAction := gameAction.NewConfirmDemoSetupAction(gameRepo, cardRegistry, log)
 	finalScoringAction := gameAction.NewFinalScoringAction(gameRepo, cardRegistry, log)
 
@@ -133,22 +136,45 @@ func main() {
 	// Tile selection (1)
 	selectTileAction := tileAction.NewSelectTileAction(gameRepo, cardRegistry, stateRepo, log)
 
-	// Turn management (5)
-	startGameAction := turnAction.NewStartGameAction(gameRepo, log)
-	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
-	selectStartingChoicesAction := turnAction.NewSelectStartingChoicesAction(gameRepo, cardRegistry, log)
-
-	// Confirmations (4)
+	// Confirmations (5)
 	confirmSellPatentsAction := confirmAction.NewConfirmSellPatentsAction(gameRepo, log)
 	confirmProductionCardsAction := confirmAction.NewConfirmProductionCardsAction(gameRepo, cardRegistry, log)
 	confirmCardDrawAction := confirmAction.NewConfirmCardDrawAction(gameRepo, cardRegistry, log)
 	confirmCardDiscardAction := confirmAction.NewConfirmCardDiscardAction(gameRepo, cardRegistry, log)
 	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, log)
 
-	// Connection management (3)
+	// Turn management (3)
+	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
+	selectStartingChoicesAction := turnAction.NewSelectStartingChoicesAction(gameRepo, cardRegistry, log)
+
+	// Bot service
+	commandDispatcher := bot.NewCommandDispatcher(
+		playCardAction, useCardActionAction,
+		skipActionAction, selectStartingChoicesAction,
+		selectTileAction,
+		confirmProductionCardsAction, confirmCardDrawAction,
+		confirmCardDiscardAction, confirmBehaviorChoiceAction,
+		confirmSellPatentsAction,
+		launchAsteroidAction, buildPowerPlantAction,
+		buildAquiferAction, buildCityAction, plantGreeneryAction,
+		sellPatentsAction,
+		convertHeatAction, convertPlantsAction,
+		claimMilestoneAction, fundAwardAction,
+		log,
+	)
+	botController := bot.NewBotController(gameRepo, cardRegistry, commandDispatcher, broadcaster, log)
+	broadcaster.SetBotNotifier(botController)
+
+	startGameAction := turnAction.NewStartGameAction(gameRepo, botController, log)
+
+	// Game management (convert to bot)
+	convertToBotAction := gameAction.NewConvertToBotAction(gameRepo, botController, log)
+
+	// Connection management (4)
 	playerDisconnectedAction := connAction.NewPlayerDisconnectedAction(gameRepo, log)
 	playerTakeoverAction := connAction.NewPlayerTakeoverAction(gameRepo, cardRegistry, log)
-	kickPlayerAction := connAction.NewKickPlayerAction(gameRepo, log)
+	kickPlayerAction := connAction.NewKickPlayerAction(gameRepo, botController, finalScoringAction, log)
+	endGameAction := connAction.NewEndGameAction(gameRepo, botController, log)
 
 	// Admin actions (9)
 	adminSetPhaseAction := admin.NewSetPhaseAction(gameRepo, log)
@@ -177,6 +203,7 @@ func main() {
 		// Game lifecycle
 		createGameAction,
 		joinGameAction,
+		addBotAction,
 		confirmDemoSetupAction,
 		// Card actions
 		playCardAction,
@@ -207,6 +234,9 @@ func main() {
 		playerDisconnectedAction,
 		playerTakeoverAction,
 		kickPlayerAction,
+		endGameAction,
+		// Convert to bot
+		convertToBotAction,
 		// Milestones & Awards
 		claimMilestoneAction,
 		fundAwardAction,

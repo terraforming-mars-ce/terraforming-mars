@@ -44,6 +44,8 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		DevelopmentMode:  settings.DevelopmentMode,
 		DemoGame:         settings.DemoGame,
 		CardPacks:        settings.CardPacks,
+		HasClaudeAPIKey:  settings.ClaudeAPIKey != "",
+		ClaudeModel:      settings.ClaudeModel,
 	}
 
 	globalParams := g.GlobalParameters()

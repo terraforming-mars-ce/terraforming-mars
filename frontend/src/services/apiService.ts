@@ -20,13 +20,14 @@ export class ApiService {
     this.baseUrl = baseUrl;
   }
 
-  async createGame(settings: GameSettingsDto): Promise<GameDto> {
+  async createGame(settings: GameSettingsDto, claudeApiKey?: string): Promise<GameDto> {
     try {
       const request: CreateGameRequest = {
         maxPlayers: settings.maxPlayers,
         venusNextEnabled: settings.venusNextEnabled,
         developmentMode: settings.developmentMode,
         cardPacks: settings.cardPacks,
+        claudeApiKey: claudeApiKey || undefined,
       };
 
       const response = await fetch(`${this.baseUrl}/games`, {

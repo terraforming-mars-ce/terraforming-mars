@@ -147,6 +147,7 @@ func (h *GameHandler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		VenusNextEnabled: req.VenusNextEnabled,
 		DevelopmentMode:  req.DevelopmentMode,
 		CardPacks:        req.CardPacks,
+		ClaudeAPIKey:     req.ClaudeAPIKey,
 	}
 
 	// Execute create game action

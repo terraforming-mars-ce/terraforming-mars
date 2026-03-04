@@ -5,6 +5,7 @@ import { globalWebSocketManager } from "../../../services/globalWebSocketManager
 import CopyLinkButton from "../buttons/CopyLinkButton.tsx";
 import GameMenuButton from "../buttons/GameMenuButton.tsx";
 import GameMenuModal from "./GameMenuModal.tsx";
+import { BotDifficultyChip, BotSpeedChip } from "../display/BotChips.tsx";
 
 interface WaitingRoomOverlayProps {
   game: GameDto;
@@ -30,6 +31,8 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaveConfirmVisible, setLeaveConfirmVisible] = useState(true);
   const [pendingLeave, setPendingLeave] = useState(false);
+  const [showBotDropdown, setShowBotDropdown] = useState(false);
+  const botDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleStartGame = () => {
     if (!isHost) return;
@@ -38,11 +41,26 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
 
   const playerCount = (game.currentPlayer ? 1 : 0) + (game.otherPlayers?.length || 0);
 
+  const allBotsReady = React.useMemo(() => {
+    const bots: { botStatus?: string }[] = [];
+    if (game.currentPlayer?.playerType === "bot") bots.push(game.currentPlayer);
+    game.otherPlayers?.forEach((p) => {
+      if (p.playerType === "bot") bots.push(p);
+    });
+    return bots.every((b) => b.botStatus === "ready");
+  }, [game.currentPlayer, game.otherPlayers]);
+
   const allPlayers = React.useMemo(() => {
-    const players: { id: string; name: string }[] = [];
+    const players: { id: string; name: string; playerType: string }[] = [];
     if (game.currentPlayer)
-      players.push({ id: game.currentPlayer.id, name: game.currentPlayer.name });
-    game.otherPlayers?.forEach((p) => players.push({ id: p.id, name: p.name }));
+      players.push({
+        id: game.currentPlayer.id,
+        name: game.currentPlayer.name,
+        playerType: game.currentPlayer.playerType,
+      });
+    game.otherPlayers?.forEach((p) =>
+      players.push({ id: p.id, name: p.name, playerType: p.playerType }),
+    );
     return players;
   }, [game.currentPlayer, game.otherPlayers]);
 
@@ -114,6 +132,22 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   const openLeaveConfirm = () => {
     setShowLeaveConfirm(true);
     setLeaveConfirmVisible(true);
+  };
+
+  useEffect(() => {
+    if (!showBotDropdown) return;
+    const handleClick = (e: MouseEvent) => {
+      if (botDropdownRef.current && !botDropdownRef.current.contains(e.target as Node)) {
+        setShowBotDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showBotDropdown]);
+
+  const handleAddBot = (difficulty: string, speed: string) => {
+    setShowBotDropdown(false);
+    void globalWebSocketManager.addBot(undefined, difficulty, speed);
   };
 
   return (
@@ -206,12 +240,24 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
               const playerItems = orderedPlayers.map((player) => ({
                 id: player.id,
                 name: player.name,
+                playerType: player.playerType as string,
+                botStatus: (player.botStatus as string) || undefined,
+                botDifficulty: (player.botDifficulty as string) || undefined,
+                botSpeed: (player.botSpeed as string) || undefined,
                 isLeaving: false,
               }));
 
               leavingPlayers.forEach((lp) => {
                 if (!playerMap.has(lp.id)) {
-                  playerItems.push({ id: lp.id, name: lp.name, isLeaving: true });
+                  playerItems.push({
+                    id: lp.id,
+                    name: lp.name,
+                    playerType: "human",
+                    botStatus: undefined,
+                    botDifficulty: undefined,
+                    botSpeed: undefined,
+                    isLeaving: true,
+                  });
                 }
               });
 
@@ -233,7 +279,9 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                         : undefined
                     }
                   >
-                    <span className="text-white text-sm font-medium">{player.name}</span>
+                    <div className="flex gap-1.5 items-center">
+                      <span className="text-white text-sm font-medium">{player.name}</span>
+                    </div>
                     <div className="flex gap-1.5 items-center">
                       {player.id === playerId && (
                         <span className="bg-space-blue-800 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
@@ -244,6 +292,16 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                         <span className="bg-gradient-to-br from-[#ffa500] to-[#ff8c00] text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
                           Host
                         </span>
+                      )}
+                      {player.playerType === "bot" && (
+                        <>
+                          <BotDifficultyChip
+                            difficulty={player.botDifficulty}
+                            botStatus={player.botStatus}
+                            showStatusIcon
+                          />
+                          <BotSpeedChip speed={player.botSpeed} />
+                        </>
                       )}
                       {isHost && player.id !== playerId && !player.isLeaving && (
                         <button
@@ -273,11 +331,11 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
             })()}
           </div>
 
-          {/* Join Link */}
-          <div className="mt-4 flex justify-center">
+          {/* Join Link & Add Bot */}
+          <div className="mt-4 flex justify-center gap-2">
             <CopyLinkButton
               textToCopy={joinUrl}
-              defaultText="Join Link"
+              defaultText="Link"
               copiedText="Copied!"
               icon={
                 <svg
@@ -295,6 +353,67 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                 </svg>
               }
             />
+            {isHost && game.settings.hasClaudeApiKey && (
+              <div className="relative" ref={botDropdownRef}>
+                <GameMenuButton
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setShowBotDropdown((prev) => !prev)}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    Bot
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </span>
+                </GameMenuButton>
+                {showBotDropdown && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black border border-white/20 rounded-lg overflow-hidden shadow-lg z-10">
+                    <div className="grid grid-cols-[auto_60px_60px] text-center">
+                      <div />
+                      {["Fast", "Thinker"].map((s) => (
+                        <div
+                          key={s}
+                          className="px-3 py-1.5 text-white/40 text-[10px] font-bold uppercase tracking-wide"
+                        >
+                          {s}
+                        </div>
+                      ))}
+                      {[
+                        { key: "normal", label: "Normal" },
+                        { key: "hard", label: "Hard" },
+                        { key: "extreme", label: "Actual Bot" },
+                      ].map((diff) => (
+                        <React.Fragment key={diff.key}>
+                          <div className="px-3 py-2 text-white/60 text-[11px] font-semibold flex items-center whitespace-nowrap">
+                            {diff.label}
+                          </div>
+                          {["fast", "thinker"].map((spd) => (
+                            <button
+                              key={spd}
+                              onClick={() => handleAddBot(diff.key, spd)}
+                              className="px-3 py-2 hover:bg-white/10 transition-colors cursor-pointer text-white text-lg"
+                            >
+                              +
+                            </button>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -305,7 +424,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
               variant="primary"
               size="lg"
               onClick={handleStartGame}
-              disabled={playerCount < 1}
+              disabled={playerCount < 1 || !allBotsReady}
               className="w-full"
             >
               START GAME

@@ -393,6 +393,9 @@ func (a *SelectStartingChoicesAction) checkAndAdvancePhase(ctx context.Context, 
 	allPlayers := g.GetAllPlayers()
 
 	for _, p := range allPlayers {
+		if p.HasExited() {
+			continue
+		}
 		if g.GetSelectCorporationPhase(p.ID()) != nil {
 			log.Info("⏳ Waiting for other players to complete starting selection")
 			return
@@ -429,6 +432,9 @@ func AdvanceToActionPhase(ctx context.Context, g *game.Game, allPlayers []*playe
 	}
 
 	for _, p := range allPlayers {
+		if p.HasExited() {
+			continue
+		}
 		forcedAction := g.GetForcedFirstAction(p.ID())
 		if forcedAction == nil || forcedAction.Completed {
 			continue
@@ -454,12 +460,30 @@ func AdvanceToActionPhase(ctx context.Context, g *game.Game, allPlayers []*playe
 			zap.String("tile_type", tileType))
 	}
 
+	activePlayerCount := 0
+	for _, p := range allPlayers {
+		if !p.HasExited() {
+			activePlayerCount++
+		}
+	}
+
 	turnOrder := g.TurnOrder()
 	if len(turnOrder) > 0 {
-		firstPlayerID := turnOrder[0]
+		// Find first non-exited player in turn order
+		firstPlayerID := ""
+		for _, id := range turnOrder {
+			p, err := g.GetPlayer(id)
+			if err == nil && !p.HasExited() {
+				firstPlayerID = p.ID()
+				break
+			}
+		}
+		if firstPlayerID == "" {
+			return
+		}
 
 		availableActions := 2
-		if len(allPlayers) == 1 {
+		if activePlayerCount == 1 {
 			availableActions = -1
 			log.Info("🎮 Solo mode detected - setting unlimited actions")
 		}

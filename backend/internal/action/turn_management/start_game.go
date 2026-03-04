@@ -12,21 +12,29 @@ import (
 	playerPkg "terraforming-mars-backend/internal/game/player"
 )
 
+// BotStarter starts bot sessions when a game begins.
+type BotStarter interface {
+	StartBot(gameID, playerID, botName, difficulty, speed string, settings game.GameSettings) error
+}
+
 // StartGameAction handles the business logic for starting games
 // NOTE: Deck initialization is handled separately before calling this action
 type StartGameAction struct {
-	gameRepo game.GameRepository
-	logger   *zap.Logger
+	gameRepo   game.GameRepository
+	botStarter BotStarter
+	logger     *zap.Logger
 }
 
 // NewStartGameAction creates a new start game action
 func NewStartGameAction(
 	gameRepo game.GameRepository,
+	botStarter BotStarter,
 	logger *zap.Logger,
 ) *StartGameAction {
 	return &StartGameAction{
-		gameRepo: gameRepo,
-		logger:   logger,
+		gameRepo:   gameRepo,
+		botStarter: botStarter,
+		logger:     logger,
 	}
 }
 
@@ -145,6 +153,20 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 			return fmt.Errorf("failed to distribute project cards: %w", err)
 		}
 		log.Info("✅ Project cards distributed to all players")
+	}
+
+	// Start bot sessions for any bot players
+	if a.botStarter != nil {
+		settings := g.Settings()
+		for _, p := range players {
+			if p.IsBot() {
+				if err := a.botStarter.StartBot(gameID, p.ID(), p.Name(), string(p.BotDifficulty()), string(p.BotSpeed()), settings); err != nil {
+					log.Error("Failed to start bot",
+						zap.String("bot_player_id", p.ID()),
+						zap.Error(err))
+				}
+			}
+		}
 	}
 
 	log.Info("🎉 Game started successfully")

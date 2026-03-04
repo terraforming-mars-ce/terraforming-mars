@@ -696,6 +696,8 @@ export interface GameSettingsDto {
   developmentMode: boolean;
   demoGame: boolean;
   cardPacks?: string[];
+  hasClaudeApiKey: boolean;
+  claudeModel?: string;
 }
 /**
  * GlobalParametersDto represents the terraforming progress
@@ -928,12 +930,17 @@ export const PlayerStatusSelectingStartingCards: PlayerStatus = "selecting-start
 export const PlayerStatusSelectingProductionCards: PlayerStatus = "selecting-production-cards";
 export const PlayerStatusWaiting: PlayerStatus = "waiting";
 export const PlayerStatusActive: PlayerStatus = "active";
+export const PlayerStatusExited: PlayerStatus = "exited";
 /**
  * PlayerDto represents a player in the game for client consumption
  */
 export interface PlayerDto {
   id: string;
   name: string;
+  playerType: string;
+  botStatus?: string;
+  botDifficulty?: string;
+  botSpeed?: string;
   color: string;
   status: PlayerStatus;
   corporation?: CardDto;
@@ -945,6 +952,7 @@ export interface PlayerDto {
   passed: boolean;
   availableActions: number /* int */;
   isConnected: boolean;
+  isExited: boolean;
   effects: PlayerEffectDto[]; // Active ongoing effects (discounts, special abilities, etc.)
   actions: PlayerActionDto[]; // Available actions from played cards with manual triggers
   standardProjects: PlayerStandardProjectDto[]; // Standard projects with availability state (Player-Scoped Architecture)
@@ -973,6 +981,10 @@ export interface PlayerDto {
 export interface OtherPlayerDto {
   id: string;
   name: string;
+  playerType: string;
+  botStatus?: string;
+  botDifficulty?: string;
+  botSpeed?: string;
   color: string;
   status: PlayerStatus;
   corporation?: CardDto;
@@ -984,6 +996,7 @@ export interface OtherPlayerDto {
   passed: boolean;
   availableActions: number /* int */;
   isConnected: boolean;
+  isExited: boolean;
   effects: PlayerEffectDto[];
   actions: PlayerActionDto[];
   selectCorporationPhase?: SelectCorporationOtherPlayerDto;
@@ -1252,6 +1265,7 @@ export interface CreateGameRequest {
   venusNextEnabled: boolean;
   developmentMode: boolean;
   cardPacks?: string[];
+  claudeApiKey?: string;
 }
 /**
  * CreateGameResponse represents the response for creating a game
@@ -1388,6 +1402,7 @@ export const MessageTypeActionConvertPlantsToGreenery: MessageType =
 export const MessageTypeActionConvertHeatToTemperature: MessageType =
   "action.resource-conversion.convert-heat-to-temperature";
 export const MessageTypeCreateGame: MessageType = "create-game";
+export const MessageTypeAddBot: MessageType = "add-bot";
 export const MessageTypeActionStartGame: MessageType = "action.game-management.start-game";
 export const MessageTypeActionSkipAction: MessageType = "action.game-management.skip-action";
 export const MessageTypeActionConfirmDemoSetup: MessageType =
@@ -1412,6 +1427,9 @@ export const MessageTypeRequestLogs: MessageType = "request-logs";
 export const MessageTypePlayerTakeover: MessageType = "player-takeover";
 export const MessageTypeKickPlayer: MessageType = "kick-player";
 export const MessageTypePlayerKicked: MessageType = "player-kicked";
+export const MessageTypeConvertToBot: MessageType = "convert-to-bot";
+export const MessageTypeEndGame: MessageType = "end-game";
+export const MessageTypeGameEnded: MessageType = "game-ended";
 
 //////////
 // source: state_diff_dto.go

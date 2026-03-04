@@ -55,7 +55,7 @@ const JoinGameOverlay: React.FC<JoinGameOverlayProps> = ({
           <button
             onClick={() => void handleJoin()}
             disabled={isLoading || !playerName.trim()}
-            className="font-orbitron bg-space-blue-600 border border-space-blue-500 rounded-lg py-3 px-6 text-white text-sm font-medium hover:bg-space-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="font-orbitron bg-space-blue-600 border border-space-blue-500 rounded-lg py-3 px-6 text-white text-sm font-medium hover:bg-space-blue-500 transition-colors disabled:opacity-50 disabled:cursor-default"
           >
             {isLoading ? "Joining..." : "Join"}
           </button>

@@ -8,6 +8,7 @@ type CreateGameRequest struct {
 	VenusNextEnabled bool     `json:"venusNextEnabled" ts:"boolean"`
 	DevelopmentMode  bool     `json:"developmentMode" ts:"boolean"`
 	CardPacks        []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
+	ClaudeAPIKey     string   `json:"claudeApiKey,omitempty" ts:"string | undefined"`
 }
 
 // CreateGameResponse represents the response for creating a game

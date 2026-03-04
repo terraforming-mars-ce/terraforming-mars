@@ -34,6 +34,7 @@ func RegisterHandlers(
 	broadcaster *Broadcaster,
 	createGameAction *gameAction.CreateGameAction,
 	joinGameAction *gameAction.JoinGameAction,
+	addBotAction *gameAction.AddBotAction,
 	confirmDemoSetupAction *gameAction.ConfirmDemoSetupAction,
 	playCardAction *cardAction.PlayCardAction,
 	useCardActionAction *cardAction.UseCardActionAction,
@@ -57,6 +58,8 @@ func RegisterHandlers(
 	playerDisconnectedAction *connAction.PlayerDisconnectedAction,
 	playerTakeoverAction *connAction.PlayerTakeoverAction,
 	kickPlayerAction *connAction.KickPlayerAction,
+	endGameAction *connAction.EndGameAction,
+	convertToBotAction *gameAction.ConvertToBotAction,
 	claimMilestoneAction *milestoneAction.ClaimMilestoneAction,
 	fundAwardAction *awardAction.FundAwardAction,
 	adminSetPhaseAction *adminAction.SetPhaseAction,
@@ -78,6 +81,9 @@ func RegisterHandlers(
 	joinGameHandler := game.NewJoinGameHandler(joinGameAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypePlayerConnect, joinGameHandler)
 	hub.RegisterHandler(dto.MessageTypeJoinGame, joinGameHandler)
+
+	addBotHandler := game.NewAddBotHandler(addBotAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeAddBot, addBotHandler)
 
 	confirmDemoSetupHandler := game.NewConfirmDemoSetupHandler(confirmDemoSetupAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConfirmDemoSetup, confirmDemoSetupHandler)
@@ -150,6 +156,12 @@ func RegisterHandlers(
 
 	kickPlayerHandler := connection.NewKickPlayerHandler(kickPlayerAction, broadcaster, hub)
 	hub.RegisterHandler(dto.MessageTypeKickPlayer, kickPlayerHandler)
+
+	endGameHandler := connection.NewEndGameHandler(endGameAction, hub)
+	hub.RegisterHandler(dto.MessageTypeEndGame, endGameHandler)
+
+	convertToBotHandler := game.NewConvertToBotHandler(convertToBotAction, broadcaster, hub)
+	hub.RegisterHandler(dto.MessageTypeConvertToBot, convertToBotHandler)
 
 	claimMilestoneHandler := milestone.NewClaimMilestoneHandler(claimMilestoneAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionClaimMilestone, claimMilestoneHandler)

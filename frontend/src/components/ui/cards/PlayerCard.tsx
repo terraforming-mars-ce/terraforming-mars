@@ -103,10 +103,13 @@ interface PlayerCardProps {
   isCurrentPlayer: boolean;
   isCurrentTurn: boolean;
   isActionPhase: boolean;
+  isHost?: boolean;
   onSkipAction?: () => void;
   hasPendingTilePlacement?: boolean;
   triggeredEffects?: TriggeredEffectDto[];
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
+  onKickPlayer?: (playerId: string) => void;
+  onConvertToBot?: (playerId: string) => void;
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
@@ -115,16 +118,44 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   isCurrentPlayer,
   isCurrentTurn,
   isActionPhase,
+  isHost = false,
   onSkipAction,
   hasPendingTilePlacement = false,
   triggeredEffects = [],
   onPlayerClick,
+  onKickPlayer,
+  onConvertToBot,
 }) => {
   const hoverSound = useHoverSound(hasPendingTilePlacement);
   const isPassed = player.passed;
   const isDisconnected = !player.isConnected;
+  const isExited = player.isExited;
   const hasUnlimitedActions = player.availableActions === -1;
   const actionsRemaining = player.availableActions;
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  const canKick = isHost && !isCurrentPlayer && !isExited && onKickPlayer;
+  const canConvertToBot =
+    isHost && !isCurrentPlayer && !isExited && player.playerType !== "bot" && onConvertToBot;
+  const hasContextMenu = canKick || canConvertToBot;
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!hasContextMenu) return;
+      e.preventDefault();
+      setContextMenu({ x: e.clientX, y: e.clientY });
+    },
+    [hasContextMenu],
+  );
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [contextMenu]);
 
   const buttonText = hasUnlimitedActions || actionsRemaining === 2 ? "PASS" : "SKIP";
 
@@ -220,10 +251,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       ref={cardRef}
       className={`relative w-full h-[60px] overflow-visible pointer-events-auto ${isCurrentTurn ? "mb-1.5" : "mb-2"} ${onPlayerClick ? "cursor-pointer" : ""}`}
       onClick={() => onPlayerClick?.(player)}
+      onContextMenu={handleContextMenu}
     >
       {/* Main player card with angled edge */}
       <div
-        className={`relative h-full bg-[rgba(10,10,15,0.95)] border-l-[6px] border-t border-t-[rgba(60,60,70,0.7)] pl-2 pr-2 transition-all duration-300 flex items-center [clip-path:polygon(0_0,calc(100%-8px)_0,100%_100%,0_100%)] max-w-[270px] z-[2] shadow-[0_2px_8px_rgba(0,0,0,0.5),-2px_0_6px_var(--player-color)] ${isDisconnected ? "opacity-20" : ""} ${!isCurrentTurn ? "opacity-60" : ""} ${isCurrentTurn ? "border-l-8 shadow-[0_4px_16px_rgba(0,0,0,0.6),-4px_0_12px_var(--player-color)]" : ""}`}
+        className={`relative h-full bg-[rgba(10,10,15,0.95)] border-l-[6px] border-t border-t-[rgba(60,60,70,0.7)] pl-2 pr-2 transition-all duration-300 flex items-center [clip-path:polygon(0_0,calc(100%-8px)_0,100%_100%,0_100%)] max-w-[270px] z-[2] shadow-[0_2px_8px_rgba(0,0,0,0.5),-2px_0_6px_var(--player-color)] ${isExited || isDisconnected ? "opacity-20" : ""} ${!isCurrentTurn ? "opacity-60" : ""} ${isCurrentTurn ? "border-l-8 shadow-[0_4px_16px_rgba(0,0,0,0.6),-4px_0_12px_var(--player-color)]" : ""}`}
         style={
           { "--player-color": playerColor, borderLeftColor: playerColor } as React.CSSProperties
         }
@@ -235,14 +267,45 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 YOU
               </span>
             )}
-            {isPassed && (
+            {isPassed && !isExited && (
               <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(80,80,90,0.6)] text-[rgb(140,140,150)] border border-[rgba(60,60,70,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
                 PASSED
               </span>
             )}
-            {isDisconnected && (
+            {player.playerType === "bot" && player.botStatus === "thinking" && (
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(120,80,200,0.6)] text-[rgb(200,180,255)] border border-[rgba(140,100,220,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] flex items-center gap-1">
+                THINKING
+                <svg
+                  className="animate-spin"
+                  width="8"
+                  height="8"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                >
+                  <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                </svg>
+              </span>
+            )}
+            {player.playerType === "bot" && player.botStatus !== "thinking" && (
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(120,80,200,0.4)] text-[rgb(180,160,230)] border border-[rgba(120,80,200,0.5)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+                BOT
+              </span>
+            )}
+            {isExited && (
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,60,60,0.4)] text-[rgb(220,140,140)] border border-[rgba(180,60,60,0.5)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] relative z-[3]">
+                EXITED
+              </span>
+            )}
+            {isDisconnected && !isExited && (
               <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,60,60,0.4)] text-[rgb(220,140,140)] border border-[rgba(180,60,60,0.5)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] relative z-[3]">
                 DISCONNECTED
+              </span>
+            )}
+            {player.botStatus === "failed" && (
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(200,50,50,0.6)] text-[rgb(255,140,140)] border border-[rgba(200,50,50,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] relative z-[3]">
+                ERROR
               </span>
             )}
           </div>
@@ -260,7 +323,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           <button
             className={`absolute right-5 top-1/2 -translate-y-1/2 py-1.5 px-3 text-[9px] font-bold font-orbitron uppercase tracking-[0.5px] transition-all duration-200 ${
               hasPendingTilePlacement
-                ? "bg-[rgba(40,40,45,0.9)] text-[rgb(100,100,110)] border border-[rgba(60,60,70,0.5)] cursor-not-allowed"
+                ? "bg-[rgba(40,40,45,0.9)] text-[rgb(100,100,110)] border border-[rgba(60,60,70,0.5)] cursor-default"
                 : "bg-[rgba(50,100,160,0.95)] text-white border border-[rgba(80,140,200,0.8)] cursor-pointer hover:bg-[rgba(60,120,180,1)] hover:border-[rgba(100,160,220,0.9)]"
             }`}
             onClick={(e) => {
@@ -276,6 +339,43 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           </button>
         )}
       </div>
+
+      {/* Right-click context menu */}
+      {contextMenu &&
+        createPortal(
+          <div
+            ref={contextMenuRef}
+            className="fixed z-[10000] bg-[rgba(15,15,20,0.98)] border border-[rgba(60,60,70,0.7)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.7)] py-1 min-w-[180px]"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            {canConvertToBot && (
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-white/10 transition-colors cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenu(null);
+                  onConvertToBot?.(player.id);
+                }}
+              >
+                Convert to bot
+              </button>
+            )}
+            {canConvertToBot && canKick && <div className="border-t border-[#333]" />}
+            {canKick && (
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-white/10 transition-colors cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenu(null);
+                  onKickPlayer?.(player.id);
+                }}
+              >
+                Kick player
+              </button>
+            )}
+          </div>,
+          document.body,
+        )}
 
       {/* Triggered effect notification - rendered via portal to avoid clipping */}
       {active &&
