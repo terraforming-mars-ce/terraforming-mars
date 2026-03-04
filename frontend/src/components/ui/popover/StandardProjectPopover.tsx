@@ -6,7 +6,7 @@ import {
   ResourceTypeCredit,
   PlayerStandardProjectDto,
 } from "@/types/generated/api-types.ts";
-import { StandardProject, STANDARD_PROJECTS } from "@/types/cards.tsx";
+import { StandardProject, STANDARD_PROJECTS, STANDARD_PROJECT_COSTS } from "@/types/cards.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
@@ -33,7 +33,22 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
   const canExecuteProjects =
     isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
 
-  const playerProjects = gameState?.currentPlayer?.standardProjects ?? [];
+  const serverProjects = gameState?.currentPlayer?.standardProjects ?? [];
+
+  // For spectators, derive items from static data
+  const playerProjects: PlayerStandardProjectDto[] =
+    serverProjects.length > 0
+      ? serverProjects
+      : Object.entries(STANDARD_PROJECTS).map(([key]) => {
+          const cost = STANDARD_PROJECT_COSTS[key as StandardProject];
+          return {
+            projectType: key,
+            baseCost: { credit: cost },
+            effectiveCost: { credit: cost },
+            available: false,
+            errors: [],
+          };
+        });
   const availableCount = playerProjects.filter((p) => p.available).length;
 
   const handleProjectClick = (project: PlayerStandardProjectDto) => {

@@ -36,19 +36,37 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
   const canClaimMilestones =
     isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
 
-  const milestones = gameState?.currentPlayer?.milestones ?? [];
+  const playerMilestones = gameState?.currentPlayer?.milestones ?? [];
   const globalMilestones = gameState?.milestones ?? [];
+
+  // For spectators, use global milestones as the item source
+  const milestones =
+    playerMilestones.length > 0
+      ? playerMilestones
+      : globalMilestones.map((m) => ({
+          type: m.type,
+          name: m.name,
+          description: m.description,
+          claimCost: m.claimCost,
+          isClaimed: m.isClaimed,
+          claimedBy: m.claimedBy,
+          available: false,
+          progress: 0,
+          required: m.required,
+          errors: [] as import("@/types/generated/api-types.ts").StateErrorDto[],
+        }));
   const claimedCount = milestones.filter((m) => m.isClaimed).length;
 
   const allPlayers: PlayerInfo[] = useMemo(() => {
     if (!gameState) return [];
-    const players: PlayerInfo[] = [
-      {
+    const players: PlayerInfo[] = [];
+    if (gameState.currentPlayer?.id) {
+      players.push({
         id: gameState.currentPlayer.id,
         name: gameState.currentPlayer.name,
         color: gameState.currentPlayer.color,
-      },
-    ];
+      });
+    }
     for (const p of gameState.otherPlayers) {
       players.push({ id: p.id, name: p.name, color: p.color });
     }
