@@ -100,7 +100,7 @@ func CalculatePlayerCardActionState(
 			for _, allowed := range input.PaymentAllowed {
 				for _, sub := range substitutes {
 					if sub.ResourceType == allowed {
-						available := getResourceAmount(resources, allowed)
+						available := resources.GetAmount(allowed)
 						effectiveCredits += available * sub.ConversionRate
 					}
 				}
@@ -115,7 +115,7 @@ func CalculatePlayerCardActionState(
 			continue
 		}
 
-		available := getResourceAmount(resources, input.ResourceType)
+		available := resources.GetAmount(input.ResourceType)
 		if available < input.Amount {
 			errors = append(errors, player.StateError{
 				Code:     player.ErrorCodeInsufficientResources,
@@ -419,7 +419,7 @@ func validateProductionOutputs(
 			}
 
 			// Check if player has enough production
-			currentProduction := getProductionAmount(production, baseResourceType)
+			currentProduction := production.GetAmount(baseResourceType)
 			resultingProduction := currentProduction + output.Amount // output.Amount is negative
 
 			// MC production can go to -5, others cannot go below 0
@@ -471,7 +471,7 @@ func validateNegativeResourceOutputs(
 		if !isBasicPlayerResource(output.ResourceType) {
 			continue
 		}
-		available := getResourceAmount(resources, output.ResourceType)
+		available := resources.GetAmount(output.ResourceType)
 		required := -output.Amount
 		if available < required {
 			errors = append(errors, player.StateError{
@@ -933,7 +933,7 @@ func checkRequirement(
 		}
 
 		production := p.Resources().Production()
-		currentProduction := getProductionAmount(production, *req.Resource)
+		currentProduction := production.GetAmount(*req.Resource)
 
 		if req.Min != nil && currentProduction < *req.Min {
 			return &player.StateError{
@@ -953,7 +953,7 @@ func checkRequirement(
 			}
 		}
 		resources := p.Resources().Get()
-		currentAmount := getResourceAmount(resources, *req.Resource)
+		currentAmount := resources.GetAmount(*req.Resource)
 
 		if req.Min != nil && currentAmount < *req.Min {
 			return &player.StateError{
@@ -1136,7 +1136,7 @@ func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]i
 			}
 		} else {
 			// Non-credit costs checked directly (no substitutes apply)
-			available := getResourceAmount(resources, shared.ResourceType(resourceType))
+			available := resources.GetAmount(shared.ResourceType(resourceType))
 			if available < cost {
 				errors = append(errors, player.StateError{
 					Code:     player.ErrorCodeInsufficientCredits,
@@ -1147,16 +1147,6 @@ func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]i
 		}
 	}
 	return errors
-}
-
-// cardHasTag checks if a card has a specific tag.
-func cardHasTag(card *gamecards.Card, tag shared.CardTag) bool {
-	for _, cardTag := range card.Tags {
-		if cardTag == tag {
-			return true
-		}
-	}
-	return false
 }
 
 // getStandardProjectBaseCosts returns the base cost map for a standard project.
@@ -1197,26 +1187,6 @@ func hasCardTag(tags []shared.CardTag, tag shared.CardTag) bool {
 	return false
 }
 
-// getResourceAmount extracts the amount of a specific resource from Resources.
-func getResourceAmount(resources shared.Resources, resourceType shared.ResourceType) int {
-	switch resourceType {
-	case shared.ResourceCredit:
-		return resources.Credits
-	case shared.ResourceSteel:
-		return resources.Steel
-	case shared.ResourceTitanium:
-		return resources.Titanium
-	case shared.ResourcePlant:
-		return resources.Plants
-	case shared.ResourceEnergy:
-		return resources.Energy
-	case shared.ResourceHeat:
-		return resources.Heat
-	default:
-		return 0
-	}
-}
-
 // isProducibleResource checks if the resource type is one of the 6 basic producible resources
 // or their production variants (e.g., "titanium" or "titanium-production").
 func isProducibleResource(resourceType shared.ResourceType) bool {
@@ -1228,28 +1198,6 @@ func isProducibleResource(resourceType shared.ResourceType) bool {
 		return true
 	default:
 		return false
-	}
-}
-
-// getProductionAmount extracts the production value for a specific resource type.
-// Accepts both base resources (e.g., "titanium") and production types (e.g., "titanium-production").
-// Returns 0 for non-producible resource types.
-func getProductionAmount(production shared.Production, resourceType shared.ResourceType) int {
-	switch resourceType {
-	case shared.ResourceCredit, shared.ResourceCreditProduction:
-		return production.Credits
-	case shared.ResourceSteel, shared.ResourceSteelProduction:
-		return production.Steel
-	case shared.ResourceTitanium, shared.ResourceTitaniumProduction:
-		return production.Titanium
-	case shared.ResourcePlant, shared.ResourcePlantProduction:
-		return production.Plants
-	case shared.ResourceEnergy, shared.ResourceEnergyProduction:
-		return production.Energy
-	case shared.ResourceHeat, shared.ResourceHeatProduction:
-		return production.Heat
-	default:
-		return 0
 	}
 }
 
@@ -1500,7 +1448,7 @@ func CalculateChoiceErrors(choice shared.Choice, p *player.Player, g *game.Game,
 		if !isBasicPlayerResource(output.ResourceType) {
 			continue
 		}
-		available := getResourceAmount(resources, output.ResourceType)
+		available := resources.GetAmount(output.ResourceType)
 		if available < -output.Amount {
 			errors = append(errors, player.StateError{
 				Code:     player.ErrorCodeInsufficientResources,
@@ -1517,7 +1465,7 @@ func CalculateChoiceErrors(choice shared.Choice, p *player.Player, g *game.Game,
 		if !isBasicPlayerResource(input.ResourceType) {
 			continue
 		}
-		available := getResourceAmount(resources, input.ResourceType)
+		available := resources.GetAmount(input.ResourceType)
 		if available < input.Amount {
 			errors = append(errors, player.StateError{
 				Code:     player.ErrorCodeInsufficientResources,
@@ -1541,7 +1489,7 @@ func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *g
 				Message:  "Invalid tag requirement",
 			}
 		}
-		tagCount := countPlayerTags(*req.Tag, p, cardRegistry)
+		tagCount := gamecards.CountPlayerTagsByType(p, cardRegistry, *req.Tag)
 		if req.Min != nil && tagCount < *req.Min {
 			return &player.StateError{
 				Code:     player.ErrorCodeInsufficientTags,
@@ -1634,7 +1582,7 @@ func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *g
 			}
 		}
 		production := p.Resources().Production()
-		amount := getProductionAmount(production, *req.Resource)
+		amount := production.GetAmount(*req.Resource)
 		if req.Min != nil && amount < *req.Min {
 			return &player.StateError{
 				Code:     player.ErrorCodeInsufficientProduction,
@@ -1652,7 +1600,7 @@ func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *g
 			}
 		}
 		resources := p.Resources().Get()
-		amount := getResourceAmount(resources, *req.Resource)
+		amount := resources.GetAmount(*req.Resource)
 		if req.Min != nil && amount < *req.Min {
 			return &player.StateError{
 				Code:     player.ErrorCodeInsufficientResources,
@@ -1663,40 +1611,6 @@ func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *g
 	}
 
 	return nil
-}
-
-// countPlayerTags counts the number of a specific tag across all played cards and corporation.
-func countPlayerTags(tag shared.CardTag, p *player.Player, cardRegistry cards.CardRegistry) int {
-	tagCount := 0
-	for _, playedCardID := range p.PlayedCards().Cards() {
-		if cardRegistry == nil {
-			continue
-		}
-		card, err := cardRegistry.GetByID(playedCardID)
-		if err != nil {
-			continue
-		}
-		if card.Type == gamecards.CardTypeEvent {
-			continue
-		}
-		for _, cardTag := range card.Tags {
-			if cardTag == tag || cardTag == shared.TagWild {
-				tagCount++
-			}
-		}
-	}
-
-	if corpID := p.CorporationID(); corpID != "" && cardRegistry != nil {
-		if corp, err := cardRegistry.GetByID(corpID); err == nil {
-			for _, corpTag := range corp.Tags {
-				if corpTag == tag || corpTag == shared.TagWild {
-					tagCount++
-				}
-			}
-		}
-	}
-
-	return tagCount
 }
 
 // formatMilestoneRequirementError returns a short error message for milestone requirements.

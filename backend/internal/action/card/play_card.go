@@ -172,8 +172,8 @@ func (a *PlayCardAction) Execute(
 		}
 	}
 
-	allowSteel := hasTag(card, shared.TagBuilding)
-	allowTitanium := hasTag(card, shared.TagSpace)
+	allowSteel := gamecards.HasTag(card, shared.TagBuilding)
+	allowTitanium := gamecards.HasTag(card, shared.TagSpace)
 
 	adjustedPayment := adjustPaymentToEffectiveCost(payment, effectiveCost, allowSteel, allowTitanium, playerSubstitutes, applicableStorageSubs, player)
 
@@ -285,16 +285,6 @@ func (a *PlayCardAction) Execute(
 	return nil
 }
 
-// hasTag checks if a card has a specific tag
-func hasTag(card *gamecards.Card, tag shared.CardTag) bool {
-	for _, cardTag := range card.Tags {
-		if cardTag == tag {
-			return true
-		}
-	}
-	return false
-}
-
 // validateCardRequirements validates that the player and game state meet all card requirements.
 // Uses RequirementModifierCalculator to include global parameter lenience from temporary effects.
 func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player.Player, calculator *gamecards.RequirementModifierCalculator, cardRegistry cards.CardRegistry) error {
@@ -348,7 +338,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			}
 
 			// Count the card's own tags toward requirements (per TM rules, the card being played counts)
-			tagCount := countPlayerTags(*req.Tag, player, cardRegistry, card.Tags)
+			tagCount := gamecards.CountPlayerTagsByType(player, cardRegistry, *req.Tag, card.Tags)
 
 			if req.Min != nil && tagCount < *req.Min {
 				return fmt.Errorf("tag requirement not met: need %d %s tags, have %d", *req.Min, *req.Tag, tagCount)
@@ -801,7 +791,7 @@ func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *g
 		if req.Tag == nil {
 			return fmt.Errorf("tag requirement missing tag specification")
 		}
-		tagCount := countPlayerTags(*req.Tag, p, cardRegistry)
+		tagCount := gamecards.CountPlayerTagsByType(p, cardRegistry, *req.Tag)
 		if req.Min != nil && tagCount < *req.Min {
 			return fmt.Errorf("need %d %s tags, have %d", *req.Min, *req.Tag, tagCount)
 		}
@@ -859,7 +849,7 @@ func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *g
 			return fmt.Errorf("production requirement missing resource type")
 		}
 		production := p.Resources().Production()
-		amount := getProductionAmountForChoice(production, *req.Resource)
+		amount := production.GetAmount(*req.Resource)
 		if req.Min != nil && amount < *req.Min {
 			return fmt.Errorf("%s production too low: need %d, have %d", *req.Resource, *req.Min, amount)
 		}
@@ -869,53 +859,13 @@ func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *g
 			return fmt.Errorf("resource requirement missing resource type")
 		}
 		resources := p.Resources().Get()
-		amount := getResourceAmountForChoice(resources, *req.Resource)
+		amount := resources.GetAmount(*req.Resource)
 		if req.Min != nil && amount < *req.Min {
 			return fmt.Errorf("%s too low: need %d, have %d", *req.Resource, *req.Min, amount)
 		}
 	}
 
 	return nil
-}
-
-// countPlayerTags counts the number of a specific tag across all played cards and corporation.
-// Optional extraTags allows counting tags from a card not yet in played cards (e.g., the card being played).
-func countPlayerTags(tag shared.CardTag, p *player.Player, cardRegistry cards.CardRegistry, extraTags ...[]shared.CardTag) int {
-	tagCount := 0
-	for _, playedCardID := range p.PlayedCards().Cards() {
-		card, err := cardRegistry.GetByID(playedCardID)
-		if err != nil {
-			continue
-		}
-		if card.Type == gamecards.CardTypeEvent {
-			continue
-		}
-		for _, cardTag := range card.Tags {
-			if cardTag == tag || cardTag == shared.TagWild {
-				tagCount++
-			}
-		}
-	}
-
-	if corpID := p.CorporationID(); corpID != "" {
-		if corp, err := cardRegistry.GetByID(corpID); err == nil {
-			for _, corpTag := range corp.Tags {
-				if corpTag == tag || corpTag == shared.TagWild {
-					tagCount++
-				}
-			}
-		}
-	}
-
-	for _, tags := range extraTags {
-		for _, cardTag := range tags {
-			if cardTag == tag || cardTag == shared.TagWild {
-				tagCount++
-			}
-		}
-	}
-
-	return tagCount
 }
 
 // validateProductionOutputs checks that playing the card won't bring production below the minimum.
@@ -960,42 +910,4 @@ func validateProductionOutputs(card *gamecards.Card, p *player.Player) error {
 		}
 	}
 	return nil
-}
-
-func getProductionAmountForChoice(production shared.Production, resourceType shared.ResourceType) int {
-	switch resourceType {
-	case shared.ResourceCredit:
-		return production.Credits
-	case shared.ResourceSteel:
-		return production.Steel
-	case shared.ResourceTitanium:
-		return production.Titanium
-	case shared.ResourcePlant:
-		return production.Plants
-	case shared.ResourceEnergy:
-		return production.Energy
-	case shared.ResourceHeat:
-		return production.Heat
-	default:
-		return 0
-	}
-}
-
-func getResourceAmountForChoice(resources shared.Resources, resourceType shared.ResourceType) int {
-	switch resourceType {
-	case shared.ResourceCredit:
-		return resources.Credits
-	case shared.ResourceSteel:
-		return resources.Steel
-	case shared.ResourceTitanium:
-		return resources.Titanium
-	case shared.ResourcePlant:
-		return resources.Plants
-	case shared.ResourceEnergy:
-		return resources.Energy
-	case shared.ResourceHeat:
-		return resources.Heat
-	default:
-		return 0
-	}
 }

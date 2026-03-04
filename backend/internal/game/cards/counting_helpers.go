@@ -27,12 +27,13 @@ func CountPlayerTiles(playerID string, b *board.Board, tileType *shared.Resource
 	return count
 }
 
-// CountPlayerTagsByType counts tags of a specific type across all played cards for a player.
-func CountPlayerTagsByType(p *player.Player, cardRegistry CardRegistryInterface, tagType shared.CardTag) int {
+// CountPlayerTagsByType counts tags of a specific type across all played cards and corporation for a player.
+// Wild tags count toward any tag type. Event cards are excluded unless counting TagEvent.
+// Optional extraTags allows counting tags from a card not yet in played cards (e.g., the card being played).
+func CountPlayerTagsByType(p *player.Player, cardRegistry CardRegistryInterface, tagType shared.CardTag, extraTags ...[]shared.CardTag) int {
 	count := 0
-	playedCardIDs := p.PlayedCards().Cards()
 
-	for _, cardID := range playedCardIDs {
+	for _, cardID := range p.PlayedCards().Cards() {
 		card, err := cardRegistry.GetByID(cardID)
 		if err != nil {
 			continue
@@ -40,14 +41,41 @@ func CountPlayerTagsByType(p *player.Player, cardRegistry CardRegistryInterface,
 		if card.Type == CardTypeEvent && tagType != shared.TagEvent {
 			continue
 		}
-		for _, tag := range card.Tags {
-			if tag == tagType {
-				count++
-			}
+		count += countTagsInList(card.Tags, tagType)
+	}
+
+	if corpID := p.CorporationID(); corpID != "" {
+		if corp, err := cardRegistry.GetByID(corpID); err == nil {
+			count += countTagsInList(corp.Tags, tagType)
 		}
 	}
 
+	for _, tags := range extraTags {
+		count += countTagsInList(tags, tagType)
+	}
+
 	return count
+}
+
+// countTagsInList counts occurrences of a tag in a slice, including wild tags.
+func countTagsInList(tags []shared.CardTag, target shared.CardTag) int {
+	count := 0
+	for _, tag := range tags {
+		if tag == target || tag == shared.TagWild {
+			count++
+		}
+	}
+	return count
+}
+
+// HasTag checks if a card has a specific tag.
+func HasTag(card *Card, tag shared.CardTag) bool {
+	for _, cardTag := range card.Tags {
+		if cardTag == tag {
+			return true
+		}
+	}
+	return false
 }
 
 // CountAllTilesOfType counts all tiles of a specific type on the board, regardless of owner.

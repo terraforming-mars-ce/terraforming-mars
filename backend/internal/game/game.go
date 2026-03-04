@@ -60,7 +60,7 @@ func (ctx *gameVPRecalculationContext) CountPlayerTagsByType(playerID string, ta
 			continue
 		}
 		for _, tag := range cardInfo.Tags {
-			if tag == tagType {
+			if tag == tagType || tag == shared.TagWild {
 				count++
 			}
 		}
