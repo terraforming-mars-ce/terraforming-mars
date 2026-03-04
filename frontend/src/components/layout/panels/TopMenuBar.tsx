@@ -4,6 +4,7 @@ import {
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
   PlayerDto,
+  SpectatorDto,
 } from "@/types/generated/api-types.ts";
 import { StandardProject } from "@/types/cards.tsx";
 import { Z_INDEX } from "@/constants/zIndex";
@@ -149,8 +150,11 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [hamburgerHovered, setHamburgerHovered] = useState(false);
+  const [eyeHovered, setEyeHovered] = useState(false);
+  const [spectatorsOpen, setSpectatorsOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
   const hamburgerButtonRef = useRef<HTMLButtonElement>(null);
+  const eyeButtonRef = useRef<HTMLButtonElement>(null);
   const menuItemHover = useHoverSound();
 
   useEffect(() => {
@@ -237,8 +241,10 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const spectators: SpectatorDto[] = gameState?.spectators || [];
   const buttonWidths = [250, 190, 160];
   const buttonHeight = 40;
+  const EYE_WIDTH = 68;
 
   return (
     <div
@@ -267,7 +273,75 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
             ))}
         </div>
 
-        <div className="origin-top-right" style={{ transform: `scale(${topBarScale})` }}>
+        <div
+          className="origin-top-right flex items-center"
+          style={{ transform: `scale(${topBarScale})` }}
+        >
+          {spectators.length > 0 && (
+            <button
+              ref={eyeButtonRef}
+              onClick={() => setSpectatorsOpen(!spectatorsOpen)}
+              onMouseEnter={() => setEyeHovered(true)}
+              onMouseLeave={() => setEyeHovered(false)}
+              aria-label="Spectators"
+              className="relative pointer-events-auto cursor-pointer"
+              style={{
+                width: EYE_WIDTH,
+                height: buttonHeight,
+                marginRight: -ANGLE_INDENT + BUTTON_SPACING,
+              }}
+            >
+              <svg
+                className="absolute inset-0 w-full h-full"
+                viewBox={`0 0 ${EYE_WIDTH} ${buttonHeight}`}
+                preserveAspectRatio="none"
+              >
+                <polygon
+                  points={`${ANGLE_INDENT},0 ${EYE_WIDTH},0 ${EYE_WIDTH - ANGLE_INDENT},${buttonHeight} 0,${buttonHeight}`}
+                  fill={eyeHovered ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
+                />
+                <line
+                  x1={ANGLE_INDENT}
+                  y1={0}
+                  x2={EYE_WIDTH}
+                  y2={0}
+                  stroke={eyeHovered ? "#7eb8da" : BORDER_COLOR}
+                  strokeWidth="3"
+                />
+                <line
+                  x1={EYE_WIDTH}
+                  y1={0}
+                  x2={EYE_WIDTH - ANGLE_INDENT}
+                  y2={buttonHeight}
+                  stroke={BORDER_COLOR}
+                  strokeWidth="2"
+                />
+                <line
+                  x1={ANGLE_INDENT}
+                  y1={0}
+                  x2={0}
+                  y2={buttonHeight}
+                  stroke={BORDER_COLOR}
+                  strokeWidth="2"
+                />
+              </svg>
+              <div className="relative z-10 h-full flex items-center justify-center">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={eyeHovered ? "white" : "rgba(255,255,255,0.8)"}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </div>
+            </button>
+          )}
           <button
             ref={hamburgerButtonRef}
             onClick={() => setMenuOpen(!menuOpen)}
@@ -551,6 +625,41 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
         gameState={gameState}
         anchorRef={awardsButtonRef}
       />
+
+      {spectators.length > 0 && (
+        <GamePopover
+          isVisible={spectatorsOpen}
+          onClose={() => setSpectatorsOpen(false)}
+          position={{
+            type: "anchor",
+            anchorRef: eyeButtonRef,
+            placement: "below",
+          }}
+          theme="menu"
+          width={180}
+          maxHeight="auto"
+          animation="slideDown"
+          excludeRef={eyeButtonRef}
+          zIndex={Z_INDEX.TOP_MENU_ALWAYS_ON_TOP + 1}
+        >
+          <div className="py-2 px-3">
+            <div className="text-white/40 text-[10px] font-orbitron font-bold uppercase tracking-wider mb-2">
+              Spectators ({spectators.length})
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {spectators.map((s) => (
+                <div key={s.id} className="flex items-center gap-2">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: s.color }}
+                  />
+                  <span className="text-white/80 text-sm truncate">{s.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </GamePopover>
+      )}
     </div>
   );
 };

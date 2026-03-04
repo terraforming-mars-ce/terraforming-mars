@@ -33,7 +33,26 @@ func (h *RequestLogsHandler) HandleMessage(_ context.Context, connection *core.C
 
 	log.Info("📋 Processing request-logs")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID == "" {
+		log.Error("Missing connection context")
+		connection.Send <- dto.WebSocketMessage{
+			Type: dto.MessageTypeError,
+			Payload: map[string]any{
+				"error": "Not connected to a game",
+			},
+		}
+		return
+	}
+
+	if connection.SpectatorID != "" {
+		h.broadcaster.SendInitialLogsToSpectator(connection.GameID, connection.SpectatorID)
+		log.Info("✅ Sent initial logs to spectator",
+			zap.String("game_id", connection.GameID),
+			zap.String("spectator_id", connection.SpectatorID))
+		return
+	}
+
+	if connection.PlayerID == "" {
 		log.Error("Missing connection context")
 		connection.Send <- dto.WebSocketMessage{
 			Type: dto.MessageTypeError,

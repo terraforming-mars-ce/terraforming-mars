@@ -58,4 +58,13 @@ const (
 	MessageTypeConvertToBot   MessageType = "convert-to-bot"
 	MessageTypeEndGame        MessageType = "end-game"
 	MessageTypeGameEnded      MessageType = "game-ended"
+
+	MessageTypeSetPlayerColor        MessageType = "set-player-color"
+	MessageTypeSpectatorConnect      MessageType = "spectator-connect"
+	MessageTypeSpectatorConnected    MessageType = "spectator-connected"
+	MessageTypeSpectatorDisconnected MessageType = "spectator-disconnected"
+	MessageTypeChatMessage           MessageType = "chat-message"
+	MessageTypeChatUpdate            MessageType = "chat-update"
+	MessageTypeKickSpectator         MessageType = "kick-spectator"
+	MessageTypeSpectatorKicked       MessageType = "spectator-kicked"
 )

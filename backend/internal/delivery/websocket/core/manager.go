@@ -34,20 +34,28 @@ func (m *Manager) RegisterConnection(connection *Connection) {
 	m.logger.Debug("🔗 Client connected to server", zap.String("connection_id", connection.ID))
 }
 
-// UnregisterConnection unregisters a connection and handles cleanup
-func (m *Manager) UnregisterConnection(connection *Connection) (playerID, gameID string, shouldBroadcast bool) {
+// UnregisterConnection unregisters a connection and handles cleanup.
+// Returns connection metadata including whether it was a spectator.
+func (m *Manager) UnregisterConnection(connection *Connection) (playerID, spectatorID, gameID string, connType ConnectionType, shouldBroadcast bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if _, exists := m.connections[connection]; !exists {
-		return "", "", false
+		return "", "", "", ConnectionTypePlayer, false
 	}
 
 	delete(m.connections, connection)
 	connection.CloseSend()
 
 	playerID, gameID = connection.GetPlayer()
-	shouldBroadcast = gameID != "" && playerID != ""
+	spectatorID = connection.SpectatorID
+	connType = connection.ConnType
+
+	if connType == ConnectionTypeSpectator {
+		shouldBroadcast = gameID != "" && spectatorID != ""
+	} else {
+		shouldBroadcast = gameID != "" && playerID != ""
+	}
 
 	// Remove from game connections
 	if gameConns, exists := m.gameConnections[gameID]; exists {
@@ -64,9 +72,11 @@ func (m *Manager) UnregisterConnection(connection *Connection) (playerID, gameID
 	m.logger.Debug("⛓️‍💥 Client disconnected from server",
 		zap.String("connection_id", connection.ID),
 		zap.String("player_id", playerID),
-		zap.String("game_id", gameID))
+		zap.String("spectator_id", spectatorID),
+		zap.String("game_id", gameID),
+		zap.String("conn_type", string(connType)))
 
-	return playerID, gameID, shouldBroadcast
+	return playerID, spectatorID, gameID, connType, shouldBroadcast
 }
 
 // AddToGame adds a connection to a game group
@@ -197,6 +207,39 @@ func (m *Manager) CloseAllConnections() {
 	m.gameConnections = make(map[string]map[*Connection]bool)
 
 	m.logger.Info("⛓️‍💥 All client connections closed by server")
+}
+
+// GetConnectionBySpectatorID finds a connection for a specific spectator in a game.
+func (m *Manager) GetConnectionBySpectatorID(gameID, spectatorID string) *Connection {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	gameConnections, exists := m.gameConnections[gameID]
+	if !exists {
+		return nil
+	}
+
+	for connection := range gameConnections {
+		if connection.SpectatorID == spectatorID && connection.IsSpectator() {
+			return connection
+		}
+	}
+
+	return nil
+}
+
+// GetSpectatorConnections returns all spectator connections for a game.
+func (m *Manager) GetSpectatorConnections(gameID string) []*Connection {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var spectators []*Connection
+	for conn := range m.gameConnections[gameID] {
+		if conn.IsSpectator() {
+			spectators = append(spectators, conn)
+		}
+	}
+	return spectators
 }
 
 // GetConnectionByPlayerID finds a connection for a specific player in a game

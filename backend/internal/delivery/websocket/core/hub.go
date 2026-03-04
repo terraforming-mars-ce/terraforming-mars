@@ -65,26 +65,36 @@ func (h *Hub) Run(ctx context.Context) {
 			// Session registration will happen when first message is received
 
 		case connection := <-h.Unregister:
-			playerID, gameID, shouldBroadcast := h.manager.UnregisterConnection(connection)
+			playerID, spectatorID, gameID, connType, shouldBroadcast := h.manager.UnregisterConnection(connection)
 
-			// If we should broadcast (player was connected to a game), send internal disconnect message
 			if shouldBroadcast {
-				disconnectMessage := dto.WebSocketMessage{
-					Type:   dto.MessageTypePlayerDisconnected,
-					GameID: gameID,
-					Payload: dto.PlayerDisconnectedPayload{
-						PlayerID: playerID,
-						GameID:   gameID,
-					},
+				var disconnectMessage dto.WebSocketMessage
+
+				if connType == ConnectionTypeSpectator {
+					disconnectMessage = dto.WebSocketMessage{
+						Type:   dto.MessageTypeSpectatorDisconnected,
+						GameID: gameID,
+						Payload: dto.SpectatorDisconnectedPayload{
+							SpectatorID: spectatorID,
+							GameID:      gameID,
+						},
+					}
+				} else {
+					disconnectMessage = dto.WebSocketMessage{
+						Type:   dto.MessageTypePlayerDisconnected,
+						GameID: gameID,
+						Payload: dto.PlayerDisconnectedPayload{
+							PlayerID: playerID,
+							GameID:   gameID,
+						},
+					}
 				}
 
-				// Create internal hub message and route it to disconnect handler
 				hubMessage := HubMessage{
-					Connection: connection, // Connection is being disconnected
+					Connection: connection,
 					Message:    disconnectMessage,
 				}
 
-				// Route the disconnect message through the normal handler system
 				h.routeMessage(ctx, hubMessage)
 			}
 
@@ -121,6 +131,17 @@ func (h *Hub) SendToPlayer(gameID, playerID string, message dto.WebSocketMessage
 		zap.String("player_id", playerID),
 		zap.String("message_type", string(message.Type)))
 
+	return nil
+}
+
+// SendToSpectator sends a message to a specific spectator via their connection.
+func (h *Hub) SendToSpectator(gameID, spectatorID string, message dto.WebSocketMessage) error {
+	connection := h.manager.GetConnectionBySpectatorID(gameID, spectatorID)
+	if connection == nil {
+		return nil
+	}
+
+	connection.SendMessage(message)
 	return nil
 }
 

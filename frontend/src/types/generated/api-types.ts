@@ -700,6 +700,7 @@ export interface GameSettingsDto {
   cardPacks?: string[];
   hasClaudeApiKey: boolean;
   claudeModel?: string;
+  availablePlayerColors: string[];
 }
 /**
  * GlobalParametersDto represents the terraforming progress
@@ -1035,6 +1036,28 @@ export interface GameDto {
   triggeredEffects?: TriggeredEffectDto[]; // Recently triggered passive effects
   placeableTileTypes: PlaceableTileTypeDto[]; // Available tile types for the demo tile picker
   initPhase?: InitPhaseDto;
+  spectators: SpectatorDto[];
+  chatMessages: ChatMessageDto[];
+  isSpectator: boolean;
+}
+/**
+ * SpectatorDto represents a spectator visible to all clients.
+ */
+export interface SpectatorDto {
+  id: string;
+  name: string;
+  color: string;
+}
+/**
+ * ChatMessageDto represents a chat message sent by a player or spectator.
+ */
+export interface ChatMessageDto {
+  senderId: string;
+  senderName: string;
+  senderColor: string;
+  message: string;
+  timestamp: string;
+  isSpectator: boolean;
 }
 /**
  * PlaceableTileTypeDto represents a tile type available for placement in the demo tile picker
@@ -1052,6 +1075,7 @@ export interface InitPhaseDto {
   currentPlayerIndex: number /* int */;
   totalPlayers: number /* int */;
   waitingForConfirm: boolean;
+  confirmVersion: number /* int */;
   hasPreludePhase: boolean;
   hasPendingTiles: boolean;
 }
@@ -1447,6 +1471,14 @@ export const MessageTypePlayerKicked: MessageType = "player-kicked";
 export const MessageTypeConvertToBot: MessageType = "convert-to-bot";
 export const MessageTypeEndGame: MessageType = "end-game";
 export const MessageTypeGameEnded: MessageType = "game-ended";
+export const MessageTypeSetPlayerColor: MessageType = "set-player-color";
+export const MessageTypeSpectatorConnect: MessageType = "spectator-connect";
+export const MessageTypeSpectatorConnected: MessageType = "spectator-connected";
+export const MessageTypeSpectatorDisconnected: MessageType = "spectator-disconnected";
+export const MessageTypeChatMessage: MessageType = "chat-message";
+export const MessageTypeChatUpdate: MessageType = "chat-update";
+export const MessageTypeKickSpectator: MessageType = "kick-spectator";
+export const MessageTypeSpectatorKicked: MessageType = "spectator-kicked";
 
 //////////
 // source: state_diff_dto.go
@@ -1661,4 +1693,37 @@ export interface ConfirmStartingCardSelectionMessage {
 export interface PlayerTakeoverPayload {
   gameId: string;
   targetPlayerId: string;
+}
+/**
+ * SpectatorConnectPayload contains spectator connection data.
+ */
+export interface SpectatorConnectPayload {
+  spectatorName: string;
+  gameId: string;
+}
+/**
+ * SpectatorConnectedPayload contains data about a newly connected spectator.
+ */
+export interface SpectatorConnectedPayload {
+  spectatorId: string;
+  game: GameDto;
+}
+/**
+ * SpectatorDisconnectedPayload contains data about a disconnected spectator.
+ */
+export interface SpectatorDisconnectedPayload {
+  spectatorId: string;
+  gameId: string;
+}
+/**
+ * ChatMessagePayload contains a chat message from a client.
+ */
+export interface ChatMessagePayload {
+  message: string;
+}
+/**
+ * ChatUpdatePayload contains a new chat message broadcast to all clients.
+ */
+export interface ChatUpdatePayload {
+  chatMessage: ChatMessageDto;
 }

@@ -28,6 +28,8 @@ func (m *mockLogBroadcaster) SendInitialLogs(gameID string, playerID string) {
 	})
 }
 
+func (m *mockLogBroadcaster) SendInitialLogsToSpectator(_ string, _ string) {}
+
 func TestRequestLogsHandler_SendsInitialLogs(t *testing.T) {
 	broadcaster := &mockLogBroadcaster{}
 	handler := connection.NewRequestLogsHandler(broadcaster)

@@ -107,6 +107,9 @@ type Game struct {
 
 	triggeredEffects []TriggeredEffect
 
+	spectators   map[string]*Spectator
+	chatMessages []ChatMessage
+
 	pendingTileSelections      map[string]*player.PendingTileSelection
 	pendingTileSelectionQueues map[string]*player.PendingTileSelectionQueue
 	forcedFirstActions         map[string]*player.ForcedFirstAction
@@ -118,6 +121,7 @@ type Game struct {
 	deferredStartingChoices    map[string]*DeferredStartingChoices
 	initPhasePlayerIndex       int
 	initPhaseWaitingForConfirm bool
+	initPhaseConfirmVersion    int
 }
 
 // NewGame creates a new game with the given settings
@@ -174,6 +178,8 @@ func NewGame(
 		selectStartingCardsPhases:  make(map[string]*player.SelectStartingCardsPhase),
 		selectPreludeCardsPhases:   make(map[string]*player.SelectPreludeCardsPhase),
 		deferredStartingChoices:    make(map[string]*DeferredStartingChoices),
+		spectators:                 make(map[string]*Spectator),
+		chatMessages:               []ChatMessage{},
 	}
 
 	g.subscribeToGenerationalEvents()
@@ -379,6 +385,21 @@ func (g *Game) AddPlayer(ctx context.Context, p *player.Player) error {
 		return fmt.Errorf("player %s already exists in game %s", p.ID(), g.id)
 	}
 
+	if p.Color() == "" {
+		taken := make(map[string]bool, len(g.players))
+		for _, existing := range g.players {
+			if existing.Color() != "" {
+				taken[existing.Color()] = true
+			}
+		}
+		for _, c := range PlayerColors {
+			if !taken[c] {
+				p.SetColor(c)
+				break
+			}
+		}
+	}
+
 	g.players[p.ID()] = p
 	g.playerOrder = append(g.playerOrder, p.ID())
 	g.updatedAt = time.Now()
@@ -417,6 +438,135 @@ func (g *Game) RemovePlayer(ctx context.Context, playerID string) error {
 	g.mu.Unlock()
 
 	return nil
+}
+
+// AddSpectator adds a spectator to the game, assigning a color automatically.
+func (g *Game) AddSpectator(ctx context.Context, s *Spectator) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if len(g.spectators) >= MaxSpectators {
+		return fmt.Errorf("game %s already has the maximum number of spectators (%d)", g.id, MaxSpectators)
+	}
+
+	if _, exists := g.spectators[s.ID()]; exists {
+		return fmt.Errorf("spectator %s already exists in game %s", s.ID(), g.id)
+	}
+
+	g.spectators[s.ID()] = s
+	g.updatedAt = time.Now()
+	return nil
+}
+
+// RemoveSpectator removes a spectator from the game.
+func (g *Game) RemoveSpectator(ctx context.Context, spectatorID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if _, exists := g.spectators[spectatorID]; !exists {
+		return fmt.Errorf("spectator %s not found in game %s", spectatorID, g.id)
+	}
+
+	delete(g.spectators, spectatorID)
+	g.updatedAt = time.Now()
+	return nil
+}
+
+// GetSpectator returns a spectator by ID.
+func (g *Game) GetSpectator(spectatorID string) (*Spectator, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	s, exists := g.spectators[spectatorID]
+	if !exists {
+		return nil, fmt.Errorf("spectator %s not found in game %s", spectatorID, g.id)
+	}
+	return s, nil
+}
+
+// GetAllSpectators returns all spectators in the game.
+func (g *Game) GetAllSpectators() []*Spectator {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	spectators := make([]*Spectator, 0, len(g.spectators))
+	for _, s := range g.spectators {
+		spectators = append(spectators, s)
+	}
+	return spectators
+}
+
+// SpectatorCount returns the number of spectators in the game.
+func (g *Game) SpectatorCount() int {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return len(g.spectators)
+}
+
+// NextSpectatorColor returns the next available color from the spectator palette.
+func (g *Game) NextSpectatorColor() string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	idx := len(g.spectators) % len(SpectatorColors)
+	return SpectatorColors[idx]
+}
+
+// IsPlayerColorAvailable returns true if the given color is in the palette and
+// not taken by another player (excluding the specified player).
+func (g *Game) IsPlayerColorAvailable(color string, excludePlayerID string) bool {
+	validColor := false
+	for _, c := range PlayerColors {
+		if c == color {
+			validColor = true
+			break
+		}
+	}
+	if !validColor {
+		return false
+	}
+
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	for _, p := range g.players {
+		if p.ID() != excludePlayerID && p.Color() == color {
+			return false
+		}
+	}
+	return true
+}
+
+// AddChatMessage appends a chat message, trimming old messages if over the limit.
+func (g *Game) AddChatMessage(ctx context.Context, msg ChatMessage) {
+	if ctx.Err() != nil {
+		return
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.chatMessages = append(g.chatMessages, msg)
+	if len(g.chatMessages) > MaxChatMessages {
+		g.chatMessages = g.chatMessages[len(g.chatMessages)-MaxChatMessages:]
+	}
+	g.updatedAt = time.Now()
+}
+
+// GetChatMessages returns all chat messages.
+func (g *Game) GetChatMessages() []ChatMessage {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	msgs := make([]ChatMessage, len(g.chatMessages))
+	copy(msgs, g.chatMessages)
+	return msgs
 }
 
 // UpdateStatus updates the game status and publishes GameStatusChangedEvent
@@ -1707,6 +1857,13 @@ func (g *Game) InitPhaseWaitingForConfirm() bool {
 	return g.initPhaseWaitingForConfirm
 }
 
+// InitPhaseConfirmVersion returns the confirm version counter for the init phase.
+func (g *Game) InitPhaseConfirmVersion() int {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.initPhaseConfirmVersion
+}
+
 // SetInitPhaseWaitingForConfirm sets whether the init phase is waiting for frontend confirmation
 func (g *Game) SetInitPhaseWaitingForConfirm(ctx context.Context, waiting bool) error {
 	if err := ctx.Err(); err != nil {
@@ -1715,6 +1872,9 @@ func (g *Game) SetInitPhaseWaitingForConfirm(ctx context.Context, waiting bool) 
 
 	g.mu.Lock()
 	g.initPhaseWaitingForConfirm = waiting
+	if waiting {
+		g.initPhaseConfirmVersion++
+	}
 	g.updatedAt = time.Now()
 	g.mu.Unlock()
 

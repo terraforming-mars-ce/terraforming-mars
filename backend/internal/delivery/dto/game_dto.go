@@ -391,13 +391,14 @@ type ProductionPhaseOtherPlayerDto struct {
 
 // GameSettingsDto contains configurable game parameters
 type GameSettingsDto struct {
-	MaxPlayers       int      `json:"maxPlayers" ts:"number"`
-	VenusNextEnabled bool     `json:"venusNextEnabled" ts:"boolean"`
-	DevelopmentMode  bool     `json:"developmentMode" ts:"boolean"`
-	DemoGame         bool     `json:"demoGame" ts:"boolean"`
-	CardPacks        []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
-	HasClaudeAPIKey  bool     `json:"hasClaudeApiKey" ts:"boolean"`
-	ClaudeModel      string   `json:"claudeModel,omitempty" ts:"string | undefined"`
+	MaxPlayers            int      `json:"maxPlayers" ts:"number"`
+	VenusNextEnabled      bool     `json:"venusNextEnabled" ts:"boolean"`
+	DevelopmentMode       bool     `json:"developmentMode" ts:"boolean"`
+	DemoGame              bool     `json:"demoGame" ts:"boolean"`
+	CardPacks             []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
+	HasClaudeAPIKey       bool     `json:"hasClaudeApiKey" ts:"boolean"`
+	ClaudeModel           string   `json:"claudeModel,omitempty" ts:"string | undefined"`
+	AvailablePlayerColors []string `json:"availablePlayerColors" ts:"string[]"`
 }
 
 // GlobalParametersDto represents the terraforming progress
@@ -731,6 +732,26 @@ type GameDto struct {
 	TriggeredEffects   []TriggeredEffectDto   `json:"triggeredEffects,omitempty" ts:"TriggeredEffectDto[] | undefined"` // Recently triggered passive effects
 	PlaceableTileTypes []PlaceableTileTypeDto `json:"placeableTileTypes" ts:"PlaceableTileTypeDto[]"`                   // Available tile types for the demo tile picker
 	InitPhase          *InitPhaseDto          `json:"initPhase,omitempty" ts:"InitPhaseDto | undefined"`
+	Spectators         []SpectatorDto         `json:"spectators" ts:"SpectatorDto[]"`
+	ChatMessages       []ChatMessageDto       `json:"chatMessages" ts:"ChatMessageDto[]"`
+	IsSpectator        bool                   `json:"isSpectator" ts:"boolean"`
+}
+
+// SpectatorDto represents a spectator visible to all clients.
+type SpectatorDto struct {
+	ID    string `json:"id" ts:"string"`
+	Name  string `json:"name" ts:"string"`
+	Color string `json:"color" ts:"string"`
+}
+
+// ChatMessageDto represents a chat message sent by a player or spectator.
+type ChatMessageDto struct {
+	SenderID    string `json:"senderId" ts:"string"`
+	SenderName  string `json:"senderName" ts:"string"`
+	SenderColor string `json:"senderColor" ts:"string"`
+	Message     string `json:"message" ts:"string"`
+	Timestamp   string `json:"timestamp" ts:"string"`
+	IsSpectator bool   `json:"isSpectator" ts:"boolean"`
 }
 
 // PlaceableTileTypeDto represents a tile type available for placement in the demo tile picker
@@ -746,6 +767,7 @@ type InitPhaseDto struct {
 	CurrentPlayerIndex int    `json:"currentPlayerIndex" ts:"number"`
 	TotalPlayers       int    `json:"totalPlayers" ts:"number"`
 	WaitingForConfirm  bool   `json:"waitingForConfirm" ts:"boolean"`
+	ConfirmVersion     int    `json:"confirmVersion" ts:"number"`
 	HasPreludePhase    bool   `json:"hasPreludePhase" ts:"boolean"`
 	HasPendingTiles    bool   `json:"hasPendingTiles" ts:"boolean"`
 }

@@ -103,6 +103,19 @@ func SetupSoloGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardReg
 	return testGame, repo, cardRegistry, playerID
 }
 
+// AddBotToGame adds a bot player to a game in lobby and returns it.
+func AddBotToGame(t *testing.T, g *game.Game, repo game.GameRepository, name, difficulty, speed string) *player.Player {
+	t.Helper()
+	ctx := context.Background()
+	botID := "bot-" + name
+	bot := player.NewBotPlayer(g.EventBus(), g.ID(), botID, name, player.BotDifficulty(difficulty), player.BotSpeed(speed))
+	err := g.AddPlayer(ctx, bot)
+	if err != nil {
+		t.Fatalf("Failed to add bot: %v", err)
+	}
+	return bot
+}
+
 // SetPlayerHeat sets a player's heat resource
 func SetPlayerHeat(ctx context.Context, p *player.Player, amount int) {
 	resources := p.Resources().Get()

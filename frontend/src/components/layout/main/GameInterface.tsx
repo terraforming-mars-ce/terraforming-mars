@@ -13,6 +13,7 @@ import { WindowManagerProvider } from "../../ui/debug/WindowManager.tsx";
 import WaitingRoomOverlay from "../../ui/overlay/WaitingRoomOverlay.tsx";
 import PlayerSelectionOverlay from "../../ui/overlay/PlayerSelectionOverlay.tsx";
 import JoinGameOverlay from "../../ui/overlay/JoinGameOverlay.tsx";
+import SpectateGameOverlay from "../../ui/overlay/SpectateGameOverlay.tsx";
 import DemoSetupOverlay from "../../ui/overlay/DemoSetupOverlay.tsx";
 import TabConflictOverlay from "../../ui/overlay/TabConflictOverlay.tsx";
 import StartingCardSelectionOverlay from "../../ui/overlay/StartingCardSelectionOverlay.tsx";
@@ -22,6 +23,7 @@ import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOv
 import CardFanOverlay from "../../ui/overlay/CardFanOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import YourTurnBanner from "../../ui/overlay/YourTurnBanner.tsx";
+import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 import MainMenuSettingsButton from "../../ui/buttons/MainMenuSettingsButton.tsx";
 import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
@@ -46,6 +48,7 @@ import { clearGameSession, getGameSession, saveGameSession } from "@/utils/sessi
 import {
   CardDto,
   CardPaymentDto,
+  ChatMessageDto,
   FullStatePayload,
   GameDto,
   GamePhaseAction,
@@ -72,7 +75,7 @@ import { StandardProject } from "@/types/cards.tsx";
 
 type TransitionPhase = "idle" | "lobby" | "loading" | "fadeOutLobby" | "animateUI" | "complete";
 
-type LoadingPhase = "checking" | "selecting" | "joining" | "connecting" | "ready";
+type LoadingPhase = "checking" | "selecting" | "joining" | "spectating" | "connecting" | "ready";
 
 export default function GameInterface() {
   const location = useLocation();
@@ -106,6 +109,8 @@ export default function GameInterface() {
   const [showPerformanceWindow, setShowPerformanceWindow] = useState(false);
   const [showBugReportWindow, setShowBugReportWindow] = useState(false);
   const [spectatePlayerId, setSpectatePlayerId] = useState<string | null>(null);
+  const [isSpectator, setIsSpectator] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessageDto[]>([]);
   const [showCorp, setShowCorp] = useState(false);
   const [displayedInitPlayerId, setDisplayedInitPlayerId] = useState<string | null>(null);
 
@@ -320,6 +325,7 @@ export default function GameInterface() {
   const isFullyLoaded =
     (loadingPhase === "selecting" && isSpaceBgLoaded) ||
     (loadingPhase === "joining" && isSpaceBgLoaded) ||
+    (loadingPhase === "spectating" && isSpaceBgLoaded) ||
     (isConnected &&
       !!game &&
       !isReconnecting &&
@@ -334,7 +340,7 @@ export default function GameInterface() {
   const handleGameUpdated = useCallback(
     (updatedGame: GameDto) => {
       const playerId = currentPlayerIdRef.current;
-      if (!playerId) return;
+      if (!playerId && !updatedGame.isSpectator) return;
 
       // Detect changes before updating
       if (previousGameRef.current) {
@@ -373,6 +379,10 @@ export default function GameInterface() {
             setChangedPaths(new Set());
           }, 1500);
         }
+      }
+
+      if (!previousGameRef.current && updatedGame.chatMessages?.length) {
+        setChatMessages(updatedGame.chatMessages);
       }
 
       // Store the previous state for next comparison
@@ -507,6 +517,29 @@ export default function GameInterface() {
     clearGameSession();
     navigate("/", { state: { error: "Server is down", persistent: true } });
   }, [navigate]);
+
+  const handleChatUpdate = useCallback((chatMessage: ChatMessageDto) => {
+    setChatMessages((prev) => [...prev, chatMessage]);
+  }, []);
+
+  const handleSpectatorKicked = useCallback(() => {
+    globalWebSocketManager.disconnect();
+    navigate("/", { replace: true });
+  }, [navigate]);
+
+  const handleSpectatorIdReceived = useCallback((payload: { spectatorId: string }) => {
+    const gameId = globalWebSocketManager.gameId;
+    if (!gameId || !payload.spectatorId) return;
+    currentPlayerIdRef.current = payload.spectatorId;
+    const savedSession = getGameSession();
+    if (savedSession && savedSession.gameId === gameId) {
+      saveGameSession({
+        ...savedSession,
+        playerId: payload.spectatorId,
+        isSpectator: true,
+      });
+    }
+  }, []);
 
   // Check if we should show production phase modal based on game state
   useEffect(() => {
@@ -1653,6 +1686,9 @@ export default function GameInterface() {
     globalWebSocketManager.on("error", handleError);
     globalWebSocketManager.on("disconnect", handleDisconnect);
     globalWebSocketManager.on("max-reconnects-reached", handleMaxReconnectsReached);
+    globalWebSocketManager.on("chat-update", handleChatUpdate);
+    globalWebSocketManager.on("spectator-kicked", handleSpectatorKicked);
+    globalWebSocketManager.on("spectator-connected", handleSpectatorIdReceived);
 
     isWebSocketInitialized.current = true;
 
@@ -1666,6 +1702,9 @@ export default function GameInterface() {
       globalWebSocketManager.off("error", handleError);
       globalWebSocketManager.off("disconnect", handleDisconnect);
       globalWebSocketManager.off("max-reconnects-reached", handleMaxReconnectsReached);
+      globalWebSocketManager.off("chat-update", handleChatUpdate);
+      globalWebSocketManager.off("spectator-kicked", handleSpectatorKicked);
+      globalWebSocketManager.off("spectator-connected", handleSpectatorIdReceived);
       isWebSocketInitialized.current = false;
     };
   }, [
@@ -1678,6 +1717,9 @@ export default function GameInterface() {
     handleError,
     handleDisconnect,
     handleMaxReconnectsReached,
+    handleChatUpdate,
+    handleSpectatorKicked,
+    handleSpectatorIdReceived,
   ]);
 
   // Handle action selection from card actions
@@ -1972,6 +2014,12 @@ export default function GameInterface() {
     navigate("/", { replace: true });
   }, [navigate]);
 
+  const handleSpectatorConnected = useCallback(() => {
+    setIsSpectator(true);
+    setLoadingPhase("ready");
+    setIsConnected(true);
+  }, []);
+
   useEffect(() => {
     let aborted = false;
 
@@ -1983,6 +2031,7 @@ export default function GameInterface() {
         playerId?: string;
         playerName?: string;
         isReconnection?: boolean;
+        spectatorName?: string;
       } | null;
 
       // 1. Determine game ID and player ID sources (priority order)
@@ -1997,7 +2046,8 @@ export default function GameInterface() {
       // 2. Validate game exists (and player is still in game if we have a saved session)
       let fetchedGame: GameDto | null = null;
       try {
-        fetchedGame = await apiService.getGame(gameId, savedSession?.playerId);
+        const playerIdForApi = savedSession?.isSpectator ? undefined : savedSession?.playerId;
+        fetchedGame = await apiService.getGame(gameId, playerIdForApi);
       } catch {
         navigate("/", {
           replace: true,
@@ -2019,6 +2069,14 @@ export default function GameInterface() {
 
       // 3. Check cached session
       const cachedForThisGame = savedSession && savedSession.gameId === gameId;
+
+      if (cachedForThisGame && savedSession.isSpectator) {
+        setIsSpectator(true);
+        setIsConnected(true);
+        setLoadingPhase("ready");
+        await globalWebSocketManager.spectatorConnect(savedSession.playerName, gameId);
+        return;
+      }
 
       if (cachedForThisGame && savedSession.playerId) {
         // Check if cached player exists in game
@@ -2106,11 +2164,32 @@ export default function GameInterface() {
 
       if (aborted) return;
 
-      // 5. Check if this is a join link
-      const urlParams = new URLSearchParams(window.location.search);
-      const isJoinLink = urlParams.get("type") === "join";
+      // 5. Check if spectator name was passed from browse page popover
+      if (routeState?.spectatorName) {
+        setIsSpectator(true);
+        setIsConnected(true);
+        setLoadingPhase("ready");
+        saveGameSession({
+          gameId,
+          playerId: "",
+          playerName: routeState.spectatorName,
+          isSpectator: true,
+        });
+        await globalWebSocketManager.spectatorConnect(routeState.spectatorName, gameId);
+        return;
+      }
 
-      if (isJoinLink) {
+      // 6. Check if this is a join or spectate link
+      const urlParams = new URLSearchParams(window.location.search);
+      const linkType = urlParams.get("type");
+
+      if (linkType === "spectate") {
+        setGameForSelection(fetchedGame);
+        setLoadingPhase("spectating");
+        return;
+      }
+
+      if (linkType === "join") {
         setGameForSelection(fetchedGame);
         setLoadingPhase("joining");
         return;
@@ -2264,7 +2343,11 @@ export default function GameInterface() {
   }, [showDebugDropdown]);
 
   const loadingMessage = (() => {
-    if (loadingPhase === "selecting" || loadingPhase === "joining") {
+    if (
+      loadingPhase === "selecting" ||
+      loadingPhase === "joining" ||
+      loadingPhase === "spectating"
+    ) {
       if (!isSpaceBgLoaded) return "Loading 3D environment...";
       return "Loading game...";
     }
@@ -2292,6 +2375,21 @@ export default function GameInterface() {
     const other = game.otherPlayers?.find((p) => p.id === spectatePlayerId);
     return other?.color || "#6496ff";
   }, [spectatePlayerId, game]);
+
+  const playerColorMap = useMemo(() => {
+    if (!game) return new Map<string, string>();
+    const map = new Map<string, string>();
+    if (game.currentPlayer?.id && game.currentPlayer.color) {
+      map.set(game.currentPlayer.id, game.currentPlayer.color);
+    }
+    game.otherPlayers?.forEach((p) => {
+      if (p.id && p.color) map.set(p.id, p.color);
+    });
+    game.spectators?.forEach((s) => {
+      if (s.id && s.color) map.set(s.id, s.color);
+    });
+    return map;
+  }, [game]);
 
   const handlePlayerClick = useCallback(
     (player: PlayerDto | OtherPlayerDto) => {
@@ -2382,10 +2480,10 @@ export default function GameInterface() {
   }, [game, isPreGamePhase]);
 
   // Auto-advance init phase after transition animation and notification queue complete
-  // Only the first player in turn order sends confirms to prevent duplicate advances
+  // Host always sends confirms for all players (bots handle tile placements only)
   useEffect(() => {
     if (!isInitApplyPhase || !game?.initPhase?.waitingForConfirm) return;
-    if (!game.turnOrder?.length || game.turnOrder[0] !== currentPlayer?.id) return;
+    if (game.hostPlayerId !== currentPlayer?.id) return;
 
     const animationDone = transitionPhase === "complete" || transitionPhase === "idle";
     if (!animationDone) return;
@@ -2405,10 +2503,10 @@ export default function GameInterface() {
   }, [
     isInitApplyPhase,
     game?.initPhase?.waitingForConfirm,
-    game?.initPhase?.currentPlayerId,
+    game?.initPhase?.confirmVersion,
     game?.initPhase?.currentPlayerIndex,
     game?.initPhase?.hasPendingTiles,
-    game?.turnOrder,
+    game?.hostPlayerId,
     currentPlayer?.id,
     transitionPhase,
   ]);
@@ -2455,38 +2553,46 @@ export default function GameInterface() {
         }
       `}</style>
 
-      {game && loadingPhase !== "selecting" && loadingPhase !== "joining" && (
-        <GameLayout
-          gameState={game}
-          currentPlayer={currentPlayer}
-          playedCards={currentPlayer?.playedCards || []}
-          corporationCard={corporationData}
-          showCorporation={showCorp}
-          initTurnPlayerId={displayedInitPlayerId}
-          showStartingSelection={showStartingSelection}
-          transitionPhase={transitionPhase}
-          animateHexEntrance={
-            transitionPhase === "fadeOutLobby" ||
-            transitionPhase === "animateUI" ||
-            transitionPhase === "complete"
-          }
-          changedPaths={changedPaths}
-          tileHighlightMode={tileHighlightMode}
-          vpIndicators={vpIndicators}
-          triggeredEffects={triggeredEffects}
-          bottomBarCallbacks={bottomBarCallbacks}
-          onStandardProjectSelect={handleStandardProjectSelect}
-          onLeaveGame={handleLeaveGame}
-          onEndGame={handleEndGame}
-          onSkyboxReady={handleSkyboxReady}
-          onGpuReady={handleGpuReady}
-          onPlayerClick={handlePlayerClick}
-          spectatingPlayer={spectatePlayer}
-          spectatingCorporation={spectatePlayer?.corporation ?? null}
-          spectatePlayerColor={spectatePlayerColor}
-          onStopSpectating={handleStopSpectating}
-        />
-      )}
+      {game &&
+        loadingPhase !== "selecting" &&
+        loadingPhase !== "joining" &&
+        loadingPhase !== "spectating" && (
+          <GameLayout
+            gameState={game}
+            currentPlayer={currentPlayer}
+            playedCards={currentPlayer?.playedCards || []}
+            corporationCard={corporationData}
+            showCorporation={showCorp}
+            initTurnPlayerId={displayedInitPlayerId}
+            showStartingSelection={showStartingSelection}
+            transitionPhase={transitionPhase}
+            animateHexEntrance={
+              transitionPhase === "fadeOutLobby" ||
+              transitionPhase === "animateUI" ||
+              transitionPhase === "complete"
+            }
+            changedPaths={changedPaths}
+            tileHighlightMode={tileHighlightMode}
+            vpIndicators={vpIndicators}
+            triggeredEffects={triggeredEffects}
+            bottomBarCallbacks={bottomBarCallbacks}
+            onStandardProjectSelect={handleStandardProjectSelect}
+            onLeaveGame={handleLeaveGame}
+            onEndGame={handleEndGame}
+            onSkyboxReady={handleSkyboxReady}
+            onGpuReady={handleGpuReady}
+            onPlayerClick={handlePlayerClick}
+            spectatingPlayer={spectatePlayer}
+            spectatingCorporation={spectatePlayer?.corporation ?? null}
+            spectatePlayerColor={spectatePlayerColor}
+            onStopSpectating={handleStopSpectating}
+            isGameSpectator={isSpectator}
+            chatMessages={chatMessages}
+            onSendChatMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
+            isLobbyPhase={isLobbyPhase}
+            playerColorMap={playerColorMap}
+          />
+        )}
 
       <CardsPlayedModal
         isVisible={showCardsPlayedModal}
@@ -2533,7 +2639,8 @@ export default function GameInterface() {
         transitionPhase === "loading" ||
         transitionPhase === "fadeOutLobby" ||
         loadingPhase === "selecting" ||
-        loadingPhase === "joining") && (
+        loadingPhase === "joining" ||
+        loadingPhase === "spectating") && (
         <div
           className={
             transitionPhase === "fadeOutLobby" ? "animate-[fadeOut_1500ms_ease-out_forwards]" : ""
@@ -2543,13 +2650,23 @@ export default function GameInterface() {
         </div>
       )}
 
-      {lobbyMounted && game && playerId && (
-        <WaitingRoomOverlay
-          game={game}
-          playerId={playerId}
-          visible={isLobbyPhase}
-          onExited={() => setLobbyMounted(false)}
-        />
+      {lobbyMounted && game && (playerId || isSpectator) && (
+        <>
+          <WaitingRoomOverlay
+            game={game}
+            playerId={playerId ?? "spectator"}
+            visible={isLobbyPhase}
+            onExited={() => setLobbyMounted(false)}
+          />
+          {isLobbyPhase && (
+            <ChatOverlay
+              messages={chatMessages}
+              onSendMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
+              isLobby={true}
+              playerColorMap={playerColorMap}
+            />
+          )}
+        </>
       )}
 
       {/* Demo setup overlay - shown after start game in demo mode */}
@@ -2569,12 +2686,21 @@ export default function GameInterface() {
         <PlayerSelectionOverlay
           game={gameForSelection}
           onSelectPlayer={(playerId, playerName) => void handlePlayerSelected(playerId, playerName)}
+          onSpectate={handleSpectatorConnected}
           onCancel={handlePlayerSelectionCancel}
         />
       )}
 
       {loadingPhase === "joining" && gameForSelection && (
         <JoinGameOverlay game={gameForSelection} onCancel={handlePlayerSelectionCancel} />
+      )}
+
+      {loadingPhase === "spectating" && gameForSelection && (
+        <SpectateGameOverlay
+          game={gameForSelection}
+          onCancel={handlePlayerSelectionCancel}
+          onConnected={handleSpectatorConnected}
+        />
       )}
 
       {/* Leave game confirmation dialog */}

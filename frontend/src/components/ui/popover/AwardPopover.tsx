@@ -36,19 +36,35 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
   const canFundAwards =
     isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
 
-  const awards = gameState?.currentPlayer?.awards ?? [];
+  const playerAwards = gameState?.currentPlayer?.awards ?? [];
   const globalAwards = gameState?.awards ?? [];
+
+  // For spectators, use global awards as the item source
+  const awards =
+    playerAwards.length > 0
+      ? playerAwards
+      : globalAwards.map((a) => ({
+          type: a.type,
+          name: a.name,
+          description: a.description,
+          fundingCost: a.fundingCost,
+          isFunded: a.isFunded,
+          fundedBy: a.fundedBy,
+          available: false,
+          errors: [] as import("@/types/generated/api-types.ts").StateErrorDto[],
+        }));
   const fundedCount = awards.filter((a) => a.isFunded).length;
 
   const allPlayers: PlayerInfo[] = useMemo(() => {
     if (!gameState) return [];
-    const players: PlayerInfo[] = [
-      {
+    const players: PlayerInfo[] = [];
+    if (gameState.currentPlayer?.id) {
+      players.push({
         id: gameState.currentPlayer.id,
         name: gameState.currentPlayer.name,
         color: gameState.currentPlayer.color,
-      },
-    ];
+      });
+    }
     for (const p of gameState.otherPlayers) {
       players.push({ id: p.id, name: p.name, color: p.color });
     }

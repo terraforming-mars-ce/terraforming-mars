@@ -8,6 +8,7 @@ export interface StoredGameData {
   gameId: string;
   playerId: string;
   playerName: string;
+  isSpectator?: boolean;
   joinedAt?: string;
   timestamp?: number;
 }

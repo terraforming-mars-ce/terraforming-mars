@@ -25,13 +25,23 @@ const (
 	maxMessageSize = 64 * 1024
 )
 
+// ConnectionType distinguishes player connections from spectator connections.
+type ConnectionType string
+
+const (
+	ConnectionTypePlayer    ConnectionType = "player"
+	ConnectionTypeSpectator ConnectionType = "spectator"
+)
+
 // Connection represents a WebSocket connection
 type Connection struct {
-	ID       string
-	PlayerID string
-	GameID   string
-	Conn     *websocket.Conn
-	Send     chan dto.WebSocketMessage
+	ID          string
+	PlayerID    string
+	SpectatorID string
+	GameID      string
+	ConnType    ConnectionType
+	Conn        *websocket.Conn
+	Send        chan dto.WebSocketMessage
 
 	// Callbacks for hub communication
 	onMessage    func(HubMessage)
@@ -52,6 +62,7 @@ type Connection struct {
 func NewConnection(id string, conn *websocket.Conn, manager *Manager, onMessage func(HubMessage), onDisconnect func(*Connection)) *Connection {
 	return &Connection{
 		ID:           id,
+		ConnType:     ConnectionTypePlayer,
 		Conn:         conn,
 		Send:         make(chan dto.WebSocketMessage, 256),
 		onMessage:    onMessage,
@@ -67,12 +78,32 @@ func (c *Connection) SetPlayer(playerID, gameID string) {
 	c.mu.Lock()
 	c.PlayerID = playerID
 	c.GameID = gameID
+	c.ConnType = ConnectionTypePlayer
 	c.mu.Unlock()
 
-	// Register connection with game in manager (synchronous - no race condition)
 	if c.manager != nil && gameID != "" {
 		c.manager.AddToGame(c, gameID)
 	}
+}
+
+// SetSpectator associates this connection with a spectator.
+func (c *Connection) SetSpectator(spectatorID, gameID string) {
+	c.mu.Lock()
+	c.SpectatorID = spectatorID
+	c.GameID = gameID
+	c.ConnType = ConnectionTypeSpectator
+	c.mu.Unlock()
+
+	if c.manager != nil && gameID != "" {
+		c.manager.AddToGame(c, gameID)
+	}
+}
+
+// IsSpectator returns true if this connection is a spectator.
+func (c *Connection) IsSpectator() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.ConnType == ConnectionTypeSpectator
 }
 
 // GetPlayer returns the player and game IDs for this connection
@@ -126,7 +157,7 @@ func (c *Connection) ReadPump() {
 		default:
 			var message dto.WebSocketMessage
 			if err := c.Conn.ReadJSON(&message); err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNoStatusReceived) {
 					c.logger.Error("WebSocket read error", zap.Error(err), zap.String("connection_id", c.ID))
 				}
 				return

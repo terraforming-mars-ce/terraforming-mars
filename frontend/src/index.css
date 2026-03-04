@@ -239,23 +239,28 @@ code {
   animation: skipButtonPulse 2s ease-in-out infinite;
 }
 
-/* Scrollbar styling */
-.player-list-scrollbar::-webkit-scrollbar {
-  width: 4px;
+/* Global dark scrollbar styling */
+* {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-width: thin;
 }
 
-.player-list-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 2px;
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.player-list-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(100, 200, 255, 0.3);
-  border-radius: 2px;
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.player-list-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 200, 255, 0.5);
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* Player color glow effects */

@@ -378,7 +378,16 @@ Optional: choiceIndex, targetPlayerId, sourceCardForInput, selectedAmount
 {"type": "action.milestone.claim-milestone", "payload": {"milestoneType": "TYPE"}}
 
 == AWARDS ==
-{"type": "action.award.fund-award", "payload": {"awardType": "TYPE"}}%s`, commandPath, strategySection)
+{"type": "action.award.fund-award", "payload": {"awardType": "TYPE"}}
+
+== CHAT MESSAGE ==
+{"type": "chat.send-message", "payload": {"message": "Your message here"}}
+Chat is a big part of the game experience. Use it to engage with other players:
+- React to opponent moves that affect you (stealing resources, blocking tiles, claiming milestones you wanted)
+- Respond to chat messages from other players — don't leave people hanging
+- Trash talk, banter, celebrate your own big plays
+- Comment on the game state when something dramatic happens
+Keep messages to 1 sentence, max 2 chat messages per turn. Do NOT narrate your actions — react and engage instead.%s`, commandPath, strategySection)
 }
 
 func buildTurnPrompt(game *dto.GameDto, statePath, commandPath, historyPath string) string {
@@ -413,6 +422,12 @@ Append your commands here, one JSON object per line, using: echo '...' >> %s
 HISTORY FILE: %s
 After each command, read the tail of this file to check if it succeeded before sending the next.
 %s%s%s
-Begin by reading the game state file, then decide on your action(s).`,
+Begin by reading the game state file, then decide on your action(s).
+
+CHAT: After reading the game state, check the RECENT GAME LOG and RECENT CHAT sections.
+- If there are unanswered chat messages from other players, ALWAYS reply. Don't ignore people.
+- If an opponent did something that affected you (stole resources, blocked your tile spot, claimed a milestone you were going for), react to it.
+- If something big happened in the game log, comment on it.
+- Send chat BEFORE your game actions. Stay in character per your personality style.`,
 		statePath, commandPath, commandPath, historyPath, pendingNote, phaseNote, actionsNote)
 }

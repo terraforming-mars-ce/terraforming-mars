@@ -32,7 +32,7 @@ import { useHoverSound } from "@/hooks/useHoverSound.ts";
 
 interface AngledPanelProps {
   side: "left" | "right";
-  corpColor: string;
+  corpColor?: string;
   width: number;
   height: number;
   children: React.ReactNode;
@@ -162,6 +162,7 @@ interface BottomResourceBarProps {
   spectatingCorporation?: CardDto | null;
   spectatePlayerColor?: string;
   onStopSpectating?: () => void;
+  isGameSpectator?: boolean;
 }
 
 const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
@@ -177,8 +178,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   spectatingCorporation,
   spectatePlayerColor,
   onStopSpectating,
+  isGameSpectator = false,
 }) => {
   const isSpectating = !!spectatingPlayer;
+  const hideContents = isGameSpectator && !isSpectating;
   const displayPlayer: PlayerDto | OtherPlayerDto | null | undefined = isSpectating
     ? spectatingPlayer
     : currentPlayer;
@@ -469,414 +472,450 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       {/* LEFT PANEL: Corporation + Resources */}
       <AngledPanel
         side="left"
-        corpColor={corpColor}
+        corpColor={hideContents ? undefined : corpColor}
         width={LEFT_PANEL_WIDTH}
         height={BAR_HEIGHT}
-        showGradient={showCorporation}
+        showGradient={!hideContents && showCorporation}
       >
-        <div
-          className="flex items-center h-full origin-left"
-          style={{
-            paddingRight: ANGLE_INDENT + 16,
-            transform: `scale(${contentScale})`,
-            width: MAX_PANEL_WIDTH,
-          }}
-        >
-          {/* Corporation Section */}
+        {!hideContents && (
           <div
-            ref={corpContainerRef}
-            className="flex items-center relative w-[120px] justify-center transition-opacity duration-800 ease-in"
-            style={{ opacity: showCorporation ? 1 : 0 }}
-          >
-            {displayCorporation && (
-              <>
-                {/* Corporation Logo Button */}
-                <div
-                  className="cursor-pointer p-2 transition-all duration-200 hover:brightness-110"
-                  onClick={(e) => {
-                    hoverSound.onClick?.();
-                    handleCorpToggle(e);
-                  }}
-                  onMouseEnter={hoverSound.onMouseEnter}
-                  style={{
-                    filter: `drop-shadow(0 0 8px ${corpColor}50)`,
-                  }}
-                >
-                  <div className="flex items-center justify-center min-h-[50px] [&>*]:scale-65 [&>*]:origin-center">
-                    {getCorporationLogo(displayCorporation.name.toLowerCase())}
-                  </div>
-                </div>
-
-                {/* Expanded Corporation Card */}
-                {showCorpExpanded && (
-                  <div
-                    className={`absolute bottom-[100%] left-4 mb-2 origin-bottom-left transition-all duration-200 ${
-                      isCorpExpanded ? "opacity-100 scale-100" : "opacity-0 scale-90"
-                    }`}
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCorpClose();
-                      }}
-                      className="absolute top-4 right-4 text-white/70 hover:text-white text-xl leading-none transition-colors z-10 cursor-pointer"
-                    >
-                      ×
-                    </button>
-                    <CorporationCard
-                      corporation={{
-                        id: displayCorporation.id,
-                        name: displayCorporation.name,
-                        description: displayCorporation.description,
-                        startingMegaCredits: displayCorporation.startingResources?.credits || 0,
-                        startingProduction: displayCorporation.startingProduction,
-                        startingResources: displayCorporation.startingResources,
-                        behaviors: displayCorporation.behaviors,
-                      }}
-                      isSelected={false}
-                      onSelect={() => {}}
-                      showCheckbox={false}
-                      borderColor={corpColor}
-                      disableInteraction={true}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Divider between corp and resources */}
-          <div
-            className="w-[1px] h-[50px] self-center mx-2"
+            className="flex items-center h-full origin-left"
             style={{
-              background: `linear-gradient(transparent, ${accentColor}40, transparent)`,
-              transition: "background 800ms ease-in",
+              paddingRight: ANGLE_INDENT + 16,
+              transform: `scale(${contentScale})`,
+              width: MAX_PANEL_WIDTH,
             }}
-          />
-
-          {/* Resources Section */}
-          <div className="flex items-center justify-evenly flex-1">
-            {playerResources.map((resource, index) => {
-              const resourceChanged = hasPathChanged(`currentPlayer.resources.${resource.id}`);
-              const productionChanged = hasPathChanged(`currentPlayer.production.${resource.id}`);
-
-              const showConversionButton =
-                (resource.id === "plant" && canConvertPlants) ||
-                (resource.id === "heat" && canConvertHeat);
-
-              return (
-                <React.Fragment key={resource.id}>
-                  {/* Resource Item */}
-                  <div className="flex flex-col items-center gap-0.5 px-2 py-1.5 relative">
-                    {/* Conversion button - positioned absolutely above production box */}
-                    {(resource.id === "plant" || resource.id === "heat") && (
-                      <div
-                        className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-1 transition-all duration-300 ${
-                          showConversionButton
-                            ? "opacity-100 scale-100"
-                            : "opacity-0 scale-90 pointer-events-none"
-                        }`}
-                      >
-                        <button
-                          disabled={isConversionDisabled || !showConversionButton}
-                          className={`flex items-center justify-center gap-0.5 px-1.5 py-0.5 bg-black/80 border border-white/20 transition-all duration-200 ${
-                            isConversionDisabled || !showConversionButton
-                              ? "opacity-40 cursor-default"
-                              : "cursor-pointer hover:bg-white/10 hover:border-white/40"
-                          }`}
-                          style={{
-                            borderColor: showConversionButton ? `${corpColor}60` : undefined,
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isConversionDisabled || !showConversionButton) return;
-                            hoverSound.onClick?.();
-                            if (resource.id === "plant") {
-                              void onConvertPlantsToGreenery?.();
-                            } else if (resource.id === "heat") {
-                              void onConvertHeatToTemperature?.();
-                            }
-                          }}
-                          onMouseEnter={
-                            isConversionDisabled || !showConversionButton
-                              ? undefined
-                              : hoverSound.onMouseEnter
-                          }
-                        >
-                          <span className="text-[10px] font-bold text-white/90">+</span>
-                          <GameIcon
-                            iconType={
-                              resource.id === "plant"
-                                ? ResourceTypeGreeneryTile
-                                : ResourceTypeTemperature
-                            }
-                            size="small"
-                          />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Production badge */}
-                    <div className="inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.5)_0%,rgba(139,89,42,0.45)_100%)] border border-[rgba(160,110,60,0.6)] px-3 py-0.5 w-[32px] mb-1">
-                      <span
-                        className={`text-[10px] font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none tabular-nums ${
-                          productionChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
-                        }`}
-                      >
-                        {resource.production}
-                      </span>
+          >
+            {/* Corporation Section */}
+            <div
+              ref={corpContainerRef}
+              className="flex items-center relative w-[120px] justify-center transition-opacity duration-800 ease-in"
+              style={{ opacity: showCorporation ? 1 : 0 }}
+            >
+              {displayCorporation && (
+                <>
+                  {/* Corporation Logo Button */}
+                  <div
+                    className="cursor-pointer p-2 transition-all duration-200 hover:brightness-110"
+                    onClick={(e) => {
+                      hoverSound.onClick?.();
+                      handleCorpToggle(e);
+                    }}
+                    onMouseEnter={hoverSound.onMouseEnter}
+                    style={{
+                      filter: `drop-shadow(0 0 8px ${corpColor}50)`,
+                    }}
+                  >
+                    <div className="flex items-center justify-center min-h-[50px] [&>*]:scale-65 [&>*]:origin-center">
+                      {getCorporationLogo(displayCorporation.name.toLowerCase())}
                     </div>
+                  </div>
 
-                    {/* Resource icon and value */}
-                    {resource.id === "credit" ? (
-                      <div className="flex items-center gap-1 w-[48px] justify-center scale-110">
-                        <GameIcon
-                          iconType={ResourceTypeCredit}
-                          amount={resource.current}
-                          size="small"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 w-[48px] justify-center scale-[0.85]">
-                        <GameIcon iconType={getResourceType(resource.id)} size="small" />
-                        <span
-                          className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] tabular-nums w-[24px] text-left ${
-                            resourceChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
+                  {/* Expanded Corporation Card */}
+                  {showCorpExpanded && (
+                    <div
+                      className={`absolute bottom-[100%] left-4 mb-2 origin-bottom-left transition-all duration-200 ${
+                        isCorpExpanded ? "opacity-100 scale-100" : "opacity-0 scale-90"
+                      }`}
+                    >
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCorpClose();
+                        }}
+                        className="absolute top-4 right-4 text-white/70 hover:text-white text-xl leading-none transition-colors z-10 cursor-pointer"
+                      >
+                        ×
+                      </button>
+                      <CorporationCard
+                        corporation={{
+                          id: displayCorporation.id,
+                          name: displayCorporation.name,
+                          description: displayCorporation.description,
+                          startingMegaCredits: displayCorporation.startingResources?.credits || 0,
+                          startingProduction: displayCorporation.startingProduction,
+                          startingResources: displayCorporation.startingResources,
+                          behaviors: displayCorporation.behaviors,
+                        }}
+                        isSelected={false}
+                        onSelect={() => {}}
+                        showCheckbox={false}
+                        borderColor={corpColor}
+                        disableInteraction={true}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Divider between corp and resources */}
+            <div
+              className="w-[1px] h-[50px] self-center mx-2"
+              style={{
+                background: `linear-gradient(transparent, ${accentColor}40, transparent)`,
+                transition: "background 800ms ease-in",
+              }}
+            />
+
+            {/* Resources Section */}
+            <div className="flex items-center justify-evenly flex-1">
+              {playerResources.map((resource, index) => {
+                const resourceChanged = hasPathChanged(`currentPlayer.resources.${resource.id}`);
+                const productionChanged = hasPathChanged(`currentPlayer.production.${resource.id}`);
+
+                const showConversionButton =
+                  (resource.id === "plant" && canConvertPlants) ||
+                  (resource.id === "heat" && canConvertHeat);
+
+                return (
+                  <React.Fragment key={resource.id}>
+                    {/* Resource Item */}
+                    <div className="flex flex-col items-center gap-0.5 px-2 py-1.5 relative">
+                      {/* Conversion button - positioned absolutely above production box */}
+                      {(resource.id === "plant" || resource.id === "heat") && (
+                        <div
+                          className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-1 transition-all duration-300 ${
+                            showConversionButton
+                              ? "opacity-100 scale-100"
+                              : "opacity-0 scale-90 pointer-events-none"
                           }`}
                         >
-                          {resource.current}
+                          <button
+                            disabled={isConversionDisabled || !showConversionButton}
+                            className={`flex items-center justify-center gap-0.5 px-1.5 py-0.5 bg-black/80 border border-white/20 transition-all duration-200 ${
+                              isConversionDisabled || !showConversionButton
+                                ? "opacity-40 cursor-default"
+                                : "cursor-pointer hover:bg-white/10 hover:border-white/40"
+                            }`}
+                            style={{
+                              borderColor: showConversionButton ? `${corpColor}60` : undefined,
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isConversionDisabled || !showConversionButton) return;
+                              hoverSound.onClick?.();
+                              if (resource.id === "plant") {
+                                void onConvertPlantsToGreenery?.();
+                              } else if (resource.id === "heat") {
+                                void onConvertHeatToTemperature?.();
+                              }
+                            }}
+                            onMouseEnter={
+                              isConversionDisabled || !showConversionButton
+                                ? undefined
+                                : hoverSound.onMouseEnter
+                            }
+                          >
+                            <span className="text-[10px] font-bold text-white/90">+</span>
+                            <GameIcon
+                              iconType={
+                                resource.id === "plant"
+                                  ? ResourceTypeGreeneryTile
+                                  : ResourceTypeTemperature
+                              }
+                              size="small"
+                            />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Production badge */}
+                      <div className="inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.5)_0%,rgba(139,89,42,0.45)_100%)] border border-[rgba(160,110,60,0.6)] px-3 py-0.5 w-[32px] mb-1">
+                        <span
+                          className={`text-[10px] font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none tabular-nums ${
+                            productionChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
+                          }`}
+                        >
+                          {resource.production}
                         </span>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Divider between resources */}
-                  {index < playerResources.length - 1 && (
-                    <div
-                      className="w-[1px] h-[40px] self-center"
-                      style={{
-                        background: `linear-gradient(transparent, rgba(60,60,70,0.8), transparent)`,
-                      }}
-                    />
-                  )}
-                </React.Fragment>
-              );
-            })}
+                      {/* Resource icon and value */}
+                      {resource.id === "credit" ? (
+                        <div className="flex items-center gap-1 w-[48px] justify-center scale-110">
+                          <GameIcon
+                            iconType={ResourceTypeCredit}
+                            amount={resource.current}
+                            size="small"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 w-[48px] justify-center scale-[0.85]">
+                          <GameIcon iconType={getResourceType(resource.id)} size="small" />
+                          <span
+                            className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] tabular-nums w-[24px] text-left ${
+                              resourceChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
+                            }`}
+                          >
+                            {resource.current}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Divider between resources */}
+                    {index < playerResources.length - 1 && (
+                      <div
+                        className="w-[1px] h-[40px] self-center"
+                        style={{
+                          background: `linear-gradient(transparent, rgba(60,60,70,0.8), transparent)`,
+                        }}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </AngledPanel>
 
       {/* RIGHT PANEL: Action Buttons */}
-      <AngledPanel side="right" corpColor={corpColor} width={RIGHT_PANEL_WIDTH} height={BAR_HEIGHT}>
-        <div
-          className="flex items-center h-full justify-evenly"
-          style={{
-            paddingLeft: ANGLE_INDENT + 16,
-            paddingRight: ANGLE_INDENT + 16,
-          }}
-        >
-          {/* Actions Button */}
-          <button
-            ref={actionsButtonRef}
-            className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={() => {
-              hoverSound.onClick?.();
-              handleOpenActionsPopover();
+      <AngledPanel
+        side="right"
+        corpColor={hideContents ? undefined : corpColor}
+        width={RIGHT_PANEL_WIDTH}
+        height={BAR_HEIGHT}
+      >
+        {!hideContents ? (
+          <div
+            className="flex items-center h-full justify-evenly"
+            style={{
+              paddingLeft: ANGLE_INDENT + 16,
+              paddingRight: ANGLE_INDENT + 16,
             }}
-            onMouseEnter={hoverSound.onMouseEnter}
           >
-            <div className="font-bold flex items-center gap-[2px] h-[24px] w-[24px] justify-center text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-              <span className="text-[7px] leading-none translate-y-[1px]">●</span>
-              <span className="text-[7px] leading-none translate-y-[1px]">●</span>
-              <span className="text-[18px] leading-none">→</span>
-            </div>
-            <div
-              className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
-                hasPathChanged("currentPlayer.actions")
-                  ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                  : ""
-              }`}
-            >
-              {displayPlayer?.actions?.length || 0}
-            </div>
-            <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
-              Actions
-            </div>
-          </button>
-
-          {/* Effects Button */}
-          <button
-            ref={effectsButtonRef}
-            className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={() => {
-              hoverSound.onClick?.();
-              handleOpenEffectsPopover();
-            }}
-            onMouseEnter={hoverSound.onMouseEnter}
-          >
-            <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-              <div className="absolute w-[20px] h-[20px] rounded-full border-2 border-current" />
-              <div className="flex flex-col items-center justify-center relative">
-                <span className="text-[7px] leading-none">●</span>
-                <span className="text-[7px] leading-none">●</span>
-              </div>
-            </div>
-            <div
-              className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
-                hasPathChanged("currentPlayer.effects")
-                  ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                  : ""
-              }`}
-            >
-              {displayPlayer?.effects?.length || 0}
-            </div>
-            <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
-              Effects
-            </div>
-          </button>
-
-          {/* Tags Button */}
-          <button
-            ref={tagsButtonRef}
-            className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={() => {
-              hoverSound.onClick?.();
-              handleOpenTagsPopover();
-            }}
-            onMouseEnter={hoverSound.onMouseEnter}
-          >
-            <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-              <div className="absolute w-[20px] h-[20px] rounded-full border-2 border-current" />
-              <div className="flex items-center gap-[2px] relative text-[6px] leading-none">
-                <span>●</span>
-                <span>●</span>
-                <span>●</span>
-              </div>
-            </div>
-            <div
-              className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
-                hasPathChanged("currentPlayer.playedCards")
-                  ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                  : ""
-              }`}
-            >
-              {tagCounts.reduce((sum, tag) => sum + tag.count, 0)}
-            </div>
-            <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
-              Tags
-            </div>
-          </button>
-
-          {/* Storages Button */}
-          <button
-            ref={storagesButtonRef}
-            className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={() => {
-              hoverSound.onClick?.();
-              handleOpenStoragesPopover();
-            }}
-            onMouseEnter={hoverSound.onMouseEnter}
-          >
-            <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-              <div className="absolute w-[20px] h-[20px] border-2 border-current" />
-              <div className="flex items-center gap-[2px] relative text-[6px] leading-none">
-                <span>●</span>
-                <span>●</span>
-                <span>●</span>
-              </div>
-            </div>
-            <div
-              className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
-                hasPathChanged("currentPlayer.resourceStorage")
-                  ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                  : ""
-              }`}
-            >
-              {storageCardsCount}
-            </div>
-            <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
-              Storages
-            </div>
-          </button>
-
-          {/* Played Cards Button */}
-          <button
-            className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={() => {
-              hoverSound.onClick?.();
-              handleOpenCardsModal();
-            }}
-            onMouseEnter={hoverSound.onMouseEnter}
-          >
-            <div className="text-lg font-bold flex items-center justify-center h-[24px] w-[24px] text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-              ↓
-            </div>
-            <div
-              className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
-                hasPathChanged("currentPlayer.playedCards")
-                  ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                  : ""
-              }`}
-            >
-              {playedCardsCount}
-            </div>
-            <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
-              Played
-            </div>
-          </button>
-
-          {/* VP Button */}
-          <button
-            ref={vpButtonRef}
-            className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
-            onClick={() => {
-              hoverSound.onClick?.();
-              handleOpenVPPopover();
-            }}
-            onMouseEnter={hoverSound.onMouseEnter}
-          >
-            <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-              <span className="text-xl absolute">○</span>
-              <span className="text-sm absolute">●</span>
-            </div>
-            <div
-              className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
-                hasPathChanged("currentPlayer.vpGranters") ||
-                hasPathChanged("currentPlayer.terraformRating")
-                  ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                  : ""
-              }`}
-            >
-              {totalVP}
-            </div>
-            <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
-              VP
-            </div>
-          </button>
-
-          {/* Log Button */}
-          {gameId && (
+            {/* Actions Button */}
             <button
-              ref={logButtonRef}
+              ref={actionsButtonRef}
               className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
               onClick={() => {
                 hoverSound.onClick?.();
-                setShowLogPopover(!showLogPopover);
+                handleOpenActionsPopover();
               }}
               onMouseEnter={hoverSound.onMouseEnter}
             >
-              <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-base text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-                ☰
+              <div className="font-bold flex items-center gap-[2px] h-[24px] w-[24px] justify-center text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
+                <span className="text-[7px] leading-none translate-y-[1px]">●</span>
+                <span className="text-[7px] leading-none translate-y-[1px]">●</span>
+                <span className="text-[18px] leading-none">→</span>
               </div>
-              <div className="text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none invisible">
-                0
+              <div
+                className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
+                  hasPathChanged("currentPlayer.actions")
+                    ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
+                    : ""
+                }`}
+              >
+                {displayPlayer?.actions?.length || 0}
               </div>
               <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
-                Log
+                Actions
               </div>
             </button>
-          )}
-        </div>
+
+            {/* Effects Button */}
+            <button
+              ref={effectsButtonRef}
+              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              onClick={() => {
+                hoverSound.onClick?.();
+                handleOpenEffectsPopover();
+              }}
+              onMouseEnter={hoverSound.onMouseEnter}
+            >
+              <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
+                <div className="absolute w-[20px] h-[20px] rounded-full border-2 border-current" />
+                <div className="flex flex-col items-center justify-center relative">
+                  <span className="text-[7px] leading-none">●</span>
+                  <span className="text-[7px] leading-none">●</span>
+                </div>
+              </div>
+              <div
+                className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
+                  hasPathChanged("currentPlayer.effects")
+                    ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
+                    : ""
+                }`}
+              >
+                {displayPlayer?.effects?.length || 0}
+              </div>
+              <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
+                Effects
+              </div>
+            </button>
+
+            {/* Tags Button */}
+            <button
+              ref={tagsButtonRef}
+              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              onClick={() => {
+                hoverSound.onClick?.();
+                handleOpenTagsPopover();
+              }}
+              onMouseEnter={hoverSound.onMouseEnter}
+            >
+              <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
+                <div className="absolute w-[20px] h-[20px] rounded-full border-2 border-current" />
+                <div className="flex items-center gap-[2px] relative text-[6px] leading-none">
+                  <span>●</span>
+                  <span>●</span>
+                  <span>●</span>
+                </div>
+              </div>
+              <div
+                className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
+                  hasPathChanged("currentPlayer.playedCards")
+                    ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
+                    : ""
+                }`}
+              >
+                {tagCounts.reduce((sum, tag) => sum + tag.count, 0)}
+              </div>
+              <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
+                Tags
+              </div>
+            </button>
+
+            {/* Storages Button */}
+            <button
+              ref={storagesButtonRef}
+              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              onClick={() => {
+                hoverSound.onClick?.();
+                handleOpenStoragesPopover();
+              }}
+              onMouseEnter={hoverSound.onMouseEnter}
+            >
+              <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
+                <div className="absolute w-[20px] h-[20px] border-2 border-current" />
+                <div className="flex items-center gap-[2px] relative text-[6px] leading-none">
+                  <span>●</span>
+                  <span>●</span>
+                  <span>●</span>
+                </div>
+              </div>
+              <div
+                className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
+                  hasPathChanged("currentPlayer.resourceStorage")
+                    ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
+                    : ""
+                }`}
+              >
+                {storageCardsCount}
+              </div>
+              <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
+                Storages
+              </div>
+            </button>
+
+            {/* Played Cards Button */}
+            <button
+              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              onClick={() => {
+                hoverSound.onClick?.();
+                handleOpenCardsModal();
+              }}
+              onMouseEnter={hoverSound.onMouseEnter}
+            >
+              <div className="text-lg font-bold flex items-center justify-center h-[24px] w-[24px] text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
+                ↓
+              </div>
+              <div
+                className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
+                  hasPathChanged("currentPlayer.playedCards")
+                    ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
+                    : ""
+                }`}
+              >
+                {playedCardsCount}
+              </div>
+              <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
+                Played
+              </div>
+            </button>
+
+            {/* VP Button */}
+            <button
+              ref={vpButtonRef}
+              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              onClick={() => {
+                hoverSound.onClick?.();
+                handleOpenVPPopover();
+              }}
+              onMouseEnter={hoverSound.onMouseEnter}
+            >
+              <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
+                <span className="text-xl absolute">○</span>
+                <span className="text-sm absolute">●</span>
+              </div>
+              <div
+                className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
+                  hasPathChanged("currentPlayer.vpGranters") ||
+                  hasPathChanged("currentPlayer.terraformRating")
+                    ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
+                    : ""
+                }`}
+              >
+                {totalVP}
+              </div>
+              <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
+                VP
+              </div>
+            </button>
+
+            {/* Log Button */}
+            {gameId && (
+              <button
+                ref={logButtonRef}
+                className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+                onClick={() => {
+                  hoverSound.onClick?.();
+                  setShowLogPopover(!showLogPopover);
+                }}
+                onMouseEnter={hoverSound.onMouseEnter}
+              >
+                <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-base text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
+                  ☰
+                </div>
+                <div className="text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none invisible">
+                  0
+                </div>
+                <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
+                  Log
+                </div>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div
+            className="flex items-center h-full justify-end"
+            style={{ paddingRight: ANGLE_INDENT + 16 }}
+          >
+            {gameId && (
+              <button
+                ref={logButtonRef}
+                className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+                onClick={() => {
+                  hoverSound.onClick?.();
+                  setShowLogPopover(!showLogPopover);
+                }}
+                onMouseEnter={hoverSound.onMouseEnter}
+              >
+                <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-base text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
+                  ☰
+                </div>
+                <div className="text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none invisible">
+                  0
+                </div>
+                <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
+                  Log
+                </div>
+              </button>
+            )}
+          </div>
+        )}
       </AngledPanel>
 
       {/* Popovers */}

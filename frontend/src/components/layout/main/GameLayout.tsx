@@ -11,6 +11,7 @@ import BottomResourceBar, {
 import PlayerOverlay from "../../ui/overlay/PlayerOverlay.tsx";
 import { StandardProject } from "../../../types/cards.tsx";
 import {
+  ChatMessageDto,
   GameDto,
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
@@ -22,6 +23,7 @@ import {
 import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
+import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 
 export type TransitionPhase =
   | "idle"
@@ -56,6 +58,11 @@ interface GameLayoutProps {
   spectatingCorporation?: CardDto | null;
   spectatePlayerColor?: string;
   onStopSpectating?: () => void;
+  isGameSpectator?: boolean;
+  chatMessages?: ChatMessageDto[];
+  onSendChatMessage?: (message: string) => void;
+  isLobbyPhase?: boolean;
+  playerColorMap?: Map<string, string>;
 }
 
 const GameLayout: React.FC<GameLayoutProps> = ({
@@ -83,6 +90,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   spectatingCorporation,
   spectatePlayerColor,
   onStopSpectating,
+  isGameSpectator = false,
+  chatMessages,
+  onSendChatMessage,
+  isLobbyPhase = false,
+  playerColorMap,
 }) => {
   // Create a map of all players (current + others) for easy lookup
   const playerMap = new Map<string, PlayerDto | OtherPlayerDto>();
@@ -184,6 +196,18 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         </div>
       )}
 
+      {/* Chat overlay - rendered before sidebars so it's behind them in z-order */}
+      {showUI && !showStartingSelection && chatMessages && onSendChatMessage && (
+        <div className={uiAnimationClass}>
+          <ChatOverlay
+            messages={chatMessages}
+            onSendMessage={onSendChatMessage}
+            isLobby={isLobbyPhase}
+            playerColorMap={playerColorMap}
+          />
+        </div>
+      )}
+
       {/* Overlay Components */}
       {showUI && (
         <div className={uiAnimationClass}>
@@ -237,6 +261,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             spectatingCorporation={spectatingCorporation}
             spectatePlayerColor={spectatePlayerColor}
             onStopSpectating={onStopSpectating}
+            isGameSpectator={isGameSpectator}
           />
         </div>
       )}

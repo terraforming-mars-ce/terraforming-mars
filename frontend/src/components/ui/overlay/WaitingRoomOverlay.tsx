@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { GameDto } from "../../../types/generated/api-types.ts";
+import { GameDto, OtherPlayerDto, PlayerDto } from "../../../types/generated/api-types.ts";
 import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
 import CopyLinkButton from "../buttons/CopyLinkButton.tsx";
 import GameMenuButton from "../buttons/GameMenuButton.tsx";
@@ -27,6 +27,38 @@ function getOrderedPlayers<T>(playerMap: Map<string, T>, game: GameDto): T[] {
   return order.map((pid) => playerMap.get(pid)).filter((p) => p !== undefined);
 }
 
+const ColorPicker: React.FC<{
+  colors: string[];
+  takenColors: Set<string>;
+  currentColor: string;
+  onSelect: (color: string) => void;
+}> = ({ colors, takenColors, currentColor, onSelect }) => (
+  <div
+    className="flex flex-wrap gap-1.5"
+    style={{ width: colors.length > 5 ? `${5 * 28 + 4 * 6}px` : undefined }}
+  >
+    {colors.map((color) => {
+      const isTaken = takenColors.has(color);
+      const isSelected = color === currentColor;
+      return (
+        <button
+          key={color}
+          onClick={() => !isTaken && onSelect(color)}
+          className={`w-7 h-7 rounded-full border-2 transition-all flex-shrink-0 ${
+            isSelected
+              ? "border-white scale-110"
+              : isTaken
+                ? "border-white/10 opacity-25 cursor-default"
+                : "border-transparent cursor-pointer hover:scale-110"
+          }`}
+          style={{ backgroundColor: color }}
+          disabled={isTaken}
+        />
+      );
+    })}
+  </div>
+);
+
 const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   game,
   playerId,
@@ -40,27 +72,30 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   const [leaveConfirmVisible, setLeaveConfirmVisible] = useState(true);
   const [pendingLeave, setPendingLeave] = useState(false);
   const [showBotDropdown, setShowBotDropdown] = useState(false);
+  const [colorPickerForPlayer, setColorPickerForPlayer] = useState<string | null>(null);
   const botDropdownRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
 
   const handleStartGame = () => {
     if (!isHost) return;
     void globalWebSocketManager.startGame();
   };
 
-  const playerCount = (game.currentPlayer ? 1 : 0) + (game.otherPlayers?.length || 0);
+  const hasCurrentPlayer = !!game.currentPlayer?.id;
+  const playerCount = (hasCurrentPlayer ? 1 : 0) + (game.otherPlayers?.length || 0);
 
   const allBotsReady = React.useMemo(() => {
     const bots: { botStatus?: string }[] = [];
-    if (game.currentPlayer?.playerType === "bot") bots.push(game.currentPlayer);
+    if (hasCurrentPlayer && game.currentPlayer?.playerType === "bot") bots.push(game.currentPlayer);
     game.otherPlayers?.forEach((p) => {
       if (p.playerType === "bot") bots.push(p);
     });
     return bots.every((b) => b.botStatus === "ready");
-  }, [game.currentPlayer, game.otherPlayers]);
+  }, [hasCurrentPlayer, game.currentPlayer, game.otherPlayers]);
 
   const allPlayers = React.useMemo(() => {
     const players: { id: string; name: string; playerType: string }[] = [];
-    if (game.currentPlayer)
+    if (hasCurrentPlayer && game.currentPlayer)
       players.push({
         id: game.currentPlayer.id,
         name: game.currentPlayer.name,
@@ -70,7 +105,37 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
       players.push({ id: p.id, name: p.name, playerType: p.playerType }),
     );
     return players;
-  }, [game.currentPlayer, game.otherPlayers]);
+  }, [hasCurrentPlayer, game.currentPlayer, game.otherPlayers]);
+
+  const takenColorsFor = React.useCallback(
+    (targetId: string) => {
+      const colors = new Set<string>();
+      const addPlayerColor = (p: PlayerDto | OtherPlayerDto) => {
+        if (p.color && p.id !== targetId) colors.add(p.color);
+      };
+      if (hasCurrentPlayer && game.currentPlayer) addPlayerColor(game.currentPlayer);
+      game.otherPlayers?.forEach(addPlayerColor);
+      return colors;
+    },
+    [hasCurrentPlayer, game.currentPlayer, game.otherPlayers],
+  );
+
+  const getPlayerColor = React.useCallback(
+    (pid: string) => {
+      if (hasCurrentPlayer && game.currentPlayer?.id === pid)
+        return game.currentPlayer?.color || "";
+      return game.otherPlayers?.find((p) => p.id === pid)?.color || "";
+    },
+    [hasCurrentPlayer, game.currentPlayer, game.otherPlayers],
+  );
+
+  const handleColorSelect = (color: string) => {
+    if (colorPickerForPlayer) {
+      const targetId = colorPickerForPlayer === playerId ? undefined : colorPickerForPlayer;
+      void globalWebSocketManager.setPlayerColor(color, targetId);
+    }
+    setColorPickerForPlayer(null);
+  };
 
   const currentPlayerIds = React.useMemo(() => new Set(allPlayers.map((p) => p.id)), [allPlayers]);
 
@@ -143,15 +208,26 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   };
 
   useEffect(() => {
-    if (!showBotDropdown) return;
+    if (!showBotDropdown && !colorPickerForPlayer) return;
     const handleClick = (e: MouseEvent) => {
-      if (botDropdownRef.current && !botDropdownRef.current.contains(e.target as Node)) {
+      if (
+        showBotDropdown &&
+        botDropdownRef.current &&
+        !botDropdownRef.current.contains(e.target as Node)
+      ) {
         setShowBotDropdown(false);
+      }
+      if (
+        colorPickerForPlayer &&
+        colorPickerRef.current &&
+        !colorPickerRef.current.contains(e.target as Node)
+      ) {
+        setColorPickerForPlayer(null);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showBotDropdown]);
+  }, [showBotDropdown, colorPickerForPlayer]);
 
   const handleAddBot = (difficulty: string, speed: string) => {
     setShowBotDropdown(false);
@@ -231,7 +307,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
           <div className="flex flex-col gap-2">
             {(() => {
               const playerMap = new Map();
-              if (game.currentPlayer) {
+              if (hasCurrentPlayer && game.currentPlayer) {
                 playerMap.set(game.currentPlayer.id, game.currentPlayer);
               }
               game.otherPlayers?.forEach((otherPlayer) => {
@@ -243,6 +319,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
               const playerItems = orderedPlayers.map((player) => ({
                 id: player.id,
                 name: player.name,
+                color: player.color || "",
                 playerType: player.playerType as string,
                 botStatus: (player.botStatus as string) || undefined,
                 botDifficulty: (player.botDifficulty as string) || undefined,
@@ -255,6 +332,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                   playerItems.push({
                     id: lp.id,
                     name: lp.name,
+                    color: "",
                     playerType: "human",
                     botStatus: undefined,
                     botDifficulty: undefined,
@@ -272,17 +350,48 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                   animClass = "animate-[playerSlideIn_0.3s_ease-out]";
                 }
 
+                const isCurrentPlayer = player.id === playerId;
+                const canEditColor =
+                  (isCurrentPlayer || (isHost && player.playerType === "bot")) && !player.isLeaving;
+                const showingPicker = colorPickerForPlayer === player.id;
+
                 return (
                   <div
                     key={player.id}
-                    className={`flex justify-between items-center py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50 ${animClass}`}
+                    className={`relative flex justify-between items-center py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50 ${animClass}`}
                     onAnimationEnd={
                       !player.isLeaving && newPlayerIds.has(player.id)
                         ? () => handleAnimationEnd(player.id)
                         : undefined
                     }
                   >
-                    <div className="flex gap-1.5 items-center">
+                    <div className="flex gap-2 items-center">
+                      <div
+                        className="relative flex items-center"
+                        ref={showingPicker ? colorPickerRef : undefined}
+                      >
+                        <button
+                          className={`w-4 h-4 rounded-full transition-all flex-shrink-0 p-0 leading-none ${
+                            canEditColor ? "cursor-pointer hover:scale-125" : "cursor-default"
+                          }`}
+                          style={{ backgroundColor: player.color || "#555" }}
+                          onClick={() =>
+                            canEditColor &&
+                            setColorPickerForPlayer((v) => (v === player.id ? null : player.id))
+                          }
+                          disabled={!canEditColor}
+                        />
+                        {showingPicker && game.settings.availablePlayerColors && (
+                          <div className="absolute top-full left-0 mt-1 bg-black border border-white/20 rounded-lg p-3 z-20">
+                            <ColorPicker
+                              colors={game.settings.availablePlayerColors}
+                              takenColors={takenColorsFor(player.id)}
+                              currentColor={getPlayerColor(player.id)}
+                              onSelect={handleColorSelect}
+                            />
+                          </div>
+                        )}
+                      </div>
                       <span className="text-white text-sm font-medium">{player.name}</span>
                     </div>
                     <div className="flex gap-1.5 items-center">
@@ -333,6 +442,47 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
               });
             })()}
           </div>
+
+          {/* Spectators Section */}
+          {game.spectators && game.spectators.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-white/60 text-xs font-semibold mb-2 uppercase tracking-wide">
+                Spectators
+              </h3>
+              <div className="flex flex-col gap-1.5">
+                {game.spectators.map((spectator) => (
+                  <div
+                    key={spectator.id}
+                    className="flex justify-between items-center py-1.5 px-3 bg-black/25 rounded-lg border border-white/10"
+                  >
+                    <span className="text-white/70 text-sm">{spectator.name}</span>
+                    <div className="flex gap-1.5 items-center">
+                      {isHost && (
+                        <button
+                          onClick={() => void globalWebSocketManager.kickSpectator(spectator.id)}
+                          className="ml-1 text-red-400/60 hover:text-red-300 transition-colors cursor-pointer"
+                        >
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Join Link & Add Bot */}
           <div className="mt-4 flex justify-center gap-2">

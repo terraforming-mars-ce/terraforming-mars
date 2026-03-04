@@ -2,6 +2,7 @@ import { webSocketService } from "./webSocketService.ts";
 import { WebSocketConnection } from "../types/webSocketTypes.ts";
 import type {
   CardPaymentDto,
+  ChatMessageDto,
   ConfirmDemoSetupRequest,
   GameDto,
   PlayerDisconnectedPayload,
@@ -105,6 +106,18 @@ class GlobalWebSocketManager implements WebSocketConnection {
       this.emit("available-cards", payload);
     });
 
+    webSocketService.on("spectator-connected", (payload: any) => {
+      this.emit("spectator-connected", payload);
+    });
+
+    webSocketService.on("chat-update", (chatMessage: ChatMessageDto) => {
+      this.emit("chat-update", chatMessage);
+    });
+
+    webSocketService.on("spectator-kicked", (payload: any) => {
+      this.emit("spectator-kicked", payload);
+    });
+
     webSocketService.on("error", (error: any) => {
       console.error("WebSocket error:", error);
       this.emit("error", error);
@@ -157,6 +170,9 @@ class GlobalWebSocketManager implements WebSocketConnection {
   }
 
   async playerConnect(playerName: string, gameId: string, playerId?: string) {
+    if (this.isInitialized && webSocketService.gameId && webSocketService.gameId !== gameId) {
+      this.disconnect();
+    }
     await this.ensureConnected();
     return webSocketService.playerConnect(playerName, gameId, playerId);
   }
@@ -336,6 +352,29 @@ class GlobalWebSocketManager implements WebSocketConnection {
   async requestLogs(): Promise<void> {
     await this.ensureConnected();
     webSocketService.requestLogs();
+  }
+
+  async setPlayerColor(color: string, targetPlayerId?: string): Promise<void> {
+    await this.ensureConnected();
+    webSocketService.setPlayerColor(color, targetPlayerId);
+  }
+
+  async spectatorConnect(spectatorName: string, gameId: string): Promise<void> {
+    if (this.isInitialized) {
+      this.disconnect();
+    }
+    await this.ensureConnected();
+    webSocketService.spectatorConnect(spectatorName, gameId);
+  }
+
+  async sendChatMessage(message: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.sendChatMessage(message);
+  }
+
+  async kickSpectator(targetSpectatorId: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.kickSpectator(targetSpectatorId);
   }
 
   get connected() {
