@@ -45,6 +45,27 @@ frontend/
 ### Code Style
 
 - **CRITICAL**: NO unnecessary comments - code should be self-documenting. Avoid logic comments that just restate what the code does. Only add comments when truly necessary (complex algorithms, non-obvious business rules).
+- **CRITICAL**: Always use braces for `if` statements. No single-line or bracketless `if` blocks:
+  ```tsx
+  // ✅ CORRECT
+  if (something) {
+    doThing();
+  }
+
+  // ❌ WRONG
+  if (something) doThing();
+  if (something)
+    doThing();
+  ```
+- **CRITICAL**: NEVER nest ternary operators. Break them into separate variables or use `if`/`else`:
+  ```tsx
+  // ✅ CORRECT
+  const order = hasA ? a : b;
+  const result = order ? transform(order) : fallback;
+
+  // ❌ WRONG
+  const result = hasA ? a : hasB ? b : fallback;
+  ```
 
 ### Component Development
 

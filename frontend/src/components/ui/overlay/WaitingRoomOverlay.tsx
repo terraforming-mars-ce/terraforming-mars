@@ -19,6 +19,14 @@ interface LeavingPlayer {
   name: string;
 }
 
+function getOrderedPlayers<T>(playerMap: Map<string, T>, game: GameDto): T[] {
+  const order = [game.turnOrder, game.playerOrder].find((o) => o && o.length > 0);
+  if (!order) {
+    return Array.from(playerMap.values());
+  }
+  return order.map((pid) => playerMap.get(pid)).filter((p) => p !== undefined);
+}
+
 const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   game,
   playerId,
@@ -230,12 +238,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                 playerMap.set(otherPlayer.id, otherPlayer);
               });
 
-              const orderedPlayers =
-                game.turnOrder && game.turnOrder.length > 0
-                  ? game.turnOrder
-                      .map((pid) => playerMap.get(pid))
-                      .filter((player) => player !== undefined)
-                  : Array.from(playerMap.values());
+              const orderedPlayers = getOrderedPlayers(playerMap, game);
 
               const playerItems = orderedPlayers.map((player) => ({
                 id: player.id,

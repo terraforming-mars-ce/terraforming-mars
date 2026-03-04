@@ -159,6 +159,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		ViewingPlayerID:  playerID,
 		CurrentTurn:      getCurrentTurnPlayerID(g),
 		Generation:       g.Generation(),
+		PlayerOrder:      g.PlayerOrder(),
 		TurnOrder:        g.TurnOrder(),
 		Board: BoardDto{
 			Tiles: tileDtos,

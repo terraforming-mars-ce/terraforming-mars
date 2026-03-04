@@ -1024,6 +1024,7 @@ export interface GameDto {
   viewingPlayerId: string; // The player viewing this game state
   currentTurn?: string; // Whose turn it is (nullable)
   generation: number /* int */;
+  playerOrder: string[]; // Player IDs in join order
   turnOrder: string[]; // Turn order of all players in game
   board: BoardDto; // Game board with tiles and occupancy state
   paymentConstants: PaymentConstantsDto; // Conversion rates for alternative payments
