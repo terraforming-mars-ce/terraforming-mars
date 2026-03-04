@@ -156,6 +156,7 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		ResourceStorage:           p.Resources().Storage(),
 		PaymentSubstitutes:        convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
 		StoragePaymentSubstitutes: convertStoragePaymentSubstitutes(p.Resources().StoragePaymentSubstitutes()),
+		VPGranters:                toVPGranterDtos(p.VPGranters().GetAll()),
 	}
 }
 
