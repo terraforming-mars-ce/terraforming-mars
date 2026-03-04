@@ -45,6 +45,10 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 		return err
 	}
 
+	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+		return err
+	}
+
 	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
 		return err
 	}

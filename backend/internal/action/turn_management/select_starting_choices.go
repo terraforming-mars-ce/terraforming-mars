@@ -92,7 +92,7 @@ func (a *SelectStartingChoicesAction) Execute(ctx context.Context, gameID string
 		return fmt.Errorf("failed to store deferred starting choices: %w", err)
 	}
 
-	// Discard unchosen preludes
+	// Remove unchosen preludes permanently (preludes must never enter the discard/draw cycle)
 	preludePhase := g.GetSelectPreludeCardsPhase(p.ID())
 	if preludePhase != nil {
 		selectedSet := make(map[string]bool, len(preludeIDs))
@@ -106,9 +106,9 @@ func (a *SelectStartingChoicesAction) Execute(ctx context.Context, gameID string
 			}
 		}
 		if len(unselected) > 0 {
-			if err := g.Deck().Discard(ctx, unselected); err != nil {
-				log.Error("Failed to discard unselected preludes", zap.Error(err))
-				return fmt.Errorf("failed to discard unselected preludes: %w", err)
+			if err := g.Deck().Remove(ctx, unselected); err != nil {
+				log.Error("Failed to remove unselected preludes", zap.Error(err))
+				return fmt.Errorf("failed to remove unselected preludes: %w", err)
 			}
 		}
 	}

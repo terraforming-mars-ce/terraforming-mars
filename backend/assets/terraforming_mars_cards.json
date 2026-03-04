@@ -15980,10 +15980,10 @@
             "type": "manual"
           }
         ],
-        "outputs": [
+        "inputs": [
           {
             "type": "credit",
-            "amount": -4,
+            "amount": 4,
             "target": "self-player"
           }
         ],
@@ -18666,10 +18666,10 @@
             "type": "manual"
           }
         ],
-        "outputs": [
+        "inputs": [
           {
             "type": "energy",
-            "amount": -2,
+            "amount": 2,
             "target": "self-player"
           }
         ],
@@ -19210,12 +19210,14 @@
             ]
           },
           {
-            "outputs": [
+            "inputs": [
               {
                 "type": "credit",
-                "amount": -3,
+                "amount": 3,
                 "target": "self-player"
-              },
+              }
+            ],
+            "outputs": [
               {
                 "type": "card-draw",
                 "amount": 1,

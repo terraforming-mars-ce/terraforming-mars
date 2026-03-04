@@ -138,6 +138,11 @@ func (a *UseCardActionAction) Execute(
 		return fmt.Errorf("must select an amount for this action")
 	}
 
+	if err := validateOutputAffordability(p, outputs); err != nil {
+		log.Warn("Cannot afford negative resource outputs", zap.Error(err))
+		return err
+	}
+
 	if err := applier.ApplyInputs(ctx, inputs); err != nil {
 		log.Error("Failed to apply inputs", zap.Error(err))
 		return err
@@ -244,4 +249,37 @@ func hasVariableAmount(inputs, outputs []shared.ResourceCondition) bool {
 		}
 	}
 	return false
+}
+
+// validateOutputAffordability checks that the player can afford all negative resource outputs
+// before they are applied. This is a defense-in-depth check; card costs should be modeled as
+// inputs, but this catches any negative resource outputs that slip through.
+func validateOutputAffordability(p *player.Player, outputs []shared.ResourceCondition) error {
+	resources := p.Resources().Get()
+	for _, output := range outputs {
+		if output.VariableAmount || output.Amount >= 0 {
+			continue
+		}
+		var available int
+		switch output.ResourceType {
+		case shared.ResourceCredit:
+			available = resources.Credits
+		case shared.ResourceSteel:
+			available = resources.Steel
+		case shared.ResourceTitanium:
+			available = resources.Titanium
+		case shared.ResourcePlant:
+			available = resources.Plants
+		case shared.ResourceEnergy:
+			available = resources.Energy
+		case shared.ResourceHeat:
+			available = resources.Heat
+		default:
+			continue
+		}
+		if available < -output.Amount {
+			return fmt.Errorf("insufficient %s: need %d, have %d", output.ResourceType, -output.Amount, available)
+		}
+	}
+	return nil
 }

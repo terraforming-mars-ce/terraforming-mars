@@ -7,7 +7,9 @@ import (
 
 	"terraforming-mars-backend/internal/action/confirmation"
 	"terraforming-mars-backend/internal/action/turn_management"
+	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/deck"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/test/testutil"
@@ -105,7 +107,7 @@ func TestDeckRecycling_SoldPatents(t *testing.T) {
 		Source:         "sell-patents",
 	})
 
-	action := confirmation.NewConfirmSellPatentsAction(repo, log)
+	action := confirmation.NewConfirmSellPatentsAction(repo, nil, log)
 	err := action.Execute(ctx, testGame.ID(), playerID, cardsInHand)
 	testutil.AssertNoError(t, err, "confirm sell patents")
 
@@ -207,6 +209,41 @@ func TestDeckRecycling_AutoShuffleOnEmptyDrawPile(t *testing.T) {
 	testutil.AssertEqual(t, 1, gameDeck.ShuffleCount(), "shuffle count should be 1")
 }
 
+func TestDeckRecycling_PreludeCardsNeverReshuffledIntoProjectDeck(t *testing.T) {
+	ctx := context.Background()
+
+	projectCards := []string{"card-a", "card-b"}
+	preludeCards := []string{"P01", "P02", "P03", "P04"}
+	gameDeck := deck.NewDeck("test-game", projectCards, nil, preludeCards)
+
+	// Draw all project cards to empty the draw pile
+	drawn, err := gameDeck.DrawProjectCards(ctx, 2)
+	testutil.AssertNoError(t, err, "initial draw")
+	testutil.AssertEqual(t, 2, len(drawn), "should draw 2 cards")
+
+	// Simulate unselected preludes being removed (the fix) and project cards being discarded
+	err = gameDeck.Remove(ctx, []string{"P03", "P04"})
+	testutil.AssertNoError(t, err, "remove unselected preludes")
+	err = gameDeck.Discard(ctx, drawn)
+	testutil.AssertNoError(t, err, "discard project cards")
+
+	// Trigger reshuffle by drawing from empty draw pile
+	redrawn, err := gameDeck.DrawProjectCards(ctx, 2)
+	testutil.AssertNoError(t, err, "draw after reshuffle")
+	testutil.AssertEqual(t, 2, len(redrawn), "should draw 2 cards after reshuffle")
+
+	// Verify no prelude cards appear in the drawn cards
+	for _, cardID := range redrawn {
+		testutil.AssertFalse(t, slices.Contains(preludeCards, cardID),
+			"reshuffled draw pile must not contain prelude card "+cardID)
+	}
+
+	// Verify prelude cards are in removed pile, not discard pile
+	removedCards := gameDeck.RemovedCards()
+	testutil.AssertTrue(t, slices.Contains(removedCards, "P03"), "P03 should be in removed cards")
+	testutil.AssertTrue(t, slices.Contains(removedCards, "P04"), "P04 should be in removed cards")
+}
+
 func TestDeckRecycling_AutoShuffleFailsWhenBothPilesEmpty(t *testing.T) {
 	ctx := context.Background()
 
@@ -220,4 +257,53 @@ func TestDeckRecycling_AutoShuffleFailsWhenBothPilesEmpty(t *testing.T) {
 	// Both draw pile and discard pile are empty — draw should fail
 	_, err = gameDeck.DrawProjectCards(ctx, 1)
 	testutil.AssertError(t, err, "draw from empty deck should fail")
+}
+
+func TestDeckRecycling_RealDeckNeverDealsPreludeOrCorporation(t *testing.T) {
+	ctx := context.Background()
+	registry := testutil.GetCardDB()
+
+	projectCardIDs, corpIDs, preludeIDs := cards.GetCardIDsByPacks(registry, []string{"base-game", "prelude"})
+	testutil.AssertTrue(t, len(projectCardIDs) > 0, "should have project cards")
+	testutil.AssertTrue(t, len(preludeIDs) > 0, "should have prelude cards")
+	testutil.AssertTrue(t, len(corpIDs) > 0, "should have corporation cards")
+
+	gameDeck := deck.NewDeck("test-game", projectCardIDs, corpIDs, preludeIDs)
+
+	// Build lookup sets for non-project card types
+	preludeSet := make(map[string]bool, len(preludeIDs))
+	for _, id := range preludeIDs {
+		preludeSet[id] = true
+	}
+	corpSet := make(map[string]bool, len(corpIDs))
+	for _, id := range corpIDs {
+		corpSet[id] = true
+	}
+
+	// Draw every project card from the deck
+	drawn, err := gameDeck.DrawProjectCards(ctx, len(projectCardIDs))
+	testutil.AssertNoError(t, err, "draw all project cards")
+
+	for _, cardID := range drawn {
+		card, lookupErr := registry.GetByID(cardID)
+		testutil.AssertNoError(t, lookupErr, "card should exist in registry: "+cardID)
+		testutil.AssertFalse(t, card.Type == gamecards.CardTypePrelude,
+			"drew prelude card from project deck: "+cardID+" ("+card.Name+")")
+		testutil.AssertFalse(t, card.Type == gamecards.CardTypeCorporation,
+			"drew corporation card from project deck: "+cardID+" ("+card.Name+")")
+	}
+
+	// Discard all drawn cards, then reshuffle and draw them all again
+	err = gameDeck.Discard(ctx, drawn)
+	testutil.AssertNoError(t, err, "discard all cards")
+
+	redrawn, err := gameDeck.DrawProjectCards(ctx, len(projectCardIDs))
+	testutil.AssertNoError(t, err, "redraw all project cards after reshuffle")
+
+	for _, cardID := range redrawn {
+		testutil.AssertFalse(t, preludeSet[cardID],
+			"reshuffled deck contains prelude card: "+cardID)
+		testutil.AssertFalse(t, corpSet[cardID],
+			"reshuffled deck contains corporation card: "+cardID)
+	}
 }

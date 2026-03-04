@@ -56,6 +56,26 @@ const getCardBadgeType = (type: string): "peek" | "take" | "buy" | "discard" | "
 const isAttackTarget = (target: string | undefined): boolean =>
   target === "any-player" || target === "all-opponents" || (target?.startsWith("steal-") ?? false);
 
+const PRODUCTION_TYPES = new Set([
+  "credit-production",
+  "steel-production",
+  "titanium-production",
+  "plant-production",
+  "energy-production",
+  "heat-production",
+]);
+
+const isAnyProductionChoicePattern = (behavior: any): boolean => {
+  if (!behavior.choices || behavior.choices.length < 4) return false;
+  return behavior.choices.every((choice: any) => {
+    if (choice.inputs && choice.inputs.length > 0) return false;
+    if (!choice.outputs || choice.outputs.length !== 1) return false;
+    const output = choice.outputs[0];
+    const type = output.resourceType || output.type || "";
+    return PRODUCTION_TYPES.has(type) && (output.amount === 1 || output.amount === -1);
+  });
+};
+
 const renderChoiceOutputs = (
   outputs: any[],
   choiceIndex: number,
@@ -108,6 +128,46 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
 }) => {
   // Handle choice-based behaviors
   if (behavior.choices && behavior.choices.length > 0) {
+    // Compact rendering for "any standard production +1" patterns (e.g. Robinson Industries)
+    if (isAnyProductionChoicePattern(behavior)) {
+      const hasInputs = behavior.inputs && behavior.inputs.length > 0;
+      return (
+        <div className="flex items-center justify-center gap-2 w-full">
+          {hasInputs ? (
+            <div className="flex items-center gap-[3px]">
+              {behavior.inputs.map((input: any, inputIndex: number) => {
+                const displayInfo = analyzeResourceDisplayWithConstraints(input, 3, false);
+                return (
+                  <ResourceDisplay
+                    key={`input-${inputIndex}`}
+                    displayInfo={displayInfo}
+                    isInput={true}
+                    resource={input}
+                    isGroupedWithOtherNegatives={false}
+                    context="action"
+                    isAffordable={isResourceAffordable(input, true)}
+                    tileScaleInfo={tileScaleInfo}
+                  />
+                );
+              })}
+            </div>
+          ) : !hideActionChip ? (
+            <span className="text-[10px] font-semibold text-white bg-[rgba(33,150,243,0.5)] px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
+              Action
+            </span>
+          ) : null}
+          <div className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
+            →
+          </div>
+          <div className="bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] flex items-center">
+            <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold rounded px-1 py-[1px] leading-tight">
+              SR
+            </span>
+          </div>
+        </div>
+      );
+    }
+
     // Check if choices only have inputs (no outputs) and behavior has outputs
     const choicesOnlyHaveInputs = behavior.choices.every(
       (choice: any) => !choice.outputs || choice.outputs.length === 0,
