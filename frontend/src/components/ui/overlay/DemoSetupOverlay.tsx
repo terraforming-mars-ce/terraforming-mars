@@ -510,6 +510,8 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
                             }
                           : undefined,
                         behaviors: corp.behaviors,
+                        tags: corp.tags,
+                        vpConditions: corp.vpConditions,
                         logoPath: undefined,
                       }}
                       isSelected={selectedCorporationId === corp.id}

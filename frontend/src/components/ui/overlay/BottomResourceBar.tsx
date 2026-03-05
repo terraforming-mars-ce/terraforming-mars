@@ -539,6 +539,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                           startingProduction: displayCorporation.startingProduction,
                           startingResources: displayCorporation.startingResources,
                           behaviors: displayCorporation.behaviors,
+                          tags: displayCorporation.tags,
+                          vpConditions: displayCorporation.vpConditions,
                         }}
                         isSelected={false}
                         onSelect={() => {}}
