@@ -7,6 +7,7 @@ import OrChip from "./OrChip.tsx";
 import Slash from "./Slash.tsx";
 import { getIconPath, getTagIconPath } from "@/utils/iconStore.ts";
 import { analyzeCardOutputs } from "../utils/displayAnalysis.ts";
+import ChoiceRequirementBox from "./ChoiceRequirementBox.tsx";
 
 interface IconDisplayInfo {
   resourceType: string;
@@ -384,49 +385,53 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
             return (
               <React.Fragment key={`choice-compact-${choiceIndex}`}>
                 {choiceIndex > 0 && (behavior.choices.length >= 3 ? <Slash /> : <OrChip />)}
-                {allChoiceOutputsAreProduction ? (
-                  <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-                    {choiceOutputs.map((output: any, outputIndex: number) => {
-                      const displayInfo = analyzeResourceDisplayWithConstraints(
-                        output,
-                        7,
-                        forceNumberMode,
-                      );
-                      return (
-                        <ResourceDisplay
-                          key={`choice-${choiceIndex}-output-${outputIndex}`}
-                          displayInfo={displayInfo}
-                          isInput={false}
-                          resource={output}
-                          isGroupedWithOtherNegatives={false}
-                          context="production"
-                          isAffordable={isResourceAffordable(output, false)}
-                          tileScaleInfo={tileScaleInfo}
-                        />
-                      );
-                    })}
-                  </div>
-                ) : (
-                  choiceOutputs.map((output: any, outputIndex: number) => {
-                    const displayInfo = analyzeResourceDisplayWithConstraints(
-                      output,
-                      7,
-                      forceNumberMode,
-                    );
-                    return (
-                      <ResourceDisplay
-                        key={`choice-${choiceIndex}-output-${outputIndex}`}
-                        displayInfo={displayInfo}
-                        isInput={false}
-                        resource={output}
-                        isGroupedWithOtherNegatives={false}
-                        context="standalone"
-                        isAffordable={isResourceAffordable(output, false)}
-                        tileScaleInfo={tileScaleInfo}
-                      />
-                    );
-                  })
-                )}
+                <ChoiceRequirementBox requirements={choice.requirements}>
+                  {allChoiceOutputsAreProduction ? (
+                    <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+                      {choiceOutputs.map((output: any, outputIndex: number) => {
+                        const displayInfo = analyzeResourceDisplayWithConstraints(
+                          output,
+                          7,
+                          forceNumberMode,
+                        );
+                        return (
+                          <ResourceDisplay
+                            key={`choice-${choiceIndex}-output-${outputIndex}`}
+                            displayInfo={displayInfo}
+                            isInput={false}
+                            resource={output}
+                            isGroupedWithOtherNegatives={false}
+                            context="production"
+                            isAffordable={isResourceAffordable(output, false)}
+                            tileScaleInfo={tileScaleInfo}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex gap-[3px] items-center">
+                      {choiceOutputs.map((output: any, outputIndex: number) => {
+                        const displayInfo = analyzeResourceDisplayWithConstraints(
+                          output,
+                          7,
+                          forceNumberMode,
+                        );
+                        return (
+                          <ResourceDisplay
+                            key={`choice-${choiceIndex}-output-${outputIndex}`}
+                            displayInfo={displayInfo}
+                            isInput={false}
+                            resource={output}
+                            isGroupedWithOtherNegatives={false}
+                            context="standalone"
+                            isAffordable={isResourceAffordable(output, false)}
+                            tileScaleInfo={tileScaleInfo}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </ChoiceRequirementBox>
               </React.Fragment>
             );
           })}
@@ -567,24 +572,26 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
             {behavior.choices.map((choice: any, choiceIndex: number) => (
               <React.Fragment key={`prod-choice-${choiceIndex}`}>
                 {choiceIndex > 0 && (behavior.choices.length >= 3 ? <Slash /> : <OrChip />)}
-                <div className="flex gap-[3px] items-center">
-                  {choice.outputs.map((output: any, outputIndex: number) => {
-                    const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                    return (
-                      <React.Fragment key={`prod-choice-${choiceIndex}-output-${outputIndex}`}>
-                        <ResourceDisplay
-                          displayInfo={displayInfo}
-                          isInput={false}
-                          resource={output}
-                          isGroupedWithOtherNegatives={false}
-                          context="standalone"
-                          isAffordable={isResourceAffordable(output, false)}
-                          tileScaleInfo={tileScaleInfo}
-                        />
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
+                <ChoiceRequirementBox requirements={choice.requirements}>
+                  <div className="flex gap-[3px] items-center">
+                    {choice.outputs.map((output: any, outputIndex: number) => {
+                      const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
+                      return (
+                        <React.Fragment key={`prod-choice-${choiceIndex}-output-${outputIndex}`}>
+                          <ResourceDisplay
+                            displayInfo={displayInfo}
+                            isInput={false}
+                            resource={output}
+                            isGroupedWithOtherNegatives={false}
+                            context="standalone"
+                            isAffordable={isResourceAffordable(output, false)}
+                            tileScaleInfo={tileScaleInfo}
+                          />
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                </ChoiceRequirementBox>
               </React.Fragment>
             ))}
           </div>
@@ -599,91 +606,93 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
         {behavior.choices.map((choice: any, choiceIndex: number) => (
           <React.Fragment key={`attack-choice-${choiceIndex}`}>
             {choiceIndex > 0 && (behavior.choices.length >= 3 ? <Slash /> : <OrChip />)}
-            {choice.outputs &&
-              choice.outputs.map((output: any, outputIndex: number) => {
-                const amount = Math.abs(output.amount || 1);
-                const resourceType = output.resourceType || output.type;
-                const isNegative = (output.amount || 0) < 0;
-                const isAttack =
-                  output.target === "any-player" ||
-                  output.target === "any-card" ||
-                  output.target?.startsWith("steal-");
+            <ChoiceRequirementBox requirements={choice.requirements}>
+              {choice.outputs &&
+                choice.outputs.map((output: any, outputIndex: number) => {
+                  const amount = Math.abs(output.amount || 1);
+                  const resourceType = output.resourceType || output.type;
+                  const isNegative = (output.amount || 0) < 0;
+                  const isAttack =
+                    output.target === "any-player" ||
+                    output.target === "any-card" ||
+                    output.target?.startsWith("steal-");
 
-                if (resourceType === "credit") {
+                  if (resourceType === "credit") {
+                    return (
+                      <div
+                        key={`attack-choice-${choiceIndex}-output-${outputIndex}`}
+                        className="flex items-center gap-0.5"
+                      >
+                        {isNegative && (
+                          <span className="relative z-10 text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+                            -
+                          </span>
+                        )}
+                        <GameIcon
+                          iconType="credit"
+                          amount={amount}
+                          size="small"
+                          isAttack={isAttack}
+                        />
+                      </div>
+                    );
+                  }
+
+                  // Card resources use CardIcon for proper rendering (no "1" prefix for amount=1)
+                  const isCardResourceType =
+                    resourceType === "card-draw" ||
+                    resourceType === "card-peek" ||
+                    resourceType === "card-take" ||
+                    resourceType === "card-buy" ||
+                    resourceType === "card-discard";
+
+                  if (isCardResourceType) {
+                    const badgeType =
+                      resourceType === "card-peek"
+                        ? "peek"
+                        : resourceType === "card-take"
+                          ? "take"
+                          : resourceType === "card-buy"
+                            ? "buy"
+                            : resourceType === "card-discard"
+                              ? "discard"
+                              : "none";
+                    const isCardAttack =
+                      output.target === "any-player" ||
+                      output.target === "all-opponents" ||
+                      output.target?.startsWith("steal-");
+                    return (
+                      <CardIcon
+                        key={`attack-choice-${choiceIndex}-output-${outputIndex}`}
+                        amount={amount}
+                        badgeType={badgeType}
+                        isAffordable={isResourceAffordable(output, false)}
+                        isAttack={isCardAttack}
+                        totalCardTypes={1}
+                      />
+                    );
+                  }
+
                   return (
                     <div
                       key={`attack-choice-${choiceIndex}-output-${outputIndex}`}
-                      className="flex items-center gap-0.5"
+                      className="flex gap-[3px] items-center"
                     >
-                      {isNegative && (
-                        <span className="relative z-10 text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                          -
-                        </span>
-                      )}
-                      <GameIcon
-                        iconType="credit"
-                        amount={amount}
-                        size="small"
+                      <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+                        {isNegative ? `-${amount}` : amount}
+                      </span>
+                      <BehaviorIcon
+                        resourceType={resourceType}
+                        isProduction={false}
                         isAttack={isAttack}
+                        context="standalone"
+                        isAffordable={isResourceAffordable(output, false)}
+                        tileScaleInfo={tileScaleInfo}
                       />
                     </div>
                   );
-                }
-
-                // Card resources use CardIcon for proper rendering (no "1" prefix for amount=1)
-                const isCardResourceType =
-                  resourceType === "card-draw" ||
-                  resourceType === "card-peek" ||
-                  resourceType === "card-take" ||
-                  resourceType === "card-buy" ||
-                  resourceType === "card-discard";
-
-                if (isCardResourceType) {
-                  const badgeType =
-                    resourceType === "card-peek"
-                      ? "peek"
-                      : resourceType === "card-take"
-                        ? "take"
-                        : resourceType === "card-buy"
-                          ? "buy"
-                          : resourceType === "card-discard"
-                            ? "discard"
-                            : "none";
-                  const isCardAttack =
-                    output.target === "any-player" ||
-                    output.target === "all-opponents" ||
-                    output.target?.startsWith("steal-");
-                  return (
-                    <CardIcon
-                      key={`attack-choice-${choiceIndex}-output-${outputIndex}`}
-                      amount={amount}
-                      badgeType={badgeType}
-                      isAffordable={isResourceAffordable(output, false)}
-                      isAttack={isCardAttack}
-                      totalCardTypes={1}
-                    />
-                  );
-                }
-
-                return (
-                  <div
-                    key={`attack-choice-${choiceIndex}-output-${outputIndex}`}
-                    className="flex gap-[3px] items-center"
-                  >
-                    <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                      {isNegative ? `-${amount}` : amount}
-                    </span>
-                    <BehaviorIcon
-                      resourceType={resourceType}
-                      isProduction={false}
-                      isAttack={isAttack}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                    />
-                  </div>
-                );
-              })}
+                })}
+            </ChoiceRequirementBox>
           </React.Fragment>
         ))}
       </div>

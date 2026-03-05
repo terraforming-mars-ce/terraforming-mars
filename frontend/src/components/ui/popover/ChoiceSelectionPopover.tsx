@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChoiceDto, CardBehaviorDto, ResourcesDto } from "../../../types/generated/api-types.ts";
 import BehaviorSection from "../cards/BehaviorSection";
+import { renderRequirementItems } from "../cards/BehaviorSection/components/ChoiceRequirementBox.tsx";
 import { Z_INDEX } from "@/constants/zIndex";
 
 interface ChoiceItem {
@@ -224,9 +225,19 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
                     <span className="max-w-[140px] truncate">{choice.errors[0].message}</span>
                   </div>
                 )}
-                <div className="text-white/60 text-[11px] font-semibold uppercase tracking-wider mb-3 text-shadow-glow">
+                <div className="text-white/60 text-[11px] font-semibold uppercase tracking-wider mb-1 text-shadow-glow">
                   Choice {index + 1}
                 </div>
+                {choice.requirements &&
+                  choice.requirements.items &&
+                  choice.requirements.items.length > 0 && (
+                    <div
+                      className={`flex items-center gap-1 mb-2 text-[11px] font-semibold ${isSelectable ? "text-white/70" : "text-red-400/80"}`}
+                    >
+                      <span>Requires:</span>
+                      {renderRequirementItems(choice.requirements.items)}
+                    </div>
+                  )}
                 <div className="flex items-center justify-center w-full [&>div]:!relative [&>div]:!bottom-auto [&>div]:!left-auto [&>div]:!right-auto [&>div]:w-auto [&>div]:max-w-full [&>div:hover]:!transform-none [&>div:hover]:!shadow-none [&>div:hover]:!filter-none">
                   <BehaviorSection
                     behaviors={[behaviorForChoice]}
