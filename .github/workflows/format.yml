@@ -42,20 +42,5 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Run formatters
-        run: make format
-
-      - name: Check for formatting changes
-        run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "❌ Code formatting issues detected!"
-            echo "The following files need formatting:"
-            git status --porcelain
-            echo ""
-            echo "Please run 'make format' locally and commit the changes."
-            echo "Git diff:"
-            git diff
-            exit 1
-          else
-            echo "✅ All code is properly formatted"
-          fi
+      - name: Check formatting
+        run: make format-check

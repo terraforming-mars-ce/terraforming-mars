@@ -1,7 +1,7 @@
 # Terraforming Mars - Unified Development Makefile
 # Run from project root directory
 
-.PHONY: help run frontend backend kill lint typecheck test test-clean test-backend test-frontend test-verbose test-coverage clean build format format-backend format-frontend install-cli generate prepare-for-commit deploy-pi mcp-setup bot-setup bot-run deps
+.PHONY: help run frontend backend kill lint typecheck test test-clean test-backend test-frontend test-verbose test-coverage clean build format format-check format-backend format-frontend install-cli generate prepare-for-commit deploy-pi mcp-setup bot-setup bot-run deps
 
 # Default target - show help
 help:
@@ -125,6 +125,15 @@ format-frontend:
 	@echo "🎨 Formatting frontend TypeScript code..."
 	cd frontend && npm run format:write
 	@echo "✅ Frontend formatting complete"
+
+format-check:
+	@echo "🔍 Checking code formatting..."
+	@FAILED=0; \
+	RESULT=$$(cd backend && find . -name "*.go" -exec gofmt -s -l {} \;); \
+	if [ -n "$$RESULT" ]; then echo "❌ Backend formatting issues:"; echo "$$RESULT"; FAILED=1; fi; \
+	cd frontend && npm run format || FAILED=1; \
+	if [ "$$FAILED" -eq 1 ]; then exit 1; fi
+	@echo "✅ All code is properly formatted"
 
 # Pre-commit preparation
 prepare-for-commit: format lint
