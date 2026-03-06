@@ -1,12 +1,18 @@
-import React, { useRef, useState } from "react";
-import TreeNode from "./TreeNode.tsx";
-import AdminCommandPanel from "./AdminCommandPanel.tsx";
-import World3DSettingsPanel from "./World3DSettingsPanel.tsx";
+import React, { useRef, useState, useEffect } from "react";
 import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
 import { GameDto } from "../../../types/generated/api-types.ts";
+import SidebarNav, { type ActiveItem } from "./SidebarNav.tsx";
+import GameStatePanel from "./panels/GameStatePanel.tsx";
+import PlayerResourcesPage from "./panels/PlayerResourcesPage.tsx";
+import PlayerBehaviorPage from "./panels/PlayerBehaviorPage.tsx";
+import PlaceTilePage from "./panels/PlaceTilePage.tsx";
+import GameCommandsPage from "./panels/GameCommandsPage.tsx";
+import World3DCameraPage from "./panels/World3DCameraPage.tsx";
+import World3DSunPage from "./panels/World3DSunPage.tsx";
+import World3DSkyboxPage from "./panels/World3DSkyboxPage.tsx";
 
 const WINDOW_ID = "admin-tools";
-const WINDOW_WIDTH = 600;
+const WINDOW_WIDTH = 780;
 const EXCLUDE_SELECTORS = [".tree-expand-toggle", ".tree-node-content", ".debug-content-area"];
 
 interface DebugDropdownProps {
@@ -23,10 +29,8 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
   changedPaths = new Set(),
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [expandAll, setExpandAll] = useState(false);
-  const [expandAllSignal, setExpandAllSignal] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<"state" | "admin" | "3d-world">("state");
+  const [activeItem, setActiveItem] = useState<ActiveItem>("game-state");
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
 
   const { position, isDragging, handleMouseDown } = useWindowDrag({
     windowId: WINDOW_ID,
@@ -38,63 +42,63 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
 
   const { getZIndex } = useWindowManager();
 
-  if (!isVisible) return null;
+  const allPlayers = gameState ? [gameState.currentPlayer, ...gameState.otherPlayers] : [];
 
-  const handleCopyAll = () => {
-    if (gameState) {
-      navigator.clipboard.writeText(JSON.stringify(gameState, null, 2));
+  useEffect(() => {
+    if (allPlayers.length > 0 && selectedPlayerIds.length === 0) {
+      setSelectedPlayerIds([allPlayers[0].id]);
+    }
+  }, [allPlayers.length]);
+
+  if (!isVisible) {
+    return null;
+  }
+
+  const is3DItem = (item: ActiveItem) => item.startsWith("3d-");
+  const isCommandItem = (item: ActiveItem) => item !== "game-state" && !is3DItem(item);
+
+  const renderContent = () => {
+    if (activeItem === "game-state") {
+      return <GameStatePanel gameState={gameState} changedPaths={changedPaths} />;
+    }
+
+    if (activeItem === "3d-camera") {
+      return <World3DCameraPage />;
+    }
+    if (activeItem === "3d-sun") {
+      return <World3DSunPage />;
+    }
+    if (activeItem === "3d-skybox") {
+      return <World3DSkyboxPage />;
+    }
+
+    if (!gameState) {
+      return (
+        <div style={{ color: "#666", textAlign: "center", padding: "20px" }}>
+          No game state available
+        </div>
+      );
+    }
+
+    const playerProps = {
+      gameState,
+      selectedPlayerIds,
+      onPlayerChange: setSelectedPlayerIds,
+    };
+
+    switch (activeItem) {
+      case "player-resources":
+        return <PlayerResourcesPage {...playerProps} />;
+      case "player-behavior":
+        return <PlayerBehaviorPage {...playerProps} />;
+      case "place-tile":
+        return <PlaceTilePage {...playerProps} />;
+      case "game-commands":
+        return <GameCommandsPage gameState={gameState} />;
+      default:
+        return null;
     }
   };
-
-  const handleExportJSON = () => {
-    if (gameState) {
-      const dataStr = JSON.stringify(gameState, null, 2);
-      const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-      const exportFileDefaultName = `game_state_${Date.now()}.json`;
-
-      const linkElement = document.createElement("a");
-      linkElement.setAttribute("href", dataUri);
-      linkElement.setAttribute("download", exportFileDefaultName);
-      linkElement.click();
-    }
-  };
-
-  const filterGameState = (obj: any, search: string): any => {
-    if (!search) return obj;
-
-    const searchLower = search.toLowerCase();
-
-    if (typeof obj !== "object" || obj === null) {
-      return String(obj).toLowerCase().includes(searchLower) ? obj : undefined;
-    }
-
-    if (Array.isArray(obj)) {
-      const filtered = obj
-        .map((item) => filterGameState(item, search))
-        .filter((item) => item !== undefined);
-      return filtered.length > 0 ? filtered : undefined;
-    }
-
-    const filtered: any = {};
-    let hasMatch = false;
-
-    for (const [key, value] of Object.entries(obj)) {
-      if (key.toLowerCase().includes(searchLower)) {
-        filtered[key] = value;
-        hasMatch = true;
-      } else {
-        const filteredValue = filterGameState(value, search);
-        if (filteredValue !== undefined) {
-          filtered[key] = filteredValue;
-          hasMatch = true;
-        }
-      }
-    }
-
-    return hasMatch ? filtered : undefined;
-  };
-
-  const displayState = searchTerm ? filterGameState(gameState, searchTerm) : gameState;
 
   return (
     <div
@@ -105,18 +109,17 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
         position: "fixed",
         top: `${position.y}px`,
         left: `${position.x}px`,
-        width: "600px",
+        width: `${WINDOW_WIDTH}px`,
         maxHeight: "70vh",
-        background: "rgba(0, 0, 0, 0.95)",
-        border: "2px solid #9b59b6",
+        background: "rgb(0, 0, 0)",
+        border: "2px solid #3b82f6",
         borderRadius: "8px",
-        padding: "16px",
         zIndex: getZIndex(WINDOW_ID),
-        overflow: activeTab === "admin" ? "visible" : "hidden",
+        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        boxShadow: "0 4px 20px rgba(155, 89, 182, 0.3)",
-        cursor: isDragging ? "grabbing" : "default",
+        boxShadow: "0 4px 20px rgba(59, 130, 246, 0.3)",
+        cursor: isDragging ? "default" : "default",
         transition: isDragging ? "none" : "top 0.2s ease-out, left 0.2s ease-out",
       }}
     >
@@ -125,24 +128,24 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "12px",
-          paddingBottom: "12px",
+          padding: "12px 16px",
           borderBottom: "1px solid #333",
           userSelect: "none",
-          cursor: "grab",
+          cursor: "default",
         }}
       >
         <h3
+          className="font-orbitron"
           style={{
             margin: 0,
-            color: "#9b59b6",
+            color: "#3b82f6",
             fontSize: "16px",
             display: "flex",
             alignItems: "center",
             gap: "8px",
           }}
         >
-          <span style={{ opacity: 0.7, fontSize: "12px" }}>⋮⋮</span>
+          <span style={{ opacity: 0.7, fontSize: "12px" }}>&#x22ee;&#x22ee;</span>
           Admin Tools
         </h3>
         <button
@@ -164,207 +167,31 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
       <div
         style={{
           display: "flex",
-          marginBottom: "12px",
-          borderBottom: "1px solid #333",
+          flex: 1,
+          overflow: "hidden",
+          minHeight: 0,
         }}
       >
-        <button
-          onClick={() => setActiveTab("state")}
-          onMouseDown={(e) => e.stopPropagation()}
+        <SidebarNav
+          activeItem={activeItem}
+          onSelectItem={setActiveItem}
+          developmentMode={gameState?.settings.developmentMode ?? false}
+        />
+
+        <div
+          className="debug-content-area"
           style={{
             flex: 1,
-            padding: "8px",
-            background: activeTab === "state" ? "rgba(155, 89, 182, 0.3)" : "transparent",
-            border: "none",
-            borderBottom: activeTab === "state" ? "2px solid #9b59b6" : "2px solid transparent",
-            color: activeTab === "state" ? "#9b59b6" : "#abb2bf",
-            fontSize: "12px",
-            cursor: "pointer",
-            transition: "all 0.2s",
+            overflow: isCommandItem(activeItem) ? "visible" : "auto",
+            padding: "16px",
+            display: "flex",
+            flexDirection: "column",
           }}
-        >
-          Game State
-        </button>
-        {gameState?.settings.developmentMode && (
-          <button
-            onClick={() => setActiveTab("admin")}
-            onMouseDown={(e) => e.stopPropagation()}
-            style={{
-              flex: 1,
-              padding: "8px",
-              background: activeTab === "admin" ? "rgba(155, 89, 182, 0.3)" : "transparent",
-              border: "none",
-              borderBottom: activeTab === "admin" ? "2px solid #9b59b6" : "2px solid transparent",
-              color: activeTab === "admin" ? "#9b59b6" : "#abb2bf",
-              fontSize: "12px",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-          >
-            Commands
-          </button>
-        )}
-        <button
-          onClick={() => setActiveTab("3d-world")}
           onMouseDown={(e) => e.stopPropagation()}
-          style={{
-            flex: 1,
-            padding: "8px",
-            background: activeTab === "3d-world" ? "rgba(155, 89, 182, 0.3)" : "transparent",
-            border: "none",
-            borderBottom: activeTab === "3d-world" ? "2px solid #9b59b6" : "2px solid transparent",
-            color: activeTab === "3d-world" ? "#9b59b6" : "#abb2bf",
-            fontSize: "12px",
-            cursor: "pointer",
-            transition: "all 0.2s",
-          }}
         >
-          3D World
-        </button>
+          {renderContent()}
+        </div>
       </div>
-
-      {activeTab === "state" && (
-        <>
-          <div
-            style={{
-              marginBottom: "12px",
-              display: "flex",
-              gap: "8px",
-              cursor: "grab",
-            }}
-          >
-            <input
-              type="text"
-              placeholder="Search keys or values..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onMouseDown={(e) => e.stopPropagation()}
-              style={{
-                flex: 1,
-                padding: "6px 10px",
-                background: "rgba(255, 255, 255, 0.1)",
-                border: "1px solid #333",
-                borderRadius: "4px",
-                color: "white",
-                fontSize: "13px",
-              }}
-            />
-            <button
-              onClick={() => {
-                const newExpandAll = !expandAll;
-                setExpandAll(newExpandAll);
-                setExpandAllSignal(Date.now());
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              style={{
-                padding: "6px 12px",
-                background: "rgba(155, 89, 182, 0.2)",
-                border: "1px solid #9b59b6",
-                borderRadius: "4px",
-                color: "#9b59b6",
-                fontSize: "12px",
-                cursor: "pointer",
-              }}
-            >
-              {expandAll ? "Collapse" : "Expand"} All
-            </button>
-            <button
-              onClick={handleCopyAll}
-              onMouseDown={(e) => e.stopPropagation()}
-              style={{
-                padding: "6px 12px",
-                background: "rgba(155, 89, 182, 0.2)",
-                border: "1px solid #9b59b6",
-                borderRadius: "4px",
-                color: "#9b59b6",
-                fontSize: "12px",
-                cursor: "pointer",
-              }}
-            >
-              Copy JSON
-            </button>
-            <button
-              onClick={handleExportJSON}
-              onMouseDown={(e) => e.stopPropagation()}
-              style={{
-                padding: "6px 12px",
-                background: "rgba(155, 89, 182, 0.2)",
-                border: "1px solid #9b59b6",
-                borderRadius: "4px",
-                color: "#9b59b6",
-                fontSize: "12px",
-                cursor: "pointer",
-              }}
-            >
-              Export
-            </button>
-          </div>
-
-          <div
-            className="debug-content-area"
-            style={{
-              flex: 1,
-              overflow: "auto",
-              background: "rgba(0, 0, 0, 0.5)",
-              padding: "12px",
-              borderRadius: "4px",
-              border: "1px solid #222",
-            }}
-          >
-            {displayState ? (
-              <div>
-                {Object.entries(displayState).map(([key, value]) => (
-                  <TreeNode
-                    key={key}
-                    nodeKey={key}
-                    value={value}
-                    changedPaths={changedPaths}
-                    expandAllSignal={expandAllSignal}
-                    shouldExpandAll={expandAll}
-                  />
-                ))}
-              </div>
-            ) : gameState ? (
-              <div style={{ color: "#666", textAlign: "center", padding: "20px" }}>
-                No matches found for "{searchTerm}"
-              </div>
-            ) : (
-              <div style={{ color: "#666", textAlign: "center", padding: "20px" }}>
-                No game state available
-              </div>
-            )}
-          </div>
-
-          <div
-            style={{
-              marginTop: "12px",
-              paddingTop: "12px",
-              borderTop: "1px solid #333",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              cursor: "grab",
-            }}
-          >
-            <span style={{ color: "#666", fontSize: "11px" }}>
-              {changedPaths.size > 0 && (
-                <span style={{ color: "#ffdf00" }}>
-                  {changedPaths.size} change{changedPaths.size === 1 ? "" : "s"} detected
-                </span>
-              )}
-            </span>
-            <span style={{ color: "#666", fontSize: "11px" }}>
-              Press Ctrl+D to toggle • Double-click values to copy
-            </span>
-          </div>
-        </>
-      )}
-
-      {activeTab === "admin" && gameState?.settings.developmentMode && (
-        <AdminCommandPanel gameState={gameState} onClose={onClose} />
-      )}
-
-      {activeTab === "3d-world" && <World3DSettingsPanel />}
     </div>
   );
 };

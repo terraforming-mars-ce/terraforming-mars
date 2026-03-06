@@ -2329,18 +2329,13 @@ export default function GameInterface() {
           case "5":
             event.preventDefault();
             break;
-          case "d":
-          case "D":
-            event.preventDefault();
-            setShowDebugDropdown(!showDebugDropdown);
-            break;
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [showDebugDropdown]);
+  }, []);
 
   const loadingMessage = (() => {
     if (

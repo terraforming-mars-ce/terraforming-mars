@@ -152,9 +152,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
   useEffect(() => {
     if (!contextMenu) return;
-    const handleClick = () => setContextMenu(null);
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
+    const handleDismiss = () => setContextMenu(null);
+    document.addEventListener("click", handleDismiss);
+    document.addEventListener("contextmenu", handleDismiss);
+    return () => {
+      document.removeEventListener("click", handleDismiss);
+      document.removeEventListener("contextmenu", handleDismiss);
+    };
   }, [contextMenu]);
 
   const buttonText = hasUnlimitedActions || actionsRemaining === 2 ? "PASS" : "SKIP";
