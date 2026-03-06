@@ -15,7 +15,13 @@ const VENUS_ORBIT = { minDistance: 2.4, maxDistance: 20, defaultRadius: 6.5 };
 
 export function PanControls() {
   const { camera, gl, size } = useThree();
-  const { settings, storedCameraState, setStoredCameraState } = useWorld3DSettings();
+  const {
+    settings,
+    storedCameraState,
+    setStoredCameraState,
+    cameraStateRef,
+    pendingCameraTransformRef,
+  } = useWorld3DSettings();
   const { activePlanet, isTransitioning, setIsTransitioning } = usePlanetFocus();
   const isPointerDown = useRef(false);
   const previousPointer = useRef({ x: 0, y: 0 });
@@ -64,6 +70,10 @@ export function PanControls() {
     }
 
     if (settings.freeCameraEnabled) {
+      cameraStateRef.current = {
+        position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+        rotation: { x: camera.rotation.x, y: camera.rotation.y, z: camera.rotation.z },
+      };
       return;
     }
 
@@ -98,9 +108,31 @@ export function PanControls() {
     spherical.phi += (targetSpherical.current.phi - spherical.phi) * lerpFactor;
     spherical.radius += (targetSpherical.current.radius - spherical.radius) * lerpFactor;
 
+    const pending = pendingCameraTransformRef.current;
+    if (pending) {
+      if (pending.position) {
+        camera.position.set(pending.position.x, pending.position.y, pending.position.z);
+        const newSpherical = new THREE.Spherical().setFromVector3(
+          camera.position.clone().sub(orbitCenter.current),
+        );
+        spherical.radius = newSpherical.radius;
+        spherical.phi = newSpherical.phi;
+        spherical.theta = newSpherical.theta;
+        targetSpherical.current.radius = newSpherical.radius;
+        targetSpherical.current.phi = newSpherical.phi;
+        targetSpherical.current.theta = newSpherical.theta;
+      }
+      pendingCameraTransformRef.current = null;
+    }
+
     const offset = new THREE.Vector3().setFromSpherical(spherical);
     camera.position.copy(orbitCenter.current).add(offset);
     camera.lookAt(orbitCenter.current);
+
+    cameraStateRef.current = {
+      position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      rotation: { x: camera.rotation.x, y: camera.rotation.y, z: camera.rotation.z },
+    };
 
     if (isTransitioning) {
       const centerDist = orbitCenter.current.distanceTo(targetOrbitCenter.current);
@@ -139,7 +171,7 @@ export function PanControls() {
       const deltaX = event.clientX - previousPointer.current.x;
       const deltaY = event.clientY - previousPointer.current.y;
 
-      const orbitSpeed = 0.001;
+      const orbitSpeed = 0.0003;
       const maxAngle = Math.PI / 4;
       const equator = Math.PI / 2;
 

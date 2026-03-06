@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { skyboxCache, SkyboxLoadingState } from "../services/SkyboxCache.ts";
 
 interface SpaceBackgroundContextType {
@@ -34,13 +34,13 @@ export function SpaceBackgroundProvider({ children }: { children: React.ReactNod
     return unsubscribe;
   }, []);
 
-  const preloadSkybox = async () => {
+  const preloadSkybox = useCallback(async () => {
     try {
       await skyboxCache.preload();
     } catch (error) {
       console.error("Failed to preload skybox:", error);
     }
-  };
+  }, []);
 
   const contextValue: SpaceBackgroundContextType = {
     isLoading: loadingState.isLoading,

@@ -24,10 +24,9 @@ function AnimatedCamera({ speed }: { speed: number }) {
     const time = state.clock.getElapsedTime();
 
     // Slow horizontal rotation (theta)
-    spherical.current.theta = time * speed * 0.05;
+    spherical.current.theta = time * speed * 0.00625;
 
-    // Subtle vertical oscillation (phi) - stays near equator
-    spherical.current.phi = Math.PI / 2 + Math.sin(time * speed * 0.03) * 0.1;
+    spherical.current.phi = Math.PI / 2 + Math.sin(time * speed * 0.00375) * 0.1;
 
     // Update camera position from spherical coordinates
     camera.position.setFromSpherical(spherical.current);
