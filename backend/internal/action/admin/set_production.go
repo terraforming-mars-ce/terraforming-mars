@@ -39,7 +39,7 @@ func (a *SetProductionAction) Execute(ctx context.Context, gameID string, player
 		zap.Int("energy", production.Energy),
 		zap.Int("heat", production.Heat),
 	)
-	log.Info("🏭 Admin: Setting player production")
+	log.Debug("Admin: Setting player production")
 
 	game, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -55,6 +55,6 @@ func (a *SetProductionAction) Execute(ctx context.Context, gameID string, player
 
 	player.Resources().SetProduction(production)
 
-	log.Info("✅ Admin set production completed")
+	log.Info("Admin set production completed")
 	return nil
 }

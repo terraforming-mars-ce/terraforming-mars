@@ -529,12 +529,56 @@ Use appropriate error categories for proper frontend display:
 
 ### Logging Guidelines
 
-- Use emojis for visual distinction
-- Include direction indicators (client→server, server→client)
-- 🔗 for connect, ⛓️‍💥 for disconnect
-- 📢 for broadcasts, 💬 for direct messages
-- 📡 for HTTP requests
-- 🚀 for startup, 🛑 for shutdown
+Production-quality logging. Every log line should earn its place at its level.
+
+**General Rules**
+- **No emoji** in log messages — keep logs clean and professional
+- **No "successfully"** — if it's logged at Info, success is implied. Write "Game created" not "Game created successfully"
+- Log messages should be concise, descriptive, and use sentence case (e.g., "Game created")
+- No decorative prefixes, symbols, or formatting in messages
+- Use structured fields (zap key-value pairs) for IDs, counts, and contextual data — not string interpolation
+- **No duplicate logging** — don't log the same error at multiple layers (action + handler + middleware). Let the outermost layer handle it
+
+**Info Level — One per operation**
+- Each action/operation gets exactly **one** Info log: the **final success summary**
+- Examples: "Game created successfully", "Card played successfully", "Player joined game successfully"
+- Also appropriate for: server start/stop, phase transitions (entering action phase, game ended)
+- **Never** log intermediate steps at Info (e.g., "Removing card from hand", "Deducting payment", "Processing behaviors")
+
+**Debug Level — Everything else**
+- Intermediate action steps (card removed from hand, payment deducted, behaviors processed)
+- "Attempting to..." or "Starting..." logs that precede the operation
+- Resource changes (added credits, increased production, etc.)
+- Corporation/card processing internals
+- HTTP request/response logging for successful requests
+- WebSocket connection established/closed
+- Query operations (get game, list cards, list games)
+- Handler entry/exit, message routing
+- Initialization details, configuration, setup steps
+- Bot/service internals (health checks, dispatching)
+
+**Warn Level**
+- Expected failure cases that callers should handle (game not found, player not found)
+- Invalid client input that was rejected
+- Recoverable errors or degraded functionality
+
+**Error Level**
+- Unexpected failures: database errors, serialization failures, internal invariant violations
+- Errors that indicate bugs or system problems, not user mistakes
+
+**Pattern for new actions:**
+```go
+func (a *MyAction) Execute(ctx context.Context, ...) (*Result, error) {
+    a.logger.Debug("Starting operation", zap.String("game_id", gameID))
+
+    // ... intermediate steps, all logged at Debug ...
+    a.logger.Debug("Intermediate step completed", zap.Int("count", n))
+
+    // One Info log at the end
+    a.logger.Info("Operation completed successfully", zap.String("game_id", gameID))
+    return result, nil
+}
+```
 
 ## Testing Guidelines
 

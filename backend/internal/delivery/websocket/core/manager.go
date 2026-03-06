@@ -31,7 +31,7 @@ func (m *Manager) RegisterConnection(connection *Connection) {
 	defer m.mu.Unlock()
 
 	m.connections[connection] = true
-	m.logger.Debug("🔗 Client connected to server", zap.String("connection_id", connection.ID))
+	m.logger.Debug("Client connected to server", zap.String("connection_id", connection.ID))
 }
 
 // UnregisterConnection unregisters a connection and handles cleanup.
@@ -69,7 +69,7 @@ func (m *Manager) UnregisterConnection(connection *Connection) (playerID, specta
 
 	connection.Close()
 
-	m.logger.Debug("⛓️‍💥 Client disconnected from server",
+	m.logger.Debug("Client disconnected from server",
 		zap.String("connection_id", connection.ID),
 		zap.String("player_id", playerID),
 		zap.String("spectator_id", spectatorID),
@@ -124,7 +124,7 @@ func (m *Manager) RemoveExistingPlayerConnection(playerID, gameID string, exclud
 	var existingConnection *Connection
 	var matchingConnections []*Connection
 
-	m.logger.Debug("🔍 Starting connection cleanup search",
+	m.logger.Debug("Starting connection cleanup search",
 		zap.String("player_id", playerID),
 		zap.String("game_id", gameID),
 		zap.String("exclude_connection_id", excludeConnection.ID),
@@ -135,7 +135,7 @@ func (m *Manager) RemoveExistingPlayerConnection(playerID, gameID string, exclud
 		if existingPlayerID == playerID && existingGameID == gameID {
 			matchingConnections = append(matchingConnections, connection)
 
-			m.logger.Debug("🔎 Found matching connection",
+			m.logger.Debug("Found matching connection",
 				zap.String("connection_id", connection.ID),
 				zap.Uintptr("connection_ptr", uintptr(unsafe.Pointer(connection))),
 				zap.Bool("is_excluded", connection == excludeConnection),
@@ -149,19 +149,19 @@ func (m *Manager) RemoveExistingPlayerConnection(playerID, gameID string, exclud
 		}
 	}
 
-	m.logger.Debug("🔎 Connection search complete",
+	m.logger.Debug("Connection search complete",
 		zap.Int("total_matching", len(matchingConnections)),
 		zap.Bool("found_to_cleanup", existingConnection != nil))
 
 	if existingConnection == nil {
-		m.logger.Debug("🔍 No existing connection to clean up for reconnecting player",
+		m.logger.Debug("No existing connection to clean up for reconnecting player",
 			zap.String("player_id", playerID),
 			zap.String("game_id", gameID),
 			zap.String("current_connection_id", excludeConnection.ID))
 		return nil
 	}
 
-	m.logger.Debug("🧹 Cleaning up existing connection for reconnecting player",
+	m.logger.Debug("Cleaning up existing connection for reconnecting player",
 		zap.String("existing_connection_id", existingConnection.ID),
 		zap.String("current_connection_id", excludeConnection.ID),
 		zap.String("player_id", playerID),
@@ -184,7 +184,7 @@ func (m *Manager) RemoveExistingPlayerConnection(playerID, gameID string, exclud
 
 	existingConnection.Close()
 
-	m.logger.Debug("✅ Existing connection cleaned up for reconnecting player",
+	m.logger.Debug("Existing connection cleaned up for reconnecting player",
 		zap.String("old_connection_id", existingConnection.ID),
 		zap.String("current_connection_id", excludeConnection.ID),
 		zap.String("player_id", playerID))
@@ -197,7 +197,7 @@ func (m *Manager) CloseAllConnections() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.logger.Info("🛑 Closing all active connections", zap.Int("connection_count", len(m.connections)))
+	m.logger.Debug("Closing all active connections", zap.Int("connection_count", len(m.connections)))
 
 	for connection := range m.connections {
 		connection.Close()
@@ -206,7 +206,7 @@ func (m *Manager) CloseAllConnections() {
 	m.connections = make(map[*Connection]bool)
 	m.gameConnections = make(map[string]map[*Connection]bool)
 
-	m.logger.Info("⛓️‍💥 All client connections closed by server")
+	m.logger.Debug("All client connections closed by server")
 }
 
 // GetConnectionBySpectatorID finds a connection for a specific spectator in a game.

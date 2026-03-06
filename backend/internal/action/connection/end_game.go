@@ -56,6 +56,6 @@ func (a *EndGameAction) Execute(ctx context.Context, gameID string, requesterID 
 		return fmt.Errorf("failed to delete game: %w", err)
 	}
 
-	log.Info("🗑️ Game ended and deleted by host")
+	log.Info("Game ended and deleted by host")
 	return nil
 }

@@ -45,7 +45,7 @@ func (a *BuildPowerPlantAction) Execute(
 	playerID string,
 ) error {
 	log := a.InitLogger(gameID, playerID)
-	log.Info("⚡ Building power plant")
+	log.Debug("Building power plant")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -79,7 +79,7 @@ func (a *BuildPowerPlantAction) Execute(
 			effectiveCost = 0
 		}
 		if creditDiscount > 0 {
-			log.Info("💰 Applied power plant discount",
+			log.Debug("Applied power plant discount",
 				zap.Int("base_cost", BuildPowerPlantCost),
 				zap.Int("discount", creditDiscount),
 				zap.Int("effective_cost", effectiveCost))
@@ -107,7 +107,7 @@ func (a *BuildPowerPlantAction) Execute(
 	})
 
 	resources = player.Resources().Get()
-	log.Info("💰 Deducted power plant cost",
+	log.Debug("Deducted power plant cost",
 		zap.Int("cost", effectiveCost),
 		zap.Int("remaining_credits", resources.Credits))
 
@@ -116,7 +116,7 @@ func (a *BuildPowerPlantAction) Execute(
 	})
 
 	production := player.Resources().Production()
-	log.Info("📈 Increased energy production",
+	log.Debug("Increased energy production",
 		zap.Int("new_energy_production", production.Energy))
 
 	a.ConsumePlayerAction(g, log)
@@ -135,7 +135,7 @@ func (a *BuildPowerPlantAction) Execute(
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: Power Plant")
 	a.WriteStateLogFull(ctx, g, "Standard Project: Power Plant", game.SourceTypeStandardProject, playerID, "Built power plant", nil, calculatedOutputs, displayData)
 
-	log.Info("✅ Power plant built successfully",
+	log.Info("Power plant built",
 		zap.Int("new_energy_production", production.Energy),
 		zap.Int("remaining_credits", resources.Credits))
 	return nil

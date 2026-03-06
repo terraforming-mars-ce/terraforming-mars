@@ -39,7 +39,7 @@ func (a *GiveCardAction) Execute(ctx context.Context, gameID string, playerID st
 		zap.String("action", "admin_give_card"),
 		zap.String("card_id", cardID),
 	)
-	log.Info("🎴 Admin: Giving card to player")
+	log.Debug("Admin: Giving card to player")
 
 	game, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -55,6 +55,6 @@ func (a *GiveCardAction) Execute(ctx context.Context, gameID string, playerID st
 
 	action.AddCardsToPlayerHand([]string{cardID}, player, game, a.cardRegistry, log)
 
-	log.Info("✅ Admin give card completed")
+	log.Info("Admin give card completed")
 	return nil
 }

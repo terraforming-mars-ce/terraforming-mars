@@ -55,7 +55,7 @@ func (h *StandardProjectHandler) HandleStandardProject(
 		return
 	}
 
-	h.logger.Info("✅ "+projectName+" action completed successfully, tile queued for placement",
+	h.logger.Debug(projectName+" completed, tile queued",
 		zap.String("connection_id", connection.ID),
 		zap.String("player_id", playerID),
 		zap.String("game_id", gameID))

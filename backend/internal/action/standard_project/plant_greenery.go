@@ -38,7 +38,7 @@ func NewPlantGreeneryAction(
 // Execute performs the plant greenery action
 func (a *PlantGreeneryAction) Execute(ctx context.Context, gameID string, playerID string) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "plant_greenery"))
-	log.Info("🌱 Planting greenery (standard project)")
+	log.Debug("Planting greenery (standard project)")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -83,7 +83,7 @@ func (a *PlantGreeneryAction) Execute(ctx context.Context, gameID string, player
 	})
 
 	resources = player.Resources().Get()
-	log.Info("💰 Deducted greenery cost",
+	log.Debug("Deducted greenery cost",
 		zap.Int("cost", PlantGreeneryStandardProjectCost),
 		zap.Int("remaining_credits", resources.Credits))
 
@@ -101,11 +101,11 @@ func (a *PlantGreeneryAction) Execute(ctx context.Context, gameID string, player
 		return fmt.Errorf("failed to queue tile placement: %w", err)
 	}
 
-	log.Info("📋 Created tile queue for greenery placement (auto-processed by SetPendingTileSelectionQueue)")
+	log.Debug("Created tile queue for greenery placement (auto-processed by SetPendingTileSelectionQueue)")
 
 	a.ConsumePlayerAction(g, log)
 
-	log.Info("✅ Greenery tile selection ready",
+	log.Info("Greenery queued",
 		zap.Int("remaining_credits", resources.Credits))
 	return nil
 }

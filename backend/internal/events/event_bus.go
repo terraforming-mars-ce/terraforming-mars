@@ -66,7 +66,7 @@ func Subscribe[T any](eb *EventBusImpl, handler EventHandler[T]) SubscriptionID 
 
 	eb.subscriptions[id] = sub
 
-	eb.logger.Debug("📬 Event handler subscribed",
+	eb.logger.Debug("Event handler subscribed",
 		zap.String("subscription_id", string(id)),
 		zap.String("event_type", eventType))
 
@@ -88,10 +88,10 @@ func Publish[T any](eb *EventBusImpl, event T) {
 	}
 
 	if len(matchingHandlers) == 0 {
-		eb.logger.Debug("📭 No subscribers for event",
+		eb.logger.Debug("No subscribers for event",
 			zap.String("event_type", eventType))
 	} else {
-		eb.logger.Debug("📢 Publishing event to subscribers",
+		eb.logger.Debug("Publishing event to subscribers",
 			zap.String("event_type", eventType),
 			zap.Int("subscriber_count", len(matchingHandlers)))
 
@@ -109,7 +109,7 @@ func (eb *EventBusImpl) Unsubscribe(id SubscriptionID) {
 
 	if sub, exists := eb.subscriptions[id]; exists {
 		delete(eb.subscriptions, id)
-		eb.logger.Debug("🗑️ Event handler unsubscribed",
+		eb.logger.Debug("Event handler unsubscribed",
 			zap.String("subscription_id", string(id)),
 			zap.String("event_type", sub.eventType))
 	}

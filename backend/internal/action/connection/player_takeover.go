@@ -44,7 +44,7 @@ func (a *PlayerTakeoverAction) Execute(ctx context.Context, gameID string, targe
 		zap.String("target_player_id", targetPlayerID),
 		zap.String("action", "player_takeover"),
 	)
-	log.Info("🔄 Processing player takeover request")
+	log.Debug("Processing player takeover request")
 
 	g, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -77,7 +77,7 @@ func (a *PlayerTakeoverAction) Execute(ctx context.Context, gameID string, targe
 
 	gameDto := dto.ToGameDto(g, a.cardRegistry, targetPlayerID)
 
-	log.Info("✅ Player takeover completed successfully",
+	log.Info("Player takeover completed",
 		zap.String("player_name", player.Name()))
 
 	return &PlayerTakeoverResult{

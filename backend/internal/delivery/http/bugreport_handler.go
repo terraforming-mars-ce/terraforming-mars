@@ -25,7 +25,7 @@ func NewBugReportHandler(service *bugreport.Service) *BugReportHandler {
 
 // GetStatus handles GET /api/v1/bugs/status.
 func (h *BugReportHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
-	h.logger.Info("📡 GET /api/v1/bugs/status")
+	h.logger.Debug("GET /api/v1/bugs/status")
 
 	caps := h.service.Capabilities()
 	resp := dto.BugReportStatusResponse{
@@ -40,7 +40,7 @@ func (h *BugReportHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 // SubmitBugReport handles POST /api/v1/bugs.
 func (h *BugReportHandler) SubmitBugReport(w http.ResponseWriter, r *http.Request) {
-	h.logger.Info("📡 POST /api/v1/bugs")
+	h.logger.Debug("POST /api/v1/bugs")
 
 	if !h.service.IsAvailable() {
 		h.WriteErrorResponse(w, http.StatusServiceUnavailable, "Bug reporting is not available")

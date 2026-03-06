@@ -41,7 +41,7 @@ func (h *CreateGameHandler) HandleMessage(ctx context.Context, connection *core.
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🎮 Processing create game request")
+	log.Debug("Processing create game request")
 
 	settings := game.GameSettings{
 		MaxPlayers: game.DefaultMaxPlayers,
@@ -85,24 +85,24 @@ func (h *CreateGameHandler) HandleMessage(ctx context.Context, connection *core.
 		return
 	}
 
-	log.Info("✅ Create game action completed successfully",
+	log.Debug("Game created",
 		zap.String("game_id", game.ID()))
 
 	h.broadcaster.BroadcastGameState(game.ID(), nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type: dto.MessageTypeGameUpdated,
 		Payload: map[string]interface{}{
 			"gameId":  game.ID(),
 			"success": true,
-			"message": "Game created successfully. Join with playerConnect.",
+			"message": "Game created. Join with playerConnect.",
 		},
 	}
 
 	connection.Send <- response
 
-	log.Info("📤 Sent game created response to client")
+	log.Debug("Sent game created response to client")
 }
 
 // sendError sends an error message to the client

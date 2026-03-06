@@ -106,13 +106,13 @@ func (a *ConfirmInitAdvanceAction) applyCurrentPlayer(ctx context.Context, g *ga
 		if err := ApplyCorpForPlayer(ctx, g, currentPlayerID, a.cardRegistry, a.corpProc, log); err != nil {
 			return fmt.Errorf("failed to apply corp for player %s: %w", currentPlayerID, err)
 		}
-		log.Info("💼 Applied corp effects", zap.String("player_id", currentPlayerID))
+		log.Debug("Applied corp effects", zap.String("player_id", currentPlayerID))
 
 	case game.GamePhaseInitApplyPrelude:
 		if err := ApplyPreludesForPlayer(ctx, g, currentPlayerID, a.cardRegistry, log); err != nil {
 			return fmt.Errorf("failed to apply preludes for player %s: %w", currentPlayerID, err)
 		}
-		log.Info("📜 Applied prelude effects", zap.String("player_id", currentPlayerID))
+		log.Debug("Applied prelude effects", zap.String("player_id", currentPlayerID))
 	}
 
 	// After applying, wait for the frontend to display the effects
@@ -140,7 +140,7 @@ func (a *ConfirmInitAdvanceAction) advanceToNextPlayer(ctx context.Context, g *g
 	switch phase {
 	case game.GamePhaseInitApplyCorp:
 		if g.Settings().HasPrelude() {
-			log.Info("📜 All corps applied, advancing to init_apply_prelude phase")
+			log.Debug("All corps applied, advancing to init_apply_prelude phase")
 			if err := g.UpdatePhase(ctx, game.GamePhaseInitApplyPrelude); err != nil {
 				return fmt.Errorf("failed to transition to prelude phase: %w", err)
 			}
@@ -161,11 +161,11 @@ func (a *ConfirmInitAdvanceAction) advanceToNextPlayer(ctx context.Context, g *g
 			return nil
 		}
 
-		log.Info("🎮 All corps applied (no prelude), advancing to action phase")
+		log.Info("All corps applied (no prelude), advancing to action phase")
 		AdvanceToActionPhase(ctx, g, allPlayers, log)
 
 	case game.GamePhaseInitApplyPrelude:
-		log.Info("🎮 All preludes applied, advancing to action phase")
+		log.Info("All preludes applied, advancing to action phase")
 		AdvanceToActionPhase(ctx, g, allPlayers, log)
 	}
 

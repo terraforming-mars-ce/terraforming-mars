@@ -39,7 +39,7 @@ func (h *SelectTileHandler) HandleMessage(ctx context.Context, connection *core.
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🎯 Processing tile selection request")
+	log.Debug("Processing tile selection request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -70,10 +70,10 @@ func (h *SelectTileHandler) HandleMessage(ctx context.Context, connection *core.
 		return
 	}
 
-	log.Info("✅ Select tile action completed successfully")
+	log.Debug("Tile selection completed")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

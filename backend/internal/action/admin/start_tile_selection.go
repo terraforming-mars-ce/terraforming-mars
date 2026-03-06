@@ -35,7 +35,7 @@ func (a *StartTileSelectionAction) Execute(ctx context.Context, gameID string, p
 		zap.String("action", "admin_start_tile_selection"),
 		zap.String("tile_type", tileType),
 	)
-	log.Info("🗺️ Admin: Starting tile selection")
+	log.Debug("Admin: Starting tile selection")
 
 	if !board.ValidPlaceableTileType(tileType) {
 		log.Error("Invalid tile type", zap.String("tile_type", tileType))
@@ -64,6 +64,6 @@ func (a *StartTileSelectionAction) Execute(ctx context.Context, gameID string, p
 		return fmt.Errorf("failed to start tile selection: %w", err)
 	}
 
-	log.Info("✅ Admin start tile selection completed")
+	log.Info("Admin start tile selection completed")
 	return nil
 }

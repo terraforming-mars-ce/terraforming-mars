@@ -43,7 +43,7 @@ func (h *PlayerHandler) GetPlayer(w http.ResponseWriter, r *http.Request) {
 	gameID := vars["gameId"]
 	playerID := vars["playerId"]
 
-	log.Info("📡 HTTP GET /api/v1/games/:gameId/players/:playerId",
+	log.Debug("HTTP GET /api/v1/games/:gameId/players/:playerId",
 		zap.String("game_id", gameID),
 		zap.String("player_id", playerID))
 
@@ -72,7 +72,7 @@ func (h *PlayerHandler) GetPlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("✅ Player retrieved successfully",
+	log.Debug("Player retrieved",
 		zap.String("game_id", gameID),
 		zap.String("player_id", playerID))
 }

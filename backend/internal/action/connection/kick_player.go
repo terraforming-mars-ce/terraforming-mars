@@ -66,7 +66,7 @@ func (a *KickPlayerAction) Execute(ctx context.Context, gameID string, requester
 }
 
 func (a *KickPlayerAction) kickFromLobby(ctx context.Context, g *game.Game, targetPlayerID string, log *zap.Logger) error {
-	log.Info("👢 Kicking player from lobby")
+	log.Debug("Kicking player from lobby")
 
 	if err := g.RemovePlayer(ctx, targetPlayerID); err != nil {
 		log.Error("Failed to remove player from lobby", zap.Error(err))
@@ -79,16 +79,16 @@ func (a *KickPlayerAction) kickFromLobby(ctx context.Context, g *game.Game, targ
 			log.Error("Failed to delete empty game", zap.Error(err))
 			return fmt.Errorf("failed to delete empty game: %w", err)
 		}
-		log.Info("🗑️ Game deleted (no players remaining)")
+		log.Debug("Game deleted (no players remaining)")
 		return nil
 	}
 
-	log.Info("✅ Player kicked from lobby")
+	log.Info("Player kicked from lobby")
 	return nil
 }
 
 func (a *KickPlayerAction) kickFromActiveGame(ctx context.Context, g *game.Game, gameID string, targetPlayerID string, log *zap.Logger) error {
-	log.Info("👢 Kicking player from active game")
+	log.Debug("Kicking player from active game")
 
 	target, err := g.GetPlayer(targetPlayerID)
 	if err != nil {
@@ -120,7 +120,7 @@ func (a *KickPlayerAction) kickFromActiveGame(ctx context.Context, g *game.Game,
 		a.handleProductionPhaseKick(ctx, g, log)
 	}
 
-	log.Info("✅ Player kicked from active game",
+	log.Info("Player kicked from active game",
 		zap.String("target_player_id", targetPlayerID))
 	return nil
 }
@@ -207,12 +207,12 @@ func (a *KickPlayerAction) handleStartingSelectionKick(ctx context.Context, g *g
 			g.GetSelectPreludeCardsPhase(p.ID()) != nil ||
 			g.GetPendingTileSelection(p.ID()) != nil ||
 			g.GetPendingTileSelectionQueue(p.ID()) != nil {
-			log.Info("⏳ Other players still in starting selection")
+			log.Debug("Other players still in starting selection")
 			return
 		}
 	}
 
-	log.Info("🎉 All remaining players completed starting selection after kick, advancing to action phase")
+	log.Debug("All remaining players completed starting selection after kick, advancing to action phase")
 
 	var activePlayers []*playerPkg.Player
 	for _, p := range allPlayers {
@@ -272,7 +272,7 @@ func (a *KickPlayerAction) handleActionPhaseKick(ctx context.Context, g *game.Ga
 					if err := g.SetCurrentTurn(ctx, p.ID(), -1); err != nil {
 						log.Error("Failed to grant unlimited actions", zap.Error(err))
 					}
-					log.Info("🏃 Last active player granted unlimited actions after kick",
+					log.Debug("Last active player granted unlimited actions after kick",
 						zap.String("player_id", p.ID()))
 					break
 				}
@@ -310,7 +310,7 @@ func (a *KickPlayerAction) advanceToNextActivePlayer(ctx context.Context, g *gam
 				log.Error("Failed to advance turn", zap.Error(err))
 				return
 			}
-			log.Info("⏭️ Advanced turn after kick",
+			log.Debug("Advanced turn after kick",
 				zap.String("next_player_id", nextPlayer.ID()))
 			return
 		}
@@ -332,11 +332,11 @@ func (a *KickPlayerAction) handleProductionPhaseKick(ctx context.Context, g *gam
 	}
 
 	if !allComplete {
-		log.Info("⏳ Other players still in production phase")
+		log.Debug("Other players still in production phase")
 		return
 	}
 
-	log.Info("🎉 All remaining players completed production after kick, advancing to action phase")
+	log.Debug("All remaining players completed production after kick, advancing to action phase")
 
 	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
 		log.Error("Failed to transition game phase", zap.Error(err))
@@ -381,14 +381,14 @@ func (a *KickPlayerAction) handleProductionPhaseKick(ctx context.Context, g *gam
 
 func (a *KickPlayerAction) triggerEndOfGeneration(ctx context.Context, g *game.Game, gameID string, log *zap.Logger) {
 	if g.GlobalParameters().IsMaxed() {
-		log.Info("🏆 All global parameters maxed after kick - triggering final scoring")
+		log.Debug("All global parameters maxed after kick - triggering final scoring")
 		if err := a.finalScoringAction.Execute(ctx, gameID); err != nil {
 			log.Error("Failed to execute final scoring", zap.Error(err))
 		}
 		return
 	}
 
-	log.Info("🏭 All players finished after kick - triggering production phase")
+	log.Debug("All players finished after kick - triggering production phase")
 
 	activePlayers := []*playerPkg.Player{}
 	for _, p := range g.GetAllPlayers() {

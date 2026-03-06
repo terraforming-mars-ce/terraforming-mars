@@ -85,7 +85,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		} else if wrapped.statusCode >= 400 {
 			logger.Get().Warn(msg, fields...)
 		} else {
-			logger.Get().Info(msg, fields...)
+			logger.Get().Debug(msg, fields...)
 		}
 	})
 }

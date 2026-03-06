@@ -35,7 +35,7 @@ func (h *EndGameHandler) HandleMessage(ctx context.Context, connection *core.Con
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🛑 Processing end game request")
+	log.Debug("Processing end game request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -54,7 +54,7 @@ func (h *EndGameHandler) HandleMessage(ctx context.Context, connection *core.Con
 		return
 	}
 
-	log.Info("✅ Game ended successfully, notifying all players")
+	log.Debug("Game ended")
 
 	gameEndedMessage := dto.WebSocketMessage{
 		Type:    dto.MessageTypeGameEnded,
@@ -71,7 +71,7 @@ func (h *EndGameHandler) HandleMessage(ctx context.Context, connection *core.Con
 		for conn := range gameConnections {
 			conn.Close()
 		}
-		log.Info("🔌 Closed all connections for ended game", zap.String("game_id", gameID))
+		log.Debug("Closed all connections for ended game", zap.String("game_id", gameID))
 	}()
 }
 

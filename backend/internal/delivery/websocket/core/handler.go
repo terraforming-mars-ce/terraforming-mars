@@ -36,11 +36,11 @@ func NewHandler(hub *Hub) *Handler {
 
 // ServeWS handles WebSocket upgrade requests from clients
 func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
-	h.logger.Info("🔗 WebSocket connection request received", zap.String("remote_addr", r.RemoteAddr))
+	h.logger.Debug("WebSocket connection request received", zap.String("remote_addr", r.RemoteAddr))
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		h.logger.Error("❌ Failed to upgrade connection to WebSocket", zap.Error(err))
+		h.logger.Error("Failed to upgrade connection to WebSocket", zap.Error(err))
 		return
 	}
 
@@ -51,7 +51,7 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 		func(msg HubMessage) { h.hub.Messages <- msg },      // onMessage callback
 		func(conn *Connection) { h.hub.Unregister <- conn }) // onDisconnect callback
 
-	h.logger.Info("✅ New WebSocket connection established",
+	h.logger.Debug("New WebSocket connection established",
 		zap.String("connection_id", connectionID),
 		zap.String("remote_addr", r.RemoteAddr))
 
@@ -68,5 +68,5 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 	go connection.WritePump()
 	go connection.ReadPump()
 
-	h.logger.Info("🎉 WebSocket connection fully initialized", zap.String("connection_id", connectionID))
+	h.logger.Debug("WebSocket connection fully initialized", zap.String("connection_id", connectionID))
 }

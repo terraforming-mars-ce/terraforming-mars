@@ -37,7 +37,7 @@ func NewLaunchAsteroidAction(
 // Execute performs the launch asteroid action
 func (a *LaunchAsteroidAction) Execute(ctx context.Context, gameID string, playerID string) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "launch_asteroid"))
-	log.Info("☄️ Launching asteroid")
+	log.Debug("Launching asteroid")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -82,7 +82,7 @@ func (a *LaunchAsteroidAction) Execute(ctx context.Context, gameID string, playe
 	})
 
 	resources = player.Resources().Get()
-	log.Info("💰 Deducted asteroid cost",
+	log.Debug("Deducted asteroid cost",
 		zap.Int("cost", LaunchAsteroidCost),
 		zap.Int("remaining_credits", resources.Credits))
 
@@ -95,7 +95,7 @@ func (a *LaunchAsteroidAction) Execute(ctx context.Context, gameID string, playe
 	newTemp := g.GlobalParameters().Temperature()
 
 	if stepsRaised > 0 {
-		log.Info("🌡️ Increased temperature",
+		log.Debug("Increased temperature",
 			zap.Int("old_temperature", oldTemp),
 			zap.Int("new_temperature", newTemp),
 			zap.Int("steps_raised", stepsRaised))
@@ -106,7 +106,7 @@ func (a *LaunchAsteroidAction) Execute(ctx context.Context, gameID string, playe
 		player.Resources().UpdateTerraformRating(1)
 		newTR := player.Resources().TerraformRating()
 
-		log.Info("🏆 Increased terraform rating",
+		log.Debug("Increased terraform rating",
 			zap.Int("old_tr", oldTR),
 			zap.Int("new_tr", newTR))
 	}
@@ -132,7 +132,7 @@ func (a *LaunchAsteroidAction) Execute(ctx context.Context, gameID string, playe
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: Asteroid")
 	a.WriteStateLogFull(ctx, g, "Standard Project: Asteroid", game.SourceTypeStandardProject, playerID, "Launched asteroid", nil, calculatedOutputs, displayData)
 
-	log.Info("✅ Asteroid launched successfully",
+	log.Info("Asteroid launched",
 		zap.Int("remaining_credits", resources.Credits))
 	return nil
 }

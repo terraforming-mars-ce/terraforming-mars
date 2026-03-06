@@ -34,7 +34,7 @@ func (h *PlantGreeneryHandler) HandleMessage(ctx context.Context, connection *co
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🌱 Processing plant greenery request")
+	log.Debug("Processing plant greenery request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -49,10 +49,10 @@ func (h *PlantGreeneryHandler) HandleMessage(ctx context.Context, connection *co
 		return
 	}
 
-	log.Info("✅ Plant greenery action completed successfully")
+	log.Debug("Greenery planted")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

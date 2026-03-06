@@ -39,7 +39,7 @@ func (a *SetResourcesAction) Execute(ctx context.Context, gameID string, playerI
 		zap.Int("energy", resources.Energy),
 		zap.Int("heat", resources.Heat),
 	)
-	log.Info("💰 Admin: Setting player resources")
+	log.Debug("Admin: Setting player resources")
 
 	game, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -55,6 +55,6 @@ func (a *SetResourcesAction) Execute(ctx context.Context, gameID string, playerI
 
 	player.Resources().Set(resources)
 
-	log.Info("✅ Admin set resources completed")
+	log.Info("Admin set resources completed")
 	return nil
 }

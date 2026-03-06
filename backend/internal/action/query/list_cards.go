@@ -41,7 +41,7 @@ func (a *ListCardsAction) Execute(ctx context.Context, offset, limit int) (*List
 		zap.Int("offset", offset),
 		zap.Int("limit", limit),
 	)
-	log.Info("🔍 Querying cards")
+	log.Debug("Querying cards")
 
 	allCards := a.cardRegistry.GetAll()
 
@@ -63,7 +63,7 @@ func (a *ListCardsAction) Execute(ctx context.Context, offset, limit int) (*List
 
 	paginatedCards := allCards[start:end]
 
-	log.Info("✅ Cards query completed",
+	log.Debug("Cards query completed",
 		zap.Int("total_count", totalCount),
 		zap.Int("returned_count", len(paginatedCards)),
 	)

@@ -44,7 +44,7 @@ type PlayerScore struct {
 // Execute performs the final scoring action
 func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 	log := a.logger.With(zap.String("game_id", gameID))
-	log.Info("🏆 Starting final scoring")
+	log.Debug("Starting final scoring")
 
 	// 1. Fetch game
 	g, err := a.gameRepo.Get(ctx, gameID)
@@ -87,7 +87,7 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 			Breakdown:  breakdown,
 			Credits:    p.Resources().Get().Credits,
 		}
-		log.Info("📊 Player VP calculated",
+		log.Debug("Player VP calculated",
 			zap.String("player_id", p.ID()),
 			zap.String("player_name", p.Name()),
 			zap.Int("total_vp", breakdown.TotalVP),
@@ -119,7 +119,7 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 		}
 	}
 
-	log.Info("🥇 Winner determined",
+	log.Debug("Winner determined",
 		zap.String("winner_id", winnerID),
 		zap.String("winner_name", scores[0].PlayerName),
 		zap.Int("winning_vp", scores[0].Breakdown.TotalVP),
@@ -177,7 +177,7 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 		Timestamp: time.Now(),
 	})
 
-	log.Info("✅ Final scoring complete, game ended")
+	log.Info("Final scoring complete, game ended")
 	return nil
 }
 

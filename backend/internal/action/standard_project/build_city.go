@@ -38,7 +38,7 @@ func NewBuildCityAction(
 // Execute performs the build city action
 func (a *BuildCityAction) Execute(ctx context.Context, gameID string, playerID string) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "build_city"))
-	log.Info("🏢 Building city")
+	log.Debug("Building city")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -83,7 +83,7 @@ func (a *BuildCityAction) Execute(ctx context.Context, gameID string, playerID s
 	})
 
 	resources = player.Resources().Get()
-	log.Info("💰 Deducted city cost",
+	log.Debug("Deducted city cost",
 		zap.Int("cost", BuildCityCost),
 		zap.Int("remaining_credits", resources.Credits))
 
@@ -92,7 +92,7 @@ func (a *BuildCityAction) Execute(ctx context.Context, gameID string, playerID s
 	})
 
 	production := player.Resources().Production()
-	log.Info("📈 Increased credit production",
+	log.Debug("Increased credit production",
 		zap.Int("new_credit_production", production.Credits))
 
 	queue := &playerPkg.PendingTileSelectionQueue{
@@ -103,7 +103,7 @@ func (a *BuildCityAction) Execute(ctx context.Context, gameID string, playerID s
 		return fmt.Errorf("failed to queue tile placement: %w", err)
 	}
 
-	log.Info("📋 Created tile queue for city placement (auto-processed by SetPendingTileSelectionQueue)")
+	log.Debug("Created tile queue for city placement (auto-processed by SetPendingTileSelectionQueue)")
 
 	a.ConsumePlayerAction(g, log)
 
@@ -122,7 +122,7 @@ func (a *BuildCityAction) Execute(ctx context.Context, gameID string, playerID s
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: City")
 	a.WriteStateLogFull(ctx, g, "Standard Project: City", game.SourceTypeStandardProject, playerID, "Built city", nil, calculatedOutputs, displayData)
 
-	log.Info("✅ City built successfully, tile selection ready",
+	log.Info("City built",
 		zap.Int("new_credit_production", production.Credits),
 		zap.Int("remaining_credits", resources.Credits))
 	return nil

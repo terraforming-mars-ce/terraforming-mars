@@ -34,7 +34,7 @@ func (h *PlayerTakeoverHandler) HandleMessage(ctx context.Context, connection *c
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🔄 Processing player takeover request")
+	log.Debug("Processing player takeover request")
 
 	payloadMap, ok := message.Payload.(map[string]any)
 	if !ok {
@@ -71,12 +71,12 @@ func (h *PlayerTakeoverHandler) HandleMessage(ctx context.Context, connection *c
 
 	connection.SetPlayer(targetPlayerID, gameID)
 
-	log.Info("✅ Player takeover completed successfully",
+	log.Debug("Player takeover completed",
 		zap.String("player_id", result.PlayerID),
 		zap.String("player_name", result.PlayerName))
 
 	h.broadcaster.BroadcastGameState(gameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   dto.MessageTypePlayerConnected,
@@ -89,7 +89,7 @@ func (h *PlayerTakeoverHandler) HandleMessage(ctx context.Context, connection *c
 	}
 
 	connection.Send <- response
-	log.Info("📤 Sent player takeover confirmation")
+	log.Debug("Sent player takeover confirmation")
 }
 
 // sendError sends an error message to the client

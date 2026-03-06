@@ -34,7 +34,7 @@ func NewSellPatentsAction(
 // Execute performs the sell patents action (Phase 1: initiate card selection)
 func (a *SellPatentsAction) Execute(ctx context.Context, gameID string, playerID string) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "sell_patents"))
-	log.Info("🏛️ Initiating sell patents")
+	log.Debug("Initiating sell patents")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -86,9 +86,9 @@ func (a *SellPatentsAction) Execute(ctx context.Context, gameID string, playerID
 		Timestamp:   time.Now(),
 	})
 
-	log.Info("📋 Created pending card selection for sell patents",
+	log.Debug("Created pending card selection for sell patents",
 		zap.Int("available_cards", len(playerCards)))
 
-	log.Info("✅ Sell patents initiated successfully, awaiting card selection")
+	log.Info("Sell patents initiated")
 	return nil
 }

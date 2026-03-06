@@ -34,7 +34,7 @@ func (h *LaunchAsteroidHandler) HandleMessage(ctx context.Context, connection *c
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("☄️ Processing launch asteroid request")
+	log.Debug("Processing launch asteroid request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -49,10 +49,10 @@ func (h *LaunchAsteroidHandler) HandleMessage(ctx context.Context, connection *c
 		return
 	}
 
-	log.Info("✅ Launch asteroid action completed successfully")
+	log.Debug("Asteroid launched")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

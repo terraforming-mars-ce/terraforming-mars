@@ -72,6 +72,6 @@ func (a *SetPlayerColorAction) Execute(ctx context.Context, gameID, requesterID,
 
 	p.SetColor(color)
 
-	log.Debug("🎨 Player color changed")
+	log.Debug("Player color changed")
 	return nil
 }

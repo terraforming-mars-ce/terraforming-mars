@@ -152,7 +152,7 @@ func (bc *BotController) StartBot(gameID, playerID, botName, difficulty, speed s
 
 	go bc.runBotLoop(ctx, session)
 
-	bc.logger.Info("🤖 Bot session started",
+	bc.logger.Debug("Bot session started",
 		zap.String("game_id", gameID),
 		zap.String("player_id", playerID),
 		zap.String("bot_name", botName),
@@ -229,7 +229,7 @@ func (bc *BotController) StopBot(gameID, playerID string) {
 	<-session.done
 	bc.cleanupSession(session)
 
-	bc.logger.Info("🤖 Bot stopped for player",
+	bc.logger.Debug("Bot stopped for player",
 		zap.String("game_id", gameID),
 		zap.String("player_id", playerID))
 }
@@ -251,7 +251,7 @@ func (bc *BotController) StopAllBotsForGame(gameID string) {
 		bc.cleanupSession(session)
 	}
 
-	bc.logger.Info("🤖 All bots stopped for game", zap.String("game_id", gameID))
+	bc.logger.Debug("All bots stopped for game", zap.String("game_id", gameID))
 }
 
 func (bc *BotController) runBotLoop(ctx context.Context, session *BotSession) {
@@ -265,7 +265,7 @@ func (bc *BotController) runBotLoop(ctx context.Context, session *BotSession) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("🤖 Bot loop exiting")
+			log.Debug("Bot loop exiting")
 			return
 		case <-session.turnCh:
 			bc.handleTurn(ctx, session, log)
@@ -287,11 +287,11 @@ func (bc *BotController) handleTurn(ctx context.Context, session *BotSession, lo
 
 		gameDto := dto.ToGameDto(g, bc.cardRegistry, session.playerID)
 		if !IsMyTurn(&gameDto, session.playerID) {
-			log.Debug("🤖 Not my turn anymore, stopping")
+			log.Debug("Not my turn anymore, stopping")
 			return
 		}
 
-		log.Info("🤖 Starting turn invocation")
+		log.Debug("Starting turn invocation")
 
 		if bot, err := g.GetPlayer(session.playerID); err == nil {
 			bot.SetBotStatus(playerPkg.BotStatusThinking)
@@ -328,7 +328,7 @@ func (bc *BotController) handleTurn(ctx context.Context, session *BotSession, lo
 		invokeCancel()
 
 		if err != nil {
-			log.Error("🤖 Claude CLI invocation failed", zap.Error(err))
+			log.Error("Claude CLI invocation failed", zap.Error(err))
 		}
 
 		// Give time for remaining commands to be processed
@@ -336,7 +336,7 @@ func (bc *BotController) handleTurn(ctx context.Context, session *BotSession, lo
 		cmdCancel()
 		<-cmdDone
 
-		log.Info("🤖 Turn invocation complete")
+		log.Debug("Turn invocation complete")
 
 		if g, err := bc.gameRepo.Get(ctx, session.gameID); err == nil {
 			if bot, err := g.GetPlayer(session.playerID); err == nil {
@@ -371,7 +371,7 @@ func (bc *BotController) executeCommand(ctx context.Context, session *BotSession
 		Payload json.RawMessage `json:"payload"`
 	}
 	if err := json.Unmarshal(rawCmd, &envelope); err != nil {
-		log.Error("🤖 Failed to parse command envelope", zap.Error(err))
+		log.Error("Failed to parse command envelope", zap.Error(err))
 		return
 	}
 
@@ -383,7 +383,7 @@ func (bc *BotController) executeCommand(ctx context.Context, session *BotSession
 
 	err := bc.dispatcher.Dispatch(ctx, session.gameID, session.playerID, rawCmd)
 	if err != nil {
-		log.Error("🤖 Command dispatch failed", zap.Error(err))
+		log.Error("Command dispatch failed", zap.Error(err))
 		errPayload, _ := json.Marshal(map[string]string{
 			"type":  "error",
 			"error": err.Error(),
@@ -413,7 +413,7 @@ func (bc *BotController) handleChatMessage(ctx context.Context, session *BotSess
 		Message string `json:"message"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
-		log.Error("🤖 Failed to parse chat message payload", zap.Error(err))
+		log.Error("Failed to parse chat message payload", zap.Error(err))
 		return
 	}
 

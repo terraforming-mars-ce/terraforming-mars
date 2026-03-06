@@ -45,7 +45,7 @@ func (h *ClaimMilestoneHandler) HandleMessage(ctx context.Context, connection *c
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🏆 Processing claim milestone request")
+	log.Debug("Processing claim milestone request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -80,11 +80,11 @@ func (h *ClaimMilestoneHandler) HandleMessage(ctx context.Context, connection *c
 		return
 	}
 
-	log.Info("✅ Claim milestone action completed successfully",
+	log.Debug("Milestone claimed",
 		zap.String("milestone_type", payload.MilestoneType))
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

@@ -47,7 +47,7 @@ func NewBroadcaster(
 		lastBroadcastedSeq: make(map[string]int64),
 	}
 
-	broadcaster.logger.Info("📡 Broadcaster initialized")
+	broadcaster.logger.Debug("Broadcaster initialized")
 
 	return broadcaster
 }
@@ -79,10 +79,10 @@ func (b *Broadcaster) BroadcastGameState(gameID string, playerIDs []string) {
 				playerIDs = append(playerIDs, player.ID())
 			}
 		}
-		log.Debug("📢 Broadcasting to all players", zap.Int("player_count", len(playerIDs)))
+		log.Debug("Broadcasting to all players", zap.Int("player_count", len(playerIDs)))
 	} else {
 		// Broadcast to specific players
-		log.Debug("📢 Broadcasting to specific players", zap.Strings("player_ids", playerIDs))
+		log.Debug("Broadcasting to specific players", zap.Strings("player_ids", playerIDs))
 	}
 
 	for _, playerID := range playerIDs {
@@ -103,7 +103,7 @@ func (b *Broadcaster) BroadcastGameState(gameID string, playerIDs []string) {
 	// Broadcast any new log entries since the last broadcast
 	b.broadcastNewLogs(gameID, playerIDs)
 
-	log.Debug("✅ Broadcast completed", zap.Int("player_count", len(playerIDs)))
+	log.Debug("Broadcast completed", zap.Int("player_count", len(playerIDs)))
 
 	if b.botNotifier != nil {
 		b.botNotifier.OnGameBroadcast(gameID)
@@ -171,7 +171,7 @@ func (b *Broadcaster) broadcastNewLogs(gameID string, playerIDs []string) {
 		conn.SendMessage(message)
 	}
 
-	log.Debug("📜 Broadcasted new logs", zap.Int("log_count", len(newLogs)))
+	log.Debug("Broadcasted new logs", zap.Int("log_count", len(newLogs)))
 }
 
 // sendToPlayer creates a personalized DTO for a player and sends it via WebSocket
@@ -195,7 +195,7 @@ func (b *Broadcaster) sendToPlayer(ctx context.Context, game *game.Game, playerI
 		return err
 	}
 
-	log.Debug("✅ Sent personalized game state to player")
+	log.Debug("Sent personalized game state to player")
 	return nil
 }
 
@@ -233,7 +233,7 @@ func (b *Broadcaster) SendInitialLogs(gameID string, playerID string) {
 		return
 	}
 
-	log.Debug("📜 Sent initial logs to player", zap.Int("log_count", len(logDtos)))
+	log.Debug("Sent initial logs to player", zap.Int("log_count", len(logDtos)))
 }
 
 // broadcastToSpectators sends spectator-specific game state to all spectator connections.
@@ -261,7 +261,7 @@ func (b *Broadcaster) broadcastToSpectators(g *game.Game) {
 		}
 	}
 
-	b.logger.Debug("👁️ Broadcasted to spectators",
+	b.logger.Debug("Broadcasted to spectators",
 		zap.String("game_id", g.ID()),
 		zap.Int("spectator_count", len(spectators)))
 }
@@ -300,7 +300,7 @@ func (b *Broadcaster) BroadcastChatMessage(gameID string, chatMsg dto.ChatMessag
 		conn.SendMessage(message)
 	}
 
-	log.Debug("💬 Broadcasted chat message")
+	log.Debug("Broadcasted chat message")
 }
 
 // SendInitialLogsToSpectator sends all game logs to a spectator (used on connect).
@@ -335,7 +335,7 @@ func (b *Broadcaster) SendInitialLogsToSpectator(gameID string, spectatorID stri
 		return
 	}
 
-	log.Debug("📜 Sent initial logs to spectator", zap.Int("log_count", len(logDtos)))
+	log.Debug("Sent initial logs to spectator", zap.Int("log_count", len(logDtos)))
 }
 
 // BroadcastLogUpdate broadcasts a single log entry to all players in a game
@@ -372,5 +372,5 @@ func (b *Broadcaster) BroadcastLogUpdate(gameID string, logEntry *game.StateDiff
 		conn.SendMessage(message)
 	}
 
-	log.Debug("📜 Broadcasted log update", zap.Int64("sequence", logEntry.SequenceNumber))
+	log.Debug("Broadcasted log update", zap.Int64("sequence", logEntry.SequenceNumber))
 }

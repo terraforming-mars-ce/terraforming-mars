@@ -44,7 +44,7 @@ func (a *SpectatorDisconnectedAction) Execute(ctx context.Context, gameID, spect
 		return nil
 	}
 
-	log.Info("👁️ Spectator disconnected and removed")
+	log.Debug("Spectator disconnected and removed")
 	return nil
 }
 
@@ -89,6 +89,6 @@ func (a *KickSpectatorAction) Execute(ctx context.Context, gameID, requesterID, 
 		return fmt.Errorf("spectator not found: %s", targetSpectatorID)
 	}
 
-	log.Info("👢 Spectator kicked from game")
+	log.Info("Spectator kicked from game")
 	return nil
 }

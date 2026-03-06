@@ -31,7 +31,7 @@ func (h *RequestLogsHandler) HandleMessage(_ context.Context, connection *core.C
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("📋 Processing request-logs")
+	log.Debug("Processing request-logs")
 
 	if connection.GameID == "" {
 		log.Error("Missing connection context")
@@ -46,7 +46,7 @@ func (h *RequestLogsHandler) HandleMessage(_ context.Context, connection *core.C
 
 	if connection.SpectatorID != "" {
 		h.broadcaster.SendInitialLogsToSpectator(connection.GameID, connection.SpectatorID)
-		log.Info("✅ Sent initial logs to spectator",
+		log.Debug("Sent initial logs to spectator",
 			zap.String("game_id", connection.GameID),
 			zap.String("spectator_id", connection.SpectatorID))
 		return
@@ -64,7 +64,7 @@ func (h *RequestLogsHandler) HandleMessage(_ context.Context, connection *core.C
 	}
 
 	h.broadcaster.SendInitialLogs(connection.GameID, connection.PlayerID)
-	log.Info("✅ Sent initial logs to player",
+	log.Debug("Sent initial logs to player",
 		zap.String("game_id", connection.GameID),
 		zap.String("player_id", connection.PlayerID))
 }

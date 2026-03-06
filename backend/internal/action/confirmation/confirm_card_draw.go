@@ -37,7 +37,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		zap.Int("cards_to_take", len(cardsToTake)),
 		zap.Int("cards_to_buy", len(cardsToBuy)),
 	)
-	log.Info("🃏 Confirming card draw selection")
+	log.Debug("Confirming card draw selection")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -111,7 +111,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		})
 
 		newResources := player.Resources().Get()
-		log.Info("💰 Paid for bought cards",
+		log.Debug("Paid for bought cards",
 			zap.Int("cards_bought", len(cardsToBuy)),
 			zap.Int("cost", totalCost),
 			zap.Int("remaining_credits", newResources.Credits))
@@ -119,7 +119,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 
 	baseaction.AddCardsToPlayerHand(allSelectedCards, player, g, a.CardRegistry(), log)
 
-	log.Info("🃏 Added selected cards to hand",
+	log.Debug("Added selected cards to hand",
 		zap.Int("cards_taken", len(cardsToTake)),
 		zap.Int("cards_bought", len(cardsToBuy)),
 		zap.Int("total_cards", len(allSelectedCards)))
@@ -136,7 +136,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 			log.Error("Failed to discard unselected cards", zap.Error(err))
 			return fmt.Errorf("failed to discard unselected cards: %w", err)
 		}
-		log.Debug("🗑️ Discarded unselected cards to discard pile",
+		log.Debug("Discarded unselected cards to discard pile",
 			zap.Int("count", len(unselectedCards)),
 			zap.Strings("card_ids", unselectedCards))
 	}
@@ -148,7 +148,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		a.completeSourceCardAction(g, player, selection, log)
 	}
 
-	log.Info("✅ Card draw confirmation completed",
+	log.Info("Card draw confirmation completed",
 		zap.String("source", selection.Source),
 		zap.Int("cards_taken", len(cardsToTake)),
 		zap.Int("cards_bought", len(cardsToBuy)),
@@ -171,7 +171,7 @@ func (a *ConfirmCardDrawAction) completeSourceCardAction(
 		if actions[i].CardID == selection.SourceCardID && actions[i].BehaviorIndex == selection.SourceBehaviorIndex {
 			actions[i].TimesUsedThisTurn++
 			actions[i].TimesUsedThisGeneration++
-			log.Debug("📊 Incremented action usage counts from card draw confirmation",
+			log.Debug("Incremented action usage counts from card draw confirmation",
 				zap.String("card_id", selection.SourceCardID),
 				zap.Int("behavior_index", selection.SourceBehaviorIndex),
 				zap.Int("times_used_this_turn", actions[i].TimesUsedThisTurn),

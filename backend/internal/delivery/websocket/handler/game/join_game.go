@@ -38,7 +38,7 @@ func (h *JoinGameHandler) HandleMessage(ctx context.Context, connection *core.Co
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🎮 Processing join game request")
+	log.Debug("Processing join game request")
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
@@ -83,14 +83,14 @@ func (h *JoinGameHandler) HandleMessage(ctx context.Context, connection *core.Co
 		return
 	}
 
-	log.Info("✅ Join game action completed successfully",
+	log.Debug("Game joined",
 		zap.String("player_id", result.PlayerID))
 
 	h.broadcaster.BroadcastGameState(gameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	h.broadcaster.SendInitialLogs(gameID, playerID)
-	log.Debug("📜 Sent initial logs to player")
+	log.Debug("Sent initial logs to player")
 
 	response := dto.WebSocketMessage{
 		Type:   dto.MessageTypePlayerConnected,
@@ -103,7 +103,7 @@ func (h *JoinGameHandler) HandleMessage(ctx context.Context, connection *core.Co
 	}
 
 	connection.Send <- response
-	log.Info("📤 Sent player connected confirmation")
+	log.Debug("Sent player connected confirmation")
 }
 
 // sendError sends an error message to the client

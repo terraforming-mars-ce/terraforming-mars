@@ -41,7 +41,7 @@ func (h *PlayerDisconnectedHandler) HandleMessage(ctx context.Context, connectio
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("⛓️‍💥 Processing player disconnected request")
+	log.Debug("Processing player disconnected request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context - connection closing anyway")
@@ -54,10 +54,10 @@ func (h *PlayerDisconnectedHandler) HandleMessage(ctx context.Context, connectio
 		return
 	}
 
-	log.Info("✅ Player disconnected action completed successfully")
+	log.Debug("Player disconnect completed")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	// NOTE: Do NOT send response on connection.Send - the connection is being closed
 }

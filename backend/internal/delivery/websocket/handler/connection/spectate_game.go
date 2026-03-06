@@ -35,7 +35,7 @@ func (h *SpectateGameHandler) HandleMessage(ctx context.Context, connection *cor
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("👁️ Processing spectate game request")
+	log.Debug("Processing spectate game request")
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
@@ -69,7 +69,7 @@ func (h *SpectateGameHandler) HandleMessage(ctx context.Context, connection *cor
 		return
 	}
 
-	log.Info("✅ Spectator joined successfully", zap.String("spectator_id", result.SpectatorID))
+	log.Debug("Spectator joined", zap.String("spectator_id", result.SpectatorID))
 
 	h.broadcaster.BroadcastGameState(gameID, nil)
 

@@ -32,7 +32,7 @@ func NewSkipActionAction(
 // Execute performs the skip action
 func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID string) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "skip_action"))
-	log.Info("⏭️ Skipping player turn")
+	log.Debug("Skipping player turn")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -94,7 +94,7 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 						log.Error("Failed to grant unlimited actions to last player", zap.Error(err))
 						return fmt.Errorf("failed to grant unlimited actions: %w", err)
 					}
-					log.Info("🏃 Last active player granted unlimited actions due to others passing",
+					log.Debug("Last active player granted unlimited actions due to others passing",
 						zap.String("player_id", p.ID()))
 				}
 			}
@@ -124,7 +124,7 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 
 	if allPlayersFinished {
 		if g.GlobalParameters().IsMaxed() {
-			log.Info("🏆 All global parameters maxed - triggering final scoring",
+			log.Debug("All global parameters maxed - triggering final scoring",
 				zap.String("game_id", gameID),
 				zap.Int("generation", g.Generation()))
 
@@ -134,11 +134,11 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 				return fmt.Errorf("failed to execute final scoring: %w", err)
 			}
 
-			log.Info("✅ Game ended, final scores calculated")
+			log.Info("Game ended, final scores calculated")
 			return nil
 		}
 
-		log.Info("🏭 All players finished their turns - executing production phase",
+		log.Debug("All players finished their turns - executing production phase",
 			zap.String("game_id", gameID),
 			zap.Int("generation", g.Generation()),
 			zap.Int("passed_or_exited_players", passedOrExitedCount))
@@ -155,7 +155,7 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 			return fmt.Errorf("failed to execute production phase: %w", err)
 		}
 
-		log.Info("✅ Production phase completed, new generation started")
+		log.Info("New generation started")
 		return nil
 	}
 
@@ -180,7 +180,7 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 	}
 	if nonPassedCount == 1 {
 		nextActions = -1
-		log.Info("🏃 Next player is the last non-passed player, granting unlimited actions",
+		log.Debug("Next player is the last non-passed player, granting unlimited actions",
 			zap.String("player_id", nextPlayerID))
 	}
 
@@ -190,7 +190,7 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 		return fmt.Errorf("failed to update game: %w", err)
 	}
 
-	log.Info("✅ Player turn skipped, advanced to next player",
+	log.Info("Player turn skipped, advanced to next player",
 		zap.String("previous_player", playerID),
 		zap.String("current_player", nextPlayerID))
 

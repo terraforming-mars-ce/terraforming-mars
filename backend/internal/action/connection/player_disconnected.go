@@ -32,7 +32,7 @@ func (a *PlayerDisconnectedAction) Execute(ctx context.Context, gameID string, p
 		zap.String("player_id", playerID),
 		zap.String("action", "player_disconnected"),
 	)
-	log.Info("🔌 Player disconnecting")
+	log.Debug("Player disconnecting")
 
 	g, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -54,7 +54,7 @@ func (a *PlayerDisconnectedAction) Execute(ctx context.Context, gameID string, p
 				log.Error("Failed to delete empty game", zap.Error(err))
 				return fmt.Errorf("failed to delete empty game: %w", err)
 			}
-			log.Info("🗑️ Game deleted (no players remaining)")
+			log.Debug("Game deleted (no players remaining)")
 			return nil
 		}
 
@@ -72,7 +72,7 @@ func (a *PlayerDisconnectedAction) Execute(ctx context.Context, gameID string, p
 					log.Error("Failed to delete game with only bots", zap.Error(err))
 					return fmt.Errorf("failed to delete game: %w", err)
 				}
-				log.Info("🗑️ Game deleted (no human players remaining)")
+				log.Debug("Game deleted (no human players remaining)")
 				return nil
 			}
 
@@ -80,10 +80,10 @@ func (a *PlayerDisconnectedAction) Execute(ctx context.Context, gameID string, p
 				log.Error("Failed to reassign host", zap.Error(err))
 				return fmt.Errorf("failed to reassign host: %w", err)
 			}
-			log.Info("👑 Host reassigned to human player", zap.String("new_host", newHost))
+			log.Debug("Host reassigned to human player", zap.String("new_host", newHost))
 		}
 
-		log.Info("✅ Player removed from lobby")
+		log.Debug("Player removed from lobby")
 		return nil
 	}
 
@@ -100,6 +100,6 @@ func (a *PlayerDisconnectedAction) Execute(ctx context.Context, gameID string, p
 
 	player.SetConnected(false)
 
-	log.Info("✅ Player disconnected successfully")
+	log.Info("Player disconnected")
 	return nil
 }

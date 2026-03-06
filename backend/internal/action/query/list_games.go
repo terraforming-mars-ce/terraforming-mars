@@ -28,7 +28,7 @@ func NewListGamesAction(
 // Execute retrieves all games, optionally filtered by status
 func (a *ListGamesAction) Execute(ctx context.Context, status *game.GameStatus) ([]*game.Game, error) {
 	log := a.logger
-	log.Info("🔍 Querying all games")
+	log.Debug("Querying all games")
 
 	games, err := a.gameRepo.List(ctx, status)
 	if err != nil {
@@ -36,6 +36,6 @@ func (a *ListGamesAction) Execute(ctx context.Context, status *game.GameStatus) 
 		return nil, err
 	}
 
-	log.Info("✅ Games query completed", zap.Int("count", len(games)))
+	log.Debug("Games query completed", zap.Int("count", len(games)))
 	return games, nil
 }

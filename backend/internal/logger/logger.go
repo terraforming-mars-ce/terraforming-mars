@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var globalLogger *zap.Logger
@@ -12,15 +13,6 @@ var globalLogger *zap.Logger
 func Init(logLevel *string) error {
 	var err error
 
-	// Create config based on GO_ENV for formatting
-	env := os.Getenv("GO_ENV")
-	var config zap.Config
-	if env == "production" {
-		config = zap.NewProductionConfig()
-	} else {
-		config = zap.NewDevelopmentConfig()
-	}
-
 	var appliedLogLevel string
 	if logLevel != nil {
 		appliedLogLevel = *logLevel
@@ -28,23 +20,35 @@ func Init(logLevel *string) error {
 		appliedLogLevel = "info"
 	}
 
-	// Set the log level based on TM_LOG_LEVEL
+	var level zapcore.Level
 	switch appliedLogLevel {
 	case "debug":
-		config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+		level = zap.DebugLevel
 	case "info":
-		config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+		level = zap.InfoLevel
 	case "warn":
-		config.Level = zap.NewAtomicLevelAt(zap.WarnLevel)
+		level = zap.WarnLevel
 	case "error":
-		config.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
+		level = zap.ErrorLevel
 	default:
-		config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+		level = zap.InfoLevel
 	}
 
-	globalLogger, err = config.Build(zap.AddStacktrace(zap.ErrorLevel))
-	if err != nil {
-		return err
+	env := os.Getenv("GO_ENV")
+	if env == "production" {
+		config := zap.NewProductionConfig()
+		config.Level = zap.NewAtomicLevelAt(level)
+		globalLogger, err = config.Build(zap.AddStacktrace(zap.ErrorLevel))
+		if err != nil {
+			return err
+		}
+	} else {
+		output, _, err := zap.Open("stderr")
+		if err != nil {
+			return err
+		}
+		core := newPrettyCore(level, output)
+		globalLogger = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
 	}
 
 	return nil

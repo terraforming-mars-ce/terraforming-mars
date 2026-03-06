@@ -34,7 +34,7 @@ func (h *ConfirmInitAdvanceHandler) HandleMessage(ctx context.Context, connectio
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("⏭️ Processing init phase advance request")
+	log.Debug("Processing init phase advance request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		h.sendError(connection, "Not connected to a game")
@@ -48,7 +48,7 @@ func (h *ConfirmInitAdvanceHandler) HandleMessage(ctx context.Context, connectio
 		return
 	}
 
-	log.Info("✅ Init phase advance completed successfully")
+	log.Debug("Init advance completed")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
 

@@ -52,7 +52,7 @@ func (a *JoinGameAction) Execute(
 		zap.String("game_id", gameID),
 		zap.String("player_name", playerName),
 	)
-	log.Info("🎮 Player joining game")
+	log.Debug("Player joining game")
 
 	// 1. Fetch game from repository
 	g, err := a.gameRepo.Get(ctx, gameID)
@@ -65,7 +65,7 @@ func (a *JoinGameAction) Execute(
 	existingPlayer, err := g.GetPlayer(playerID)
 	if err == nil && existingPlayer != nil {
 		// Reconnection case - skip lobby check, just update connection status
-		log.Info("🔄 Player reconnecting", zap.String("player_id", playerID))
+		log.Debug("Player reconnecting", zap.String("player_id", playerID))
 		existingPlayer.SetConnected(true)
 
 		gameDto := dto.ToGameDto(g, a.cardRegistry, playerID)
@@ -85,7 +85,7 @@ func (a *JoinGameAction) Execute(
 	existingPlayers := g.GetAllPlayers()
 	for _, p := range existingPlayers {
 		if p.Name() == playerName {
-			log.Info("🔄 Player already exists, returning existing ID",
+			log.Debug("Player already exists, returning existing ID",
 				zap.String("player_id", p.ID()))
 
 			// Return the existing game state with personalized view
@@ -109,7 +109,7 @@ func (a *JoinGameAction) Execute(
 
 	// 6. Create new player (using Game's EventBus for automatic broadcasting)
 	newPlayer := playerPkg.NewPlayer(g.EventBus(), gameID, playerID, playerName)
-	log.Info("✅ New player created", zap.String("player_id", newPlayer.ID()))
+	log.Debug("New player created", zap.String("player_id", newPlayer.ID()))
 
 	// 7. Check if this will be the first player (before adding)
 	isFirstPlayer := len(existingPlayers) == 0
@@ -121,7 +121,7 @@ func (a *JoinGameAction) Execute(
 			log.Error("Failed to set host player", zap.Error(err))
 			return nil, fmt.Errorf("failed to set host player: %w", err)
 		}
-		log.Info("👑 Player set as host")
+		log.Debug("Player set as host")
 	}
 
 	// 9. Add player to game (publishes PlayerJoinedEvent which auto-broadcasts)
@@ -131,7 +131,7 @@ func (a *JoinGameAction) Execute(
 		return nil, fmt.Errorf("failed to add player to game: %w", err)
 	}
 
-	log.Info("✅ Player added to game")
+	log.Debug("Player added to game")
 
 	// 10. Convert to DTO with personalized view for the joining player
 	gameDto := dto.ToGameDto(g, a.cardRegistry, newPlayer.ID())
@@ -139,7 +139,7 @@ func (a *JoinGameAction) Execute(
 	// Note: Broadcasting handled automatically via PlayerJoinedEvent
 	// g.AddPlayer() publishes event → SessionManager subscribes → broadcasts
 
-	log.Info("🎉 Player joined game successfully")
+	log.Info("Player joined game")
 	return &JoinGameResult{
 		PlayerID: newPlayer.ID(),
 		GameDto:  gameDto,

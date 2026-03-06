@@ -37,7 +37,7 @@ func (h *KickSpectatorHandler) HandleMessage(ctx context.Context, connection *co
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("👢 Processing kick spectator request")
+	log.Debug("Processing kick spectator request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -66,7 +66,7 @@ func (h *KickSpectatorHandler) HandleMessage(ctx context.Context, connection *co
 		return
 	}
 
-	log.Info("✅ Spectator kicked successfully")
+	log.Debug("Spectator kicked")
 
 	kickedConn := h.hub.GetManager().GetConnectionBySpectatorID(connection.GameID, targetSpectatorID)
 	if kickedConn != nil {

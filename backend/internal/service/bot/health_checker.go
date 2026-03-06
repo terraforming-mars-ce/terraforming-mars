@@ -65,6 +65,6 @@ func (hc *HealthChecker) CheckHealth(ctx context.Context, apiKey, model, botName
 	}
 
 	greeting := strings.TrimSpace(string(output))
-	hc.logger.Info("Health check passed", zap.String("greeting", greeting))
+	hc.logger.Debug("Health check passed", zap.String("greeting", greeting))
 	return greeting, nil
 }

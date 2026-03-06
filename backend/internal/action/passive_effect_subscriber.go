@@ -123,7 +123,7 @@ func subscribePlacementBonusEffect(
 		}
 
 		// Condition matched! Apply the effect outputs using BehaviorApplier
-		log.Info("🎴 Passive effect triggered",
+		log.Debug("Passive effect triggered",
 			zap.String("card_name", effect.CardName),
 			zap.String("trigger_type", trigger.Condition.Type),
 			zap.Any("resources_gained", event.Resources))
@@ -140,7 +140,7 @@ func subscribePlacementBonusEffect(
 		}
 	})
 
-	log.Debug("📬 Subscribed passive effect to PlacementBonusGainedEvent",
+	log.Debug("Subscribed passive effect to PlacementBonusGainedEvent",
 		zap.String("card_name", effect.CardName))
 
 	return subID
@@ -191,7 +191,7 @@ func subscribeCityPlacedEffect(
 		}
 
 		// Condition matched! Apply the effect outputs using BehaviorApplier
-		log.Info("🎴 Passive effect triggered (city placement)",
+		log.Debug("Passive effect triggered (city placement)",
 			zap.String("card_name", effect.CardName),
 			zap.String("player_id", p.ID()),
 			zap.String("placed_by", event.PlayerID),
@@ -209,7 +209,7 @@ func subscribeCityPlacedEffect(
 		}
 	})
 
-	log.Debug("📬 Subscribed passive effect to TilePlacedEvent (city)",
+	log.Debug("Subscribed passive effect to TilePlacedEvent (city)",
 		zap.String("card_name", effect.CardName))
 
 	return subID
@@ -252,7 +252,7 @@ func subscribeOceanPlacedEffect(
 			return
 		}
 
-		log.Info("🎴 Passive effect triggered (ocean placement)",
+		log.Debug("Passive effect triggered (ocean placement)",
 			zap.String("card_name", effect.CardName),
 			zap.String("player_id", p.ID()),
 			zap.String("placed_by", event.PlayerID),
@@ -269,7 +269,7 @@ func subscribeOceanPlacedEffect(
 		}
 	})
 
-	log.Debug("📬 Subscribed passive effect to TilePlacedEvent (ocean)",
+	log.Debug("Subscribed passive effect to TilePlacedEvent (ocean)",
 		zap.String("card_name", effect.CardName))
 
 	return subID
@@ -317,7 +317,7 @@ func subscribeTagPlayedEffect(
 			}
 		}
 
-		log.Info("🎴 Passive effect triggered (tag played)",
+		log.Debug("Passive effect triggered (tag played)",
 			zap.String("card_name", effect.CardName),
 			zap.String("effect_owner", p.ID()),
 			zap.String("tag_played_by", event.PlayerID),
@@ -347,7 +347,7 @@ func subscribeTagPlayedEffect(
 		}
 	})
 
-	log.Debug("📬 Subscribed passive effect to TagPlayedEvent",
+	log.Debug("Subscribed passive effect to TagPlayedEvent",
 		zap.String("card_name", effect.CardName))
 
 	return subID
@@ -392,7 +392,7 @@ func subscribeCardPlayedEffect(
 			}
 		}
 
-		log.Info("🎴 Passive effect triggered (card played)",
+		log.Debug("Passive effect triggered (card played)",
 			zap.String("card_name", effect.CardName),
 			zap.String("effect_owner", p.ID()),
 			zap.String("card_played_by", event.PlayerID),
@@ -415,7 +415,7 @@ func subscribeCardPlayedEffect(
 		}
 	})
 
-	log.Debug("📬 Subscribed passive effect to CardPlayedEvent",
+	log.Debug("Subscribed passive effect to CardPlayedEvent",
 		zap.String("card_name", effect.CardName))
 
 	return subID
@@ -471,7 +471,7 @@ func subscribeStandardProjectPlayedEffect(
 			}
 		}
 
-		log.Info("🎴 Passive effect triggered (standard project played)",
+		log.Debug("Passive effect triggered (standard project played)",
 			zap.String("card_name", effect.CardName),
 			zap.String("effect_owner", p.ID()),
 			zap.String("project_type", event.ProjectType),
@@ -489,7 +489,7 @@ func subscribeStandardProjectPlayedEffect(
 		}
 	})
 
-	log.Debug("📬 Subscribed passive effect to StandardProjectPlayedEvent",
+	log.Debug("Subscribed passive effect to StandardProjectPlayedEvent",
 		zap.String("card_name", effect.CardName))
 
 	return subID
@@ -535,7 +535,7 @@ func subscribeTilePlacedEffect(
 			}
 		}
 
-		log.Info("🎴 Passive effect triggered (tile placed on bonus)",
+		log.Debug("Passive effect triggered (tile placed on bonus)",
 			zap.String("card_name", effect.CardName),
 			zap.String("trigger_type", trigger.Condition.Type),
 			zap.Any("bonus_resources", event.Resources))
@@ -552,7 +552,7 @@ func subscribeTilePlacedEffect(
 		}
 	})
 
-	log.Debug("📬 Subscribed passive effect to PlacementBonusGainedEvent (tile-placed)",
+	log.Debug("Subscribed passive effect to PlacementBonusGainedEvent (tile-placed)",
 		zap.String("card_name", effect.CardName))
 
 	return subID
@@ -576,7 +576,7 @@ func createPassiveCardDiscard(p *player.Player, effect player.CardEffect, log *z
 
 	// Skip if player has no cards to discard
 	if len(p.Hand().Cards()) == 0 {
-		log.Info("🗑️ Skipping card discard - player has no cards in hand",
+		log.Debug("Skipping card discard - player has no cards in hand",
 			zap.String("card_name", effect.CardName))
 		return
 	}
@@ -589,7 +589,7 @@ func createPassiveCardDiscard(p *player.Player, effect player.CardEffect, log *z
 		PendingOutputs: effect.Behavior.Outputs,
 	})
 
-	log.Info("🗑️ Created pending card discard selection from passive effect",
+	log.Debug("Created pending card discard selection from passive effect",
 		zap.String("card_name", effect.CardName),
 		zap.Int("min_cards", minCards),
 		zap.Int("max_cards", maxCards))
@@ -604,7 +604,7 @@ func createPassiveBehaviorChoice(p *player.Player, effect player.CardEffect, log
 		SourceCardID: effect.CardID,
 	})
 
-	log.Info("🔀 Created pending behavior choice selection from passive effect",
+	log.Debug("Created pending behavior choice selection from passive effect",
 		zap.String("card_name", effect.CardName),
 		zap.Int("num_choices", len(effect.Behavior.Choices)))
 }

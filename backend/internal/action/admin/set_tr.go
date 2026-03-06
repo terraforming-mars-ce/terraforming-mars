@@ -33,7 +33,7 @@ func (a *SetTRAction) Execute(ctx context.Context, gameID string, playerID strin
 		zap.String("action", "admin_set_tr"),
 		zap.Int("terraform_rating", terraformRating),
 	)
-	log.Info("🌍 Admin: Setting player terraform rating")
+	log.Debug("Admin: Setting player terraform rating")
 
 	game, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -49,6 +49,6 @@ func (a *SetTRAction) Execute(ctx context.Context, gameID string, playerID strin
 
 	player.Resources().SetTerraformRating(terraformRating)
 
-	log.Info("✅ Admin set terraform rating completed")
+	log.Info("Admin set terraform rating completed")
 	return nil
 }

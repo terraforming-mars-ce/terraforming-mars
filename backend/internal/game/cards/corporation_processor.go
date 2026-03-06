@@ -40,7 +40,7 @@ func (p *CorporationProcessor) ApplyStartingEffects(
 		zap.String("player_id", pl.ID()),
 	)
 
-	log.Info("💼 Applying corporation starting effects")
+	log.Debug("Applying corporation starting effects")
 
 	applier := NewBehaviorApplier(pl, g, card.Name, p.logger).
 		WithSourceCardID(card.ID).
@@ -50,7 +50,7 @@ func (p *CorporationProcessor) ApplyStartingEffects(
 	for _, behavior := range card.Behaviors {
 		for _, trigger := range behavior.Triggers {
 			if trigger.Type == string(ResourceTriggerAutoCorporationStart) {
-				log.Info("✨ Found auto-corporation-start behavior",
+				log.Debug("Found auto-corporation-start behavior",
 					zap.Int("outputs", len(behavior.Outputs)))
 
 				if err := applier.ApplyOutputs(ctx, behavior.Outputs); err != nil {
@@ -60,7 +60,7 @@ func (p *CorporationProcessor) ApplyStartingEffects(
 		}
 	}
 
-	log.Info("✅ Corporation starting effects applied successfully")
+	log.Debug("Corporation starting effects applied")
 	return nil
 }
 
@@ -78,7 +78,7 @@ func (p *CorporationProcessor) ApplyAutoEffects(
 		zap.String("player_id", pl.ID()),
 	)
 
-	log.Info("💼 Applying corporation auto effects")
+	log.Debug("Applying corporation auto effects")
 
 	applier := NewBehaviorApplier(pl, g, card.Name, p.logger).
 		WithSourceCardID(card.ID).
@@ -90,7 +90,7 @@ func (p *CorporationProcessor) ApplyAutoEffects(
 			// Handle auto trigger WITHOUT conditions (immediate effects like payment-substitute)
 			// Auto triggers WITH conditions are passive effects handled separately
 			if trigger.Type == string(ResourceTriggerAuto) && trigger.Condition == nil {
-				log.Info("✨ Found auto behavior (no condition)",
+				log.Debug("Found auto behavior (no condition)",
 					zap.Int("outputs", len(behavior.Outputs)))
 
 				if err := applier.ApplyOutputs(ctx, behavior.Outputs); err != nil {
@@ -100,7 +100,7 @@ func (p *CorporationProcessor) ApplyAutoEffects(
 		}
 	}
 
-	log.Info("✅ Corporation auto effects applied successfully")
+	log.Debug("Corporation auto effects applied")
 	return nil
 }
 
@@ -117,13 +117,13 @@ func (p *CorporationProcessor) SetupForcedFirstAction(
 		zap.String("player_id", playerID),
 	)
 
-	log.Info("🎯 Checking for forced first action")
+	log.Debug("Checking for forced first action")
 
 	// Process behaviors with auto-corporation-first-action trigger
 	for _, behavior := range card.Behaviors {
 		for _, trigger := range behavior.Triggers {
 			if trigger.Type == string(ResourceTriggerAutoCorporationFirstAction) {
-				log.Info("✨ Found auto-corporation-first-action behavior",
+				log.Debug("Found auto-corporation-first-action behavior",
 					zap.Int("outputs", len(behavior.Outputs)))
 
 				// Create forced action based on outputs
@@ -238,7 +238,7 @@ func (p *CorporationProcessor) createForcedAction(
 		if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
 			return fmt.Errorf("failed to set forced city placement action: %w", err)
 		}
-		log.Info("🏙️ Set forced city placement action",
+		log.Debug("Set forced city placement action",
 			zap.String("description", action.Description))
 
 		if !inStartingSelection {
@@ -249,9 +249,9 @@ func (p *CorporationProcessor) createForcedAction(
 			if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
 				return fmt.Errorf("failed to queue tile placement: %w", err)
 			}
-			log.Info("🎯 Queued city tile for placement")
+			log.Debug("Queued city tile for placement")
 		} else {
-			log.Info("⏳ Deferred city tile queue to action phase")
+			log.Debug("Deferred city tile queue to action phase")
 		}
 
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
@@ -267,7 +267,7 @@ func (p *CorporationProcessor) createForcedAction(
 		if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
 			return fmt.Errorf("failed to set forced greenery placement action: %w", err)
 		}
-		log.Info("🌳 Set forced greenery placement action",
+		log.Debug("Set forced greenery placement action",
 			zap.String("description", action.Description))
 
 		if !inStartingSelection {
@@ -278,9 +278,9 @@ func (p *CorporationProcessor) createForcedAction(
 			if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
 				return fmt.Errorf("failed to queue tile placement: %w", err)
 			}
-			log.Info("🎯 Queued greenery tile for placement")
+			log.Debug("Queued greenery tile for placement")
 		} else {
-			log.Info("⏳ Deferred greenery tile queue to action phase")
+			log.Debug("Deferred greenery tile queue to action phase")
 		}
 
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
@@ -296,7 +296,7 @@ func (p *CorporationProcessor) createForcedAction(
 		if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
 			return fmt.Errorf("failed to set forced ocean placement action: %w", err)
 		}
-		log.Info("🌊 Set forced ocean placement action",
+		log.Debug("Set forced ocean placement action",
 			zap.String("description", action.Description))
 
 		if !inStartingSelection {
@@ -307,15 +307,15 @@ func (p *CorporationProcessor) createForcedAction(
 			if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
 				return fmt.Errorf("failed to queue tile placement: %w", err)
 			}
-			log.Info("🎯 Queued ocean tile for placement")
+			log.Debug("Queued ocean tile for placement")
 		} else {
-			log.Info("⏳ Deferred ocean tile queue to action phase")
+			log.Debug("Deferred ocean tile queue to action phase")
 		}
 
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
 
 	default:
-		log.Warn("⚠️ Unhandled forced action type",
+		log.Warn("Unhandled forced action type",
 			zap.String("type", string(output.ResourceType)))
 	}
 
@@ -333,7 +333,7 @@ func (p *CorporationProcessor) subscribeForcedActionCompletion(
 ) {
 	eventBus := g.EventBus()
 	if eventBus == nil {
-		log.Warn("⚠️ No event bus available, cannot subscribe to forced action completion")
+		log.Warn("No event bus available, cannot subscribe to forced action completion")
 		return
 	}
 
@@ -344,7 +344,7 @@ func (p *CorporationProcessor) subscribeForcedActionCompletion(
 			return
 		}
 
-		log.Debug("📡 Received TilePlacedEvent for forced action check",
+		log.Debug("Received TilePlacedEvent for forced action check",
 			zap.String("player_id", event.PlayerID),
 			zap.String("tile_type", event.TileType))
 
@@ -358,14 +358,14 @@ func (p *CorporationProcessor) subscribeForcedActionCompletion(
 		// Check if the queue is now empty (last tile was placed)
 		queue := g.GetPendingTileSelectionQueue(playerID)
 		if queue != nil && len(queue.Items) > 0 {
-			log.Debug("🔄 Tile queue still has items, waiting for more tiles",
+			log.Debug("Tile queue still has items, waiting for more tiles",
 				zap.Int("remaining_tiles", len(queue.Items)))
 			return
 		}
 
 		// Queue is empty - forced action is complete!
 		// Note: Forced first actions are FREE - they don't consume player actions
-		log.Info("✅ Forced first action completed (free action)",
+		log.Debug("Forced first action completed (free action)",
 			zap.String("action_type", forcedAction.ActionType),
 			zap.String("corporation_id", forcedAction.CorporationID))
 
@@ -375,7 +375,7 @@ func (p *CorporationProcessor) subscribeForcedActionCompletion(
 		}
 	})
 
-	log.Info("👂 Subscribed to TilePlacedEvent for forced action completion",
+	log.Debug("Subscribed to TilePlacedEvent for forced action completion",
 		zap.String("player_id", playerID),
 		zap.String("source", source))
 }

@@ -50,13 +50,13 @@ func NewHub() *Hub {
 
 // Run starts the hub's main event loop
 func (h *Hub) Run(ctx context.Context) {
-	h.logger.Info("🚀 Starting WebSocket hub")
-	h.logger.Info("✅ WebSocket hub ready to process messages")
+	h.logger.Debug("Starting WebSocket hub")
+	h.logger.Debug("WebSocket hub ready to process messages")
 
 	for {
 		select {
 		case <-ctx.Done():
-			h.logger.Info("🛑 WebSocket hub shutting down")
+			h.logger.Debug("WebSocket hub shutting down")
 			h.manager.CloseAllConnections()
 			return
 
@@ -119,14 +119,14 @@ func (h *Hub) GetManager() *Manager {
 func (h *Hub) SendToPlayer(gameID, playerID string, message dto.WebSocketMessage) error {
 	connection := h.manager.GetConnectionByPlayerID(gameID, playerID)
 	if connection == nil {
-		h.logger.Debug("❌ No connection found for player",
+		h.logger.Debug("No connection found for player",
 			zap.String("game_id", gameID),
 			zap.String("player_id", playerID))
 		return nil // Don't error, just skip sending (player might be disconnected)
 	}
 
 	connection.SendMessage(message)
-	h.logger.Debug("💬 Message sent to player via Hub",
+	h.logger.Debug("Message sent to player via Hub",
 		zap.String("game_id", gameID),
 		zap.String("player_id", playerID),
 		zap.String("message_type", string(message.Type)))
@@ -148,7 +148,7 @@ func (h *Hub) SendToSpectator(gameID, spectatorID string, message dto.WebSocketM
 // RegisterConnectionWithGame registers a connection with a game after player ID is set
 func (h *Hub) RegisterConnectionWithGame(connection *Connection, gameID string) {
 	h.manager.AddToGame(connection, gameID)
-	h.logger.Debug("🎯 Connection registered with game",
+	h.logger.Debug("Connection registered with game",
 		zap.String("connection_id", connection.ID),
 		zap.String("game_id", gameID),
 		zap.String("player_id", connection.PlayerID))
@@ -159,16 +159,16 @@ func (h *Hub) routeMessage(ctx context.Context, hubMessage HubMessage) {
 	connection := hubMessage.Connection
 	message := hubMessage.Message
 
-	h.logger.Info("🔄 Routing WebSocket message",
+	h.logger.Debug("Routing WebSocket message",
 		zap.String("connection_id", connection.ID),
 		zap.String("message_type", string(message.Type)))
 
 	if handler, exists := h.handlers[message.Type]; exists {
-		h.logger.Debug("🎯 Routing to registered message handler",
+		h.logger.Debug("Routing to registered message handler",
 			zap.String("message_type", string(message.Type)))
 		handler.HandleMessage(ctx, connection, message)
 	} else {
-		h.logger.Warn("❓ Unknown message type",
+		h.logger.Warn("Unknown message type",
 			zap.String("message_type", string(message.Type)))
 		h.sendError(connection, ErrUnknownMessageType)
 	}

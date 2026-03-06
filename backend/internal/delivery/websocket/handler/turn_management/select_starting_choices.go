@@ -39,7 +39,7 @@ func (h *SelectStartingChoicesHandler) HandleMessage(ctx context.Context, connec
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🎮 Processing select starting choices request")
+	log.Debug("Processing select starting choices request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -93,7 +93,7 @@ func (h *SelectStartingChoicesHandler) HandleMessage(ctx context.Context, connec
 		return
 	}
 
-	log.Info("✅ Select starting choices action completed successfully")
+	log.Debug("Starting choices selected")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
 

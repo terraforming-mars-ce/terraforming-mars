@@ -69,7 +69,7 @@ func (h *AdminCommandHandler) HandleMessage(ctx context.Context, connection *cor
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🔧 Processing admin command")
+	log.Debug("Processing admin command")
 
 	_, gameID := connection.GetPlayer()
 	if gameID == "" {
@@ -99,7 +99,7 @@ func (h *AdminCommandHandler) HandleMessage(ctx context.Context, connection *cor
 		return
 	}
 
-	log.Info("🔧 Admin command received",
+	log.Debug("Admin command received",
 		zap.String("command_type", commandType),
 		zap.String("game_id", gameID))
 
@@ -135,10 +135,10 @@ func (h *AdminCommandHandler) HandleMessage(ctx context.Context, connection *cor
 		return
 	}
 
-	log.Info("✅ Admin command executed successfully")
+	log.Debug("Admin command executed")
 
 	h.broadcaster.BroadcastGameState(gameID, nil)
-	log.Debug("📡 Broadcasted game state after admin command")
+	log.Debug("Broadcasted game state after admin command")
 }
 
 func (h *AdminCommandHandler) handleGiveCard(ctx context.Context, gameID string, payload interface{}) error {

@@ -70,7 +70,7 @@ func (a *PlayCardAction) Execute(
 	if targetPlayerID != nil {
 		log = log.With(zap.String("target_player_id", *targetPlayerID))
 	}
-	log.Info("🃏 Player attempting to play card")
+	log.Debug("Player attempting to play card")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -120,7 +120,7 @@ func (a *PlayCardAction) Execute(
 		return fmt.Errorf("cannot play card: %w", err)
 	}
 
-	log.Debug("✅ Card requirements validated")
+	log.Debug("Card requirements validated")
 
 	if tileErrors := baseaction.ValidateTileOutputs(card, player, g); len(tileErrors) > 0 {
 		log.Error("Tile placement not available", zap.String("error", tileErrors[0].Message))
@@ -145,7 +145,7 @@ func (a *PlayCardAction) Execute(
 				}
 			}
 		}
-		log.Debug("✅ Choice requirements validated")
+		log.Debug("Choice requirements validated")
 	}
 
 	discountAmount := calculator.CalculateCardDiscounts(player, card)
@@ -214,7 +214,7 @@ func (a *PlayCardAction) Execute(
 		return fmt.Errorf("failed to remove card from hand: card not found")
 	}
 
-	log.Info("✅ Card removed from hand")
+	log.Debug("Card removed from hand")
 
 	cardTags := make([]string, len(card.Tags))
 	for i, tag := range card.Tags {
@@ -223,11 +223,11 @@ func (a *PlayCardAction) Execute(
 
 	player.PlayedCards().AddCard(cardID, card.Name, string(card.Type), cardTags)
 
-	log.Info("✅ Card added to played cards")
+	log.Debug("Card added to played cards")
 
 	if card.ResourceStorage != nil {
 		player.Resources().AddToStorage(cardID, card.ResourceStorage.Starting)
-		log.Info("📦 Initialized resource storage",
+		log.Debug("Initialized resource storage",
 			zap.String("card_id", cardID),
 			zap.String("resource_type", string(card.ResourceStorage.Type)),
 			zap.Int("starting_amount", card.ResourceStorage.Starting))
@@ -249,13 +249,13 @@ func (a *PlayCardAction) Execute(
 	for cardID, amount := range adjustedPayment.StorageSubstitutes {
 		if amount > 0 {
 			player.Resources().AddToStorage(cardID, -amount)
-			log.Info("📦 Deducted storage payment",
+			log.Debug("Deducted storage payment",
 				zap.String("card_id", cardID),
 				zap.Int("amount", amount))
 		}
 	}
 
-	log.Info("✅ Payment deducted",
+	log.Debug("Payment deducted",
 		zap.Int("credits", adjustedPayment.Credits),
 		zap.Int("steel", adjustedPayment.Steel),
 		zap.Int("titanium", adjustedPayment.Titanium),
@@ -277,7 +277,7 @@ func (a *PlayCardAction) Execute(
 	displayData := baseaction.BuildCardDisplayData(card, game.SourceTypeCardPlay)
 	a.WriteStateLogFull(ctx, g, card.Name, game.SourceTypeCardPlay, playerID, description, choiceIndex, calculatedOutputs, displayData)
 
-	log.Info("🎉 Card played successfully",
+	log.Info("Card played",
 		zap.String("card_name", card.Name),
 		zap.Int("card_cost", card.Cost),
 		zap.Int("payment_value", totalValue))
@@ -439,7 +439,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 		return nil, nil
 	}
 
-	log.Info("🎴 Processing card behaviors",
+	log.Debug("Processing card behaviors",
 		zap.String("card_id", card.ID),
 		zap.Int("behavior_count", len(card.Behaviors)))
 
@@ -461,7 +461,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 				continue
 			}
 
-			log.Info("✨ Found auto-trigger behavior, applying outputs immediately",
+			log.Debug("Found auto-trigger behavior, applying outputs immediately",
 				zap.Int("output_count", len(outputs)))
 
 			// Use BehaviorApplier for consistent output handling
@@ -490,7 +490,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 			// Also register as effect if it has persistent outputs (discount, payment-substitute)
 			// These need to show in the effects list for display and for modifier calculations
 			if gamecards.HasPersistentEffects(behavior) {
-				log.Info("🏷️ Registering auto-trigger behavior with persistent effects",
+				log.Debug("Registering auto-trigger behavior with persistent effects",
 					zap.String("card_name", card.Name))
 
 				effect := player.CardEffect{
@@ -518,7 +518,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 
 		// Register manual-trigger behaviors as player actions
 		if gamecards.HasManualTrigger(behavior) {
-			log.Info("🎯 Found manual-trigger behavior, registering as player action")
+			log.Debug("Found manual-trigger behavior, registering as player action")
 
 			p.Actions().AddAction(player.CardAction{
 				CardID:                  card.ID,
@@ -539,7 +539,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 
 		// Register conditional-trigger behaviors as passive effects
 		if gamecards.HasConditionalTrigger(behavior) {
-			log.Info("⚡ Found conditional-trigger behavior, registering as passive effect",
+			log.Debug("Found conditional-trigger behavior, registering as passive effect",
 				zap.Int("trigger_count", len(behavior.Triggers)))
 
 			effect := player.CardEffect{
@@ -606,7 +606,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 		})
 	}
 
-	log.Info("✅ All card behaviors processed successfully")
+	log.Debug("Card behaviors processed")
 	return allCalculatedOutputs, nil
 }
 
@@ -636,7 +636,7 @@ func (a *PlayCardAction) createPendingCardDiscard(
 
 	// If optional but player has no cards in hand, skip entirely
 	if isOptional && len(p.Hand().Cards()) == 0 {
-		log.Info("⏭️ Skipping card discard: optional and player has no cards in hand")
+		log.Debug("Skipping card discard: optional and player has no cards in hand")
 		return
 	}
 
@@ -650,7 +650,7 @@ func (a *PlayCardAction) createPendingCardDiscard(
 
 	p.Selection().SetPendingCardDiscardSelection(selection)
 
-	log.Info("🗑️ Created pending card discard selection",
+	log.Debug("Created pending card discard selection",
 		zap.String("card_name", card.Name),
 		zap.Int("min_cards", minCards),
 		zap.Int("max_cards", maxCards),
@@ -765,7 +765,7 @@ func collectTemporaryEffectCardIDs(p *player.Player, temporaryType string) []str
 func removePrePlayTemporaryEffects(p *player.Player, cardIDs []string, log *zap.Logger) {
 	for _, cardID := range cardIDs {
 		p.Effects().RemoveEffectsByCardID(cardID)
-		log.Info("🧹 Removed temporary next-card effect",
+		log.Debug("Removed temporary next-card effect",
 			zap.String("effect_card_id", cardID))
 	}
 }

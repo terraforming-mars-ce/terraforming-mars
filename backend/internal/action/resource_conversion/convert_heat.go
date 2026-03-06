@@ -46,7 +46,7 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 	playerID string,
 ) error {
 	log := a.InitLogger(gameID, playerID)
-	log.Info("🔥 Converting heat to temperature")
+	log.Debug("Converting heat to temperature")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -77,7 +77,7 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 	if requiredHeat < 1 {
 		requiredHeat = 1
 	}
-	log.Debug("💰 Calculated heat cost",
+	log.Debug("Calculated heat cost",
 		zap.Int("base_cost", BaseHeatForTemperature),
 		zap.Int("discount", heatDiscount),
 		zap.Int("final_cost", requiredHeat))
@@ -93,7 +93,7 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 	resources.Heat -= requiredHeat
 	player.Resources().Set(resources)
 
-	log.Info("🔥 Deducted heat",
+	log.Debug("Deducted heat",
 		zap.Int("heat_spent", requiredHeat),
 		zap.Int("remaining_heat", resources.Heat))
 
@@ -109,7 +109,7 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 
 		if stepsRaised > 0 {
 			newTemp := g.GlobalParameters().Temperature()
-			log.Info("🌡️ Temperature raised",
+			log.Debug("Temperature raised",
 				zap.Int("old_temperature", currentTemp),
 				zap.Int("new_temperature", newTemp),
 				zap.Int("steps_raised", stepsRaised))
@@ -118,12 +118,12 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 			player.Resources().UpdateTerraformRating(1)
 			newTR := player.Resources().TerraformRating()
 
-			log.Info("🏆 Increased terraform rating",
+			log.Debug("Increased terraform rating",
 				zap.Int("old_tr", oldTR),
 				zap.Int("new_tr", newTR))
 		}
 	} else {
-		log.Info("🌡️ Temperature already at maximum, no TR awarded")
+		log.Debug("Temperature already at maximum, no TR awarded")
 	}
 
 	a.ConsumePlayerAction(g, log)
@@ -147,7 +147,7 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 	displayData := baseaction.GetStandardProjectDisplayData("Convert Heat")
 	a.WriteStateLogFull(ctx, g, "Convert Heat", game.SourceTypeResourceConvert, playerID, "Converted heat to raise temperature", nil, calculatedOutputs, displayData)
 
-	log.Info("✅ Heat converted successfully",
+	log.Info("Heat converted",
 		zap.Int("heat_spent", requiredHeat))
 	return nil
 }

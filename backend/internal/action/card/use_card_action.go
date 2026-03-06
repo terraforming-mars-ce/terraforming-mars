@@ -63,7 +63,7 @@ func (a *UseCardActionAction) Execute(
 	if stealSourceCardID != nil {
 		log = log.With(zap.String("source_card_for_input", *stealSourceCardID))
 	}
-	log.Info("🎯 Player attempting to use card action")
+	log.Debug("Player attempting to use card action")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -98,7 +98,7 @@ func (a *UseCardActionAction) Execute(
 		return fmt.Errorf("action already played this generation")
 	}
 
-	log.Info("✅ Found card action",
+	log.Debug("Found card action",
 		zap.String("card_name", cardAction.CardName),
 		zap.Int("times_used_this_generation", cardAction.TimesUsedThisGeneration))
 
@@ -127,7 +127,7 @@ func (a *UseCardActionAction) Execute(
 	inputs, outputs := cardAction.Behavior.ExtractInputsOutputs(choiceIndex)
 
 	if choiceIndex != nil {
-		log.Info("📋 Using choice-specific behavior",
+		log.Debug("Using choice-specific behavior",
 			zap.Int("choice_index", *choiceIndex),
 			zap.Int("input_count", len(inputs)),
 			zap.Int("output_count", len(outputs)))
@@ -157,7 +157,7 @@ func (a *UseCardActionAction) Execute(
 	if hasPending {
 		// Pending selection created - action completion deferred to confirmation
 		// Don't increment usage counts or consume action here - that happens in ConfirmCardDraw
-		log.Info("🃏 Card draw selection pending, awaiting player choice")
+		log.Debug("Card draw selection pending, awaiting player choice")
 		return nil
 	}
 
@@ -178,7 +178,7 @@ func (a *UseCardActionAction) Execute(
 	}
 	a.WriteStateLogFull(ctx, g, cardAction.CardName, game.SourceTypeCardAction, playerID, description, choiceIndex, calculatedOutputs, displayData)
 
-	log.Info("🎉 Card action executed successfully")
+	log.Info("Card action executed")
 	return nil
 }
 
@@ -217,7 +217,7 @@ func (a *UseCardActionAction) incrementUsageCounts(
 		if actions[i].CardID == cardID && actions[i].BehaviorIndex == behaviorIndex {
 			actions[i].TimesUsedThisTurn++
 			actions[i].TimesUsedThisGeneration++
-			log.Debug("📊 Incremented action usage counts",
+			log.Debug("Incremented action usage counts",
 				zap.Int("times_used_this_turn", actions[i].TimesUsedThisTurn),
 				zap.Int("times_used_this_generation", actions[i].TimesUsedThisGeneration))
 			break

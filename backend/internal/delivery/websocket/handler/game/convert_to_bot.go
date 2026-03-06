@@ -33,7 +33,7 @@ func (h *ConvertToBotHandler) HandleMessage(ctx context.Context, connection *cor
 		zap.String("connection_id", connection.ID),
 		zap.String("message_type", string(message.Type)),
 	)
-	log.Info("🤖 Processing convert to bot request")
+	log.Debug("Processing convert to bot request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		h.sendError(connection, "not connected to game")
@@ -59,7 +59,7 @@ func (h *ConvertToBotHandler) HandleMessage(ctx context.Context, connection *cor
 		return
 	}
 
-	log.Info("✅ Player converted to bot successfully")
+	log.Debug("Player converted to bot")
 
 	// Send player-kicked to the converted player so they return to main menu
 	convertedConn := h.hub.GetManager().GetConnectionByPlayerID(connection.GameID, targetPlayerID)

@@ -118,14 +118,14 @@ func (b *BaseAction) GetPlayerFromGame(g *game.Game, playerID string, log *zap.L
 func (b *BaseAction) ConsumePlayerAction(g *game.Game, log *zap.Logger) bool {
 	currentTurn := g.CurrentTurn()
 	if currentTurn == nil {
-		log.Warn("⚠️ No current turn set, cannot consume action")
+		log.Warn("No current turn set, cannot consume action")
 		return false
 	}
 
 	playerID := currentTurn.PlayerID()
 	consumed := currentTurn.ConsumeAction()
 	if consumed {
-		log.Debug("✅ Action consumed", zap.Int("remaining_actions", currentTurn.ActionsRemaining()))
+		log.Debug("Action consumed", zap.Int("remaining_actions", currentTurn.ActionsRemaining()))
 
 		if currentTurn.ActionsRemaining() == 0 {
 			AutoAdvanceTurnIfNeeded(g, playerID, log)
@@ -192,7 +192,7 @@ func AutoAdvanceTurnIfNeeded(g *game.Game, playerID string, log *zap.Logger) {
 			if err := g.SetCurrentTurn(context.Background(), playerID, -1); err != nil {
 				log.Error("Failed to grant unlimited actions to last player", zap.Error(err))
 			} else {
-				log.Info("🏃 Last non-passed player granted unlimited actions",
+				log.Debug("Last non-passed player granted unlimited actions",
 					zap.String("player_id", playerID))
 			}
 			return
@@ -211,13 +211,13 @@ func AutoAdvanceTurnIfNeeded(g *game.Game, playerID string, log *zap.Logger) {
 			nextActions := 2
 			if nonPassedCount == 1 {
 				nextActions = -1
-				log.Info("🏃 Last non-passed player granted unlimited actions",
+				log.Debug("Last non-passed player granted unlimited actions",
 					zap.String("player_id", nextID))
 			}
 			if err := g.SetCurrentTurn(context.Background(), nextID, nextActions); err != nil {
 				log.Error("Failed to auto-advance turn", zap.Error(err))
 			} else {
-				log.Info("🔄 Auto-advanced turn to next player",
+				log.Debug("Auto-advanced turn to next player",
 					zap.String("from", playerID),
 					zap.String("to", nextID),
 					zap.Int("actions", nextActions))

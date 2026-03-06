@@ -107,7 +107,7 @@ func (d *CommandDispatcher) Dispatch(ctx context.Context, gameID, playerID strin
 		return fmt.Errorf("parse command envelope: %w", err)
 	}
 
-	d.logger.Info("📤 Dispatching bot command",
+	d.logger.Debug("Dispatching bot command",
 		zap.String("game_id", gameID),
 		zap.String("player_id", playerID),
 		zap.String("type", envelope.Type))

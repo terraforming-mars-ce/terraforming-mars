@@ -53,7 +53,7 @@ func (a *CreateDemoLobbyAction) Execute(
 	settings DemoLobbySettings,
 ) (*DemoLobbyResult, error) {
 	log := a.logger.With(zap.String("action", "create_demo_lobby"))
-	log.Info("Creating demo lobby", zap.Int("player_count", settings.PlayerCount))
+	log.Debug("Creating demo lobby", zap.Int("player_count", settings.PlayerCount))
 
 	// Validate required fields
 	if settings.PlayerCount < 1 || settings.PlayerCount > 5 {
@@ -82,7 +82,7 @@ func (a *CreateDemoLobbyAction) Execute(
 	gameDeck := deck.NewDeck(gameID, projectCardIDs, corpIDs, preludeIDs)
 	newGame.SetDeck(gameDeck)
 	newGame.SetVPCardLookup(cards.NewVPCardLookupAdapter(a.cardRegistry))
-	log.Info("Deck initialized",
+	log.Debug("Deck initialized",
 		zap.Int("project_cards", len(projectCardIDs)),
 		zap.Int("corporations", len(corpIDs)))
 
@@ -97,7 +97,7 @@ func (a *CreateDemoLobbyAction) Execute(
 	if err := newGame.AddPlayer(ctx, humanPlayer); err != nil {
 		return nil, fmt.Errorf("failed to add player: %w", err)
 	}
-	log.Info("Human player added", zap.String("player_id", playerID), zap.String("name", settings.PlayerName))
+	log.Debug("Human player added", zap.String("player_id", playerID), zap.String("name", settings.PlayerName))
 
 	// Set host to human player
 	if err := newGame.SetHostPlayerID(ctx, playerID); err != nil {
@@ -105,7 +105,7 @@ func (a *CreateDemoLobbyAction) Execute(
 	}
 
 	// Game stays in lobby status - ready for configuration
-	log.Info("Demo lobby created successfully", zap.String("game_id", gameID))
+	log.Info("Demo lobby created", zap.String("game_id", gameID))
 
 	gameDto := dto.ToGameDto(newGame, a.cardRegistry, playerID)
 	return &DemoLobbyResult{
