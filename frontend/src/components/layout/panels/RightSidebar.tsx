@@ -6,6 +6,7 @@ interface GlobalParameters {
   temperature: number;
   oxygen: number;
   oceans: number;
+  maxOceans: number;
   venus: number;
 }
 
@@ -429,11 +430,12 @@ const GaugeLegendPanel: React.FC<GaugeLegendPanelProps> = ({ width, height }) =>
 
 interface OceansPanelProps {
   oceans: number;
+  maxOceans: number;
   width: number;
   height: number;
 }
 
-const OceansPanel: React.FC<OceansPanelProps> = ({ oceans, width, height }) => {
+const OceansPanel: React.FC<OceansPanelProps> = ({ oceans, maxOceans, width, height }) => {
   const fillPoints = `0,0 ${width},${ANGLE_INDENT} ${width},${height} 0,${height - ANGLE_INDENT}`;
 
   return (
@@ -480,7 +482,7 @@ const OceansPanel: React.FC<OceansPanelProps> = ({ oceans, width, height }) => {
         <div className="flex items-center font-orbitron text-sm font-bold">
           <span className="text-[#00bfff] [text-shadow:0_0_3px_rgba(0,191,255,0.6)]">{oceans}</span>
           <span className="text-[#666]"> / </span>
-          <span className="text-[#999]">9</span>
+          <span className="text-[#999]">{maxOceans}</span>
         </div>
       </div>
     </div>
@@ -532,7 +534,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             }}
           >
             <VenusGaugeSection
-              venus={globalParameters?.venus || 0}
+              venus={globalParameters?.venus ?? 0}
               width={venusWidth}
               isHovered={isHovered}
             />
@@ -561,8 +563,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           }}
         >
           <GaugesSection
-            oxygen={globalParameters?.oxygen || 0}
-            temperature={globalParameters?.temperature || -30}
+            oxygen={globalParameters?.oxygen ?? 0}
+            temperature={globalParameters?.temperature ?? -30}
             width={currentWidth}
             isHovered={isHovered}
           />
@@ -572,7 +574,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
         <div style={{ marginTop: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
           <OceansPanel
-            oceans={globalParameters?.oceans || 0}
+            oceans={globalParameters?.oceans ?? 0}
+            maxOceans={globalParameters?.maxOceans ?? 9}
             width={currentWidth}
             height={OCEANS_PANEL_HEIGHT}
           />

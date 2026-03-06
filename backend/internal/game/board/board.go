@@ -296,6 +296,19 @@ func max(a, b int) int {
 	return b
 }
 
+// FreeOceanSpaces returns the count of unoccupied ocean-space tiles on the board
+func (b *Board) FreeOceanSpaces() int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	count := 0
+	for _, tile := range b.tiles {
+		if tile.Type == shared.ResourceOceanSpace && tile.OccupiedBy == nil {
+			count++
+		}
+	}
+	return count
+}
+
 // Tiles returns a deep copy of all tiles to prevent external mutation
 func (b *Board) Tiles() []Tile {
 	b.mu.RLock()
@@ -384,6 +397,7 @@ func (b *Board) ClearTileOccupant(ctx context.Context, coords shared.HexPosition
 		if b.tiles[i].Coordinates == coords {
 			b.tiles[i].OccupiedBy = nil
 			b.tiles[i].OwnerID = nil
+			b.tiles[i].ReservedBy = nil
 			found = true
 			break
 		}

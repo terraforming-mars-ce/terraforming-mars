@@ -406,6 +406,7 @@ type GlobalParametersDto struct {
 	Temperature int `json:"temperature" ts:"number"` // Range: -30 to +8°C
 	Oxygen      int `json:"oxygen" ts:"number"`      // Range: 0-14%
 	Oceans      int `json:"oceans" ts:"number"`      // Range: 0-9
+	MaxOceans   int `json:"maxOceans" ts:"number"`   // Dynamic max, starts at 9
 	Venus       int `json:"venus" ts:"number"`       // Range: 0-30%
 }
 

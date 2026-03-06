@@ -79,7 +79,7 @@ function formatGlobalParams(gp: GlobalParametersDto): string {
     "=== GLOBAL PARAMETERS ===",
     `Temperature: ${gp.temperature}°C (target: 8°C)`,
     `Oxygen: ${gp.oxygen}% (target: 14%)`,
-    `Oceans: ${gp.oceans}/9`,
+    `Oceans: ${gp.oceans}/${gp.maxOceans}`,
     `Venus: ${gp.venus}% (target: 30%)`,
   ].join("\n");
 }

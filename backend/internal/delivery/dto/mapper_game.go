@@ -55,6 +55,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		Temperature: globalParams.Temperature(),
 		Oxygen:      globalParams.Oxygen(),
 		Oceans:      globalParams.Oceans(),
+		MaxOceans:   globalParams.GetMaxOceans(),
 		Venus:       globalParams.Venus(),
 	}
 
