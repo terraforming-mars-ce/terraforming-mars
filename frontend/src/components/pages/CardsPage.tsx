@@ -546,6 +546,8 @@ const CardsPage: React.FC = () => {
     startingProduction: card.startingProduction,
     startingResources: card.startingResources,
     behaviors: card.behaviors,
+    tags: card.tags,
+    vpConditions: card.vpConditions,
   });
 
   return (

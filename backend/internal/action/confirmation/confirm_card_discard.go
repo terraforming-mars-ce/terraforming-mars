@@ -38,7 +38,7 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 		zap.String("action", "confirm_card_discard"),
 		zap.Int("cards_to_discard", len(cardsToDiscard)),
 	)
-	log.Info("🗑️ Confirming card discard selection")
+	log.Debug("Confirming card discard selection")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -90,7 +90,7 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 			log.Error("Failed to discard cards to discard pile", zap.Error(err))
 			return fmt.Errorf("failed to discard cards: %w", err)
 		}
-		log.Info("🗑️ Discarded cards from hand to discard pile",
+		log.Debug("Discarded cards from hand to discard pile",
 			zap.Int("count", len(cardsToDiscard)),
 			zap.Strings("card_ids", cardsToDiscard))
 	}
@@ -106,7 +106,7 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 	// Clear the pending selection
 	p.Selection().SetPendingCardDiscardSelection(nil)
 
-	log.Info("✅ Card discard confirmation completed",
+	log.Info("Card discard confirmation completed",
 		zap.String("source", selection.Source),
 		zap.Int("cards_discarded", len(cardsToDiscard)))
 
@@ -137,7 +137,7 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 						continue
 					}
 					baseaction.AddCardsToPlayerHand(drawnCards, opponent, g, a.CardRegistry(), log)
-					log.Info("🃏 Opponent drew cards",
+					log.Debug("Opponent drew cards",
 						zap.String("opponent_id", opponent.ID()),
 						zap.Int("count", len(drawnCards)))
 				}
@@ -150,7 +150,7 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 				return fmt.Errorf("failed to draw cards: %w", err)
 			}
 			baseaction.AddCardsToPlayerHand(drawnCards, p, g, a.CardRegistry(), log)
-			log.Info("🃏 Drew cards after discard",
+			log.Debug("Drew cards after discard",
 				zap.Int("count", len(drawnCards)))
 			continue
 		}

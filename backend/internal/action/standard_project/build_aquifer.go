@@ -38,7 +38,7 @@ func NewBuildAquiferAction(
 // Execute performs the build aquifer action
 func (a *BuildAquiferAction) Execute(ctx context.Context, gameID string, playerID string) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "build_aquifer"))
-	log.Info("💧 Building aquifer (ocean tile)")
+	log.Debug("Building aquifer (ocean tile)")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -83,7 +83,7 @@ func (a *BuildAquiferAction) Execute(ctx context.Context, gameID string, playerI
 	})
 
 	resources = player.Resources().Get()
-	log.Info("💰 Deducted aquifer cost",
+	log.Debug("Deducted aquifer cost",
 		zap.Int("cost", BuildAquiferCost),
 		zap.Int("remaining_credits", resources.Credits))
 
@@ -98,11 +98,11 @@ func (a *BuildAquiferAction) Execute(ctx context.Context, gameID string, playerI
 		return fmt.Errorf("failed to queue tile placement: %w", err)
 	}
 
-	log.Info("📋 Created tile queue for ocean placement (auto-processed by SetPendingTileSelectionQueue)")
+	log.Debug("Created tile queue for ocean placement (auto-processed by SetPendingTileSelectionQueue)")
 
 	a.ConsumePlayerAction(g, log)
 
-	log.Info("✅ Aquifer ocean tile queued for placement",
+	log.Info("Aquifer placed",
 		zap.Int("remaining_credits", resources.Credits))
 	return nil
 }

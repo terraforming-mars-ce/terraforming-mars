@@ -41,7 +41,7 @@ func (a *CreateGameAction) Execute(
 		zap.Int("max_players", settings.MaxPlayers),
 		zap.Strings("card_packs", settings.CardPacks),
 	)
-	log.Info("🎮 Creating new game")
+	log.Debug("Creating new game")
 
 	// 1. Generate game ID
 	gameID := uuid.New().String()
@@ -68,7 +68,7 @@ func (a *CreateGameAction) Execute(
 	gameDeck := deck.NewDeck(gameID, projectCardIDs, corpIDs, preludeIDs)
 	newGame.SetDeck(gameDeck)
 	newGame.SetVPCardLookup(cards.NewVPCardLookupAdapter(a.cardRegistry))
-	log.Info("✅ Deck initialized",
+	log.Debug("Deck initialized",
 		zap.Int("project_cards", len(projectCardIDs)),
 		zap.Int("corporations", len(corpIDs)),
 		zap.Int("preludes", len(preludeIDs)),
@@ -81,7 +81,7 @@ func (a *CreateGameAction) Execute(
 		return nil, err
 	}
 
-	log.Info("✅ Game created successfully with board and deck", zap.String("game_id", gameID))
+	log.Info("Game created", zap.String("game_id", gameID))
 	return newGame, nil
 }
 

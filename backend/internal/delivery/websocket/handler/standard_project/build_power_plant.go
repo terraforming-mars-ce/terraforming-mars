@@ -34,7 +34,7 @@ func (h *BuildPowerPlantHandler) HandleMessage(ctx context.Context, connection *
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("⚡ Processing build power plant request")
+	log.Debug("Processing build power plant request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -49,10 +49,10 @@ func (h *BuildPowerPlantHandler) HandleMessage(ctx context.Context, connection *
 		return
 	}
 
-	log.Info("✅ Build power plant action completed successfully")
+	log.Debug("Power plant built")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

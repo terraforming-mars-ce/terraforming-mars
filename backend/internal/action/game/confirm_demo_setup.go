@@ -51,7 +51,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 		zap.String("player_id", playerID),
 		zap.String("action", "confirm_demo_setup"),
 	)
-	log.Info("🎮 Player confirming demo setup")
+	log.Debug("Player confirming demo setup")
 
 	// 1. Fetch game from repository
 	g, err := a.gameRepo.Get(ctx, gameID)
@@ -95,7 +95,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 	// 4a. Apply corporation with all effects
 	if corporationID != "" {
 		p.SetCorporationID(corporationID)
-		log.Info("✅ Set corporation ID", zap.String("corporation_id", corporationID))
+		log.Debug("Set corporation ID", zap.String("corporation_id", corporationID))
 
 		// Fetch corporation card and apply effects
 		corpCard, err := a.cardRegistry.GetByID(corporationID)
@@ -114,7 +114,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 		autoEffects := a.corpProc.GetAutoEffects(corpCard)
 		for _, effect := range autoEffects {
 			p.Effects().AddEffect(effect)
-			log.Debug("✅ Registered auto effect",
+			log.Debug("Registered auto effect",
 				zap.String("card_name", effect.CardName),
 				zap.Int("behavior_index", effect.BehaviorIndex))
 		}
@@ -123,7 +123,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 		triggerEffects := a.corpProc.GetTriggerEffects(corpCard)
 		for _, effect := range triggerEffects {
 			p.Effects().AddEffect(effect)
-			log.Debug("✅ Registered trigger effect",
+			log.Debug("Registered trigger effect",
 				zap.String("card_name", effect.CardName),
 				zap.Int("behavior_index", effect.BehaviorIndex))
 
@@ -135,7 +135,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 		manualActions := a.corpProc.GetManualActions(corpCard)
 		for _, act := range manualActions {
 			p.Actions().AddAction(act)
-			log.Debug("✅ Registered manual action",
+			log.Debug("Registered manual action",
 				zap.String("card_name", act.CardName),
 				zap.Int("behavior_index", act.BehaviorIndex))
 		}
@@ -146,13 +146,13 @@ func (a *ConfirmDemoSetupAction) Execute(
 			return fmt.Errorf("failed to setup forced first action: %w", err)
 		}
 
-		log.Info("✅ Applied corporation effects", zap.String("corporation_name", corpCard.Name))
+		log.Debug("Applied corporation effects", zap.String("corporation_name", corpCard.Name))
 	}
 
 	// 5. Add cards to hand with proper PlayerCard caching (using shared helper)
 	if len(request.CardIDs) > 0 {
 		action.AddCardsToPlayerHand(request.CardIDs, p, g, a.cardRegistry, log)
-		log.Info("✅ Added cards to hand", zap.Int("card_count", len(request.CardIDs)))
+		log.Debug("Added cards to hand", zap.Int("card_count", len(request.CardIDs)))
 	}
 
 	// 6. Set resources
@@ -165,7 +165,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 		Heat:     request.Resources.Heat,
 	}
 	p.Resources().Set(resources)
-	log.Info("✅ Set resources", zap.Any("resources", resources))
+	log.Debug("Set resources", zap.Any("resources", resources))
 
 	// 7. Set production
 	production := shared.Production{
@@ -177,7 +177,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 		Heat:     request.Production.Heat,
 	}
 	p.Resources().SetProduction(production)
-	log.Info("✅ Set production", zap.Any("production", production))
+	log.Debug("Set production", zap.Any("production", production))
 
 	// 7a. Publish TagPlayedEvent for corporation tags AFTER production is set
 	// This ensures trigger effects (like Saturn Systems) modify production correctly
@@ -199,7 +199,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 
 	// 8. Set terraform rating
 	p.Resources().SetTerraformRating(request.TerraformRating)
-	log.Info("✅ Set terraform rating", zap.Int("rating", request.TerraformRating))
+	log.Debug("Set terraform rating", zap.Int("rating", request.TerraformRating))
 
 	// 9. If host, set global parameters and generation
 	isHost := g.HostPlayerID() == playerID
@@ -217,7 +217,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 			log.Error("Failed to set oceans", zap.Error(err))
 			return fmt.Errorf("failed to set oceans: %w", err)
 		}
-		log.Info("✅ Set global parameters",
+		log.Debug("Set global parameters",
 			zap.Int("temperature", request.GlobalParameters.Temperature),
 			zap.Int("oxygen", request.GlobalParameters.Oxygen),
 			zap.Int("oceans", request.GlobalParameters.Oceans))
@@ -228,12 +228,12 @@ func (a *ConfirmDemoSetupAction) Execute(
 			log.Error("Failed to set generation", zap.Error(err))
 			return fmt.Errorf("failed to set generation: %w", err)
 		}
-		log.Info("✅ Set generation", zap.Int("generation", *request.Generation))
+		log.Debug("Set generation", zap.Int("generation", *request.Generation))
 	}
 
 	// 10. Mark player as having confirmed demo setup
 	p.SetDemoSetupConfirmed(true)
-	log.Info("✅ Player confirmed demo setup")
+	log.Info("Player confirmed demo setup")
 
 	// 11. Check if all players have confirmed
 	allConfirmed := true
@@ -250,7 +250,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 			log.Error("Failed to update game phase", zap.Error(err))
 			return fmt.Errorf("failed to update game phase: %w", err)
 		}
-		log.Info("🎉 All players confirmed, transitioning to Action phase")
+		log.Debug("All players confirmed, transitioning to Action phase")
 
 		// Set first player turn with appropriate action count
 		turnOrder := g.TurnOrder()
@@ -264,7 +264,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 				log.Error("Failed to set current turn", zap.Error(err))
 				return fmt.Errorf("failed to set current turn: %w", err)
 			}
-			log.Info("✅ Set first player turn with actions",
+			log.Debug("Set first player turn with actions",
 				zap.String("player_id", firstPlayerID),
 				zap.Int("available_actions", availableActions))
 		}

@@ -78,7 +78,7 @@ func formatGlobalParams(gp *dto.GlobalParametersDto) string {
 		"=== GLOBAL PARAMETERS ===",
 		fmt.Sprintf("Temperature: %d°C (target: 8°C)", gp.Temperature),
 		fmt.Sprintf("Oxygen: %d%% (target: 14%%)", gp.Oxygen),
-		fmt.Sprintf("Oceans: %d/9", gp.Oceans),
+		fmt.Sprintf("Oceans: %d/%d", gp.Oceans, gp.MaxOceans),
 		fmt.Sprintf("Venus: %d%% (target: 30%%)", gp.Venus),
 	}, "\n")
 }

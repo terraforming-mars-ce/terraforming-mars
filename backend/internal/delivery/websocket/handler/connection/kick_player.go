@@ -34,7 +34,7 @@ func (h *KickPlayerHandler) HandleMessage(ctx context.Context, connection *core.
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("👢 Processing kick player request")
+	log.Debug("Processing kick player request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -63,7 +63,7 @@ func (h *KickPlayerHandler) HandleMessage(ctx context.Context, connection *core.
 		return
 	}
 
-	log.Info("✅ Player kicked successfully")
+	log.Debug("Player kicked")
 
 	// Send player-kicked message to the kicked player before closing their connection
 	kickedConnection := h.hub.GetManager().GetConnectionByPlayerID(connection.GameID, targetPlayerID)
@@ -74,18 +74,18 @@ func (h *KickPlayerHandler) HandleMessage(ctx context.Context, connection *core.
 			Payload: map[string]any{"reason": "You were kicked from the game"},
 		}
 		kickedConnection.SendMessage(kickedMessage)
-		log.Info("💬 Sent player-kicked message to kicked player", zap.String("target_player_id", targetPlayerID))
+		log.Debug("Sent player-kicked message to kicked player", zap.String("target_player_id", targetPlayerID))
 
 		// Close the kicked player's connection after a short delay to ensure the message is sent
 		go func() {
 			time.Sleep(100 * time.Millisecond)
 			kickedConnection.Close()
-			log.Info("🔌 Closed kicked player's connection", zap.String("target_player_id", targetPlayerID))
+			log.Debug("Closed kicked player's connection", zap.String("target_player_id", targetPlayerID))
 		}()
 	}
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 }
 
 func (h *KickPlayerHandler) sendError(connection *core.Connection, errorMessage string) {

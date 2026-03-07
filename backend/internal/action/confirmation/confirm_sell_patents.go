@@ -33,7 +33,7 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 		zap.String("action", "confirm_sell_patents"),
 		zap.Int("cards_selected", len(selectedCardIDs)),
 	)
-	log.Info("🏛️ Confirming sell patents card selection")
+	log.Debug("Confirming sell patents card selection")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -106,7 +106,7 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 		})
 
 		resources := player.Resources().Get()
-		log.Info("💰 Awarded credits for sold cards",
+		log.Debug("Awarded credits for sold cards",
 			zap.Int("cards_sold", len(selectedCardIDs)),
 			zap.Int("credits_earned", totalReward),
 			zap.Int("new_credits", resources.Credits))
@@ -124,7 +124,7 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 		return fmt.Errorf("failed to discard sold cards: %w", err)
 	}
 
-	log.Info("🗑️ Sold cards added to discard pile", zap.Int("cards_removed", len(selectedCardIDs)))
+	log.Debug("Sold cards added to discard pile", zap.Int("cards_removed", len(selectedCardIDs)))
 
 	player.Selection().SetPendingCardSelection(nil)
 
@@ -155,7 +155,7 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 		a.WriteStateLogFull(ctx, g, "Standard Project: Sell Patents", game.SourceTypeStandardProject, playerID, "Sold patents", nil, creditOutputs, displayData)
 	}
 
-	log.Info("✅ Sell patents completed successfully",
+	log.Info("Sell patents completed",
 		zap.Int("cards_sold", len(selectedCardIDs)),
 		zap.Int("credits_earned", totalReward))
 	return nil

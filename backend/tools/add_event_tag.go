@@ -129,5 +129,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("\n✅ Successfully updated %d event cards with 'event' tag\n", updatedCount)
+	fmt.Printf("\nSuccessfully updated %d event cards with 'event' tag\n", updatedCount)
 }

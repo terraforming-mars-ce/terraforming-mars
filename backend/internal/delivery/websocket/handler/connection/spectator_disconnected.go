@@ -66,5 +66,5 @@ func (h *SpectatorDisconnectedHandler) HandleMessage(ctx context.Context, connec
 	}
 
 	h.broadcaster.BroadcastGameState(gameID, nil)
-	log.Debug("📡 Broadcasted updated state after spectator disconnect")
+	log.Debug("Broadcasted updated state after spectator disconnect")
 }

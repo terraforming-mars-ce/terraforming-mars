@@ -76,7 +76,7 @@ func (a *ConvertToBotAction) Execute(ctx context.Context, gameID string, request
 		return fmt.Errorf("claude API key is required to convert players to bots")
 	}
 
-	log.Info("🤖 Converting player to bot", zap.String("player_name", target.Name()))
+	log.Debug("Converting player to bot", zap.String("player_name", target.Name()))
 
 	target.SetPlayerType(playerPkg.PlayerTypeBot)
 	target.SetBotDifficulty(playerPkg.BotDifficultyNormal)
@@ -92,6 +92,6 @@ func (a *ConvertToBotAction) Execute(ctx context.Context, gameID string, request
 		}
 	}
 
-	log.Info("✅ Player converted to bot", zap.String("player_name", target.Name()))
+	log.Info("Player converted to bot", zap.String("player_name", target.Name()))
 	return nil
 }

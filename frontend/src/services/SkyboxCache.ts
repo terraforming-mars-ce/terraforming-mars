@@ -17,6 +17,8 @@ class SkyboxCacheService {
     texture: null,
   };
   private loadPromise: Promise<THREE.Texture> | null = null;
+  private currentPath: string | null = null;
+  private textureCache: Map<string, THREE.Texture> = new Map();
   private listeners: Set<(state: SkyboxLoadingState) => void> = new Set();
 
   static getInstance(): SkyboxCacheService {
@@ -41,53 +43,44 @@ class SkyboxCacheService {
     });
   }
 
-  async loadSkybox(): Promise<THREE.Texture> {
-    if (this.loadingState.isLoaded && this.loadingState.texture) {
-      return this.loadingState.texture;
+  async loadSkybox(path?: string): Promise<THREE.Texture> {
+    const targetPath = path ?? "/assets/backgrounds/starmap_2020_8k.exr";
+
+    const cached = this.textureCache.get(targetPath);
+    if (cached) {
+      this.currentPath = targetPath;
+      this.loadingState = { isLoading: false, isLoaded: true, error: null, texture: cached };
+      this.notifyListeners();
+      return cached;
     }
 
-    if (this.loadPromise) {
+    if (this.loadPromise && this.currentPath === targetPath) {
       return this.loadPromise;
     }
 
-    this.loadingState = {
-      isLoading: true,
-      isLoaded: false,
-      error: null,
-      texture: null,
-    };
+    this.currentPath = targetPath;
+    this.loadingState = { isLoading: true, isLoaded: false, error: null, texture: null };
     this.notifyListeners();
 
     this.loadPromise = new Promise<THREE.Texture>((resolve, reject) => {
       const loader = new EXRLoader();
 
       loader.load(
-        "/assets/backgrounds/space-skybox-8k.exr",
+        targetPath,
         (texture) => {
           try {
             texture.mapping = THREE.EquirectangularReflectionMapping;
-            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.colorSpace = THREE.LinearSRGBColorSpace;
 
-            this.loadingState = {
-              isLoading: false,
-              isLoaded: true,
-              error: null,
-              texture: texture,
-            };
-
+            this.textureCache.set(targetPath, texture);
+            this.loadingState = { isLoading: false, isLoaded: true, error: null, texture };
             this.notifyListeners();
             this.loadPromise = null;
             resolve(texture);
           } catch (error) {
             const err =
               error instanceof Error ? error : new Error("Failed to configure skybox texture");
-            this.loadingState = {
-              isLoading: false,
-              isLoaded: false,
-              error: err,
-              texture: null,
-            };
-
+            this.loadingState = { isLoading: false, isLoaded: false, error: err, texture: null };
             this.notifyListeners();
             this.loadPromise = null;
             reject(err);
@@ -96,14 +89,7 @@ class SkyboxCacheService {
         (_progress) => {},
         (error) => {
           const err = error instanceof Error ? error : new Error("Failed to load EXR skybox");
-
-          this.loadingState = {
-            isLoading: false,
-            isLoaded: false,
-            error: err,
-            texture: null,
-          };
-
+          this.loadingState = { isLoading: false, isLoaded: false, error: err, texture: null };
           this.notifyListeners();
           this.loadPromise = null;
           reject(err);
@@ -118,8 +104,8 @@ class SkyboxCacheService {
     return { ...this.loadingState };
   }
 
-  preload(): Promise<THREE.Texture> {
-    return this.loadSkybox();
+  preload(path?: string): Promise<THREE.Texture> {
+    return this.loadSkybox(path);
   }
 
   isReady(): boolean {

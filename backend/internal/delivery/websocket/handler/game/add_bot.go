@@ -34,7 +34,7 @@ func (h *AddBotHandler) HandleMessage(ctx context.Context, connection *core.Conn
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🤖 Processing add bot request")
+	log.Debug("Processing add bot request")
 
 	_, gameID := connection.GetPlayer()
 	if gameID == "" {
@@ -65,7 +65,7 @@ func (h *AddBotHandler) HandleMessage(ctx context.Context, connection *core.Conn
 		return
 	}
 
-	log.Info("✅ Bot added successfully", zap.String("bot_id", result.PlayerID))
+	log.Debug("Bot added", zap.String("bot_id", result.PlayerID))
 
 	h.broadcaster.BroadcastGameState(gameID, nil)
 }

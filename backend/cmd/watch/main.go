@@ -35,7 +35,7 @@ func main() {
 	// Create file watcher
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal("❌ Failed to create watcher:", err)
+		log.Fatal("Failed to create watcher:", err)
 	}
 	defer watcher.Close()
 
@@ -57,11 +57,11 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatal("❌ Failed to add paths to watcher:", err)
+		log.Fatal("Failed to add paths to watcher:", err)
 	}
 
-	fmt.Println("🔄 File watcher started...")
-	fmt.Println("👀 Watching for changes in Go files...")
+	fmt.Println("File watcher started...")
+	fmt.Println("Watching for changes in Go files...")
 
 	// Listen for events
 	for {
@@ -82,7 +82,7 @@ func main() {
 			}
 
 			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Remove) {
-				fmt.Printf("📝 File changed: %s\n", event.Name)
+				fmt.Printf("File changed: %s\n", event.Name)
 				triggerRestart()
 			}
 
@@ -90,7 +90,7 @@ func main() {
 			if !ok {
 				return
 			}
-			log.Printf("⚠️  Watcher error: %v\n", err)
+			log.Printf("Watcher error: %v\n", err)
 		}
 	}
 }
@@ -126,7 +126,7 @@ func handleRestart(command []string) {
 }
 
 func startServer(command []string) {
-	fmt.Println("🚀 Starting server...")
+	fmt.Println("Starting server...")
 
 	// For single files, use go run directly on the file
 	if len(command) == 1 {
@@ -142,16 +142,16 @@ func startServer(command []string) {
 
 	err := serverProcess.Start()
 	if err != nil {
-		log.Printf("❌ Failed to start server: %v\n", err)
+		log.Printf("Failed to start server: %v\n", err)
 		return
 	}
 
-	fmt.Printf("✅ Server started (PID: %d)\n", serverProcess.Process.Pid)
+	fmt.Printf("Server started (PID: %d)\n", serverProcess.Process.Pid)
 }
 
 func stopServer() {
 	if serverProcess != nil && serverProcess.Process != nil {
-		fmt.Printf("🛑 Stopping server (PID: %d)...\n", serverProcess.Process.Pid)
+		fmt.Printf("Stopping server (PID: %d)...\n", serverProcess.Process.Pid)
 
 		// Try graceful shutdown first
 		serverProcess.Process.Signal(os.Interrupt)
@@ -167,7 +167,7 @@ func stopServer() {
 			// Process exited gracefully
 		case <-time.After(2 * time.Second):
 			// Force kill if graceful shutdown takes too long
-			fmt.Println("⏰ Graceful shutdown timeout, force killing...")
+			fmt.Println("Graceful shutdown timeout, force killing...")
 			serverProcess.Process.Kill()
 			<-done // Wait for process to actually exit
 		}

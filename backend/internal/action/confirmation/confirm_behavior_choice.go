@@ -34,7 +34,7 @@ func (a *ConfirmBehaviorChoiceAction) Execute(ctx context.Context, gameID string
 		zap.String("action", "confirm_behavior_choice"),
 		zap.Int("choice_index", choiceIndex),
 	)
-	log.Info("🔀 Confirming behavior choice selection")
+	log.Debug("Confirming behavior choice selection")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -98,7 +98,7 @@ func (a *ConfirmBehaviorChoiceAction) Execute(ctx context.Context, gameID string
 	// Clear the pending selection
 	p.Selection().SetPendingBehaviorChoiceSelection(nil)
 
-	log.Info("✅ Behavior choice confirmation completed",
+	log.Info("Behavior choice confirmation completed",
 		zap.String("source", selection.Source),
 		zap.Int("choice_selected", choiceIndex))
 

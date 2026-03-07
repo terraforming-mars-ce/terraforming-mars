@@ -60,6 +60,6 @@ func (a *SendChatMessageAction) Execute(ctx context.Context, gameID, senderID, s
 
 	g.AddChatMessage(ctx, chatMsg)
 
-	log.Debug("💬 Chat message added")
+	log.Debug("Chat message added")
 	return &chatMsg, nil
 }

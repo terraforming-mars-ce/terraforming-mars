@@ -614,6 +614,58 @@ func TestIoSulphurResearch_FailsDraw3WithoutVenusTags(t *testing.T) {
 	testutil.AssertError(t, err, "Io Sulphur Research choice 1 should fail without 3 venus tags")
 }
 
+func TestIoSulphurResearch_FailsDraw3WithOnly2VenusTags(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	cardRegistry := testutil.CreateTestCardRegistry()
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testGame.UpdateStatus(ctx, game.GameStatusActive)
+	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 200})
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+
+	// Play 2 venus-tagged cards: Dirigibles (cost 11) and Jet Stream Microscrappers (cost 12)
+	dirigibles := testutil.GetCardByName("Dirigibles")
+	p.Hand().AddCard(dirigibles.ID)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), dirigibles.ID, cardAction.PaymentRequest{Credits: 11}, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Dirigibles should play successfully")
+
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	jetStream := testutil.GetCardByName("Jet Stream Microscrappers")
+	p.Hand().AddCard(jetStream.ID)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), jetStream.ID, cardAction.PaymentRequest{Credits: 12}, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Jet Stream Microscrappers should play successfully")
+
+	// Verify player has exactly 2 venus tags
+	venusTagCount := gamecards.CountPlayerTagsByType(p, cardRegistry, shared.TagVenus)
+	testutil.AssertEqual(t, 2, venusTagCount, "Player should have exactly 2 venus tags")
+
+	// Now play Io Sulphur Research with choice 1 (draw 3, requires 3+ venus tags) — should fail
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	ioSulphur := testutil.GetCardByName("Io Sulphur Research")
+	p.Hand().AddCard(ioSulphur.ID)
+	choiceIndex := 1
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), ioSulphur.ID, cardAction.PaymentRequest{Credits: 17}, &choiceIndex, nil, nil, nil)
+	testutil.AssertError(t, err, "Io Sulphur Research choice 1 should fail with only 2 venus tags")
+
+	// Verify card is still in hand (play was rejected)
+	testutil.AssertTrue(t, p.Hand().HasCard(ioSulphur.ID), "Io Sulphur Research should remain in hand after failed play")
+
+	// Also verify state calculator marks choice 1 as unavailable
+	for _, behavior := range ioSulphur.Behaviors {
+		if len(behavior.Choices) >= 2 {
+			errors := action.CalculateChoiceErrors(behavior.Choices[1], p, testGame, cardRegistry)
+			testutil.AssertTrue(t, len(errors) > 0, "State calculator should report errors for choice 1 with only 2 venus tags")
+		}
+	}
+}
+
 // =============================================================================
 // Card 233: Ishtar Mining (automated)
 // "Requires Venus 8%. Increase your titanium production 1 step."

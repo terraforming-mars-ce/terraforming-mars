@@ -187,6 +187,7 @@ func NewGame(
 	}
 
 	g.subscribeToGenerationalEvents()
+	g.subscribeToOceanSpaceEvents()
 
 	return g
 }
@@ -1342,9 +1343,9 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 	}
 
 	for _, tile := range tiles {
-		// Clear targets occupied tiles (inverse of normal placement)
+		// Clear targets occupied or reserved tiles (inverse of normal placement)
 		if tileType == "clear" {
-			if tile.OccupiedBy != nil {
+			if tile.OccupiedBy != nil || tile.ReservedBy != nil {
 				availableHexes = append(availableHexes, tile.Coordinates.String())
 			}
 			continue
@@ -1380,7 +1381,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			if len(boardTags) > 0 {
 				if tileHasRequiredTag(tile, boardTags) {
 					availableHexes = append(availableHexes, tile.Coordinates.String())
-					logger.Get().Debug("✅ Tile available for city (board tag match)",
+					logger.Get().Debug("Tile available for city (board tag match)",
 						zap.String("tile", tile.Coordinates.String()),
 						zap.Strings("board_tags", boardTags))
 				}
@@ -1394,7 +1395,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 
 			// Normal city placement: exclude reserved areas (tagged tiles)
 			if tileHasAnyTag(tile) {
-				logger.Get().Debug("⏭️ Skipping reserved tile for normal city placement",
+				logger.Get().Debug("Skipping reserved tile for normal city placement",
 					zap.String("tile", tile.Coordinates.String()),
 					zap.Strings("tile_tags", tile.Tags))
 				continue
@@ -1404,7 +1405,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			if adjacency == "none" {
 				if !hasAnyAdjacentOccupied(tile) {
 					availableHexes = append(availableHexes, tile.Coordinates.String())
-					logger.Get().Debug("✅ Tile available for city (no adjacent tiles)",
+					logger.Get().Debug("Tile available for city (no adjacent tiles)",
 						zap.String("tile", tile.Coordinates.String()))
 				}
 				continue // Skip normal city adjacency rules
@@ -1423,7 +1424,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			hasAdjacentCity := false
 			neighbors := tile.Coordinates.GetNeighbors()
 
-			logger.Get().Debug("🔍 Checking city placement",
+			logger.Get().Debug("Checking city placement",
 				zap.String("tile", tile.Coordinates.String()),
 				zap.Int("neighbor_count", len(neighbors)))
 
@@ -1435,7 +1436,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 							occupantType = string(neighborTile.OccupiedBy.Type)
 						}
 
-						logger.Get().Debug("🔎 Checking neighbor",
+						logger.Get().Debug("Checking neighbor",
 							zap.String("neighbor_pos", neighborPos.String()),
 							zap.String("neighbor_tile", neighborTile.Coordinates.String()),
 							zap.Bool("occupied", neighborTile.OccupiedBy != nil),
@@ -1454,10 +1455,10 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 
 			if !hasAdjacentCity {
 				availableHexes = append(availableHexes, tile.Coordinates.String())
-				logger.Get().Debug("✅ Tile available for city",
+				logger.Get().Debug("Tile available for city",
 					zap.String("tile", tile.Coordinates.String()))
 			} else {
-				logger.Get().Debug("❌ Tile unavailable for city (adjacent city)",
+				logger.Get().Debug("Tile unavailable for city (adjacent city)",
 					zap.String("tile", tile.Coordinates.String()))
 			}
 
@@ -1497,6 +1498,11 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 				continue
 			}
 			if tile.Type == shared.ResourceLandTile {
+				availableHexes = append(availableHexes, tile.Coordinates.String())
+			}
+
+		case "mohole":
+			if tile.Type == shared.ResourceOceanSpace {
 				availableHexes = append(availableHexes, tile.Coordinates.String())
 			}
 
@@ -1565,7 +1571,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			canFallback = true
 		}
 		if canFallback {
-			logger.Get().Info("🔄 No tiles match restrictions, falling back to normal placement",
+			logger.Get().Debug("No tiles match restrictions, falling back to normal placement",
 				zap.String("tile_type", tileType))
 			return g.calculateAvailableHexesForTile(tileType, playerID, nil)
 		}
@@ -1762,6 +1768,30 @@ func (g *Game) subscribeToGenerationalEvents() {
 			p.Effects().RemoveTemporaryEffects(shared.TemporaryGenerationEnd)
 			// Also clear any "next-card" effects that weren't consumed
 			p.Effects().RemoveTemporaryEffects(shared.TemporaryNextCard)
+		}
+	})
+}
+
+func (g *Game) subscribeToOceanSpaceEvents() {
+	events.Subscribe(g.eventBus, func(e events.TilePlacedEvent) {
+		if e.TileType == string(shared.ResourceOceanTile) || e.TileType == "ocean" {
+			return
+		}
+
+		coords := shared.HexPosition{Q: e.Q, R: e.R, S: e.S}
+		tile, err := g.board.GetTile(coords)
+		if err != nil {
+			return
+		}
+		if tile.Type != shared.ResourceOceanSpace {
+			return
+		}
+
+		freeOceanSpaces := g.board.FreeOceanSpaces()
+		gp := g.globalParameters
+		oceansRemaining := gp.GetMaxOceans() - gp.Oceans()
+		if freeOceanSpaces < oceansRemaining {
+			gp.ReduceMaxOceans(gp.Oceans() + freeOceanSpaces)
 		}
 	})
 }

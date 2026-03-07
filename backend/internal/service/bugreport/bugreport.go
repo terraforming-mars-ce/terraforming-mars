@@ -69,21 +69,27 @@ func (s *Service) initialize() {
 	s.config = cfg
 
 	s.capabilities.GitHubApp = s.initGitHub(cfg)
-	s.capabilities.Claude = s.initClaude(cfg)
 
-	s.logger.Info("Bug report service initialized",
-		zap.Bool("github_app", s.capabilities.GitHubApp),
-		zap.Bool("claude", s.capabilities.Claude))
+	// Check Claude availability in the background to avoid blocking startup
+	go func() {
+		result := s.initClaude(cfg)
+		s.mu.Lock()
+		s.capabilities.Claude = result
+		s.mu.Unlock()
+		s.logger.Debug("Bug report service initialized",
+			zap.Bool("github_app", s.capabilities.GitHubApp),
+			zap.Bool("claude", result))
+	}()
 }
 
 func (s *Service) initGitHub(cfg Config) bool {
 	if cfg.GitHubInstallationID == 0 {
-		s.logger.Warn("Bug report: GitHub App disabled (GITHUB_INSTALLATION_ID not set)")
+		s.logger.Debug("Bug report: GitHub App disabled (GITHUB_INSTALLATION_ID not set)")
 		return false
 	}
 
 	if _, err := os.Stat(cfg.GitHubPrivateKeyPath); os.IsNotExist(err) {
-		s.logger.Warn("Bug report: GitHub App disabled (private key not found: " + cfg.GitHubPrivateKeyPath + ")")
+		s.logger.Debug("Bug report: GitHub App disabled (private key not found: " + cfg.GitHubPrivateKeyPath + ")")
 		return false
 	}
 
@@ -142,6 +148,8 @@ func (s *Service) IsAvailable() bool {
 
 // Capabilities returns which external services are available.
 func (s *Service) Capabilities() Capabilities {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.capabilities
 }
 
@@ -291,7 +299,7 @@ func (s *Service) processBugReport(id string, description string, author string,
 		r.IssueURL = issue.GetHTMLURL()
 	}
 	s.mu.Unlock()
-	s.logger.Info("Bug report submitted", zap.String("issue_url", issue.GetHTMLURL()))
+	s.logger.Debug("Bug report submitted", zap.String("issue_url", issue.GetHTMLURL()))
 }
 
 func loadConfig() Config {
@@ -437,6 +445,7 @@ func buildGameMeta(gameState json.RawMessage) string {
 			Temperature int `json:"temperature"`
 			Oxygen      int `json:"oxygen"`
 			Oceans      int `json:"oceans"`
+			MaxOceans   int `json:"maxOceans"`
 			Venus       int `json:"venus"`
 		} `json:"globalParameters"`
 		Settings struct {
@@ -515,7 +524,7 @@ func buildGameMeta(gameState json.RawMessage) string {
 	b.WriteString("| Generation | " + strconv.Itoa(game.Generation) + " |\n")
 	b.WriteString("| Temperature | " + strconv.Itoa(game.GlobalParameters.Temperature) + "°C |\n")
 	b.WriteString("| Oxygen | " + strconv.Itoa(game.GlobalParameters.Oxygen) + "% |\n")
-	b.WriteString("| Oceans | " + strconv.Itoa(game.GlobalParameters.Oceans) + "/9 |\n")
+	b.WriteString("| Oceans | " + strconv.Itoa(game.GlobalParameters.Oceans) + "/" + strconv.Itoa(game.GlobalParameters.MaxOceans) + " |\n")
 	b.WriteString("| Venus | " + strconv.Itoa(game.GlobalParameters.Venus) + "% |\n")
 
 	if game.Settings.CardPacks != nil {

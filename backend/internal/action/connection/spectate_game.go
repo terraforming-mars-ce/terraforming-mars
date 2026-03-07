@@ -57,7 +57,7 @@ func (a *SpectateGameAction) Execute(ctx context.Context, gameID, spectatorName,
 		return nil, fmt.Errorf("failed to add spectator: %w", err)
 	}
 
-	log.Info("👁️ Spectator joined game")
+	log.Info("Spectator joined game")
 
 	return &SpectateGameResult{
 		SpectatorID: spectatorID,

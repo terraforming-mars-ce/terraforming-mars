@@ -685,3 +685,69 @@ func TestCalculatePlayerCardState_TitaniumCountedForSpaceCard(t *testing.T) {
 		t.Errorf("Expected card to be available: titanium should count for Space card, got errors: %+v", state.Errors)
 	}
 }
+
+func TestCalculateChoiceErrors_NoRequirements(t *testing.T) {
+	g, p, cardRegistry := setupTestEnvironment(t)
+
+	choice := shared.Choice{
+		Outputs: []shared.ResourceCondition{
+			{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+		},
+	}
+
+	errors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
+	if len(errors) != 0 {
+		t.Errorf("Choice without requirements should always be available, got %d errors", len(errors))
+	}
+}
+
+func TestCalculateChoiceErrors_TagRequirementNotMet(t *testing.T) {
+	g, p, cardRegistry := setupTestEnvironment(t)
+
+	choice := shared.Choice{
+		Outputs: []shared.ResourceCondition{
+			{ResourceType: shared.ResourceCardDraw, Amount: 3, Target: "self-player"},
+		},
+		Requirements: &shared.ChoiceRequirements{
+			Items: []shared.ChoiceRequirement{
+				{Type: "tags", Min: testutil.IntPtr(3), Tag: testutil.TagPtr(shared.TagVenus)},
+			},
+		},
+	}
+
+	errors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
+	if len(errors) == 0 {
+		t.Errorf("Choice with 3+ venus tag requirement should fail when player has 0 venus tags")
+	}
+}
+
+func TestCalculateChoiceErrors_TagRequirementMet(t *testing.T) {
+	g, p, _ := setupTestEnvironment(t)
+
+	p.PlayedCards().AddCard("venus-1", "Venus 1", "automated", []string{"venus"})
+	p.PlayedCards().AddCard("venus-2", "Venus 2", "automated", []string{"venus"})
+	p.PlayedCards().AddCard("venus-3", "Venus 3", "automated", []string{"venus"})
+
+	venusCards := []gamecards.Card{
+		{ID: "venus-1", Name: "Venus 1", Type: gamecards.CardTypeAutomated, Pack: "base", Tags: []shared.CardTag{shared.TagVenus}},
+		{ID: "venus-2", Name: "Venus 2", Type: gamecards.CardTypeAutomated, Pack: "base", Tags: []shared.CardTag{shared.TagVenus}},
+		{ID: "venus-3", Name: "Venus 3", Type: gamecards.CardTypeAutomated, Pack: "base", Tags: []shared.CardTag{shared.TagVenus}},
+	}
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(venusCards)
+
+	choice := shared.Choice{
+		Outputs: []shared.ResourceCondition{
+			{ResourceType: shared.ResourceCardDraw, Amount: 3, Target: "self-player"},
+		},
+		Requirements: &shared.ChoiceRequirements{
+			Items: []shared.ChoiceRequirement{
+				{Type: "tags", Min: testutil.IntPtr(3), Tag: testutil.TagPtr(shared.TagVenus)},
+			},
+		},
+	}
+
+	errors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
+	if len(errors) != 0 {
+		t.Errorf("Choice with 3+ venus tag requirement should pass when player has 3 venus tags, got %d errors: %+v", len(errors), errors)
+	}
+}

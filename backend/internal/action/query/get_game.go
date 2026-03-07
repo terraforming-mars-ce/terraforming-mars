@@ -28,14 +28,14 @@ func NewGetGameAction(
 // Execute retrieves a game by ID
 func (a *GetGameAction) Execute(ctx context.Context, gameID string) (*game.Game, error) {
 	log := a.logger.With(zap.String("game_id", gameID))
-	log.Info("🔍 Querying game")
+	log.Debug("Querying game")
 
 	game, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
-		log.Warn("Failed to get game", zap.Error(err))
+		log.Debug("Failed to get game", zap.Error(err))
 		return nil, err
 	}
 
-	log.Info("✅ Game query completed")
+	log.Debug("Game query completed")
 	return game, nil
 }

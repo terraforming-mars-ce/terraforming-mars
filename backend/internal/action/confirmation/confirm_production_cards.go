@@ -33,7 +33,7 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		zap.String("action", "confirm_production_cards"),
 		zap.Strings("selected_card_ids", selectedCardIDs),
 	)
-	log.Info("🃏 Player confirming production card selection")
+	log.Debug("Player confirming production card selection")
 
 	g, err := a.GameRepository().Get(ctx, gameID)
 	if err != nil {
@@ -92,17 +92,17 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 	})
 
 	resources = player.Resources().Get()
-	log.Info("✅ Resources updated",
+	log.Debug("Resources updated",
 		zap.Int("cost", cost),
 		zap.Int("remaining_credits", resources.Credits))
 
-	log.Debug("🃏 Adding cards to player hand",
+	log.Debug("Adding cards to player hand",
 		zap.Strings("card_ids", selectedCardIDs),
 		zap.Int("count", len(selectedCardIDs)))
 
 	baseaction.AddCardsToPlayerHand(selectedCardIDs, player, g, a.CardRegistry(), log)
 
-	log.Info("✅ Cards added to hand",
+	log.Debug("Cards added to hand",
 		zap.Strings("card_ids_added", selectedCardIDs),
 		zap.Int("card_count", len(selectedCardIDs)))
 
@@ -112,7 +112,7 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		return fmt.Errorf("failed to update production phase: %w", err)
 	}
 
-	log.Info("✅ Production selection marked complete")
+	log.Debug("Production selection marked complete")
 
 	allPlayers := g.GetAllPlayers()
 	allComplete := true
@@ -128,7 +128,7 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 	}
 
 	if allComplete {
-		log.Info("🎉 All players completed production selection, advancing to action phase")
+		log.Debug("All players completed production selection, advancing to action phase")
 
 		if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
 			log.Error("Failed to transition game phase", zap.Error(err))
@@ -156,7 +156,7 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 				log.Error("Failed to set current turn", zap.Error(err))
 				return fmt.Errorf("failed to set current turn: %w", err)
 			}
-			log.Debug("✅ Set first player turn with actions",
+			log.Debug("Set first player turn with actions",
 				zap.String("player_id", firstPlayerID),
 				zap.Int("available_actions", availableActions))
 		}
@@ -176,6 +176,6 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		}
 	}
 
-	log.Info("🎉 Production card selection completed successfully")
+	log.Info("Production cards selected")
 	return nil
 }

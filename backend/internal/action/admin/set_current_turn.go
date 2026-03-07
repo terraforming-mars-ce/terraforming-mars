@@ -32,7 +32,7 @@ func (a *SetCurrentTurnAction) Execute(ctx context.Context, gameID string, playe
 		zap.String("player_id", playerID),
 		zap.String("action", "admin_set_current_turn"),
 	)
-	log.Info("🎲 Admin: Setting current turn")
+	log.Debug("Admin: Setting current turn")
 
 	game, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -52,6 +52,6 @@ func (a *SetCurrentTurnAction) Execute(ctx context.Context, gameID string, playe
 		return fmt.Errorf("failed to update current turn: %w", err)
 	}
 
-	log.Info("✅ Admin set current turn completed")
+	log.Info("Admin set current turn completed")
 	return nil
 }

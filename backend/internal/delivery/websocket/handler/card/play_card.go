@@ -41,7 +41,7 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🃏 Processing play card request")
+	log.Debug("Processing play card request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -146,10 +146,10 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 		return
 	}
 
-	log.Info("✅ Play card action completed successfully")
+	log.Debug("Play card completed")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

@@ -51,7 +51,7 @@ func NewSelectTileAction(
 // Execute performs the select tile action and returns placement result
 func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID string, selectedHex string) (*TilePlacementResult, error) {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "select_tile"))
-	log.Info("🎯 Selecting tile", zap.String("hex", selectedHex))
+	log.Debug("Selecting tile", zap.String("hex", selectedHex))
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -100,14 +100,31 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 
 	tileType := pendingTileSelection.TileType
 
-	// Handle clear differently - removes occupant from a tile (admin debug tool)
+	// Handle clear differently - removes occupant/reservation from a tile (admin debug tool)
 	if tileType == "clear" {
+		// Check if tile is an ocean before clearing, so we can decrement the ocean count
+		clearedTile, tileErr := g.Board().GetTile(*coords)
+		if tileErr != nil {
+			log.Warn("Failed to get tile for clear", zap.Error(tileErr))
+			return nil, fmt.Errorf("failed to get tile: %w", tileErr)
+		}
+		wasOcean := clearedTile.OccupiedBy != nil && clearedTile.OccupiedBy.Type == shared.ResourceOceanTile
+
 		if err := g.Board().ClearTileOccupant(ctx, *coords); err != nil {
 			log.Warn("Failed to clear tile occupant", zap.Error(err))
 			return nil, fmt.Errorf("failed to clear tile: %w", err)
 		}
 
-		log.Info("🧹 Tile cleared",
+		if wasOcean {
+			currentOceans := g.GlobalParameters().Oceans()
+			if currentOceans > 0 {
+				if err := g.GlobalParameters().SetOceans(ctx, currentOceans-1); err != nil {
+					log.Warn("Failed to decrement ocean count", zap.Error(err))
+				}
+			}
+		}
+
+		log.Debug("Tile cleared",
 			zap.String("position", selectedHex))
 
 		result := &TilePlacementResult{
@@ -127,7 +144,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 
 		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 
-		log.Info("✅ Tile cleared successfully",
+		log.Debug("Tile cleared",
 			zap.String("position", selectedHex))
 		return result, nil
 	}
@@ -139,7 +156,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 			return nil, fmt.Errorf("failed to reserve tile: %w", err)
 		}
 
-		log.Info("🏴 Tile reserved for land claim",
+		log.Debug("Tile reserved for land claim",
 			zap.String("position", selectedHex))
 
 		result := &TilePlacementResult{
@@ -163,7 +180,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 
 		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 
-		log.Info("✅ Land claim reserved successfully",
+		log.Debug("Land claim reserved",
 			zap.String("position", selectedHex))
 		return result, nil
 	}
@@ -178,7 +195,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return nil, fmt.Errorf("failed to place tile: %w", err)
 	}
 
-	log.Info("🏗️ Tile placed on board",
+	log.Debug("Tile placed on board",
 		zap.String("tile_type", tileType),
 		zap.String("position", selectedHex))
 
@@ -186,7 +203,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 	if err != nil {
 		log.Warn("Failed to get placed tile for bonus check", zap.Error(err))
 	} else if len(placedTile.Bonuses) > 0 {
-		log.Info("🎁 Tile has bonuses", zap.Int("bonus_count", len(placedTile.Bonuses)))
+		log.Debug("Tile has bonuses", zap.Int("bonus_count", len(placedTile.Bonuses)))
 
 		resourceBonuses := make(map[string]int)
 
@@ -196,7 +213,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 				p.Resources().Add(map[shared.ResourceType]int{
 					bonus.Type: bonus.Amount,
 				})
-				log.Info("💰 Awarded resource bonus",
+				log.Debug("Awarded resource bonus",
 					zap.String("resource", string(bonus.Type)),
 					zap.Int("amount", bonus.Amount))
 
@@ -221,12 +238,12 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 					},
 				})
 
-				log.Info("🃏 Awarded card draw bonus",
+				log.Debug("Awarded card draw bonus",
 					zap.Int("cards_drawn", len(cardIDs)),
 					zap.Strings("card_ids", cardIDs))
 
 			default:
-				log.Warn("⚠️  Unhandled tile bonus type",
+				log.Warn(" Unhandled tile bonus type",
 					zap.String("type", string(bonus.Type)),
 					zap.Int("amount", bonus.Amount))
 			}
@@ -243,7 +260,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 				S:            coords.S,
 				Timestamp:    time.Now(),
 			})
-			log.Info("📢 Published PlacementBonusGainedEvent",
+			log.Debug("Published PlacementBonusGainedEvent",
 				zap.Any("resources", resourceBonuses))
 		}
 
@@ -281,7 +298,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 				},
 			})
 
-			log.Info("🌊 Awarded ocean adjacency bonus",
+			log.Debug("Awarded ocean adjacency bonus",
 				zap.Int("adjacent_oceans", adjacentOceanCount),
 				zap.Int("credits_awarded", oceanBonus))
 		}
@@ -296,7 +313,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 
 	switch tileType {
 	case "city":
-		log.Info("🏙️ City placed (no TR bonus)")
+		log.Debug("City placed (no TR bonus)")
 
 	case "greenery":
 		actualSteps, err := g.GlobalParameters().IncreaseOxygen(ctx, 1)
@@ -308,11 +325,11 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		if actualSteps > 0 {
 			p.Resources().UpdateTerraformRating(1)
 			result.TRGained = 1
-			log.Info("🌿 Increased oxygen and TR for greenery placement",
+			log.Debug("Increased oxygen and TR for greenery placement",
 				zap.Int("oxygen_steps", actualSteps),
 				zap.Int("tr_gained", 1))
 		} else {
-			log.Info("🌿 Greenery placed but oxygen already maxed")
+			log.Debug("Greenery placed but oxygen already maxed")
 		}
 
 	case "ocean":
@@ -325,14 +342,14 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		if success {
 			p.Resources().UpdateTerraformRating(1)
 			result.TRGained = 1
-			log.Info("🌊 Placed ocean and increased TR",
+			log.Debug("Placed ocean and increased TR",
 				zap.Int("tr_gained", 1))
 		} else {
-			log.Info("🌊 Ocean placed but ocean count already maxed")
+			log.Debug("Ocean placed but ocean count already maxed")
 		}
 
 	case "volcano":
-		log.Info("🌋 Volcano placed (no TR bonus)")
+		log.Debug("Volcano placed (no TR bonus)")
 	}
 
 	if err := g.SetPendingTileSelection(ctx, playerID, nil); err != nil {
@@ -357,7 +374,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 	}
 
-	log.Info("✅ Tile selected and placed successfully",
+	log.Info("Tile placed",
 		zap.String("tile_type", tileType),
 		zap.String("position", selectedHex))
 	return result, nil
@@ -385,7 +402,7 @@ func (a *SelectTileAction) checkStartingSelectionCompletion(ctx context.Context,
 		}
 	}
 
-	log.Info("🎉 All starting selections and tiles resolved, advancing to action phase")
+	log.Debug("All starting selections and tiles resolved, advancing to action phase")
 
 	turn_management.AdvanceToActionPhase(ctx, g, allPlayers, log)
 }

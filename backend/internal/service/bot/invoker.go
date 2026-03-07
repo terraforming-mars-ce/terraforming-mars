@@ -84,7 +84,7 @@ func (inv *Invoker) PlayTurn(ctx context.Context, gameDto *dto.GameDto, myPlayer
 	systemPrompt := buildSystemPrompt(inv.CommandPath, inv.Difficulty, inv.logger)
 	turnPrompt := buildTurnPrompt(gameDto, inv.StatePath, inv.CommandPath, inv.HistoryPath)
 
-	inv.logger.Info("🤖 Invoking Claude CLI",
+	inv.logger.Debug("Invoking Claude CLI",
 		zap.String("model", inv.Model),
 		zap.String("player_id", myPlayerID))
 
@@ -138,7 +138,7 @@ func (inv *Invoker) PlayTurn(ctx context.Context, gameDto *dto.GameDto, myPlayer
 		return fmt.Errorf("claude CLI: %w", err)
 	}
 
-	inv.logger.Info("✅ Claude CLI exited successfully")
+	inv.logger.Debug("Claude CLI exited")
 	return nil
 }
 
@@ -156,7 +156,7 @@ func (inv *Invoker) displayEvent(event *streamEvent) {
 			switch block.Type {
 			case "text":
 				if block.Text != "" {
-					inv.logger.Info("🤖 Claude", zap.String("text", block.Text))
+					inv.logger.Debug("Claude", zap.String("text", block.Text))
 				}
 			case "tool_use":
 				inv.displayToolUse(block)
@@ -166,17 +166,17 @@ func (inv *Invoker) displayEvent(event *streamEvent) {
 	case "user":
 		if event.ToolUseResult != nil && event.ToolUseResult.File != nil {
 			f := event.ToolUseResult.File
-			inv.logger.Debug("📄 Tool result", zap.String("file", f.FilePath), zap.Int("lines", f.NumLines))
+			inv.logger.Debug("Tool result", zap.String("file", f.FilePath), zap.Int("lines", f.NumLines))
 		}
 
 	case "result":
 		if event.Subtype == "success" {
-			inv.logger.Info("🤖 Claude done",
+			inv.logger.Debug("Claude done",
 				zap.Int("turns", event.NumTurns),
 				zap.Int("duration_ms", event.DurationMs),
 				zap.Float64("cost_usd", event.Cost))
 		} else {
-			inv.logger.Error("🤖 Claude error", zap.String("result", event.Result))
+			inv.logger.Error("Claude error", zap.String("result", event.Result))
 		}
 	}
 }
@@ -188,7 +188,7 @@ func (inv *Invoker) displayToolUse(block contentBlock) {
 			FilePath string `json:"file_path"`
 		}
 		json.Unmarshal(block.Input, &input)
-		inv.logger.Debug("📖 Read", zap.String("file", input.FilePath))
+		inv.logger.Debug("Read", zap.String("file", input.FilePath))
 
 	case "Bash":
 		var input struct {
@@ -200,13 +200,13 @@ func (inv *Invoker) displayToolUse(block contentBlock) {
 			cmd = cmd[:200] + "..."
 		}
 		if strings.Contains(cmd, ">> ") {
-			inv.logger.Info("📤 Command", zap.String("cmd", cmd))
+			inv.logger.Debug("Command", zap.String("cmd", cmd))
 		} else {
-			inv.logger.Debug("🔧 Bash", zap.String("cmd", cmd))
+			inv.logger.Debug("Bash", zap.String("cmd", cmd))
 		}
 
 	default:
-		inv.logger.Debug("🔧 Tool", zap.String("name", block.Name))
+		inv.logger.Debug("Tool", zap.String("name", block.Name))
 	}
 }
 

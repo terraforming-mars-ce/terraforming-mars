@@ -72,7 +72,7 @@ func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName strin
 		zap.String("bot_name", botName),
 		zap.String("action", "add_bot"),
 	)
-	log.Info("🤖 Adding bot to game")
+	log.Debug("Adding bot to game")
 
 	g, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -120,7 +120,7 @@ func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName strin
 		return nil, fmt.Errorf("failed to add bot to game: %w", err)
 	}
 
-	log.Info("✅ Bot added to game", zap.String("bot_id", botID), zap.String("bot_name", botName))
+	log.Info("Bot added to game", zap.String("bot_id", botID), zap.String("bot_name", botName))
 
 	if a.healthChecker != nil && a.broadcaster != nil {
 		settings := g.Settings()
@@ -135,7 +135,7 @@ func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName strin
 }
 
 func (a *AddBotAction) runHealthCheck(gameID, botID, botName, difficulty, apiKey, model string, log *zap.Logger) {
-	log.Info("🤖 Running Claude health check for bot", zap.String("bot_id", botID))
+	log.Debug("Running Claude health check for bot", zap.String("bot_id", botID))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -155,13 +155,13 @@ func (a *AddBotAction) runHealthCheck(gameID, botID, botName, difficulty, apiKey
 	}
 
 	if err != nil {
-		log.Error("🤖 Health check failed for bot", zap.String("bot_id", botID), zap.Error(err))
+		log.Error("Health check failed for bot", zap.String("bot_id", botID), zap.Error(err))
 		bot.SetBotStatus(playerPkg.BotStatusFailed)
 		a.broadcaster.BroadcastGameState(gameID, nil)
 		return
 	}
 
-	log.Info("✅ Bot health check passed", zap.String("bot_id", botID))
+	log.Debug("Bot health check passed", zap.String("bot_id", botID))
 	bot.SetBotStatus(playerPkg.BotStatusReady)
 	a.broadcaster.BroadcastGameState(gameID, nil)
 

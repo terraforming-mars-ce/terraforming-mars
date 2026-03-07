@@ -34,7 +34,7 @@ func (h *SellPatentsHandler) HandleMessage(ctx context.Context, connection *core
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🏛️ Processing sell patents request")
+	log.Debug("Processing sell patents request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -49,10 +49,10 @@ func (h *SellPatentsHandler) HandleMessage(ctx context.Context, connection *core
 		return
 	}
 
-	log.Info("✅ Sell patents action completed successfully")
+	log.Debug("Patents sold")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

@@ -25,6 +25,7 @@ type GlobalParameters struct {
 	temperature int // Range: -30 to +8°C
 	oxygen      int // Range: 0-14%
 	oceans      int // Range: 0-9
+	maxOceans   int // Dynamic max, starts at MaxOceans (9), reduced when non-ocean tiles occupy ocean spaces
 	venus       int // Range: 0-30%
 	eventBus    *events.EventBusImpl
 }
@@ -36,6 +37,7 @@ func NewGlobalParameters(gameID string, eventBus *events.EventBusImpl) *GlobalPa
 		temperature: MinTemperature,
 		oxygen:      MinOxygen,
 		oceans:      MinOceans,
+		maxOceans:   MaxOceans,
 		venus:       MinVenus,
 		eventBus:    eventBus,
 	}
@@ -48,6 +50,7 @@ func NewGlobalParametersWithValues(gameID string, temperature, oxygen, oceans, v
 		temperature: temperature,
 		oxygen:      oxygen,
 		oceans:      oceans,
+		maxOceans:   MaxOceans,
 		venus:       venus,
 		eventBus:    eventBus,
 	}
@@ -81,13 +84,39 @@ func (gp *GlobalParameters) Venus() int {
 	return gp.venus
 }
 
+// GetMaxOceans returns the current dynamic max oceans limit for this game
+func (gp *GlobalParameters) GetMaxOceans() int {
+	gp.mu.RLock()
+	defer gp.mu.RUnlock()
+	return gp.maxOceans
+}
+
+// ReduceMaxOceans lowers the max oceans limit when non-ocean tiles occupy ocean spaces.
+// Publishes OceansChangedEvent to trigger a broadcast.
+func (gp *GlobalParameters) ReduceMaxOceans(newMax int) {
+	gp.mu.Lock()
+	oldMax := gp.maxOceans
+	if newMax < gp.maxOceans {
+		gp.maxOceans = newMax
+	}
+	gp.mu.Unlock()
+
+	if gp.eventBus != nil && oldMax != gp.maxOceans {
+		events.Publish(gp.eventBus, events.OceansChangedEvent{
+			GameID:   gp.gameID,
+			OldValue: gp.oceans,
+			NewValue: gp.oceans,
+		})
+	}
+}
+
 // IsMaxed returns true if all global parameters have reached their maximum values
 func (gp *GlobalParameters) IsMaxed() bool {
 	gp.mu.RLock()
 	defer gp.mu.RUnlock()
 	return gp.temperature >= MaxTemperature &&
 		gp.oxygen >= MaxOxygen &&
-		gp.oceans >= MaxOceans
+		gp.oceans >= gp.maxOceans
 }
 
 // IncreaseTemperature raises the temperature by the specified number of steps
@@ -171,7 +200,7 @@ func (gp *GlobalParameters) PlaceOcean(ctx context.Context) (bool, error) {
 
 	gp.mu.Lock()
 	oldOceans = gp.oceans
-	if gp.oceans >= MaxOceans {
+	if gp.oceans >= gp.maxOceans {
 		success = false
 	} else {
 		gp.oceans++

@@ -34,7 +34,7 @@ func (h *ConfirmCardDiscardHandler) HandleMessage(ctx context.Context, connectio
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🗑️ Processing confirm card discard request")
+	log.Debug("Processing confirm card discard request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -69,10 +69,10 @@ func (h *ConfirmCardDiscardHandler) HandleMessage(ctx context.Context, connectio
 		return
 	}
 
-	log.Info("✅ Confirm card discard action completed successfully")
+	log.Debug("Card discard confirmed")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

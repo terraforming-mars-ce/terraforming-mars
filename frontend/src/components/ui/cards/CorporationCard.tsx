@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import GameIcon from "../display/GameIcon.tsx";
+import VictoryPointIcon from "../display/VictoryPointIcon.tsx";
 import BehaviorSection from "./BehaviorSection";
 
 import {
   CardBehaviorDto,
+  VPConditionDto,
   ResourceTypeCredit,
   ResourceTypeSteel,
   ResourceTypeTitanium,
@@ -12,6 +14,7 @@ import {
   ResourceTypeHeat,
 } from "../../../types/generated/api-types.ts";
 import { getCorporationLogo } from "@/utils/corporationLogos.tsx";
+import { getTagIconPath } from "@/utils/iconStore.ts";
 import { FormattedDescription } from "../display/FormattedDescription";
 
 interface Corporation {
@@ -36,6 +39,8 @@ interface Corporation {
     heat?: number;
   };
   behaviors?: CardBehaviorDto[];
+  tags?: string[];
+  vpConditions?: VPConditionDto[];
   specialEffects?: string[];
   expansion?: string;
   logoPath?: string;
@@ -332,6 +337,35 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
       <div className="text-xs text-white/80 leading-[1.4] text-center">
         <FormattedDescription text={corporation.description} />
       </div>
+
+      {/* Tags at bottom right */}
+      {corporation.tags && corporation.tags.length > 0 && (
+        <div className="absolute bottom-3 right-3 flex flex-col gap-1 items-center z-[5]">
+          {corporation.tags.map((tag, index) => {
+            const tagIcon = getTagIconPath(tag.toLowerCase());
+            if (!tagIcon) return null;
+            return (
+              <div
+                key={index}
+                className="flex items-center justify-center shrink-0 [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.7))]"
+              >
+                <img
+                  src={tagIcon}
+                  alt={tag}
+                  className="w-6 h-6 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* VP at bottom left */}
+      {corporation.vpConditions && corporation.vpConditions.length > 0 && (
+        <div className="absolute bottom-3 left-3 z-[5]">
+          <VictoryPointIcon vpConditions={corporation.vpConditions} />
+        </div>
+      )}
 
       {/* Expansion badge */}
       {corporation.expansion && (

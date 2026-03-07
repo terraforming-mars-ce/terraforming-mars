@@ -33,6 +33,7 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry) GameDto {
 		Temperature: globalParams.Temperature(),
 		Oxygen:      globalParams.Oxygen(),
 		Oceans:      globalParams.Oceans(),
+		MaxOceans:   globalParams.GetMaxOceans(),
 		Venus:       globalParams.Venus(),
 	}
 

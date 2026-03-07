@@ -28,7 +28,7 @@ func NewGetGameLogsAction(
 // Execute retrieves all state diffs for a game
 func (a *GetGameLogsAction) Execute(ctx context.Context, gameID string, since int64) ([]game.StateDiff, error) {
 	log := a.logger.With(zap.String("game_id", gameID), zap.Int64("since", since))
-	log.Info("🔍 Querying game logs")
+	log.Debug("Querying game logs")
 
 	diffs, err := a.stateRepo.GetDiff(ctx, gameID)
 	if err != nil {
@@ -46,6 +46,6 @@ func (a *GetGameLogsAction) Execute(ctx context.Context, gameID string, since in
 		diffs = filtered
 	}
 
-	log.Info("✅ Game logs query completed", zap.Int("count", len(diffs)))
+	log.Debug("Game logs query completed", zap.Int("count", len(diffs)))
 	return diffs, nil
 }

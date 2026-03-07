@@ -51,7 +51,7 @@ func (a *SelectStartingChoicesAction) Execute(ctx context.Context, gameID string
 		zap.Strings("prelude_ids", preludeIDs),
 		zap.Strings("card_ids", cardIDs),
 	)
-	log.Info("🎮 Player selecting starting choices")
+	log.Debug("Player selecting starting choices")
 
 	g, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -147,7 +147,7 @@ func (a *SelectStartingChoicesAction) Execute(ctx context.Context, gameID string
 
 	a.checkAndAdvanceToInitApplyCorp(ctx, g, log)
 
-	log.Info("🎉 Starting choices stored successfully")
+	log.Info("Starting choices stored")
 	return nil
 }
 
@@ -269,12 +269,12 @@ func (a *SelectStartingChoicesAction) checkAndAdvanceToInitApplyCorp(ctx context
 			continue
 		}
 		if g.GetDeferredStartingChoices(p.ID()) == nil {
-			log.Info("⏳ Waiting for other players to complete starting selection")
+			log.Debug("Waiting for other players to complete starting selection")
 			return
 		}
 	}
 
-	log.Info("🎉 All players stored starting choices, advancing to init_apply_corp phase")
+	log.Debug("All players stored starting choices, advancing to init_apply_corp phase")
 
 	if err := g.UpdatePhase(ctx, game.GamePhaseInitApplyCorp); err != nil {
 		log.Error("Failed to transition to init_apply_corp phase", zap.Error(err))
@@ -317,7 +317,7 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 		return fmt.Errorf("corporation card not found: %s", choices.CorporationID)
 	}
 
-	log.Info("💼 Applying corporation effects",
+	log.Debug("Applying corporation effects",
 		zap.String("player_id", playerID),
 		zap.String("corporation", corpCard.Name))
 
@@ -409,7 +409,7 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 
 	g.MarkCorpApplied(playerID)
 
-	log.Info("✅ Corporation effects and card purchase complete",
+	log.Debug("Corporation effects and card purchase complete",
 		zap.String("player_id", playerID),
 		zap.String("corporation", corpCard.Name))
 
@@ -433,7 +433,7 @@ func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, 
 		return fmt.Errorf("player not found: %s", playerID)
 	}
 
-	log.Info("📜 Applying prelude effects",
+	log.Debug("Applying prelude effects",
 		zap.String("player_id", playerID),
 		zap.Strings("preludes", choices.PreludeIDs))
 
@@ -445,7 +445,7 @@ func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, 
 
 	g.MarkPreludesApplied(playerID)
 
-	log.Info("✅ Prelude effects complete", zap.String("player_id", playerID))
+	log.Debug("Prelude effects complete", zap.String("player_id", playerID))
 	return nil
 }
 
@@ -555,7 +555,7 @@ func AdvanceToActionPhase(ctx context.Context, g *game.Game, allPlayers []*playe
 		availableActions := 2
 		if activePlayerCount == 1 {
 			availableActions = -1
-			log.Info("🎮 Solo mode detected - setting unlimited actions")
+			log.Debug("Solo mode detected - setting unlimited actions")
 		}
 
 		if err := g.SetCurrentTurn(ctx, firstPlayerID, availableActions); err != nil {
@@ -563,7 +563,7 @@ func AdvanceToActionPhase(ctx context.Context, g *game.Game, allPlayers []*playe
 			return
 		}
 
-		log.Info("✅ Set first player turn with actions",
+		log.Debug("Set first player turn with actions",
 			zap.String("first_player_id", firstPlayerID),
 			zap.Int("available_actions", availableActions))
 	}

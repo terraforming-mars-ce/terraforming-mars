@@ -32,7 +32,7 @@ func NewFundAwardAction(
 // Execute funds an award for the player
 func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID string, awardType string) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "fund_award"), zap.String("award", awardType))
-	log.Info("🏅 Funding award")
+	log.Debug("Funding award")
 
 	if !shared.ValidAwardType(awardType) {
 		log.Warn("Invalid award type", zap.String("award_type", awardType))
@@ -85,7 +85,7 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: -fundingCost,
 	})
-	log.Info("💰 Deducted award funding cost",
+	log.Debug("Deducted award funding cost",
 		zap.Int("cost", fundingCost),
 		zap.Int("remaining_credits", player.Resources().Get().Credits))
 
@@ -98,7 +98,7 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 
 	a.WriteStateLog(ctx, g, awardType, game.SourceTypeAward, playerID, fmt.Sprintf("Funded %s award", awardType))
 
-	log.Info("✅ Award funded successfully",
+	log.Info("Award funded",
 		zap.String("award", awardType),
 		zap.Int("total_funded", awards.FundedCount()))
 

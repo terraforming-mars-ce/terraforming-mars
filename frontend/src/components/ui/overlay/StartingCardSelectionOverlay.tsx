@@ -146,6 +146,8 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
                             }
                           : undefined,
                         behaviors: corp.behaviors,
+                        tags: corp.tags,
+                        vpConditions: corp.vpConditions,
                         logoPath: undefined,
                       }}
                       isSelected={selectedCorporationId === corp.id}

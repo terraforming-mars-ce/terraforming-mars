@@ -35,7 +35,7 @@ func (h *ConfirmDemoSetupHandler) HandleMessage(ctx context.Context, connection 
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🎮 Processing confirm demo setup request")
+	log.Debug("Processing confirm demo setup request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -69,10 +69,10 @@ func (h *ConfirmDemoSetupHandler) HandleMessage(ctx context.Context, connection 
 		return
 	}
 
-	log.Info("✅ Confirm demo setup action completed successfully")
+	log.Debug("Demo setup confirmed")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

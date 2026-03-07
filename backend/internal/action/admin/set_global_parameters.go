@@ -43,7 +43,7 @@ func (a *SetGlobalParametersAction) Execute(ctx context.Context, gameID string, 
 		zap.Int("oceans", params.Oceans),
 		zap.Int("venus", params.Venus),
 	)
-	log.Info("🌍 Admin: Setting global parameters")
+	log.Debug("Admin: Setting global parameters")
 
 	game, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -51,38 +51,26 @@ func (a *SetGlobalParametersAction) Execute(ctx context.Context, gameID string, 
 		return fmt.Errorf("game not found: %s", gameID)
 	}
 
-	if params.Temperature != 0 {
-		err := game.GlobalParameters().SetTemperature(ctx, params.Temperature)
-		if err != nil {
-			log.Error("Failed to update temperature", zap.Error(err))
-			return fmt.Errorf("failed to update temperature: %w", err)
-		}
+	if err := game.GlobalParameters().SetTemperature(ctx, params.Temperature); err != nil {
+		log.Error("Failed to update temperature", zap.Error(err))
+		return fmt.Errorf("failed to update temperature: %w", err)
 	}
 
-	if params.Oxygen != 0 {
-		err := game.GlobalParameters().SetOxygen(ctx, params.Oxygen)
-		if err != nil {
-			log.Error("Failed to update oxygen", zap.Error(err))
-			return fmt.Errorf("failed to update oxygen: %w", err)
-		}
+	if err := game.GlobalParameters().SetOxygen(ctx, params.Oxygen); err != nil {
+		log.Error("Failed to update oxygen", zap.Error(err))
+		return fmt.Errorf("failed to update oxygen: %w", err)
 	}
 
-	if params.Oceans != 0 {
-		err := game.GlobalParameters().SetOceans(ctx, params.Oceans)
-		if err != nil {
-			log.Error("Failed to update oceans", zap.Error(err))
-			return fmt.Errorf("failed to update oceans: %w", err)
-		}
+	if err := game.GlobalParameters().SetOceans(ctx, params.Oceans); err != nil {
+		log.Error("Failed to update oceans", zap.Error(err))
+		return fmt.Errorf("failed to update oceans: %w", err)
 	}
 
-	if params.Venus != 0 {
-		err := game.GlobalParameters().SetVenus(ctx, params.Venus)
-		if err != nil {
-			log.Error("Failed to update venus", zap.Error(err))
-			return fmt.Errorf("failed to update venus: %w", err)
-		}
+	if err := game.GlobalParameters().SetVenus(ctx, params.Venus); err != nil {
+		log.Error("Failed to update venus", zap.Error(err))
+		return fmt.Errorf("failed to update venus: %w", err)
 	}
 
-	log.Info("✅ Admin set global parameters completed")
+	log.Info("Admin set global parameters completed")
 	return nil
 }

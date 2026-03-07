@@ -43,7 +43,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 		zap.String("action", "admin_set_corporation"),
 		zap.String("corporation_id", corporationID),
 	)
-	log.Info("🏢 Admin: Setting player corporation")
+	log.Debug("Admin: Setting player corporation")
 
 	g, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -59,7 +59,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 
 	oldCorpID := player.CorporationID()
 	if oldCorpID != "" {
-		log.Info("🧹 Clearing old corporation effects", zap.String("old_corporation_id", oldCorpID))
+		log.Debug("Clearing old corporation effects", zap.String("old_corporation_id", oldCorpID))
 
 		player.Effects().RemoveEffectsByCardID(oldCorpID)
 		player.Actions().RemoveActionsByCardID(oldCorpID)
@@ -67,7 +67,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 		player.Resources().ClearPaymentSubstitutes()
 		player.Resources().ClearValueModifiers()
 
-		log.Info("✅ Old corporation effects cleared")
+		log.Debug("Old corporation effects cleared")
 	}
 
 	corpCard, err := a.cardRegistry.GetByID(corporationID)
@@ -82,7 +82,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 	}
 
 	player.SetCorporationID(corporationID)
-	log.Info("✅ Corporation ID set", zap.String("corporation_name", corpCard.Name))
+	log.Debug("Corporation ID set", zap.String("corporation_name", corpCard.Name))
 
 	if err := a.corpProc.ApplyStartingEffects(ctx, corpCard, player, g); err != nil {
 		log.Error("Failed to apply corporation starting effects", zap.Error(err))
@@ -97,7 +97,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 	autoEffects := a.corpProc.GetAutoEffects(corpCard)
 	for _, effect := range autoEffects {
 		player.Effects().AddEffect(effect)
-		log.Debug("✅ Registered auto effect",
+		log.Debug("Registered auto effect",
 			zap.String("card_name", effect.CardName),
 			zap.Int("behavior_index", effect.BehaviorIndex))
 	}
@@ -105,7 +105,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 	triggerEffects := a.corpProc.GetTriggerEffects(corpCard)
 	for _, effect := range triggerEffects {
 		player.Effects().AddEffect(effect)
-		log.Debug("✅ Registered trigger effect",
+		log.Debug("Registered trigger effect",
 			zap.String("card_name", effect.CardName),
 			zap.Int("behavior_index", effect.BehaviorIndex))
 
@@ -127,7 +127,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 	manualActions := a.corpProc.GetManualActions(corpCard)
 	for _, action := range manualActions {
 		player.Actions().AddAction(action)
-		log.Debug("✅ Registered manual action",
+		log.Debug("Registered manual action",
 			zap.String("card_name", action.CardName),
 			zap.Int("behavior_index", action.BehaviorIndex))
 	}
@@ -137,7 +137,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 		return fmt.Errorf("failed to setup forced first action: %w", err)
 	}
 
-	log.Info("✅ Admin set corporation completed with all effects applied",
+	log.Info("Admin set corporation completed with all effects applied",
 		zap.String("corporation_name", corpCard.Name))
 	return nil
 }

@@ -33,7 +33,7 @@ func NewClaimMilestoneAction(
 // Execute claims a milestone for the player
 func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playerID string, milestoneType string) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "claim_milestone"), zap.String("milestone", milestoneType))
-	log.Info("🏆 Claiming milestone")
+	log.Debug("Claiming milestone")
 
 	if !shared.ValidMilestoneType(milestoneType) {
 		log.Warn("Invalid milestone type", zap.String("milestone_type", milestoneType))
@@ -95,7 +95,7 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: -game.MilestoneClaimCost,
 	})
-	log.Info("💰 Deducted milestone cost",
+	log.Debug("Deducted milestone cost",
 		zap.Int("cost", game.MilestoneClaimCost),
 		zap.Int("remaining_credits", player.Resources().Get().Credits))
 
@@ -108,7 +108,7 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 
 	a.WriteStateLog(ctx, g, milestoneType, game.SourceTypeMilestone, playerID, fmt.Sprintf("Claimed %s milestone", milestoneType))
 
-	log.Info("✅ Milestone claimed successfully",
+	log.Info("Milestone claimed",
 		zap.String("milestone", milestoneType),
 		zap.Int("total_claimed", milestones.ClaimedCount()))
 

@@ -54,9 +54,9 @@ func main() {
 	defer logger.Shutdown()
 
 	log := logger.Get()
-	log.Info("🚀 Starting Terraforming Mars backend server")
+	log.Info("Starting Terraforming Mars backend server")
 	log.Info("Version: " + Version)
-	log.Info("Log level set to " + logLevel)
+	log.Debug("Log level set to " + logLevel)
 
 	// Setup graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -70,37 +70,37 @@ func main() {
 	}
 
 	cardPath := filepath.Join(wd, "assets", "terraforming_mars_cards.json")
-	log.Info("📂 Loading cards from", zap.String("path", cardPath))
+	log.Debug("Loading cards from", zap.String("path", cardPath))
 
 	cardData, err := cards.LoadCardsFromJSON(cardPath)
 	if err != nil {
 		log.Fatal("Failed to load cards", zap.Error(err))
 	}
 	cardRegistry := cards.NewInMemoryCardRegistry(cardData)
-	log.Info("🃏 Card registry initialized", zap.Int("card_count", len(cardData)))
+	log.Debug("Card registry initialized", zap.Int("card_count", len(cardData)))
 
 	// ========== Initialize Game Repository (Single Source of Truth) ==========
 	gameRepo := game.NewInMemoryGameRepository()
-	log.Info("🎮 Game repository initialized")
+	log.Debug("Game repository initialized")
 
 	// ========== Initialize Game State Repository (Diff Logging) ==========
 	stateRepo := game.NewInMemoryGameStateRepository()
-	log.Info("📊 Game state repository initialized")
+	log.Debug("Game state repository initialized")
 
 	// ========== Initialize Bug Report Service ==========
 	bugReportService := bugreport.NewService(log)
 	caps := bugReportService.Capabilities()
-	log.Info("🐛 Bug report service",
+	log.Debug("Bug report service",
 		zap.Bool("github_app", caps.GitHubApp),
 		zap.Bool("claude", caps.Claude))
 
 	// ========== Initialize WebSocket Hub ==========
 	hub := core.NewHub()
-	log.Info("🔌 WebSocket hub initialized")
+	log.Debug("WebSocket hub initialized")
 
 	// ========== Initialize Game State Broadcaster (Automatic Broadcasting) ==========
 	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry)
-	log.Info("📡 Game state broadcaster initialized (provides automatic broadcasting for all games)")
+	log.Debug("Game state broadcaster initialized (provides automatic broadcasting for all games)")
 
 	// ========== Initialize Game Actions ==========
 
@@ -203,7 +203,7 @@ func main() {
 	listCardsAction := query.NewListCardsAction(cardRegistry, log)
 	getPlayerAction := query.NewGetPlayerAction(gameRepo, log)
 
-	log.Info("✅ All actions initialized")
+	log.Debug("All actions initialized")
 
 	// ========== Register WebSocket Handlers ==========
 	wsHandler.RegisterHandlers(
@@ -269,14 +269,14 @@ func main() {
 		adminSetTRAction,
 	)
 
-	log.Info("🎯 WebSocket handlers registered")
+	log.Debug("WebSocket handlers registered")
 
 	// ========== Start WebSocket Hub ==========
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go hub.Run(ctx)
-	log.Info("🔌 WebSocket hub running")
+	log.Debug("WebSocket hub running")
 
 	// ========== Setup HTTP Router ==========
 	mainRouter := mux.NewRouter()
@@ -303,17 +303,7 @@ func main() {
 	// Add WebSocket endpoint
 	mainRouter.HandleFunc("/ws", wsHttpHandler.ServeWS)
 
-	log.Info("🌐 HTTP routes configured")
-	log.Info("   📌 POST /api/v1/games - Create game")
-	log.Info("   📌 POST /api/v1/games/demo/lobby - Create demo lobby")
-	log.Info("   📌 GET  /api/v1/games - List games")
-	log.Info("   📌 GET  /api/v1/games/{gameId} - Get game")
-	log.Info("   📌 GET  /api/v1/games/{gameId}/logs - Get game logs")
-	log.Info("   📌 GET  /api/v1/cards - List cards")
-	log.Info("   📌 GET  /api/v1/games/{gameId}/players/{playerId} - Get player")
-	log.Info("   📌 POST /api/v1/bugs - Submit bug report")
-	log.Info("   📌 WS   /ws - WebSocket endpoint")
-	log.Info("   ℹ️  Game creation available via both HTTP POST and WebSocket 'create-game'")
+	log.Debug("HTTP routes configured")
 
 	// ========== Setup HTTP Server ==========
 	server := &http.Server{
@@ -326,18 +316,18 @@ func main() {
 
 	// Start HTTP server in background
 	go func() {
-		log.Info("🌍 HTTP server listening on :3001")
+		log.Info("HTTP server listening on :3001")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Failed to start HTTP server", zap.Error(err))
 		}
 	}()
 
-	log.Info("✅ Server started successfully")
+	log.Info("Server started")
 
 	// Wait for shutdown signal
 	<-quit
 
-	log.Info("🛑 Shutting down server...")
+	log.Info("Shutting down server...")
 
 	// Graceful shutdown with timeout
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -347,12 +337,12 @@ func main() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error("Failed to gracefully shutdown HTTP server", zap.Error(err))
 	} else {
-		log.Info("✅ HTTP server stopped")
+		log.Debug("HTTP server stopped")
 	}
 
 	// Cancel WebSocket hub context
 	cancel()
-	log.Info("✅ WebSocket hub stopped")
+	log.Debug("WebSocket hub stopped")
 
-	log.Info("✅ Server shutdown complete")
+	log.Info("Server shutdown complete")
 }

@@ -139,7 +139,7 @@ func (a *BehaviorApplier) ApplyInputs(
 		zap.Int("input_count", len(inputs)),
 	)
 
-	log.Debug("💰 Processing behavior inputs")
+	log.Debug("Processing behavior inputs")
 
 	resources := a.player.Resources().Get()
 
@@ -225,7 +225,7 @@ func (a *BehaviorApplier) ApplyInputs(
 				return fmt.Errorf("insufficient heat production: need %d, have %d", effectiveAmount, production.Heat)
 			}
 		default:
-			log.Warn("⚠️ Unhandled input type", zap.String("type", string(input.ResourceType)))
+			log.Warn("Unhandled input type", zap.String("type", string(input.ResourceType)))
 		}
 	}
 
@@ -242,7 +242,7 @@ func (a *BehaviorApplier) ApplyInputs(
 		// Storage resource inputs (target: "self-card") deduct from card storage
 		if input.Target == "self-card" && isStorageResourceType(input.ResourceType) {
 			a.player.Resources().AddToStorage(a.sourceCardID, -effectiveAmount)
-			log.Info("📦 Deducted from card storage",
+			log.Debug("Deducted from card storage",
 				zap.String("card_id", a.sourceCardID),
 				zap.String("resource_type", string(input.ResourceType)),
 				zap.Int("amount", effectiveAmount))
@@ -260,73 +260,73 @@ func (a *BehaviorApplier) ApplyInputs(
 			a.player.Resources().Add(map[shared.ResourceType]int{
 				shared.ResourceCredit: -effectiveAmount,
 			})
-			log.Info("💸 Deducted credits", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted credits", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourceSteel:
 			a.player.Resources().Add(map[shared.ResourceType]int{
 				shared.ResourceSteel: -effectiveAmount,
 			})
-			log.Info("🔩 Deducted steel", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted steel", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourceTitanium:
 			a.player.Resources().Add(map[shared.ResourceType]int{
 				shared.ResourceTitanium: -effectiveAmount,
 			})
-			log.Info("⚙️ Deducted titanium", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted titanium", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourcePlant:
 			a.player.Resources().Add(map[shared.ResourceType]int{
 				shared.ResourcePlant: -effectiveAmount,
 			})
-			log.Info("🌱 Deducted plants", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted plants", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourceEnergy:
 			a.player.Resources().Add(map[shared.ResourceType]int{
 				shared.ResourceEnergy: -effectiveAmount,
 			})
-			log.Info("⚡ Deducted energy", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted energy", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourceHeat:
 			a.player.Resources().Add(map[shared.ResourceType]int{
 				shared.ResourceHeat: -effectiveAmount,
 			})
-			log.Info("🔥 Deducted heat", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted heat", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourceEnergyProduction:
 			a.player.Resources().AddProduction(map[shared.ResourceType]int{
 				shared.ResourceEnergyProduction: -effectiveAmount,
 			})
-			log.Info("⚡ Deducted energy production", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted energy production", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourceCreditProduction:
 			a.player.Resources().AddProduction(map[shared.ResourceType]int{
 				shared.ResourceCreditProduction: -effectiveAmount,
 			})
-			log.Info("💰 Deducted credit production", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted credit production", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourceSteelProduction:
 			a.player.Resources().AddProduction(map[shared.ResourceType]int{
 				shared.ResourceSteelProduction: -effectiveAmount,
 			})
-			log.Info("🔩 Deducted steel production", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted steel production", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourceTitaniumProduction:
 			a.player.Resources().AddProduction(map[shared.ResourceType]int{
 				shared.ResourceTitaniumProduction: -effectiveAmount,
 			})
-			log.Info("⚙️ Deducted titanium production", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted titanium production", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourcePlantProduction:
 			a.player.Resources().AddProduction(map[shared.ResourceType]int{
 				shared.ResourcePlantProduction: -effectiveAmount,
 			})
-			log.Info("🌱 Deducted plant production", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted plant production", zap.Int("amount", effectiveAmount))
 
 		case shared.ResourceHeatProduction:
 			a.player.Resources().AddProduction(map[shared.ResourceType]int{
 				shared.ResourceHeatProduction: -effectiveAmount,
 			})
-			log.Info("🔥 Deducted heat production", zap.Int("amount", effectiveAmount))
+			log.Debug("Deducted heat production", zap.Int("amount", effectiveAmount))
 		}
 	}
 
@@ -394,7 +394,7 @@ func (a *BehaviorApplier) validateActionPayment(
 		return fmt.Errorf("payment insufficient: action costs %d MC, payment provides %d MC", requiredAmount, totalValue)
 	}
 
-	log.Info("💰 Validated action payment",
+	log.Debug("Validated action payment",
 		zap.Int("required", requiredAmount),
 		zap.Int("credits", payment.Credits),
 		zap.Int("titanium", payment.Titanium),
@@ -414,7 +414,7 @@ func (a *BehaviorApplier) applyActionPayment(
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceCredit: -requiredAmount,
 		})
-		log.Info("💸 Deducted credits (no action payment)", zap.Int("amount", requiredAmount))
+		log.Debug("Deducted credits (no action payment)", zap.Int("amount", requiredAmount))
 		return
 	}
 
@@ -424,19 +424,19 @@ func (a *BehaviorApplier) applyActionPayment(
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceCredit: -payment.Credits,
 		})
-		log.Info("💸 Deducted credits from action payment", zap.Int("amount", payment.Credits))
+		log.Debug("Deducted credits from action payment", zap.Int("amount", payment.Credits))
 	}
 	if payment.Titanium > 0 {
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceTitanium: -payment.Titanium,
 		})
-		log.Info("⚙️ Deducted titanium from action payment", zap.Int("amount", payment.Titanium))
+		log.Debug("Deducted titanium from action payment", zap.Int("amount", payment.Titanium))
 	}
 	if payment.Steel > 0 {
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceSteel: -payment.Steel,
 		})
-		log.Info("🔩 Deducted steel from action payment", zap.Int("amount", payment.Steel))
+		log.Debug("Deducted steel from action payment", zap.Int("amount", payment.Steel))
 	}
 }
 
@@ -488,7 +488,7 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 		zap.Int("output_count", len(outputs)),
 	)
 
-	log.Debug("✨ Processing behavior outputs")
+	log.Debug("Processing behavior outputs")
 
 	var calculatedOutputs []game.CalculatedOutput
 	var notificationOutputs []game.CalculatedOutput
@@ -505,7 +505,7 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 				multiplier := count / output.Per.Amount
 				actualAmount = output.Amount * multiplier
 				isScaled = true
-				log.Debug("📊 Calculated scaled output",
+				log.Debug("Calculated scaled output",
 					zap.String("resource_type", string(output.ResourceType)),
 					zap.Int("base_amount", output.Amount),
 					zap.Int("count", count),
@@ -518,7 +518,7 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 		if output.VariableAmount {
 			actualAmount = output.Amount * a.selectedAmount
 			isScaled = true
-			log.Debug("📊 Applied variable amount",
+			log.Debug("Applied variable amount",
 				zap.String("resource_type", string(output.ResourceType)),
 				zap.Int("base_amount", output.Amount),
 				zap.Int("selected_amount", a.selectedAmount),
@@ -680,7 +680,7 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 		return false, fmt.Errorf("failed to draw cards: %w", err)
 	}
 
-	log.Info("🃏 Drew cards for peek selection",
+	log.Debug("Drew cards for peek selection",
 		zap.Int("peek_amount", peekAmount),
 		zap.Int("take_amount", takeAmount),
 		zap.Int("buy_amount", buyAmount),
@@ -700,7 +700,7 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 	// Set on player
 	a.player.Selection().SetPendingCardDrawSelection(selection)
 
-	log.Info("🃏 Created pending card draw selection",
+	log.Debug("Created pending card draw selection",
 		zap.String("source", a.source),
 		zap.String("source_card_id", a.sourceCardID),
 		zap.Int("source_behavior_index", a.sourceBehaviorIdx),
@@ -718,7 +718,7 @@ func (a *BehaviorApplier) stealAnyPlayerResource(
 	log *zap.Logger,
 ) error {
 	if a.targetPlayerID == "" {
-		log.Debug("⏭️ Skipping steal: no target player (solo mode)",
+		log.Debug("Skipping steal: no target player (solo mode)",
 			zap.String("resource_type", string(resourceType)))
 		return nil
 	}
@@ -761,7 +761,7 @@ func (a *BehaviorApplier) stealAnyPlayerResource(
 		})
 	}
 
-	log.Info("🎯 Stole resource from target player",
+	log.Debug("Stole resource from target player",
 		zap.String("target_player_id", a.targetPlayerID),
 		zap.String("resource_type", string(resourceType)),
 		zap.Int("requested", amount),
@@ -776,7 +776,7 @@ func (a *BehaviorApplier) applyAnyPlayerResource(
 	log *zap.Logger,
 ) error {
 	if a.targetPlayerID == "" {
-		log.Debug("⏭️ Skipping any-player resource removal: no target player (solo mode)",
+		log.Debug("Skipping any-player resource removal: no target player (solo mode)",
 			zap.String("resource_type", string(resourceType)))
 		return nil
 	}
@@ -820,7 +820,7 @@ func (a *BehaviorApplier) applyAnyPlayerResource(
 		})
 	}
 
-	log.Info("🎯 Removed resource from target player",
+	log.Debug("Removed resource from target player",
 		zap.String("target_player_id", a.targetPlayerID),
 		zap.String("resource_type", string(resourceType)),
 		zap.Int("requested", absAmount),
@@ -837,7 +837,7 @@ func (a *BehaviorApplier) applyAnyPlayerProduction(
 	log *zap.Logger,
 ) error {
 	if a.targetPlayerID == "" {
-		log.Debug("⏭️ Skipping any-player production change: no target player (solo mode)",
+		log.Debug("Skipping any-player production change: no target player (solo mode)",
 			zap.String("production_type", string(productionType)))
 		return nil
 	}
@@ -853,7 +853,7 @@ func (a *BehaviorApplier) applyAnyPlayerProduction(
 		productionType: amount,
 	})
 
-	log.Info("🎯 Applied production change to target player",
+	log.Debug("Applied production change to target player",
 		zap.String("target_player_id", a.targetPlayerID),
 		zap.String("production_type", string(productionType)),
 		zap.Int("amount", amount))
@@ -880,7 +880,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceCredit: output.Amount,
 		})
-		log.Info("💰 Added credits", zap.Int("amount", output.Amount))
+		log.Debug("Added credits", zap.Int("amount", output.Amount))
 
 	case shared.ResourceSteel:
 		if output.Target == "steal-any-player" {
@@ -895,7 +895,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceSteel: output.Amount,
 		})
-		log.Info("🔩 Added steel", zap.Int("amount", output.Amount))
+		log.Debug("Added steel", zap.Int("amount", output.Amount))
 
 	case shared.ResourceTitanium:
 		if output.Target == "steal-any-player" {
@@ -910,7 +910,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceTitanium: output.Amount,
 		})
-		log.Info("⚙️ Added titanium", zap.Int("amount", output.Amount))
+		log.Debug("Added titanium", zap.Int("amount", output.Amount))
 
 	case shared.ResourcePlant:
 		if output.Target == "steal-any-player" {
@@ -925,7 +925,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourcePlant: output.Amount,
 		})
-		log.Info("🌱 Added plants", zap.Int("amount", output.Amount))
+		log.Debug("Added plants", zap.Int("amount", output.Amount))
 
 	case shared.ResourceEnergy:
 		if output.Target == "steal-any-player" {
@@ -940,7 +940,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceEnergy: output.Amount,
 		})
-		log.Info("⚡ Added energy", zap.Int("amount", output.Amount))
+		log.Debug("Added energy", zap.Int("amount", output.Amount))
 
 	case shared.ResourceHeat:
 		if output.Target == "steal-any-player" {
@@ -955,7 +955,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceHeat: output.Amount,
 		})
-		log.Info("🔥 Added heat", zap.Int("amount", output.Amount))
+		log.Debug("Added heat", zap.Int("amount", output.Amount))
 
 	case shared.ResourceCreditProduction:
 		if output.Target == "any-player" {
@@ -967,7 +967,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().AddProduction(map[shared.ResourceType]int{
 			shared.ResourceCreditProduction: output.Amount,
 		})
-		log.Info("💰 Added credits production", zap.Int("amount", output.Amount))
+		log.Debug("Added credits production", zap.Int("amount", output.Amount))
 
 	case shared.ResourceSteelProduction:
 		if output.Target == "any-player" {
@@ -979,7 +979,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().AddProduction(map[shared.ResourceType]int{
 			shared.ResourceSteelProduction: output.Amount,
 		})
-		log.Info("🔩 Added steel production", zap.Int("amount", output.Amount))
+		log.Debug("Added steel production", zap.Int("amount", output.Amount))
 
 	case shared.ResourceTitaniumProduction:
 		if output.Target == "any-player" {
@@ -991,7 +991,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().AddProduction(map[shared.ResourceType]int{
 			shared.ResourceTitaniumProduction: output.Amount,
 		})
-		log.Info("⚙️ Added titanium production", zap.Int("amount", output.Amount))
+		log.Debug("Added titanium production", zap.Int("amount", output.Amount))
 
 	case shared.ResourcePlantProduction:
 		if output.Target == "any-player" {
@@ -1003,7 +1003,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().AddProduction(map[shared.ResourceType]int{
 			shared.ResourcePlantProduction: output.Amount,
 		})
-		log.Info("🌱 Added plants production", zap.Int("amount", output.Amount))
+		log.Debug("Added plants production", zap.Int("amount", output.Amount))
 
 	case shared.ResourceEnergyProduction:
 		if output.Target == "any-player" {
@@ -1015,7 +1015,7 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().AddProduction(map[shared.ResourceType]int{
 			shared.ResourceEnergyProduction: output.Amount,
 		})
-		log.Info("⚡ Added energy production", zap.Int("amount", output.Amount))
+		log.Debug("Added energy production", zap.Int("amount", output.Amount))
 
 	case shared.ResourceHeatProduction:
 		if output.Target == "any-player" {
@@ -1027,14 +1027,14 @@ func (a *BehaviorApplier) applyOutput(
 		a.player.Resources().AddProduction(map[shared.ResourceType]int{
 			shared.ResourceHeatProduction: output.Amount,
 		})
-		log.Info("🔥 Added heat production", zap.Int("amount", output.Amount))
+		log.Debug("Added heat production", zap.Int("amount", output.Amount))
 
 	case shared.ResourceTR:
 		if a.player == nil {
 			return fmt.Errorf("cannot apply terraform rating: no player context")
 		}
 		a.player.Resources().UpdateTerraformRating(output.Amount)
-		log.Info("🌍 Added terraform rating", zap.Int("amount", output.Amount))
+		log.Debug("Added terraform rating", zap.Int("amount", output.Amount))
 
 	case shared.ResourceOxygen:
 		if a.game == nil {
@@ -1047,7 +1047,7 @@ func (a *BehaviorApplier) applyOutput(
 		if actualSteps > 0 && a.player != nil {
 			a.player.Resources().UpdateTerraformRating(actualSteps)
 		}
-		log.Info("🌊 Increased oxygen", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
+		log.Debug("Increased oxygen", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
 
 	case shared.ResourceTemperature:
 		if a.game == nil {
@@ -1060,7 +1060,7 @@ func (a *BehaviorApplier) applyOutput(
 		if actualSteps > 0 && a.player != nil {
 			a.player.Resources().UpdateTerraformRating(actualSteps)
 		}
-		log.Info("🌡️ Increased temperature", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
+		log.Debug("Increased temperature", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
 
 	case shared.ResourceVenus:
 		if a.game == nil {
@@ -1073,7 +1073,7 @@ func (a *BehaviorApplier) applyOutput(
 		if actualSteps > 0 && a.player != nil {
 			a.player.Resources().UpdateTerraformRating(actualSteps)
 		}
-		log.Info("♀ Increased venus", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
+		log.Debug("Increased venus", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
 
 	case shared.ResourceLandClaim:
 		if a.game == nil {
@@ -1094,7 +1094,7 @@ func (a *BehaviorApplier) applyOutput(
 			return fmt.Errorf("failed to append land claim to pending tile selection queue: %w", err)
 		}
 
-		log.Info("🏴 Added land claim tile selection to queue",
+		log.Debug("Added land claim tile selection to queue",
 			zap.Int("count", output.Amount))
 
 	case shared.ResourceTilePlacement:
@@ -1135,7 +1135,7 @@ func (a *BehaviorApplier) applyOutput(
 			return fmt.Errorf("failed to append to pending tile selection queue: %w", err)
 		}
 
-		log.Info("🏗️ Added special tile placements to queue",
+		log.Debug("Added special tile placements to queue",
 			zap.String("tile_type", tileType),
 			zap.Int("count", output.Amount),
 			zap.Any("tile_restrictions", tileRestrictions))
@@ -1186,7 +1186,7 @@ func (a *BehaviorApplier) applyOutput(
 			return fmt.Errorf("failed to append to pending tile selection queue: %w", err)
 		}
 
-		log.Info("🏗️ Added tile placements to queue",
+		log.Debug("Added tile placements to queue",
 			zap.String("tile_type", tileType),
 			zap.Int("count", output.Amount),
 			zap.Any("tile_restrictions", tileRestrictions))
@@ -1200,25 +1200,25 @@ func (a *BehaviorApplier) applyOutput(
 		if len(resources) > 0 {
 			resourceType := shared.ResourceType(resources[0])
 			a.player.Resources().AddPaymentSubstitute(resourceType, output.Amount)
-			log.Info("💰 Added payment substitute",
+			log.Debug("Added payment substitute",
 				zap.String("resource_type", string(resourceType)),
 				zap.Int("conversion_rate", output.Amount))
 		} else {
-			log.Warn("⚠️ payment-substitute output missing selectors with resources")
+			log.Warn("payment-substitute output missing selectors with resources")
 		}
 
 	case shared.ResourceDiscount:
 		// Discounts are registered as effects and handled by RequirementModifierCalculator
 		// The effect registration happens when the card is played (auto effects are added to player.Effects)
 		// The calculator then computes the actual modifiers from all effects
-		log.Info("🏷️ Discount effect registered",
+		log.Debug("Discount effect registered",
 			zap.Int("amount", output.Amount),
 			zap.Any("selectors", output.Selectors))
 
 	case shared.ResourceGlobalParameterLenience:
 		// Lenience is registered as an effect and handled by RequirementModifierCalculator
 		// during requirement validation. It widens the min/max window for global parameter checks.
-		log.Info("🔓 Global parameter lenience effect registered",
+		log.Debug("Global parameter lenience effect registered",
 			zap.Int("amount", output.Amount),
 			zap.String("temporary", output.Temporary))
 
@@ -1230,7 +1230,7 @@ func (a *BehaviorApplier) applyOutput(
 		for _, resourceStr := range GetResourcesFromSelectors(output.Selectors) {
 			resourceType := shared.ResourceType(resourceStr)
 			a.player.Resources().AddValueModifier(resourceType, output.Amount)
-			log.Info("💎 Added resource value modifier",
+			log.Debug("Added resource value modifier",
 				zap.String("resource_type", string(resourceType)),
 				zap.Int("modifier_amount", output.Amount))
 		}
@@ -1240,7 +1240,7 @@ func (a *BehaviorApplier) applyOutput(
 			return fmt.Errorf("cannot apply storage payment substitute: no player context")
 		}
 		if a.sourceCardID == "" {
-			log.Warn("⚠️ storage-payment-substitute output missing source card ID")
+			log.Warn("storage-payment-substitute output missing source card ID")
 			return nil
 		}
 		a.player.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
@@ -1249,7 +1249,7 @@ func (a *BehaviorApplier) applyOutput(
 			ConversionRate: output.Amount,
 			Selectors:      output.Selectors,
 		})
-		log.Info("💰 Added storage payment substitute",
+		log.Debug("Added storage payment substitute",
 			zap.String("card_id", a.sourceCardID),
 			zap.Int("conversion_rate", output.Amount),
 			zap.Any("selectors", output.Selectors))
@@ -1261,7 +1261,7 @@ func (a *BehaviorApplier) applyOutput(
 		}
 		targetID := a.nextTargetCardID()
 		if targetID == "" {
-			log.Warn("⚠️ No target card specified for card-resource output")
+			log.Warn("No target card specified for card-resource output")
 			return fmt.Errorf("no target card specified for card-resource output")
 		}
 		if a.cardRegistry == nil {
@@ -1275,7 +1275,7 @@ func (a *BehaviorApplier) applyOutput(
 			return fmt.Errorf("target card %s has no resource storage", targetID)
 		}
 		a.player.Resources().AddToStorage(targetID, output.Amount)
-		log.Info("🐾 Added card-resource to target card storage",
+		log.Debug("Added card-resource to target card storage",
 			zap.String("card_id", targetID),
 			zap.String("storage_type", string(targetCard.ResourceStorage.Type)),
 			zap.Int("amount", output.Amount))
@@ -1290,19 +1290,19 @@ func (a *BehaviorApplier) applyOutput(
 		switch target {
 		case "self-card":
 			if a.sourceCardID == "" {
-				log.Warn("⚠️ Cannot place resource on self-card: no source card ID",
+				log.Warn("Cannot place resource on self-card: no source card ID",
 					zap.String("resource_type", string(output.ResourceType)))
 				return nil
 			}
 			a.player.Resources().AddToStorage(a.sourceCardID, output.Amount)
-			log.Info("🐾 Added resource to card storage",
+			log.Debug("Added resource to card storage",
 				zap.String("card_id", a.sourceCardID),
 				zap.String("resource_type", string(output.ResourceType)),
 				zap.Int("amount", output.Amount))
 
 		case "steal-from-any-card":
 			if a.stealSourceCardID == "" {
-				log.Debug("⏭️ Skipping steal-from-any-card: no source card specified")
+				log.Debug("Skipping steal-from-any-card: no source card specified")
 				return nil
 			}
 			if a.game == nil {
@@ -1314,7 +1314,7 @@ func (a *BehaviorApplier) applyOutput(
 				if storage > 0 {
 					stolenAmount = min(output.Amount, storage)
 					p.Resources().AddToStorage(a.stealSourceCardID, -stolenAmount)
-					log.Info("🎯 Stole resource from card",
+					log.Debug("Stole resource from card",
 						zap.String("source_card_id", a.stealSourceCardID),
 						zap.String("owner_player_id", p.ID()),
 						zap.String("resource_type", string(output.ResourceType)),
@@ -1324,7 +1324,7 @@ func (a *BehaviorApplier) applyOutput(
 			}
 			if stolenAmount > 0 && a.sourceCardID != "" {
 				a.player.Resources().AddToStorage(a.sourceCardID, stolenAmount)
-				log.Info("🐾 Added stolen resource to self card",
+				log.Debug("Added stolen resource to self card",
 					zap.String("card_id", a.sourceCardID),
 					zap.String("resource_type", string(output.ResourceType)),
 					zap.Int("amount", stolenAmount))
@@ -1333,7 +1333,7 @@ func (a *BehaviorApplier) applyOutput(
 		case "any-card":
 			targetID := a.nextTargetCardID()
 			if targetID == "" {
-				log.Warn("⚠️ No target card for any-card resource placement — resources lost",
+				log.Warn("No target card for any-card resource placement — resources lost",
 					zap.String("resource_type", string(output.ResourceType)),
 					zap.Int("amount", output.Amount))
 				return nil
@@ -1351,7 +1351,7 @@ func (a *BehaviorApplier) applyOutput(
 				}
 			}
 			a.player.Resources().AddToStorage(targetID, output.Amount)
-			log.Info("🐾 Added resource to target card storage",
+			log.Debug("Added resource to target card storage",
 				zap.String("card_id", targetID),
 				zap.String("resource_type", string(output.ResourceType)),
 				zap.Int("amount", output.Amount))
@@ -1360,12 +1360,12 @@ func (a *BehaviorApplier) applyOutput(
 			// Default to self-card if target is empty and sourceCardID is set
 			if a.sourceCardID != "" {
 				a.player.Resources().AddToStorage(a.sourceCardID, output.Amount)
-				log.Info("🐾 Added resource to card storage (default to self)",
+				log.Debug("Added resource to card storage (default to self)",
 					zap.String("card_id", a.sourceCardID),
 					zap.String("resource_type", string(output.ResourceType)),
 					zap.Int("amount", output.Amount))
 			} else {
-				log.Warn("⚠️ Unhandled target for card resource",
+				log.Warn("Unhandled target for card resource",
 					zap.String("target", target),
 					zap.String("resource_type", string(output.ResourceType)))
 			}
@@ -1391,7 +1391,7 @@ func (a *BehaviorApplier) applyOutput(
 				for _, cardID := range drawnCards {
 					opponent.Hand().AddCard(cardID)
 				}
-				log.Info("🃏 Opponent drew cards",
+				log.Debug("Opponent drew cards",
 					zap.String("opponent_id", opponent.ID()),
 					zap.Int("amount", len(drawnCards)))
 			}
@@ -1417,7 +1417,7 @@ func (a *BehaviorApplier) applyOutput(
 			if len(discarded) > 0 {
 				_ = a.game.Deck().Discard(ctx, discarded)
 			}
-			log.Info("🃏 Drew matching cards (draw-until)",
+			log.Debug("Drew matching cards (draw-until)",
 				zap.Int("matched", len(matched)),
 				zap.Int("discarded", len(discarded)))
 		} else {
@@ -1432,18 +1432,18 @@ func (a *BehaviorApplier) applyOutput(
 			if a.onCardsAddedToHand != nil && len(drawnCards) > 0 {
 				a.onCardsAddedToHand(drawnCards)
 			}
-			log.Info("🃏 Drew cards and added to hand",
+			log.Debug("Drew cards and added to hand",
 				zap.Int("amount", len(drawnCards)))
 		}
 
 	case shared.ResourceCardPeek, shared.ResourceCardTake, shared.ResourceCardBuy:
 		// Handled by ApplyCardDrawOutputs - skip here
-		log.Debug("🃏 Skipping card draw output (handled by ApplyCardDrawOutputs)",
+		log.Debug("Skipping card draw output (handled by ApplyCardDrawOutputs)",
 			zap.String("type", string(output.ResourceType)),
 			zap.Int("amount", output.Amount))
 
 	default:
-		log.Warn("⚠️ Unhandled output type",
+		log.Warn("Unhandled output type",
 			zap.String("type", string(output.ResourceType)))
 	}
 

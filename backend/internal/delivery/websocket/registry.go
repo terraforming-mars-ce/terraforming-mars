@@ -81,7 +81,7 @@ func RegisterHandlers(
 	adminSetTRAction *adminAction.SetTRAction,
 ) {
 	log := logger.Get()
-	log.Info("🔄 Registering WebSocket handlers")
+	log.Debug("Registering WebSocket handlers")
 
 	createGameHandler := game.NewCreateGameHandler(createGameAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeCreateGame, createGameHandler)
@@ -209,5 +209,5 @@ func RegisterHandlers(
 	)
 	hub.RegisterHandler(dto.MessageTypeAdminCommand, adminCommandHandler)
 
-	log.Info("🎯 WebSocket handlers registered")
+	log.Debug("WebSocket handlers registered")
 }

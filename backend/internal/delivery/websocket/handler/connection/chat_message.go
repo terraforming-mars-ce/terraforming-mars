@@ -115,7 +115,7 @@ func (h *ChatMessageHandler) HandleMessage(ctx context.Context, connection *core
 	}
 
 	h.broadcaster.BroadcastChatMessage(gameID, chatDto)
-	log.Debug("💬 Chat message broadcast")
+	log.Debug("Chat message broadcast")
 }
 
 func (h *ChatMessageHandler) sendError(connection *core.Connection, errorMessage string) {

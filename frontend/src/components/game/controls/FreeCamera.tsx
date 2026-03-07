@@ -5,7 +5,7 @@ import { useWorld3DSettings, StoredCameraState } from "../../../contexts/World3D
 
 export function FreeCamera() {
   const { camera, gl } = useThree();
-  const { settings } = useWorld3DSettings();
+  const { settings, cameraStateRef, pendingCameraTransformRef } = useWorld3DSettings();
 
   const moveSpeed = 0.01;
   const lookSpeed = 0.0004;
@@ -117,6 +117,18 @@ export function FreeCamera() {
   useFrame(() => {
     if (!settings.freeCameraEnabled) return;
 
+    const pending = pendingCameraTransformRef.current;
+    if (pending) {
+      if (pending.position) {
+        camera.position.set(pending.position.x, pending.position.y, pending.position.z);
+      }
+      if (pending.rotation) {
+        euler.current.set(pending.rotation.x, pending.rotation.y, pending.rotation.z, "YXZ");
+        camera.quaternion.setFromEuler(euler.current);
+      }
+      pendingCameraTransformRef.current = null;
+    }
+
     const direction = new THREE.Vector3();
     const right = new THREE.Vector3();
 
@@ -129,6 +141,11 @@ export function FreeCamera() {
     if (keys.current.right) camera.position.addScaledVector(right, moveSpeed);
     if (keys.current.up) camera.position.y += moveSpeed;
     if (keys.current.down) camera.position.y -= moveSpeed;
+
+    cameraStateRef.current = {
+      position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      rotation: { x: camera.rotation.x, y: camera.rotation.y, z: camera.rotation.z },
+    };
   });
 
   return null;

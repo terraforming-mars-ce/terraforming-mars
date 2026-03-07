@@ -148,7 +148,7 @@ func (c *Connection) ReadPump() {
 		return nil
 	})
 
-	c.logger.Info("🔄 Starting ReadPump for connection", zap.String("connection_id", c.ID))
+	c.logger.Debug("Starting ReadPump for connection", zap.String("connection_id", c.ID))
 
 	for {
 		select {
@@ -163,7 +163,7 @@ func (c *Connection) ReadPump() {
 				return
 			}
 
-			c.logger.Debug("📡 Received WebSocket message",
+			c.logger.Debug("Received WebSocket message",
 				zap.String("connection_id", c.ID),
 				zap.String("message_type", string(message.Type)))
 
@@ -222,7 +222,7 @@ func (c *Connection) SendMessage(message dto.WebSocketMessage) {
 
 	select {
 	case c.Send <- message:
-		c.logger.Debug("💬 Message queued for client",
+		c.logger.Debug("Message queued for client",
 			zap.String("connection_id", c.ID),
 			zap.String("message_type", string(message.Type)))
 	case <-c.Done:

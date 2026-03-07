@@ -34,7 +34,7 @@ func (h *BuildCityHandler) HandleMessage(ctx context.Context, connection *core.C
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("🏙️ Processing build city request")
+	log.Debug("Processing build city request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -49,10 +49,10 @@ func (h *BuildCityHandler) HandleMessage(ctx context.Context, connection *core.C
 		return
 	}
 
-	log.Info("✅ Build city action completed successfully")
+	log.Debug("City built")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

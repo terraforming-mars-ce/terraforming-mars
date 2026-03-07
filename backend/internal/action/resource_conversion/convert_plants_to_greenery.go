@@ -41,7 +41,7 @@ func NewConvertPlantsToGreeneryAction(
 // Execute performs the convert plants to greenery action
 func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID string, playerID string) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "convert_plants_to_greenery"))
-	log.Info("🌱 Converting plants to greenery")
+	log.Debug("Converting plants to greenery")
 
 	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
 	if err != nil {
@@ -72,7 +72,7 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 	if requiredPlants < 1 {
 		requiredPlants = 1
 	}
-	log.Debug("💰 Calculated plants cost",
+	log.Debug("Calculated plants cost",
 		zap.Int("base_cost", BasePlantsForGreenery),
 		zap.Int("discount", plantDiscount),
 		zap.Int("final_cost", requiredPlants))
@@ -90,7 +90,7 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 	})
 
 	resources = player.Resources().Get()
-	log.Info("🌿 Deducted plants",
+	log.Debug("Deducted plants",
 		zap.Int("plants_spent", requiredPlants),
 		zap.Int("remaining_plants", resources.Plants))
 
@@ -108,11 +108,11 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 		return fmt.Errorf("failed to queue tile placement: %w", err)
 	}
 
-	log.Info("📋 Created tile queue for greenery placement (auto-processed by SetPendingTileSelectionQueue)")
+	log.Debug("Created tile queue for greenery placement (auto-processed by SetPendingTileSelectionQueue)")
 
 	a.ConsumePlayerAction(g, log)
 
-	log.Info("✅ Plants converted successfully, greenery tile queued for placement",
+	log.Info("Plants converted, greenery queued",
 		zap.Int("plants_spent", requiredPlants))
 	return nil
 }

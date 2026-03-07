@@ -32,7 +32,7 @@ func (a *SetPhaseAction) Execute(ctx context.Context, gameID string, phase game.
 		zap.String("action", "admin_set_phase"),
 		zap.String("phase", string(phase)),
 	)
-	log.Info("🎬 Admin: Setting game phase")
+	log.Debug("Admin: Setting game phase")
 
 	game, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -46,6 +46,6 @@ func (a *SetPhaseAction) Execute(ctx context.Context, gameID string, phase game.
 		return fmt.Errorf("failed to update phase: %w", err)
 	}
 
-	log.Info("✅ Admin set phase completed")
+	log.Info("Admin set phase completed")
 	return nil
 }

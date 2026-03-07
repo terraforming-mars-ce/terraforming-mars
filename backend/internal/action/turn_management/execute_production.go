@@ -15,7 +15,7 @@ import (
 // and transitions the game to the production_and_card_draw phase.
 func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*playerPkg.Player, log *zap.Logger) error {
 	log = log.With(zap.String("game_id", g.ID()))
-	log.Info("🏭 Starting production phase",
+	log.Debug("Starting production phase",
 		zap.Int("player_count", len(players)),
 		zap.Int("generation", g.Generation()))
 
@@ -46,7 +46,7 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 		for i := range 4 {
 			cardIDs, err := deck.DrawProjectCards(ctx, 1)
 			if err != nil || len(cardIDs) == 0 {
-				log.Debug("⚠️ Deck empty or error drawing card, stopping at card draw",
+				log.Debug("Deck empty or error drawing card, stopping at card draw",
 					zap.Int("cards_drawn", len(drawnCards)),
 					zap.Int("attempt", i),
 					zap.Error(err))
@@ -64,17 +64,17 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 			CreditsIncome:     production.Credits + tr,
 		}
 
-		log.Info("📋 Setting production phase data for player",
+		log.Debug("Setting production phase data for player",
 			zap.String("player_id", p.ID()),
 			zap.Int("available_cards", len(drawnCards)))
 
 		err := g.SetProductionPhase(ctx, p.ID(), productionPhaseData)
 		if err != nil {
-			log.Error("❌ Failed to set production phase", zap.Error(err))
+			log.Error("Failed to set production phase", zap.Error(err))
 			return fmt.Errorf("failed to set production phase: %w", err)
 		}
 
-		log.Info("✅ Production phase data set successfully",
+		log.Debug("Production phase data set",
 			zap.String("player_id", p.ID()),
 			zap.Int("cards_drawn", len(drawnCards)),
 			zap.Int("credits_income", productionPhaseData.CreditsIncome),
@@ -110,7 +110,7 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 			return fmt.Errorf("failed to rotate turn order: %w", err)
 		}
 		turnOrder = rotatedOrder
-		log.Info("🔄 Turn order rotated for new generation",
+		log.Debug("Turn order rotated for new generation",
 			zap.Strings("new_turn_order", turnOrder))
 	}
 
@@ -138,17 +138,17 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 		}
 	}
 
-	log.Info("🔄 Updating game phase to production_and_card_draw",
+	log.Debug("Updating game phase to production_and_card_draw",
 		zap.String("current_phase", string(g.CurrentPhase())),
 		zap.String("new_phase", string(game.GamePhaseProductionAndCardDraw)))
 
 	err := g.UpdatePhase(ctx, game.GamePhaseProductionAndCardDraw)
 	if err != nil {
-		log.Error("❌ Failed to update phase", zap.Error(err))
+		log.Error("Failed to update phase", zap.Error(err))
 		return fmt.Errorf("failed to update phase: %w", err)
 	}
 
-	log.Info("🎉 Production phase complete, generation advanced",
+	log.Info("Production phase complete, generation advanced",
 		zap.Int("old_generation", oldGeneration),
 		zap.Int("new_generation", newGeneration))
 

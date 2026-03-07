@@ -39,7 +39,7 @@ func (h *BuildAquiferHandler) HandleMessage(ctx context.Context, connection *cor
 		zap.String("message_type", string(message.Type)),
 	)
 
-	log.Info("💧 Processing build aquifer request")
+	log.Debug("Processing build aquifer request")
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
@@ -54,10 +54,10 @@ func (h *BuildAquiferHandler) HandleMessage(ctx context.Context, connection *cor
 		return
 	}
 
-	log.Info("✅ Build aquifer action completed successfully")
+	log.Debug("Aquifer built")
 
 	h.broadcaster.BroadcastGameState(connection.GameID, nil)
-	log.Debug("📡 Broadcasted game state to all players")
+	log.Debug("Broadcasted game state to all players")
 
 	response := dto.WebSocketMessage{
 		Type:   "action-success",

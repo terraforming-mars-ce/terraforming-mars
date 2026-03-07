@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 interface TreeNodeProps {
   nodeKey: string;
@@ -6,9 +7,117 @@ interface TreeNodeProps {
   depth?: number;
   changedPaths?: Set<string>;
   currentPath?: string;
-  expandAllSignal?: number; // Signal to expand/collapse all (timestamp)
-  shouldExpandAll?: boolean; // Whether the signal is expand (true) or collapse (false)
+  expandAllSignal?: number;
+  shouldExpandAll?: boolean;
 }
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  nodeKey: string;
+  value: any;
+}
+
+const ContextMenu: React.FC<{
+  menu: ContextMenuState;
+  onClose: () => void;
+}> = ({ menu, onClose }) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleDismiss = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleDismiss, true);
+    document.addEventListener("contextmenu", handleDismiss, true);
+    return () => {
+      document.removeEventListener("mousedown", handleDismiss, true);
+      document.removeEventListener("contextmenu", handleDismiss, true);
+    };
+  }, [onClose]);
+
+  const itemStyle = {
+    padding: "6px 12px",
+    fontSize: "12px",
+    color: "#abb2bf",
+    cursor: "pointer" as const,
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    transition: "background 0.15s ease",
+  };
+
+  const handleCopyObject = () => {
+    void navigator.clipboard.writeText(JSON.stringify(menu.value, null, 2));
+    onClose();
+  };
+
+  const handleCopyName = () => {
+    void navigator.clipboard.writeText(menu.nodeKey);
+    onClose();
+  };
+
+  return createPortal(
+    <div
+      ref={ref}
+      style={{
+        position: "fixed",
+        top: menu.y,
+        left: menu.x,
+        background: "rgba(0, 0, 0, 0.98)",
+        border: "1px solid rgba(59, 130, 246, 0.5)",
+        borderRadius: "4px",
+        zIndex: 99999,
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.8)",
+        minWidth: "140px",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        onClick={handleCopyObject}
+        style={itemStyle}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#abb2bf"
+          strokeWidth="2"
+        >
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+        </svg>
+        Copy Object
+      </div>
+      <div
+        onClick={handleCopyName}
+        style={{ ...itemStyle, borderTop: "1px solid rgba(59, 130, 246, 0.2)" }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#abb2bf"
+          strokeWidth="2"
+        >
+          <path d="M4 7V4a2 2 0 012-2h8.5L20 7.5V20a2 2 0 01-2 2H6a2 2 0 01-2-2v-3" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="2" y1="15" x2="12" y2="15" />
+        </svg>
+        Copy Name
+      </div>
+    </div>,
+    document.body,
+  );
+};
 
 const TreeNode: React.FC<TreeNodeProps> = ({
   nodeKey,
@@ -19,9 +128,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   expandAllSignal,
   shouldExpandAll,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false); // Start collapsed by default
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
-  // Handle expand/collapse all signal
   useEffect(() => {
     if (expandAllSignal !== undefined) {
       setIsExpanded(shouldExpandAll || false);
@@ -43,17 +152,17 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   const getTypeColor = (type: string) => {
     switch (type) {
       case "string":
-        return "#98c379"; // Green
+        return "#98c379";
       case "number":
-        return "#61afef"; // Blue
+        return "#61afef";
       case "boolean":
-        return "#d19a66"; // Orange
+        return "#d19a66";
       case "null":
       case "undefined":
-        return "#abb2bf"; // Gray
+        return "#abb2bf";
       case "object":
       case "array":
-        return "#c678dd"; // Purple
+        return "#c678dd";
       default:
         return "#ffffff";
     }
@@ -113,22 +222,13 @@ const TreeNode: React.FC<TreeNodeProps> = ({
           e.stopPropagation();
         }}
       >
-        {isExpanded ? "▼" : "▶"}
+        {isExpanded ? "\u25BC" : "\u25B6"}
       </span>
     );
   };
 
   const renderKey = () => {
-    return (
-      <span
-        style={{
-          color: "#e06c75",
-          marginRight: "4px",
-        }}
-      >
-        {nodeKey}:
-      </span>
-    );
+    return <span style={{ color: "#e06c75", marginRight: "4px" }}>{nodeKey}:</span>;
   };
 
   const renderExpandedContent = () => {
@@ -175,24 +275,45 @@ const TreeNode: React.FC<TreeNodeProps> = ({
     return null;
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(JSON.stringify(value, null, 2));
-  };
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        nodeKey,
+        value,
+      });
+    },
+    [nodeKey, value],
+  );
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  // Invisible indent text: included in copy/paste but takes no visual space
+  const indentStr = "  ".repeat(depth);
 
   return (
     <div
       className={`font-mono text-[13px] leading-[1.5] relative ${isChanged ? "[&>.treeNodeContent]:animate-[blink_1.5s_ease-out]" : ""}`}
     >
       <div
-        className="treeNodeContent flex items-center py-0.5 px-1 rounded relative select-text"
-        onDoubleClick={handleCopy}
+        className="treeNodeContent flex items-start py-0.5 px-1 rounded relative select-text"
+        onDoubleClick={() => void navigator.clipboard.writeText(JSON.stringify(value, null, 2))}
+        onContextMenu={handleContextMenu}
       >
         {renderExpandToggle()}
-        {renderKey()}
-        {renderPrimitiveValue()}
-        {renderObjectPreview()}
+        <span>
+          <span aria-hidden="true" style={{ fontSize: 0, opacity: 0, whiteSpace: "pre" }}>
+            {indentStr}
+          </span>
+          {renderKey()} {renderPrimitiveValue()}
+          {renderObjectPreview()}
+        </span>
       </div>
       {renderExpandedContent()}
+      {contextMenu && <ContextMenu menu={contextMenu} onClose={closeContextMenu} />}
     </div>
   );
 };

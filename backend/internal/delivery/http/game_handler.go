@@ -57,11 +57,11 @@ func (h *GameHandler) GetGame(w http.ResponseWriter, r *http.Request) {
 	gameID := vars["gameId"]
 	playerID := r.URL.Query().Get("playerId")
 
-	log.Info("📡 HTTP GET /api/v1/games/:gameId", zap.String("game_id", gameID))
+	log.Debug("HTTP GET /api/v1/games/:gameId", zap.String("game_id", gameID))
 
 	game, err := h.getGameAction.Execute(ctx, gameID)
 	if err != nil {
-		log.Warn("Failed to get game", zap.Error(err))
+		log.Debug("Failed to get game", zap.Error(err))
 		http.Error(w, "Game not found", http.StatusNotFound)
 		return
 	}
@@ -69,7 +69,7 @@ func (h *GameHandler) GetGame(w http.ResponseWriter, r *http.Request) {
 	// If playerId provided, verify player is in the game
 	if playerID != "" {
 		if _, err := game.GetPlayer(playerID); err != nil {
-			log.Warn("Player not in game", zap.String("player_id", playerID))
+			log.Debug("Player not in game", zap.String("player_id", playerID))
 			http.Error(w, "Player not in game", http.StatusNotFound)
 			return
 		}
@@ -88,7 +88,7 @@ func (h *GameHandler) GetGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("✅ Game retrieved successfully", zap.String("game_id", gameID))
+	log.Debug("Game retrieved", zap.String("game_id", gameID))
 }
 
 // ListGames handles GET /api/v1/games
@@ -96,7 +96,7 @@ func (h *GameHandler) ListGames(w http.ResponseWriter, r *http.Request) {
 	log := logger.Get()
 	ctx := r.Context()
 
-	log.Info("📡 HTTP GET /api/v1/games")
+	log.Debug("HTTP GET /api/v1/games")
 
 	var statusFilter *game.GameStatus
 	if statusParam := r.URL.Query().Get("status"); statusParam != "" {
@@ -125,7 +125,7 @@ func (h *GameHandler) ListGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("✅ Games listed successfully", zap.Int("count", len(games)))
+	log.Debug("Games listed", zap.Int("count", len(games)))
 }
 
 // CreateGame handles POST /api/v1/games
@@ -133,7 +133,7 @@ func (h *GameHandler) CreateGame(w http.ResponseWriter, r *http.Request) {
 	log := logger.Get()
 	ctx := r.Context()
 
-	log.Info("📡 HTTP POST /api/v1/games")
+	log.Debug("HTTP POST /api/v1/games")
 
 	var req dto.CreateGameRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -172,7 +172,7 @@ func (h *GameHandler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("✅ Game created successfully", zap.String("game_id", game.ID()))
+	log.Debug("Game created", zap.String("game_id", game.ID()))
 }
 
 // ListCards handles GET /api/v1/cards
@@ -180,7 +180,7 @@ func (h *GameHandler) ListCards(w http.ResponseWriter, r *http.Request) {
 	log := logger.Get()
 	ctx := r.Context()
 
-	log.Info("📡 HTTP GET /api/v1/cards")
+	log.Debug("HTTP GET /api/v1/cards")
 
 	queryParams := r.URL.Query()
 	offset := 0
@@ -228,7 +228,7 @@ func (h *GameHandler) ListCards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("✅ Cards listed successfully", zap.Int("count", len(cardDtos)))
+	log.Debug("Cards listed", zap.Int("count", len(cardDtos)))
 }
 
 // GetGameLogs handles GET /api/v1/games/{gameId}/logs
@@ -248,7 +248,7 @@ func (h *GameHandler) GetGameLogs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	log.Info("📡 HTTP GET /api/v1/games/:gameId/logs", zap.String("game_id", gameID), zap.Int64("since", since))
+	log.Debug("HTTP GET /api/v1/games/:gameId/logs", zap.String("game_id", gameID), zap.Int64("since", since))
 
 	diffs, err := h.getGameLogsAction.Execute(ctx, gameID, since)
 	if err != nil {
@@ -266,7 +266,7 @@ func (h *GameHandler) GetGameLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("✅ Game logs retrieved successfully", zap.String("game_id", gameID), zap.Int("count", len(diffs)))
+	log.Debug("Game logs retrieved", zap.String("game_id", gameID), zap.Int("count", len(diffs)))
 }
 
 // CreateDemoLobby handles POST /api/v1/games/demo/lobby
@@ -274,7 +274,7 @@ func (h *GameHandler) CreateDemoLobby(w http.ResponseWriter, r *http.Request) {
 	log := logger.Get()
 	ctx := r.Context()
 
-	log.Info("POST /api/v1/games/demo/lobby")
+	log.Debug("POST /api/v1/games/demo/lobby")
 
 	var req dto.CreateDemoLobbyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -309,5 +309,5 @@ func (h *GameHandler) CreateDemoLobby(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("Demo lobby created successfully", zap.String("game_id", result.GameDto.ID))
+	log.Debug("Demo lobby created", zap.String("game_id", result.GameDto.ID))
 }

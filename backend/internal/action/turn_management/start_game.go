@@ -45,7 +45,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 		zap.String("player_id", playerID),
 		zap.String("action", "start_game"),
 	)
-	log.Info("🎮 Starting game")
+	log.Debug("Starting game")
 
 	// 1. Fetch game from repository
 	g, err := a.gameRepo.Get(ctx, gameID)
@@ -70,7 +70,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 
 	// 4. Get all players
 	players := g.GetAllPlayers()
-	log.Info("🎮 Starting game with players", zap.Int("player_count", len(players)))
+	log.Debug("Starting game with players", zap.Int("player_count", len(players)))
 
 	// 5. BUSINESS LOGIC: Randomize and set turn order
 	playerIDs := make([]string, len(players))
@@ -85,7 +85,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 		log.Error("Failed to set turn order", zap.Error(err))
 		return fmt.Errorf("failed to set turn order: %w", err)
 	}
-	log.Info("🎲 Randomized turn order", zap.Strings("turn_order", playerIDs))
+	log.Debug("Randomized turn order", zap.Strings("turn_order", playerIDs))
 
 	// 6. BUSINESS LOGIC: Ensure deck is initialized
 	deck := g.Deck()
@@ -107,7 +107,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 			log.Error("Failed to set current turn", zap.Error(err))
 			return fmt.Errorf("failed to set current turn: %w", err)
 		}
-		log.Info("✅ Set initial turn", zap.String("first_player_id", firstPlayerID))
+		log.Debug("Set initial turn", zap.String("first_player_id", firstPlayerID))
 	}
 
 	// 9. BUSINESS LOGIC: Demo games go to DemoSetup phase, normal games to CorporationSelection
@@ -116,7 +116,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 			log.Error("Failed to update game phase", zap.Error(err))
 			return fmt.Errorf("failed to update game phase: %w", err)
 		}
-		log.Info("🎮 Demo game entering setup phase")
+		log.Debug("Demo game entering setup phase")
 	} else {
 		if err := g.UpdatePhase(ctx, game.GamePhaseStartingSelection); err != nil {
 			log.Error("Failed to update game phase", zap.Error(err))
@@ -127,21 +127,21 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 			log.Error("Failed to distribute corporations", zap.Error(err))
 			return fmt.Errorf("failed to distribute corporations: %w", err)
 		}
-		log.Info("✅ Corporations distributed to all players")
+		log.Debug("Corporations distributed to all players")
 
 		if g.Settings().HasPrelude() {
 			if err := a.distributePreludeCards(ctx, g, players); err != nil {
 				log.Error("Failed to distribute prelude cards", zap.Error(err))
 				return fmt.Errorf("failed to distribute prelude cards: %w", err)
 			}
-			log.Info("✅ Prelude cards distributed to all players")
+			log.Debug("Prelude cards distributed to all players")
 		}
 
 		if err := a.distributeProjectCards(ctx, g, players); err != nil {
 			log.Error("Failed to distribute project cards", zap.Error(err))
 			return fmt.Errorf("failed to distribute project cards: %w", err)
 		}
-		log.Info("✅ Project cards distributed to all players")
+		log.Debug("Project cards distributed to all players")
 	}
 
 	// Start bot sessions for any bot players
@@ -158,7 +158,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 		}
 	}
 
-	log.Info("🎉 Game started successfully")
+	log.Info("Game started")
 	return nil
 }
 

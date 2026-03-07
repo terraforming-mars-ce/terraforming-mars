@@ -33,7 +33,7 @@ func (a *GetPlayerAction) Execute(ctx context.Context, gameID string, playerID s
 		zap.String("game_id", gameID),
 		zap.String("player_id", playerID),
 	)
-	log.Info("🔍 Querying player")
+	log.Debug("Querying player")
 
 	game, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
@@ -48,6 +48,6 @@ func (a *GetPlayerAction) Execute(ctx context.Context, gameID string, playerID s
 		return nil, fmt.Errorf("player %s not found in game %s", playerID, gameID)
 	}
 
-	log.Info("✅ Player query completed")
+	log.Debug("Player query completed")
 	return player, nil
 }

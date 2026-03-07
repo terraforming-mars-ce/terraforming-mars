@@ -709,6 +709,7 @@ export interface GlobalParametersDto {
   temperature: number /* int */; // Range: -30 to +8°C
   oxygen: number /* int */; // Range: 0-14%
   oceans: number /* int */; // Range: 0-9
+  maxOceans: number /* int */; // Dynamic max, starts at 9
   venus: number /* int */; // Range: 0-30%
 }
 /**
