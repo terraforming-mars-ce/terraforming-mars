@@ -1265,9 +1265,9 @@ func TestSpinInducingAsteroid_RaiseVenus(t *testing.T) {
 
 // =============================================================================
 // Card 247: Sponsored Academies
-// "Discard 1 card from hand and draw 3 cards. All OPPONENTS draw 1 card."
+// "Discard 1 card from hand and **then** draw 3 cards. All **opponents** draw 1 card."
 // =============================================================================
-func TestSponsoredAcademies_DiscardAndDraw(t *testing.T) {
+func TestSponsoredAcademies_DiscardDrawAndOpponentDraw(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	logger := testutil.TestLogger()
@@ -1276,18 +1276,37 @@ func TestSponsoredAcademies_DiscardAndDraw(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 	players := testGame.GetAllPlayers()
 	p := players[0]
+	opponent := players[1]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	players[1].SetCorporationID(testutil.CardID("Tharsis Republic"))
+	opponent.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testGame.UpdateStatus(ctx, game.GameStatusActive)
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
+
+	// Player has: Sponsored Academies + 2 fodder cards = 3 cards in hand
 	p.Hand().AddCard(card.ID)
-	p.Hand().AddCard("card-discard-fodder")
+	p.Hand().AddCard("card-fodder-1")
+	p.Hand().AddCard("card-fodder-2")
+
+	playerHandBefore := p.Hand().CardCount()             // 3
+	opponentHandBefore := opponent.Hand().CardCount()     // 0
+
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 9}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Sponsored Academies should play successfully")
+
+	playerHandAfter := p.Hand().CardCount()
+	opponentHandAfter := opponent.Hand().CardCount()
+
+	// Player: started with 3, played 1 (-1), discarded 1 (-1), drew 3 (+3) = net +1 = 4
+	testutil.AssertEqual(t, playerHandBefore+1, playerHandAfter,
+		"Player should have net +1 cards (played 1, discarded 1, drew 3)")
+
+	// Opponent: drew 1 card (+1)
+	testutil.AssertEqual(t, opponentHandBefore+1, opponentHandAfter,
+		"Opponent should have drawn 1 card from Sponsored Academies")
 }
 
 // =============================================================================

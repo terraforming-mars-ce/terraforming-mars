@@ -85,6 +85,71 @@ func TestRobinsonIndustries_ActionSucceedsWithSufficientCredits(t *testing.T) {
 	testutil.AssertEqual(t, 1, prodAfter.Credits, "Credit production should increase by 1")
 }
 
+func TestRobinsonIndustries_OnlyAllowsIncreasingLowestProduction(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	cardID := testutil.CardID("Robinson Industries")
+	p.SetCorporationID(cardID)
+	p.PlayedCards().AddCard(cardID, "Robinson Industries", "corporation", []string{})
+
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+
+	// Set production so steel is at 3, everything else at 0
+	// The "lowest" productions are credit, titanium, plant, energy, heat (all 0)
+	// Steel at 3 should NOT be chooseable
+	p.Resources().AddProduction(map[shared.ResourceType]int{
+		shared.ResourceSteelProduction: 3,
+	})
+
+	behavior := shared.CardBehavior{
+		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+		Inputs: []shared.ResourceCondition{
+			{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"},
+		},
+		Choices: []shared.Choice{
+			{Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
+			}},
+			{Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceSteelProduction, Amount: 1, Target: "self-player"},
+			}},
+			{Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"},
+			}},
+			{Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourcePlantProduction, Amount: 1, Target: "self-player"},
+			}},
+			{Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+			}},
+			{Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceHeatProduction, Amount: 1, Target: "self-player"},
+			}},
+		},
+	}
+	p.Actions().SetActions([]player.CardAction{
+		{
+			CardID:        cardID,
+			CardName:      "Robinson Industries",
+			BehaviorIndex: 1,
+			Behavior:      behavior,
+		},
+	})
+
+	// Try to increase steel production (choice index 1) - steel is at 3, NOT the lowest
+	// This should FAIL because Robinson Industries only allows increasing the LOWEST production
+	steelChoice := 1
+	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &steelChoice, nil, nil, nil, nil, nil)
+	testutil.AssertError(t, err, "Robinson Industries should reject increasing steel production (3) when other productions are at 0")
+}
+
 func TestRobinsonIndustries_ActionFailsWithInsufficientCredits(t *testing.T) {
 	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
