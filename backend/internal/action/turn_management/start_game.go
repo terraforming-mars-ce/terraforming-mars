@@ -168,10 +168,24 @@ func (a *StartGameAction) distributeCorporations(ctx context.Context, g *game.Ga
 		return fmt.Errorf("game deck is nil")
 	}
 
-	for _, p := range players {
+	for i, p := range players {
 		corporationIDs, err := deck.DrawCorporations(ctx, 2)
 		if err != nil {
 			return fmt.Errorf("failed to draw corporations for player %s: %w", p.ID(), err)
+		}
+
+		// TEMP: Force Celestic into first player's corp selection
+		if i == 0 {
+			hasCelestic := false
+			for _, id := range corporationIDs {
+				if id == "V02" {
+					hasCelestic = true
+					break
+				}
+			}
+			if !hasCelestic && len(corporationIDs) > 0 {
+				corporationIDs[0] = "V02"
+			}
 		}
 
 		phase := &playerPkg.SelectCorporationPhase{

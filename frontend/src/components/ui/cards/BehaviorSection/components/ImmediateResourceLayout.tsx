@@ -1529,7 +1529,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
       globalParamOutputs.length > 0 &&
       positiveRegular.length + globalParamOutputs.length <= 4 &&
       consolidatedCards.length === 0 ? (
-        <div className="flex gap-[3px] items-center justify-center">
+        <div className="flex gap-2 items-center justify-center">
           {positiveRegular.map((output: any, index: number) => {
             const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
             return (
