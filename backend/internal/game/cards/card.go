@@ -54,7 +54,33 @@ func (c Card) DeepCopy() Card {
 	}
 
 	vpConditions := make([]VictoryPointCondition, len(c.VPConditions))
-	copy(vpConditions, c.VPConditions)
+	for i, vpc := range c.VPConditions {
+		vpConditions[i] = vpc
+		if vpc.MaxTrigger != nil {
+			mt := *vpc.MaxTrigger
+			vpConditions[i].MaxTrigger = &mt
+		}
+		if vpc.Per != nil {
+			perCopy := *vpc.Per
+			if perCopy.Location != nil {
+				loc := *perCopy.Location
+				perCopy.Location = &loc
+			}
+			if perCopy.Target != nil {
+				tgt := *perCopy.Target
+				perCopy.Target = &tgt
+			}
+			if perCopy.Tag != nil {
+				tag := *perCopy.Tag
+				perCopy.Tag = &tag
+			}
+			if perCopy.AdjacentToTileType != nil {
+				att := *perCopy.AdjacentToTileType
+				perCopy.AdjacentToTileType = &att
+			}
+			vpConditions[i].Per = &perCopy
+		}
+	}
 
 	var resourceStorage *ResourceStorage
 	if c.ResourceStorage != nil {
