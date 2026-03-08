@@ -26,12 +26,14 @@ func TestFrontOfTheLine_GrantsExtraActions(t *testing.T) {
 
 	// Player starts with 2 actions
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().ActionsRemaining(), "Should start with 2 actions")
+	testutil.AssertEqual(t, 2, testGame.CurrentTurn().TotalActions(), "Should start with 2 total actions")
 
 	err := playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Front of the Line should play successfully")
 
-	// Started with 2, consumed 1, gained 2 → 3 remaining
+	// Started with 2, consumed 1, gained 2 → 3 remaining, 4 total
 	testutil.AssertEqual(t, 3, testGame.CurrentTurn().ActionsRemaining(), "Should have 3 actions remaining (2 - 1 + 2)")
+	testutil.AssertEqual(t, 4, testGame.CurrentTurn().TotalActions(), "Should have 4 total actions (2 + 2)")
 }
 
 func TestFrontOfTheLine_AsLastAction(t *testing.T) {
@@ -53,8 +55,9 @@ func TestFrontOfTheLine_AsLastAction(t *testing.T) {
 	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Front of the Line should play as last action")
 
-	// Started with 1, consumed 1, gained 2 → 2 remaining
+	// Started with 1, consumed 1, gained 2 → 2 remaining, 3 total
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().ActionsRemaining(), "Should have 2 actions remaining (1 - 1 + 2)")
+	testutil.AssertEqual(t, 3, testGame.CurrentTurn().TotalActions(), "Should have 3 total actions (1 + 2)")
 	// Turn should NOT auto-advance since actions remain
 	testutil.AssertEqual(t, playerID, testGame.CurrentTurn().PlayerID(), "Turn should still be current player's")
 }
@@ -79,6 +82,7 @@ func TestFrontOfTheLine_UnlimitedActionsUnchanged(t *testing.T) {
 
 	// Unlimited actions should remain unchanged
 	testutil.AssertEqual(t, -1, testGame.CurrentTurn().ActionsRemaining(), "Solo should still have unlimited actions")
+	testutil.AssertEqual(t, -1, testGame.CurrentTurn().TotalActions(), "Solo total actions should still be unlimited")
 }
 
 func TestFrontOfTheLine_ExtraActionsCanBeUsed(t *testing.T) {
@@ -101,6 +105,7 @@ func TestFrontOfTheLine_ExtraActionsCanBeUsed(t *testing.T) {
 	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Front of the Line should play successfully")
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().ActionsRemaining(), "Should have 2 actions after Front of the Line")
+	testutil.AssertEqual(t, 3, testGame.CurrentTurn().TotalActions(), "Should have 3 total actions (1 + 2)")
 
 	// Use first extra action: play Power Plant (cost 4)
 	p.Hand().AddCard(testutil.CardID("Power Plant"))
@@ -108,6 +113,7 @@ func TestFrontOfTheLine_ExtraActionsCanBeUsed(t *testing.T) {
 	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Power Plant"), payment2, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "First extra action should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "Should have 1 action remaining")
+	testutil.AssertEqual(t, 3, testGame.CurrentTurn().TotalActions(), "Total actions should still be 3")
 	testutil.AssertEqual(t, playerID, testGame.CurrentTurn().PlayerID(), "Should still be current player's turn")
 
 	// Use second extra action: play Asteroid (cost 14)

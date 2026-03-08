@@ -1448,10 +1448,7 @@ func (a *BehaviorApplier) applyOutput(
 		}
 		currentTurn := a.game.CurrentTurn()
 		if currentTurn != nil {
-			remaining := currentTurn.ActionsRemaining()
-			if remaining >= 0 {
-				currentTurn.SetActionsRemaining(remaining + output.Amount)
-			}
+			currentTurn.AddExtraActions(output.Amount)
 		}
 		log.Debug("Granted extra actions", zap.Int("amount", output.Amount))
 

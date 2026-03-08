@@ -955,6 +955,7 @@ export interface PlayerDto {
   playedCards: CardDto[]; // Full card details for all played cards
   passed: boolean;
   availableActions: number /* int */;
+  totalActions: number /* int */;
   isConnected: boolean;
   isExited: boolean;
   effects: PlayerEffectDto[]; // Active ongoing effects (discounts, special abilities, etc.)
@@ -1000,6 +1001,7 @@ export interface OtherPlayerDto {
   playedCards: CardDto[]; // Played cards are public - full card details
   passed: boolean;
   availableActions: number /* int */;
+  totalActions: number /* int */;
   isConnected: boolean;
   isExited: boolean;
   effects: PlayerEffectDto[];

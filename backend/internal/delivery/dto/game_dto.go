@@ -651,6 +651,7 @@ type PlayerDto struct {
 	PlayedCards      []CardDto                  `json:"playedCards" ts:"CardDto[]"` // Full card details for all played cards
 	Passed           bool                       `json:"passed" ts:"boolean"`
 	AvailableActions int                        `json:"availableActions" ts:"number"`
+	TotalActions     int                        `json:"totalActions" ts:"number"`
 	IsConnected      bool                       `json:"isConnected" ts:"boolean"`
 	IsExited         bool                       `json:"isExited" ts:"boolean"`
 	Effects          []PlayerEffectDto          `json:"effects" ts:"PlayerEffectDto[]"`                   // Active ongoing effects (discounts, special abilities, etc.)
@@ -696,6 +697,7 @@ type OtherPlayerDto struct {
 	PlayedCards      []CardDto         `json:"playedCards" ts:"CardDto[]"` // Played cards are public - full card details
 	Passed           bool              `json:"passed" ts:"boolean"`
 	AvailableActions int               `json:"availableActions" ts:"number"`
+	TotalActions     int               `json:"totalActions" ts:"number"`
 	IsConnected      bool              `json:"isConnected" ts:"boolean"`
 	IsExited         bool              `json:"isExited" ts:"boolean"`
 	Effects          []PlayerEffectDto `json:"effects" ts:"PlayerEffectDto[]"`

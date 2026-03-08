@@ -89,6 +89,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		PlayedCards:      playedCards,
 		Passed:           p.HasPassed(),
 		AvailableActions: getAvailableActionsForPlayer(g, p.ID()),
+		TotalActions:     getTotalActionsForPlayer(g, p.ID()),
 		IsConnected:      p.IsConnected(),
 		IsExited:         p.HasExited(),
 		Effects:          convertPlayerEffects(p.Effects().List()),
@@ -145,6 +146,7 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		PlayedCards:      playedCards,
 		Passed:           p.HasPassed(),
 		AvailableActions: getAvailableActionsForPlayer(g, p.ID()),
+		TotalActions:     getTotalActionsForPlayer(g, p.ID()),
 		IsConnected:      p.IsConnected(),
 		IsExited:         p.HasExited(),
 		Effects:          convertPlayerEffects(p.Effects().List()),
@@ -468,6 +470,20 @@ func getAvailableActionsForPlayer(g *game.Game, playerID string) int {
 
 	if currentTurn.PlayerID() == playerID {
 		return currentTurn.ActionsRemaining()
+	}
+
+	return 0
+}
+
+// getTotalActionsForPlayer returns the total actions granted this turn
+func getTotalActionsForPlayer(g *game.Game, playerID string) int {
+	currentTurn := g.CurrentTurn()
+	if currentTurn == nil {
+		return 0
+	}
+
+	if currentTurn.PlayerID() == playerID {
+		return currentTurn.TotalActions()
 	}
 
 	return 0
