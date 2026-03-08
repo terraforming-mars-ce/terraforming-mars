@@ -13,7 +13,7 @@ import (
 // A selector must have at least Tags, CardTypes, or RequiredOriginalCost to match a card.
 func MatchesSelector(card *Card, selector shared.Selector) bool {
 	// Selectors without card-relevant criteria cannot match cards
-	if len(selector.Tags) == 0 && len(selector.CardTypes) == 0 && selector.RequiredOriginalCost == nil {
+	if len(selector.Tags) == 0 && len(selector.CardTypes) == 0 && selector.RequiredOriginalCost == nil && selector.VP == nil {
 		return false
 	}
 
@@ -36,6 +36,23 @@ func MatchesSelector(card *Card, selector shared.Selector) bool {
 			return false
 		}
 		if selector.RequiredOriginalCost.Max != nil && card.Cost > *selector.RequiredOriginalCost.Max {
+			return false
+		}
+	}
+
+	if selector.VP != nil {
+		hasVP := false
+		for _, vp := range card.VPConditions {
+			if selector.VP.Min != nil && vp.Amount < *selector.VP.Min {
+				continue
+			}
+			if selector.VP.Max != nil && vp.Amount > *selector.VP.Max {
+				continue
+			}
+			hasVP = true
+			break
+		}
+		if !hasVP {
 			return false
 		}
 	}
@@ -74,7 +91,7 @@ func MatchesAnyStandardProjectSelector(project shared.StandardProject, selectors
 // HasCardSelectors returns true if any selector targets cards
 func HasCardSelectors(selectors []shared.Selector) bool {
 	for _, sel := range selectors {
-		if len(sel.Tags) > 0 || len(sel.CardTypes) > 0 || sel.RequiredOriginalCost != nil {
+		if len(sel.Tags) > 0 || len(sel.CardTypes) > 0 || sel.RequiredOriginalCost != nil || sel.VP != nil {
 			return true
 		}
 	}

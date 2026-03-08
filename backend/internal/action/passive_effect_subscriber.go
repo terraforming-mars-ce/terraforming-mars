@@ -2,12 +2,14 @@ package action
 
 import (
 	"context"
+	"slices"
 
 	"go.uber.org/zap"
 
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -68,6 +70,16 @@ func SubscribePassiveEffectToEvents(
 		// Handle tile-placed trigger (production based on placement bonus type)
 		if trigger.Condition.Type == "tile-placed" {
 			subID = subscribeTilePlacedEffect(ctx, g, p, effect, trigger, log, cr)
+		}
+
+		// Handle global-parameter-raised trigger
+		if trigger.Condition.Type == "global-parameter-raised" {
+			subID = subscribeGlobalParameterRaisedEffect(ctx, g, p, effect, trigger, log, cr)
+		}
+
+		// Handle production-increased trigger
+		if trigger.Condition.Type == "production-increased" {
+			subID = subscribeProductionIncreasedEffect(ctx, g, p, effect, trigger, log, cr)
 		}
 
 		// Register subscription for cleanup when effect is removed
@@ -163,8 +175,7 @@ func subscribeCityPlacedEffect(
 		}
 
 		// Only process city tile placements
-		// TileType is ResourceCityTile constant value: "city-tile"
-		if event.TileType != string(shared.ResourceCityTile) {
+		if event.TileType != board.TileTypeCity {
 			return
 		}
 
@@ -230,7 +241,7 @@ func subscribeOceanPlacedEffect(
 			return
 		}
 
-		if event.TileType != string(shared.ResourceOceanTile) {
+		if event.TileType != board.TileTypeOcean {
 			return
 		}
 
@@ -558,6 +569,96 @@ func subscribeTilePlacedEffect(
 	return subID
 }
 
+func subscribeGlobalParameterRaisedEffect(
+	_ context.Context,
+	g *game.Game,
+	p *player.Player,
+	effect player.CardEffect,
+	_ shared.Trigger,
+	log *zap.Logger,
+	cr cards.CardRegistry,
+) events.SubscriptionID {
+	globalParams := getGlobalParametersFromSelectors(effect.Behavior.Triggers)
+
+	applyPerStep := func(steps int, paramName string) {
+		if steps <= 0 {
+			return
+		}
+		log.Debug("Passive effect triggered (global parameter raised)",
+			zap.String("card_name", effect.CardName),
+			zap.String("player_id", p.ID()),
+			zap.String("parameter", paramName),
+			zap.Int("steps", steps))
+
+		for i := 0; i < steps; i++ {
+			applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
+				WithSourceCardID(effect.CardID).
+				WithCardRegistry(cr).
+				WithSourceType(game.SourceTypePassiveEffect).
+				WithOnCardsAddedToHand(MakeCardDrawCallback(p, g, cr))
+			if err := applier.ApplyOutputs(context.Background(), effect.Behavior.Outputs); err != nil {
+				log.Error("Failed to apply passive effect outputs",
+					zap.String("card_name", effect.CardName),
+					zap.Error(err))
+			}
+		}
+	}
+
+	if slices.Contains(globalParams, "venus") {
+		subID := events.Subscribe(g.EventBus(), func(event events.VenusChangedEvent) {
+			if event.GameID != g.ID() {
+				return
+			}
+			steps := (event.NewValue - event.OldValue) / 2
+			applyPerStep(steps, "venus")
+		})
+		p.Effects().RegisterSubscription(effect.CardID, subID)
+	}
+
+	if slices.Contains(globalParams, "temperature") {
+		subID := events.Subscribe(g.EventBus(), func(event events.TemperatureChangedEvent) {
+			if event.GameID != g.ID() {
+				return
+			}
+			steps := (event.NewValue - event.OldValue) / 2
+			applyPerStep(steps, "temperature")
+		})
+		p.Effects().RegisterSubscription(effect.CardID, subID)
+	}
+
+	if slices.Contains(globalParams, "oxygen") {
+		subID := events.Subscribe(g.EventBus(), func(event events.OxygenChangedEvent) {
+			if event.GameID != g.ID() {
+				return
+			}
+			steps := event.NewValue - event.OldValue
+			applyPerStep(steps, "oxygen")
+		})
+		p.Effects().RegisterSubscription(effect.CardID, subID)
+	}
+
+	log.Debug("Subscribed passive effect to global parameter raised events",
+		zap.String("card_name", effect.CardName),
+		zap.Strings("parameters", globalParams))
+
+	// Subscriptions are registered internally per parameter, return empty to avoid duplicate registration by caller
+	return ""
+}
+
+func getGlobalParametersFromSelectors(triggers []shared.Trigger) []string {
+	for _, trigger := range triggers {
+		if trigger.Condition == nil {
+			continue
+		}
+		for _, sel := range trigger.Condition.Selectors {
+			if len(sel.GlobalParameters) > 0 {
+				return sel.GlobalParameters
+			}
+		}
+	}
+	return nil
+}
+
 // createPassiveCardDiscard creates a pending card discard selection from a passive effect
 // Used for effects like Mars University that require player to optionally discard before gaining outputs
 func createPassiveCardDiscard(p *player.Player, effect player.CardEffect, log *zap.Logger) {
@@ -593,6 +694,87 @@ func createPassiveCardDiscard(p *player.Player, effect player.CardEffect, log *z
 		zap.String("card_name", effect.CardName),
 		zap.Int("min_cards", minCards),
 		zap.Int("max_cards", maxCards))
+}
+
+// resourceNameToProductionType maps event resource names to production resource types
+var resourceNameToProductionType = map[string]shared.ResourceType{
+	"credits":  shared.ResourceCreditProduction,
+	"steel":    shared.ResourceSteelProduction,
+	"titanium": shared.ResourceTitaniumProduction,
+	"plants":   shared.ResourcePlantProduction,
+	"energy":   shared.ResourceEnergyProduction,
+	"heat":     shared.ResourceHeatProduction,
+}
+
+// subscribeProductionIncreasedEffect subscribes to ProductionChangedEvent for production increase triggers
+func subscribeProductionIncreasedEffect(
+	_ context.Context,
+	g *game.Game,
+	p *player.Player,
+	effect player.CardEffect,
+	trigger shared.Trigger,
+	log *zap.Logger,
+	cr cards.CardRegistry,
+) events.SubscriptionID {
+	subID := events.Subscribe(g.EventBus(), func(event events.ProductionChangedEvent) {
+		if event.GameID != g.ID() {
+			return
+		}
+
+		target := "self-player"
+		if trigger.Condition.Target != nil {
+			target = *trigger.Condition.Target
+		}
+
+		if target == "self-player" && event.PlayerID != p.ID() {
+			return
+		}
+
+		increase := event.NewProduction - event.OldProduction
+		if increase <= 0 {
+			return
+		}
+
+		// Check if this production type matches the trigger's resource type filter
+		if len(trigger.Condition.ResourceTypes) > 0 {
+			productionType, exists := resourceNameToProductionType[event.ResourceType]
+			if !exists {
+				return
+			}
+			if !slices.Contains(trigger.Condition.ResourceTypes, productionType) {
+				return
+			}
+		}
+
+		// Scale outputs by the production increase amount
+		scaledOutputs := make([]shared.ResourceCondition, len(effect.Behavior.Outputs))
+		for i, output := range effect.Behavior.Outputs {
+			scaledOutputs[i] = output
+			scaledOutputs[i].Amount = output.Amount * increase
+		}
+
+		log.Debug("Passive effect triggered",
+			zap.String("card_name", effect.CardName),
+			zap.String("trigger_type", trigger.Condition.Type),
+			zap.String("resource_type", event.ResourceType),
+			zap.Int("increase", increase))
+
+		applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
+			WithSourceCardID(effect.CardID).
+			WithCardRegistry(cr).
+			WithSourceType(game.SourceTypePassiveEffect).
+			WithOnCardsAddedToHand(MakeCardDrawCallback(p, g, cr))
+		if err := applier.ApplyOutputs(context.Background(), scaledOutputs); err != nil {
+			log.Error("Failed to apply passive effect outputs",
+				zap.String("card_name", effect.CardName),
+				zap.Error(err))
+		}
+	})
+
+	log.Debug("Subscribed passive effect to ProductionChangedEvent",
+		zap.String("card_name", effect.CardName))
+
+	return subID
 }
 
 // createPassiveBehaviorChoice creates a pending behavior choice selection from a passive effect

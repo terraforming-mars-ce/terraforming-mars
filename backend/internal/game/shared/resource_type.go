@@ -65,7 +65,6 @@ const (
 	ResourceTag ResourceType = "tag"
 
 	ResourceGlobalParameterLenience ResourceType = "global-parameter-lenience"
-	ResourceVenusLenience           ResourceType = "venus-lenience"
 	ResourceDefense                 ResourceType = "defense"
 	ResourceDiscount                ResourceType = "discount"
 	ResourceValueModifier           ResourceType = "value-modifier"
@@ -75,4 +74,5 @@ const (
 	ResourceLandClaim                ResourceType = "land-claim"
 	ResourceStoragePaymentSubstitute ResourceType = "storage-payment-substitute"
 	ResourceCardResource             ResourceType = "card-resource"
+	ResourceActionReuse              ResourceType = "action-reuse"
 )

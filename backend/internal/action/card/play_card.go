@@ -292,11 +292,10 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 		return nil // No requirements to validate
 	}
 
-	lenience := calculator.CalculateGlobalParameterLenience(player)
-
 	for _, req := range card.Requirements.Items {
 		switch req.Type {
 		case gamecards.RequirementTemperature:
+			lenience := calculator.CalculateGlobalParameterLenience(player, "temperature")
 			temp := g.GlobalParameters().Temperature()
 			if req.Min != nil && temp < *req.Min-lenience {
 				return fmt.Errorf("temperature requirement not met: need %d°C, current %d°C", *req.Min, temp)
@@ -306,6 +305,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			}
 
 		case gamecards.RequirementOxygen:
+			lenience := calculator.CalculateGlobalParameterLenience(player, "oxygen")
 			oxygen := g.GlobalParameters().Oxygen()
 			if req.Min != nil && oxygen < *req.Min-lenience {
 				return fmt.Errorf("oxygen requirement not met: need %d%%, current %d%%", *req.Min, oxygen)
@@ -315,6 +315,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			}
 
 		case gamecards.RequirementOceans:
+			lenience := calculator.CalculateGlobalParameterLenience(player, "ocean")
 			oceans := g.GlobalParameters().Oceans()
 			if req.Min != nil && oceans < *req.Min-lenience {
 				return fmt.Errorf("ocean requirement not met: need %d, current %d", *req.Min, oceans)
@@ -408,6 +409,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			// For now, skip these validations
 
 		case gamecards.RequirementVenus:
+			lenience := calculator.CalculateGlobalParameterLenience(player, "venus")
 			venus := g.GlobalParameters().Venus()
 			if req.Min != nil && venus < *req.Min-lenience {
 				return fmt.Errorf("venus requirement not met: need %d%%, current %d%%", *req.Min, venus)

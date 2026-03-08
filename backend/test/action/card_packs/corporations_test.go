@@ -43,6 +43,7 @@ func TestRobinsonIndustries_ActionSucceedsWithSufficientCredits(t *testing.T) {
 		Inputs: []shared.ResourceCondition{
 			{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"},
 		},
+		ChoicePolicy: shared.ChoicePolicyLowest,
 		Choices: []shared.Choice{
 			{Outputs: []shared.ResourceCondition{
 				{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
@@ -75,7 +76,7 @@ func TestRobinsonIndustries_ActionSucceedsWithSufficientCredits(t *testing.T) {
 
 	choiceIndex := 0
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Robinson Industries action should succeed with 10 credits")
 
 	resources := p.Resources().Get()
@@ -112,6 +113,7 @@ func TestRobinsonIndustries_OnlyAllowsIncreasingLowestProduction(t *testing.T) {
 		Inputs: []shared.ResourceCondition{
 			{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"},
 		},
+		ChoicePolicy: shared.ChoicePolicyLowest,
 		Choices: []shared.Choice{
 			{Outputs: []shared.ResourceCondition{
 				{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
@@ -146,7 +148,7 @@ func TestRobinsonIndustries_OnlyAllowsIncreasingLowestProduction(t *testing.T) {
 	// This should FAIL because Robinson Industries only allows increasing the LOWEST production
 	steelChoice := 1
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &steelChoice, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &steelChoice, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Robinson Industries should reject increasing steel production (3) when other productions are at 0")
 }
 
@@ -187,7 +189,7 @@ func TestRobinsonIndustries_ActionFailsWithInsufficientCredits(t *testing.T) {
 
 	choiceIndex := 0
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Robinson Industries action should fail with only 3 credits")
 
 	resources := p.Resources().Get()

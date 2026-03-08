@@ -7,6 +7,7 @@ import (
 
 	"terraforming-mars-backend/internal/action/admin"
 	cardAction "terraforming-mars-backend/internal/action/card"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -23,13 +24,13 @@ func TestAphrodite_StartingResources(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 	resources := p.Resources().Get()
-	testutil.AssertEqual(t, 49, resources.Credits, "Aphrodite should have 49 credits (47 starting + 2 from auto effect)")
+	testutil.AssertEqual(t, 47, resources.Credits, "Aphrodite should have 47 starting credits")
 
 	production := p.Resources().Production()
 	testutil.AssertEqual(t, 1, production.Plants, "Aphrodite should start with 1 plant production")
 }
 
-func TestAphrodite_Gain2MCWhenVenusTerraformed(t *testing.T) {
+func TestAphrodite_Gain2MCWhenVenusRaised(t *testing.T) {
 	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -40,13 +41,13 @@ func TestAphrodite_Gain2MCWhenVenusTerraformed(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 	resources := p.Resources().Get()
-	testutil.AssertEqual(t, 49, resources.Credits, "Aphrodite should have 49 credits before Venus increase")
+	testutil.AssertEqual(t, 47, resources.Credits, "Aphrodite should have 47 credits before Venus increase")
 
 	testGame.GlobalParameters().IncreaseVenus(ctx, 1)
 	time.Sleep(50 * time.Millisecond)
 
 	resources = p.Resources().Get()
-	testutil.AssertEqual(t, 51, resources.Credits, "Aphrodite should have 51 credits after Venus increase (gained 2 M€)")
+	testutil.AssertEqual(t, 49, resources.Credits, "Aphrodite should have 49 credits after Venus increase (gained 2 M€)")
 }
 
 func TestCelestic_StartingResources(t *testing.T) {
@@ -138,7 +139,7 @@ func TestCelestic_AddFloaterToAnyCard(t *testing.T) {
 	p.Resources().AddToStorage(otherCardID, 0)
 
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), playerID, corpCardID, 2, nil, []string{otherCardID}, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), playerID, corpCardID, 2, nil, []string{otherCardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Celestic add floater to another card should succeed")
 
 	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(corpCardID), "Celestic corp card should still have 0 floaters")
@@ -156,12 +157,12 @@ func TestManutech_StartingResources(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 	resources := p.Resources().Get()
-	testutil.AssertEqual(t, 36, resources.Credits, "Manutech should start with 36 credits (35 + 1 from auto)")
-	testutil.AssertEqual(t, 1, resources.Steel, "Manutech should start with 1 steel from auto effect")
-	testutil.AssertEqual(t, 1, resources.Titanium, "Manutech should start with 1 titanium from auto effect")
-	testutil.AssertEqual(t, 1, resources.Plants, "Manutech should start with 1 plant from auto effect")
-	testutil.AssertEqual(t, 1, resources.Energy, "Manutech should start with 1 energy from auto effect")
-	testutil.AssertEqual(t, 1, resources.Heat, "Manutech should start with 1 heat from auto effect")
+	testutil.AssertEqual(t, 35, resources.Credits, "Manutech should start with 35 credits")
+	testutil.AssertEqual(t, 1, resources.Steel, "Manutech should start with 1 steel from production-increased trigger")
+	testutil.AssertEqual(t, 0, resources.Titanium, "Manutech should start with 0 titanium")
+	testutil.AssertEqual(t, 0, resources.Plants, "Manutech should start with 0 plants")
+	testutil.AssertEqual(t, 0, resources.Energy, "Manutech should start with 0 energy")
+	testutil.AssertEqual(t, 0, resources.Heat, "Manutech should start with 0 heat")
 
 	production := p.Resources().Production()
 	testutil.AssertEqual(t, 1, production.Steel, "Manutech should start with 1 steel production")
@@ -178,7 +179,7 @@ func TestManutech_GainResourceWhenProductionIncreased(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 	steelCount := p.Resources().Get().Steel
-	testutil.AssertEqual(t, 1, steelCount, "Manutech should start with 1 steel from auto effect")
+	testutil.AssertEqual(t, 1, steelCount, "Manutech should start with 1 steel from production-increased trigger")
 
 	energyBefore := p.Resources().Get().Energy
 
@@ -228,14 +229,20 @@ func TestMorningStarInc_VenusLenienceRegistered(t *testing.T) {
 	for _, effect := range effects {
 		if effect.CardName == "Morning Star Inc." && effect.BehaviorIndex == 2 {
 			found = true
-			testutil.AssertEqual(t, shared.ResourceVenusLenience, effect.Behavior.Outputs[0].ResourceType,
-				"Morning Star Inc. effect output should be venus lenience")
+			testutil.AssertEqual(t, shared.ResourceGlobalParameterLenience, effect.Behavior.Outputs[0].ResourceType,
+				"Morning Star Inc. effect output should be global parameter lenience")
 			testutil.AssertEqual(t, 2, effect.Behavior.Outputs[0].Amount,
 				"Morning Star Inc. venus lenience amount should be 2")
 			break
 		}
 	}
 	testutil.AssertTrue(t, found, "Morning Star Inc. should have registered its venus lenience effect at behavior index 2")
+
+	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
+	venusLenience := calculator.CalculateGlobalParameterLenience(p, "venus")
+	testutil.AssertEqual(t, 2, venusLenience, "Morning Star Inc. should provide venus lenience of 2")
+	tempLenience := calculator.CalculateGlobalParameterLenience(p, "temperature")
+	testutil.AssertEqual(t, 0, tempLenience, "Morning Star Inc. should NOT provide temperature lenience")
 }
 
 func TestViron_StartingResources(t *testing.T) {
@@ -252,6 +259,32 @@ func TestViron_StartingResources(t *testing.T) {
 	testutil.AssertEqual(t, 48, resources.Credits, "Viron should start with 48 credits")
 }
 
+func TestViron_HasActionReuseAction(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	vironCardID := testutil.CardID("Viron")
+	actions := p.Actions().List()
+	hasVironAction := false
+	for _, a := range actions {
+		if a.CardID == vironCardID {
+			for _, output := range a.Behavior.Outputs {
+				if output.ResourceType == shared.ResourceActionReuse {
+					hasVironAction = true
+					break
+				}
+			}
+		}
+	}
+	testutil.AssertTrue(t, hasVironAction, "Viron should have a manual action-reuse action")
+}
+
 func TestViron_ReuseBlueCardAction(t *testing.T) {
 	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
@@ -262,11 +295,12 @@ func TestViron_ReuseBlueCardAction(t *testing.T) {
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
 	p, _ := testGame.GetPlayer(playerID)
+	vironCardID := testutil.CardID("Viron")
 
 	p.PlayedCards().AddCard("test-blue-card", "Test Blue Card", "active", []string{"microbe"})
 	p.Resources().AddToStorage("test-blue-card", 0)
 
-	testAction := player.CardAction{
+	testBlueAction := player.CardAction{
 		CardID:        "test-blue-card",
 		CardName:      "Test Blue Card",
 		BehaviorIndex: 0,
@@ -278,20 +312,146 @@ func TestViron_ReuseBlueCardAction(t *testing.T) {
 		},
 		TimesUsedThisGeneration: 1,
 	}
-	p.Actions().SetActions([]player.CardAction{testAction})
+
+	existingActions := p.Actions().List()
+	existingActions = append(existingActions, testBlueAction)
+	p.Actions().SetActions(existingActions)
 
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card", 0, nil, []string{"test-blue-card"}, nil, nil, nil, nil)
+
+	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card", 0, nil, []string{"test-blue-card"}, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Blue card action should fail because already used this generation")
 
-	vironCardID := testutil.CardID("Viron")
+	reuseSource := vironCardID
+	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card", 0, nil, []string{"test-blue-card"}, nil, nil, nil, nil, &reuseSource)
+	testutil.AssertNoError(t, err, "Viron should allow reusing already-used blue card action")
+
+	storage := p.Resources().GetCardStorage("test-blue-card")
+	testutil.AssertEqual(t, 1, storage, "Test blue card should have gained 1 microbe from reuse")
+
 	actions := p.Actions().List()
-	hasVironAction := false
 	for _, a := range actions {
 		if a.CardID == vironCardID {
-			hasVironAction = true
-			break
+			for _, output := range a.Behavior.Outputs {
+				if output.ResourceType == shared.ResourceActionReuse {
+					testutil.AssertEqual(t, 1, a.TimesUsedThisGeneration, "Viron action should be marked as used")
+				}
+			}
 		}
 	}
-	testutil.AssertTrue(t, hasVironAction, "Viron should have a manual action to reuse blue card actions (NOT YET IMPLEMENTED)")
+}
+
+func TestViron_CannotReuseUnusedAction(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	vironCardID := testutil.CardID("Viron")
+
+	p.PlayedCards().AddCard("test-blue-card", "Test Blue Card", "active", []string{"microbe"})
+	p.Resources().AddToStorage("test-blue-card", 0)
+
+	testBlueAction := player.CardAction{
+		CardID:        "test-blue-card",
+		CardName:      "Test Blue Card",
+		BehaviorIndex: 0,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+			},
+		},
+		TimesUsedThisGeneration: 0,
+	}
+
+	existingActions := p.Actions().List()
+	existingActions = append(existingActions, testBlueAction)
+	p.Actions().SetActions(existingActions)
+
+	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
+	reuseSource := vironCardID
+	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card", 0, nil, []string{"test-blue-card"}, nil, nil, nil, nil, &reuseSource)
+	testutil.AssertError(t, err, "Should not be able to reuse an action that has not been used this generation")
+}
+
+func TestViron_CannotReuseSelf(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	vironCardID := testutil.CardID("Viron")
+
+	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
+	reuseSource := vironCardID
+	err = useAction.Execute(ctx, testGame.ID(), playerID, vironCardID, 1, nil, nil, nil, nil, nil, nil, &reuseSource)
+	testutil.AssertError(t, err, "Should not be able to reuse own action-reuse ability")
+}
+
+func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	vironCardID := testutil.CardID("Viron")
+
+	p.PlayedCards().AddCard("test-blue-card", "Test Blue Card", "active", []string{"microbe"})
+	p.Resources().AddToStorage("test-blue-card", 0)
+
+	testBlueAction := player.CardAction{
+		CardID:        "test-blue-card",
+		CardName:      "Test Blue Card",
+		BehaviorIndex: 0,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+			},
+		},
+		TimesUsedThisGeneration: 1,
+	}
+
+	existingActions := p.Actions().List()
+	existingActions = append(existingActions, testBlueAction)
+	p.Actions().SetActions(existingActions)
+
+	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
+	reuseSource := vironCardID
+
+	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card", 0, nil, []string{"test-blue-card"}, nil, nil, nil, nil, &reuseSource)
+	testutil.AssertNoError(t, err, "First Viron reuse should succeed")
+
+	p.Resources().AddToStorage("test-blue-card", 0)
+
+	testBlueAction2 := player.CardAction{
+		CardID:        "test-blue-card-2",
+		CardName:      "Test Blue Card 2",
+		BehaviorIndex: 0,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+			},
+		},
+		TimesUsedThisGeneration: 1,
+	}
+	currentActions := p.Actions().List()
+	currentActions = append(currentActions, testBlueAction2)
+	p.Actions().SetActions(currentActions)
+
+	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card-2", 0, nil, nil, nil, nil, nil, nil, &reuseSource)
+	testutil.AssertError(t, err, "Viron should not be able to reuse again this generation")
 }

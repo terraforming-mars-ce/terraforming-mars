@@ -27,6 +27,8 @@ type Selector struct {
 	Resources            []string          `json:"resources,omitempty"`
 	StandardProjects     []StandardProject `json:"standardProjects,omitempty"`
 	RequiredOriginalCost *MinMaxValue      `json:"requiredOriginalCost,omitempty"`
+	VP                   *MinMaxValue      `json:"vp,omitempty"`
+	GlobalParameters     []string          `json:"globalParameters,omitempty"`
 }
 
 // ResourceTriggerCondition represents what triggers an automatic resource exchange

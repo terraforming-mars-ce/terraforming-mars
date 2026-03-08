@@ -45,6 +45,7 @@ func (a *UseCardActionAction) Execute(
 	stealSourceCardID *string,
 	selectedAmount *int,
 	actionPayment *gamecards.CardPayment,
+	reuseSourceCardID *string,
 ) error {
 	log := a.InitLogger(gameID, playerID).With(
 		zap.String("card_id", cardID),
@@ -92,6 +93,10 @@ func (a *UseCardActionAction) Execute(
 		return err
 	}
 
+	if reuseSourceCardID != nil {
+		return a.executeReuse(ctx, g, p, cardAction, cardID, behaviorIndex, choiceIndex, cardStorageTargets, targetPlayerID, stealSourceCardID, selectedAmount, actionPayment, *reuseSourceCardID, log)
+	}
+
 	if a.hasManualTrigger(cardAction.Behavior) && cardAction.TimesUsedThisGeneration >= 1 {
 		log.Warn("Action already played this generation",
 			zap.Int("times_used", cardAction.TimesUsedThisGeneration))
@@ -101,6 +106,16 @@ func (a *UseCardActionAction) Execute(
 	log.Debug("Found card action",
 		zap.String("card_name", cardAction.CardName),
 		zap.Int("times_used_this_generation", cardAction.TimesUsedThisGeneration))
+
+	if choiceIndex != nil && cardAction.Behavior.ChoicePolicy != "" {
+		production := p.Resources().Production()
+		if !shared.IsChoiceValidForPolicy(*choiceIndex, cardAction.Behavior.Choices, cardAction.Behavior.ChoicePolicy, production) {
+			log.Warn("Choice rejected by policy",
+				zap.String("policy", cardAction.Behavior.ChoicePolicy),
+				zap.Int("choice_index", *choiceIndex))
+			return fmt.Errorf("choice not valid: policy %q restricts available options", cardAction.Behavior.ChoicePolicy)
+		}
+	}
 
 	applier := gamecards.NewBehaviorApplier(p, g, cardAction.CardName, log).
 		WithSourceCardID(cardID).
@@ -226,6 +241,152 @@ func (a *UseCardActionAction) incrementUsageCounts(
 
 	// Update player actions
 	p.Actions().SetActions(actions)
+}
+
+func (a *UseCardActionAction) executeReuse(
+	ctx context.Context,
+	g *game.Game,
+	p *player.Player,
+	targetAction *player.CardAction,
+	targetCardID string,
+	targetBehaviorIndex int,
+	choiceIndex *int,
+	cardStorageTargets []string,
+	targetPlayerID *string,
+	stealSourceCardID *string,
+	selectedAmount *int,
+	actionPayment *gamecards.CardPayment,
+	reuseSourceCardID string,
+	log *zap.Logger,
+) error {
+	log = log.With(zap.String("reuse_source_card_id", reuseSourceCardID))
+	log.Debug("Executing action reuse")
+
+	reuseAction, err := a.findActionReuseAction(p, reuseSourceCardID, log)
+	if err != nil {
+		return err
+	}
+
+	if reuseAction.TimesUsedThisGeneration >= 1 {
+		log.Warn("Reuse action already played this generation")
+		return fmt.Errorf("reuse action already played this generation")
+	}
+
+	if targetCardID == reuseSourceCardID {
+		log.Warn("Cannot reuse own action-reuse ability")
+		return fmt.Errorf("cannot reuse own action-reuse ability")
+	}
+
+	if !a.hasManualTrigger(targetAction.Behavior) {
+		log.Warn("Target action is not a manual action")
+		return fmt.Errorf("target action is not a manual action")
+	}
+
+	if targetAction.TimesUsedThisGeneration < 1 {
+		log.Warn("Target action has not been used this generation")
+		return fmt.Errorf("target action has not been used this generation")
+	}
+
+	if choiceIndex != nil && targetAction.Behavior.ChoicePolicy != "" {
+		production := p.Resources().Production()
+		if !shared.IsChoiceValidForPolicy(*choiceIndex, targetAction.Behavior.Choices, targetAction.Behavior.ChoicePolicy, production) {
+			log.Warn("Choice rejected by policy",
+				zap.String("policy", targetAction.Behavior.ChoicePolicy),
+				zap.Int("choice_index", *choiceIndex))
+			return fmt.Errorf("choice not valid: policy %q restricts available options", targetAction.Behavior.ChoicePolicy)
+		}
+	}
+
+	applier := gamecards.NewBehaviorApplier(p, g, targetAction.CardName, log).
+		WithSourceCardID(targetCardID).
+		WithSourceBehaviorIndex(targetBehaviorIndex).
+		WithCardRegistry(a.CardRegistry()).
+		WithSourceType(game.SourceTypeCardAction).
+		WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
+	if len(cardStorageTargets) > 0 {
+		applier = applier.WithTargetCardIDs(cardStorageTargets)
+	}
+	if targetPlayerID != nil {
+		applier = applier.WithTargetPlayerID(*targetPlayerID)
+	}
+	if stealSourceCardID != nil {
+		applier = applier.WithStealSourceCardID(*stealSourceCardID)
+	}
+	if selectedAmount != nil {
+		applier = applier.WithSelectedAmount(*selectedAmount)
+	}
+	if actionPayment != nil {
+		applier = applier.WithActionPayment(actionPayment)
+	}
+
+	inputs, outputs := targetAction.Behavior.ExtractInputsOutputs(choiceIndex)
+
+	if hasVariableAmount(inputs, outputs) && selectedAmount == nil {
+		log.Warn("Variable-amount action requires selectedAmount")
+		return fmt.Errorf("must select an amount for this action")
+	}
+
+	if err := validateOutputAffordability(p, outputs); err != nil {
+		log.Warn("Cannot afford negative resource outputs", zap.Error(err))
+		return err
+	}
+
+	if err := applier.ApplyInputs(ctx, inputs); err != nil {
+		log.Error("Failed to apply inputs for reused action", zap.Error(err))
+		return err
+	}
+
+	hasPending, err := applier.ApplyCardDrawOutputs(ctx, outputs)
+	if err != nil {
+		log.Error("Failed to apply card draw outputs for reused action", zap.Error(err))
+		return err
+	}
+	if hasPending {
+		log.Debug("Card draw selection pending for reused action")
+		return nil
+	}
+
+	calculatedOutputs, err := applier.ApplyOutputsAndGetCalculated(ctx, outputs)
+	if err != nil {
+		log.Error("Failed to apply outputs for reused action", zap.Error(err))
+		return err
+	}
+
+	a.incrementUsageCounts(p, reuseSourceCardID, reuseAction.BehaviorIndex, log)
+
+	a.ConsumePlayerAction(g, log)
+
+	description := fmt.Sprintf("Used %s to reuse %s action", reuseAction.CardName, targetAction.CardName)
+	var displayData *game.LogDisplayData
+	if cardFromRegistry, err := a.CardRegistry().GetByID(targetCardID); err == nil {
+		displayData = baseaction.BuildCardDisplayData(cardFromRegistry, game.SourceTypeCardAction)
+	}
+	a.WriteStateLogFull(ctx, g, targetAction.CardName, game.SourceTypeCardAction, p.ID(), description, choiceIndex, calculatedOutputs, displayData)
+
+	log.Info("Action reused",
+		zap.String("reuse_source", reuseAction.CardName),
+		zap.String("target_action", targetAction.CardName))
+	return nil
+}
+
+func (a *UseCardActionAction) findActionReuseAction(
+	p *player.Player,
+	reuseSourceCardID string,
+	log *zap.Logger,
+) (*player.CardAction, error) {
+	actions := p.Actions().List()
+	for i := range actions {
+		if actions[i].CardID != reuseSourceCardID {
+			continue
+		}
+		for _, output := range actions[i].Behavior.Outputs {
+			if output.ResourceType == shared.ResourceActionReuse {
+				return &actions[i], nil
+			}
+		}
+	}
+	log.Error("Action-reuse action not found", zap.String("card_id", reuseSourceCardID))
+	return nil, fmt.Errorf("action-reuse action not found on card %s", reuseSourceCardID)
 }
 
 func (a *UseCardActionAction) hasManualTrigger(behavior shared.CardBehavior) bool {

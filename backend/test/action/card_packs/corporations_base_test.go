@@ -236,7 +236,7 @@ func TestInventrix_GlobalParameterLenienceRegistered(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
-	lenience := calculator.CalculateGlobalParameterLenience(p)
+	lenience := calculator.CalculateGlobalParameterLenience(p, "temperature")
 	testutil.AssertEqual(t, 2, lenience, "Inventrix should provide global parameter lenience of 2")
 }
 
@@ -252,7 +252,7 @@ func TestInventrix_LenienceStacksWithSpecialDesign(t *testing.T) {
 	p, _ := testGame.GetPlayer(playerID)
 
 	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
-	lenienceBefore := calculator.CalculateGlobalParameterLenience(p)
+	lenienceBefore := calculator.CalculateGlobalParameterLenience(p, "temperature")
 	testutil.AssertEqual(t, 2, lenienceBefore, "Inventrix alone should provide lenience of 2")
 
 	specialDesignID := testutil.CardID("Special Design")
@@ -266,7 +266,7 @@ func TestInventrix_LenienceStacksWithSpecialDesign(t *testing.T) {
 	err = playCard.Execute(ctx, testGame.ID(), playerID, specialDesignID, payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Special Design should play successfully")
 
-	lenienceAfter := calculator.CalculateGlobalParameterLenience(p)
+	lenienceAfter := calculator.CalculateGlobalParameterLenience(p, "temperature")
 	testutil.AssertEqual(t, 4, lenienceAfter, "Inventrix (2) + Special Design (2) should stack to lenience of 4")
 }
 
@@ -505,7 +505,7 @@ func TestUNMI_Pay3MCToRaiseTR(t *testing.T) {
 
 	cardID := testutil.CardID("United Nations Mars Initiative")
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, nil, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "UNMI action should succeed")
 
 	testutil.AssertEqual(t, creditsBefore-3, p.Resources().Get().Credits, "UNMI action should cost 3 credits")

@@ -279,7 +279,7 @@ func TestSpaceElevator_ActionSpendSteelGainCredits(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Space Elevator action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 2, resources.Steel, "Should have 2 steel after spending 1")
@@ -318,7 +318,7 @@ func TestEquatorialMagnetizer_DecreaseEnergyProdIncreaseTR(t *testing.T) {
 	trBefore := p.Resources().TerraformRating()
 	prodBefore := p.Resources().Production()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Equatorial Magnetizer action should succeed")
 	trAfter := p.Resources().TerraformRating()
 	testutil.AssertEqual(t, trBefore+1, trAfter, "TR should increase by 1")
@@ -602,7 +602,7 @@ func TestSecurityFleet_SpendTitaniumAddFighter(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Security Fleet action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 2, resources.Titanium, "Should have 2 titanium after spending 1")
@@ -1074,7 +1074,7 @@ func TestTardigrades_AddMicrobe(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Tardigrades add microbe should succeed")
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(cardID),
 		"Tardigrades should have 1 microbe after action")
@@ -1102,7 +1102,7 @@ func TestTardigrades_AccumulateMicrobes(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Tardigrades add microbe should succeed")
 	testutil.AssertEqual(t, 4, p.Resources().GetCardStorage(cardID),
 		"Tardigrades should have 4 microbes (3 + 1)")
@@ -1167,7 +1167,7 @@ func TestFish_ActionAddAnimal(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, []string{cardID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, []string{cardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Fish add animal action should succeed")
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(cardID),
 		"Fish should have 1 animal after action")
@@ -1572,7 +1572,7 @@ func TestSmallAnimals_AddAnimalAction(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, []string{cardID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, []string{cardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Small Animals add animal action should succeed")
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(cardID), "Card should have 1 animal after action")
 }
@@ -1940,7 +1940,7 @@ func TestSpaceMirrors_SpendCreditsForEnergyProduction(t *testing.T) {
 	productionBefore := p.Resources().Production()
 	creditsBefore := p.Resources().Get().Credits
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Space Mirrors action should succeed")
 	productionAfter := p.Resources().Production()
 	testutil.AssertEqual(t, productionBefore.Energy+1, productionAfter.Energy, "Energy production should increase by 1")
@@ -2391,7 +2391,7 @@ func TestPhysicsComplex_SpendEnergyForScience(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Physics Complex action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 4, resources.Energy, "Should have 4 energy after spending 6")
@@ -2428,7 +2428,7 @@ func TestPhysicsComplex_FailsWithoutEnoughEnergy(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{cardID}, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Physics Complex should fail without enough energy")
 }
 
@@ -2568,7 +2568,7 @@ func TestIronworks_SpendEnergyForSteelAndOxygen(t *testing.T) {
 	steelBefore := p.Resources().Get().Steel
 	oxygenBefore := testGame.GlobalParameters().Oxygen()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Ironworks action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 2, resources.Energy, "Should have 2 energy after spending 4")
@@ -2606,7 +2606,7 @@ func TestIronworks_FailsWithoutEnoughEnergy(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Ironworks should fail without enough energy")
 }
 
@@ -2706,7 +2706,7 @@ func TestSteelworks_SpendEnergyForSteelAndOxygen(t *testing.T) {
 	steelBefore := p.Resources().Get().Steel
 	oxygenBefore := testGame.GlobalParameters().Oxygen()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Steelworks action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 4, resources.Energy, "Should have 4 energy after spending 4")
@@ -2748,7 +2748,7 @@ func TestOreProcessor_SpendEnergyForTitaniumAndOxygen(t *testing.T) {
 	titaniumBefore := p.Resources().Get().Titanium
 	oxygenBefore := testGame.GlobalParameters().Oxygen()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Ore Processor action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 1, resources.Energy, "Should have 1 energy after spending 4")
@@ -2786,7 +2786,7 @@ func TestOreProcessor_FailsWithoutEnoughEnergy(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Ore Processor should fail without enough energy")
 }
 
@@ -3441,7 +3441,7 @@ func TestIndustrialCenter_ActionSpendCreditsGainSteelProduction(t *testing.T) {
 	prodBefore := p.Resources().Production()
 	creditsBefore := p.Resources().Get().Credits
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Industrial Center action should succeed")
 	prodAfter := p.Resources().Production()
 	testutil.AssertEqual(t, prodBefore.Steel+1, prodAfter.Steel,
@@ -3725,7 +3725,7 @@ func TestSymbioticFungus_ActionAddMicrobeToAnyCard(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{targetCardID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, []string{targetCardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Symbiotic Fungus action should succeed")
 	microbeStorage := p.Resources().GetCardStorage(targetCardID)
 	testutil.AssertEqual(t, 1, microbeStorage, "Target card should have 1 microbe")
@@ -4262,7 +4262,7 @@ func TestCaretakerContract_ActionSpendHeatGainTR(t *testing.T) {
 	trBefore := p.Resources().TerraformRating()
 	heatBefore := p.Resources().Get().Heat
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Caretaker Contract action should succeed")
 	trAfter := p.Resources().TerraformRating()
 	testutil.AssertEqual(t, trBefore+1, trAfter, "TR should increase by 1")
@@ -5252,7 +5252,7 @@ func TestNitriteReducingBacteria_Action_AddMicrobe(t *testing.T) {
 	testutil.AssertEqual(t, 3, p.Resources().GetCardStorage(nitriteReducing.ID), "Should have 3 microbes after playing")
 	choiceIndex := 0
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), p.ID(), nitriteReducing.ID, 1, &choiceIndex, []string{nitriteReducing.ID}, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), p.ID(), nitriteReducing.ID, 1, &choiceIndex, []string{nitriteReducing.ID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 0 (add microbe) should succeed")
 	testutil.AssertEqual(t, 4, p.Resources().GetCardStorage(nitriteReducing.ID), "Card should have 4 microbes after adding 1")
 }
@@ -5283,7 +5283,7 @@ func TestNitriteReducingBacteria_Action_Remove3MicrobesForTR(t *testing.T) {
 	trBefore := p.Resources().TerraformRating()
 	choiceIndex := 1
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), p.ID(), nitriteReducing.ID, 1, &choiceIndex, []string{nitriteReducing.ID}, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), p.ID(), nitriteReducing.ID, 1, &choiceIndex, []string{nitriteReducing.ID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 1 (remove 3 microbes for TR) should succeed")
 	testutil.AssertEqual(t, 2, p.Resources().GetCardStorage(nitriteReducing.ID), "Card should have 2 microbes after removing 3 from 5")
 	trAfter := p.Resources().TerraformRating()
@@ -5307,7 +5307,7 @@ func TestNitriteReducingBacteria_Action_FailsWithInsufficientMicrobes(t *testing
 	})
 	choiceIndex := 1
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, []string{cardID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, []string{cardID}, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Choice 1 should fail with only 2 microbes (need 3)")
 }
 
@@ -5344,7 +5344,7 @@ func TestWaterSplittingPlant_SpendEnergyToRaiseOxygen(t *testing.T) {
 	})
 	oxygenBefore := testGame.GlobalParameters().Oxygen()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Water Splitting Plant action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 2, resources.Energy, "Should have 2 energy after spending 3")
@@ -5379,7 +5379,7 @@ func TestWaterSplittingPlant_FailsWithoutEnoughEnergy(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Water Splitting Plant should fail without enough energy")
 }
 
@@ -5446,7 +5446,7 @@ func TestLivestock_Action_AddAnimal(t *testing.T) {
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), livestock.ID, payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Livestock should play successfully")
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), p.ID(), livestock.ID, 1, nil, []string{livestock.ID}, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), p.ID(), livestock.ID, 1, nil, []string{livestock.ID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Livestock action should succeed")
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(livestock.ID), "Card should have 1 animal after action")
 }
@@ -5484,7 +5484,7 @@ func TestUndergroundDetonations_SpendCreditsForHeatProduction(t *testing.T) {
 	})
 	prodBefore := p.Resources().Production()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Underground Detonations action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 10, resources.Credits, "Should have 10 credits after spending 10")
@@ -5519,7 +5519,7 @@ func TestUndergroundDetonations_FailsWithInsufficientCredits(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Underground Detonations should fail without enough credits")
 }
 
@@ -5591,7 +5591,7 @@ func TestAICentral_Action_DrawTwoCards(t *testing.T) {
 	testutil.AssertNoError(t, err, "AI Central should play successfully")
 	handBefore := p.Hand().CardCount()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), p.ID(), aiCentral.ID, 1, nil, nil, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), p.ID(), aiCentral.ID, 1, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "AI Central action should succeed")
 	handAfter := p.Hand().CardCount()
 	testutil.AssertEqual(t, handBefore+2, handAfter, "Hand should increase by 2 from drawing 2 cards")
@@ -5864,7 +5864,7 @@ func TestRestrictedArea_SpendCreditsToDrawCard(t *testing.T) {
 	})
 	handBefore := p.Hand().CardCount()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Restricted Area action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 8, resources.Credits, "Should have 8 credits after spending 2")
@@ -5899,7 +5899,7 @@ func TestRestrictedArea_FailsWithoutEnoughCredits(t *testing.T) {
 		},
 	})
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Restricted Area should fail without enough credits")
 }
 

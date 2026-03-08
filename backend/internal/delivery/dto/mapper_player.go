@@ -293,11 +293,25 @@ func convertPlayerActions(actions []player.CardAction, p *player.Player, g *game
 			g,
 		)
 
+		behaviorDto := toCardBehaviorDto(act.Behavior)
+
+		if act.Behavior.ChoicePolicy != "" && len(behaviorDto.Choices) > 0 {
+			production := p.Resources().Production()
+			validIndices := shared.FilterChoiceIndicesByPolicy(act.Behavior.Choices, act.Behavior.ChoicePolicy, production)
+			filtered := make([]ChoiceDto, 0, len(validIndices))
+			for _, idx := range validIndices {
+				choice := behaviorDto.Choices[idx]
+				choice.OriginalIndex = idx
+				filtered = append(filtered, choice)
+			}
+			behaviorDto.Choices = filtered
+		}
+
 		dtos[i] = PlayerActionDto{
 			CardID:                  act.CardID,
 			CardName:                act.CardName,
 			BehaviorIndex:           act.BehaviorIndex,
-			Behavior:                toCardBehaviorDto(act.Behavior),
+			Behavior:                behaviorDto,
 			TimesUsedThisTurn:       act.TimesUsedThisTurn,
 			TimesUsedThisGeneration: act.TimesUsedThisGeneration,
 			Available:               state.Available(),
@@ -396,7 +410,7 @@ func convertPendingBehaviorChoiceSelection(selection *player.PendingBehaviorChoi
 
 	choices := make([]ChoiceDto, len(selection.Choices))
 	for i, choice := range selection.Choices {
-		choices[i] = toChoiceDtoWithState(choice, p, g, cardRegistry)
+		choices[i] = toChoiceDtoWithState(i, choice, p, g, cardRegistry)
 	}
 
 	return &PendingBehaviorChoiceSelectionDto{
@@ -407,14 +421,15 @@ func convertPendingBehaviorChoiceSelection(selection *player.PendingBehaviorChoi
 }
 
 // toChoiceDtoWithState maps a choice to DTO with computed errors from the state calculator.
-func toChoiceDtoWithState(choice shared.Choice, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) ChoiceDto {
+func toChoiceDtoWithState(index int, choice shared.Choice, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) ChoiceDto {
 	errors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
 	return ChoiceDto{
-		Inputs:       mapSlice(choice.Inputs, toResourceConditionDto),
-		Outputs:      mapSlice(choice.Outputs, toResourceConditionDto),
-		Requirements: toChoiceRequirementsDto(choice.Requirements),
-		Available:    len(errors) == 0,
-		Errors:       convertStateErrors(errors),
+		OriginalIndex: index,
+		Inputs:        mapSlice(choice.Inputs, toResourceConditionDto),
+		Outputs:       mapSlice(choice.Outputs, toResourceConditionDto),
+		Requirements:  toChoiceRequirementsDto(choice.Requirements),
+		Available:     len(errors) == 0,
+		Errors:        convertStateErrors(errors),
 	}
 }
 
@@ -583,15 +598,30 @@ func mapPlayerCards(p *player.Player, g *game.Game, cardRegistry cards.CardRegis
 
 		dto := ToPlayerCardDto(pc)
 
-		// Enrich choices with computed errors
+		// Enrich choices with computed errors and apply choice policy filtering
 		if card, ok := pc.Card().(*gamecards.Card); ok {
 			for bi, behavior := range card.Behaviors {
 				if bi < len(dto.Behaviors) {
-					for ci, choice := range behavior.Choices {
-						if ci < len(dto.Behaviors[bi].Choices) {
-							choiceErrors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
-							dto.Behaviors[bi].Choices[ci].Available = len(choiceErrors) == 0
-							dto.Behaviors[bi].Choices[ci].Errors = convertStateErrors(choiceErrors)
+					if behavior.ChoicePolicy != "" && len(dto.Behaviors[bi].Choices) > 0 {
+						production := p.Resources().Production()
+						validIndices := shared.FilterChoiceIndicesByPolicy(behavior.Choices, behavior.ChoicePolicy, production)
+						filtered := make([]ChoiceDto, 0, len(validIndices))
+						for _, idx := range validIndices {
+							choiceDto := dto.Behaviors[bi].Choices[idx]
+							choiceDto.OriginalIndex = idx
+							choiceErrors := action.CalculateChoiceErrors(behavior.Choices[idx], p, g, cardRegistry)
+							choiceDto.Available = len(choiceErrors) == 0
+							choiceDto.Errors = convertStateErrors(choiceErrors)
+							filtered = append(filtered, choiceDto)
+						}
+						dto.Behaviors[bi].Choices = filtered
+					} else {
+						for ci, choice := range behavior.Choices {
+							if ci < len(dto.Behaviors[bi].Choices) {
+								choiceErrors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
+								dto.Behaviors[bi].Choices[ci].Available = len(choiceErrors) == 0
+								dto.Behaviors[bi].Choices[ci].Errors = convertStateErrors(choiceErrors)
+							}
 						}
 					}
 				}

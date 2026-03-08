@@ -455,9 +455,9 @@ func isStorageResourceType(rt shared.ResourceType) bool {
 func isEffectOutputType(rt shared.ResourceType) bool {
 	switch rt {
 	case shared.ResourceDiscount, shared.ResourcePaymentSubstitute, shared.ResourceValueModifier,
-		shared.ResourceGlobalParameterLenience, shared.ResourceVenusLenience,
+		shared.ResourceGlobalParameterLenience,
 		shared.ResourceStoragePaymentSubstitute, shared.ResourceOceanAdjacencyBonus,
-		shared.ResourceDefense:
+		shared.ResourceDefense, shared.ResourceActionReuse:
 		return true
 	}
 	return false
@@ -1441,6 +1441,9 @@ func (a *BehaviorApplier) applyOutput(
 		log.Debug("Skipping card draw output (handled by ApplyCardDrawOutputs)",
 			zap.String("type", string(output.ResourceType)),
 			zap.Int("amount", output.Amount))
+
+	case shared.ResourceActionReuse:
+		log.Debug("Skipping action-reuse output (handled at action layer)")
 
 	default:
 		log.Warn("Unhandled output type",

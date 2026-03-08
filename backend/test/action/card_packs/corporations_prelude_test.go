@@ -191,7 +191,7 @@ func TestVitor_StartingResources(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 	resources := p.Resources().Get()
-	testutil.AssertEqual(t, 48, resources.Credits, "Vitor should start with 48 credits (45 starting + 3 from auto effect)")
+	testutil.AssertEqual(t, 45, resources.Credits, "Vitor should start with 45 credits")
 }
 
 func TestVitor_Gain3MCWhenPlayingCardWithVP(t *testing.T) {

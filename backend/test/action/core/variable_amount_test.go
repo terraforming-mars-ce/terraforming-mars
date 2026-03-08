@@ -140,7 +140,7 @@ func TestPowerInfrastructure_SpendEnergyGainCredits(t *testing.T) {
 	// Use action with selectedAmount=3 (spend 3 energy, gain 3 credits)
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 3
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
 	testutil.AssertNoError(t, err, "Power Infrastructure action should succeed")
 
 	resources := p.Resources().Get()
@@ -184,7 +184,7 @@ func TestPowerInfrastructure_SpendZeroEnergy(t *testing.T) {
 	// Use action with selectedAmount=0 (spend 0, gain 0)
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 0
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
 	testutil.AssertNoError(t, err, "Power Infrastructure with 0 amount should succeed")
 
 	resources := p.Resources().Get()
@@ -228,7 +228,7 @@ func TestPowerInfrastructure_SpendAllEnergy(t *testing.T) {
 	// Use action with selectedAmount=5 (spend all energy)
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 5
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
 	testutil.AssertNoError(t, err, "Power Infrastructure with max amount should succeed")
 
 	resources := p.Resources().Get()
@@ -272,7 +272,7 @@ func TestPowerInfrastructure_FailsWhenInsufficientEnergy(t *testing.T) {
 	// Try to spend more energy than available
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 5
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
 	testutil.AssertError(t, err, "Should fail when trying to spend more energy than available")
 
 	// Verify resources unchanged

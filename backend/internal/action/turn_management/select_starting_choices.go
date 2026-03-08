@@ -317,9 +317,33 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 		return fmt.Errorf("corporation card not found: %s", choices.CorporationID)
 	}
 
+	corpTags := make([]string, len(corpCard.Tags))
+	for i, tag := range corpCard.Tags {
+		corpTags[i] = string(tag)
+	}
+	p.PlayedCards().AddCard(choices.CorporationID, corpCard.Name, string(corpCard.Type), corpTags)
+
+	if corpCard.ResourceStorage != nil {
+		p.Resources().AddToStorage(choices.CorporationID, corpCard.ResourceStorage.Starting)
+	}
+
 	log.Debug("Applying corporation effects",
 		zap.String("player_id", playerID),
 		zap.String("corporation", corpCard.Name))
+
+	// Register trigger effects BEFORE applying starting effects so that
+	// production-increased triggers (e.g. Manutech) fire on starting production
+	triggerEffects := corpProc.GetTriggerEffects(corpCard)
+	for _, effect := range triggerEffects {
+		p.Effects().AddEffect(effect)
+		baseaction.SubscribePassiveEffectToEvents(ctx, g, p, effect, log, cardRegistry)
+		g.AddTriggeredEffect(game.TriggeredEffect{
+			CardName:   corpCard.Name,
+			PlayerID:   p.ID(),
+			SourceType: game.SourceTypeEffectAdded,
+			Behaviors:  []shared.CardBehavior{effect.Behavior},
+		})
+	}
 
 	if err := corpProc.ApplyStartingEffects(ctx, corpCard, p, g); err != nil {
 		return fmt.Errorf("failed to apply corporation starting effects: %w", err)
@@ -350,18 +374,6 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 	autoEffects := corpProc.GetAutoEffects(corpCard)
 	for _, effect := range autoEffects {
 		p.Effects().AddEffect(effect)
-		g.AddTriggeredEffect(game.TriggeredEffect{
-			CardName:   corpCard.Name,
-			PlayerID:   p.ID(),
-			SourceType: game.SourceTypeEffectAdded,
-			Behaviors:  []shared.CardBehavior{effect.Behavior},
-		})
-	}
-
-	triggerEffects := corpProc.GetTriggerEffects(corpCard)
-	for _, effect := range triggerEffects {
-		p.Effects().AddEffect(effect)
-		baseaction.SubscribePassiveEffectToEvents(ctx, g, p, effect, log, cardRegistry)
 		g.AddTriggeredEffect(game.TriggeredEffect{
 			CardName:   corpCard.Name,
 			PlayerID:   p.ID(),
