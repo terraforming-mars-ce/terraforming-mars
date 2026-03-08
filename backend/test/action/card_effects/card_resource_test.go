@@ -278,7 +278,7 @@ func TestCardResource_MaxwellBase_ActionAddsToVenusCard(t *testing.T) {
 	// Use Maxwell Base action targeting the venus microbe card
 	useCardAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	targetCardID := "card-venus-microbe"
-	err := useCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-maxwell-base", 1, nil, []string{targetCardID}, nil, nil, nil, nil)
+	err := useCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-maxwell-base", 1, nil, []string{targetCardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Maxwell Base action should execute successfully")
 
 	// Verify 1 resource was added (2 existing + 1 new = 3)

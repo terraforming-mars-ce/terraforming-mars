@@ -318,6 +318,98 @@ func TestHasCardSelectors_WithCost(t *testing.T) {
 	}
 }
 
+func TestMatchesSelector_VP_NonNegative(t *testing.T) {
+	cardWithPositiveVP := &gamecards.Card{
+		ID:   "v01",
+		Name: "Card With VP",
+		Type: "automated",
+		VPConditions: []gamecards.VictoryPointCondition{
+			{Amount: 1, Condition: "once"},
+		},
+	}
+
+	cardWithZeroVP := &gamecards.Card{
+		ID:   "v02",
+		Name: "Card With Zero VP",
+		Type: "automated",
+		VPConditions: []gamecards.VictoryPointCondition{
+			{Amount: 0, Condition: "once"},
+		},
+	}
+
+	cardWithNegativeVP := &gamecards.Card{
+		ID:   "v03",
+		Name: "Card With Negative VP",
+		Type: "automated",
+		VPConditions: []gamecards.VictoryPointCondition{
+			{Amount: -1, Condition: "once"},
+		},
+	}
+
+	cardWithNoVP := &gamecards.Card{
+		ID:   "v04",
+		Name: "Card Without VP",
+		Type: "automated",
+	}
+
+	selector := shared.Selector{
+		VP: &shared.MinMaxValue{Min: intPtr(0)},
+	}
+
+	if !gamecards.MatchesSelector(cardWithPositiveVP, selector) {
+		t.Error("Card with VP=1 should match VP min:0 selector")
+	}
+
+	if !gamecards.MatchesSelector(cardWithZeroVP, selector) {
+		t.Error("Card with VP=0 should match VP min:0 selector")
+	}
+
+	if gamecards.MatchesSelector(cardWithNegativeVP, selector) {
+		t.Error("Card with VP=-1 should NOT match VP min:0 selector")
+	}
+
+	if gamecards.MatchesSelector(cardWithNoVP, selector) {
+		t.Error("Card without VP conditions should NOT match VP selector")
+	}
+}
+
+func TestMatchesSelector_VP_WithMaxConstraint(t *testing.T) {
+	cardWithVP3 := &gamecards.Card{
+		ID:   "v05",
+		Name: "Card With 3 VP",
+		Type: "automated",
+		VPConditions: []gamecards.VictoryPointCondition{
+			{Amount: 3, Condition: "once"},
+		},
+	}
+
+	selector := shared.Selector{
+		VP: &shared.MinMaxValue{Min: intPtr(1), Max: intPtr(2)},
+	}
+
+	if gamecards.MatchesSelector(cardWithVP3, selector) {
+		t.Error("Card with VP=3 should NOT match VP min:1 max:2 selector")
+	}
+
+	selectorMaxOnly := shared.Selector{
+		VP: &shared.MinMaxValue{Max: intPtr(2)},
+	}
+
+	if gamecards.MatchesSelector(cardWithVP3, selectorMaxOnly) {
+		t.Error("Card with VP=3 should NOT match VP max:2 selector")
+	}
+}
+
+func TestHasCardSelectors_VP(t *testing.T) {
+	vpSelectors := []shared.Selector{
+		{VP: &shared.MinMaxValue{Min: intPtr(0)}},
+	}
+
+	if !gamecards.HasCardSelectors(vpSelectors) {
+		t.Error("VP-based selectors should return true for HasCardSelectors")
+	}
+}
+
 func TestOptimalAerobrakingScenario(t *testing.T) {
 	spaceEventCard := &gamecards.Card{
 		ID:   "087",

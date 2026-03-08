@@ -35,7 +35,7 @@ func TestAllBehaviorsHaveDescriptions(t *testing.T) {
 
 	for _, card := range allCards {
 		for i, behavior := range card.Behaviors {
-			if behavior.Description == "" {
+			if behavior.Description == "" && behavior.Group == "" {
 				t.Errorf("Card %s (%s) behavior[%d] is missing a description",
 					card.ID, card.Name, i)
 			}

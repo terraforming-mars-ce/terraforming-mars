@@ -1,6 +1,8 @@
 package cards
 
 import (
+	"slices"
+
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
@@ -191,26 +193,40 @@ func (c *RequirementModifierCalculator) CalculateCardDiscounts(p *player.Player,
 	return totalDiscount
 }
 
-// CalculateGlobalParameterLenience computes the total lenience for global parameter requirements.
+// CalculateGlobalParameterLenience computes the total lenience for a specific global parameter requirement.
 // Lenience widens the min/max window: min is lowered, max is raised.
-// Returns the total lenience amount from all player effects.
-func (c *RequirementModifierCalculator) CalculateGlobalParameterLenience(p *player.Player) int {
+// The paramType should be one of: "temperature", "oxygen", "ocean", "venus".
+func (c *RequirementModifierCalculator) CalculateGlobalParameterLenience(p *player.Player, paramType string) int {
 	if p == nil {
 		return 0
 	}
 
 	totalLenience := 0
-	effects := p.Effects().List()
-
-	for _, effect := range effects {
+	for _, effect := range p.Effects().List() {
 		for _, output := range effect.Behavior.Outputs {
-			if output.ResourceType == shared.ResourceGlobalParameterLenience {
+			if output.ResourceType != shared.ResourceGlobalParameterLenience {
+				continue
+			}
+			if len(output.Selectors) > 0 {
+				if matchesGlobalParameterSelector(output.Selectors, paramType) {
+					totalLenience += output.Amount
+				}
+			} else {
 				totalLenience += output.Amount
 			}
 		}
 	}
 
 	return totalLenience
+}
+
+func matchesGlobalParameterSelector(selectors []shared.Selector, paramType string) bool {
+	for _, sel := range selectors {
+		if slices.Contains(sel.GlobalParameters, paramType) {
+			return true
+		}
+	}
+	return false
 }
 
 // CalculateStandardProjectDiscounts computes discounts for a specific standard project.

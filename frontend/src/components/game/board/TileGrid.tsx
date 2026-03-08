@@ -6,10 +6,16 @@ import { TileVPIndicator } from "../../ui/overlay/EndGameOverlay";
 import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import { useSoundEffects } from "../../../hooks/useSoundEffects";
+import { useHoverSound } from "../../../hooks/useHoverSound";
 import GreeneryRenderer from "./GreeneryRenderer";
+import BirdRenderer from "./BirdRenderer";
 import { SPHERE_RADIUS } from "./boardConstants";
 import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
 import { Html } from "@react-three/drei";
+import { panState } from "../controls/PanControls";
+
+const noop = () => {};
+
 interface TileGridProps {
   gameState?: GameDto;
   onHexClick?: (hexCoordinate: string) => void;
@@ -128,7 +134,6 @@ export default function TileGrid({
   }, [gameState]);
 
   const [tooltipData, setTooltipData] = useState<TileTooltipData | null>(null);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTileHoverInfo = useCallback(
     (
@@ -137,20 +142,17 @@ export default function TileGrid({
         reservedById: string | null;
       },
     ) => {
-      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = setTimeout(() => {
-        setTooltipData({
-          position: data.position,
-          tileType: data.tileType,
-          displayName: data.displayName,
-          ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
-          ownerColor: data.ownerId ? playerColorMap.get(data.ownerId) : undefined,
-          reservedByName: data.reservedById ? playerNameMap.get(data.reservedById) : undefined,
-          isOceanSpace: data.isOceanSpace,
-          isVolcanic: data.isVolcanic,
-          bonuses: data.bonuses,
-        });
-      }, 200);
+      setTooltipData({
+        position: data.position,
+        tileType: data.tileType,
+        displayName: data.displayName,
+        ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
+        ownerColor: data.ownerId ? playerColorMap.get(data.ownerId) : undefined,
+        reservedByName: data.reservedById ? playerNameMap.get(data.reservedById) : undefined,
+        isOceanSpace: data.isOceanSpace,
+        isVolcanic: data.isVolcanic,
+        bonuses: data.bonuses,
+      });
     },
     [playerNameMap, playerColorMap],
   );
@@ -160,10 +162,6 @@ export default function TileGrid({
   }, []);
 
   const handleTileHoverLeave = useCallback(() => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
     setTooltipData(null);
   }, []);
 
@@ -428,9 +426,115 @@ export default function TileGrid({
     return added;
   }, [greeneryTiles, volcanoTiles, livingGreeneryTiles]);
 
+  // --- Centralized interaction sphere (single raycast target) ---
+  const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
+  const hoverSound = useHoverSound();
+  const interactionSphereGeometry = useMemo(
+    () => new THREE.SphereGeometry(SPHERE_RADIUS + 0.02, 64, 64),
+    [],
+  );
+
+  const findNearestHex = useCallback(
+    (hitPoint: THREE.Vector3): string | null => {
+      let bestKey: string | null = null;
+      let bestDist = Infinity;
+      const HEX_HIT_RADIUS = 0.17;
+      for (const tile of projectedHexGrid) {
+        const dist = hitPoint.distanceTo(tile.spherePosition);
+        if (dist < bestDist && dist < HEX_HIT_RADIUS) {
+          bestDist = dist;
+          bestKey = HexGrid2D.coordinateToKey(tile.coordinate);
+        }
+      }
+      return bestKey;
+    },
+    [projectedHexGrid],
+  );
+
+  const handleSpherePointerMove = useCallback(
+    (event: THREE.Event & { point: THREE.Vector3; nativeEvent: PointerEvent }) => {
+      if (panState.isPanning) {
+        if (hoveredHexKey) {
+          setHoveredHexKey(null);
+          handleTileHoverLeave();
+        }
+        return;
+      }
+      const key = findNearestHex(event.point);
+      if (key !== hoveredHexKey) {
+        setHoveredHexKey(key);
+        if (key) {
+          const tile = projectedHexGrid.find(
+            (t) => HexGrid2D.coordinateToKey(t.coordinate) === key,
+          );
+          if (tile) {
+            const tileData = getTileData(tile);
+            const isAvailable = availableHexes.includes(key);
+            if (isAvailable) {
+              hoverSound.onMouseEnter?.();
+            }
+            handleTileHoverInfo({
+              position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
+              tileType: tileData.type,
+              displayName: tileData.specialLabel || tile.backendTile?.displayName,
+              ownerId: tileData.ownerId,
+              reservedById: tile.backendTile?.reservedBy || null,
+              isOceanSpace: tile.isOceanSpace,
+              isVolcanic: tile.backendTile?.tags?.includes("volcanic") ?? false,
+              bonuses: tile.bonuses,
+            });
+          }
+        } else {
+          handleTileHoverLeave();
+        }
+      } else if (key) {
+        handleTileHoverMove({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
+      }
+    },
+    [
+      hoveredHexKey,
+      projectedHexGrid,
+      availableHexes,
+      findNearestHex,
+      handleTileHoverInfo,
+      handleTileHoverMove,
+      handleTileHoverLeave,
+      hoverSound,
+    ],
+  );
+
+  const handleSpherePointerLeave = useCallback(() => {
+    setHoveredHexKey(null);
+    handleTileHoverLeave();
+  }, [handleTileHoverLeave]);
+
+  const handleSphereClick = useCallback(
+    (event: THREE.Event & { point: THREE.Vector3 }) => {
+      if (panState.isPanning) return;
+      const key = findNearestHex(event.point);
+      if (key) {
+        const isAvailable = availableHexes.includes(key);
+        if (isAvailable) {
+          hoverSound.onClick?.();
+        }
+        onHexClick?.(key);
+      }
+    },
+    [findNearestHex, availableHexes, onHexClick, hoverSound],
+  );
+
   return (
     <>
-      {/* Tile hover tooltip (portal escapes R3F Canvas) */}
+      {/* Single invisible sphere for all pointer interaction */}
+      <mesh
+        geometry={interactionSphereGeometry}
+        onPointerMove={handleSpherePointerMove}
+        onPointerLeave={handleSpherePointerLeave}
+        onClick={handleSphereClick}
+        visible={false}
+      />
+
+      {/* Tile hover tooltip (portals to document.body) */}
       <Html>
         <TileTooltip data={tooltipData} />
       </Html>
@@ -441,6 +545,7 @@ export default function TileGrid({
         livingGreeneryTiles={livingGreeneryTiles}
         newTileKeys={newGreeneryKeys}
       />
+      <BirdRenderer livingGreeneryTiles={livingGreeneryTiles} />
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
         const tileData = getTileData(tile);
@@ -459,9 +564,8 @@ export default function TileGrid({
             isVolcanic={tile.backendTile?.tags?.includes("volcanic") ?? false}
             isOceanSpace={tile.isOceanSpace}
             bonuses={tile.bonuses}
-            onClick={() => {
-              onHexClick?.(hexKey);
-            }}
+            onClick={noop}
+            isHovered={hoveredHexKey === hexKey}
             isAvailableForPlacement={isAvailable}
             highlightMode={getHighlightModeForTile(tileData.type, tileHighlightMode, vpIndicator)}
             vpAmount={vpIndicator?.showVPText ? vpIndicator.amount : undefined}
@@ -469,9 +573,6 @@ export default function TileGrid({
             animateEntrance={animateHexEntrance}
             entranceDelay={index * 15}
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
-            onHoverInfo={handleTileHoverInfo}
-            onHoverMove={handleTileHoverMove}
-            onHoverLeave={handleTileHoverLeave}
           />
         );
       })}

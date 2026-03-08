@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import GameIcon from "../display/GameIcon.tsx";
-import VPDescriptionTooltip from "../display/VPDescriptionTooltip.tsx";
-import VictoryPointIcon from "../display/VictoryPointIcon.tsx";
+import CardDecorBar from "../display/CardDecorBar.tsx";
 import BehaviorSection from "./BehaviorSection";
 import RequirementsBox from "./RequirementsBox.tsx";
 import { getTagIconPath } from "@/utils/iconStore.ts";
@@ -32,20 +31,8 @@ const GameCard: React.FC<GameCardProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [vpDescription, setVpDescription] = useState<string | null>(null);
-  const [vpTooltipPos, setVpTooltipPos] = useState<{ x: number; y: number } | null>(null);
-  const vpRef = useRef<HTMLDivElement>(null);
   const { playCardHoverSound } = useSoundEffects();
   const pendingSoundRef = useRef(false);
-
-  useEffect(() => {
-    if (vpDescription && vpRef.current) {
-      const rect = vpRef.current.getBoundingClientRect();
-      setVpTooltipPos({ x: rect.left, y: rect.bottom });
-    } else {
-      setVpTooltipPos(null);
-    }
-  }, [vpDescription]);
 
   useEffect(() => {
     if (pendingSoundRef.current) {
@@ -179,8 +166,8 @@ const GameCard: React.FC<GameCardProps> = ({
         <div
           className="absolute -left-[5px] top-[2.5%] bottom-[2.5%] w-[5px] z-[0] transition-all duration-300"
           style={{
-            boxShadow: isSelected
-              ? `0 0 12px ${accentColors[cardType]}, 0 0 24px ${accentColors[cardType]}80`
+            filter: isSelected
+              ? `drop-shadow(0 0 6px ${accentColors[cardType]}) drop-shadow(0 0 12px ${accentColors[cardType]}80)`
               : "none",
           }}
         >
@@ -242,9 +229,7 @@ const GameCard: React.FC<GameCardProps> = ({
       </div>
 
       {/* Card title at 38% from top */}
-      <div
-        className={`absolute top-[38%] left-0 right-2 z-[4] max-md:px-0.5 ${vpDescription ? "z-[10]" : ""}`}
-      >
+      <div className={"absolute top-[38%] left-0 right-2 z-[4] max-md:px-0.5"}>
         <div className="relative w-full">
           <h3
             className={`${card.name.length > 19 ? "text-[11px]" : card.name.length > 14 ? "text-[13px]" : "text-base"} font-orbitron font-semibold text-white leading-[1.2] text-left flex items-center justify-start w-full h-[44px] rounded-none p-1 pl-3 ${hasTags ? "pr-[30px]" : "pr-3"} shadow-[0_3px_6px_rgba(0,0,0,0.4)] my-0 mx-auto ${card.name.length > 19 ? "max-md:text-[9px]" : card.name.length > 14 ? "max-md:text-[11px]" : "max-md:text-sm"} max-md:h-[36px] max-md:pl-2 ${hasTags ? "max-md:pr-[25px]" : "max-md:pr-2"} ${cardType && titleStyles[cardType] ? titleStyles[cardType] : ""}`}
@@ -262,18 +247,16 @@ const GameCard: React.FC<GameCardProps> = ({
             <line x1="12" y1="0" x2="0" y2="12" stroke="rgba(60,60,70,0.7)" strokeWidth="2" />
           </svg>
         </div>
-        {/* Victory Points label below title */}
-        <div className="relative pointer-events-auto" ref={vpRef}>
-          <VictoryPointIcon
-            vpConditions={card.vpConditions}
-            onHoverDescription={setVpDescription}
-          />
-          <VPDescriptionTooltip description={vpDescription} position={vpTooltipPos} />
+        {/* Victory Points + Resource Storage label below title */}
+        <div className="relative pointer-events-auto">
+          <CardDecorBar vpConditions={card.vpConditions} resourceStorage={card.resourceStorage} />
         </div>
       </div>
 
       {/* Content section - takes up roughly half the card height and vertically centers content */}
-      <div className="absolute top-[calc(50%+20px)] left-2 right-2 bottom-4 flex items-center justify-center z-[3] max-md:top-[calc(50%+25px)] max-md:left-1.5 max-md:right-1.5 max-md:bottom-3">
+      <div
+        className={`absolute left-2 right-2 bottom-4 flex items-center justify-center z-[3] max-md:left-1.5 max-md:right-1.5 max-md:bottom-3 ${(card.vpConditions && card.vpConditions.length > 0) || card.resourceStorage ? "top-[calc(50%+38px)] max-md:top-[calc(50%+40px)]" : "top-[calc(50%+20px)] max-md:top-[calc(50%+25px)]"}`}
+      >
         <BehaviorSection behaviors={card.behaviors} />
       </div>
 

@@ -54,11 +54,11 @@ const PaymentSubstituteLayout: React.FC<PaymentSubstituteLayoutProps> = ({ behav
       {/* Left side: multiplier (if applicable) + x + affected resources */}
       <div className="flex gap-[3px] items-center">
         {leftMultiplier && (
-          <span className="text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-sm">
+          <span className="font-orbitron text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-sm">
             {leftMultiplier}
           </span>
         )}
-        <span className="text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-sm">
+        <span className="font-orbitron text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-sm">
           x
         </span>
         {affectedResources.map((resourceType: string, resIndex: number) => (
@@ -70,14 +70,14 @@ const PaymentSubstituteLayout: React.FC<PaymentSubstituteLayoutProps> = ({ behav
       </div>
 
       {/* Separator */}
-      <span className="text-base font-bold text-white mx-[3px] [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+      <span className="font-orbitron text-base font-bold text-white mx-[3px] [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
         :
       </span>
 
       {/* Right side: Credits icon with X or ratio inside */}
       <div className="relative flex items-center justify-center">
         <GameIcon iconType="credit" size="small" />
-        <span className="absolute inset-0 flex items-center justify-center text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-black [text-shadow:0_0_2px_rgba(255,255,255,0.3)] tracking-[0.5px] [-webkit-font-smoothing:antialiased] [-moz-osx-font-smoothing:grayscale] [text-rendering:optimizeLegibility] pointer-events-none max-md:text-[11px]">
+        <span className="absolute inset-0 flex items-center justify-center text-[13px] font-black font-orbitron text-black [text-shadow:0_0_2px_rgba(255,255,255,0.3)] tracking-[0.5px] [-webkit-font-smoothing:antialiased] [-moz-osx-font-smoothing:grayscale] [text-rendering:optimizeLegibility] pointer-events-none max-md:text-[11px] translate-y-px">
           {creditsText}
         </span>
       </div>

@@ -292,11 +292,10 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 		return nil // No requirements to validate
 	}
 
-	lenience := calculator.CalculateGlobalParameterLenience(player)
-
 	for _, req := range card.Requirements.Items {
 		switch req.Type {
 		case gamecards.RequirementTemperature:
+			lenience := calculator.CalculateGlobalParameterLenience(player, "temperature")
 			temp := g.GlobalParameters().Temperature()
 			if req.Min != nil && temp < *req.Min-lenience {
 				return fmt.Errorf("temperature requirement not met: need %d°C, current %d°C", *req.Min, temp)
@@ -306,6 +305,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			}
 
 		case gamecards.RequirementOxygen:
+			lenience := calculator.CalculateGlobalParameterLenience(player, "oxygen")
 			oxygen := g.GlobalParameters().Oxygen()
 			if req.Min != nil && oxygen < *req.Min-lenience {
 				return fmt.Errorf("oxygen requirement not met: need %d%%, current %d%%", *req.Min, oxygen)
@@ -315,6 +315,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			}
 
 		case gamecards.RequirementOceans:
+			lenience := calculator.CalculateGlobalParameterLenience(player, "ocean")
 			oceans := g.GlobalParameters().Oceans()
 			if req.Min != nil && oceans < *req.Min-lenience {
 				return fmt.Errorf("ocean requirement not met: need %d, current %d", *req.Min, oceans)
@@ -408,6 +409,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			// For now, skip these validations
 
 		case gamecards.RequirementVenus:
+			lenience := calculator.CalculateGlobalParameterLenience(player, "venus")
 			venus := g.GlobalParameters().Venus()
 			if req.Min != nil && venus < *req.Min-lenience {
 				return fmt.Errorf("venus requirement not met: need %d%%, current %d%%", *req.Min, venus)
@@ -458,6 +460,12 @@ func (a *PlayCardAction) applyCardBehaviors(
 			// Check for card-discard inputs — these defer output application
 			if gamecards.HasCardDiscardInput(behavior) {
 				a.createPendingCardDiscard(p, card, inputs, outputs, log)
+				continue
+			}
+
+			// Check for card-discard outputs — player must choose cards to discard first
+			if gamecards.HasCardDiscardOutput(behavior) {
+				a.createPendingCardDiscardFromOutputs(p, card, outputs, log)
 				continue
 			}
 
@@ -656,6 +664,44 @@ func (a *PlayCardAction) createPendingCardDiscard(
 		zap.Int("max_cards", maxCards),
 		zap.Bool("optional", isOptional),
 		zap.Int("pending_outputs", len(outputs)))
+}
+
+// createPendingCardDiscardFromOutputs creates a PendingCardDiscardSelection for behaviors with card-discard outputs.
+// The player must select cards to discard before remaining outputs (draws, etc.) are applied.
+func (a *PlayCardAction) createPendingCardDiscardFromOutputs(
+	p *player.Player,
+	card *gamecards.Card,
+	outputs []shared.ResourceCondition,
+	log *zap.Logger,
+) {
+	minCards := 0
+	maxCards := 0
+	var pendingOutputs []shared.ResourceCondition
+
+	for _, output := range outputs {
+		if output.ResourceType == shared.ResourceCardDiscard {
+			minCards += output.Amount
+			maxCards += output.Amount
+		} else {
+			pendingOutputs = append(pendingOutputs, output)
+		}
+	}
+
+	selection := &player.PendingCardDiscardSelection{
+		MinCards:       minCards,
+		MaxCards:       maxCards,
+		Source:         card.Name,
+		SourceCardID:   card.ID,
+		PendingOutputs: pendingOutputs,
+	}
+
+	p.Selection().SetPendingCardDiscardSelection(selection)
+
+	log.Debug("Created pending card discard selection from outputs",
+		zap.String("card_name", card.Name),
+		zap.Int("min_cards", minCards),
+		zap.Int("max_cards", maxCards),
+		zap.Int("pending_outputs", len(pendingOutputs)))
 }
 
 func adjustPaymentToEffectiveCost(

@@ -317,30 +317,30 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 		return fmt.Errorf("corporation card not found: %s", choices.CorporationID)
 	}
 
+	if corpCard.ResourceStorage != nil {
+		p.Resources().AddToStorage(choices.CorporationID, corpCard.ResourceStorage.Starting)
+	}
+
 	log.Debug("Applying corporation effects",
 		zap.String("player_id", playerID),
 		zap.String("corporation", corpCard.Name))
 
-	if err := corpProc.ApplyStartingEffects(ctx, corpCard, p, g); err != nil {
-		return fmt.Errorf("failed to apply corporation starting effects: %w", err)
+	// Register trigger effects BEFORE applying starting effects so that
+	// production-increased triggers (e.g. Manutech) fire on starting production
+	triggerEffects := corpProc.GetTriggerEffects(corpCard)
+	for _, effect := range triggerEffects {
+		p.Effects().AddEffect(effect)
+		baseaction.SubscribePassiveEffectToEvents(ctx, g, p, effect, log, cardRegistry)
+		g.AddTriggeredEffect(game.TriggeredEffect{
+			CardName:   corpCard.Name,
+			PlayerID:   p.ID(),
+			SourceType: game.SourceTypeEffectAdded,
+			Behaviors:  []shared.CardBehavior{effect.Behavior},
+		})
 	}
 
-	// Append forced first action outputs (e.g. city-placement) to the starting effects notification.
-	// Must happen immediately after ApplyStartingEffects so the starting credits effect is the
-	// last triggered effect for this player (before auto/trigger effects are added).
-	for _, behavior := range corpCard.Behaviors {
-		if gamecards.HasCorporationFirstActionTrigger(behavior) {
-			var outputs []game.CalculatedOutput
-			for _, output := range behavior.Outputs {
-				outputs = append(outputs, game.CalculatedOutput{
-					ResourceType: string(output.ResourceType),
-					Amount:       output.Amount,
-				})
-			}
-			if len(outputs) > 0 {
-				g.AppendToLastTriggeredEffect(p.ID(), outputs)
-			}
-		}
+	if err := corpProc.ApplyStartingEffects(ctx, corpCard, p, g); err != nil {
+		return fmt.Errorf("failed to apply corporation starting effects: %w", err)
 	}
 
 	if err := corpProc.ApplyAutoEffects(ctx, corpCard, p, g); err != nil {
@@ -350,18 +350,6 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 	autoEffects := corpProc.GetAutoEffects(corpCard)
 	for _, effect := range autoEffects {
 		p.Effects().AddEffect(effect)
-		g.AddTriggeredEffect(game.TriggeredEffect{
-			CardName:   corpCard.Name,
-			PlayerID:   p.ID(),
-			SourceType: game.SourceTypeEffectAdded,
-			Behaviors:  []shared.CardBehavior{effect.Behavior},
-		})
-	}
-
-	triggerEffects := corpProc.GetTriggerEffects(corpCard)
-	for _, effect := range triggerEffects {
-		p.Effects().AddEffect(effect)
-		baseaction.SubscribePassiveEffectToEvents(ctx, g, p, effect, log, cardRegistry)
 		g.AddTriggeredEffect(game.TriggeredEffect{
 			CardName:   corpCard.Name,
 			PlayerID:   p.ID(),
@@ -392,6 +380,7 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 		})
 	}
 
+	corpProc.WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, cardRegistry))
 	if err := corpProc.SetupForcedFirstAction(ctx, corpCard, g, p.ID()); err != nil {
 		return fmt.Errorf("failed to setup forced first action: %w", err)
 	}
@@ -438,7 +427,7 @@ func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, 
 		zap.Strings("preludes", choices.PreludeIDs))
 
 	for _, preludeID := range choices.PreludeIDs {
-		if err := applyPreludeCard(ctx, g, p, preludeID, cardRegistry, log); err != nil {
+		if err := ApplyPreludeCard(ctx, g, p, preludeID, cardRegistry, log); err != nil {
 			return fmt.Errorf("failed to apply prelude %s: %w", preludeID, err)
 		}
 	}
@@ -449,7 +438,9 @@ func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, 
 	return nil
 }
 
-func applyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, preludeID string, cardRegistry cards.CardRegistry, log *zap.Logger) error {
+// ApplyPreludeCard applies a single prelude card's effects: adds to played cards,
+// processes auto behaviors, registers trigger effects and manual actions.
+func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, preludeID string, cardRegistry cards.CardRegistry, log *zap.Logger) error {
 	card, err := cardRegistry.GetByID(preludeID)
 	if err != nil {
 		return fmt.Errorf("prelude card not found: %s", preludeID)

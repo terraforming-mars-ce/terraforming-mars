@@ -53,7 +53,7 @@ func TestWaterImportFromEuropa_PayWithCreditsOnly(t *testing.T) {
 
 	payment := &gamecards.CardPayment{Credits: 12}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
 	testutil.AssertNoError(t, err, "Water Import action should succeed with credits only")
 
 	resources := p.Resources().Get()
@@ -101,7 +101,7 @@ func TestWaterImportFromEuropa_PayWithTitaniumAndCredits(t *testing.T) {
 	// Pay 6 credits + 2 titanium (value 3 each = 6) = 12 total
 	payment := &gamecards.CardPayment{Credits: 6, Titanium: 2}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
 	testutil.AssertNoError(t, err, "Water Import action should succeed with titanium + credits")
 
 	resources := p.Resources().Get()
@@ -150,7 +150,7 @@ func TestWaterImportFromEuropa_FailInsufficientPayment(t *testing.T) {
 	// Pay 3 credits + 1 titanium (value 3) = 6, need 12
 	payment := &gamecards.CardPayment{Credits: 3, Titanium: 1}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
 	testutil.AssertError(t, err, "Should fail with insufficient payment")
 }
 
@@ -195,7 +195,7 @@ func TestWaterImportFromEuropa_FailSteelNotAllowed(t *testing.T) {
 	// Try to pay with steel (not allowed)
 	payment := &gamecards.CardPayment{Credits: 6, Steel: 3}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
 	testutil.AssertError(t, err, "Should fail when using steel (not allowed)")
 }
 
@@ -238,7 +238,7 @@ func TestWaterImportFromEuropa_NoPaymentFallsBackToCredits(t *testing.T) {
 
 	// No payment provided — should fall back to credits-only
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should succeed with no payment (falls back to credits)")
 
 	resources := p.Resources().Get()
@@ -303,7 +303,7 @@ func TestRotatorImpacts_Choice1_PayWithTitanium(t *testing.T) {
 	// Pay with 2 titanium (3 MC each = 6 MC total)
 	payment := &gamecards.CardPayment{Credits: 0, Titanium: 2}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, nil, nil, nil, nil, payment)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, nil, nil, nil, nil, payment, nil)
 	testutil.AssertNoError(t, err, "Rotator Impacts choice 1 should succeed with titanium")
 
 	resources := p.Resources().Get()
@@ -354,7 +354,7 @@ func TestWaterImportFromEuropa_TitaniumWithValueModifier(t *testing.T) {
 	// Pay with 3 titanium (4 MC each with modifier = 12 MC total)
 	payment := &gamecards.CardPayment{Credits: 0, Titanium: 3}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
 	testutil.AssertNoError(t, err, "Should succeed with titanium value modifier")
 
 	resources := p.Resources().Get()

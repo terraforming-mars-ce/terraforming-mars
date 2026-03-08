@@ -20,7 +20,7 @@ import StartingCardSelectionOverlay from "../../ui/overlay/StartingCardSelection
 import PendingCardSelectionOverlay from "../../ui/overlay/PendingCardSelectionOverlay.tsx";
 import CardDrawSelectionOverlay from "../../ui/overlay/CardDrawSelectionOverlay.tsx";
 import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOverlay.tsx";
-import CardFanOverlay from "../../ui/overlay/CardFanOverlay.tsx";
+import CardFanOverlay, { CardFanOverlayHandle } from "../../ui/overlay/CardFanOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import YourTurnBanner from "../../ui/overlay/YourTurnBanner.tsx";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
@@ -36,6 +36,7 @@ import CardStorageSelectionPopover from "../../ui/popover/CardStorageSelectionPo
 import TargetPlayerSelectionPopover from "../../ui/popover/TargetPlayerSelectionPopover.tsx";
 import CardResourceSelectionPopover from "../../ui/popover/CardResourceSelectionPopover.tsx";
 import AmountSelectionPopover from "../../ui/popover/AmountSelectionPopover.tsx";
+import ActionReusePopover from "../../ui/popover/ActionReusePopover.tsx";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import { apiService } from "@/services/apiService.ts";
 import { getTabManager } from "@/utils/tabManager.ts";
@@ -94,6 +95,7 @@ export default function GameInterface() {
   const [isConnected, setIsConnected] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>("idle");
   const wasInLobby = useRef(false);
+  const cardFanRef = useRef<CardFanOverlayHandle>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectionStep, setReconnectionStep] = useState<"game" | "environment" | null>(null);
   const [currentPlayer, setCurrentPlayer] = useState<PlayerDto | null>(null);
@@ -189,6 +191,14 @@ export default function GameInterface() {
   // Action choice selection state (for playing actions with choices)
   const [showActionChoiceSelection, setShowActionChoiceSelection] = useState(false);
   const [actionPendingChoice, setActionPendingChoice] = useState<PlayerActionDto | null>(null);
+
+  // Action reuse state (for Viron-style abilities)
+  const [showActionReuseSelection, setShowActionReuseSelection] = useState(false);
+  const [pendingActionReuse, setPendingActionReuse] = useState<{
+    cardId: string;
+    behaviorIndex: number;
+  } | null>(null);
+  const activeReuseSourceCardId = useRef<string | undefined>(undefined);
 
   // Passive triggered behavior choice state (from server pending selection)
   const [showBehaviorChoiceSelection, setShowBehaviorChoiceSelection] = useState(false);
@@ -835,10 +845,12 @@ export default function GameInterface() {
           b.triggers?.some((t) => t.type === "auto"),
         );
         for (const behavior of autoTriggerBehaviors || []) {
-          const outputs =
-            choiceIndex !== undefined ? behavior.choices?.[choiceIndex]?.outputs : behavior.outputs;
-          const inputs =
-            choiceIndex !== undefined ? behavior.choices?.[choiceIndex]?.inputs : behavior.inputs;
+          const matchedChoice =
+            choiceIndex !== undefined
+              ? behavior.choices?.find((c) => c.originalIndex === choiceIndex)
+              : undefined;
+          const outputs = matchedChoice ? matchedChoice.outputs : behavior.outputs;
+          const inputs = matchedChoice ? matchedChoice.inputs : behavior.inputs;
           const variableInfo = getVariableAmountInfo(inputs, outputs);
           if (variableInfo) {
             setPendingVariableAmount({
@@ -863,8 +875,11 @@ export default function GameInterface() {
           b.triggers?.some((t) => t.type === "auto"),
         );
         for (const behavior of autoTriggerBehaviors || []) {
-          const outputs =
-            choiceIndex !== undefined ? behavior.choices?.[choiceIndex]?.outputs : behavior.outputs;
+          const matchedChoice2 =
+            choiceIndex !== undefined
+              ? behavior.choices?.find((c) => c.originalIndex === choiceIndex)
+              : undefined;
+          const outputs = matchedChoice2 ? matchedChoice2.outputs : behavior.outputs;
           const targetInfo = needsTargetPlayerSelection(outputs);
           if (targetInfo) {
             setPendingTargetPlayer({
@@ -1007,7 +1022,7 @@ export default function GameInterface() {
 
         // Check storage first, then payment
         const behavior = cardPendingChoice.behaviors?.[pendingCardBehaviorIndex];
-        const selectedChoice = behavior?.choices?.[choiceIndex];
+        const selectedChoice = behavior?.choices?.find((c) => c.originalIndex === choiceIndex);
 
         // Collect ALL any-card storage needs from choice outputs and behavior outputs
         const allStorageNeeds: Array<{
@@ -1109,8 +1124,10 @@ export default function GameInterface() {
       try {
         setShowActionChoiceSelection(false);
 
-        // Get the selected choice
-        const selectedChoice = actionPendingChoice.behavior.choices?.[choiceIndex];
+        // Get the selected choice by originalIndex (choices may have been filtered by policy)
+        const selectedChoice = actionPendingChoice.behavior.choices?.find(
+          (c) => c.originalIndex === choiceIndex,
+        );
 
         // Check for self-card storage first
         const storageInfo = needsCardStorageSelection(selectedChoice?.outputs);
@@ -1131,11 +1148,18 @@ export default function GameInterface() {
             setShowActionTargetPlayerSelection(true);
             setActionPendingChoice(null);
           } else {
+            const reuseId = activeReuseSourceCardId.current;
+            activeReuseSourceCardId.current = undefined;
             await globalWebSocketManager.playCardAction(
               actionPendingChoice.cardId,
               actionPendingChoice.behaviorIndex,
               choiceIndex,
               [actionPendingChoice.cardId],
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              reuseId,
             );
             setActionPendingChoice(null);
           }
@@ -1185,10 +1209,18 @@ export default function GameInterface() {
               setShowActionTargetPlayerSelection(true);
               setActionPendingChoice(null);
             } else {
+              const reuseId = activeReuseSourceCardId.current;
+              activeReuseSourceCardId.current = undefined;
               await globalWebSocketManager.playCardAction(
                 actionPendingChoice.cardId,
                 actionPendingChoice.behaviorIndex,
                 choiceIndex,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                reuseId,
               );
               setActionPendingChoice(null);
             }
@@ -1196,10 +1228,11 @@ export default function GameInterface() {
         }
       } catch (error) {
         console.error(
-          `❌ Failed to play action ${actionPendingChoice.cardId} with choice ${choiceIndex}:`,
+          `Failed to play action ${actionPendingChoice.cardId} with choice ${choiceIndex}:`,
           error,
         );
         setActionPendingChoice(null);
+        activeReuseSourceCardId.current = undefined;
       }
     },
     [
@@ -1215,6 +1248,61 @@ export default function GameInterface() {
     setActionPendingChoice(null);
   }, []);
 
+  const handleActionReuseSelect = useCallback(
+    (targetAction: PlayerActionDto) => {
+      if (!pendingActionReuse) return;
+      setShowActionReuseSelection(false);
+
+      // For the reused action, we need to handle its sub-flows (choices, storage, etc.)
+      // Set the reuse source so downstream playCardAction calls include it
+      activeReuseSourceCardId.current = pendingActionReuse.cardId;
+
+      // Re-enter the normal action handling flow for the target action
+      // Check if this action has choices
+      if (targetAction.behavior.choices && targetAction.behavior.choices.length > 0) {
+        setActionPendingChoice(targetAction);
+        setShowActionChoiceSelection(true);
+      } else {
+        // Check for self-card storage
+        const storageInfo = needsCardStorageSelection(targetAction.behavior.outputs);
+        if (storageInfo && storageInfo.target === "self-card") {
+          void globalWebSocketManager.playCardAction(
+            targetAction.cardId,
+            targetAction.behaviorIndex,
+            undefined,
+            [targetAction.cardId],
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            pendingActionReuse.cardId,
+          );
+        } else {
+          void globalWebSocketManager.playCardAction(
+            targetAction.cardId,
+            targetAction.behaviorIndex,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            pendingActionReuse.cardId,
+          );
+        }
+        activeReuseSourceCardId.current = undefined;
+      }
+      setPendingActionReuse(null);
+    },
+    [pendingActionReuse, needsCardStorageSelection],
+  );
+
+  const handleActionReuseCancel = useCallback(() => {
+    setShowActionReuseSelection(false);
+    setPendingActionReuse(null);
+    activeReuseSourceCardId.current = undefined;
+  }, []);
+
   // Passive triggered behavior choice handlers
   const handleBehaviorChoiceSelect = useCallback(
     async (choiceIndex: number) => {
@@ -1222,7 +1310,9 @@ export default function GameInterface() {
       if (!pendingBehaviorChoice) return;
 
       try {
-        const selectedChoice = pendingBehaviorChoice.choices[choiceIndex];
+        const selectedChoice = pendingBehaviorChoice.choices.find(
+          (c) => c.originalIndex === choiceIndex,
+        );
 
         // Collect ALL any-card storage needs
         const allStorageNeeds: Array<{
@@ -1435,7 +1525,9 @@ export default function GameInterface() {
         );
         const outputs =
           pendingActionStorage.choiceIndex !== undefined
-            ? action?.behavior.choices?.[pendingActionStorage.choiceIndex]?.outputs
+            ? action?.behavior.choices?.find(
+                (c) => c.originalIndex === pendingActionStorage.choiceIndex,
+              )?.outputs
             : action?.behavior.outputs;
         const targetInfo = needsTargetPlayerSelection(outputs);
 
@@ -1727,6 +1819,19 @@ export default function GameInterface() {
     (action: PlayerActionDto) => {
       // Block actions when tile selection is pending
       if (currentPlayer?.pendingTileSelection) {
+        return;
+      }
+
+      // Check if this is an action-reuse action (e.g., Viron)
+      const isActionReuse = action.behavior.outputs?.some(
+        (o: { type: string }) => o.type === "action-reuse",
+      );
+      if (isActionReuse) {
+        setPendingActionReuse({
+          cardId: action.cardId,
+          behaviorIndex: action.behaviorIndex,
+        });
+        setShowActionReuseSelection(true);
         return;
       }
 
@@ -2516,6 +2621,65 @@ export default function GameInterface() {
     [handleActionSelect, handleConvertPlantsToGreenery, handleConvertHeatToTemperature],
   );
 
+  // Hotkeys: Space (toggle hand fan), Enter (pass/skip turn)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+        return;
+      }
+
+      const anyModalOpen =
+        showStartingSelection ||
+        showPendingCardSelection ||
+        showCardDrawSelection ||
+        showCardDiscardSelection ||
+        showBehaviorChoiceSelection ||
+        showProductionPhaseModal ||
+        showPaymentSelection ||
+        isPreGamePhase ||
+        isInitApplyPhase;
+
+      if (e.key === " ") {
+        e.preventDefault();
+        if (!anyModalOpen && !spectatePlayerId && !isSpectator) {
+          cardFanRef.current?.toggleExpand();
+        }
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (
+          !anyModalOpen &&
+          game?.currentPhase === GamePhaseAction &&
+          currentPlayer?.id === game?.currentTurn &&
+          !currentPlayer?.pendingTileSelection
+        ) {
+          void globalWebSocketManager.skipAction();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    spectatePlayerId,
+    isSpectator,
+    showStartingSelection,
+    showPendingCardSelection,
+    showCardDrawSelection,
+    showCardDiscardSelection,
+    showBehaviorChoiceSelection,
+    showProductionPhaseModal,
+    showPaymentSelection,
+    isPreGamePhase,
+    isInitApplyPhase,
+    game?.currentPhase,
+    game?.currentTurn,
+    currentPlayer?.id,
+    currentPlayer?.pendingTileSelection,
+  ]);
+
   // Check if we need the persistent backdrop (during overlay transitions)
   const shouldShowBackdrop = showStartingSelection;
 
@@ -2916,6 +3080,7 @@ export default function GameInterface() {
           }`}
         >
           <CardFanOverlay
+            ref={cardFanRef}
             cards={currentPlayer.cards || []}
             hideWhenModalOpen={
               showStartingSelection ||
@@ -2980,6 +3145,18 @@ export default function GameInterface() {
           isAction={true}
           playerResources={currentPlayer?.resources}
           resourceStorage={currentPlayer?.resourceStorage}
+        />
+      )}
+
+      {/* Action reuse popover (Viron) */}
+      {pendingActionReuse && currentPlayer?.actions && (
+        <ActionReusePopover
+          isVisible={showActionReuseSelection}
+          onClose={handleActionReuseCancel}
+          actions={currentPlayer.actions}
+          reuseSourceCardId={pendingActionReuse.cardId}
+          onActionSelect={handleActionReuseSelect}
+          gameState={game ?? undefined}
         />
       )}
 

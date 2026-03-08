@@ -62,20 +62,19 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
       };
     }
 
+    if (selection.playAsPrelude) {
+      return {
+        title: "Select prelude",
+        description: "Select 1 prelude card to play",
+      };
+    }
+
     // For all peek/take/buy scenarios, use consistent "Select cards" title
     const maxCards = selection.freeTakeCount + selection.maxBuyCount;
     return {
       title: "Select cards",
       description: `Select up to ${maxCards} card${maxCards !== 1 ? "s" : ""}`,
     };
-  };
-
-  const getCardBadge = (cardId: string): { type: "free" | "buy"; value?: number } => {
-    if (cardsToTake.includes(cardId)) {
-      return { type: "free" };
-    } else {
-      return { type: "buy", value: selection.cardBuyCost };
-    }
   };
 
   const canAffordBuy = (): boolean => {
@@ -200,7 +199,6 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
           <div className={OVERLAY_CARDS_INNER_CLASS}>
             {selection.availableCards.map((card, index) => {
               const isSelected = cardsToTake.includes(card.id) || cardsToBuy.includes(card.id);
-              const badge = getCardBadge(card.id);
 
               return (
                 <div key={card.id} className="relative">
@@ -211,12 +209,6 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
                     animationDelay={index * 100}
                     showCheckbox={!isCardDraw}
                   />
-                  {/* FREE Badge - only show for cards in free take list */}
-                  {!isCardDraw && badge.type === "free" && (
-                    <div className="absolute top-2 right-2 px-2 py-1 rounded-md font-bold text-sm shadow-lg bg-[#4caf50] text-white">
-                      FREE
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -225,20 +217,22 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
 
         {/* Footer with cost and confirm button */}
         <div className={OVERLAY_FOOTER_CLASS}>
-          <div className="flex gap-8 items-center max-[768px]:w-full max-[768px]:justify-between max-[768px]:flex-wrap">
-            <div className="flex items-center gap-3">
-              <span className={RESOURCE_LABEL_CLASS}>Your Credits:</span>
-              <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size="large" />
-            </div>
-            {totalBuyCost > 0 && (
+          {!selection.playAsPrelude && (
+            <div className="flex gap-8 items-center max-[768px]:w-full max-[768px]:justify-between max-[768px]:flex-wrap">
               <div className="flex items-center gap-3">
-                <span className={RESOURCE_LABEL_CLASS}>Buy Cost:</span>
-                <GameIcon iconType={ResourceTypeCredit} amount={totalBuyCost} size="large" />
+                <span className={RESOURCE_LABEL_CLASS}>Your Credits:</span>
+                <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size="large" />
               </div>
-            )}
-          </div>
+              {totalBuyCost > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className={RESOURCE_LABEL_CLASS}>Buy Cost:</span>
+                  <GameIcon iconType={ResourceTypeCredit} amount={totalBuyCost} size="large" />
+                </div>
+              )}
+            </div>
+          )}
 
-          <div className="flex items-center gap-6 max-[768px]:w-full max-[768px]:flex-col max-[768px]:gap-3">
+          <div className="flex items-center gap-6 ml-auto max-[768px]:w-full max-[768px]:flex-col max-[768px]:gap-3">
             <div className="text-sm">
               {isCardDraw ? (
                 <span className="text-white/70">

@@ -111,6 +111,11 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 		actionPayment = payment
 	}
 
+	var reuseSourceCardID *string
+	if rsci, ok := payload["reuseSourceCardId"].(string); ok && rsci != "" {
+		reuseSourceCardID = &rsci
+	}
+
 	log = log.With(
 		zap.String("card_id", cardID),
 		zap.Int("behavior_index", behaviorIndex),
@@ -127,8 +132,11 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 	if stealSourceCardID != nil {
 		log = log.With(zap.String("source_card_for_input", *stealSourceCardID))
 	}
+	if reuseSourceCardID != nil {
+		log = log.With(zap.String("reuse_source_card_id", *reuseSourceCardID))
+	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, behaviorIndex, choiceIndex, cardStorageTargets, targetPlayerID, stealSourceCardID, selectedAmount, actionPayment)
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, behaviorIndex, choiceIndex, cardStorageTargets, targetPlayerID, stealSourceCardID, selectedAmount, actionPayment, reuseSourceCardID)
 	if err != nil {
 		log.Error("Failed to execute use card action", zap.Error(err))
 		h.sendError(connection, err.Error())

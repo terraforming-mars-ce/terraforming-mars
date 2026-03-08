@@ -197,7 +197,7 @@ func TestSpecialDesign_LenienceAppliedToNextCard(t *testing.T) {
 
 	// Verify: lenience is calculated
 	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
-	lenience := calculator.CalculateGlobalParameterLenience(player)
+	lenience := calculator.CalculateGlobalParameterLenience(player, "temperature")
 	testutil.AssertEqual(t, 2, lenience, "Should have 2 lenience from Special Design")
 
 	// Now the card should be playable: temp -26, requirement -24 with lenience 2 -> effective min -26

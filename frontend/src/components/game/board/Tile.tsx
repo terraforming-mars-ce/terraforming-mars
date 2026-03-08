@@ -1,19 +1,16 @@
-import { useRef, useState, useMemo, useEffect, type RefObject } from "react";
+import { useRef, useState, useMemo, useEffect, memo, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { HexTile2D } from "../../../utils/hex-grid-2d";
-import { panState } from "../controls/PanControls";
 import OceanTile from "./OceanTile";
 import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
-import LivingGreeneryTile from "./LivingGreeneryTile";
 import MiningTile from "./MiningTile";
 import ReservedAreaTile from "./ReservedAreaTile";
 import WorldTreeTile from "./WorldTreeTile";
 import { useTextures } from "../../../hooks/useTextures";
-import { useHoverSound } from "../../../hooks/useHoverSound";
 import {
   sphereProjectionVertex,
   hoverGlowFragment,
@@ -178,19 +175,23 @@ function ClampedBillboard({
   const ref = useRef<THREE.Group>(null);
   const billboardQuat = useMemo(() => new THREE.Quaternion(), []);
   const flatQuat = useMemo(() => new THREE.Quaternion(), []);
+  const depthFixedRef = useRef(false);
   useFrame(({ camera }) => {
     const group = ref.current;
     if (!group) return;
 
-    group.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.material) {
-        const materials = Array.isArray(child.material) ? child.material : [child.material];
-        for (const mat of materials) {
-          mat.depthTest = false;
-          mat.depthWrite = false;
+    if (!depthFixedRef.current) {
+      group.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          for (const mat of materials) {
+            mat.depthTest = false;
+            mat.depthWrite = false;
+          }
         }
-      }
-    });
+      });
+      depthFixedRef.current = true;
+    }
 
     group.lookAt(camera.position);
     billboardQuat.copy(group.quaternion);
@@ -253,6 +254,7 @@ interface TileProps {
   entranceDelay?: number;
   isNewlyPlaced?: boolean;
   isVolcanic?: boolean;
+  isHovered?: boolean;
   onHoverInfo?: (data: TileHoverInfo) => void;
   onHoverMove?: (position: { x: number; y: number }) => void;
   onHoverLeave?: () => void;
@@ -261,16 +263,16 @@ interface TileProps {
   tileOpacity?: RefObject<number>;
 }
 
-export default function Tile({
+function Tile({
   tileData,
   tileType,
   ownerId,
   ownerColor,
   reservedById,
   displayName,
-  isOceanSpace = false,
-  bonuses = {},
-  onClick,
+  isOceanSpace: _isOceanSpace = false,
+  bonuses: _bonuses = {},
+  onClick: _onClick,
   isAvailableForPlacement = false,
   highlightMode = null,
   vpAmount,
@@ -279,9 +281,7 @@ export default function Tile({
   entranceDelay = 0,
   isNewlyPlaced = false,
   isVolcanic = false,
-  onHoverInfo,
-  onHoverMove,
-  onHoverLeave,
+  isHovered: isHoveredProp = false,
   sphereRadius = SPHERE_RADIUS,
   sphereCenter = ORIGIN,
   tileOpacity,
@@ -289,9 +289,9 @@ export default function Tile({
   const tileGroupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const vpTextRef = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState(false);
+  const extraMatsRef = useRef<THREE.Material[] | null>(null);
+  const hovered = isHoveredProp;
   const animationStartTimeRef = useRef<number | null>(null);
-  const hoverSound = useHoverSound();
 
   const [entranceScale, setEntranceScale] = useState(animateEntrance ? 0 : 1);
   const entranceStartRef = useRef<number | null>(null);
@@ -407,6 +407,15 @@ export default function Tile({
   }, [sphereRadius, sphereCenter]);
 
   useFrame((state) => {
+    // Update colors for hover state (avoids recreating materials)
+    if (hovered) {
+      hexTileMaterial.color.set("#ffff88");
+      borderMaterial.uniforms.uColor.value.set("#ffffff");
+    } else {
+      hexTileMaterial.color.copy(baseTileColor);
+      borderMaterial.uniforms.uColor.value.copy(baseBorderColor);
+    }
+
     if (animateEntrance && !entranceDoneRef.current) {
       if (entranceStartRef.current === null) {
         entranceStartRef.current = state.clock.elapsedTime;
@@ -501,26 +510,34 @@ export default function Tile({
       hoverGlowMaterial.uniforms.opacity.value *= o;
       endGameHighlightMaterial.uniforms.opacity.value *= o;
 
-      const knownMats = new Set([
-        hexTileMaterial,
-        borderMaterial,
-        hoverGlowMaterial,
-        availableGlowMaterial,
-        endGameHighlightMaterial,
-        volcanicTintMaterial,
-      ]);
-      tileGroupRef.current.traverse((child) => {
-        if (!(child instanceof THREE.Mesh)) return;
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        for (const mat of mats) {
-          if (knownMats.has(mat)) continue;
-          if (!mat.transparent) {
-            mat.transparent = true;
-            mat.needsUpdate = true;
+      if (!extraMatsRef.current) {
+        const knownMats = new Set<THREE.Material>([
+          hexTileMaterial,
+          borderMaterial,
+          hoverGlowMaterial,
+          availableGlowMaterial,
+          endGameHighlightMaterial,
+          volcanicTintMaterial,
+        ]);
+        const extras: THREE.Material[] = [];
+        tileGroupRef.current.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          for (const mat of mats) {
+            if (knownMats.has(mat)) continue;
+            if (!mat.transparent) {
+              mat.transparent = true;
+              mat.needsUpdate = true;
+            }
+            extras.push(mat);
           }
-          mat.opacity = o;
-        }
-      });
+        });
+        extraMatsRef.current = extras;
+      }
+
+      for (const mat of extraMatsRef.current) {
+        mat.opacity = o;
+      }
     }
   });
 
@@ -535,9 +552,7 @@ export default function Tile({
     return tileData.spherePosition.clone().add(tileData.normal.clone().multiplyScalar(0.01));
   }, [tileData.spherePosition, tileData.normal]);
 
-  const tileColor = useMemo(() => {
-    if (hovered) return new THREE.Color("#ffff88");
-
+  const baseTileColor = useMemo(() => {
     switch (tileType) {
       case "ocean":
         return new THREE.Color("#1e88e5");
@@ -561,22 +576,21 @@ export default function Tile({
       case "world-tree":
         return new THREE.Color("#1a3a12");
       default:
-        return tileData.isOceanSpace
-          ? new THREE.Color("#6d4c41").multiplyScalar(0.8)
-          : new THREE.Color("#6d4c41").multiplyScalar(0.8);
+        return new THREE.Color("#6d4c41").multiplyScalar(0.8);
     }
-  }, [tileType, tileData.isOceanSpace, hovered]);
+  }, [tileType]);
 
-  const borderColor = useMemo(() => {
-    if (hovered) return new THREE.Color("#ffffff");
-    if (ownerColor) return new THREE.Color(ownerColor);
-    return tileColor.clone().multiplyScalar(0.25);
-  }, [tileColor, hovered, ownerColor]);
+  const baseBorderColor = useMemo(() => {
+    if (ownerColor) {
+      return new THREE.Color(ownerColor);
+    }
+    return baseTileColor.clone().multiplyScalar(0.25);
+  }, [baseTileColor, ownerColor]);
 
   const hexTileMaterial = useMemo(() => {
     const isGreenery = tileType === "greenery";
     const material = new THREE.MeshStandardMaterial({
-      color: tileColor,
+      color: baseTileColor,
       transparent: true,
       opacity:
         isGreenery ||
@@ -611,7 +625,7 @@ export default function Tile({
     };
 
     return material;
-  }, [tileColor, tileType, sphereRadius, sphereCenter]);
+  }, [baseTileColor, tileType, sphereRadius, sphereCenter]);
 
   const baseHexOpacity = useMemo(() => {
     if (
@@ -632,7 +646,7 @@ export default function Tile({
       uniforms: {
         uSphereRadius: { value: sphereRadius },
         uZOffset: { value: CHROME_Z_BASE + 0.0025 },
-        uColor: { value: new THREE.Color(borderColor.r, borderColor.g, borderColor.b) },
+        uColor: { value: new THREE.Color(baseBorderColor.r, baseBorderColor.g, baseBorderColor.b) },
         uOpacity: { value: 0.9 },
         uNoiseTex: { value: borderNoiseTexture },
         uSphereCenter: { value: sphereCenter },
@@ -641,7 +655,7 @@ export default function Tile({
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-  }, [borderColor, borderNoiseTexture, sphereRadius, sphereCenter]);
+  }, [baseBorderColor, borderNoiseTexture, sphereRadius, sphereCenter]);
 
   interface BonusIconGroup {
     type: string;
@@ -705,43 +719,7 @@ export default function Tile({
           geometry={hexGeometry}
           material={hexTileMaterial}
           renderOrder={10}
-          onPointerEnter={(event) => {
-            if (tileOpacity && tileOpacity.current < 0.5) return;
-            if (!panState.isPanning) {
-              setHovered(true);
-              if (isAvailableForPlacement) {
-                hoverSound.onMouseEnter?.();
-              }
-              onHoverInfo?.({
-                position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
-                tileType,
-                displayName,
-                ownerId: ownerId || null,
-                reservedById: reservedById || null,
-                isOceanSpace,
-                isVolcanic,
-                bonuses,
-              });
-            }
-          }}
-          onPointerMove={(event) => {
-            if (!panState.isPanning) {
-              onHoverMove?.({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
-            }
-          }}
-          onPointerLeave={() => {
-            setHovered(false);
-            onHoverLeave?.();
-          }}
-          onClick={(event) => {
-            if (tileOpacity && tileOpacity.current < 0.5) return;
-            if (panState.isPanning) return;
-            event.stopPropagation();
-            if (isAvailableForPlacement) {
-              hoverSound.onClick?.();
-            }
-            onClick();
-          }}
+          raycast={() => {}}
         />
       )}
 
@@ -830,17 +808,6 @@ export default function Tile({
           isNewlyPlaced={isNewlyPlaced}
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}
-        />
-      )}
-
-      {/* Living Greenery (ecological zone / natural preserve) */}
-      {(tileType === "ecological-zone" || tileType === "natural-preserve") && (
-        <LivingGreeneryTile
-          seed={
-            Math.abs(tileData.coordinate.q * 73856093) ^
-            (tileData.coordinate.r * 19349663) ^
-            (tileData.coordinate.s * 83492791)
-          }
         />
       )}
 
@@ -982,6 +949,9 @@ export default function Tile({
     </group>
   );
 }
+
+const MemoizedTile = memo(Tile);
+export default MemoizedTile;
 
 interface BonusIconProps {
   texture: THREE.Texture;

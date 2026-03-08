@@ -9,6 +9,7 @@ interface BehaviorContainerProps {
   description?: string;
   isHovered?: boolean;
   onHover?: (index: number | null) => void;
+  noContainer?: boolean;
   children: React.ReactNode;
 }
 
@@ -64,13 +65,22 @@ const BehaviorContainer: React.FC<BehaviorContainerProps> = ({
   description,
   isHovered = false,
   onHover,
+  noContainer = false,
   children,
 }) => {
-  const { type } = classifiedBehavior;
+  const { type: rawType } = classifiedBehavior;
+  const type = noContainer ? ("auto-no-background" as const) : rawType;
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMouseEnter = () => onHover?.(index);
   const handleMouseLeave = () => onHover?.(null);
+
+  useEffect(() => {
+    if (!isHovered) return;
+    const dismiss = () => onHover?.(null);
+    window.addEventListener("scroll", dismiss, true);
+    return () => window.removeEventListener("scroll", dismiss, true);
+  }, [isHovered, onHover]);
 
   if (type === "auto-no-background") {
     return (

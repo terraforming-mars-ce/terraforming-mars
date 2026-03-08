@@ -2,17 +2,17 @@ import React from "react";
 import { createPortal } from "react-dom";
 import { FormattedDescription } from "./FormattedDescription.tsx";
 
-interface VPDescriptionTooltipProps {
+interface DecorBoxTooltipProps {
   description: string | null;
   position: { x: number; y: number } | null;
 }
 
-const VPDescriptionTooltip: React.FC<VPDescriptionTooltipProps> = ({ description, position }) => {
+const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({ description, position }) => {
   if (!description || !position) return null;
 
   return createPortal(
     <div
-      className="fixed w-max max-w-40 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
+      className="fixed w-max max-w-40 -translate-x-1/2 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
       style={{ left: position.x, top: position.y, zIndex: 99999 }}
     >
       <div
@@ -41,4 +41,4 @@ const VPDescriptionTooltip: React.FC<VPDescriptionTooltipProps> = ({ description
   );
 };
 
-export default VPDescriptionTooltip;
+export default DecorBoxTooltip;

@@ -164,6 +164,11 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
               SR
             </span>
           </div>
+          {behavior.choicePolicy && (
+            <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+              *
+            </span>
+          )}
         </div>
       );
     }
@@ -363,6 +368,38 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
             {choiceIndex < behavior.choices.length - 1 && <OrChip />}
           </div>
         ))}
+      </div>
+    );
+  }
+
+  // Check for action-reuse output (e.g., Viron)
+  const hasActionReuse =
+    behavior.outputs &&
+    behavior.outputs.some((o: any) => (o.type || o.resourceType) === "action-reuse");
+  if (hasActionReuse) {
+    return (
+      <div className="flex items-center justify-center gap-1 w-full">
+        {!hideActionChip && (
+          <span className="text-[10px] font-semibold text-white bg-[rgba(33,150,243,0.5)] px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
+            Action
+          </span>
+        )}
+        <div className="bg-white/[0.08] border border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.15)] rounded px-2 py-1 flex items-center justify-center">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="opacity-80"
+          >
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+          </svg>
+        </div>
       </div>
     );
   }

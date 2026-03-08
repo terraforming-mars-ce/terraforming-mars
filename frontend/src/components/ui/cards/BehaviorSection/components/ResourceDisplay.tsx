@@ -125,9 +125,10 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     }
   }
 
-  // Handle production WITHOUT per condition in ACTION context only (e.g., energy-production input in Equatorial Magnetizer)
-  // Other contexts (standalone, production) already have parent components that wrap in brown boxes
-  if (isProduction && !hasPer && context === "action") {
+  // Handle production WITHOUT per condition - wrap in brown production box
+  // "action" context: e.g., energy-production input in Equatorial Magnetizer
+  // "default" context: e.g., production outputs in triggered effects (Tharsis Republic, Mining Area)
+  if (isProduction && !hasPer && (context === "action" || context === "default")) {
     const baseResourceType = resourceType.replace("-production", "");
     const baseIsCredits = baseResourceType === "credit";
 
@@ -269,39 +270,39 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     );
   }
 
-  // Handle global-parameter-lenience (special edge case)
+  // Handle global-parameter-lenience with selector-based global params
   if (resourceType === "global-parameter-lenience") {
+    const globalParams: string[] = resource?.selectors?.[0]?.globalParameters ?? [
+      "temperature",
+      "oxygen",
+      "ocean",
+      "venus",
+    ];
+    const paramToIcon: Record<string, string> = {
+      temperature: "temperature",
+      oxygen: "oxygen",
+      ocean: "ocean-tile",
+      venus: "venus",
+    };
+
     return (
       <div className="flex items-center gap-[2px]">
-        <BehaviorIcon
-          resourceType="temperature"
-          isProduction={false}
-          isAttack={false}
-          context={context}
-          isAffordable={isAffordable}
-          tileScaleInfo={tileScaleInfo}
-        />
-        <BehaviorIcon
-          resourceType="oxygen"
-          isProduction={false}
-          isAttack={false}
-          context={context}
-          isAffordable={isAffordable}
-          tileScaleInfo={tileScaleInfo}
-        />
-        <BehaviorIcon
-          resourceType="ocean-tile"
-          isProduction={false}
-          isAttack={false}
-          context={context}
-          isAffordable={isAffordable}
-          tileScaleInfo={tileScaleInfo}
-        />
+        {globalParams.map((param: string) => (
+          <BehaviorIcon
+            key={param}
+            resourceType={paramToIcon[param] ?? param}
+            isProduction={false}
+            isAttack={false}
+            context={context}
+            isAffordable={isAffordable}
+            tileScaleInfo={tileScaleInfo}
+          />
+        ))}
         <span className="text-base font-bold text-white mx-1 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
           :
         </span>
         <div className="flex items-center gap-[3px]">
-          <div className="flex flex-col items-center leading-none -space-y-[9px]">
+          <div className="flex flex-col items-center leading-none -space-y-[11px] translate-y-px">
             <span className="text-sm font-bold font-orbitron text-[#c8e6c9] [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
               +
             </span>

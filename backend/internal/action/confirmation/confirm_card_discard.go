@@ -97,10 +97,23 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 
 	// Apply pending outputs if player actually discarded (or if discard was mandatory with min=0)
 	if len(cardsToDiscard) > 0 && len(selection.PendingOutputs) > 0 {
-		if err := a.applyPendingOutputs(ctx, g, p, selection, log); err != nil {
+		selfOutputs, err := a.applyPendingOutputs(ctx, g, p, selection, log)
+		if err != nil {
 			log.Error("Failed to apply pending outputs after discard", zap.Error(err))
 			return fmt.Errorf("failed to apply pending outputs: %w", err)
 		}
+
+		// Add triggered effect for self-player: discard + draws
+		calculatedOutputs := []game.CalculatedOutput{
+			{ResourceType: string(shared.ResourceCardDiscard), Amount: len(cardsToDiscard)},
+		}
+		calculatedOutputs = append(calculatedOutputs, selfOutputs...)
+		g.AddTriggeredEffect(game.TriggeredEffect{
+			CardName:          selection.Source,
+			PlayerID:          p.ID(),
+			SourceType:        game.SourceTypeCardPlay,
+			CalculatedOutputs: calculatedOutputs,
+		})
 	}
 
 	// Clear the pending selection
@@ -113,18 +126,20 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 	return nil
 }
 
-// applyPendingOutputs applies the outputs after a successful discard
+// applyPendingOutputs applies the outputs after a successful discard.
+// Returns calculated outputs for the self-player (for triggered effect notifications).
 func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 	ctx context.Context,
 	g *game.Game,
 	p *player.Player,
 	selection *player.PendingCardDiscardSelection,
 	log *zap.Logger,
-) error {
+) ([]game.CalculatedOutput, error) {
+	var selfOutputs []game.CalculatedOutput
+
 	for _, output := range selection.PendingOutputs {
 		if output.ResourceType == shared.ResourceCardDraw {
 			if output.Target == "all-opponents" {
-				// Draw cards for all opponents
 				for _, opponent := range g.GetAllPlayers() {
 					if opponent.ID() == p.ID() {
 						continue
@@ -140,16 +155,28 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 					log.Debug("Opponent drew cards",
 						zap.String("opponent_id", opponent.ID()),
 						zap.Int("count", len(drawnCards)))
+
+					g.AddTriggeredEffect(game.TriggeredEffect{
+						CardName:   selection.Source,
+						PlayerID:   opponent.ID(),
+						SourceType: game.SourceTypeCardPlay,
+						CalculatedOutputs: []game.CalculatedOutput{
+							{ResourceType: string(shared.ResourceCardDraw), Amount: len(drawnCards)},
+						},
+					})
 				}
 				continue
 			}
 
-			// Self-player card draw: draw and add directly to hand
 			drawnCards, err := g.Deck().DrawProjectCards(ctx, output.Amount)
 			if err != nil {
-				return fmt.Errorf("failed to draw cards: %w", err)
+				return nil, fmt.Errorf("failed to draw cards: %w", err)
 			}
 			baseaction.AddCardsToPlayerHand(drawnCards, p, g, a.CardRegistry(), log)
+			selfOutputs = append(selfOutputs, game.CalculatedOutput{
+				ResourceType: string(shared.ResourceCardDraw),
+				Amount:       len(drawnCards),
+			})
 			log.Debug("Drew cards after discard",
 				zap.Int("count", len(drawnCards)))
 			continue
@@ -162,8 +189,8 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 			WithSourceType(game.SourceTypePassiveEffect).
 			WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
 		if err := applier.ApplyOutputs(ctx, []shared.ResourceCondition{output}); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return selfOutputs, nil
 }

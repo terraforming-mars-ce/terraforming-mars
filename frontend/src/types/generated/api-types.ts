@@ -416,7 +416,6 @@ export const ResourceTypeHeatProduction: ResourceType = "heat-production";
 export const ResourceTypeEffect: ResourceType = "effect";
 export const ResourceTypeTag: ResourceType = "tag";
 export const ResourceTypeGlobalParameterLenience: ResourceType = "global-parameter-lenience";
-export const ResourceTypeVenusLenience: ResourceType = "venus-lenience";
 export const ResourceTypeDefense: ResourceType = "defense";
 export const ResourceTypeDiscount: ResourceType = "discount";
 export const ResourceTypeValueModifier: ResourceType = "value-modifier";
@@ -462,8 +461,7 @@ export const VPConditionResourcesOn: VPConditionType = "resources-on";
  */
 export type TriggerType = string;
 export const TriggerOceanPlaced: TriggerType = "ocean-placed";
-export const TriggerTemperatureRaise: TriggerType = "temperature-raise";
-export const TriggerOxygenRaise: TriggerType = "oxygen-raise";
+export const TriggerGlobalParameterRaised: TriggerType = "global-parameter-raised";
 export const TriggerCityPlaced: TriggerType = "city-placed";
 export const TriggerCardPlayed: TriggerType = "card-played";
 export const TriggerTagPlayed: TriggerType = "tag-played";
@@ -498,6 +496,7 @@ export interface TileRestrictionsDto {
   adjacentToType?: string; // "city", "greenery" = must be adjacent to this tile type
   minAdjacentOfType?: number /* int */; // min count of adjacent tiles of AdjacentToType
   adjacentToOwned?: boolean; // must be adjacent to a tile owned by the placing player
+  onBonusType?: string[]; // tile must have one of these bonus types
 }
 /**
  * SelectorDto represents matching criteria for cards, resources, or projects.
@@ -510,6 +509,8 @@ export interface SelectorDto {
   resources?: string[];
   standardProjects?: StandardProject[];
   requiredOriginalCost?: MinMaxValueDto;
+  vp?: MinMaxValueDto;
+  globalParameters?: string[];
 }
 /**
  * ResourceConditionDto represents a resource condition for client consumption
@@ -522,6 +523,7 @@ export interface ResourceConditionDto {
   maxTrigger?: number /* int */;
   per?: PerConditionDto;
   tileRestrictions?: TileRestrictionsDto;
+  tileType?: string;
   variableAmount?: boolean;
   optional?: boolean;
   paymentAllowed?: ResourceType[];
@@ -540,6 +542,7 @@ export interface PerConditionDto {
  * ChoiceDto represents a choice for client consumption
  */
 export interface ChoiceDto {
+  originalIndex: number /* int */;
   inputs?: ResourceConditionDto[];
   outputs?: ResourceConditionDto[];
   requirements?: CardRequirementsDto;
@@ -565,11 +568,13 @@ export interface MinMaxValueDto {
  */
 export interface ResourceTriggerConditionDto {
   type: TriggerType;
+  resourceTypes?: ResourceType[];
   location?: CardApplyLocation;
   selectors?: SelectorDto[];
   target?: TargetType;
   requiredOriginalCost?: MinMaxValueDto;
   requiredResourceChange?: { [key: ResourceType]: MinMaxValueDto };
+  onBonusType?: string[];
 }
 /**
  * CardBehaviorDto represents a card behavior for client consumption
@@ -580,7 +585,9 @@ export interface CardBehaviorDto {
   inputs?: ResourceConditionDto[];
   outputs?: ResourceConditionDto[];
   choices?: ChoiceDto[];
+  choicePolicy?: string;
   generationalEventRequirements?: GenerationalEventRequirementDto[];
+  group?: string;
 }
 /**
  * PaymentConstantsDto represents payment conversion rates
@@ -908,6 +915,7 @@ export interface PendingCardDrawSelectionDto {
   maxBuyCount: number /* int */; // Maximum cards to buy (optional, 0 = no buying allowed)
   cardBuyCost: number /* int */; // Cost per card when buying (typically 3 MC, 0 if no buying)
   source: string; // Card ID or action that triggered this
+  playAsPrelude: boolean; // When true, selected card is played as prelude
 }
 /**
  * PendingCardDiscardSelectionDto represents a pending card discard action from card effects

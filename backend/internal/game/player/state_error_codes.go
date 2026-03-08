@@ -49,6 +49,7 @@ const (
 
 	ErrorCodeActionAlreadyPlayed StateErrorCode = "action-already-played"
 	ErrorCodeNoActionsRemaining  StateErrorCode = "no-actions-remaining"
+	ErrorCodeNoUsedActions       StateErrorCode = "no-used-actions"
 )
 
 // StateErrorCategory represents categories for error grouping.

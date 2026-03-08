@@ -14,8 +14,9 @@ import (
 
 // CorporationProcessor handles applying corporation card effects
 type CorporationProcessor struct {
-	cardRegistry CardRegistryInterface
-	logger       *zap.Logger
+	cardRegistry       CardRegistryInterface
+	logger             *zap.Logger
+	onCardsAddedToHand func([]string)
 }
 
 // NewCorporationProcessor creates a new corporation processor
@@ -24,6 +25,13 @@ func NewCorporationProcessor(cardRegistry CardRegistryInterface, logger *zap.Log
 		cardRegistry: cardRegistry,
 		logger:       logger,
 	}
+}
+
+// WithOnCardsAddedToHand sets the callback invoked when cards are drawn into hand.
+// This is needed to create and cache PlayerCard objects from the action layer.
+func (p *CorporationProcessor) WithOnCardsAddedToHand(fn func([]string)) *CorporationProcessor {
+	p.onCardsAddedToHand = fn
+	return p
 }
 
 // ApplyStartingEffects processes ONLY auto-corporation-start behaviors
@@ -126,7 +134,15 @@ func (p *CorporationProcessor) SetupForcedFirstAction(
 				log.Debug("Found auto-corporation-first-action behavior",
 					zap.Int("outputs", len(behavior.Outputs)))
 
-				// Create forced action based on outputs
+				// Check if this behavior has card-peek/card-take outputs (e.g. Valley Trust)
+				if p.hasCardDrawOutputs(behavior) {
+					if err := p.applyCardDrawForcedAction(ctx, behavior, card, g, playerID, log); err != nil {
+						return fmt.Errorf("failed to apply card draw forced action: %w", err)
+					}
+					continue
+				}
+
+				// Create forced action based on individual outputs
 				for _, output := range behavior.Outputs {
 					if err := p.createForcedAction(ctx, output, card, g, playerID, log); err != nil {
 						return fmt.Errorf("failed to create forced action: %w", err)
@@ -211,6 +227,59 @@ func (p *CorporationProcessor) GetManualActions(card *Card) []player.CardAction 
 	}
 
 	return actions
+}
+
+// hasCardDrawOutputs returns true if the behavior has card-peek or card-take outputs
+func (p *CorporationProcessor) hasCardDrawOutputs(behavior shared.CardBehavior) bool {
+	for _, output := range behavior.Outputs {
+		switch output.ResourceType {
+		case shared.ResourceCardPeek, shared.ResourceCardTake, shared.ResourceCardBuy:
+			return true
+		}
+	}
+	return false
+}
+
+// applyCardDrawForcedAction handles first-action behaviors with card-peek/card-take outputs.
+// These need to be processed as a batch via ApplyCardDrawOutputs.
+func (p *CorporationProcessor) applyCardDrawForcedAction(
+	ctx context.Context,
+	behavior shared.CardBehavior,
+	card *Card,
+	g *game.Game,
+	playerID string,
+	log *zap.Logger,
+) error {
+	pl, err := g.GetPlayer(playerID)
+	if err != nil {
+		return fmt.Errorf("failed to get player for card draw: %w", err)
+	}
+
+	applier := NewBehaviorApplier(pl, g, card.Name, log).
+		WithSourceCardID(card.ID).
+		WithCardRegistry(p.cardRegistry).
+		WithOnCardsAddedToHand(p.onCardsAddedToHand)
+
+	_, err = applier.ApplyCardDrawOutputs(ctx, behavior.Outputs)
+	if err != nil {
+		return fmt.Errorf("failed to apply card draw outputs: %w", err)
+	}
+
+	action := &player.ForcedFirstAction{
+		ActionType:    "card-draw-selection",
+		CorporationID: card.ID,
+		Source:        "corporation-starting-action",
+		Completed:     false,
+		Description:   fmt.Sprintf("Draw and select cards (%s starting action)", card.Name),
+	}
+	if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
+		return fmt.Errorf("failed to set forced card draw action: %w", err)
+	}
+
+	log.Debug("Set forced card draw selection action",
+		zap.String("description", action.Description))
+
+	return nil
 }
 
 // createForcedAction creates a forced first action based on the output.
@@ -313,6 +382,23 @@ func (p *CorporationProcessor) createForcedAction(
 		}
 
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
+
+	case shared.ResourceCardDraw:
+		pl, err := g.GetPlayer(playerID)
+		if err != nil {
+			return fmt.Errorf("failed to get player for card draw: %w", err)
+		}
+
+		applier := NewBehaviorApplier(pl, g, card.Name, log).
+			WithSourceCardID(card.ID).
+			WithCardRegistry(p.cardRegistry).
+			WithOnCardsAddedToHand(p.onCardsAddedToHand)
+
+		if err := applier.ApplyOutputs(ctx, []shared.ResourceCondition{output}); err != nil {
+			return fmt.Errorf("failed to apply card-draw output: %w", err)
+		}
+		log.Debug("Applied card-draw forced action",
+			zap.Int("amount", output.Amount))
 
 	default:
 		log.Warn("Unhandled forced action type",
