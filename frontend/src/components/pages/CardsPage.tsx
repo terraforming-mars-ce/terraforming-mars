@@ -645,19 +645,6 @@ const CardsPage: React.FC = () => {
     };
   }, [handleScroll, handleResize, cardPositions, calculateVisibleRange]);
 
-  // Convert CardDto to Corporation interface for corporation cards
-  const convertCardToCorporation = (card: CardDto) => ({
-    id: card.id,
-    name: card.name,
-    description: card.description,
-    startingMegaCredits: card.startingResources?.credits || 0,
-    startingProduction: card.startingProduction,
-    startingResources: card.startingResources,
-    behaviors: card.behaviors,
-    tags: card.tags,
-    vpConditions: card.vpConditions,
-  });
-
   return (
     <div
       className="cards-page"
@@ -872,7 +859,7 @@ const CardsPage: React.FC = () => {
             >
               {card.type === CardTypeCorporation ? (
                 <CorporationCard
-                  corporation={convertCardToCorporation(card)}
+                  card={card}
                   isSelected={selectedCards.has(card.id)}
                   onSelect={handleCardSelect}
                   showCheckbox={!isPermalinkView}

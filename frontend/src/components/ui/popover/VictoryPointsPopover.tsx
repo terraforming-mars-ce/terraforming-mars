@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from "react";
 import { VPGranterDto, VPGranterConditionDto } from "@/types/generated/api-types.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { getIconPath } from "@/utils/iconStore.ts";
-import VPDescriptionTooltip from "../display/VPDescriptionTooltip.tsx";
+import DecorBoxTooltip from "../display/DecorBoxTooltip.tsx";
 
 interface VictoryPointsPopoverProps {
   isVisible: boolean;
@@ -138,7 +138,7 @@ const VictoryPointsPopover: React.FC<VictoryPointsPopoverProps> = ({
           })}
         </div>
       )}
-      <VPDescriptionTooltip description={tooltipDescription} position={tooltipPos} />
+      <DecorBoxTooltip description={tooltipDescription} position={tooltipPos} />
     </GamePopover>
   );
 };

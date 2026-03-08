@@ -255,6 +255,7 @@ class GlobalWebSocketManager implements WebSocketConnection {
     sourceCardForInput?: string,
     selectedAmount?: number,
     payment?: CardPaymentDto,
+    reuseSourceCardId?: string,
   ): Promise<string> {
     await this.ensureConnected();
     return webSocketService.playCardAction(
@@ -266,6 +267,7 @@ class GlobalWebSocketManager implements WebSocketConnection {
       sourceCardForInput,
       selectedAmount,
       payment,
+      reuseSourceCardId,
     );
   }
 

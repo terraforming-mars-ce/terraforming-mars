@@ -1,18 +1,21 @@
 import React from "react";
 import { getIconPath } from "@/utils/iconStore.ts";
+import DecorBox from "./DecorBox.tsx";
 
 interface VictoryPointIconProps {
   value?: number | string;
   vpConditions?: any[];
   onHoverDescription?: (description: string | null) => void;
+  corner?: "bottom-right" | "top-left";
+  bare?: boolean;
 }
-
-const VP_CLIP_PATH = "polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)";
 
 const VictoryPointIcon: React.FC<VictoryPointIconProps> = ({
   value,
   vpConditions,
   onHoverDescription,
+  corner = "bottom-right",
+  bare = false,
 }) => {
   const vpDescription = vpConditions?.find((c: any) => c.description)?.description ?? null;
 
@@ -28,22 +31,28 @@ const VictoryPointIcon: React.FC<VictoryPointIconProps> = ({
     }
   };
 
-  const renderBox = (content: React.ReactNode) => (
-    <div className="relative -mt-[2px] w-fit">
-      <div
-        className="inline-flex items-center gap-1 px-1.5 py-px bg-[rgba(5,5,10,0.95)] border border-[rgba(60,60,70,0.7)] border-t-0 text-white font-orbitron"
-        style={{ clipPath: VP_CLIP_PATH }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        {content}
-        <span className="text-[9px] text-white/50 font-semibold tracking-wider">VP</span>
-      </div>
-      <svg className="absolute bottom-0 right-0 w-2 h-2 pointer-events-none" viewBox="0 0 8 8">
-        <line x1="8" y1="0" x2="0" y2="8" stroke="rgba(60,60,70,0.7)" strokeWidth="1.5" />
-      </svg>
+  const renderContent = (content: React.ReactNode) => (
+    <div
+      className="inline-flex items-center gap-1"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {content}
+      <span className="text-[9px] text-white/50 font-semibold tracking-wider">VP</span>
     </div>
   );
+
+  const renderBox = (content: React.ReactNode) => {
+    if (bare) {
+      return renderContent(content);
+    }
+    return (
+      <DecorBox corner={corner} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+        {content}
+        <span className="text-[9px] text-white/50 font-semibold tracking-wider">VP</span>
+      </DecorBox>
+    );
+  };
 
   if (vpConditions && Array.isArray(vpConditions) && vpConditions.length > 0) {
     const totalConditions = vpConditions.length;

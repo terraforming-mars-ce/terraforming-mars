@@ -23,6 +23,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   cardId,
   greyOutAll = false,
   hideActionChip = false,
+  noContainer = false,
 }) => {
   const [hoveredBehaviorIndex, setHoveredBehaviorIndex] = useState<number | null>(null);
   const handleBehaviorHover = useCallback((index: number | null) => {
@@ -158,6 +159,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
         description={classifiedBehavior.description}
         isHovered={hoveredBehaviorIndex === index}
         onHover={handleBehaviorHover}
+        noContainer={noContainer}
       >
         {content}
       </BehaviorContainer>
