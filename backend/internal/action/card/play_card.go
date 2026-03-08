@@ -463,6 +463,12 @@ func (a *PlayCardAction) applyCardBehaviors(
 				continue
 			}
 
+			// Check for card-discard outputs — player must choose cards to discard first
+			if gamecards.HasCardDiscardOutput(behavior) {
+				a.createPendingCardDiscardFromOutputs(p, card, outputs, log)
+				continue
+			}
+
 			log.Debug("Found auto-trigger behavior, applying outputs immediately",
 				zap.Int("output_count", len(outputs)))
 
@@ -658,6 +664,44 @@ func (a *PlayCardAction) createPendingCardDiscard(
 		zap.Int("max_cards", maxCards),
 		zap.Bool("optional", isOptional),
 		zap.Int("pending_outputs", len(outputs)))
+}
+
+// createPendingCardDiscardFromOutputs creates a PendingCardDiscardSelection for behaviors with card-discard outputs.
+// The player must select cards to discard before remaining outputs (draws, etc.) are applied.
+func (a *PlayCardAction) createPendingCardDiscardFromOutputs(
+	p *player.Player,
+	card *gamecards.Card,
+	outputs []shared.ResourceCondition,
+	log *zap.Logger,
+) {
+	minCards := 0
+	maxCards := 0
+	var pendingOutputs []shared.ResourceCondition
+
+	for _, output := range outputs {
+		if output.ResourceType == shared.ResourceCardDiscard {
+			minCards += output.Amount
+			maxCards += output.Amount
+		} else {
+			pendingOutputs = append(pendingOutputs, output)
+		}
+	}
+
+	selection := &player.PendingCardDiscardSelection{
+		MinCards:       minCards,
+		MaxCards:       maxCards,
+		Source:         card.Name,
+		SourceCardID:   card.ID,
+		PendingOutputs: pendingOutputs,
+	}
+
+	p.Selection().SetPendingCardDiscardSelection(selection)
+
+	log.Debug("Created pending card discard selection from outputs",
+		zap.String("card_name", card.Name),
+		zap.Int("min_cards", minCards),
+		zap.Int("max_cards", maxCards),
+		zap.Int("pending_outputs", len(pendingOutputs)))
 }
 
 func adjustPaymentToEffectiveCost(
