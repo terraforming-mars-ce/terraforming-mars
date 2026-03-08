@@ -82,6 +82,7 @@ const GameCard: React.FC<GameCardProps> = ({
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [cardHovered, setCardHovered] = useState(false);
+  const [behaviorHovered, setBehaviorHovered] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
   const { playCardHoverSound } = useSoundEffects();
   const pendingSoundRef = useRef(false);
@@ -313,7 +314,7 @@ const GameCard: React.FC<GameCardProps> = ({
       <div
         className={`absolute left-2 right-2 flex items-center justify-center z-[3] max-md:left-1.5 max-md:right-1.5 ${hasDescription ? "bottom-10 max-md:bottom-9" : "bottom-4 max-md:bottom-3"} ${(card.vpConditions && card.vpConditions.length > 0) || card.resourceStorage ? "top-[calc(50%+38px)] max-md:top-[calc(50%+40px)]" : "top-[calc(50%+20px)] max-md:top-[calc(50%+25px)]"}`}
       >
-        <BehaviorSection behaviors={card.behaviors} />
+        <BehaviorSection behaviors={card.behaviors} onBehaviorHover={setBehaviorHovered} />
       </div>
 
       {/* Card description at the bottom */}
@@ -323,7 +324,7 @@ const GameCard: React.FC<GameCardProps> = ({
           className="absolute bottom-1.5 left-2 right-2 z-[3] text-[9px] leading-tight text-white/50 line-clamp-2 max-md:left-1.5 max-md:right-1.5 max-md:bottom-1"
         >
           <FormattedDescription text={card.description} />
-          {cardHovered && (
+          {cardHovered && !behaviorHovered && (
             <CardDescriptionPortal description={card.description} anchorRef={descRef} />
           )}
         </div>
