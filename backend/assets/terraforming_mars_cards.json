@@ -16190,12 +16190,26 @@
           {
             "type": "card-take",
             "amount": 1,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "cardTypes": [
+                  "prelude"
+                ]
+              }
+            ]
           },
           {
             "type": "card-peek",
             "amount": 3,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "cardTypes": [
+                  "prelude"
+                ]
+              }
+            ]
           }
         ],
         "description": "As your first action, draw 3 Prelude cards, and play one of them. Discard the other two."
@@ -17111,7 +17125,8 @@
           {
             "type": "card-draw",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [{"resources": ["floater"]}]
           }
         ],
         "description": "As your first action, reveal cards from the deck until you have revealed 2 cards with a floater icon on it. Take those 2 cards into hand, and discard the rest."
@@ -17336,7 +17351,12 @@
           {
             "type": "card-draw",
             "amount": 3,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "tags": ["venus"]
+              }
+            ]
           }
         ],
         "description": "As your first action, reveal cards from the deck until you have revealed 3 Venus-tag cards. Take those into hand and discard the rest."

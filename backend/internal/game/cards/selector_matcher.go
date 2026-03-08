@@ -9,11 +9,11 @@ import (
 // MatchesSelector checks if a card matches a single selector.
 // Tags: ALL must be present (AND logic)
 // CardTypes: ANY can match (OR logic - card has one type)
+// Resources: card must have the resource (in storage, behavior outputs, or behavior inputs)
 // RequiredOriginalCost: card cost must satisfy min/max constraints
-// A selector must have at least Tags, CardTypes, or RequiredOriginalCost to match a card.
+// A selector must have at least one card-relevant criterion to match.
 func MatchesSelector(card *Card, selector shared.Selector) bool {
-	// Selectors without card-relevant criteria cannot match cards
-	if len(selector.Tags) == 0 && len(selector.CardTypes) == 0 && selector.RequiredOriginalCost == nil && selector.VP == nil {
+	if len(selector.Tags) == 0 && len(selector.CardTypes) == 0 && selector.RequiredOriginalCost == nil && selector.VP == nil && len(selector.Resources) == 0 {
 		return false
 	}
 
@@ -57,7 +57,37 @@ func MatchesSelector(card *Card, selector shared.Selector) bool {
 		}
 	}
 
+	if len(selector.Resources) > 0 {
+		if !cardHasAnyResource(card, selector.Resources) {
+			return false
+		}
+	}
+
 	return true
+}
+
+// cardHasAnyResource checks if a card has any of the specified resources
+// in its resource storage, behavior outputs, or behavior inputs.
+func cardHasAnyResource(card *Card, resources []string) bool {
+	for _, res := range resources {
+		rt := shared.ResourceType(res)
+		if card.ResourceStorage != nil && card.ResourceStorage.Type == rt {
+			return true
+		}
+		for _, b := range card.Behaviors {
+			for _, o := range b.Outputs {
+				if o.ResourceType == rt {
+					return true
+				}
+			}
+			for _, i := range b.Inputs {
+				if i.ResourceType == rt {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // MatchesAnySelector checks if a card matches any selector (OR between selectors)
@@ -91,7 +121,7 @@ func MatchesAnyStandardProjectSelector(project shared.StandardProject, selectors
 // HasCardSelectors returns true if any selector targets cards
 func HasCardSelectors(selectors []shared.Selector) bool {
 	for _, sel := range selectors {
-		if len(sel.Tags) > 0 || len(sel.CardTypes) > 0 || sel.RequiredOriginalCost != nil || sel.VP != nil {
+		if len(sel.Tags) > 0 || len(sel.CardTypes) > 0 || sel.RequiredOriginalCost != nil || sel.VP != nil || len(sel.Resources) > 0 {
 			return true
 		}
 	}
@@ -131,6 +161,16 @@ func GetResourcesFromSelectors(selectors []shared.Selector) []string {
 		}
 	}
 	return resources
+}
+
+// hasPreludeCardType returns true if any selector contains "prelude" in its CardTypes
+func hasPreludeCardType(selectors []shared.Selector) bool {
+	for _, sel := range selectors {
+		if slices.Contains(sel.CardTypes, "prelude") {
+			return true
+		}
+	}
+	return false
 }
 
 // MatchesResourceSelector checks if a resource type matches a selector
