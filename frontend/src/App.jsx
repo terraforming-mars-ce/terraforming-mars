@@ -80,10 +80,11 @@ function App() {
 
 function AppWithBackground() {
   const location = useLocation();
-  const { isLoaded } = useSpaceBackground();
+  const { isLoaded, error } = useSpaceBackground();
   const [overlayVisible, setOverlayVisible] = useState(() => !skyboxCache.isReady());
-
   const showSpaceBackground = ["/", "/create", "/join"].includes(location.pathname);
+
+  const skyboxReady = isLoaded || !!error;
 
   useEffect(() => {
     if (!showSpaceBackground) {
@@ -105,7 +106,7 @@ function AppWithBackground() {
     <>
       <SpaceBackground animationSpeed={0.5} overlayOpacity={0.3} active={showSpaceBackground} />
       {showSpaceBackground && overlayVisible && (
-        <LoadingOverlay isLoaded={isLoaded} onTransitionEnd={() => setOverlayVisible(false)} />
+        <LoadingOverlay isLoaded={skyboxReady} onTransitionEnd={() => setOverlayVisible(false)} />
       )}
       {showSpaceBackground && !overlayVisible && <MainMenuSettingsButton />}
       <Routes>

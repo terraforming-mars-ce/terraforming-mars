@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { config } from "../../../config.ts";
 import GameLayout from "./GameLayout.tsx";
 import CardsPlayedModal from "../../ui/modals/CardsPlayedModal.tsx";
 import ProductionPhaseModal from "../../ui/modals/ProductionPhaseModal.tsx";
@@ -1719,9 +1720,7 @@ export default function GameInterface() {
       setReconnectionStep("game");
 
       // Fetch current game state from server first (with playerId for personalized view)
-      const response = await fetch(
-        `http://localhost:3001/api/v1/games/${gameId}?playerId=${playerId}`,
-      );
+      const response = await fetch(`${config.apiUrl}/games/${gameId}?playerId=${playerId}`);
       if (!response.ok) {
         // Game doesn't exist, automatically clear storage and redirect
         console.log(
