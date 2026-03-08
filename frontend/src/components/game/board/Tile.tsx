@@ -11,6 +11,7 @@ import NuclearZoneTile from "./NuclearZoneTile";
 import LivingGreeneryTile from "./LivingGreeneryTile";
 import MiningTile from "./MiningTile";
 import ReservedAreaTile from "./ReservedAreaTile";
+import WorldTreeTile from "./WorldTreeTile";
 import { useTextures } from "../../../hooks/useTextures";
 import { useHoverSound } from "../../../hooks/useHoverSound";
 import {
@@ -235,7 +236,8 @@ interface TileProps {
     | "mining"
     | "restricted"
     | "ecological-zone"
-    | "natural-preserve";
+    | "natural-preserve"
+    | "world-tree";
   ownerId?: string | null;
   ownerColor?: string;
   reservedById?: string | null;
@@ -556,6 +558,8 @@ export default function Tile({
       case "ecological-zone":
       case "natural-preserve":
         return new THREE.Color("#2d6e2e");
+      case "world-tree":
+        return new THREE.Color("#1a3a12");
       default:
         return tileData.isOceanSpace
           ? new THREE.Color("#6d4c41").multiplyScalar(0.8)
@@ -583,7 +587,8 @@ export default function Tile({
         tileType === "mining" ||
         tileType === "restricted" ||
         tileType === "ecological-zone" ||
-        tileType === "natural-preserve"
+        tileType === "natural-preserve" ||
+        tileType === "world-tree"
           ? 0
           : tileType === "empty"
             ? 0.3
@@ -819,6 +824,15 @@ export default function Tile({
         />
       )}
 
+      {/* World Tree 3D tile */}
+      {tileType === "world-tree" && (
+        <WorldTreeTile
+          isNewlyPlaced={isNewlyPlaced}
+          surfaceNormal={tileData.normal}
+          worldPosition={adjustedPosition}
+        />
+      )}
+
       {/* Living Greenery (ecological zone / natural preserve) */}
       {(tileType === "ecological-zone" || tileType === "natural-preserve") && (
         <LivingGreeneryTile
@@ -859,6 +873,7 @@ export default function Tile({
         tileType !== "mining" &&
         tileType !== "ecological-zone" &&
         tileType !== "natural-preserve" &&
+        tileType !== "world-tree" &&
         bonusIconGroups.length > 0 && (
           <>
             {(() => {
