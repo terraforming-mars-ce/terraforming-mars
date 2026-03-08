@@ -4,6 +4,7 @@ import (
 	"context"
 	"terraforming-mars-backend/internal/action"
 	cardAction "terraforming-mars-backend/internal/action/card"
+	"terraforming-mars-backend/internal/action/confirmation"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
@@ -1289,23 +1290,34 @@ func TestSponsoredAcademies_DiscardDrawAndOpponentDraw(t *testing.T) {
 	p.Hand().AddCard("card-fodder-1")
 	p.Hand().AddCard("card-fodder-2")
 
-	playerHandBefore := p.Hand().CardCount()          // 3
-	opponentHandBefore := opponent.Hand().CardCount() // 0
-
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 9}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Sponsored Academies should play successfully")
 
-	playerHandAfter := p.Hand().CardCount()
-	opponentHandAfter := opponent.Hand().CardCount()
+	// Step 1: After playing, a pending card discard selection should exist
+	selection := p.Selection().GetPendingCardDiscardSelection()
+	if selection == nil {
+		t.Fatal("Expected pending card discard selection after playing Sponsored Academies")
+	}
+	testutil.AssertEqual(t, 1, selection.MinCards, "Should require discarding exactly 1 card")
+	testutil.AssertEqual(t, 1, selection.MaxCards, "Should allow discarding exactly 1 card")
 
-	// Player: started with 3, played 1 (-1), discarded 1 (-1), drew 3 (+3) = net +1 = 4
-	testutil.AssertEqual(t, playerHandBefore+1, playerHandAfter,
-		"Player should have net +1 cards (played 1, discarded 1, drew 3)")
+	// Player hand after play: 3 - 1 (played SA) = 2 cards remaining (fodder-1, fodder-2)
+	testutil.AssertEqual(t, 2, p.Hand().CardCount(), "Player should have 2 cards before discard")
+	testutil.AssertEqual(t, 0, opponent.Hand().CardCount(), "Opponent should have 0 cards before discard confirmation")
 
-	// Opponent: drew 1 card (+1)
-	testutil.AssertEqual(t, opponentHandBefore+1, opponentHandAfter,
+	// Step 2: Confirm discard — player chooses to discard fodder-1
+	confirmAction := confirmation.NewConfirmCardDiscardAction(repo, cardRegistry, logger)
+	err = confirmAction.Execute(ctx, testGame.ID(), p.ID(), []string{"card-fodder-1"})
+	testutil.AssertNoError(t, err, "Confirm card discard should succeed")
+
+	// Player: 2 - 1 (discarded) + 3 (drew) = 4 cards
+	testutil.AssertEqual(t, 4, p.Hand().CardCount(),
+		"Player should have 4 cards after discard and draw")
+
+	// Opponent: drew 1 card
+	testutil.AssertEqual(t, 1, opponent.Hand().CardCount(),
 		"Opponent should have drawn 1 card from Sponsored Academies")
 }
 

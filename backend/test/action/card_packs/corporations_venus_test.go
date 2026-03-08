@@ -7,7 +7,9 @@ import (
 
 	"terraforming-mars-backend/internal/action/admin"
 	cardAction "terraforming-mars-backend/internal/action/card"
+	"terraforming-mars-backend/internal/action/confirmation"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/deck"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -85,38 +87,63 @@ func TestCelestic_FirstActionDrawsFloaterCards(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
+	// Set up a controlled deck: 3 non-floater cards followed by 2 floater cards
+	// The draw-until-matching logic should skip non-floater cards and find the floater ones
+	floaterCardIDs := []string{"213", "222"} // Aerial Mappers (floater storage), Dirigibles (floater storage+output)
+	nonFloaterCardIDs := []string{"001", "002", "003"}
+	allProjectCards := append(nonFloaterCardIDs, floaterCardIDs...)
+	customDeck := deck.NewDeck(testGame.ID(), allProjectCards, nil, nil)
+	testGame.SetDeck(customDeck)
+
+	// Clear hand before setting corporation
+	p, _ := testGame.GetPlayer(playerID)
+	for _, c := range p.Hand().Cards() {
+		p.Hand().RemoveCard(c)
+	}
+
 	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Celestic"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
-	p, _ := testGame.GetPlayer(playerID)
-	handSize := p.Hand().CardCount()
-
-	testutil.AssertTrue(t, handSize >= 2,
-		"Celestic first action should draw 2 cards with floater icons into hand")
-
 	handCards := p.Hand().Cards()
-	floaterCardCount := 0
+	testutil.AssertEqual(t, 2, len(handCards),
+		"Celestic first action should draw exactly 2 cards")
+
+	// Verify both drawn cards are floater cards
 	for _, cID := range handCards {
 		card, err := cardRegistry.GetByID(cID)
-		if err != nil || card == nil {
-			continue
-		}
+		testutil.AssertNoError(t, err, "Card should exist in registry")
+		hasFloater := false
 		if card.ResourceStorage != nil && card.ResourceStorage.Type == shared.ResourceFloater {
-			floaterCardCount++
-			continue
+			hasFloater = true
 		}
 		for _, b := range card.Behaviors {
 			for _, o := range b.Outputs {
 				if o.ResourceType == shared.ResourceFloater {
-					floaterCardCount++
-					break
+					hasFloater = true
+				}
+			}
+			for _, i := range b.Inputs {
+				if i.ResourceType == shared.ResourceFloater {
+					hasFloater = true
 				}
 			}
 		}
+		testutil.AssertTrue(t, hasFloater,
+			"Card "+card.Name+" ("+cID+") should have floater resource")
 	}
-	testutil.AssertEqual(t, 2, floaterCardCount,
-		"Celestic first action should draw exactly 2 cards with floater icons")
+
+	// Verify non-floater cards were NOT drawn into hand
+	for _, nonFloaterID := range nonFloaterCardIDs {
+		found := false
+		for _, handCard := range handCards {
+			if handCard == nonFloaterID {
+				found = true
+			}
+		}
+		testutil.AssertTrue(t, !found,
+			"Non-floater card "+nonFloaterID+" should not be in hand")
+	}
 }
 
 func TestCelestic_AddFloaterToAnyCard(t *testing.T) {
@@ -454,4 +481,103 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 
 	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card-2", 0, nil, nil, nil, nil, nil, nil, &reuseSource)
 	testutil.AssertError(t, err, "Viron should not be able to reuse again this generation")
+}
+
+func TestValleyTrust_FirstActionCreatesPreludeSelection(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	// Set up controlled prelude deck with exactly 5 preludes
+	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
+	customDeck := deck.NewDeck(testGame.ID(), nil, nil, preludeIDs)
+	testGame.SetDeck(customDeck)
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	selection := p.Selection().GetPendingCardDrawSelection()
+	testutil.AssertTrue(t, selection != nil, "Valley Trust should create a pending card draw selection")
+	testutil.AssertEqual(t, 3, len(selection.AvailableCards), "Should have 3 prelude cards available")
+	testutil.AssertEqual(t, 1, selection.FreeTakeCount, "Should be able to take 1 card for free")
+	testutil.AssertEqual(t, 0, selection.MaxBuyCount, "Should not be able to buy cards")
+	testutil.AssertTrue(t, selection.PlayAsPrelude, "Selection should be marked as prelude")
+
+	// Verify all available cards are prelude cards
+	for _, cardID := range selection.AvailableCards {
+		card, err := cardRegistry.GetByID(cardID)
+		testutil.AssertNoError(t, err, "Card should exist in registry")
+		testutil.AssertEqual(t, string(gamecards.CardTypePrelude), string(card.Type),
+			"Available card "+card.Name+" should be a prelude card")
+	}
+
+	// Verify forced first action was set
+	forcedAction := testGame.GetForcedFirstAction(playerID)
+	testutil.AssertTrue(t, forcedAction != nil, "Should create forced first action")
+	testutil.AssertEqual(t, "card-draw-selection", forcedAction.ActionType, "Action type should be card-draw-selection")
+}
+
+func TestValleyTrust_ConfirmPreludeSelection(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	// Set up controlled prelude deck
+	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
+	customDeck := deck.NewDeck(testGame.ID(), nil, nil, preludeIDs)
+	testGame.SetDeck(customDeck)
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	selection := p.Selection().GetPendingCardDrawSelection()
+	testutil.AssertTrue(t, selection != nil, "Should have pending selection")
+
+	// Record credits before confirming (Valley Trust starts with 37)
+	creditsBefore := p.Resources().Get().Credits
+
+	// Take the first available prelude card (Allied Bank - P01 gives 3 credits + 4 credit production)
+	selectedPreludeID := selection.AvailableCards[0]
+
+	confirmAction := confirmation.NewConfirmCardDrawAction(repo, cardRegistry, logger)
+	err = confirmAction.Execute(ctx, testGame.ID(), playerID, []string{selectedPreludeID}, nil)
+	testutil.AssertNoError(t, err, "Confirm card draw should succeed")
+
+	// Verify prelude was played (added to played cards)
+	playedCards := p.PlayedCards().Cards()
+	found := false
+	for _, pc := range playedCards {
+		if pc == selectedPreludeID {
+			found = true
+			break
+		}
+	}
+	testutil.AssertTrue(t, found, "Selected prelude should be in played cards")
+
+	// Verify prelude effects were applied (Allied Bank gives 3 credits)
+	if selectedPreludeID == "P01" {
+		creditsAfter := p.Resources().Get().Credits
+		testutil.AssertEqual(t, creditsBefore+3, creditsAfter,
+			"Allied Bank prelude should have given 3 credits")
+
+		production := p.Resources().Production()
+		testutil.AssertEqual(t, 4, production.Credits,
+			"Allied Bank prelude should have given 4 credit production")
+	}
+
+	// Verify selection was cleared
+	testutil.AssertTrue(t, p.Selection().GetPendingCardDrawSelection() == nil,
+		"Pending card draw selection should be cleared")
+
+	// Verify forced first action was cleared
+	testutil.AssertTrue(t, testGame.GetForcedFirstAction(playerID) == nil,
+		"Forced first action should be cleared")
+
+	// Verify unselected preludes were removed permanently (not discarded)
+	removedCards := testGame.Deck().RemovedCards()
+	testutil.AssertEqual(t, 2, len(removedCards), "2 unselected preludes should be permanently removed")
 }
