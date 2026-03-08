@@ -1,4 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import GameCard from "../cards/GameCard.tsx";
 import { PlayerCardDto } from "@/types/generated/api-types.ts";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
@@ -61,6 +69,10 @@ function getCardTransform(i: number, scrollPos: number): CardTransform {
   return { x, y, rotation, scale: 1, z };
 }
 
+export interface CardFanOverlayHandle {
+  toggleExpand: () => void;
+}
+
 interface CardFanOverlayProps {
   cards: PlayerCardDto[];
   hideWhenModalOpen?: boolean;
@@ -68,538 +80,561 @@ interface CardFanOverlayProps {
   onPlayCard?: (cardId: string) => Promise<void>;
 }
 
-const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
-  cards,
-  hideWhenModalOpen = false,
-  onCardSelect,
-  onPlayCard,
-}) => {
-  const [scrollPos, setScrollPos] = useState(0);
-  const [cardOrder, setCardOrder] = useState<string[]>([]);
-  const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
-  const [draggedCard, setDraggedCard] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
-  const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
-  const [isInThrowZone, setIsInThrowZone] = useState(false);
-  const [returningCard, setReturningCard] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
+  ({ cards, hideWhenModalOpen = false, onCardSelect, onPlayCard }, ref) => {
+    const [scrollPos, setScrollPos] = useState(0);
+    const [cardOrder, setCardOrder] = useState<string[]>([]);
+    const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
+    const [draggedCard, setDraggedCard] = useState<string | null>(null);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+    const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
+    const [isInThrowZone, setIsInThrowZone] = useState(false);
+    const [returningCard, setReturningCard] = useState<string | null>(null);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const handRef = useRef<HTMLDivElement>(null);
-  const cardsRef = useRef(cards);
-  const dragIntentRef = useRef(false);
-  const capturedCardRef = useRef<HTMLDivElement | null>(null);
-  const lastPointerXRef = useRef(0);
+    const handRef = useRef<HTMLDivElement>(null);
+    const cardsRef = useRef(cards);
+    const dragIntentRef = useRef(false);
+    const capturedCardRef = useRef<HTMLDivElement | null>(null);
+    const lastPointerXRef = useRef(0);
 
-  const { playCardHoverSound } = useSoundEffects();
+    const { playCardHoverSound } = useSoundEffects();
 
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const [windowHeight, setWindowHeight] = useState(window.innerHeight);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-      setWindowHeight(window.innerHeight);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    useEffect(() => {
+      const handleResize = () => {
+        setWindowWidth(window.innerWidth);
+        setWindowHeight(window.innerHeight);
+      };
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
-  const fanScale = useMemo(() => {
-    const panelWidth = Math.min(MAX_PANEL_WIDTH, Math.max(480, (windowWidth - 700) / 2));
-    const availableWidth = windowWidth - 2 * panelWidth - FAN_PADDING;
-    const maxVisibleWidth = 2 * VISIBLE_RADIUS * SPACING + CARD_WIDTH;
-    if (maxVisibleWidth <= availableWidth) return 1;
-    return Math.min(1, Math.max(0.5, (availableWidth / maxVisibleWidth) * 1.2));
-  }, [windowWidth]);
+    const fanScale = useMemo(() => {
+      const panelWidth = Math.min(MAX_PANEL_WIDTH, Math.max(480, (windowWidth - 700) / 2));
+      const availableWidth = windowWidth - 2 * panelWidth - FAN_PADDING;
+      const maxVisibleWidth = 2 * VISIBLE_RADIUS * SPACING + CARD_WIDTH;
+      if (maxVisibleWidth <= availableWidth) return 1;
+      return Math.min(1, Math.max(0.5, (availableWidth / maxVisibleWidth) * 1.2));
+    }, [windowWidth]);
 
-  const expandedBaseY = useMemo(() => {
-    return -(windowHeight / 2 - CARD_HEIGHT / 2 - 48);
-  }, [windowHeight]);
+    const expandedBaseY = useMemo(() => {
+      return -(windowHeight / 2 - CARD_HEIGHT / 2 - 48);
+    }, [windowHeight]);
 
-  const expandedCullRadius = useMemo(() => {
-    return Math.ceil(windowWidth / EXPANDED_SPACING / 2) + 2;
-  }, [windowWidth]);
+    const expandedCullRadius = useMemo(() => {
+      return Math.ceil(windowWidth / EXPANDED_SPACING / 2) + 2;
+    }, [windowWidth]);
 
-  // --- Expand / Collapse ---
-  const handleExpand = useCallback(() => {
-    setIsTransitioning(true);
-    setIsExpanded(true);
-    setHighlightedCard(null);
-    setTimeout(() => setIsTransitioning(false), 350);
-  }, []);
-
-  const scrollTargetRef = useRef(0);
-  const scrollAnimRef = useRef(0);
-  const isAnimatingRef = useRef(false);
-
-  const handleCollapse = useCallback(
-    (cardId?: string) => {
+    // --- Expand / Collapse ---
+    const handleExpand = useCallback(() => {
       setIsTransitioning(true);
-      setIsExpanded(false);
-      if (cardId) {
-        const cardIndex = cardOrder.indexOf(cardId);
-        if (cardIndex >= 0) {
-          scrollTargetRef.current = cardIndex;
-          setScrollPos(cardIndex);
-          setHighlightedCard(cardId);
-        }
-      }
-      setTimeout(() => setIsTransitioning(false), 350);
-    },
-    [cardOrder],
-  );
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isExpanded) {
-        handleCollapse();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isExpanded, handleCollapse]);
-
-  useEffect(() => {
-    cardsRef.current = cards;
-  }, [cards]);
-
-  // Sync cardOrder when cards prop changes (additions/removals)
-  useEffect(() => {
-    setCardOrder((prev) => {
-      const propIds = new Set(cards.map((c) => c.id));
-      const kept = prev.filter((id) => propIds.has(id));
-      const keptSet = new Set(kept);
-      const added = cards.filter((c) => !keptSet.has(c.id)).map((c) => c.id);
-      const next = [...kept, ...added];
-      const isFirstRender = prev.length === 0;
-      const result = isFirstRender ? cards.map((c) => c.id) : next;
-      // Center scroll on first load
-      if (isFirstRender && result.length > 0) {
-        const center = (result.length - 1) / 2;
-        setScrollPos(center);
-        scrollTargetRef.current = center;
-      }
-      return result;
-    });
-  }, [cards]);
-
-  // Clamp scrollPos when cards change
-  useEffect(() => {
-    const maxScroll = Math.max(cardOrder.length - 1, 0);
-    setScrollPos((prev) => {
-      const clamped = clamp(prev, 0, maxScroll);
-      scrollTargetRef.current = clamped;
-      return clamped;
-    });
-    // Clear selection if card disappeared
-    if (highlightedCard && !cardOrder.includes(highlightedCard)) {
+      setIsExpanded(true);
       setHighlightedCard(null);
-    }
-  }, [cardOrder, highlightedCard]);
+      setTimeout(() => setIsTransitioning(false), 350);
+    }, []);
 
-  // --- Wheel scrolling ---
-  const animateScroll = useCallback(() => {
-    setScrollPos((prev) => {
-      const diff = scrollTargetRef.current - prev;
-      if (Math.abs(diff) < 0.01) {
-        isAnimatingRef.current = false;
-        return scrollTargetRef.current;
-      }
-      scrollAnimRef.current = requestAnimationFrame(animateScroll);
-      return prev + diff * 0.25;
-    });
-  }, []);
+    const scrollTargetRef = useRef(0);
+    const scrollAnimRef = useRef(0);
+    const isAnimatingRef = useRef(false);
 
-  const startScrollAnimation = useCallback(() => {
-    if (!isAnimatingRef.current) {
-      isAnimatingRef.current = true;
-      scrollAnimRef.current = requestAnimationFrame(animateScroll);
-    }
-  }, [animateScroll]);
+    const handleCollapse = useCallback(
+      (cardId?: string) => {
+        setIsTransitioning(true);
+        setIsExpanded(false);
+        if (cardId) {
+          const cardIndex = cardOrder.indexOf(cardId);
+          if (cardIndex >= 0) {
+            scrollTargetRef.current = cardIndex;
+            setScrollPos(cardIndex);
+            setHighlightedCard(cardId);
+          }
+        }
+        setTimeout(() => setIsTransitioning(false), 350);
+      },
+      [cardOrder],
+    );
 
-  useEffect(() => {
-    return () => cancelAnimationFrame(scrollAnimRef.current);
-  }, []);
+    useImperativeHandle(
+      ref,
+      () => ({
+        toggleExpand: () => {
+          if (isExpanded) {
+            handleCollapse();
+          } else {
+            handleExpand();
+          }
+        },
+      }),
+      [isExpanded, handleCollapse, handleExpand],
+    );
 
-  const handleWheel = useCallback(
-    (e: WheelEvent) => {
-      // When dragging, only allow scroll if cursor is near the card fan
-      if (draggedCard) {
-        const containerRect = handRef.current?.getBoundingClientRect();
-        if (!containerRect || e.clientY < containerRect.bottom - 200) return;
-      }
-      e.preventDefault();
-      if (highlightedCard) {
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && isExpanded) {
+          handleCollapse();
+        }
+      };
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [isExpanded, handleCollapse]);
+
+    useEffect(() => {
+      cardsRef.current = cards;
+    }, [cards]);
+
+    // Sync cardOrder when cards prop changes (additions/removals)
+    useEffect(() => {
+      setCardOrder((prev) => {
+        const propIds = new Set(cards.map((c) => c.id));
+        const kept = prev.filter((id) => propIds.has(id));
+        const keptSet = new Set(kept);
+        const added = cards.filter((c) => !keptSet.has(c.id)).map((c) => c.id);
+        const next = [...kept, ...added];
+        const isFirstRender = prev.length === 0;
+        const result = isFirstRender ? cards.map((c) => c.id) : next;
+        // Center scroll on first load
+        if (isFirstRender && result.length > 0) {
+          const center = (result.length - 1) / 2;
+          setScrollPos(center);
+          scrollTargetRef.current = center;
+        }
+        return result;
+      });
+    }, [cards]);
+
+    // Clamp scrollPos when cards change
+    useEffect(() => {
+      const maxScroll = Math.max(cardOrder.length - 1, 0);
+      setScrollPos((prev) => {
+        const clamped = clamp(prev, 0, maxScroll);
+        scrollTargetRef.current = clamped;
+        return clamped;
+      });
+      // Clear selection if card disappeared
+      if (highlightedCard && !cardOrder.includes(highlightedCard)) {
         setHighlightedCard(null);
       }
-      const delta = e.deltaY || e.deltaX;
-      const maxScroll = Math.max(cardOrder.length - 1, 0);
-      scrollTargetRef.current = clamp(scrollTargetRef.current + delta * WHEEL_SCALE, 0, maxScroll);
-      startScrollAnimation();
-    },
-    [draggedCard, highlightedCard, cardOrder.length, startScrollAnimation],
-  );
+    }, [cardOrder, highlightedCard]);
 
-  useEffect(() => {
-    const el = handRef.current;
-    if (!el) return;
-    el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => el.removeEventListener("wheel", handleWheel);
-  }, [handleWheel]);
-
-  // --- Pointer events for drag (collapsed mode only) ---
-  const handlePointerDown = (cardId: string, e: React.PointerEvent<HTMLDivElement>) => {
-    if (isExpanded) return;
-    e.preventDefault();
-    const cardEl = e.currentTarget;
-    cardEl.setPointerCapture(e.pointerId);
-    capturedCardRef.current = cardEl;
-
-    dragIntentRef.current = false;
-
-    const cardIndex = cardOrder.indexOf(cardId);
-    const transform = getCardTransform(cardIndex, scrollPos);
-    const containerRect = handRef.current?.getBoundingClientRect();
-
-    if (containerRect) {
-      const cardScreenX = containerRect.left + containerRect.width / 2 + transform.x;
-      // Include selected lift so the card doesn't snap down on grab
-      const isSelected = highlightedCard === cardId;
-      const liftY = isSelected ? SELECTED_LIFT : 0;
-      const cardScreenY = containerRect.bottom + transform.y + liftY;
-
-      setDragOffset({
-        x: cardScreenX - e.clientX,
-        y: cardScreenY - e.clientY,
+    // --- Wheel scrolling ---
+    const animateScroll = useCallback(() => {
+      setScrollPos((prev) => {
+        const diff = scrollTargetRef.current - prev;
+        if (Math.abs(diff) < 0.01) {
+          isAnimatingRef.current = false;
+          return scrollTargetRef.current;
+        }
+        scrollAnimRef.current = requestAnimationFrame(animateScroll);
+        return prev + diff * 0.25;
       });
-    }
+    }, []);
 
-    setDraggedCard(cardId);
-    setDragPosition({ x: e.clientX, y: e.clientY });
-    setDragStartPosition({ x: e.clientX, y: e.clientY });
-    setIsInThrowZone(false);
-  };
-
-  const tryReorder = useCallback(
-    (pointerX: number, pointerY: number) => {
-      if (!draggedCard || !dragIntentRef.current) return;
-      const containerRect = handRef.current?.getBoundingClientRect();
-      if (!containerRect) return;
-      const cursorNearFan = pointerY >= containerRect.bottom - 80;
-      if (!cursorNearFan) return;
-      const relativeX = pointerX - (containerRect.left + containerRect.width / 2);
-      const targetSlot = clamp(
-        Math.round(relativeX / SPACING + scrollPos),
-        0,
-        cardOrder.length - 1,
-      );
-      setCardOrder((prev) => {
-        const currentIdx = prev.indexOf(draggedCard);
-        if (currentIdx === -1 || currentIdx === targetSlot) return prev;
-        const next = [...prev];
-        next.splice(currentIdx, 1);
-        next.splice(targetSlot, 0, draggedCard);
-        return next;
-      });
-    },
-    [draggedCard, scrollPos, cardOrder.length],
-  );
-
-  // Re-run reorder when scrollPos changes during drag
-  useEffect(() => {
-    if (draggedCard && dragIntentRef.current) {
-      tryReorder(lastPointerXRef.current, dragPosition.y);
-    }
-  }, [scrollPos, draggedCard, tryReorder, dragPosition.y]);
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!draggedCard) return;
-
-      const deltaX = e.clientX - dragStartPosition.x;
-      const deltaY = e.clientY - dragStartPosition.y;
-      const movedDist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-      if (!dragIntentRef.current && movedDist > DRAG_THRESHOLD) {
-        dragIntentRef.current = true;
+    const startScrollAnimation = useCallback(() => {
+      if (!isAnimatingRef.current) {
+        isAnimatingRef.current = true;
+        scrollAnimRef.current = requestAnimationFrame(animateScroll);
       }
+    }, [animateScroll]);
 
-      if (!dragIntentRef.current) return;
+    useEffect(() => {
+      return () => cancelAnimationFrame(scrollAnimRef.current);
+    }, []);
 
-      lastPointerXRef.current = e.clientX;
-      setDragPosition({ x: e.clientX, y: e.clientY });
+    const handleWheel = useCallback(
+      (e: WheelEvent) => {
+        // When dragging, only allow scroll if cursor is near the card fan
+        if (draggedCard) {
+          const containerRect = handRef.current?.getBoundingClientRect();
+          if (!containerRect || e.clientY < containerRect.bottom - 200) return;
+        }
+        e.preventDefault();
+        if (highlightedCard) {
+          setHighlightedCard(null);
+        }
+        const delta = e.deltaY || e.deltaX;
+        const maxScroll = Math.max(cardOrder.length - 1, 0);
+        scrollTargetRef.current = clamp(
+          scrollTargetRef.current + delta * WHEEL_SCALE,
+          0,
+          maxScroll,
+        );
+        startScrollAnimation();
+      },
+      [draggedCard, highlightedCard, cardOrder.length, startScrollAnimation],
+    );
 
-      tryReorder(e.clientX, e.clientY);
+    useEffect(() => {
+      const el = handRef.current;
+      if (!el) return;
+      el.addEventListener("wheel", handleWheel, { passive: false });
+      return () => el.removeEventListener("wheel", handleWheel);
+    }, [handleWheel]);
 
-      const throwDist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      const isUpward = deltaY < THROW_Y_THRESHOLD;
-      setIsInThrowZone(throwDist > THROW_DISTANCE_THRESHOLD && isUpward);
-    },
-    [draggedCard, dragStartPosition, tryReorder],
-  );
+    // --- Pointer events for drag (collapsed mode only) ---
+    const handlePointerDown = (cardId: string, e: React.PointerEvent<HTMLDivElement>) => {
+      if (isExpanded) return;
+      e.preventDefault();
+      const cardEl = e.currentTarget;
+      cardEl.setPointerCapture(e.pointerId);
+      capturedCardRef.current = cardEl;
 
-  const handlePointerUp = useCallback(
-    async (e: React.PointerEvent<HTMLDivElement>) => {
-      const cardId = draggedCard;
-      if (!cardId) return;
-
-      if (capturedCardRef.current) {
-        capturedCardRef.current.releasePointerCapture(e.pointerId);
-        capturedCardRef.current = null;
-      }
-
-      const wasDrag = dragIntentRef.current;
       dragIntentRef.current = false;
 
-      if (!wasDrag) {
-        // This was a click, not a drag
+      const cardIndex = cardOrder.indexOf(cardId);
+      const transform = getCardTransform(cardIndex, scrollPos);
+      const containerRect = handRef.current?.getBoundingClientRect();
+
+      if (containerRect) {
+        const cardScreenX = containerRect.left + containerRect.width / 2 + transform.x;
+        // Include selected lift so the card doesn't snap down on grab
+        const isSelected = highlightedCard === cardId;
+        const liftY = isSelected ? SELECTED_LIFT : 0;
+        const cardScreenY = containerRect.bottom + transform.y + liftY;
+
+        setDragOffset({
+          x: cardScreenX - e.clientX,
+          y: cardScreenY - e.clientY,
+        });
+      }
+
+      setDraggedCard(cardId);
+      setDragPosition({ x: e.clientX, y: e.clientY });
+      setDragStartPosition({ x: e.clientX, y: e.clientY });
+      setIsInThrowZone(false);
+    };
+
+    const tryReorder = useCallback(
+      (pointerX: number, pointerY: number) => {
+        if (!draggedCard || !dragIntentRef.current) return;
+        const containerRect = handRef.current?.getBoundingClientRect();
+        if (!containerRect) return;
+        const cursorNearFan = pointerY >= containerRect.bottom - 80;
+        if (!cursorNearFan) return;
+        const relativeX = pointerX - (containerRect.left + containerRect.width / 2);
+        const targetSlot = clamp(
+          Math.round(relativeX / SPACING + scrollPos),
+          0,
+          cardOrder.length - 1,
+        );
+        setCardOrder((prev) => {
+          const currentIdx = prev.indexOf(draggedCard);
+          if (currentIdx === -1 || currentIdx === targetSlot) return prev;
+          const next = [...prev];
+          next.splice(currentIdx, 1);
+          next.splice(targetSlot, 0, draggedCard);
+          return next;
+        });
+      },
+      [draggedCard, scrollPos, cardOrder.length],
+    );
+
+    // Re-run reorder when scrollPos changes during drag
+    useEffect(() => {
+      if (draggedCard && dragIntentRef.current) {
+        tryReorder(lastPointerXRef.current, dragPosition.y);
+      }
+    }, [scrollPos, draggedCard, tryReorder, dragPosition.y]);
+
+    const handlePointerMove = useCallback(
+      (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!draggedCard) return;
+
+        const deltaX = e.clientX - dragStartPosition.x;
+        const deltaY = e.clientY - dragStartPosition.y;
+        const movedDist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        if (!dragIntentRef.current && movedDist > DRAG_THRESHOLD) {
+          dragIntentRef.current = true;
+        }
+
+        if (!dragIntentRef.current) return;
+
+        lastPointerXRef.current = e.clientX;
+        setDragPosition({ x: e.clientX, y: e.clientY });
+
+        tryReorder(e.clientX, e.clientY);
+
+        const throwDist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const isUpward = deltaY < THROW_Y_THRESHOLD;
+        setIsInThrowZone(throwDist > THROW_DISTANCE_THRESHOLD && isUpward);
+      },
+      [draggedCard, dragStartPosition, tryReorder],
+    );
+
+    const handlePointerUp = useCallback(
+      async (e: React.PointerEvent<HTMLDivElement>) => {
+        const cardId = draggedCard;
+        if (!cardId) return;
+
+        if (capturedCardRef.current) {
+          capturedCardRef.current.releasePointerCapture(e.pointerId);
+          capturedCardRef.current = null;
+        }
+
+        const wasDrag = dragIntentRef.current;
+        dragIntentRef.current = false;
+
+        if (!wasDrag) {
+          // This was a click, not a drag
+          setDraggedCard(null);
+          setIsInThrowZone(false);
+
+          // Toggle selection
+          if (highlightedCard === cardId) {
+            setHighlightedCard(null);
+          } else {
+            void playCardHoverSound();
+            setHighlightedCard(cardId);
+            onCardSelect?.(cardId);
+          }
+
+          return;
+        }
+
+        // Drag ended — check throw
+        const deltaX = e.clientX - dragStartPosition.x;
+        const deltaY = e.clientY - dragStartPosition.y;
+        const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const isUpward = deltaY < THROW_Y_THRESHOLD;
+        const isThrow = dist > THROW_DISTANCE_THRESHOLD && isUpward;
+
+        if (isThrow && onPlayCard) {
+          const cardData = cardsRef.current.find((c) => c.id === cardId);
+          if (cardData?.available) {
+            try {
+              await onPlayCard(cardId);
+              setDraggedCard(null);
+              setIsInThrowZone(false);
+
+              setHighlightedCard(null);
+              return;
+            } catch (error) {
+              console.error("Failed to play card:", error);
+            }
+          }
+        }
+
+        // Return card to hand with animation
+        setReturningCard(cardId);
         setDraggedCard(null);
         setIsInThrowZone(false);
 
-        // Toggle selection
-        if (highlightedCard === cardId) {
+        setTimeout(() => {
+          setReturningCard(null);
+        }, 400);
+      },
+      [
+        draggedCard,
+        dragStartPosition,
+        highlightedCard,
+        onPlayCard,
+        onCardSelect,
+        playCardHoverSound,
+      ],
+    );
+
+    // --- Click outside to deselect ---
+    useEffect(() => {
+      const handleDocumentClick = (event: MouseEvent) => {
+        if (handRef.current && !handRef.current.contains(event.target as Node)) {
           setHighlightedCard(null);
-        } else {
-          void playCardHoverSound();
-          setHighlightedCard(cardId);
-          onCardSelect?.(cardId);
         }
+      };
+      document.addEventListener("click", handleDocumentClick);
+      return () => document.removeEventListener("click", handleDocumentClick);
+    }, []);
 
-        return;
-      }
+    if (hideWhenModalOpen || cards.length === 0) {
+      return null;
+    }
 
-      // Drag ended — check throw
-      const deltaX = e.clientX - dragStartPosition.x;
-      const deltaY = e.clientY - dragStartPosition.y;
-      const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      const isUpward = deltaY < THROW_Y_THRESHOLD;
-      const isThrow = dist > THROW_DISTANCE_THRESHOLD && isUpward;
+    const activeCullRadius = isExpanded ? expandedCullRadius : CULL_RADIUS;
+    const activeVisibleRadius = isExpanded ? expandedCullRadius : VISIBLE_RADIUS;
 
-      if (isThrow && onPlayCard) {
-        const cardData = cardsRef.current.find((c) => c.id === cardId);
-        if (cardData?.available) {
-          try {
-            await onPlayCard(cardId);
-            setDraggedCard(null);
-            setIsInThrowZone(false);
-
-            setHighlightedCard(null);
-            return;
-          } catch (error) {
-            console.error("Failed to play card:", error);
-          }
-        }
-      }
-
-      // Return card to hand with animation
-      setReturningCard(cardId);
-      setDraggedCard(null);
-      setIsInThrowZone(false);
-
-      setTimeout(() => {
-        setReturningCard(null);
-      }, 400);
-    },
-    [draggedCard, dragStartPosition, highlightedCard, onPlayCard, onCardSelect, playCardHoverSound],
-  );
-
-  // --- Click outside to deselect ---
-  useEffect(() => {
-    const handleDocumentClick = (event: MouseEvent) => {
-      if (handRef.current && !handRef.current.contains(event.target as Node)) {
-        setHighlightedCard(null);
-      }
-    };
-    document.addEventListener("click", handleDocumentClick);
-    return () => document.removeEventListener("click", handleDocumentClick);
-  }, []);
-
-  if (hideWhenModalOpen || cards.length === 0) {
-    return null;
-  }
-
-  const activeCullRadius = isExpanded ? expandedCullRadius : CULL_RADIUS;
-  const activeVisibleRadius = isExpanded ? expandedCullRadius : VISIBLE_RADIUS;
-
-  return (
-    <>
-      {/* Backdrop with blur */}
-      <div
-        className={`card-fan-backdrop ${isExpanded ? "is-visible" : ""}`}
-        onClick={() => handleCollapse()}
-      />
-
-      <div className="card-fan-overlay" ref={handRef}>
-        {/* Expand button */}
-        <button
-          className={`card-fan-toggle-btn card-fan-expand-btn ${isExpanded ? "is-hidden" : ""}`}
-          onClick={handleExpand}
-        >
-          <svg width="18" height="20" viewBox="0 0 18 20" fill="none" style={{ marginTop: 3 }}>
-            <path
-              d="M4 13L9 8L14 13"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M4 7L9 2L14 7"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-
-        {/* Collapse button */}
-        <button
-          className={`card-fan-toggle-btn card-fan-collapse-btn ${isExpanded ? "" : "is-hidden"}`}
+    return (
+      <>
+        {/* Backdrop with blur */}
+        <div
+          className={`card-fan-backdrop ${isExpanded ? "is-visible" : ""}`}
           onClick={() => handleCollapse()}
-          style={{ bottom: `${-expandedBaseY - 56}px` }}
-        >
-          <svg width="18" height="20" viewBox="0 0 18 20" fill="none" style={{ marginTop: 3 }}>
-            <path
-              d="M4 2L9 7L14 2"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M4 8L9 13L14 8"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        />
 
-        {cards.map((card) => {
-          const index = cardOrder.indexOf(card.id);
-          if (index === -1) return null;
-
-          const isDraggedCard = draggedCard === card.id;
-
-          const absD = Math.abs(index - scrollPos);
-          if (absD > activeCullRadius && !isDraggedCard) return null;
-
-          const edgeOpacity = isExpanded || isDraggedCard || absD <= activeVisibleRadius ? 1 : 0;
-          const isDragging = isDraggedCard && dragIntentRef.current;
-          const isReturning = returningCard === card.id;
-          const isHighlighted = highlightedCard === card.id;
-
-          let finalX: number;
-          let finalY: number;
-          let finalRotation: number;
-          let finalScale: number;
-          let finalZ: number;
-          let showErrors = false;
-
-          if (isExpanded) {
-            const d = index - scrollPos;
-            finalX = d * EXPANDED_SPACING;
-            finalY = expandedBaseY;
-            finalRotation = 0;
-            finalScale = 1;
-            finalZ = index;
-          } else {
-            const base = getCardTransform(index, scrollPos);
-            finalX = base.x * fanScale;
-            finalY = base.y * fanScale;
-            finalRotation = base.rotation;
-            finalScale = fanScale;
-            finalZ = base.z;
-
-            if (isHighlighted && !isDraggedCard) {
-              finalY += SELECTED_LIFT * fanScale;
-              finalScale = SELECTED_SCALE * fanScale;
-              finalRotation = 0;
-              finalZ = 2000;
-            }
-
-            let isDragRaised = false;
-            if (isDraggedCard && !isReturning) {
-              const containerRect = handRef.current?.getBoundingClientRect();
-              if (containerRect) {
-                finalX =
-                  dragPosition.x + dragOffset.x - (containerRect.left + containerRect.width / 2);
-                finalY = dragPosition.y + dragOffset.y - containerRect.bottom;
-                finalRotation = 0;
-                finalScale = fanScale;
-                finalZ = 3000;
-
-                const dragDeltaY = dragPosition.y - dragStartPosition.y;
-                isDragRaised = dragIntentRef.current && dragDeltaY < DRAG_RAISE_THRESHOLD;
-              }
-            }
-
-            showErrors =
-              !card.available &&
-              card.errors.length > 0 &&
-              (isHighlighted || (isDraggedCard && isDragRaised));
-          }
-
-          const staggerDelay = isTransitioning
-            ? `${Math.abs(index - Math.round(scrollPos)) * 25}ms`
-            : undefined;
-
-          const classNames = [
-            "card-fan-card",
-            isTransitioning ? "is-mode-transition" : "",
-            !isExpanded && isDragging && !isReturning ? "is-dragging" : "",
-            !isExpanded && !isDraggedCard && draggedCard ? "is-reordering" : "",
-            !isExpanded && isReturning ? "is-returning" : "",
-            !isExpanded && isDraggedCard && isInThrowZone && card.available ? "is-throw-zone" : "",
-            isExpanded ? "is-expanded" : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
-
-          return (
-            <div
-              key={card.id}
-              data-card-id={card.id}
-              className={classNames}
-              style={{
-                transform: `translate(${finalX}px, ${finalY}px) rotate(${finalRotation}deg) scale(${finalScale})`,
-                zIndex: finalZ,
-                opacity: edgeOpacity,
-                pointerEvents: edgeOpacity === 0 ? "none" : undefined,
-                transitionDelay: staggerDelay,
-              }}
-              onPointerDown={isExpanded ? undefined : (e) => handlePointerDown(card.id, e)}
-              onPointerMove={isExpanded ? undefined : handlePointerMove}
-              onPointerUp={isExpanded ? undefined : handlePointerUp}
-              onClick={isExpanded ? () => handleCollapse(card.id) : undefined}
-            >
-              <GameCard
-                card={card}
-                isSelected={
-                  !isExpanded &&
-                  (isHighlighted || (isDraggedCard && isInThrowZone && card.available === true))
-                }
-                onSelect={() => {}}
-                animationDelay={-1}
+        <div className="card-fan-overlay" ref={handRef}>
+          {/* Expand button */}
+          <button
+            className={`card-fan-toggle-btn card-fan-expand-btn ${isExpanded ? "is-hidden" : ""}`}
+            onClick={handleExpand}
+          >
+            <svg width="18" height="20" viewBox="0 0 18 20" fill="none" style={{ marginTop: 3 }}>
+              <path
+                d="M4 13L9 8L14 13"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
-              {!isExpanded && !card.available && card.errors.length > 0 && (
-                <div className={`card-fan-error-panel ${showErrors ? "is-visible" : ""}`}>
-                  {card.errors.map((err, i) => (
-                    <div key={i} className="card-fan-error-item">
-                      {err.message}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+              <path
+                d="M4 7L9 2L14 7"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
 
-        <style>{`
+          {/* Collapse button */}
+          <button
+            className={`card-fan-toggle-btn card-fan-collapse-btn ${isExpanded ? "" : "is-hidden"}`}
+            onClick={() => handleCollapse()}
+            style={{ bottom: `${-expandedBaseY - 56}px` }}
+          >
+            <svg width="18" height="20" viewBox="0 0 18 20" fill="none" style={{ marginTop: 3 }}>
+              <path
+                d="M4 2L9 7L14 2"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M4 8L9 13L14 8"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          {cards.map((card) => {
+            const index = cardOrder.indexOf(card.id);
+            if (index === -1) return null;
+
+            const isDraggedCard = draggedCard === card.id;
+
+            const absD = Math.abs(index - scrollPos);
+            if (absD > activeCullRadius && !isDraggedCard) return null;
+
+            const edgeOpacity = isExpanded || isDraggedCard || absD <= activeVisibleRadius ? 1 : 0;
+            const isDragging = isDraggedCard && dragIntentRef.current;
+            const isReturning = returningCard === card.id;
+            const isHighlighted = highlightedCard === card.id;
+
+            let finalX: number;
+            let finalY: number;
+            let finalRotation: number;
+            let finalScale: number;
+            let finalZ: number;
+            let showErrors = false;
+
+            if (isExpanded) {
+              const d = index - scrollPos;
+              finalX = d * EXPANDED_SPACING;
+              finalY = expandedBaseY;
+              finalRotation = 0;
+              finalScale = 1;
+              finalZ = index;
+            } else {
+              const base = getCardTransform(index, scrollPos);
+              finalX = base.x * fanScale;
+              finalY = base.y * fanScale;
+              finalRotation = base.rotation;
+              finalScale = fanScale;
+              finalZ = base.z;
+
+              if (isHighlighted && !isDraggedCard) {
+                finalY += SELECTED_LIFT * fanScale;
+                finalScale = SELECTED_SCALE * fanScale;
+                finalRotation = 0;
+                finalZ = 2000;
+              }
+
+              let isDragRaised = false;
+              if (isDraggedCard && !isReturning) {
+                const containerRect = handRef.current?.getBoundingClientRect();
+                if (containerRect) {
+                  finalX =
+                    dragPosition.x + dragOffset.x - (containerRect.left + containerRect.width / 2);
+                  finalY = dragPosition.y + dragOffset.y - containerRect.bottom;
+                  finalRotation = 0;
+                  finalScale = fanScale;
+                  finalZ = 3000;
+
+                  const dragDeltaY = dragPosition.y - dragStartPosition.y;
+                  isDragRaised = dragIntentRef.current && dragDeltaY < DRAG_RAISE_THRESHOLD;
+                }
+              }
+
+              showErrors =
+                !card.available &&
+                card.errors.length > 0 &&
+                (isHighlighted || (isDraggedCard && isDragRaised));
+            }
+
+            const staggerDelay = isTransitioning
+              ? `${Math.abs(index - Math.round(scrollPos)) * 25}ms`
+              : undefined;
+
+            const classNames = [
+              "card-fan-card",
+              isTransitioning ? "is-mode-transition" : "",
+              !isExpanded && isDragging && !isReturning ? "is-dragging" : "",
+              !isExpanded && !isDraggedCard && draggedCard ? "is-reordering" : "",
+              !isExpanded && isReturning ? "is-returning" : "",
+              !isExpanded && isDraggedCard && isInThrowZone && card.available
+                ? "is-throw-zone"
+                : "",
+              isExpanded ? "is-expanded" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            return (
+              <div
+                key={card.id}
+                data-card-id={card.id}
+                className={classNames}
+                style={{
+                  transform: `translate(${finalX}px, ${finalY}px) rotate(${finalRotation}deg) scale(${finalScale})`,
+                  zIndex: finalZ,
+                  opacity: edgeOpacity,
+                  pointerEvents: edgeOpacity === 0 ? "none" : undefined,
+                  transitionDelay: staggerDelay,
+                }}
+                onPointerDown={isExpanded ? undefined : (e) => handlePointerDown(card.id, e)}
+                onPointerMove={isExpanded ? undefined : handlePointerMove}
+                onPointerUp={isExpanded ? undefined : handlePointerUp}
+                onClick={isExpanded ? () => handleCollapse(card.id) : undefined}
+              >
+                <GameCard
+                  card={card}
+                  isSelected={
+                    !isExpanded &&
+                    (isHighlighted || (isDraggedCard && isInThrowZone && card.available === true))
+                  }
+                  onSelect={() => {}}
+                  animationDelay={-1}
+                />
+                {!isExpanded && !card.available && card.errors.length > 0 && (
+                  <div className={`card-fan-error-panel ${showErrors ? "is-visible" : ""}`}>
+                    {card.errors.map((err, i) => (
+                      <div key={i} className="card-fan-error-item">
+                        {err.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <style>{`
         .card-fan-backdrop {
           position: fixed;
           inset: 0;
@@ -783,9 +818,10 @@ const CardFanOverlay: React.FC<CardFanOverlayProps> = ({
           }
         }
       `}</style>
-      </div>
-    </>
-  );
-};
+        </div>
+      </>
+    );
+  },
+);
 
 export default CardFanOverlay;

@@ -20,7 +20,7 @@ import StartingCardSelectionOverlay from "../../ui/overlay/StartingCardSelection
 import PendingCardSelectionOverlay from "../../ui/overlay/PendingCardSelectionOverlay.tsx";
 import CardDrawSelectionOverlay from "../../ui/overlay/CardDrawSelectionOverlay.tsx";
 import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOverlay.tsx";
-import CardFanOverlay from "../../ui/overlay/CardFanOverlay.tsx";
+import CardFanOverlay, { CardFanOverlayHandle } from "../../ui/overlay/CardFanOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import YourTurnBanner from "../../ui/overlay/YourTurnBanner.tsx";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
@@ -94,6 +94,7 @@ export default function GameInterface() {
   const [isConnected, setIsConnected] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>("idle");
   const wasInLobby = useRef(false);
+  const cardFanRef = useRef<CardFanOverlayHandle>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectionStep, setReconnectionStep] = useState<"game" | "environment" | null>(null);
   const [currentPlayer, setCurrentPlayer] = useState<PlayerDto | null>(null);
@@ -2516,6 +2517,65 @@ export default function GameInterface() {
     [handleActionSelect, handleConvertPlantsToGreenery, handleConvertHeatToTemperature],
   );
 
+  // Hotkeys: Space (toggle hand fan), Enter (pass/skip turn)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+        return;
+      }
+
+      const anyModalOpen =
+        showStartingSelection ||
+        showPendingCardSelection ||
+        showCardDrawSelection ||
+        showCardDiscardSelection ||
+        showBehaviorChoiceSelection ||
+        showProductionPhaseModal ||
+        showPaymentSelection ||
+        isPreGamePhase ||
+        isInitApplyPhase;
+
+      if (e.key === " ") {
+        e.preventDefault();
+        if (!anyModalOpen && !spectatePlayerId && !isSpectator) {
+          cardFanRef.current?.toggleExpand();
+        }
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (
+          !anyModalOpen &&
+          game?.currentPhase === GamePhaseAction &&
+          currentPlayer?.id === game?.currentTurn &&
+          !currentPlayer?.pendingTileSelection
+        ) {
+          void globalWebSocketManager.skipAction();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    spectatePlayerId,
+    isSpectator,
+    showStartingSelection,
+    showPendingCardSelection,
+    showCardDrawSelection,
+    showCardDiscardSelection,
+    showBehaviorChoiceSelection,
+    showProductionPhaseModal,
+    showPaymentSelection,
+    isPreGamePhase,
+    isInitApplyPhase,
+    game?.currentPhase,
+    game?.currentTurn,
+    currentPlayer?.id,
+    currentPlayer?.pendingTileSelection,
+  ]);
+
   // Check if we need the persistent backdrop (during overlay transitions)
   const shouldShowBackdrop = showStartingSelection;
 
@@ -2916,6 +2976,7 @@ export default function GameInterface() {
           }`}
         >
           <CardFanOverlay
+            ref={cardFanRef}
             cards={currentPlayer.cards || []}
             hideWhenModalOpen={
               showStartingSelection ||
