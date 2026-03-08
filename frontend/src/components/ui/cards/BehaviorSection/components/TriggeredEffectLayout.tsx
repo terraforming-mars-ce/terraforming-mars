@@ -96,6 +96,23 @@ const renderSelector = (
     });
   }
 
+  if (selector.vp) {
+    const vpLabel =
+      selector.vp.min === 0 && !selector.vp.max
+        ? "+ VP"
+        : selector.vp.max != null && !selector.vp.min
+          ? `≤${selector.vp.max} VP`
+          : `≥${selector.vp.min} VP`;
+    elements.push(
+      <span
+        key={`vp-${triggerIndex}-${selectorIndex}`}
+        className="font-orbitron text-[10px] font-semibold text-white bg-black/40 border border-white/15 px-1.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)] leading-[22px]"
+      >
+        {vpLabel}
+      </span>,
+    );
+  }
+
   return (
     <div
       key={`selector-${triggerIndex}-${selectorIndex}`}
@@ -143,6 +160,44 @@ const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode 
 
   // Check if trigger is city-placed condition (e.g., Tharsis Republic)
   const isCityPlaced = trigger.condition?.type === "city-placed";
+
+  // Handle global-parameter-raised condition (e.g., Aphrodite for venus)
+  const isGlobalParameterRaised = trigger.condition?.type === "global-parameter-raised";
+
+  if (isGlobalParameterRaised) {
+    const paramToIcon: Record<string, string> = {
+      temperature: "temperature",
+      oxygen: "oxygen",
+      ocean: "ocean-tile",
+      venus: "venus",
+    };
+    const globalParams: string[] = trigger.condition?.selectors?.[0]?.globalParameters ?? [];
+
+    return (
+      <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
+        <div className="flex items-center gap-[2px]">
+          {globalParams.map((param: string) => (
+            <GameIcon key={param} iconType={paramToIcon[param] ?? param} size="small" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Handle placement-bonus-gained (e.g., Mining Guild): tile icon + selectors
+  const isPlacementBonusGained = trigger.condition?.type === "placement-bonus-gained";
+  if (isPlacementBonusGained) {
+    return (
+      <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
+        <GameIcon iconType="tile-placement" size="small" />
+        {hasSelectors && (
+          <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+            *
+          </span>
+        )}
+      </div>
+    );
+  }
 
   // Handle selectors first (new system with AND within selector, OR between selectors)
   if (hasSelectors) {
@@ -273,6 +328,27 @@ const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode 
             -
           </span>
           <GameIcon iconType="credit" amount={value} size="small" />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle production-increased trigger (e.g., Manutech partial group)
+  const isProductionIncreased = trigger.condition?.type === "production-increased";
+  if (isProductionIncreased) {
+    const resourceTypes: string[] = trigger.condition?.resourceTypes ?? [];
+    return (
+      <div key={triggerIndex} className="flex gap-[2px] items-center">
+        <div className="bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1 py-[2px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] flex items-center gap-[2px]">
+          {resourceTypes.map((rt: string, idx: number) => {
+            const iconType = PRODUCTION_TYPE_TO_RESOURCE[rt] ?? rt;
+            return (
+              <React.Fragment key={`prod-${triggerIndex}-${idx}`}>
+                {idx > 0 && <Slash />}
+                <GameIcon iconType={iconType} size="small" />
+              </React.Fragment>
+            );
+          })}
         </div>
       </div>
     );
@@ -521,7 +597,7 @@ const renderBehaviorRow = (
                     isInput={true}
                     resource={input}
                     isGroupedWithOtherNegatives={false}
-                    context="default"
+                    context="action"
                     isAffordable={isResourceAffordable(input, true)}
                     tileScaleInfo={tileScaleInfo}
                   />
@@ -597,7 +673,7 @@ const renderBehaviorRow = (
                     isInput={true}
                     resource={input}
                     isGroupedWithOtherNegatives={false}
-                    context="default"
+                    context="action"
                     isAffordable={isResourceAffordable(input, true)}
                     tileScaleInfo={tileScaleInfo}
                   />
@@ -631,6 +707,56 @@ const renderBehaviorRow = (
   );
 };
 
+const isTilePlacementWithBonusProductionPattern = (allBehaviors: any[]): boolean => {
+  const hasTilePlacement = allBehaviors.some((b) =>
+    b.outputs?.some((o: any) => o.type === "tile-placement"),
+  );
+  const hasTilePlacedTrigger = allBehaviors.some(
+    (b) => b.triggers?.[0]?.condition?.type === "tile-placed",
+  );
+  return hasTilePlacement && hasTilePlacedTrigger;
+};
+
+const ALL_PRODUCTION_TYPES = new Set([
+  "credits-production",
+  "steel-production",
+  "titanium-production",
+  "plant-production",
+  "energy-production",
+  "heat-production",
+]);
+
+const isAllStandardResourceProductionPattern = (allBehaviors: any[]): boolean => {
+  if (allBehaviors.length < 6) {
+    return false;
+  }
+  const coveredTypes = new Set<string>();
+  for (const b of allBehaviors) {
+    const trigger = b.triggers?.[0];
+    if (trigger?.condition?.type !== "production-increased") {
+      return false;
+    }
+    const resourceTypes: string[] = trigger.condition.resourceTypes ?? [];
+    if (resourceTypes.length !== 1) {
+      return false;
+    }
+    if (!ALL_PRODUCTION_TYPES.has(resourceTypes[0])) {
+      return false;
+    }
+    coveredTypes.add(resourceTypes[0]);
+  }
+  return coveredTypes.size === 6;
+};
+
+const PRODUCTION_TYPE_TO_RESOURCE: Record<string, string> = {
+  "credits-production": "credit",
+  "steel-production": "steel",
+  "titanium-production": "titanium",
+  "plant-production": "plant",
+  "energy-production": "energy",
+  "heat-production": "heat",
+};
+
 const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
   behavior,
   mergedBehaviors,
@@ -642,6 +768,60 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
   // Collect all behaviors to render (primary + merged)
   const allBehaviors = [behavior, ...(mergedBehaviors || [])];
 
+  // Compact rendering for all-6-standard-resource production-increased pattern (Manutech)
+  if (isAllStandardResourceProductionPattern(allBehaviors)) {
+    return (
+      <div className="flex gap-[3px] items-center justify-center">
+        <div className="bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] flex items-center">
+          <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold rounded px-1 py-[1px] leading-tight">
+            SR
+          </span>
+        </div>
+        <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
+          :
+        </span>
+        <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold rounded px-1 py-[1px] leading-tight">
+          SR
+        </span>
+      </div>
+    );
+  }
+
+  // Compact rendering for tile-placement + conditional production pattern (Mining Area/Rights)
+  if (isTilePlacementWithBonusProductionPattern(allBehaviors)) {
+    const tileBehavior = allBehaviors.find((b) =>
+      b.outputs?.some((o: any) => o.type === "tile-placement"),
+    );
+    const tileOutput = tileBehavior?.outputs?.find((o: any) => o.type === "tile-placement");
+    const hasBonusRestriction = tileOutput?.tileRestrictions?.onBonusType?.length > 0;
+    const triggeredBehaviors = allBehaviors.filter(
+      (b) => b.triggers?.[0]?.condition?.type === "tile-placed",
+    );
+
+    return (
+      <div className="flex flex-col gap-1 items-center justify-center">
+        <div className="flex gap-[2px] items-center justify-center">
+          <GameIcon iconType="tile-placement" size="small" />
+          {hasBonusRestriction && (
+            <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+              *
+            </span>
+          )}
+        </div>
+        {triggeredBehaviors.map((b, index) =>
+          renderBehaviorRow(
+            b,
+            index,
+            isResourceAffordable,
+            analyzeResourceDisplayWithConstraints,
+            tileScaleInfo,
+          ),
+        )}
+      </div>
+    );
+  }
+
+  // For production-increased triggers, render resource icons inside production box
   return (
     <div className="flex flex-col gap-2 items-center justify-center">
       {allBehaviors.map((b, index) =>

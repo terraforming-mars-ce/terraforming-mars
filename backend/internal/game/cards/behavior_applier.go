@@ -455,9 +455,9 @@ func isStorageResourceType(rt shared.ResourceType) bool {
 func isEffectOutputType(rt shared.ResourceType) bool {
 	switch rt {
 	case shared.ResourceDiscount, shared.ResourcePaymentSubstitute, shared.ResourceValueModifier,
-		shared.ResourceGlobalParameterLenience, shared.ResourceVenusLenience,
+		shared.ResourceGlobalParameterLenience,
 		shared.ResourceStoragePaymentSubstitute, shared.ResourceOceanAdjacencyBonus,
-		shared.ResourceDefense:
+		shared.ResourceDefense, shared.ResourceActionReuse:
 		return true
 	}
 	return false
@@ -651,6 +651,7 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 
 	// Scan outputs for card-peek, card-take, card-buy
 	var peekAmount, takeAmount, buyAmount int
+	var isPrelude bool
 	for _, output := range outputs {
 		switch output.ResourceType {
 		case shared.ResourceCardPeek:
@@ -659,6 +660,9 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 			takeAmount += output.Amount
 		case shared.ResourceCardBuy:
 			buyAmount += output.Amount
+		}
+		if hasPreludeCardType(output.Selectors) {
+			isPrelude = true
 		}
 	}
 
@@ -674,8 +678,14 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 		return false, fmt.Errorf("cannot apply card draw outputs: no game context")
 	}
 
-	// Draw cards from deck
-	drawnCards, err := a.game.Deck().DrawProjectCards(ctx, peekAmount)
+	// Draw cards from the appropriate deck
+	var drawnCards []string
+	var err error
+	if isPrelude {
+		drawnCards, err = a.game.Deck().DrawPreludeCards(ctx, peekAmount)
+	} else {
+		drawnCards, err = a.game.Deck().DrawProjectCards(ctx, peekAmount)
+	}
 	if err != nil {
 		return false, fmt.Errorf("failed to draw cards: %w", err)
 	}
@@ -684,6 +694,7 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 		zap.Int("peek_amount", peekAmount),
 		zap.Int("take_amount", takeAmount),
 		zap.Int("buy_amount", buyAmount),
+		zap.Bool("is_prelude", isPrelude),
 		zap.Strings("drawn_cards", drawnCards))
 
 	// Create pending card draw selection
@@ -695,6 +706,7 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 		Source:              a.source,
 		SourceCardID:        a.sourceCardID,
 		SourceBehaviorIndex: a.sourceBehaviorIdx,
+		PlayAsPrelude:       isPrelude,
 	}
 
 	// Set on player
@@ -1436,11 +1448,17 @@ func (a *BehaviorApplier) applyOutput(
 				zap.Int("amount", len(drawnCards)))
 		}
 
+	case shared.ResourceCardDiscard:
+		log.Debug("Skipping card-discard output (handled at action layer)")
+
 	case shared.ResourceCardPeek, shared.ResourceCardTake, shared.ResourceCardBuy:
 		// Handled by ApplyCardDrawOutputs - skip here
 		log.Debug("Skipping card draw output (handled by ApplyCardDrawOutputs)",
 			zap.String("type", string(output.ResourceType)),
 			zap.Int("amount", output.Amount))
+
+	case shared.ResourceActionReuse:
+		log.Debug("Skipping action-reuse output (handled at action layer)")
 
 	default:
 		log.Warn("Unhandled output type",

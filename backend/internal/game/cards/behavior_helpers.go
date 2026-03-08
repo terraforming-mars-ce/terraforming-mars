@@ -125,3 +125,14 @@ func HasCardDiscardInput(behavior shared.CardBehavior) bool {
 	}
 	return false
 }
+
+// HasCardDiscardOutput checks if a behavior has card-discard type outputs
+// These require a pending selection before remaining outputs can be applied
+func HasCardDiscardOutput(behavior shared.CardBehavior) bool {
+	for _, output := range behavior.Outputs {
+		if output.ResourceType == shared.ResourceCardDiscard {
+			return true
+		}
+	}
+	return false
+}

@@ -104,8 +104,9 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
   };
 
   const handleChoiceClick = (choiceIndex: number) => {
-    // Call immediately without delay for choice selection
-    onChoiceSelect(choiceIndex);
+    const choice = choices[choiceIndex]?.choice;
+    const indexToSend = choice?.originalIndex ?? choiceIndex;
+    onChoiceSelect(indexToSend);
   };
 
   useEffect(() => {
@@ -127,6 +128,9 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
     };
 
     const preventScroll = (event: WheelEvent | TouchEvent) => {
+      if (popoverRef.current && popoverRef.current.contains(event.target as Node)) {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
     };
@@ -188,10 +192,10 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
           {choices.map(({ index, choice }) => {
             // Convert the choice into a CardBehaviorDto that BehaviorSection can render
             const behaviorForChoice: CardBehaviorDto = {
-              triggers: behavior?.triggers || [],
+              triggers: [{ type: "manual" }],
               inputs: choice.inputs,
               outputs: choice.outputs,
-              choices: undefined, // Don't show nested choices
+              choices: undefined,
             };
 
             const delay = index * 0.05;
@@ -238,7 +242,7 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
                       {renderRequirementItems(choice.requirements.items)}
                     </div>
                   )}
-                <div className="flex items-center justify-center w-full [&>div]:!relative [&>div]:!bottom-auto [&>div]:!left-auto [&>div]:!right-auto [&>div]:w-auto [&>div]:max-w-full [&>div:hover]:!transform-none [&>div:hover]:!shadow-none [&>div:hover]:!filter-none">
+                <div className="flex items-center justify-center w-full">
                   <BehaviorSection
                     behaviors={[behaviorForChoice]}
                     playerResources={playerResources}
@@ -246,6 +250,7 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
                     cardId={cardId}
                     greyOutAll={!isSelectable}
                     hideActionChip
+                    noContainer
                   />
                 </div>
               </div>

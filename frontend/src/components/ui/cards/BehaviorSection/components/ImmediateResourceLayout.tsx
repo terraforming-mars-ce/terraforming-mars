@@ -1523,56 +1523,76 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
         </>
       )}
 
-      {(nonProductionOutputs.length > 0 || consolidatedCards.length > 0) && (
-        <div
-          className={`flex flex-col gap-[3px] justify-center ${negativeRegular.length > 0 && positiveRegular.length > 0 ? "items-start" : "items-center"}`}
-        >
-          {negativeRegular.length > 0 && (
-            <div className="flex gap-[3px] items-center justify-start">
-              {negativeRegular.length > 1 && (
-                <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                  -
-                </span>
-              )}
-              {negativeRegular.map((output: any, index: number) => {
-                const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                const isGrouped = negativeRegular.length > 1;
-                return (
-                  <React.Fragment key={`neg-${index}`}>
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={isGrouped}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          )}
-
-          {globalParamOutputs.length > 0 && (
-            <div className="flex gap-[3px] items-center justify-center">
-              {[...globalParamOutputs]
-                .sort((a, b) => {
-                  const typeA = a.resourceType || a.type || "";
-                  const typeB = b.resourceType || b.type || "";
-                  if (typeA === "tr") return 1;
-                  if (typeB === "tr") return -1;
-                  return 0;
-                })
-                .map((output: any, index: number) => {
+      {(nonProductionOutputs.length > 0 || consolidatedCards.length > 0) &&
+      negativeRegular.length === 0 &&
+      positiveRegular.length > 0 &&
+      globalParamOutputs.length > 0 &&
+      positiveRegular.length + globalParamOutputs.length <= 4 &&
+      consolidatedCards.length === 0 ? (
+        <div className="flex gap-2 items-center justify-center">
+          {positiveRegular.map((output: any, index: number) => {
+            const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
+            return (
+              <React.Fragment key={`pos-inline-${index}`}>
+                <ResourceDisplay
+                  displayInfo={displayInfo}
+                  isInput={false}
+                  resource={output}
+                  isGroupedWithOtherNegatives={false}
+                  context="standalone"
+                  isAffordable={isResourceAffordable(output, false)}
+                  tileScaleInfo={tileScaleInfo}
+                />
+              </React.Fragment>
+            );
+          })}
+          {[...globalParamOutputs]
+            .sort((a, b) => {
+              const typeA = a.resourceType || a.type || "";
+              const typeB = b.resourceType || b.type || "";
+              if (typeA === "tr") return 1;
+              if (typeB === "tr") return -1;
+              return 0;
+            })
+            .map((output: any, index: number) => {
+              const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
+              return (
+                <React.Fragment key={`global-inline-${index}`}>
+                  <ResourceDisplay
+                    displayInfo={displayInfo}
+                    isInput={false}
+                    resource={output}
+                    isGroupedWithOtherNegatives={false}
+                    context="standalone"
+                    isAffordable={isResourceAffordable(output, false)}
+                    tileScaleInfo={tileScaleInfo}
+                  />
+                </React.Fragment>
+              );
+            })}
+        </div>
+      ) : (
+        (nonProductionOutputs.length > 0 || consolidatedCards.length > 0) && (
+          <div
+            className={`flex flex-col gap-[3px] justify-center ${negativeRegular.length > 0 && positiveRegular.length > 0 ? "items-start" : "items-center"}`}
+          >
+            {negativeRegular.length > 0 && (
+              <div className="flex gap-[3px] items-center justify-start">
+                {negativeRegular.length > 1 && (
+                  <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
+                    -
+                  </span>
+                )}
+                {negativeRegular.map((output: any, index: number) => {
                   const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
+                  const isGrouped = negativeRegular.length > 1;
                   return (
-                    <React.Fragment key={`global-default-${index}`}>
+                    <React.Fragment key={`neg-${index}`}>
                       <ResourceDisplay
                         displayInfo={displayInfo}
                         isInput={false}
                         resource={output}
-                        isGroupedWithOtherNegatives={false}
+                        isGroupedWithOtherNegatives={isGrouped}
                         context="standalone"
                         isAffordable={isResourceAffordable(output, false)}
                         tileScaleInfo={tileScaleInfo}
@@ -1580,42 +1600,23 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                     </React.Fragment>
                   );
                 })}
-            </div>
-          )}
+              </div>
+            )}
 
-          {positiveRegular.length > 0 && (
-            <>
-              {negativeRegular.length === 0 && positiveRegular.length === 2 ? (
-                positiveRegular.map((output: any, index: number) => {
-                  const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                  return (
-                    <div
-                      key={`pos-row-${index}`}
-                      className="flex gap-[3px] items-center justify-center"
-                    >
-                      <ResourceDisplay
-                        displayInfo={displayInfo}
-                        isInput={false}
-                        resource={output}
-                        isGroupedWithOtherNegatives={false}
-                        context="standalone"
-                        isAffordable={isResourceAffordable(output, false)}
-                        tileScaleInfo={tileScaleInfo}
-                      />
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="flex gap-[3px] items-center justify-start">
-                  {negativeRegular.length > 0 && (
-                    <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                      +
-                    </span>
-                  )}
-                  {positiveRegular.map((output: any, index: number) => {
+            {globalParamOutputs.length > 0 && (
+              <div className="flex gap-[3px] items-center justify-center">
+                {[...globalParamOutputs]
+                  .sort((a, b) => {
+                    const typeA = a.resourceType || a.type || "";
+                    const typeB = b.resourceType || b.type || "";
+                    if (typeA === "tr") return 1;
+                    if (typeB === "tr") return -1;
+                    return 0;
+                  })
+                  .map((output: any, index: number) => {
                     const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
                     return (
-                      <React.Fragment key={`pos-${index}`}>
+                      <React.Fragment key={`global-default-${index}`}>
                         <ResourceDisplay
                           displayInfo={displayInfo}
                           isInput={false}
@@ -1628,38 +1629,70 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       </React.Fragment>
                     );
                   })}
-                </div>
-              )}
-            </>
-          )}
+              </div>
+            )}
 
-          {consolidatedCards.length > 0 &&
-            (() => {
-              const discardCards = consolidatedCards.filter((c) => c.badgeType === "discard");
-              const drawCards = consolidatedCards.filter((c) => c.badgeType !== "discard");
-              const hasArrow = discardCards.length > 0 && drawCards.length > 0;
+            {positiveRegular.length > 0 && (
+              <>
+                {negativeRegular.length === 0 && positiveRegular.length === 2 ? (
+                  positiveRegular.map((output: any, index: number) => {
+                    const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
+                    return (
+                      <div
+                        key={`pos-row-${index}`}
+                        className="flex gap-[3px] items-center justify-center"
+                      >
+                        <ResourceDisplay
+                          displayInfo={displayInfo}
+                          isInput={false}
+                          resource={output}
+                          isGroupedWithOtherNegatives={false}
+                          context="standalone"
+                          isAffordable={isResourceAffordable(output, false)}
+                          tileScaleInfo={tileScaleInfo}
+                        />
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex gap-[3px] items-center justify-start">
+                    {negativeRegular.length > 0 && (
+                      <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
+                        +
+                      </span>
+                    )}
+                    {positiveRegular.map((output: any, index: number) => {
+                      const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
+                      return (
+                        <React.Fragment key={`pos-${index}`}>
+                          <ResourceDisplay
+                            displayInfo={displayInfo}
+                            isInput={false}
+                            resource={output}
+                            isGroupedWithOtherNegatives={false}
+                            context="standalone"
+                            isAffordable={isResourceAffordable(output, false)}
+                            tileScaleInfo={tileScaleInfo}
+                          />
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
 
-              return (
-                <div className="flex gap-[3px] items-center justify-start">
-                  {discardCards.map((cardItem, index) => (
-                    <CardIcon
-                      key={`discard-${index}`}
-                      amount={cardItem.amount}
-                      badgeType={cardItem.badgeType}
-                      isAffordable={true}
-                      isAttack={cardItem.isAttack}
-                      totalCardTypes={1}
-                    />
-                  ))}
-                  {hasArrow && (
-                    <span className="text-white text-sm font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] mx-1.5">
-                      →
-                    </span>
-                  )}
-                  <div className="flex flex-col gap-[6px] items-center">
-                    {drawCards.map((cardItem, index) => (
+            {consolidatedCards.length > 0 &&
+              (() => {
+                const discardCards = consolidatedCards.filter((c) => c.badgeType === "discard");
+                const drawCards = consolidatedCards.filter((c) => c.badgeType !== "discard");
+                const hasArrow = discardCards.length > 0 && drawCards.length > 0;
+
+                return (
+                  <div className="flex gap-[3px] items-center justify-start">
+                    {discardCards.map((cardItem, index) => (
                       <CardIcon
-                        key={`draw-${index}`}
+                        key={`discard-${index}`}
                         amount={cardItem.amount}
                         badgeType={cardItem.badgeType}
                         isAffordable={true}
@@ -1667,11 +1700,28 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                         totalCardTypes={1}
                       />
                     ))}
+                    {hasArrow && (
+                      <span className="text-white text-sm font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] mx-1.5">
+                        →
+                      </span>
+                    )}
+                    <div className="flex flex-col gap-[6px] items-center">
+                      {drawCards.map((cardItem, index) => (
+                        <CardIcon
+                          key={`draw-${index}`}
+                          amount={cardItem.amount}
+                          badgeType={cardItem.badgeType}
+                          isAffordable={true}
+                          isAttack={cardItem.isAttack}
+                          totalCardTypes={1}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })()}
-        </div>
+                );
+              })()}
+          </div>
+        )
       )}
     </div>
   );

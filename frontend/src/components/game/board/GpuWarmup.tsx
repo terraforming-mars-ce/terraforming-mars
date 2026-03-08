@@ -10,6 +10,7 @@ import {
   TREE_NAMES,
   BUSH_NAMES,
   CLOVER_NAMES,
+  FLOWER_NAMES,
   type TreeVariant,
 } from "./GreeneryRenderer";
 import { useModels } from "../../../hooks/useModels";
@@ -23,7 +24,7 @@ interface GpuWarmupProps {
 }
 
 export default function GpuWarmup({ onReady }: GpuWarmupProps) {
-  const { treesScene, rockScene, cityScene } = useModels();
+  const { treesScene, rockScene, cityScene, flowersScene } = useModels();
   const {
     rock: rockTexture,
     sand: sandTexture,
@@ -64,6 +65,13 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
     }
     return variantCache.clover;
   }, [treesScene]);
+
+  const flowerVariants = useMemo(() => {
+    if (!variantCache.flowers) {
+      variantCache.flowers = createVariantsFromScene(flowersScene, FLOWER_NAMES, 0.025);
+    }
+    return variantCache.flowers;
+  }, [flowersScene]);
 
   const { geometry: rockGeometry, material: rockMaterial } = useMemo(() => {
     if (variantCache.rock) return variantCache.rock;
@@ -170,6 +178,7 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   const treeRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const bushRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const cloverRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
+  const flowerRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const rockRef = useRef<THREE.InstancedMesh>(null);
 
   useLayoutEffect(() => {
@@ -216,6 +225,19 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   }, [cloverVariants]);
 
   useLayoutEffect(() => {
+    const matrix = new THREE.Matrix4().compose(
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Quaternion(),
+      new THREE.Vector3(WARMUP_SCALE, WARMUP_SCALE, WARMUP_SCALE),
+    );
+    for (const [, mesh] of flowerRefs.current) {
+      if (!mesh) continue;
+      mesh.setMatrixAt(0, matrix);
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  }, [flowerVariants]);
+
+  useLayoutEffect(() => {
     if (!rockRef.current) return;
     const matrix = new THREE.Matrix4().compose(
       new THREE.Vector3(0, 0, 0),
@@ -254,6 +276,7 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
       {renderVariants(treeVariants, "warmup-tree", treeRefs)}
       {renderVariants(bushVariants, "warmup-bush", bushRefs)}
       {renderVariants(cloverVariants, "warmup-clover", cloverRefs)}
+      {renderVariants(flowerVariants, "warmup-flower", flowerRefs)}
       <instancedMesh ref={rockRef} args={[rockGeometry, rockMaterial, 1]} frustumCulled={false} />
       <primitive object={warmupCity} />
       <mesh geometry={oceanGeometry} material={oceanWarmupMaterial} frustumCulled={false} />

@@ -17,12 +17,20 @@ const _tmpQuat = new THREE.Quaternion();
 const _tmpScale = new THREE.Vector3();
 
 // Animation timing config (ms)
-const ANIM_DELAYS = { ground: 0, rocks: 100, bushes: 150, trees: 200, clover: 250 };
-const ANIM_DURATIONS = { ground: 500, rocks: 400, bushes: 400, trees: 500, clover: 350 };
+const ANIM_DELAYS = { ground: 0, rocks: 100, bushes: 150, trees: 200, clover: 250, flowers: 200 };
+const ANIM_DURATIONS = {
+  ground: 500,
+  rocks: 400,
+  bushes: 400,
+  trees: 500,
+  clover: 350,
+  flowers: 400,
+};
 
 export const TREE_NAMES = ["Tree-01-1", "Tree-01-2", "Tree-01-3", "Tree-01-4"];
 export const BUSH_NAMES = ["Bush-01", "Bush-02", "Bush-03", "Bush-04", "Bush-05"];
 export const CLOVER_NAMES = ["Clover-01", "Clover-02", "Clover-03", "Clover-04", "Clover-05"];
+export const FLOWER_NAMES = ["Circle003", "Circle008", "Circle015"];
 
 export interface TreePrimitive {
   geometry: THREE.BufferGeometry;
@@ -38,11 +46,13 @@ export const variantCache: {
   trees: TreeVariant[] | null;
   bushes: TreeVariant[] | null;
   clover: TreeVariant[] | null;
+  flowers: TreeVariant[] | null;
   rock: { geometry: THREE.BufferGeometry; material: THREE.Material } | null;
 } = {
   trees: null,
   bushes: null,
   clover: null,
+  flowers: null,
   rock: null,
 };
 
@@ -385,10 +395,11 @@ export default function GreeneryRenderer({
   const treeInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const bushInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const cloverInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
+  const flowerInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const rockInstanceRef = useRef<THREE.InstancedMesh>(null);
   const groundMeshRefs = useRef<THREE.Mesh[]>([]);
 
-  const { treesScene, rockScene } = useModels();
+  const { treesScene, rockScene, flowersScene } = useModels();
   const {
     grass: grassTexture,
     rock: rockTexture,
@@ -417,6 +428,13 @@ export default function GreeneryRenderer({
     }
     return variantCache.clover;
   }, [treesScene]);
+
+  const flowerVariants = useMemo(() => {
+    if (!variantCache.flowers) {
+      variantCache.flowers = createVariantsFromScene(flowersScene, FLOWER_NAMES, 0.025);
+    }
+    return variantCache.flowers;
+  }, [flowersScene]);
 
   const { geometry: rockGeometry, material: rockMaterial } = useMemo(() => {
     if (variantCache.rock) {
@@ -475,329 +493,370 @@ export default function GreeneryRenderer({
   }, [rockScene, rockTexture]);
 
   // Generate all instance data for all tiles
-  const { treeInstances, bushInstances, cloverInstances, rockInstances, groundData } =
-    useMemo(() => {
-      const treeInstances: {
-        position: THREE.Vector3;
-        rotation: number;
-        scale: number;
-        variantIdx: number;
-        tint: number;
-        tileKey: string;
-      }[] = [];
-      const bushInstances: {
-        position: THREE.Vector3;
-        rotation: number;
-        scale: number;
-        variantIdx: number;
-        tint: number;
-        tileKey: string;
-      }[] = [];
-      const cloverInstances: {
-        position: THREE.Vector3;
-        rotation: number;
-        scale: number;
-        variantIdx: number;
-        tileKey: string;
-      }[] = [];
-      const rockInstances: {
-        position: THREE.Vector3;
-        rotation: THREE.Euler;
-        scale: number;
-        tileKey: string;
-      }[] = [];
-      const groundData: {
-        geometry: THREE.BufferGeometry;
-        position: THREE.Vector3;
-        normal: THREE.Vector3;
-        tileKey: string;
-      }[] = [];
+  const {
+    treeInstances,
+    bushInstances,
+    cloverInstances,
+    flowerInstances,
+    rockInstances,
+    groundData,
+  } = useMemo(() => {
+    const treeInstances: {
+      position: THREE.Vector3;
+      rotation: number;
+      scale: number;
+      variantIdx: number;
+      tint: number;
+      tileKey: string;
+    }[] = [];
+    const bushInstances: {
+      position: THREE.Vector3;
+      rotation: number;
+      scale: number;
+      variantIdx: number;
+      tint: number;
+      tileKey: string;
+    }[] = [];
+    const cloverInstances: {
+      position: THREE.Vector3;
+      rotation: number;
+      scale: number;
+      variantIdx: number;
+      tileKey: string;
+    }[] = [];
+    const flowerInstances: {
+      position: THREE.Vector3;
+      rotation: number;
+      scale: number;
+      variantIdx: number;
+      tileKey: string;
+    }[] = [];
+    const rockInstances: {
+      position: THREE.Vector3;
+      rotation: THREE.Euler;
+      scale: number;
+      tileKey: string;
+    }[] = [];
+    const groundData: {
+      geometry: THREE.BufferGeometry;
+      position: THREE.Vector3;
+      normal: THREE.Vector3;
+      tileKey: string;
+    }[] = [];
 
-      const livingGreeneryKeys = new Set(
-        livingGreeneryTiles.map((t) => `${t.coordinate.q},${t.coordinate.r},${t.coordinate.s}`),
+    const livingGreeneryKeys = new Set(
+      livingGreeneryTiles.map((t) => `${t.coordinate.q},${t.coordinate.r},${t.coordinate.s}`),
+    );
+
+    for (const tile of tiles) {
+      const tileKey = `${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`;
+      const seed = getTileSeed(tile.coordinate.q, tile.coordinate.r, tile.coordinate.s);
+      const isLivingGreenery = livingGreeneryKeys.has(tileKey);
+
+      // Get biome value for this tile (0-1)
+      // High = forested (more trees), Low = scrubland (more bushes/rocks)
+      const biome = getBiomeValue(tile.coordinate.q, tile.coordinate.r);
+
+      // Pre-roll rock tier (separate RNG, doesn't affect tree sequence)
+      const rockPreRoll = mulberry32(seed + 12345)();
+      const hasBigRock = rockPreRoll >= 0.6;
+      const hasMountain = rockPreRoll >= 0.85;
+
+      // Ground geometry per tile (unique due to noise)
+      const groundGeo = createNoisyHexGeometry(hexRadius * 2.0, 8, 6, 0.008, seed);
+      groundGeo.rotateZ(Math.PI / 2);
+      groundData.push({
+        geometry: groundGeo,
+        position: tile.worldPosition,
+        normal: tile.normal,
+        tileKey,
+      });
+
+      // Generate rocks FIRST so vegetation can avoid them
+      const rockRng = mulberry32(seed + 12345);
+      const rockExclusions: { x: number; y: number; r: number }[] = [];
+      const rockSpacing: { x: number; y: number }[] = [];
+      const rockRoll = rockRng();
+      const rockBaseSize = 0.04;
+
+      let rockScales: number[] = [];
+      if (rockRoll < 0.1) {
+        // 10%: no rocks
+      } else if (rockRoll < 0.55) {
+        // 45%: 2-6 small rocks
+        const count = 2 + Math.floor(rockRng() * 5);
+        for (let i = 0; i < count; i++) {
+          rockScales.push(0.3 + rockRng() * 0.4);
+        }
+      } else if (rockRoll < 0.85) {
+        // 25%: 1 large rock + 1-3 small companions
+        rockScales.push(1.2 + rockRng() * 0.6);
+        const companions = 1 + Math.floor(rockRng() * 3);
+        for (let i = 0; i < companions; i++) {
+          rockScales.push(0.2 + rockRng() * 0.4);
+        }
+      } else {
+        // 15%: 1 mountain rock + 2-4 small companions
+        rockScales.push(2.4 + rockRng() * 0.3);
+        const companions = 2 + Math.floor(rockRng() * 3);
+        for (let i = 0; i < companions; i++) {
+          rockScales.push(0.3 + rockRng() * 0.5);
+        }
+      }
+
+      for (let i = 0; i < rockScales.length; i++) {
+        const pos = randomHexPosition(rockRng, hexRadius * 0.75, 0.03, rockSpacing, 0.04);
+        if (pos) {
+          rockSpacing.push(pos);
+          rockExclusions.push({ x: pos.x, y: pos.y, r: rockBaseSize * rockScales[i] * 0.6 });
+          const localPos = new THREE.Vector3(pos.x, pos.y, 0.0);
+          const worldPos = localPos
+            .clone()
+            .applyMatrix4(
+              new THREE.Matrix4().compose(
+                tile.worldPosition,
+                new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
+                new THREE.Vector3(1, 1, 1),
+              ),
+            );
+          rockInstances.push({
+            position: worldPos,
+            rotation: new THREE.Euler(
+              rockRng() * Math.PI * 2,
+              rockRng() * Math.PI * 2,
+              rockRng() * Math.PI * 2,
+            ),
+            scale: rockScales[i],
+            tileKey,
+          });
+        }
+      }
+
+      const isInsideRock = (x: number, y: number): boolean => {
+        for (const rock of rockExclusions) {
+          const dx = x - rock.x;
+          const dy = y - rock.y;
+          if (dx * dx + dy * dy < rock.r * rock.r) return true;
+        }
+        return false;
+      };
+
+      // Generate trees - more in high biome areas, boosted near mountains/living greenery
+      const treeRng = mulberry32(seed);
+      const livingMult = isLivingGreenery ? 0.65 : 1.0;
+      const treeMult = hasMountain ? 1.8 : hasBigRock ? 1.4 : 1.0;
+      const baseTreeCount = Math.floor(treeRng() * 10) + 9;
+      const treeCount = Math.floor(baseTreeCount * (0.3 + biome * 1.4) * treeMult * livingMult);
+      const treePositions: { x: number; y: number }[] = [];
+
+      for (let i = 0; i < treeCount; i++) {
+        const pos = randomHexPosition(treeRng, hexRadius * 0.9, 0.012, treePositions, 0.025);
+        if (pos) {
+          if (isInsideRock(pos.x, pos.y)) continue;
+          treePositions.push(pos);
+          const localPos = new THREE.Vector3(pos.x, pos.y, 0.003);
+          const worldPos = localPos
+            .clone()
+            .applyMatrix4(
+              new THREE.Matrix4().compose(
+                tile.worldPosition,
+                new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
+                new THREE.Vector3(1, 1, 1),
+              ),
+            );
+          const tint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
+          let rockProximityBoost = 0;
+          for (const rock of rockExclusions) {
+            const dx = pos.x - rock.x;
+            const dy = pos.y - rock.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const influenceRadius = rock.r * 3;
+            if (dist < influenceRadius) {
+              const proximity = 1 - dist / influenceRadius;
+              rockProximityBoost = Math.max(rockProximityBoost, proximity * 0.5);
+            }
+          }
+          const rawTreeScale = hasMountain ? 1.3 + treeRng() * 0.3 : 1.1 + treeRng() * 0.3;
+          const treeScale = rawTreeScale + rockProximityBoost;
+          treeInstances.push({
+            position: worldPos,
+            rotation: treeRng() * Math.PI * 2,
+            scale: treeScale,
+            variantIdx: Math.floor(treeRng() * 4),
+            tint,
+            tileKey,
+          });
+        }
+      }
+
+      // Generate bushes - more in low biome areas (inverse of trees)
+      const bushRng = mulberry32(seed + 54321);
+      const baseBushCount = Math.floor(bushRng() * 100) + 160;
+      const livingBushMult = isLivingGreenery ? 1.0 : 1.0;
+      const bushCount = Math.floor(baseBushCount * (0.5 + (1 - biome) * 1.2) * livingBushMult);
+      const bushPositions: { x: number; y: number }[] = [];
+
+      for (let i = 0; i < bushCount; i++) {
+        const pos = randomHexPosition(bushRng, hexRadius * 0.92, 0.003, bushPositions, 0.006);
+        if (pos) {
+          bushPositions.push(pos);
+          const localPos = new THREE.Vector3(pos.x, pos.y, 0.001);
+          const worldPos = localPos
+            .clone()
+            .applyMatrix4(
+              new THREE.Matrix4().compose(
+                tile.worldPosition,
+                new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
+                new THREE.Vector3(1, 1, 1),
+              ),
+            );
+          const bushTint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
+          bushInstances.push({
+            position: worldPos,
+            rotation: bushRng() * Math.PI * 2,
+            scale: 0.7 + bushRng() * 0.6,
+            variantIdx: Math.floor(bushRng() * 5),
+            tint: bushTint,
+            tileKey,
+          });
+        }
+      }
+
+      // Generate clover for this tile
+      const cloverRng = mulberry32(seed + 99999);
+      const cloverCount = Math.floor(cloverRng() * 20) + 40;
+      const cloverPositions: { x: number; y: number }[] = [];
+
+      for (let i = 0; i < cloverCount; i++) {
+        const pos = randomHexPosition(cloverRng, hexRadius * 0.95, 0.005, cloverPositions, 0.01);
+        if (pos) {
+          if (isInsideRock(pos.x, pos.y)) continue;
+          cloverPositions.push(pos);
+          const localPos = new THREE.Vector3(pos.x, pos.y, 0.0005);
+          const worldPos = localPos
+            .clone()
+            .applyMatrix4(
+              new THREE.Matrix4().compose(
+                tile.worldPosition,
+                new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
+                new THREE.Vector3(1, 1, 1),
+              ),
+            );
+          cloverInstances.push({
+            position: worldPos,
+            rotation: cloverRng() * Math.PI * 2,
+            scale: 0.5 + cloverRng() * 1.0,
+            variantIdx: Math.floor(cloverRng() * 5),
+            tileKey,
+          });
+        }
+      }
+
+      if (isLivingGreenery) {
+        const flowerRng = mulberry32(seed + 11111);
+        const flowerCount = 15 + Math.floor(flowerRng() * 10);
+        const flowerPositions: { x: number; y: number }[] = [];
+
+        for (let i = 0; i < flowerCount; i++) {
+          const pos = randomHexPosition(flowerRng, hexRadius * 0.88, 0.01, flowerPositions, 0.015);
+          if (pos) {
+            flowerPositions.push(pos);
+            const localPos = new THREE.Vector3(pos.x, pos.y, 0.002);
+            const worldPos = localPos
+              .clone()
+              .applyMatrix4(
+                new THREE.Matrix4().compose(
+                  tile.worldPosition,
+                  new THREE.Quaternion().setFromUnitVectors(
+                    new THREE.Vector3(0, 0, 1),
+                    tile.normal,
+                  ),
+                  new THREE.Vector3(1, 1, 1),
+                ),
+              );
+            flowerInstances.push({
+              position: worldPos,
+              rotation: flowerRng() * Math.PI * 2,
+              scale: 0.6 + flowerRng() * 0.8,
+              variantIdx: Math.floor(flowerRng() * FLOWER_NAMES.length),
+              tileKey,
+            });
+          }
+        }
+      }
+    }
+
+    // === Volcano tiles: trees + bushes OUTSIDE the dark volcano area ===
+    const volcanoExclusionRadius = 0.105;
+    for (const tile of volcanoTiles) {
+      const tileKey = `${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`;
+      const seed = getTileSeed(tile.coordinate.q, tile.coordinate.r, tile.coordinate.s);
+
+      const isInsideVolcano = (x: number, y: number): boolean => {
+        return x * x + y * y < volcanoExclusionRadius * volcanoExclusionRadius;
+      };
+
+      const tileMatrix = new THREE.Matrix4().compose(
+        tile.worldPosition,
+        new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
+        new THREE.Vector3(1, 1, 1),
       );
 
-      for (const tile of tiles) {
-        const tileKey = `${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`;
-        const seed = getTileSeed(tile.coordinate.q, tile.coordinate.r, tile.coordinate.s);
-        const isLivingGreenery = livingGreeneryKeys.has(tileKey);
+      // Trees around volcano (80% scale, placed outside exclusion zone)
+      const vTreeRng = mulberry32(seed + 77777);
+      const vTreeCount = 8 + Math.floor(vTreeRng() * 6);
+      const vTreePositions: { x: number; y: number }[] = [];
 
-        // Get biome value for this tile (0-1)
-        // High = forested (more trees), Low = scrubland (more bushes/rocks)
-        const biome = getBiomeValue(tile.coordinate.q, tile.coordinate.r);
-
-        // Pre-roll rock tier (separate RNG, doesn't affect tree sequence)
-        const rockPreRoll = mulberry32(seed + 12345)();
-        const hasBigRock = rockPreRoll >= 0.6;
-        const hasMountain = rockPreRoll >= 0.85;
-
-        // Ground geometry per tile (unique due to noise)
-        const groundGeo = createNoisyHexGeometry(hexRadius * 2.0, 8, 6, 0.008, seed);
-        groundGeo.rotateZ(Math.PI / 2);
-        groundData.push({
-          geometry: groundGeo,
-          position: tile.worldPosition,
-          normal: tile.normal,
-          tileKey,
-        });
-
-        // Generate rocks FIRST so vegetation can avoid them
-        const rockRng = mulberry32(seed + 12345);
-        const rockExclusions: { x: number; y: number; r: number }[] = [];
-        const rockSpacing: { x: number; y: number }[] = [];
-        const rockRoll = rockRng();
-        const rockBaseSize = 0.04;
-
-        let rockScales: number[] = [];
-        if (rockRoll < 0.1) {
-          // 10%: no rocks
-        } else if (rockRoll < 0.55) {
-          // 45%: 2-6 small rocks
-          const count = 2 + Math.floor(rockRng() * 5);
-          for (let i = 0; i < count; i++) {
-            rockScales.push(0.3 + rockRng() * 0.4);
-          }
-        } else if (rockRoll < 0.85) {
-          // 25%: 1 large rock + 1-3 small companions
-          rockScales.push(1.2 + rockRng() * 0.6);
-          const companions = 1 + Math.floor(rockRng() * 3);
-          for (let i = 0; i < companions; i++) {
-            rockScales.push(0.2 + rockRng() * 0.4);
-          }
-        } else {
-          // 15%: 1 mountain rock + 2-4 small companions
-          rockScales.push(2.4 + rockRng() * 0.3);
-          const companions = 2 + Math.floor(rockRng() * 3);
-          for (let i = 0; i < companions; i++) {
-            rockScales.push(0.3 + rockRng() * 0.5);
-          }
-        }
-
-        for (let i = 0; i < rockScales.length; i++) {
-          const pos = randomHexPosition(rockRng, hexRadius * 0.75, 0.03, rockSpacing, 0.04);
-          if (pos) {
-            rockSpacing.push(pos);
-            rockExclusions.push({ x: pos.x, y: pos.y, r: rockBaseSize * rockScales[i] * 0.6 });
-            const localPos = new THREE.Vector3(pos.x, pos.y, 0.0);
-            const worldPos = localPos
-              .clone()
-              .applyMatrix4(
-                new THREE.Matrix4().compose(
-                  tile.worldPosition,
-                  new THREE.Quaternion().setFromUnitVectors(
-                    new THREE.Vector3(0, 0, 1),
-                    tile.normal,
-                  ),
-                  new THREE.Vector3(1, 1, 1),
-                ),
-              );
-            rockInstances.push({
-              position: worldPos,
-              rotation: new THREE.Euler(
-                rockRng() * Math.PI * 2,
-                rockRng() * Math.PI * 2,
-                rockRng() * Math.PI * 2,
-              ),
-              scale: rockScales[i],
-              tileKey,
-            });
-          }
-        }
-
-        const isInsideRock = (x: number, y: number): boolean => {
-          for (const rock of rockExclusions) {
-            const dx = x - rock.x;
-            const dy = y - rock.y;
-            if (dx * dx + dy * dy < rock.r * rock.r) return true;
-          }
-          return false;
-        };
-
-        // Generate trees - more in high biome areas, boosted near mountains/living greenery
-        const treeRng = mulberry32(seed);
-        const livingMult = isLivingGreenery ? 1.3 : 1.0;
-        const treeMult = hasMountain ? 1.8 : hasBigRock ? 1.4 : 1.0;
-        const baseTreeCount = Math.floor(treeRng() * 10) + 9;
-        const treeCount = Math.floor(baseTreeCount * (0.3 + biome * 1.4) * treeMult * livingMult);
-        const treePositions: { x: number; y: number }[] = [];
-
-        for (let i = 0; i < treeCount; i++) {
-          const pos = randomHexPosition(treeRng, hexRadius * 0.9, 0.012, treePositions, 0.025);
-          if (pos) {
-            if (isInsideRock(pos.x, pos.y)) continue;
-            treePositions.push(pos);
-            const localPos = new THREE.Vector3(pos.x, pos.y, 0.003);
-            const worldPos = localPos
-              .clone()
-              .applyMatrix4(
-                new THREE.Matrix4().compose(
-                  tile.worldPosition,
-                  new THREE.Quaternion().setFromUnitVectors(
-                    new THREE.Vector3(0, 0, 1),
-                    tile.normal,
-                  ),
-                  new THREE.Vector3(1, 1, 1),
-                ),
-              );
-            const tint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
-            let rockProximityBoost = 0;
-            for (const rock of rockExclusions) {
-              const dx = pos.x - rock.x;
-              const dy = pos.y - rock.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              const influenceRadius = rock.r * 3;
-              if (dist < influenceRadius) {
-                const proximity = 1 - dist / influenceRadius;
-                rockProximityBoost = Math.max(rockProximityBoost, proximity * 0.5);
-              }
-            }
-            const rawTreeScale = hasMountain ? 1.3 + treeRng() * 0.3 : 1.1 + treeRng() * 0.3;
-            const baseTreeScale = isLivingGreenery ? rawTreeScale * 1.2 : rawTreeScale;
-            const treeScale = baseTreeScale + rockProximityBoost;
-            treeInstances.push({
-              position: worldPos,
-              rotation: treeRng() * Math.PI * 2,
-              scale: treeScale,
-              variantIdx: Math.floor(treeRng() * 4),
-              tint,
-              tileKey,
-            });
-          }
-        }
-
-        // Generate bushes - more in low biome areas (inverse of trees)
-        const bushRng = mulberry32(seed + 54321);
-        const baseBushCount = Math.floor(bushRng() * 100) + 160;
-        const bushCount = Math.floor(baseBushCount * (0.5 + (1 - biome) * 1.2));
-        const bushPositions: { x: number; y: number }[] = [];
-
-        for (let i = 0; i < bushCount; i++) {
-          const pos = randomHexPosition(bushRng, hexRadius * 0.92, 0.003, bushPositions, 0.006);
-          if (pos) {
-            bushPositions.push(pos);
-            const localPos = new THREE.Vector3(pos.x, pos.y, 0.001);
-            const worldPos = localPos
-              .clone()
-              .applyMatrix4(
-                new THREE.Matrix4().compose(
-                  tile.worldPosition,
-                  new THREE.Quaternion().setFromUnitVectors(
-                    new THREE.Vector3(0, 0, 1),
-                    tile.normal,
-                  ),
-                  new THREE.Vector3(1, 1, 1),
-                ),
-              );
-            const bushTint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
-            bushInstances.push({
-              position: worldPos,
-              rotation: bushRng() * Math.PI * 2,
-              scale: 0.7 + bushRng() * 0.6,
-              variantIdx: Math.floor(bushRng() * 5),
-              tint: bushTint,
-              tileKey,
-            });
-          }
-        }
-
-        // Generate clover for this tile
-        const cloverRng = mulberry32(seed + 99999);
-        const cloverCount = Math.floor(cloverRng() * 20) + 40;
-        const cloverPositions: { x: number; y: number }[] = [];
-
-        for (let i = 0; i < cloverCount; i++) {
-          const pos = randomHexPosition(cloverRng, hexRadius * 0.95, 0.005, cloverPositions, 0.01);
-          if (pos) {
-            if (isInsideRock(pos.x, pos.y)) continue;
-            cloverPositions.push(pos);
-            const localPos = new THREE.Vector3(pos.x, pos.y, 0.0005);
-            const worldPos = localPos
-              .clone()
-              .applyMatrix4(
-                new THREE.Matrix4().compose(
-                  tile.worldPosition,
-                  new THREE.Quaternion().setFromUnitVectors(
-                    new THREE.Vector3(0, 0, 1),
-                    tile.normal,
-                  ),
-                  new THREE.Vector3(1, 1, 1),
-                ),
-              );
-            cloverInstances.push({
-              position: worldPos,
-              rotation: cloverRng() * Math.PI * 2,
-              scale: 0.5 + cloverRng() * 1.0,
-              variantIdx: Math.floor(cloverRng() * 5),
-              tileKey,
-            });
-          }
+      for (let i = 0; i < vTreeCount; i++) {
+        const pos = randomHexPosition(vTreeRng, hexRadius * 0.9, 0.012, vTreePositions, 0.025);
+        if (pos) {
+          if (isInsideVolcano(pos.x, pos.y)) continue;
+          vTreePositions.push(pos);
+          const worldPos = new THREE.Vector3(pos.x, pos.y, 0.003).applyMatrix4(tileMatrix);
+          const tint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
+          treeInstances.push({
+            position: worldPos,
+            rotation: vTreeRng() * Math.PI * 2,
+            scale: (0.9 + vTreeRng() * 0.2) * 0.8,
+            variantIdx: Math.floor(vTreeRng() * 4),
+            tint,
+            tileKey,
+          });
         }
       }
 
-      // === Volcano tiles: trees + bushes OUTSIDE the dark volcano area ===
-      const volcanoExclusionRadius = 0.105;
-      for (const tile of volcanoTiles) {
-        const tileKey = `${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`;
-        const seed = getTileSeed(tile.coordinate.q, tile.coordinate.r, tile.coordinate.s);
+      // Bushes around volcano (placed outside exclusion zone)
+      const vBushRng = mulberry32(seed + 88888);
+      const vBushPositions: { x: number; y: number }[] = [];
 
-        const isInsideVolcano = (x: number, y: number): boolean => {
-          return x * x + y * y < volcanoExclusionRadius * volcanoExclusionRadius;
-        };
-
-        const tileMatrix = new THREE.Matrix4().compose(
-          tile.worldPosition,
-          new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
-          new THREE.Vector3(1, 1, 1),
-        );
-
-        // Trees around volcano (80% scale, placed outside exclusion zone)
-        const vTreeRng = mulberry32(seed + 77777);
-        const vTreeCount = 8 + Math.floor(vTreeRng() * 6);
-        const vTreePositions: { x: number; y: number }[] = [];
-
-        for (let i = 0; i < vTreeCount; i++) {
-          const pos = randomHexPosition(vTreeRng, hexRadius * 0.9, 0.012, vTreePositions, 0.025);
-          if (pos) {
-            if (isInsideVolcano(pos.x, pos.y)) continue;
-            vTreePositions.push(pos);
-            const worldPos = new THREE.Vector3(pos.x, pos.y, 0.003).applyMatrix4(tileMatrix);
-            const tint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
-            treeInstances.push({
-              position: worldPos,
-              rotation: vTreeRng() * Math.PI * 2,
-              scale: (0.9 + vTreeRng() * 0.2) * 0.8,
-              variantIdx: Math.floor(vTreeRng() * 4),
-              tint,
-              tileKey,
-            });
-          }
-        }
-
-        // Bushes around volcano (placed outside exclusion zone)
-        const vBushRng = mulberry32(seed + 88888);
-        const vBushPositions: { x: number; y: number }[] = [];
-
-        for (let i = 0; i < 200; i++) {
-          const pos = randomHexPosition(vBushRng, hexRadius * 0.92, 0.003, vBushPositions, 0.006);
-          if (pos) {
-            if (isInsideVolcano(pos.x, pos.y)) continue;
-            vBushPositions.push(pos);
-            const worldPos = new THREE.Vector3(pos.x, pos.y, 0.001).applyMatrix4(tileMatrix);
-            const bushTint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
-            bushInstances.push({
-              position: worldPos,
-              rotation: vBushRng() * Math.PI * 2,
-              scale: 0.6 + vBushRng() * 0.5,
-              variantIdx: Math.floor(vBushRng() * 5),
-              tint: bushTint,
-              tileKey,
-            });
-          }
+      for (let i = 0; i < 200; i++) {
+        const pos = randomHexPosition(vBushRng, hexRadius * 0.92, 0.003, vBushPositions, 0.006);
+        if (pos) {
+          if (isInsideVolcano(pos.x, pos.y)) continue;
+          vBushPositions.push(pos);
+          const worldPos = new THREE.Vector3(pos.x, pos.y, 0.001).applyMatrix4(tileMatrix);
+          const bushTint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
+          bushInstances.push({
+            position: worldPos,
+            rotation: vBushRng() * Math.PI * 2,
+            scale: 0.6 + vBushRng() * 0.5,
+            variantIdx: Math.floor(vBushRng() * 5),
+            tint: bushTint,
+            tileKey,
+          });
         }
       }
+    }
 
-      return { treeInstances, bushInstances, cloverInstances, rockInstances, groundData };
-    }, [tiles, volcanoTiles, livingGreeneryTiles, hexRadius]);
+    return {
+      treeInstances,
+      bushInstances,
+      cloverInstances,
+      flowerInstances,
+      rockInstances,
+      groundData,
+    };
+  }, [tiles, volcanoTiles, livingGreeneryTiles, hexRadius]);
 
   // Group instances by variant
   const treesByVariant = useMemo(() => {
@@ -857,6 +916,24 @@ export default function GreeneryRenderer({
     }
     return groups;
   }, [cloverInstances]);
+
+  const flowersByVariant = useMemo(() => {
+    const groups: {
+      position: THREE.Vector3;
+      rotation: number;
+      scale: number;
+      tileKey: string;
+    }[][] = FLOWER_NAMES.map(() => []);
+    for (const inst of flowerInstances) {
+      groups[inst.variantIdx].push({
+        position: inst.position,
+        rotation: inst.rotation,
+        scale: inst.scale,
+        tileKey: inst.tileKey,
+      });
+    }
+    return groups;
+  }, [flowerInstances]);
 
   // Ground material (shared)
   const groundMaterial = useMemo(() => {
@@ -1017,6 +1094,29 @@ export default function GreeneryRenderer({
           });
         });
       });
+
+      // Vegetation grow - flowers
+      const flowerDelay = ANIM_DELAYS.flowers;
+      const flowerDur = ANIM_DURATIONS.flowers;
+      flowersByVariant.forEach((transforms, variantIdx) => {
+        const variant = flowerVariants[variantIdx];
+        if (!variant) return;
+        variant.primitives.forEach((_, primIdx) => {
+          const key = `flower-${variantIdx}-${primIdx}`;
+          const mesh = flowerInstanceRefs.current.get(key);
+          if (!mesh) return;
+          transforms.forEach((data, i) => {
+            if (data.tileKey !== tileKey) return;
+            const rawT = Math.max(0, Math.min(1, (timeSinceStart - flowerDelay) / flowerDur));
+            const animScale = data.scale * easeOutCubic(rawT);
+            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpScale.set(animScale, animScale, animScale);
+            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
+            mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.needsUpdate = true;
+          });
+        });
+      });
     }
 
     // Cleanup completed animations — write final full-scale matrices for ALL element types
@@ -1081,6 +1181,25 @@ export default function GreeneryRenderer({
         variant.primitives.forEach((_, primIdx) => {
           const key = `clover-${variantIdx}-${primIdx}`;
           const mesh = cloverInstanceRefs.current.get(key);
+          if (!mesh) return;
+          transforms.forEach((data, i) => {
+            if (data.tileKey !== tileKey) return;
+            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpScale.set(data.scale, data.scale, data.scale);
+            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
+            mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.needsUpdate = true;
+          });
+        });
+      });
+
+      // Final matrices for flowers
+      flowersByVariant.forEach((transforms, variantIdx) => {
+        const variant = flowerVariants[variantIdx];
+        if (!variant) return;
+        variant.primitives.forEach((_, primIdx) => {
+          const key = `flower-${variantIdx}-${primIdx}`;
+          const mesh = flowerInstanceRefs.current.get(key);
           if (!mesh) return;
           transforms.forEach((data, i) => {
             if (data.tileKey !== tileKey) return;
@@ -1212,6 +1331,35 @@ export default function GreeneryRenderer({
     });
   }, [cloverByVariant, cloverVariants, newTileKeys]);
 
+  // Update flower instance matrices
+  useLayoutEffect(() => {
+    const matrix = new THREE.Matrix4();
+    const quaternion = new THREE.Quaternion();
+
+    flowersByVariant.forEach((transforms, variantIdx) => {
+      if (transforms.length === 0) return;
+
+      const variant = flowerVariants[variantIdx];
+      if (!variant) return;
+
+      variant.primitives.forEach((_, primIdx) => {
+        const key = `flower-${variantIdx}-${primIdx}`;
+        const mesh = flowerInstanceRefs.current.get(key);
+        if (!mesh) return;
+
+        transforms.forEach((data, i) => {
+          const isAnimating = newTileKeys.has(data.tileKey);
+          const s = isAnimating ? 0 : data.scale;
+          quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+          matrix.compose(data.position, quaternion, new THREE.Vector3(s, s, s));
+          mesh.setMatrixAt(i, matrix);
+        });
+
+        mesh.instanceMatrix.needsUpdate = true;
+      });
+    });
+  }, [flowersByVariant, flowerVariants, newTileKeys]);
+
   // Update rock instance matrices
   useLayoutEffect(() => {
     if (!rockInstanceRef.current || rockInstances.length === 0) return;
@@ -1295,6 +1443,7 @@ export default function GreeneryRenderer({
             args={[prim.geometry, prim.material, transforms.length]}
             frustumCulled={false}
             renderOrder={15}
+            raycast={() => {}}
           />
         ));
       })}
@@ -1327,6 +1476,24 @@ export default function GreeneryRenderer({
             key={`clover-${variantIdx}-${primIdx}`}
             ref={(el) => {
               cloverInstanceRefs.current.set(`clover-${variantIdx}-${primIdx}`, el);
+            }}
+            args={[prim.geometry, prim.material, transforms.length]}
+            frustumCulled={false}
+            renderOrder={15}
+          />
+        ));
+      })}
+
+      {/* Flowers - single InstancedMesh per variant (living greenery only) */}
+      {flowerVariants.map((variant, variantIdx) => {
+        const transforms = flowersByVariant[variantIdx];
+        if (!transforms || transforms.length === 0) return null;
+
+        return variant.primitives.map((prim, primIdx) => (
+          <instancedMesh
+            key={`flower-${variantIdx}-${primIdx}`}
+            ref={(el) => {
+              flowerInstanceRefs.current.set(`flower-${variantIdx}-${primIdx}`, el);
             }}
             args={[prim.geometry, prim.material, transforms.length]}
             frustumCulled={false}

@@ -82,7 +82,24 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 	}
 
 	player.SetCorporationID(corporationID)
+
+	if corpCard.ResourceStorage != nil {
+		player.Resources().AddToStorage(corporationID, corpCard.ResourceStorage.Starting)
+	}
+
 	log.Debug("Corporation ID set", zap.String("corporation_name", corpCard.Name))
+
+	// Register trigger effects BEFORE applying starting effects so that
+	// production-increased triggers (e.g. Manutech) fire on starting production
+	triggerEffects := a.corpProc.GetTriggerEffects(corpCard)
+	for _, effect := range triggerEffects {
+		player.Effects().AddEffect(effect)
+		log.Debug("Registered trigger effect",
+			zap.String("card_name", effect.CardName),
+			zap.Int("behavior_index", effect.BehaviorIndex))
+
+		baseaction.SubscribePassiveEffectToEvents(ctx, g, player, effect, log, a.cardRegistry)
+	}
 
 	if err := a.corpProc.ApplyStartingEffects(ctx, corpCard, player, g); err != nil {
 		log.Error("Failed to apply corporation starting effects", zap.Error(err))
@@ -100,16 +117,6 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 		log.Debug("Registered auto effect",
 			zap.String("card_name", effect.CardName),
 			zap.Int("behavior_index", effect.BehaviorIndex))
-	}
-
-	triggerEffects := a.corpProc.GetTriggerEffects(corpCard)
-	for _, effect := range triggerEffects {
-		player.Effects().AddEffect(effect)
-		log.Debug("Registered trigger effect",
-			zap.String("card_name", effect.CardName),
-			zap.Int("behavior_index", effect.BehaviorIndex))
-
-		baseaction.SubscribePassiveEffectToEvents(ctx, g, player, effect, log, a.cardRegistry)
 	}
 
 	// Publish TagPlayedEvent for each corporation tag (triggers Saturn Systems, etc.)
@@ -132,6 +139,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 			zap.Int("behavior_index", action.BehaviorIndex))
 	}
 
+	a.corpProc.WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(player, g, a.cardRegistry))
 	if err := a.corpProc.SetupForcedFirstAction(ctx, corpCard, g, playerID); err != nil {
 		log.Error("Failed to setup forced first action", zap.Error(err))
 		return fmt.Errorf("failed to setup forced first action: %w", err)

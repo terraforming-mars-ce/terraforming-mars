@@ -313,6 +313,7 @@ export class WebSocketService {
     sourceCardForInput?: string,
     selectedAmount?: number,
     payment?: CardPaymentDto,
+    reuseSourceCardId?: string,
   ): string {
     return this.send(MessageTypeActionCardAction, {
       type: "card-action",
@@ -324,6 +325,7 @@ export class WebSocketService {
       ...(sourceCardForInput !== undefined && { sourceCardForInput }),
       ...(selectedAmount !== undefined && { selectedAmount }),
       ...(payment !== undefined && { payment }),
+      ...(reuseSourceCardId !== undefined && { reuseSourceCardId }),
     });
   }
 

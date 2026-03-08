@@ -144,6 +144,7 @@ func CalculatePlayerCardActionState(
 	}
 
 	errors = append(errors, validateActionUsageLimit(behavior, timesUsedThisGeneration)...)
+	errors = append(errors, validateActionReuseAvailability(cardID, behavior, p)...)
 	errors = append(errors, validateBehaviorTileOutputs(behavior, p, g)...)
 	errors = append(errors, validateGenerationalEventRequirements(behavior, p)...)
 	errors = append(errors, validateNegativeResourceOutputs(behavior, p)...)
@@ -338,6 +339,45 @@ func validateActionUsageLimit(
 	return nil
 }
 
+func validateActionReuseAvailability(
+	cardID string,
+	behavior shared.CardBehavior,
+	p *player.Player,
+) []player.StateError {
+	hasActionReuse := false
+	for _, output := range behavior.Outputs {
+		if output.ResourceType == shared.ResourceActionReuse {
+			hasActionReuse = true
+			break
+		}
+	}
+	if !hasActionReuse {
+		return nil
+	}
+
+	for _, act := range p.Actions().List() {
+		if act.CardID == cardID {
+			continue
+		}
+		hasManual := false
+		for _, trigger := range act.Behavior.Triggers {
+			if trigger.Type == shared.TriggerTypeManual {
+				hasManual = true
+				break
+			}
+		}
+		if hasManual && act.TimesUsedThisGeneration >= 1 {
+			return nil
+		}
+	}
+
+	return []player.StateError{{
+		Code:     player.ErrorCodeNoUsedActions,
+		Category: player.ErrorCategoryAvailability,
+		Message:  "No used actions to reuse",
+	}}
+}
+
 // validateRequirements checks all card requirements.
 // Includes global parameter lenience from temporary effects (e.g., Special Design).
 func validateRequirements(
@@ -350,14 +390,12 @@ func validateRequirements(
 		return nil
 	}
 
-	// Calculate global parameter lenience from player effects
 	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
-	lenience := calculator.CalculateGlobalParameterLenience(p)
 
 	var errors []player.StateError
 
 	for _, req := range card.Requirements.Items {
-		err := checkRequirement(req, p, g, cardRegistry, lenience)
+		err := checkRequirement(req, p, g, cardRegistry, calculator)
 		if err != nil {
 			errors = append(errors, *err)
 		}
@@ -787,16 +825,17 @@ func validateBehaviorTileOutputs(
 }
 
 // checkRequirement validates a single requirement.
-// lenience widens global parameter requirements (min lowered, max raised) from temporary effects.
+// Uses calculator to compute per-parameter lenience from player effects.
 func checkRequirement(
 	req gamecards.Requirement,
 	p *player.Player,
 	g *game.Game,
 	cardRegistry cards.CardRegistry,
-	lenience int,
+	calculator *gamecards.RequirementModifierCalculator,
 ) *player.StateError {
 	switch req.Type {
 	case gamecards.RequirementTemperature:
+		lenience := calculator.CalculateGlobalParameterLenience(p, "temperature")
 		temp := g.GlobalParameters().Temperature()
 		if req.Min != nil && temp < *req.Min-lenience {
 			return &player.StateError{
@@ -814,6 +853,7 @@ func checkRequirement(
 		}
 
 	case gamecards.RequirementOxygen:
+		lenience := calculator.CalculateGlobalParameterLenience(p, "oxygen")
 		oxygen := g.GlobalParameters().Oxygen()
 		if req.Min != nil && oxygen < *req.Min-lenience {
 			return &player.StateError{
@@ -831,6 +871,7 @@ func checkRequirement(
 		}
 
 	case gamecards.RequirementOceans:
+		lenience := calculator.CalculateGlobalParameterLenience(p, "ocean")
 		oceans := g.GlobalParameters().Oceans()
 		if req.Min != nil && oceans < *req.Min-lenience {
 			return &player.StateError{
@@ -975,6 +1016,7 @@ func checkRequirement(
 		// For now, skip these validations (same as PlayCardAction line 310-312)
 
 	case gamecards.RequirementVenus:
+		lenience := calculator.CalculateGlobalParameterLenience(p, "venus")
 		venus := g.GlobalParameters().Venus()
 		if req.Min != nil && venus < *req.Min-lenience {
 			return &player.StateError{
@@ -1204,17 +1246,17 @@ func isProducibleResource(resourceType shared.ResourceType) bool {
 // resourceDisplayNames maps ResourceType values to human-readable names for error messages
 var resourceDisplayNames = map[shared.ResourceType]string{
 	// Base resources
-	shared.ResourceCredit:   "credit",
+	shared.ResourceCredit:   "credits",
 	shared.ResourceSteel:    "steel",
 	shared.ResourceTitanium: "titanium",
-	shared.ResourcePlant:    "plant",
+	shared.ResourcePlant:    "plants",
 	shared.ResourceEnergy:   "energy",
 	shared.ResourceHeat:     "heat",
-	shared.ResourceMicrobe:  "microbe",
-	shared.ResourceAnimal:   "animal",
-	shared.ResourceFloater:  "floater",
+	shared.ResourceMicrobe:  "microbes",
+	shared.ResourceAnimal:   "animals",
+	shared.ResourceFloater:  "floaters",
 	shared.ResourceScience:  "science",
-	shared.ResourceAsteroid: "asteroid",
+	shared.ResourceAsteroid: "asteroids",
 	shared.ResourceDisease:  "disease",
 
 	// Production types (map to base resource name)

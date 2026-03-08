@@ -49,6 +49,8 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
     const isTagRequirement = tag || (affectedTags && affectedTags.length > 0);
     // Determine if it's a production requirement
     const isProductionRequirement = type === "production" && resource;
+    // Determine if it's a named resource requirement (e.g., floater, microbe)
+    const isNamedResourceRequirement = type === "resource" && resource;
     const key = tag || affectedTags?.[0] || resource || type;
 
     let resourceType: ResourceType | null = null;
@@ -62,13 +64,16 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
     } else if (isProductionRequirement) {
       // Production requirements - use resource as-is (already contains -production)
       resourceType = resource;
+    } else if (type === "resource" && resource) {
+      // Named resource requirements (e.g., floater, microbe)
+      resourceType = resource;
     } else {
       // Regular resource/parameter requirements
       resourceType = type;
     }
 
     // Determine count and display text
-    if (isTagRequirement || isProductionRequirement) {
+    if (isTagRequirement || isProductionRequirement || isNamedResourceRequirement) {
       if (min !== undefined && min > 0) {
         if (min === 1) {
           iconCount = 1;
@@ -146,11 +151,13 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
         className="flex items-center gap-px px-0.5 py-px [&:has(span)]:px-1 [&:has(span)]:py-0.5"
       >
         {/* Show amount before icon for tag/production requirements with multiple units */}
-        {(isTagRequirement || isProductionRequirement) && displayText && !showMultipleIcons && (
-          <span className="text-[11px] font-orbitron font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none">
-            {displayText}
-          </span>
-        )}
+        {(isTagRequirement || isProductionRequirement || isNamedResourceRequirement) &&
+          displayText &&
+          !showMultipleIcons && (
+            <span className="text-[11px] font-orbitron font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none">
+              {displayText}
+            </span>
+          )}
 
         {resourceType || cardTag ? (
           <div className="flex items-center gap-px">
@@ -178,11 +185,14 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
         )}
 
         {/* Show amount after icon for non-tag, non-production requirements */}
-        {!isTagRequirement && !isProductionRequirement && displayText && (
-          <span className="text-[11px] font-orbitron font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none max-md:text-[10px]">
-            {displayText}
-          </span>
-        )}
+        {!isTagRequirement &&
+          !isProductionRequirement &&
+          !isNamedResourceRequirement &&
+          displayText && (
+            <span className="text-[11px] font-orbitron font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none max-md:text-[10px]">
+              {displayText}
+            </span>
+          )}
       </div>
     );
   };

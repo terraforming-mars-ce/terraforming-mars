@@ -73,19 +73,21 @@ func Subscribe[T any](eb *EventBusImpl, handler EventHandler[T]) SubscriptionID 
 	return id
 }
 
-// Publish publishes a type-safe event to all matching subscribers synchronously
+// Publish publishes a type-safe event to all matching subscribers synchronously.
+// Handlers are collected under the read lock, then executed after releasing it
+// so that handlers may safely call Subscribe/Unsubscribe without deadlocking.
 func Publish[T any](eb *EventBusImpl, event T) {
-	eb.mutex.RLock()
-	defer eb.mutex.RUnlock()
-
 	eventType := fmt.Sprintf("%T", event)
 
+	// Collect matching handlers under read lock
+	eb.mutex.RLock()
 	var matchingHandlers []func(any)
 	for _, sub := range eb.subscriptions {
 		if sub.eventType == eventType {
 			matchingHandlers = append(matchingHandlers, sub.handlerFunc)
 		}
 	}
+	eb.mutex.RUnlock()
 
 	if len(matchingHandlers) == 0 {
 		eb.logger.Debug("No subscribers for event",
@@ -95,7 +97,7 @@ func Publish[T any](eb *EventBusImpl, event T) {
 			zap.String("event_type", eventType),
 			zap.Int("subscriber_count", len(matchingHandlers)))
 
-		// Execute all matching handlers synchronously
+		// Execute handlers without holding the lock
 		for _, handlerFunc := range matchingHandlers {
 			handlerFunc(event)
 		}

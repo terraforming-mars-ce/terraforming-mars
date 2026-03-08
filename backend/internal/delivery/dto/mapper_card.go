@@ -109,8 +109,10 @@ func toCardBehaviorDto(behavior shared.CardBehavior) CardBehaviorDto {
 		Triggers:                      mapSlice(behavior.Triggers, toTriggerDto),
 		Inputs:                        mapSlice(behavior.Inputs, toResourceConditionDto),
 		Outputs:                       mapSlice(behavior.Outputs, toResourceConditionDto),
-		Choices:                       mapSlice(behavior.Choices, toChoiceDto),
+		Choices:                       toChoiceDtos(behavior.Choices),
+		ChoicePolicy:                  behavior.ChoicePolicy,
 		GenerationalEventRequirements: mapSlice(behavior.GenerationalEventRequirements, toGenerationalEventRequirementDto),
+		Group:                         behavior.Group,
 	}
 }
 
@@ -140,10 +142,12 @@ func toTriggerDto(trigger shared.Trigger) TriggerDto {
 func toResourceTriggerConditionDto(cond shared.ResourceTriggerCondition) ResourceTriggerConditionDto {
 	return ResourceTriggerConditionDto{
 		Type:                 TriggerType(cond.Type),
+		ResourceTypes:        mapSlice(cond.ResourceTypes, func(rt shared.ResourceType) ResourceType { return ResourceType(rt) }),
 		Location:             ptrCast(cond.Location, func(l string) CardApplyLocation { return CardApplyLocation(l) }),
 		Selectors:            mapSlice(cond.Selectors, toSelectorDto),
 		Target:               ptrCast(cond.Target, func(t string) TargetType { return TargetType(t) }),
 		RequiredOriginalCost: ptrCast(cond.RequiredOriginalCost, toMinMaxValueDto),
+		OnBonusType:          cond.OnBonusType,
 	}
 }
 
@@ -165,6 +169,7 @@ func toTileRestrictionsDto(tr shared.TileRestrictions) TileRestrictionsDto {
 	if tr.AdjacentToOwned {
 		dto.AdjacentToOwned = &tr.AdjacentToOwned
 	}
+	dto.OnBonusType = tr.OnBonusType
 	return dto
 }
 
@@ -175,6 +180,8 @@ func toSelectorDto(sel shared.Selector) SelectorDto {
 		Resources:            sel.Resources,
 		StandardProjects:     mapSlice(sel.StandardProjects, func(sp shared.StandardProject) StandardProject { return StandardProject(sp) }),
 		RequiredOriginalCost: ptrCast(sel.RequiredOriginalCost, toMinMaxValueDto),
+		VP:                   ptrCast(sel.VP, toMinMaxValueDto),
+		GlobalParameters:     sel.GlobalParameters,
 	}
 }
 
@@ -187,6 +194,7 @@ func toResourceConditionDto(rc shared.ResourceCondition) ResourceConditionDto {
 		MaxTrigger:       rc.MaxTrigger,
 		Per:              ptrCast(rc.Per, toPerConditionDto),
 		TileRestrictions: ptrCast(rc.TileRestrictions, toTileRestrictionsDto),
+		TileType:         rc.TileType,
 	}
 	if rc.VariableAmount {
 		dto.VariableAmount = &rc.VariableAmount
@@ -200,13 +208,25 @@ func toResourceConditionDto(rc shared.ResourceCondition) ResourceConditionDto {
 	return dto
 }
 
-func toChoiceDto(choice shared.Choice) ChoiceDto {
+func toChoiceDtos(choices []shared.Choice) []ChoiceDto {
+	if len(choices) == 0 {
+		return nil
+	}
+	dtos := make([]ChoiceDto, len(choices))
+	for i, choice := range choices {
+		dtos[i] = toChoiceDto(i, choice)
+	}
+	return dtos
+}
+
+func toChoiceDto(index int, choice shared.Choice) ChoiceDto {
 	return ChoiceDto{
-		Inputs:       mapSlice(choice.Inputs, toResourceConditionDto),
-		Outputs:      mapSlice(choice.Outputs, toResourceConditionDto),
-		Requirements: toChoiceRequirementsDto(choice.Requirements),
-		Available:    true,
-		Errors:       []StateErrorDto{},
+		OriginalIndex: index,
+		Inputs:        mapSlice(choice.Inputs, toResourceConditionDto),
+		Outputs:       mapSlice(choice.Outputs, toResourceConditionDto),
+		Requirements:  toChoiceRequirementsDto(choice.Requirements),
+		Available:     true,
+		Errors:        []StateErrorDto{},
 	}
 }
 

@@ -485,36 +485,7 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
                 {filteredCorporations.map((corp) => (
                   <div key={corp.id} className="scale-90">
                     <CorporationCard
-                      corporation={{
-                        id: corp.id,
-                        name: corp.name,
-                        description: corp.description ?? "",
-                        startingMegaCredits: corp.startingResources?.credits ?? 0,
-                        startingProduction: corp.startingProduction
-                          ? {
-                              credits: corp.startingProduction.credits,
-                              steel: corp.startingProduction.steel,
-                              titanium: corp.startingProduction.titanium,
-                              plants: corp.startingProduction.plants,
-                              energy: corp.startingProduction.energy,
-                              heat: corp.startingProduction.heat,
-                            }
-                          : undefined,
-                        startingResources: corp.startingResources
-                          ? {
-                              credits: corp.startingResources.credits,
-                              steel: corp.startingResources.steel,
-                              titanium: corp.startingResources.titanium,
-                              plants: corp.startingResources.plants,
-                              energy: corp.startingResources.energy,
-                              heat: corp.startingResources.heat,
-                            }
-                          : undefined,
-                        behaviors: corp.behaviors,
-                        tags: corp.tags,
-                        vpConditions: corp.vpConditions,
-                        logoPath: undefined,
-                      }}
+                      card={corp}
                       isSelected={selectedCorporationId === corp.id}
                       onSelect={() =>
                         setSelectedCorporationId(selectedCorporationId === corp.id ? "" : corp.id)

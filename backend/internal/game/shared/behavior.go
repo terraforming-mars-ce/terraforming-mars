@@ -1,5 +1,10 @@
 package shared
 
+// Choice policy constants
+const (
+	ChoicePolicyLowest = "lowest" // Only choices affecting the lowest production are valid
+)
+
 // CardBehavior represents card behaviors (immediate and repeatable)
 type CardBehavior struct {
 	Description                   string                         `json:"description,omitempty" ts:"string | undefined"`
@@ -7,7 +12,9 @@ type CardBehavior struct {
 	Inputs                        []ResourceCondition            `json:"inputs,omitempty"`
 	Outputs                       []ResourceCondition            `json:"outputs,omitempty"`
 	Choices                       []Choice                       `json:"choices,omitempty"`
+	ChoicePolicy                  string                         `json:"choicePolicy,omitempty"`
 	GenerationalEventRequirements []GenerationalEventRequirement `json:"generationalEventRequirements,omitempty" ts:"GenerationalEventRequirement[] | undefined"`
+	Group                         string                         `json:"group,omitempty" ts:"string | undefined"`
 }
 
 // DeepCopy creates a deep copy of the CardBehavior
@@ -15,6 +22,8 @@ func (cb CardBehavior) DeepCopy() CardBehavior {
 	var result CardBehavior
 
 	result.Description = cb.Description
+	result.ChoicePolicy = cb.ChoicePolicy
+	result.Group = cb.Group
 
 	if cb.Triggers != nil {
 		result.Triggers = make([]Trigger, len(cb.Triggers))
@@ -104,6 +113,88 @@ func (cb CardBehavior) ExtractInputsOutputs(choiceIndex *int) (inputs []Resource
 	}
 
 	return inputs, outputs
+}
+
+// productionResourceTypes lists all production resource types for policy evaluation.
+var productionResourceTypes = []ResourceType{
+	ResourceCreditProduction,
+	ResourceSteelProduction,
+	ResourceTitaniumProduction,
+	ResourcePlantProduction,
+	ResourceEnergyProduction,
+	ResourceHeatProduction,
+}
+
+// FilterChoiceIndicesByPolicy returns the indices of choices that are valid under the given policy.
+// For empty policy or "any", all indices are returned.
+// For "lowest", only choices whose production output is at the player's minimum production level.
+func FilterChoiceIndicesByPolicy(choices []Choice, policy string, production Production) []int {
+	if policy == "" {
+		indices := make([]int, len(choices))
+		for i := range choices {
+			indices[i] = i
+		}
+		return indices
+	}
+
+	switch policy {
+	case ChoicePolicyLowest:
+		return filterLowestProductionChoices(choices, production)
+	default:
+		indices := make([]int, len(choices))
+		for i := range choices {
+			indices[i] = i
+		}
+		return indices
+	}
+}
+
+// IsChoiceValidForPolicy checks whether a specific choice index is valid under the given policy.
+func IsChoiceValidForPolicy(choiceIndex int, choices []Choice, policy string, production Production) bool {
+	if policy == "" || choiceIndex < 0 || choiceIndex >= len(choices) {
+		return choiceIndex >= 0 && choiceIndex < len(choices)
+	}
+
+	validIndices := FilterChoiceIndicesByPolicy(choices, policy, production)
+	for _, idx := range validIndices {
+		if idx == choiceIndex {
+			return true
+		}
+	}
+	return false
+}
+
+func filterLowestProductionChoices(choices []Choice, production Production) []int {
+	// Find the minimum production value across all 6 types
+	minValue := production.Credits
+	for _, rt := range productionResourceTypes {
+		val := production.GetAmount(rt)
+		if val < minValue {
+			minValue = val
+		}
+	}
+
+	// Return indices of choices whose production output type is at the minimum level
+	var valid []int
+	for i, choice := range choices {
+		for _, output := range choice.Outputs {
+			if isProductionResourceType(output.ResourceType) && production.GetAmount(output.ResourceType) == minValue {
+				valid = append(valid, i)
+				break
+			}
+		}
+	}
+	return valid
+}
+
+func isProductionResourceType(rt ResourceType) bool {
+	switch rt {
+	case ResourceCreditProduction, ResourceSteelProduction, ResourceTitaniumProduction,
+		ResourcePlantProduction, ResourceEnergyProduction, ResourceHeatProduction:
+		return true
+	default:
+		return false
+	}
 }
 
 func deepCopyResourceCondition(rc ResourceCondition) ResourceCondition {

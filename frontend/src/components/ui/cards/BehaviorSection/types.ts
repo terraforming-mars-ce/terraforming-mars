@@ -7,6 +7,7 @@ export interface BehaviorSectionProps {
   cardId?: string;
   greyOutAll?: boolean;
   hideActionChip?: boolean;
+  noContainer?: boolean;
 }
 
 export interface ClassifiedBehavior {

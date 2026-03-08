@@ -118,7 +118,6 @@ const (
 	ResourceTypeTag    ResourceType = "tag"
 
 	ResourceTypeGlobalParameterLenience ResourceType = "global-parameter-lenience"
-	ResourceTypeVenusLenience           ResourceType = "venus-lenience"
 	ResourceTypeDefense                 ResourceType = "defense"
 	ResourceTypeDiscount                ResourceType = "discount"
 	ResourceTypeValueModifier           ResourceType = "value-modifier"
@@ -173,13 +172,12 @@ const (
 type TriggerType string
 
 const (
-	TriggerOceanPlaced      TriggerType = "ocean-placed"
-	TriggerTemperatureRaise TriggerType = "temperature-raise"
-	TriggerOxygenRaise      TriggerType = "oxygen-raise"
-	TriggerCityPlaced       TriggerType = "city-placed"
-	TriggerCardPlayed       TriggerType = "card-played"
-	TriggerTagPlayed        TriggerType = "tag-played"
-	TriggerTilePlaced       TriggerType = "tile-placed"
+	TriggerOceanPlaced           TriggerType = "ocean-placed"
+	TriggerGlobalParameterRaised TriggerType = "global-parameter-raised"
+	TriggerCityPlaced            TriggerType = "city-placed"
+	TriggerCardPlayed            TriggerType = "card-played"
+	TriggerTagPlayed             TriggerType = "tag-played"
+	TriggerTilePlaced            TriggerType = "tile-placed"
 )
 
 // ResourceTriggerType represents different trigger types for resource exchanges for client consumption
@@ -210,6 +208,7 @@ type TileRestrictionsDto struct {
 	AdjacentToType    string   `json:"adjacentToType,omitempty" ts:"string | undefined"`    // "city", "greenery" = must be adjacent to this tile type
 	MinAdjacentOfType *int     `json:"minAdjacentOfType,omitempty" ts:"number | undefined"` // min count of adjacent tiles of AdjacentToType
 	AdjacentToOwned   *bool    `json:"adjacentToOwned,omitempty" ts:"boolean | undefined"`  // must be adjacent to a tile owned by the placing player
+	OnBonusType       []string `json:"onBonusType,omitempty" ts:"string[] | undefined"`     // tile must have one of these bonus types
 }
 
 // SelectorDto represents matching criteria for cards, resources, or projects.
@@ -221,6 +220,8 @@ type SelectorDto struct {
 	Resources            []string          `json:"resources,omitempty" ts:"string[] | undefined"`
 	StandardProjects     []StandardProject `json:"standardProjects,omitempty" ts:"StandardProject[] | undefined"`
 	RequiredOriginalCost *MinMaxValueDto   `json:"requiredOriginalCost,omitempty" ts:"MinMaxValueDto | undefined"`
+	VP                   *MinMaxValueDto   `json:"vp,omitempty" ts:"MinMaxValueDto | undefined"`
+	GlobalParameters     []string          `json:"globalParameters,omitempty" ts:"string[] | undefined"`
 }
 
 // ResourceConditionDto represents a resource condition for client consumption
@@ -232,6 +233,7 @@ type ResourceConditionDto struct {
 	MaxTrigger       *int                 `json:"maxTrigger,omitempty" ts:"number | undefined"`
 	Per              *PerConditionDto     `json:"per,omitempty" ts:"PerConditionDto | undefined"`
 	TileRestrictions *TileRestrictionsDto `json:"tileRestrictions,omitempty" ts:"TileRestrictionsDto | undefined"`
+	TileType         string               `json:"tileType,omitempty" ts:"string | undefined"`
 	VariableAmount   *bool                `json:"variableAmount,omitempty" ts:"boolean | undefined"`
 	Optional         *bool                `json:"optional,omitempty" ts:"boolean | undefined"`
 	PaymentAllowed   []ResourceType       `json:"paymentAllowed,omitempty" ts:"ResourceType[] | undefined"`
@@ -248,11 +250,12 @@ type PerConditionDto struct {
 
 // ChoiceDto represents a choice for client consumption
 type ChoiceDto struct {
-	Inputs       []ResourceConditionDto `json:"inputs,omitempty" ts:"ResourceConditionDto[] | undefined"`
-	Outputs      []ResourceConditionDto `json:"outputs,omitempty" ts:"ResourceConditionDto[] | undefined"`
-	Requirements *CardRequirementsDto   `json:"requirements,omitempty" ts:"CardRequirementsDto | undefined"`
-	Available    bool                   `json:"available" ts:"boolean"`
-	Errors       []StateErrorDto        `json:"errors" ts:"StateErrorDto[]"`
+	OriginalIndex int                    `json:"originalIndex" ts:"number"`
+	Inputs        []ResourceConditionDto `json:"inputs,omitempty" ts:"ResourceConditionDto[] | undefined"`
+	Outputs       []ResourceConditionDto `json:"outputs,omitempty" ts:"ResourceConditionDto[] | undefined"`
+	Requirements  *CardRequirementsDto   `json:"requirements,omitempty" ts:"CardRequirementsDto | undefined"`
+	Available     bool                   `json:"available" ts:"boolean"`
+	Errors        []StateErrorDto        `json:"errors" ts:"StateErrorDto[]"`
 }
 
 // TriggerDto represents a trigger for client consumption
@@ -270,11 +273,13 @@ type MinMaxValueDto struct {
 // ResourceTriggerConditionDto represents a resource trigger condition for client consumption
 type ResourceTriggerConditionDto struct {
 	Type                   TriggerType                     `json:"type" ts:"TriggerType"`
+	ResourceTypes          []ResourceType                  `json:"resourceTypes,omitempty" ts:"ResourceType[] | undefined"`
 	Location               *CardApplyLocation              `json:"location,omitempty" ts:"CardApplyLocation | undefined"`
 	Selectors              []SelectorDto                   `json:"selectors,omitempty" ts:"SelectorDto[] | undefined"`
 	Target                 *TargetType                     `json:"target,omitempty" ts:"TargetType | undefined"`
 	RequiredOriginalCost   *MinMaxValueDto                 `json:"requiredOriginalCost,omitempty" ts:"MinMaxValueDto | undefined"`
 	RequiredResourceChange map[ResourceType]MinMaxValueDto `json:"requiredResourceChange,omitempty" ts:"Record<ResourceType, MinMaxValueDto> | undefined"`
+	OnBonusType            []string                        `json:"onBonusType,omitempty" ts:"string[] | undefined"`
 }
 
 // CardBehaviorDto represents a card behavior for client consumption
@@ -284,7 +289,9 @@ type CardBehaviorDto struct {
 	Inputs                        []ResourceConditionDto            `json:"inputs,omitempty" ts:"ResourceConditionDto[] | undefined"`
 	Outputs                       []ResourceConditionDto            `json:"outputs,omitempty" ts:"ResourceConditionDto[] | undefined"`
 	Choices                       []ChoiceDto                       `json:"choices,omitempty" ts:"ChoiceDto[] | undefined"`
+	ChoicePolicy                  string                            `json:"choicePolicy,omitempty" ts:"string | undefined"`
 	GenerationalEventRequirements []GenerationalEventRequirementDto `json:"generationalEventRequirements,omitempty" ts:"GenerationalEventRequirementDto[] | undefined"`
+	Group                         string                            `json:"group,omitempty" ts:"string | undefined"`
 }
 
 // PaymentConstantsDto represents payment conversion rates
@@ -605,6 +612,7 @@ type PendingCardDrawSelectionDto struct {
 	MaxBuyCount    int       `json:"maxBuyCount" ts:"number"`       // Maximum cards to buy (optional, 0 = no buying allowed)
 	CardBuyCost    int       `json:"cardBuyCost" ts:"number"`       // Cost per card when buying (typically 3 MC, 0 if no buying)
 	Source         string    `json:"source" ts:"string"`            // Card ID or action that triggered this
+	PlayAsPrelude  bool      `json:"playAsPrelude" ts:"boolean"`    // When true, selected card is played as prelude
 }
 
 // PendingCardDiscardSelectionDto represents a pending card discard action from card effects

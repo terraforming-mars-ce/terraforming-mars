@@ -24,6 +24,7 @@ const CardsPage: React.FC = () => {
   >("unsorted");
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
+  const [selectedPacks, setSelectedPacks] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [isFadedIn, setIsFadedIn] = useState(false);
@@ -49,14 +50,13 @@ const CardsPage: React.FC = () => {
     const sort = (searchParams.get("sort") as typeof sortBy) || "unsorted";
     const tags = searchParams.get("tags");
     const types = searchParams.get("types");
+    const packs = searchParams.get("packs");
 
     setSearchQuery(query);
     setSortBy(sort);
     setSelectedTags(new Set(tags ? tags.split(",").filter(Boolean) : []));
     setSelectedTypes(new Set(types ? types.split(",").filter(Boolean) : []));
-
-    // Don't select cards when viewing a permalink - just show them
-    // Don't auto-close filters panel when filters are removed
+    setSelectedPacks(new Set(packs ? packs.split(",").filter(Boolean) : []));
   }, [searchParams]);
 
   // Update URL parameters when state changes
@@ -83,8 +83,20 @@ const CardsPage: React.FC = () => {
       params.set("types", Array.from(selectedTypes).sort().join(","));
     }
 
+    if (selectedPacks.size > 0) {
+      params.set("packs", Array.from(selectedPacks).sort().join(","));
+    }
+
     setSearchParams(params, { replace: true });
-  }, [searchQuery, sortBy, selectedTags, selectedTypes, searchParams, setSearchParams]);
+  }, [
+    searchQuery,
+    sortBy,
+    selectedTags,
+    selectedTypes,
+    selectedPacks,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const loadAllCards = useCallback(async () => {
     if (loading) return;
@@ -121,6 +133,23 @@ const CardsPage: React.FC = () => {
     return Array.from(types).sort();
   }, [allCards]);
 
+  const availablePacks = useMemo(() => {
+    const packs = new Set<string>();
+    allCards.forEach((card) => {
+      if (card.pack) {
+        packs.add(card.pack);
+      }
+    });
+    return Array.from(packs).sort();
+  }, [allCards]);
+
+  const formatPackName = (pack: string) => {
+    return pack
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   // Combined filter and sort functionality
   const applyFiltersAndSort = useCallback(() => {
     let filtered = [...allCards];
@@ -151,10 +180,33 @@ const CardsPage: React.FC = () => {
       if (selectedTypes.size > 0) {
         filtered = filtered.filter((card) => selectedTypes.has(card.type));
       }
+
+      // Apply pack filter (if any packs selected, show cards with ANY of the selected packs)
+      if (selectedPacks.size > 0) {
+        filtered = filtered.filter((card) => selectedPacks.has(card.pack));
+      }
     }
 
-    // Apply sorting (only if not unsorted)
-    if (sortBy !== "unsorted") {
+    // Apply sorting
+    const typePriority = (type: string) => {
+      if (type === "corporation") {
+        return 2;
+      }
+      if (type === "prelude") {
+        return 1;
+      }
+      return 0;
+    };
+
+    if (sortBy === "unsorted") {
+      filtered.sort((a, b) => {
+        const priorityDiff = typePriority(a.type) - typePriority(b.type);
+        if (priorityDiff !== 0) {
+          return priorityDiff;
+        }
+        return a.id.localeCompare(b.id);
+      });
+    } else {
       filtered.sort((a, b) => {
         switch (sortBy) {
           case "name-asc":
@@ -172,7 +224,7 @@ const CardsPage: React.FC = () => {
     }
 
     setCards(filtered);
-  }, [allCards, searchQuery, selectedTags, selectedTypes, sortBy, searchParams]);
+  }, [allCards, searchQuery, selectedTags, selectedTypes, selectedPacks, sortBy, searchParams]);
 
   // Search functionality
   const handleSearch = useCallback((query: string) => {
@@ -202,6 +254,19 @@ const CardsPage: React.FC = () => {
         newTypes.add(type);
       }
       return newTypes;
+    });
+  }, []);
+
+  // Pack toggle functionality
+  const togglePack = useCallback((pack: string) => {
+    setSelectedPacks((prev) => {
+      const newPacks = new Set(prev);
+      if (newPacks.has(pack)) {
+        newPacks.delete(pack);
+      } else {
+        newPacks.add(pack);
+      }
+      return newPacks;
     });
   }, []);
 
@@ -330,7 +395,7 @@ const CardsPage: React.FC = () => {
     if (allCards.length > 0) {
       applyFiltersAndSort();
     }
-  }, [selectedTags, selectedTypes, sortBy, searchQuery, applyFiltersAndSort]);
+  }, [selectedTags, selectedTypes, selectedPacks, sortBy, searchQuery, applyFiltersAndSort]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -392,11 +457,23 @@ const CardsPage: React.FC = () => {
     return Math.min(1300, windowWidth - 40);
   }, [windowWidth]);
 
+  const SECTION_BREAK_HEIGHT = 60;
+
   // Calculate card positions for ALL cards (used for both height and rendering)
-  const cardPositions = useMemo(() => {
+  const { cardPositions, sectionBreaks } = useMemo(() => {
     const REGULAR_CARD_WIDTH = 220;
     const CORP_CARD_WIDTH = 420;
     const containerWidth = getContainerWidth();
+
+    const typePriority = (type: string) => {
+      if (type === "corporation") {
+        return 2;
+      }
+      if (type === "prelude") {
+        return 1;
+      }
+      return 0;
+    };
 
     const positions: Array<{
       cardIndex: number;
@@ -407,23 +484,52 @@ const CardsPage: React.FC = () => {
       height: number;
     }> = [];
 
+    const breaks: Array<{ top: number; label: string }> = [];
+
     let currentRow = 0;
     let currentRowCards: Array<{ index: number; left: number; width: number }> = [];
     let currentRowWidth = 0;
     let currentRowHasCorp = false;
     let cumulativeTop = 0;
+    let lastTypePriority = -1;
+
+    const sectionLabels: { [key: number]: string } = {
+      1: "Preludes",
+      2: "Corporations",
+    };
 
     cards.forEach((card, index) => {
       const cardWidth = card.type === CardTypeCorporation ? CORP_CARD_WIDTH : REGULAR_CARD_WIDTH;
-
-      // Force new row for corporation cards
       const isCorporation = card.type === CardTypeCorporation;
+      const currentPriority = typePriority(card.type);
 
-      // Check if card fits in current row or is a corporation card
+      // Check if we're transitioning to a new type group
       if (
-        (currentRowWidth + cardWidth > containerWidth && currentRowWidth > 0) ||
-        (isCorporation && currentRowWidth > 0)
+        currentPriority > lastTypePriority &&
+        lastTypePriority >= 0 &&
+        sectionLabels[currentPriority]
       ) {
+        // Finalize current row before break
+        if (currentRowCards.length > 0) {
+          const rowOffset = (containerWidth - currentRowWidth) / 2;
+          const rowHeight = currentRowHasCorp ? CORP_CARD_HEIGHT : REGULAR_CARD_HEIGHT;
+          currentRowCards.forEach((cardInfo) => {
+            positions[cardInfo.index].left = cardInfo.left + rowOffset;
+          });
+          cumulativeTop += rowHeight;
+          currentRow++;
+          currentRowCards = [];
+          currentRowWidth = 0;
+          currentRowHasCorp = false;
+        }
+
+        breaks.push({ top: cumulativeTop, label: sectionLabels[currentPriority] });
+        cumulativeTop += SECTION_BREAK_HEIGHT;
+      }
+      lastTypePriority = currentPriority;
+
+      // Check if card fits in current row
+      if (currentRowWidth + cardWidth > containerWidth && currentRowWidth > 0) {
         // Finalize current row - center the cards
         const rowOffset = (containerWidth - currentRowWidth) / 2;
         const rowHeight = currentRowHasCorp ? CORP_CARD_HEIGHT : REGULAR_CARD_HEIGHT;
@@ -455,7 +561,9 @@ const CardsPage: React.FC = () => {
 
       currentRowCards.push({ index, left: cardLeft, width: cardWidth });
       currentRowWidth += cardWidth;
-      if (isCorporation) currentRowHasCorp = true;
+      if (isCorporation) {
+        currentRowHasCorp = true;
+      }
     });
 
     // Center the last row
@@ -466,7 +574,7 @@ const CardsPage: React.FC = () => {
       });
     }
 
-    return positions;
+    return { cardPositions: positions, sectionBreaks: breaks };
   }, [cards, getContainerWidth]);
 
   // Calculate total height based on card positions
@@ -537,19 +645,6 @@ const CardsPage: React.FC = () => {
     };
   }, [handleScroll, handleResize, cardPositions, calculateVisibleRange]);
 
-  // Convert CardDto to Corporation interface for corporation cards
-  const convertCardToCorporation = (card: CardDto) => ({
-    id: card.id,
-    name: card.name,
-    description: card.description,
-    startingMegaCredits: card.startingResources?.credits || 0,
-    startingProduction: card.startingProduction,
-    startingResources: card.startingResources,
-    behaviors: card.behaviors,
-    tags: card.tags,
-    vpConditions: card.vpConditions,
-  });
-
   return (
     <div
       className="cards-page"
@@ -568,7 +663,10 @@ const CardsPage: React.FC = () => {
             <div className="cards-info-header">
               {cards.length > 0 && (
                 <span>
-                  {searchQuery || selectedTags.size > 0 || selectedTypes.size > 0
+                  {searchQuery ||
+                  selectedTags.size > 0 ||
+                  selectedTypes.size > 0 ||
+                  selectedPacks.size > 0
                     ? `${cards.length} of ${allCards.length}`
                     : `${cards.length}`}{" "}
                   cards
@@ -676,12 +774,36 @@ const CardsPage: React.FC = () => {
                 ))}
               </div>
             </div>
-            {(selectedTags.size > 0 || selectedTypes.size > 0) && (
+            <div className="filter-section">
+              <h3>Card Packs</h3>
+              <div className="filter-chips">
+                {availablePacks.map((pack) => (
+                  <button
+                    key={pack}
+                    className={`filter-chip pack-chip ${selectedPacks.has(pack) ? "active" : ""}`}
+                    onClick={() => togglePack(pack)}
+                    style={{
+                      borderColor: selectedPacks.has(pack)
+                        ? "rgba(0, 188, 212, 0.8)"
+                        : "rgba(0, 188, 212, 0.4)",
+                      backgroundColor: selectedPacks.has(pack)
+                        ? "rgba(0, 188, 212, 0.3)"
+                        : "rgba(255, 255, 255, 0.1)",
+                      color: selectedPacks.has(pack) ? "#ffffff" : "rgba(0, 188, 212, 0.9)",
+                    }}
+                  >
+                    {formatPackName(pack)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {(selectedTags.size > 0 || selectedTypes.size > 0 || selectedPacks.size > 0) && (
               <button
                 className="clear-filters-button"
                 onClick={() => {
                   setSelectedTags(new Set());
                   setSelectedTypes(new Set());
+                  setSelectedPacks(new Set());
                 }}
               >
                 Clear All Filters
@@ -700,6 +822,28 @@ const CardsPage: React.FC = () => {
           {/* Spacer to create scrollable area */}
           <div style={{ height: `${totalHeight}px`, pointerEvents: "none" }} />
 
+          {sectionBreaks.map((breakInfo) => (
+            <div
+              key={breakInfo.label}
+              className="section-break"
+              style={{
+                position: "absolute",
+                top: `${breakInfo.top}px`,
+                left: 0,
+                right: 0,
+                height: `${SECTION_BREAK_HEIGHT}px`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "16px",
+              }}
+            >
+              <div className="section-break-line" />
+              <span className="section-break-label">{breakInfo.label}</span>
+              <div className="section-break-line" />
+            </div>
+          ))}
+
           {visibleCards.map(({ card, position }) => (
             <div
               key={card.id}
@@ -715,7 +859,7 @@ const CardsPage: React.FC = () => {
             >
               {card.type === CardTypeCorporation ? (
                 <CorporationCard
-                  corporation={convertCardToCorporation(card)}
+                  card={card}
                   isSelected={selectedCards.has(card.id)}
                   onSelect={handleCardSelect}
                   showCheckbox={!isPermalinkView}
@@ -1210,6 +1354,37 @@ const CardsPage: React.FC = () => {
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
+        .pack-chip {
+          font-weight: 600;
+          font-size: 13px;
+          transition: all 0.3s ease;
+        }
+
+        .pack-chip:hover {
+          transform: scale(1.05);
+          box-shadow: 0 2px 8px rgba(0, 188, 212, 0.3);
+        }
+
+        .section-break-line {
+          flex: 1;
+          height: 1px;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.3) 50%,
+            transparent 100%
+          );
+        }
+
+        .section-break-label {
+          font-family: 'Orbitron', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.5);
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
 
         .divider {
           width: 100%;
@@ -1241,6 +1416,7 @@ const CardsPage: React.FC = () => {
           margin: 0 auto 40px auto;
           position: relative;
           width: 100%;
+          overflow: hidden;
         }
 
         .card-wrapper {

@@ -43,7 +43,7 @@ func TestPredatorsStealAnimalFromOtherPlayer(t *testing.T) {
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	ctx := context.Background()
 
-	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, &targetCardID, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, &targetCardID, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Predators steal action should succeed")
 
 	testutil.AssertEqual(t, 2, other.Resources().GetCardStorage(targetCardID), "Target card should have 2 animals after steal")
@@ -82,7 +82,7 @@ func TestPredatorsStealFromOwnCard(t *testing.T) {
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	ctx := context.Background()
 
-	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, &targetCardID, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, &targetCardID, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Predators steal from own card should succeed")
 
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(targetCardID), "Target card should have 1 animal after steal")
@@ -117,7 +117,7 @@ func TestPredatorsSkipsStealWithNoSourceCard(t *testing.T) {
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	ctx := context.Background()
 
-	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Predators without source card should succeed (skip steal)")
 
 	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(predatorsID), "Predators card should have 0 animals when no source card specified")
@@ -156,7 +156,7 @@ func TestPredatorsStealFromCardWithZeroAnimals(t *testing.T) {
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	ctx := context.Background()
 
-	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, &targetCardID, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, &targetCardID, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Predators steal from empty card should succeed")
 
 	testutil.AssertEqual(t, 0, other.Resources().GetCardStorage(targetCardID), "Target card should still have 0 animals")
@@ -196,7 +196,7 @@ func TestAntsStealMicrobeFromOtherPlayer(t *testing.T) {
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	ctx := context.Background()
 
-	err := useAction.Execute(ctx, testGame.ID(), playerID, antsID, 0, nil, []string{antsID}, nil, &targetCardID, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, antsID, 0, nil, []string{antsID}, nil, &targetCardID, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Ants steal action should succeed")
 
 	testutil.AssertEqual(t, 4, other.Resources().GetCardStorage(targetCardID), "Target card should have 4 microbes after steal")

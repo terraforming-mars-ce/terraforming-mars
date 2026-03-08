@@ -66,7 +66,7 @@ func TestInventorsGuild_ActionCanBeUsed(t *testing.T) {
 	testutil.AssertNoError(t, err, "Inventors' Guild should play successfully")
 	// Use the card action (behavior index 0 since only one behavior, manual)
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, 0, nil, nil, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Inventors' Guild action should succeed")
 }
 
@@ -103,7 +103,7 @@ func TestDevelopmentCenter_PlaysAndActionSpendEnergyDrawCard(t *testing.T) {
 		"Development Center should be in played cards")
 	// Use the card action: spend 1 energy to draw a card
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, 0, nil, nil, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Development Center action should succeed")
 	energyAfter := p.Resources().Get().Energy
 	testutil.AssertEqual(t, energyBefore-1, energyAfter,
@@ -134,7 +134,7 @@ func TestDevelopmentCenter_ActionFailsWithoutEnergy(t *testing.T) {
 	testutil.AssertNoError(t, err, "Development Center should play successfully")
 	// Try to use the action with 0 energy - should fail
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, 0, nil, nil, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, 0, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Development Center action should fail without energy")
 }
 
@@ -352,7 +352,7 @@ func TestElectroCatapult_ActionSpendPlantGainCredits(t *testing.T) {
 	})
 	choiceIndex := 0 // spend 1 plant
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Electro Catapult action (spend plant) should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 4, resources.Plants, "Should have 4 plants after spending 1")
@@ -397,7 +397,7 @@ func TestElectroCatapult_ActionSpendSteelGainCredits(t *testing.T) {
 	})
 	choiceIndex := 1 // spend 1 steel
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Electro Catapult action (spend steel) should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 2, resources.Steel, "Should have 2 steel after spending 1")
@@ -1058,7 +1058,7 @@ func TestPowerInfrastructure_PlayAndUseAction(t *testing.T) {
 	// Use the action: spend 3 energy to gain 3 credits
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 3
-	err = useAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, 0, nil, nil, nil, nil, &selectedAmount, nil)
+	err = useAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
 	testutil.AssertNoError(t, err, "Power Infrastructure action should succeed")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, energyBefore-3, resources.Energy, "Energy should decrease by 3")
@@ -1095,7 +1095,7 @@ func TestPowerInfrastructure_UseActionSpendAllEnergy(t *testing.T) {
 	// Spend all 7 energy
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 7
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
 	testutil.AssertNoError(t, err, "Power Infrastructure should succeed spending all energy")
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 0, resources.Energy, "Should have 0 energy after spending all 7")

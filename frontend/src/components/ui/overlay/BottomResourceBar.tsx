@@ -531,17 +531,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                         ×
                       </button>
                       <CorporationCard
-                        corporation={{
-                          id: displayCorporation.id,
-                          name: displayCorporation.name,
-                          description: displayCorporation.description,
-                          startingMegaCredits: displayCorporation.startingResources?.credits || 0,
-                          startingProduction: displayCorporation.startingProduction,
-                          startingResources: displayCorporation.startingResources,
-                          behaviors: displayCorporation.behaviors,
-                          tags: displayCorporation.tags,
-                          vpConditions: displayCorporation.vpConditions,
-                        }}
+                        card={displayCorporation}
                         isSelected={false}
                         onSelect={() => {}}
                         showCheckbox={false}

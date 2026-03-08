@@ -2819,12 +2819,13 @@
     ],
     "behaviors": [
       {
+        "group": "mining-area",
         "triggers": [
           {
             "type": "auto"
           }
         ],
-        "description": "Place this tile on an area with a steel or titanium placement bonus, adjacent to another of your tiles.",
+        "description": "Place tile on steel/titanium bonus adjacent to your tile. Gain that production.",
         "outputs": [
           {
             "type": "tile-placement",
@@ -2842,6 +2843,7 @@
         ]
       },
       {
+        "group": "mining-area",
         "triggers": [
           {
             "type": "auto",
@@ -2854,7 +2856,6 @@
             }
           }
         ],
-        "description": "Increase your steel production 1 step.",
         "outputs": [
           {
             "type": "steel-production",
@@ -2864,6 +2865,7 @@
         ]
       },
       {
+        "group": "mining-area",
         "triggers": [
           {
             "type": "auto",
@@ -2876,7 +2878,6 @@
             }
           }
         ],
-        "description": "Increase your titanium production 1 step.",
         "outputs": [
           {
             "type": "titanium-production",
@@ -2957,12 +2958,13 @@
     ],
     "behaviors": [
       {
+        "group": "mining-rights",
         "triggers": [
           {
             "type": "auto"
           }
         ],
-        "description": "Place this tile on an area with a steel or titanium placement bonus.",
+        "description": "Place tile on steel/titanium bonus. Gain that production.",
         "outputs": [
           {
             "type": "tile-placement",
@@ -2979,6 +2981,7 @@
         ]
       },
       {
+        "group": "mining-rights",
         "triggers": [
           {
             "type": "auto",
@@ -2991,7 +2994,6 @@
             }
           }
         ],
-        "description": "Increase your steel production 1 step.",
         "outputs": [
           {
             "type": "steel-production",
@@ -3001,6 +3003,7 @@
         ]
       },
       {
+        "group": "mining-rights",
         "triggers": [
           {
             "type": "auto",
@@ -3013,7 +3016,6 @@
             }
           }
         ],
-        "description": "Increase your titanium production 1 step.",
         "outputs": [
           {
             "type": "titanium-production",
@@ -6562,7 +6564,8 @@
           {
             "type": "global-parameter-lenience",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [{ "globalParameters": ["temperature", "oxygen", "ocean", "venus"] }]
           }
         ],
         "description": "Your global requirements are +2 or -2 steps, your choice in each case."
@@ -8739,7 +8742,8 @@
             "type": "global-parameter-lenience",
             "amount": 2,
             "target": "self-player",
-            "temporary": "next-card"
+            "temporary": "next-card",
+            "selectors": [{ "globalParameters": ["temperature", "oxygen", "ocean", "venus"] }]
           }
         ]
       }
@@ -11861,7 +11865,8 @@
           {
             "type": "global-parameter-lenience",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [{ "globalParameters": ["temperature", "oxygen", "ocean"] }]
           }
         ],
         "description": "Your temperature, oxygen, and ocean requirements are +2 or -2 steps, your choice in each case."
@@ -15988,27 +15993,40 @@
         ],
         "outputs": [
           {
-            "type": "card-draw",
-            "amount": 1,
-            "target": "self-player"
-          }
-        ],
-        "description": "Draw 1 card"
-      },
-      {
-        "triggers": [
-          {
-            "type": "auto"
-          }
-        ],
-        "outputs": [
-          {
             "type": "credit",
             "amount": 38,
             "target": "self-player"
           },
           {
             "type": "titanium-production",
+            "amount": 1,
+            "target": "self-player"
+          },
+          {
+            "type": "card-draw",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "You start with 38 M€, 1 titanium production, and draw 1 card"
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "tag-played",
+              "selectors": [
+                {
+                  "tags": ["earth"]
+                }
+              ]
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "type": "card-draw",
             "amount": 1,
             "target": "self-player"
           }
@@ -16053,6 +16071,7 @@
             "target": "self-player"
           }
         ],
+        "choicePolicy": "lowest",
         "choices": [
           {
             "outputs": [
@@ -16171,12 +16190,26 @@
           {
             "type": "card-take",
             "amount": 1,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "cardTypes": [
+                  "prelude"
+                ]
+              }
+            ]
           },
           {
             "type": "card-peek",
             "amount": 3,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "cardTypes": [
+                  "prelude"
+                ]
+              }
+            ]
           }
         ],
         "description": "As your first action, draw 3 Prelude cards, and play one of them. Discard the other two."
@@ -16212,7 +16245,16 @@
       {
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "card-played",
+              "target": "self-player",
+              "selectors": [
+                {
+                  "vp": { "min": 0 }
+                }
+              ]
+            }
           }
         ],
         "outputs": [
@@ -17028,7 +17070,12 @@
       {
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "global-parameter-raised",
+              "target": "any-player",
+              "selectors": [{ "globalParameters": ["venus"] }]
+            }
           }
         ],
         "outputs": [
@@ -17078,7 +17125,8 @@
           {
             "type": "card-draw",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [{"resources": ["floater"]}]
           }
         ],
         "description": "As your first action, reveal cards from the deck until you have revealed 2 cards with a floater icon on it. Take those 2 cards into hand, and discard the rest."
@@ -17151,9 +17199,15 @@
         "description": "You start with 35 M€ and 1 steel production."
       },
       {
+        "group": "manutech-production",
+        "description": "For each step you increase the production of a resource, you also gain that resource",
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "production-increased",
+              "resourceTypes": ["credits-production"]
+            }
           }
         ],
         "outputs": [
@@ -17161,34 +17215,103 @@
             "type": "credit",
             "amount": 1,
             "target": "self-player"
-          },
+          }
+        ]
+      },
+      {
+        "group": "manutech-production",
+        "triggers": [
           {
-            "type": "energy",
-            "amount": 1,
-            "target": "self-player"
-          },
-          {
-            "type": "heat",
-            "amount": 1,
-            "target": "self-player"
-          },
-          {
-            "type": "plant",
-            "amount": 1,
-            "target": "self-player"
-          },
+            "type": "auto",
+            "condition": {
+              "type": "production-increased",
+              "resourceTypes": ["steel-production"]
+            }
+          }
+        ],
+        "outputs": [
           {
             "type": "steel",
             "amount": 1,
             "target": "self-player"
-          },
+          }
+        ]
+      },
+      {
+        "group": "manutech-production",
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "production-increased",
+              "resourceTypes": ["titanium-production"]
+            }
+          }
+        ],
+        "outputs": [
           {
             "type": "titanium",
             "amount": 1,
             "target": "self-player"
           }
+        ]
+      },
+      {
+        "group": "manutech-production",
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "production-increased",
+              "resourceTypes": ["plant-production"]
+            }
+          }
         ],
-        "description": "For each step you increase the production of a resource, you also gain that resource"
+        "outputs": [
+          {
+            "type": "plant",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ]
+      },
+      {
+        "group": "manutech-production",
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "production-increased",
+              "resourceTypes": ["energy-production"]
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "type": "energy",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ]
+      },
+      {
+        "group": "manutech-production",
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "production-increased",
+              "resourceTypes": ["heat-production"]
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "type": "heat",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ]
       }
     ]
   },
@@ -17228,7 +17351,12 @@
           {
             "type": "card-draw",
             "amount": 3,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "tags": ["venus"]
+              }
+            ]
           }
         ],
         "description": "As your first action, reveal cards from the deck until you have revealed 3 Venus-tag cards. Take those into hand and discard the rest."
@@ -17236,14 +17364,18 @@
       {
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "card-hand-updated"
+            }
           }
         ],
         "outputs": [
           {
-            "type": "venus-lenience",
+            "type": "global-parameter-lenience",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [{ "globalParameters": ["venus"] }]
           }
         ],
         "description": "Your Venus requirements are +/- 2 steps, your choice in each case"
@@ -17275,6 +17407,21 @@
           }
         ],
         "description": "You start with 48 M€."
+      },
+      {
+        "triggers": [
+          {
+            "type": "manual"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "action-reuse",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "Use a blue card action that has already been used this generation."
       }
     ]
   },

@@ -226,7 +226,7 @@ func (d *CommandDispatcher) dispatchUseCardAction(ctx context.Context, gameID, p
 		}
 	}
 
-	return d.useCardAction.Execute(ctx, gameID, playerID, p.CardID, p.BehaviorIndex, p.ChoiceIndex, p.CardStorageTargets, p.TargetPlayerID, p.SourceCardForInput, p.SelectedAmount, actionPayment)
+	return d.useCardAction.Execute(ctx, gameID, playerID, p.CardID, p.BehaviorIndex, p.ChoiceIndex, p.CardStorageTargets, p.TargetPlayerID, p.SourceCardForInput, p.SelectedAmount, actionPayment, nil)
 }
 
 func (d *CommandDispatcher) dispatchSelectStartingChoices(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {

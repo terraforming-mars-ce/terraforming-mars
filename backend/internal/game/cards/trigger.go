@@ -9,8 +9,7 @@ type TriggerType string
 
 const (
 	TriggerOceanPlaced           TriggerType = "ocean-placed"
-	TriggerTemperatureRaise      TriggerType = "temperature-raise"
-	TriggerOxygenRaise           TriggerType = "oxygen-raise"
+	TriggerGlobalParameterRaised TriggerType = "global-parameter-raised"
 	TriggerCityPlaced            TriggerType = "city-placed"
 	TriggerGreeneryPlaced        TriggerType = "greenery-placed"
 	TriggerTilePlaced            TriggerType = "tile-placed"

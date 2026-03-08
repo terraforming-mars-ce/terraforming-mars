@@ -35,21 +35,25 @@ export const mergeTriggeredEffects = (
   classifiedBehaviors.forEach((classifiedBehavior) => {
     if (classifiedBehavior.type === "triggered-effect") {
       triggeredEffects.push(classifiedBehavior);
+    } else if (classifiedBehavior.behavior.group) {
+      triggeredEffects.push(classifiedBehavior);
     } else {
       otherBehaviors.push(classifiedBehavior);
     }
   });
 
-  // Group triggered effects by condition key (type + target + location)
+  // Group triggered effects by group field (if present) or condition key (type + target + location)
   const groupedByCondition: Map<string, ClassifiedBehavior[]> = new Map();
   const ungroupedEffects: ClassifiedBehavior[] = [];
 
   triggeredEffects.forEach((effect) => {
-    const conditionKey = getConditionKey(effect.behavior);
-    if (conditionKey) {
-      const existing = groupedByCondition.get(conditionKey) || [];
+    const groupKey = effect.behavior.group
+      ? `group:${effect.behavior.group}`
+      : getConditionKey(effect.behavior);
+    if (groupKey) {
+      const existing = groupedByCondition.get(groupKey) || [];
       existing.push(effect);
-      groupedByCondition.set(conditionKey, existing);
+      groupedByCondition.set(groupKey, existing);
     } else {
       ungroupedEffects.push(effect);
     }
@@ -60,9 +64,12 @@ export const mergeTriggeredEffects = (
   groupedByCondition.forEach((effects) => {
     if (effects.length > 1) {
       // Create merged behavior using first behavior as primary, storing others in mergedBehaviors
+      // Use the first available description from any behavior in the group
+      const groupDescription = effects.find((e) => e.description)?.description;
       const mergedBehavior: ClassifiedBehavior = {
         behavior: effects[0].behavior,
         type: "triggered-effect",
+        description: groupDescription,
         mergedBehaviors: effects.slice(1).map((e) => e.behavior),
       };
       mergedEffects.push(mergedBehavior);
@@ -100,6 +107,12 @@ export const mergeAutoProductionBehaviors = (
     // Check if behavior has a trigger condition (e.g., greenery-placed for Herbivores)
     const hasCondition =
       behavior.triggers && behavior.triggers.some((trigger: any) => trigger.condition);
+
+    // Grouped behaviors skip auto merging — they'll be handled by mergeTriggeredEffects
+    if (behavior.group) {
+      otherBehaviors.push(classifiedBehavior);
+      return;
+    }
 
     const isAutoProduction =
       type === "auto-no-background" &&
