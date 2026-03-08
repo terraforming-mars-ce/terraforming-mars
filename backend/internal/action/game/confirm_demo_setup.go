@@ -141,6 +141,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 		}
 
 		// Setup forced first action if corporation requires it
+		a.corpProc.WithOnCardsAddedToHand(action.MakeCardDrawCallback(p, g, a.cardRegistry))
 		if err := a.corpProc.SetupForcedFirstAction(ctx, corpCard, g, playerID); err != nil {
 			log.Error("Failed to setup forced first action", zap.Error(err))
 			return fmt.Errorf("failed to setup forced first action: %w", err)

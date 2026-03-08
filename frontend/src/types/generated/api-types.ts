@@ -915,6 +915,7 @@ export interface PendingCardDrawSelectionDto {
   maxBuyCount: number /* int */; // Maximum cards to buy (optional, 0 = no buying allowed)
   cardBuyCost: number /* int */; // Cost per card when buying (typically 3 MC, 0 if no buying)
   source: string; // Card ID or action that triggered this
+  playAsPrelude: boolean; // When true, selected card is played as prelude
 }
 /**
  * PendingCardDiscardSelectionDto represents a pending card discard action from card effects

@@ -317,12 +317,6 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 		return fmt.Errorf("corporation card not found: %s", choices.CorporationID)
 	}
 
-	corpTags := make([]string, len(corpCard.Tags))
-	for i, tag := range corpCard.Tags {
-		corpTags[i] = string(tag)
-	}
-	p.PlayedCards().AddCard(choices.CorporationID, corpCard.Name, string(corpCard.Type), corpTags)
-
 	if corpCard.ResourceStorage != nil {
 		p.Resources().AddToStorage(choices.CorporationID, corpCard.ResourceStorage.Starting)
 	}
@@ -347,24 +341,6 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 
 	if err := corpProc.ApplyStartingEffects(ctx, corpCard, p, g); err != nil {
 		return fmt.Errorf("failed to apply corporation starting effects: %w", err)
-	}
-
-	// Append forced first action outputs (e.g. city-placement) to the starting effects notification.
-	// Must happen immediately after ApplyStartingEffects so the starting credits effect is the
-	// last triggered effect for this player (before auto/trigger effects are added).
-	for _, behavior := range corpCard.Behaviors {
-		if gamecards.HasCorporationFirstActionTrigger(behavior) {
-			var outputs []game.CalculatedOutput
-			for _, output := range behavior.Outputs {
-				outputs = append(outputs, game.CalculatedOutput{
-					ResourceType: string(output.ResourceType),
-					Amount:       output.Amount,
-				})
-			}
-			if len(outputs) > 0 {
-				g.AppendToLastTriggeredEffect(p.ID(), outputs)
-			}
-		}
 	}
 
 	if err := corpProc.ApplyAutoEffects(ctx, corpCard, p, g); err != nil {
@@ -404,6 +380,7 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 		})
 	}
 
+	corpProc.WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, cardRegistry))
 	if err := corpProc.SetupForcedFirstAction(ctx, corpCard, g, p.ID()); err != nil {
 		return fmt.Errorf("failed to setup forced first action: %w", err)
 	}
@@ -450,7 +427,7 @@ func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, 
 		zap.Strings("preludes", choices.PreludeIDs))
 
 	for _, preludeID := range choices.PreludeIDs {
-		if err := applyPreludeCard(ctx, g, p, preludeID, cardRegistry, log); err != nil {
+		if err := ApplyPreludeCard(ctx, g, p, preludeID, cardRegistry, log); err != nil {
 			return fmt.Errorf("failed to apply prelude %s: %w", preludeID, err)
 		}
 	}
@@ -461,7 +438,9 @@ func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, 
 	return nil
 }
 
-func applyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, preludeID string, cardRegistry cards.CardRegistry, log *zap.Logger) error {
+// ApplyPreludeCard applies a single prelude card's effects: adds to played cards,
+// processes auto behaviors, registers trigger effects and manual actions.
+func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, preludeID string, cardRegistry cards.CardRegistry, log *zap.Logger) error {
 	card, err := cardRegistry.GetByID(preludeID)
 	if err != nil {
 		return fmt.Errorf("prelude card not found: %s", preludeID)

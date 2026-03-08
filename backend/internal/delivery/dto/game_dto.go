@@ -612,6 +612,7 @@ type PendingCardDrawSelectionDto struct {
 	MaxBuyCount    int       `json:"maxBuyCount" ts:"number"`       // Maximum cards to buy (optional, 0 = no buying allowed)
 	CardBuyCost    int       `json:"cardBuyCost" ts:"number"`       // Cost per card when buying (typically 3 MC, 0 if no buying)
 	Source         string    `json:"source" ts:"string"`            // Card ID or action that triggered this
+	PlayAsPrelude  bool      `json:"playAsPrelude" ts:"boolean"`    // When true, selected card is played as prelude
 }
 
 // PendingCardDiscardSelectionDto represents a pending card discard action from card effects

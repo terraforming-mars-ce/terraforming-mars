@@ -147,6 +147,7 @@ type PendingCardDrawSelection struct {
 	Source              string
 	SourceCardID        string // Card that triggered this selection (for card actions)
 	SourceBehaviorIndex int    // Behavior index of the card action
+	PlayAsPrelude       bool   // When true, selected card is played as prelude instead of added to hand
 }
 
 // SelectCorporationPhase represents the corporation selection phase state

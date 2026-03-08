@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	baseaction "terraforming-mars-backend/internal/action"
 
+	baseaction "terraforming-mars-backend/internal/action"
+	"terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/player"
@@ -44,12 +45,12 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		return err
 	}
 
-	player, err := a.GetPlayerFromGame(g, playerID, log)
+	p, err := a.GetPlayerFromGame(g, playerID, log)
 	if err != nil {
 		return err
 	}
 
-	selection := player.Selection().GetPendingCardDrawSelection()
+	selection := p.Selection().GetPendingCardDrawSelection()
 	if selection == nil {
 		log.Warn("No pending card draw selection found")
 		return fmt.Errorf("no pending card draw selection found")
@@ -98,7 +99,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 	totalCost := len(cardsToBuy) * selection.CardBuyCost
 
 	if totalCost > 0 {
-		resources := player.Resources().Get()
+		resources := p.Resources().Get()
 		if resources.Credits < totalCost {
 			log.Warn("Insufficient credits to buy cards",
 				zap.Int("needed", totalCost),
@@ -106,23 +107,33 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 			return fmt.Errorf("insufficient credits to buy cards: need %d, have %d", totalCost, resources.Credits)
 		}
 
-		player.Resources().Add(map[shared.ResourceType]int{
+		p.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceCredit: -totalCost,
 		})
 
-		newResources := player.Resources().Get()
+		newResources := p.Resources().Get()
 		log.Debug("Paid for bought cards",
 			zap.Int("cards_bought", len(cardsToBuy)),
 			zap.Int("cost", totalCost),
 			zap.Int("remaining_credits", newResources.Credits))
 	}
 
-	baseaction.AddCardsToPlayerHand(allSelectedCards, player, g, a.CardRegistry(), log)
-
-	log.Debug("Added selected cards to hand",
-		zap.Int("cards_taken", len(cardsToTake)),
-		zap.Int("cards_bought", len(cardsToBuy)),
-		zap.Int("total_cards", len(allSelectedCards)))
+	if selection.PlayAsPrelude {
+		// Play selected prelude cards instead of adding to hand
+		for _, preludeID := range allSelectedCards {
+			if err := turn_management.ApplyPreludeCard(ctx, g, p, preludeID, a.CardRegistry(), log); err != nil {
+				return fmt.Errorf("failed to play prelude card %s: %w", preludeID, err)
+			}
+		}
+		log.Debug("Played selected prelude cards",
+			zap.Strings("prelude_ids", allSelectedCards))
+	} else {
+		baseaction.AddCardsToPlayerHand(allSelectedCards, p, g, a.CardRegistry(), log)
+		log.Debug("Added selected cards to hand",
+			zap.Int("cards_taken", len(cardsToTake)),
+			zap.Int("cards_bought", len(cardsToBuy)),
+			zap.Int("total_cards", len(allSelectedCards)))
+	}
 
 	unselectedCards := []string{}
 	for _, cardID := range selection.AvailableCards {
@@ -132,27 +143,46 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 	}
 
 	if len(unselectedCards) > 0 {
-		if err := g.Deck().Discard(ctx, unselectedCards); err != nil {
-			log.Error("Failed to discard unselected cards", zap.Error(err))
-			return fmt.Errorf("failed to discard unselected cards: %w", err)
+		if selection.PlayAsPrelude {
+			// Prelude cards are removed permanently, never discarded
+			if err := g.Deck().Remove(ctx, unselectedCards); err != nil {
+				log.Error("Failed to remove unselected prelude cards", zap.Error(err))
+				return fmt.Errorf("failed to remove unselected prelude cards: %w", err)
+			}
+			log.Debug("Removed unselected prelude cards permanently",
+				zap.Int("count", len(unselectedCards)),
+				zap.Strings("card_ids", unselectedCards))
+		} else {
+			if err := g.Deck().Discard(ctx, unselectedCards); err != nil {
+				log.Error("Failed to discard unselected cards", zap.Error(err))
+				return fmt.Errorf("failed to discard unselected cards: %w", err)
+			}
+			log.Debug("Discarded unselected cards to discard pile",
+				zap.Int("count", len(unselectedCards)),
+				zap.Strings("card_ids", unselectedCards))
 		}
-		log.Debug("Discarded unselected cards to discard pile",
-			zap.Int("count", len(unselectedCards)),
-			zap.Strings("card_ids", unselectedCards))
 	}
 
-	player.Selection().SetPendingCardDrawSelection(nil)
+	p.Selection().SetPendingCardDrawSelection(nil)
+
+	// Clear forced first action if this was a prelude card draw selection
+	if selection.PlayAsPrelude {
+		if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
+			log.Error("Failed to clear forced first action", zap.Error(err))
+		}
+	}
 
 	// If this selection was triggered by a card action, complete the action now
-	if selection.SourceCardID != "" {
-		a.completeSourceCardAction(g, player, selection, log)
+	if selection.SourceCardID != "" && !selection.PlayAsPrelude {
+		a.completeSourceCardAction(g, p, selection, log)
 	}
 
 	log.Info("Card draw confirmation completed",
 		zap.String("source", selection.Source),
 		zap.Int("cards_taken", len(cardsToTake)),
 		zap.Int("cards_bought", len(cardsToBuy)),
-		zap.Int("total_cost", totalCost))
+		zap.Int("total_cost", totalCost),
+		zap.Bool("play_as_prelude", selection.PlayAsPrelude))
 
 	return nil
 }

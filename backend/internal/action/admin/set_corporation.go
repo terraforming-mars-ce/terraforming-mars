@@ -63,7 +63,6 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 
 		player.Effects().RemoveEffectsByCardID(oldCorpID)
 		player.Actions().RemoveActionsByCardID(oldCorpID)
-		player.PlayedCards().RemoveCard(oldCorpID)
 		player.Resources().RemoveCardStorage(oldCorpID)
 		player.Resources().ClearPaymentSubstitutes()
 		player.Resources().ClearValueModifiers()
@@ -83,12 +82,6 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 	}
 
 	player.SetCorporationID(corporationID)
-
-	corpTags := make([]string, len(corpCard.Tags))
-	for i, tag := range corpCard.Tags {
-		corpTags[i] = string(tag)
-	}
-	player.PlayedCards().AddCard(corporationID, corpCard.Name, string(corpCard.Type), corpTags)
 
 	if corpCard.ResourceStorage != nil {
 		player.Resources().AddToStorage(corporationID, corpCard.ResourceStorage.Starting)
@@ -146,6 +139,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 			zap.Int("behavior_index", action.BehaviorIndex))
 	}
 
+	a.corpProc.WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(player, g, a.cardRegistry))
 	if err := a.corpProc.SetupForcedFirstAction(ctx, corpCard, g, playerID); err != nil {
 		log.Error("Failed to setup forced first action", zap.Error(err))
 		return fmt.Errorf("failed to setup forced first action: %w", err)

@@ -386,6 +386,7 @@ func convertPendingCardDrawSelection(selection *player.PendingCardDrawSelection,
 		MaxBuyCount:    selection.MaxBuyCount,
 		CardBuyCost:    selection.CardBuyCost,
 		Source:         selection.Source,
+		PlayAsPrelude:  selection.PlayAsPrelude,
 	}
 }
 
