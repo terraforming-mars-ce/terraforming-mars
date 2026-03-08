@@ -1246,17 +1246,17 @@ func isProducibleResource(resourceType shared.ResourceType) bool {
 // resourceDisplayNames maps ResourceType values to human-readable names for error messages
 var resourceDisplayNames = map[shared.ResourceType]string{
 	// Base resources
-	shared.ResourceCredit:   "credit",
+	shared.ResourceCredit:   "credits",
 	shared.ResourceSteel:    "steel",
 	shared.ResourceTitanium: "titanium",
-	shared.ResourcePlant:    "plant",
+	shared.ResourcePlant:    "plants",
 	shared.ResourceEnergy:   "energy",
 	shared.ResourceHeat:     "heat",
-	shared.ResourceMicrobe:  "microbe",
-	shared.ResourceAnimal:   "animal",
-	shared.ResourceFloater:  "floater",
+	shared.ResourceMicrobe:  "microbes",
+	shared.ResourceAnimal:   "animals",
+	shared.ResourceFloater:  "floaters",
 	shared.ResourceScience:  "science",
-	shared.ResourceAsteroid: "asteroid",
+	shared.ResourceAsteroid: "asteroids",
 	shared.ResourceDisease:  "disease",
 
 	// Production types (map to base resource name)

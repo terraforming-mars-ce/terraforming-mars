@@ -403,7 +403,7 @@ func TestTharsisRepublic_GainCreditsAndProductionOnCityPlacement(t *testing.T) {
 	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
 		GameID:   testGame.ID(),
 		PlayerID: playerID,
-		TileType: "city",
+		TileType: string(shared.ResourceCityTile),
 	})
 
 	time.Sleep(50 * time.Millisecond)

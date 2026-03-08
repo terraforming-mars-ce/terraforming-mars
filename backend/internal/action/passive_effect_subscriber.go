@@ -9,7 +9,6 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -175,7 +174,7 @@ func subscribeCityPlacedEffect(
 		}
 
 		// Only process city tile placements
-		if event.TileType != board.TileTypeCity {
+		if event.TileType != string(shared.ResourceCityTile) {
 			return
 		}
 
@@ -241,7 +240,7 @@ func subscribeOceanPlacedEffect(
 			return
 		}
 
-		if event.TileType != board.TileTypeOcean {
+		if event.TileType != string(shared.ResourceOceanTile) {
 			return
 		}
 
