@@ -24,16 +24,11 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   greyOutAll = false,
   hideActionChip = false,
   noContainer = false,
-  onBehaviorHover,
 }) => {
   const [hoveredBehaviorIndex, setHoveredBehaviorIndex] = useState<number | null>(null);
-  const handleBehaviorHover = useCallback(
-    (index: number | null) => {
-      setHoveredBehaviorIndex(index);
-      onBehaviorHover?.(index !== null);
-    },
-    [onBehaviorHover],
-  );
+  const handleBehaviorHover = useCallback((index: number | null) => {
+    setHoveredBehaviorIndex(index);
+  }, []);
 
   if (!behaviors || behaviors.length === 0) {
     return null;

@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
 import GameIcon from "../display/GameIcon.tsx";
 import CardDecorBar from "../display/CardDecorBar.tsx";
 import BehaviorSection from "./BehaviorSection";
 import RequirementsBox from "./RequirementsBox.tsx";
-import { FormattedDescription } from "../display/FormattedDescription.tsx";
 import { getTagIconPath } from "@/utils/iconStore.ts";
 import { CardDto, PlayerCardDto, ResourceTypeCredit } from "@/types/generated/api-types.ts";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
@@ -24,54 +22,6 @@ function isPlayerCardDto(card: CardDto | PlayerCardDto): card is PlayerCardDto {
 
 const CARD_CLIP_PATH = "polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%)";
 
-const CardDescriptionPortal: React.FC<{
-  description: string;
-  anchorRef: React.RefObject<HTMLDivElement | null>;
-}> = ({ description, anchorRef }) => {
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-
-  useEffect(() => {
-    if (anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      setPos({ x: rect.left + rect.width / 2, y: rect.bottom });
-    }
-  }, [anchorRef]);
-
-  if (!pos) {
-    return null;
-  }
-
-  return createPortal(
-    <div
-      className="fixed w-[184px] max-md:w-[148px] -translate-x-1/2 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
-      style={{ left: pos.x, top: pos.y, zIndex: 99999 }}
-    >
-      <div
-        className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
-        style={{
-          clipPath:
-            "polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px))",
-        }}
-      >
-        <FormattedDescription text={description} />
-        <svg
-          className="absolute top-0 right-0 w-[14px] h-[14px] pointer-events-none"
-          viewBox="0 0 14 14"
-        >
-          <line x1="0" y1="0" x2="14" y2="14" stroke="rgba(60,60,70,0.7)" strokeWidth="1.5" />
-        </svg>
-        <svg
-          className="absolute bottom-0 left-0 w-[14px] h-[14px] pointer-events-none"
-          viewBox="0 0 14 14"
-        >
-          <line x1="0" y1="0" x2="14" y2="14" stroke="rgba(60,60,70,0.7)" strokeWidth="1.5" />
-        </svg>
-      </div>
-    </div>,
-    document.body,
-  );
-};
-
 const GameCard: React.FC<GameCardProps> = ({
   card,
   isSelected,
@@ -81,9 +31,6 @@ const GameCard: React.FC<GameCardProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [cardHovered, setCardHovered] = useState(false);
-  const [behaviorHovered, setBehaviorHovered] = useState(false);
-  const descRef = useRef<HTMLDivElement>(null);
   const { playCardHoverSound } = useSoundEffects();
   const pendingSoundRef = useRef(false);
 
@@ -93,8 +40,6 @@ const GameCard: React.FC<GameCardProps> = ({
       void playCardHoverSound();
     }
   }, [isSelected, playCardHoverSound]);
-
-  const hasDescription = !!card.description;
 
   // Determine if card has state information (PlayerCardDto)
   const hasState = isPlayerCardDto(card);
@@ -173,8 +118,6 @@ const GameCard: React.FC<GameCardProps> = ({
       className={`relative w-[200px] min-h-[280px] p-4 transition-all duration-200 z-[1] max-md:w-[160px] max-md:min-h-[240px] max-md:p-3 group select-none ${animationDelay >= 0 ? "opacity-0 translate-y-5 animate-[fadeInUp_0.5s_ease_forwards]" : ""} ${!isAvailable ? "grayscale-[0.6] brightness-[0.65] saturate-[0.2]" : ""}`}
       style={animationDelay >= 0 ? { animationDelay: `${animationDelay}ms` } : undefined}
       onClick={handleClick}
-      onMouseEnter={() => setCardHovered(true)}
-      onMouseLeave={() => setCardHovered(false)}
     >
       {/* Inner card body with clip-path for angled top-right corner */}
       <div
@@ -312,23 +255,10 @@ const GameCard: React.FC<GameCardProps> = ({
 
       {/* Content section - takes up roughly half the card height and vertically centers content */}
       <div
-        className={`absolute left-2 right-2 flex items-center justify-center z-[3] max-md:left-1.5 max-md:right-1.5 ${hasDescription ? "bottom-10 max-md:bottom-9" : "bottom-4 max-md:bottom-3"} ${(card.vpConditions && card.vpConditions.length > 0) || card.resourceStorage ? "top-[calc(50%+38px)] max-md:top-[calc(50%+40px)]" : "top-[calc(50%+20px)] max-md:top-[calc(50%+25px)]"}`}
+        className={`absolute left-2 right-2 flex items-center justify-center z-[3] max-md:left-1.5 max-md:right-1.5 bottom-4 max-md:bottom-3 ${(card.vpConditions && card.vpConditions.length > 0) || card.resourceStorage ? "top-[calc(50%+38px)] max-md:top-[calc(50%+40px)]" : "top-[calc(50%+20px)] max-md:top-[calc(50%+25px)]"}`}
       >
-        <BehaviorSection behaviors={card.behaviors} onBehaviorHover={setBehaviorHovered} />
+        <BehaviorSection behaviors={card.behaviors} />
       </div>
-
-      {/* Card description at the bottom */}
-      {hasDescription && (
-        <div
-          ref={descRef}
-          className="absolute bottom-1.5 left-2 right-2 z-[3] text-[9px] leading-tight text-white/50 line-clamp-2 max-md:left-1.5 max-md:right-1.5 max-md:bottom-1"
-        >
-          <FormattedDescription text={card.description} />
-          {cardHovered && !behaviorHovered && (
-            <CardDescriptionPortal description={card.description} anchorRef={descRef} />
-          )}
-        </div>
-      )}
 
       {/* Selection indicator at bottom center, peeking out (only shown when showCheckbox is true) */}
       {showCheckbox && (

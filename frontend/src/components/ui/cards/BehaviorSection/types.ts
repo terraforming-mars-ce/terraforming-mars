@@ -8,7 +8,6 @@ export interface BehaviorSectionProps {
   greyOutAll?: boolean;
   hideActionChip?: boolean;
   noContainer?: boolean;
-  onBehaviorHover?: (isHovered: boolean) => void;
 }
 
 export interface ClassifiedBehavior {
