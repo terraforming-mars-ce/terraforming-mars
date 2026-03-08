@@ -675,6 +675,7 @@ type PlayerDto struct {
 	StoragePaymentSubstitutes      []StoragePaymentSubstituteDto      `json:"storagePaymentSubstitutes" ts:"StoragePaymentSubstituteDto[]"`
 	GenerationalEvents             []PlayerGenerationalEventEntryDto  `json:"generationalEvents" ts:"PlayerGenerationalEventEntryDto[]"`
 	VPGranters                     []VPGranterDto                     `json:"vpGranters" ts:"VPGranterDto[]"`
+	BonusTags                      map[string]int                     `json:"bonusTags" ts:"Record<string, number>"`
 }
 
 // OtherPlayerDto represents another player from the viewing player's perspective (limited data)
@@ -708,6 +709,7 @@ type OtherPlayerDto struct {
 	PaymentSubstitutes        []PaymentSubstituteDto             `json:"paymentSubstitutes" ts:"PaymentSubstituteDto[]"`
 	StoragePaymentSubstitutes []StoragePaymentSubstituteDto      `json:"storagePaymentSubstitutes" ts:"StoragePaymentSubstituteDto[]"`
 	VPGranters                []VPGranterDto                     `json:"vpGranters" ts:"VPGranterDto[]"`
+	BonusTags                 map[string]int                     `json:"bonusTags" ts:"Record<string, number>"`
 }
 
 // GameDto represents a game for client consumption (clean architecture)

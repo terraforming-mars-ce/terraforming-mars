@@ -364,6 +364,27 @@ const CreateGamePage: React.FC = () => {
                     <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
                       <input
                         type="checkbox"
+                        checked={selectedPacks.includes("experimental")}
+                        onChange={() => handlePackToggle("experimental")}
+                        disabled={
+                          isLoading ||
+                          (selectedPacks.includes("experimental") && selectedPacks.length === 1)
+                        }
+                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
+                      />
+                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
+                        Experimental
+                        <span className="text-white/50 text-xs">(4 cards)</span>
+                        <InfoTooltip size="small">
+                          Experimental cards with new mechanics: extra actions, bonus tags, special
+                          tiles, and tile destruction.
+                        </InfoTooltip>
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
+                      <input
+                        type="checkbox"
                         checked={selectedPacks.includes("future")}
                         onChange={() => handlePackToggle("future")}
                         disabled={

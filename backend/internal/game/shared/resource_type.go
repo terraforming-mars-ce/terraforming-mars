@@ -75,4 +75,10 @@ const (
 	ResourceLandClaim                ResourceType = "land-claim"
 	ResourceStoragePaymentSubstitute ResourceType = "storage-payment-substitute"
 	ResourceCardResource             ResourceType = "card-resource"
+
+	ResourceExtraActions    ResourceType = "extra-actions"
+	ResourceTileDestruction ResourceType = "tile-destruction"
+	ResourceBonusTags       ResourceType = "bonus-tags"
+
+	ResourceWorldTreeTile ResourceType = "world-tree-tile"
 )

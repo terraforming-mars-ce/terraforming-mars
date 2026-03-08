@@ -978,6 +978,7 @@ export interface PlayerDto {
   storagePaymentSubstitutes: StoragePaymentSubstituteDto[];
   generationalEvents: PlayerGenerationalEventEntryDto[];
   vpGranters: VPGranterDto[];
+  bonusTags: { [key: string]: number /* int */ };
 }
 /**
  * OtherPlayerDto represents another player from the viewing player's perspective (limited data)
@@ -1011,6 +1012,7 @@ export interface OtherPlayerDto {
   paymentSubstitutes: PaymentSubstituteDto[];
   storagePaymentSubstitutes: StoragePaymentSubstituteDto[];
   vpGranters: VPGranterDto[];
+  bonusTags: { [key: string]: number /* int */ };
 }
 /**
  * GameDto represents a game for client consumption (clean architecture)

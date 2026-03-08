@@ -2,6 +2,7 @@ package player
 
 import (
 	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // PlayerType represents the type of player (human or bot)
@@ -66,6 +67,7 @@ type Player struct {
 	effects            *Effects
 	generationalEvents *GenerationalEvents
 	vpGranters         *VPGranters
+	bonusTags          map[shared.CardTag]int
 }
 
 // NewPlayer creates a new human player with initialized components
@@ -88,6 +90,7 @@ func NewPlayer(eventBus *events.EventBusImpl, gameID, playerID, name string) *Pl
 		effects:            NewEffects(eventBus),
 		generationalEvents: newGenerationalEvents(),
 		vpGranters:         NewVPGranters(eventBus, gameID, playerID),
+		bonusTags:          make(map[shared.CardTag]int),
 	}
 }
 
@@ -113,6 +116,7 @@ func NewBotPlayer(eventBus *events.EventBusImpl, gameID, playerID, name string, 
 		effects:            NewEffects(eventBus),
 		generationalEvents: newGenerationalEvents(),
 		vpGranters:         NewVPGranters(eventBus, gameID, playerID),
+		bonusTags:          make(map[shared.CardTag]int),
 	}
 }
 
@@ -252,4 +256,23 @@ func (p *Player) DemoSetupConfirmed() bool {
 
 func (p *Player) SetDemoSetupConfirmed(confirmed bool) {
 	p.demoSetupConfirmed = confirmed
+}
+
+// BonusTags returns the player's bonus tags map (tag type → count)
+func (p *Player) BonusTags() map[shared.CardTag]int {
+	result := make(map[shared.CardTag]int, len(p.bonusTags))
+	for k, v := range p.bonusTags {
+		result[k] = v
+	}
+	return result
+}
+
+// AddBonusTags adds bonus tags of the specified type
+func (p *Player) AddBonusTags(tag shared.CardTag, count int) {
+	p.bonusTags[tag] = p.bonusTags[tag] + count
+}
+
+// BonusTagCount returns the number of bonus tags of the specified type
+func (p *Player) BonusTagCount(tag shared.CardTag) int {
+	return p.bonusTags[tag]
 }

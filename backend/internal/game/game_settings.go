@@ -23,10 +23,11 @@ type GameSettings struct {
 
 // Card pack constants
 const (
-	PackBaseGame = "base-game"  // Tested simple cards only
-	PackFuture   = "future"     // Untested/complex cards for future implementation
-	PackPrelude  = "prelude"    // Prelude expansion cards
-	PackVenus    = "venus-next" // Venus Next expansion cards
+	PackBaseGame     = "base-game"    // Tested simple cards only
+	PackFuture       = "future"       // Untested/complex cards for future implementation
+	PackPrelude      = "prelude"      // Prelude expansion cards
+	PackVenus        = "venus-next"   // Venus Next expansion cards
+	PackExperimental = "experimental" // Experimental cards with new mechanics
 )
 
 // HasPrelude returns true if the prelude card pack is enabled
