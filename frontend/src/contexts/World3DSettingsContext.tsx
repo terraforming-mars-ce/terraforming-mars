@@ -1,16 +1,10 @@
 import { createContext, useContext, useState, useRef, ReactNode } from "react";
 
 export const SKYBOX_OPTIONS = [
-  { id: "space-skybox-8k", label: "Deep Space", path: "/assets/backgrounds/space-skybox-8k.exr" },
   {
     id: "starmap-2020-8k",
     label: "NASA Starmap 2020",
     path: "/assets/backgrounds/starmap_2020_8k.exr",
-  },
-  {
-    id: "starmap-2020-8k-gal",
-    label: "Galactic Coordinates",
-    path: "/assets/backgrounds/starmap_2020_8k_gal.exr",
   },
 ] as const;
 

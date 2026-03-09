@@ -15,9 +15,6 @@ on:
       - '.github/workflows/frontend.yml'
   workflow_dispatch:
 
-env:
-  NODE_VERSION: '20.19.0'
-
 jobs:
   # Frontend Lint
   frontend-lint:
@@ -27,16 +24,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install frontend dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Run frontend lint
         run: make lint-frontend
@@ -49,20 +42,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install frontend dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Run TypeScript type check
         working-directory: ./frontend
-        run: npm run typecheck
+        run: bun run typecheck
 
   # Build Frontend
   build-frontend:
@@ -73,16 +62,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install frontend dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build frontend for production
         run: make build-frontend
@@ -91,5 +76,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: frontend/dist/
+          path: frontend/build/
           retention-days: 7

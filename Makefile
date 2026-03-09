@@ -41,12 +41,12 @@ run:
 	@echo ""
 	@trap 'kill 0' SIGINT; \
 		(cd backend && TM_REPO_PATH=../ $(shell go env GOPATH)/bin/air) & \
-		(cd frontend && npm start) & \
+		(cd frontend && bun start) & \
 		wait
 
 frontend:
 	@echo "🎨 Starting frontend development server..."
-	cd frontend && npm start
+	cd frontend && bun start
 
 backend: build-backend
 	@echo "🚀 Running backend (port 3001)..."
@@ -67,7 +67,7 @@ test-frontend:
 	@echo "🧪 Running frontend tests..."
 	@echo "⚠️  No test script found in frontend package.json"
 	@echo "ℹ️  Running linter instead..."
-	cd frontend && npm run lint
+	cd frontend && bun run lint
 
 test-clean:
 	@echo "🧪 Running backend tests (clean, no cache)..."
@@ -101,7 +101,7 @@ lint: lint-backend lint-frontend typecheck
 
 typecheck:
 	@echo "🔍 Running TypeScript type checking..."
-	cd frontend && npm run typecheck
+	cd frontend && bun run typecheck
 	@echo "✅ Type checking complete"
 
 lint-backend:
@@ -111,7 +111,7 @@ lint-backend:
 
 lint-frontend:
 	@echo "🔍 Running frontend linting (oxlint)..."
-	cd frontend && npm run lint
+	cd frontend && bun run lint
 	@echo "✅ Frontend linting complete"
 
 format: format-backend format-frontend
@@ -123,7 +123,7 @@ format-backend:
 
 format-frontend:
 	@echo "🎨 Formatting frontend TypeScript code..."
-	cd frontend && npm run format:write
+	cd frontend && bun run format:write
 	@echo "✅ Frontend formatting complete"
 
 format-check:
@@ -131,7 +131,7 @@ format-check:
 	@FAILED=0; \
 	RESULT=$$(cd backend && find . -name "*.go" -exec gofmt -s -l {} \;); \
 	if [ -n "$$RESULT" ]; then echo "❌ Backend formatting issues:"; echo "$$RESULT"; FAILED=1; fi; \
-	cd frontend && npm run format || FAILED=1; \
+	cd frontend && bun run format || FAILED=1; \
 	if [ "$$FAILED" -eq 1 ]; then exit 1; fi
 	@echo "✅ All code is properly formatted"
 
@@ -149,8 +149,8 @@ build-backend:
 
 build-frontend:
 	@echo "🏗️  Building frontend for production..."
-	cd frontend && npm run build
-	@echo "✅ Frontend build: frontend/dist/"
+	cd frontend && bun run build
+	@echo "✅ Frontend build: frontend/build/"
 
 # Cleanup
 clean:
@@ -163,14 +163,14 @@ clean:
 # Install dependencies
 deps:
 	cd backend && go mod tidy
-	cd frontend && npm install
+	cd frontend && bun install
 
 # Development helpers
 dev-setup:
 	@echo "🔧 Setting up development environment..."
 	go install github.com/air-verse/air@latest
 	cd backend && go mod tidy
-	cd frontend && npm install
+	cd frontend && bun install
 	@echo "✅ Development setup complete"
 
 # Type generation
@@ -182,7 +182,7 @@ generate:
 # MCP server setup
 mcp-setup:
 	@echo "Setting up MCP server..."
-	cd mcp-server && npm install
+	cd mcp-server && bun install
 	@echo "MCP server ready. Restart Claude Code to pick up .mcp.json"
 
 # Raspberry Pi deployment

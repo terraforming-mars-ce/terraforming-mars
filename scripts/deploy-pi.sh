@@ -47,7 +47,7 @@ build() {
 
     echo "==> Building frontend..."
     cd "$PROJECT_ROOT/frontend"
-    VITE_APP_VERSION="$BUILD_VERSION" npm run build
+    VITE_APP_VERSION="$BUILD_VERSION" bun run build
     echo "    frontend/build/ ready"
 }
 

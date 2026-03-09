@@ -4,6 +4,8 @@ import { useWorld3DSettings, SKYBOX_OPTIONS } from "../../../../contexts/World3D
 const World3DSkyboxPage: React.FC = () => {
   const { settings, updateSettings } = useWorld3DSettings();
 
+  const currentSkybox = SKYBOX_OPTIONS[0];
+
   return (
     <div>
       <label
@@ -18,45 +20,25 @@ const World3DSkyboxPage: React.FC = () => {
       >
         Skybox
       </label>
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {SKYBOX_OPTIONS.map((option) => (
-          <label
-            key={option.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              padding: "8px 12px",
-              background:
-                settings.skyboxId === option.id
-                  ? "rgba(59, 130, 246, 0.2)"
-                  : "rgba(255, 255, 255, 0.03)",
-              border:
-                settings.skyboxId === option.id
-                  ? "1px solid rgba(59, 130, 246, 0.5)"
-                  : "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: "6px",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            <input
-              type="radio"
-              name="skybox"
-              checked={settings.skyboxId === option.id}
-              onChange={() => updateSettings({ skyboxId: option.id })}
-              style={{ accentColor: "#3b82f6" }}
-            />
-            <div>
-              <div style={{ color: "#fff", fontSize: "12px", fontWeight: "500" }}>
-                {option.label}
-              </div>
-              <div style={{ color: "#666", fontSize: "10px", marginTop: "2px" }}>
-                {option.path.split("/").pop()}
-              </div>
-            </div>
-          </label>
-        ))}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "8px 12px",
+          background: "rgba(59, 130, 246, 0.2)",
+          border: "1px solid rgba(59, 130, 246, 0.5)",
+          borderRadius: "6px",
+        }}
+      >
+        <div>
+          <div style={{ color: "#fff", fontSize: "12px", fontWeight: "500" }}>
+            {currentSkybox.label}
+          </div>
+          <div style={{ color: "#666", fontSize: "10px", marginTop: "2px" }}>
+            {currentSkybox.path.split("/").pop()}
+          </div>
+        </div>
       </div>
 
       <div style={{ marginTop: "16px" }}>

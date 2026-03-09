@@ -15,7 +15,7 @@ make help        # Show all available commands
 ```bash
 make frontend    # React dev server (port 3000)
 make backend     # Go backend with Air hot reload (port 3001)
-make dev-setup   # Set up environment (go mod tidy + npm install)
+make dev-setup   # Set up environment (go mod tidy + bun install)
 ```
 
 ### Testing
