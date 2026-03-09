@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 FROM alpine:latest
 WORKDIR /app
 
-RUN apk --no-cache add ca-certificates tzdata bash unzip curl && \
+RUN apk --no-cache add ca-certificates tzdata bash unzip curl libstdc++ libgcc && \
     addgroup -g 1000 appuser && \
     adduser -D -u 1000 -G appuser appuser
 
