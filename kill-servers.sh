@@ -50,14 +50,14 @@ kill_by_port() {
     fi
 }
 
-# Kill frontend processes (npm, vite, esbuild)
-kill_by_pattern "npm start.*terraforming-mars" "npm start"
-kill_by_pattern "node.*vite" "vite dev server"
+# Kill frontend processes (bun, vite, esbuild)
+kill_by_pattern "bun start.*terraforming-mars" "bun start"
+kill_by_pattern "bun.*vite" "vite dev server"
 kill_by_pattern "esbuild.*terraforming-mars" "esbuild"
 
 # Kill any vite process in this project directory (more specific)
 cd "$PROJECT_DIR" && {
-    local_vite_pids=$(pgrep -f "node.*vite" 2>/dev/null | while read pid; do
+    local_vite_pids=$(pgrep -f "bun.*vite" 2>/dev/null | while read pid; do
         if [ -n "$(lsof -p $pid 2>/dev/null | grep $(pwd))" ]; then
             echo $pid
         fi
@@ -124,12 +124,12 @@ kill_by_port_selective 3002 "frontend-alt"
 
 # Additional cleanup for development server processes only
 cd "$PROJECT_DIR" 2>/dev/null || true
-local_pids=$(pgrep -f "$PROJECT_DIR.*vite\|$PROJECT_DIR.*go run\|$PROJECT_DIR.*npm start" 2>/dev/null || true)
+local_pids=$(pgrep -f "$PROJECT_DIR.*vite\|$PROJECT_DIR.*go run\|$PROJECT_DIR.*bun start" 2>/dev/null || true)
 if [ -n "$local_pids" ]; then
     echo "🧹 Cleaning up remaining development server processes: $local_pids"
     echo "$local_pids" | xargs kill -TERM 2>/dev/null || true
     sleep 1
-    local_remaining=$(pgrep -f "$PROJECT_DIR.*vite\|$PROJECT_DIR.*go run\|$PROJECT_DIR.*npm start" 2>/dev/null || true)
+    local_remaining=$(pgrep -f "$PROJECT_DIR.*vite\|$PROJECT_DIR.*go run\|$PROJECT_DIR.*bun start" 2>/dev/null || true)
     if [ -n "$local_remaining" ]; then
         echo "💥 Force killing remaining development processes: $local_remaining"
         echo "$local_remaining" | xargs kill -KILL 2>/dev/null || true

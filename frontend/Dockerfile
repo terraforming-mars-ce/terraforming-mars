@@ -1,14 +1,14 @@
-FROM node:20-alpine AS builder
+FROM oven/bun:latest AS builder
 WORKDIR /build
 
 ARG BUILD_VERSION="Local Build"
 ENV VITE_APP_VERSION=${BUILD_VERSION}
 
-COPY package*.json ./
-RUN npm ci
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 COPY . .
 
-RUN npm run build
+RUN bun run build
 
 FROM nginx:alpine
 WORKDIR /app
