@@ -408,3 +408,207 @@ func TestUrbanizedArea_PlayCardRejectedWhenNoPlacements(t *testing.T) {
 	testutil.AssertTrue(t, err != nil,
 		"Playing Urbanized Area should fail when no valid placements exist")
 }
+
+// --- Plantation (193) ---
+// "Place a greenery tile and raise oxygen 1 step."
+// Per TM rules, greenery must be adjacent to player's own tiles (with fallback to anywhere).
+
+func makePlantationCard() gamecards.Card {
+	return gamecards.Card{
+		ID:   "card-plantation",
+		Name: "Plantation",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 15,
+		Tags: []shared.CardTag{shared.TagPlant},
+		Behaviors: []shared.CardBehavior{
+			{
+				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
+				Outputs: []shared.ResourceCondition{
+					{
+						ResourceType: shared.ResourceGreeneryPlacement,
+						Amount:       1,
+						Target:       "none",
+					},
+				},
+			},
+		},
+	}
+}
+
+func TestPlantation_GreeneryAdjacentToOwnedTiles(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	plantation := makePlantationCard()
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{plantation})
+
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID("corp-tharsis-republic")
+
+	testGame.UpdateStatus(ctx, game.GameStatusActive)
+	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	p.Hand().AddCard("card-plantation")
+
+	// Place a city owned by the current player at (0,0,0)
+	ownedTile := shared.HexPosition{Q: 0, R: 0, S: 0}
+	err := testGame.Board().UpdateTileOccupancy(ctx, ownedTile,
+		board.TileOccupant{Type: shared.ResourceCityTile}, p.ID())
+	testutil.AssertNoError(t, err, "placing owned city")
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 15}
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-plantation", payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Plantation should play successfully")
+
+	selection := testGame.GetPendingTileSelection(p.ID())
+	testutil.AssertTrue(t, selection != nil, "Should have pending tile selection")
+	testutil.AssertEqual(t, "greenery", selection.TileType, "Pending tile type should be greenery")
+
+	// All available hexes should be adjacent to the owned tile at (0,0,0)
+	neighbors := ownedTile.GetNeighbors()
+	neighborStrings := make(map[string]bool)
+	for _, n := range neighbors {
+		neighborStrings[n.String()] = true
+	}
+
+	for _, hex := range selection.AvailableHexes {
+		testutil.AssertTrue(t, neighborStrings[hex],
+			"Hex "+hex+" should be adjacent to owned tile at (0,0,0)")
+	}
+	testutil.AssertTrue(t, len(selection.AvailableHexes) > 0,
+		"Should have at least one available hex adjacent to owned tile")
+}
+
+func TestPlantation_FallbackWhenNoOwnedTiles(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	plantation := makePlantationCard()
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{plantation})
+
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID("corp-tharsis-republic")
+
+	testGame.UpdateStatus(ctx, game.GameStatusActive)
+	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	p.Hand().AddCard("card-plantation")
+
+	// No tiles placed — player has no owned tiles on board
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 15}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-plantation", payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Plantation should play successfully with fallback")
+
+	selection := testGame.GetPendingTileSelection(p.ID())
+	testutil.AssertTrue(t, selection != nil, "Should have pending tile selection")
+	testutil.AssertEqual(t, "greenery", selection.TileType, "Pending tile type should be greenery")
+
+	// With no owned tiles, fallback allows all valid land tiles
+	testutil.AssertTrue(t, len(selection.AvailableHexes) > 1,
+		"Should have multiple available hexes when no owned tiles (fallback)")
+}
+
+// --- Mangrove (059) ---
+// "Place a greenery tile ON AN AREA RESERVED FOR OCEAN and raise oxygen 1 step."
+// onTileType: "ocean" overrides normal placement — should NOT be affected by adjacency fix.
+
+func makeMangroveCard() gamecards.Card {
+	return gamecards.Card{
+		ID:   "card-mangrove",
+		Name: "Mangrove",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 12,
+		Tags: []shared.CardTag{shared.TagPlant},
+		Behaviors: []shared.CardBehavior{
+			{
+				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
+				Outputs: []shared.ResourceCondition{
+					{
+						ResourceType: shared.ResourceGreeneryPlacement,
+						Amount:       1,
+						Target:       "none",
+						TileRestrictions: &shared.TileRestrictions{
+							OnTileType: "ocean",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func TestMangrove_NotAffectedByAdjacentToOwned(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	mangrove := makeMangroveCard()
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{mangrove})
+
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID("corp-tharsis-republic")
+
+	testGame.UpdateStatus(ctx, game.GameStatusActive)
+	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	p.Hand().AddCard("card-mangrove")
+
+	// Place a city far away — Mangrove should still offer ocean spaces, not adjacent-to-owned
+	ownedTile := shared.HexPosition{Q: 4, R: -2, S: -2}
+	err := testGame.Board().UpdateTileOccupancy(ctx, ownedTile,
+		board.TileOccupant{Type: shared.ResourceCityTile}, p.ID())
+	testutil.AssertNoError(t, err, "placing owned city")
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 12}
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-mangrove", payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Mangrove should play successfully")
+
+	selection := testGame.GetPendingTileSelection(p.ID())
+	testutil.AssertTrue(t, selection != nil, "Should have pending tile selection")
+	testutil.AssertEqual(t, "greenery", selection.TileType, "Pending tile type should be greenery")
+
+	// Mangrove should offer ocean spaces — verify available hexes are ocean tiles
+	testutil.AssertTrue(t, len(selection.AvailableHexes) > 0,
+		"Should have available ocean hexes for Mangrove")
+
+	// Verify that hexes include non-adjacent-to-owned ocean spaces
+	ownedNeighbors := ownedTile.GetNeighbors()
+	ownedNeighborStrings := make(map[string]bool)
+	for _, n := range ownedNeighbors {
+		ownedNeighborStrings[n.String()] = true
+	}
+
+	hasNonAdjacentHex := false
+	for _, hex := range selection.AvailableHexes {
+		if !ownedNeighborStrings[hex] {
+			hasNonAdjacentHex = true
+			break
+		}
+	}
+	testutil.AssertTrue(t, hasNonAdjacentHex,
+		"Mangrove should offer ocean spaces not adjacent to owned tiles")
+}

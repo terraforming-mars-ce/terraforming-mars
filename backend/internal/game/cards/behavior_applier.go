@@ -1193,6 +1193,18 @@ func (a *BehaviorApplier) applyOutput(
 			}
 		}
 
+		// For greenery placements, enforce adjacency to owned tiles (TM rules)
+		// unless the card explicitly overrides placement (e.g., Mangrove with onTileType: "ocean")
+		if output.ResourceType == shared.ResourceGreeneryPlacement {
+			if tileRestrictions == nil {
+				tileRestrictions = &shared.TileRestrictions{
+					AdjacentToOwned: true,
+				}
+			} else if tileRestrictions.OnTileType == "" {
+				tileRestrictions.AdjacentToOwned = true
+			}
+		}
+
 		// Atomically append to queue (thread-safe)
 		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, tileRestrictions); err != nil {
 			return fmt.Errorf("failed to append to pending tile selection queue: %w", err)
