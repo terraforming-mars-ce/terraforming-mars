@@ -149,6 +149,56 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return result, nil
 	}
 
+	// Handle tile destruction - removes any tile (including oceans)
+	if tileType == "tile-destruction" {
+		destroyedTile, tileErr := g.Board().GetTile(*coords)
+		if tileErr != nil {
+			log.Warn("Failed to get tile for destruction", zap.Error(tileErr))
+			return nil, fmt.Errorf("failed to get tile: %w", tileErr)
+		}
+		wasOcean := destroyedTile.OccupiedBy != nil && destroyedTile.OccupiedBy.Type == shared.ResourceOceanTile
+
+		if err := g.Board().ClearTileOccupant(ctx, *coords); err != nil {
+			log.Warn("Failed to destroy tile", zap.Error(err))
+			return nil, fmt.Errorf("failed to destroy tile: %w", err)
+		}
+
+		if wasOcean {
+			currentOceans := g.GlobalParameters().Oceans()
+			if currentOceans > 0 {
+				if err := g.GlobalParameters().SetOceans(ctx, currentOceans-1); err != nil {
+					log.Warn("Failed to decrement ocean count", zap.Error(err))
+				}
+			}
+		}
+
+		result := &TilePlacementResult{
+			TileType:   tileType,
+			Source:     pendingTileSelection.Source,
+			Hex:        selectedHex,
+			OnComplete: pendingTileSelection.OnComplete,
+		}
+
+		if err := g.SetPendingTileSelection(ctx, playerID, nil); err != nil {
+			return nil, fmt.Errorf("failed to clear pending tile selection: %w", err)
+		}
+
+		if err := g.ProcessNextTile(ctx, playerID); err != nil {
+			return nil, fmt.Errorf("failed to process next tile: %w", err)
+		}
+
+		if err := a.completionRegistry.Handle(ctx, g, playerID, result, result.OnComplete); err != nil {
+			log.Warn("Failed to handle completion callback", zap.Error(err))
+		}
+
+		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+
+		log.Info("Tile destroyed",
+			zap.String("position", selectedHex),
+			zap.Bool("was_ocean", wasOcean))
+		return result, nil
+	}
+
 	// Handle land claims differently - they reserve a tile instead of placing an occupant
 	if tileType == "land-claim" {
 		if err := g.Board().ReserveTile(ctx, *coords, playerID); err != nil {
@@ -315,7 +365,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 	case "city":
 		log.Debug("City placed (no TR bonus)")
 
-	case "greenery":
+	case "greenery", "world-tree":
 		actualSteps, err := g.GlobalParameters().IncreaseOxygen(ctx, 1)
 		if err != nil {
 			return nil, fmt.Errorf("failed to increase oxygen: %w", err)
@@ -325,11 +375,11 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		if actualSteps > 0 {
 			p.Resources().UpdateTerraformRating(1)
 			result.TRGained = 1
-			log.Debug("Increased oxygen and TR for greenery placement",
+			log.Debug("Increased oxygen and TR for forest placement",
 				zap.Int("oxygen_steps", actualSteps),
 				zap.Int("tr_gained", 1))
 		} else {
-			log.Debug("Greenery placed but oxygen already maxed")
+			log.Debug("Forest placed but oxygen already maxed")
 		}
 
 	case "ocean":
@@ -445,6 +495,8 @@ func mapTileTypeToResourceType(tileType string) shared.ResourceType {
 		return shared.ResourceOceanTile
 	case "volcano":
 		return shared.ResourceVolcanoTile
+	case "world-tree":
+		return shared.ResourceWorldTreeTile
 	default:
 		return shared.ResourceType(tileType + "-tile")
 	}

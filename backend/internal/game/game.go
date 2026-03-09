@@ -1351,6 +1351,14 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			continue
 		}
 
+		// Tile destruction targets any occupied tile on the board
+		if tileType == "tile-destruction" {
+			if tile.OccupiedBy != nil {
+				availableHexes = append(availableHexes, tile.Coordinates.String())
+			}
+			continue
+		}
+
 		// Skip tiles that are already occupied
 		if tile.OccupiedBy != nil {
 			continue
@@ -1462,7 +1470,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 					zap.String("tile", tile.Coordinates.String()))
 			}
 
-		case "greenery":
+		case "greenery", "world-tree":
 			// Check if restricted to ocean tiles (Mangrove card)
 			if tileRestrictions != nil && tileRestrictions.OnTileType == "ocean" {
 				if tile.Type == shared.ResourceOceanSpace {

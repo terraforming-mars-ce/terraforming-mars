@@ -110,6 +110,8 @@ interface PlayerCardProps {
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
   onKickPlayer?: (playerId: string) => void;
   onConvertToBot?: (playerId: string) => void;
+  minNameWidth?: number;
+  minCardWidth?: number;
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
@@ -125,6 +127,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onPlayerClick,
   onKickPlayer,
   onConvertToBot,
+  minNameWidth,
+  minCardWidth,
 }) => {
   const hoverSound = useHoverSound(hasPendingTile);
   const isPassed = player.passed;
@@ -253,19 +257,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <div
       ref={cardRef}
-      className={`relative w-full h-[66px] overflow-visible pointer-events-auto ${isCurrentTurn ? "mb-1.5" : "mb-2"} ${onPlayerClick ? "cursor-pointer" : ""}`}
+      className={`relative h-[66px] overflow-visible pointer-events-auto ${isCurrentTurn ? "mb-1.5" : "mb-2"} ${onPlayerClick ? "cursor-pointer" : ""}`}
       onClick={() => onPlayerClick?.(player)}
       onContextMenu={handleContextMenu}
     >
       {/* Main player card with angled edge */}
       <div
-        className={`relative h-full bg-[rgba(10,10,15,0.95)] border-l-[6px] border-t border-t-[rgba(60,60,70,0.7)] pl-2 pr-2 transition-all duration-300 flex items-center [clip-path:polygon(0_0,calc(100%-8px)_0,100%_100%,0_100%)] max-w-[324px] z-[2] shadow-[0_2px_8px_rgba(0,0,0,0.5),-2px_0_6px_var(--player-color)] ${isExited || isDisconnected ? "opacity-20" : ""} ${!isCurrentTurn ? "opacity-60" : ""} ${isCurrentTurn ? "border-l-8 shadow-[0_4px_16px_rgba(0,0,0,0.6),-4px_0_12px_var(--player-color)]" : ""}`}
+        data-player-card-inner
+        className={`relative h-full bg-[rgba(10,10,15,0.95)] border-l-[6px] border-t border-t-[rgba(60,60,70,0.7)] pl-2 transition-all duration-300 flex items-center [clip-path:polygon(0_0,calc(100%-8px)_0,100%_100%,0_100%)] w-fit z-[2] shadow-[0_2px_8px_rgba(0,0,0,0.5),-2px_0_6px_var(--player-color)] ${isExited || isDisconnected ? "opacity-20" : ""} ${!isCurrentTurn ? "opacity-60" : ""} ${isCurrentTurn ? "border-l-8 shadow-[0_4px_16px_rgba(0,0,0,0.6),-4px_0_12px_var(--player-color)]" : ""}`}
         style={
-          { "--player-color": playerColor, borderLeftColor: playerColor } as React.CSSProperties
+          {
+            "--player-color": playerColor,
+            borderLeftColor: playerColor,
+            minWidth: minCardWidth ? `${minCardWidth}px` : undefined,
+            paddingRight: "24px",
+          } as React.CSSProperties
         }
       >
-        <div className="flex flex-col items-start justify-center w-full gap-1">
-          <div className="flex gap-1 flex-wrap justify-start items-center relative z-[2]">
+        <div className="flex flex-col items-start justify-center gap-1">
+          <div className="flex gap-1 flex-wrap justify-start items-center">
             {isCurrentPlayer && (
               <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(60,100,150,0.8)] text-white border border-[rgba(80,130,180,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
                 YOU
@@ -298,17 +308,17 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
               </span>
             )}
             {isExited && (
-              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,60,60,0.4)] text-[rgb(220,140,140)] border border-[rgba(180,60,60,0.5)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] relative z-[3]">
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,60,60,0.4)] text-[rgb(220,140,140)] border border-[rgba(180,60,60,0.5)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
                 EXITED
               </span>
             )}
             {isDisconnected && !isExited && (
-              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,60,60,0.4)] text-[rgb(220,140,140)] border border-[rgba(180,60,60,0.5)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] relative z-[3]">
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,60,60,0.4)] text-[rgb(220,140,140)] border border-[rgba(180,60,60,0.5)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
                 DISCONNECTED
               </span>
             )}
             {player.botStatus === "failed" && (
-              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(200,50,50,0.6)] text-[rgb(255,140,140)] border border-[rgba(200,50,50,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] relative z-[3]">
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(200,50,50,0.6)] text-[rgb(255,140,140)] border border-[rgba(200,50,50,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
                 ERROR
               </span>
             )}
@@ -318,19 +328,30 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
               </span>
             )}
           </div>
-          <span className="text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] tracking-[0.3px] shrink-0">
-            {player.name}
-          </span>
+          <div
+            className="flex items-center gap-1.5"
+            style={minNameWidth ? { minWidth: `${minNameWidth}px` } : undefined}
+          >
+            <span className="text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] tracking-[0.3px] shrink-0">
+              {player.name}
+            </span>
+            {isCurrentTurn && isActionPhase && !isPassed && (
+              <span className="text-[10px] font-bold font-orbitron text-[rgb(140,160,190)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+                {hasUnlimitedActions ? "∞" : `${actionsRemaining}/${player.totalActions}`}
+              </span>
+            )}
+          </div>
         </div>
-        {/* TR Display - score only */}
-        <div className="absolute right-24 top-1/2 -translate-y-1/2 flex items-center bg-[rgba(30,50,80,0.9)] border border-[rgba(60,100,150,0.6)] px-2.5 py-1">
+        {/* TR Display */}
+        <div className="flex items-center bg-[rgba(30,50,80,0.9)] border border-[rgba(60,100,150,0.6)] px-2.5 py-1 shrink-0 ml-auto">
           <span className="text-sm font-bold font-orbitron text-[rgb(180,210,255)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
             {player.terraformRating}
           </span>
         </div>
-        {isCurrentPlayer && isCurrentTurn && isActionPhase && (
+        {/* PASS/SKIP button */}
+        {isCurrentPlayer && isCurrentTurn && isActionPhase ? (
           <button
-            className={`absolute right-5 top-1/2 -translate-y-1/2 py-1.5 px-3 text-[9px] font-bold font-orbitron uppercase tracking-[0.5px] transition-all duration-200 ${
+            className={`py-1.5 px-3 text-[9px] font-bold font-orbitron uppercase tracking-[0.5px] transition-all duration-200 shrink-0 ml-2 ${
               hasPendingTile
                 ? "bg-[rgba(40,40,45,0.9)] text-[rgb(100,100,110)] border border-[rgba(60,60,70,0.5)] cursor-default"
                 : "bg-[rgba(50,100,160,0.95)] text-white border border-[rgba(80,140,200,0.8)] cursor-pointer hover:bg-[rgba(60,120,180,1)] hover:border-[rgba(100,160,220,0.9)]"
@@ -346,6 +367,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           >
             {buttonText}
           </button>
+        ) : (
+          <div className="py-1.5 px-3 text-[9px] font-orbitron shrink-0 ml-2 invisible">PASS</div>
         )}
       </div>
 

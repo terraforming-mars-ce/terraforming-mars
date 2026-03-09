@@ -9,6 +9,7 @@ import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
 import MiningTile from "./MiningTile";
 import ReservedAreaTile from "./ReservedAreaTile";
+import WorldTreeTile from "./WorldTreeTile";
 import { useTextures } from "../../../hooks/useTextures";
 import {
   sphereProjectionVertex,
@@ -236,7 +237,8 @@ interface TileProps {
     | "mining"
     | "restricted"
     | "ecological-zone"
-    | "natural-preserve";
+    | "natural-preserve"
+    | "world-tree";
   ownerId?: string | null;
   ownerColor?: string;
   reservedById?: string | null;
@@ -571,6 +573,8 @@ function Tile({
       case "ecological-zone":
       case "natural-preserve":
         return new THREE.Color("#2d6e2e");
+      case "world-tree":
+        return new THREE.Color("#1a3a12");
       default:
         return new THREE.Color("#6d4c41").multiplyScalar(0.8);
     }
@@ -597,7 +601,8 @@ function Tile({
         tileType === "mining" ||
         tileType === "restricted" ||
         tileType === "ecological-zone" ||
-        tileType === "natural-preserve"
+        tileType === "natural-preserve" ||
+        tileType === "world-tree"
           ? 0
           : tileType === "empty"
             ? 0.3
@@ -797,6 +802,15 @@ function Tile({
         />
       )}
 
+      {/* World Tree 3D tile */}
+      {tileType === "world-tree" && (
+        <WorldTreeTile
+          isNewlyPlaced={isNewlyPlaced}
+          surfaceNormal={tileData.normal}
+          worldPosition={adjustedPosition}
+        />
+      )}
+
       {/* Special tile label (rendered via displayName below) */}
 
       {/* Billboard display name for named tiles */}
@@ -826,6 +840,7 @@ function Tile({
         tileType !== "mining" &&
         tileType !== "ecological-zone" &&
         tileType !== "natural-preserve" &&
+        tileType !== "world-tree" &&
         bonusIconGroups.length > 0 && (
           <>
             {(() => {

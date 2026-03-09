@@ -659,6 +659,7 @@ type PlayerDto struct {
 	PlayedCards      []CardDto                  `json:"playedCards" ts:"CardDto[]"` // Full card details for all played cards
 	Passed           bool                       `json:"passed" ts:"boolean"`
 	AvailableActions int                        `json:"availableActions" ts:"number"`
+	TotalActions     int                        `json:"totalActions" ts:"number"`
 	IsConnected      bool                       `json:"isConnected" ts:"boolean"`
 	IsExited         bool                       `json:"isExited" ts:"boolean"`
 	Effects          []PlayerEffectDto          `json:"effects" ts:"PlayerEffectDto[]"`                   // Active ongoing effects (discounts, special abilities, etc.)
@@ -683,6 +684,7 @@ type PlayerDto struct {
 	StoragePaymentSubstitutes      []StoragePaymentSubstituteDto      `json:"storagePaymentSubstitutes" ts:"StoragePaymentSubstituteDto[]"`
 	GenerationalEvents             []PlayerGenerationalEventEntryDto  `json:"generationalEvents" ts:"PlayerGenerationalEventEntryDto[]"`
 	VPGranters                     []VPGranterDto                     `json:"vpGranters" ts:"VPGranterDto[]"`
+	BonusTags                      map[string]int                     `json:"bonusTags" ts:"Record<string, number>"`
 }
 
 // OtherPlayerDto represents another player from the viewing player's perspective (limited data)
@@ -703,6 +705,7 @@ type OtherPlayerDto struct {
 	PlayedCards      []CardDto         `json:"playedCards" ts:"CardDto[]"` // Played cards are public - full card details
 	Passed           bool              `json:"passed" ts:"boolean"`
 	AvailableActions int               `json:"availableActions" ts:"number"`
+	TotalActions     int               `json:"totalActions" ts:"number"`
 	IsConnected      bool              `json:"isConnected" ts:"boolean"`
 	IsExited         bool              `json:"isExited" ts:"boolean"`
 	Effects          []PlayerEffectDto `json:"effects" ts:"PlayerEffectDto[]"`
@@ -716,6 +719,7 @@ type OtherPlayerDto struct {
 	PaymentSubstitutes        []PaymentSubstituteDto             `json:"paymentSubstitutes" ts:"PaymentSubstituteDto[]"`
 	StoragePaymentSubstitutes []StoragePaymentSubstituteDto      `json:"storagePaymentSubstitutes" ts:"StoragePaymentSubstituteDto[]"`
 	VPGranters                []VPGranterDto                     `json:"vpGranters" ts:"VPGranterDto[]"`
+	BonusTags                 map[string]int                     `json:"bonusTags" ts:"Record<string, number>"`
 }
 
 // GameDto represents a game for client consumption (clean architecture)

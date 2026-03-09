@@ -89,6 +89,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		PlayedCards:      playedCards,
 		Passed:           p.HasPassed(),
 		AvailableActions: getAvailableActionsForPlayer(g, p.ID()),
+		TotalActions:     getTotalActionsForPlayer(g, p.ID()),
 		IsConnected:      p.IsConnected(),
 		IsExited:         p.HasExited(),
 		Effects:          convertPlayerEffects(p.Effects().List()),
@@ -113,6 +114,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		StoragePaymentSubstitutes:      convertStoragePaymentSubstitutes(p.Resources().StoragePaymentSubstitutes()),
 		GenerationalEvents:             convertGenerationalEvents(p.GenerationalEvents().GetAll()),
 		VPGranters:                     toVPGranterDtos(p.VPGranters().GetAll()),
+		BonusTags:                      convertBonusTags(p.BonusTags()),
 	}
 }
 
@@ -144,6 +146,7 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		PlayedCards:      playedCards,
 		Passed:           p.HasPassed(),
 		AvailableActions: getAvailableActionsForPlayer(g, p.ID()),
+		TotalActions:     getTotalActionsForPlayer(g, p.ID()),
 		IsConnected:      p.IsConnected(),
 		IsExited:         p.HasExited(),
 		Effects:          convertPlayerEffects(p.Effects().List()),
@@ -157,7 +160,19 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		PaymentSubstitutes:        convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
 		StoragePaymentSubstitutes: convertStoragePaymentSubstitutes(p.Resources().StoragePaymentSubstitutes()),
 		VPGranters:                toVPGranterDtos(p.VPGranters().GetAll()),
+		BonusTags:                 convertBonusTags(p.BonusTags()),
 	}
+}
+
+func convertBonusTags(tags map[shared.CardTag]int) map[string]int {
+	if len(tags) == 0 {
+		return map[string]int{}
+	}
+	result := make(map[string]int, len(tags))
+	for k, v := range tags {
+		result[string(k)] = v
+	}
+	return result
 }
 
 func playerStatus(p *player.Player) PlayerStatus {
@@ -471,6 +486,20 @@ func getAvailableActionsForPlayer(g *game.Game, playerID string) int {
 
 	if currentTurn.PlayerID() == playerID {
 		return currentTurn.ActionsRemaining()
+	}
+
+	return 0
+}
+
+// getTotalActionsForPlayer returns the total actions granted this turn
+func getTotalActionsForPlayer(g *game.Game, playerID string) int {
+	currentTurn := g.CurrentTurn()
+	if currentTurn == nil {
+		return 0
+	}
+
+	if currentTurn.PlayerID() == playerID {
+		return currentTurn.TotalActions()
 	}
 
 	return 0

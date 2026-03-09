@@ -35,9 +35,10 @@ type ResourceCondition struct {
 
 // PerCondition represents what to count for conditional resource gains
 type PerCondition struct {
-	Type     shared.ResourceType `json:"type"`
-	Amount   int                 `json:"amount"`
-	Location *CardApplyLocation  `json:"location,omitempty"`
-	Target   *TargetType         `json:"target,omitempty"`
-	Tag      *shared.CardTag     `json:"tag,omitempty"`
+	Type               shared.ResourceType  `json:"type"`
+	Amount             int                  `json:"amount"`
+	Location           *CardApplyLocation   `json:"location,omitempty"`
+	Target             *TargetType          `json:"target,omitempty"`
+	Tag                *shared.CardTag      `json:"tag,omitempty"`
+	AdjacentToTileType *shared.ResourceType `json:"adjacentToTileType,omitempty"`
 }

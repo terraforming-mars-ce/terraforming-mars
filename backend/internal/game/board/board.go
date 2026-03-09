@@ -25,6 +25,7 @@ const (
 	TileTypeColony          = "colony"
 	TileTypeLandClaim       = "land-claim"
 	TileTypeClear           = "clear"
+	TileTypeWorldTree       = "world-tree"
 )
 
 // PlaceableTileType describes a tile type available in the demo tile picker
@@ -48,6 +49,7 @@ var PlaceableTileTypes = []PlaceableTileType{
 	{Type: TileTypeNuclearZone, Label: "Nuclear Zone", Group: "Industrial"},
 	{Type: TileTypeMohole, Label: "Mohole", Group: "Industrial"},
 	{Type: TileTypeRestricted, Label: "Restricted", Group: "Industrial"},
+	{Type: TileTypeWorldTree, Label: "World Tree", Group: "Special"},
 	{Type: TileTypeLandClaim, Label: "Land Claim", Group: "Tools"},
 	{Type: TileTypeClear, Label: "Clear", Group: "Tools"},
 }

@@ -1457,6 +1457,57 @@ func (a *BehaviorApplier) applyOutput(
 			zap.String("type", string(output.ResourceType)),
 			zap.Int("amount", output.Amount))
 
+	case shared.ResourceExtraActions:
+		if a.game == nil {
+			return fmt.Errorf("cannot apply extra actions: no game context")
+		}
+		currentTurn := a.game.CurrentTurn()
+		if currentTurn != nil {
+			currentTurn.AddExtraActions(output.Amount)
+		}
+		log.Debug("Granted extra actions", zap.Int("amount", output.Amount))
+
+	case shared.ResourceBonusTags:
+		if a.player == nil {
+			return fmt.Errorf("cannot apply bonus tags: no player context")
+		}
+		if output.Per != nil && output.Per.Tag != nil {
+			tagToCount := *output.Per.Tag
+			tagToGrant := shared.CardTag(output.ResourceType)
+			if len(output.Selectors) > 0 && len(output.Selectors[0].Tags) > 0 {
+				tagToGrant = output.Selectors[0].Tags[0]
+			}
+			var tagCount int
+			if a.cardRegistry != nil {
+				tagCount = CountPlayerTagsByType(a.player, a.cardRegistry, tagToCount)
+			}
+			bonusCount := tagCount * output.Amount
+			if bonusCount > 0 {
+				a.player.AddBonusTags(tagToGrant, bonusCount)
+			}
+			log.Debug("Added bonus tags",
+				zap.String("tag_type", string(tagToGrant)),
+				zap.Int("count", bonusCount),
+				zap.String("per_tag", string(tagToCount)),
+				zap.Int("tag_count", tagCount))
+		}
+
+	case shared.ResourceTileDestruction:
+		if a.game == nil {
+			return fmt.Errorf("cannot apply tile destruction: no game context")
+		}
+		if a.player == nil {
+			return fmt.Errorf("cannot apply tile destruction: no player context")
+		}
+		tileTypes := make([]string, output.Amount)
+		for i := 0; i < output.Amount; i++ {
+			tileTypes[i] = "tile-destruction"
+		}
+		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, nil); err != nil {
+			return fmt.Errorf("failed to append tile destruction to pending tile selection queue: %w", err)
+		}
+		log.Debug("Added tile destruction selection to queue")
+
 	case shared.ResourceActionReuse:
 		log.Debug("Skipping action-reuse output (handled at action layer)")
 

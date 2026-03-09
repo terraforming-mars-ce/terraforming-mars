@@ -33,7 +33,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   onConvertToBot,
 }) => {
   return (
-    <div className="absolute top-[15%] left-0 z-10 w-[240px] h-[calc(85vh-120px)] bg-transparent py-[15px] flex flex-col overflow-visible pointer-events-none">
+    <div className="absolute top-[15%] left-0 z-10 h-[calc(85vh-120px)] bg-transparent py-[15px] flex flex-col overflow-visible pointer-events-none">
       <PlayerList
         players={players}
         currentPlayer={currentPlayer}

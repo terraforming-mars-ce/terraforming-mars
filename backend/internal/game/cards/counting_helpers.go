@@ -54,6 +54,9 @@ func CountPlayerTagsByType(p *player.Player, cardRegistry CardRegistryInterface,
 		count += countTagsInList(tags, tagType)
 	}
 
+	// Include bonus tags from effects like Home Schooled
+	count += p.BonusTagCount(tagType)
+
 	return count
 }
 

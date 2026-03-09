@@ -256,15 +256,18 @@ func countPerCondition(
 ) int {
 	// Handle resource storage on card (e.g., animals on this card)
 	if per.Target != nil && *per.Target == TargetSelfCard {
-		// Count resources stored on this specific card
 		storage := p.Resources().GetCardStorage(card.ID)
 		return storage
+	}
+
+	// Handle adjacency-based counting (e.g., World Tree: 1 VP per adjacent forest)
+	if per.AdjacentToTileType != nil {
+		return countAdjacentTilesOfType(p.ID(), b, per.Type, *per.AdjacentToTileType)
 	}
 
 	cityTileType := shared.ResourceCityTile
 	greeneryTileType := shared.ResourceGreeneryTile
 
-	// Handle different resource types
 	switch per.Type {
 	case shared.ResourceOceanTile:
 		return CountAllTilesOfType(b, shared.ResourceOceanTile)
@@ -391,4 +394,51 @@ func getAdjacentGreeneryCoordinates(coords shared.HexPosition, tiles []board.Til
 	}
 
 	return greeneryCoords
+}
+
+// isForestTile returns true if the tile type counts as a forest (greenery or world-tree)
+func isForestTile(tileType shared.ResourceType) bool {
+	return tileType == shared.ResourceGreeneryTile || tileType == shared.ResourceWorldTreeTile
+}
+
+// countAdjacentTilesOfType counts unique tiles matching countType that are adjacent
+// to tiles of adjacentToType owned by playerID. Uses isForestTile for greenery matching.
+func countAdjacentTilesOfType(playerID string, b *board.Board, countType shared.ResourceType, adjacentToType shared.ResourceType) int {
+	tiles := b.Tiles()
+	counted := make(map[shared.HexPosition]bool)
+
+	for _, tile := range tiles {
+		if tile.OwnerID == nil || *tile.OwnerID != playerID {
+			continue
+		}
+		if tile.OccupiedBy == nil || tile.OccupiedBy.Type != adjacentToType {
+			continue
+		}
+
+		neighbors := tile.Coordinates.GetNeighbors()
+		for _, neighborTile := range tiles {
+			if neighborTile.OccupiedBy == nil || counted[neighborTile.Coordinates] {
+				continue
+			}
+
+			var matches bool
+			if countType == shared.ResourceGreeneryTile {
+				matches = isForestTile(neighborTile.OccupiedBy.Type)
+			} else {
+				matches = neighborTile.OccupiedBy.Type == countType
+			}
+			if !matches {
+				continue
+			}
+
+			for _, neighbor := range neighbors {
+				if neighborTile.Coordinates == neighbor {
+					counted[neighborTile.Coordinates] = true
+					break
+				}
+			}
+		}
+	}
+
+	return len(counted)
 }

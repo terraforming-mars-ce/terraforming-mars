@@ -19798,5 +19798,112 @@
       "starting": 0,
       "description": "This card stores disease resources."
     }
+  },
+  {
+    "id": "EXP001",
+    "name": "Front of the Line",
+    "type": "event",
+    "cost": 3,
+    "description": "Gain 2 extra actions this turn.",
+    "pack": "experimental",
+    "tags": ["event"],
+    "behaviors": [
+      {
+        "triggers": [{ "type": "auto" }],
+        "outputs": [
+          {
+            "type": "extra-actions",
+            "amount": 2,
+            "target": "self-player"
+          }
+        ],
+        "description": "Gain 2 extra actions this turn."
+      }
+    ]
+  },
+  {
+    "id": "EXP002",
+    "name": "Home Schooled",
+    "type": "event",
+    "cost": 11,
+    "description": "Gain 1 science tag for each earth tag you have.",
+    "pack": "experimental",
+    "tags": ["event", "science"],
+    "behaviors": [
+      {
+        "triggers": [{ "type": "auto" }],
+        "outputs": [
+          {
+            "type": "bonus-tags",
+            "amount": 1,
+            "target": "self-player",
+            "selectors": [{ "tags": ["science"] }],
+            "per": {
+              "type": "tag",
+              "amount": 1,
+              "tag": "earth"
+            }
+          }
+        ],
+        "description": "Gain 1 science tag for each earth tag you have."
+      }
+    ]
+  },
+  {
+    "id": "EXP003",
+    "name": "The World Tree",
+    "type": "automated",
+    "cost": 28,
+    "description": "Place a World Tree tile. It counts as a forest for adjacency. 1 VP per adjacent forest.",
+    "pack": "experimental",
+    "tags": ["plant", "building"],
+    "behaviors": [
+      {
+        "triggers": [{ "type": "auto" }],
+        "outputs": [
+          {
+            "type": "tile-placement",
+            "amount": 1,
+            "target": "self-player",
+            "tileType": "world-tree"
+          }
+        ],
+        "description": "Place a World Tree tile."
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": 1,
+        "condition": "per",
+        "per": {
+          "type": "greenery-tile",
+          "amount": 1,
+          "adjacentToTileType": "world-tree-tile"
+        },
+        "description": "1 VP per adjacent forest"
+      }
+    ]
+  },
+  {
+    "id": "EXP004",
+    "name": "Nuke",
+    "type": "event",
+    "cost": 30,
+    "description": "Destroy any tile on the board. If it's an ocean, reduce the ocean count by 1.",
+    "pack": "experimental",
+    "tags": ["event", "earth"],
+    "behaviors": [
+      {
+        "triggers": [{ "type": "auto" }],
+        "outputs": [
+          {
+            "type": "tile-destruction",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "Destroy any tile on the board."
+      }
+    ]
   }
 ]

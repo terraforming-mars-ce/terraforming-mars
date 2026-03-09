@@ -963,6 +963,7 @@ export interface PlayerDto {
   playedCards: CardDto[]; // Full card details for all played cards
   passed: boolean;
   availableActions: number /* int */;
+  totalActions: number /* int */;
   isConnected: boolean;
   isExited: boolean;
   effects: PlayerEffectDto[]; // Active ongoing effects (discounts, special abilities, etc.)
@@ -986,6 +987,7 @@ export interface PlayerDto {
   storagePaymentSubstitutes: StoragePaymentSubstituteDto[];
   generationalEvents: PlayerGenerationalEventEntryDto[];
   vpGranters: VPGranterDto[];
+  bonusTags: { [key: string]: number /* int */ };
 }
 /**
  * OtherPlayerDto represents another player from the viewing player's perspective (limited data)
@@ -1007,6 +1009,7 @@ export interface OtherPlayerDto {
   playedCards: CardDto[]; // Played cards are public - full card details
   passed: boolean;
   availableActions: number /* int */;
+  totalActions: number /* int */;
   isConnected: boolean;
   isExited: boolean;
   effects: PlayerEffectDto[];
@@ -1019,6 +1022,7 @@ export interface OtherPlayerDto {
   paymentSubstitutes: PaymentSubstituteDto[];
   storagePaymentSubstitutes: StoragePaymentSubstituteDto[];
   vpGranters: VPGranterDto[];
+  bonusTags: { [key: string]: number /* int */ };
 }
 /**
  * GameDto represents a game for client consumption (clean architecture)

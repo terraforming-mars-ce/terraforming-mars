@@ -47,7 +47,8 @@ type TileType =
   | "mining"
   | "restricted"
   | "ecological-zone"
-  | "natural-preserve";
+  | "natural-preserve"
+  | "world-tree";
 
 // Labels for special tile types (keyed by occupant type from backend)
 const SPECIAL_TILE_LABELS: Record<string, string> = {
@@ -307,6 +308,12 @@ export default function TileGrid({
           case "restricted-tile":
             return {
               type: "restricted",
+              ownerId: backendTile.ownerId || null,
+              specialLabel: null,
+            };
+          case "world-tree-tile":
+            return {
+              type: "world-tree",
               ownerId: backendTile.ownerId || null,
               specialLabel: null,
             };

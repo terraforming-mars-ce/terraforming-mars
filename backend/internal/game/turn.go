@@ -8,6 +8,7 @@ type Turn struct {
 	mu               sync.RWMutex
 	playerID         string
 	actionsRemaining int // -1 = unlimited, 0 = none, >0 = specific count
+	totalActions     int // total actions granted this turn (initial + extra)
 }
 
 // NewTurn creates a new turn for the specified player with a specific action count
@@ -15,6 +16,7 @@ func NewTurn(playerID string, actionsRemaining int) *Turn {
 	return &Turn{
 		playerID:         playerID,
 		actionsRemaining: actionsRemaining,
+		totalActions:     actionsRemaining,
 	}
 }
 
@@ -33,11 +35,28 @@ func (t *Turn) ActionsRemaining() int {
 	return t.actionsRemaining
 }
 
+// TotalActions returns the total actions granted this turn (initial + extra)
+func (t *Turn) TotalActions() int {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.totalActions
+}
+
 // SetActionsRemaining sets the number of actions remaining
 func (t *Turn) SetActionsRemaining(actions int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.actionsRemaining = actions
+}
+
+// AddExtraActions increases both remaining and total actions
+func (t *Turn) AddExtraActions(amount int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.actionsRemaining >= 0 {
+		t.actionsRemaining += amount
+		t.totalActions += amount
+	}
 }
 
 // ConsumeAction decreases the number of actions remaining
