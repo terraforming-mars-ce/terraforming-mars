@@ -1693,7 +1693,7 @@
           }
         ],
         "description": "Raise your terraform rating 2 steps and temperature 1 step. Increase your plant production 1 step, or 4 steps if you have 3 plant tags.",
-        "choicePolicy": "auto-plant-tags-3"
+        "choicePolicy": {"type": "auto", "default": 0, "select": {"option": 1, "minMax": {"min": 3}, "resourceType": "tag", "tag": "plant"}}
       }
     ]
   },
@@ -16181,7 +16181,7 @@
             "target": "self-player"
           }
         ],
-        "choicePolicy": "lowest",
+        "choicePolicy": {"type": "lowest"},
         "choices": [
           {
             "outputs": [

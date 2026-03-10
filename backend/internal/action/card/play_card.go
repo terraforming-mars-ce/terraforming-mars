@@ -461,13 +461,13 @@ func (a *PlayCardAction) applyCardBehaviors(
 		if gamecards.HasAutoTrigger(behavior) {
 			// Auto-select choice if behavior has an auto-selection policy
 			effectiveChoiceIndex := choiceIndex
-			if behavior.ChoicePolicy != "" && len(behavior.Choices) > 0 {
-				plantTagCount := gamecards.CountPlayerTagsByType(p, a.CardRegistry(), shared.TagPlant)
-				autoIdx := shared.AutoSelectChoiceIndex(behavior.ChoicePolicy, plantTagCount)
+			if behavior.ChoicePolicy != nil && len(behavior.Choices) > 0 {
+				count := resolveChoicePolicyCount(behavior.ChoicePolicy, p, a.CardRegistry())
+				autoIdx := shared.AutoSelectChoiceIndex(behavior.ChoicePolicy, count)
 				if autoIdx >= 0 {
 					effectiveChoiceIndex = &autoIdx
 					log.Debug("Auto-selected choice by policy",
-						zap.String("policy", behavior.ChoicePolicy),
+						zap.String("policy_type", string(behavior.ChoicePolicy.Type)),
 						zap.Int("choice_index", autoIdx))
 				}
 			}
@@ -1031,4 +1031,15 @@ func validateNegativeResourceOutputs(card *gamecards.Card, p *player.Player) err
 		}
 	}
 	return nil
+}
+
+func resolveChoicePolicyCount(policy *shared.ChoicePolicy, p *player.Player, registry gamecards.CardRegistryInterface) int {
+	if policy == nil || policy.Select == nil {
+		return 0
+	}
+	sel := policy.Select
+	if sel.ResourceType == "tag" && sel.Tag != nil {
+		return gamecards.CountPlayerTagsByType(p, registry, *sel.Tag)
+	}
+	return 0
 }

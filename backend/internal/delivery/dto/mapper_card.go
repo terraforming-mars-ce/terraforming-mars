@@ -110,10 +110,33 @@ func toCardBehaviorDto(behavior shared.CardBehavior) CardBehaviorDto {
 		Inputs:                        mapSlice(behavior.Inputs, toResourceConditionDto),
 		Outputs:                       mapSlice(behavior.Outputs, toResourceConditionDto),
 		Choices:                       toChoiceDtos(behavior.Choices),
-		ChoicePolicy:                  behavior.ChoicePolicy,
+		ChoicePolicy:                  toChoicePolicyDto(behavior.ChoicePolicy),
 		GenerationalEventRequirements: mapSlice(behavior.GenerationalEventRequirements, toGenerationalEventRequirementDto),
 		Group:                         behavior.Group,
 	}
+}
+
+func toChoicePolicyDto(cp *shared.ChoicePolicy) *ChoicePolicyDto {
+	if cp == nil {
+		return nil
+	}
+	dto := &ChoicePolicyDto{
+		Type:    string(cp.Type),
+		Default: cp.Default,
+	}
+	if cp.Select != nil {
+		sel := &ChoicePolicySelectDto{
+			Option:       cp.Select.Option,
+			MinMax:       MinMaxValueDto{Min: cp.Select.MinMax.Min, Max: cp.Select.MinMax.Max},
+			ResourceType: cp.Select.ResourceType,
+		}
+		if cp.Select.Tag != nil {
+			s := string(*cp.Select.Tag)
+			sel.Tag = &s
+		}
+		dto.Select = sel
+	}
+	return dto
 }
 
 func toGenerationalEventRequirementDto(req shared.GenerationalEventRequirement) GenerationalEventRequirementDto {

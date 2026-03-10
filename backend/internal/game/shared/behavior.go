@@ -1,10 +1,27 @@
 package shared
 
-// Choice policy constants
+// ChoicePolicyType identifies the kind of choice policy.
+type ChoicePolicyType string
+
 const (
-	ChoicePolicyLowest         = "lowest"            // Only choices affecting the lowest production are valid
-	ChoicePolicyAutoPlantTags3 = "auto-plant-tags-3" // Auto-select: choice 1 if 3+ plant tags, else choice 0
+	ChoicePolicyTypeLowest ChoicePolicyType = "lowest"
+	ChoicePolicyTypeAuto   ChoicePolicyType = "auto"
 )
+
+// ChoicePolicySelect describes an auto-selection rule: pick Option when count satisfies MinMax.
+type ChoicePolicySelect struct {
+	Option       int      `json:"option"`
+	MinMax       MinMax   `json:"minMax"`
+	ResourceType string   `json:"resourceType"`
+	Tag          *CardTag `json:"tag,omitempty"`
+}
+
+// ChoicePolicy governs how choices are filtered or auto-selected for a behavior.
+type ChoicePolicy struct {
+	Type    ChoicePolicyType    `json:"type"`
+	Default *int                `json:"default,omitempty"`
+	Select  *ChoicePolicySelect `json:"select,omitempty"`
+}
 
 // CardBehavior represents card behaviors (immediate and repeatable)
 type CardBehavior struct {
@@ -13,7 +30,7 @@ type CardBehavior struct {
 	Inputs                        []ResourceCondition            `json:"inputs,omitempty"`
 	Outputs                       []ResourceCondition            `json:"outputs,omitempty"`
 	Choices                       []Choice                       `json:"choices,omitempty"`
-	ChoicePolicy                  string                         `json:"choicePolicy,omitempty"`
+	ChoicePolicy                  *ChoicePolicy                  `json:"choicePolicy,omitempty"`
 	GenerationalEventRequirements []GenerationalEventRequirement `json:"generationalEventRequirements,omitempty" ts:"GenerationalEventRequirement[] | undefined"`
 	Group                         string                         `json:"group,omitempty" ts:"string | undefined"`
 }
@@ -23,8 +40,32 @@ func (cb CardBehavior) DeepCopy() CardBehavior {
 	var result CardBehavior
 
 	result.Description = cb.Description
-	result.ChoicePolicy = cb.ChoicePolicy
 	result.Group = cb.Group
+
+	if cb.ChoicePolicy != nil {
+		cp := *cb.ChoicePolicy
+		if cp.Default != nil {
+			d := *cp.Default
+			cp.Default = &d
+		}
+		if cp.Select != nil {
+			s := *cp.Select
+			if s.MinMax.Min != nil {
+				v := *s.MinMax.Min
+				s.MinMax.Min = &v
+			}
+			if s.MinMax.Max != nil {
+				v := *s.MinMax.Max
+				s.MinMax.Max = &v
+			}
+			if s.Tag != nil {
+				t := *s.Tag
+				s.Tag = &t
+			}
+			cp.Select = &s
+		}
+		result.ChoicePolicy = &cp
+	}
 
 	if cb.Triggers != nil {
 		result.Triggers = make([]Trigger, len(cb.Triggers))
@@ -127,35 +168,26 @@ var productionResourceTypes = []ResourceType{
 }
 
 // FilterChoiceIndicesByPolicy returns the indices of choices that are valid under the given policy.
-// For empty policy or "any", all indices are returned.
+// For nil policy, all indices are returned.
 // For "lowest", only choices whose production output is at the player's minimum production level.
-func FilterChoiceIndicesByPolicy(choices []Choice, policy string, production Production) []int {
-	if policy == "" {
-		indices := make([]int, len(choices))
-		for i := range choices {
-			indices[i] = i
-		}
-		return indices
+func FilterChoiceIndicesByPolicy(choices []Choice, policy *ChoicePolicy, production Production) []int {
+	if policy == nil {
+		return allChoiceIndices(choices)
 	}
 
-	switch policy {
-	case ChoicePolicyLowest:
+	switch policy.Type {
+	case ChoicePolicyTypeLowest:
 		return filterLowestProductionChoices(choices, production)
-	case ChoicePolicyAutoPlantTags3:
-		// Handled externally via AutoSelectChoiceIndex — return all as valid fallback
+	case ChoicePolicyTypeAuto:
 		return allChoiceIndices(choices)
 	default:
-		indices := make([]int, len(choices))
-		for i := range choices {
-			indices[i] = i
-		}
-		return indices
+		return allChoiceIndices(choices)
 	}
 }
 
 // IsChoiceValidForPolicy checks whether a specific choice index is valid under the given policy.
-func IsChoiceValidForPolicy(choiceIndex int, choices []Choice, policy string, production Production) bool {
-	if policy == "" || choiceIndex < 0 || choiceIndex >= len(choices) {
+func IsChoiceValidForPolicy(choiceIndex int, choices []Choice, policy *ChoicePolicy, production Production) bool {
+	if policy == nil || choiceIndex < 0 || choiceIndex >= len(choices) {
 		return choiceIndex >= 0 && choiceIndex < len(choices)
 	}
 
@@ -176,18 +208,24 @@ func allChoiceIndices(choices []Choice) []int {
 	return indices
 }
 
-// AutoSelectChoiceIndex returns an auto-selected choice index for policies that
-// deterministically pick a choice based on game state. Returns -1 if not applicable.
-func AutoSelectChoiceIndex(policy string, plantTagCount int) int {
-	switch policy {
-	case ChoicePolicyAutoPlantTags3:
-		if plantTagCount >= 3 {
-			return 1 // 4 plant production
-		}
-		return 0 // 1 plant production
-	default:
+// AutoSelectChoiceIndex returns an auto-selected choice index for "auto" policies.
+// The count parameter is the resolved count for the policy's resource/tag type.
+// Returns -1 if the policy is nil or not an auto policy.
+func AutoSelectChoiceIndex(policy *ChoicePolicy, count int) int {
+	if policy == nil || policy.Type != ChoicePolicyTypeAuto || policy.Select == nil {
 		return -1
 	}
+	sel := policy.Select
+	if sel.MinMax.Min != nil && count >= *sel.MinMax.Min {
+		return sel.Option
+	}
+	if sel.MinMax.Max != nil && count <= *sel.MinMax.Max {
+		return sel.Option
+	}
+	if policy.Default != nil {
+		return *policy.Default
+	}
+	return -1
 }
 
 func filterLowestProductionChoices(choices []Choice, production Production) []int {

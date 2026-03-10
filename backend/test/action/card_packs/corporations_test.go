@@ -43,7 +43,7 @@ func TestRobinsonIndustries_ActionSucceedsWithSufficientCredits(t *testing.T) {
 		Inputs: []shared.ResourceCondition{
 			{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"},
 		},
-		ChoicePolicy: shared.ChoicePolicyLowest,
+		ChoicePolicy: &shared.ChoicePolicy{Type: shared.ChoicePolicyTypeLowest},
 		Choices: []shared.Choice{
 			{Outputs: []shared.ResourceCondition{
 				{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
@@ -113,7 +113,7 @@ func TestRobinsonIndustries_OnlyAllowsIncreasingLowestProduction(t *testing.T) {
 		Inputs: []shared.ResourceCondition{
 			{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"},
 		},
-		ChoicePolicy: shared.ChoicePolicyLowest,
+		ChoicePolicy: &shared.ChoicePolicy{Type: shared.ChoicePolicyTypeLowest},
 		Choices: []shared.Choice{
 			{Outputs: []shared.ResourceCondition{
 				{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},

@@ -311,7 +311,7 @@ func convertPlayerActions(actions []player.CardAction, p *player.Player, g *game
 
 		behaviorDto := toCardBehaviorDto(act.Behavior)
 
-		if act.Behavior.ChoicePolicy != "" && len(behaviorDto.Choices) > 0 {
+		if act.Behavior.ChoicePolicy != nil && len(behaviorDto.Choices) > 0 {
 			production := p.Resources().Production()
 			validIndices := shared.FilterChoiceIndicesByPolicy(act.Behavior.Choices, act.Behavior.ChoicePolicy, production)
 			filtered := make([]ChoiceDto, 0, len(validIndices))
@@ -648,7 +648,7 @@ func mapPlayerCards(p *player.Player, g *game.Game, cardRegistry cards.CardRegis
 		if card, ok := pc.Card().(*gamecards.Card); ok {
 			for bi, behavior := range card.Behaviors {
 				if bi < len(dto.Behaviors) {
-					if behavior.ChoicePolicy != "" && len(dto.Behaviors[bi].Choices) > 0 {
+					if behavior.ChoicePolicy != nil && len(dto.Behaviors[bi].Choices) > 0 {
 						production := p.Resources().Production()
 						validIndices := shared.FilterChoiceIndicesByPolicy(behavior.Choices, behavior.ChoicePolicy, production)
 						filtered := make([]ChoiceDto, 0, len(validIndices))
