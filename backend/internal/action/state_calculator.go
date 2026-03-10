@@ -308,36 +308,10 @@ func validatePhase(g *game.Game) []player.StateError {
 		return []player.StateError{{
 			Code:     player.ErrorCodeWrongPhase,
 			Category: player.ErrorCategoryPhase,
-			Message:  fmt.Sprintf("Can only play cards during action phase, current phase: %s", humanReadablePhase(g.CurrentPhase())),
+			Message:  "Not in action phase",
 		}}
 	}
 	return nil
-}
-
-// humanReadablePhase maps phase enum values to user-friendly names.
-func humanReadablePhase(phase game.GamePhase) string {
-	switch phase {
-	case game.GamePhaseAction:
-		return "Action"
-	case game.GamePhaseProductionAndCardDraw:
-		return "Production"
-	case game.GamePhaseStartingSelection:
-		return "Starting Selection"
-	case game.GamePhaseStartGameSelection:
-		return "Start Game Selection"
-	case game.GamePhaseDemoSetup:
-		return "Demo Setup"
-	case game.GamePhaseInitApplyCorp:
-		return "Corporation Setup"
-	case game.GamePhaseInitApplyPrelude:
-		return "Prelude Setup"
-	case game.GamePhaseWaitingForGameStart:
-		return "Waiting for Game Start"
-	case game.GamePhaseComplete:
-		return "Game Complete"
-	default:
-		return string(phase)
-	}
 }
 
 // validateNoActiveTileSelection checks if player has an active tile selection pending.
