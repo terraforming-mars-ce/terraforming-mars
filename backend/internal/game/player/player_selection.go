@@ -16,6 +16,7 @@ type Selection struct {
 	pendingCardDrawSelection       *PendingCardDrawSelection
 	pendingCardDiscardSelection    *PendingCardDiscardSelection
 	pendingBehaviorChoiceSelection *PendingBehaviorChoiceSelection
+	pendingStealTargetSelection    *PendingStealTargetSelection
 	eventBus                       *events.EventBusImpl
 	gameID                         string
 	playerID                       string
@@ -128,6 +129,18 @@ func (s *Selection) SetPendingBehaviorChoiceSelection(selection *PendingBehavior
 	}
 }
 
+func (s *Selection) GetPendingStealTargetSelection() *PendingStealTargetSelection {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pendingStealTargetSelection
+}
+
+func (s *Selection) SetPendingStealTargetSelection(selection *PendingStealTargetSelection) {
+	s.mu.Lock()
+	s.pendingStealTargetSelection = selection
+	s.mu.Unlock()
+}
+
 // PendingCardSelection represents a pending card selection
 type PendingCardSelection struct {
 	AvailableCards []string
@@ -217,6 +230,16 @@ type PendingBehaviorChoiceSelection struct {
 	Choices      []shared.Choice
 	Source       string // Card name that owns the effect
 	SourceCardID string // Card ID that owns the effect
+}
+
+// PendingStealTargetSelection represents a pending target player selection for
+// post-tile-placement resource steal (e.g., Flooding card).
+type PendingStealTargetSelection struct {
+	EligiblePlayerIDs []string
+	ResourceType      shared.ResourceType
+	Amount            int
+	Source            string
+	SourceCardID      string
 }
 
 // ForcedFirstAction represents an action that must be completed as first action

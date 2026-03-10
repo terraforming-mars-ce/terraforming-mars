@@ -173,6 +173,12 @@ func toTileRestrictionsDto(tr shared.TileRestrictions) TileRestrictionsDto {
 	return dto
 }
 
+func toTargetRestrictionDto(tr shared.TargetRestriction) TargetRestrictionDto {
+	return TargetRestrictionDto{
+		Adjacent: tr.Adjacent,
+	}
+}
+
 func toSelectorDto(sel shared.Selector) SelectorDto {
 	return SelectorDto{
 		Tags:                 mapSlice(sel.Tags, func(t shared.CardTag) CardTag { return CardTag(t) }),
@@ -187,14 +193,15 @@ func toSelectorDto(sel shared.Selector) SelectorDto {
 
 func toResourceConditionDto(rc shared.ResourceCondition) ResourceConditionDto {
 	dto := ResourceConditionDto{
-		Type:             ResourceType(rc.ResourceType),
-		Amount:           rc.Amount,
-		Target:           TargetType(rc.Target),
-		Selectors:        mapSlice(rc.Selectors, toSelectorDto),
-		MaxTrigger:       rc.MaxTrigger,
-		Per:              ptrCast(rc.Per, toPerConditionDto),
-		TileRestrictions: ptrCast(rc.TileRestrictions, toTileRestrictionsDto),
-		TileType:         rc.TileType,
+		Type:              ResourceType(rc.ResourceType),
+		Amount:            rc.Amount,
+		Target:            TargetType(rc.Target),
+		Selectors:         mapSlice(rc.Selectors, toSelectorDto),
+		MaxTrigger:        rc.MaxTrigger,
+		Per:               ptrCast(rc.Per, toPerConditionDto),
+		TileRestrictions:  ptrCast(rc.TileRestrictions, toTileRestrictionsDto),
+		TargetRestriction: ptrCast(rc.TargetRestriction, toTargetRestrictionDto),
+		TileType:          rc.TileType,
 	}
 	if rc.VariableAmount {
 		dto.VariableAmount = &rc.VariableAmount
