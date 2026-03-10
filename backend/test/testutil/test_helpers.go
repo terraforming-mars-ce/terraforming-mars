@@ -133,6 +133,66 @@ func CreateTestGameWithPlayers(t *testing.T, numPlayers int, broadcaster *MockBr
 	return testGame, repo
 }
 
+// CreateTestGameWithVenus creates a test game with Venus Next enabled and the specified number of players
+func CreateTestGameWithVenus(t *testing.T, numPlayers int, broadcaster *MockBroadcaster) (*game.Game, game.GameRepository) {
+	t.Helper()
+
+	repo := game.NewInMemoryGameRepository()
+	cardRegistry := CreateTestCardRegistry()
+
+	settings := game.GameSettings{
+		MaxPlayers:       4,
+		CardPacks:        []string{"base-game", "venus-next"},
+		VenusNextEnabled: true,
+	}
+
+	testGame := game.NewGame("test-game-id", "", settings)
+	allCards := cardRegistry.GetAll()
+
+	projectCards := make([]string, 0)
+	corpCards := make([]string, 0)
+	preludeCards := make([]string, 0)
+
+	for _, card := range allCards {
+		switch card.Type {
+		case gamecards.CardTypeCorporation:
+			corpCards = append(corpCards, card.ID)
+		case gamecards.CardTypePrelude:
+			preludeCards = append(preludeCards, card.ID)
+		default:
+			projectCards = append(projectCards, card.ID)
+		}
+	}
+
+	gameDeck := deck.NewDeck(testGame.ID(), projectCards, corpCards, preludeCards)
+	testGame.SetDeck(gameDeck)
+	testGame.SetVPCardLookup(cards.NewVPCardLookupAdapter(cardRegistry))
+
+	err := repo.Create(context.Background(), testGame)
+	if err != nil {
+		t.Fatalf("Failed to create test game: %v", err)
+	}
+
+	ctx := context.Background()
+	for i := 0; i < numPlayers; i++ {
+		playerID := fmt.Sprintf("player-%d", i+1)
+		playerName := "Player " + string(rune('A'+i))
+		newPlayer := player.NewPlayer(testGame.EventBus(), testGame.ID(), playerID, playerName)
+		err := testGame.AddPlayer(ctx, newPlayer)
+		if err != nil {
+			t.Fatalf("Failed to add player %d: %v", i, err)
+		}
+	}
+
+	if numPlayers > 0 {
+		if err := testGame.SetHostPlayerID(ctx, "player-1"); err != nil {
+			t.Fatalf("Failed to set host player: %v", err)
+		}
+	}
+
+	return testGame, repo
+}
+
 // AssertNoError fails the test if err is not nil
 func AssertNoError(t *testing.T, err error, message string) {
 	t.Helper()
