@@ -45,7 +45,7 @@ func TestAphrodite_Gain2MCWhenVenusRaised(t *testing.T) {
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 47, resources.Credits, "Aphrodite should have 47 credits before Venus increase")
 
-	testGame.GlobalParameters().IncreaseVenus(ctx, 1)
+	testGame.GlobalParameters().IncreaseVenus(ctx, 1, "")
 	time.Sleep(50 * time.Millisecond)
 
 	resources = p.Resources().Get()

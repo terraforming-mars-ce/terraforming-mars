@@ -34,11 +34,12 @@ func CalculatePlayerCardState(
 		metadata["discounts"] = discounts
 	}
 
-	errors = append(errors, validateAffordabilityWithSubstitutes(p, costMap, card.Tags)...)
+	errors = append(errors, validateAffordabilityWithSubstitutes(p, card, costMap)...)
 	errors = append(errors, validateRequirements(card, p, g, cardRegistry)...)
 	errors = append(errors, validateProductionOutputs(card, p)...)
 	errors = append(errors, validateCardResourceOutputs(card, p, cardRegistry)...)
 	errors = append(errors, validateCardDiscardOutputs(card, p)...)
+	errors = append(errors, validateNegativeResourceOutputsForCard(card, p)...)
 
 	errors = append(errors, ValidateTileOutputs(card, p, g)...)
 
@@ -307,6 +308,13 @@ func validateNoActiveTileSelection(p *player.Player, g *game.Game) []player.Stat
 			Message:  "Active tile selection",
 		}}
 	}
+	if p.Selection().GetPendingStealTargetSelection() != nil {
+		return []player.StateError{{
+			Code:     player.ErrorCodeActiveTileSelection,
+			Category: player.ErrorCategoryPhase,
+			Message:  "Pending steal target selection",
+		}}
+	}
 	return nil
 }
 
@@ -491,6 +499,22 @@ func isBasicPlayerResource(rt shared.ResourceType) bool {
 	return false
 }
 
+// validateNegativeResourceOutputsForCard checks all auto-trigger behaviors on a card
+// for negative resource outputs (e.g., "spend 5 heat" modeled as heat: -5).
+func validateNegativeResourceOutputsForCard(
+	card *gamecards.Card,
+	p *player.Player,
+) []player.StateError {
+	var errors []player.StateError
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+		errors = append(errors, validateNegativeResourceOutputs(behavior, p)...)
+	}
+	return errors
+}
+
 // validateNegativeResourceOutputs checks that the player has enough resources for negative
 // resource outputs in a card action behavior's base outputs.
 // This is a defense-in-depth check: card costs should normally be modeled as inputs,
@@ -504,6 +528,9 @@ func validateNegativeResourceOutputs(
 
 	for _, output := range behavior.Outputs {
 		if output.VariableAmount || output.Amount >= 0 {
+			continue
+		}
+		if output.Target != "" && output.Target != "self-player" {
 			continue
 		}
 		if !isBasicPlayerResource(output.ResourceType) {
@@ -1134,15 +1161,16 @@ func validateAffordabilityMap(p *player.Player, costMap map[string]int) []player
 }
 
 // validateAffordabilityWithSubstitutes checks if player can afford a multi-resource cost,
-// considering payment substitutes like Helion's heat-to-credit conversion.
+// considering payment substitutes like Helion's heat-to-credit conversion and
+// storage payment substitutes like Dirigibles' floaters.
 // Steel is only counted for cards with the Building tag, titanium only for Space tag.
-func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]int, tags []shared.CardTag) []player.StateError {
+func validateAffordabilityWithSubstitutes(p *player.Player, card *gamecards.Card, costMap map[string]int) []player.StateError {
 	var errors []player.StateError
 	resources := p.Resources().Get()
 	substitutes := p.Resources().PaymentSubstitutes()
 
-	allowSteel := hasCardTag(tags, shared.TagBuilding)
-	allowTitanium := hasCardTag(tags, shared.TagSpace)
+	allowSteel := hasCardTag(card.Tags, shared.TagBuilding)
+	allowTitanium := hasCardTag(card.Tags, shared.TagSpace)
 
 	for resourceType, cost := range costMap {
 		if shared.ResourceType(resourceType) == shared.ResourceCredit {
@@ -1166,6 +1194,14 @@ func validateAffordabilityWithSubstitutes(p *player.Player, costMap map[string]i
 					effectiveCredits += resources.Energy * sub.ConversionRate
 				case shared.ResourcePlant:
 					effectiveCredits += resources.Plants * sub.ConversionRate
+				}
+			}
+
+			// Add storage payment substitutes (e.g., Dirigibles floaters for Venus cards)
+			for _, storageSub := range p.Resources().StoragePaymentSubstitutes() {
+				if len(storageSub.Selectors) == 0 || gamecards.MatchesAnySelector(card, storageSub.Selectors) {
+					stored := p.Resources().GetCardStorage(storageSub.CardID)
+					effectiveCredits += stored * storageSub.ConversionRate
 				}
 			}
 

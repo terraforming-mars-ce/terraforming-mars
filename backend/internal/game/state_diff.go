@@ -86,6 +86,7 @@ const (
 	SourceTypeMilestone       SourceType = "milestone"
 	SourceTypeActionAdded     SourceType = "action_added"
 	SourceTypeEffectAdded     SourceType = "effect_added"
+	SourceTypeGlobalBonus     SourceType = "global_bonus"
 )
 
 // CalculatedOutput represents an actual output value that was applied

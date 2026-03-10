@@ -132,6 +132,11 @@ func (a *PlayCardAction) Execute(
 		return fmt.Errorf("cannot play card: %w", err)
 	}
 
+	if err := validateNegativeResourceOutputs(card, player); err != nil {
+		log.Error("Negative resource output validation failed", zap.Error(err))
+		return fmt.Errorf("cannot play card: %w", err)
+	}
+
 	// Validate choice requirements early (before any state mutations)
 	if choiceIndex != nil {
 		for _, behavior := range card.Behaviors {
@@ -494,6 +499,19 @@ func (a *PlayCardAction) applyCardBehaviors(
 			}
 
 			allCalculatedOutputs = append(allCalculatedOutputs, calculatedOutputs...)
+
+			if deferred := applier.DeferredSteal(); deferred != nil {
+				callback := &player.TileCompletionCallback{
+					Type: "adjacent-steal",
+					Data: map[string]interface{}{
+						"resourceType": string(deferred.ResourceType),
+						"amount":       deferred.Amount,
+						"sourceCardID": card.ID,
+						"source":       card.Name,
+					},
+				}
+				g.SetTileQueueOnComplete(ctx, p.ID(), callback)
+			}
 
 			// Also register as effect if it has persistent outputs (discount, payment-substitute)
 			// These need to show in the effects list for display and for modifier calculations
@@ -952,6 +970,50 @@ func validateProductionOutputs(card *gamecards.Card, p *player.Player) error {
 			}
 			if current+output.Amount < minProd {
 				return fmt.Errorf("insufficient %s: have %d, need at least %d to decrease by %d", output.ResourceType, current, -output.Amount, -output.Amount)
+			}
+		}
+	}
+	return nil
+}
+
+func validateNegativeResourceOutputs(card *gamecards.Card, p *player.Player) error {
+	if len(card.Behaviors) == 0 {
+		return nil
+	}
+
+	resources := p.Resources().Get()
+
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+		for _, output := range behavior.Outputs {
+			if output.VariableAmount || output.Amount >= 0 {
+				continue
+			}
+			if output.Target != "self-player" {
+				continue
+			}
+			var available int
+			switch output.ResourceType {
+			case shared.ResourceCredit:
+				available = resources.Credits
+			case shared.ResourceSteel:
+				available = resources.Steel
+			case shared.ResourceTitanium:
+				available = resources.Titanium
+			case shared.ResourcePlant:
+				available = resources.Plants
+			case shared.ResourceEnergy:
+				available = resources.Energy
+			case shared.ResourceHeat:
+				available = resources.Heat
+			default:
+				continue
+			}
+			required := -output.Amount
+			if available < required {
+				return fmt.Errorf("not enough %s: have %d, need %d", output.ResourceType, available, required)
 			}
 		}
 	}

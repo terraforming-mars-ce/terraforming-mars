@@ -211,6 +211,11 @@ type TileRestrictionsDto struct {
 	OnBonusType       []string `json:"onBonusType,omitempty" ts:"string[] | undefined"`     // tile must have one of these bonus types
 }
 
+// TargetRestrictionDto represents restrictions on target player selection
+type TargetRestrictionDto struct {
+	Adjacent string `json:"adjacent,omitempty" ts:"string"`
+}
+
 // SelectorDto represents matching criteria for cards, resources, or projects.
 // Multiple fields within a Selector use AND logic (all must match).
 // Multiple Selectors in a slice use OR logic (any match is sufficient).
@@ -226,17 +231,18 @@ type SelectorDto struct {
 
 // ResourceConditionDto represents a resource condition for client consumption
 type ResourceConditionDto struct {
-	Type             ResourceType         `json:"type" ts:"ResourceType"`
-	Amount           int                  `json:"amount" ts:"number"`
-	Target           TargetType           `json:"target" ts:"TargetType"`
-	Selectors        []SelectorDto        `json:"selectors,omitempty" ts:"SelectorDto[] | undefined"`
-	MaxTrigger       *int                 `json:"maxTrigger,omitempty" ts:"number | undefined"`
-	Per              *PerConditionDto     `json:"per,omitempty" ts:"PerConditionDto | undefined"`
-	TileRestrictions *TileRestrictionsDto `json:"tileRestrictions,omitempty" ts:"TileRestrictionsDto | undefined"`
-	TileType         string               `json:"tileType,omitempty" ts:"string | undefined"`
-	VariableAmount   *bool                `json:"variableAmount,omitempty" ts:"boolean | undefined"`
-	Optional         *bool                `json:"optional,omitempty" ts:"boolean | undefined"`
-	PaymentAllowed   []ResourceType       `json:"paymentAllowed,omitempty" ts:"ResourceType[] | undefined"`
+	Type              ResourceType          `json:"type" ts:"ResourceType"`
+	Amount            int                   `json:"amount" ts:"number"`
+	Target            TargetType            `json:"target" ts:"TargetType"`
+	Selectors         []SelectorDto         `json:"selectors,omitempty" ts:"SelectorDto[] | undefined"`
+	MaxTrigger        *int                  `json:"maxTrigger,omitempty" ts:"number | undefined"`
+	Per               *PerConditionDto      `json:"per,omitempty" ts:"PerConditionDto | undefined"`
+	TileRestrictions  *TileRestrictionsDto  `json:"tileRestrictions,omitempty" ts:"TileRestrictionsDto | undefined"`
+	TargetRestriction *TargetRestrictionDto `json:"targetRestriction,omitempty" ts:"TargetRestrictionDto | undefined"`
+	TileType          string                `json:"tileType,omitempty" ts:"string | undefined"`
+	VariableAmount    *bool                 `json:"variableAmount,omitempty" ts:"boolean | undefined"`
+	Optional          *bool                 `json:"optional,omitempty" ts:"boolean | undefined"`
+	PaymentAllowed    []ResourceType        `json:"paymentAllowed,omitempty" ts:"ResourceType[] | undefined"`
 }
 
 // PerConditionDto represents a per condition for client consumption
@@ -408,13 +414,22 @@ type GameSettingsDto struct {
 	AvailablePlayerColors []string `json:"availablePlayerColors" ts:"string[]"`
 }
 
+// GlobalParameterBonusDto describes a bonus step on a global parameter track
+type GlobalParameterBonusDto struct {
+	Parameter    string `json:"parameter" ts:"string"`
+	Threshold    int    `json:"threshold" ts:"number"`
+	RewardType   string `json:"rewardType" ts:"string"`
+	RewardAmount int    `json:"rewardAmount" ts:"number"`
+}
+
 // GlobalParametersDto represents the terraforming progress
 type GlobalParametersDto struct {
-	Temperature int `json:"temperature" ts:"number"` // Range: -30 to +8°C
-	Oxygen      int `json:"oxygen" ts:"number"`      // Range: 0-14%
-	Oceans      int `json:"oceans" ts:"number"`      // Range: 0-9
-	MaxOceans   int `json:"maxOceans" ts:"number"`   // Dynamic max, starts at 9
-	Venus       int `json:"venus" ts:"number"`       // Range: 0-30%
+	Temperature int                       `json:"temperature" ts:"number"` // Range: -30 to +8°C
+	Oxygen      int                       `json:"oxygen" ts:"number"`      // Range: 0-14%
+	Oceans      int                       `json:"oceans" ts:"number"`      // Range: 0-9
+	MaxOceans   int                       `json:"maxOceans" ts:"number"`   // Dynamic max, starts at 9
+	Venus       int                       `json:"venus" ts:"number"`       // Range: 0-30%
+	Bonuses     []GlobalParameterBonusDto `json:"bonuses" ts:"GlobalParameterBonusDto[]"`
 }
 
 // ResourcesDto represents a player's resources
@@ -445,9 +460,10 @@ type PaymentSubstituteDto struct {
 
 // StoragePaymentSubstituteDto represents card storage resources that can be used as M€ payment
 type StoragePaymentSubstituteDto struct {
-	CardID         string       `json:"cardId" ts:"string"`
-	ResourceType   ResourceType `json:"resourceType" ts:"ResourceType"`
-	ConversionRate int          `json:"conversionRate" ts:"number"`
+	CardID         string        `json:"cardId" ts:"string"`
+	ResourceType   ResourceType  `json:"resourceType" ts:"ResourceType"`
+	ConversionRate int           `json:"conversionRate" ts:"number"`
+	Selectors      []SelectorDto `json:"selectors" ts:"SelectorDto[]"`
 }
 
 // StateErrorCode represents error codes for entity state validation.
@@ -630,6 +646,15 @@ type PendingBehaviorChoiceSelectionDto struct {
 	SourceCardID string      `json:"sourceCardId" ts:"string"`
 }
 
+// PendingStealTargetSelectionDto represents a pending steal target selection after tile placement
+type PendingStealTargetSelectionDto struct {
+	EligiblePlayerIDs []string `json:"eligiblePlayerIds" ts:"string[]"`
+	ResourceType      string   `json:"resourceType" ts:"string"`
+	Amount            int      `json:"amount" ts:"number"`
+	Source            string   `json:"source" ts:"string"`
+	SourceCardID      string   `json:"sourceCardId" ts:"string"`
+}
+
 // PlayerStatus represents the current status of a player in the game
 type PlayerStatus string
 
@@ -678,6 +703,7 @@ type PlayerDto struct {
 	PendingCardDrawSelection       *PendingCardDrawSelectionDto       `json:"pendingCardDrawSelection" ts:"PendingCardDrawSelectionDto | null"`
 	PendingCardDiscardSelection    *PendingCardDiscardSelectionDto    `json:"pendingCardDiscardSelection" ts:"PendingCardDiscardSelectionDto | null"`
 	PendingBehaviorChoiceSelection *PendingBehaviorChoiceSelectionDto `json:"pendingBehaviorChoiceSelection" ts:"PendingBehaviorChoiceSelectionDto | null"`
+	PendingStealTargetSelection    *PendingStealTargetSelectionDto    `json:"pendingStealTargetSelection" ts:"PendingStealTargetSelectionDto | null"`
 	ForcedFirstAction              *ForcedFirstActionDto              `json:"forcedFirstAction" ts:"ForcedFirstActionDto | null"`
 	ResourceStorage                map[string]int                     `json:"resourceStorage" ts:"Record<string, number>"`
 	PaymentSubstitutes             []PaymentSubstituteDto             `json:"paymentSubstitutes" ts:"PaymentSubstituteDto[]"`

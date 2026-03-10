@@ -5,7 +5,7 @@ import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 import { VENUS_POSITION } from "../board/boardConstants";
 
-export const panState = { isPanning: false };
+export const panState = { isPanning: false, hasDragged: false };
 
 const MARS_CENTER = new THREE.Vector3(0, 0, 0);
 const VENUS_CENTER = new THREE.Vector3(VENUS_POSITION[0], VENUS_POSITION[1], VENUS_POSITION[2]);
@@ -25,6 +25,7 @@ export function PanControls() {
   const { activePlanet, isTransitioning, setIsTransitioning } = usePlanetFocus();
   const isPointerDown = useRef(false);
   const previousPointer = useRef({ x: 0, y: 0 });
+  const pointerDownOrigin = useRef({ x: 0, y: 0 });
   const [shouldRecenter, setShouldRecenter] = useState(false);
   const previousSize = useRef({ width: size.width, height: size.height });
 
@@ -158,7 +159,9 @@ export function PanControls() {
       if (settings.freeCameraEnabled || isTransitioningRef.current) return;
       isPointerDown.current = true;
       panState.isPanning = true;
+      panState.hasDragged = false;
       previousPointer.current = { x: event.clientX, y: event.clientY };
+      pointerDownOrigin.current = { x: event.clientX, y: event.clientY };
       gl.domElement.style.cursor = "grabbing";
 
       document.addEventListener("pointermove", handlePointerMove);
@@ -167,6 +170,14 @@ export function PanControls() {
 
     const handlePointerMove = (event: PointerEvent) => {
       if (!isPointerDown.current) return;
+
+      if (!panState.hasDragged) {
+        const dx = event.clientX - pointerDownOrigin.current.x;
+        const dy = event.clientY - pointerDownOrigin.current.y;
+        if (dx * dx + dy * dy > 9) {
+          panState.hasDragged = true;
+        }
+      }
 
       const deltaX = event.clientX - previousPointer.current.x;
       const deltaY = event.clientY - previousPointer.current.y;

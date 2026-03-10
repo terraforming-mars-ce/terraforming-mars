@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { PlayerDto, OtherPlayerDto } from "@/types/generated/api-types.ts";
+import React, { useMemo, useState } from "react";
+import { PlayerDto, OtherPlayerDto, GlobalParameterBonusDto } from "@/types/generated/api-types.ts";
 import GameIcon from "../../ui/display/GameIcon.tsx";
 
 interface GlobalParameters {
@@ -8,6 +8,7 @@ interface GlobalParameters {
   oceans: number;
   maxOceans: number;
   venus: number;
+  bonuses?: GlobalParameterBonusDto[];
 }
 
 interface RightSidebarProps {
@@ -20,7 +21,7 @@ interface RightSidebarProps {
 const ANGLE_INDENT = 20;
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
 const THICK_BORDER_COLOR = "rgba(80,80,90,0.9)";
-const BACKGROUND_COLOR = "rgba(10,10,15,1)";
+const BACKGROUND_COLOR = "black";
 const SIDEBAR_WIDTH = 65;
 const GAUGE_GAP = 2;
 
@@ -75,14 +76,50 @@ const GenerationPanel: React.FC<GenerationPanelProps> = ({ generation, width, he
   );
 };
 
+const REWARD_ICON_MAP: Record<string, string> = {
+  "heat-production": "heat-production",
+  "ocean-placement": "ocean",
+  temperature: "temperature",
+  "card-draw": "card-draw",
+  tr: "tr",
+};
+
+interface BonusIconProps {
+  rewardType: string;
+  isHovered: boolean;
+}
+
+const BonusIcon: React.FC<BonusIconProps> = ({ rewardType, isHovered }) => {
+  const iconType = REWARD_ICON_MAP[rewardType] ?? rewardType;
+  const isProduction = iconType.endsWith("-production");
+  const baseScale = isProduction ? 0.5 : 0.65;
+  const hoverScale = isProduction ? 0.6 : 0.75;
+
+  return (
+    <div
+      className="transition-all duration-300"
+      style={{ transform: `scale(${isHovered ? hoverScale : baseScale})` }}
+    >
+      <GameIcon iconType={iconType} size="small" />
+    </div>
+  );
+};
+
 interface GaugesSectionProps {
   oxygen: number;
   temperature: number;
   width: number;
   isHovered: boolean;
+  bonuses?: GlobalParameterBonusDto[];
 }
 
-const GaugesSection: React.FC<GaugesSectionProps> = ({ oxygen, temperature, width, isHovered }) => {
+const GaugesSection: React.FC<GaugesSectionProps> = ({
+  oxygen,
+  temperature,
+  width,
+  isHovered,
+  bonuses,
+}) => {
   const oxygenPercent = Math.max(0, (oxygen / 14) * 100);
   const temperaturePercent = Math.max(0, ((temperature + 30) / 38) * 100);
 
@@ -92,6 +129,30 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({ oxygen, temperature, widt
   const tempSteps = [
     -30, -28, -26, -24, -22, -20, -18, -16, -14, -12, -10, -8, -6, -4, -2, 0, 2, 4, 6, 8,
   ];
+
+  const oxygenBonusMap = useMemo(() => {
+    const map = new Map<number, GlobalParameterBonusDto>();
+    if (bonuses) {
+      for (const b of bonuses) {
+        if (b.parameter === "oxygen") {
+          map.set(b.threshold, b);
+        }
+      }
+    }
+    return map;
+  }, [bonuses]);
+
+  const tempBonusMap = useMemo(() => {
+    const map = new Map<number, GlobalParameterBonusDto>();
+    if (bonuses) {
+      for (const b of bonuses) {
+        if (b.parameter === "temperature") {
+          map.set(b.threshold, b);
+        }
+      }
+    }
+    return map;
+  }, [bonuses]);
 
   return (
     <div
@@ -132,30 +193,40 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({ oxygen, temperature, widt
       <div className="relative z-10 h-full flex">
         {/* Oxygen Gauge */}
         <div
-          className="relative h-full bg-[linear-gradient(to_right,#1a1a1a_0%,#0a0a0a_50%,#1a1a1a_100%)] overflow-hidden transition-[width] duration-300 ease-out"
-          style={{ width: gaugeWidth }}
+          className="relative h-full bg-black overflow-hidden transition-[width] duration-300 ease-out"
+          style={{ width: gaugeWidth, borderLeft: `${GAUGE_GAP}px solid ${BORDER_COLOR}` }}
         >
           <div
             className="absolute bottom-0 left-0 right-0 bg-[linear-gradient(to_top,#006400_0%,#32cd32_50%,#00ff00_100%)] transition-[height] duration-500 ease-[ease] shadow-[0_0_8px_rgba(0,255,0,1),0_0_15px_rgba(50,205,50,0.8),inset_0_1px_2px_rgba(255,255,255,0.3)]"
             style={{ height: `${oxygenPercent}%` }}
           />
-          <div
-            className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-0" : "opacity-100"}`}
-          >
+          <div className="absolute inset-0 pointer-events-none transition-opacity duration-300">
             {oxygenSteps.map((o) => {
               if (o === 0 || o === 14) return null;
               const position = (o / 14) * 100;
+              const bonus = oxygenBonusMap.get(o);
+              const showBonus = bonus && oxygen < o;
               return (
                 <div
                   key={o}
-                  className="absolute w-full text-[8px] font-orbitron font-bold text-[#00ff00] [text-shadow:0_0_3px_rgba(0,255,0,0.8)] text-center transition-opacity duration-300"
+                  className="absolute w-full transition-opacity duration-300"
                   style={{
                     bottom: `${position}%`,
                     transform: "translateY(50%)",
                     opacity: oxygen >= o ? 0.3 : 1,
                   }}
                 >
-                  {o}
+                  {showBonus && !isHovered ? (
+                    <div className="flex items-center justify-center">
+                      <BonusIcon rewardType={bonus.rewardType} isHovered={false} />
+                    </div>
+                  ) : (
+                    <div
+                      className={`text-[9px] font-orbitron font-bold text-[#00ff00] [text-shadow:0_0_3px_rgba(0,255,0,0.8)] text-center transition-opacity duration-300 ${isHovered ? "opacity-0" : "opacity-100"}`}
+                    >
+                      {o}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -173,30 +244,40 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({ oxygen, temperature, widt
 
         {/* Temperature Gauge */}
         <div
-          className="relative h-full bg-[linear-gradient(to_right,#1a1a1a_0%,#0a0a0a_50%,#1a1a1a_100%)] overflow-hidden transition-[width] duration-300 ease-out"
+          className="relative h-full bg-black overflow-hidden transition-[width] duration-300 ease-out"
           style={{ width: gaugeWidth }}
         >
           <div
             className="absolute bottom-0 left-0 right-0 bg-[linear-gradient(to_top,#87ceeb_0%,#ffb347_50%,#ff8c00_100%)] transition-[height] duration-500 ease-[ease] shadow-[0_0_8px_rgba(255,140,0,1),0_0_15px_rgba(255,179,71,0.8),inset_0_1px_2px_rgba(255,255,255,0.3)]"
             style={{ height: `${temperaturePercent}%` }}
           />
-          <div
-            className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-0" : "opacity-100"}`}
-          >
+          <div className="absolute inset-0 pointer-events-none transition-opacity duration-300">
             {tempSteps.map((t) => {
               if (t === -30 || t === 8) return null;
               const position = ((t + 30) / 38) * 100;
+              const bonus = tempBonusMap.get(t);
+              const showBonus = bonus && temperature < t;
               return (
                 <div
                   key={t}
-                  className="absolute w-full text-[8px] font-orbitron font-bold text-[#ff8c00] [text-shadow:0_0_3px_rgba(255,140,0,0.8)] text-center transition-opacity duration-300"
+                  className="absolute w-full transition-opacity duration-300"
                   style={{
                     bottom: `${position}%`,
                     transform: "translateY(50%)",
                     opacity: temperature >= t ? 0.3 : 1,
                   }}
                 >
-                  {t}
+                  {showBonus && !isHovered ? (
+                    <div className="flex items-center justify-center">
+                      <BonusIcon rewardType={bonus.rewardType} isHovered={false} />
+                    </div>
+                  ) : (
+                    <div
+                      className={`text-[9px] font-orbitron font-bold text-[#ff8c00] [text-shadow:0_0_3px_rgba(255,140,0,0.8)] text-center transition-opacity duration-300 ${isHovered ? "opacity-0" : "opacity-100"}`}
+                    >
+                      {t}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -273,11 +354,29 @@ interface VenusGaugeSectionProps {
   venus: number;
   width: number;
   isHovered: boolean;
+  bonuses?: GlobalParameterBonusDto[];
 }
 
-const VenusGaugeSection: React.FC<VenusGaugeSectionProps> = ({ venus, width, isHovered }) => {
+const VenusGaugeSection: React.FC<VenusGaugeSectionProps> = ({
+  venus,
+  width,
+  isHovered,
+  bonuses,
+}) => {
   const venusPercent = Math.max(0, (venus / 30) * 100);
   const venusSteps = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];
+
+  const venusBonusMap = useMemo(() => {
+    const map = new Map<number, GlobalParameterBonusDto>();
+    if (bonuses) {
+      for (const b of bonuses) {
+        if (b.parameter === "venus") {
+          map.set(b.threshold, b);
+        }
+      }
+    }
+    return map;
+  }, [bonuses]);
 
   return (
     <div
@@ -312,28 +411,41 @@ const VenusGaugeSection: React.FC<VenusGaugeSectionProps> = ({ venus, width, isH
         />
       </svg>
 
-      <div className="relative z-10 h-full bg-[linear-gradient(to_right,#1a1a1a_0%,#0a0a0a_50%,#1a1a1a_100%)] overflow-hidden">
+      <div
+        className="relative z-10 h-full bg-black overflow-hidden"
+        style={{ borderLeft: `${GAUGE_GAP}px solid ${BORDER_COLOR}` }}
+      >
         <div
           className="absolute bottom-0 left-0 right-0 bg-[linear-gradient(to_top,#8B6914_0%,#DAA520_50%,#FFD700_100%)] transition-[height] duration-500 ease-[ease] shadow-[0_0_8px_rgba(255,215,0,1),0_0_15px_rgba(218,165,32,0.8),inset_0_1px_2px_rgba(255,255,255,0.3)]"
           style={{ height: `${venusPercent}%` }}
         />
-        <div
-          className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-0" : "opacity-100"}`}
-        >
+        <div className="absolute inset-0 pointer-events-none transition-opacity duration-300">
           {venusSteps.map((v) => {
             if (v === 0 || v === 30) return null;
             const position = (v / 30) * 100;
+            const bonus = venusBonusMap.get(v);
+            const showBonus = bonus && venus < v;
             return (
               <div
                 key={v}
-                className="absolute w-full text-[8px] font-orbitron font-bold text-[#FFD700] [text-shadow:0_0_3px_rgba(255,215,0,0.8)] text-center transition-opacity duration-300"
+                className="absolute w-full transition-opacity duration-300"
                 style={{
                   bottom: `${position}%`,
                   transform: "translateY(50%)",
                   opacity: venus >= v ? 0.3 : 1,
                 }}
               >
-                {v}
+                {showBonus && !isHovered ? (
+                  <div className="flex items-center justify-center">
+                    <BonusIcon rewardType={bonus.rewardType} isHovered={false} />
+                  </div>
+                ) : (
+                  <div
+                    className={`text-[9px] font-orbitron font-bold text-[#FFD700] [text-shadow:0_0_3px_rgba(255,215,0,0.8)] text-center transition-opacity duration-300 ${isHovered ? "opacity-0" : "opacity-100"}`}
+                  >
+                    {v}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -517,8 +629,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           style={{
             height: "55%",
             marginRight: 0,
-            marginTop: -(GEN_PANEL_HEIGHT - ANGLE_INDENT),
-            borderRight: `${GAUGE_GAP}px solid ${BORDER_COLOR}`,
+            marginTop: (-(GEN_PANEL_HEIGHT - ANGLE_INDENT) * 2) / 3,
           }}
         >
           <div style={{ marginBottom: -VENUS_ANGLE, zIndex: 2, position: "relative" }}>
@@ -537,6 +648,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
               venus={globalParameters?.venus ?? 0}
               width={venusWidth}
               isHovered={isHovered}
+              bonuses={globalParameters?.bonuses}
             />
           </div>
           <div style={{ marginTop: -VENUS_ANGLE, zIndex: 2, position: "relative" }}>
@@ -567,6 +679,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             temperature={globalParameters?.temperature ?? -30}
             width={currentWidth}
             isHovered={isHovered}
+            bonuses={globalParameters?.bonuses}
           />
         </div>
         <div style={{ marginTop: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>

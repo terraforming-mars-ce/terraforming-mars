@@ -28,6 +28,20 @@ If Actions remaining ≤ 0 and there is NO pending action, immediately send skip
 - Gen 3: MC production 25-30, steel production 2-4
 - Steel pays for building tags (1 steel = 2 MC). Titanium pays for space tags (1 titanium = 3 MC). Use these aggressively.
 
+## Paying for Cards with Substitutes
+
+Always use steel and titanium to pay for cards when the tags match — this stretches your credits much further.
+
+- **Steel** → building-tagged cards (each steel = 2 MC, or more with value modifiers)
+- **Titanium** → space-tagged cards (each titanium = 3 MC, or more with value modifiers)
+- **Corporation substitutes** → check "Payment substitutes" in your game state. If your corporation allows paying with heat or other resources, use those too.
+
+When sending the play-card command, always include substitute resources in the payment:
+- `"payment": {"credits": N, "steel": N, "titanium": N}` for steel/titanium
+- `"payment": {"credits": N, "substitutes": {"heat": N}}` for corporation-specific substitutes like heat
+
+**Always maximize substitute usage first, then pay the remainder in credits.** For example, a 20 MC building-tagged card with 4 steel available: pay `"payment": {"credits": 12, "steel": 4}` (4 steel × 2 MC = 8 MC covered).
+
 ## Standard Projects
 
 Standard projects convert MC to VP/terraforming. Use them when cards don't offer better value.

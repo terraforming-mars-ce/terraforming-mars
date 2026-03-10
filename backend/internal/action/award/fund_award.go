@@ -96,7 +96,11 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 
 	a.ConsumePlayerAction(g, log)
 
-	a.WriteStateLog(ctx, g, awardType, game.SourceTypeAward, playerID, fmt.Sprintf("Funded %s award", awardType))
+	awardName := awardType
+	if info, ok := game.GetAwardInfo(shared.AwardType(awardType)); ok {
+		awardName = info.Name
+	}
+	a.WriteStateLog(ctx, g, awardName, game.SourceTypeAward, playerID, fmt.Sprintf("Funded %s award", awardName))
 
 	log.Info("Award funded",
 		zap.String("award", awardType),

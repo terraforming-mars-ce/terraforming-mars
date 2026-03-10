@@ -136,12 +136,13 @@ func main() {
 	// Tile selection (1)
 	selectTileAction := tileAction.NewSelectTileAction(gameRepo, cardRegistry, stateRepo, log)
 
-	// Confirmations (5)
+	// Confirmations (6)
 	confirmSellPatentsAction := confirmAction.NewConfirmSellPatentsAction(gameRepo, stateRepo, log)
 	confirmProductionCardsAction := confirmAction.NewConfirmProductionCardsAction(gameRepo, cardRegistry, log)
 	confirmCardDrawAction := confirmAction.NewConfirmCardDrawAction(gameRepo, cardRegistry, log)
 	confirmCardDiscardAction := confirmAction.NewConfirmCardDiscardAction(gameRepo, cardRegistry, log)
 	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, log)
+	confirmStealTargetAction := confirmAction.NewConfirmStealTargetAction(gameRepo, cardRegistry, stateRepo, log)
 
 	// Turn management (4)
 	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
@@ -241,6 +242,7 @@ func main() {
 		confirmCardDrawAction,
 		confirmCardDiscardAction,
 		confirmBehaviorChoiceAction,
+		confirmStealTargetAction,
 		// Connection
 		playerDisconnectedAction,
 		playerTakeoverAction,

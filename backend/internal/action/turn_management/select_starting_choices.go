@@ -369,6 +369,8 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 		})
 	}
 
+	g.RegisterCorporationVPGranter(p.ID(), choices.CorporationID)
+
 	manualActions := corpProc.GetManualActions(corpCard)
 	for _, action := range manualActions {
 		p.Actions().AddAction(action)

@@ -331,6 +331,11 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.confirmBehaviorChoice(choiceIndex, cardStorageTargets);
   }
 
+  async confirmStealTarget(targetPlayerId: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.confirmStealTarget(targetPlayerId);
+  }
+
   async addBot(botName?: string, difficulty?: string, speed?: string): Promise<string> {
     await this.ensureConnected();
     return webSocketService.addBot(botName, difficulty, speed);

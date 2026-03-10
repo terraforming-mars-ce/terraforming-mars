@@ -97,7 +97,7 @@ const AngledPanel: React.FC<AngledPanelProps> = ({
             </linearGradient>
           )}
         </defs>
-        <polygon points={fillPoints} fill="rgba(10,10,15,0.95)" />
+        <polygon points={fillPoints} fill="rgb(0,0,0)" />
         {side === "left" && (
           <>
             <polygon
@@ -517,7 +517,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                   {/* Expanded Corporation Card */}
                   {showCorpExpanded && (
                     <div
-                      className={`absolute bottom-[100%] left-4 mb-2 origin-bottom-left transition-all duration-200 ${
+                      className={`absolute bottom-[100%] left-4 mb-6 origin-bottom-left transition-all duration-200 ${
                         isCorpExpanded ? "opacity-100 scale-100" : "opacity-0 scale-90"
                       }`}
                     >

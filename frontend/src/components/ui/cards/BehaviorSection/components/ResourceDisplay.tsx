@@ -392,11 +392,13 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     const absoluteAmount = Math.abs(amount);
     return (
       <div className="flex items-center gap-px relative">
-        {(isInput || amount < 0) && !isGroupedWithOtherNegatives && context !== "action" && (
-          <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)]">
-            -
-          </span>
-        )}
+        {(isInput || isAttack || amount < 0) &&
+          !isGroupedWithOtherNegatives &&
+          context !== "action" && (
+            <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)]">
+              -
+            </span>
+          )}
         {Array.from({ length: absoluteAmount }, (_, i) => (
           <React.Fragment key={i}>{baseIconElement}</React.Fragment>
         ))}
@@ -410,14 +412,16 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     );
   } else {
     return (
-      <div className="flex items-center gap-0.5 relative">
-        {isInput && !isGroupedWithOtherNegatives && context !== "action" && (
-          <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)]">
-            -
-          </span>
-        )}
-        <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] w-[20px] flex items-center justify-center">
-          {isGroupedWithOtherNegatives ? Math.abs(amount) : amount}
+      <div className="flex items-center gap-[3px] relative">
+        {(isInput || isAttack || amount < 0) &&
+          !isGroupedWithOtherNegatives &&
+          context !== "action" && (
+            <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-[#ffcdd2] [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center justify-center">
+              -
+            </span>
+          )}
+        <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center justify-center">
+          {Math.abs(amount)}
         </span>
         {baseIconElement}
         {renderSelectorBadges()}

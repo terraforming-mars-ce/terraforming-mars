@@ -18,6 +18,7 @@ interface TargetPlayerSelectionPopoverProps {
   onPlayerSelect: (playerId: string) => void;
   onCancel: () => void;
   isVisible: boolean;
+  mandatory?: boolean;
 }
 
 function getPlayerResourceAmount(player: TargetPlayer, resourceType: ResourceType): number {
@@ -59,6 +60,7 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
   onPlayerSelect,
   onCancel,
   isVisible,
+  mandatory = false,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isClosing, setIsClosing] = useState(false);
@@ -78,6 +80,14 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
   const handleContinueAnyway = () => {
     onPlayerSelect("");
   };
+
+  const isProduction = resourceType.endsWith("-production");
+  const displayIconType = resourceType;
+  const eligiblePlayers = players.filter(
+    (player) => getPlayerResourceAmount(player, resourceType) > 0,
+  );
+  const hasNoTargets = eligiblePlayers.length === 0;
+  const canDismiss = !mandatory || hasNoTargets;
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -102,11 +112,13 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
     };
 
     if (isVisible) {
-      document.body.style.overflow = "hidden";
-      document.addEventListener("keydown", handleEscape);
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("wheel", preventScroll, { passive: false });
-      document.addEventListener("touchmove", preventScroll, { passive: false });
+      if (canDismiss) {
+        document.body.style.overflow = "hidden";
+        document.addEventListener("keydown", handleEscape);
+        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("wheel", preventScroll, { passive: false });
+        document.addEventListener("touchmove", preventScroll, { passive: false });
+      }
     }
 
     return () => {
@@ -116,20 +128,13 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
       document.removeEventListener("wheel", preventScroll);
       document.removeEventListener("touchmove", preventScroll);
     };
-  }, [isVisible, onCancel]);
+  }, [isVisible, onCancel, canDismiss]);
 
   if (!isVisible) return null;
 
-  const isProduction = resourceType.endsWith("-production");
-  const displayIconType = resourceType;
-  const eligiblePlayers = players.filter(
-    (player) => getPlayerResourceAmount(player, resourceType) > 0,
-  );
-  const hasNoTargets = eligiblePlayers.length === 0;
-
   return (
     <div
-      className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center pointer-events-auto overflow-hidden"
+      className={`fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center overflow-hidden ${canDismiss ? "pointer-events-auto" : "pointer-events-none"}`}
       style={{ zIndex: Z_INDEX.SELECTION_POPOVER }}
     >
       <div
@@ -153,10 +158,8 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
           </h3>
           {!hasNoTargets && (
             <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
-              <span>
-                {isSteal ? "Steal" : "Remove"} up to {amount}
-              </span>
-              <GameIcon iconType={displayIconType} size="small" />
+              <span>{isSteal ? "Steal" : "Remove"} up to</span>
+              <GameIcon iconType={displayIconType} amount={amount} size="small" />
               <span>{isProduction ? "production" : ""}</span>
             </div>
           )}
@@ -197,8 +200,7 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
                 >
                   <div className="text-white font-semibold text-sm">{player.name}</div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className="text-white/60 text-xs font-medium">{currentAmount}</span>
-                    <GameIcon iconType={displayIconType} size="small" />
+                    <GameIcon iconType={displayIconType} amount={currentAmount} size="small" />
                   </div>
                 </div>
               );
@@ -207,26 +209,46 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 bg-black/40 border-t border-space-blue-500/60 flex justify-center gap-3">
-          {hasNoTargets ? (
-            <>
-              <button
-                className="
-                  bg-yellow-600/50
-                  border-2 border-yellow-500/60
-                  rounded-md text-white text-xs font-semibold
-                  px-6 py-2 cursor-pointer
-                  transition-all duration-200
-                  text-shadow-glow font-orbitron
-                  shadow-[0_0_8px_rgba(180,120,0,0.4)]
-                  hover:bg-yellow-500/60
-                  hover:border-yellow-500/80
-                                   hover:shadow-[0_0_12px_rgba(180,120,0,0.6)]
-                "
-                onClick={handleContinueAnyway}
-              >
-                Continue Anyway
-              </button>
+        {(hasNoTargets || canDismiss) && (
+          <div className="px-4 py-3 bg-black/40 border-t border-space-blue-500/60 flex justify-center gap-3">
+            {hasNoTargets ? (
+              <>
+                <button
+                  className="
+                    bg-yellow-600/50
+                    border-2 border-yellow-500/60
+                    rounded-md text-white text-xs font-semibold
+                    px-6 py-2 cursor-pointer
+                    transition-all duration-200
+                    text-shadow-glow font-orbitron
+                    shadow-[0_0_8px_rgba(180,120,0,0.4)]
+                    hover:bg-yellow-500/60
+                    hover:border-yellow-500/80
+                                     hover:shadow-[0_0_12px_rgba(180,120,0,0.6)]
+                  "
+                  onClick={handleContinueAnyway}
+                >
+                  Continue Anyway
+                </button>
+                <button
+                  className="
+                    bg-space-blue-600/50
+                    border-2 border-space-blue-500/60
+                    rounded-md text-white text-xs font-semibold
+                    px-6 py-2 cursor-pointer
+                    transition-all duration-200
+                    text-shadow-glow font-orbitron
+                    shadow-[0_0_8px_rgba(30,60,150,0.4)]
+                    hover:bg-space-blue-500/60
+                    hover:border-space-blue-500/80
+                                     hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
+                  "
+                  onClick={handleCancelClick}
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
               <button
                 className="
                   bg-space-blue-600/50
@@ -238,33 +260,15 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
                   shadow-[0_0_8px_rgba(30,60,150,0.4)]
                   hover:bg-space-blue-500/60
                   hover:border-space-blue-500/80
-                                   hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
+                                 hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
                 "
                 onClick={handleCancelClick}
               >
                 Cancel
               </button>
-            </>
-          ) : (
-            <button
-              className="
-                bg-space-blue-600/50
-                border-2 border-space-blue-500/60
-                rounded-md text-white text-xs font-semibold
-                px-6 py-2 cursor-pointer
-                transition-all duration-200
-                text-shadow-glow font-orbitron
-                shadow-[0_0_8px_rgba(30,60,150,0.4)]
-                hover:bg-space-blue-500/60
-                hover:border-space-blue-500/80
-                               hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
-              "
-              onClick={handleCancelClick}
-            >
-              Cancel
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       <style>{`

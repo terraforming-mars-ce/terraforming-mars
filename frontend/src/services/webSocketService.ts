@@ -43,6 +43,7 @@ import {
   MessageTypeGameEnded,
   MessageTypeConvertToBot,
   MessageTypeActionBehaviorChoiceConfirmed,
+  MessageTypeActionConfirmStealTarget,
   MessageTypeActionCardDiscardConfirmed,
   MessageTypeActionConfirmInitAdvance,
   MessageTypeRequestLogs,
@@ -389,6 +390,10 @@ export class WebSocketService {
       choiceIndex,
       ...(cardStorageTargets !== undefined && { cardStorageTargets }),
     });
+  }
+
+  confirmStealTarget(targetPlayerId: string): string {
+    return this.send(MessageTypeActionConfirmStealTarget, { targetPlayerId });
   }
 
   addBot(botName?: string, difficulty?: string, speed?: string): string {

@@ -94,6 +94,13 @@ func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, cards.CardR
 			Cost: 12,
 			Tags: []shared.CardTag{shared.TagSpace},
 		},
+		{
+			ID:   "card-venus",
+			Name: "Venus Card",
+			Type: gamecards.CardTypeAutomated,
+			Cost: 11,
+			Tags: []shared.CardTag{shared.TagVenus},
+		},
 	}
 
 	cardRegistry := cards.NewInMemoryCardRegistry(testCards)
@@ -235,9 +242,9 @@ func TestCalculatePlayerCardState_MultipleRequirements(t *testing.T) {
 
 	// Set global parameters to NOT meet requirements
 	ctx := context.Background()
-	g.GlobalParameters().SetOxygen(ctx, 2) // Need 5
-	g.GlobalParameters().PlaceOcean(ctx)   // 1 ocean, need 3
-	g.GlobalParameters().PlaceOcean(ctx)   // 2 oceans, need 3
+	g.GlobalParameters().SetOxygen(ctx, 2)   // Need 5
+	g.GlobalParameters().PlaceOcean(ctx, "") // 1 ocean, need 3
+	g.GlobalParameters().PlaceOcean(ctx, "") // 2 oceans, need 3
 
 	// Get test card (requires oxygen >= 5 AND oceans >= 3)
 	card, err := cardRegistry.GetByID("card3")
@@ -531,7 +538,7 @@ func TestCalculatePlayerStandardProjectState_NoOceansRemaining(t *testing.T) {
 	// Place all 9 oceans
 	ctx := context.Background()
 	for i := 0; i < 9; i++ {
-		if _, err := g.GlobalParameters().PlaceOcean(ctx); err != nil {
+		if _, err := g.GlobalParameters().PlaceOcean(ctx, ""); err != nil {
 			t.Fatalf("Failed to place ocean: %v", err)
 		}
 	}
@@ -749,5 +756,86 @@ func TestCalculateChoiceErrors_TagRequirementMet(t *testing.T) {
 	errors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
 	if len(errors) != 0 {
 		t.Errorf("Choice with 3+ venus tag requirement should pass when player has 3 venus tags, got %d errors: %+v", len(errors), errors)
+	}
+}
+
+// TestCalculatePlayerCardState_StoragePaymentSubstituteCountedForMatchingCard verifies that
+// storage payment substitutes (e.g., Dirigibles floaters) are counted for cards with matching tags.
+func TestCalculatePlayerCardState_StoragePaymentSubstituteCountedForMatchingCard(t *testing.T) {
+	g, p, cardRegistry := setupTestEnvironment(t)
+
+	// Give player 8 credits (not enough alone for cost 11)
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 8,
+	})
+
+	// Simulate Dirigibles played: register storage payment substitute for Venus cards
+	dirigiblesID := "dirigibles-played"
+	p.PlayedCards().AddCard(dirigiblesID, "Dirigibles", "active", []string{"venus"})
+	p.Resources().AddToStorage(dirigiblesID, 1) // 1 floater = 3 MC
+	p.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
+		CardID:         dirigiblesID,
+		ResourceType:   shared.ResourceFloater,
+		ConversionRate: 3,
+		Selectors:      []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}},
+	})
+
+	// Get venus card (cost 11) — 8 credits + 1 floater * 3 = 11 >= 11
+	card, err := cardRegistry.GetByID("card-venus")
+	if err != nil {
+		t.Fatalf("Failed to get card: %v", err)
+	}
+	p.Hand().AddCard(card.ID)
+
+	state := action.CalculatePlayerCardState(card, p, g, cardRegistry)
+
+	if !state.Available() {
+		t.Errorf("Expected card to be available: 8 credits + 1 floater (3 MC) = 11 should cover cost 11, got errors: %+v", state.Errors)
+	}
+}
+
+// TestCalculatePlayerCardState_StoragePaymentSubstituteNotCountedForNonMatchingCard verifies that
+// storage payment substitutes are NOT counted for cards without matching tags.
+func TestCalculatePlayerCardState_StoragePaymentSubstituteNotCountedForNonMatchingCard(t *testing.T) {
+	g, p, cardRegistry := setupTestEnvironment(t)
+
+	// Give player 3 credits (not enough for cost 6)
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 3,
+	})
+
+	// Simulate Dirigibles played: register storage payment substitute for Venus cards only
+	dirigiblesID := "dirigibles-played"
+	p.PlayedCards().AddCard(dirigiblesID, "Dirigibles", "active", []string{"venus"})
+	p.Resources().AddToStorage(dirigiblesID, 3) // 3 floaters = 9 MC (but only for Venus)
+	p.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
+		CardID:         dirigiblesID,
+		ResourceType:   shared.ResourceFloater,
+		ConversionRate: 3,
+		Selectors:      []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}},
+	})
+
+	// Get microbe card (cost 6, no Venus tag) — floaters should NOT apply
+	card, err := cardRegistry.GetByID("card-microbe")
+	if err != nil {
+		t.Fatalf("Failed to get card: %v", err)
+	}
+	p.Hand().AddCard(card.ID)
+
+	state := action.CalculatePlayerCardState(card, p, g, cardRegistry)
+
+	if state.Available() {
+		t.Error("Expected card to be unavailable: Dirigibles floaters should not count for non-Venus card")
+	}
+
+	found := false
+	for _, err := range state.Errors {
+		if err.Code == player.ErrorCodeInsufficientCredits && err.Category == player.ErrorCategoryCost {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected insufficient-credits error, got errors: %+v", state.Errors)
 	}
 }

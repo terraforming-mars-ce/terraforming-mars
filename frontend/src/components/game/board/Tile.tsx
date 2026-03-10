@@ -28,6 +28,9 @@ const HIGHLIGHT_COLOR_CITY = new THREE.Vector3(0.58, 0.64, 0.7);
 const HIGHLIGHT_COLOR_ADJACENT = new THREE.Vector3(1.0, 0.84, 0.0);
 const BONUS_ICON_TINT = new THREE.Color(0.7, 0.7, 0.7);
 const ORIGIN = new THREE.Vector3(0, 0, 0);
+const _bbWorldPos = new THREE.Vector3();
+const _bbNormal = new THREE.Vector3();
+const _bbToCamera = new THREE.Vector3();
 
 function createSubdividedHexagonGeometry(radius: number, rings: number): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -187,11 +190,30 @@ function ClampedBillboard({
           for (const mat of materials) {
             mat.depthTest = false;
             mat.depthWrite = false;
+            mat.transparent = true;
           }
         }
       });
       depthFixedRef.current = true;
     }
+
+    group.getWorldPosition(_bbWorldPos);
+    _bbNormal.copy(_bbWorldPos).normalize();
+    _bbToCamera.copy(camera.position).sub(_bbWorldPos).normalize();
+    const dot = _bbNormal.dot(_bbToCamera);
+
+    const opacity = THREE.MathUtils.smoothstep(dot, -0.15, 0.15);
+    group.visible = opacity > 0.001;
+    if (!group.visible) return;
+
+    group.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.material) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const mat of mats) {
+          mat.opacity = opacity;
+        }
+      }
+    });
 
     group.lookAt(camera.position);
     billboardQuat.copy(group.quaternion);
@@ -813,104 +835,48 @@ function Tile({
 
       {/* Special tile label (rendered via displayName below) */}
 
-      {/* Billboard display name for named tiles */}
-      {displayName && (
+      {/* Billboard display name and/or bonus icons */}
+      {(displayName ||
+        (tileType !== "greenery" &&
+          tileType !== "ecological-zone" &&
+          tileType !== "natural-preserve" &&
+          tileType !== "world-tree" &&
+          bonusIconGroups.length > 0)) && (
         <ClampedBillboard position={[0, 0, 0.02]} renderOrder={110}>
-          <Text
-            fontSize={0.045}
-            font="/assets/Prototype.ttf"
-            color="white"
-            outlineWidth={0.004}
-            outlineColor="black"
-            anchorX="center"
-            anchorY="middle"
-            textAlign="center"
-            maxWidth={0.18}
-            renderOrder={110}
-          >
-            {displayName}
-          </Text>
+          {displayName && (
+            <Text
+              fontSize={0.045}
+              font="/assets/Prototype.ttf"
+              color="white"
+              outlineWidth={0.004}
+              outlineColor="black"
+              anchorX="center"
+              anchorY="middle"
+              textAlign="center"
+              maxWidth={0.18}
+              renderOrder={110}
+            >
+              {displayName}
+            </Text>
+          )}
+          {tileType !== "greenery" &&
+            tileType !== "ecological-zone" &&
+            tileType !== "natural-preserve" &&
+            tileType !== "world-tree" &&
+            bonusIconGroups.length > 0 && (
+              <group position={[0, displayName ? -0.08 : 0, 0]}>
+                {calculateIconPositions(bonusIconGroups).map((pos) => (
+                  <BonusIcon
+                    key={`${pos.group.type}-${pos.indexInGroup}`}
+                    texture={pos.group.texture}
+                    position={[pos.x, 0, 0]}
+                    isCredits={pos.group.isCredits}
+                    creditAmount={pos.group.isCredits ? pos.group.count : undefined}
+                  />
+                ))}
+              </group>
+            )}
         </ClampedBillboard>
-      )}
-
-      {/* Bonus icons for standard tiles (excludes tiles with 3D components) */}
-      {tileType !== "greenery" &&
-        tileType !== "volcano" &&
-        tileType !== "nuclear-zone" &&
-        tileType !== "mining" &&
-        tileType !== "ecological-zone" &&
-        tileType !== "natural-preserve" &&
-        tileType !== "world-tree" &&
-        bonusIconGroups.length > 0 && (
-          <>
-            {(() => {
-              const yOffset = displayName ? -0.03 : 0;
-              const positions = calculateIconPositions(bonusIconGroups);
-              return positions.map((pos) => (
-                <BonusIcon
-                  key={`${pos.group.type}-${pos.indexInGroup}`}
-                  texture={pos.group.texture}
-                  position={[pos.x, yOffset, 0.01]}
-                  isCredits={pos.group.isCredits}
-                  creditAmount={pos.group.isCredits ? pos.group.count : undefined}
-                />
-              ));
-            })()}
-          </>
-        )}
-
-      {/* Bonus icons for nuclear-zone tiles (kept flat on tile) */}
-      {tileType === "nuclear-zone" && bonusIconGroups.length > 0 && (
-        <>
-          {(() => {
-            const positions = calculateIconPositions(bonusIconGroups);
-            return positions.map((pos) => (
-              <BonusIcon
-                key={`${pos.group.type}-${pos.indexInGroup}`}
-                texture={pos.group.texture}
-                position={[pos.x, 0, 0.01]}
-                isCredits={pos.group.isCredits}
-                creditAmount={pos.group.isCredits ? pos.group.count : undefined}
-              />
-            ));
-          })()}
-        </>
-      )}
-
-      {/* Bonus icons for mining tiles (kept flat on tile) */}
-      {tileType === "mining" && bonusIconGroups.length > 0 && (
-        <>
-          {(() => {
-            const positions = calculateIconPositions(bonusIconGroups);
-            return positions.map((pos) => (
-              <BonusIcon
-                key={`${pos.group.type}-${pos.indexInGroup}`}
-                texture={pos.group.texture}
-                position={[pos.x, 0, 0.01]}
-                isCredits={pos.group.isCredits}
-                creditAmount={pos.group.isCredits ? pos.group.count : undefined}
-              />
-            ));
-          })()}
-        </>
-      )}
-
-      {/* Bonus icons for volcano tiles (kept flat on tile) */}
-      {tileType === "volcano" && bonusIconGroups.length > 0 && (
-        <>
-          {(() => {
-            const positions = calculateIconPositions(bonusIconGroups);
-            return positions.map((pos) => (
-              <BonusIcon
-                key={`${pos.group.type}-${pos.indexInGroup}`}
-                texture={pos.group.texture}
-                position={[pos.x, 0, 0.01]}
-                isCredits={pos.group.isCredits}
-                creditAmount={pos.group.isCredits ? pos.group.count : undefined}
-              />
-            ));
-          })()}
-        </>
       )}
 
       {/* Reserved tile marker (land claim) */}
@@ -976,7 +942,7 @@ function BonusIcon({ texture, position, isCredits, creditAmount }: BonusIconProp
 
   return (
     <group position={position}>
-      <mesh>
+      <mesh renderOrder={110}>
         <planeGeometry args={dimensions} />
         <meshBasicMaterial
           transparent
@@ -984,6 +950,8 @@ function BonusIcon({ texture, position, isCredits, creditAmount }: BonusIconProp
           map={texture}
           toneMapped={false}
           color={BONUS_ICON_TINT}
+          depthTest={false}
+          depthWrite={false}
         />
       </mesh>
 
@@ -995,6 +963,7 @@ function BonusIcon({ texture, position, isCredits, creditAmount }: BonusIconProp
           color="black"
           anchorX="center"
           anchorY="middle"
+          renderOrder={111}
         >
           {creditAmount}
         </Text>

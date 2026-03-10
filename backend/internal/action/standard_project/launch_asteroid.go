@@ -87,7 +87,7 @@ func (a *LaunchAsteroidAction) Execute(ctx context.Context, gameID string, playe
 		zap.Int("remaining_credits", resources.Credits))
 
 	oldTemp := g.GlobalParameters().Temperature()
-	stepsRaised, err := g.GlobalParameters().IncreaseTemperature(ctx, 1)
+	stepsRaised, err := g.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
 	if err != nil {
 		log.Error("Failed to increase temperature", zap.Error(err))
 		return fmt.Errorf("failed to increase temperature: %w", err)

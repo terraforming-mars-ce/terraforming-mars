@@ -28,7 +28,13 @@ type BehaviorApplier struct {
 	cardRegistry       CardRegistryInterface  // Card registry for tag counting in per conditions (optional)
 	sourceType         game.SourceType        // Source type for triggered effect classification
 	onCardsAddedToHand func(cardIDs []string) // Callback when cards are drawn to hand (for PlayerCard caching)
+	deferredSteal      *shared.ResourceCondition
 	logger             *zap.Logger
+}
+
+// DeferredSteal returns the deferred steal output, if any (for post-tile-placement processing)
+func (a *BehaviorApplier) DeferredSteal() *shared.ResourceCondition {
+	return a.deferredSteal
 }
 
 // NewBehaviorApplier creates a new behavior applier
@@ -880,6 +886,12 @@ func (a *BehaviorApplier) applyOutput(
 ) error {
 	switch output.ResourceType {
 	case shared.ResourceCredit:
+		if output.Target == "steal-any-player" && output.TargetRestriction != nil && output.TargetRestriction.Adjacent == "self-card" {
+			a.deferredSteal = &output
+			log.Debug("Deferred adjacent steal for post-tile-placement",
+				zap.Int("amount", output.Amount))
+			return nil
+		}
 		if output.Target == "steal-any-player" {
 			return a.stealAnyPlayerResource(shared.ResourceCredit, output.Amount, log)
 		}
@@ -1052,7 +1064,7 @@ func (a *BehaviorApplier) applyOutput(
 		if a.game == nil {
 			return fmt.Errorf("cannot apply oxygen: no game context")
 		}
-		actualSteps, err := a.game.GlobalParameters().IncreaseOxygen(ctx, output.Amount)
+		actualSteps, err := a.game.GlobalParameters().IncreaseOxygen(ctx, output.Amount, a.player.ID())
 		if err != nil {
 			return fmt.Errorf("failed to increase oxygen: %w", err)
 		}
@@ -1065,7 +1077,7 @@ func (a *BehaviorApplier) applyOutput(
 		if a.game == nil {
 			return fmt.Errorf("cannot apply temperature: no game context")
 		}
-		actualSteps, err := a.game.GlobalParameters().IncreaseTemperature(ctx, output.Amount)
+		actualSteps, err := a.game.GlobalParameters().IncreaseTemperature(ctx, output.Amount, a.player.ID())
 		if err != nil {
 			return fmt.Errorf("failed to increase temperature: %w", err)
 		}
@@ -1078,7 +1090,7 @@ func (a *BehaviorApplier) applyOutput(
 		if a.game == nil {
 			return fmt.Errorf("cannot apply venus: no game context")
 		}
-		actualSteps, err := a.game.GlobalParameters().IncreaseVenus(ctx, output.Amount)
+		actualSteps, err := a.game.GlobalParameters().IncreaseVenus(ctx, output.Amount, a.player.ID())
 		if err != nil {
 			return fmt.Errorf("failed to increase venus: %w", err)
 		}
@@ -1190,6 +1202,18 @@ func (a *BehaviorApplier) applyOutput(
 				MinAdjacentOfType: output.TileRestrictions.MinAdjacentOfType,
 				AdjacentToOwned:   output.TileRestrictions.AdjacentToOwned,
 				OnBonusType:       output.TileRestrictions.OnBonusType,
+			}
+		}
+
+		// For greenery placements, enforce adjacency to owned tiles (TM rules)
+		// unless the card explicitly overrides placement (e.g., Mangrove with onTileType: "ocean")
+		if output.ResourceType == shared.ResourceGreeneryPlacement {
+			if tileRestrictions == nil {
+				tileRestrictions = &shared.TileRestrictions{
+					AdjacentToOwned: true,
+				}
+			} else if tileRestrictions.OnTileType == "" {
+				tileRestrictions.AdjacentToOwned = true
 			}
 		}
 

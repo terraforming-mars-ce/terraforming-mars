@@ -47,6 +47,7 @@ const (
 	MessageTypeActionCardDrawConfirmed       MessageType = "action.card.card-draw-confirmed"
 	MessageTypeActionCardDiscardConfirmed    MessageType = "action.card.card-discard-confirmed"
 	MessageTypeActionBehaviorChoiceConfirmed MessageType = "action.card.behavior-choice-confirmed"
+	MessageTypeActionConfirmStealTarget      MessageType = "action.card.confirm-steal-target"
 
 	MessageTypeAdminCommand MessageType = "admin-command"
 

@@ -108,6 +108,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		PendingCardDrawSelection:       convertPendingCardDrawSelection(p.Selection().GetPendingCardDrawSelection(), cardRegistry),
 		PendingCardDiscardSelection:    convertPendingCardDiscardSelection(p.Selection().GetPendingCardDiscardSelection()),
 		PendingBehaviorChoiceSelection: convertPendingBehaviorChoiceSelection(p.Selection().GetPendingBehaviorChoiceSelection(), p, g, cardRegistry),
+		PendingStealTargetSelection:    convertPendingStealTargetSelection(p.Selection().GetPendingStealTargetSelection()),
 		ForcedFirstAction:              forcedFirstAction,
 		ResourceStorage:                p.Resources().Storage(),
 		PaymentSubstitutes:             convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
@@ -364,6 +365,7 @@ func convertStoragePaymentSubstitutes(substitutes []shared.StoragePaymentSubstit
 			CardID:         sub.CardID,
 			ResourceType:   ResourceType(sub.ResourceType),
 			ConversionRate: sub.ConversionRate,
+			Selectors:      mapSlice(sub.Selectors, toSelectorDto),
 		}
 	}
 	return dtos
@@ -433,6 +435,20 @@ func convertPendingBehaviorChoiceSelection(selection *player.PendingBehaviorChoi
 		Choices:      choices,
 		Source:       selection.Source,
 		SourceCardID: selection.SourceCardID,
+	}
+}
+
+func convertPendingStealTargetSelection(selection *player.PendingStealTargetSelection) *PendingStealTargetSelectionDto {
+	if selection == nil {
+		return nil
+	}
+
+	return &PendingStealTargetSelectionDto{
+		EligiblePlayerIDs: selection.EligiblePlayerIDs,
+		ResourceType:      string(selection.ResourceType),
+		Amount:            selection.Amount,
+		Source:            selection.Source,
+		SourceCardID:      selection.SourceCardID,
 	}
 }
 

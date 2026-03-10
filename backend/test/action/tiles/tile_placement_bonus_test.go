@@ -230,7 +230,7 @@ func TestSelectTileAction_OceanAdjacencyBonus_MultipleOceans(t *testing.T) {
 		"Player should receive +4 M€ for two adjacent ocean tiles")
 }
 
-func TestSelectTileAction_OceanAdjacencyBonus_OceanTileDoesNotGetBonus(t *testing.T) {
+func TestSelectTileAction_OceanAdjacencyBonus_OceanTileGetsBonus(t *testing.T) {
 	ctx := context.Background()
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
@@ -266,11 +266,10 @@ func TestSelectTileAction_OceanAdjacencyBonus_OceanTileDoesNotGetBonus(t *testin
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), playerID, hexStr)
 	testutil.AssertNoError(t, err, "Failed to place ocean tile")
 
-	// Ocean tiles should NOT receive adjacency bonus
-	// Credits change only by TR bonus (+1 TR from ocean placement), not adjacency
+	// Ocean tiles SHOULD receive adjacency bonus (2 MC per adjacent ocean)
 	finalCredits := p.Resources().Get().Credits
-	testutil.AssertEqual(t, initialCredits, finalCredits,
-		"Ocean tile placement should not receive adjacency bonus credits")
+	testutil.AssertEqual(t, initialCredits+2, finalCredits,
+		"Ocean tile placement should receive +2 M€ for one adjacent ocean tile")
 }
 
 func getResourceAmount(p *player.Player, resourceType shared.ResourceType) int {

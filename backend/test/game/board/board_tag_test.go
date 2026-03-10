@@ -10,7 +10,7 @@ import (
 func TestGenerateMarsBoard_NoctisCityTaggedTile(t *testing.T) {
 	tiles := board.GenerateMarsBoard(false)
 
-	noctisCityPos := shared.HexPosition{Q: -4, R: 2, S: 2}
+	noctisCityPos := shared.HexPosition{Q: -2, R: 0, S: 2}
 
 	var noctisTile *board.Tile
 	for i := range tiles {
@@ -21,7 +21,7 @@ func TestGenerateMarsBoard_NoctisCityTaggedTile(t *testing.T) {
 	}
 
 	if noctisTile == nil {
-		t.Fatal("expected to find Noctis City tile at position {-4, 2, 2}")
+		t.Fatal("expected to find Noctis City tile at position {-2, 0, 2}")
 	}
 
 	// Check the tile has the noctis-city tag
@@ -65,9 +65,9 @@ func TestGenerateMarsBoard_UntaggedTilesHaveNoTags(t *testing.T) {
 		}
 	}
 
-	// Noctis City, Ganymede Colony, 4 volcanic tiles, and 2 off-Mars tiles should be tagged
+	// Noctis City, 4 volcanic tiles, and 3 off-Mars tiles (Phobos, Dawn City, Ganymede Colony) should be tagged
 	if taggedCount != 8 {
-		t.Errorf("expected exactly 8 tagged tiles (Noctis City, Ganymede Colony, 4 volcanic, 2 off-Mars), got %d", taggedCount)
+		t.Errorf("expected exactly 8 tagged tiles (Noctis City, 4 volcanic, 3 off-Mars), got %d", taggedCount)
 	}
 
 	// All other tiles should have empty tags
@@ -79,8 +79,8 @@ func TestGenerateMarsBoard_UntaggedTilesHaveNoTags(t *testing.T) {
 func TestGenerateMarsBoard_TotalTileCount(t *testing.T) {
 	tiles := board.GenerateMarsBoard(false)
 
-	// Standard Mars board with radius 4 has 61 hex tiles + 2 off-Mars tiles = 63
-	expectedCount := 63
+	// Standard Mars board with radius 4 has 61 hex tiles + 3 off-Mars tiles = 64
+	expectedCount := 64
 	if len(tiles) != expectedCount {
 		t.Errorf("expected %d tiles, got %d", expectedCount, len(tiles))
 	}

@@ -118,6 +118,7 @@ const GameCommandsPage: React.FC<GameCommandsPageProps> = ({ gameState }) => {
         oceans: isNaN(parseInt(form.oceans, 10)) ? 0 : parseInt(form.oceans, 10),
         maxOceans: gameState.globalParameters.maxOceans,
         venus: isNaN(parseInt(form.venus, 10)) ? 0 : parseInt(form.venus, 10),
+        bonuses: gameState.globalParameters.bonuses,
       },
     };
     await sendCommand(AdminCommandTypeSetGlobalParams, command);

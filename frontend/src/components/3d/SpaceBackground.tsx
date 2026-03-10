@@ -7,7 +7,6 @@ interface SpaceBackgroundProps {
   animationSpeed?: number;
   overlayOpacity?: number;
   showOverlay?: boolean;
-  active?: boolean;
   children?: React.ReactNode;
 }
 
@@ -44,7 +43,6 @@ export default function SpaceBackground({
   animationSpeed = 1,
   overlayOpacity = 0.2,
   showOverlay = true,
-  active = true,
   children,
 }: SpaceBackgroundProps) {
   const [cameraConfig] = useState({
@@ -61,8 +59,6 @@ export default function SpaceBackground({
         width: "100vw",
         height: "100vh",
         zIndex: 0,
-        visibility: active ? "visible" : "hidden",
-        pointerEvents: active ? "auto" : "none",
       }}
     >
       <Canvas
@@ -70,7 +66,7 @@ export default function SpaceBackground({
           position: cameraConfig.position,
           fov: cameraConfig.fov,
         }}
-        frameloop={active ? "always" : "never"}
+        frameloop="always"
         style={{
           background: "#000000",
           width: "100%",

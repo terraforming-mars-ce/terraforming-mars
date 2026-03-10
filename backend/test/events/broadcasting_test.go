@@ -106,7 +106,7 @@ func TestBroadcasting_GlobalParameterChanges(t *testing.T) {
 	testutil.StartTestGame(t, testGame)
 
 	// Change temperature
-	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
+	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
 	testutil.AssertNoError(t, err, "Temperature increase should succeed")
 
 	// Verify temperature changed

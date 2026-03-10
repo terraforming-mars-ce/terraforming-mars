@@ -58,6 +58,7 @@ func RegisterHandlers(
 	confirmCardDrawAction *confirmAction.ConfirmCardDrawAction,
 	confirmCardDiscardAction *confirmAction.ConfirmCardDiscardAction,
 	confirmBehaviorChoiceAction *confirmAction.ConfirmBehaviorChoiceAction,
+	confirmStealTargetAction *confirmAction.ConfirmStealTargetAction,
 	playerDisconnectedAction *connAction.PlayerDisconnectedAction,
 	playerTakeoverAction *connAction.PlayerTakeoverAction,
 	kickPlayerAction *connAction.KickPlayerAction,
@@ -155,6 +156,9 @@ func RegisterHandlers(
 
 	confirmBehaviorChoiceHandler := confirmation.NewConfirmBehaviorChoiceHandler(confirmBehaviorChoiceAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionBehaviorChoiceConfirmed, confirmBehaviorChoiceHandler)
+
+	confirmStealTargetHandler := confirmation.NewConfirmStealTargetHandler(confirmStealTargetAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionConfirmStealTarget, confirmStealTargetHandler)
 
 	requestLogsHandler := connection.NewRequestLogsHandler(broadcaster)
 	hub.RegisterHandler(dto.MessageTypeRequestLogs, requestLogsHandler)

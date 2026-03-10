@@ -159,6 +159,9 @@ func AutoAdvanceTurnIfNeeded(g *game.Game, playerID string, log *zap.Logger) {
 	if g.GetPendingTileSelection(playerID) != nil {
 		return
 	}
+	if p, err := g.GetPlayer(playerID); err == nil && p.Selection().GetPendingStealTargetSelection() != nil {
+		return
+	}
 
 	turnOrder := g.TurnOrder()
 	if len(turnOrder) == 0 {

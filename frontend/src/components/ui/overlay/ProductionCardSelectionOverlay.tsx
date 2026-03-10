@@ -25,6 +25,8 @@ interface ProductionCardSelectionOverlayProps {
   playerCredits: number;
   onSelectCards: (selectedCardIds: string[]) => void;
   onReturn: () => void;
+  initialSelectedCardIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayProps> = ({
@@ -33,6 +35,8 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
   playerCredits,
   onSelectCards,
   onReturn,
+  initialSelectedCardIds,
+  onSelectionChange,
 }) => {
   const {
     selectedCardIds,
@@ -45,8 +49,10 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
     cards,
     isOpen,
     playerCredits,
-    costPerCard: 3, // Each card costs 3 MC
-    minCards: 0, // Can select 0 cards
+    costPerCard: 3,
+    minCards: 0,
+    initialSelectedCardIds,
+    onSelectionChange,
   });
 
   if (!isOpen || cards.length === 0) return null;

@@ -88,7 +88,6 @@ export default function TileGrid({
         case "greenery-tile":
         case "ecological-zone-tile":
         case "natural-preserve-tile":
-          void playOxygenSound();
           break;
         case "city-tile":
         case "special-tile":
@@ -510,7 +509,7 @@ export default function TileGrid({
 
   const handleSphereClick = useCallback(
     (event: THREE.Event & { point: THREE.Vector3 }) => {
-      if (panState.isPanning) return;
+      if (panState.isPanning || panState.hasDragged) return;
       const key = findNearestHex(event.point);
       if (key) {
         const isAvailable = availableHexes.includes(key);

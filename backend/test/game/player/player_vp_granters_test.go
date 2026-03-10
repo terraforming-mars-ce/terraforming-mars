@@ -698,13 +698,7 @@ func TestIntegrationCorporationSelectedRegistersVPGranterAndResourceRecalculates
 	p := players[0]
 
 	arklightID := testutil.CardID("Arklight")
-	events.Publish(testGame.EventBus(), events.CorporationSelectedEvent{
-		GameID:          testGame.ID(),
-		PlayerID:        p.ID(),
-		CorporationID:   arklightID,
-		CorporationName: "Arklight",
-		Timestamp:       time.Now(),
-	})
+	testGame.RegisterCorporationVPGranter(p.ID(), arklightID)
 
 	granters := p.VPGranters().GetAll()
 	testutil.AssertEqual(t, 1, len(granters), "Selecting Arklight should register 1 VP granter")

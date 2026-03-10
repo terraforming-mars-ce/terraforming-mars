@@ -351,6 +351,107 @@ func TestDeuteriumExport_Action_SpendFloaterForEnergyProduction(t *testing.T) {
 }
 
 // =============================================================================
+// Card 222: Dirigibles (active)
+// "Action: Add 1 floater to any card. / Effect: When playing a Venus tag,
+//
+//	floaters here may be used as payment, and are worth 3 M€ each."
+//
+// Tags: venus. Has floater storage.
+// =============================================================================
+func TestDirigibles_StoragePaymentSubstitute_VenusCard(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	cardRegistry := testutil.CreateTestCardRegistry()
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testGame.UpdateStatus(ctx, game.GameStatusActive)
+	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 200})
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+
+	// Play Dirigibles
+	dirigibles := testutil.GetCardByName("Dirigibles")
+	p.Hand().AddCard(dirigibles.ID)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), dirigibles.ID, cardAction.PaymentRequest{Credits: 11}, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Dirigibles should play successfully")
+
+	// Verify storage payment substitute was registered
+	subs := p.Resources().StoragePaymentSubstitutes()
+	testutil.AssertTrue(t, len(subs) > 0, "Should have storage payment substitute after playing Dirigibles")
+	testutil.AssertEqual(t, dirigibles.ID, subs[0].CardID, "Storage payment substitute should reference Dirigibles")
+	testutil.AssertEqual(t, 3, subs[0].ConversionRate, "Floater conversion rate should be 3 M€")
+
+	// Add 3 floaters to Dirigibles
+	p.Resources().AddToStorage(dirigibles.ID, 3)
+	testutil.AssertEqual(t, 3, p.Resources().GetCardStorage(dirigibles.ID), "Dirigibles should have 3 floaters")
+
+	// Play Ishtar Mining (venus-tagged, cost 5) using 1 floater (3 M€) + 2 credits
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	ishtarMining := testutil.GetCardByName("Ishtar Mining")
+	p.Hand().AddCard(ishtarMining.ID)
+	// Set venus to 8% so Ishtar Mining requirement is met
+	for i := 0; i < 4; i++ {
+		testGame.GlobalParameters().IncreaseVenus(ctx, 1, p.ID())
+	}
+
+	creditsBefore := p.Resources().Get().Credits
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), ishtarMining.ID, cardAction.PaymentRequest{
+		Credits:            2,
+		StorageSubstitutes: map[string]int{dirigibles.ID: 1},
+	}, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Should pay for Venus card with Dirigibles floaters")
+
+	// Verify floaters were deducted
+	testutil.AssertEqual(t, 2, p.Resources().GetCardStorage(dirigibles.ID), "Should have 2 floaters remaining")
+	// Verify credits were deducted (2 credits for the remaining cost)
+	testutil.AssertEqual(t, creditsBefore-2, p.Resources().Get().Credits, "Should deduct 2 credits")
+}
+
+func TestDirigibles_StoragePaymentSubstitute_NonVenusCardRejected(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	cardRegistry := testutil.CreateTestCardRegistry()
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testGame.UpdateStatus(ctx, game.GameStatusActive)
+	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 200})
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+
+	// Play Dirigibles first
+	dirigibles := testutil.GetCardByName("Dirigibles")
+	p.Hand().AddCard(dirigibles.ID)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), dirigibles.ID, cardAction.PaymentRequest{Credits: 11}, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Dirigibles should play successfully")
+
+	// Add floaters
+	p.Resources().AddToStorage(dirigibles.ID, 3)
+
+	// Try to play a non-Venus card using Dirigibles floaters — should fail
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	asteroid := testutil.GetCardByName("Asteroid")
+	p.Hand().AddCard(asteroid.ID)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), asteroid.ID, cardAction.PaymentRequest{
+		Credits:            0,
+		StorageSubstitutes: map[string]int{dirigibles.ID: 3},
+	}, nil, nil, nil, nil)
+	testutil.AssertError(t, err, "Should reject Dirigibles floaters for non-Venus card")
+
+	// Verify floaters were NOT deducted
+	testutil.AssertEqual(t, 3, p.Resources().GetCardStorage(dirigibles.ID), "Floaters should not be deducted on failure")
+}
+
+// =============================================================================
 // Card 223: Extractor Balloons (active)
 // "Action: Add 1 floater to this card, or remove 2 floaters here to raise
 //
@@ -2113,7 +2214,7 @@ func TestVenusIncrease_CappedAtMax(t *testing.T) {
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
 	ctx := context.Background()
 	testGame.GlobalParameters().SetVenus(ctx, 28)
-	actualSteps, err := testGame.GlobalParameters().IncreaseVenus(ctx, 2)
+	actualSteps, err := testGame.GlobalParameters().IncreaseVenus(ctx, 2, "")
 	testutil.AssertNoError(t, err, "IncreaseVenus should not error")
 	testutil.AssertEqual(t, 1, actualSteps, "Should only increase 1 step (capped at 30)")
 	testutil.AssertEqual(t, 30, testGame.GlobalParameters().Venus(), "Venus should be capped at 30")

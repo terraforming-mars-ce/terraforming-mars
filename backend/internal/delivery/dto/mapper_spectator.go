@@ -35,6 +35,7 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry) GameDto {
 		Oceans:      globalParams.Oceans(),
 		MaxOceans:   globalParams.GetMaxOceans(),
 		Venus:       globalParams.Venus(),
+		Bonuses:     buildGlobalParameterBonuses(settings.VenusNextEnabled),
 	}
 
 	tiles := g.Board().Tiles()

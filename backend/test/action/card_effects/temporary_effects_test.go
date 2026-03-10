@@ -175,7 +175,7 @@ func TestSpecialDesign_LenienceAppliedToNextCard(t *testing.T) {
 
 	// Temperature is at -30C (default). Card requires -24C.
 	// Let's increase temperature to -26
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 2) // -30 + 2*2 = -26
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 2, "") // -30 + 2*2 = -26
 
 	// Without Special Design, temp is -26 and card requires -24 -> can't play
 	tempReqCard, err := cardRegistry.GetByID(tempReqTestID)
@@ -243,7 +243,7 @@ func TestSpecialDesign_LenienceWithMaxRequirement(t *testing.T) {
 	player.Hand().AddCard(oxygenTestID) // Requires oxygen <= 5%
 
 	// Increase oxygen to 7% (3.5 steps from default 0)
-	testGame.GlobalParameters().IncreaseOxygen(ctx, 7)
+	testGame.GlobalParameters().IncreaseOxygen(ctx, 7, "")
 
 	// Without lenience: oxygen 7, max 5 -> can't play
 	oxygenCard, err := cardRegistry.GetByID(oxygenTestID)

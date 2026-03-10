@@ -4289,6 +4289,13 @@
         ],
         "description": "Place this tile and raise temperature 2 steps."
       }
+    ],
+    "vpConditions": [
+      {
+        "amount": -2,
+        "condition": "fixed",
+        "description": "-2 VP"
+      }
     ]
   },
   {
@@ -4859,6 +4866,13 @@
         ],
         "description": "Raise your terraform rating 2 steps."
       }
+    ],
+    "vpConditions": [
+      {
+        "amount": -2,
+        "condition": "fixed",
+        "description": "-2 VP"
+      }
     ]
   },
   {
@@ -5353,6 +5367,13 @@
           }
         ],
         "description": "Decrease your energy production 1 step and any M€ production 2 steps. Increase your M€ production 2 steps"
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
       }
     ]
   },
@@ -6565,7 +6586,16 @@
             "type": "global-parameter-lenience",
             "amount": 2,
             "target": "self-player",
-            "selectors": [{ "globalParameters": ["temperature", "oxygen", "ocean", "venus"] }]
+            "selectors": [
+              {
+                "globalParameters": [
+                  "temperature",
+                  "oxygen",
+                  "ocean",
+                  "venus"
+                ]
+              }
+            ]
           }
         ],
         "description": "Your global requirements are +2 or -2 steps, your choice in each case."
@@ -7642,6 +7672,13 @@
         ],
         "description": "Increase your energy production 1 step. Decrease **any** heat production 2 steps."
       }
+    ],
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
+      }
     ]
   },
   {
@@ -7793,6 +7830,13 @@
         ],
         "description": "Decrease your energy production 1 step and increase your M€ production 3 steps. Place a city tile."
       }
+    ],
+    "vpConditions": [
+      {
+        "amount": -2,
+        "condition": "fixed",
+        "description": "-2 VP"
+      }
     ]
   },
   {
@@ -7835,6 +7879,13 @@
           }
         ],
         "description": "Increase your energy production 2 steps. Decrease **any** plant production 1 step."
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
       }
     ]
   },
@@ -8070,8 +8121,11 @@
         "outputs": [
           {
             "type": "credit",
-            "amount": -4,
-            "target": "any-player"
+            "amount": 4,
+            "target": "steal-any-player",
+            "targetRestriction": {
+              "adjacent": "self-card"
+            }
           },
           {
             "type": "ocean-placement",
@@ -8080,6 +8134,13 @@
           }
         ],
         "description": "Place an ocean tile. You may remove 4 M€ from the owner of an adjacent tile."
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
       }
     ]
   },
@@ -8327,6 +8388,13 @@
             "temporary": "next-card"
           }
         ]
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
       }
     ]
   },
@@ -8592,6 +8660,13 @@
         ],
         "description": "Decrease **any** energy production 1 step and increase your own 1 step"
       }
+    ],
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
+      }
     ]
   },
   {
@@ -8743,7 +8818,16 @@
             "amount": 2,
             "target": "self-player",
             "temporary": "next-card",
-            "selectors": [{ "globalParameters": ["temperature", "oxygen", "ocean", "venus"] }]
+            "selectors": [
+              {
+                "globalParameters": [
+                  "temperature",
+                  "oxygen",
+                  "ocean",
+                  "venus"
+                ]
+              }
+            ]
           }
         ]
       }
@@ -11866,7 +11950,15 @@
             "type": "global-parameter-lenience",
             "amount": 2,
             "target": "self-player",
-            "selectors": [{ "globalParameters": ["temperature", "oxygen", "ocean"] }]
+            "selectors": [
+              {
+                "globalParameters": [
+                  "temperature",
+                  "oxygen",
+                  "ocean"
+                ]
+              }
+            ]
           }
         ],
         "description": "Your temperature, oxygen, and ocean requirements are +2 or -2 steps, your choice in each case."
@@ -12512,7 +12604,14 @@
           "tag": "earth"
         }
       ]
-    }
+    },
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
+      }
+    ]
   },
   {
     "id": "C06",
@@ -12835,6 +12934,13 @@
           }
         ],
         "description": "Increase your M€ production 2 steps, and gain 4 M€."
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
       }
     ]
   },
@@ -16018,7 +16124,9 @@
               "type": "tag-played",
               "selectors": [
                 {
-                  "tags": ["earth"]
+                  "tags": [
+                    "earth"
+                  ]
                 }
               ]
             }
@@ -16251,7 +16359,9 @@
               "target": "self-player",
               "selectors": [
                 {
-                  "vp": { "min": 0 }
+                  "vp": {
+                    "min": 0
+                  }
                 }
               ]
             }
@@ -16295,6 +16405,13 @@
           }
         ],
         "description": "Remove up to 2 plants **from any player**. Increase your heat production 2 steps"
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
       }
     ]
   },
@@ -17074,7 +17191,13 @@
             "condition": {
               "type": "global-parameter-raised",
               "target": "any-player",
-              "selectors": [{ "globalParameters": ["venus"] }]
+              "selectors": [
+                {
+                  "globalParameters": [
+                    "venus"
+                  ]
+                }
+              ]
             }
           }
         ],
@@ -17126,7 +17249,13 @@
             "type": "card-draw",
             "amount": 2,
             "target": "self-player",
-            "selectors": [{"resources": ["floater"]}]
+            "selectors": [
+              {
+                "resources": [
+                  "floater"
+                ]
+              }
+            ]
           }
         ],
         "description": "As your first action, reveal cards from the deck until you have revealed 2 cards with a floater icon on it. Take those 2 cards into hand, and discard the rest."
@@ -17206,7 +17335,9 @@
             "type": "auto",
             "condition": {
               "type": "production-increased",
-              "resourceTypes": ["credits-production"]
+              "resourceTypes": [
+                "credits-production"
+              ]
             }
           }
         ],
@@ -17225,7 +17356,9 @@
             "type": "auto",
             "condition": {
               "type": "production-increased",
-              "resourceTypes": ["steel-production"]
+              "resourceTypes": [
+                "steel-production"
+              ]
             }
           }
         ],
@@ -17244,7 +17377,9 @@
             "type": "auto",
             "condition": {
               "type": "production-increased",
-              "resourceTypes": ["titanium-production"]
+              "resourceTypes": [
+                "titanium-production"
+              ]
             }
           }
         ],
@@ -17263,7 +17398,9 @@
             "type": "auto",
             "condition": {
               "type": "production-increased",
-              "resourceTypes": ["plant-production"]
+              "resourceTypes": [
+                "plant-production"
+              ]
             }
           }
         ],
@@ -17282,7 +17419,9 @@
             "type": "auto",
             "condition": {
               "type": "production-increased",
-              "resourceTypes": ["energy-production"]
+              "resourceTypes": [
+                "energy-production"
+              ]
             }
           }
         ],
@@ -17301,7 +17440,9 @@
             "type": "auto",
             "condition": {
               "type": "production-increased",
-              "resourceTypes": ["heat-production"]
+              "resourceTypes": [
+                "heat-production"
+              ]
             }
           }
         ],
@@ -17354,7 +17495,9 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": ["venus"]
+                "tags": [
+                  "venus"
+                ]
               }
             ]
           }
@@ -17375,7 +17518,13 @@
             "type": "global-parameter-lenience",
             "amount": 2,
             "target": "self-player",
-            "selectors": [{ "globalParameters": ["venus"] }]
+            "selectors": [
+              {
+                "globalParameters": [
+                  "venus"
+                ]
+              }
+            ]
           }
         ],
         "description": "Your Venus requirements are +/- 2 steps, your choice in each case"
@@ -17583,6 +17732,13 @@
           }
         ],
         "description": "Steal 3 M€ from a player that **removed your resources or decreased your production** this generation. Place this card face down in **that player's event pile**."
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": -1,
+        "condition": "fixed",
+        "description": "-1 VP"
       }
     ]
   },
@@ -19806,10 +19962,16 @@
     "cost": 3,
     "description": "Gain 2 extra actions this turn.",
     "pack": "experimental",
-    "tags": ["event"],
+    "tags": [
+      "event"
+    ],
     "behaviors": [
       {
-        "triggers": [{ "type": "auto" }],
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
         "outputs": [
           {
             "type": "extra-actions",
@@ -19828,16 +19990,29 @@
     "cost": 11,
     "description": "Gain 1 science tag for each earth tag you have.",
     "pack": "experimental",
-    "tags": ["event", "science"],
+    "tags": [
+      "event",
+      "science"
+    ],
     "behaviors": [
       {
-        "triggers": [{ "type": "auto" }],
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
         "outputs": [
           {
             "type": "bonus-tags",
             "amount": 1,
             "target": "self-player",
-            "selectors": [{ "tags": ["science"] }],
+            "selectors": [
+              {
+                "tags": [
+                  "science"
+                ]
+              }
+            ],
             "per": {
               "type": "tag",
               "amount": 1,
@@ -19856,10 +20031,17 @@
     "cost": 28,
     "description": "Place a World Tree tile. It counts as a forest for adjacency. 1 VP per adjacent forest.",
     "pack": "experimental",
-    "tags": ["plant", "building"],
+    "tags": [
+      "plant",
+      "building"
+    ],
     "behaviors": [
       {
-        "triggers": [{ "type": "auto" }],
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
         "outputs": [
           {
             "type": "tile-placement",
@@ -19891,10 +20073,17 @@
     "cost": 30,
     "description": "Destroy any tile on the board. If it's an ocean, reduce the ocean count by 1.",
     "pack": "experimental",
-    "tags": ["event", "earth"],
+    "tags": [
+      "event",
+      "earth"
+    ],
     "behaviors": [
       {
-        "triggers": [{ "type": "auto" }],
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
         "outputs": [
           {
             "type": "tile-destruction",

@@ -27,6 +27,23 @@ Every action must pass a strict MC/VP test:
 
 Use steel and titanium aggressively when paying for tagged cards. Never spend raw MC when you have applicable resource substitutes.
 
+## Payment Optimization
+
+When playing any card, calculate the optimal payment split to minimize credit expenditure:
+
+1. Check the card's tags — **building** allows steel, **space** allows titanium
+2. Check "Payment substitutes" in your game state for corporation-specific substitutes (e.g., Helion: heat as credits)
+3. Spend all applicable substitute resources first, then cover the remainder with credits
+
+**Payment JSON format:**
+- Steel/titanium: `"payment": {"credits": N, "steel": N, "titanium": N}`
+- Corporation substitutes (heat, etc.): `"payment": {"credits": N, "substitutes": {"heat": N}}`
+- Combined: `"payment": {"credits": N, "steel": N, "titanium": N, "substitutes": {"heat": N}}`
+
+**Example:** A 25 MC card with building + space tags. You have 3 steel (2 MC each = 6 MC), 2 titanium (3 MC each = 6 MC). Pay: `"payment": {"credits": 13, "steel": 3, "titanium": 2}`. Never pay 25 credits when substitutes are available.
+
+**Storage payment substitutes:** Some cards (like Dirigibles) allow spending stored resources as payment. Check "Storage payment substitutes" in your game state and include them via `"storageSubstitutes": {"CARD_ID": N}`.
+
 ## Standard Projects: Calculated Efficiency
 
 ### Absolute Rules

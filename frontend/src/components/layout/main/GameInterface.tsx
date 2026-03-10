@@ -23,7 +23,8 @@ import CardDrawSelectionOverlay from "../../ui/overlay/CardDrawSelectionOverlay.
 import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOverlay.tsx";
 import CardFanOverlay, { CardFanOverlayHandle } from "../../ui/overlay/CardFanOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
-import YourTurnBanner from "../../ui/overlay/YourTurnBanner.tsx";
+import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
+import { useGameEvent } from "@/hooks/useGameEvent.ts";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 import MainMenuSettingsButton from "../../ui/buttons/MainMenuSettingsButton.tsx";
 import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
@@ -67,6 +68,7 @@ import {
   PlayerDto,
   OtherPlayerDto,
   PlayerActionDto,
+  PlayerCardDto,
   ResourceType,
   StateDiffDto,
   TriggeredEffectDto,
@@ -83,16 +85,15 @@ export default function GameInterface() {
   const location = useLocation();
   const navigate = useNavigate();
   const { gameId: urlGameId } = useParams<{ gameId?: string }>();
-  const {
-    playProductionSound,
-    playTemperatureSound,
-    playOxygenSound,
-    playAsteroidImpactSound,
-    playYourTurnSound,
-  } = useSoundEffects();
+  const { playProductionSound, playTemperatureSound, playOxygenSound, playYourTurnSound } =
+    useSoundEffects();
   const { showNotification } = useNotifications();
   const [game, setGame] = useState<GameDto | null>(null);
-  const [showYourTurnBanner, setShowYourTurnBanner] = useState(false);
+  const {
+    currentEvent,
+    enqueue: enqueueGameEvent,
+    dismissCurrent: dismissGameEvent,
+  } = useGameEvent();
   const [isConnected, setIsConnected] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>("idle");
   const wasInLobby = useRef(false);
@@ -186,7 +187,7 @@ export default function GameInterface() {
 
   // Choice selection state (for card play)
   const [showChoiceSelection, setShowChoiceSelection] = useState(false);
-  const [cardPendingChoice, setCardPendingChoice] = useState<CardDto | null>(null);
+  const [cardPendingChoice, setCardPendingChoice] = useState<PlayerCardDto | null>(null);
   const [pendingCardBehaviorIndex, setPendingCardBehaviorIndex] = useState(0);
 
   // Action choice selection state (for playing actions with choices)
@@ -200,6 +201,9 @@ export default function GameInterface() {
     behaviorIndex: number;
   } | null>(null);
   const activeReuseSourceCardId = useRef<string | undefined>(undefined);
+
+  // Steal target selection state (from server pending selection after tile placement)
+  const [showStealTargetSelection, setShowStealTargetSelection] = useState(false);
 
   // Passive triggered behavior choice state (from server pending selection)
   const [showBehaviorChoiceSelection, setShowBehaviorChoiceSelection] = useState(false);
@@ -217,7 +221,7 @@ export default function GameInterface() {
   // Payment selection state
   const [showPaymentSelection, setShowPaymentSelection] = useState(false);
   const [pendingCardPayment, setPendingCardPayment] = useState<{
-    card: CardDto;
+    card: PlayerCardDto;
     choiceIndex?: number;
     cardStorageTargets?: string[];
   } | null>(null);
@@ -365,10 +369,26 @@ export default function GameInterface() {
           void playTemperatureSound();
         }
 
-        // Play oxygen increase sound when oxygen goes up
+        // Play oxygen increase sound when oxygen goes up, or when a greenery is placed at max oxygen
         const prevOxygen = previousGameRef.current.globalParameters?.oxygen;
         const newOxygen = updatedGame.globalParameters?.oxygen;
+        const greeneryTypes = new Set([
+          "greenery-tile",
+          "ecological-zone-tile",
+          "natural-preserve-tile",
+        ]);
+        const prevGreeneryCount =
+          previousGameRef.current.board?.tiles?.filter(
+            (t) => t.occupiedBy && greeneryTypes.has(t.occupiedBy.type),
+          ).length ?? 0;
+        const newGreeneryCount =
+          updatedGame.board?.tiles?.filter(
+            (t) => t.occupiedBy && greeneryTypes.has(t.occupiedBy.type),
+          ).length ?? 0;
+        const greeneryPlaced = newGreeneryCount > prevGreeneryCount;
         if (prevOxygen !== undefined && newOxygen !== undefined && newOxygen > prevOxygen) {
+          void playOxygenSound();
+        } else if (greeneryPlaced) {
           void playOxygenSound();
         }
 
@@ -381,7 +401,51 @@ export default function GameInterface() {
         const wasMyActionTurn = prevTurn === playerId && prevPhase === GamePhaseAction;
         if (isNowMyActionTurn && !wasMyActionTurn) {
           void playYourTurnSound();
-          setShowYourTurnBanner(true);
+          enqueueGameEvent({ title: "YOUR TURN", duration: 2500 });
+        }
+
+        // Detect milestone claims
+        const prevMilestones = previousGameRef.current.milestones;
+        const newMilestones = updatedGame.milestones;
+        if (prevMilestones && newMilestones) {
+          for (const ms of newMilestones) {
+            if (ms.isClaimed && ms.claimedBy) {
+              const prev = prevMilestones.find((p) => p.type === ms.type);
+              if (prev && !prev.isClaimed) {
+                const allPlayers = [updatedGame.currentPlayer, ...(updatedGame.otherPlayers ?? [])];
+                const claimPlayer = allPlayers.find((p) => p.id === ms.claimedBy);
+                enqueueGameEvent({
+                  title: "MILESTONE CLAIMED",
+                  achievementName: ms.name,
+                  playerName: claimPlayer?.name ?? "Unknown",
+                  playerColor: claimPlayer?.color ?? "#64c8ff",
+                  duration: 4000,
+                });
+              }
+            }
+          }
+        }
+
+        // Detect award funding
+        const prevAwards = previousGameRef.current.awards;
+        const newAwards = updatedGame.awards;
+        if (prevAwards && newAwards) {
+          for (const aw of newAwards) {
+            if (aw.isFunded && aw.fundedBy) {
+              const prev = prevAwards.find((p) => p.type === aw.type);
+              if (prev && !prev.isFunded) {
+                const allPlayers = [updatedGame.currentPlayer, ...(updatedGame.otherPlayers ?? [])];
+                const fundPlayer = allPlayers.find((p) => p.id === aw.fundedBy);
+                enqueueGameEvent({
+                  title: "AWARD FUNDED",
+                  achievementName: aw.name,
+                  playerName: fundPlayer?.name ?? "Unknown",
+                  playerColor: fundPlayer?.color ?? "#64c8ff",
+                  duration: 4000,
+                });
+              }
+            }
+          }
         }
 
         // Clear changed paths after animation completes
@@ -438,21 +502,7 @@ export default function GameInterface() {
     [isReconnecting, playTemperatureSound, playOxygenSound, playYourTurnSound],
   );
 
-  const handleLogUpdate = useCallback(
-    (logs: StateDiffDto[]) => {
-      const ASTEROID_IMPACT_PATTERN = /asteroid|comet|impactor/i;
-      const hasAsteroidPlacement = logs.some(
-        (log) =>
-          (log.sourceType === "card_play" || log.sourceType === "standard_project") &&
-          ASTEROID_IMPACT_PATTERN.test(log.source) &&
-          (log.changes?.boardChanges?.tilesPlaced?.length ?? 0) > 0,
-      );
-      if (hasAsteroidPlacement) {
-        void playAsteroidImpactSound();
-      }
-    },
-    [playAsteroidImpactSound],
-  );
+  const handleLogUpdate = useCallback((_logs: StateDiffDto[]) => {}, []);
 
   const handleFullState = useCallback(
     (statePayload: FullStatePayload) => {
@@ -747,6 +797,7 @@ export default function GameInterface() {
       ] as ResourceType[];
 
       for (const output of outputs) {
+        if (output.targetRestriction) continue; // Deferred to post-tile-placement
         if (
           (output.target === "any-player" || output.target === "steal-any-player") &&
           targetableResources.includes(output.type as ResourceType)
@@ -986,7 +1037,13 @@ export default function GameInterface() {
             setShowCardStorageSelection(true);
           } else if (
             currentPlayer &&
-            shouldShowPaymentModal(card, currentPlayer.resources, currentPlayer.paymentSubstitutes)
+            shouldShowPaymentModal(
+              card,
+              currentPlayer.resources,
+              currentPlayer.paymentSubstitutes,
+              currentPlayer.storagePaymentSubstitutes,
+              currentPlayer.resourceStorage,
+            )
           ) {
             // No any-card storage needed, show payment selection modal
             setPendingCardPayment({
@@ -996,7 +1053,7 @@ export default function GameInterface() {
             setShowPaymentSelection(true);
           } else {
             // No storage, no payment modal — play directly
-            const payment = createDefaultPayment(card.cost);
+            const payment = createDefaultPayment(card.effectiveCost);
             await finalizePlayCard(cardId, payment, undefined, undefined, card);
           }
         }
@@ -1071,6 +1128,8 @@ export default function GameInterface() {
             cardPendingChoice,
             currentPlayer.resources,
             currentPlayer.paymentSubstitutes,
+            currentPlayer.storagePaymentSubstitutes,
+            currentPlayer.resourceStorage,
           )
         ) {
           // No any-card storage needed, show payment selection modal
@@ -1083,7 +1142,7 @@ export default function GameInterface() {
           setPendingCardBehaviorIndex(0);
         } else {
           // No storage, no payment modal — play directly
-          const payment = createDefaultPayment(cardPendingChoice.cost);
+          const payment = createDefaultPayment(cardPendingChoice.effectiveCost);
           await finalizePlayCard(
             cardPendingChoice.id,
             payment,
@@ -1395,6 +1454,15 @@ export default function GameInterface() {
     setShowBehaviorChoiceSelection(true);
   }, []);
 
+  // Steal target selection callbacks (deferred adjacent steal)
+  const handleStealTargetSelect = useCallback(async (targetPlayerId: string) => {
+    void globalWebSocketManager.confirmStealTarget(targetPlayerId);
+  }, []);
+
+  const handleStealTargetSkip = useCallback(async () => {
+    void globalWebSocketManager.confirmStealTarget("");
+  }, []);
+
   // Payment selection callbacks
   const handlePaymentConfirm = useCallback(
     async (payment: CardPaymentDto) => {
@@ -1454,7 +1522,13 @@ export default function GameInterface() {
 
         if (
           card &&
-          shouldShowPaymentModal(card, currentPlayer.resources, currentPlayer.paymentSubstitutes)
+          shouldShowPaymentModal(
+            card,
+            currentPlayer.resources,
+            currentPlayer.paymentSubstitutes,
+            currentPlayer.storagePaymentSubstitutes,
+            currentPlayer.resourceStorage,
+          )
         ) {
           setPendingCardPayment({
             card: card,
@@ -1467,7 +1541,7 @@ export default function GameInterface() {
         }
 
         // No payment modal needed — finalize with default payment
-        const payment = createDefaultPayment(card?.cost ?? 0);
+        const payment = createDefaultPayment(card?.effectiveCost ?? 0);
         await finalizePlayCard(
           pendingCardStorage.cardId,
           payment,
@@ -2417,6 +2491,17 @@ export default function GameInterface() {
     }
   }, [game?.currentPlayer?.pendingBehaviorChoiceSelection, showBehaviorChoiceSelection]);
 
+  // Show/hide steal target selection popover (deferred adjacent steal from tile placement)
+  useEffect(() => {
+    const pending = game?.currentPlayer?.pendingStealTargetSelection;
+
+    if (pending && !showStealTargetSelection) {
+      setShowStealTargetSelection(true);
+    } else if (!pending && showStealTargetSelection) {
+      setShowStealTargetSelection(false);
+    }
+  }, [game?.currentPlayer?.pendingStealTargetSelection, showStealTargetSelection]);
+
   // Demo keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -2634,6 +2719,7 @@ export default function GameInterface() {
         showCardDrawSelection ||
         showCardDiscardSelection ||
         showBehaviorChoiceSelection ||
+        showStealTargetSelection ||
         showProductionPhaseModal ||
         showPaymentSelection ||
         isPreGamePhase ||
@@ -3181,6 +3267,7 @@ export default function GameInterface() {
           amount={pendingBehaviorChoiceStorage.amount}
           selectorTags={pendingBehaviorChoiceStorage.selectorTags}
           playedCards={currentPlayer?.playedCards || []}
+          corporationCard={currentPlayer?.corporation}
           resourceStorage={currentPlayer?.resourceStorage}
           onCardSelect={handleBehaviorChoiceStorageSelect}
           onCancel={handleBehaviorChoiceStorageCancel}
@@ -3195,6 +3282,7 @@ export default function GameInterface() {
           amount={pendingCardStorage.amount}
           selectorTags={pendingCardStorage.selectorTags}
           playedCards={currentPlayer?.playedCards || []}
+          corporationCard={currentPlayer?.corporation}
           resourceStorage={currentPlayer?.resourceStorage}
           onCardSelect={handleCardStorageSelect}
           onCancel={handleCardStorageCancel}
@@ -3210,6 +3298,8 @@ export default function GameInterface() {
           playerResources={currentPlayer.resources}
           paymentConstants={game.paymentConstants}
           playerPaymentSubstitutes={currentPlayer.paymentSubstitutes}
+          storagePaymentSubstitutes={currentPlayer.storagePaymentSubstitutes}
+          resourceStorage={currentPlayer.resourceStorage}
           onConfirm={handlePaymentConfirm}
           onCancel={handlePaymentCancel}
           isVisible={showPaymentSelection}
@@ -3223,6 +3313,7 @@ export default function GameInterface() {
           amount={pendingActionStorage.amount}
           selectorTags={pendingActionStorage.selectorTags}
           playedCards={currentPlayer?.playedCards || []}
+          corporationCard={currentPlayer?.corporation}
           resourceStorage={currentPlayer?.resourceStorage}
           onCardSelect={handleActionStorageSelect}
           onCancel={handleActionStorageCancel}
@@ -3290,6 +3381,29 @@ export default function GameInterface() {
         />
       )}
 
+      {/* Steal target selection popover (deferred adjacent steal from tile placement) */}
+      {game?.currentPlayer?.pendingStealTargetSelection && game && (
+        <TargetPlayerSelectionPopover
+          resourceType={game.currentPlayer.pendingStealTargetSelection.resourceType as ResourceType}
+          amount={game.currentPlayer.pendingStealTargetSelection.amount}
+          isSteal={true}
+          players={(game.otherPlayers || [])
+            .filter((p) =>
+              game.currentPlayer!.pendingStealTargetSelection!.eligiblePlayerIds.includes(p.id),
+            )
+            .map((p) => ({
+              id: p.id,
+              name: p.name,
+              resources: p.resources,
+              production: p.production,
+            }))}
+          onPlayerSelect={handleStealTargetSelect}
+          onCancel={handleStealTargetSkip}
+          isVisible={showStealTargetSelection}
+          mandatory
+        />
+      )}
+
       {/* Card resource selection popover (steal-from-any-card like Predators/Ants) */}
       {pendingCardResourceInput && (
         <CardResourceSelectionPopover
@@ -3345,7 +3459,7 @@ export default function GameInterface() {
         </GameMenuButton>
       )}
 
-      <YourTurnBanner visible={showYourTurnBanner} onDismiss={() => setShowYourTurnBanner(false)} />
+      <GameEventBanner event={currentEvent} onDismiss={dismissGameEvent} />
 
       {/* Loading overlay rendered LAST to ensure it covers all UI elements */}
       {overlayVisible && (

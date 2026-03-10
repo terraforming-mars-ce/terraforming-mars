@@ -2,6 +2,7 @@ package tile
 
 import (
 	"context"
+	"fmt"
 
 	baseaction "terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/game"
@@ -14,6 +15,7 @@ const (
 	CallbackConvertPlantsToGreenery = "convert-plants-to-greenery"
 	CallbackStandardProjectGreenery = "standard-project-greenery"
 	CallbackStandardProjectAquifer  = "standard-project-aquifer"
+	CallbackAdjacentSteal           = "adjacent-steal"
 )
 
 // TileCompletionHandlerFunc is the signature for tile completion callbacks
@@ -39,6 +41,7 @@ func (r *TileCompletionRegistry) registerDefaultHandlers() {
 	r.handlers[CallbackConvertPlantsToGreenery] = r.handleConvertPlantsToGreenery
 	r.handlers[CallbackStandardProjectGreenery] = r.handleStandardProjectGreenery
 	r.handlers[CallbackStandardProjectAquifer] = r.handleStandardProjectAquifer
+	r.handlers[CallbackAdjacentSteal] = r.handleAdjacentSteal
 }
 
 // Handle invokes the appropriate handler for the callback type
@@ -99,4 +102,52 @@ func (r *TileCompletionRegistry) handleStandardProjectAquifer(ctx context.Contex
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: Aquifer")
 	_, err := r.stateRepo.WriteFull(ctx, g.ID(), g, "Standard Project: Aquifer", game.SourceTypeStandardProject, playerID, "Built aquifer", nil, outputs, displayData)
 	return err
+}
+
+func (r *TileCompletionRegistry) handleAdjacentSteal(_ context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *player.TileCompletionCallback) error {
+	amount, _ := callback.Data["amount"].(int)
+	source, _ := callback.Data["source"].(string)
+	sourceCardID, _ := callback.Data["sourceCardID"].(string)
+
+	coords, err := parseHexPosition(result.Hex)
+	if err != nil {
+		return fmt.Errorf("failed to parse hex for adjacent steal: %w", err)
+	}
+
+	neighbors := coords.GetNeighbors()
+	eligiblePlayerIDs := make(map[string]bool)
+
+	for _, neighbor := range neighbors {
+		neighborTile, tileErr := g.Board().GetTile(neighbor)
+		if tileErr != nil {
+			continue
+		}
+		if neighborTile.OwnerID != nil && *neighborTile.OwnerID != playerID {
+			eligiblePlayerIDs[*neighborTile.OwnerID] = true
+		}
+	}
+
+	if len(eligiblePlayerIDs) == 0 {
+		return nil
+	}
+
+	ids := make([]string, 0, len(eligiblePlayerIDs))
+	for id := range eligiblePlayerIDs {
+		ids = append(ids, id)
+	}
+
+	p, err := g.GetPlayer(playerID)
+	if err != nil {
+		return fmt.Errorf("player not found: %w", err)
+	}
+
+	p.Selection().SetPendingStealTargetSelection(&player.PendingStealTargetSelection{
+		EligiblePlayerIDs: ids,
+		ResourceType:      shared.ResourceCredit,
+		Amount:            amount,
+		Source:            source,
+		SourceCardID:      sourceCardID,
+	})
+
+	return nil
 }

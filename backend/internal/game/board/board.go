@@ -144,28 +144,79 @@ func NewBoardWithTiles(gameID string, tiles []Tile, eventBus *events.EventBusImp
 func GenerateMarsBoard(includeVenus bool) []Tile {
 	tiles := []Tile{}
 
+	// Official Tharsis map ocean-reserved spaces (12 total, 9 ocean tiles placed during game)
 	oceanSpaces := map[shared.HexPosition]bool{
-		{Q: -4, R: 0, S: 4}:  true,
-		{Q: -3, R: -1, S: 4}: true,
-		{Q: -1, R: -2, S: 3}: true,
-		{Q: 1, R: 1, S: -2}:  true,
-		{Q: 2, R: -1, S: -1}: true,
-		{Q: 3, R: -2, S: -1}: true,
-		{Q: 0, R: 3, S: -3}:  true,
-		{Q: -2, R: 4, S: -2}: true,
-		{Q: 1, R: 3, S: -4}:  true,
+		// Row 0 (top)
+		{Q: 1, R: -4, S: 3}: true,
+		{Q: 3, R: -4, S: 1}: true,
+		{Q: 4, R: -4, S: 0}: true,
+		// Row 1
+		{Q: 4, R: -3, S: -1}: true,
+		// Row 3
+		{Q: 4, R: -1, S: -3}: true,
+		// Row 4 (middle)
+		{Q: -1, R: 0, S: 1}: true,
+		{Q: 0, R: 0, S: 0}:  true,
+		{Q: 1, R: 0, S: -1}: true,
+		// Row 5
+		{Q: 1, R: 1, S: -2}: true,
+		{Q: 2, R: 1, S: -3}: true,
+		{Q: 3, R: 1, S: -4}: true,
+		// Row 8 (bottom)
+		{Q: 0, R: 4, S: -4}: true,
 	}
 
-	bonusTiles := map[shared.HexPosition]TileBonus{
-		{Q: -3, R: 1, S: 2}:  {Type: shared.ResourceSteel, Amount: 2},
-		{Q: -2, R: 0, S: 2}:  {Type: shared.ResourceSteel, Amount: 2},
-		{Q: 2, R: 1, S: -3}:  {Type: shared.ResourceTitanium, Amount: 3},
-		{Q: 3, R: 0, S: -3}:  {Type: shared.ResourceTitanium, Amount: 3},
-		{Q: -1, R: 2, S: -1}: {Type: shared.ResourcePlant, Amount: 2},
-		{Q: 0, R: 2, S: -2}:  {Type: shared.ResourcePlant, Amount: 2},
-		{Q: 1, R: -3, S: 2}:  {Type: shared.ResourceCardDraw, Amount: 2},
-		{Q: 2, R: -3, S: 1}:  {Type: shared.ResourceCardDraw, Amount: 2},
-		{Q: -1, R: -1, S: 2}: {Type: shared.ResourceCredit, Amount: 3},
+	// Official Tharsis map placement bonuses
+	bonusTiles := map[shared.HexPosition][]TileBonus{
+		// Row 0: steel in upper-left
+		{Q: 0, R: -4, S: 4}: {{Type: shared.ResourceSteel, Amount: 2}},
+		{Q: 1, R: -4, S: 3}: {{Type: shared.ResourceSteel, Amount: 2}},
+		{Q: 3, R: -4, S: 1}: {{Type: shared.ResourceCardDraw, Amount: 1}},
+		// Row 1: Tharsis Tholus steel, rightmost ocean has 2 card draws
+		{Q: 0, R: -3, S: 3}:  {{Type: shared.ResourceSteel, Amount: 1}},
+		{Q: 4, R: -3, S: -1}: {{Type: shared.ResourceCardDraw, Amount: 2}},
+		// Row 2: Ascraeus Mons card draw, rightmost steel
+		{Q: -2, R: -2, S: 4}: {{Type: shared.ResourceCardDraw, Amount: 1}},
+		{Q: 4, R: -2, S: -2}: {{Type: shared.ResourceSteel, Amount: 1}},
+		// Row 3: Pavonis Mons plant+titanium, plant bonuses across equator
+		{Q: -3, R: -1, S: 4}: {{Type: shared.ResourcePlant, Amount: 1}, {Type: shared.ResourceTitanium, Amount: 1}},
+		{Q: -2, R: -1, S: 3}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: -1, R: -1, S: 2}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: 0, R: -1, S: 1}:  {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: 1, R: -1, S: 0}:  {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: 2, R: -1, S: -1}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: 3, R: -1, S: -2}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: 4, R: -1, S: -3}: {{Type: shared.ResourcePlant, Amount: 2}},
+		// Row 4: all tiles have 2 plants (equatorial belt)
+		{Q: -4, R: 0, S: 4}: {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: -3, R: 0, S: 3}: {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: -2, R: 0, S: 2}: {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: -1, R: 0, S: 1}: {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: 0, R: 0, S: 0}:  {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: 1, R: 0, S: -1}: {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: 2, R: 0, S: -2}: {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: 3, R: 0, S: -3}: {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: 4, R: 0, S: -4}: {{Type: shared.ResourcePlant, Amount: 2}},
+		// Row 5: plant bonuses
+		{Q: -4, R: 1, S: 3}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: -3, R: 1, S: 2}: {{Type: shared.ResourcePlant, Amount: 2}},
+		{Q: -2, R: 1, S: 1}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: -1, R: 1, S: 0}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: 0, R: 1, S: -1}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: 1, R: 1, S: -2}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: 2, R: 1, S: -3}: {{Type: shared.ResourcePlant, Amount: 1}},
+		{Q: 3, R: 1, S: -4}: {{Type: shared.ResourcePlant, Amount: 1}},
+		// Row 6: single plant on one tile
+		{Q: 1, R: 2, S: -3}: {{Type: shared.ResourcePlant, Amount: 1}},
+		// Row 7: steel, card draws, titanium
+		{Q: -4, R: 3, S: 1}:  {{Type: shared.ResourceSteel, Amount: 2}},
+		{Q: -2, R: 3, S: -1}: {{Type: shared.ResourceCardDraw, Amount: 1}},
+		{Q: -1, R: 3, S: -2}: {{Type: shared.ResourceCardDraw, Amount: 1}},
+		{Q: 1, R: 3, S: -4}:  {{Type: shared.ResourceTitanium, Amount: 1}},
+		// Row 8: steel and titanium
+		{Q: -4, R: 4, S: 0}:  {{Type: shared.ResourceSteel, Amount: 1}},
+		{Q: -3, R: 4, S: -1}: {{Type: shared.ResourceSteel, Amount: 2}},
+		{Q: 0, R: 4, S: -4}:  {{Type: shared.ResourceTitanium, Amount: 2}},
 	}
 
 	type taggedTileInfo struct {
@@ -173,12 +224,11 @@ func GenerateMarsBoard(includeVenus bool) []Tile {
 		DisplayName string
 	}
 	taggedTiles := map[shared.HexPosition]taggedTileInfo{
-		{Q: -4, R: 2, S: 2}:  {Tags: []string{BoardTagNoctisCity}, DisplayName: "Noctis City"},
-		{Q: 4, R: -2, S: -2}: {Tags: []string{BoardTagGanymedeColony}, DisplayName: "Ganymede Colony"},
-		{Q: 0, R: -2, S: 2}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Tharsis Tholus"},
-		{Q: -1, R: 0, S: 1}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Ascraeus Mons"},
-		{Q: -2, R: 1, S: 1}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Pavonis Mons"},
-		{Q: -3, R: 2, S: 1}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Arsia Mons"},
+		{Q: 0, R: -3, S: 3}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Tharsis Tholus"},
+		{Q: -2, R: -2, S: 4}: {Tags: []string{BoardTagVolcanic}, DisplayName: "Ascraeus Mons"},
+		{Q: -3, R: -1, S: 4}: {Tags: []string{BoardTagVolcanic}, DisplayName: "Pavonis Mons"},
+		{Q: -4, R: 0, S: 4}:  {Tags: []string{BoardTagVolcanic}, DisplayName: "Arsia Mons"},
+		{Q: -2, R: 0, S: 2}:  {Tags: []string{BoardTagNoctisCity}, DisplayName: "Noctis City"},
 	}
 
 	radius := 4
@@ -200,9 +250,9 @@ func GenerateMarsBoard(includeVenus bool) []Tile {
 				tileType = shared.ResourceLandTile
 			}
 
-			// Add bonus if this position has one
-			if bonus, hasBonus := bonusTiles[pos]; hasBonus {
-				bonuses = append(bonuses, bonus)
+			// Add bonuses if this position has any
+			if tileBonuses, hasBonus := bonusTiles[pos]; hasBonus {
+				bonuses = append(bonuses, tileBonuses...)
 			}
 
 			// Build tags and display name for tagged tiles
@@ -238,6 +288,7 @@ func GenerateMarsBoard(includeVenus bool) []Tile {
 	}{
 		{shared.HexPosition{Q: 0, R: -5, S: 5}, []string{BoardTagPhobosSpaceHaven}, "Phobos Space Haven"},
 		{shared.HexPosition{Q: -5, R: 0, S: 5}, []string{BoardTagDawnCity}, "Dawn City"},
+		{shared.HexPosition{Q: 5, R: -5, S: 0}, []string{BoardTagGanymedeColony}, "Ganymede Colony"},
 	}
 	for _, ot := range offMarsTiles {
 		displayName := ot.DisplayName

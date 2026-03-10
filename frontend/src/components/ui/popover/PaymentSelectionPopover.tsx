@@ -1,22 +1,26 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
-  CardDto,
   CardPaymentDto,
   PaymentConstantsDto,
+  PlayerCardDto,
   PaymentSubstituteDto,
   ResourcesDto,
+  StoragePaymentSubstituteDto,
   TagBuilding,
   TagSpace,
 } from "@/types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import { Z_INDEX } from "@/constants/zIndex";
+import { cardMatchesStorageSubstitute } from "@/utils/paymentUtils.ts";
 
 interface PaymentSelectionPopoverProps {
   cardId: string;
-  card: CardDto;
+  card: PlayerCardDto;
   playerResources: ResourcesDto;
   paymentConstants: PaymentConstantsDto;
   playerPaymentSubstitutes?: PaymentSubstituteDto[];
+  storagePaymentSubstitutes?: StoragePaymentSubstituteDto[];
+  resourceStorage?: { [key: string]: number };
   onConfirm: (payment: CardPaymentDto) => void;
   onCancel: () => void;
   isVisible: boolean;
@@ -28,6 +32,8 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
   playerResources,
   paymentConstants,
   playerPaymentSubstitutes,
+  storagePaymentSubstitutes,
+  resourceStorage,
   onConfirm,
   onCancel,
   isVisible,
@@ -42,6 +48,9 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
   // Payment substitutes state (dynamic based on player's available substitutes)
   const [substitutes, setSubstitutes] = useState<Record<string, number>>({});
 
+  // Storage payment substitutes state (cardId -> amount)
+  const [storageSubstitutes, setStorageSubstitutes] = useState<Record<string, number>>({});
+
   // Get dynamic steel/titanium values from paymentSubstitutes (includes value modifiers like Phobolog)
   // Falls back to paymentConstants for backwards compatibility
   const steelValue =
@@ -51,14 +60,35 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
     playerPaymentSubstitutes?.find((s) => s.resourceType === "titanium")?.conversionRate ??
     paymentConstants.titaniumValue;
 
+  // Filter storage substitutes applicable to this card
+  const applicableStorageSubstitutes = useMemo(() => {
+    if (!storagePaymentSubstitutes || !resourceStorage) {
+      return [];
+    }
+    return storagePaymentSubstitutes.filter((sub) => {
+      const available = resourceStorage[sub.cardId] ?? 0;
+      return available > 0 && cardMatchesStorageSubstitute(card, sub);
+    });
+  }, [storagePaymentSubstitutes, resourceStorage, card]);
+
   // Reset payment when modal opens
   useEffect(() => {
     if (isVisible) {
       setSteel(0);
       setTitanium(0);
       setSubstitutes({});
+      setStorageSubstitutes({});
     }
-  }, [isVisible, card.cost]);
+  }, [isVisible, card.effectiveCost]);
+
+  // Calculate storage substitutes value
+  let storageSubstitutesValue = 0;
+  for (const [cardId, amount] of Object.entries(storageSubstitutes)) {
+    const sub = applicableStorageSubstitutes.find((s) => s.cardId === cardId);
+    if (sub) {
+      storageSubstitutesValue += amount * sub.conversionRate;
+    }
+  }
 
   // Calculate final cost after applying steel, titanium, and substitute discounts
   let substitutesValue = 0;
@@ -71,41 +101,59 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
     }
   }
 
-  const finalCost = card.cost - steel * steelValue - titanium * titaniumValue - substitutesValue;
+  const finalCost =
+    card.effectiveCost -
+    steel * steelValue -
+    titanium * titaniumValue -
+    substitutesValue -
+    storageSubstitutesValue;
+
+  // Helper to calculate total non-credit payment value (excluding a specific source)
+  const totalOtherPaymentValue = (
+    excludeSteel: boolean,
+    excludeTitanium: boolean,
+    excludeSubResourceType?: string,
+    excludeStorageCardId?: string,
+  ) => {
+    let total = 0;
+    if (!excludeSteel) {
+      total += steel * steelValue;
+    }
+    if (!excludeTitanium) {
+      total += titanium * titaniumValue;
+    }
+    if (playerPaymentSubstitutes) {
+      for (const [resourceType, amount] of Object.entries(substitutes)) {
+        if (resourceType !== excludeSubResourceType) {
+          const sub = playerPaymentSubstitutes.find((s) => s.resourceType === resourceType);
+          if (sub) {
+            total += amount * sub.conversionRate;
+          }
+        }
+      }
+    }
+    for (const [cardId, amount] of Object.entries(storageSubstitutes)) {
+      if (cardId !== excludeStorageCardId) {
+        const sub = applicableStorageSubstitutes.find((s) => s.cardId === cardId);
+        if (sub) {
+          total += amount * sub.conversionRate;
+        }
+      }
+    }
+    return total;
+  };
 
   // Check which resources to show (only if card has appropriate tag)
   const canUseSteel = card.tags?.includes(TagBuilding);
   const canUseTitanium = card.tags?.includes(TagSpace);
 
   // Calculate max units dynamically based on current payment state
-  // For steel: remaining cost excluding steel itself
-  let remainingCostForSteel = card.cost;
-  remainingCostForSteel -= titanium * titaniumValue;
-  if (playerPaymentSubstitutes) {
-    for (const [resourceType, amount] of Object.entries(substitutes)) {
-      const sub = playerPaymentSubstitutes.find((s) => s.resourceType === resourceType);
-      if (sub) {
-        remainingCostForSteel -= amount * sub.conversionRate;
-      }
-    }
-  }
-
+  const remainingCostForSteel = card.effectiveCost - totalOtherPaymentValue(true, false);
   const maxSteelUnits = canUseSteel
     ? Math.min(playerResources.steel, Math.ceil(Math.max(0, remainingCostForSteel) / steelValue))
     : 0;
 
-  // For titanium: remaining cost excluding titanium itself
-  let remainingCostForTitanium = card.cost;
-  remainingCostForTitanium -= steel * steelValue;
-  if (playerPaymentSubstitutes) {
-    for (const [resourceType, amount] of Object.entries(substitutes)) {
-      const sub = playerPaymentSubstitutes.find((s) => s.resourceType === resourceType);
-      if (sub) {
-        remainingCostForTitanium -= amount * sub.conversionRate;
-      }
-    }
-  }
-
+  const remainingCostForTitanium = card.effectiveCost - totalOtherPaymentValue(false, true);
   const maxTitaniumUnits = canUseTitanium
     ? Math.min(
         playerResources.titanium,
@@ -130,14 +178,16 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
     if (!canConfirm) return;
 
     const payment: CardPaymentDto = {
-      credits: Math.max(0, finalCost), // Credits needed (0 if overpaying)
+      credits: Math.max(0, finalCost),
       steel,
       titanium,
       substitutes: Object.keys(substitutes).length > 0 ? substitutes : undefined,
+      storageSubstitutes:
+        Object.keys(storageSubstitutes).length > 0 ? storageSubstitutes : undefined,
     };
 
     onConfirm(payment);
-  }, [steel, titanium, substitutes, finalCost, canConfirm, onConfirm]);
+  }, [steel, titanium, substitutes, storageSubstitutes, finalCost, canConfirm, onConfirm]);
 
   // Escape key handler
   useEffect(() => {
@@ -235,8 +285,8 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
           <div className="mt-2 flex items-center justify-between">
             <span className="text-sm text-gray-400">Pay for: {card.name}</span>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Original cost:</span>
-              <GameIcon iconType="credit" amount={card.cost} size="small" />
+              <span className="text-sm text-gray-400">Cost:</span>
+              <GameIcon iconType="credit" amount={card.effectiveCost} size="small" />
             </div>
           </div>
         </div>
@@ -333,24 +383,9 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
 
                 const currentAmount = substitutes[resourceType] || 0;
 
-                // Calculate remaining cost excluding THIS substitute
-                let remainingCostForThisSubstitute = card.cost;
-                remainingCostForThisSubstitute -= steel * steelValue;
-                remainingCostForThisSubstitute -= titanium * titaniumValue;
-
-                // Subtract OTHER substitutes' values (not this one)
-                if (playerPaymentSubstitutes) {
-                  for (const [otherResourceType, amount] of Object.entries(substitutes)) {
-                    if (otherResourceType !== resourceType) {
-                      const otherSub = playerPaymentSubstitutes.find(
-                        (sub) => sub.resourceType === otherResourceType,
-                      );
-                      if (otherSub) {
-                        remainingCostForThisSubstitute -= amount * otherSub.conversionRate;
-                      }
-                    }
-                  }
-                }
+                const remainingCostForThisSubstitute =
+                  card.effectiveCost -
+                  totalOtherPaymentValue(false, false, resourceType, undefined);
 
                 const maxUnits = Math.min(
                   available,
@@ -419,10 +454,87 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
                 );
               })}
 
+          {/* Storage Payment Substitutes (e.g., Dirigibles floaters) */}
+          {applicableStorageSubstitutes.map((substitute) => {
+            const available = resourceStorage?.[substitute.cardId] ?? 0;
+            if (available === 0) return null;
+
+            const currentAmount = storageSubstitutes[substitute.cardId] || 0;
+
+            const remainingCostForThis =
+              card.effectiveCost -
+              totalOtherPaymentValue(false, false, undefined, substitute.cardId);
+
+            const maxUnits = Math.min(
+              available,
+              Math.ceil(Math.max(0, remainingCostForThis) / substitute.conversionRate),
+            );
+
+            const incrementStorage = () => {
+              if (currentAmount < maxUnits) {
+                setStorageSubstitutes((prev) => ({
+                  ...prev,
+                  [substitute.cardId]: currentAmount + 1,
+                }));
+              }
+            };
+
+            const decrementStorage = () => {
+              if (currentAmount > 0) {
+                setStorageSubstitutes((prev) => {
+                  const newSubs = { ...prev };
+                  if (currentAmount === 1) {
+                    delete newSubs[substitute.cardId];
+                  } else {
+                    newSubs[substitute.cardId] = currentAmount - 1;
+                  }
+                  return newSubs;
+                });
+              }
+            };
+
+            return (
+              <div
+                key={`storage-${substitute.cardId}`}
+                className="flex items-center justify-between rounded-md bg-black/30 border-2 border-space-blue-500/40 p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <GameIcon iconType={substitute.resourceType} size="medium" />
+                  <div className="flex flex-col">
+                    <span className="text-white capitalize">{substitute.resourceType}</span>
+                    <span className="text-xs text-gray-400">
+                      {substitute.conversionRate} MC each ({available} available)
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={decrementStorage}
+                    disabled={currentAmount === 0}
+                    className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                  >
+                    −
+                  </button>
+                  <span className="w-12 text-center text-lg text-white font-semibold">
+                    {currentAmount}
+                  </span>
+                  <button
+                    onClick={incrementStorage}
+                    disabled={currentAmount >= maxUnits}
+                    className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
           {/* Show message if no alternative payment options */}
           {!canUseSteel &&
             !canUseTitanium &&
-            (!playerPaymentSubstitutes || playerPaymentSubstitutes.length === 0) && (
+            (!playerPaymentSubstitutes || playerPaymentSubstitutes.length === 0) &&
+            applicableStorageSubstitutes.length === 0 && (
               <div className="text-center text-gray-400 py-4">
                 This card cannot use alternative payment methods
               </div>

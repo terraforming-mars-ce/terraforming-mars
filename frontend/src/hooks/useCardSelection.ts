@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export interface CardSelectionConfig {
   /** Cards or selection object with availableCards */
@@ -17,6 +17,10 @@ export interface CardSelectionConfig {
   minCards?: number;
   /** Maximum cards that can be selected */
   maxCards?: number;
+  /** Initial selected card IDs (for restoring persisted selections) */
+  initialSelectedCardIds?: string[];
+  /** Callback when selected card IDs change */
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 export interface CardSelectionState {
@@ -47,31 +51,48 @@ export interface CardSelectionState {
 export function useCardSelection(config: CardSelectionConfig): CardSelectionState {
   const {
     cards,
-    isOpen,
     playerCredits,
     costPerCard = 0,
     getCardCost,
     getCardReward,
     minCards = 0,
     maxCards = Infinity,
+    initialSelectedCardIds,
+    onSelectionChange,
   } = config;
 
   // Extract cards array from object if needed
   const cardsArray = Array.isArray(cards) ? cards : cards.availableCards;
 
-  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>(initialSelectedCardIds ?? []);
   const [totalCost, setTotalCost] = useState(0);
   const [totalReward, setTotalReward] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
+  const prevCardSetKeyRef = useRef<string>(
+    cardsArray
+      .map((c) => c.id)
+      .sort()
+      .join(","),
+  );
+
   useEffect(() => {
-    if (isOpen && cardsArray.length > 0) {
+    const cardSetKey = cardsArray
+      .map((c) => c.id)
+      .sort()
+      .join(",");
+    if (cardSetKey !== prevCardSetKeyRef.current) {
+      prevCardSetKeyRef.current = cardSetKey;
       setSelectedCardIds([]);
       setShowConfirmation(false);
       setTotalCost(0);
       setTotalReward(0);
     }
-  }, [isOpen, cardsArray.length]);
+  }, [cardsArray]);
+
+  useEffect(() => {
+    onSelectionChange?.(selectedCardIds);
+  }, [selectedCardIds, onSelectionChange]);
 
   useEffect(() => {
     let cost = 0;

@@ -66,6 +66,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 		player.Resources().RemoveCardStorage(oldCorpID)
 		player.Resources().ClearPaymentSubstitutes()
 		player.Resources().ClearValueModifiers()
+		player.VPGranters().RemoveByCardID(oldCorpID)
 
 		log.Debug("Old corporation effects cleared")
 	}
@@ -130,6 +131,8 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 			Timestamp: time.Now(),
 		})
 	}
+
+	g.RegisterCorporationVPGranter(playerID, corporationID)
 
 	manualActions := a.corpProc.GetManualActions(corpCard)
 	for _, action := range manualActions {

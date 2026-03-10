@@ -106,7 +106,11 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 
 	a.ConsumePlayerAction(g, log)
 
-	a.WriteStateLog(ctx, g, milestoneType, game.SourceTypeMilestone, playerID, fmt.Sprintf("Claimed %s milestone", milestoneType))
+	milestoneName := milestoneType
+	if info, ok := game.GetMilestoneInfo(shared.MilestoneType(milestoneType)); ok {
+		milestoneName = info.Name
+	}
+	a.WriteStateLog(ctx, g, milestoneName, game.SourceTypeMilestone, playerID, fmt.Sprintf("Claimed %s milestone", milestoneName))
 
 	log.Info("Milestone claimed",
 		zap.String("milestone", milestoneType),
