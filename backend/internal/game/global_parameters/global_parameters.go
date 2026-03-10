@@ -122,7 +122,7 @@ func (gp *GlobalParameters) IsMaxed() bool {
 // IncreaseTemperature raises the temperature by the specified number of steps
 // Each step is 2 degrees. Returns the actual number of steps raised (may be less if limit reached)
 // Publishes TemperatureChangedEvent after state change
-func (gp *GlobalParameters) IncreaseTemperature(ctx context.Context, steps int) (int, error) {
+func (gp *GlobalParameters) IncreaseTemperature(ctx context.Context, steps int, playerID string) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
@@ -145,9 +145,10 @@ func (gp *GlobalParameters) IncreaseTemperature(ctx context.Context, steps int) 
 	// Automatic broadcasting handled by EventBus
 	if gp.eventBus != nil && oldTemp != newTemp {
 		events.Publish(gp.eventBus, events.TemperatureChangedEvent{
-			GameID:   gp.gameID,
-			OldValue: oldTemp,
-			NewValue: newTemp,
+			GameID:    gp.gameID,
+			OldValue:  oldTemp,
+			NewValue:  newTemp,
+			ChangedBy: playerID,
 		})
 	}
 
@@ -157,7 +158,7 @@ func (gp *GlobalParameters) IncreaseTemperature(ctx context.Context, steps int) 
 // IncreaseOxygen raises the oxygen by the specified number of steps
 // Returns the actual number of steps raised (may be less if limit reached)
 // Publishes OxygenChangedEvent after state change
-func (gp *GlobalParameters) IncreaseOxygen(ctx context.Context, steps int) (int, error) {
+func (gp *GlobalParameters) IncreaseOxygen(ctx context.Context, steps int, playerID string) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
@@ -178,9 +179,10 @@ func (gp *GlobalParameters) IncreaseOxygen(ctx context.Context, steps int) (int,
 	// Automatic broadcasting handled by EventBus
 	if gp.eventBus != nil && oldOxygen != newOxygen {
 		events.Publish(gp.eventBus, events.OxygenChangedEvent{
-			GameID:   gp.gameID,
-			OldValue: oldOxygen,
-			NewValue: newOxygen,
+			GameID:    gp.gameID,
+			OldValue:  oldOxygen,
+			NewValue:  newOxygen,
+			ChangedBy: playerID,
 		})
 	}
 
@@ -190,7 +192,7 @@ func (gp *GlobalParameters) IncreaseOxygen(ctx context.Context, steps int) (int,
 // PlaceOcean places an ocean tile (increments ocean count)
 // Returns true if successful, false if limit reached
 // Publishes OceansChangedEvent after state change
-func (gp *GlobalParameters) PlaceOcean(ctx context.Context) (bool, error) {
+func (gp *GlobalParameters) PlaceOcean(ctx context.Context, playerID string) (bool, error) {
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
@@ -213,9 +215,10 @@ func (gp *GlobalParameters) PlaceOcean(ctx context.Context) (bool, error) {
 	// Automatic broadcasting handled by EventBus
 	if gp.eventBus != nil && oldOceans != newOceans {
 		events.Publish(gp.eventBus, events.OceansChangedEvent{
-			GameID:   gp.gameID,
-			OldValue: oldOceans,
-			NewValue: newOceans,
+			GameID:    gp.gameID,
+			OldValue:  oldOceans,
+			NewValue:  newOceans,
+			ChangedBy: playerID,
 		})
 	}
 
@@ -303,7 +306,7 @@ func (gp *GlobalParameters) SetOceans(ctx context.Context, newOceans int) error 
 // IncreaseVenus raises the venus level by the specified number of steps
 // Each step is 2%. Returns the actual number of steps raised (may be less if limit reached)
 // Publishes VenusChangedEvent after state change
-func (gp *GlobalParameters) IncreaseVenus(ctx context.Context, steps int) (int, error) {
+func (gp *GlobalParameters) IncreaseVenus(ctx context.Context, steps int, playerID string) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
@@ -323,9 +326,10 @@ func (gp *GlobalParameters) IncreaseVenus(ctx context.Context, steps int) (int, 
 
 	if gp.eventBus != nil && oldVenus != newVenus {
 		events.Publish(gp.eventBus, events.VenusChangedEvent{
-			GameID:   gp.gameID,
-			OldValue: oldVenus,
-			NewValue: newVenus,
+			GameID:    gp.gameID,
+			OldValue:  oldVenus,
+			NewValue:  newVenus,
+			ChangedBy: playerID,
 		})
 	}
 

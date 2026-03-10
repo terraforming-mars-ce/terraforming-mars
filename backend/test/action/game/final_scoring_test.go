@@ -37,13 +37,13 @@ func TestFinalScoring_CardVPIncluded(t *testing.T) {
 	gp := g.GlobalParameters()
 	for !gp.IsMaxed() {
 		if gp.Temperature() < 8 {
-			gp.IncreaseTemperature(ctx, 1)
+			gp.IncreaseTemperature(ctx, 1, "")
 		}
 		if gp.Oxygen() < 14 {
-			gp.IncreaseOxygen(ctx, 1)
+			gp.IncreaseOxygen(ctx, 1, "")
 		}
 		if gp.Oceans() < 9 {
-			gp.PlaceOcean(ctx)
+			gp.PlaceOcean(ctx, "")
 		}
 	}
 
@@ -132,13 +132,13 @@ func TestFinalScoring_GreeneryAndCityVP(t *testing.T) {
 	gp := g.GlobalParameters()
 	for !gp.IsMaxed() {
 		if gp.Temperature() < 8 {
-			gp.IncreaseTemperature(ctx, 1)
+			gp.IncreaseTemperature(ctx, 1, "")
 		}
 		if gp.Oxygen() < 14 {
-			gp.IncreaseOxygen(ctx, 1)
+			gp.IncreaseOxygen(ctx, 1, "")
 		}
 		if gp.Oceans() < 9 {
-			gp.PlaceOcean(ctx)
+			gp.PlaceOcean(ctx, "")
 		}
 	}
 

@@ -101,7 +101,7 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 	currentTemp := g.GlobalParameters().Temperature()
 	if currentTemp < global_parameters.MaxTemperature {
 		var err error
-		stepsRaised, err = g.GlobalParameters().IncreaseTemperature(ctx, 1)
+		stepsRaised, err = g.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
 		if err != nil {
 			log.Error("Failed to raise temperature", zap.Error(err))
 			return fmt.Errorf("failed to raise temperature: %w", err)

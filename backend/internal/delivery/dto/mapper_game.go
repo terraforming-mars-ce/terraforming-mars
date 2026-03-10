@@ -57,6 +57,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		Oceans:      globalParams.Oceans(),
 		MaxOceans:   globalParams.GetMaxOceans(),
 		Venus:       globalParams.Venus(),
+		Bonuses:     buildGlobalParameterBonuses(settings.VenusNextEnabled),
 	}
 
 	board := g.Board()
@@ -519,4 +520,20 @@ func ToTriggeredEffectDto(effect game.TriggeredEffect) TriggeredEffectDto {
 		Behaviors:         behaviorDtos,
 		VPConditions:      vpConditionDtos,
 	}
+}
+
+func buildGlobalParameterBonuses(venusEnabled bool) []GlobalParameterBonusDto {
+	bonuses := []GlobalParameterBonusDto{
+		{Parameter: "temperature", Threshold: -24, RewardType: "heat-production", RewardAmount: 1},
+		{Parameter: "temperature", Threshold: -20, RewardType: "heat-production", RewardAmount: 1},
+		{Parameter: "temperature", Threshold: 0, RewardType: "ocean-placement", RewardAmount: 1},
+		{Parameter: "oxygen", Threshold: 8, RewardType: "temperature", RewardAmount: 1},
+	}
+	if venusEnabled {
+		bonuses = append(bonuses,
+			GlobalParameterBonusDto{Parameter: "venus", Threshold: 8, RewardType: "card-draw", RewardAmount: 1},
+			GlobalParameterBonusDto{Parameter: "venus", Threshold: 16, RewardType: "tr", RewardAmount: 1},
+		)
+	}
+	return bonuses
 }

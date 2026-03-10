@@ -188,6 +188,7 @@ func NewGame(
 
 	g.subscribeToGenerationalEvents()
 	g.subscribeToOceanSpaceEvents()
+	g.subscribeToGlobalParameterBonuses()
 
 	return g
 }
@@ -868,6 +869,18 @@ func (g *Game) SetPendingTileSelectionQueue(ctx context.Context, playerID string
 	}
 
 	return nil
+}
+
+// SetTileQueueOnComplete sets the OnComplete callback on a player's pending tile selection queue or current pending tile selection
+func (g *Game) SetTileQueueOnComplete(_ context.Context, playerID string, callback *player.TileCompletionCallback) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if queue, exists := g.pendingTileSelectionQueues[playerID]; exists && queue != nil {
+		queue.OnComplete = callback
+	}
+	if sel, exists := g.pendingTileSelections[playerID]; exists && sel != nil {
+		sel.OnComplete = callback
+	}
 }
 
 // AppendToPendingTileSelectionQueue atomically appends tile types to a player's tile selection queue
@@ -1652,6 +1665,29 @@ func (g *Game) SetVPCardLookup(lookup VPCardLookup) {
 	g.subscribeToVPEvents()
 }
 
+// RegisterCorporationVPGranter registers VP conditions from a corporation card.
+func (g *Game) RegisterCorporationVPGranter(playerID string, corporationID string) {
+	if g.vpCardLookup == nil {
+		return
+	}
+	cardInfo, err := g.vpCardLookup.LookupVPCard(corporationID)
+	if err != nil || len(cardInfo.VPConditions) == 0 {
+		return
+	}
+	p, err := g.GetPlayer(playerID)
+	if err != nil {
+		return
+	}
+	granter := player.VPGranter{
+		CardID:       cardInfo.CardID,
+		CardName:     cardInfo.CardName,
+		Description:  cardInfo.Description,
+		VPConditions: cardInfo.VPConditions,
+	}
+	p.VPGranters().Prepend(granter)
+	g.recalculatePlayerVP(p)
+}
+
 func (g *Game) recalculatePlayerVP(p *player.Player) {
 	if g.vpCardLookup == nil {
 		return
@@ -1714,32 +1750,6 @@ func (g *Game) subscribeToVPEvents() {
 		g.recalculateAllPlayersVP()
 	})
 
-	events.Subscribe(g.eventBus, func(e events.CorporationSelectedEvent) {
-		if g.vpCardLookup == nil {
-			return
-		}
-		cardInfo, err := g.vpCardLookup.LookupVPCard(e.CorporationID)
-		if err != nil {
-			return
-		}
-		if len(cardInfo.VPConditions) == 0 {
-			return
-		}
-
-		p, err := g.GetPlayer(e.PlayerID)
-		if err != nil {
-			return
-		}
-
-		granter := player.VPGranter{
-			CardID:       cardInfo.CardID,
-			CardName:     cardInfo.CardName,
-			Description:  cardInfo.Description,
-			VPConditions: cardInfo.VPConditions,
-		}
-		p.VPGranters().Prepend(granter)
-		g.recalculatePlayerVP(p)
-	})
 }
 
 func (g *Game) subscribeToGenerationalEvents() {
@@ -1800,6 +1810,126 @@ func (g *Game) subscribeToOceanSpaceEvents() {
 		oceansRemaining := gp.GetMaxOceans() - gp.Oceans()
 		if freeOceanSpaces < oceansRemaining {
 			gp.ReduceMaxOceans(gp.Oceans() + freeOceanSpaces)
+		}
+	})
+}
+
+func (g *Game) subscribeToGlobalParameterBonuses() {
+	log := logger.Get()
+
+	events.Subscribe(g.eventBus, func(e events.TemperatureChangedEvent) {
+		if e.ChangedBy == "" {
+			return
+		}
+		p, err := g.GetPlayer(e.ChangedBy)
+		if err != nil {
+			return
+		}
+
+		if e.OldValue < -24 && e.NewValue >= -24 {
+			p.Resources().AddProduction(map[shared.ResourceType]int{
+				shared.ResourceHeatProduction: 1,
+			})
+			g.AddTriggeredEffect(TriggeredEffect{
+				CardName:   "Temperature Bonus",
+				PlayerID:   e.ChangedBy,
+				SourceType: SourceTypeGlobalBonus,
+				CalculatedOutputs: []CalculatedOutput{
+					{ResourceType: string(shared.ResourceHeatProduction), Amount: 1},
+				},
+			})
+			log.Debug("Temperature bonus: +1 heat production at -24C", zap.String("player_id", e.ChangedBy))
+		}
+
+		if e.OldValue < -20 && e.NewValue >= -20 {
+			p.Resources().AddProduction(map[shared.ResourceType]int{
+				shared.ResourceHeatProduction: 1,
+			})
+			g.AddTriggeredEffect(TriggeredEffect{
+				CardName:   "Temperature Bonus",
+				PlayerID:   e.ChangedBy,
+				SourceType: SourceTypeGlobalBonus,
+				CalculatedOutputs: []CalculatedOutput{
+					{ResourceType: string(shared.ResourceHeatProduction), Amount: 1},
+				},
+			})
+			log.Debug("Temperature bonus: +1 heat production at -20C", zap.String("player_id", e.ChangedBy))
+		}
+
+		if e.OldValue < 0 && e.NewValue >= 0 {
+			ctx := context.Background()
+			if err := g.AppendToPendingTileSelectionQueue(ctx, e.ChangedBy, []string{"ocean"}, "Temperature Bonus", "", nil); err != nil {
+				log.Warn("Failed to queue ocean tile for temperature bonus", zap.Error(err))
+			}
+			g.AddTriggeredEffect(TriggeredEffect{
+				CardName:   "Temperature Bonus",
+				PlayerID:   e.ChangedBy,
+				SourceType: SourceTypeGlobalBonus,
+				CalculatedOutputs: []CalculatedOutput{
+					{ResourceType: string(shared.ResourceOceanTile), Amount: 1},
+				},
+			})
+			log.Debug("Temperature bonus: place ocean at 0C", zap.String("player_id", e.ChangedBy))
+		}
+	})
+
+	events.Subscribe(g.eventBus, func(e events.OxygenChangedEvent) {
+		if e.ChangedBy == "" {
+			return
+		}
+
+		if e.OldValue < 8 && e.NewValue >= 8 {
+			ctx := context.Background()
+			g.globalParameters.IncreaseTemperature(ctx, 1, e.ChangedBy)
+			g.AddTriggeredEffect(TriggeredEffect{
+				CardName:   "Oxygen Bonus",
+				PlayerID:   e.ChangedBy,
+				SourceType: SourceTypeGlobalBonus,
+				CalculatedOutputs: []CalculatedOutput{
+					{ResourceType: string(shared.ResourceTemperature), Amount: 1},
+				},
+			})
+			log.Debug("Oxygen bonus: +1 temperature step at 8%", zap.String("player_id", e.ChangedBy))
+		}
+	})
+
+	events.Subscribe(g.eventBus, func(e events.VenusChangedEvent) {
+		if e.ChangedBy == "" {
+			return
+		}
+		p, err := g.GetPlayer(e.ChangedBy)
+		if err != nil {
+			return
+		}
+
+		if e.OldValue < 8 && e.NewValue >= 8 {
+			ctx := context.Background()
+			cardIDs, drawErr := g.deck.DrawProjectCards(ctx, 1)
+			if drawErr == nil && len(cardIDs) > 0 {
+				p.Hand().AddCard(cardIDs[0])
+			}
+			g.AddTriggeredEffect(TriggeredEffect{
+				CardName:   "Venus Bonus",
+				PlayerID:   e.ChangedBy,
+				SourceType: SourceTypeGlobalBonus,
+				CalculatedOutputs: []CalculatedOutput{
+					{ResourceType: "card-draw", Amount: 1},
+				},
+			})
+			log.Debug("Venus bonus: draw 1 card at 8%", zap.String("player_id", e.ChangedBy))
+		}
+
+		if e.OldValue < 16 && e.NewValue >= 16 {
+			p.Resources().UpdateTerraformRating(1)
+			g.AddTriggeredEffect(TriggeredEffect{
+				CardName:   "Venus Bonus",
+				PlayerID:   e.ChangedBy,
+				SourceType: SourceTypeGlobalBonus,
+				CalculatedOutputs: []CalculatedOutput{
+					{ResourceType: string(shared.ResourceTR), Amount: 1},
+				},
+			})
+			log.Debug("Venus bonus: +1 TR at 16%", zap.String("player_id", e.ChangedBy))
 		}
 	})
 }

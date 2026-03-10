@@ -154,7 +154,7 @@ func TestStateRepository_GlobalParameterChanges(t *testing.T) {
 		t.Fatalf("First write failed: %v", err)
 	}
 
-	testGame.GlobalParameters().IncreaseTemperature(context.Background(), 2)
+	testGame.GlobalParameters().IncreaseTemperature(context.Background(), 2, "")
 
 	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Heat Conversion", game.SourceTypeResourceConvert, player.ID(), "Converted heat to temperature")
 	if err != nil {

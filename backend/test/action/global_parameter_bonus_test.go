@@ -1,0 +1,158 @@
+package action_test
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"terraforming-mars-backend/test/testutil"
+)
+
+func TestTemperatureBonus_HeatProductionAtMinus24(t *testing.T) {
+	testGame, _, _, playerID := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+
+	player, _ := testGame.GetPlayer(playerID)
+	initialHeatProd := player.Resources().Production().Heat
+
+	testGame.GlobalParameters().SetTemperature(ctx, -26)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
+	time.Sleep(50 * time.Millisecond)
+
+	finalHeatProd := player.Resources().Production().Heat
+	testutil.AssertEqual(t, initialHeatProd+1, finalHeatProd,
+		"Player should gain +1 heat production when temperature crosses -24C")
+}
+
+func TestTemperatureBonus_HeatProductionAtMinus20(t *testing.T) {
+	testGame, _, _, playerID := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+
+	player, _ := testGame.GetPlayer(playerID)
+	initialHeatProd := player.Resources().Production().Heat
+
+	testGame.GlobalParameters().SetTemperature(ctx, -22)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
+	time.Sleep(50 * time.Millisecond)
+
+	finalHeatProd := player.Resources().Production().Heat
+	testutil.AssertEqual(t, initialHeatProd+1, finalHeatProd,
+		"Player should gain +1 heat production when temperature crosses -20C")
+}
+
+func TestTemperatureBonus_CrossBothThresholds(t *testing.T) {
+	testGame, _, _, playerID := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+
+	player, _ := testGame.GetPlayer(playerID)
+	initialHeatProd := player.Resources().Production().Heat
+
+	testGame.GlobalParameters().SetTemperature(ctx, -26)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 3, playerID)
+	time.Sleep(50 * time.Millisecond)
+
+	finalHeatProd := player.Resources().Production().Heat
+	testutil.AssertEqual(t, initialHeatProd+2, finalHeatProd,
+		"Player should gain +2 heat production when crossing both -24C and -20C thresholds")
+}
+
+func TestTemperatureBonus_OceanQueuedAtZero(t *testing.T) {
+	testGame, _, _, playerID := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+
+	testGame.GlobalParameters().SetTemperature(ctx, -2)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
+	time.Sleep(50 * time.Millisecond)
+
+	// The queue auto-processes the first tile into the active pending tile selection
+	selection := testGame.GetPendingTileSelection(playerID)
+	testutil.AssertTrue(t, selection != nil,
+		"Ocean tile selection should be pending when temperature crosses 0C")
+	testutil.AssertEqual(t, "ocean", selection.TileType,
+		"Pending tile type should be ocean")
+}
+
+func TestOxygenBonus_TemperatureStepAt8(t *testing.T) {
+	testGame, _, _, playerID := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+
+	testGame.GlobalParameters().SetOxygen(ctx, 7)
+	initialTemp := testGame.GlobalParameters().Temperature()
+
+	testGame.GlobalParameters().IncreaseOxygen(ctx, 1, playerID)
+	time.Sleep(50 * time.Millisecond)
+
+	finalTemp := testGame.GlobalParameters().Temperature()
+	testutil.AssertEqual(t, initialTemp+2, finalTemp,
+		"Temperature should increase by 2 degrees (1 step) when oxygen crosses 8%")
+}
+
+func TestOxygenBonus_ChainedWithTemperatureBonus(t *testing.T) {
+	testGame, _, _, playerID := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+
+	player, _ := testGame.GetPlayer(playerID)
+	initialHeatProd := player.Resources().Production().Heat
+
+	testGame.GlobalParameters().SetTemperature(ctx, -26)
+	testGame.GlobalParameters().SetOxygen(ctx, 7)
+
+	testGame.GlobalParameters().IncreaseOxygen(ctx, 1, playerID)
+	time.Sleep(50 * time.Millisecond)
+
+	finalTemp := testGame.GlobalParameters().Temperature()
+	testutil.AssertEqual(t, -24, finalTemp,
+		"Temperature should increase from -26 to -24 via oxygen bonus")
+
+	finalHeatProd := player.Resources().Production().Heat
+	testutil.AssertEqual(t, initialHeatProd+1, finalHeatProd,
+		"Player should gain +1 heat production from chained temperature bonus at -24C")
+}
+
+func TestVenusBonus_CardDrawAt8(t *testing.T) {
+	testGame, _, _, playerID := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+
+	player, _ := testGame.GetPlayer(playerID)
+	initialCardCount := player.Hand().CardCount()
+
+	testGame.GlobalParameters().SetVenus(ctx, 6)
+	testGame.GlobalParameters().IncreaseVenus(ctx, 1, playerID)
+	time.Sleep(50 * time.Millisecond)
+
+	finalCardCount := player.Hand().CardCount()
+	testutil.AssertEqual(t, initialCardCount+1, finalCardCount,
+		"Player should draw 1 card when venus crosses 8%")
+}
+
+func TestVenusBonus_TRAt16(t *testing.T) {
+	testGame, _, _, playerID := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+
+	player, _ := testGame.GetPlayer(playerID)
+	initialTR := player.Resources().TerraformRating()
+
+	testGame.GlobalParameters().SetVenus(ctx, 14)
+	testGame.GlobalParameters().IncreaseVenus(ctx, 1, playerID)
+	time.Sleep(50 * time.Millisecond)
+
+	finalTR := player.Resources().TerraformRating()
+	testutil.AssertEqual(t, initialTR+1, finalTR,
+		"TR should increase by 1 from the venus bonus at 16%")
+}
+
+func TestAdminSetDoesNotTriggerBonus(t *testing.T) {
+	testGame, _, _, playerID := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+
+	player, _ := testGame.GetPlayer(playerID)
+	initialHeatProd := player.Resources().Production().Heat
+
+	testGame.GlobalParameters().SetTemperature(ctx, -26)
+	testGame.GlobalParameters().SetTemperature(ctx, -20)
+	time.Sleep(50 * time.Millisecond)
+
+	finalHeatProd := player.Resources().Production().Heat
+	testutil.AssertEqual(t, initialHeatProd, finalHeatProd,
+		"Admin SetTemperature should not trigger heat production bonus")
+}

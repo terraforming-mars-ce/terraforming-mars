@@ -82,7 +82,7 @@ func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
 	}
 
 	// TRIGGER EVENT: Increase temperature to meet requirement
-	_, err := g.GlobalParameters().IncreaseTemperature(ctx, 10)
+	_, err := g.GlobalParameters().IncreaseTemperature(ctx, 10, "")
 	if err != nil {
 		t.Fatalf("Failed to increase temperature: %v", err)
 	}

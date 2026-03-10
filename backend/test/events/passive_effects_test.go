@@ -33,7 +33,7 @@ func TestPassiveEffects_EventSubscription(t *testing.T) {
 	players[0].SetCorporationID("corp-tharsis-republic")
 	testutil.StartTestGame(t, testGame)
 
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -78,7 +78,7 @@ func TestPassiveEffects_MultipleEffects(t *testing.T) {
 	players[0].SetCorporationID("corp-tharsis-republic")
 	testutil.StartTestGame(t, testGame)
 
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -121,7 +121,7 @@ func TestPassiveEffects_DifferentEventTypes(t *testing.T) {
 	testutil.StartTestGame(t, testGame)
 
 	// Trigger temperature change
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
 	time.Sleep(10 * time.Millisecond)
 
 	mu.Lock()
@@ -173,7 +173,7 @@ func TestPassiveEffects_EventData(t *testing.T) {
 	initialTemp := testGame.GlobalParameters().Temperature()
 
 	// Trigger temperature change
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
 	time.Sleep(10 * time.Millisecond)
 
 	// Verify event data
@@ -209,7 +209,7 @@ func TestPassiveEffects_Unsubscribe(t *testing.T) {
 	testutil.StartTestGame(t, testGame)
 
 	// Trigger once
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
 	time.Sleep(10 * time.Millisecond)
 
 	mu.Lock()
@@ -223,7 +223,7 @@ func TestPassiveEffects_Unsubscribe(t *testing.T) {
 	eventBus.Unsubscribe(subID)
 
 	// Trigger again
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
 	time.Sleep(10 * time.Millisecond)
 
 	mu.Lock()
@@ -254,7 +254,7 @@ func TestPassiveEffects_CardBasedEffect(t *testing.T) {
 	initialCredits := testutil.GetPlayerCredits(player)
 
 	// Trigger temperature change
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
 	time.Sleep(10 * time.Millisecond)
 
 	// Verify credits increased
@@ -288,8 +288,8 @@ func TestPassiveEffects_ConditionalEffect(t *testing.T) {
 	testutil.StartTestGame(t, testGame)
 
 	// Trigger temperature changes
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, "")
 	time.Sleep(10 * time.Millisecond)
 
 	mu.Lock()

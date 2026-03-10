@@ -320,38 +320,36 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		}
 	}
 
-	// Award 2 M€ per adjacent ocean tile
-	if tileType != "ocean" {
-		neighbors := coords.GetNeighbors()
-		adjacentOceanCount := 0
-		for _, neighbor := range neighbors {
-			neighborTile, err := g.Board().GetTile(neighbor)
-			if err != nil {
-				continue
-			}
-			if neighborTile.OccupiedBy != nil && neighborTile.OccupiedBy.Type == shared.ResourceOceanTile {
-				adjacentOceanCount++
-			}
+	// Award 2 M€ per adjacent ocean tile (applies to all tile types, including oceans)
+	neighbors := coords.GetNeighbors()
+	adjacentOceanCount := 0
+	for _, neighbor := range neighbors {
+		neighborTile, err := g.Board().GetTile(neighbor)
+		if err != nil {
+			continue
 		}
-		if adjacentOceanCount > 0 {
-			oceanBonus := adjacentOceanCount * 2
-			p.Resources().Add(map[shared.ResourceType]int{
-				shared.ResourceCredit: oceanBonus,
-			})
-
-			g.AddTriggeredEffect(game.TriggeredEffect{
-				CardName:   "Ocean Adjacency",
-				PlayerID:   playerID,
-				SourceType: game.SourceTypeGameEvent,
-				CalculatedOutputs: []game.CalculatedOutput{
-					{ResourceType: string(shared.ResourceCredit), Amount: oceanBonus},
-				},
-			})
-
-			log.Debug("Awarded ocean adjacency bonus",
-				zap.Int("adjacent_oceans", adjacentOceanCount),
-				zap.Int("credits_awarded", oceanBonus))
+		if neighborTile.OccupiedBy != nil && neighborTile.OccupiedBy.Type == shared.ResourceOceanTile {
+			adjacentOceanCount++
 		}
+	}
+	if adjacentOceanCount > 0 {
+		oceanBonus := adjacentOceanCount * 2
+		p.Resources().Add(map[shared.ResourceType]int{
+			shared.ResourceCredit: oceanBonus,
+		})
+
+		g.AddTriggeredEffect(game.TriggeredEffect{
+			CardName:   "Ocean Adjacency",
+			PlayerID:   playerID,
+			SourceType: game.SourceTypeGameEvent,
+			CalculatedOutputs: []game.CalculatedOutput{
+				{ResourceType: string(shared.ResourceCredit), Amount: oceanBonus},
+			},
+		})
+
+		log.Debug("Awarded ocean adjacency bonus",
+			zap.Int("adjacent_oceans", adjacentOceanCount),
+			zap.Int("credits_awarded", oceanBonus))
 	}
 
 	result := &TilePlacementResult{
@@ -366,7 +364,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		log.Debug("City placed (no TR bonus)")
 
 	case "greenery", "world-tree":
-		actualSteps, err := g.GlobalParameters().IncreaseOxygen(ctx, 1)
+		actualSteps, err := g.GlobalParameters().IncreaseOxygen(ctx, 1, playerID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to increase oxygen: %w", err)
 		}
@@ -383,7 +381,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		}
 
 	case "ocean":
-		success, err := g.GlobalParameters().PlaceOcean(ctx)
+		success, err := g.GlobalParameters().PlaceOcean(ctx, playerID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to place ocean: %w", err)
 		}
