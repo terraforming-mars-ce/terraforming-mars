@@ -498,8 +498,8 @@ func TestMiningArea_PlaceOnSteelBonus_IncreaseSteelProduction(t *testing.T) {
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 
-	// Place a player-owned tile adjacent to the steel bonus tile at (-3, 1, 2)
-	adjacentToSteelBonus := shared.HexPosition{Q: -2, R: 1, S: 1}
+	// Place a player-owned tile adjacent to the steel bonus tile at (-4,3,1)
+	adjacentToSteelBonus := shared.HexPosition{Q: -3, R: 3, S: 0}
 	err := testGame.Board().UpdateTileOccupancy(ctx, adjacentToSteelBonus,
 		board.TileOccupant{Type: shared.ResourceCityTile}, p.ID())
 	testutil.AssertNoError(t, err, "Should place player tile adjacent to steel bonus")
@@ -519,8 +519,8 @@ func TestMiningArea_PlaceOnSteelBonus_IncreaseSteelProduction(t *testing.T) {
 	selection := testGame.GetPendingTileSelection(p.ID())
 	testutil.AssertTrue(t, selection != nil, "Should have pending mining tile selection")
 
-	// Select the steel bonus hex at (-3,1,2)
-	steelBonusHex := fmt.Sprintf("%d,%d,%d", -3, 1, 2)
+	// Select the steel bonus hex at (-4,3,1) — land tile with Steel×2
+	steelBonusHex := fmt.Sprintf("%d,%d,%d", -4, 3, 1)
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), p.ID(), steelBonusHex)
 	testutil.AssertNoError(t, err, "Should be able to select steel bonus hex")
@@ -549,8 +549,8 @@ func TestMiningArea_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing.T
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 
-	// Place a player-owned tile adjacent to the titanium bonus tile at (2, 1, -3)
-	adjacentToTitaniumBonus := shared.HexPosition{Q: 1, R: 1, S: -2}
+	// Place a player-owned tile adjacent to the titanium bonus tile at (1,3,-4)
+	adjacentToTitaniumBonus := shared.HexPosition{Q: 0, R: 3, S: -3}
 	err := testGame.Board().UpdateTileOccupancy(ctx, adjacentToTitaniumBonus,
 		board.TileOccupant{Type: shared.ResourceCityTile}, p.ID())
 	testutil.AssertNoError(t, err, "Should place player tile adjacent to titanium bonus")
@@ -570,8 +570,8 @@ func TestMiningArea_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing.T
 	selection := testGame.GetPendingTileSelection(p.ID())
 	testutil.AssertTrue(t, selection != nil, "Should have pending mining tile selection")
 
-	// Select the titanium bonus hex at (2,1,-3)
-	titaniumBonusHex := fmt.Sprintf("%d,%d,%d", 2, 1, -3)
+	// Select the titanium bonus hex at (1,3,-4) — land tile with Titanium×1
+	titaniumBonusHex := fmt.Sprintf("%d,%d,%d", 1, 3, -4)
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), p.ID(), titaniumBonusHex)
 	testutil.AssertNoError(t, err, "Should be able to select titanium bonus hex")
