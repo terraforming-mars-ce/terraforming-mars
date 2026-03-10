@@ -206,7 +206,7 @@ const GameCard: React.FC<GameCardProps> = ({
             })}
           {card.type === "event" && (
             <div className="flex items-center justify-center shrink-0 [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.7))]">
-              <GameIcon iconType="event" size="small" />
+              <GameIcon iconType="event" size="medium" />
             </div>
           )}
         </div>
