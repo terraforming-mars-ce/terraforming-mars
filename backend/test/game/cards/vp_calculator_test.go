@@ -70,7 +70,7 @@ func TestPerStorageVPCard(t *testing.T) {
 }
 
 // TestPerOceanTileVPCard verifies per-ocean-tile VP calculation.
-// Capital (008): 1 VP per ocean tile (placed on board).
+// Capital (008): 1 VP per ocean tile adjacent to Capital's city tile.
 func TestPerOceanTileVPCard(t *testing.T) {
 	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	p, _ := g.GetPlayer(playerID)
@@ -79,19 +79,36 @@ func TestPerOceanTileVPCard(t *testing.T) {
 	cardID := testutil.CardID("Capital")
 	p.PlayedCards().AddCard(cardID, "Capital", "automated", []string{"building", "city"})
 
-	// Place 3 ocean tiles on the board
-	oceanPositions := []shared.HexPosition{
-		{Q: -4, R: 0, S: 4},
-		{Q: -3, R: -1, S: 4},
-		{Q: -1, R: -2, S: 3},
+	// Place Capital's city tile at (0, 0, 0) with the source tag
+	cityPos := shared.HexPosition{Q: 0, R: 0, S: 0}
+	err := g.Board().UpdateTileOccupancy(ctx, cityPos, board.TileOccupant{
+		Type: shared.ResourceCityTile,
+		Tags: []string{"source:" + cardID},
+	}, playerID)
+	if err != nil {
+		t.Fatalf("failed to place Capital city tile: %v", err)
 	}
-	for _, pos := range oceanPositions {
+
+	// Place 2 ocean tiles adjacent to the city
+	adjacentOceanPositions := []shared.HexPosition{
+		{Q: 1, R: -1, S: 0},
+		{Q: 0, R: -1, S: 1},
+	}
+	for _, pos := range adjacentOceanPositions {
 		err := g.Board().UpdateTileOccupancy(ctx, pos, board.TileOccupant{
 			Type: shared.ResourceOceanTile,
 		}, "neutral")
 		if err != nil {
 			t.Fatalf("failed to place ocean tile: %v", err)
 		}
+	}
+
+	// Place 1 ocean tile NOT adjacent to the city (should not count)
+	err = g.Board().UpdateTileOccupancy(ctx, shared.HexPosition{Q: 3, R: -3, S: 0}, board.TileOccupant{
+		Type: shared.ResourceOceanTile,
+	}, "neutral")
+	if err != nil {
+		t.Fatalf("failed to place distant ocean tile: %v", err)
 	}
 
 	breakdown := gamecards.CalculatePlayerVP(
@@ -103,8 +120,9 @@ func TestPerOceanTileVPCard(t *testing.T) {
 		cardRegistry,
 	)
 
-	if breakdown.CardVP != 3 {
-		t.Fatalf("expected CardVP=3 for Capital with 3 ocean tiles, got %d", breakdown.CardVP)
+	// Only 2 adjacent oceans should count, not the distant one
+	if breakdown.CardVP != 2 {
+		t.Fatalf("expected CardVP=2 for Capital with 2 adjacent ocean tiles, got %d", breakdown.CardVP)
 	}
 }
 

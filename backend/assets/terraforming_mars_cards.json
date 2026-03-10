@@ -345,7 +345,8 @@
         "per": {
           "type": "ocean-tile",
           "amount": 1,
-          "location": "anywhere"
+          "location": "anywhere",
+          "adjacentToSelfTile": true
         },
         "description": "1 VP per ocean tile adjacent to this city tile."
       }
@@ -1684,14 +1685,15 @@
           {
             "outputs": [
               {
-                "type": "plant",
+                "type": "plant-production",
                 "amount": 4,
                 "target": "self-player"
               }
             ]
           }
         ],
-        "description": "Raise your terraform rating 2 steps and temperature 1 step. Increase your plant production 1 step, or 4 steps if you have 3 plant tags."
+        "description": "Raise your terraform rating 2 steps and temperature 1 step. Increase your plant production 1 step, or 4 steps if you have 3 plant tags.",
+        "choicePolicy": "auto-plant-tags-3"
       }
     ]
   },

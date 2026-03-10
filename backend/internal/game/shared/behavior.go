@@ -2,7 +2,8 @@ package shared
 
 // Choice policy constants
 const (
-	ChoicePolicyLowest = "lowest" // Only choices affecting the lowest production are valid
+	ChoicePolicyLowest         = "lowest"            // Only choices affecting the lowest production are valid
+	ChoicePolicyAutoPlantTags3 = "auto-plant-tags-3" // Auto-select: choice 1 if 3+ plant tags, else choice 0
 )
 
 // CardBehavior represents card behaviors (immediate and repeatable)
@@ -140,6 +141,9 @@ func FilterChoiceIndicesByPolicy(choices []Choice, policy string, production Pro
 	switch policy {
 	case ChoicePolicyLowest:
 		return filterLowestProductionChoices(choices, production)
+	case ChoicePolicyAutoPlantTags3:
+		// Handled externally via AutoSelectChoiceIndex — return all as valid fallback
+		return allChoiceIndices(choices)
 	default:
 		indices := make([]int, len(choices))
 		for i := range choices {
@@ -162,6 +166,28 @@ func IsChoiceValidForPolicy(choiceIndex int, choices []Choice, policy string, pr
 		}
 	}
 	return false
+}
+
+func allChoiceIndices(choices []Choice) []int {
+	indices := make([]int, len(choices))
+	for i := range choices {
+		indices[i] = i
+	}
+	return indices
+}
+
+// AutoSelectChoiceIndex returns an auto-selected choice index for policies that
+// deterministically pick a choice based on game state. Returns -1 if not applicable.
+func AutoSelectChoiceIndex(policy string, plantTagCount int) int {
+	switch policy {
+	case ChoicePolicyAutoPlantTags3:
+		if plantTagCount >= 3 {
+			return 1 // 4 plant production
+		}
+		return 0 // 1 plant production
+	default:
+		return -1
+	}
 }
 
 func filterLowestProductionChoices(choices []Choice, production Production) []int {

@@ -21,7 +21,9 @@ import StartingCardSelectionOverlay from "../../ui/overlay/StartingCardSelection
 import PendingCardSelectionOverlay from "../../ui/overlay/PendingCardSelectionOverlay.tsx";
 import CardDrawSelectionOverlay from "../../ui/overlay/CardDrawSelectionOverlay.tsx";
 import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOverlay.tsx";
-import CardFanOverlay, { CardFanOverlayHandle } from "../../ui/overlay/CardFanOverlay.tsx";
+import CardFanOverlay, {
+  CardFanOverlayHandle,
+} from "../../ui/overlay/CardFanOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
 import { useGameEvent } from "@/hooks/useGameEvent.ts";
@@ -31,7 +33,9 @@ import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import SpaceBackground from "../../3d/SpaceBackground.tsx";
-import EndGameOverlay, { TileVPIndicator } from "../../ui/overlay/EndGameOverlay.tsx";
+import EndGameOverlay, {
+  TileVPIndicator,
+} from "../../ui/overlay/EndGameOverlay.tsx";
 import { TileHighlightMode } from "../../game/board/Tile.tsx";
 import ChoiceSelectionPopover from "../../ui/popover/ChoiceSelectionPopover.tsx";
 import CardStorageSelectionPopover from "../../ui/popover/CardStorageSelectionPopover.tsx";
@@ -47,7 +51,11 @@ import { useSpaceBackground } from "@/contexts/SpaceBackgroundContext.tsx";
 import { useNotifications } from "@/contexts/NotificationContext.tsx";
 import { skyboxCache } from "@/services/SkyboxCache.ts";
 import { audioService } from "@/services/audioService.ts";
-import { clearGameSession, getGameSession, saveGameSession } from "@/utils/sessionStorage.ts";
+import {
+  clearGameSession,
+  getGameSession,
+  saveGameSession,
+} from "@/utils/sessionStorage.ts";
 import {
   CardDto,
   CardPaymentDto,
@@ -73,20 +81,39 @@ import {
   StateDiffDto,
   TriggeredEffectDto,
 } from "@/types/generated/api-types.ts";
-import { shouldShowPaymentModal, createDefaultPayment } from "@/utils/paymentUtils.ts";
+import {
+  shouldShowPaymentModal,
+  createDefaultPayment,
+} from "@/utils/paymentUtils.ts";
 import { deepClone, findChangedPaths } from "@/utils/deepCompare.ts";
 import { StandardProject } from "@/types/cards.tsx";
 
-type TransitionPhase = "idle" | "lobby" | "loading" | "fadeOutLobby" | "animateUI" | "complete";
+type TransitionPhase =
+  | "idle"
+  | "lobby"
+  | "loading"
+  | "fadeOutLobby"
+  | "animateUI"
+  | "complete";
 
-type LoadingPhase = "checking" | "selecting" | "joining" | "spectating" | "connecting" | "ready";
+type LoadingPhase =
+  | "checking"
+  | "selecting"
+  | "joining"
+  | "spectating"
+  | "connecting"
+  | "ready";
 
 export default function GameInterface() {
   const location = useLocation();
   const navigate = useNavigate();
   const { gameId: urlGameId } = useParams<{ gameId?: string }>();
-  const { playProductionSound, playTemperatureSound, playOxygenSound, playYourTurnSound } =
-    useSoundEffects();
+  const {
+    playProductionSound,
+    playTemperatureSound,
+    playOxygenSound,
+    playYourTurnSound,
+  } = useSoundEffects();
   const { showNotification } = useNotifications();
   const [game, setGame] = useState<GameDto | null>(null);
   const {
@@ -95,15 +122,20 @@ export default function GameInterface() {
     dismissCurrent: dismissGameEvent,
   } = useGameEvent();
   const [isConnected, setIsConnected] = useState(false);
-  const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>("idle");
+  const [transitionPhase, setTransitionPhase] =
+    useState<TransitionPhase>("idle");
   const wasInLobby = useRef(false);
   const cardFanRef = useRef<CardFanOverlayHandle>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [reconnectionStep, setReconnectionStep] = useState<"game" | "environment" | null>(null);
+  const [reconnectionStep, setReconnectionStep] = useState<
+    "game" | "environment" | null
+  >(null);
   const [currentPlayer, setCurrentPlayer] = useState<PlayerDto | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null); // Track player ID separately
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>("checking");
-  const [gameForSelection, setGameForSelection] = useState<GameDto | null>(null);
+  const [gameForSelection, setGameForSelection] = useState<GameDto | null>(
+    null,
+  );
   const [_showCorporationModal, setShowCorporationModal] = useState(false);
   const [corporationData, setCorporationData] = useState<CardDto | null>(null);
 
@@ -116,7 +148,19 @@ export default function GameInterface() {
   const [isSpectator, setIsSpectator] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessageDto[]>([]);
   const [showCorp, setShowCorp] = useState(false);
-  const [displayedInitPlayerId, setDisplayedInitPlayerId] = useState<string | null>(null);
+  const [displayedInitPlayerId, setDisplayedInitPlayerId] = useState<
+    string | null
+  >(null);
+
+  // Prevent browser back button from leaving the game page
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   // Set corporation data directly from player (backend now sends full CardDto)
   useEffect(() => {
@@ -145,7 +189,10 @@ export default function GameInterface() {
   useEffect(() => {
     const initPlayerId = game?.initPhase?.currentPlayerId ?? null;
     const phase = game?.currentPhase;
-    if (phase !== GamePhaseInitApplyCorp && phase !== GamePhaseInitApplyPrelude) {
+    if (
+      phase !== GamePhaseInitApplyCorp &&
+      phase !== GamePhaseInitApplyPrelude
+    ) {
       setDisplayedInitPlayerId(null);
       return;
     }
@@ -162,40 +209,49 @@ export default function GameInterface() {
   }, [game?.currentPhase, game?.initPhase?.currentPlayerId]);
 
   // Production phase modal state
-  const [showProductionPhaseModal, setShowProductionPhaseModal] = useState(false);
+  const [showProductionPhaseModal, setShowProductionPhaseModal] =
+    useState(false);
   const [isProductionModalHidden, setIsProductionModalHidden] = useState(false);
-  const [openProductionToCardSelection, setOpenProductionToCardSelection] = useState(false);
+  const [openProductionToCardSelection, setOpenProductionToCardSelection] =
+    useState(false);
   const isInitialMount = useRef(true);
 
   // Starting selection state (corporation + preludes + project cards)
   const [showStartingSelection, setShowStartingSelection] = useState(false);
 
   // Pending card selection state (for sell patents, etc.)
-  const [showPendingCardSelection, setShowPendingCardSelection] = useState(false);
+  const [showPendingCardSelection, setShowPendingCardSelection] =
+    useState(false);
 
   // Card draw selection state (for card-draw/peek/take/buy effects)
   const [showCardDrawSelection, setShowCardDrawSelection] = useState(false);
 
   // Card discard selection state (for passive effects like Mars University)
-  const [showCardDiscardSelection, setShowCardDiscardSelection] = useState(false);
+  const [showCardDiscardSelection, setShowCardDiscardSelection] =
+    useState(false);
 
   // End game tile highlighting state
-  const [tileHighlightMode, setTileHighlightMode] = useState<TileHighlightMode>(null);
+  const [tileHighlightMode, setTileHighlightMode] =
+    useState<TileHighlightMode>(null);
 
   // End game VP indicators state
   const [vpIndicators, setVPIndicators] = useState<TileVPIndicator[]>([]);
 
   // Choice selection state (for card play)
   const [showChoiceSelection, setShowChoiceSelection] = useState(false);
-  const [cardPendingChoice, setCardPendingChoice] = useState<PlayerCardDto | null>(null);
+  const [cardPendingChoice, setCardPendingChoice] =
+    useState<PlayerCardDto | null>(null);
   const [pendingCardBehaviorIndex, setPendingCardBehaviorIndex] = useState(0);
 
   // Action choice selection state (for playing actions with choices)
-  const [showActionChoiceSelection, setShowActionChoiceSelection] = useState(false);
-  const [actionPendingChoice, setActionPendingChoice] = useState<PlayerActionDto | null>(null);
+  const [showActionChoiceSelection, setShowActionChoiceSelection] =
+    useState(false);
+  const [actionPendingChoice, setActionPendingChoice] =
+    useState<PlayerActionDto | null>(null);
 
   // Action reuse state (for Viron-style abilities)
-  const [showActionReuseSelection, setShowActionReuseSelection] = useState(false);
+  const [showActionReuseSelection, setShowActionReuseSelection] =
+    useState(false);
   const [pendingActionReuse, setPendingActionReuse] = useState<{
     cardId: string;
     behaviorIndex: number;
@@ -203,20 +259,28 @@ export default function GameInterface() {
   const activeReuseSourceCardId = useRef<string | undefined>(undefined);
 
   // Steal target selection state (from server pending selection after tile placement)
-  const [showStealTargetSelection, setShowStealTargetSelection] = useState(false);
+  const [showStealTargetSelection, setShowStealTargetSelection] =
+    useState(false);
 
   // Passive triggered behavior choice state (from server pending selection)
-  const [showBehaviorChoiceSelection, setShowBehaviorChoiceSelection] = useState(false);
-  const [pendingBehaviorChoiceStorage, setPendingBehaviorChoiceStorage] = useState<{
-    choiceIndex: number;
-    allStorageNeeds: Array<{ resourceType: ResourceType; amount: number; selectorTags?: string[] }>;
-    collectedTargets: string[];
-    currentIndex: number;
-    resourceType: ResourceType;
-    amount: number;
-    selectorTags?: string[];
-  } | null>(null);
-  const [showBehaviorChoiceStorage, setShowBehaviorChoiceStorage] = useState(false);
+  const [showBehaviorChoiceSelection, setShowBehaviorChoiceSelection] =
+    useState(false);
+  const [pendingBehaviorChoiceStorage, setPendingBehaviorChoiceStorage] =
+    useState<{
+      choiceIndex: number;
+      allStorageNeeds: Array<{
+        resourceType: ResourceType;
+        amount: number;
+        selectorTags?: string[];
+      }>;
+      collectedTargets: string[];
+      currentIndex: number;
+      resourceType: ResourceType;
+      amount: number;
+      selectorTags?: string[];
+    } | null>(null);
+  const [showBehaviorChoiceStorage, setShowBehaviorChoiceStorage] =
+    useState(false);
 
   // Payment selection state
   const [showPaymentSelection, setShowPaymentSelection] = useState(false);
@@ -227,11 +291,16 @@ export default function GameInterface() {
   } | null>(null);
 
   // Card storage selection state
-  const [showCardStorageSelection, setShowCardStorageSelection] = useState(false);
+  const [showCardStorageSelection, setShowCardStorageSelection] =
+    useState(false);
   const [pendingCardStorage, setPendingCardStorage] = useState<{
     cardId: string;
     choiceIndex?: number;
-    allStorageNeeds: Array<{ resourceType: ResourceType; amount: number; selectorTags?: string[] }>;
+    allStorageNeeds: Array<{
+      resourceType: ResourceType;
+      amount: number;
+      selectorTags?: string[];
+    }>;
     collectedTargets: string[];
     currentIndex: number;
     resourceType: ResourceType;
@@ -240,12 +309,17 @@ export default function GameInterface() {
   } | null>(null);
 
   // Action storage selection state
-  const [showActionStorageSelection, setShowActionStorageSelection] = useState(false);
+  const [showActionStorageSelection, setShowActionStorageSelection] =
+    useState(false);
   const [pendingActionStorage, setPendingActionStorage] = useState<{
     cardId: string;
     behaviorIndex: number;
     choiceIndex?: number;
-    allStorageNeeds: Array<{ resourceType: ResourceType; amount: number; selectorTags?: string[] }>;
+    allStorageNeeds: Array<{
+      resourceType: ResourceType;
+      amount: number;
+      selectorTags?: string[];
+    }>;
     collectedTargets: string[];
     currentIndex: number;
     resourceType: ResourceType;
@@ -254,7 +328,8 @@ export default function GameInterface() {
   } | null>(null);
 
   // Target player selection state (for any-player resource/production removal)
-  const [showTargetPlayerSelection, setShowTargetPlayerSelection] = useState(false);
+  const [showTargetPlayerSelection, setShowTargetPlayerSelection] =
+    useState(false);
   const [pendingTargetPlayer, setPendingTargetPlayer] = useState<{
     cardId: string;
     payment: CardPaymentDto;
@@ -267,7 +342,8 @@ export default function GameInterface() {
   } | null>(null);
 
   // Action target player selection state
-  const [showActionTargetPlayerSelection, setShowActionTargetPlayerSelection] = useState(false);
+  const [showActionTargetPlayerSelection, setShowActionTargetPlayerSelection] =
+    useState(false);
   const [pendingActionTargetPlayer, setPendingActionTargetPlayer] = useState<{
     cardId: string;
     behaviorIndex: number;
@@ -279,7 +355,8 @@ export default function GameInterface() {
   } | null>(null);
 
   // Card resource selection state (for steal-from-any-card inputs like Predators/Ants)
-  const [showCardResourceSelection, setShowCardResourceSelection] = useState(false);
+  const [showCardResourceSelection, setShowCardResourceSelection] =
+    useState(false);
   const [pendingCardResourceInput, setPendingCardResourceInput] = useState<{
     cardId: string;
     behaviorIndex: number;
@@ -320,10 +397,14 @@ export default function GameInterface() {
   const [changedPaths, setChangedPaths] = useState<Set<string>>(new Set());
 
   // Triggered effects notifications
-  const [triggeredEffects, setTriggeredEffects] = useState<TriggeredEffectDto[]>([]);
+  const [triggeredEffects, setTriggeredEffects] = useState<
+    TriggeredEffectDto[]
+  >([]);
   const notificationQueueDoneAt = useRef<number>(0);
 
-  const [isSkyboxReady, setIsSkyboxReady] = useState(() => skyboxCache.isReady());
+  const [isSkyboxReady, setIsSkyboxReady] = useState(() =>
+    skyboxCache.isReady(),
+  );
   const [isGpuReady, setIsGpuReady] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const { isLoaded: isSpaceBgLoaded } = useSpaceBackground();
@@ -365,7 +446,11 @@ export default function GameInterface() {
         // Play temperature increase sound when temperature goes up
         const prevTemp = previousGameRef.current.globalParameters?.temperature;
         const newTemp = updatedGame.globalParameters?.temperature;
-        if (prevTemp !== undefined && newTemp !== undefined && newTemp > prevTemp) {
+        if (
+          prevTemp !== undefined &&
+          newTemp !== undefined &&
+          newTemp > prevTemp
+        ) {
           void playTemperatureSound();
         }
 
@@ -386,7 +471,11 @@ export default function GameInterface() {
             (t) => t.occupiedBy && greeneryTypes.has(t.occupiedBy.type),
           ).length ?? 0;
         const greeneryPlaced = newGreeneryCount > prevGreeneryCount;
-        if (prevOxygen !== undefined && newOxygen !== undefined && newOxygen > prevOxygen) {
+        if (
+          prevOxygen !== undefined &&
+          newOxygen !== undefined &&
+          newOxygen > prevOxygen
+        ) {
           void playOxygenSound();
         } else if (greeneryPlaced) {
           void playOxygenSound();
@@ -397,8 +486,10 @@ export default function GameInterface() {
         const prevPhase = previousGameRef.current.currentPhase;
         const newTurn = updatedGame.currentTurn;
         const newPhase = updatedGame.currentPhase;
-        const isNowMyActionTurn = newTurn === playerId && newPhase === GamePhaseAction;
-        const wasMyActionTurn = prevTurn === playerId && prevPhase === GamePhaseAction;
+        const isNowMyActionTurn =
+          newTurn === playerId && newPhase === GamePhaseAction;
+        const wasMyActionTurn =
+          prevTurn === playerId && prevPhase === GamePhaseAction;
         if (isNowMyActionTurn && !wasMyActionTurn) {
           void playYourTurnSound();
           enqueueGameEvent({ title: "YOUR TURN", duration: 2500 });
@@ -412,8 +503,13 @@ export default function GameInterface() {
             if (ms.isClaimed && ms.claimedBy) {
               const prev = prevMilestones.find((p) => p.type === ms.type);
               if (prev && !prev.isClaimed) {
-                const allPlayers = [updatedGame.currentPlayer, ...(updatedGame.otherPlayers ?? [])];
-                const claimPlayer = allPlayers.find((p) => p.id === ms.claimedBy);
+                const allPlayers = [
+                  updatedGame.currentPlayer,
+                  ...(updatedGame.otherPlayers ?? []),
+                ];
+                const claimPlayer = allPlayers.find(
+                  (p) => p.id === ms.claimedBy,
+                );
                 enqueueGameEvent({
                   title: "MILESTONE CLAIMED",
                   achievementName: ms.name,
@@ -434,7 +530,10 @@ export default function GameInterface() {
             if (aw.isFunded && aw.fundedBy) {
               const prev = prevAwards.find((p) => p.type === aw.type);
               if (prev && !prev.isFunded) {
-                const allPlayers = [updatedGame.currentPlayer, ...(updatedGame.otherPlayers ?? [])];
+                const allPlayers = [
+                  updatedGame.currentPlayer,
+                  ...(updatedGame.otherPlayers ?? []),
+                ];
                 const fundPlayer = allPlayers.find((p) => p.id === aw.fundedBy);
                 enqueueGameEvent({
                   title: "AWARD FUNDED",
@@ -464,7 +563,10 @@ export default function GameInterface() {
       previousGameRef.current = deepClone(updatedGame);
 
       // Extract triggered effects for notifications (clear after short delay to allow component to process)
-      if (updatedGame.triggeredEffects && updatedGame.triggeredEffects.length > 0) {
+      if (
+        updatedGame.triggeredEffects &&
+        updatedGame.triggeredEffects.length > 0
+      ) {
         setTriggeredEffects(updatedGame.triggeredEffects);
         const notificationCount = updatedGame.triggeredEffects.length;
         notificationQueueDoneAt.current = Date.now() + notificationCount * 2500;
@@ -588,19 +690,22 @@ export default function GameInterface() {
     navigate("/", { replace: true });
   }, [navigate]);
 
-  const handleSpectatorIdReceived = useCallback((payload: { spectatorId: string }) => {
-    const gameId = globalWebSocketManager.gameId;
-    if (!gameId || !payload.spectatorId) return;
-    currentPlayerIdRef.current = payload.spectatorId;
-    const savedSession = getGameSession();
-    if (savedSession && savedSession.gameId === gameId) {
-      saveGameSession({
-        ...savedSession,
-        playerId: payload.spectatorId,
-        isSpectator: true,
-      });
-    }
-  }, []);
+  const handleSpectatorIdReceived = useCallback(
+    (payload: { spectatorId: string }) => {
+      const gameId = globalWebSocketManager.gameId;
+      if (!gameId || !payload.spectatorId) return;
+      currentPlayerIdRef.current = payload.spectatorId;
+      const savedSession = getGameSession();
+      if (savedSession && savedSession.gameId === gameId) {
+        saveGameSession({
+          ...savedSession,
+          playerId: payload.spectatorId,
+          isSpectator: true,
+        });
+      }
+    },
+    [],
+  );
 
   // Check if we should show production phase modal based on game state
   useEffect(() => {
@@ -629,12 +734,21 @@ export default function GameInterface() {
     if (isInitialMount.current) {
       isInitialMount.current = false;
     }
-  }, [currentPlayer?.productionPhase, game, showProductionPhaseModal, playProductionSound]);
+  }, [
+    currentPlayer?.productionPhase,
+    game,
+    showProductionPhaseModal,
+    playProductionSound,
+  ]);
 
   const handleStartingChoicesConfirm = useCallback(
     async (corporationId: string, preludeIds: string[], cardIds: string[]) => {
       try {
-        await globalWebSocketManager.selectStartingChoices(corporationId, preludeIds, cardIds);
+        await globalWebSocketManager.selectStartingChoices(
+          corporationId,
+          preludeIds,
+          cardIds,
+        );
       } catch (error) {
         console.error("Failed to select starting choices:", error);
       }
@@ -643,32 +757,41 @@ export default function GameInterface() {
   );
 
   // Handle pending card selection (sell patents, etc.)
-  const handlePendingCardSelection = useCallback(async (selectedCardIds: string[]) => {
-    try {
-      await globalWebSocketManager.selectCards(selectedCardIds);
-      // Overlay closes automatically when backend clears pendingCardSelection
-    } catch (error) {
-      console.error("Failed to select cards:", error);
-    }
-  }, []);
+  const handlePendingCardSelection = useCallback(
+    async (selectedCardIds: string[]) => {
+      try {
+        await globalWebSocketManager.selectCards(selectedCardIds);
+        // Overlay closes automatically when backend clears pendingCardSelection
+      } catch (error) {
+        console.error("Failed to select cards:", error);
+      }
+    },
+    [],
+  );
 
   // Handle card draw selection confirmation
-  const handleCardDrawConfirm = useCallback(async (cardsToTake: string[], cardsToBuy: string[]) => {
-    try {
-      await globalWebSocketManager.confirmCardDraw(cardsToTake, cardsToBuy);
-    } catch (error) {
-      console.error("Failed to confirm card draw:", error);
-    }
-  }, []);
+  const handleCardDrawConfirm = useCallback(
+    async (cardsToTake: string[], cardsToBuy: string[]) => {
+      try {
+        await globalWebSocketManager.confirmCardDraw(cardsToTake, cardsToBuy);
+      } catch (error) {
+        console.error("Failed to confirm card draw:", error);
+      }
+    },
+    [],
+  );
 
   // Handle card discard selection confirmation (passive effects like Mars University)
-  const handleCardDiscardConfirm = useCallback(async (cardsToDiscard: string[]) => {
-    try {
-      await globalWebSocketManager.confirmCardDiscard(cardsToDiscard);
-    } catch (error) {
-      console.error("Failed to confirm card discard:", error);
-    }
-  }, []);
+  const handleCardDiscardConfirm = useCallback(
+    async (cardsToDiscard: string[]) => {
+      try {
+        await globalWebSocketManager.confirmCardDiscard(cardsToDiscard);
+      } catch (error) {
+        console.error("Failed to confirm card discard:", error);
+      }
+    },
+    [],
+  );
 
   // Helper function to get ALL any-card storage selections from outputs
   const getAllAnyCardStorageSelections = useCallback(
@@ -799,7 +922,8 @@ export default function GameInterface() {
       for (const output of outputs) {
         if (output.targetRestriction) continue; // Deferred to post-tile-placement
         if (
-          (output.target === "any-player" || output.target === "steal-any-player") &&
+          (output.target === "any-player" ||
+            output.target === "steal-any-player") &&
           targetableResources.includes(output.type as ResourceType)
         ) {
           return {
@@ -816,15 +940,29 @@ export default function GameInterface() {
   );
 
   const needsCardResourceInput = useCallback(
-    (inputs: any[] | undefined): { resourceType: ResourceType; amount: number } | null => {
-      if (!inputs) return null;
+    (
+      inputs: any[] | undefined,
+      outputs?: any[] | undefined,
+    ): { resourceType: ResourceType; amount: number } | null => {
+      if (inputs) {
+        for (const input of inputs) {
+          if (input.target === "steal-from-any-card") {
+            return {
+              resourceType: input.type as ResourceType,
+              amount: input.amount || 1,
+            };
+          }
+        }
+      }
 
-      for (const input of inputs) {
-        if (input.target === "steal-from-any-card") {
-          return {
-            resourceType: input.type as ResourceType,
-            amount: input.amount || 1,
-          };
+      if (outputs) {
+        for (const output of outputs) {
+          if (output.target === "steal-from-any-card") {
+            return {
+              resourceType: output.type as ResourceType,
+              amount: output.amount || 1,
+            };
+          }
         }
       }
 
@@ -891,7 +1029,8 @@ export default function GameInterface() {
       selectedAmount?: number,
     ) => {
       // Check if any auto-trigger behavior has variableAmount and we haven't collected it yet
-      const card = cardForBehaviors || currentPlayer?.cards.find((c) => c.id === cardId);
+      const card =
+        cardForBehaviors || currentPlayer?.cards.find((c) => c.id === cardId);
       if (card && selectedAmount === undefined) {
         const autoTriggerBehaviors = card.behaviors?.filter((b) =>
           b.triggers?.some((t) => t.type === "auto"),
@@ -901,7 +1040,9 @@ export default function GameInterface() {
             choiceIndex !== undefined
               ? behavior.choices?.find((c) => c.originalIndex === choiceIndex)
               : undefined;
-          const outputs = matchedChoice ? matchedChoice.outputs : behavior.outputs;
+          const outputs = matchedChoice
+            ? matchedChoice.outputs
+            : behavior.outputs;
           const inputs = matchedChoice ? matchedChoice.inputs : behavior.inputs;
           const variableInfo = getVariableAmountInfo(inputs, outputs);
           if (variableInfo) {
@@ -931,7 +1072,9 @@ export default function GameInterface() {
             choiceIndex !== undefined
               ? behavior.choices?.find((c) => c.originalIndex === choiceIndex)
               : undefined;
-          const outputs = matchedChoice2 ? matchedChoice2.outputs : behavior.outputs;
+          const outputs = matchedChoice2
+            ? matchedChoice2.outputs
+            : behavior.outputs;
           const targetInfo = needsTargetPlayerSelection(outputs);
           if (targetInfo) {
             setPendingTargetPlayer({
@@ -985,7 +1128,11 @@ export default function GameInterface() {
         // Check if any AUTO-triggered behavior has choices
         // Manual-triggered behaviors (actions) will show choices when the action is played
         const behaviorWithChoices = card.behaviors?.findIndex(
-          (b) => b.choices && b.choices.length > 0 && b.triggers?.some((t) => t.type === "auto"),
+          (b) =>
+            b.choices &&
+            b.choices.length > 0 &&
+            b.triggers?.some((t) => t.type === "auto") &&
+            !b.choicePolicy?.startsWith("auto-"),
         );
 
         if (
@@ -1079,8 +1226,11 @@ export default function GameInterface() {
         setShowChoiceSelection(false);
 
         // Check storage first, then payment
-        const behavior = cardPendingChoice.behaviors?.[pendingCardBehaviorIndex];
-        const selectedChoice = behavior?.choices?.find((c) => c.originalIndex === choiceIndex);
+        const behavior =
+          cardPendingChoice.behaviors?.[pendingCardBehaviorIndex];
+        const selectedChoice = behavior?.choices?.find(
+          (c) => c.originalIndex === choiceIndex,
+        );
 
         // Collect ALL any-card storage needs from choice outputs and behavior outputs
         const allStorageNeeds: Array<{
@@ -1088,7 +1238,9 @@ export default function GameInterface() {
           amount: number;
           selectorTags?: string[];
         }> = [];
-        const choiceSelections = getAllAnyCardStorageSelections(selectedChoice?.outputs);
+        const choiceSelections = getAllAnyCardStorageSelections(
+          selectedChoice?.outputs,
+        );
         for (const sel of choiceSelections) {
           allStorageNeeds.push({
             resourceType: sel.resourceType,
@@ -1097,7 +1249,9 @@ export default function GameInterface() {
           });
         }
         if (allStorageNeeds.length === 0) {
-          const behaviorSelections = getAllAnyCardStorageSelections(behavior?.outputs);
+          const behaviorSelections = getAllAnyCardStorageSelections(
+            behavior?.outputs,
+          );
           for (const sel of behaviorSelections) {
             allStorageNeeds.push({
               resourceType: sel.resourceType,
@@ -1194,7 +1348,9 @@ export default function GameInterface() {
 
         if (storageInfo && storageInfo.target === "self-card") {
           // Self-card target: check target player needs
-          const targetInfo = needsTargetPlayerSelection(selectedChoice?.outputs);
+          const targetInfo = needsTargetPlayerSelection(
+            selectedChoice?.outputs,
+          );
           if (targetInfo) {
             setPendingActionTargetPlayer({
               cardId: actionPendingChoice.cardId,
@@ -1230,7 +1386,9 @@ export default function GameInterface() {
             amount: number;
             selectorTags?: string[];
           }> = [];
-          const selections = getAllAnyCardStorageSelections(selectedChoice?.outputs);
+          const selections = getAllAnyCardStorageSelections(
+            selectedChoice?.outputs,
+          );
           for (const sel of selections) {
             allStorageNeeds.push({
               resourceType: sel.resourceType,
@@ -1256,7 +1414,9 @@ export default function GameInterface() {
             setActionPendingChoice(null);
           } else {
             // No card storage needed, check target player needs
-            const targetInfo = needsTargetPlayerSelection(selectedChoice?.outputs);
+            const targetInfo = needsTargetPlayerSelection(
+              selectedChoice?.outputs,
+            );
             if (targetInfo) {
               setPendingActionTargetPlayer({
                 cardId: actionPendingChoice.cardId,
@@ -1319,12 +1479,17 @@ export default function GameInterface() {
 
       // Re-enter the normal action handling flow for the target action
       // Check if this action has choices
-      if (targetAction.behavior.choices && targetAction.behavior.choices.length > 0) {
+      if (
+        targetAction.behavior.choices &&
+        targetAction.behavior.choices.length > 0
+      ) {
         setActionPendingChoice(targetAction);
         setShowActionChoiceSelection(true);
       } else {
         // Check for self-card storage
-        const storageInfo = needsCardStorageSelection(targetAction.behavior.outputs);
+        const storageInfo = needsCardStorageSelection(
+          targetAction.behavior.outputs,
+        );
         if (storageInfo && storageInfo.target === "self-card") {
           void globalWebSocketManager.playCardAction(
             targetAction.cardId,
@@ -1366,7 +1531,8 @@ export default function GameInterface() {
   // Passive triggered behavior choice handlers
   const handleBehaviorChoiceSelect = useCallback(
     async (choiceIndex: number) => {
-      const pendingBehaviorChoice = game?.currentPlayer?.pendingBehaviorChoiceSelection;
+      const pendingBehaviorChoice =
+        game?.currentPlayer?.pendingBehaviorChoiceSelection;
       if (!pendingBehaviorChoice) return;
 
       try {
@@ -1380,7 +1546,9 @@ export default function GameInterface() {
           amount: number;
           selectorTags?: string[];
         }> = [];
-        const selections = getAllAnyCardStorageSelections(selectedChoice?.outputs);
+        const selections = getAllAnyCardStorageSelections(
+          selectedChoice?.outputs,
+        );
         for (const sel of selections) {
           allStorageNeeds.push({
             resourceType: sel.resourceType,
@@ -1409,7 +1577,10 @@ export default function GameInterface() {
         console.error("Failed to confirm behavior choice:", error);
       }
     },
-    [game?.currentPlayer?.pendingBehaviorChoiceSelection, getAllAnyCardStorageSelections],
+    [
+      game?.currentPlayer?.pendingBehaviorChoiceSelection,
+      getAllAnyCardStorageSelections,
+    ],
   );
 
   const handleBehaviorChoiceStorageSelect = useCallback(
@@ -1417,7 +1588,10 @@ export default function GameInterface() {
       if (!pendingBehaviorChoiceStorage) return;
 
       try {
-        const newCollected = [...pendingBehaviorChoiceStorage.collectedTargets, targetCardId];
+        const newCollected = [
+          ...pendingBehaviorChoiceStorage.collectedTargets,
+          targetCardId,
+        ];
         const nextIndex = pendingBehaviorChoiceStorage.currentIndex + 1;
 
         if (nextIndex < pendingBehaviorChoiceStorage.allStorageNeeds.length) {
@@ -1441,7 +1615,10 @@ export default function GameInterface() {
           setPendingBehaviorChoiceStorage(null);
         }
       } catch (error) {
-        console.error("Failed to confirm behavior choice with storage target:", error);
+        console.error(
+          "Failed to confirm behavior choice with storage target:",
+          error,
+        );
         setPendingBehaviorChoiceStorage(null);
       }
     },
@@ -1455,9 +1632,12 @@ export default function GameInterface() {
   }, []);
 
   // Steal target selection callbacks (deferred adjacent steal)
-  const handleStealTargetSelect = useCallback(async (targetPlayerId: string) => {
-    void globalWebSocketManager.confirmStealTarget(targetPlayerId);
-  }, []);
+  const handleStealTargetSelect = useCallback(
+    async (targetPlayerId: string) => {
+      void globalWebSocketManager.confirmStealTarget(targetPlayerId);
+    },
+    [],
+  );
 
   const handleStealTargetSkip = useCallback(async () => {
     void globalWebSocketManager.confirmStealTarget("");
@@ -1499,7 +1679,10 @@ export default function GameInterface() {
       if (!pendingCardStorage || !currentPlayer) return;
 
       try {
-        const newCollected = [...pendingCardStorage.collectedTargets, targetCardId];
+        const newCollected = [
+          ...pendingCardStorage.collectedTargets,
+          targetCardId,
+        ];
         const nextIndex = pendingCardStorage.currentIndex + 1;
 
         if (nextIndex < pendingCardStorage.allStorageNeeds.length) {
@@ -1518,7 +1701,9 @@ export default function GameInterface() {
 
         // All collected - proceed with payment or finalize
         setShowCardStorageSelection(false);
-        const card = currentPlayer.cards.find((c) => c.id === pendingCardStorage.cardId);
+        const card = currentPlayer.cards.find(
+          (c) => c.id === pendingCardStorage.cardId,
+        );
 
         if (
           card &&
@@ -1571,7 +1756,10 @@ export default function GameInterface() {
       if (!pendingActionStorage) return;
 
       try {
-        const newCollected = [...pendingActionStorage.collectedTargets, targetCardId];
+        const newCollected = [
+          ...pendingActionStorage.collectedTargets,
+          targetCardId,
+        ];
         const nextIndex = pendingActionStorage.currentIndex + 1;
 
         if (nextIndex < pendingActionStorage.allStorageNeeds.length) {
@@ -1782,7 +1970,9 @@ export default function GameInterface() {
     try {
       const savedGameData = getGameSession();
       if (!savedGameData) {
-        console.log("No saved game data for reconnection, returning to landing page");
+        console.log(
+          "No saved game data for reconnection, returning to landing page",
+        );
         clearGameSession();
         navigate("/", { replace: true });
         return;
@@ -1794,7 +1984,9 @@ export default function GameInterface() {
       setReconnectionStep("game");
 
       // Fetch current game state from server first (with playerId for personalized view)
-      const response = await fetch(`${config.apiUrl}/games/${gameId}?playerId=${playerId}`);
+      const response = await fetch(
+        `${config.apiUrl}/games/${gameId}?playerId=${playerId}`,
+      );
       if (!response.ok) {
         // Game doesn't exist, automatically clear storage and redirect
         console.log(
@@ -1832,7 +2024,9 @@ export default function GameInterface() {
       setReconnectionStep(null);
       // Don't navigate away - let user try manual reconnection
       // or they can manually navigate to home if needed
-      console.error("Failed to reconnect to game. Please check your connection and try again.");
+      console.error(
+        "Failed to reconnect to game. Please check your connection and try again.",
+      );
     }
   }, [navigate]);
 
@@ -1850,7 +2044,10 @@ export default function GameInterface() {
     globalWebSocketManager.on("game-ended", handleGameEnded);
     globalWebSocketManager.on("error", handleError);
     globalWebSocketManager.on("disconnect", handleDisconnect);
-    globalWebSocketManager.on("max-reconnects-reached", handleMaxReconnectsReached);
+    globalWebSocketManager.on(
+      "max-reconnects-reached",
+      handleMaxReconnectsReached,
+    );
     globalWebSocketManager.on("chat-update", handleChatUpdate);
     globalWebSocketManager.on("spectator-kicked", handleSpectatorKicked);
     globalWebSocketManager.on("spectator-connected", handleSpectatorIdReceived);
@@ -1861,15 +2058,24 @@ export default function GameInterface() {
       globalWebSocketManager.off("game-updated", handleGameUpdated);
       globalWebSocketManager.off("full-state", handleFullState);
       globalWebSocketManager.off("log-update", handleLogUpdate);
-      globalWebSocketManager.off("player-disconnected", handlePlayerDisconnected);
+      globalWebSocketManager.off(
+        "player-disconnected",
+        handlePlayerDisconnected,
+      );
       globalWebSocketManager.off("player-kicked", handlePlayerKicked);
       globalWebSocketManager.off("game-ended", handleGameEnded);
       globalWebSocketManager.off("error", handleError);
       globalWebSocketManager.off("disconnect", handleDisconnect);
-      globalWebSocketManager.off("max-reconnects-reached", handleMaxReconnectsReached);
+      globalWebSocketManager.off(
+        "max-reconnects-reached",
+        handleMaxReconnectsReached,
+      );
       globalWebSocketManager.off("chat-update", handleChatUpdate);
       globalWebSocketManager.off("spectator-kicked", handleSpectatorKicked);
-      globalWebSocketManager.off("spectator-connected", handleSpectatorIdReceived);
+      globalWebSocketManager.off(
+        "spectator-connected",
+        handleSpectatorIdReceived,
+      );
       isWebSocketInitialized.current = false;
     };
   }, [
@@ -1915,7 +2121,10 @@ export default function GameInterface() {
         setShowActionChoiceSelection(true);
       } else {
         // No choices, check if behavior has variableAmount inputs/outputs
-        const variableInfo = getVariableAmountInfo(action.behavior.inputs, action.behavior.outputs);
+        const variableInfo = getVariableAmountInfo(
+          action.behavior.inputs,
+          action.behavior.outputs,
+        );
         if (variableInfo) {
           setPendingVariableAmount({
             type: "card-action",
@@ -1929,12 +2138,17 @@ export default function GameInterface() {
           return;
         }
 
-        // Check if inputs need card resource selection (steal-from-any-card)
-        const cardResourceInfo = needsCardResourceInput(action.behavior.inputs);
+        // Check if inputs/outputs need card resource selection (steal-from-any-card)
+        const cardResourceInfo = needsCardResourceInput(
+          action.behavior.inputs,
+          action.behavior.outputs,
+        );
 
         if (cardResourceInfo) {
           // Determine cardStorageTargets for the output side
-          const storageInfo = needsCardStorageSelection(action.behavior.outputs);
+          const storageInfo = needsCardStorageSelection(
+            action.behavior.outputs,
+          );
           const cardStorageTargets =
             storageInfo?.target === "self-card" ? [action.cardId] : undefined;
 
@@ -1948,11 +2162,15 @@ export default function GameInterface() {
           setShowCardResourceSelection(true);
         } else {
           // Check for self-card storage first
-          const storageInfo = needsCardStorageSelection(action.behavior.outputs);
+          const storageInfo = needsCardStorageSelection(
+            action.behavior.outputs,
+          );
 
           if (storageInfo && storageInfo.target === "self-card") {
             // Self-card target: skip popover and send directly with the source card as target
-            const targetInfo = needsTargetPlayerSelection(action.behavior.outputs);
+            const targetInfo = needsTargetPlayerSelection(
+              action.behavior.outputs,
+            );
             if (targetInfo) {
               setPendingActionTargetPlayer({
                 cardId: action.cardId,
@@ -1978,7 +2196,9 @@ export default function GameInterface() {
               amount: number;
               selectorTags?: string[];
             }> = [];
-            const selections = getAllAnyCardStorageSelections(action.behavior.outputs);
+            const selections = getAllAnyCardStorageSelections(
+              action.behavior.outputs,
+            );
             for (const sel of selections) {
               allStorageNeeds.push({
                 resourceType: sel.resourceType,
@@ -2002,7 +2222,9 @@ export default function GameInterface() {
               setShowActionStorageSelection(true);
             } else {
               // No card storage needed, check target player needs
-              const targetInfo = needsTargetPlayerSelection(action.behavior.outputs);
+              const targetInfo = needsTargetPlayerSelection(
+                action.behavior.outputs,
+              );
               if (targetInfo) {
                 setPendingActionTargetPlayer({
                   cardId: action.cardId,
@@ -2013,7 +2235,10 @@ export default function GameInterface() {
                 });
                 setShowActionTargetPlayerSelection(true);
               } else {
-                void globalWebSocketManager.playCardAction(action.cardId, action.behaviorIndex);
+                void globalWebSocketManager.playCardAction(
+                  action.cardId,
+                  action.behaviorIndex,
+                );
               }
             }
           }
@@ -2111,7 +2336,10 @@ export default function GameInterface() {
   const handleTabTakeOver = () => {
     if (conflictingTabInfo) {
       const tabManager = getTabManager();
-      tabManager.forceTakeOver(conflictingTabInfo.gameId, conflictingTabInfo.playerName);
+      tabManager.forceTakeOver(
+        conflictingTabInfo.gameId,
+        conflictingTabInfo.playerName,
+      );
       setShowTabConflict(false);
       setConflictingTabInfo(null);
 
@@ -2159,7 +2387,10 @@ export default function GameInterface() {
       setLoadingPhase("connecting");
 
       const tabManager = getTabManager();
-      const canClaim = await tabManager.claimTab(gameForSelection.id, playerName);
+      const canClaim = await tabManager.claimTab(
+        gameForSelection.id,
+        playerName,
+      );
 
       if (!canClaim) {
         const activeTabInfo = tabManager.getActiveTabInfo();
@@ -2181,7 +2412,10 @@ export default function GameInterface() {
       setPlayerId(selectedPlayerId);
       globalWebSocketManager.setCurrentPlayerId(selectedPlayerId);
 
-      await globalWebSocketManager.playerTakeover(selectedPlayerId, gameForSelection.id);
+      await globalWebSocketManager.playerTakeover(
+        selectedPlayerId,
+        gameForSelection.id,
+      );
 
       setLoadingPhase("ready");
     },
@@ -2224,7 +2458,9 @@ export default function GameInterface() {
       // 2. Validate game exists (and player is still in game if we have a saved session)
       let fetchedGame: GameDto | null = null;
       try {
-        const playerIdForApi = savedSession?.isSpectator ? undefined : savedSession?.playerId;
+        const playerIdForApi = savedSession?.isSpectator
+          ? undefined
+          : savedSession?.playerId;
         fetchedGame = await apiService.getGame(gameId, playerIdForApi);
       } catch {
         navigate("/", {
@@ -2252,17 +2488,23 @@ export default function GameInterface() {
         setIsSpectator(true);
         setIsConnected(true);
         setLoadingPhase("ready");
-        await globalWebSocketManager.spectatorConnect(savedSession.playerName, gameId);
+        await globalWebSocketManager.spectatorConnect(
+          savedSession.playerName,
+          gameId,
+        );
         return;
       }
 
       if (cachedForThisGame && savedSession.playerId) {
         // Check if cached player exists in game
-        const allPlayers = [fetchedGame.currentPlayer, ...(fetchedGame.otherPlayers || [])].filter(
-          Boolean,
-        );
+        const allPlayers = [
+          fetchedGame.currentPlayer,
+          ...(fetchedGame.otherPlayers || []),
+        ].filter(Boolean);
 
-        const cachedPlayer = allPlayers.find((p) => p?.id === savedSession.playerId);
+        const cachedPlayer = allPlayers.find(
+          (p) => p?.id === savedSession.playerId,
+        );
 
         if (cachedPlayer) {
           // Player exists in game
@@ -2271,7 +2513,10 @@ export default function GameInterface() {
             setLoadingPhase("connecting");
 
             const tabManager = getTabManager();
-            const canClaim = await tabManager.claimTab(fetchedGame.id, savedSession.playerName);
+            const canClaim = await tabManager.claimTab(
+              fetchedGame.id,
+              savedSession.playerName,
+            );
             if (aborted) return;
 
             if (!canClaim) {
@@ -2287,7 +2532,10 @@ export default function GameInterface() {
             setPlayerId(savedSession.playerId);
             globalWebSocketManager.setCurrentPlayerId(savedSession.playerId);
 
-            await globalWebSocketManager.playerTakeover(savedSession.playerId, fetchedGame.id);
+            await globalWebSocketManager.playerTakeover(
+              savedSession.playerId,
+              fetchedGame.id,
+            );
             if (aborted) return;
 
             setLoadingPhase("ready");
@@ -2300,7 +2548,10 @@ export default function GameInterface() {
       // 4. If we have full route state with player info, use that directly
       if (routeState?.game && routeState?.playerId && routeState?.playerName) {
         const tabManager = getTabManager();
-        const canClaim = await tabManager.claimTab(routeState.game.id, routeState.playerName);
+        const canClaim = await tabManager.claimTab(
+          routeState.game.id,
+          routeState.playerName,
+        );
         if (aborted) return;
 
         if (!canClaim) {
@@ -2353,7 +2604,10 @@ export default function GameInterface() {
           playerName: routeState.spectatorName,
           isSpectator: true,
         });
-        await globalWebSocketManager.spectatorConnect(routeState.spectatorName, gameId);
+        await globalWebSocketManager.spectatorConnect(
+          routeState.spectatorName,
+          gameId,
+        );
         return;
       }
 
@@ -2422,7 +2676,10 @@ export default function GameInterface() {
     };
     window.addEventListener("toggle-bug-report-window", handleToggleBugReport);
     return () => {
-      window.removeEventListener("toggle-bug-report-window", handleToggleBugReport);
+      window.removeEventListener(
+        "toggle-bug-report-window",
+        handleToggleBugReport,
+      );
     };
   }, []);
 
@@ -2471,25 +2728,33 @@ export default function GameInterface() {
 
   // Show/hide card discard selection overlay (passive effects like Mars University)
   useEffect(() => {
-    const pendingDiscardSelection = game?.currentPlayer?.pendingCardDiscardSelection;
+    const pendingDiscardSelection =
+      game?.currentPlayer?.pendingCardDiscardSelection;
 
     if (pendingDiscardSelection && !showCardDiscardSelection) {
       setShowCardDiscardSelection(true);
     } else if (!pendingDiscardSelection && showCardDiscardSelection) {
       setShowCardDiscardSelection(false);
     }
-  }, [game?.currentPlayer?.pendingCardDiscardSelection, showCardDiscardSelection]);
+  }, [
+    game?.currentPlayer?.pendingCardDiscardSelection,
+    showCardDiscardSelection,
+  ]);
 
   // Show/hide behavior choice selection popover (passive triggered effects)
   useEffect(() => {
-    const pendingBehaviorChoice = game?.currentPlayer?.pendingBehaviorChoiceSelection;
+    const pendingBehaviorChoice =
+      game?.currentPlayer?.pendingBehaviorChoiceSelection;
 
     if (pendingBehaviorChoice && !showBehaviorChoiceSelection) {
       setShowBehaviorChoiceSelection(true);
     } else if (!pendingBehaviorChoice && showBehaviorChoiceSelection) {
       setShowBehaviorChoiceSelection(false);
     }
-  }, [game?.currentPlayer?.pendingBehaviorChoiceSelection, showBehaviorChoiceSelection]);
+  }, [
+    game?.currentPlayer?.pendingBehaviorChoiceSelection,
+    showBehaviorChoiceSelection,
+  ]);
 
   // Show/hide steal target selection popover (deferred adjacent steal from tile placement)
   useEffect(() => {
@@ -2500,7 +2765,10 @@ export default function GameInterface() {
     } else if (!pending && showStealTargetSelection) {
       setShowStealTargetSelection(false);
     }
-  }, [game?.currentPlayer?.pendingStealTargetSelection, showStealTargetSelection]);
+  }, [
+    game?.currentPlayer?.pendingStealTargetSelection,
+    showStealTargetSelection,
+  ]);
 
   // Demo keyboard shortcuts
   useEffect(() => {
@@ -2539,7 +2807,8 @@ export default function GameInterface() {
     if (loadingPhase === "connecting") return "Connecting...";
     if (isReconnecting && reconnectionStep) {
       if (reconnectionStep === "game") return "Reconnecting to game...";
-      if (reconnectionStep === "environment") return "Loading 3D environment...";
+      if (reconnectionStep === "environment")
+        return "Loading 3D environment...";
     }
     if (!isSkyboxReady) return "Loading 3D environment...";
     return "Connecting to game...";
@@ -2555,7 +2824,8 @@ export default function GameInterface() {
 
   const spectatePlayerColor = useMemo(() => {
     if (!spectatePlayerId || !game) return "#6496ff";
-    if (game.currentPlayer?.id === spectatePlayerId) return game.currentPlayer.color || "#6496ff";
+    if (game.currentPlayer?.id === spectatePlayerId)
+      return game.currentPlayer.color || "#6496ff";
     const other = game.otherPlayers?.find((p) => p.id === spectatePlayerId);
     return other?.color || "#6496ff";
   }, [spectatePlayerId, game]);
@@ -2578,7 +2848,11 @@ export default function GameInterface() {
   const handlePlayerClick = useCallback(
     (player: PlayerDto | OtherPlayerDto) => {
       const phase = game?.currentPhase;
-      if (phase === GamePhaseInitApplyCorp || phase === GamePhaseInitApplyPrelude) return;
+      if (
+        phase === GamePhaseInitApplyCorp ||
+        phase === GamePhaseInitApplyPrelude
+      )
+        return;
       if (player.id === game?.currentPlayer?.id) {
         setSpectatePlayerId(null);
         return;
@@ -2607,7 +2881,8 @@ export default function GameInterface() {
   // Pre-game phase covers lobby and starting selection
   const isPreGamePhase =
     isLobbyPhase ||
-    (game?.status === GameStatusActive && game?.currentPhase === GamePhaseStartingSelection);
+    (game?.status === GameStatusActive &&
+      game?.currentPhase === GamePhaseStartingSelection);
 
   const isInitApplyPhase =
     game?.status === GameStatusActive &&
@@ -2669,7 +2944,8 @@ export default function GameInterface() {
     if (!isInitApplyPhase || !game?.initPhase?.waitingForConfirm) return;
     if (game.hostPlayerId !== currentPlayer?.id) return;
 
-    const animationDone = transitionPhase === "complete" || transitionPhase === "idle";
+    const animationDone =
+      transitionPhase === "complete" || transitionPhase === "idle";
     if (!animationDone) return;
 
     if (game.initPhase.hasPendingTiles) return;
@@ -2702,14 +2978,22 @@ export default function GameInterface() {
       onConvertPlantsToGreenery: handleConvertPlantsToGreenery,
       onConvertHeatToTemperature: handleConvertHeatToTemperature,
     }),
-    [handleActionSelect, handleConvertPlantsToGreenery, handleConvertHeatToTemperature],
+    [
+      handleActionSelect,
+      handleConvertPlantsToGreenery,
+      handleConvertHeatToTemperature,
+    ],
   );
 
   // Hotkeys: Space (toggle hand fan), Enter (pass/skip turn)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
         return;
       }
 
@@ -2832,7 +3116,9 @@ export default function GameInterface() {
             onStopSpectating={handleStopSpectating}
             isGameSpectator={isSpectator}
             chatMessages={chatMessages}
-            onSendChatMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
+            onSendChatMessage={(msg) =>
+              void globalWebSocketManager.sendChatMessage(msg)
+            }
             isLobbyPhase={isLobbyPhase}
             playerColorMap={playerColorMap}
           />
@@ -2841,7 +3127,9 @@ export default function GameInterface() {
       <CardsPlayedModal
         isVisible={showCardsPlayedModal}
         onClose={() => setShowCardsPlayedModal(false)}
-        cards={(spectatePlayer?.playedCards ?? currentPlayer?.playedCards) || []}
+        cards={
+          (spectatePlayer?.playedCards ?? currentPlayer?.playedCards) || []
+        }
       />
 
       <ProductionPhaseModal
@@ -2887,7 +3175,9 @@ export default function GameInterface() {
         loadingPhase === "spectating") && (
         <div
           className={
-            transitionPhase === "fadeOutLobby" ? "animate-[fadeOut_1500ms_ease-out_forwards]" : ""
+            transitionPhase === "fadeOutLobby"
+              ? "animate-[fadeOut_1500ms_ease-out_forwards]"
+              : ""
           }
         >
           <SpaceBackground animationSpeed={0.5} overlayOpacity={0.3} />
@@ -2905,7 +3195,9 @@ export default function GameInterface() {
           {isLobbyPhase && (
             <ChatOverlay
               messages={chatMessages}
-              onSendMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
+              onSendMessage={(msg) =>
+                void globalWebSocketManager.sendChatMessage(msg)
+              }
               isLobby={true}
               playerColorMap={playerColorMap}
             />
@@ -2929,14 +3221,19 @@ export default function GameInterface() {
       {loadingPhase === "selecting" && gameForSelection && (
         <PlayerSelectionOverlay
           game={gameForSelection}
-          onSelectPlayer={(playerId, playerName) => void handlePlayerSelected(playerId, playerName)}
+          onSelectPlayer={(playerId, playerName) =>
+            void handlePlayerSelected(playerId, playerName)
+          }
           onSpectate={handleSpectatorConnected}
           onCancel={handlePlayerSelectionCancel}
         />
       )}
 
       {loadingPhase === "joining" && gameForSelection && (
-        <JoinGameOverlay game={gameForSelection} onCancel={handlePlayerSelectionCancel} />
+        <JoinGameOverlay
+          game={gameForSelection}
+          onCancel={handlePlayerSelectionCancel}
+        />
       )}
 
       {loadingPhase === "spectating" && gameForSelection && (
@@ -2959,7 +3256,10 @@ export default function GameInterface() {
             You can reconnect to the game again without losing any progress.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameMenuButton variant="secondary" onClick={() => setShowLeaveGameConfirm(false)}>
+            <GameMenuButton
+              variant="secondary"
+              onClick={() => setShowLeaveGameConfirm(false)}
+            >
               Cancel
             </GameMenuButton>
             <GameMenuButton variant="error" onClick={handleConfirmLeaveGame}>
@@ -2978,10 +3278,14 @@ export default function GameInterface() {
           zIndex={10000}
         >
           <p className="text-white/80 text-center mb-6">
-            This will end the game for all players. This action cannot be undone.
+            This will end the game for all players. This action cannot be
+            undone.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameMenuButton variant="secondary" onClick={() => setShowEndGameConfirm(false)}>
+            <GameMenuButton
+              variant="secondary"
+              onClick={() => setShowEndGameConfirm(false)}
+            >
               Cancel
             </GameMenuButton>
             <GameMenuButton variant="error" onClick={handleConfirmEndGame}>
@@ -2995,11 +3299,18 @@ export default function GameInterface() {
       <StartingCardSelectionOverlay
         isOpen={showStartingSelection}
         availableCorporations={
-          game?.currentPlayer?.selectCorporationPhase?.availableCorporations || []
+          game?.currentPlayer?.selectCorporationPhase?.availableCorporations ||
+          []
         }
-        availablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.availablePreludes || []}
-        maxSelectablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.maxSelectable || 2}
-        cards={game?.currentPlayer?.selectStartingCardsPhase?.availableCards || []}
+        availablePreludes={
+          game?.currentPlayer?.selectPreludeCardsPhase?.availablePreludes || []
+        }
+        maxSelectablePreludes={
+          game?.currentPlayer?.selectPreludeCardsPhase?.maxSelectable || 2
+        }
+        cards={
+          game?.currentPlayer?.selectStartingCardsPhase?.availableCards || []
+        }
         playerCredits={currentPlayer?.resources?.credits || 40}
         onConfirm={handleStartingChoicesConfirm}
       />
@@ -3043,7 +3354,8 @@ export default function GameInterface() {
                           !!game.currentPlayer.corporation,
                         isSelf: true,
                         playerType: game.currentPlayer.playerType,
-                        botDifficulty: game.currentPlayer.botDifficulty || undefined,
+                        botDifficulty:
+                          game.currentPlayer.botDifficulty || undefined,
                         botSpeed: game.currentPlayer.botSpeed || undefined,
                       });
                     }
@@ -3075,7 +3387,9 @@ export default function GameInterface() {
                         key={player.id}
                         className="flex justify-between items-center py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50"
                       >
-                        <span className="text-white text-sm font-medium">{player.name}</span>
+                        <span className="text-white text-sm font-medium">
+                          {player.name}
+                        </span>
                         <div className="flex gap-1.5 items-center">
                           {player.isSelf && (
                             <span className="bg-space-blue-800 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
@@ -3084,7 +3398,9 @@ export default function GameInterface() {
                           )}
                           {player.playerType === "bot" && (
                             <>
-                              <BotDifficultyChip difficulty={player.botDifficulty} />
+                              <BotDifficultyChip
+                                difficulty={player.botDifficulty}
+                              />
                               <BotSpeedChip speed={player.botSpeed} />
                             </>
                           )}
@@ -3159,7 +3475,8 @@ export default function GameInterface() {
               ? "opacity-0 pointer-events-none"
               : transitionPhase === "animateUI"
                 ? "animate-[uiFadeIn_1200ms_ease-out_both]"
-                : transitionPhase === "loading" || transitionPhase === "fadeOutLobby"
+                : transitionPhase === "loading" ||
+                    transitionPhase === "fadeOutLobby"
                   ? "opacity-0"
                   : ""
           }`}
@@ -3248,9 +3565,16 @@ export default function GameInterface() {
       {/* Passive triggered behavior choice popover */}
       {game?.currentPlayer?.pendingBehaviorChoiceSelection && (
         <ChoiceSelectionPopover
-          cardId={game.currentPlayer.pendingBehaviorChoiceSelection.sourceCardId}
+          cardId={
+            game.currentPlayer.pendingBehaviorChoiceSelection.sourceCardId
+          }
           cardName={`Triggered: ${game.currentPlayer.pendingBehaviorChoiceSelection.source}`}
-          behaviors={[{ choices: game.currentPlayer.pendingBehaviorChoiceSelection.choices }]}
+          behaviors={[
+            {
+              choices:
+                game.currentPlayer.pendingBehaviorChoiceSelection.choices,
+            },
+          ]}
           behaviorIndex={0}
           onChoiceSelect={handleBehaviorChoiceSelect}
           onCancel={() => {}}
@@ -3384,12 +3708,17 @@ export default function GameInterface() {
       {/* Steal target selection popover (deferred adjacent steal from tile placement) */}
       {game?.currentPlayer?.pendingStealTargetSelection && game && (
         <TargetPlayerSelectionPopover
-          resourceType={game.currentPlayer.pendingStealTargetSelection.resourceType as ResourceType}
+          resourceType={
+            game.currentPlayer.pendingStealTargetSelection
+              .resourceType as ResourceType
+          }
           amount={game.currentPlayer.pendingStealTargetSelection.amount}
           isSteal={true}
           players={(game.otherPlayers || [])
             .filter((p) =>
-              game.currentPlayer!.pendingStealTargetSelection!.eligiblePlayerIds.includes(p.id),
+              game.currentPlayer!.pendingStealTargetSelection!.eligiblePlayerIds.includes(
+                p.id,
+              ),
             )
             .map((p) => ({
               id: p.id,

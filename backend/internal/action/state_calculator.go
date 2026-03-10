@@ -8,6 +8,7 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/global_parameters"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
@@ -166,6 +167,7 @@ func CalculatePlayerStandardProjectState(
 	cardRegistry cards.CardRegistry,
 ) player.EntityState {
 	var errors []player.StateError
+	var warnings []player.StateWarning
 	metadata := make(map[string]interface{})
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
@@ -233,6 +235,12 @@ func CalculatePlayerStandardProjectState(
 		}
 
 	case shared.StandardProjectAsteroid:
+		if g.GlobalParameters().Temperature() >= global_parameters.MaxTemperature {
+			warnings = append(warnings, player.StateWarning{
+				Code:    player.WarningCodeGlobalParamMaxed,
+				Message: "Temperature is already at maximum",
+			})
+		}
 
 	case shared.StandardProjectCity:
 		cityPlacements := g.CountAvailableHexesForTile("city", p.ID(), nil)
@@ -253,6 +261,12 @@ func CalculatePlayerStandardProjectState(
 				Message:  "No valid greenery placements",
 			})
 		}
+		if g.GlobalParameters().Oxygen() >= global_parameters.MaxOxygen {
+			warnings = append(warnings, player.StateWarning{
+				Code:    player.WarningCodeGlobalParamMaxed,
+				Message: "Oxygen is already at maximum",
+			})
+		}
 
 	case shared.StandardProjectPowerPlant:
 
@@ -261,6 +275,7 @@ func CalculatePlayerStandardProjectState(
 
 	return player.EntityState{
 		Errors:         errors,
+		Warnings:       warnings,
 		Cost:           effectiveCosts,
 		Metadata:       metadata,
 		LastCalculated: time.Now(),
@@ -293,10 +308,36 @@ func validatePhase(g *game.Game) []player.StateError {
 		return []player.StateError{{
 			Code:     player.ErrorCodeWrongPhase,
 			Category: player.ErrorCategoryPhase,
-			Message:  fmt.Sprintf("Can only play cards during action phase, current phase: %s", g.CurrentPhase()),
+			Message:  fmt.Sprintf("Can only play cards during action phase, current phase: %s", humanReadablePhase(g.CurrentPhase())),
 		}}
 	}
 	return nil
+}
+
+// humanReadablePhase maps phase enum values to user-friendly names.
+func humanReadablePhase(phase game.GamePhase) string {
+	switch phase {
+	case game.GamePhaseAction:
+		return "Action"
+	case game.GamePhaseProductionAndCardDraw:
+		return "Production"
+	case game.GamePhaseStartingSelection:
+		return "Starting Selection"
+	case game.GamePhaseStartGameSelection:
+		return "Start Game Selection"
+	case game.GamePhaseDemoSetup:
+		return "Demo Setup"
+	case game.GamePhaseInitApplyCorp:
+		return "Corporation Setup"
+	case game.GamePhaseInitApplyPrelude:
+		return "Prelude Setup"
+	case game.GamePhaseWaitingForGameStart:
+		return "Waiting for Game Start"
+	case game.GamePhaseComplete:
+		return "Game Complete"
+	default:
+		return string(phase)
+	}
 }
 
 // validateNoActiveTileSelection checks if player has an active tile selection pending.
@@ -942,29 +983,8 @@ func checkRequirement(
 		}
 
 		tagCount := 0
-		for _, playedCardID := range p.PlayedCards().Cards() {
-			if cardRegistry == nil {
-				continue
-			}
-			card, err := cardRegistry.GetByID(playedCardID)
-			if err != nil {
-				continue
-			}
-			for _, tag := range card.Tags {
-				if tag == *req.Tag {
-					tagCount++
-				}
-			}
-		}
-
-		if corpID := p.CorporationID(); corpID != "" && cardRegistry != nil {
-			if corp, err := cardRegistry.GetByID(corpID); err == nil {
-				for _, tag := range corp.Tags {
-					if tag == *req.Tag {
-						tagCount++
-					}
-				}
-			}
+		if cardRegistry != nil {
+			tagCount = gamecards.CountPlayerTagsByType(p, cardRegistry, *req.Tag)
 		}
 
 		if req.Min != nil && tagCount < *req.Min {

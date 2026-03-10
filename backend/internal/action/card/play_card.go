@@ -459,8 +459,21 @@ func (a *PlayCardAction) applyCardBehaviors(
 
 		// Apply auto-trigger behaviors immediately
 		if gamecards.HasAutoTrigger(behavior) {
+			// Auto-select choice if behavior has an auto-selection policy
+			effectiveChoiceIndex := choiceIndex
+			if behavior.ChoicePolicy != "" && len(behavior.Choices) > 0 {
+				plantTagCount := gamecards.CountPlayerTagsByType(p, a.CardRegistry(), shared.TagPlant)
+				autoIdx := shared.AutoSelectChoiceIndex(behavior.ChoicePolicy, plantTagCount)
+				if autoIdx >= 0 {
+					effectiveChoiceIndex = &autoIdx
+					log.Debug("Auto-selected choice by policy",
+						zap.String("policy", behavior.ChoicePolicy),
+						zap.Int("choice_index", autoIdx))
+				}
+			}
+
 			// Extract inputs and outputs, incorporating choice if present
-			inputs, outputs := behavior.ExtractInputsOutputs(choiceIndex)
+			inputs, outputs := behavior.ExtractInputsOutputs(effectiveChoiceIndex)
 
 			// Check for card-discard inputs — these defer output application
 			if gamecards.HasCardDiscardInput(behavior) {

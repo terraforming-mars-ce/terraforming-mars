@@ -41,4 +41,5 @@ type PerCondition struct {
 	Target             *TargetType          `json:"target,omitempty"`
 	Tag                *shared.CardTag      `json:"tag,omitempty"`
 	AdjacentToTileType *shared.ResourceType `json:"adjacentToTileType,omitempty"`
+	AdjacentToSelfTile bool                 `json:"adjacentToSelfTile,omitempty"`
 }
