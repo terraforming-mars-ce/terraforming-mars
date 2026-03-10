@@ -183,8 +183,108 @@ export default function VenusTileGrid({
     return "empty";
   };
 
+  const interactionSphereGeometry = useMemo(
+    () => new THREE.SphereGeometry(VENUS_RADIUS + 0.02, 32, 32),
+    [],
+  );
+
+  const findNearestHex = useCallback(
+    (hitPoint: THREE.Vector3): string | null => {
+      let bestKey: string | null = null;
+      let bestDist = Infinity;
+      const HEX_HIT_RADIUS = 0.17;
+      for (const tile of venusTiles) {
+        const dist = hitPoint.distanceTo(tile.spherePosition);
+        if (dist < bestDist && dist < HEX_HIT_RADIUS) {
+          bestDist = dist;
+          bestKey = HexGrid2D.coordinateToKey(tile.coordinate);
+        }
+      }
+      return bestKey;
+    },
+    [venusTiles],
+  );
+
+  const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
+
+  const handleSpherePointerMove = useCallback(
+    (
+      event: THREE.Event & {
+        point: THREE.Vector3;
+        nativeEvent: PointerEvent;
+        object: THREE.Object3D;
+      },
+    ) => {
+      const localPoint = event.object.worldToLocal(event.point.clone());
+      const key = findNearestHex(localPoint);
+      if (key !== hoveredHexKey) {
+        setHoveredHexKey(key);
+        if (key) {
+          const tile = venusTiles.find((t) => HexGrid2D.coordinateToKey(t.coordinate) === key);
+          if (tile) {
+            const ownerId = tile.backendTile.ownerId || null;
+            handleTileHoverInfo({
+              position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
+              tileType: getTileType(tile),
+              displayName: tile.backendTile.displayName,
+              ownerId,
+              reservedById: tile.backendTile.reservedBy || null,
+              isOceanSpace: false,
+              isVolcanic: false,
+              bonuses: tile.bonuses,
+            });
+          }
+        } else {
+          handleTileHoverLeave();
+        }
+      } else if (key) {
+        handleTileHoverMove({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
+      }
+    },
+    [
+      hoveredHexKey,
+      venusTiles,
+      findNearestHex,
+      handleTileHoverInfo,
+      handleTileHoverMove,
+      handleTileHoverLeave,
+    ],
+  );
+
+  const handleSpherePointerLeave = useCallback(() => {
+    setHoveredHexKey(null);
+    handleTileHoverLeave();
+  }, [handleTileHoverLeave]);
+
+  const handleSphereClick = useCallback(
+    (
+      event: THREE.Event & {
+        point: THREE.Vector3;
+        object: THREE.Object3D;
+        stopPropagation: () => void;
+      },
+    ) => {
+      event.stopPropagation();
+      const localPoint = event.object.worldToLocal(event.point.clone());
+      const key = findNearestHex(localPoint);
+      if (key) {
+        onHexClick?.(key);
+      }
+    },
+    [findNearestHex, onHexClick],
+  );
+
   return (
     <>
+      {/* Invisible interaction sphere for click/hover handling */}
+      <mesh
+        geometry={interactionSphereGeometry}
+        onPointerMove={handleSpherePointerMove}
+        onPointerLeave={handleSpherePointerLeave}
+        onClick={handleSphereClick}
+        visible={false}
+      />
+
       <Html>
         <TileTooltip data={tooltipData} />
       </Html>
@@ -216,6 +316,7 @@ export default function VenusTileGrid({
             onHoverInfo={handleTileHoverInfo}
             onHoverMove={handleTileHoverMove}
             onHoverLeave={handleTileHoverLeave}
+            isHovered={hoveredHexKey === hexKey}
           />
         );
       })}
