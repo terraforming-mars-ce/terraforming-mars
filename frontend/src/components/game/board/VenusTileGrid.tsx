@@ -208,8 +208,15 @@ export default function VenusTileGrid({
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
 
   const handleSpherePointerMove = useCallback(
-    (event: THREE.Event & { point: THREE.Vector3; nativeEvent: PointerEvent }) => {
-      const key = findNearestHex(event.point);
+    (
+      event: THREE.Event & {
+        point: THREE.Vector3;
+        nativeEvent: PointerEvent;
+        object: THREE.Object3D;
+      },
+    ) => {
+      const localPoint = event.object.worldToLocal(event.point.clone());
+      const key = findNearestHex(localPoint);
       if (key !== hoveredHexKey) {
         setHoveredHexKey(key);
         if (key) {
@@ -250,8 +257,16 @@ export default function VenusTileGrid({
   }, [handleTileHoverLeave]);
 
   const handleSphereClick = useCallback(
-    (event: THREE.Event & { point: THREE.Vector3 }) => {
-      const key = findNearestHex(event.point);
+    (
+      event: THREE.Event & {
+        point: THREE.Vector3;
+        object: THREE.Object3D;
+        stopPropagation: () => void;
+      },
+    ) => {
+      event.stopPropagation();
+      const localPoint = event.object.worldToLocal(event.point.clone());
+      const key = findNearestHex(localPoint);
       if (key) {
         onHexClick?.(key);
       }
