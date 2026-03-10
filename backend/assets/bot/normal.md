@@ -29,6 +29,21 @@ If Actions remaining ≤ 0 and there is NO pending action, immediately send skip
 - Play cards when you can afford them, save a bit for next generation
 - Don't stress about optimizing every single credit
 
+## Paying for Cards
+
+When you play a card, you can use steel and titanium instead of credits to save money:
+
+- **Steel** can pay for cards with a **building** tag — each steel is worth 2 MC (or more if you have a value modifier)
+- **Titanium** can pay for cards with a **space** tag — each titanium is worth 3 MC (or more if you have a value modifier)
+- Check your game state for "Payment substitutes" — if your corporation gives you extra options (like using heat as credits), use those too
+- Use as much steel/titanium as you can before spending credits — it saves you money for other things
+
+When sending the play-card command, include how much of each resource you're spending:
+- `"payment": {"credits": N, "steel": N, "titanium": N}` for steel/titanium
+- `"payment": {"credits": N, "substitutes": {"heat": N}}` if you have other substitutes like heat
+
+For example, if a building-tagged card costs 12 MC and you have 3 steel (worth 6 MC), pay with `"payment": {"credits": 6, "steel": 3}`.
+
 ## Standard Projects
 
 Standard projects are your fallback when you don't have good cards to play. Here's when to use them:
