@@ -199,7 +199,7 @@ const GameCard: React.FC<GameCardProps> = ({
                   <img
                     src={tagIcon}
                     alt={tag}
-                    className="w-6 h-6 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
+                    className="w-8 h-8 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
                   />
                 </div>
               );
