@@ -10,6 +10,7 @@ import (
 
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game/board"
+	"terraforming-mars-backend/internal/game/colony"
 	"terraforming-mars-backend/internal/game/deck"
 	"terraforming-mars-backend/internal/game/global_parameters"
 	"terraforming-mars-backend/internal/game/player"
@@ -126,6 +127,10 @@ type Game struct {
 	initPhasePlayerIndex       int
 	initPhaseWaitingForConfirm bool
 	initPhaseConfirmVersion    int
+
+	// Colony state (only populated when colonies expansion enabled)
+	colonyTileStates []*colony.TileState
+	tradeFleets      map[string]bool // playerID -> fleet available this generation
 }
 
 // NewGame creates a new game with the given settings
@@ -2064,4 +2069,68 @@ func (g *Game) SetInitPhaseWaitingForConfirm(ctx context.Context, waiting bool) 
 	}
 
 	return nil
+}
+
+// HasColonies returns true if the colonies expansion is enabled for this game
+func (g *Game) HasColonies() bool {
+	return g.settings.HasColonies()
+}
+
+// ColonyTileStates returns the colony tile states for this game
+func (g *Game) ColonyTileStates() []*colony.TileState {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.colonyTileStates
+}
+
+// SetColonyTileStates sets the colony tile states for this game
+func (g *Game) SetColonyTileStates(states []*colony.TileState) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.colonyTileStates = states
+	g.updatedAt = time.Now()
+}
+
+// GetColonyTileState returns the colony tile state for the given colony definition ID
+func (g *Game) GetColonyTileState(colonyID string) *colony.TileState {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	for _, state := range g.colonyTileStates {
+		if state.DefinitionID == colonyID {
+			return state
+		}
+	}
+	return nil
+}
+
+// GetTradeFleetAvailable returns whether the player's trade fleet is available
+func (g *Game) GetTradeFleetAvailable(playerID string) bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if g.tradeFleets == nil {
+		return false
+	}
+	return g.tradeFleets[playerID]
+}
+
+// SetTradeFleetAvailable sets whether the player's trade fleet is available
+func (g *Game) SetTradeFleetAvailable(playerID string, available bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.tradeFleets == nil {
+		g.tradeFleets = make(map[string]bool)
+	}
+	g.tradeFleets[playerID] = available
+	g.updatedAt = time.Now()
+}
+
+// InitializeTradeFleets sets all players' trade fleets to available
+func (g *Game) InitializeTradeFleets(playerIDs []string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.tradeFleets = make(map[string]bool, len(playerIDs))
+	for _, id := range playerIDs {
+		g.tradeFleets[id] = true
+	}
+	g.updatedAt = time.Now()
 }

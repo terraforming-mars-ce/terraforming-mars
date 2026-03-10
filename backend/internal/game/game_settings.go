@@ -28,11 +28,17 @@ const (
 	PackPrelude      = "prelude"      // Prelude expansion cards
 	PackVenus        = "venus-next"   // Venus Next expansion cards
 	PackExperimental = "experimental" // Experimental cards with new mechanics
+	PackColonies     = "colonies"     // Colonies expansion
 )
 
 // HasPrelude returns true if the prelude card pack is enabled
 func (s GameSettings) HasPrelude() bool {
 	return slices.Contains(s.CardPacks, PackPrelude)
+}
+
+// HasColonies returns true if the Colonies expansion is enabled
+func (s GameSettings) HasColonies() bool {
+	return slices.Contains(s.CardPacks, PackColonies)
 }
 
 // HasVenus returns true if the Venus expansion is enabled

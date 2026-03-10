@@ -19,6 +19,21 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 		zap.Int("player_count", len(players)),
 		zap.Int("generation", g.Generation()))
 
+	// Solar Phase: advance colony markers and reset trade fleets
+	if g.HasColonies() {
+		for _, state := range g.ColonyTileStates() {
+			state.TradedThisGen = false
+			state.TraderID = ""
+			if state.MarkerPosition < 6 {
+				state.MarkerPosition++
+			}
+		}
+		for _, p := range players {
+			g.SetTradeFleetAvailable(p.ID(), true)
+		}
+		log.Debug("Solar phase complete: colony markers advanced, trade fleets reset")
+	}
+
 	deck := g.Deck()
 	if deck == nil {
 		return fmt.Errorf("game deck is nil")

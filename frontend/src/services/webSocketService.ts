@@ -44,6 +44,7 @@ import {
   MessageTypeConvertToBot,
   MessageTypeActionBehaviorChoiceConfirmed,
   MessageTypeActionConfirmStealTarget,
+  MessageTypeActionConfirmColonyResource,
   MessageTypeActionCardDiscardConfirmed,
   MessageTypeActionConfirmInitAdvance,
   MessageTypeRequestLogs,
@@ -54,6 +55,8 @@ import {
   MessageTypeChatUpdate,
   MessageTypeKickSpectator,
   MessageTypeSpectatorKicked,
+  MessageTypeActionColonyTrade,
+  MessageTypeActionColonyBuild,
   // Payload types
   ChatUpdatePayload,
   PlayerConnectedPayload,
@@ -376,6 +379,14 @@ export class WebSocketService {
     return this.send(MessageTypeActionFundAward, { awardType });
   }
 
+  tradeWithColony(colonyId: string): string {
+    return this.send(MessageTypeActionColonyTrade, { colonyId });
+  }
+
+  buildColony(colonyId: string): string {
+    return this.send(MessageTypeActionColonyBuild, { colonyId });
+  }
+
   playerTakeover(targetPlayerId: string, gameId: string): void {
     this.send("player-takeover" as MessageType, { targetPlayerId, gameId }, gameId);
     this.currentGameId = gameId;
@@ -394,6 +405,10 @@ export class WebSocketService {
 
   confirmStealTarget(targetPlayerId: string): string {
     return this.send(MessageTypeActionConfirmStealTarget, { targetPlayerId });
+  }
+
+  confirmColonyResource(cardId: string): string {
+    return this.send(MessageTypeActionConfirmColonyResource, { cardId });
   }
 
   addBot(botName?: string, difficulty?: string, speed?: string): string {

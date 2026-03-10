@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"terraforming-mars-backend/internal/cards"
+	"terraforming-mars-backend/internal/colonies"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
 	"terraforming-mars-backend/internal/game"
@@ -25,6 +26,7 @@ type Broadcaster struct {
 	stateRepo           game.GameStateRepository
 	hub                 *core.Hub
 	cardRegistry        cards.CardRegistry
+	colonyRegistry      colonies.ColonyRegistry
 	botNotifier         BotNotifier
 	logger              *zap.Logger
 	lastBroadcastedSeq  map[string]int64 // gameID -> last broadcasted log sequence
@@ -37,12 +39,14 @@ func NewBroadcaster(
 	stateRepo game.GameStateRepository,
 	hub *core.Hub,
 	cardRegistry cards.CardRegistry,
+	colonyRegistry colonies.ColonyRegistry,
 ) *Broadcaster {
 	broadcaster := &Broadcaster{
 		gameRepo:           gameRepo,
 		stateRepo:          stateRepo,
 		hub:                hub,
 		cardRegistry:       cardRegistry,
+		colonyRegistry:     colonyRegistry,
 		logger:             logger.Get(),
 		lastBroadcastedSeq: make(map[string]int64),
 	}
@@ -181,7 +185,7 @@ func (b *Broadcaster) sendToPlayer(ctx context.Context, game *game.Game, playerI
 		zap.String("player_id", playerID),
 	)
 
-	gameDto := dto.ToGameDto(game, b.cardRegistry, playerID)
+	gameDto := dto.ToGameDto(game, b.cardRegistry, playerID, b.colonyRegistry)
 
 	message := dto.WebSocketMessage{
 		Type:   dto.MessageTypeGameUpdated,

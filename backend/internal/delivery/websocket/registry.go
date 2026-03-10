@@ -4,6 +4,7 @@ import (
 	adminAction "terraforming-mars-backend/internal/action/admin"
 	awardAction "terraforming-mars-backend/internal/action/award"
 	cardAction "terraforming-mars-backend/internal/action/card"
+	colonyAction "terraforming-mars-backend/internal/action/colony"
 	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	connAction "terraforming-mars-backend/internal/action/connection"
 	gameAction "terraforming-mars-backend/internal/action/game"
@@ -17,6 +18,7 @@ import (
 	"terraforming-mars-backend/internal/delivery/websocket/handler/admin"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/award"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/card"
+	colonyHandler "terraforming-mars-backend/internal/delivery/websocket/handler/colony"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/confirmation"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/connection"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/game"
@@ -59,6 +61,7 @@ func RegisterHandlers(
 	confirmCardDiscardAction *confirmAction.ConfirmCardDiscardAction,
 	confirmBehaviorChoiceAction *confirmAction.ConfirmBehaviorChoiceAction,
 	confirmStealTargetAction *confirmAction.ConfirmStealTargetAction,
+	confirmColonyResourceAction *confirmAction.ConfirmColonyResourceAction,
 	playerDisconnectedAction *connAction.PlayerDisconnectedAction,
 	playerTakeoverAction *connAction.PlayerTakeoverAction,
 	kickPlayerAction *connAction.KickPlayerAction,
@@ -71,6 +74,8 @@ func RegisterHandlers(
 	convertToBotAction *gameAction.ConvertToBotAction,
 	claimMilestoneAction *milestoneAction.ClaimMilestoneAction,
 	fundAwardAction *awardAction.FundAwardAction,
+	colonyTradeAction *colonyAction.TradeAction,
+	colonyBuildAction *colonyAction.BuildColonyAction,
 	adminSetPhaseAction *adminAction.SetPhaseAction,
 	adminSetCurrentTurnAction *adminAction.SetCurrentTurnAction,
 	adminSetResourcesAction *adminAction.SetResourcesAction,
@@ -160,6 +165,9 @@ func RegisterHandlers(
 	confirmStealTargetHandler := confirmation.NewConfirmStealTargetHandler(confirmStealTargetAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConfirmStealTarget, confirmStealTargetHandler)
 
+	confirmColonyResourceHandler := confirmation.NewConfirmColonyResourceHandler(confirmColonyResourceAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionConfirmColonyResource, confirmColonyResourceHandler)
+
 	requestLogsHandler := connection.NewRequestLogsHandler(broadcaster)
 	hub.RegisterHandler(dto.MessageTypeRequestLogs, requestLogsHandler)
 
@@ -198,6 +206,12 @@ func RegisterHandlers(
 
 	fundAwardHandler := award.NewFundAwardHandler(fundAwardAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionFundAward, fundAwardHandler)
+
+	colonyTradeHandler := colonyHandler.NewTradeHandler(colonyTradeAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionColonyTrade, colonyTradeHandler)
+
+	colonyBuildHandler := colonyHandler.NewBuildColonyHandler(colonyBuildAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionColonyBuild, colonyBuildHandler)
 
 	adminCommandHandler := admin.NewAdminCommandHandler(
 		adminSetPhaseAction,

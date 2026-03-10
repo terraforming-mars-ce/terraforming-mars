@@ -205,6 +205,9 @@ export default function GameInterface() {
   // Steal target selection state (from server pending selection after tile placement)
   const [showStealTargetSelection, setShowStealTargetSelection] = useState(false);
 
+  // Colony resource selection state (from server pending selection after colony trade/build)
+  const [showColonyResourceSelection, setShowColonyResourceSelection] = useState(false);
+
   // Passive triggered behavior choice state (from server pending selection)
   const [showBehaviorChoiceSelection, setShowBehaviorChoiceSelection] = useState(false);
   const [pendingBehaviorChoiceStorage, setPendingBehaviorChoiceStorage] = useState<{
@@ -1463,6 +1466,15 @@ export default function GameInterface() {
     void globalWebSocketManager.confirmStealTarget("");
   }, []);
 
+  // Colony resource selection callbacks (card storage for colony trade/build rewards)
+  const handleColonyResourceSelect = useCallback(async (cardId: string) => {
+    void globalWebSocketManager.confirmColonyResource(cardId);
+  }, []);
+
+  const handleColonyResourceSkip = useCallback(async () => {
+    void globalWebSocketManager.confirmColonyResource("");
+  }, []);
+
   // Payment selection callbacks
   const handlePaymentConfirm = useCallback(
     async (payment: CardPaymentDto) => {
@@ -2502,6 +2514,17 @@ export default function GameInterface() {
     }
   }, [game?.currentPlayer?.pendingStealTargetSelection, showStealTargetSelection]);
 
+  // Show/hide colony resource selection popover (card storage for colony trade/build rewards)
+  useEffect(() => {
+    const pending = game?.currentPlayer?.pendingColonyResourceSelection;
+
+    if (pending && !showColonyResourceSelection) {
+      setShowColonyResourceSelection(true);
+    } else if (!pending && showColonyResourceSelection) {
+      setShowColonyResourceSelection(false);
+    }
+  }, [game?.currentPlayer?.pendingColonyResourceSelection, showColonyResourceSelection]);
+
   // Demo keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -2720,6 +2743,7 @@ export default function GameInterface() {
         showCardDiscardSelection ||
         showBehaviorChoiceSelection ||
         showStealTargetSelection ||
+        showColonyResourceSelection ||
         showProductionPhaseModal ||
         showPaymentSelection ||
         isPreGamePhase ||
@@ -3401,6 +3425,22 @@ export default function GameInterface() {
           onCancel={handleStealTargetSkip}
           isVisible={showStealTargetSelection}
           mandatory
+        />
+      )}
+
+      {/* Colony resource selection popover (card storage for colony trade/build rewards) */}
+      {game?.currentPlayer?.pendingColonyResourceSelection && currentPlayer && (
+        <CardStorageSelectionPopover
+          resourceType={
+            game.currentPlayer.pendingColonyResourceSelection.resourceType as ResourceType
+          }
+          amount={game.currentPlayer.pendingColonyResourceSelection.amount}
+          playedCards={currentPlayer.playedCards || []}
+          corporationCard={currentPlayer.corporation}
+          resourceStorage={currentPlayer.resourceStorage}
+          onCardSelect={handleColonyResourceSelect}
+          onCancel={handleColonyResourceSkip}
+          isVisible={showColonyResourceSelection}
         />
       )}
 

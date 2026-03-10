@@ -964,6 +964,15 @@ export interface PendingStealTargetSelectionDto {
   sourceCardId: string;
 }
 /**
+ * PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
+ */
+export interface PendingColonyResourceSelectionDto {
+  resourceType: string;
+  amount: number /* int */;
+  source: string;
+  colonyId: string;
+}
+/**
  * PlayerStatus represents the current status of a player in the game
  */
 export type PlayerStatus = string;
@@ -1011,6 +1020,7 @@ export interface PlayerDto {
   pendingCardDiscardSelection?: PendingCardDiscardSelectionDto;
   pendingBehaviorChoiceSelection?: PendingBehaviorChoiceSelectionDto;
   pendingStealTargetSelection?: PendingStealTargetSelectionDto;
+  pendingColonyResourceSelection?: PendingColonyResourceSelectionDto;
   forcedFirstAction?: ForcedFirstActionDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
@@ -1083,6 +1093,8 @@ export interface GameDto {
   spectators: SpectatorDto[];
   chatMessages: ChatMessageDto[];
   isSpectator: boolean;
+  colonyTiles?: ColonyTileDto[];
+  tradeFleetAvailable: boolean;
 }
 /**
  * SpectatorDto represents a spectator visible to all clients.
@@ -1122,6 +1134,51 @@ export interface InitPhaseDto {
   confirmVersion: number /* int */;
   hasPreludePhase: boolean;
   hasPendingTiles: boolean;
+}
+/**
+ * ColonyTileDto represents a colony tile in the game
+ */
+export interface ColonyTileDto {
+  id: string;
+  name: string;
+  steps: ColonyStepDto[];
+  colonyBonus: ColonyOutputDto[];
+  colonies: ColonySlotDto[];
+  markerPosition: number /* int */;
+  playerColonies: string[];
+  tradedThisGen: boolean;
+  traderId: string;
+  style: ColonyStyleDto;
+  tradeAvailable: boolean;
+  buildAvailable: boolean;
+  tradeErrors: StateErrorDto[];
+  buildErrors: StateErrorDto[];
+}
+/**
+ * ColonyStepDto represents one position on the trade track
+ */
+export interface ColonyStepDto {
+  outputs: ColonyOutputDto[];
+}
+/**
+ * ColonyOutputDto represents a resource output from a colony
+ */
+export interface ColonyOutputDto {
+  type: string;
+  amount: number /* int */;
+}
+/**
+ * ColonySlotDto represents a colony placement slot
+ */
+export interface ColonySlotDto {
+  reward: ColonyOutputDto[];
+}
+/**
+ * ColonyStyleDto provides visual hints for the frontend
+ */
+export interface ColonyStyleDto {
+  color: string;
+  icon: string;
 }
 /**
  * TileBonusDto represents a resource bonus provided by a tile when occupied
@@ -1508,6 +1565,9 @@ export const MessageTypeActionCardDiscardConfirmed: MessageType =
 export const MessageTypeActionBehaviorChoiceConfirmed: MessageType =
   "action.card.behavior-choice-confirmed";
 export const MessageTypeActionConfirmStealTarget: MessageType = "action.card.confirm-steal-target";
+export const MessageTypeActionColonyTrade: MessageType = "action.colony.trade";
+export const MessageTypeActionColonyBuild: MessageType = "action.colony.build";
+export const MessageTypeActionConfirmColonyResource: MessageType = "action.confirm-colony-resource";
 export const MessageTypeAdminCommand: MessageType = "admin-command";
 export const MessageTypeRequestLogs: MessageType = "request-logs";
 export const MessageTypePlayerTakeover: MessageType = "player-takeover";
