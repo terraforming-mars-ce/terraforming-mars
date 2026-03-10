@@ -73,6 +73,19 @@ func (vg *VPGranters) Prepend(granter VPGranter) {
 	vg.granters = append([]VPGranter{granter}, vg.granters...)
 }
 
+// RemoveByCardID removes all VP granters for the given card ID.
+func (vg *VPGranters) RemoveByCardID(cardID string) {
+	vg.mu.Lock()
+	defer vg.mu.Unlock()
+	filtered := vg.granters[:0]
+	for _, g := range vg.granters {
+		if g.CardID != cardID {
+			filtered = append(filtered, g)
+		}
+	}
+	vg.granters = filtered
+}
+
 func (vg *VPGranters) GetAll() []VPGranter {
 	vg.mu.RLock()
 	defer vg.mu.RUnlock()

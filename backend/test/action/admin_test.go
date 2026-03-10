@@ -492,6 +492,64 @@ func TestSetCorporation_InvalidCardID(t *testing.T) {
 	testutil.AssertError(t, err, "SetCorporation should fail for invalid card ID")
 }
 
+func TestSetCorporation_RegistersVPGranter(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	corpID := testutil.CardID("Arklight")
+	err := action.Execute(ctx, testGame.ID(), playerID, corpID)
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	granters := p.VPGranters().GetAll()
+	testutil.AssertEqual(t, 1, len(granters), "Arklight should register 1 VP granter")
+	testutil.AssertEqual(t, "Arklight", granters[0].CardName, "VP granter should be for Arklight")
+}
+
+func TestSetCorporation_ChangeCorporation_ClearsOldVPGranter(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+
+	// Set Arklight (has VP granter: 1 VP per 2 animals)
+	arklightID := testutil.CardID("Arklight")
+	err := action.Execute(ctx, testGame.ID(), playerID, arklightID)
+	testutil.AssertNoError(t, err, "SetCorporation to Arklight should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	granters := p.VPGranters().GetAll()
+	testutil.AssertEqual(t, 1, len(granters), "Should have 1 VP granter after setting Arklight")
+	testutil.AssertEqual(t, "Arklight", granters[0].CardName, "VP granter should be for Arklight")
+
+	// Switch to Celestic (has VP granter: 1 VP per 3 floaters)
+	celesticID := testutil.CardID("Celestic")
+	err = action.Execute(ctx, testGame.ID(), playerID, celesticID)
+	testutil.AssertNoError(t, err, "SetCorporation to Celestic should succeed")
+
+	granters = p.VPGranters().GetAll()
+	testutil.AssertEqual(t, 1, len(granters), "Should still have 1 VP granter after switching to Celestic")
+	testutil.AssertEqual(t, "Celestic", granters[0].CardName, "VP granter should now be for Celestic")
+}
+
+func TestSetCorporation_NoVPGranterForCorpWithoutVP(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	corpID := testutil.CardID("CrediCor")
+	err := action.Execute(ctx, testGame.ID(), playerID, corpID)
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	granters := p.VPGranters().GetAll()
+	testutil.AssertEqual(t, 0, len(granters), "CrediCor should not register any VP granters")
+}
+
 func TestSetCorporation_NonCorporationCard(t *testing.T) {
 	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()

@@ -341,8 +341,9 @@ type SetTRAdminCommand struct {
 
 // CardPaymentDto represents how a player is paying for a card
 type CardPaymentDto struct {
-	Credits     int            `json:"credits" ts:"number"`                                           // MC spent
-	Steel       int            `json:"steel" ts:"number"`                                             // Steel resources used (2 MC value each)
-	Titanium    int            `json:"titanium" ts:"number"`                                          // Titanium resources used (3 MC value each)
-	Substitutes map[string]int `json:"substitutes,omitempty" ts:"Record<string, number> | undefined"` // Payment substitutes (e.g., heat for Helion)
+	Credits            int            `json:"credits" ts:"number"`                                                  // MC spent
+	Steel              int            `json:"steel" ts:"number"`                                                    // Steel resources used (2 MC value each)
+	Titanium           int            `json:"titanium" ts:"number"`                                                 // Titanium resources used (3 MC value each)
+	Substitutes        map[string]int `json:"substitutes,omitempty" ts:"Record<string, number> | undefined"`        // Payment substitutes (e.g., heat for Helion)
+	StorageSubstitutes map[string]int `json:"storageSubstitutes,omitempty" ts:"Record<string, number> | undefined"` // Storage payment substitutes (e.g., floaters from Dirigibles)
 }

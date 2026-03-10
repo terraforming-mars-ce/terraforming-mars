@@ -147,6 +147,8 @@ func (a *ConfirmDemoSetupAction) Execute(
 			return fmt.Errorf("failed to setup forced first action: %w", err)
 		}
 
+		g.RegisterCorporationVPGranter(playerID, corporationID)
+
 		log.Debug("Applied corporation effects", zap.String("corporation_name", corpCard.Name))
 	}
 

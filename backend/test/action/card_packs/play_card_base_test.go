@@ -1480,7 +1480,7 @@ func TestColonizerTrainingCamp_FailsAboveMaxOxygen(t *testing.T) {
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 	// Increase oxygen above 5%
 	for i := 0; i < 6; i++ {
-		testGame.GlobalParameters().IncreaseOxygen(ctx, 1)
+		testGame.GlobalParameters().IncreaseOxygen(ctx, 1, "")
 	}
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -4512,7 +4512,7 @@ func TestLichen_IncreasesPlantProduction(t *testing.T) {
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 	// Set temperature to -24 (3 steps from -30)
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 3)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 3, "")
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
@@ -4674,7 +4674,7 @@ func TestTundraFarming_ProductionAndPlant(t *testing.T) {
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 	// Temperature needs to be -6 or warmer. Default is -30. Need 12 steps (each step is +2).
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 12)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 12, "")
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
@@ -4853,7 +4853,7 @@ func TestNoctisFarming_ProductionAndPlants(t *testing.T) {
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 	// Temperature needs to be -20 or warmer. Default is -30. Need 5 steps (each step is +2).
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 5)
+	testGame.GlobalParameters().IncreaseTemperature(ctx, 5, "")
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
@@ -5402,7 +5402,7 @@ func TestLivestock_OnPlay_ChangesProduction(t *testing.T) {
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 	// Oxygen needs to be at 9 for the requirement
-	testGame.GlobalParameters().IncreaseOxygen(ctx, 9)
+	testGame.GlobalParameters().IncreaseOxygen(ctx, 9, "")
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
@@ -5433,7 +5433,7 @@ func TestLivestock_Action_AddAnimal(t *testing.T) {
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 	// Oxygen needs to be at 9 for the requirement (same as OnPlay test)
-	testGame.GlobalParameters().IncreaseOxygen(ctx, 9)
+	testGame.GlobalParameters().IncreaseOxygen(ctx, 9, "")
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
@@ -5771,7 +5771,7 @@ func TestBiomassCombustors_StealPlantProduction(t *testing.T) {
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, attacker.ID(), 2)
 	// Oxygen needs to be 6
-	testGame.GlobalParameters().IncreaseOxygen(ctx, 6)
+	testGame.GlobalParameters().IncreaseOxygen(ctx, 6, "")
 	attacker.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
@@ -5813,7 +5813,7 @@ func TestShuttles_OnPlay_ProductionChanges(t *testing.T) {
 	testGame.UpdatePhase(ctx, game.GamePhaseAction)
 	testGame.SetCurrentTurn(ctx, p.ID(), 2)
 	// Oxygen needs to be 5 for the requirement
-	testGame.GlobalParameters().IncreaseOxygen(ctx, 5)
+	testGame.GlobalParameters().IncreaseOxygen(ctx, 5, "")
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
@@ -5937,8 +5937,8 @@ func TestMiningRights_PlaceOnSteelBonus_IncreaseSteelProduction(t *testing.T) {
 	selection := testGame.GetPendingTileSelection(p.ID())
 	testutil.AssertTrue(t, selection != nil, "Should have pending mining tile selection")
 
-	// Select the steel bonus hex at (-3,1,2)
-	steelBonusHex := fmt.Sprintf("%d,%d,%d", -3, 1, 2)
+	// Select the steel bonus hex at (-4,3,1) — land tile with Steel×2
+	steelBonusHex := fmt.Sprintf("%d,%d,%d", -4, 3, 1)
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), p.ID(), steelBonusHex)
 	testutil.AssertNoError(t, err, "Should be able to select steel bonus hex")
@@ -5983,8 +5983,8 @@ func TestMiningRights_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing
 	selection := testGame.GetPendingTileSelection(p.ID())
 	testutil.AssertTrue(t, selection != nil, "Should have pending mining tile selection")
 
-	// Select the titanium bonus hex at (2,1,-3)
-	titaniumBonusHex := fmt.Sprintf("%d,%d,%d", 2, 1, -3)
+	// Select the titanium bonus hex at (1,3,-4) — land tile with Titanium×1
+	titaniumBonusHex := fmt.Sprintf("%d,%d,%d", 1, 3, -4)
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), p.ID(), titaniumBonusHex)
 	testutil.AssertNoError(t, err, "Should be able to select titanium bonus hex")
@@ -5996,4 +5996,65 @@ func TestMiningRights_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing
 		"Titanium production should increase by 1 when mining tile placed on titanium bonus")
 	testutil.AssertEqual(t, prodBefore.Steel, prodAfter.Steel,
 		"Steel production should not change")
+}
+
+// --- Local Heat Trapping (190) ---
+// "Spend 5 heat to either gain 4 plants, or to add 2 animals to another card."
+// Should fail if player has less than 5 heat.
+func TestLocalHeatTrapping_FailsWithInsufficientHeat(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	card := testutil.GetCardByName("Local Heat Trapping")
+	cardRegistry := testutil.CreateTestCardRegistry()
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testGame.UpdateStatus(ctx, game.GameStatusActive)
+	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+		shared.ResourceHeat:   1,
+	})
+	p.Hand().AddCard(card.ID)
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 1}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	testutil.AssertError(t, err, "Local Heat Trapping should fail with only 1 heat")
+}
+
+func TestLocalHeatTrapping_PlaysWithSufficientHeat(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	card := testutil.GetCardByName("Local Heat Trapping")
+	cardRegistry := testutil.CreateTestCardRegistry()
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testGame.UpdateStatus(ctx, game.GameStatusActive)
+	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+		shared.ResourceHeat:   5,
+	})
+	p.Hand().AddCard(card.ID)
+
+	heatBefore := p.Resources().Get().Heat
+	plantsBefore := p.Resources().Get().Plants
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 1}
+	choiceIndex := 0
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, &choiceIndex, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Local Heat Trapping should play with 5 heat")
+
+	heatAfter := p.Resources().Get().Heat
+	plantsAfter := p.Resources().Get().Plants
+	testutil.AssertEqual(t, heatBefore-5, heatAfter, "Heat should decrease by 5")
+	testutil.AssertEqual(t, plantsBefore+4, plantsAfter, "Plants should increase by 4")
 }
