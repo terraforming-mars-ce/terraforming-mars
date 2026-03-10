@@ -11,6 +11,7 @@ export type {
   GamePopoverProps,
   PopoverItemState,
   PopoverItemError,
+  PopoverItemWarning,
   GamePopoverItemProps,
   GamePopoverEmptyProps,
 } from "./types";

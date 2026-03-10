@@ -606,6 +606,7 @@ type PlayerStandardProjectDto struct {
 
 	Available     bool                   `json:"available" ts:"boolean"`                                      // Computed: project is available
 	Errors        []StateErrorDto        `json:"errors" ts:"StateErrorDto[]"`                                 // Reasons why project is not available
+	Warnings      []StateWarningDto      `json:"warnings,omitempty" ts:"StateWarningDto[] | undefined"`       // Non-blocking warnings
 	EffectiveCost map[string]int         `json:"effectiveCost" ts:"Record<string, number>"`                   // Cost per resource type after discounts
 	Discounts     map[string]int         `json:"discounts,omitempty" ts:"Record<string, number> | undefined"` // Discount amounts per resource type (if any)
 	Metadata      map[string]interface{} `json:"metadata,omitempty" ts:"Record<string, any> | undefined"`     // Project-specific context (e.g., oceansRemaining)

@@ -128,6 +128,18 @@ export default function GameInterface() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // Warn when closing/refreshing the tab during an active game
+  useEffect(() => {
+    if (!isConnected || !game) {
+      return;
+    }
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isConnected, game]);
+
   // Set corporation data directly from player (backend now sends full CardDto)
   useEffect(() => {
     if (currentPlayer?.corporation) {

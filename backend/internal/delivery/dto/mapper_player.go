@@ -712,6 +712,7 @@ func mapPlayerStandardProjects(p *player.Player, g *game.Game, cardRegistry card
 			BaseCost:      baseCost,
 			Available:     state.Available(),
 			Errors:        convertStateErrors(state.Errors),
+			Warnings:      convertStateWarnings(state.Warnings),
 			EffectiveCost: state.Cost,
 			Discounts:     discounts,
 			Metadata:      state.Metadata,

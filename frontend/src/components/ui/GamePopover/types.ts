@@ -20,8 +20,18 @@ export const POPOVER_THEMES = {
 export type PopoverThemeName = keyof typeof POPOVER_THEMES;
 
 export type PopoverPosition =
-  | { type: "anchor"; anchorRef: React.RefObject<HTMLElement | null>; placement: "above" | "below" }
-  | { type: "fixed"; top?: number; left?: number; right?: number; bottom?: number };
+  | {
+      type: "anchor";
+      anchorRef: React.RefObject<HTMLElement | null>;
+      placement: "above" | "below";
+    }
+  | {
+      type: "fixed";
+      top?: number;
+      left?: number;
+      right?: number;
+      bottom?: number;
+    };
 
 export interface PopoverHeader {
   title: string;
@@ -36,7 +46,11 @@ export interface GamePopoverProps {
   position: PopoverPosition;
   theme: PopoverThemeName | PopoverTheme;
   header?: PopoverHeader;
-  arrow?: { enabled: boolean; position?: "left" | "center" | "right"; offset?: number };
+  arrow?: {
+    enabled: boolean;
+    position?: "left" | "center" | "right";
+    offset?: number;
+  };
   width?: number | string;
   maxHeight?: number | string;
   zIndex?: number;
@@ -54,10 +68,15 @@ export interface PopoverItemError {
   count?: number;
 }
 
+export interface PopoverItemWarning {
+  message: string;
+}
+
 export interface GamePopoverItemProps {
   state: PopoverItemState;
   onClick?: () => void;
   error?: PopoverItemError;
+  warning?: PopoverItemWarning;
   statusBadge?: string; // "played", "claimed", "funded"
   hoverEffect?: "translate-x" | "glow" | "background" | "none";
   animationDelay?: number;
