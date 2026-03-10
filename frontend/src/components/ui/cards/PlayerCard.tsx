@@ -134,6 +134,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   const isPassed = player.passed;
   const isDisconnected = !player.isConnected;
   const isExited = player.isExited;
+  const isInProduction =
+    player.productionPhase != null && !player.productionPhase.selectionComplete;
   const hasUnlimitedActions = player.availableActions === -1;
   const actionsRemaining = player.availableActions;
 
@@ -157,9 +159,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   useEffect(() => {
     if (!contextMenu) return;
     const handleDismiss = () => setContextMenu(null);
-    document.addEventListener("click", handleDismiss);
-    document.addEventListener("contextmenu", handleDismiss);
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("click", handleDismiss);
+      document.addEventListener("contextmenu", handleDismiss);
+    }, 0);
     return () => {
+      clearTimeout(timeoutId);
       document.removeEventListener("click", handleDismiss);
       document.removeEventListener("contextmenu", handleDismiss);
     };
@@ -286,7 +291,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 PASSED
               </span>
             )}
-            {player.playerType === "bot" && player.botStatus === "thinking" && (
+            {player.playerType === "bot" && player.botStatus === "thinking" && !isInProduction && (
               <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(120,80,200,0.6)] text-[rgb(200,180,255)] border border-[rgba(140,100,220,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] flex items-center gap-1">
                 THINKING
                 <svg
@@ -325,6 +330,22 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             {hasPendingTile && (
               <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,140,50,0.6)] text-[rgb(255,220,140)] border border-[rgba(180,140,50,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
                 TILE
+              </span>
+            )}
+            {isInProduction && (
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,120,40,0.6)] text-[rgb(255,200,120)] border border-[rgba(180,120,40,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] flex items-center gap-1">
+                PRODUCTION
+                <svg
+                  className="animate-spin"
+                  width="8"
+                  height="8"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                >
+                  <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                </svg>
               </span>
             )}
           </div>

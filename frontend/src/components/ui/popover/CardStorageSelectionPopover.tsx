@@ -8,6 +8,7 @@ interface CardStorageSelectionPopoverProps {
   amount: number;
   selectorTags?: string[];
   playedCards: CardDto[];
+  corporationCard?: CardDto;
   resourceStorage?: { [cardId: string]: number }; // Map of cardId to current storage count
   onCardSelect: (cardId: string) => void;
   onCancel: () => void;
@@ -24,6 +25,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
   amount,
   selectorTags,
   playedCards,
+  corporationCard,
   resourceStorage,
   onCardSelect,
   onCancel,
@@ -32,10 +34,16 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isClosing, setIsClosing] = useState(false);
 
-  // Filter played cards to only those with matching resource storage
+  // Include corporation card (if it has resource storage) alongside played cards
+  const allCandidateCards = [
+    ...(corporationCard?.resourceStorage ? [corporationCard] : []),
+    ...playedCards,
+  ];
+
+  // Filter cards to only those with matching resource storage
   // For "card-resource" type, match by selector tags instead of storage type
   // For specific resource types (floater, animal, etc.), match storage type AND selector tags if present
-  const validCards: CardStorageOption[] = playedCards
+  const validCards: CardStorageOption[] = allCandidateCards
     .filter((card) => {
       if (!card.resourceStorage) return false;
       if (resourceType === "card-resource") {

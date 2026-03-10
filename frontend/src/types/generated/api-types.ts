@@ -310,6 +310,7 @@ export interface CardPaymentDto {
   steel: number /* int */; // Steel resources used (2 MC value each)
   titanium: number /* int */; // Titanium resources used (3 MC value each)
   substitutes?: { [key: string]: number /* int */ }; // Payment substitutes (e.g., heat for Helion)
+  storageSubstitutes?: { [key: string]: number /* int */ }; // Storage payment substitutes (e.g., floaters from Dirigibles)
 }
 
 //////////
@@ -499,6 +500,12 @@ export interface TileRestrictionsDto {
   onBonusType?: string[]; // tile must have one of these bonus types
 }
 /**
+ * TargetRestrictionDto represents restrictions on target player selection
+ */
+export interface TargetRestrictionDto {
+  adjacent?: string;
+}
+/**
  * SelectorDto represents matching criteria for cards, resources, or projects.
  * Multiple fields within a Selector use AND logic (all must match).
  * Multiple Selectors in a slice use OR logic (any match is sufficient).
@@ -523,6 +530,7 @@ export interface ResourceConditionDto {
   maxTrigger?: number /* int */;
   per?: PerConditionDto;
   tileRestrictions?: TileRestrictionsDto;
+  targetRestriction?: TargetRestrictionDto;
   tileType?: string;
   variableAmount?: boolean;
   optional?: boolean;
@@ -710,6 +718,15 @@ export interface GameSettingsDto {
   availablePlayerColors: string[];
 }
 /**
+ * GlobalParameterBonusDto describes a bonus step on a global parameter track
+ */
+export interface GlobalParameterBonusDto {
+  parameter: string;
+  threshold: number /* int */;
+  rewardType: string;
+  rewardAmount: number /* int */;
+}
+/**
  * GlobalParametersDto represents the terraforming progress
  */
 export interface GlobalParametersDto {
@@ -718,6 +735,7 @@ export interface GlobalParametersDto {
   oceans: number /* int */; // Range: 0-9
   maxOceans: number /* int */; // Dynamic max, starts at 9
   venus: number /* int */; // Range: 0-30%
+  bonuses: GlobalParameterBonusDto[];
 }
 /**
  * ResourcesDto represents a player's resources
@@ -755,6 +773,7 @@ export interface StoragePaymentSubstituteDto {
   cardId: string;
   resourceType: ResourceType;
   conversionRate: number /* int */;
+  selectors: SelectorDto[];
 }
 /**
  * StateErrorCode represents error codes for entity state validation.
@@ -935,6 +954,16 @@ export interface PendingBehaviorChoiceSelectionDto {
   sourceCardId: string;
 }
 /**
+ * PendingStealTargetSelectionDto represents a pending steal target selection after tile placement
+ */
+export interface PendingStealTargetSelectionDto {
+  eligiblePlayerIds: string[];
+  resourceType: string;
+  amount: number /* int */;
+  source: string;
+  sourceCardId: string;
+}
+/**
  * PlayerStatus represents the current status of a player in the game
  */
 export type PlayerStatus = string;
@@ -981,6 +1010,7 @@ export interface PlayerDto {
   pendingCardDrawSelection?: PendingCardDrawSelectionDto;
   pendingCardDiscardSelection?: PendingCardDiscardSelectionDto;
   pendingBehaviorChoiceSelection?: PendingBehaviorChoiceSelectionDto;
+  pendingStealTargetSelection?: PendingStealTargetSelectionDto;
   forcedFirstAction?: ForcedFirstActionDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
@@ -1477,6 +1507,7 @@ export const MessageTypeActionCardDiscardConfirmed: MessageType =
   "action.card.card-discard-confirmed";
 export const MessageTypeActionBehaviorChoiceConfirmed: MessageType =
   "action.card.behavior-choice-confirmed";
+export const MessageTypeActionConfirmStealTarget: MessageType = "action.card.confirm-steal-target";
 export const MessageTypeAdminCommand: MessageType = "admin-command";
 export const MessageTypeRequestLogs: MessageType = "request-logs";
 export const MessageTypePlayerTakeover: MessageType = "player-takeover";

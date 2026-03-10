@@ -782,7 +782,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
 
     return (
       <div className="flex flex-col gap-[9px] items-center justify-center max-w-full">
-        <div className="flex gap-2 items-center justify-center">
+        <div className="flex gap-3 items-center justify-center">
           {attackResources.map((output: any, index: number) => {
             const displayInfo = regularDisplayModes.get(output)!;
             return (

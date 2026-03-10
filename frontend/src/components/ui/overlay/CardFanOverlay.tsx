@@ -93,6 +93,13 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
     const [returningCard, setReturningCard] = useState<string | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const [flyingAwayGhost, setFlyingAwayGhost] = useState<{
+      card: PlayerCardDto;
+      x: number;
+      y: number;
+      scale: number;
+      animating: boolean;
+    } | null>(null);
 
     const handRef = useRef<HTMLDivElement>(null);
     const cardsRef = useRef(cards);
@@ -407,14 +414,40 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
           const cardData = cardsRef.current.find((c) => c.id === cardId);
           if (cardData?.available) {
             try {
-              await onPlayCard(cardId);
+              const containerRect = handRef.current?.getBoundingClientRect();
+              const releaseX = containerRect
+                ? e.clientX + dragOffset.x - (containerRect.left + containerRect.width / 2)
+                : 0;
+              const releaseY = containerRect ? e.clientY + dragOffset.y - containerRect.bottom : 0;
+
+              setFlyingAwayGhost({
+                card: cardData,
+                x: releaseX,
+                y: releaseY,
+                scale: fanScale,
+                animating: false,
+              });
               setDraggedCard(null);
               setIsInThrowZone(false);
-
               setHighlightedCard(null);
+
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  setFlyingAwayGhost((prev) =>
+                    prev ? { ...prev, scale: prev.scale * 0.85, animating: true } : prev,
+                  );
+                });
+              });
+
+              setTimeout(() => {
+                setFlyingAwayGhost(null);
+              }, 400);
+
+              await onPlayCard(cardId);
               return;
             } catch (error) {
               console.error("Failed to play card:", error);
+              setFlyingAwayGhost(null);
             }
           }
         }
@@ -431,6 +464,8 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
       [
         draggedCard,
         dragStartPosition,
+        dragOffset,
+        fanScale,
         highlightedCard,
         onPlayCard,
         onCardSelect,
@@ -449,7 +484,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
       return () => document.removeEventListener("click", handleDocumentClick);
     }, []);
 
-    if (hideWhenModalOpen || cards.length === 0) {
+    if (hideWhenModalOpen || (cards.length === 0 && !flyingAwayGhost)) {
       return null;
     }
 
@@ -517,6 +552,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
             if (index === -1) return null;
 
             const isDraggedCard = draggedCard === card.id;
+            if (flyingAwayGhost?.card.id === card.id) return null;
 
             const absD = Math.abs(index - scrollPos);
             if (absD > activeCullRadius && !isDraggedCard) return null;
@@ -634,6 +670,23 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
             );
           })}
 
+          {flyingAwayGhost && (
+            <div
+              className={`card-fan-card ${flyingAwayGhost.animating ? "is-flying-away" : "is-flying-away-start"}`}
+              style={{
+                transform: `translate(${flyingAwayGhost.x}px, ${flyingAwayGhost.y}px) scale(${flyingAwayGhost.scale})`,
+                zIndex: 3000,
+              }}
+            >
+              <GameCard
+                card={flyingAwayGhost.card}
+                isSelected={true}
+                onSelect={() => {}}
+                animationDelay={-1}
+              />
+            </div>
+          )}
+
           <style>{`
         .card-fan-backdrop {
           position: fixed;
@@ -702,6 +755,17 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
 
         .card-fan-card.is-throw-zone {
           filter: brightness(1.15);
+        }
+
+        .card-fan-card.is-flying-away-start {
+          transition: none !important;
+          pointer-events: none !important;
+        }
+
+        .card-fan-card.is-flying-away {
+          transition: transform 350ms ease-out, opacity 350ms ease-out !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
         }
 
         /* --- Toggle buttons --- */

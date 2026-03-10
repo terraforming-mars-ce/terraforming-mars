@@ -28,6 +28,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   openDirectlyToCardSelection = false,
 }) => {
   const [hasSubmittedCardSelection, setHasSubmittedCardSelection] = useState(false);
+  const persistedSelectionRef = useRef<string[]>([]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [animationStep, setAnimationStep] = useState<"energyConversion" | "production">(
     "energyConversion",
@@ -75,6 +76,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
     if (isOpen && (selectionTransitioned || modalJustOpened)) {
       setHasSubmittedCardSelection(false);
       setShowCardSelection(openDirectlyToCardSelection);
+      persistedSelectionRef.current = [];
     }
 
     prevSelectionCompleteRef.current = selectionComplete;
@@ -588,6 +590,10 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
           playerCredits={gameState?.currentPlayer?.resources.credits || 0}
           onSelectCards={handleCardSelection}
           onReturn={handleReturnFromCardSelection}
+          initialSelectedCardIds={persistedSelectionRef.current}
+          onSelectionChange={(ids) => {
+            persistedSelectionRef.current = ids;
+          }}
         />
       )}
     </>

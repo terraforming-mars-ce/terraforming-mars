@@ -201,6 +201,7 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
     oceans: game.globalParameters?.oceans ?? OCEANS_MIN,
     maxOceans: game.globalParameters?.maxOceans ?? 9,
     venus: game.globalParameters?.venus ?? 0,
+    bonuses: game.globalParameters?.bonuses ?? [],
   });
   const [generation, setGeneration] = useState(game.generation ?? 1);
 

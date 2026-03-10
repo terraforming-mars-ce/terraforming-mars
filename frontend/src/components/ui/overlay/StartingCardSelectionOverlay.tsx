@@ -163,7 +163,12 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
             <h3 className="text-white/60 text-sm font-orbitron font-bold uppercase tracking-widest mb-4">
               Project Cards
             </h3>
-            <div className="flex gap-6 justify-center flex-wrap max-[768px]:gap-4">
+            <div
+              className="grid gap-x-6 gap-y-14 justify-center py-6 max-[768px]:gap-x-4 max-[768px]:gap-y-8"
+              style={{
+                gridTemplateColumns: `repeat(${Math.ceil(cards.length / Math.ceil(cards.length / 6))}, max-content)`,
+              }}
+            >
               {cards.map((card, index) => {
                 const isSelected = selectedCardIds.includes(card.id);
 

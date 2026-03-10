@@ -342,7 +342,7 @@ const LogEntry: React.FC<LogEntryProps> = ({ diff, playerNames }) => {
         />
       )}
 
-      {!displayData && !isCardSource && !isBehaviorSource && (
+      {!displayData && !isBehaviorSource && (
         <div className="text-xs text-gray-400">{diff.description}</div>
       )}
     </div>

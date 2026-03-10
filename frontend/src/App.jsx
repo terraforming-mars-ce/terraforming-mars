@@ -104,7 +104,7 @@ function AppWithBackground() {
 
   return (
     <>
-      <SpaceBackground animationSpeed={0.5} overlayOpacity={0.3} active={showSpaceBackground} />
+      {showSpaceBackground && <SpaceBackground animationSpeed={0.5} overlayOpacity={0.3} />}
       {showSpaceBackground && overlayVisible && (
         <LoadingOverlay isLoaded={skyboxReady} onTransitionEnd={() => setOverlayVisible(false)} />
       )}
