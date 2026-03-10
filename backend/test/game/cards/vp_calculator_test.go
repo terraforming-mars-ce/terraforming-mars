@@ -265,6 +265,68 @@ func TestTotalVPSumsAllCategories(t *testing.T) {
 	}
 }
 
+// TestNegativeFixedVPCard verifies that a card with negative fixed VP
+// (e.g. Nuclear Zone, -2 VP) correctly subtracts from the player's score.
+func TestNegativeFixedVPCard(t *testing.T) {
+	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(playerID)
+
+	// Nuclear Zone (097): vpConditions: [{amount:-2, condition:"fixed"}]
+	cardID := testutil.CardID("Nuclear Zone")
+	p.PlayedCards().AddCard(cardID, "Nuclear Zone", "automated", []string{"earth"})
+
+	breakdown := gamecards.CalculatePlayerVP(
+		p,
+		g.Board(),
+		nil,
+		nil,
+		g.GetAllPlayers(),
+		cardRegistry,
+	)
+
+	if breakdown.CardVP != -2 {
+		t.Fatalf("expected CardVP=-2 for Nuclear Zone, got %d", breakdown.CardVP)
+	}
+	if len(breakdown.CardVPDetails) != 1 {
+		t.Fatalf("expected 1 card VP detail, got %d", len(breakdown.CardVPDetails))
+	}
+	if breakdown.CardVPDetails[0].TotalVP != -2 {
+		t.Errorf("expected card detail TotalVP=-2, got %d", breakdown.CardVPDetails[0].TotalVP)
+	}
+}
+
+// TestNegativeVPReducesTotalScore verifies that negative VP cards reduce the total score.
+func TestNegativeVPReducesTotalScore(t *testing.T) {
+	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(playerID)
+
+	// Play Colonizer Training Camp (001): +2 VP fixed
+	p.PlayedCards().AddCard(testutil.CardID("Colonizer Training Camp"), "Colonizer Training Camp", "automated", []string{"building", "jovian"})
+
+	// Play Nuclear Zone (097): -2 VP fixed
+	p.PlayedCards().AddCard(testutil.CardID("Nuclear Zone"), "Nuclear Zone", "automated", []string{"earth"})
+
+	// Play Hackers (125): -1 VP fixed
+	p.PlayedCards().AddCard(testutil.CardID("Hackers"), "Hackers", "automated", []string{"building"})
+
+	breakdown := gamecards.CalculatePlayerVP(
+		p,
+		g.Board(),
+		nil,
+		nil,
+		g.GetAllPlayers(),
+		cardRegistry,
+	)
+
+	// 2 + (-2) + (-1) = -1
+	if breakdown.CardVP != -1 {
+		t.Fatalf("expected CardVP=-1 (2 - 2 - 1), got %d", breakdown.CardVP)
+	}
+	if len(breakdown.CardVPDetails) != 3 {
+		t.Fatalf("expected 3 card VP details, got %d", len(breakdown.CardVPDetails))
+	}
+}
+
 // TestNoVPCards verifies that cards without VP conditions don't contribute.
 func TestNoVPCards(t *testing.T) {
 	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
