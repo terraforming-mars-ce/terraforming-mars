@@ -71,10 +71,7 @@ const AngledPanel: React.FC<AngledPanelProps> = ({
   const whiteGlowId = `whiteGlow-${side}`;
 
   return (
-    <div
-      className="relative pointer-events-auto z-[2]"
-      style={{ width, height }}
-    >
+    <div className="relative pointer-events-auto z-[2]" style={{ width, height }}>
       <svg
         className="absolute inset-0 w-full h-full"
         viewBox={`0 0 ${width} ${height}`}
@@ -87,13 +84,7 @@ const AngledPanel: React.FC<AngledPanelProps> = ({
                 <stop offset="0%" stopColor="#ffffff" stopOpacity="0.12" />
                 <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
               </linearGradient>
-              <linearGradient
-                id={corpGradientId}
-                x1="0%"
-                y1="0%"
-                x2="30%"
-                y2="0%"
-              >
+              <linearGradient id={corpGradientId} x1="0%" y1="0%" x2="30%" y2="0%">
                 <stop offset="0%" stopColor={corpColor} stopOpacity="0.17" />
                 <stop offset="100%" stopColor={corpColor} stopOpacity="0" />
               </linearGradient>
@@ -127,9 +118,7 @@ const AngledPanel: React.FC<AngledPanelProps> = ({
             />
           </>
         )}
-        {side === "right" && (
-          <polygon points={fillPoints} fill={`url(#${whiteGlowId})`} />
-        )}
+        {side === "right" && <polygon points={fillPoints} fill={`url(#${whiteGlowId})`} />}
         <line
           x1={topEdge.x1}
           y1={topEdge.y1}
@@ -199,12 +188,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 }) => {
   const isSpectating = !!spectatingPlayer;
   const hideContents = isGameSpectator && !isSpectating;
-  const displayPlayer: PlayerDto | OtherPlayerDto | null | undefined =
-    isSpectating ? spectatingPlayer : currentPlayer;
+  const displayPlayer: PlayerDto | OtherPlayerDto | null | undefined = isSpectating
+    ? spectatingPlayer
+    : currentPlayer;
   const displayCorporation = isSpectating ? spectatingCorporation : corporation;
-  const displayPlayedCards = isSpectating
-    ? (spectatingPlayer?.playedCards ?? [])
-    : playedCards;
+  const displayPlayedCards = isSpectating ? (spectatingPlayer?.playedCards ?? []) : playedCards;
 
   const {
     onOpenCardsPlayedModal,
@@ -256,10 +244,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        corpContainerRef.current &&
-        !corpContainerRef.current.contains(event.target as Node)
-      ) {
+      if (corpContainerRef.current && !corpContainerRef.current.contains(event.target as Node)) {
         handleCorpClose();
       }
     };
@@ -412,14 +397,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     setShowTagsPopover(!showTagsPopover);
   };
 
-  const vpGranters =
-    displayPlayer && "vpGranters" in displayPlayer
-      ? displayPlayer.vpGranters
-      : [];
-  const totalVP = (vpGranters || []).reduce(
-    (sum, g) => sum + g.computedValue,
-    0,
-  );
+  const vpGranters = displayPlayer && "vpGranters" in displayPlayer ? displayPlayer.vpGranters : [];
+  const totalVP = (vpGranters || []).reduce((sum, g) => sum + g.computedValue, 0);
 
   const handleOpenVPPopover = () => {
     setShowVPPopover(!showVPPopover);
@@ -493,9 +472,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                   </span>
                 )}
               </div>
-              <span className="text-white/30 text-[10px] font-orbitron">
-                ESC to close
-              </span>
+              <span className="text-white/30 text-[10px] font-orbitron">ESC to close</span>
             </div>
           </div>
         </>
@@ -539,9 +516,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                     }}
                   >
                     <div className="flex items-center justify-center min-h-[50px] [&>*]:scale-65 [&>*]:origin-center">
-                      {getCorporationLogo(
-                        displayCorporation.name.toLowerCase(),
-                      )}
+                      {getCorporationLogo(displayCorporation.name.toLowerCase())}
                     </div>
                   </div>
 
@@ -549,9 +524,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                   {showCorpExpanded && (
                     <div
                       className={`absolute bottom-[100%] left-4 mb-6 origin-bottom-left transition-all duration-200 ${
-                        isCorpExpanded
-                          ? "opacity-100 scale-100"
-                          : "opacity-0 scale-90"
+                        isCorpExpanded ? "opacity-100 scale-100" : "opacity-0 scale-90"
                       }`}
                     >
                       <button
@@ -589,12 +562,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             {/* Resources Section */}
             <div className="flex items-center justify-evenly flex-1">
               {playerResources.map((resource, index) => {
-                const resourceChanged = hasPathChanged(
-                  `currentPlayer.resources.${resource.id}`,
-                );
-                const productionChanged = hasPathChanged(
-                  `currentPlayer.production.${resource.id}`,
-                );
+                const resourceChanged = hasPathChanged(`currentPlayer.resources.${resource.id}`);
+                const productionChanged = hasPathChanged(`currentPlayer.production.${resource.id}`);
 
                 const showConversionButton =
                   (resource.id === "plant" && canConvertPlants) ||
@@ -614,9 +583,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                           }`}
                         >
                           <button
-                            disabled={
-                              isConversionDisabled || !showConversionButton
-                            }
+                            disabled={isConversionDisabled || !showConversionButton}
                             className={`flex items-center justify-center gap-0.5 px-1.5 py-0.5 border transition-all duration-200 ${
                               isConversionDisabled || !showConversionButton
                                 ? "opacity-40 cursor-default bg-black/80 border-white/20"
@@ -624,8 +591,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                             }`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (isConversionDisabled || !showConversionButton)
-                                return;
+                              if (isConversionDisabled || !showConversionButton) return;
                               hoverSound.onClick?.();
                               if (resource.id === "plant") {
                                 void onConvertPlantsToGreenery?.();
@@ -639,9 +605,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                                 : hoverSound.onMouseEnter
                             }
                           >
-                            <span className="text-[10px] font-bold text-white/90">
-                              +
-                            </span>
+                            <span className="text-[10px] font-bold text-white/90">+</span>
                             <GameIcon
                               iconType={
                                 resource.id === "plant"
@@ -658,9 +622,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                       <div className="inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.5)_0%,rgba(139,89,42,0.45)_100%)] border border-[rgba(160,110,60,0.6)] px-3 py-0.5 w-[32px] mb-1">
                         <span
                           className={`text-[10px] font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none tabular-nums ${
-                            productionChanged
-                              ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                              : ""
+                            productionChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
                           }`}
                         >
                           {resource.production}
@@ -678,15 +640,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                         </div>
                       ) : (
                         <div className="flex items-center gap-1 w-[48px] justify-center scale-[0.85]">
-                          <GameIcon
-                            iconType={getResourceType(resource.id)}
-                            size="small"
-                          />
+                          <GameIcon iconType={getResourceType(resource.id)} size="small" />
                           <span
                             className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] tabular-nums w-[24px] text-left ${
-                              resourceChanged
-                                ? "[animation:valueUpdateShine_0.8s_ease-in-out]"
-                                : ""
+                              resourceChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
                             }`}
                           >
                             {resource.current}
@@ -738,12 +695,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               onMouseEnter={hoverSound.onMouseEnter}
             >
               <div className="font-bold flex items-center gap-[2px] h-[24px] w-[24px] justify-center text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-                <span className="text-[7px] leading-none translate-y-[1px]">
-                  ●
-                </span>
-                <span className="text-[7px] leading-none translate-y-[1px]">
-                  ●
-                </span>
+                <span className="text-[7px] leading-none translate-y-[1px]">●</span>
+                <span className="text-[7px] leading-none translate-y-[1px]">●</span>
                 <span className="text-[18px] leading-none">→</span>
               </div>
               <div

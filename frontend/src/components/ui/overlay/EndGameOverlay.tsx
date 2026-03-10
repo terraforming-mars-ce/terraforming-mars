@@ -1,8 +1,5 @@
 import { FC, useState, useCallback, useEffect, useRef } from "react";
-import type {
-  GameDto,
-  CardVPDetailDto,
-} from "../../../types/generated/api-types";
+import type { GameDto, CardVPDetailDto } from "../../../types/generated/api-types";
 import {
   ANIMATION_TIMINGS,
   VPSequencePhase,
@@ -82,25 +79,18 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
   onReturnToMenu,
 }) => {
   const [currentPhase, setCurrentPhase] = useState<VPSequencePhase>("intro");
-  const [tileCountingState, setTileCountingState] =
-    useState<TileCountingState | null>(null);
+  const [tileCountingState, setTileCountingState] = useState<TileCountingState | null>(null);
   const [vpIndicators, setVPIndicators] = useState<TileVPIndicator[]>([]);
   const [cardVPState, setCardVPState] = useState<CardVPState | null>(null);
   const [isDrawerHidden, setIsDrawerHidden] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hover states for showing VP indicators on badge hover
-  const [hoveredTileType, setHoveredTileType] = useState<TileHoverType | null>(
-    null,
-  );
-  const [hoveredCardPlayerId, setHoveredCardPlayerId] = useState<string | null>(
-    null,
-  );
+  const [hoveredTileType, setHoveredTileType] = useState<TileHoverType | null>(null);
+  const [hoveredCardPlayerId, setHoveredCardPlayerId] = useState<string | null>(null);
 
   const allScores = game.finalScores ?? [];
-  const sortedScores = [...allScores].sort(
-    (a, b) => b.vpBreakdown.totalVP - a.vpBreakdown.totalVP,
-  );
+  const sortedScores = [...allScores].sort((a, b) => b.vpBreakdown.totalVP - a.vpBreakdown.totalVP);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -124,9 +114,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
     // Don't override active tile counting animation
     if (currentPhase === "tiles" && tileCountingState) return;
 
-    const score = sortedScores.find(
-      (s) => s.playerId === hoveredTileType.playerId,
-    );
+    const score = sortedScores.find((s) => s.playerId === hoveredTileType.playerId);
     if (!score) return;
 
     const hoverIndicators: TileVPIndicator[] = [];
@@ -241,10 +229,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
 
       if (phase === "cities") {
         // Greenery phase complete - show full greenery VP
-        const fullGreeneryVP = greeneryDetails.reduce(
-          (sum, detail) => sum + detail.vp,
-          0,
-        );
+        const fullGreeneryVP = greeneryDetails.reduce((sum, detail) => sum + detail.vp, 0);
         // Sum VP for cities 0 to currentTileIndex (inclusive)
         const revealedCityVP = cityDetails
           .slice(0, currentTileIndex + 1)
@@ -260,21 +245,11 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
   // Auto-advance phases
   useEffect(() => {
     if (currentPhase === "intro") {
-      timerRef.current = setTimeout(
-        () => advanceToPhase("tr"),
-        ANIMATION_TIMINGS.PHASE_INTRO,
-      );
+      timerRef.current = setTimeout(() => advanceToPhase("tr"), ANIMATION_TIMINGS.PHASE_INTRO);
     } else if (currentPhase === "tr") {
       // Skip milestones/awards phases if none exist
-      const nextPhase = hasClaimedMilestones
-        ? "milestones"
-        : hasFundedAwards
-          ? "awards"
-          : "tiles";
-      timerRef.current = setTimeout(
-        () => advanceToPhase(nextPhase),
-        ANIMATION_TIMINGS.PHASE_TR,
-      );
+      const nextPhase = hasClaimedMilestones ? "milestones" : hasFundedAwards ? "awards" : "tiles";
+      timerRef.current = setTimeout(() => advanceToPhase(nextPhase), ANIMATION_TIMINGS.PHASE_TR);
     } else if (currentPhase === "milestones") {
       // Skip awards phase if no funded awards
       const nextPhase = hasFundedAwards ? "awards" : "tiles";
@@ -283,10 +258,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
         ANIMATION_TIMINGS.PHASE_MILESTONES,
       );
     } else if (currentPhase === "awards") {
-      timerRef.current = setTimeout(
-        () => advanceToPhase("tiles"),
-        ANIMATION_TIMINGS.PHASE_AWARDS,
-      );
+      timerRef.current = setTimeout(() => advanceToPhase("tiles"), ANIMATION_TIMINGS.PHASE_AWARDS);
     } else if (currentPhase === "tiles" && !tileCountingState) {
       // Start per-player tile counting
       startTileCounting();
@@ -333,11 +305,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
 
   // Process next tile in counting sequence using backend VP details
   useEffect(() => {
-    if (
-      !tileCountingState ||
-      currentPhase !== "tiles" ||
-      tileCountingState.phase === "done"
-    )
+    if (!tileCountingState || currentPhase !== "tiles" || tileCountingState.phase === "done")
       return;
 
     const { currentPlayerIndex, phase, currentTileIndex } = tileCountingState;
@@ -374,9 +342,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
         timerRef.current = setTimeout(() => {
           // Stop animation on this tile
           setVPIndicators((prev) =>
-            prev.map((ind) =>
-              ind.coordinate === coord ? { ...ind, isAnimating: false } : ind,
-            ),
+            prev.map((ind) => (ind.coordinate === coord ? { ...ind, isAnimating: false } : ind)),
           );
           // Move to next tile after brief display
           setTimeout(() => {
@@ -420,30 +386,23 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
         };
 
         // Adjacent greeneries just get highlight, no VP text
-        const greeneryIndicators: TileVPIndicator[] =
-          adjacentGreeneryCoords.map((greenCoord) => ({
-            coordinate: greenCoord,
-            amount: 1,
-            type: "city-adjacency" as const,
-            playerId: currentPlayer.playerId,
-            isAnimating: false,
-            showVPText: false,
-          }));
+        const greeneryIndicators: TileVPIndicator[] = adjacentGreeneryCoords.map((greenCoord) => ({
+          coordinate: greenCoord,
+          amount: 1,
+          type: "city-adjacency" as const,
+          playerId: currentPlayer.playerId,
+          isAnimating: false,
+          showVPText: false,
+        }));
 
-        setVPIndicators((prev) => [
-          ...prev,
-          cityIndicator,
-          ...greeneryIndicators,
-        ]);
+        setVPIndicators((prev) => [...prev, cityIndicator, ...greeneryIndicators]);
 
         // Delay before moving to next city
         timerRef.current = setTimeout(() => {
           // Stop animation on this city
           setVPIndicators((prev) =>
             prev.map((ind) =>
-              ind.coordinate === cityCoord
-                ? { ...ind, isAnimating: false }
-                : ind,
+              ind.coordinate === cityCoord ? { ...ind, isAnimating: false } : ind,
             ),
           );
           // Move to next city after brief display
@@ -539,9 +498,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
     }
 
     timerRef.current = setTimeout(() => {
-      setCardVPState((prev) =>
-        prev ? { ...prev, currentCardIndex: currentCardIndex + 1 } : null,
-      );
+      setCardVPState((prev) => (prev ? { ...prev, currentCardIndex: currentCardIndex + 1 } : null));
     }, ANIMATION_TIMINGS.CARD_VP_DISPLAY);
   }, [cardVPState, currentPhase, advanceToPhase]);
 
@@ -550,9 +507,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
     return (
       <div className="fixed right-0 top-0 bottom-0 w-80 z-[1000] bg-black/90 backdrop-blur-md flex items-center justify-center">
         <div className="text-center p-4">
-          <h2 className="font-orbitron text-lg text-red-400 mb-4">
-            No scores available
-          </h2>
+          <h2 className="font-orbitron text-lg text-red-400 mb-4">No scores available</h2>
           <GameMenuButton
             variant="primary"
             size="lg"
@@ -583,9 +538,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
       {/* Card VP Hover Modal - shown when hovering card badge */}
       {hoveredCardPlayerId && currentPhase !== "cards" && (
         <CardVPHoverModal
-          playerScore={sortedScores.find(
-            (s) => s.playerId === hoveredCardPlayerId,
-          )}
+          playerScore={sortedScores.find((s) => s.playerId === hoveredCardPlayerId)}
         />
       )}
 
@@ -643,15 +596,11 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
             {currentPhase === "tiles" && (
               <>
                 Tile VP:{" "}
-                {tileCountingState &&
-                  sortedScores[tileCountingState.currentPlayerIndex] && (
-                    <span className="text-white">
-                      {
-                        sortedScores[tileCountingState.currentPlayerIndex]
-                          .playerName
-                      }
-                    </span>
-                  )}
+                {tileCountingState && sortedScores[tileCountingState.currentPlayerIndex] && (
+                  <span className="text-white">
+                    {sortedScores[tileCountingState.currentPlayerIndex].playerName}
+                  </span>
+                )}
               </>
             )}
             {currentPhase === "cards" && "Card VP"}
@@ -665,8 +614,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
           {/* Player VP Summary */}
           <div className="space-y-3">
             {sortedScores.map((score, idx) => {
-              const { revealedGreeneryVP, revealedCityVP } =
-                getRevealedTileVP(idx);
+              const { revealedGreeneryVP, revealedCityVP } = getRevealedTileVP(idx);
               return (
                 <PlayerVPCard
                   key={score.playerId}
@@ -675,8 +623,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
                   isCurrentPlayer={score.playerId === playerId}
                   currentPhase={currentPhase}
                   isCountingTiles={
-                    tileCountingState?.currentPlayerIndex === idx &&
-                    currentPhase === "tiles"
+                    tileCountingState?.currentPlayerIndex === idx && currentPhase === "tiles"
                   }
                   revealedGreeneryVP={revealedGreeneryVP}
                   revealedCityVP={revealedCityVP}
@@ -699,17 +646,12 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
           {/* Milestones compact display */}
           {(currentPhase === "milestones" ||
             (currentPhase !== "intro" && currentPhase !== "tr")) && (
-            <MilestoneCompact
-              milestones={game.milestones ?? []}
-              scores={sortedScores}
-            />
+            <MilestoneCompact milestones={game.milestones ?? []} scores={sortedScores} />
           )}
 
           {/* Awards compact display */}
           {(currentPhase === "awards" ||
-            ["tiles", "cards", "summary", "rankings", "complete"].includes(
-              currentPhase,
-            )) && (
+            ["tiles", "cards", "summary", "rankings", "complete"].includes(currentPhase)) && (
             <AwardCompact
               awards={game.awards ?? []}
               scores={sortedScores}
@@ -737,9 +679,7 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
               <p className="text-amber-400 font-orbitron text-lg winner-glow-animate">
                 {winner.playerName} Wins!
               </p>
-              <p className="text-white/60 text-sm mb-3">
-                {winner.vpBreakdown.totalVP} VP
-              </p>
+              <p className="text-white/60 text-sm mb-3">{winner.vpBreakdown.totalVP} VP</p>
               {/* View Details button - under winner announcement in complete phase */}
               {currentPhase === "complete" && (
                 <button

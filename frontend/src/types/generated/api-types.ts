@@ -585,6 +585,23 @@ export interface ResourceTriggerConditionDto {
   onBonusType?: string[];
 }
 /**
+ * ChoicePolicySelectDto describes an auto-selection rule for a choice policy
+ */
+export interface ChoicePolicySelectDto {
+  option: number /* int */;
+  minMax: MinMaxValueDto;
+  resourceType: string;
+  tag?: string;
+}
+/**
+ * ChoicePolicyDto represents a choice policy for client consumption
+ */
+export interface ChoicePolicyDto {
+  type: string;
+  default?: number /* int */;
+  select?: ChoicePolicySelectDto;
+}
+/**
  * CardBehaviorDto represents a card behavior for client consumption
  */
 export interface CardBehaviorDto {
@@ -593,7 +610,7 @@ export interface CardBehaviorDto {
   inputs?: ResourceConditionDto[];
   outputs?: ResourceConditionDto[];
   choices?: ChoiceDto[];
-  choicePolicy?: string;
+  choicePolicy?: ChoicePolicyDto;
   generationalEventRequirements?: GenerationalEventRequirementDto[];
   group?: string;
 }
