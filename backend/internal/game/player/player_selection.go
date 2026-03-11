@@ -17,6 +17,7 @@ type Selection struct {
 	pendingCardDiscardSelection    *PendingCardDiscardSelection
 	pendingBehaviorChoiceSelection *PendingBehaviorChoiceSelection
 	pendingStealTargetSelection    *PendingStealTargetSelection
+	pendingColonyResourceSelection *PendingColonyResourceSelection
 	eventBus                       *events.EventBusImpl
 	gameID                         string
 	playerID                       string
@@ -141,6 +142,18 @@ func (s *Selection) SetPendingStealTargetSelection(selection *PendingStealTarget
 	s.mu.Unlock()
 }
 
+func (s *Selection) GetPendingColonyResourceSelection() *PendingColonyResourceSelection {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pendingColonyResourceSelection
+}
+
+func (s *Selection) SetPendingColonyResourceSelection(selection *PendingColonyResourceSelection) {
+	s.mu.Lock()
+	s.pendingColonyResourceSelection = selection
+	s.mu.Unlock()
+}
+
 // PendingCardSelection represents a pending card selection
 type PendingCardSelection struct {
 	AvailableCards []string
@@ -240,6 +253,16 @@ type PendingStealTargetSelection struct {
 	Amount            int
 	Source            string
 	SourceCardID      string
+}
+
+// PendingColonyResourceSelection represents a pending card storage selection
+// from a colony trade or build that produced card-targeted resources (microbes, animals, floaters).
+type PendingColonyResourceSelection struct {
+	ResourceType string // "microbe", "animal", "floater"
+	Amount       int
+	Source       string // Colony name
+	ColonyID     string
+	Reason       string // "trade", "colony-bonus", "build"
 }
 
 // ForcedFirstAction represents an action that must be completed as first action

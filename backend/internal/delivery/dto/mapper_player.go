@@ -109,6 +109,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		PendingCardDiscardSelection:    convertPendingCardDiscardSelection(p.Selection().GetPendingCardDiscardSelection()),
 		PendingBehaviorChoiceSelection: convertPendingBehaviorChoiceSelection(p.Selection().GetPendingBehaviorChoiceSelection(), p, g, cardRegistry),
 		PendingStealTargetSelection:    convertPendingStealTargetSelection(p.Selection().GetPendingStealTargetSelection()),
+		PendingColonyResourceSelection: convertPendingColonyResourceSelection(p.Selection().GetPendingColonyResourceSelection()),
 		ForcedFirstAction:              forcedFirstAction,
 		ResourceStorage:                p.Resources().Storage(),
 		PaymentSubstitutes:             convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
@@ -449,6 +450,20 @@ func convertPendingStealTargetSelection(selection *player.PendingStealTargetSele
 		Amount:            selection.Amount,
 		Source:            selection.Source,
 		SourceCardID:      selection.SourceCardID,
+	}
+}
+
+func convertPendingColonyResourceSelection(selection *player.PendingColonyResourceSelection) *PendingColonyResourceSelectionDto {
+	if selection == nil {
+		return nil
+	}
+
+	return &PendingColonyResourceSelectionDto{
+		ResourceType: selection.ResourceType,
+		Amount:       selection.Amount,
+		Source:       selection.Source,
+		ColonyID:     selection.ColonyID,
+		Reason:       ColonyResourceReason(selection.Reason),
 	}
 }
 

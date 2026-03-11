@@ -364,6 +364,27 @@ const CreateGamePage: React.FC = () => {
                     <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
                       <input
                         type="checkbox"
+                        checked={selectedPacks.includes("colonies")}
+                        onChange={() => handlePackToggle("colonies")}
+                        disabled={isLoading}
+                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
+                      />
+                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
+                        Colonies
+                        <span className="text-[10px] font-orbitron font-bold text-yellow-400/80 uppercase tracking-wider">
+                          WIP
+                        </span>
+                        <InfoTooltip size="small">
+                          Adds colony tiles that players can trade with and build on. Trade costs 3
+                          energy, building costs 17 MC. Work in progress — some colony interactions
+                          and card effects are not yet implemented.
+                        </InfoTooltip>
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
+                      <input
+                        type="checkbox"
                         checked={selectedPacks.includes("experimental")}
                         onChange={() => handlePackToggle("experimental")}
                         disabled={

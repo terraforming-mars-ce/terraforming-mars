@@ -276,11 +276,34 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
     );
 
     useEffect(() => {
-      const el = handRef.current;
-      if (!el) return;
-      el.addEventListener("wheel", handleWheel, { passive: false });
-      return () => el.removeEventListener("wheel", handleWheel);
-    }, [handleWheel]);
+      if (isExpanded) {
+        document.addEventListener("wheel", handleWheel, { passive: false });
+        return () => document.removeEventListener("wheel", handleWheel);
+      } else {
+        const el = handRef.current;
+        if (!el) return;
+        el.addEventListener("wheel", handleWheel, { passive: false });
+        return () => el.removeEventListener("wheel", handleWheel);
+      }
+    }, [handleWheel, isExpanded]);
+
+    useEffect(() => {
+      if (!isExpanded) return;
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          e.preventDefault();
+          if (highlightedCard) {
+            setHighlightedCard(null);
+          }
+          const maxScroll = Math.max(cardOrder.length - 1, 0);
+          const step = e.key === "ArrowLeft" ? -1 : 1;
+          scrollTargetRef.current = clamp(scrollTargetRef.current + step, 0, maxScroll);
+          startScrollAnimation();
+        }
+      };
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [isExpanded, highlightedCard, cardOrder.length, startScrollAnimation]);
 
     // --- Pointer events for drag (collapsed mode only) ---
     const handlePointerDown = (cardId: string, e: React.PointerEvent<HTMLDivElement>) => {
@@ -500,53 +523,6 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         />
 
         <div className="card-fan-overlay" ref={handRef}>
-          {/* Expand button */}
-          <button
-            className={`card-fan-toggle-btn card-fan-expand-btn ${isExpanded ? "is-hidden" : ""}`}
-            onClick={handleExpand}
-          >
-            <svg width="18" height="20" viewBox="0 0 18 20" fill="none" style={{ marginTop: 3 }}>
-              <path
-                d="M4 13L9 8L14 13"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M4 7L9 2L14 7"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-
-          {/* Collapse button */}
-          <button
-            className={`card-fan-toggle-btn card-fan-collapse-btn ${isExpanded ? "" : "is-hidden"}`}
-            onClick={() => handleCollapse()}
-            style={{ bottom: `${-expandedBaseY - 56}px` }}
-          >
-            <svg width="18" height="20" viewBox="0 0 18 20" fill="none" style={{ marginTop: 3 }}>
-              <path
-                d="M4 2L9 7L14 2"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M4 8L9 13L14 8"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-
           {cards.map((card) => {
             const index = cardOrder.indexOf(card.id);
             if (index === -1) return null;
@@ -768,45 +744,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
           pointer-events: none !important;
         }
 
-        /* --- Toggle buttons --- */
-        .card-fan-toggle-btn {
-          position: absolute;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 10;
-          pointer-events: auto;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 44px;
-          height: 44px;
-          padding: 0;
-          color: rgba(200, 200, 220, 0.95);
-          background: rgba(10, 10, 15, 0.85);
-          border: 1px solid rgba(80, 80, 90, 0.5);
-          border-radius: 50%;
-          opacity: 1;
-          transition: background 200ms ease, border-color 200ms ease, opacity 300ms ease;
-        }
 
-        .card-fan-toggle-btn.is-hidden {
-          opacity: 0;
-          pointer-events: none;
-        }
-
-        .card-fan-toggle-btn:hover {
-          background: rgba(30, 30, 40, 0.95);
-          border-color: rgba(120, 120, 140, 0.7);
-        }
-
-        .card-fan-expand-btn {
-          bottom: 160px;
-        }
-
-        .card-fan-collapse-btn {
-          /* bottom set via inline style */
-        }
 
         .card-fan-error-panel {
           position: absolute;

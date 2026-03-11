@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"slices"
+
 	"terraforming-mars-backend/internal/cards"
+	"terraforming-mars-backend/internal/colonies"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
@@ -13,7 +16,7 @@ import (
 
 // ToGameDto converts Game to GameDto with personalized view
 // The playerID parameter determines which player is "currentPlayer" vs "otherPlayers"
-func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) GameDto {
+func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string, colonyRegistry ...colonies.ColonyRegistry) GameDto {
 	players := g.GetAllPlayers()
 
 	var currentPlayer PlayerDto
@@ -152,7 +155,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		}
 	}
 
-	return GameDto{
+	result := GameDto{
 		ID:               g.ID(),
 		Status:           GameStatus(g.Status()),
 		Settings:         settingsDto,
@@ -180,6 +183,13 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string) G
 		Spectators:         toSpectatorDtos(g),
 		ChatMessages:       toChatMessageDtos(g),
 	}
+
+	if g.HasColonies() && len(colonyRegistry) > 0 && colonyRegistry[0] != nil {
+		result.ColonyTiles = toColonyTileDtos(g, colonyRegistry[0], playerID)
+		result.TradeFleetAvailable = g.GetTradeFleetAvailable(playerID)
+	}
+
+	return result
 }
 
 func toSpectatorDtos(g *game.Game) []SpectatorDto {
@@ -536,4 +546,128 @@ func buildGlobalParameterBonuses(venusEnabled bool) []GlobalParameterBonusDto {
 		)
 	}
 	return bonuses
+}
+
+func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, playerID string) []ColonyTileDto {
+	tileStates := g.ColonyTileStates()
+	if len(tileStates) == 0 {
+		return nil
+	}
+
+	dtos := make([]ColonyTileDto, 0, len(tileStates))
+	for _, state := range tileStates {
+		def, err := colonyRegistry.GetByID(state.DefinitionID)
+		if err != nil {
+			continue
+		}
+
+		steps := make([]ColonyStepDto, len(def.Steps))
+		for i, s := range def.Steps {
+			outputs := make([]ColonyOutputDto, len(s.Outputs))
+			for j, o := range s.Outputs {
+				outputs[j] = ColonyOutputDto{Type: o.Type, Amount: o.Amount}
+			}
+			steps[i] = ColonyStepDto{Outputs: outputs}
+		}
+
+		colonyBonus := make([]ColonyOutputDto, len(def.ColonyBonus))
+		for i, b := range def.ColonyBonus {
+			colonyBonus[i] = ColonyOutputDto{Type: b.Type, Amount: b.Amount}
+		}
+
+		colonySlots := make([]ColonySlotDto, len(def.Colonies))
+		for i, c := range def.Colonies {
+			reward := make([]ColonyOutputDto, len(c.Reward))
+			for j, r := range c.Reward {
+				reward[j] = ColonyOutputDto{Type: r.Type, Amount: r.Amount}
+			}
+			colonySlots[i] = ColonySlotDto{Reward: reward}
+		}
+
+		playerColonies := state.PlayerColonies
+		if playerColonies == nil {
+			playerColonies = []string{}
+		}
+
+		// Calculate trade availability
+		tradeAvailable := true
+		var tradeErrors []StateErrorDto
+		if state.TradedThisGen {
+			tradeAvailable = false
+			tradeErrors = append(tradeErrors, StateErrorDto{
+				Code:    StateErrorCode("colony-already-traded"),
+				Message: "This colony has already been traded this generation",
+			})
+		}
+		if !g.GetTradeFleetAvailable(playerID) {
+			tradeAvailable = false
+			tradeErrors = append(tradeErrors, StateErrorDto{
+				Code:    StateErrorCode("fleet-unavailable"),
+				Message: "Your trade fleet is not available",
+			})
+		}
+		playerObj, _ := g.GetPlayer(playerID)
+		if playerObj != nil {
+			resources := playerObj.Resources().Get()
+			canAffordAny := resources.Credits >= 9 || resources.Energy >= 3 || resources.Titanium >= 3
+			if !canAffordAny {
+				tradeAvailable = false
+				tradeErrors = append(tradeErrors, StateErrorDto{
+					Code:    StateErrorCode("insufficient-resources"),
+					Message: "Cannot afford trade: need 9 MC, 3 energy, or 3 titanium",
+				})
+			}
+		}
+
+		// Calculate build availability
+		buildAvailable := true
+		var buildErrors []StateErrorDto
+		maxColonies := len(def.Colonies)
+		if len(state.PlayerColonies) >= maxColonies {
+			buildAvailable = false
+			buildErrors = append(buildErrors, StateErrorDto{
+				Code:    StateErrorCode("colony-full"),
+				Message: "This colony tile is full",
+			})
+		}
+		if slices.Contains(state.PlayerColonies, playerID) {
+			buildAvailable = false
+			buildErrors = append(buildErrors, StateErrorDto{
+				Code:    StateErrorCode("already-has-colony"),
+				Message: "You already have a colony here",
+			})
+		}
+		if playerObj != nil {
+			resources := playerObj.Resources().Get()
+			if resources.Credits < 17 {
+				buildAvailable = false
+				buildErrors = append(buildErrors, StateErrorDto{
+					Code:    StateErrorCode("insufficient-credits"),
+					Message: fmt.Sprintf("Insufficient credits: need 17, have %d", resources.Credits),
+				})
+			}
+		}
+
+		dtos = append(dtos, ColonyTileDto{
+			ID:             def.ID,
+			Name:           def.Name,
+			Steps:          steps,
+			ColonyBonus:    colonyBonus,
+			Colonies:       colonySlots,
+			MarkerPosition: state.MarkerPosition,
+			PlayerColonies: playerColonies,
+			TradedThisGen:  state.TradedThisGen,
+			TraderID:       state.TraderID,
+			Style: ColonyStyleDto{
+				Color: def.Style.Color,
+				Icon:  def.Style.Icon,
+			},
+			TradeAvailable: tradeAvailable,
+			BuildAvailable: buildAvailable,
+			TradeErrors:    tradeErrors,
+			BuildErrors:    buildErrors,
+		})
+	}
+
+	return dtos
 }

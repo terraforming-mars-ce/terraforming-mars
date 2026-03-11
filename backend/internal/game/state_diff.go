@@ -87,6 +87,8 @@ const (
 	SourceTypeActionAdded     SourceType = "action_added"
 	SourceTypeEffectAdded     SourceType = "effect_added"
 	SourceTypeGlobalBonus     SourceType = "global_bonus"
+	SourceTypeColonyTrade     SourceType = "colony_trade"
+	SourceTypeColonyBuild     SourceType = "colony_build"
 )
 
 // CalculatedOutput represents an actual output value that was applied

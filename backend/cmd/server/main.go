@@ -12,6 +12,7 @@ import (
 	admin "terraforming-mars-backend/internal/action/admin"
 	awardAction "terraforming-mars-backend/internal/action/award"
 	cardAction "terraforming-mars-backend/internal/action/card"
+	colonyAction "terraforming-mars-backend/internal/action/colony"
 	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	connAction "terraforming-mars-backend/internal/action/connection"
 	gameAction "terraforming-mars-backend/internal/action/game"
@@ -22,6 +23,7 @@ import (
 	tileAction "terraforming-mars-backend/internal/action/tile"
 	turnAction "terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/cards"
+	"terraforming-mars-backend/internal/colonies"
 	httpHandler "terraforming-mars-backend/internal/delivery/http"
 	wsHandler "terraforming-mars-backend/internal/delivery/websocket"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
@@ -79,6 +81,17 @@ func main() {
 	cardRegistry := cards.NewInMemoryCardRegistry(cardData)
 	log.Debug("Card registry initialized", zap.Int("card_count", len(cardData)))
 
+	// ========== Initialize Colony Registry ==========
+	colonyPath := filepath.Join(wd, "assets", "terraforming_mars_colonies.json")
+	log.Debug("Loading colonies from", zap.String("path", colonyPath))
+
+	colonyData, err := colonies.LoadColoniesFromJSON(colonyPath)
+	if err != nil {
+		log.Fatal("Failed to load colonies", zap.Error(err))
+	}
+	colonyRegistry := colonies.NewInMemoryColonyRegistry(colonyData)
+	log.Debug("Colony registry initialized", zap.Int("colony_count", len(colonyData)))
+
 	// ========== Initialize Game Repository (Single Source of Truth) ==========
 	gameRepo := game.NewInMemoryGameRepository()
 	log.Debug("Game repository initialized")
@@ -99,7 +112,7 @@ func main() {
 	log.Debug("WebSocket hub initialized")
 
 	// ========== Initialize Game State Broadcaster (Automatic Broadcasting) ==========
-	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry)
+	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry)
 	log.Debug("Game state broadcaster initialized (provides automatic broadcasting for all games)")
 
 	// ========== Initialize Game Actions ==========
@@ -116,6 +129,10 @@ func main() {
 	// Milestones & Awards (2)
 	claimMilestoneAction := milestoneAction.NewClaimMilestoneAction(gameRepo, cardRegistry, stateRepo, log)
 	fundAwardAction := awardAction.NewFundAwardAction(gameRepo, cardRegistry, stateRepo, log)
+
+	// Colony actions (2)
+	colonyTradeAction := colonyAction.NewTradeAction(gameRepo, colonyRegistry, cardRegistry, stateRepo, log)
+	colonyBuildAction := colonyAction.NewBuildColonyAction(gameRepo, colonyRegistry, cardRegistry, stateRepo, log)
 
 	// Card actions (2)
 	playCardAction := cardAction.NewPlayCardAction(gameRepo, cardRegistry, stateRepo, log)
@@ -143,6 +160,7 @@ func main() {
 	confirmCardDiscardAction := confirmAction.NewConfirmCardDiscardAction(gameRepo, cardRegistry, log)
 	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, log)
 	confirmStealTargetAction := confirmAction.NewConfirmStealTargetAction(gameRepo, cardRegistry, stateRepo, log)
+	confirmColonyResourceAction := confirmAction.NewConfirmColonyResourceAction(gameRepo, cardRegistry, stateRepo, log)
 
 	// Turn management (4)
 	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
@@ -168,7 +186,7 @@ func main() {
 	botController := bot.NewBotController(gameRepo, stateRepo, cardRegistry, commandDispatcher, broadcaster, log)
 	broadcaster.SetBotNotifier(botController)
 
-	startGameAction := turnAction.NewStartGameAction(gameRepo, botController, log)
+	startGameAction := turnAction.NewStartGameAction(gameRepo, colonyRegistry, botController, log)
 
 	// Game management (convert to bot)
 	convertToBotAction := gameAction.NewConvertToBotAction(gameRepo, botController, log)
@@ -243,6 +261,7 @@ func main() {
 		confirmCardDiscardAction,
 		confirmBehaviorChoiceAction,
 		confirmStealTargetAction,
+		confirmColonyResourceAction,
 		// Connection
 		playerDisconnectedAction,
 		playerTakeoverAction,
@@ -259,6 +278,9 @@ func main() {
 		// Milestones & Awards
 		claimMilestoneAction,
 		fundAwardAction,
+		// Colony actions
+		colonyTradeAction,
+		colonyBuildAction,
 		// Admin actions
 		adminSetPhaseAction,
 		adminSetCurrentTurnAction,

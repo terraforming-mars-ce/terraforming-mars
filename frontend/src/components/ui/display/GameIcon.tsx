@@ -17,10 +17,10 @@ interface GameIconProps {
   iconType?: GameIconType;
   /**
    * Amount to display on the icon.
-   * - For credits: Shows number inside the icon
+   * - For credits: Shows value inside the icon (number or string like "X")
    * - For other resources: Shows number in bottom-right corner (if > 1)
    */
-  amount?: number;
+  amount?: number | string;
   /**
    * Whether to display attack/threat indicator with red glow animation.
    * Only applicable for resource icons when showing enemy attacks or resource removal.
@@ -103,9 +103,8 @@ const GameIcon: React.FC<GameIconProps> = ({
 
   const getCreditFontSize = () => {
     if (amount === undefined) return dimensions.baseFontSize;
-    const digits = String(Math.abs(amount)).length;
-    if (digits <= 1) return dimensions.baseFontSize;
-    if (digits === 2) return dimensions.baseFontSize;
+    const digits = typeof amount === "string" ? amount.length : String(Math.abs(amount)).length;
+    if (digits <= 2) return dimensions.baseFontSize;
     return Math.round(dimensions.baseFontSize * 0.85);
   };
 
@@ -157,7 +156,7 @@ const GameIcon: React.FC<GameIconProps> = ({
           alt={displayType}
           className="w-full h-full object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
         />
-        {amount !== undefined && amount > 1 && !isCredits && (
+        {amount !== undefined && typeof amount === "number" && amount > 1 && !isCredits && (
           <span
             className="absolute bottom-0 right-0 text-white font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] bg-black/50 rounded-full px-1 min-w-[16px] text-center leading-none"
             style={{ fontSize: `${dimensions.baseFontSize}px` }}

@@ -250,6 +250,22 @@ type AwardFundedEvent struct {
 	Timestamp   time.Time
 }
 
+// ColonyBuiltEvent is published when a player builds a colony on a colony tile
+type ColonyBuiltEvent struct {
+	GameID    string
+	PlayerID  string
+	ColonyID  string
+	Timestamp time.Time
+}
+
+// ColonyTradedEvent is published when a player trades with a colony tile
+type ColonyTradedEvent struct {
+	GameID    string
+	PlayerID  string
+	ColonyID  string
+	Timestamp time.Time
+}
+
 // GameEndedEvent is published when the game ends (all global parameters maxed)
 type GameEndedEvent struct {
 	GameID    string

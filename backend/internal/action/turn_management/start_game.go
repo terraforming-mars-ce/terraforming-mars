@@ -8,7 +8,9 @@ import (
 
 	"go.uber.org/zap"
 
+	"terraforming-mars-backend/internal/colonies"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/colony"
 	playerPkg "terraforming-mars-backend/internal/game/player"
 )
 
@@ -20,21 +22,24 @@ type BotStarter interface {
 // StartGameAction handles the business logic for starting games
 // NOTE: Deck initialization is handled separately before calling this action
 type StartGameAction struct {
-	gameRepo   game.GameRepository
-	botStarter BotStarter
-	logger     *zap.Logger
+	gameRepo       game.GameRepository
+	colonyRegistry colonies.ColonyRegistry
+	botStarter     BotStarter
+	logger         *zap.Logger
 }
 
 // NewStartGameAction creates a new start game action
 func NewStartGameAction(
 	gameRepo game.GameRepository,
+	colonyRegistry colonies.ColonyRegistry,
 	botStarter BotStarter,
 	logger *zap.Logger,
 ) *StartGameAction {
 	return &StartGameAction{
-		gameRepo:   gameRepo,
-		botStarter: botStarter,
-		logger:     logger,
+		gameRepo:       gameRepo,
+		colonyRegistry: colonyRegistry,
+		botStarter:     botStarter,
+		logger:         logger,
 	}
 }
 
@@ -86,6 +91,11 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 		return fmt.Errorf("failed to set turn order: %w", err)
 	}
 	log.Debug("Randomized turn order", zap.Strings("turn_order", playerIDs))
+
+	// 5b. BUSINESS LOGIC: Initialize colony tiles if colonies pack enabled
+	if g.Settings().HasColonies() {
+		a.initializeColonies(g, playerIDs, rng, log)
+	}
 
 	// 6. BUSINESS LOGIC: Ensure deck is initialized
 	deck := g.Deck()
@@ -160,6 +170,46 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 
 	log.Info("Game started")
 	return nil
+}
+
+func (a *StartGameAction) initializeColonies(g *game.Game, playerIDs []string, rng *rand.Rand, log *zap.Logger) {
+	allColonies := a.colonyRegistry.GetAll()
+	if len(allColonies) == 0 {
+		log.Warn("No colony definitions available")
+		return
+	}
+
+	// Select N+2 colonies (min 5)
+	numToSelect := len(playerIDs) + 2
+	if numToSelect < 5 {
+		numToSelect = 5
+	}
+	if numToSelect > len(allColonies) {
+		numToSelect = len(allColonies)
+	}
+
+	// Shuffle and pick
+	rng.Shuffle(len(allColonies), func(i, j int) {
+		allColonies[i], allColonies[j] = allColonies[j], allColonies[i]
+	})
+	selected := allColonies[:numToSelect]
+
+	// Initialize tile states
+	states := make([]*colony.TileState, len(selected))
+	for i, def := range selected {
+		states[i] = &colony.TileState{
+			DefinitionID:   def.ID,
+			MarkerPosition: 1,
+			PlayerColonies: []string{},
+			TradedThisGen:  false,
+		}
+	}
+	g.SetColonyTileStates(states)
+	g.InitializeTradeFleets(playerIDs)
+
+	log.Debug("Colony tiles initialized",
+		zap.Int("colony_count", len(states)),
+		zap.Int("player_count", len(playerIDs)))
 }
 
 func (a *StartGameAction) distributeCorporations(ctx context.Context, g *game.Game, players []*playerPkg.Player) error {

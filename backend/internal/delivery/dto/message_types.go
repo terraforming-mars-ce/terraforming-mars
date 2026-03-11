@@ -49,6 +49,10 @@ const (
 	MessageTypeActionBehaviorChoiceConfirmed MessageType = "action.card.behavior-choice-confirmed"
 	MessageTypeActionConfirmStealTarget      MessageType = "action.card.confirm-steal-target"
 
+	MessageTypeActionColonyTrade           MessageType = "action.colony.trade"
+	MessageTypeActionColonyBuild           MessageType = "action.colony.build"
+	MessageTypeActionConfirmColonyResource MessageType = "action.confirm-colony-resource"
+
 	MessageTypeAdminCommand MessageType = "admin-command"
 
 	MessageTypeRequestLogs MessageType = "request-logs"

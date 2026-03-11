@@ -671,6 +671,25 @@ type PendingStealTargetSelectionDto struct {
 	SourceCardID      string   `json:"sourceCardId" ts:"string"`
 }
 
+// PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
+// ColonyResourceReason represents why a colony resource selection is pending
+type ColonyResourceReason string
+
+const (
+	ColonyResourceReasonTrade     ColonyResourceReason = "trade"
+	ColonyResourceReasonColonyTax ColonyResourceReason = "colony-tax"
+	ColonyResourceReasonBuild     ColonyResourceReason = "build"
+)
+
+// PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
+type PendingColonyResourceSelectionDto struct {
+	ResourceType string               `json:"resourceType" ts:"string"`
+	Amount       int                  `json:"amount" ts:"number"`
+	Source       string               `json:"source" ts:"string"`
+	ColonyID     string               `json:"colonyId" ts:"string"`
+	Reason       ColonyResourceReason `json:"reason" ts:"ColonyResourceReason"`
+}
+
 // PlayerStatus represents the current status of a player in the game
 type PlayerStatus string
 
@@ -720,6 +739,7 @@ type PlayerDto struct {
 	PendingCardDiscardSelection    *PendingCardDiscardSelectionDto    `json:"pendingCardDiscardSelection" ts:"PendingCardDiscardSelectionDto | null"`
 	PendingBehaviorChoiceSelection *PendingBehaviorChoiceSelectionDto `json:"pendingBehaviorChoiceSelection" ts:"PendingBehaviorChoiceSelectionDto | null"`
 	PendingStealTargetSelection    *PendingStealTargetSelectionDto    `json:"pendingStealTargetSelection" ts:"PendingStealTargetSelectionDto | null"`
+	PendingColonyResourceSelection *PendingColonyResourceSelectionDto `json:"pendingColonyResourceSelection" ts:"PendingColonyResourceSelectionDto | null"`
 	ForcedFirstAction              *ForcedFirstActionDto              `json:"forcedFirstAction" ts:"ForcedFirstActionDto | null"`
 	ResourceStorage                map[string]int                     `json:"resourceStorage" ts:"Record<string, number>"`
 	PaymentSubstitutes             []PaymentSubstituteDto             `json:"paymentSubstitutes" ts:"PaymentSubstituteDto[]"`
@@ -766,31 +786,33 @@ type OtherPlayerDto struct {
 
 // GameDto represents a game for client consumption (clean architecture)
 type GameDto struct {
-	ID                 string                 `json:"id" ts:"string"`
-	Status             GameStatus             `json:"status" ts:"GameStatus"`
-	Settings           GameSettingsDto        `json:"settings" ts:"GameSettingsDto"`
-	HostPlayerID       string                 `json:"hostPlayerId" ts:"string"`
-	CurrentPhase       GamePhase              `json:"currentPhase" ts:"GamePhase"`
-	GlobalParameters   GlobalParametersDto    `json:"globalParameters" ts:"GlobalParametersDto"`
-	CurrentPlayer      PlayerDto              `json:"currentPlayer" ts:"PlayerDto"`       // Viewing player's full data
-	OtherPlayers       []OtherPlayerDto       `json:"otherPlayers" ts:"OtherPlayerDto[]"` // Other players' limited data
-	ViewingPlayerID    string                 `json:"viewingPlayerId" ts:"string"`        // The player viewing this game state
-	CurrentTurn        *string                `json:"currentTurn" ts:"string|null"`       // Whose turn it is (nullable)
-	Generation         int                    `json:"generation" ts:"number"`
-	PlayerOrder        []string               `json:"playerOrder" ts:"string[]"`                                        // Player IDs in join order
-	TurnOrder          []string               `json:"turnOrder" ts:"string[]"`                                          // Turn order of all players in game
-	Board              BoardDto               `json:"board" ts:"BoardDto"`                                              // Game board with tiles and occupancy state
-	PaymentConstants   PaymentConstantsDto    `json:"paymentConstants" ts:"PaymentConstantsDto"`                        // Conversion rates for alternative payments
-	Milestones         []MilestoneDto         `json:"milestones" ts:"MilestoneDto[]"`                                   // All milestones with claim status
-	Awards             []AwardDto             `json:"awards" ts:"AwardDto[]"`                                           // All awards with funding status
-	AwardResults       []AwardResultDto       `json:"awardResults" ts:"AwardResultDto[]"`                               // Current award placements (1st/2nd place per award)
-	FinalScores        []FinalScoreDto        `json:"finalScores,omitempty" ts:"FinalScoreDto[] | undefined"`           // Final scores (only when game completed)
-	TriggeredEffects   []TriggeredEffectDto   `json:"triggeredEffects,omitempty" ts:"TriggeredEffectDto[] | undefined"` // Recently triggered passive effects
-	PlaceableTileTypes []PlaceableTileTypeDto `json:"placeableTileTypes" ts:"PlaceableTileTypeDto[]"`                   // Available tile types for the demo tile picker
-	InitPhase          *InitPhaseDto          `json:"initPhase,omitempty" ts:"InitPhaseDto | undefined"`
-	Spectators         []SpectatorDto         `json:"spectators" ts:"SpectatorDto[]"`
-	ChatMessages       []ChatMessageDto       `json:"chatMessages" ts:"ChatMessageDto[]"`
-	IsSpectator        bool                   `json:"isSpectator" ts:"boolean"`
+	ID                  string                 `json:"id" ts:"string"`
+	Status              GameStatus             `json:"status" ts:"GameStatus"`
+	Settings            GameSettingsDto        `json:"settings" ts:"GameSettingsDto"`
+	HostPlayerID        string                 `json:"hostPlayerId" ts:"string"`
+	CurrentPhase        GamePhase              `json:"currentPhase" ts:"GamePhase"`
+	GlobalParameters    GlobalParametersDto    `json:"globalParameters" ts:"GlobalParametersDto"`
+	CurrentPlayer       PlayerDto              `json:"currentPlayer" ts:"PlayerDto"`       // Viewing player's full data
+	OtherPlayers        []OtherPlayerDto       `json:"otherPlayers" ts:"OtherPlayerDto[]"` // Other players' limited data
+	ViewingPlayerID     string                 `json:"viewingPlayerId" ts:"string"`        // The player viewing this game state
+	CurrentTurn         *string                `json:"currentTurn" ts:"string|null"`       // Whose turn it is (nullable)
+	Generation          int                    `json:"generation" ts:"number"`
+	PlayerOrder         []string               `json:"playerOrder" ts:"string[]"`                                        // Player IDs in join order
+	TurnOrder           []string               `json:"turnOrder" ts:"string[]"`                                          // Turn order of all players in game
+	Board               BoardDto               `json:"board" ts:"BoardDto"`                                              // Game board with tiles and occupancy state
+	PaymentConstants    PaymentConstantsDto    `json:"paymentConstants" ts:"PaymentConstantsDto"`                        // Conversion rates for alternative payments
+	Milestones          []MilestoneDto         `json:"milestones" ts:"MilestoneDto[]"`                                   // All milestones with claim status
+	Awards              []AwardDto             `json:"awards" ts:"AwardDto[]"`                                           // All awards with funding status
+	AwardResults        []AwardResultDto       `json:"awardResults" ts:"AwardResultDto[]"`                               // Current award placements (1st/2nd place per award)
+	FinalScores         []FinalScoreDto        `json:"finalScores,omitempty" ts:"FinalScoreDto[] | undefined"`           // Final scores (only when game completed)
+	TriggeredEffects    []TriggeredEffectDto   `json:"triggeredEffects,omitempty" ts:"TriggeredEffectDto[] | undefined"` // Recently triggered passive effects
+	PlaceableTileTypes  []PlaceableTileTypeDto `json:"placeableTileTypes" ts:"PlaceableTileTypeDto[]"`                   // Available tile types for the demo tile picker
+	InitPhase           *InitPhaseDto          `json:"initPhase,omitempty" ts:"InitPhaseDto | undefined"`
+	Spectators          []SpectatorDto         `json:"spectators" ts:"SpectatorDto[]"`
+	ChatMessages        []ChatMessageDto       `json:"chatMessages" ts:"ChatMessageDto[]"`
+	IsSpectator         bool                   `json:"isSpectator" ts:"boolean"`
+	ColonyTiles         []ColonyTileDto        `json:"colonyTiles,omitempty" ts:"ColonyTileDto[] | undefined"`
+	TradeFleetAvailable bool                   `json:"tradeFleetAvailable" ts:"boolean"`
 }
 
 // SpectatorDto represents a spectator visible to all clients.
@@ -826,6 +848,48 @@ type InitPhaseDto struct {
 	ConfirmVersion     int    `json:"confirmVersion" ts:"number"`
 	HasPreludePhase    bool   `json:"hasPreludePhase" ts:"boolean"`
 	HasPendingTiles    bool   `json:"hasPendingTiles" ts:"boolean"`
+}
+
+// Colony-related DTOs
+
+// ColonyTileDto represents a colony tile in the game
+type ColonyTileDto struct {
+	ID             string            `json:"id" ts:"string"`
+	Name           string            `json:"name" ts:"string"`
+	Steps          []ColonyStepDto   `json:"steps" ts:"ColonyStepDto[]"`
+	ColonyBonus    []ColonyOutputDto `json:"colonyBonus" ts:"ColonyOutputDto[]"`
+	Colonies       []ColonySlotDto   `json:"colonies" ts:"ColonySlotDto[]"`
+	MarkerPosition int               `json:"markerPosition" ts:"number"`
+	PlayerColonies []string          `json:"playerColonies" ts:"string[]"`
+	TradedThisGen  bool              `json:"tradedThisGen" ts:"boolean"`
+	TraderID       string            `json:"traderId" ts:"string"`
+	Style          ColonyStyleDto    `json:"style" ts:"ColonyStyleDto"`
+	TradeAvailable bool              `json:"tradeAvailable" ts:"boolean"`
+	BuildAvailable bool              `json:"buildAvailable" ts:"boolean"`
+	TradeErrors    []StateErrorDto   `json:"tradeErrors" ts:"StateErrorDto[]"`
+	BuildErrors    []StateErrorDto   `json:"buildErrors" ts:"StateErrorDto[]"`
+}
+
+// ColonyStepDto represents one position on the trade track
+type ColonyStepDto struct {
+	Outputs []ColonyOutputDto `json:"outputs" ts:"ColonyOutputDto[]"`
+}
+
+// ColonyOutputDto represents a resource output from a colony
+type ColonyOutputDto struct {
+	Type   string `json:"type" ts:"string"`
+	Amount int    `json:"amount" ts:"number"`
+}
+
+// ColonySlotDto represents a colony placement slot
+type ColonySlotDto struct {
+	Reward []ColonyOutputDto `json:"reward" ts:"ColonyOutputDto[]"`
+}
+
+// ColonyStyleDto provides visual hints for the frontend
+type ColonyStyleDto struct {
+	Color string `json:"color" ts:"string"`
+	Icon  string `json:"icon" ts:"string"`
 }
 
 // Board-related DTOs for tygo generation
