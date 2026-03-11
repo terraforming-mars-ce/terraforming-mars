@@ -379,8 +379,8 @@ export class WebSocketService {
     return this.send(MessageTypeActionFundAward, { awardType });
   }
 
-  tradeWithColony(colonyId: string): string {
-    return this.send(MessageTypeActionColonyTrade, { colonyId });
+  tradeWithColony(colonyId: string, paymentType: string): string {
+    return this.send(MessageTypeActionColonyTrade, { colonyId, paymentType });
   }
 
   buildColony(colonyId: string): string {

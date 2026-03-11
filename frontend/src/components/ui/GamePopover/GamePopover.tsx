@@ -128,6 +128,7 @@ const GamePopover: React.FC<GamePopoverProps> = ({
               </div>
             )}
           </div>
+          {header.centerContent}
           <div className="flex items-center gap-2">
             {header.rightContent}
             {header.showCloseButton && (

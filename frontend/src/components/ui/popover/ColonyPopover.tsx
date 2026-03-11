@@ -7,6 +7,7 @@ import {
   ColonyOutputDto,
   ResourceTypeCredit,
   ResourceTypeEnergy,
+  ResourceTypeTitanium,
 } from "@/types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import { webSocketService } from "@/services/webSocketService.ts";
@@ -15,6 +16,7 @@ import { GamePopover } from "../GamePopover";
 import ColonySteps, { getTradeExpression, mapOutputTypeToIcon } from "./ColonySteps.tsx";
 
 type ColonyMode = "trade" | "build";
+type TradePaymentType = "credits" | "energy" | "titanium";
 
 interface ColonyPopoverProps {
   isVisible: boolean;
@@ -36,6 +38,20 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
   anchorRef,
 }) => {
   const [mode, setMode] = useState<ColonyMode>("trade");
+
+  const resources = gameState?.currentPlayer?.resources;
+  const canAffordCredits = (resources?.credits ?? 0) >= 9;
+  const canAffordEnergy = (resources?.energy ?? 0) >= 3;
+  const canAffordTitanium = (resources?.titanium ?? 0) >= 3;
+
+  const defaultPayment = (): TradePaymentType => {
+    if (canAffordCredits) return "credits";
+    if (canAffordEnergy) return "energy";
+    if (canAffordTitanium) return "titanium";
+    return "credits";
+  };
+
+  const [tradePayment, setTradePayment] = useState<TradePaymentType>(defaultPayment);
 
   const isGameActive = gameState?.status === GameStatusActive;
   const isActionPhase = gameState?.currentPhase === GamePhaseAction;
@@ -71,7 +87,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
 
   const handleTrade = (colonyId: string) => {
     if (!canAct) return;
-    void webSocketService.tradeWithColony(colonyId);
+    void webSocketService.tradeWithColony(colonyId, tradePayment);
   };
 
   const handleBuild = (colonyId: string) => {
@@ -113,6 +129,17 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
       excludeRef={anchorRef}
       header={{
         title: "Colonies",
+        centerContent: (
+          <div style={{ opacity: mode === "trade" ? 1 : 0, transition: "opacity 300ms" }}>
+            <TradePaymentSelector
+              selected={tradePayment}
+              onSelect={setTradePayment}
+              canAffordCredits={canAffordCredits}
+              canAffordEnergy={canAffordEnergy}
+              canAffordTitanium={canAffordTitanium}
+            />
+          </div>
+        ),
         rightContent: toggleButton,
         showCloseButton: true,
       }}
@@ -129,6 +156,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
             mode={mode}
             canAct={canAct}
             viewingPlayerId={gameState?.viewingPlayerId ?? ""}
+            tradePayment={tradePayment}
             getPlayerColor={getPlayerColor}
             getPlayerName={getPlayerName}
             onTrade={handleTrade}
@@ -145,17 +173,25 @@ interface ColonyTileCardProps {
   mode: ColonyMode;
   canAct: boolean;
   viewingPlayerId: string;
+  tradePayment: TradePaymentType;
   getPlayerColor: (playerId: string) => string;
   getPlayerName: (playerId: string) => string;
   onTrade: (colonyId: string) => void;
   onBuild: (colonyId: string) => void;
 }
 
+const TRADE_PAYMENT_CONFIG: Record<TradePaymentType, { icon: string; amount: number }> = {
+  credits: { icon: ResourceTypeCredit, amount: 9 },
+  energy: { icon: ResourceTypeEnergy, amount: 3 },
+  titanium: { icon: ResourceTypeTitanium, amount: 3 },
+};
+
 const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
   colony,
   mode,
   canAct,
   viewingPlayerId,
+  tradePayment,
   getPlayerColor,
   getPlayerName,
   onTrade,
@@ -251,18 +287,32 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
 
       {/* Info row: cost → gain (layered for cross-fade without re-mount) */}
       <div className="relative h-7">
-        <div
-          className="absolute inset-0 flex items-center gap-1.5"
-          style={{
-            opacity: mode === "trade" && !colony.tradedThisGen ? 1 : 0,
-            transition: mode === "trade" ? "opacity 300ms" : "none",
-          }}
-        >
-          <span className="text-xs text-white/70 font-orbitron font-bold">3</span>
-          <GameIcon iconType={ResourceTypeEnergy} size="small" />
-          <span className="text-white/30 text-sm">→</span>
-          <CostDisplay outputs={tradeGainOutputs} />
-        </div>
+        {(["credits", "energy", "titanium"] as TradePaymentType[]).map((pt) => {
+          const config = TRADE_PAYMENT_CONFIG[pt];
+          return (
+            <div
+              key={pt}
+              className="absolute inset-0 flex items-center gap-1.5"
+              style={{
+                opacity: mode === "trade" && !colony.tradedThisGen && tradePayment === pt ? 1 : 0,
+                transition: mode === "trade" ? "opacity 300ms" : "none",
+              }}
+            >
+              {pt !== "credits" && (
+                <span className="text-xs text-white/70 font-orbitron font-bold">
+                  {config.amount}
+                </span>
+              )}
+              <GameIcon
+                iconType={config.icon}
+                amount={pt === "credits" ? config.amount : undefined}
+                size="small"
+              />
+              <span className="text-white/30 text-sm">→</span>
+              <CostDisplay outputs={tradeGainOutputs} />
+            </div>
+          );
+        })}
         <div
           className="absolute inset-0 flex items-center"
           style={{
@@ -328,6 +378,55 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+interface TradePaymentSelectorProps {
+  selected: TradePaymentType;
+  onSelect: (type: TradePaymentType) => void;
+  canAffordCredits: boolean;
+  canAffordEnergy: boolean;
+  canAffordTitanium: boolean;
+}
+
+const TradePaymentSelector: React.FC<TradePaymentSelectorProps> = ({
+  selected,
+  onSelect,
+  canAffordCredits,
+  canAffordEnergy,
+  canAffordTitanium,
+}) => {
+  const options: { type: TradePaymentType; icon: string; canAfford: boolean }[] = [
+    { type: "credits", icon: ResourceTypeCredit, canAfford: canAffordCredits },
+    { type: "energy", icon: ResourceTypeEnergy, canAfford: canAffordEnergy },
+    { type: "titanium", icon: ResourceTypeTitanium, canAfford: canAffordTitanium },
+  ];
+
+  return (
+    <div className="flex rounded overflow-hidden border border-white/20">
+      {options.map((opt) => {
+        const isSelected = selected === opt.type;
+        return (
+          <button
+            key={opt.type}
+            className={`flex items-center px-1.5 py-0.5 transition-colors cursor-pointer ${
+              isSelected
+                ? "bg-white/20 text-white"
+                : opt.canAfford
+                  ? "bg-transparent text-white/40 hover:text-white/60"
+                  : "bg-transparent text-white/20 opacity-40"
+            }`}
+            onClick={() => onSelect(opt.type)}
+          >
+            <GameIcon
+              iconType={opt.icon}
+              amount={opt.type === "credits" ? "X" : undefined}
+              size="small"
+            />
+          </button>
+        );
+      })}
     </div>
   );
 };

@@ -28,6 +28,7 @@ export interface PopoverHeader {
   title: string;
   badge?: React.ReactNode;
   showCloseButton?: boolean;
+  centerContent?: React.ReactNode;
   rightContent?: React.ReactNode;
 }
 
