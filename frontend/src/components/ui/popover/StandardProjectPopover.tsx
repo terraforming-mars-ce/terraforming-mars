@@ -118,7 +118,15 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
               onClick={isExecutable ? () => handleProjectClick(project) : undefined}
               error={
                 !project.available && project.errors && project.errors.length > 0
-                  ? { message: project.errors[0].message, count: project.errors.length }
+                  ? {
+                      message: project.errors[0].message,
+                      count: project.errors.length,
+                    }
+                  : undefined
+              }
+              warning={
+                project.available && project.warnings && project.warnings.length > 0
+                  ? { message: project.warnings[0].message }
                   : undefined
               }
               hoverEffect="background"

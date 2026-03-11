@@ -103,12 +103,18 @@ const AngledPanel: React.FC<AngledPanelProps> = ({
             <polygon
               points={fillPoints}
               fill={`url(#${whiteBaseId})`}
-              style={{ opacity: showGradient ? 0 : 1, transition: "opacity 800ms ease-in" }}
+              style={{
+                opacity: showGradient ? 0 : 1,
+                transition: "opacity 800ms ease-in",
+              }}
             />
             <polygon
               points={fillPoints}
               fill={`url(#${corpGradientId})`}
-              style={{ opacity: showGradient ? 1 : 0, transition: "opacity 800ms ease-in" }}
+              style={{
+                opacity: showGradient ? 1 : 0,
+                transition: "opacity 800ms ease-in",
+              }}
             />
           </>
         )}
@@ -578,14 +584,11 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                         >
                           <button
                             disabled={isConversionDisabled || !showConversionButton}
-                            className={`flex items-center justify-center gap-0.5 px-1.5 py-0.5 bg-black/80 border border-white/20 transition-all duration-200 ${
+                            className={`flex items-center justify-center gap-0.5 px-1.5 py-0.5 border transition-all duration-200 ${
                               isConversionDisabled || !showConversionButton
-                                ? "opacity-40 cursor-default"
-                                : "cursor-pointer hover:bg-white/10 hover:border-white/40"
+                                ? "opacity-40 cursor-default bg-black/80 border-white/20"
+                                : "cursor-pointer bg-amber-900/60 border-amber-400/70 hover:bg-amber-800/70 hover:border-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)] animate-pulse"
                             }`}
-                            style={{
-                              borderColor: showConversionButton ? `${corpColor}60` : undefined,
-                            }}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (isConversionDisabled || !showConversionButton) return;

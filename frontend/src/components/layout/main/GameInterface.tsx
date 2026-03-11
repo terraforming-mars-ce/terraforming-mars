@@ -118,6 +118,28 @@ export default function GameInterface() {
   const [showCorp, setShowCorp] = useState(false);
   const [displayedInitPlayerId, setDisplayedInitPlayerId] = useState<string | null>(null);
 
+  // Prevent browser back button from leaving the game page
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // Warn when closing/refreshing the tab during an active game
+  useEffect(() => {
+    if (!isConnected || !game) {
+      return;
+    }
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isConnected, game]);
+
   // Set corporation data directly from player (backend now sends full CardDto)
   useEffect(() => {
     if (currentPlayer?.corporation) {
@@ -209,7 +231,11 @@ export default function GameInterface() {
   const [showBehaviorChoiceSelection, setShowBehaviorChoiceSelection] = useState(false);
   const [pendingBehaviorChoiceStorage, setPendingBehaviorChoiceStorage] = useState<{
     choiceIndex: number;
-    allStorageNeeds: Array<{ resourceType: ResourceType; amount: number; selectorTags?: string[] }>;
+    allStorageNeeds: Array<{
+      resourceType: ResourceType;
+      amount: number;
+      selectorTags?: string[];
+    }>;
     collectedTargets: string[];
     currentIndex: number;
     resourceType: ResourceType;
@@ -231,7 +257,11 @@ export default function GameInterface() {
   const [pendingCardStorage, setPendingCardStorage] = useState<{
     cardId: string;
     choiceIndex?: number;
-    allStorageNeeds: Array<{ resourceType: ResourceType; amount: number; selectorTags?: string[] }>;
+    allStorageNeeds: Array<{
+      resourceType: ResourceType;
+      amount: number;
+      selectorTags?: string[];
+    }>;
     collectedTargets: string[];
     currentIndex: number;
     resourceType: ResourceType;
@@ -245,7 +275,11 @@ export default function GameInterface() {
     cardId: string;
     behaviorIndex: number;
     choiceIndex?: number;
-    allStorageNeeds: Array<{ resourceType: ResourceType; amount: number; selectorTags?: string[] }>;
+    allStorageNeeds: Array<{
+      resourceType: ResourceType;
+      amount: number;
+      selectorTags?: string[];
+    }>;
     collectedTargets: string[];
     currentIndex: number;
     resourceType: ResourceType;
@@ -816,15 +850,29 @@ export default function GameInterface() {
   );
 
   const needsCardResourceInput = useCallback(
-    (inputs: any[] | undefined): { resourceType: ResourceType; amount: number } | null => {
-      if (!inputs) return null;
+    (
+      inputs: any[] | undefined,
+      outputs?: any[] | undefined,
+    ): { resourceType: ResourceType; amount: number } | null => {
+      if (inputs) {
+        for (const input of inputs) {
+          if (input.target === "steal-from-any-card") {
+            return {
+              resourceType: input.type as ResourceType,
+              amount: input.amount || 1,
+            };
+          }
+        }
+      }
 
-      for (const input of inputs) {
-        if (input.target === "steal-from-any-card") {
-          return {
-            resourceType: input.type as ResourceType,
-            amount: input.amount || 1,
-          };
+      if (outputs) {
+        for (const output of outputs) {
+          if (output.target === "steal-from-any-card") {
+            return {
+              resourceType: output.type as ResourceType,
+              amount: output.amount || 1,
+            };
+          }
         }
       }
 
@@ -985,7 +1033,11 @@ export default function GameInterface() {
         // Check if any AUTO-triggered behavior has choices
         // Manual-triggered behaviors (actions) will show choices when the action is played
         const behaviorWithChoices = card.behaviors?.findIndex(
-          (b) => b.choices && b.choices.length > 0 && b.triggers?.some((t) => t.type === "auto"),
+          (b) =>
+            b.choices &&
+            b.choices.length > 0 &&
+            b.triggers?.some((t) => t.type === "auto") &&
+            b.choicePolicy?.type !== "auto",
         );
 
         if (
@@ -1929,8 +1981,11 @@ export default function GameInterface() {
           return;
         }
 
-        // Check if inputs need card resource selection (steal-from-any-card)
-        const cardResourceInfo = needsCardResourceInput(action.behavior.inputs);
+        // Check if inputs/outputs need card resource selection (steal-from-any-card)
+        const cardResourceInfo = needsCardResourceInput(
+          action.behavior.inputs,
+          action.behavior.outputs,
+        );
 
         if (cardResourceInfo) {
           // Determine cardStorageTargets for the output side
@@ -3250,7 +3305,11 @@ export default function GameInterface() {
         <ChoiceSelectionPopover
           cardId={game.currentPlayer.pendingBehaviorChoiceSelection.sourceCardId}
           cardName={`Triggered: ${game.currentPlayer.pendingBehaviorChoiceSelection.source}`}
-          behaviors={[{ choices: game.currentPlayer.pendingBehaviorChoiceSelection.choices }]}
+          behaviors={[
+            {
+              choices: game.currentPlayer.pendingBehaviorChoiceSelection.choices,
+            },
+          ]}
           behaviorIndex={0}
           onChoiceSelect={handleBehaviorChoiceSelect}
           onCancel={() => {}}

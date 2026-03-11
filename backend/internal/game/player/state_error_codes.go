@@ -70,3 +70,7 @@ const (
 // StateWarningCode represents warning codes for entity state validation.
 // All codes use kebab-case for consistency with JSON serialization.
 type StateWarningCode string
+
+const (
+	WarningCodeGlobalParamMaxed StateWarningCode = "global-param-maxed"
+)

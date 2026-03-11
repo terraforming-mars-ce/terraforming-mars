@@ -107,13 +107,13 @@ func (a *UseCardActionAction) Execute(
 		zap.String("card_name", cardAction.CardName),
 		zap.Int("times_used_this_generation", cardAction.TimesUsedThisGeneration))
 
-	if choiceIndex != nil && cardAction.Behavior.ChoicePolicy != "" {
+	if choiceIndex != nil && cardAction.Behavior.ChoicePolicy != nil {
 		production := p.Resources().Production()
 		if !shared.IsChoiceValidForPolicy(*choiceIndex, cardAction.Behavior.Choices, cardAction.Behavior.ChoicePolicy, production) {
 			log.Warn("Choice rejected by policy",
-				zap.String("policy", cardAction.Behavior.ChoicePolicy),
+				zap.String("policy_type", string(cardAction.Behavior.ChoicePolicy.Type)),
 				zap.Int("choice_index", *choiceIndex))
-			return fmt.Errorf("choice not valid: policy %q restricts available options", cardAction.Behavior.ChoicePolicy)
+			return fmt.Errorf("choice not valid: policy %q restricts available options", cardAction.Behavior.ChoicePolicy.Type)
 		}
 	}
 
@@ -287,13 +287,13 @@ func (a *UseCardActionAction) executeReuse(
 		return fmt.Errorf("target action has not been used this generation")
 	}
 
-	if choiceIndex != nil && targetAction.Behavior.ChoicePolicy != "" {
+	if choiceIndex != nil && targetAction.Behavior.ChoicePolicy != nil {
 		production := p.Resources().Production()
 		if !shared.IsChoiceValidForPolicy(*choiceIndex, targetAction.Behavior.Choices, targetAction.Behavior.ChoicePolicy, production) {
 			log.Warn("Choice rejected by policy",
-				zap.String("policy", targetAction.Behavior.ChoicePolicy),
+				zap.String("policy_type", string(targetAction.Behavior.ChoicePolicy.Type)),
 				zap.Int("choice_index", *choiceIndex))
-			return fmt.Errorf("choice not valid: policy %q restricts available options", targetAction.Behavior.ChoicePolicy)
+			return fmt.Errorf("choice not valid: policy %q restricts available options", targetAction.Behavior.ChoicePolicy.Type)
 		}
 	}
 

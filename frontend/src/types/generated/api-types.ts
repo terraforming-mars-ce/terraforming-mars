@@ -585,6 +585,23 @@ export interface ResourceTriggerConditionDto {
   onBonusType?: string[];
 }
 /**
+ * ChoicePolicySelectDto describes an auto-selection rule for a choice policy
+ */
+export interface ChoicePolicySelectDto {
+  option: number /* int */;
+  minMax: MinMaxValueDto;
+  resourceType: string;
+  tag?: string;
+}
+/**
+ * ChoicePolicyDto represents a choice policy for client consumption
+ */
+export interface ChoicePolicyDto {
+  type: string;
+  default?: number /* int */;
+  select?: ChoicePolicySelectDto;
+}
+/**
  * CardBehaviorDto represents a card behavior for client consumption
  */
 export interface CardBehaviorDto {
@@ -593,7 +610,7 @@ export interface CardBehaviorDto {
   inputs?: ResourceConditionDto[];
   outputs?: ResourceConditionDto[];
   choices?: ChoiceDto[];
-  choicePolicy?: string;
+  choicePolicy?: ChoicePolicyDto;
   generationalEventRequirements?: GenerationalEventRequirementDto[];
   group?: string;
 }
@@ -893,6 +910,7 @@ export interface PlayerStandardProjectDto {
   baseCost: { [key: string]: number /* int */ }; // Base cost per resource type (e.g., {"credits": 23} or {"plants": 8})
   available: boolean; // Computed: project is available
   errors: StateErrorDto[]; // Reasons why project is not available
+  warnings?: StateWarningDto[]; // Non-blocking warnings
   effectiveCost: { [key: string]: number /* int */ }; // Cost per resource type after discounts
   discounts?: { [key: string]: number /* int */ }; // Discount amounts per resource type (if any)
   metadata?: { [key: string]: any }; // Project-specific context (e.g., oceansRemaining)

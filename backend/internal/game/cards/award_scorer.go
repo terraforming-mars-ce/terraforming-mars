@@ -30,8 +30,10 @@ func CalculateAwardScore(
 ) int {
 	switch awardType {
 	case shared.AwardLandlord:
-		// Most tiles on Mars (owned by player)
-		return CountPlayerTiles(p.ID(), b, nil)
+		// Most cities + greeneries on Mars (oceans don't count)
+		cityType := shared.ResourceCityTile
+		greeneryType := shared.ResourceGreeneryTile
+		return CountPlayerTiles(p.ID(), b, &cityType) + CountPlayerTiles(p.ID(), b, &greeneryType)
 	case shared.AwardBanker:
 		// Highest MC production
 		production := p.Resources().Production()

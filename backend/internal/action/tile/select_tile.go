@@ -235,9 +235,13 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return result, nil
 	}
 
+	occupantTags := []string{}
+	if pendingTileSelection.SourceCardID != "" {
+		occupantTags = append(occupantTags, "source:"+pendingTileSelection.SourceCardID)
+	}
 	occupant := board.TileOccupant{
 		Type: mapTileTypeToResourceType(tileType),
-		Tags: []string{},
+		Tags: occupantTags,
 	}
 
 	if err := g.Board().UpdateTileOccupancy(ctx, *coords, occupant, playerID); err != nil {

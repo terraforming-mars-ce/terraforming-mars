@@ -260,6 +260,11 @@ func countPerCondition(
 		return storage
 	}
 
+	// Handle adjacency to tile placed by this card (e.g., Capital: 1 VP per adjacent ocean)
+	if per.AdjacentToSelfTile {
+		return countAdjacentTilesOfTypeForCard(b, card.ID, per.Type)
+	}
+
 	// Handle adjacency-based counting (e.g., World Tree: 1 VP per adjacent forest)
 	if per.AdjacentToTileType != nil {
 		return countAdjacentTilesOfType(p.ID(), b, per.Type, *per.AdjacentToTileType)
@@ -394,6 +399,52 @@ func getAdjacentGreeneryCoordinates(coords shared.HexPosition, tiles []board.Til
 	}
 
 	return greeneryCoords
+}
+
+// countAdjacentTilesOfTypeForCard counts tiles matching countType that are adjacent
+// to the tile placed by a specific card (identified by "source:CARD_ID" occupant tag).
+func countAdjacentTilesOfTypeForCard(b *board.Board, cardID string, countType shared.ResourceType) int {
+	tiles := b.Tiles()
+	sourceTag := "source:" + cardID
+
+	// Find the tile placed by this card
+	var sourceTile *board.Tile
+	for i := range tiles {
+		if tiles[i].OccupiedBy == nil {
+			continue
+		}
+		for _, tag := range tiles[i].OccupiedBy.Tags {
+			if tag == sourceTag {
+				sourceTile = &tiles[i]
+				break
+			}
+		}
+		if sourceTile != nil {
+			break
+		}
+	}
+
+	if sourceTile == nil {
+		return 0
+	}
+
+	neighbors := sourceTile.Coordinates.GetNeighbors()
+	count := 0
+	for _, tile := range tiles {
+		if tile.OccupiedBy == nil {
+			continue
+		}
+		if tile.OccupiedBy.Type != countType {
+			continue
+		}
+		for _, neighbor := range neighbors {
+			if tile.Coordinates == neighbor {
+				count++
+				break
+			}
+		}
+	}
+	return count
 }
 
 // isForestTile returns true if the tile type counts as a forest (greenery or world-tree)

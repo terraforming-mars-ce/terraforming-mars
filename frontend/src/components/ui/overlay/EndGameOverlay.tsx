@@ -185,7 +185,10 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
   const getRevealedTileVP = useCallback(
     (
       playerIndex: number,
-    ): { revealedGreeneryVP: number | undefined; revealedCityVP: number | undefined } => {
+    ): {
+      revealedGreeneryVP: number | undefined;
+      revealedCityVP: number | undefined;
+    } => {
       // Not in tiles phase or no counting state - use undefined to show final values
       if (currentPhase !== "tiles" || !tileCountingState) {
         return { revealedGreeneryVP: undefined, revealedCityVP: undefined };
@@ -608,49 +611,47 @@ const EndGameOverlay: FC<EndGameOverlayProps> = ({
 
         {/* Main content */}
         <div className="p-4 space-y-4">
-          {/* Player VP Summary - hidden in complete phase (bar chart shows scores) */}
-          {currentPhase !== "complete" && (
-            <div className="space-y-3">
-              {sortedScores.map((score, idx) => {
-                const { revealedGreeneryVP, revealedCityVP } = getRevealedTileVP(idx);
-                return (
-                  <PlayerVPCard
-                    key={score.playerId}
-                    score={score}
-                    placement={idx + 1}
-                    isCurrentPlayer={score.playerId === playerId}
-                    currentPhase={currentPhase}
-                    isCountingTiles={
-                      tileCountingState?.currentPlayerIndex === idx && currentPhase === "tiles"
-                    }
-                    revealedGreeneryVP={revealedGreeneryVP}
-                    revealedCityVP={revealedCityVP}
-                    onHoverTileType={setHoveredTileType}
-                    onHoverCardVP={setHoveredCardPlayerId}
-                  />
-                );
-              })}
-              {/* View Summary button - directly under player boxes during counting phases */}
-              {currentPhase !== "intro" && (
-                <button
-                  onClick={viewSummary}
-                  className="w-full text-sm text-white/50 hover:text-white px-3 py-2 border border-white/20 rounded hover:bg-white/10 transition-colors mt-2"
-                >
-                  View Summary
-                </button>
-              )}
-            </div>
-          )}
+          {/* Player VP Summary */}
+          <div className="space-y-3">
+            {sortedScores.map((score, idx) => {
+              const { revealedGreeneryVP, revealedCityVP } = getRevealedTileVP(idx);
+              return (
+                <PlayerVPCard
+                  key={score.playerId}
+                  score={score}
+                  placement={idx + 1}
+                  isCurrentPlayer={score.playerId === playerId}
+                  currentPhase={currentPhase}
+                  isCountingTiles={
+                    tileCountingState?.currentPlayerIndex === idx && currentPhase === "tiles"
+                  }
+                  revealedGreeneryVP={revealedGreeneryVP}
+                  revealedCityVP={revealedCityVP}
+                  onHoverTileType={setHoveredTileType}
+                  onHoverCardVP={setHoveredCardPlayerId}
+                />
+              );
+            })}
+            {/* View Summary button - directly under player boxes during counting phases */}
+            {currentPhase !== "intro" && currentPhase !== "complete" && (
+              <button
+                onClick={viewSummary}
+                className="w-full text-sm text-white/50 hover:text-white px-3 py-2 border border-white/20 rounded hover:bg-white/10 transition-colors mt-2"
+              >
+                View Summary
+              </button>
+            )}
+          </div>
 
           {/* Milestones compact display */}
           {(currentPhase === "milestones" ||
-            (currentPhase !== "intro" && currentPhase !== "tr" && currentPhase !== "complete")) && (
+            (currentPhase !== "intro" && currentPhase !== "tr")) && (
             <MilestoneCompact milestones={game.milestones ?? []} scores={sortedScores} />
           )}
 
           {/* Awards compact display */}
           {(currentPhase === "awards" ||
-            ["tiles", "cards", "summary", "rankings"].includes(currentPhase)) && (
+            ["tiles", "cards", "summary", "rankings", "complete"].includes(currentPhase)) && (
             <AwardCompact
               awards={game.awards ?? []}
               scores={sortedScores}

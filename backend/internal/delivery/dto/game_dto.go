@@ -288,6 +288,21 @@ type ResourceTriggerConditionDto struct {
 	OnBonusType            []string                        `json:"onBonusType,omitempty" ts:"string[] | undefined"`
 }
 
+// ChoicePolicySelectDto describes an auto-selection rule for a choice policy
+type ChoicePolicySelectDto struct {
+	Option       int            `json:"option" ts:"number"`
+	MinMax       MinMaxValueDto `json:"minMax" ts:"MinMaxValueDto"`
+	ResourceType string         `json:"resourceType" ts:"string"`
+	Tag          *string        `json:"tag,omitempty" ts:"string | undefined"`
+}
+
+// ChoicePolicyDto represents a choice policy for client consumption
+type ChoicePolicyDto struct {
+	Type    string                 `json:"type" ts:"string"`
+	Default *int                   `json:"default,omitempty" ts:"number | undefined"`
+	Select  *ChoicePolicySelectDto `json:"select,omitempty" ts:"ChoicePolicySelectDto | undefined"`
+}
+
 // CardBehaviorDto represents a card behavior for client consumption
 type CardBehaviorDto struct {
 	Description                   string                            `json:"description,omitempty" ts:"string | undefined"`
@@ -295,7 +310,7 @@ type CardBehaviorDto struct {
 	Inputs                        []ResourceConditionDto            `json:"inputs,omitempty" ts:"ResourceConditionDto[] | undefined"`
 	Outputs                       []ResourceConditionDto            `json:"outputs,omitempty" ts:"ResourceConditionDto[] | undefined"`
 	Choices                       []ChoiceDto                       `json:"choices,omitempty" ts:"ChoiceDto[] | undefined"`
-	ChoicePolicy                  string                            `json:"choicePolicy,omitempty" ts:"string | undefined"`
+	ChoicePolicy                  *ChoicePolicyDto                  `json:"choicePolicy,omitempty" ts:"ChoicePolicyDto | undefined"`
 	GenerationalEventRequirements []GenerationalEventRequirementDto `json:"generationalEventRequirements,omitempty" ts:"GenerationalEventRequirementDto[] | undefined"`
 	Group                         string                            `json:"group,omitempty" ts:"string | undefined"`
 }
@@ -591,6 +606,7 @@ type PlayerStandardProjectDto struct {
 
 	Available     bool                   `json:"available" ts:"boolean"`                                      // Computed: project is available
 	Errors        []StateErrorDto        `json:"errors" ts:"StateErrorDto[]"`                                 // Reasons why project is not available
+	Warnings      []StateWarningDto      `json:"warnings,omitempty" ts:"StateWarningDto[] | undefined"`       // Non-blocking warnings
 	EffectiveCost map[string]int         `json:"effectiveCost" ts:"Record<string, number>"`                   // Cost per resource type after discounts
 	Discounts     map[string]int         `json:"discounts,omitempty" ts:"Record<string, number> | undefined"` // Discount amounts per resource type (if any)
 	Metadata      map[string]interface{} `json:"metadata,omitempty" ts:"Record<string, any> | undefined"`     // Project-specific context (e.g., oceansRemaining)
