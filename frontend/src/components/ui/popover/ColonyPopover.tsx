@@ -128,6 +128,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
             colony={colony}
             mode={mode}
             canAct={canAct}
+            viewingPlayerId={gameState?.viewingPlayerId ?? ""}
             getPlayerColor={getPlayerColor}
             getPlayerName={getPlayerName}
             onTrade={handleTrade}
@@ -143,6 +144,7 @@ interface ColonyTileCardProps {
   colony: ColonyTileDto;
   mode: ColonyMode;
   canAct: boolean;
+  viewingPlayerId: string;
   getPlayerColor: (playerId: string) => string;
   getPlayerName: (playerId: string) => string;
   onTrade: (colonyId: string) => void;
@@ -153,6 +155,7 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
   colony,
   mode,
   canAct,
+  viewingPlayerId,
   getPlayerColor,
   getPlayerName,
   onTrade,
@@ -167,6 +170,26 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
   const markerOutput = colony.steps[colony.markerPosition]?.outputs ?? [];
   const buildReward = colony.colonies[0]?.reward ?? [];
   const tradeExpression = getTradeExpression(colony.steps);
+
+  const viewerColonyCount = colony.playerColonies.filter((id) => id === viewingPlayerId).length;
+  const tradeGainOutputs: ColonyOutputDto[] = useMemo(() => {
+    const combined = [...markerOutput];
+    if (viewerColonyCount > 0) {
+      for (const bonus of colony.colonyBonus) {
+        const scaledAmount = bonus.amount * viewerColonyCount;
+        const existing = combined.find((o) => o.type === bonus.type);
+        if (existing) {
+          combined[combined.indexOf(existing)] = {
+            ...existing,
+            amount: existing.amount + scaledAmount,
+          };
+        } else {
+          combined.push({ ...bonus, amount: scaledAmount });
+        }
+      }
+    }
+    return combined;
+  }, [markerOutput, viewerColonyCount, colony.colonyBonus]);
 
   return (
     <div
@@ -226,55 +249,84 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
         )}
       </div>
 
-      {/* Info row: cost → gain */}
-      <div className="flex items-center gap-1.5 mb-2 h-7">
-        {mode === "trade" ? (
-          <>
-            <span className="text-xs text-white/70 font-orbitron font-bold">3</span>
-            <GameIcon iconType={ResourceTypeEnergy} size="small" />
-            <span className="text-white/30 text-sm">→</span>
-            <CostDisplay outputs={markerOutput} />
-          </>
-        ) : (
-          <>
-            <GameIcon iconType={ResourceTypeCredit} amount={17} size="small" />
-            <span className="text-white/30 text-sm">→</span>
-            <GameIcon iconType="colony-tile" size="small" />
-            <CostDisplay outputs={buildReward} />
-          </>
-        )}
+      {/* Info row: cost → gain (layered for cross-fade without re-mount) */}
+      <div className="relative h-7">
+        <div
+          className="absolute inset-0 flex items-center gap-1.5"
+          style={{
+            opacity: mode === "trade" && !colony.tradedThisGen ? 1 : 0,
+            transition: mode === "trade" ? "opacity 300ms" : "none",
+          }}
+        >
+          <span className="text-xs text-white/70 font-orbitron font-bold">3</span>
+          <GameIcon iconType={ResourceTypeEnergy} size="small" />
+          <span className="text-white/30 text-sm">→</span>
+          <CostDisplay outputs={tradeGainOutputs} />
+        </div>
+        <div
+          className="absolute inset-0 flex items-center"
+          style={{
+            opacity: mode === "trade" && colony.tradedThisGen ? 1 : 0,
+            transition: mode === "trade" ? "opacity 300ms" : "none",
+          }}
+        >
+          <span className="text-[10px] font-orbitron font-bold text-white/30 uppercase tracking-wider">
+            Already Traded
+          </span>
+        </div>
+        <div
+          className="absolute inset-0 flex items-center gap-1.5"
+          style={{
+            opacity: mode === "build" ? 1 : 0,
+            transition: mode === "build" ? "opacity 300ms" : "none",
+          }}
+        >
+          <GameIcon iconType={ResourceTypeCredit} amount={17} size="small" />
+          <span className="text-white/30 text-sm">→</span>
+          <GameIcon iconType="colony-tile" size="small" />
+          <CostDisplay outputs={buildReward} />
+        </div>
       </div>
 
-      {/* Trade track label + expression */}
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-white/50 text-[10px] font-orbitron uppercase tracking-wider">
-          Trade
-        </span>
-        {tradeExpression && (
-          <span className="inline-flex items-center gap-0.5">
-            {tradeExpression.type === "x-icon" && (
-              <span className="text-xs text-white/70 font-orbitron font-bold">X</span>
-            )}
-            <GameIcon iconType={tradeExpression.icon} size="small" />
-          </span>
-        )}
-      </div>
+      <div style={{ height: "1px", background: "rgba(255,255,255,0.15)", margin: "16px 0" }} />
 
       {/* Trade steps with colony slots */}
-      <div className="mb-1.5">
+      <div className="mb-3">
         <ColonySteps
           steps={colony.steps}
           markerPosition={colony.markerPosition}
           playerColonies={colony.playerColonies}
           maxSlots={colony.colonies.length}
           getPlayerColor={getPlayerColor}
+          getPlayerName={getPlayerName}
         />
       </div>
 
-      {/* Colony bonus */}
-      <div className="flex items-center gap-2 text-[10px] text-white/40">
-        <span className="font-orbitron uppercase tracking-wider">Bonus</span>
-        <OutputDisplay outputs={colony.colonyBonus} />
+      {/* Colony bonus + trade gain expression */}
+      <div className="flex items-center justify-between text-[10px] text-white/40">
+        <div className="flex items-center gap-2">
+          <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
+          <OutputDisplay outputs={colony.colonyBonus} />
+        </div>
+        {tradeExpression && (
+          <div className="flex items-center gap-2">
+            <span className="font-orbitron uppercase tracking-wider">Trade Gain</span>
+            <span className="inline-flex items-center gap-0.5">
+              {tradeExpression.type === "x-icon" && !tradeExpression.isCreditType && (
+                <span className="text-[10px] text-white/70 font-orbitron font-bold">X</span>
+              )}
+              <GameIcon
+                iconType={tradeExpression.icon}
+                amount={
+                  tradeExpression.type === "x-icon" && tradeExpression.isCreditType
+                    ? "X"
+                    : undefined
+                }
+                size="small"
+              />
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -287,12 +339,22 @@ interface OutputDisplayProps {
 const OutputDisplay: React.FC<OutputDisplayProps> = ({ outputs }) => {
   return (
     <span className="inline-flex items-center gap-0.5">
-      {outputs.map((output, i) => (
-        <span key={i} className="inline-flex items-center gap-0.5">
-          <span className="text-[10px]">{output.amount}</span>
-          <GameIcon iconType={mapOutputTypeToIcon(output.type)} size="small" />
-        </span>
-      ))}
+      {outputs.map((output, i) => {
+        const icon = mapOutputTypeToIcon(output.type);
+        const useAmountProp = output.type === "credit" || output.type === "credit-production";
+        return (
+          <span key={i} className="inline-flex items-center gap-0.5">
+            {!useAmountProp && (
+              <span className="text-xs text-white/70 font-orbitron font-bold">{output.amount}</span>
+            )}
+            <GameIcon
+              iconType={icon}
+              amount={useAmountProp ? output.amount : undefined}
+              size="small"
+            />
+          </span>
+        );
+      })}
     </span>
   );
 };
@@ -300,14 +362,22 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ outputs }) => {
 const CostDisplay: React.FC<OutputDisplayProps> = ({ outputs }) => {
   return (
     <span className="inline-flex items-center gap-0.5">
-      {outputs.map((output, i) => (
-        <span key={i} className="inline-flex items-center gap-0.5">
-          {output.amount > 1 && (
-            <span className="text-xs text-white/70 font-orbitron font-bold">{output.amount}</span>
-          )}
-          <GameIcon iconType={mapOutputTypeToIcon(output.type)} size="small" />
-        </span>
-      ))}
+      {outputs.map((output, i) => {
+        const icon = mapOutputTypeToIcon(output.type);
+        const useAmountProp = output.type === "credit" || output.type === "credit-production";
+        return (
+          <span key={i} className="inline-flex items-center gap-0.5">
+            {!useAmountProp && output.amount > 1 && (
+              <span className="text-xs text-white/70 font-orbitron font-bold">{output.amount}</span>
+            )}
+            <GameIcon
+              iconType={icon}
+              amount={useAmountProp ? output.amount : undefined}
+              size="small"
+            />
+          </span>
+        );
+      })}
     </span>
   );
 };

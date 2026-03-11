@@ -371,9 +371,13 @@ const CreateGamePage: React.FC = () => {
                       />
                       <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
                         Colonies
+                        <span className="text-[10px] font-orbitron font-bold text-yellow-400/80 uppercase tracking-wider">
+                          WIP
+                        </span>
                         <InfoTooltip size="small">
                           Adds colony tiles that players can trade with and build on. Trade costs 3
-                          energy, building costs 17 MC. Colony markers advance each generation.
+                          energy, building costs 17 MC. Work in progress — some colony interactions
+                          and card effects are not yet implemented.
                         </InfoTooltip>
                       </span>
                     </label>

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { ColonyStepDto, ColonyOutputDto } from "@/types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
 
@@ -8,6 +9,7 @@ interface ColonyStepsProps {
   playerColonies: string[];
   maxSlots: number;
   getPlayerColor: (id: string) => string;
+  getPlayerName: (id: string) => string;
 }
 
 type StepPattern =
@@ -59,7 +61,7 @@ function mapOutputTypeToIcon(outputType: string): string {
     "plant-production": "plant-production",
     "energy-production": "energy-production",
     "heat-production": "heat-production",
-    "card-draw": "card",
+    "card-draw": "card-draw",
     microbe: "microbe",
     animal: "animal",
     floater: "floater",
@@ -72,14 +74,43 @@ function getStepAmount(outputs: ColonyOutputDto[]): number {
   return outputs.reduce((sum, o) => sum + o.amount, 0);
 }
 
+const ColonySlotTooltip: React.FC<{
+  data: { x: number; y: number; label: string; color?: string } | null;
+}> = ({ data }) => {
+  if (!data) {
+    return null;
+  }
+  return createPortal(
+    <div
+      className="fixed pointer-events-none animate-[fadeIn_150ms_ease-in]"
+      style={{ left: data.x + 12, top: data.y + 12, zIndex: 99999 }}
+    >
+      <div className="bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.5)] rounded-sm flex items-center gap-1.5">
+        {data.color && (
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: data.color }} />
+        )}
+        <span className="font-orbitron font-bold text-[10px]">{data.label}</span>
+      </div>
+    </div>,
+    document.body,
+  );
+};
+
 const ColonySteps: React.FC<ColonyStepsProps> = ({
   steps,
   markerPosition,
   playerColonies,
   maxSlots,
   getPlayerColor,
+  getPlayerName,
 }) => {
   const { pattern, sameType } = analyzeSteps(steps);
+  const [slotTooltip, setSlotTooltip] = useState<{
+    x: number;
+    y: number;
+    label: string;
+    color?: string;
+  } | null>(null);
 
   const stepCount = steps.length;
   const markerLeftPercent = (markerPosition / stepCount) * 100;
@@ -92,7 +123,7 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
           <div key={i} className="flex-1 flex justify-center">
             {i < maxSlots && (
               <div
-                className={`w-4 h-4 rounded-sm ${
+                className={`w-4 h-4 rounded-sm cursor-default ${
                   playerColonies[i] ? "" : "border border-white/20"
                 }`}
                 style={{
@@ -100,6 +131,19 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
                     ? getPlayerColor(playerColonies[i])
                     : "transparent",
                 }}
+                onMouseEnter={(e) => {
+                  const playerId = playerColonies[i];
+                  setSlotTooltip({
+                    x: e.clientX,
+                    y: e.clientY,
+                    label: playerId ? getPlayerName(playerId) : "Empty colony slot",
+                    color: playerId ? getPlayerColor(playerId) : undefined,
+                  });
+                }}
+                onMouseMove={(e) => {
+                  setSlotTooltip((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY } : null));
+                }}
+                onMouseLeave={() => setSlotTooltip(null)}
               />
             )}
             {i === steps.length - 1 && markerPosition === steps.length - 1 && (
@@ -108,6 +152,7 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
           </div>
         ))}
       </div>
+      <ColonySlotTooltip data={slotTooltip} />
 
       {/* Step boxes with sliding marker overlay */}
       <div className="relative flex w-full">
@@ -178,14 +223,17 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
   );
 };
 
-export function getTradeExpression(steps: ColonyStepDto[]): { type: string; icon: string } | null {
+export function getTradeExpression(
+  steps: ColonyStepDto[],
+): { type: string; icon: string; isCreditType: boolean } | null {
   const { pattern, sameType } = analyzeSteps(steps);
 
   if (sameType) {
+    const isCreditType = sameType === "credit" || sameType === "credit-production";
     if (pattern === "same-resource-all-one") {
-      return { type: "icon-only", icon: mapOutputTypeToIcon(sameType) };
+      return { type: "icon-only", icon: mapOutputTypeToIcon(sameType), isCreditType };
     }
-    return { type: "x-icon", icon: mapOutputTypeToIcon(sameType) };
+    return { type: "x-icon", icon: mapOutputTypeToIcon(sameType), isCreditType };
   }
   return null;
 }

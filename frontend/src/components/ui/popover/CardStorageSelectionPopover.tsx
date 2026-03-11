@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { CardDto, ResourceType } from "@/types/generated/api-types.ts";
+import {
+  CardDto,
+  ResourceType,
+  ColonyResourceReason,
+  ColonyResourceReasonTrade,
+  ColonyResourceReasonColonyTax,
+  ColonyResourceReasonBuild,
+} from "@/types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import { Z_INDEX } from "@/constants/zIndex";
 
@@ -9,7 +16,9 @@ interface CardStorageSelectionPopoverProps {
   selectorTags?: string[];
   playedCards: CardDto[];
   corporationCard?: CardDto;
-  resourceStorage?: { [cardId: string]: number }; // Map of cardId to current storage count
+  resourceStorage?: { [cardId: string]: number };
+  reason?: ColonyResourceReason;
+  mandatory?: boolean;
   onCardSelect: (cardId: string) => void;
   onCancel: () => void;
   isVisible: boolean;
@@ -27,6 +36,8 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
   playedCards,
   corporationCard,
   resourceStorage,
+  reason,
+  mandatory,
   onCardSelect,
   onCancel,
   isVisible,
@@ -83,13 +94,13 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && canDismiss) {
         handleCancelClick();
       }
     };
 
     const handleClickOutside = (event: MouseEvent) => {
-      // Only close on left click (button 0), ignore right click (button 2) and middle click (button 1)
+      if (!canDismiss) return;
       if (
         event.button === 0 &&
         popoverRef.current &&
@@ -130,6 +141,16 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
   if (!isVisible) return null;
 
   const hasNoStorage = validCards.length === 0;
+  const canDismiss = !mandatory || hasNoStorage;
+
+  const reasonTitleMap: Record<string, string> = {
+    [ColonyResourceReasonTrade]: "Trading Complete",
+    [ColonyResourceReasonColonyTax]: "Colony Taxes Received",
+    [ColonyResourceReasonBuild]: "Colony Built",
+  };
+  const title = hasNoStorage
+    ? "No Storage Available"
+    : (reason && reasonTitleMap[reason]) || "Select Card Storage";
 
   return (
     <div
@@ -153,7 +174,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
         {/* Header */}
         <div className="py-[15px] px-5 bg-black/40 border-b border-b-space-blue-500/60">
           <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
-            {hasNoStorage ? "No Storage Available" : "Select Card Storage"}
+            {title}
           </h3>
           <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
             {hasNoStorage ? (
@@ -232,26 +253,46 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 bg-black/40 border-t border-space-blue-500/60 flex justify-center gap-3">
-          {hasNoStorage ? (
-            <>
-              <button
-                className="
-                  bg-yellow-600/50
-                  border-2 border-yellow-500/60
-                  rounded-md text-white text-xs font-semibold
-                  px-6 py-2 cursor-pointer
-                  transition-all duration-200
-                  text-shadow-glow font-orbitron
-                  shadow-[0_0_8px_rgba(180,120,0,0.4)]
-                  hover:bg-yellow-500/60
-                  hover:border-yellow-500/80
-                                   hover:shadow-[0_0_12px_rgba(180,120,0,0.6)]
-                "
-                onClick={handleContinueWithoutStorage}
-              >
-                Continue Anyway
-              </button>
+        {(hasNoStorage || canDismiss) && (
+          <div className="px-4 py-3 bg-black/40 border-t border-space-blue-500/60 flex justify-center gap-3">
+            {hasNoStorage ? (
+              <>
+                <button
+                  className="
+                    bg-yellow-600/50
+                    border-2 border-yellow-500/60
+                    rounded-md text-white text-xs font-semibold
+                    px-6 py-2 cursor-pointer
+                    transition-all duration-200
+                    text-shadow-glow font-orbitron
+                    shadow-[0_0_8px_rgba(180,120,0,0.4)]
+                    hover:bg-yellow-500/60
+                    hover:border-yellow-500/80
+                    hover:shadow-[0_0_12px_rgba(180,120,0,0.6)]
+                  "
+                  onClick={handleContinueWithoutStorage}
+                >
+                  Continue Anyway
+                </button>
+                <button
+                  className="
+                    bg-space-blue-600/50
+                    border-2 border-space-blue-500/60
+                    rounded-md text-white text-xs font-semibold
+                    px-6 py-2 cursor-pointer
+                    transition-all duration-200
+                    text-shadow-glow font-orbitron
+                    shadow-[0_0_8px_rgba(30,60,150,0.4)]
+                    hover:bg-space-blue-500/60
+                    hover:border-space-blue-500/80
+                    hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
+                  "
+                  onClick={handleCancelClick}
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
               <button
                 className="
                   bg-space-blue-600/50
@@ -263,33 +304,15 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
                   shadow-[0_0_8px_rgba(30,60,150,0.4)]
                   hover:bg-space-blue-500/60
                   hover:border-space-blue-500/80
-                                   hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
+                  hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
                 "
                 onClick={handleCancelClick}
               >
                 Cancel
               </button>
-            </>
-          ) : (
-            <button
-              className="
-                bg-space-blue-600/50
-                border-2 border-space-blue-500/60
-                rounded-md text-white text-xs font-semibold
-                px-6 py-2 cursor-pointer
-                transition-all duration-200
-                text-shadow-glow font-orbitron
-                shadow-[0_0_8px_rgba(30,60,150,0.4)]
-                hover:bg-space-blue-500/60
-                hover:border-space-blue-500/80
-                               hover:shadow-[0_0_12px_rgba(30,60,150,0.6)]
-              "
-              onClick={handleCancelClick}
-            >
-              Cancel
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       <style>{`

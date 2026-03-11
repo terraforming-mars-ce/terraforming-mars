@@ -3435,6 +3435,8 @@ export default function GameInterface() {
             game.currentPlayer.pendingColonyResourceSelection.resourceType as ResourceType
           }
           amount={game.currentPlayer.pendingColonyResourceSelection.amount}
+          reason={game.currentPlayer.pendingColonyResourceSelection.reason}
+          mandatory
           playedCards={currentPlayer.playedCards || []}
           corporationCard={currentPlayer.corporation}
           resourceStorage={currentPlayer.resourceStorage}
