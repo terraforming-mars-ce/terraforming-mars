@@ -19,7 +19,8 @@ type Broadcaster interface {
 
 // TradePayload represents the expected payload for trading with a colony
 type TradePayload struct {
-	ColonyID string `json:"colonyId"`
+	ColonyID    string `json:"colonyId"`
+	PaymentType string `json:"paymentType"`
 }
 
 // TradeHandler handles colony trade requests
@@ -73,7 +74,12 @@ func (h *TradeHandler) HandleMessage(ctx context.Context, connection *core.Conne
 		return
 	}
 
-	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.ColonyID)
+	paymentType := colonyaction.TradePaymentType(payload.PaymentType)
+	if paymentType == "" {
+		paymentType = colonyaction.TradePaymentEnergy
+	}
+
+	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.ColonyID, paymentType)
 	if err != nil {
 		log.Error("Failed to execute colony trade action", zap.Error(err))
 		h.sendError(connection, err.Error())

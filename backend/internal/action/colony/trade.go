@@ -16,8 +16,19 @@ import (
 	"go.uber.org/zap"
 )
 
+// TradePaymentType represents the resource used to pay for a colony trade
+type TradePaymentType string
+
 const (
-	TradeEnergyCost = 3
+	TradePaymentCredits  TradePaymentType = "credits"
+	TradePaymentEnergy   TradePaymentType = "energy"
+	TradePaymentTitanium TradePaymentType = "titanium"
+)
+
+const (
+	TradeCreditsCost  = 9
+	TradeEnergyCost   = 3
+	TradeTitaniumCost = 3
 )
 
 // TradeAction handles the business logic for trading with a colony tile
@@ -43,7 +54,7 @@ func NewTradeAction(
 }
 
 // Execute performs the trade action
-func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID string, colonyID string) error {
+func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID string, colonyID string, paymentType TradePaymentType) error {
 	log := a.InitLogger(gameID, playerID).With(
 		zap.String("action", "colony_trade"),
 		zap.String("colony_id", colonyID),
@@ -90,8 +101,21 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 	}
 
 	resources := traderPlayer.Resources().Get()
-	if resources.Energy < TradeEnergyCost {
-		return fmt.Errorf("insufficient energy: need %d, have %d", TradeEnergyCost, resources.Energy)
+	switch paymentType {
+	case TradePaymentCredits:
+		if resources.Credits < TradeCreditsCost {
+			return fmt.Errorf("insufficient credits: need %d, have %d", TradeCreditsCost, resources.Credits)
+		}
+	case TradePaymentEnergy:
+		if resources.Energy < TradeEnergyCost {
+			return fmt.Errorf("insufficient energy: need %d, have %d", TradeEnergyCost, resources.Energy)
+		}
+	case TradePaymentTitanium:
+		if resources.Titanium < TradeTitaniumCost {
+			return fmt.Errorf("insufficient titanium: need %d, have %d", TradeTitaniumCost, resources.Titanium)
+		}
+	default:
+		return fmt.Errorf("invalid trade payment type: %s", paymentType)
 	}
 
 	definition, err := a.colonyRegistry.GetByID(colonyID)
@@ -99,10 +123,21 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		return fmt.Errorf("colony definition not found: %w", err)
 	}
 
-	// Deduct energy cost
-	traderPlayer.Resources().Add(map[shared.ResourceType]int{
-		shared.ResourceEnergy: -TradeEnergyCost,
-	})
+	// Deduct trade cost
+	switch paymentType {
+	case TradePaymentCredits:
+		traderPlayer.Resources().Add(map[shared.ResourceType]int{
+			shared.ResourceCredit: -TradeCreditsCost,
+		})
+	case TradePaymentEnergy:
+		traderPlayer.Resources().Add(map[shared.ResourceType]int{
+			shared.ResourceEnergy: -TradeEnergyCost,
+		})
+	case TradePaymentTitanium:
+		traderPlayer.Resources().Add(map[shared.ResourceType]int{
+			shared.ResourceTitanium: -TradeTitaniumCost,
+		})
+	}
 
 	// Collect pending card-targeted resources per player, so same-type resources
 	// from trade income + colony bonus are combined into a single selection.

@@ -609,11 +609,12 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, play
 		playerObj, _ := g.GetPlayer(playerID)
 		if playerObj != nil {
 			resources := playerObj.Resources().Get()
-			if resources.Energy < 3 {
+			canAffordAny := resources.Credits >= 9 || resources.Energy >= 3 || resources.Titanium >= 3
+			if !canAffordAny {
 				tradeAvailable = false
 				tradeErrors = append(tradeErrors, StateErrorDto{
-					Code:    StateErrorCode("insufficient-energy"),
-					Message: fmt.Sprintf("Insufficient energy: need 3, have %d", resources.Energy),
+					Code:    StateErrorCode("insufficient-resources"),
+					Message: "Cannot afford trade: need 9 MC, 3 energy, or 3 titanium",
 				})
 			}
 		}
