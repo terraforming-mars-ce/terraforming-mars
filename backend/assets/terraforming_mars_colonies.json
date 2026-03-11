@@ -63,9 +63,9 @@
     "id": "europa",
     "name": "Europa",
     "steps": [
-      { "outputs": [{ "type": "credit-production", "amount": 1 }] },
-      { "outputs": [{ "type": "credit-production", "amount": 1 }] },
       { "outputs": [{ "type": "credit-production", "amount": 0 }] },
+      { "outputs": [{ "type": "credit-production", "amount": 1 }] },
+      { "outputs": [{ "type": "credit-production", "amount": 1 }] },
       { "outputs": [{ "type": "credit-production", "amount": 1 }] },
       { "outputs": [{ "type": "credit-production", "amount": 1 }] },
       { "outputs": [{ "type": "credit-production", "amount": 2 }] },

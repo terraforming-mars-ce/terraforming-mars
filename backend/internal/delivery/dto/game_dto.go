@@ -656,11 +656,22 @@ type PendingStealTargetSelectionDto struct {
 }
 
 // PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
+// ColonyResourceReason represents why a colony resource selection is pending
+type ColonyResourceReason string
+
+const (
+	ColonyResourceReasonTrade     ColonyResourceReason = "trade"
+	ColonyResourceReasonColonyTax ColonyResourceReason = "colony-tax"
+	ColonyResourceReasonBuild     ColonyResourceReason = "build"
+)
+
+// PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
 type PendingColonyResourceSelectionDto struct {
-	ResourceType string `json:"resourceType" ts:"string"`
-	Amount       int    `json:"amount" ts:"number"`
-	Source       string `json:"source" ts:"string"`
-	ColonyID     string `json:"colonyId" ts:"string"`
+	ResourceType string               `json:"resourceType" ts:"string"`
+	Amount       int                  `json:"amount" ts:"number"`
+	Source       string               `json:"source" ts:"string"`
+	ColonyID     string               `json:"colonyId" ts:"string"`
+	Reason       ColonyResourceReason `json:"reason" ts:"ColonyResourceReason"`
 }
 
 // PlayerStatus represents the current status of a player in the game

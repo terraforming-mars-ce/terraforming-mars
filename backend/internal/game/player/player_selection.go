@@ -262,6 +262,7 @@ type PendingColonyResourceSelection struct {
 	Amount       int
 	Source       string // Colony name
 	ColonyID     string
+	Reason       string // "trade", "colony-bonus", "build"
 }
 
 // ForcedFirstAction represents an action that must be completed as first action

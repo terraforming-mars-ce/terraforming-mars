@@ -104,15 +104,24 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		shared.ResourceEnergy: -TradeEnergyCost,
 	})
 
+	// Collect pending card-targeted resources per player, so same-type resources
+	// from trade income + colony bonus are combined into a single selection.
+	pendingByPlayer := map[string][]*PendingResource{}
+	outputsByPlayer := map[string][]game.CalculatedOutput{}
+
 	// Give trade income based on marker position
 	if tileState.MarkerPosition >= 0 && tileState.MarkerPosition < len(definition.Steps) {
 		step := definition.Steps[tileState.MarkerPosition]
 		for _, output := range step.Outputs {
 			if output.Amount > 0 {
-				pending := applyOutput(ctx, g, traderPlayer, output.Type, output.Amount, log)
+				pending := applyOutput(ctx, g, traderPlayer, output.Type, output.Amount, a.cardRegistry, log)
 				if pending != nil {
-					setPendingColonyResource(traderPlayer, pending, definition.Name, colonyID, a.cardRegistry, log)
+					pendingByPlayer[playerID] = append(pendingByPlayer[playerID], pending)
 				}
+				outputsByPlayer[playerID] = append(outputsByPlayer[playerID], game.CalculatedOutput{
+					ResourceType: output.Type,
+					Amount:       output.Amount,
+				})
 			}
 		}
 	}
@@ -125,13 +134,45 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		}
 		for _, bonus := range definition.ColonyBonus {
 			if bonus.Amount > 0 {
-				pending := applyOutput(ctx, g, colonyOwner, bonus.Type, bonus.Amount, log)
+				pending := applyOutput(ctx, g, colonyOwner, bonus.Type, bonus.Amount, a.cardRegistry, log)
 				if pending != nil {
-					setPendingColonyResource(colonyOwner, pending, definition.Name, colonyID, a.cardRegistry, log)
+					pendingByPlayer[colonyOwnerID] = append(pendingByPlayer[colonyOwnerID], pending)
 				}
+				outputsByPlayer[colonyOwnerID] = append(outputsByPlayer[colonyOwnerID], game.CalculatedOutput{
+					ResourceType: bonus.Type,
+					Amount:       bonus.Amount,
+				})
 			}
 		}
 	}
+
+	// Resolve pending resources — combine same-type for each player
+	for pid, pendings := range pendingByPlayer {
+		p, pErr := g.GetPlayer(pid)
+		if pErr != nil {
+			continue
+		}
+		reason := "colony-tax"
+		if pid == playerID {
+			reason = "trade"
+		}
+		for _, combined := range combinePendingResources(pendings) {
+			setPendingColonyResource(p, combined, definition.Name, colonyID, reason, a.cardRegistry, log)
+		}
+	}
+
+	// Add triggered effects for trader and colony bonus recipients
+	for pid, outputs := range outputsByPlayer {
+		g.AddTriggeredEffect(game.TriggeredEffect{
+			CardName:          "Trade: " + definition.Name,
+			PlayerID:          pid,
+			SourceType:        game.SourceTypeColonyTrade,
+			CalculatedOutputs: combineCalculatedOutputs(outputs),
+		})
+	}
+
+	a.WriteStateLogFull(ctx, g, "Trade: "+definition.Name, game.SourceTypeColonyTrade,
+		playerID, fmt.Sprintf("Traded with %s", definition.Name), nil, combineCalculatedOutputs(outputsByPlayer[playerID]), nil)
 
 	// Reset marker to position after last colony
 	tileState.MarkerPosition = len(tileState.PlayerColonies)
@@ -158,7 +199,7 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 
 // setPendingColonyResource sets a pending colony resource selection on a player
 // if they have at least one card that can store the resource type.
-func setPendingColonyResource(p *player.Player, pending *PendingResource, colonyName string, colonyID string, cardRegistry cards.CardRegistry, log *zap.Logger) {
+func setPendingColonyResource(p *player.Player, pending *PendingResource, colonyName string, colonyID string, reason string, cardRegistry cards.CardRegistry, log *zap.Logger) {
 	if !hasEligibleStorageCard(p, pending.ResourceType, cardRegistry) {
 		log.Debug("No eligible storage card, resources lost",
 			zap.String("player_id", p.ID()),
@@ -172,6 +213,7 @@ func setPendingColonyResource(p *player.Player, pending *PendingResource, colony
 		Amount:       pending.Amount,
 		Source:       colonyName,
 		ColonyID:     colonyID,
+		Reason:       reason,
 	})
 
 	log.Debug("Set pending colony resource selection",

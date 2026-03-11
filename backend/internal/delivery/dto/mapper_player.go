@@ -463,6 +463,7 @@ func convertPendingColonyResourceSelection(selection *player.PendingColonyResour
 		Amount:       selection.Amount,
 		Source:       selection.Source,
 		ColonyID:     selection.ColonyID,
+		Reason:       ColonyResourceReason(selection.Reason),
 	}
 }
 

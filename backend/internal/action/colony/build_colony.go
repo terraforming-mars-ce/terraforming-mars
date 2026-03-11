@@ -113,17 +113,34 @@ func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID
 	tileState.PlayerColonies = append(tileState.PlayerColonies, playerID)
 
 	// Apply placement reward
+	calculatedOutputs := []game.CalculatedOutput{
+		{ResourceType: "colony-tile", Amount: 1},
+	}
 	if slotIndex < len(definition.Colonies) {
 		slot := definition.Colonies[slotIndex]
 		for _, reward := range slot.Reward {
 			if reward.Amount > 0 {
-				pending := applyOutput(ctx, g, player, reward.Type, reward.Amount, log)
+				pending := applyOutput(ctx, g, player, reward.Type, reward.Amount, a.cardRegistry, log)
 				if pending != nil {
-					setPendingColonyResource(player, pending, definition.Name, colonyID, a.cardRegistry, log)
+					setPendingColonyResource(player, pending, definition.Name, colonyID, "build", a.cardRegistry, log)
 				}
+				calculatedOutputs = append(calculatedOutputs, game.CalculatedOutput{
+					ResourceType: reward.Type,
+					Amount:       reward.Amount,
+				})
 			}
 		}
 	}
+
+	g.AddTriggeredEffect(game.TriggeredEffect{
+		CardName:          "Build Colony: " + definition.Name,
+		PlayerID:          playerID,
+		SourceType:        game.SourceTypeColonyBuild,
+		CalculatedOutputs: calculatedOutputs,
+	})
+
+	a.WriteStateLogFull(ctx, g, "Build Colony: "+definition.Name, game.SourceTypeColonyBuild,
+		playerID, fmt.Sprintf("Built colony on %s", definition.Name), nil, calculatedOutputs, nil)
 
 	events.Publish(g.EventBus(), events.ColonyBuiltEvent{
 		GameID:    g.ID(),

@@ -965,12 +965,21 @@ export interface PendingStealTargetSelectionDto {
 }
 /**
  * PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
+ * ColonyResourceReason represents why a colony resource selection is pending
+ */
+export type ColonyResourceReason = string;
+export const ColonyResourceReasonTrade: ColonyResourceReason = "trade";
+export const ColonyResourceReasonColonyTax: ColonyResourceReason = "colony-tax";
+export const ColonyResourceReasonBuild: ColonyResourceReason = "build";
+/**
+ * PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
  */
 export interface PendingColonyResourceSelectionDto {
   resourceType: string;
   amount: number /* int */;
   source: string;
   colonyId: string;
+  reason: ColonyResourceReason;
 }
 /**
  * PlayerStatus represents the current status of a player in the game
