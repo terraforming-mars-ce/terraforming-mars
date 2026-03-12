@@ -51,12 +51,12 @@ func TestSelectTileAction_BonusesRemovedAfterClaim(t *testing.T) {
 
 	// Set up pending tile selection for the player (simulating city placement)
 	hexStr := formatHexCoords(*bonusTileCoords)
-	pendingSelection := &player.PendingTileSelection{
+	pendingSelection := &shared.PendingTileSelection{
 		TileType:       "city",
 		AvailableHexes: []string{hexStr},
 		Source:         "test",
 	}
-	testGame.SetPendingTileSelection(ctx, playerID, pendingSelection)
+	testutil.AssertNoError(t, testGame.SetPendingTileSelection(ctx, playerID, pendingSelection), "set pending tile selection")
 
 	// Execute tile placement
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
@@ -114,12 +114,12 @@ func TestSelectTileAction_CardDrawBonusRemovedAfterClaim(t *testing.T) {
 
 	// Set up pending tile selection
 	hexStr := formatHexCoords(*cardDrawTileCoords)
-	pendingSelection := &player.PendingTileSelection{
+	pendingSelection := &shared.PendingTileSelection{
 		TileType:       "city",
 		AvailableHexes: []string{hexStr},
 		Source:         "test",
 	}
-	testGame.SetPendingTileSelection(ctx, playerID, pendingSelection)
+	testutil.AssertNoError(t, testGame.SetPendingTileSelection(ctx, playerID, pendingSelection), "set pending tile selection")
 
 	// Execute tile placement
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
@@ -164,12 +164,12 @@ func TestSelectTileAction_OceanAdjacencyBonus(t *testing.T) {
 	// Place a city adjacent to the ocean at (2,0,-2) — neighbor of (1,1,-2)
 	cityCoords := shared.HexPosition{Q: 2, R: 0, S: -2}
 	hexStr := formatHexCoords(cityCoords)
-	pendingSelection := &player.PendingTileSelection{
+	pendingSelection := &shared.PendingTileSelection{
 		TileType:       "city",
 		AvailableHexes: []string{hexStr},
 		Source:         "test",
 	}
-	testGame.SetPendingTileSelection(ctx, playerID, pendingSelection)
+	testutil.AssertNoError(t, testGame.SetPendingTileSelection(ctx, playerID, pendingSelection), "set pending tile selection")
 
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), playerID, hexStr)
@@ -213,12 +213,12 @@ func TestSelectTileAction_OceanAdjacencyBonus_MultipleOceans(t *testing.T) {
 	// Place a greenery at (1,2,-3) — adjacent to both oceans
 	greeneryCoords := shared.HexPosition{Q: 1, R: 2, S: -3}
 	hexStr := formatHexCoords(greeneryCoords)
-	pendingSelection := &player.PendingTileSelection{
+	pendingSelection := &shared.PendingTileSelection{
 		TileType:       "greenery",
 		AvailableHexes: []string{hexStr},
 		Source:         "test",
 	}
-	testGame.SetPendingTileSelection(ctx, playerID, pendingSelection)
+	testutil.AssertNoError(t, testGame.SetPendingTileSelection(ctx, playerID, pendingSelection), "set pending tile selection")
 
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), playerID, hexStr)
@@ -255,12 +255,12 @@ func TestSelectTileAction_OceanAdjacencyBonus_OceanTileGetsBonus(t *testing.T) {
 	// Place another ocean adjacent to the first at (3,-2,-1) — also an ocean space, neighbor via East
 	ocean2Coords := shared.HexPosition{Q: 3, R: -2, S: -1}
 	hexStr := formatHexCoords(ocean2Coords)
-	pendingSelection := &player.PendingTileSelection{
+	pendingSelection := &shared.PendingTileSelection{
 		TileType:       "ocean",
 		AvailableHexes: []string{hexStr},
 		Source:         "test",
 	}
-	testGame.SetPendingTileSelection(ctx, playerID, pendingSelection)
+	testutil.AssertNoError(t, testGame.SetPendingTileSelection(ctx, playerID, pendingSelection), "set pending tile selection")
 
 	selectTileAction := tileAction.NewSelectTileAction(repo, cardRegistry, stateRepo, logger)
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), playerID, hexStr)

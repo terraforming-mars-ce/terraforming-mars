@@ -12,6 +12,7 @@ import (
 	spAction "terraforming-mars-backend/internal/action/standard_project"
 	turnmgmt "terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -166,7 +167,7 @@ func TestAutoAdvanceWaitsForPendingTileSelection(t *testing.T) {
 	logger := testutil.TestLogger()
 
 	// Set pending tile selection for player 1
-	err := testGame.SetPendingTileSelection(context.Background(), player1ID, &player.PendingTileSelection{
+	err := testGame.SetPendingTileSelection(context.Background(), player1ID, &shared.PendingTileSelection{
 		TileType:       "greenery",
 		AvailableHexes: []string{"0,1,-1"},
 		Source:         "test",
@@ -294,7 +295,7 @@ func TestForcedFirstActionDoesNotConsumePlayerAction(t *testing.T) {
 	ctx := context.Background()
 
 	// Set a forced first action for player 1 (simulating Tharsis Republic)
-	forcedAction := &player.ForcedFirstAction{
+	forcedAction := &shared.ForcedFirstAction{
 		ActionType:    "city-placement",
 		CorporationID: testutil.CardID("Tharsis Republic"),
 		Source:        "corporation-starting-action",

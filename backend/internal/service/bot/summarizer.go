@@ -6,6 +6,7 @@ import (
 
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // SummarizeGameState produces a human-readable text summary of the game state.
@@ -649,7 +650,7 @@ func formatRecentLog(diffs []game.StateDiff, maxEntries int) string {
 	return "=== RECENT GAME LOG ===\n" + strings.Join(lines, "\n")
 }
 
-func formatRecentChat(messages []game.ChatMessage, maxEntries int) string {
+func formatRecentChat(messages []shared.ChatMessage, maxEntries int) string {
 	if len(messages) == 0 {
 		return ""
 	}

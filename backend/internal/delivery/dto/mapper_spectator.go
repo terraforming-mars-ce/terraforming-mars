@@ -4,6 +4,7 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // ToSpectatorGameDto creates a GameDto for spectators where all players are shown
@@ -25,7 +26,7 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry) GameDto {
 		CardPacks:             settings.CardPacks,
 		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
 		ClaudeModel:           settings.ClaudeModel,
-		AvailablePlayerColors: game.PlayerColors,
+		AvailablePlayerColors: shared.PlayerColors,
 	}
 
 	globalParams := g.GlobalParameters()
@@ -69,7 +70,7 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry) GameDto {
 	}
 
 	var finalScoreDtos []FinalScoreDto
-	if g.Status() == game.GameStatusCompleted {
+	if g.Status() == shared.GameStatusCompleted {
 		finalScores := g.GetFinalScores()
 		if finalScores != nil {
 			finalScoreDtos = make([]FinalScoreDto, len(finalScores))
@@ -87,7 +88,7 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry) GameDto {
 
 	var initPhaseDto *InitPhaseDto
 	phase := g.CurrentPhase()
-	if phase == game.GamePhaseInitApplyCorp || phase == game.GamePhaseInitApplyPrelude {
+	if phase == shared.GamePhaseInitApplyCorp || phase == shared.GamePhaseInitApplyPrelude {
 		turnOrder := g.TurnOrder()
 		idx := g.InitPhasePlayerIndex()
 		currentInitPlayerID := ""

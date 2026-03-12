@@ -6,7 +6,6 @@ import (
 
 	cardAction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/cards"
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
@@ -53,9 +52,9 @@ func TestNaturalPreserve_TilePlacementWithNoAdjacency(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-test")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -101,9 +100,9 @@ func TestNaturalPreserve_NoAvailableHexesWhenBoardIsFull(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-test")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Place a tile at center — this blocks all adjacent hexes
 	center := shared.HexPosition{Q: 0, R: 0, S: 0}
@@ -173,9 +172,9 @@ func TestNuclearZone_TilePlacementOnNormalLand(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-test")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -233,9 +232,9 @@ func TestMoholeArea_TilePlacementOnOceanSpace(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-test")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -281,9 +280,9 @@ func TestMiningRights_TilePlacementOnBonusTile(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-test")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Check available hexes with onBonusType restriction
 	count := testGame.CountAvailableHexesForTile("mining", p.ID(), &shared.TileRestrictions{
@@ -326,9 +325,9 @@ func TestMiningArea_RequiresAdjacentOwnedTile(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-test")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Without any owned tiles, no hexes should be available (even if bonus tiles exist)
 	count := testGame.CountAvailableHexesForTile("mining", p.ID(), &shared.TileRestrictions{
@@ -366,9 +365,9 @@ func TestRestrictedArea_NormalLandPlacement(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-test")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Simple tile-placement with no restrictions should have land tiles available
 	count := testGame.CountAvailableHexesForTile("restricted", p.ID(), nil)

@@ -8,7 +8,6 @@ import (
 	"terraforming-mars-backend/internal/action/admin"
 	cardAction "terraforming-mars-backend/internal/action/card"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/deck"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -130,8 +129,7 @@ func TestValleyTrust_StartingResources(t *testing.T) {
 
 	// Valley Trust first action draws from prelude deck, so we need one
 	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
-	customDeck := deck.NewDeck(testGame.ID(), nil, nil, preludeIDs)
-	testGame.SetDeck(customDeck)
+	testGame.InitDeck(nil, nil, preludeIDs)
 
 	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))
@@ -148,8 +146,7 @@ func TestValleyTrust_DiscountEffectRegistered(t *testing.T) {
 	ctx := context.Background()
 
 	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
-	customDeck := deck.NewDeck(testGame.ID(), nil, nil, preludeIDs)
-	testGame.SetDeck(customDeck)
+	testGame.InitDeck(nil, nil, preludeIDs)
 
 	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 
 	"go.uber.org/zap"
 )
@@ -33,7 +34,7 @@ func ValidateActiveGame(
 	gameID string,
 	log *zap.Logger,
 ) (*game.Game, error) {
-	return ValidateGameStatus(ctx, gameRepo, gameID, game.GameStatusActive, log)
+	return ValidateGameStatus(ctx, gameRepo, gameID, shared.GameStatusActive, log)
 }
 
 // ValidateLobbyGame validates that a game exists and is in lobby status
@@ -44,7 +45,7 @@ func ValidateLobbyGame(
 	gameID string,
 	log *zap.Logger,
 ) (*game.Game, error) {
-	return ValidateGameStatus(ctx, gameRepo, gameID, game.GameStatusLobby, log)
+	return ValidateGameStatus(ctx, gameRepo, gameID, shared.GameStatusLobby, log)
 }
 
 // ValidateGameStatus validates that a game exists and has the expected status
@@ -53,7 +54,7 @@ func ValidateGameStatus(
 	ctx context.Context,
 	gameRepo game.GameRepository,
 	gameID string,
-	expectedStatus game.GameStatus,
+	expectedStatus shared.GameStatus,
 	log *zap.Logger,
 ) (*game.Game, error) {
 	gameResult, err := gameRepo.Get(ctx, gameID)
@@ -76,7 +77,7 @@ func ValidateGameStatus(
 // Returns error if game is not in the expected phase
 func ValidateGamePhase(
 	gameInstance *game.Game,
-	expectedPhase game.GamePhase,
+	expectedPhase shared.GamePhase,
 	log *zap.Logger,
 ) error {
 	if gameInstance.CurrentPhase() != expectedPhase {

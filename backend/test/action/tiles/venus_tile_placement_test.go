@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -20,15 +19,23 @@ func TestMaxwellBase_PlacesOnVenusTile_WhenVenusEnabled(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	if err := testGame.UpdateStatus(ctx, shared.GameStatusActive); err != nil {
+		t.Fatalf("Failed to update status: %v", err)
+	}
+	if err := testGame.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
+		t.Fatalf("Failed to update phase: %v", err)
+	}
+	if err := testGame.SetCurrentTurn(ctx, p.ID(), 2); err != nil {
+		t.Fatalf("Failed to set current turn: %v", err)
+	}
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Resources().AddProduction(map[shared.ResourceType]int{
 		shared.ResourceEnergyProduction: 2,
 	})
 	p.Hand().AddCard(card.ID)
-	testGame.GlobalParameters().SetVenus(ctx, 12)
+	if err := testGame.GlobalParameters().SetVenus(ctx, 12); err != nil {
+		t.Fatalf("Failed to set venus: %v", err)
+	}
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 18}
@@ -55,9 +62,15 @@ func TestStratopolis_PlacesOnVenusTile_WhenVenusEnabled(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	if err := testGame.UpdateStatus(ctx, shared.GameStatusActive); err != nil {
+		t.Fatalf("Failed to update status: %v", err)
+	}
+	if err := testGame.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
+		t.Fatalf("Failed to update phase: %v", err)
+	}
+	if err := testGame.SetCurrentTurn(ctx, p.ID(), 2); err != nil {
+		t.Fatalf("Failed to set current turn: %v", err)
+	}
 
 	// Add science tags via played cards (Stratopolis requires 2 science tags)
 	sciCard1 := testutil.GetCardByName("Search For Life")

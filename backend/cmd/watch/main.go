@@ -37,7 +37,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to create watcher:", err)
 	}
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			log.Printf("Failed to close watcher: %v\n", err)
+		}
+	}()
 
 	// Add directories to watch
 	err = filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
@@ -154,7 +158,9 @@ func stopServer() {
 		fmt.Printf("Stopping server (PID: %d)...\n", serverProcess.Process.Pid)
 
 		// Try graceful shutdown first
-		serverProcess.Process.Signal(os.Interrupt)
+		if err := serverProcess.Process.Signal(os.Interrupt); err != nil {
+			log.Printf("Failed to send interrupt signal: %v\n", err)
+		}
 
 		// Wait a bit for graceful shutdown
 		done := make(chan error, 1)
@@ -168,7 +174,9 @@ func stopServer() {
 		case <-time.After(2 * time.Second):
 			// Force kill if graceful shutdown takes too long
 			fmt.Println("Graceful shutdown timeout, force killing...")
-			serverProcess.Process.Kill()
+			if err := serverProcess.Process.Kill(); err != nil {
+				log.Printf("Failed to kill server process: %v\n", err)
+			}
 			<-done // Wait for process to actually exit
 		}
 

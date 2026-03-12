@@ -1,76 +1,106 @@
 package player
 
 import (
-	"sync"
-	"terraforming-mars-backend/internal/events"
 	"time"
+
+	"go.uber.org/zap"
+
+	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/logger"
 )
 
-// Hand manages player card hand (cards currently held)
+// Hand manages player card hand as a pure DataStore adapter.
 type Hand struct {
-	mu          sync.RWMutex
-	cards       []string               // Card IDs
-	playerCards map[string]*PlayerCard // Cached PlayerCard instances (with state)
-	eventBus    *events.EventBusImpl
-	gameID      string
-	playerID    string
+	ds       *datastore.DataStore
+	eventBus *events.EventBusImpl
+	gameID   string
+	playerID string
 }
 
-func newHand(eventBus *events.EventBusImpl, gameID, playerID string) *Hand {
+func newHand(ds *datastore.DataStore, eventBus *events.EventBusImpl, gameID, playerID string) *Hand {
 	return &Hand{
-		cards:       []string{},
-		playerCards: make(map[string]*PlayerCard),
-		eventBus:    eventBus,
-		gameID:      gameID,
-		playerID:    playerID,
+		ds:       ds,
+		eventBus: eventBus,
+		gameID:   gameID,
+		playerID: playerID,
+	}
+}
+
+func (h *Hand) update(fn func(s *datastore.PlayerState)) {
+	if err := h.ds.UpdatePlayer(h.gameID, h.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to update player state", zap.String("game_id", h.gameID), zap.String("player_id", h.playerID), zap.Error(err))
+	}
+}
+
+func (h *Hand) read(fn func(s *datastore.PlayerState)) {
+	if err := h.ds.ReadPlayer(h.gameID, h.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to read player state", zap.String("game_id", h.gameID), zap.String("player_id", h.playerID), zap.Error(err))
 	}
 }
 
 func (h *Hand) Cards() []string {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	cardsCopy := make([]string, len(h.cards))
-	copy(cardsCopy, h.cards)
+	var cardsCopy []string
+	h.read(func(s *datastore.PlayerState) {
+		cardsCopy = make([]string, len(s.HandCardIDs))
+		copy(cardsCopy, s.HandCardIDs)
+	})
 	return cardsCopy
 }
 
 func (h *Hand) CardCount() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.cards)
+	var count int
+	h.read(func(s *datastore.PlayerState) {
+		count = len(s.HandCardIDs)
+	})
+	return count
 }
 
 func (h *Hand) HasCard(cardID string) bool {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for _, id := range h.cards {
-		if id == cardID {
-			return true
+	var found bool
+	h.read(func(s *datastore.PlayerState) {
+		for _, id := range s.HandCardIDs {
+			if id == cardID {
+				found = true
+				return
+			}
 		}
-	}
-	return false
+	})
+	return found
 }
 
 func (h *Hand) SetCards(cards []string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if cards == nil {
-		h.cards = []string{}
-	} else {
-		h.cards = make([]string, len(cards))
-		copy(h.cards, cards)
+	var cardsCopy []string
+	h.update(func(s *datastore.PlayerState) {
+		if cards == nil {
+			s.HandCardIDs = []string{}
+		} else {
+			s.HandCardIDs = make([]string, len(cards))
+			copy(s.HandCardIDs, cards)
+		}
+		cardsCopy = make([]string, len(s.HandCardIDs))
+		copy(cardsCopy, s.HandCardIDs)
+	})
+
+	if h.eventBus != nil {
+		events.Publish(h.eventBus, events.CardHandUpdatedEvent{
+			GameID:    h.gameID,
+			PlayerID:  h.playerID,
+			CardIDs:   cardsCopy,
+			Timestamp: time.Now(),
+		})
 	}
 }
 
 func (h *Hand) AddCard(cardID string) {
-	h.mu.Lock()
-	h.cards = append(h.cards, cardID)
-	cardsCopy := make([]string, len(h.cards))
-	copy(cardsCopy, h.cards)
-	h.mu.Unlock()
+	var cardsCopy []string
+	h.update(func(s *datastore.PlayerState) {
+		s.HandCardIDs = append(s.HandCardIDs, cardID)
+		cardsCopy = make([]string, len(s.HandCardIDs))
+		copy(cardsCopy, s.HandCardIDs)
+	})
 
 	if h.eventBus != nil {
-		// Publish CardAddedToHandEvent for passive card effects
 		events.Publish(h.eventBus, events.CardAddedToHandEvent{
 			GameID:    h.gameID,
 			PlayerID:  h.playerID,
@@ -78,65 +108,38 @@ func (h *Hand) AddCard(cardID string) {
 			Timestamp: time.Now(),
 		})
 
-		// Publish CardHandUpdatedEvent with current hand state
 		events.Publish(h.eventBus, events.CardHandUpdatedEvent{
 			GameID:    h.gameID,
 			PlayerID:  h.playerID,
 			CardIDs:   cardsCopy,
 			Timestamp: time.Now(),
 		})
-
 	}
 }
 
 func (h *Hand) RemoveCard(cardID string) bool {
 	var removed bool
-	h.mu.Lock()
-
-	if pc, exists := h.playerCards[cardID]; exists {
-		pc.Cleanup() // Unsubscribe all event listeners
-		delete(h.playerCards, cardID)
-	}
-
-	for i, id := range h.cards {
-		if id == cardID {
-			h.cards = append(h.cards[:i], h.cards[i+1:]...)
-			removed = true
-			break
+	var cardsCopy []string
+	h.update(func(s *datastore.PlayerState) {
+		for i, id := range s.HandCardIDs {
+			if id == cardID {
+				s.HandCardIDs = append(s.HandCardIDs[:i], s.HandCardIDs[i+1:]...)
+				removed = true
+				break
+			}
 		}
-	}
-	cardsCopy := make([]string, len(h.cards))
-	copy(cardsCopy, h.cards)
-	h.mu.Unlock()
+		cardsCopy = make([]string, len(s.HandCardIDs))
+		copy(cardsCopy, s.HandCardIDs)
+	})
 
-	// Publish domain events after removing card (only if card was found)
 	if removed && h.eventBus != nil {
-		// Publish CardHandUpdatedEvent with current hand state
 		events.Publish(h.eventBus, events.CardHandUpdatedEvent{
 			GameID:    h.gameID,
 			PlayerID:  h.playerID,
 			CardIDs:   cardsCopy,
 			Timestamp: time.Now(),
 		})
-
 	}
 
 	return removed
-}
-
-// GetPlayerCard returns a cached PlayerCard instance.
-// Returns nil if the card is not in the cache (actions must create it).
-func (h *Hand) GetPlayerCard(cardID string) (*PlayerCard, bool) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	pc, exists := h.playerCards[cardID]
-	return pc, exists
-}
-
-// AddPlayerCard adds a PlayerCard to the cache.
-// This is called by actions after creating PlayerCard with state and event listeners.
-func (h *Hand) AddPlayerCard(cardID string, pc *PlayerCard) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.playerCards[cardID] = pc
 }

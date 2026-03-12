@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
-	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 )
@@ -53,7 +52,7 @@ func (a *GiveCardAction) Execute(ctx context.Context, gameID string, playerID st
 		return fmt.Errorf("player not found: %s", playerID)
 	}
 
-	action.AddCardsToPlayerHand([]string{cardID}, player, game, a.cardRegistry, log)
+	player.Hand().AddCard(cardID)
 
 	log.Info("Admin give card completed")
 	return nil

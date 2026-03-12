@@ -3,7 +3,6 @@ package helpers
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/global_parameters"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -39,12 +38,12 @@ func AssertGlobalParametersEqual(t *testing.T, expected, actual *global_paramete
 }
 
 // AssertGamePhase checks if game is in expected phase
-func AssertGamePhase(t *testing.T, expected game.GamePhase, actual game.GamePhase) {
+func AssertGamePhase(t *testing.T, expected shared.GamePhase, actual shared.GamePhase) {
 	assert.Equal(t, expected, actual, "game phase mismatch")
 }
 
 // AssertGameStatus checks if game is in expected status
-func AssertGameStatus(t *testing.T, expected game.GameStatus, actual game.GameStatus) {
+func AssertGameStatus(t *testing.T, expected shared.GameStatus, actual shared.GameStatus) {
 	assert.Equal(t, expected, actual, "game status mismatch")
 }
 

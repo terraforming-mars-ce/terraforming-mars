@@ -61,7 +61,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 	}
 
 	// 2. Validate game is in DemoSetup phase
-	if g.CurrentPhase() != internalgame.GamePhaseDemoSetup {
+	if g.CurrentPhase() != shared.GamePhaseDemoSetup {
 		log.Warn("Game is not in demo setup phase", zap.String("phase", string(g.CurrentPhase())))
 		return fmt.Errorf("game is not in demo setup phase: %s", g.CurrentPhase())
 	}
@@ -141,7 +141,6 @@ func (a *ConfirmDemoSetupAction) Execute(
 		}
 
 		// Setup forced first action if corporation requires it
-		a.corpProc.WithOnCardsAddedToHand(action.MakeCardDrawCallback(p, g, a.cardRegistry))
 		if err := a.corpProc.SetupForcedFirstAction(ctx, corpCard, g, playerID); err != nil {
 			log.Error("Failed to setup forced first action", zap.Error(err))
 			return fmt.Errorf("failed to setup forced first action: %w", err)
@@ -152,9 +151,11 @@ func (a *ConfirmDemoSetupAction) Execute(
 		log.Debug("Applied corporation effects", zap.String("corporation_name", corpCard.Name))
 	}
 
-	// 5. Add cards to hand with proper PlayerCard caching (using shared helper)
+	// 5. Add cards to hand
 	if len(request.CardIDs) > 0 {
-		action.AddCardsToPlayerHand(request.CardIDs, p, g, a.cardRegistry, log)
+		for _, cardID := range request.CardIDs {
+			p.Hand().AddCard(cardID)
+		}
 		log.Debug("Added cards to hand", zap.Int("card_count", len(request.CardIDs)))
 	}
 
@@ -249,7 +250,7 @@ func (a *ConfirmDemoSetupAction) Execute(
 
 	// 12. If all players confirmed, transition to Action phase
 	if allConfirmed {
-		if err := g.UpdatePhase(ctx, internalgame.GamePhaseAction); err != nil {
+		if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 			log.Error("Failed to update game phase", zap.Error(err))
 			return fmt.Errorf("failed to update game phase: %w", err)
 		}

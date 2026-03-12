@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	gameAction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
 func TestAddBot_Success(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
-	testGame.UpdateSettings(context.Background(), game.GameSettings{
+	testGame.UpdateSettings(context.Background(), shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		ClaudeModel:  "sonnet",
@@ -53,7 +53,7 @@ func TestAddBot_NoAPIKey(t *testing.T) {
 
 func TestAddBot_GameNotInLobby(t *testing.T) {
 	g, repo, cardRegistry, _, _ := testutil.SetupTwoPlayerGame(t)
-	g.UpdateSettings(context.Background(), game.GameSettings{
+	g.UpdateSettings(context.Background(), shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},
@@ -69,7 +69,7 @@ func TestAddBot_GameNotInLobby(t *testing.T) {
 func TestAddBot_GameFull(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 4, broadcaster)
-	testGame.UpdateSettings(context.Background(), game.GameSettings{
+	testGame.UpdateSettings(context.Background(), shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},
@@ -86,7 +86,7 @@ func TestAddBot_GameFull(t *testing.T) {
 func TestAddBot_UniqueNames(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
-	testGame.UpdateSettings(context.Background(), game.GameSettings{
+	testGame.UpdateSettings(context.Background(), shared.GameSettings{
 		MaxPlayers:   5,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},

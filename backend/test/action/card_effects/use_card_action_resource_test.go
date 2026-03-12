@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -36,7 +35,7 @@ func TestDevelopmentCenter_SpendEnergyToDrawCard(t *testing.T) {
 			{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Development Center",
@@ -74,7 +73,7 @@ func TestDevelopmentCenter_FailsWithoutEnergy(t *testing.T) {
 			{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Development Center",
@@ -120,7 +119,7 @@ func TestRegolithEaters_AddMicrobeToSelfCard(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Regolith Eaters",
@@ -167,7 +166,7 @@ func TestRegolithEaters_RemoveMicrobesToRaiseOxygen(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Regolith Eaters",
@@ -219,7 +218,7 @@ func TestRegolithEaters_CannotRemoveWithInsufficientMicrobes(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Regolith Eaters",
@@ -276,7 +275,7 @@ func TestGHGProducingBacteria_AddMicrobe(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "GHG Producing Bacteria",
@@ -322,7 +321,7 @@ func TestGHGProducingBacteria_RemoveMicrobesToRaiseTemperature(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "GHG Producing Bacteria",
@@ -381,7 +380,7 @@ func TestElectroCatapult_SpendPlantForCredits(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Electro Catapult",
@@ -436,7 +435,7 @@ func TestElectroCatapult_SpendSteelForCredits(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Electro Catapult",

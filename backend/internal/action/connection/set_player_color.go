@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // SetPlayerColorAction handles changing a player's color during the lobby phase.
@@ -43,7 +44,7 @@ func (a *SetPlayerColorAction) Execute(ctx context.Context, gameID, requesterID,
 		return fmt.Errorf("game not found: %s", gameID)
 	}
 
-	if g.Status() != game.GameStatusLobby {
+	if g.Status() != shared.GameStatusLobby {
 		return fmt.Errorf("can only change color during lobby phase")
 	}
 

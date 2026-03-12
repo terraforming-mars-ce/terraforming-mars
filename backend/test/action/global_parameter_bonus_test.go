@@ -15,8 +15,9 @@ func TestTemperatureBonus_HeatProductionAtMinus24(t *testing.T) {
 	player, _ := testGame.GetPlayer(playerID)
 	initialHeatProd := player.Resources().Production().Heat
 
-	testGame.GlobalParameters().SetTemperature(ctx, -26)
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -26), "set temperature")
+	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
+	testutil.AssertNoError(t, err, "increase temperature")
 	time.Sleep(50 * time.Millisecond)
 
 	finalHeatProd := player.Resources().Production().Heat
@@ -31,8 +32,9 @@ func TestTemperatureBonus_HeatProductionAtMinus20(t *testing.T) {
 	player, _ := testGame.GetPlayer(playerID)
 	initialHeatProd := player.Resources().Production().Heat
 
-	testGame.GlobalParameters().SetTemperature(ctx, -22)
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -22), "set temperature")
+	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
+	testutil.AssertNoError(t, err, "increase temperature")
 	time.Sleep(50 * time.Millisecond)
 
 	finalHeatProd := player.Resources().Production().Heat
@@ -47,8 +49,9 @@ func TestTemperatureBonus_CrossBothThresholds(t *testing.T) {
 	player, _ := testGame.GetPlayer(playerID)
 	initialHeatProd := player.Resources().Production().Heat
 
-	testGame.GlobalParameters().SetTemperature(ctx, -26)
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 3, playerID)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -26), "set temperature")
+	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 3, playerID)
+	testutil.AssertNoError(t, err, "increase temperature")
 	time.Sleep(50 * time.Millisecond)
 
 	finalHeatProd := player.Resources().Production().Heat
@@ -60,8 +63,9 @@ func TestTemperatureBonus_OceanQueuedAtZero(t *testing.T) {
 	testGame, _, _, playerID := testutil.SetupSoloGame(t)
 	ctx := context.Background()
 
-	testGame.GlobalParameters().SetTemperature(ctx, -2)
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -2), "set temperature")
+	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
+	testutil.AssertNoError(t, err, "increase temperature")
 	time.Sleep(50 * time.Millisecond)
 
 	// The queue auto-processes the first tile into the active pending tile selection
@@ -76,10 +80,11 @@ func TestOxygenBonus_TemperatureStepAt8(t *testing.T) {
 	testGame, _, _, playerID := testutil.SetupSoloGame(t)
 	ctx := context.Background()
 
-	testGame.GlobalParameters().SetOxygen(ctx, 7)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetOxygen(ctx, 7), "set oxygen")
 	initialTemp := testGame.GlobalParameters().Temperature()
 
-	testGame.GlobalParameters().IncreaseOxygen(ctx, 1, playerID)
+	_, err := testGame.GlobalParameters().IncreaseOxygen(ctx, 1, playerID)
+	testutil.AssertNoError(t, err, "increase oxygen")
 	time.Sleep(50 * time.Millisecond)
 
 	finalTemp := testGame.GlobalParameters().Temperature()
@@ -94,10 +99,11 @@ func TestOxygenBonus_ChainedWithTemperatureBonus(t *testing.T) {
 	player, _ := testGame.GetPlayer(playerID)
 	initialHeatProd := player.Resources().Production().Heat
 
-	testGame.GlobalParameters().SetTemperature(ctx, -26)
-	testGame.GlobalParameters().SetOxygen(ctx, 7)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -26), "set temperature")
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetOxygen(ctx, 7), "set oxygen")
 
-	testGame.GlobalParameters().IncreaseOxygen(ctx, 1, playerID)
+	_, err := testGame.GlobalParameters().IncreaseOxygen(ctx, 1, playerID)
+	testutil.AssertNoError(t, err, "increase oxygen")
 	time.Sleep(50 * time.Millisecond)
 
 	finalTemp := testGame.GlobalParameters().Temperature()
@@ -116,8 +122,9 @@ func TestVenusBonus_CardDrawAt8(t *testing.T) {
 	player, _ := testGame.GetPlayer(playerID)
 	initialCardCount := player.Hand().CardCount()
 
-	testGame.GlobalParameters().SetVenus(ctx, 6)
-	testGame.GlobalParameters().IncreaseVenus(ctx, 1, playerID)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 6), "set venus")
+	_, err := testGame.GlobalParameters().IncreaseVenus(ctx, 1, playerID)
+	testutil.AssertNoError(t, err, "increase venus")
 	time.Sleep(50 * time.Millisecond)
 
 	finalCardCount := player.Hand().CardCount()
@@ -132,8 +139,9 @@ func TestVenusBonus_TRAt16(t *testing.T) {
 	player, _ := testGame.GetPlayer(playerID)
 	initialTR := player.Resources().TerraformRating()
 
-	testGame.GlobalParameters().SetVenus(ctx, 14)
-	testGame.GlobalParameters().IncreaseVenus(ctx, 1, playerID)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 14), "set venus")
+	_, err := testGame.GlobalParameters().IncreaseVenus(ctx, 1, playerID)
+	testutil.AssertNoError(t, err, "increase venus")
 	time.Sleep(50 * time.Millisecond)
 
 	finalTR := player.Resources().TerraformRating()
@@ -148,8 +156,8 @@ func TestAdminSetDoesNotTriggerBonus(t *testing.T) {
 	player, _ := testGame.GetPlayer(playerID)
 	initialHeatProd := player.Resources().Production().Heat
 
-	testGame.GlobalParameters().SetTemperature(ctx, -26)
-	testGame.GlobalParameters().SetTemperature(ctx, -20)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -26), "set temperature to -26")
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -20), "set temperature to -20")
 	time.Sleep(50 * time.Millisecond)
 
 	finalHeatProd := player.Resources().Production().Heat

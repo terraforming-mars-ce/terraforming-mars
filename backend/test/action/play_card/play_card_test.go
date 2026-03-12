@@ -5,9 +5,7 @@ import (
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -26,9 +24,9 @@ func TestPlayCardAction_DiscountEffectRegistered(t *testing.T) {
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	// Set game to active status and action phase for playing cards
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "set current turn")
 
 	// Give player enough credits and add Space Station to hand
 	player.Resources().Add(map[shared.ResourceType]int{
@@ -78,9 +76,9 @@ func TestPlayCardAction_ChoiceCardPlantProduction(t *testing.T) {
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	// Set game to active status and action phase for playing cards
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "set current turn")
 
 	// Give player enough credits and add Artificial Photosynthesis to hand
 	player.Resources().Add(map[shared.ResourceType]int{
@@ -123,9 +121,9 @@ func TestPlayCardAction_ChoiceCardEnergyProduction(t *testing.T) {
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	// Set game to active status and action phase for playing cards
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "set current turn")
 
 	// Give player enough credits and add Artificial Photosynthesis to hand
 	player.Resources().Add(map[shared.ResourceType]int{
@@ -168,9 +166,9 @@ func TestPlayCardAction_DiscountCalculatedOnDemand(t *testing.T) {
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
 	// Set game to active status and action phase
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "set current turn")
 
 	// Give player credits and add Space Station to hand
 	player.Resources().Add(map[shared.ResourceType]int{
@@ -223,9 +221,9 @@ func TestPlayCardAction_WithSingleDiscount(t *testing.T) {
 	p.SetCorporationID(testutil.CardID("Teractor"))
 
 	// Set game to active status and action phase
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Register Teractor's discount effect (3 credit discount on Earth cards)
 	teractorCard, err := cardRegistry.GetByID(testutil.CardID("Teractor"))
@@ -233,7 +231,7 @@ func TestPlayCardAction_WithSingleDiscount(t *testing.T) {
 
 	for behaviorIndex, behavior := range teractorCard.Behaviors {
 		if gamecards.HasAutoTrigger(behavior) && gamecards.HasPersistentEffects(behavior) {
-			p.Effects().AddEffect(player.CardEffect{
+			p.Effects().AddEffect(shared.CardEffect{
 				CardID:        teractorCard.ID,
 				CardName:      teractorCard.Name,
 				BehaviorIndex: behaviorIndex,
@@ -286,9 +284,9 @@ func TestPlayCardAction_WithDoubleDiscount(t *testing.T) {
 	p.SetCorporationID(testutil.CardID("Teractor"))
 
 	// Set game to active status and action phase
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Register Teractor's discount effect (3 credit discount on Earth cards)
 	teractorCard, err := cardRegistry.GetByID(testutil.CardID("Teractor"))
@@ -296,7 +294,7 @@ func TestPlayCardAction_WithDoubleDiscount(t *testing.T) {
 
 	for behaviorIndex, behavior := range teractorCard.Behaviors {
 		if gamecards.HasAutoTrigger(behavior) && gamecards.HasPersistentEffects(behavior) {
-			p.Effects().AddEffect(player.CardEffect{
+			p.Effects().AddEffect(shared.CardEffect{
 				CardID:        teractorCard.ID,
 				CardName:      teractorCard.Name,
 				BehaviorIndex: behaviorIndex,
@@ -368,9 +366,9 @@ func TestPlayCardAction_DiscountDoesNotApplyToNonMatchingCard(t *testing.T) {
 	p.SetCorporationID(testutil.CardID("Teractor"))
 
 	// Set game to active status and action phase
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Register Teractor's discount effect (3 credit discount on Earth cards)
 	teractorCard, err := cardRegistry.GetByID(testutil.CardID("Teractor"))
@@ -378,7 +376,7 @@ func TestPlayCardAction_DiscountDoesNotApplyToNonMatchingCard(t *testing.T) {
 
 	for behaviorIndex, behavior := range teractorCard.Behaviors {
 		if gamecards.HasAutoTrigger(behavior) && gamecards.HasPersistentEffects(behavior) {
-			p.Effects().AddEffect(player.CardEffect{
+			p.Effects().AddEffect(shared.CardEffect{
 				CardID:        teractorCard.ID,
 				CardName:      teractorCard.Name,
 				BehaviorIndex: behaviorIndex,

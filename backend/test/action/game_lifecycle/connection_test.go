@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"terraforming-mars-backend/internal/action/connection"
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -122,7 +121,7 @@ func TestKickPlayerAction_ActiveGameKick_MarksAsExited(t *testing.T) {
 }
 
 func TestKickPlayerAction_GameNotFound_Error(t *testing.T) {
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	logger := testutil.TestLogger()
 
 	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
@@ -345,7 +344,7 @@ func TestPlayerDisconnectedAction_ActiveGameHostDisconnects_NoReassignment(t *te
 }
 
 func TestPlayerDisconnectedAction_GameNotFound_Error(t *testing.T) {
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	logger := testutil.TestLogger()
 
 	disconnectAction := connection.NewPlayerDisconnectedAction(repo, logger)

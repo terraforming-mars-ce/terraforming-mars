@@ -14,7 +14,6 @@ import (
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -26,7 +25,7 @@ type TilePlacementResult struct {
 	OxygenSteps int
 	TRGained    int
 	OceanPlaced bool
-	OnComplete  *player.TileCompletionCallback
+	OnComplete  *shared.TileCompletionCallback
 }
 
 // SelectTileAction handles the business logic for selecting a tile position
@@ -59,9 +58,9 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 	}
 
 	phase := g.CurrentPhase()
-	if phase != game.GamePhaseStartingSelection &&
-		phase != game.GamePhaseInitApplyCorp &&
-		phase != game.GamePhaseInitApplyPrelude {
+	if phase != shared.GamePhaseStartingSelection &&
+		phase != shared.GamePhaseInitApplyCorp &&
+		phase != shared.GamePhaseInitApplyPrelude {
 		if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
 			return nil, err
 		}
@@ -281,13 +280,15 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 					continue
 				}
 
-				baseaction.AddCardsToPlayerHand(cardIDs, p, g, a.CardRegistry(), log)
+				for _, cardID := range cardIDs {
+					p.Hand().AddCard(cardID)
+				}
 
-				g.AddTriggeredEffect(game.TriggeredEffect{
+				g.AddTriggeredEffect(shared.TriggeredEffect{
 					CardName:   "Tile Bonus",
 					PlayerID:   playerID,
-					SourceType: game.SourceTypeCardPlay,
-					CalculatedOutputs: []game.CalculatedOutput{
+					SourceType: shared.SourceTypeCardPlay,
+					CalculatedOutputs: []shared.CalculatedOutput{
 						{ResourceType: string(shared.ResourceCardDraw), Amount: len(cardIDs)},
 					},
 				})
@@ -342,11 +343,11 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 			shared.ResourceCredit: oceanBonus,
 		})
 
-		g.AddTriggeredEffect(game.TriggeredEffect{
+		g.AddTriggeredEffect(shared.TriggeredEffect{
 			CardName:   "Ocean Adjacency",
 			PlayerID:   playerID,
-			SourceType: game.SourceTypeGameEvent,
-			CalculatedOutputs: []game.CalculatedOutput{
+			SourceType: shared.SourceTypeGameEvent,
+			CalculatedOutputs: []shared.CalculatedOutput{
 				{ResourceType: string(shared.ResourceCredit), Amount: oceanBonus},
 			},
 		})
@@ -418,9 +419,9 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 	}
 
 	switch g.CurrentPhase() {
-	case game.GamePhaseStartingSelection:
+	case shared.GamePhaseStartingSelection:
 		a.checkStartingSelectionCompletion(ctx, g, log)
-	case game.GamePhaseInitApplyCorp, game.GamePhaseInitApplyPrelude:
+	case shared.GamePhaseInitApplyCorp, shared.GamePhaseInitApplyPrelude:
 		// During init phases, tile placement completes and the frontend sends the next confirm
 	default:
 		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)

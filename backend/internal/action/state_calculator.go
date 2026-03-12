@@ -304,7 +304,7 @@ func validateActionsRemaining(p *player.Player, g *game.Game) []player.StateErro
 
 // validatePhase checks if action is allowed in current phase.
 func validatePhase(g *game.Game) []player.StateError {
-	if g.CurrentPhase() != game.GamePhaseAction {
+	if g.CurrentPhase() != shared.GamePhaseAction {
 		return []player.StateError{{
 			Code:     player.ErrorCodeWrongPhase,
 			Category: player.ErrorCategoryPhase,

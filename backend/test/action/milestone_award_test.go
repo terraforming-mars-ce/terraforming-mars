@@ -35,7 +35,7 @@ func TestClaimMilestone_Terraformer_LogsCorrectName(t *testing.T) {
 	lastDiff := diffs[len(diffs)-1]
 	testutil.AssertEqual(t, "Terraformer", lastDiff.Source, "Source should use sentence-case name")
 	testutil.AssertEqual(t, "Claimed Terraformer milestone", lastDiff.Description, "Description should use sentence-case name")
-	testutil.AssertEqual(t, game.SourceTypeMilestone, lastDiff.SourceType, "SourceType should be milestone")
+	testutil.AssertEqual(t, string(shared.SourceTypeMilestone), string(lastDiff.SourceType), "SourceType should be milestone")
 }
 
 func TestClaimMilestone_Gardener_LogsCorrectName(t *testing.T) {
@@ -123,7 +123,7 @@ func TestFundAward_Landlord_LogsCorrectName(t *testing.T) {
 	lastDiff := diffs[len(diffs)-1]
 	testutil.AssertEqual(t, "Landlord", lastDiff.Source, "Source should use sentence-case name")
 	testutil.AssertEqual(t, "Funded Landlord award", lastDiff.Description, "Description should use sentence-case name")
-	testutil.AssertEqual(t, game.SourceTypeAward, lastDiff.SourceType, "SourceType should be award")
+	testutil.AssertEqual(t, string(shared.SourceTypeAward), string(lastDiff.SourceType), "SourceType should be award")
 }
 
 func TestFundAward_Scientist_LogsCorrectName(t *testing.T) {

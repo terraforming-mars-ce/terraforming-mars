@@ -10,7 +10,6 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -43,7 +42,7 @@ func TestMarsUniversity_CreatesDiscardSelectionOnScienceTag(t *testing.T) {
 	owner.Hand().AddCard("some-card-2")
 
 	// Register Mars University passive effect with card-discard input
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-mars-university",
 		CardName:      "Mars University",
 		BehaviorIndex: 0,
@@ -124,7 +123,7 @@ func TestMarsUniversity_SkipsDiscardWhenNoCardsInHand(t *testing.T) {
 
 	// Do NOT add cards to hand - player has empty hand
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-mars-university",
 		CardName:      "Mars University",
 		BehaviorIndex: 0,
@@ -191,7 +190,7 @@ func TestMarsUniversity_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 
 	owner.Hand().AddCard("some-card-1")
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-mars-university",
 		CardName:      "Mars University",
 		BehaviorIndex: 0,
@@ -266,7 +265,7 @@ func TestConfirmCardDiscard_DiscardAndDraw(t *testing.T) {
 	testutil.AssertEqual(t, 2, handBefore, "Should have 2 cards before discard")
 
 	// Set up pending discard selection
-	owner.Selection().SetPendingCardDiscardSelection(&player.PendingCardDiscardSelection{
+	owner.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
 		MinCards:     0,
 		MaxCards:     1,
 		Source:       "Mars University",
@@ -318,7 +317,7 @@ func TestConfirmCardDiscard_SkipOptionalDiscard(t *testing.T) {
 	owner.Hand().AddCard("card-to-keep")
 
 	// Set up pending discard with min=0 (optional)
-	owner.Selection().SetPendingCardDiscardSelection(&player.PendingCardDiscardSelection{
+	owner.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
 		MinCards:     0,
 		MaxCards:     1,
 		Source:       "Mars University",
@@ -362,7 +361,7 @@ func TestConfirmCardDiscard_RejectsNonHandCard(t *testing.T) {
 
 	owner.Hand().AddCard("real-card")
 
-	owner.Selection().SetPendingCardDiscardSelection(&player.PendingCardDiscardSelection{
+	owner.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
 		MinCards:     0,
 		MaxCards:     1,
 		Source:       "Mars University",
@@ -426,7 +425,7 @@ func TestConfirmCardDiscard_RejectsTooManyCards(t *testing.T) {
 	owner.Hand().AddCard("card-1")
 	owner.Hand().AddCard("card-2")
 
-	owner.Selection().SetPendingCardDiscardSelection(&player.PendingCardDiscardSelection{
+	owner.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
 		MinCards:     0,
 		MaxCards:     1,
 		Source:       "Mars University",

@@ -9,7 +9,6 @@ import (
 	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	tileAction "terraforming-mars-backend/internal/action/tile"
 	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -44,11 +43,14 @@ func placeTileForPlayer(ctx context.Context, t *testing.T, g *game.Game, repo ga
 		t.Fatalf("Failed to set turn for tile placement: %v", err)
 	}
 
-	g.SetPendingTileSelection(ctx, playerID, &player.PendingTileSelection{
+	err = g.SetPendingTileSelection(ctx, playerID, &shared.PendingTileSelection{
 		TileType:       tileType,
 		AvailableHexes: []string{hexStr},
 		Source:         "test",
 	})
+	if err != nil {
+		t.Fatalf("Failed to set pending tile selection: %v", err)
+	}
 
 	selectTile := tileAction.NewSelectTileAction(repo, cr, stateRepo, logger)
 	_, err = selectTile.Execute(ctx, g.ID(), playerID, hexStr)

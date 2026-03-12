@@ -6,7 +6,6 @@ import (
 
 	cardAction "terraforming-mars-backend/internal/action/card"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -42,7 +41,7 @@ func TestWaterImportFromEuropa_PayWithCreditsOnly(t *testing.T) {
 			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Water Import From Europa",
@@ -89,7 +88,7 @@ func TestWaterImportFromEuropa_PayWithTitaniumAndCredits(t *testing.T) {
 			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Water Import From Europa",
@@ -138,7 +137,7 @@ func TestWaterImportFromEuropa_FailInsufficientPayment(t *testing.T) {
 			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Water Import From Europa",
@@ -183,7 +182,7 @@ func TestWaterImportFromEuropa_FailSteelNotAllowed(t *testing.T) {
 			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Water Import From Europa",
@@ -227,7 +226,7 @@ func TestWaterImportFromEuropa_NoPaymentFallsBackToCredits(t *testing.T) {
 			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Water Import From Europa",
@@ -291,7 +290,7 @@ func TestRotatorImpacts_Choice1_PayWithTitanium(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Rotator Impacts",
@@ -342,7 +341,7 @@ func TestWaterImportFromEuropa_TitaniumWithValueModifier(t *testing.T) {
 			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Water Import From Europa",

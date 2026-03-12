@@ -2,11 +2,14 @@ package global_parameters
 
 import (
 	"context"
-	"sync"
+
+	"go.uber.org/zap"
+
 	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/logger"
 )
 
-// Constants for terraforming limits
 const (
 	MinTemperature = -30
 	MaxTemperature = 8
@@ -18,131 +21,106 @@ const (
 	MaxVenus       = 30
 )
 
-// GlobalParameters represents the terraforming progress with encapsulated state
+// GlobalParameters manages the global parameter fields of a game.
 type GlobalParameters struct {
-	mu          sync.RWMutex
-	gameID      string
-	temperature int // Range: -30 to +8°C
-	oxygen      int // Range: 0-14%
-	oceans      int // Range: 0-9
-	maxOceans   int // Dynamic max, starts at MaxOceans (9), reduced when non-ocean tiles occupy ocean spaces
-	venus       int // Range: 0-30%
-	eventBus    *events.EventBusImpl
+	ds       *datastore.DataStore
+	gameID   string
+	eventBus *events.EventBusImpl
 }
 
-// NewGlobalParameters creates a new GlobalParameters instance with default starting values
-func NewGlobalParameters(gameID string, eventBus *events.EventBusImpl) *GlobalParameters {
-	return &GlobalParameters{
-		gameID:      gameID,
-		temperature: MinTemperature,
-		oxygen:      MinOxygen,
-		oceans:      MinOceans,
-		maxOceans:   MaxOceans,
-		venus:       MinVenus,
-		eventBus:    eventBus,
+func NewGlobalParameters(ds *datastore.DataStore, gameID string, eventBus *events.EventBusImpl) *GlobalParameters {
+	return &GlobalParameters{ds: ds, gameID: gameID, eventBus: eventBus}
+}
+
+func (gp *GlobalParameters) update(fn func(s *datastore.GameState)) {
+	if err := gp.ds.UpdateGame(gp.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to update game state", zap.String("game_id", gp.gameID), zap.Error(err))
 	}
 }
 
-// NewGlobalParametersWithValues creates a new GlobalParameters instance with custom starting values
-func NewGlobalParametersWithValues(gameID string, temperature, oxygen, oceans, venus int, eventBus *events.EventBusImpl) *GlobalParameters {
-	return &GlobalParameters{
-		gameID:      gameID,
-		temperature: temperature,
-		oxygen:      oxygen,
-		oceans:      oceans,
-		maxOceans:   MaxOceans,
-		venus:       venus,
-		eventBus:    eventBus,
+func (gp *GlobalParameters) read(fn func(s *datastore.GameState)) {
+	if err := gp.ds.ReadGame(gp.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to read game state", zap.String("game_id", gp.gameID), zap.Error(err))
 	}
 }
 
-// Temperature returns the current temperature
 func (gp *GlobalParameters) Temperature() int {
-	gp.mu.RLock()
-	defer gp.mu.RUnlock()
-	return gp.temperature
+	var v int
+	gp.read(func(s *datastore.GameState) { v = s.Temperature })
+	return v
 }
 
-// Oxygen returns the current oxygen level
 func (gp *GlobalParameters) Oxygen() int {
-	gp.mu.RLock()
-	defer gp.mu.RUnlock()
-	return gp.oxygen
+	var v int
+	gp.read(func(s *datastore.GameState) { v = s.Oxygen })
+	return v
 }
 
-// Oceans returns the current ocean count
 func (gp *GlobalParameters) Oceans() int {
-	gp.mu.RLock()
-	defer gp.mu.RUnlock()
-	return gp.oceans
+	var v int
+	gp.read(func(s *datastore.GameState) { v = s.Oceans })
+	return v
 }
 
-// Venus returns the current venus level
 func (gp *GlobalParameters) Venus() int {
-	gp.mu.RLock()
-	defer gp.mu.RUnlock()
-	return gp.venus
+	var v int
+	gp.read(func(s *datastore.GameState) { v = s.Venus })
+	return v
 }
 
-// GetMaxOceans returns the current dynamic max oceans limit for this game
 func (gp *GlobalParameters) GetMaxOceans() int {
-	gp.mu.RLock()
-	defer gp.mu.RUnlock()
-	return gp.maxOceans
+	var v int
+	gp.read(func(s *datastore.GameState) { v = s.MaxOceans })
+	return v
 }
 
 // ReduceMaxOceans lowers the max oceans limit when non-ocean tiles occupy ocean spaces.
-// Publishes OceansChangedEvent to trigger a broadcast.
 func (gp *GlobalParameters) ReduceMaxOceans(newMax int) {
-	gp.mu.Lock()
-	oldMax := gp.maxOceans
-	if newMax < gp.maxOceans {
-		gp.maxOceans = newMax
-	}
-	gp.mu.Unlock()
+	var oldMax, currentMax int
+	gp.update(func(s *datastore.GameState) {
+		oldMax = s.MaxOceans
+		if newMax < s.MaxOceans {
+			s.MaxOceans = newMax
+		}
+		currentMax = s.MaxOceans
+	})
 
-	if gp.eventBus != nil && oldMax != gp.maxOceans {
+	if gp.eventBus != nil && oldMax != currentMax {
+		var oceans int
+		gp.read(func(s *datastore.GameState) { oceans = s.Oceans })
 		events.Publish(gp.eventBus, events.OceansChangedEvent{
 			GameID:   gp.gameID,
-			OldValue: gp.oceans,
-			NewValue: gp.oceans,
+			OldValue: oceans,
+			NewValue: oceans,
 		})
 	}
 }
 
-// IsMaxed returns true if all global parameters have reached their maximum values
 func (gp *GlobalParameters) IsMaxed() bool {
-	gp.mu.RLock()
-	defer gp.mu.RUnlock()
-	return gp.temperature >= MaxTemperature &&
-		gp.oxygen >= MaxOxygen &&
-		gp.oceans >= gp.maxOceans
+	var maxed bool
+	gp.read(func(s *datastore.GameState) {
+		maxed = s.Temperature >= MaxTemperature &&
+			s.Oxygen >= MaxOxygen &&
+			s.Oceans >= s.MaxOceans
+	})
+	return maxed
 }
 
-// IncreaseTemperature raises the temperature by the specified number of steps
-// Each step is 2 degrees. Returns the actual number of steps raised (may be less if limit reached)
-// Publishes TemperatureChangedEvent after state change
+// IncreaseTemperature raises the temperature by the specified number of steps.
+// Each step is 2 degrees. Returns the actual number of steps raised.
 func (gp *GlobalParameters) IncreaseTemperature(ctx context.Context, steps int, playerID string) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
 
 	var oldTemp, newTemp int
-	var actualSteps int
+	gp.update(func(s *datastore.GameState) {
+		oldTemp = s.Temperature
+		newTemp = min(s.Temperature+steps*2, MaxTemperature)
+		s.Temperature = newTemp
+	})
+	actualSteps := (newTemp - oldTemp) / 2
 
-	// Critical: Capture values while holding lock, publish AFTER releasing
-	gp.mu.Lock()
-	oldTemp = gp.temperature
-	newTemp = gp.temperature + (steps * 2) // Each step is 2 degrees
-	if newTemp > MaxTemperature {
-		newTemp = MaxTemperature
-	}
-	gp.temperature = newTemp
-	actualSteps = (newTemp - oldTemp) / 2
-	gp.mu.Unlock()
-
-	// Publish event AFTER releasing lock to avoid deadlocks
-	// Automatic broadcasting handled by EventBus
 	if gp.eventBus != nil && oldTemp != newTemp {
 		events.Publish(gp.eventBus, events.TemperatureChangedEvent{
 			GameID:    gp.gameID,
@@ -155,28 +133,21 @@ func (gp *GlobalParameters) IncreaseTemperature(ctx context.Context, steps int, 
 	return actualSteps, nil
 }
 
-// IncreaseOxygen raises the oxygen by the specified number of steps
-// Returns the actual number of steps raised (may be less if limit reached)
-// Publishes OxygenChangedEvent after state change
+// IncreaseOxygen raises the oxygen by the specified number of steps.
+// Returns the actual number of steps raised.
 func (gp *GlobalParameters) IncreaseOxygen(ctx context.Context, steps int, playerID string) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
 
 	var oldOxygen, newOxygen int
-
-	gp.mu.Lock()
-	oldOxygen = gp.oxygen
-	newOxygen = gp.oxygen + steps
-	if newOxygen > MaxOxygen {
-		newOxygen = MaxOxygen
-	}
-	gp.oxygen = newOxygen
+	gp.update(func(s *datastore.GameState) {
+		oldOxygen = s.Oxygen
+		newOxygen = min(s.Oxygen+steps, MaxOxygen)
+		s.Oxygen = newOxygen
+	})
 	actualSteps := newOxygen - oldOxygen
-	gp.mu.Unlock()
 
-	// Publish event AFTER releasing lock
-	// Automatic broadcasting handled by EventBus
 	if gp.eventBus != nil && oldOxygen != newOxygen {
 		events.Publish(gp.eventBus, events.OxygenChangedEvent{
 			GameID:    gp.gameID,
@@ -189,31 +160,27 @@ func (gp *GlobalParameters) IncreaseOxygen(ctx context.Context, steps int, playe
 	return actualSteps, nil
 }
 
-// PlaceOcean places an ocean tile (increments ocean count)
-// Returns true if successful, false if limit reached
-// Publishes OceansChangedEvent after state change
+// PlaceOcean places an ocean tile (increments ocean count).
+// Returns true if successful, false if limit reached.
 func (gp *GlobalParameters) PlaceOcean(ctx context.Context, playerID string) (bool, error) {
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
 
 	var oldOceans, newOceans int
-	var success bool
+	var placed bool
+	gp.update(func(s *datastore.GameState) {
+		oldOceans = s.Oceans
+		if s.Oceans >= s.MaxOceans {
+			newOceans = s.Oceans
+			return
+		}
+		s.Oceans++
+		newOceans = s.Oceans
+		placed = true
+	})
 
-	gp.mu.Lock()
-	oldOceans = gp.oceans
-	if gp.oceans >= gp.maxOceans {
-		success = false
-	} else {
-		gp.oceans++
-		success = true
-	}
-	newOceans = gp.oceans
-	gp.mu.Unlock()
-
-	// Publish event AFTER releasing lock
-	// Automatic broadcasting handled by EventBus
-	if gp.eventBus != nil && oldOceans != newOceans {
+	if gp.eventBus != nil && placed {
 		events.Publish(gp.eventBus, events.OceansChangedEvent{
 			GameID:    gp.gameID,
 			OldValue:  oldOceans,
@@ -222,24 +189,20 @@ func (gp *GlobalParameters) PlaceOcean(ctx context.Context, playerID string) (bo
 		})
 	}
 
-	return success, nil
+	return placed, nil
 }
 
-// SetTemperature sets the temperature to a specific value (for admin/testing)
-// Publishes TemperatureChangedEvent if value changed
 func (gp *GlobalParameters) SetTemperature(ctx context.Context, newTemp int) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
 	var oldTemp int
+	gp.update(func(s *datastore.GameState) {
+		oldTemp = s.Temperature
+		s.Temperature = newTemp
+	})
 
-	gp.mu.Lock()
-	oldTemp = gp.temperature
-	gp.temperature = newTemp
-	gp.mu.Unlock()
-
-	// Automatic broadcasting handled by EventBus
 	if gp.eventBus != nil && oldTemp != newTemp {
 		events.Publish(gp.eventBus, events.TemperatureChangedEvent{
 			GameID:   gp.gameID,
@@ -251,21 +214,17 @@ func (gp *GlobalParameters) SetTemperature(ctx context.Context, newTemp int) err
 	return nil
 }
 
-// SetOxygen sets the oxygen to a specific value (for admin/testing)
-// Publishes OxygenChangedEvent if value changed
 func (gp *GlobalParameters) SetOxygen(ctx context.Context, newOxygen int) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
 	var oldOxygen int
+	gp.update(func(s *datastore.GameState) {
+		oldOxygen = s.Oxygen
+		s.Oxygen = newOxygen
+	})
 
-	gp.mu.Lock()
-	oldOxygen = gp.oxygen
-	gp.oxygen = newOxygen
-	gp.mu.Unlock()
-
-	// Automatic broadcasting handled by EventBus
 	if gp.eventBus != nil && oldOxygen != newOxygen {
 		events.Publish(gp.eventBus, events.OxygenChangedEvent{
 			GameID:   gp.gameID,
@@ -277,21 +236,17 @@ func (gp *GlobalParameters) SetOxygen(ctx context.Context, newOxygen int) error 
 	return nil
 }
 
-// SetOceans sets the ocean count to a specific value (for admin/testing)
-// Publishes OceansChangedEvent if value changed
 func (gp *GlobalParameters) SetOceans(ctx context.Context, newOceans int) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
 	var oldOceans int
+	gp.update(func(s *datastore.GameState) {
+		oldOceans = s.Oceans
+		s.Oceans = newOceans
+	})
 
-	gp.mu.Lock()
-	oldOceans = gp.oceans
-	gp.oceans = newOceans
-	gp.mu.Unlock()
-
-	// Automatic broadcasting handled by EventBus
 	if gp.eventBus != nil && oldOceans != newOceans {
 		events.Publish(gp.eventBus, events.OceansChangedEvent{
 			GameID:   gp.gameID,
@@ -303,26 +258,20 @@ func (gp *GlobalParameters) SetOceans(ctx context.Context, newOceans int) error 
 	return nil
 }
 
-// IncreaseVenus raises the venus level by the specified number of steps
-// Each step is 2%. Returns the actual number of steps raised (may be less if limit reached)
-// Publishes VenusChangedEvent after state change
+// IncreaseVenus raises the venus level by the specified number of steps.
+// Each step is 2%. Returns the actual number of steps raised.
 func (gp *GlobalParameters) IncreaseVenus(ctx context.Context, steps int, playerID string) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
 
 	var oldVenus, newVenus int
-	var actualSteps int
-
-	gp.mu.Lock()
-	oldVenus = gp.venus
-	newVenus = gp.venus + (steps * 2)
-	if newVenus > MaxVenus {
-		newVenus = MaxVenus
-	}
-	gp.venus = newVenus
-	actualSteps = (newVenus - oldVenus) / 2
-	gp.mu.Unlock()
+	gp.update(func(s *datastore.GameState) {
+		oldVenus = s.Venus
+		newVenus = min(s.Venus+steps*2, MaxVenus)
+		s.Venus = newVenus
+	})
+	actualSteps := (newVenus - oldVenus) / 2
 
 	if gp.eventBus != nil && oldVenus != newVenus {
 		events.Publish(gp.eventBus, events.VenusChangedEvent{
@@ -336,19 +285,16 @@ func (gp *GlobalParameters) IncreaseVenus(ctx context.Context, steps int, player
 	return actualSteps, nil
 }
 
-// SetVenus sets the venus level to a specific value (for admin/testing)
-// Publishes VenusChangedEvent if value changed
 func (gp *GlobalParameters) SetVenus(ctx context.Context, newVenus int) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
 	var oldVenus int
-
-	gp.mu.Lock()
-	oldVenus = gp.venus
-	gp.venus = newVenus
-	gp.mu.Unlock()
+	gp.update(func(s *datastore.GameState) {
+		oldVenus = s.Venus
+		s.Venus = newVenus
+	})
 
 	if gp.eventBus != nil && oldVenus != newVenus {
 		events.Publish(gp.eventBus, events.VenusChangedEvent{

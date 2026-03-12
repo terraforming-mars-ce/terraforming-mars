@@ -12,6 +12,7 @@ import (
 	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // ToGameDto converts Game to GameDto with personalized view
@@ -50,7 +51,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string, c
 		CardPacks:             settings.CardPacks,
 		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
 		ClaudeModel:           settings.ClaudeModel,
-		AvailablePlayerColors: game.PlayerColors,
+		AvailablePlayerColors: shared.PlayerColors,
 	}
 
 	globalParams := g.GlobalParameters()
@@ -96,7 +97,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string, c
 	}
 
 	var finalScoreDtos []FinalScoreDto
-	if g.Status() == game.GameStatusCompleted {
+	if g.Status() == shared.GameStatusCompleted {
 		finalScores := g.GetFinalScores()
 		if finalScores != nil {
 			finalScoreDtos = make([]FinalScoreDto, len(finalScores))
@@ -123,7 +124,7 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string, c
 
 	var initPhaseDto *InitPhaseDto
 	phase := g.CurrentPhase()
-	if phase == game.GamePhaseInitApplyCorp || phase == game.GamePhaseInitApplyPrelude {
+	if phase == shared.GamePhaseInitApplyCorp || phase == shared.GamePhaseInitApplyPrelude {
 		turnOrder := g.TurnOrder()
 		idx := g.InitPhasePlayerIndex()
 		currentInitPlayerID := ""
@@ -368,7 +369,7 @@ func ToAwardResultsDto(g *game.Game, cardRegistry cards.CardRegistry) []AwardRes
 }
 
 // ToCardVPConditionDetailDto converts a card VP condition detail to DTO
-func ToCardVPConditionDetailDto(detail game.CardVPConditionDetail) CardVPConditionDetailDto {
+func ToCardVPConditionDetailDto(detail shared.CardVPConditionDetail) CardVPConditionDetailDto {
 	return CardVPConditionDetailDto{
 		ConditionType:  detail.ConditionType,
 		Amount:         detail.Amount,
@@ -381,7 +382,7 @@ func ToCardVPConditionDetailDto(detail game.CardVPConditionDetail) CardVPConditi
 }
 
 // ToCardVPDetailDto converts a card VP detail to DTO
-func ToCardVPDetailDto(detail game.CardVPDetail) CardVPDetailDto {
+func ToCardVPDetailDto(detail shared.CardVPDetail) CardVPDetailDto {
 	return CardVPDetailDto{
 		CardID:     detail.CardID,
 		CardName:   detail.CardName,
@@ -391,7 +392,7 @@ func ToCardVPDetailDto(detail game.CardVPDetail) CardVPDetailDto {
 }
 
 // ToGreeneryVPDetailDto converts a greenery VP detail to DTO
-func ToGreeneryVPDetailDto(detail game.GreeneryVPDetail) GreeneryVPDetailDto {
+func ToGreeneryVPDetailDto(detail shared.GreeneryVPDetail) GreeneryVPDetailDto {
 	return GreeneryVPDetailDto{
 		Coordinate: detail.Coordinate,
 		VP:         detail.VP,
@@ -399,7 +400,7 @@ func ToGreeneryVPDetailDto(detail game.GreeneryVPDetail) GreeneryVPDetailDto {
 }
 
 // ToCityVPDetailDto converts a city VP detail to DTO
-func ToCityVPDetailDto(detail game.CityVPDetail) CityVPDetailDto {
+func ToCityVPDetailDto(detail shared.CityVPDetail) CityVPDetailDto {
 	return CityVPDetailDto{
 		CityCoordinate:     detail.CityCoordinate,
 		AdjacentGreeneries: detail.AdjacentGreeneries,
@@ -408,7 +409,7 @@ func ToCityVPDetailDto(detail game.CityVPDetail) CityVPDetailDto {
 }
 
 // ToVPBreakdownDto converts a VP breakdown to DTO
-func ToVPBreakdownDto(breakdown game.VPBreakdown) VPBreakdownDto {
+func ToVPBreakdownDto(breakdown shared.VPBreakdown) VPBreakdownDto {
 	return VPBreakdownDto{
 		TerraformRating:   breakdown.TerraformRating,
 		CardVP:            breakdown.CardVP,
@@ -424,7 +425,7 @@ func ToVPBreakdownDto(breakdown game.VPBreakdown) VPBreakdownDto {
 }
 
 // ToFinalScoreDto creates a final score DTO for a player
-func ToFinalScoreDto(playerID, playerName string, breakdown game.VPBreakdown, isWinner bool, placement int) FinalScoreDto {
+func ToFinalScoreDto(playerID, playerName string, breakdown shared.VPBreakdown, isWinner bool, placement int) FinalScoreDto {
 	return FinalScoreDto{
 		PlayerID:    playerID,
 		PlayerName:  playerName,
@@ -435,7 +436,7 @@ func ToFinalScoreDto(playerID, playerName string, breakdown game.VPBreakdown, is
 }
 
 // toVPGranterDtos converts a slice of VPGranter to VPGranterDto slice with per-condition breakdown
-func toVPGranterDtos(granters []player.VPGranter) []VPGranterDto {
+func toVPGranterDtos(granters []shared.VPGranter) []VPGranterDto {
 	if len(granters) == 0 {
 		return []VPGranterDto{}
 	}
@@ -457,18 +458,18 @@ func toVPGranterDtos(granters []player.VPGranter) []VPGranterDto {
 	return dtos
 }
 
-func toVPGranterConditionDto(cond player.VPCondition) VPGranterConditionDto {
+func toVPGranterConditionDto(cond shared.VPCondition) VPGranterConditionDto {
 	dto := VPGranterConditionDto{
 		Amount:        cond.Amount,
 		ConditionType: string(cond.Condition),
 	}
 
 	switch cond.Condition {
-	case player.VPConditionFixed, player.VPConditionOnce:
+	case shared.VPConditionFixed, shared.VPConditionOnce:
 		dto.ComputedVP = cond.Amount
 		dto.Explanation = fmt.Sprintf("%d VP", cond.Amount)
 
-	case player.VPConditionPer:
+	case shared.VPConditionPer:
 		if cond.Per != nil {
 			perType := string(cond.Per.ResourceType)
 			if cond.Per.Tag != nil {
@@ -487,7 +488,7 @@ func toVPGranterConditionDto(cond player.VPCondition) VPGranterConditionDto {
 }
 
 // ToTriggeredEffectDto converts a triggered effect to DTO
-func ToTriggeredEffectDto(effect game.TriggeredEffect) TriggeredEffectDto {
+func ToTriggeredEffectDto(effect shared.TriggeredEffect) TriggeredEffectDto {
 	outputDtos := make([]ResourceConditionDto, len(effect.Outputs))
 	for i, output := range effect.Outputs {
 		outputDtos[i] = toResourceConditionDto(output)
@@ -517,7 +518,12 @@ func ToTriggeredEffectDto(effect game.TriggeredEffect) TriggeredEffectDto {
 	if len(effect.VPConditions) > 0 {
 		vpConditionDtos = make([]VPConditionDto, len(effect.VPConditions))
 		for i, vp := range effect.VPConditions {
-			vpConditionDtos[i] = toVPConditionForLogDto(vp)
+			vpConditionDtos[i] = VPConditionDto{
+				Amount:     vp.Amount,
+				Condition:  VPConditionType(vp.Condition),
+				MaxTrigger: vp.MaxTrigger,
+				Per:        ptrCast(vp.Per, toPerConditionDto),
+			}
 		}
 	}
 

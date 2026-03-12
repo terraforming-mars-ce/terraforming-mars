@@ -104,14 +104,14 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 		}
 
 		// Add triggered effect for self-player: discard + draws
-		calculatedOutputs := []game.CalculatedOutput{
+		calculatedOutputs := []shared.CalculatedOutput{
 			{ResourceType: string(shared.ResourceCardDiscard), Amount: len(cardsToDiscard)},
 		}
 		calculatedOutputs = append(calculatedOutputs, selfOutputs...)
-		g.AddTriggeredEffect(game.TriggeredEffect{
+		g.AddTriggeredEffect(shared.TriggeredEffect{
 			CardName:          selection.Source,
 			PlayerID:          p.ID(),
-			SourceType:        game.SourceTypeCardPlay,
+			SourceType:        shared.SourceTypeCardPlay,
 			CalculatedOutputs: calculatedOutputs,
 		})
 	}
@@ -132,10 +132,10 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 	ctx context.Context,
 	g *game.Game,
 	p *player.Player,
-	selection *player.PendingCardDiscardSelection,
+	selection *shared.PendingCardDiscardSelection,
 	log *zap.Logger,
-) ([]game.CalculatedOutput, error) {
-	var selfOutputs []game.CalculatedOutput
+) ([]shared.CalculatedOutput, error) {
+	var selfOutputs []shared.CalculatedOutput
 
 	for _, output := range selection.PendingOutputs {
 		if output.ResourceType == shared.ResourceCardDraw {
@@ -151,16 +151,18 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 							zap.Error(err))
 						continue
 					}
-					baseaction.AddCardsToPlayerHand(drawnCards, opponent, g, a.CardRegistry(), log)
+					for _, cardID := range drawnCards {
+						opponent.Hand().AddCard(cardID)
+					}
 					log.Debug("Opponent drew cards",
 						zap.String("opponent_id", opponent.ID()),
 						zap.Int("count", len(drawnCards)))
 
-					g.AddTriggeredEffect(game.TriggeredEffect{
+					g.AddTriggeredEffect(shared.TriggeredEffect{
 						CardName:   selection.Source,
 						PlayerID:   opponent.ID(),
-						SourceType: game.SourceTypeCardPlay,
-						CalculatedOutputs: []game.CalculatedOutput{
+						SourceType: shared.SourceTypeCardPlay,
+						CalculatedOutputs: []shared.CalculatedOutput{
 							{ResourceType: string(shared.ResourceCardDraw), Amount: len(drawnCards)},
 						},
 					})
@@ -172,8 +174,10 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 			if err != nil {
 				return nil, fmt.Errorf("failed to draw cards: %w", err)
 			}
-			baseaction.AddCardsToPlayerHand(drawnCards, p, g, a.CardRegistry(), log)
-			selfOutputs = append(selfOutputs, game.CalculatedOutput{
+			for _, cardID := range drawnCards {
+				p.Hand().AddCard(cardID)
+			}
+			selfOutputs = append(selfOutputs, shared.CalculatedOutput{
 				ResourceType: string(shared.ResourceCardDraw),
 				Amount:       len(drawnCards),
 			})
@@ -186,8 +190,7 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 		applier := gamecards.NewBehaviorApplier(p, g, selection.Source, log).
 			WithSourceCardID(selection.SourceCardID).
 			WithCardRegistry(a.CardRegistry()).
-			WithSourceType(game.SourceTypePassiveEffect).
-			WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
+			WithSourceType(shared.SourceTypePassiveEffect)
 		if err := applier.ApplyOutputs(ctx, []shared.ResourceCondition{output}); err != nil {
 			return nil, err
 		}

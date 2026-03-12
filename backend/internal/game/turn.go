@@ -1,74 +1,79 @@
 package game
 
-import "sync"
+import (
+	"go.uber.org/zap"
 
-// Turn tracks the active player and available actions for the current turn
-// This is game-level turn state (whose turn it is), not per-player state
+	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/logger"
+)
+
 type Turn struct {
-	mu               sync.RWMutex
-	playerID         string
-	actionsRemaining int // -1 = unlimited, 0 = none, >0 = specific count
-	totalActions     int // total actions granted this turn (initial + extra)
+	ds     *datastore.DataStore
+	gameID string
 }
 
-// NewTurn creates a new turn for the specified player with a specific action count
-func NewTurn(playerID string, actionsRemaining int) *Turn {
-	return &Turn{
-		playerID:         playerID,
-		actionsRemaining: actionsRemaining,
-		totalActions:     actionsRemaining,
+func NewTurn(ds *datastore.DataStore, gameID string) *Turn {
+	return &Turn{ds: ds, gameID: gameID}
+}
+
+func (t *Turn) update(fn func(s *datastore.GameState)) {
+	if err := t.ds.UpdateGame(t.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to update game state", zap.String("game_id", t.gameID), zap.Error(err))
 	}
 }
 
-// PlayerID returns the ID of the player whose turn it is
+func (t *Turn) read(fn func(s *datastore.GameState)) {
+	if err := t.ds.ReadGame(t.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to read game state", zap.String("game_id", t.gameID), zap.Error(err))
+	}
+}
+
 func (t *Turn) PlayerID() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.playerID
+	var v string
+	t.read(func(s *datastore.GameState) { v = s.CurrentTurnPlayerID })
+	return v
 }
 
-// ActionsRemaining returns the number of actions remaining in this turn
-// Returns -1 for unlimited actions, 0 for no actions, >0 for specific count
 func (t *Turn) ActionsRemaining() int {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.actionsRemaining
+	var v int
+	t.read(func(s *datastore.GameState) { v = s.CurrentTurnActions })
+	return v
 }
 
-// TotalActions returns the total actions granted this turn (initial + extra)
 func (t *Turn) TotalActions() int {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.totalActions
+	var v int
+	t.read(func(s *datastore.GameState) { v = s.CurrentTurnTotalActions })
+	return v
 }
 
-// SetActionsRemaining sets the number of actions remaining
+func (t *Turn) SetPlayerID(playerID string) {
+	t.update(func(s *datastore.GameState) { s.CurrentTurnPlayerID = playerID })
+}
+
 func (t *Turn) SetActionsRemaining(actions int) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.actionsRemaining = actions
+	t.update(func(s *datastore.GameState) { s.CurrentTurnActions = actions })
 }
 
-// AddExtraActions increases both remaining and total actions
+func (t *Turn) SetTotalActions(totalActions int) {
+	t.update(func(s *datastore.GameState) { s.CurrentTurnTotalActions = totalActions })
+}
+
 func (t *Turn) AddExtraActions(amount int) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if t.actionsRemaining >= 0 {
-		t.actionsRemaining += amount
-		t.totalActions += amount
-	}
+	t.update(func(s *datastore.GameState) {
+		if s.CurrentTurnActions >= 0 {
+			s.CurrentTurnActions += amount
+			s.CurrentTurnTotalActions += amount
+		}
+	})
 }
 
-// ConsumeAction decreases the number of actions remaining
-// Returns true if an action was consumed, false if unlimited (-1) or no actions (0)
 func (t *Turn) ConsumeAction() bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	if t.actionsRemaining > 0 {
-		t.actionsRemaining--
-		return true
-	}
-
-	return false
+	var consumed bool
+	t.update(func(s *datastore.GameState) {
+		if s.CurrentTurnActions > 0 {
+			s.CurrentTurnActions--
+			consumed = true
+		}
+	})
+	return consumed
 }

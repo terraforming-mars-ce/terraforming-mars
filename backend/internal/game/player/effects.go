@@ -1,74 +1,88 @@
 package player
 
 import (
-	"sync"
+	"go.uber.org/zap"
 
 	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/logger"
 )
 
-// Effects manages passive effects from played cards
-// Note: RequirementModifiers have been removed - discounts are now calculated on-demand
-// via RequirementModifierCalculator during EntityState calculation
+// Effects manages passive effects from played cards.
 type Effects struct {
-	mu            sync.RWMutex
-	effects       []CardEffect
+	ds            *datastore.DataStore
+	gameID        string
+	playerID      string
 	subscriptions map[string][]events.SubscriptionID
 	eventBus      *events.EventBusImpl
 }
 
-// NewEffects creates a new Effects instance
-func NewEffects(eventBus *events.EventBusImpl) *Effects {
+// NewEffects creates a new Effects view backed by the DataStore.
+func NewEffects(ds *datastore.DataStore, eventBus *events.EventBusImpl, gameID, playerID string) *Effects {
 	return &Effects{
-		effects:       []CardEffect{},
+		ds:            ds,
+		gameID:        gameID,
+		playerID:      playerID,
 		subscriptions: make(map[string][]events.SubscriptionID),
 		eventBus:      eventBus,
 	}
 }
 
-func (e *Effects) List() []CardEffect {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	effectsCopy := make([]CardEffect, len(e.effects))
-	copy(effectsCopy, e.effects)
-	return effectsCopy
-}
-
-func (e *Effects) SetEffects(effects []CardEffect) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if effects == nil {
-		e.effects = []CardEffect{}
-	} else {
-		e.effects = make([]CardEffect, len(effects))
-		copy(e.effects, effects)
+func (e *Effects) update(fn func(s *datastore.PlayerState)) {
+	if err := e.ds.UpdatePlayer(e.gameID, e.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to update player state", zap.String("game_id", e.gameID), zap.String("player_id", e.playerID), zap.Error(err))
 	}
 }
 
-func (e *Effects) AddEffect(effect CardEffect) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.effects = append(e.effects, effect)
+func (e *Effects) read(fn func(s *datastore.PlayerState)) {
+	if err := e.ds.ReadPlayer(e.gameID, e.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to read player state", zap.String("game_id", e.gameID), zap.String("player_id", e.playerID), zap.Error(err))
+	}
+}
+
+func (e *Effects) List() []shared.CardEffect {
+	var effectsCopy []shared.CardEffect
+	e.read(func(s *datastore.PlayerState) {
+		effectsCopy = make([]shared.CardEffect, len(s.Effects))
+		copy(effectsCopy, s.Effects)
+	})
+	return effectsCopy
+}
+
+func (e *Effects) SetEffects(effects []shared.CardEffect) {
+	e.update(func(s *datastore.PlayerState) {
+		if effects == nil {
+			s.Effects = []shared.CardEffect{}
+		} else {
+			s.Effects = make([]shared.CardEffect, len(effects))
+			copy(s.Effects, effects)
+		}
+	})
+}
+
+func (e *Effects) AddEffect(effect shared.CardEffect) {
+	e.update(func(s *datastore.PlayerState) {
+		s.Effects = append(s.Effects, effect)
+	})
 }
 
 // RegisterSubscription tracks an event subscription for a card so it can be unsubscribed later
 func (e *Effects) RegisterSubscription(cardID string, subID events.SubscriptionID) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
 	e.subscriptions[cardID] = append(e.subscriptions[cardID], subID)
 }
 
 // RemoveEffectsByCardID removes all effects from a specific card and unsubscribes from events
 func (e *Effects) RemoveEffectsByCardID(cardID string) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	filtered := make([]CardEffect, 0, len(e.effects))
-	for _, effect := range e.effects {
-		if effect.CardID != cardID {
-			filtered = append(filtered, effect)
+	e.update(func(s *datastore.PlayerState) {
+		filtered := make([]shared.CardEffect, 0, len(s.Effects))
+		for _, effect := range s.Effects {
+			if effect.CardID != cardID {
+				filtered = append(filtered, effect)
+			}
 		}
-	}
-	e.effects = filtered
+		s.Effects = filtered
+	})
 
 	if subs, exists := e.subscriptions[cardID]; exists {
 		for _, subID := range subs {
@@ -79,37 +93,39 @@ func (e *Effects) RemoveEffectsByCardID(cardID string) {
 }
 
 // RemoveTemporaryEffects removes all effects that have outputs with the given temporary type.
-// Returns the card IDs of removed effects (for logging/event publishing).
+// Returns the card IDs of removed effects.
 func (e *Effects) RemoveTemporaryEffects(temporaryType string) []string {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
 	var removedCardIDs []string
-	filtered := make([]CardEffect, 0, len(e.effects))
+	e.update(func(s *datastore.PlayerState) {
+		filtered := make([]shared.CardEffect, 0, len(s.Effects))
 
-	for _, effect := range e.effects {
-		hasTemporary := false
-		for _, output := range effect.Behavior.Outputs {
-			if output.Temporary == temporaryType {
-				hasTemporary = true
-				break
+		for _, effect := range s.Effects {
+			hasTemporary := false
+			for _, output := range effect.Behavior.Outputs {
+				if output.Temporary == temporaryType {
+					hasTemporary = true
+					break
+				}
+			}
+
+			if hasTemporary {
+				removedCardIDs = append(removedCardIDs, effect.CardID)
+			} else {
+				filtered = append(filtered, effect)
 			}
 		}
 
-		if hasTemporary {
-			removedCardIDs = append(removedCardIDs, effect.CardID)
-			// Also unsubscribe from events
-			if subs, exists := e.subscriptions[effect.CardID]; exists {
-				for _, subID := range subs {
-					e.eventBus.Unsubscribe(subID)
-				}
-				delete(e.subscriptions, effect.CardID)
+		s.Effects = filtered
+	})
+
+	for _, cardID := range removedCardIDs {
+		if subs, exists := e.subscriptions[cardID]; exists {
+			for _, subID := range subs {
+				e.eventBus.Unsubscribe(subID)
 			}
-		} else {
-			filtered = append(filtered, effect)
+			delete(e.subscriptions, cardID)
 		}
 	}
 
-	e.effects = filtered
 	return removedCardIDs
 }

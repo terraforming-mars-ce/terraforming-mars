@@ -6,7 +6,6 @@ import (
 
 	baseaction "terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -19,7 +18,7 @@ const (
 )
 
 // TileCompletionHandlerFunc is the signature for tile completion callbacks
-type TileCompletionHandlerFunc func(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *player.TileCompletionCallback) error
+type TileCompletionHandlerFunc func(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *shared.TileCompletionCallback) error
 
 // TileCompletionRegistry holds registered completion handlers
 type TileCompletionRegistry struct {
@@ -46,7 +45,7 @@ func (r *TileCompletionRegistry) registerDefaultHandlers() {
 
 // Handle invokes the appropriate handler for the callback type
 // If no callback is registered, no log is created - only use cases that explicitly register callbacks get logs
-func (r *TileCompletionRegistry) Handle(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *player.TileCompletionCallback) error {
+func (r *TileCompletionRegistry) Handle(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *shared.TileCompletionCallback) error {
 	if callback == nil {
 		return nil
 	}
@@ -59,52 +58,52 @@ func (r *TileCompletionRegistry) Handle(ctx context.Context, g *game.Game, playe
 	return handler(ctx, g, playerID, result, callback)
 }
 
-func (r *TileCompletionRegistry) handleConvertPlantsToGreenery(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, _ *player.TileCompletionCallback) error {
-	outputs := []game.CalculatedOutput{
+func (r *TileCompletionRegistry) handleConvertPlantsToGreenery(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, _ *shared.TileCompletionCallback) error {
+	outputs := []shared.CalculatedOutput{
 		{ResourceType: string(shared.ResourceGreeneryPlacement), Amount: 1, IsScaled: false},
 	}
 	if result.OxygenSteps > 0 {
-		outputs = append(outputs, game.CalculatedOutput{ResourceType: string(shared.ResourceOxygen), Amount: result.OxygenSteps, IsScaled: false})
+		outputs = append(outputs, shared.CalculatedOutput{ResourceType: string(shared.ResourceOxygen), Amount: result.OxygenSteps, IsScaled: false})
 	}
 	if result.TRGained > 0 {
-		outputs = append(outputs, game.CalculatedOutput{ResourceType: string(shared.ResourceTR), Amount: result.TRGained, IsScaled: false})
+		outputs = append(outputs, shared.CalculatedOutput{ResourceType: string(shared.ResourceTR), Amount: result.TRGained, IsScaled: false})
 	}
 
 	displayData := baseaction.GetStandardProjectDisplayData("Convert Plants")
-	_, err := r.stateRepo.WriteFull(ctx, g.ID(), g, "Convert Plants", game.SourceTypeResourceConvert, playerID, "Converted plants to greenery", nil, outputs, displayData)
+	_, err := r.stateRepo.WriteFull(ctx, g.ID(), g, "Convert Plants", shared.SourceTypeResourceConvert, playerID, "Converted plants to greenery", nil, outputs, displayData)
 	return err
 }
 
-func (r *TileCompletionRegistry) handleStandardProjectGreenery(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, _ *player.TileCompletionCallback) error {
-	outputs := []game.CalculatedOutput{
+func (r *TileCompletionRegistry) handleStandardProjectGreenery(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, _ *shared.TileCompletionCallback) error {
+	outputs := []shared.CalculatedOutput{
 		{ResourceType: string(shared.ResourceGreeneryPlacement), Amount: 1, IsScaled: false},
 	}
 	if result.OxygenSteps > 0 {
-		outputs = append(outputs, game.CalculatedOutput{ResourceType: string(shared.ResourceOxygen), Amount: result.OxygenSteps, IsScaled: false})
+		outputs = append(outputs, shared.CalculatedOutput{ResourceType: string(shared.ResourceOxygen), Amount: result.OxygenSteps, IsScaled: false})
 	}
 	if result.TRGained > 0 {
-		outputs = append(outputs, game.CalculatedOutput{ResourceType: string(shared.ResourceTR), Amount: result.TRGained, IsScaled: false})
+		outputs = append(outputs, shared.CalculatedOutput{ResourceType: string(shared.ResourceTR), Amount: result.TRGained, IsScaled: false})
 	}
 
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: Greenery")
-	_, err := r.stateRepo.WriteFull(ctx, g.ID(), g, "Standard Project: Greenery", game.SourceTypeStandardProject, playerID, "Planted greenery", nil, outputs, displayData)
+	_, err := r.stateRepo.WriteFull(ctx, g.ID(), g, "Standard Project: Greenery", shared.SourceTypeStandardProject, playerID, "Planted greenery", nil, outputs, displayData)
 	return err
 }
 
-func (r *TileCompletionRegistry) handleStandardProjectAquifer(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, _ *player.TileCompletionCallback) error {
-	outputs := []game.CalculatedOutput{
+func (r *TileCompletionRegistry) handleStandardProjectAquifer(ctx context.Context, g *game.Game, playerID string, result *TilePlacementResult, _ *shared.TileCompletionCallback) error {
+	outputs := []shared.CalculatedOutput{
 		{ResourceType: string(shared.ResourceOceanPlacement), Amount: 1, IsScaled: false},
 	}
 	if result.TRGained > 0 {
-		outputs = append(outputs, game.CalculatedOutput{ResourceType: string(shared.ResourceTR), Amount: result.TRGained, IsScaled: false})
+		outputs = append(outputs, shared.CalculatedOutput{ResourceType: string(shared.ResourceTR), Amount: result.TRGained, IsScaled: false})
 	}
 
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: Aquifer")
-	_, err := r.stateRepo.WriteFull(ctx, g.ID(), g, "Standard Project: Aquifer", game.SourceTypeStandardProject, playerID, "Built aquifer", nil, outputs, displayData)
+	_, err := r.stateRepo.WriteFull(ctx, g.ID(), g, "Standard Project: Aquifer", shared.SourceTypeStandardProject, playerID, "Built aquifer", nil, outputs, displayData)
 	return err
 }
 
-func (r *TileCompletionRegistry) handleAdjacentSteal(_ context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *player.TileCompletionCallback) error {
+func (r *TileCompletionRegistry) handleAdjacentSteal(_ context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *shared.TileCompletionCallback) error {
 	amount, _ := callback.Data["amount"].(int)
 	source, _ := callback.Data["source"].(string)
 	sourceCardID, _ := callback.Data["sourceCardID"].(string)
@@ -141,7 +140,7 @@ func (r *TileCompletionRegistry) handleAdjacentSteal(_ context.Context, g *game.
 		return fmt.Errorf("player not found: %w", err)
 	}
 
-	p.Selection().SetPendingStealTargetSelection(&player.PendingStealTargetSelection{
+	p.Selection().SetPendingStealTargetSelection(&shared.PendingStealTargetSelection{
 		EligiblePlayerIDs: ids,
 		ResourceType:      shared.ResourceCredit,
 		Amount:            amount,

@@ -9,10 +9,12 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
 	playerPkg "terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 var botNames = []string{
@@ -80,7 +82,7 @@ func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName strin
 		return nil, fmt.Errorf("game not found: %s", gameID)
 	}
 
-	if g.Status() != game.GameStatusLobby {
+	if g.Status() != shared.GameStatusLobby {
 		log.Warn("Game is not in lobby", zap.String("status", string(g.Status())))
 		return nil, fmt.Errorf("game is not in lobby: %s", g.Status())
 	}
@@ -113,12 +115,12 @@ func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName strin
 	}
 
 	botID := uuid.New().String()
-	bot := playerPkg.NewBotPlayer(g.EventBus(), gameID, botID, botName, botDifficulty, botSpeed)
-
-	if err := g.AddPlayer(ctx, bot); err != nil {
+	botPlayer, err := g.AddNewBotPlayer(ctx, botID, botName, botDifficulty, botSpeed)
+	if err != nil {
 		log.Error("Failed to add bot to game", zap.Error(err))
 		return nil, fmt.Errorf("failed to add bot to game: %w", err)
 	}
+	action.SetupPlayerCardStore(botPlayer, g, a.cardRegistry)
 
 	log.Info("Bot added to game", zap.String("bot_id", botID), zap.String("bot_name", botName))
 
@@ -166,7 +168,7 @@ func (a *AddBotAction) runHealthCheck(gameID, botID, botName, difficulty, apiKey
 	a.broadcaster.BroadcastGameState(gameID, nil)
 
 	if greeting != "" {
-		chatMsg := game.ChatMessage{
+		chatMsg := shared.ChatMessage{
 			SenderID:    botID,
 			SenderName:  botName,
 			SenderColor: bot.Color(),

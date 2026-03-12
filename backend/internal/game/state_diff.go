@@ -71,46 +71,11 @@ type GameChanges struct {
 	BoardChanges        *BoardChanges
 }
 
-// SourceType identifies the type of action that caused a state change
-type SourceType string
-
-const (
-	SourceTypeCardPlay        SourceType = "card_play"
-	SourceTypeCardAction      SourceType = "card_action"
-	SourceTypeStandardProject SourceType = "standard_project"
-	SourceTypePassiveEffect   SourceType = "passive_effect"
-	SourceTypeResourceConvert SourceType = "resource_convert"
-	SourceTypeGameEvent       SourceType = "game_event"
-	SourceTypeInitial         SourceType = "initial"
-	SourceTypeAward           SourceType = "award"
-	SourceTypeMilestone       SourceType = "milestone"
-	SourceTypeActionAdded     SourceType = "action_added"
-	SourceTypeEffectAdded     SourceType = "effect_added"
-	SourceTypeGlobalBonus     SourceType = "global_bonus"
-	SourceTypeColonyTrade     SourceType = "colony_trade"
-	SourceTypeColonyBuild     SourceType = "colony_build"
-)
-
-// CalculatedOutput represents an actual output value that was applied
-type CalculatedOutput struct {
-	ResourceType string
-	Amount       int
-	IsScaled     bool // True if this was calculated from a Per condition
-}
-
-// VPConditionForLog is a simplified VP condition for log display
-type VPConditionForLog struct {
-	Amount     int
-	Condition  string
-	MaxTrigger *int
-	Per        *shared.PerCondition
-}
-
 // LogDisplayData contains pre-computed display information for log entries
 type LogDisplayData struct {
 	Behaviors    []shared.CardBehavior
 	Tags         []shared.CardTag
-	VPConditions []VPConditionForLog
+	VPConditions []shared.VPConditionForLog
 }
 
 // StateDiff represents the difference between two consecutive game states
@@ -120,12 +85,12 @@ type StateDiff struct {
 	GameID            string
 	Changes           *GameChanges
 	Source            string
-	SourceType        SourceType
+	SourceType        shared.SourceType
 	PlayerID          string
 	Description       string
-	ChoiceIndex       *int               // For cards with choices, which choice was selected (0-indexed)
-	CalculatedOutputs []CalculatedOutput // Actual values applied (for scaled outputs like "per X tags")
-	DisplayData       *LogDisplayData    // Pre-computed display information for log entries
+	ChoiceIndex       *int                      // For cards with choices, which choice was selected (0-indexed)
+	CalculatedOutputs []shared.CalculatedOutput // Actual values applied (for scaled outputs like "per X tags")
+	DisplayData       *LogDisplayData           // Pre-computed display information for log entries
 }
 
 // DiffLog contains the complete history of state changes for a game
@@ -145,22 +110,22 @@ func NewDiffLog(gameID string) *DiffLog {
 }
 
 // Append adds a new diff to the log and returns the sequence number
-func (dl *DiffLog) Append(changes *GameChanges, source string, sourceType SourceType, playerID, description string) int64 {
+func (dl *DiffLog) Append(changes *GameChanges, source string, sourceType shared.SourceType, playerID, description string) int64 {
 	return dl.AppendWithChoice(changes, source, sourceType, playerID, description, nil)
 }
 
 // AppendWithChoice adds a new diff with an optional choice index and returns the sequence number
-func (dl *DiffLog) AppendWithChoice(changes *GameChanges, source string, sourceType SourceType, playerID, description string, choiceIndex *int) int64 {
+func (dl *DiffLog) AppendWithChoice(changes *GameChanges, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int) int64 {
 	return dl.AppendWithChoiceAndOutputs(changes, source, sourceType, playerID, description, choiceIndex, nil)
 }
 
 // AppendWithChoiceAndOutputs adds a new diff with optional choice index and calculated outputs
-func (dl *DiffLog) AppendWithChoiceAndOutputs(changes *GameChanges, source string, sourceType SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []CalculatedOutput) int64 {
+func (dl *DiffLog) AppendWithChoiceAndOutputs(changes *GameChanges, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []shared.CalculatedOutput) int64 {
 	return dl.AppendFull(changes, source, sourceType, playerID, description, choiceIndex, calculatedOutputs, nil)
 }
 
 // AppendFull adds a new diff with all optional fields including display data
-func (dl *DiffLog) AppendFull(changes *GameChanges, source string, sourceType SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []CalculatedOutput, displayData *LogDisplayData) int64 {
+func (dl *DiffLog) AppendFull(changes *GameChanges, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []shared.CalculatedOutput, displayData *LogDisplayData) int64 {
 	dl.CurrentSequence++
 	diff := StateDiff{
 		SequenceNumber:    dl.CurrentSequence,

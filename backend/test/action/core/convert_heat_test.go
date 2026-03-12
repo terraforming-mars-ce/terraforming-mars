@@ -82,7 +82,7 @@ func TestConvertHeatAction_InsufficientHeat(t *testing.T) {
 
 func TestConvertHeatAction_GameNotFound(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
@@ -117,7 +117,7 @@ func TestConvertHeatAction_TemperatureMaxed(t *testing.T) {
 	// Set temperature to max
 	ctx := context.Background()
 	maxTemp := 8
-	testGame.GlobalParameters().SetTemperature(ctx, maxTemp)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, maxTemp), "set temperature to max")
 
 	// Give player heat
 	player, _ := testGame.GetPlayer(playerID)

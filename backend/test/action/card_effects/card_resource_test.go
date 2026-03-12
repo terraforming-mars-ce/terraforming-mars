@@ -6,9 +6,7 @@ import (
 
 	cardAction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/cards"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -49,9 +47,12 @@ func TestCardResource_CEOsFavoriteProject_AddsToAnimalCard(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	// Set up played card with animal storage (with 1 existing resource)
 	p.PlayedCards().AddCard("card-animal-host", "Animal Host", "active", []string{"animal"})
@@ -66,7 +67,7 @@ func TestCardResource_CEOsFavoriteProject_AddsToAnimalCard(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 1}
 	targetCardID := "card-animal-host"
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, []string{targetCardID}, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, []string{targetCardID}, nil, nil)
 	testutil.AssertNoError(t, err, "CEO's Favorite Project should play successfully")
 
 	// Verify 1 resource was added (1 existing + 1 new = 2)
@@ -107,9 +108,12 @@ func TestCardResource_CEOsFavoriteProject_AddsToMicrobeCard(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	// Set up played card with microbe storage
 	p.PlayedCards().AddCard("card-microbe-host", "Microbe Host", "active", []string{"microbe"})
@@ -124,7 +128,7 @@ func TestCardResource_CEOsFavoriteProject_AddsToMicrobeCard(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 1}
 	targetCardID := "card-microbe-host"
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, []string{targetCardID}, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, []string{targetCardID}, nil, nil)
 	testutil.AssertNoError(t, err, "CEO's Favorite Project should play targeting microbe card")
 
 	// Verify 1 resource was added (3 existing + 1 new = 4)
@@ -175,9 +179,12 @@ func TestCardResource_CorroderSuits_AddsToVenusCard(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	// Set up played venus card with floater storage
 	p.PlayedCards().AddCard("card-venus-floater", "Venus Floater Card", "active", []string{"venus"})
@@ -194,7 +201,7 @@ func TestCardResource_CorroderSuits_AddsToVenusCard(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 8}
 	targetCardID := "card-venus-floater"
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-corroder-suits", payment, nil, []string{targetCardID}, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-corroder-suits", payment, nil, []string{targetCardID}, nil, nil)
 	testutil.AssertNoError(t, err, "Corroder Suits should play successfully")
 
 	// Verify production increased
@@ -254,9 +261,12 @@ func TestCardResource_MaxwellBase_ActionAddsToVenusCard(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	// Set up the venus microbe card
 	p.PlayedCards().AddCard("card-venus-microbe", "Venus Microbe Card", "active", []string{"venus"})
@@ -264,7 +274,7 @@ func TestCardResource_MaxwellBase_ActionAddsToVenusCard(t *testing.T) {
 
 	// Register Maxwell Base as a played card with its manual action
 	p.PlayedCards().AddCard("card-maxwell-base", "Maxwell Base", "active", []string{"city", "venus"})
-	p.Actions().AddAction(player.CardAction{
+	p.Actions().AddAction(shared.CardAction{
 		CardID:        maxwellBase.ID,
 		CardName:      maxwellBase.Name,
 		BehaviorIndex: 1,
@@ -278,7 +288,7 @@ func TestCardResource_MaxwellBase_ActionAddsToVenusCard(t *testing.T) {
 	// Use Maxwell Base action targeting the venus microbe card
 	useCardAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	targetCardID := "card-venus-microbe"
-	err := useCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-maxwell-base", 1, nil, []string{targetCardID}, nil, nil, nil, nil, nil)
+	err = useCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-maxwell-base", 1, nil, []string{targetCardID}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Maxwell Base action should execute successfully")
 
 	// Verify 1 resource was added (2 existing + 1 new = 3)
@@ -321,9 +331,12 @@ func TestCardResource_FailsWithoutTargetCard(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	p.PlayedCards().AddCard("card-animal-host", "Animal Host", "active", []string{"animal"})
 	p.Resources().AddToStorage("card-animal-host", 1)
@@ -336,7 +349,7 @@ func TestCardResource_FailsWithoutTargetCard(t *testing.T) {
 	// Play without specifying a target card — should fail
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 1}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Should fail without target card for card-resource output")
 }
 
@@ -373,9 +386,12 @@ func TestCardResource_FailsWhenTargetHasNoStorage(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	p.PlayedCards().AddCard("card-no-storage", "No Storage Card", "automated", []string{})
 
@@ -388,7 +404,7 @@ func TestCardResource_FailsWhenTargetHasNoStorage(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 1}
 	targetCardID := "card-no-storage"
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, []string{targetCardID}, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, []string{targetCardID}, nil, nil)
 	testutil.AssertError(t, err, "Should fail when target card has no resource storage")
 }
 
@@ -439,9 +455,12 @@ func TestCardResource_AnyCardTarget_SkipsWhenNoTargetCard(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	// Give player jovian tags (via played cards) but NO venus card with floater storage
 	p.PlayedCards().AddCard("card-jovian-1", "Jovian Card", "automated", []string{"jovian"})
@@ -457,7 +476,7 @@ func TestCardResource_AnyCardTarget_SkipsWhenNoTargetCard(t *testing.T) {
 	// Play without providing a target card — should succeed, skipping floater placement
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 11}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-hydrogen-to-venus", payment, nil, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-hydrogen-to-venus", payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Card should play successfully even without a valid floater target")
 
 	// Verify the other output (production) was still applied

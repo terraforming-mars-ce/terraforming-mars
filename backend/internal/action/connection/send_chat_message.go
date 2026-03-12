@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // SendChatMessageAction handles sending a chat message in a game.
@@ -27,7 +28,7 @@ func NewSendChatMessageAction(
 }
 
 // Execute adds a chat message to the game.
-func (a *SendChatMessageAction) Execute(ctx context.Context, gameID, senderID, senderName, senderColor, message string, isSpectator bool) (*game.ChatMessage, error) {
+func (a *SendChatMessageAction) Execute(ctx context.Context, gameID, senderID, senderName, senderColor, message string, isSpectator bool) (*shared.ChatMessage, error) {
 	log := a.logger.With(
 		zap.String("game_id", gameID),
 		zap.String("sender_name", senderName),
@@ -39,8 +40,8 @@ func (a *SendChatMessageAction) Execute(ctx context.Context, gameID, senderID, s
 		return nil, fmt.Errorf("message cannot be empty")
 	}
 
-	if len(message) > game.MaxChatMessageLength {
-		return nil, fmt.Errorf("message exceeds maximum length of %d characters", game.MaxChatMessageLength)
+	if len(message) > shared.MaxChatMessageLength {
+		return nil, fmt.Errorf("message exceeds maximum length of %d characters", shared.MaxChatMessageLength)
 	}
 
 	g, err := a.gameRepo.Get(ctx, gameID)
@@ -49,7 +50,7 @@ func (a *SendChatMessageAction) Execute(ctx context.Context, gameID, senderID, s
 		return nil, fmt.Errorf("game not found: %s", gameID)
 	}
 
-	chatMsg := game.ChatMessage{
+	chatMsg := shared.ChatMessage{
 		SenderID:    senderID,
 		SenderName:  senderName,
 		SenderColor: senderColor,

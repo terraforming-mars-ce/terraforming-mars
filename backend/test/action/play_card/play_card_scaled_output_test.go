@@ -6,7 +6,6 @@ import (
 
 	cardAction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/cards"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -61,9 +60,9 @@ func TestMirandaResort_CreditProductionPerEarthTag(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Play 3 earth-tagged cards and 1 non-earth card
 	p.PlayedCards().AddCard("card-earth-1", "Earth Card 1", "automated", []string{"earth"})
@@ -129,9 +128,9 @@ func TestMirandaResort_ZeroEarthTags(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -197,9 +196,9 @@ func TestTerraformingGanymede_TRPerJovianTag(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Play 2 jovian-tagged cards first
 	p.PlayedCards().AddCard("card-jovian-1", "Jovian Card 1", "automated", []string{"jovian"})
@@ -268,9 +267,9 @@ func TestTerraformingGanymede_OnlyCountsSelfPlayerTags(t *testing.T) {
 	attacker.SetCorporationID("corp-tharsis-republic")
 	other.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, attacker.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
 
 	// Other player has 3 jovian tags - should NOT count for attacker
 	other.PlayedCards().AddCard("card-jovian-other", "Jovian Other", "automated", []string{"jovian"})
@@ -338,9 +337,9 @@ func TestImportedNitrogen_MultipleAnyCardTargets(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.PlayedCards().AddCard("card-microbe-host", "Microbe Host", "active", []string{"microbe"})
 	p.Resources().AddToStorage("card-microbe-host", 0)

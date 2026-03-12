@@ -3,7 +3,6 @@ package colony
 import (
 	"context"
 
-	baseaction "terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/player"
@@ -40,7 +39,9 @@ func applyOutput(ctx context.Context, g *game.Game, p *player.Player, outputType
 				log.Warn("Failed to draw cards for colony output", zap.Error(err))
 				return nil
 			}
-			baseaction.AddCardsToPlayerHand(cardIDs, p, g, cardRegistry, log)
+			for _, cardID := range cardIDs {
+				p.Hand().AddCard(cardID)
+			}
 			log.Debug("Drew cards for colony output",
 				zap.String("player_id", p.ID()),
 				zap.Int("count", len(cardIDs)))
@@ -50,7 +51,7 @@ func applyOutput(ctx context.Context, g *game.Game, p *player.Player, outputType
 		for i := range items {
 			items[i] = "ocean"
 		}
-		queue := &player.PendingTileSelectionQueue{
+		queue := &shared.PendingTileSelectionQueue{
 			Items:  items,
 			Source: "colony-build",
 		}
@@ -91,21 +92,21 @@ func combinePendingResources(pendings []*PendingResource) []*PendingResource {
 }
 
 // combineCalculatedOutputs merges calculated outputs of the same resource type by summing amounts.
-func combineCalculatedOutputs(outputs []game.CalculatedOutput) []game.CalculatedOutput {
-	byType := map[string]*game.CalculatedOutput{}
+func combineCalculatedOutputs(outputs []shared.CalculatedOutput) []shared.CalculatedOutput {
+	byType := map[string]*shared.CalculatedOutput{}
 	var order []string
 	for _, o := range outputs {
 		if existing, ok := byType[o.ResourceType]; ok {
 			existing.Amount += o.Amount
 		} else {
-			byType[o.ResourceType] = &game.CalculatedOutput{
+			byType[o.ResourceType] = &shared.CalculatedOutput{
 				ResourceType: o.ResourceType,
 				Amount:       o.Amount,
 			}
 			order = append(order, o.ResourceType)
 		}
 	}
-	result := make([]game.CalculatedOutput, 0, len(byType))
+	result := make([]shared.CalculatedOutput, 0, len(byType))
 	for _, rt := range order {
 		result = append(result, *byType[rt])
 	}

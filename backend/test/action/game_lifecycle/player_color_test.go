@@ -5,6 +5,7 @@ import (
 
 	"terraforming-mars-backend/internal/action/connection"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -34,7 +35,7 @@ func TestPlayerColor_AssignedFromPalette(t *testing.T) {
 	g, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 
 	paletteSet := make(map[string]bool)
-	for _, c := range game.PlayerColors {
+	for _, c := range shared.PlayerColors {
 		paletteSet[c] = true
 	}
 
@@ -57,7 +58,7 @@ func TestSetPlayerColor_Success(t *testing.T) {
 	otherPlayer := players[1]
 
 	var availableColor string
-	for _, c := range game.PlayerColors {
+	for _, c := range shared.PlayerColors {
 		if c != player.Color() && c != otherPlayer.Color() {
 			availableColor = c
 			break
@@ -92,10 +93,10 @@ func TestSetPlayerColor_HostCanChangeBotColor(t *testing.T) {
 	ctx := testutil.TestContext()
 
 	hostPlayer := g.GetAllPlayers()[0]
-	bot := testutil.AddBotToGame(t, g, repo, "TestBot", "normal", "fast")
+	bot := testutil.AddBotToGame(t, g, repo, testutil.CreateTestCardRegistry(), "TestBot", "normal", "fast")
 
 	var availableColor string
-	for _, c := range game.PlayerColors {
+	for _, c := range shared.PlayerColors {
 		if c != hostPlayer.Color() && c != bot.Color() {
 			availableColor = c
 			break
@@ -118,7 +119,7 @@ func TestSetPlayerColor_NotInLobby(t *testing.T) {
 	ctx := testutil.TestContext()
 
 	action := newSetPlayerColorAction(repo)
-	err := action.Execute(ctx, g.ID(), player1ID, player1ID, game.PlayerColors[0])
+	err := action.Execute(ctx, g.ID(), player1ID, player1ID, shared.PlayerColors[0])
 
 	testutil.AssertError(t, err, "Should reject color change when not in lobby")
 }
@@ -157,10 +158,10 @@ func TestSetPlayerColor_NonHostCannotChangeBotColor(t *testing.T) {
 	ctx := testutil.TestContext()
 
 	nonHost, _ := g.GetPlayer("player-2")
-	bot := testutil.AddBotToGame(t, g, repo, "TestBot", "normal", "fast")
+	bot := testutil.AddBotToGame(t, g, repo, testutil.CreateTestCardRegistry(), "TestBot", "normal", "fast")
 
 	action := newSetPlayerColorAction(repo)
-	err := action.Execute(ctx, g.ID(), nonHost.ID(), bot.ID(), game.PlayerColors[5])
+	err := action.Execute(ctx, g.ID(), nonHost.ID(), bot.ID(), shared.PlayerColors[5])
 
 	testutil.AssertError(t, err, "Non-host should not change bot color")
 }
@@ -174,16 +175,16 @@ func TestSetPlayerColor_CannotChangeOtherHumanColor(t *testing.T) {
 	otherHuman, _ := g.GetPlayer("player-2")
 
 	action := newSetPlayerColorAction(repo)
-	err := action.Execute(ctx, g.ID(), host.ID(), otherHuman.ID(), game.PlayerColors[5])
+	err := action.Execute(ctx, g.ID(), host.ID(), otherHuman.ID(), shared.PlayerColors[5])
 
 	testutil.AssertError(t, err, "Host should not change other human player's color")
 }
 
 func TestSetPlayerColor_GameNotFound(t *testing.T) {
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	action := newSetPlayerColorAction(repo)
 
-	err := action.Execute(testutil.TestContext(), "nonexistent", "player-1", "player-1", game.PlayerColors[0])
+	err := action.Execute(testutil.TestContext(), "nonexistent", "player-1", "player-1", shared.PlayerColors[0])
 	testutil.AssertError(t, err, "Should fail for nonexistent game")
 }
 
@@ -195,7 +196,7 @@ func TestSetPlayerColor_PlayerNotFound(t *testing.T) {
 	player := g.GetAllPlayers()[0]
 
 	action := newSetPlayerColorAction(repo)
-	err := action.Execute(ctx, g.ID(), player.ID(), "nonexistent", game.PlayerColors[0])
+	err := action.Execute(ctx, g.ID(), player.ID(), "nonexistent", shared.PlayerColors[0])
 
 	testutil.AssertError(t, err, "Should fail for nonexistent player")
 }

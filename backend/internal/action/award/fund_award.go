@@ -44,7 +44,7 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -100,7 +100,7 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 	if info, ok := game.GetAwardInfo(shared.AwardType(awardType)); ok {
 		awardName = info.Name
 	}
-	a.WriteStateLog(ctx, g, awardName, game.SourceTypeAward, playerID, fmt.Sprintf("Funded %s award", awardName))
+	a.WriteStateLog(ctx, g, awardName, shared.SourceTypeAward, playerID, fmt.Sprintf("Funded %s award", awardName))
 
 	log.Info("Award funded",
 		zap.String("award", awardType),

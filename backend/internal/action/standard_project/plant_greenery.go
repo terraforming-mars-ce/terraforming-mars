@@ -10,7 +10,6 @@ import (
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
-	playerPkg "terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -45,7 +44,7 @@ func (a *PlantGreeneryAction) Execute(ctx context.Context, gameID string, player
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -87,10 +86,10 @@ func (a *PlantGreeneryAction) Execute(ctx context.Context, gameID string, player
 		zap.Int("cost", PlantGreeneryStandardProjectCost),
 		zap.Int("remaining_credits", resources.Credits))
 
-	queue := &playerPkg.PendingTileSelectionQueue{
+	queue := &shared.PendingTileSelectionQueue{
 		Items:  []string{"greenery"},
 		Source: "standard-project-greenery",
-		OnComplete: &playerPkg.TileCompletionCallback{
+		OnComplete: &shared.TileCompletionCallback{
 			Type: "standard-project-greenery",
 		},
 		TileRestrictions: &shared.TileRestrictions{

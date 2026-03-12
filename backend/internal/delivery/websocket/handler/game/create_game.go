@@ -7,6 +7,7 @@ import (
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 
 	"go.uber.org/zap"
@@ -43,9 +44,9 @@ func (h *CreateGameHandler) HandleMessage(ctx context.Context, connection *core.
 
 	log.Debug("Processing create game request")
 
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: game.DefaultMaxPlayers,
-		CardPacks:  game.DefaultCardPacks(),
+		CardPacks:  shared.DefaultCardPacks(),
 	}
 
 	if payloadMap, ok := message.Payload.(map[string]interface{}); ok {

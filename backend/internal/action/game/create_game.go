@@ -9,7 +9,7 @@ import (
 
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/deck"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // CreateGameAction handles the business logic for creating new games
@@ -35,7 +35,7 @@ func NewCreateGameAction(
 // Execute performs the create game action
 func (a *CreateGameAction) Execute(
 	ctx context.Context,
-	settings game.GameSettings,
+	settings shared.GameSettings,
 ) (*game.Game, error) {
 	log := a.logger.With(
 		zap.Int("max_players", settings.MaxPlayers),
@@ -51,22 +51,21 @@ func (a *CreateGameAction) Execute(
 		settings.MaxPlayers = game.DefaultMaxPlayers
 	}
 	if len(settings.CardPacks) == 0 {
-		settings.CardPacks = game.DefaultCardPacks()
+		settings.CardPacks = shared.DefaultCardPacks()
 	}
-	if settings.VenusNextEnabled && !slices.Contains(settings.CardPacks, game.PackVenus) {
-		settings.CardPacks = append(settings.CardPacks, game.PackVenus)
+	if settings.VenusNextEnabled && !slices.Contains(settings.CardPacks, shared.PackVenus) {
+		settings.CardPacks = append(settings.CardPacks, shared.PackVenus)
 	}
 
 	// 3. Create game entity
 	// Note: hostPlayerID is empty initially, will be set when first player joins
 	// Board is automatically created by NewGame
 	// EventBus is created per-game for synchronous event handling
-	newGame := game.NewGame(gameID, "", settings)
+	newGame := game.NewGame(a.gameRepo.DataStore(), gameID, "", settings)
 
 	// 4. Initialize deck with cards from selected packs
 	projectCardIDs, corpIDs, preludeIDs := cards.GetCardIDsByPacks(a.cardRegistry, settings.CardPacks)
-	gameDeck := deck.NewDeck(gameID, projectCardIDs, corpIDs, preludeIDs)
-	newGame.SetDeck(gameDeck)
+	newGame.InitDeck(projectCardIDs, corpIDs, preludeIDs)
 	newGame.SetVPCardLookup(cards.NewVPCardLookupAdapter(a.cardRegistry))
 	log.Debug("Deck initialized",
 		zap.Int("project_cards", len(projectCardIDs)),

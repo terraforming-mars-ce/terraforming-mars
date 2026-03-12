@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -64,9 +63,12 @@ func TestChoiceRequirements_Choice0AlwaysAvailable(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -77,7 +79,7 @@ func TestChoiceRequirements_Choice0AlwaysAvailable(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 10}
 	choiceIndex := 0
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 0 with no requirements should succeed")
 
 	// Verify card was played
@@ -97,9 +99,12 @@ func TestChoiceRequirements_Choice1RejectedWithoutEnoughTags(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -110,7 +115,7 @@ func TestChoiceRequirements_Choice1RejectedWithoutEnoughTags(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 10}
 	choiceIndex := 1
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
 	testutil.AssertError(t, err, "Choice 1 should fail without venus tags")
 
 	// Card should still be in hand since the play failed
@@ -145,9 +150,12 @@ func TestChoiceRequirements_Choice1SucceedsWithEnoughTags(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -163,7 +171,7 @@ func TestChoiceRequirements_Choice1SucceedsWithEnoughTags(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 10}
 	choiceIndex := 1
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 1 should succeed with 3 venus tags")
 
 	// Verify card was played
@@ -183,9 +191,12 @@ func TestChoiceRequirements_Choice0DrawsCard(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -197,7 +208,7 @@ func TestChoiceRequirements_Choice0DrawsCard(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 10}
 	choiceIndex := 0
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 0 should succeed")
 
 	// The test card was removed from hand (-1), and choice 0 should draw 1 card (+1)
@@ -233,9 +244,12 @@ func TestChoiceRequirements_Choice1DrawsThreeCards(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -252,7 +266,7 @@ func TestChoiceRequirements_Choice1DrawsThreeCards(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 10}
 	choiceIndex := 1
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 1 should succeed with 3 venus tags")
 
 	// The test card was removed from hand (-1), and choice 1 should draw 3 cards (+3)
@@ -284,9 +298,12 @@ func TestChoiceRequirements_Choice1FailsWithTwoTags(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -301,6 +318,6 @@ func TestChoiceRequirements_Choice1FailsWithTwoTags(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 10}
 	choiceIndex := 1
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
 	testutil.AssertError(t, err, "Choice 1 should fail with only 2 venus tags")
 }

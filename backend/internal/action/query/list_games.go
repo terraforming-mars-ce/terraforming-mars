@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 
 	"go.uber.org/zap"
 )
@@ -26,7 +27,7 @@ func NewListGamesAction(
 }
 
 // Execute retrieves all games, optionally filtered by status
-func (a *ListGamesAction) Execute(ctx context.Context, status *game.GameStatus) ([]*game.Game, error) {
+func (a *ListGamesAction) Execute(ctx context.Context, status *shared.GameStatus) ([]*game.Game, error) {
 	log := a.logger
 	log.Debug("Querying all games")
 

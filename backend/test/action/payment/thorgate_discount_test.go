@@ -4,9 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -24,8 +22,8 @@ func TestThorGate_CardDiscount(t *testing.T) {
 	p := players[0]
 
 	// Set game to active status and action phase
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
 
 	// Manually register ThorGate discount effect on player (simulating corporation selection)
 	thorGateCard, err := cardRegistry.GetByID(testutil.CardID("ThorGate"))
@@ -34,7 +32,7 @@ func TestThorGate_CardDiscount(t *testing.T) {
 	// Register the discount effect
 	for behaviorIndex, behavior := range thorGateCard.Behaviors {
 		if gamecards.HasAutoTrigger(behavior) && gamecards.HasPersistentEffects(behavior) {
-			p.Effects().AddEffect(player.CardEffect{
+			p.Effects().AddEffect(shared.CardEffect{
 				CardID:        thorGateCard.ID,
 				CardName:      thorGateCard.Name,
 				BehaviorIndex: behaviorIndex,
@@ -85,8 +83,8 @@ func TestThorGate_StandardProjectDiscount(t *testing.T) {
 	p := players[0]
 
 	// Set game to active status and action phase
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
 
 	// Manually register ThorGate discount effect on player
 	thorGateCard, err := cardRegistry.GetByID(testutil.CardID("ThorGate"))
@@ -95,7 +93,7 @@ func TestThorGate_StandardProjectDiscount(t *testing.T) {
 	// Register the discount effect
 	for behaviorIndex, behavior := range thorGateCard.Behaviors {
 		if gamecards.HasAutoTrigger(behavior) && gamecards.HasPersistentEffects(behavior) {
-			p.Effects().AddEffect(player.CardEffect{
+			p.Effects().AddEffect(shared.CardEffect{
 				CardID:        thorGateCard.ID,
 				CardName:      thorGateCard.Name,
 				BehaviorIndex: behaviorIndex,
@@ -136,8 +134,8 @@ func TestThorGate_CombinedDiscount(t *testing.T) {
 	p := players[0]
 
 	// Set game to active status
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
 
 	// Manually register ThorGate discount effect
 	thorGateCard, err := cardRegistry.GetByID(testutil.CardID("ThorGate"))
@@ -163,7 +161,7 @@ func TestThorGate_CombinedDiscount(t *testing.T) {
 	testutil.AssertEqual(t, 2, len(output.Selectors), "Should have 2 selectors (one for power tag, one for power-plant SP)")
 
 	// Register the effect
-	p.Effects().AddEffect(player.CardEffect{
+	p.Effects().AddEffect(shared.CardEffect{
 		CardID:        thorGateCard.ID,
 		CardName:      thorGateCard.Name,
 		BehaviorIndex: discountBehaviorIndex,
@@ -195,8 +193,8 @@ func TestDiscountORLogic(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
 
 	// Create a custom discount effect that targets space tag OR event card type (OR logic between selectors)
 	customBehavior := shared.CardBehavior{
@@ -213,7 +211,7 @@ func TestDiscountORLogic(t *testing.T) {
 		},
 	}
 
-	p.Effects().AddEffect(player.CardEffect{
+	p.Effects().AddEffect(shared.CardEffect{
 		CardID:        "test-custom-discount",
 		CardName:      "Test Custom Discount",
 		BehaviorIndex: 0,

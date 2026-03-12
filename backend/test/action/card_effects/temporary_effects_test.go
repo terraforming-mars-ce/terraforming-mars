@@ -6,7 +6,6 @@ import (
 
 	baseaction "terraforming-mars-backend/internal/action"
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -55,9 +54,9 @@ func TestIndenturedWorkers_DiscountAppliedToNextCard(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -85,7 +84,7 @@ func TestIndenturedWorkers_DiscountAppliedToNextCard(t *testing.T) {
 	testutil.AssertEqual(t, 8, discount, "Next card should have 8 credit discount from Indentured Workers")
 
 	// Give player another action
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 
 	// Play Power Plant (cost 4, but with 8 discount -> effective cost 0)
 	payment = cardAction.PaymentRequest{Credits: 0}
@@ -114,9 +113,9 @@ func TestIndenturedWorkers_DiscountRemovedAfterOneCard(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 200,
@@ -132,7 +131,7 @@ func TestIndenturedWorkers_DiscountRemovedAfterOneCard(t *testing.T) {
 	testutil.AssertNoError(t, err, "Failed to play Indentured Workers")
 
 	// Play Power Plant -> discount should apply
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 	err = playAction.Execute(ctx, testGame.ID(), player.ID(), powerPlantID,
 		cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Power Plant with discount")
@@ -163,9 +162,9 @@ func TestSpecialDesign_LenienceAppliedToNextCard(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -175,7 +174,8 @@ func TestSpecialDesign_LenienceAppliedToNextCard(t *testing.T) {
 
 	// Temperature is at -30C (default). Card requires -24C.
 	// Let's increase temperature to -26
-	testGame.GlobalParameters().IncreaseTemperature(ctx, 2, "") // -30 + 2*2 = -26
+	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 2, "") // -30 + 2*2 = -26
+	testutil.AssertNoError(t, err, "IncreaseTemperature failed")
 
 	// Without Special Design, temp is -26 and card requires -24 -> can't play
 	tempReqCard, err := cardRegistry.GetByID(tempReqTestID)
@@ -206,7 +206,7 @@ func TestSpecialDesign_LenienceAppliedToNextCard(t *testing.T) {
 	testutil.AssertTrue(t, playable, "Card should be playable with Special Design lenience (temp -26, need -24, lenience 2 -> effective -26)")
 
 	// Play the temperature requirement card
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 	err = playAction.Execute(ctx, testGame.ID(), player.ID(), tempReqTestID,
 		cardAction.PaymentRequest{Credits: 5}, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should be able to play with Special Design lenience")
@@ -232,9 +232,9 @@ func TestSpecialDesign_LenienceWithMaxRequirement(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -243,7 +243,8 @@ func TestSpecialDesign_LenienceWithMaxRequirement(t *testing.T) {
 	player.Hand().AddCard(oxygenTestID) // Requires oxygen <= 5%
 
 	// Increase oxygen to 7% (3.5 steps from default 0)
-	testGame.GlobalParameters().IncreaseOxygen(ctx, 7, "")
+	_, err := testGame.GlobalParameters().IncreaseOxygen(ctx, 7, "")
+	testutil.AssertNoError(t, err, "IncreaseOxygen failed")
 
 	// Without lenience: oxygen 7, max 5 -> can't play
 	oxygenCard, err := cardRegistry.GetByID(oxygenTestID)
@@ -265,7 +266,7 @@ func TestSpecialDesign_LenienceWithMaxRequirement(t *testing.T) {
 	testutil.AssertTrue(t, playable, "Card should be playable with lenience (oxygen 7, max 5+2=7)")
 
 	// Play the card
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 	err = playAction.Execute(ctx, testGame.ID(), player.ID(), oxygenTestID,
 		cardAction.PaymentRequest{Credits: 5}, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should be able to play with Special Design lenience")
@@ -286,9 +287,9 @@ func TestTemporaryEffects_ClearedOnGenerationAdvance(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -306,7 +307,7 @@ func TestTemporaryEffects_ClearedOnGenerationAdvance(t *testing.T) {
 	testutil.AssertEqual(t, 1, len(effects), "Should have 1 effect")
 
 	// Advance generation -> should clear temporary effects
-	testGame.AdvanceGeneration(ctx)
+	testutil.AssertNoError(t, testGame.AdvanceGeneration(ctx), "AdvanceGeneration failed")
 
 	// Verify effects are cleared
 	effectsAfter := player.Effects().List()
@@ -330,9 +331,9 @@ func TestIndenturedWorkers_WithExistingPermanentDiscount(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 200,
@@ -348,7 +349,7 @@ func TestIndenturedWorkers_WithExistingPermanentDiscount(t *testing.T) {
 	testutil.AssertNoError(t, err, "Failed to play Space Station")
 
 	// Play Indentured Workers (temporary discount of 8)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 	err = playAction.Execute(ctx, testGame.ID(), player.ID(), indenturedWorkersID,
 		cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Indentured Workers")
@@ -364,7 +365,7 @@ func TestIndenturedWorkers_WithExistingPermanentDiscount(t *testing.T) {
 	testutil.AssertEqual(t, 10, discount, "Space Mirrors should have combined discount of 10")
 
 	// Play Space Mirrors -> temporary effect consumed
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 	err = playAction.Execute(ctx, testGame.ID(), player.ID(), spaceMirrorsID,
 		cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Space Mirrors")

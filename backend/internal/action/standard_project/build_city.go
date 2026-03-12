@@ -10,7 +10,6 @@ import (
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
-	playerPkg "terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -45,7 +44,7 @@ func (a *BuildCityAction) Execute(ctx context.Context, gameID string, playerID s
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -95,7 +94,7 @@ func (a *BuildCityAction) Execute(ctx context.Context, gameID string, playerID s
 	log.Debug("Increased credit production",
 		zap.Int("new_credit_production", production.Credits))
 
-	queue := &playerPkg.PendingTileSelectionQueue{
+	queue := &shared.PendingTileSelectionQueue{
 		Items:  []string{"city"},
 		Source: "standard-project-city",
 	}
@@ -107,20 +106,20 @@ func (a *BuildCityAction) Execute(ctx context.Context, gameID string, playerID s
 
 	a.ConsumePlayerAction(g, log)
 
-	calculatedOutputs := []game.CalculatedOutput{
+	calculatedOutputs := []shared.CalculatedOutput{
 		{ResourceType: string(shared.ResourceCreditProduction), Amount: 1, IsScaled: false},
 		{ResourceType: string(shared.ResourceCityPlacement), Amount: 1, IsScaled: false},
 	}
 
-	g.AddTriggeredEffect(game.TriggeredEffect{
+	g.AddTriggeredEffect(shared.TriggeredEffect{
 		CardName:          "City",
 		PlayerID:          playerID,
-		SourceType:        game.SourceTypeStandardProject,
+		SourceType:        shared.SourceTypeStandardProject,
 		CalculatedOutputs: calculatedOutputs,
 	})
 
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: City")
-	a.WriteStateLogFull(ctx, g, "Standard Project: City", game.SourceTypeStandardProject, playerID, "Built city", nil, calculatedOutputs, displayData)
+	a.WriteStateLogFull(ctx, g, "Standard Project: City", shared.SourceTypeStandardProject, playerID, "Built city", nil, calculatedOutputs, displayData)
 
 	log.Info("City built",
 		zap.Int("new_credit_production", production.Credits),

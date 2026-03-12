@@ -12,11 +12,12 @@ import (
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/colony"
 	playerPkg "terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // BotStarter starts bot sessions when a game begins.
 type BotStarter interface {
-	StartBot(gameID, playerID, botName, difficulty, speed string, settings game.GameSettings) error
+	StartBot(gameID, playerID, botName, difficulty, speed string, settings shared.GameSettings) error
 }
 
 // StartGameAction handles the business logic for starting games
@@ -60,7 +61,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 	}
 
 	// 2. BUSINESS LOGIC: Validate game is in lobby status
-	if g.Status() != game.GameStatusLobby {
+	if g.Status() != shared.GameStatusLobby {
 		log.Warn("Game is not in lobby", zap.String("status", string(g.Status())))
 		return fmt.Errorf("game is not in lobby: %s", g.Status())
 	}
@@ -105,7 +106,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 	}
 
 	// 7. BUSINESS LOGIC: Update game status to Active
-	if err := g.UpdateStatus(ctx, game.GameStatusActive); err != nil {
+	if err := g.UpdateStatus(ctx, shared.GameStatusActive); err != nil {
 		log.Error("Failed to update game status", zap.Error(err))
 		return fmt.Errorf("failed to update game status: %w", err)
 	}
@@ -122,13 +123,13 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 
 	// 9. BUSINESS LOGIC: Demo games go to DemoSetup phase, normal games to CorporationSelection
 	if g.Settings().DemoGame {
-		if err := g.UpdatePhase(ctx, game.GamePhaseDemoSetup); err != nil {
+		if err := g.UpdatePhase(ctx, shared.GamePhaseDemoSetup); err != nil {
 			log.Error("Failed to update game phase", zap.Error(err))
 			return fmt.Errorf("failed to update game phase: %w", err)
 		}
 		log.Debug("Demo game entering setup phase")
 	} else {
-		if err := g.UpdatePhase(ctx, game.GamePhaseStartingSelection); err != nil {
+		if err := g.UpdatePhase(ctx, shared.GamePhaseStartingSelection); err != nil {
 			log.Error("Failed to update game phase", zap.Error(err))
 			return fmt.Errorf("failed to update game phase: %w", err)
 		}
@@ -224,7 +225,7 @@ func (a *StartGameAction) distributeCorporations(ctx context.Context, g *game.Ga
 			return fmt.Errorf("failed to draw corporations for player %s: %w", p.ID(), err)
 		}
 
-		phase := &playerPkg.SelectCorporationPhase{
+		phase := &shared.SelectCorporationPhase{
 			AvailableCorporations: corporationIDs,
 		}
 		if err := g.SetSelectCorporationPhase(ctx, p.ID(), phase); err != nil {
@@ -247,7 +248,7 @@ func (a *StartGameAction) distributePreludeCards(ctx context.Context, g *game.Ga
 			return fmt.Errorf("failed to draw prelude cards for player %s: %w", p.ID(), err)
 		}
 
-		phase := &playerPkg.SelectPreludeCardsPhase{
+		phase := &shared.SelectPreludeCardsPhase{
 			AvailablePreludes: preludeIDs,
 			MaxSelectable:     2,
 		}
@@ -271,7 +272,7 @@ func (a *StartGameAction) distributeProjectCards(ctx context.Context, g *game.Ga
 			return fmt.Errorf("failed to draw project cards for player %s: %w", p.ID(), err)
 		}
 
-		phase := &playerPkg.SelectStartingCardsPhase{
+		phase := &shared.SelectStartingCardsPhase{
 			AvailableCards: projectCardIDs,
 		}
 		if err := g.SetSelectStartingCardsPhase(ctx, p.ID(), phase); err != nil {

@@ -10,6 +10,7 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
@@ -24,18 +25,19 @@ func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
 	}
 
 	// Create test game
-	settings := game.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
-	g := game.NewGame("test-game", "player1", settings)
+	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
+	ds, _ := datastore.NewDataStore()
+	g := game.NewGame(ds, "test-game", "player1", settings)
 
 	// Add player
 	ctx := context.Background()
-	p := player.NewPlayer(g.EventBus(), "test-game", "player1", "Test Player")
-	if err := g.AddPlayer(ctx, p); err != nil {
+	p, err := g.AddNewPlayer(ctx, "player1", "Test Player")
+	if err != nil {
 		t.Fatalf("Failed to add player: %v", err)
 	}
 
 	// Set game to action phase
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		t.Fatalf("Failed to set game phase: %v", err)
 	}
 
@@ -58,13 +60,19 @@ func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
 	})
 
 	// Set temperature BELOW requirement
-	g.GlobalParameters().SetTemperature(ctx, -20)
+	if err := g.GlobalParameters().SetTemperature(ctx, -20); err != nil {
+		t.Fatalf("Failed to set temperature: %v", err)
+	}
 
-	// Create PlayerCard with event listeners
-	pc := action.CreateAndCachePlayerCard(card, p, g, cardRegistry)
+	// Setup card state store and add card to hand
+	action.SetupPlayerCardStore(p, g, cardRegistry)
+	p.Hand().AddCard(card.ID)
 
 	// Initial state should be unavailable (temperature too low)
-	state := pc.State()
+	state, ok := p.CardStateStore().GetState(card.ID)
+	if !ok {
+		t.Fatal("Expected card state to exist in store")
+	}
 	if state.Available() {
 		t.Error("Expected card to be unavailable initially")
 	}
@@ -82,7 +90,7 @@ func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
 	}
 
 	// TRIGGER EVENT: Increase temperature to meet requirement
-	_, err := g.GlobalParameters().IncreaseTemperature(ctx, 10, "")
+	_, err = g.GlobalParameters().IncreaseTemperature(ctx, 10, "")
 	if err != nil {
 		t.Fatalf("Failed to increase temperature: %v", err)
 	}
@@ -91,7 +99,10 @@ func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// State should now be updated automatically (temperature requirement met)
-	updatedState := pc.State()
+	updatedState, ok := p.CardStateStore().GetState(card.ID)
+	if !ok {
+		t.Fatal("Expected card state to exist in store after temperature increase")
+	}
 	if !updatedState.Available() {
 		t.Errorf("Expected card to be available after temperature increase, errors: %+v", updatedState.Errors)
 	}
@@ -113,18 +124,19 @@ func TestPlayerCard_ResourceChangeEventUpdate(t *testing.T) {
 	}
 
 	// Create test game
-	settings := game.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
-	g := game.NewGame("test-game", "player1", settings)
+	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
+	ds, _ := datastore.NewDataStore()
+	g := game.NewGame(ds, "test-game", "player1", settings)
 
 	// Add player
 	ctx := context.Background()
-	p := player.NewPlayer(g.EventBus(), "test-game", "player1", "Test Player")
-	if err := g.AddPlayer(ctx, p); err != nil {
+	p, err := g.AddNewPlayer(ctx, "player1", "Test Player")
+	if err != nil {
 		t.Fatalf("Failed to add player: %v", err)
 	}
 
 	// Set game to action phase
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		t.Fatalf("Failed to set game phase: %v", err)
 	}
 
@@ -143,11 +155,15 @@ func TestPlayerCard_ResourceChangeEventUpdate(t *testing.T) {
 		shared.ResourceCredit: 30,
 	})
 
-	// Create PlayerCard with event listeners
-	pc := action.CreateAndCachePlayerCard(card, p, g, cardRegistry)
+	// Setup card state store and add card to hand
+	action.SetupPlayerCardStore(p, g, cardRegistry)
+	p.Hand().AddCard(card.ID)
 
 	// Initial state should be unavailable (insufficient credits)
-	state := pc.State()
+	state, ok := p.CardStateStore().GetState(card.ID)
+	if !ok {
+		t.Fatal("Expected card state to exist in store")
+	}
 	if state.Available() {
 		t.Error("Expected card to be unavailable with insufficient credits")
 	}
@@ -173,7 +189,10 @@ func TestPlayerCard_ResourceChangeEventUpdate(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// State should now be updated automatically (affordable)
-	updatedState := pc.State()
+	updatedState, ok := p.CardStateStore().GetState(card.ID)
+	if !ok {
+		t.Fatal("Expected card state to exist in store after gaining credits")
+	}
 	if !updatedState.Available() {
 		t.Errorf("Expected card to be available after gaining credits, errors: %+v", updatedState.Errors)
 	}
@@ -195,18 +214,19 @@ func TestPlayerCard_PhaseChangeEventUpdate(t *testing.T) {
 	}
 
 	// Create test game
-	settings := game.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
-	g := game.NewGame("test-game", "player1", settings)
+	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
+	ds, _ := datastore.NewDataStore()
+	g := game.NewGame(ds, "test-game", "player1", settings)
 
 	// Add player
 	ctx := context.Background()
-	p := player.NewPlayer(g.EventBus(), "test-game", "player1", "Test Player")
-	if err := g.AddPlayer(ctx, p); err != nil {
+	p, err := g.AddNewPlayer(ctx, "player1", "Test Player")
+	if err != nil {
 		t.Fatalf("Failed to add player: %v", err)
 	}
 
 	// Start in WRONG phase
-	if err := g.UpdatePhase(ctx, game.GamePhaseWaitingForGameStart); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseWaitingForGameStart); err != nil {
 		t.Fatalf("Failed to set game phase: %v", err)
 	}
 
@@ -225,11 +245,15 @@ func TestPlayerCard_PhaseChangeEventUpdate(t *testing.T) {
 		shared.ResourceCredit: 20,
 	})
 
-	// Create PlayerCard with event listeners
-	pc := action.CreateAndCachePlayerCard(card, p, g, cardRegistry)
+	// Setup card state store and add card to hand
+	action.SetupPlayerCardStore(p, g, cardRegistry)
+	p.Hand().AddCard(card.ID)
 
 	// Initial state should be unavailable (wrong phase)
-	state := pc.State()
+	state, ok := p.CardStateStore().GetState(card.ID)
+	if !ok {
+		t.Fatal("Expected card state to exist in store")
+	}
 	if state.Available() {
 		t.Error("Expected card to be unavailable in wrong phase")
 	}
@@ -247,7 +271,7 @@ func TestPlayerCard_PhaseChangeEventUpdate(t *testing.T) {
 	}
 
 	// TRIGGER EVENT: Change phase to action
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		t.Fatalf("Failed to update phase: %v", err)
 	}
 
@@ -255,7 +279,10 @@ func TestPlayerCard_PhaseChangeEventUpdate(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// State should now be updated automatically (correct phase)
-	updatedState := pc.State()
+	updatedState, ok := p.CardStateStore().GetState(card.ID)
+	if !ok {
+		t.Fatal("Expected card state to exist in store after phase change")
+	}
 	if !updatedState.Available() {
 		t.Errorf("Expected card to be available in action phase, errors: %+v", updatedState.Errors)
 	}
@@ -277,18 +304,19 @@ func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
 	}
 
 	// Create test game
-	settings := game.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
-	g := game.NewGame("test-game", "player1", settings)
+	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
+	ds, _ := datastore.NewDataStore()
+	g := game.NewGame(ds, "test-game", "player1", settings)
 
 	// Add player
 	ctx := context.Background()
-	p := player.NewPlayer(g.EventBus(), "test-game", "player1", "Test Player")
-	if err := g.AddPlayer(ctx, p); err != nil {
+	p, err := g.AddNewPlayer(ctx, "player1", "Test Player")
+	if err != nil {
 		t.Fatalf("Failed to add player: %v", err)
 	}
 
 	// Set game to action phase
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		t.Fatalf("Failed to set game phase: %v", err)
 	}
 
@@ -307,16 +335,18 @@ func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
 		shared.ResourceCredit: 20,
 	})
 
-	// Create PlayerCard and add to hand
-	pc := action.CreateAndCachePlayerCard(card, p, g, cardRegistry)
+	// Setup card state store and add card to hand
+	action.SetupPlayerCardStore(p, g, cardRegistry)
 	p.Hand().AddCard(card.ID)
-	p.Hand().AddPlayerCard(card.ID, pc)
 
-	// Get initial state timestamp
-	initialState := pc.State()
+	// Get initial state
+	initialState, ok := p.CardStateStore().GetState(card.ID)
+	if !ok {
+		t.Fatal("Expected card state to exist in store")
+	}
 	initialTimestamp := initialState.LastCalculated
 
-	// Remove card from hand (should trigger cleanup)
+	// Remove card from hand (should trigger cleanup via CardHandUpdatedEvent -> SyncWithHand)
 	removed := p.Hand().RemoveCard(card.ID)
 	if !removed {
 		t.Fatal("Failed to remove card from hand")
@@ -325,19 +355,24 @@ func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
 	// Give time for cleanup to complete
 	time.Sleep(5 * time.Millisecond)
 
-	// Verify state is no longer updated after cleanup
+	// Verify state has been removed from the store
+	_, ok = p.CardStateStore().GetState(card.ID)
+	if ok {
+		t.Error("Expected card state to be removed from store after card removed from hand")
+	}
+
 	// Change temperature (would normally trigger state recalculation)
-	g.GlobalParameters().SetTemperature(ctx, 10)
+	if err := g.GlobalParameters().SetTemperature(ctx, 10); err != nil {
+		t.Fatalf("Failed to set temperature: %v", err)
+	}
 
 	// Give time for any handlers to execute
 	time.Sleep(10 * time.Millisecond)
 
-	// State should NOT have changed (listeners were cleaned up)
-	// LastCalculated timestamp should still be the initial one
-	stateAfterCleanup := pc.State()
-	if stateAfterCleanup.LastCalculated.After(initialTimestamp) {
-		t.Errorf("State was recalculated after cleanup (should not happen). Initial: %v, After: %v",
-			initialTimestamp, stateAfterCleanup.LastCalculated)
+	// State should still not exist in the store
+	_, ok = p.CardStateStore().GetState(card.ID)
+	if ok {
+		t.Error("Expected card state to remain absent from store after temperature change")
 	}
 
 	// Also try triggering resource change (another event type)
@@ -346,11 +381,14 @@ func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
 	})
 	time.Sleep(10 * time.Millisecond)
 
-	// Still should not have recalculated
-	finalState := pc.State()
-	if finalState.LastCalculated.After(initialTimestamp) {
-		t.Error("State was recalculated after cleanup on resource change (should not happen)")
+	// Still should not exist in the store
+	_, ok = p.CardStateStore().GetState(card.ID)
+	if ok {
+		t.Error("Expected card state to remain absent from store after resource change")
 	}
+
+	// Suppress unused variable warning
+	_ = initialTimestamp
 }
 
 // TestPlayerCard_MultipleCardsIndependentState verifies each card has independent state
@@ -362,18 +400,19 @@ func TestPlayerCard_MultipleCardsIndependentState(t *testing.T) {
 	}
 
 	// Create test game
-	settings := game.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
-	g := game.NewGame("test-game", "player1", settings)
+	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
+	ds, _ := datastore.NewDataStore()
+	g := game.NewGame(ds, "test-game", "player1", settings)
 
 	// Add player
 	ctx := context.Background()
-	p := player.NewPlayer(g.EventBus(), "test-game", "player1", "Test Player")
-	if err := g.AddPlayer(ctx, p); err != nil {
+	p, err := g.AddNewPlayer(ctx, "player1", "Test Player")
+	if err != nil {
 		t.Fatalf("Failed to add player: %v", err)
 	}
 
 	// Set game to action phase
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		t.Fatalf("Failed to set game phase: %v", err)
 	}
 
@@ -406,20 +445,29 @@ func TestPlayerCard_MultipleCardsIndependentState(t *testing.T) {
 	})
 
 	// Set temperature to 0 (meets card1 requirement, not card2)
-	g.GlobalParameters().SetTemperature(ctx, 0)
+	if err := g.GlobalParameters().SetTemperature(ctx, 0); err != nil {
+		t.Fatalf("Failed to set temperature: %v", err)
+	}
 
-	// Create both PlayerCards
-	pc1 := action.CreateAndCachePlayerCard(card1, p, g, cardRegistry)
-	pc2 := action.CreateAndCachePlayerCard(card2, p, g, cardRegistry)
+	// Setup card state store and add both cards to hand
+	action.SetupPlayerCardStore(p, g, cardRegistry)
+	p.Hand().AddCard(card1.ID)
+	p.Hand().AddCard(card2.ID)
 
 	// Verify card1 is available (temp >= -10)
-	state1 := pc1.State()
+	state1, ok := p.CardStateStore().GetState(card1.ID)
+	if !ok {
+		t.Fatal("Expected card1 state to exist in store")
+	}
 	if !state1.Available() {
 		t.Errorf("Expected card1 to be available, errors: %+v", state1.Errors)
 	}
 
 	// Verify card2 is NOT available (temp < 10)
-	state2 := pc2.State()
+	state2, ok := p.CardStateStore().GetState(card2.ID)
+	if !ok {
+		t.Fatal("Expected card2 state to exist in store")
+	}
 	if state2.Available() {
 		t.Error("Expected card2 to be unavailable")
 	}
@@ -437,12 +485,20 @@ func TestPlayerCard_MultipleCardsIndependentState(t *testing.T) {
 	}
 
 	// Increase temperature to 10 (now both cards should be available)
-	g.GlobalParameters().SetTemperature(ctx, 10)
+	if err := g.GlobalParameters().SetTemperature(ctx, 10); err != nil {
+		t.Fatalf("Failed to set temperature: %v", err)
+	}
 	time.Sleep(10 * time.Millisecond)
 
 	// Both cards should now be available
-	updatedState1 := pc1.State()
-	updatedState2 := pc2.State()
+	updatedState1, ok := p.CardStateStore().GetState(card1.ID)
+	if !ok {
+		t.Fatal("Expected card1 state to exist in store after temperature change")
+	}
+	updatedState2, ok := p.CardStateStore().GetState(card2.ID)
+	if !ok {
+		t.Fatal("Expected card2 state to exist in store after temperature change")
+	}
 
 	if !updatedState1.Available() {
 		t.Errorf("Expected card1 to still be available, errors: %+v", updatedState1.Errors)

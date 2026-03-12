@@ -3,11 +3,11 @@ package game
 import (
 	"context"
 	"fmt"
+	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
-
-	playerPkg "terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 
 	"go.uber.org/zap"
 )
@@ -76,7 +76,7 @@ func (a *JoinGameAction) Execute(
 	}
 
 	// 3. Validate game is in lobby status (only for new joins)
-	if g.Status() != game.GameStatusLobby {
+	if g.Status() != shared.GameStatusLobby {
 		log.Warn("Game is not in lobby", zap.String("status", string(g.Status())))
 		return nil, fmt.Errorf("game is not in lobby: %s", g.Status())
 	}
@@ -107,16 +107,12 @@ func (a *JoinGameAction) Execute(
 		return nil, fmt.Errorf("game is full")
 	}
 
-	// 6. Create new player (using Game's EventBus for automatic broadcasting)
-	newPlayer := playerPkg.NewPlayer(g.EventBus(), gameID, playerID, playerName)
-	log.Debug("New player created", zap.String("player_id", newPlayer.ID()))
-
-	// 7. Check if this will be the first player (before adding)
+	// 6. Check if this will be the first player (before adding)
 	isFirstPlayer := len(existingPlayers) == 0
 
-	// 8. If first player, set as host BEFORE adding (so auto-broadcast includes hostPlayerID)
+	// 7. If first player, set as host BEFORE adding (so auto-broadcast includes hostPlayerID)
 	if isFirstPlayer {
-		err = g.SetHostPlayerID(ctx, newPlayer.ID())
+		err = g.SetHostPlayerID(ctx, playerID)
 		if err != nil {
 			log.Error("Failed to set host player", zap.Error(err))
 			return nil, fmt.Errorf("failed to set host player: %w", err)
@@ -124,13 +120,13 @@ func (a *JoinGameAction) Execute(
 		log.Debug("Player set as host")
 	}
 
-	// 9. Add player to game (publishes PlayerJoinedEvent which auto-broadcasts)
-	err = g.AddPlayer(ctx, newPlayer)
+	// 8. Create and add player to game (publishes PlayerJoinedEvent which auto-broadcasts)
+	newPlayer, err := g.AddNewPlayer(ctx, playerID, playerName)
 	if err != nil {
 		log.Error("Failed to add player to game", zap.Error(err))
 		return nil, fmt.Errorf("failed to add player to game: %w", err)
 	}
-
+	action.SetupPlayerCardStore(newPlayer, g, a.cardRegistry)
 	log.Debug("Player added to game")
 
 	// 10. Convert to DTO with personalized view for the joining player

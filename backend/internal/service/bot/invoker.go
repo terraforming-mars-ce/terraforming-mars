@@ -187,14 +187,18 @@ func (inv *Invoker) displayToolUse(block contentBlock) {
 		var input struct {
 			FilePath string `json:"file_path"`
 		}
-		json.Unmarshal(block.Input, &input)
+		if err := json.Unmarshal(block.Input, &input); err != nil {
+			inv.logger.Warn("Failed to unmarshal Read tool input", zap.Error(err))
+		}
 		inv.logger.Debug("Read", zap.String("file", input.FilePath))
 
 	case "Bash":
 		var input struct {
 			Command string `json:"command"`
 		}
-		json.Unmarshal(block.Input, &input)
+		if err := json.Unmarshal(block.Input, &input); err != nil {
+			inv.logger.Warn("Failed to unmarshal Bash tool input", zap.Error(err))
+		}
 		cmd := input.Command
 		if len(cmd) > 200 {
 			cmd = cmd[:200] + "..."

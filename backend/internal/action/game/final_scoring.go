@@ -11,6 +11,7 @@ import (
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // FinalScoringAction handles the business logic for calculating final scores and ending the game
@@ -54,7 +55,7 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 	}
 
 	// 2. Validate game is active
-	if g.Status() != game.GameStatusActive {
+	if g.Status() != shared.GameStatusActive {
 		log.Warn("Game is not active, skipping final scoring", zap.String("status", string(g.Status())))
 		return nil
 	}
@@ -126,13 +127,13 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 		zap.Bool("is_tie", isTie),
 	)
 
-	// 8. Convert to game.FinalScore and store in game
-	finalScores := make([]game.FinalScore, len(scores))
+	// 8. Convert to shared.FinalScore and store in game
+	finalScores := make([]shared.FinalScore, len(scores))
 	for i, s := range scores {
-		finalScores[i] = game.FinalScore{
+		finalScores[i] = shared.FinalScore{
 			PlayerID:   s.PlayerID,
 			PlayerName: s.PlayerName,
-			Breakdown: game.VPBreakdown{
+			Breakdown: shared.VPBreakdown{
 				TerraformRating:   s.Breakdown.TerraformRating,
 				CardVP:            s.Breakdown.CardVP,
 				CardVPDetails:     convertCardVPDetails(s.Breakdown.CardVPDetails),
@@ -156,14 +157,14 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 	}
 
 	// 9. Update game status to completed
-	err = g.UpdateStatus(ctx, game.GameStatusCompleted)
+	err = g.UpdateStatus(ctx, shared.GameStatusCompleted)
 	if err != nil {
 		log.Error("Failed to update game status", zap.Error(err))
 		return err
 	}
 
 	// 10. Update game phase to complete
-	err = g.UpdatePhase(ctx, game.GamePhaseComplete)
+	err = g.UpdatePhase(ctx, shared.GamePhaseComplete)
 	if err != nil {
 		log.Error("Failed to update game phase", zap.Error(err))
 		return err
@@ -182,7 +183,7 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 }
 
 // convertToClaimedMilestoneInfo converts game milestones to the format expected by VP calculator
-func convertToClaimedMilestoneInfo(claimed []game.ClaimedMilestone) []gamecards.ClaimedMilestoneInfo {
+func convertToClaimedMilestoneInfo(claimed []shared.ClaimedMilestone) []gamecards.ClaimedMilestoneInfo {
 	result := make([]gamecards.ClaimedMilestoneInfo, len(claimed))
 	for i, m := range claimed {
 		result[i] = gamecards.ClaimedMilestoneInfo{
@@ -194,7 +195,7 @@ func convertToClaimedMilestoneInfo(claimed []game.ClaimedMilestone) []gamecards.
 }
 
 // convertToFundedAwardInfo converts game awards to the format expected by VP calculator
-func convertToFundedAwardInfo(funded []game.FundedAward) []gamecards.FundedAwardInfo {
+func convertToFundedAwardInfo(funded []shared.FundedAward) []gamecards.FundedAwardInfo {
 	result := make([]gamecards.FundedAwardInfo, len(funded))
 	for i, a := range funded {
 		result[i] = gamecards.FundedAwardInfo{
@@ -204,13 +205,13 @@ func convertToFundedAwardInfo(funded []game.FundedAward) []gamecards.FundedAward
 	return result
 }
 
-// convertCardVPDetails converts gamecards.CardVPDetail to game.CardVPDetail
-func convertCardVPDetails(details []gamecards.CardVPDetail) []game.CardVPDetail {
-	result := make([]game.CardVPDetail, len(details))
+// convertCardVPDetails converts gamecards.CardVPDetail to shared.CardVPDetail
+func convertCardVPDetails(details []gamecards.CardVPDetail) []shared.CardVPDetail {
+	result := make([]shared.CardVPDetail, len(details))
 	for i, d := range details {
-		conditions := make([]game.CardVPConditionDetail, len(d.Conditions))
+		conditions := make([]shared.CardVPConditionDetail, len(d.Conditions))
 		for j, c := range d.Conditions {
-			conditions[j] = game.CardVPConditionDetail{
+			conditions[j] = shared.CardVPConditionDetail{
 				ConditionType:  c.ConditionType,
 				Amount:         c.Amount,
 				Count:          c.Count,
@@ -220,7 +221,7 @@ func convertCardVPDetails(details []gamecards.CardVPDetail) []game.CardVPDetail 
 				Explanation:    c.Explanation,
 			}
 		}
-		result[i] = game.CardVPDetail{
+		result[i] = shared.CardVPDetail{
 			CardID:     d.CardID,
 			CardName:   d.CardName,
 			Conditions: conditions,
@@ -230,11 +231,11 @@ func convertCardVPDetails(details []gamecards.CardVPDetail) []game.CardVPDetail 
 	return result
 }
 
-// convertGreeneryVPDetails converts gamecards.GreeneryVPDetail to game.GreeneryVPDetail
-func convertGreeneryVPDetails(details []gamecards.GreeneryVPDetail) []game.GreeneryVPDetail {
-	result := make([]game.GreeneryVPDetail, len(details))
+// convertGreeneryVPDetails converts gamecards.GreeneryVPDetail to shared.GreeneryVPDetail
+func convertGreeneryVPDetails(details []gamecards.GreeneryVPDetail) []shared.GreeneryVPDetail {
+	result := make([]shared.GreeneryVPDetail, len(details))
 	for i, d := range details {
-		result[i] = game.GreeneryVPDetail{
+		result[i] = shared.GreeneryVPDetail{
 			Coordinate: d.Coordinate,
 			VP:         d.VP,
 		}
@@ -242,11 +243,11 @@ func convertGreeneryVPDetails(details []gamecards.GreeneryVPDetail) []game.Green
 	return result
 }
 
-// convertCityVPDetails converts gamecards.CityVPDetail to game.CityVPDetail
-func convertCityVPDetails(details []gamecards.CityVPDetail) []game.CityVPDetail {
-	result := make([]game.CityVPDetail, len(details))
+// convertCityVPDetails converts gamecards.CityVPDetail to shared.CityVPDetail
+func convertCityVPDetails(details []gamecards.CityVPDetail) []shared.CityVPDetail {
+	result := make([]shared.CityVPDetail, len(details))
 	for i, d := range details {
-		result[i] = game.CityVPDetail{
+		result[i] = shared.CityVPDetail{
 			CityCoordinate:     d.CityCoordinate,
 			AdjacentGreeneries: d.AdjacentGreeneries,
 			VP:                 d.VP,

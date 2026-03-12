@@ -14,9 +14,8 @@ import (
 
 // CorporationProcessor handles applying corporation card effects
 type CorporationProcessor struct {
-	cardRegistry       CardRegistryInterface
-	logger             *zap.Logger
-	onCardsAddedToHand func([]string)
+	cardRegistry CardRegistryInterface
+	logger       *zap.Logger
 }
 
 // NewCorporationProcessor creates a new corporation processor
@@ -25,13 +24,6 @@ func NewCorporationProcessor(cardRegistry CardRegistryInterface, logger *zap.Log
 		cardRegistry: cardRegistry,
 		logger:       logger,
 	}
-}
-
-// WithOnCardsAddedToHand sets the callback invoked when cards are drawn into hand.
-// This is needed to create and cache PlayerCard objects from the action layer.
-func (p *CorporationProcessor) WithOnCardsAddedToHand(fn func([]string)) *CorporationProcessor {
-	p.onCardsAddedToHand = fn
-	return p
 }
 
 // ApplyStartingEffects processes ONLY auto-corporation-start behaviors
@@ -160,15 +152,15 @@ func (p *CorporationProcessor) SetupForcedFirstAction(
 // They are applied immediately AND registered in effects list for display purposes
 // This is a READ-ONLY helper that parses the card behaviors and returns CardEffect structs
 // The action layer is responsible for adding these effects to the player
-func (p *CorporationProcessor) GetAutoEffects(card *Card) []player.CardEffect {
-	var effects []player.CardEffect
+func (p *CorporationProcessor) GetAutoEffects(card *Card) []shared.CardEffect {
+	var effects []shared.CardEffect
 
 	// Iterate through all behaviors and find auto triggers without conditions
 	for behaviorIndex, behavior := range card.Behaviors {
 		for _, trigger := range behavior.Triggers {
 			// Auto triggers WITHOUT conditions are immediate/permanent effects
 			if trigger.Type == string(ResourceTriggerAuto) && trigger.Condition == nil {
-				effect := player.CardEffect{
+				effect := shared.CardEffect{
 					CardID:        card.ID,
 					CardName:      card.Name,
 					BehaviorIndex: behaviorIndex,
@@ -186,13 +178,13 @@ func (p *CorporationProcessor) GetAutoEffects(card *Card) []player.CardEffect {
 // These are behaviors with auto triggers that have conditions, for event subscription
 // This is a READ-ONLY helper that parses the card behaviors and returns CardEffect structs
 // The action layer is responsible for adding these effects to the player
-func (p *CorporationProcessor) GetTriggerEffects(card *Card) []player.CardEffect {
-	var effects []player.CardEffect
+func (p *CorporationProcessor) GetTriggerEffects(card *Card) []shared.CardEffect {
+	var effects []shared.CardEffect
 
 	// Iterate through all behaviors and find conditional triggers
 	for behaviorIndex, behavior := range card.Behaviors {
 		if HasConditionalTrigger(behavior) {
-			effect := player.CardEffect{
+			effect := shared.CardEffect{
 				CardID:        card.ID,
 				CardName:      card.Name,
 				BehaviorIndex: behaviorIndex,
@@ -208,13 +200,13 @@ func (p *CorporationProcessor) GetTriggerEffects(card *Card) []player.CardEffect
 // GetManualActions returns all manual actions (manual triggers) from a corporation card
 // This is a READ-ONLY helper that parses the card behaviors and returns CardAction structs
 // The action layer is responsible for adding these actions to the player
-func (p *CorporationProcessor) GetManualActions(card *Card) []player.CardAction {
-	var actions []player.CardAction
+func (p *CorporationProcessor) GetManualActions(card *Card) []shared.CardAction {
+	var actions []shared.CardAction
 
 	// Iterate through all behaviors and find manual triggers
 	for behaviorIndex, behavior := range card.Behaviors {
 		if HasManualTrigger(behavior) {
-			action := player.CardAction{
+			action := shared.CardAction{
 				CardID:                  card.ID,
 				CardName:                card.Name,
 				BehaviorIndex:           behaviorIndex,
@@ -257,15 +249,14 @@ func (p *CorporationProcessor) applyCardDrawForcedAction(
 
 	applier := NewBehaviorApplier(pl, g, card.Name, log).
 		WithSourceCardID(card.ID).
-		WithCardRegistry(p.cardRegistry).
-		WithOnCardsAddedToHand(p.onCardsAddedToHand)
+		WithCardRegistry(p.cardRegistry)
 
 	_, err = applier.ApplyCardDrawOutputs(ctx, behavior.Outputs)
 	if err != nil {
 		return fmt.Errorf("failed to apply card draw outputs: %w", err)
 	}
 
-	action := &player.ForcedFirstAction{
+	action := &shared.ForcedFirstAction{
 		ActionType:    "card-draw-selection",
 		CorporationID: card.ID,
 		Source:        "corporation-starting-action",
@@ -293,11 +284,11 @@ func (p *CorporationProcessor) createForcedAction(
 	playerID string,
 	log *zap.Logger,
 ) error {
-	inStartingSelection := g.CurrentPhase() == game.GamePhaseStartingSelection
+	inStartingSelection := g.CurrentPhase() == shared.GamePhaseStartingSelection
 
 	switch output.ResourceType {
 	case shared.ResourceCityPlacement:
-		action := &player.ForcedFirstAction{
+		action := &shared.ForcedFirstAction{
 			ActionType:    "city-placement",
 			CorporationID: card.ID,
 			Source:        "corporation-starting-action",
@@ -311,7 +302,7 @@ func (p *CorporationProcessor) createForcedAction(
 			zap.String("description", action.Description))
 
 		if !inStartingSelection {
-			queue := &player.PendingTileSelectionQueue{
+			queue := &shared.PendingTileSelectionQueue{
 				Items:  []string{"city"},
 				Source: "corporation-starting-action",
 			}
@@ -326,7 +317,7 @@ func (p *CorporationProcessor) createForcedAction(
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
 
 	case shared.ResourceGreeneryPlacement:
-		action := &player.ForcedFirstAction{
+		action := &shared.ForcedFirstAction{
 			ActionType:    "greenery-placement",
 			CorporationID: card.ID,
 			Source:        "corporation-starting-action",
@@ -340,7 +331,7 @@ func (p *CorporationProcessor) createForcedAction(
 			zap.String("description", action.Description))
 
 		if !inStartingSelection {
-			queue := &player.PendingTileSelectionQueue{
+			queue := &shared.PendingTileSelectionQueue{
 				Items:  []string{"greenery"},
 				Source: "corporation-starting-action",
 			}
@@ -355,7 +346,7 @@ func (p *CorporationProcessor) createForcedAction(
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
 
 	case shared.ResourceOceanPlacement:
-		action := &player.ForcedFirstAction{
+		action := &shared.ForcedFirstAction{
 			ActionType:    "ocean-placement",
 			CorporationID: card.ID,
 			Source:        "corporation-starting-action",
@@ -369,7 +360,7 @@ func (p *CorporationProcessor) createForcedAction(
 			zap.String("description", action.Description))
 
 		if !inStartingSelection {
-			queue := &player.PendingTileSelectionQueue{
+			queue := &shared.PendingTileSelectionQueue{
 				Items:  []string{"ocean"},
 				Source: "corporation-starting-action",
 			}
@@ -391,8 +382,7 @@ func (p *CorporationProcessor) createForcedAction(
 
 		applier := NewBehaviorApplier(pl, g, card.Name, log).
 			WithSourceCardID(card.ID).
-			WithCardRegistry(p.cardRegistry).
-			WithOnCardsAddedToHand(p.onCardsAddedToHand)
+			WithCardRegistry(p.cardRegistry)
 
 		if err := applier.ApplyOutputs(ctx, []shared.ResourceCondition{output}); err != nil {
 			return fmt.Errorf("failed to apply card-draw output: %w", err)

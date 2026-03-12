@@ -5,7 +5,6 @@ import (
 	"terraforming-mars-backend/internal/action"
 	cardAction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/action/confirmation"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -28,9 +27,9 @@ func TestAerialMappers_PlayAndStorageCreated(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
@@ -71,7 +70,7 @@ func TestAerialMappers_Action_AddFloater(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Aerial Mappers", BehaviorIndex: 0, Behavior: behavior},
 	})
 	choiceIndex := 0
@@ -106,7 +105,7 @@ func TestAerialMappers_Action_SpendFloaterForCardDraw(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Aerial Mappers", BehaviorIndex: 0, Behavior: behavior},
 	})
 	choiceIndex := 1
@@ -131,9 +130,9 @@ func TestAerosportTournament_RequiresFloaters(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
@@ -159,9 +158,9 @@ func TestAtalantaPlanitiaLab_RequiresScienceTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	// Player has 0 science tags - should fail
@@ -184,9 +183,9 @@ func TestAtalantaPlanitiaLab_SucceedsWithScienceTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.PlayedCards().AddCard("sci-1", "Sci 1", "automated", []string{"science"})
 	p.PlayedCards().AddCard("sci-2", "Sci 2", "automated", []string{"science"})
@@ -229,9 +228,9 @@ func TestCorroderSuits_CreditProductionIncrease(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	p.PlayedCards().AddCard("venus-target-card", "Venus Target", "active", []string{"venus"})
@@ -264,9 +263,9 @@ func TestDeuteriumExport_PlayAndStorageCreated(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -302,7 +301,7 @@ func TestDeuteriumExport_Action_AddFloater(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Deuterium Export", BehaviorIndex: 0, Behavior: behavior},
 	})
 	choiceIndex := 0
@@ -337,7 +336,7 @@ func TestDeuteriumExport_Action_SpendFloaterForEnergyProduction(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Deuterium Export", BehaviorIndex: 0, Behavior: behavior},
 	})
 	prodBefore := p.Resources().Production()
@@ -367,9 +366,9 @@ func TestDirigibles_StoragePaymentSubstitute_VenusCard(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 200})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -391,12 +390,14 @@ func TestDirigibles_StoragePaymentSubstitute_VenusCard(t *testing.T) {
 	testutil.AssertEqual(t, 3, p.Resources().GetCardStorage(dirigibles.ID), "Dirigibles should have 3 floaters")
 
 	// Play Ishtar Mining (venus-tagged, cost 5) using 1 floater (3 M€) + 2 credits
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 	ishtarMining := testutil.GetCardByName("Ishtar Mining")
 	p.Hand().AddCard(ishtarMining.ID)
 	// Set venus to 8% so Ishtar Mining requirement is met
 	for i := 0; i < 4; i++ {
-		testGame.GlobalParameters().IncreaseVenus(ctx, 1, p.ID())
+		if _, err := testGame.GlobalParameters().IncreaseVenus(ctx, 1, p.ID()); err != nil {
+			t.Fatalf("IncreaseVenus failed: %v", err)
+		}
 	}
 
 	creditsBefore := p.Resources().Get().Credits
@@ -421,9 +422,9 @@ func TestDirigibles_StoragePaymentSubstitute_NonVenusCardRejected(t *testing.T) 
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 200})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -438,7 +439,7 @@ func TestDirigibles_StoragePaymentSubstitute_NonVenusCardRejected(t *testing.T) 
 	p.Resources().AddToStorage(dirigibles.ID, 3)
 
 	// Try to play a non-Venus card using Dirigibles floaters — should fail
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 	asteroid := testutil.GetCardByName("Asteroid")
 	p.Hand().AddCard(asteroid.ID)
 	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), asteroid.ID, cardAction.PaymentRequest{
@@ -469,9 +470,9 @@ func TestExtractorBalloons_PlayAdds3Floaters(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -497,9 +498,9 @@ func TestExtremophiles_RequiresScienceTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	// No science tags - should fail
@@ -535,7 +536,7 @@ func TestFloatingHabs_Action_Spend2CreditsForFloater(t *testing.T) {
 			{ResourceType: shared.ResourceFloater, Amount: 1, Target: "any-card"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Floating Habs", BehaviorIndex: 0, Behavior: behavior},
 	})
 	creditsBefore := p.Resources().Get().Credits
@@ -585,7 +586,7 @@ func TestForcedPrecipitation_Action_PayCreditsForFloater(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Forced Precipitation", BehaviorIndex: 0, Behavior: behavior},
 	})
 	creditsBefore := p.Resources().Get().Credits
@@ -626,7 +627,7 @@ func TestForcedPrecipitation_Action_FailsWithoutEnoughFloaters(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Forced Precipitation", BehaviorIndex: 0, Behavior: behavior},
 	})
 	choiceIndex := 1
@@ -650,9 +651,9 @@ func TestGHGImportFromVenus_HeatProductionIncrease(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
@@ -679,9 +680,9 @@ func TestIoSulphurResearch_DrawOneCardWithoutVenusTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	handBefore := p.Hand().CardCount()
@@ -703,9 +704,9 @@ func TestIoSulphurResearch_FailsDraw3WithoutVenusTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	// No venus tags - choice 1 (draw 3) should fail
@@ -725,9 +726,9 @@ func TestIoSulphurResearch_FailsDraw3WithOnly2VenusTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 200})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -738,7 +739,7 @@ func TestIoSulphurResearch_FailsDraw3WithOnly2VenusTags(t *testing.T) {
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), dirigibles.ID, cardAction.PaymentRequest{Credits: 11}, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Dirigibles should play successfully")
 
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 	jetStream := testutil.GetCardByName("Jet Stream Microscrappers")
 	p.Hand().AddCard(jetStream.ID)
 	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), jetStream.ID, cardAction.PaymentRequest{Credits: 12}, nil, nil, nil, nil)
@@ -749,7 +750,7 @@ func TestIoSulphurResearch_FailsDraw3WithOnly2VenusTags(t *testing.T) {
 	testutil.AssertEqual(t, 2, venusTagCount, "Player should have exactly 2 venus tags")
 
 	// Now play Io Sulphur Research with choice 1 (draw 3, requires 3+ venus tags) — should fail
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 	ioSulphur := testutil.GetCardByName("Io Sulphur Research")
 	p.Hand().AddCard(ioSulphur.ID)
 	choiceIndex := 1
@@ -783,12 +784,12 @@ func TestIshtarMining_TitaniumProductionIncrease(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
-	testGame.GlobalParameters().SetVenus(ctx, 8)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 8), "SetVenus failed")
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 5}
@@ -836,7 +837,7 @@ func TestJetStreamMicroscrappers_Action_SpendTitaniumFor2Floaters(t *testing.T) 
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Jet Stream Microscrappers", BehaviorIndex: 0, Behavior: behavior},
 	})
 	titaniumBefore := p.Resources().Get().Titanium
@@ -883,7 +884,7 @@ func TestLocalShading_Action_AddFloater(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Local Shading", BehaviorIndex: 0, Behavior: behavior},
 	})
 	choiceIndex := 0
@@ -918,7 +919,7 @@ func TestLocalShading_Action_SpendFloaterForCreditProduction(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{CardID: cardID, CardName: "Local Shading", BehaviorIndex: 0, Behavior: behavior},
 	})
 	prodBefore := p.Resources().Production()
@@ -952,9 +953,9 @@ func TestLunaMetropolis_CreditProductionPerEarthTag(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	// Add 2 earth-tagged played cards
 	p.PlayedCards().AddCard("earth-1", "Earth Card 1", "automated", []string{"earth"})
@@ -986,9 +987,9 @@ func TestLuxuryFoods_FailsWithoutRequiredTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	// No tags at all - should fail
@@ -1011,9 +1012,9 @@ func TestLuxuryFoods_SucceedsWithAllTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.PlayedCards().AddCard("earth-tag-card", "Earth Card", "automated", []string{"earth"})
 	p.PlayedCards().AddCard("jovian-tag-card", "Jovian Card", "automated", []string{"jovian"})
@@ -1050,9 +1051,9 @@ func TestGyropolis_ProductionAndCityPlacement(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Resources().AddProduction(map[shared.ResourceType]int{
 		shared.ResourceEnergyProduction: 3,
@@ -1094,9 +1095,9 @@ func TestMiningQuota_IncreaseSteelProduction(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.PlayedCards().AddCard("earth-1", "Earth Card", "automated", []string{"earth"})
 	p.PlayedCards().AddCard("jovian-1", "Jovian Card", "automated", []string{"jovian"})
 	p.PlayedCards().AddCard("venus-1", "Venus Card", "automated", []string{"venus"})
@@ -1120,9 +1121,9 @@ func TestMiningQuota_FailsWithoutRequiredTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	// Only earth tag, missing jovian and venus
 	p.PlayedCards().AddCard("earth-1", "Earth Card", "automated", []string{"earth"})
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
@@ -1147,12 +1148,12 @@ func TestNeutralizerFactory_IncreaseVenus(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
-	testGame.GlobalParameters().SetVenus(ctx, 10)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 10), "SetVenus failed")
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 7}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
@@ -1177,9 +1178,9 @@ func TestOmnicourt_IncreaseTR(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.PlayedCards().AddCard("earth-1", "Earth Card", "automated", []string{"earth"})
 	p.PlayedCards().AddCard("jovian-1", "Jovian Card", "automated", []string{"jovian"})
 	p.PlayedCards().AddCard("venus-1", "Venus Card", "automated", []string{"venus"})
@@ -1208,9 +1209,9 @@ func TestOrbitalReflectors_HeatProductionAndVenus(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
@@ -1257,7 +1258,7 @@ func TestRotatorImpacts_AddFloater(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Rotator Impacts",
@@ -1286,9 +1287,9 @@ func TestSisterPlanetSupport_CreditProduction(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	// Self-tags satisfy the requirement since the card itself has venus+earth
 	p.PlayedCards().AddCard("venus-1", "Venus Card", "automated", []string{"venus"})
 	p.PlayedCards().AddCard("earth-1", "Earth Card", "automated", []string{"earth"})
@@ -1321,9 +1322,9 @@ func TestSolarnet_Draw2Cards(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.PlayedCards().AddCard("venus-1", "Venus Card", "automated", []string{"venus"})
 	p.PlayedCards().AddCard("earth-1", "Earth Card", "automated", []string{"earth"})
 	p.PlayedCards().AddCard("jovian-1", "Jovian Card", "automated", []string{"jovian"})
@@ -1354,9 +1355,9 @@ func TestSpinInducingAsteroid_RaiseVenus(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -1381,9 +1382,9 @@ func TestSponsoredAcademies_DiscardDrawAndOpponentDraw(t *testing.T) {
 	opponent := players[1]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	opponent.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 
 	// Player has: Sponsored Academies + 2 fodder cards = 3 cards in hand
@@ -1441,7 +1442,7 @@ func TestStratosphericBirds_ActionAddAnimal(t *testing.T) {
 			{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Stratospheric Birds",
@@ -1472,9 +1473,9 @@ func TestSulphurExports_CreditProductionPerVenusTag(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	// 2 existing venus tags + 1 from card itself = 3 total
 	p.PlayedCards().AddCard("venus-1", "Venus Card 1", "automated", []string{"venus"})
 	p.PlayedCards().AddCard("venus-2", "Venus Card 2", "automated", []string{"venus"})
@@ -1505,9 +1506,9 @@ func TestTerraformingContract_CreditProduction(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	// Raise TR to 25
 	p.Resources().UpdateTerraformRating(5) // starts at 20, add 5 to reach 25
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
@@ -1531,9 +1532,9 @@ func TestTerraformingContract_FailsBelowTR25(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	// TR stays at default (20), below 25
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
@@ -1574,7 +1575,7 @@ func TestThermophiles_AddMicrobe(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Thermophiles",
@@ -1614,7 +1615,7 @@ func TestThermophiles_SpendMicrobesForVenus(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Thermophiles",
@@ -1643,9 +1644,9 @@ func TestWaterToVenus_RaiseVenus(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -1668,10 +1669,10 @@ func TestVenusGovernor_CreditProduction(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
-	testGame.GlobalParameters().SetVenus(ctx, 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 2), "SetVenus failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
@@ -1708,7 +1709,7 @@ func TestVenusMagnetizer_ActionDecraseEnergyForVenus(t *testing.T) {
 			{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Venus Magnetizer",
@@ -1739,9 +1740,9 @@ func TestVenusSoils_PlantProductionAndVenus(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
@@ -1768,9 +1769,9 @@ func TestVenusWaystation_DiscountEffect(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
@@ -1798,7 +1799,7 @@ func TestVenusianInsects_ActionAddMicrobe(t *testing.T) {
 			{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Venusian Insects",
@@ -1828,15 +1829,15 @@ func TestMaxwellBase_DecreaseEnergyProductionAndCityPlacement(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Resources().AddProduction(map[shared.ResourceType]int{
 		shared.ResourceEnergyProduction: 2,
 	})
 	p.Hand().AddCard(card.ID)
-	testGame.GlobalParameters().SetVenus(ctx, 12)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 12), "SetVenus failed")
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 18}
@@ -1866,9 +1867,9 @@ func TestStratopolis_CityPlacement(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.PlayedCards().AddCard("science-1", "Science Card 1", "automated", []string{"science"})
 	p.PlayedCards().AddCard("science-2", "Science Card 2", "automated", []string{"science"})
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
@@ -1896,12 +1897,12 @@ func TestVenusianAnimals_PlaysAndRegistersEffect(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
-	testGame.GlobalParameters().SetVenus(ctx, 18)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 18), "SetVenus failed")
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 15}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
@@ -1923,12 +1924,12 @@ func TestVenusianPlants_RaiseVenusWithAnimalChoice(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
-	testGame.GlobalParameters().SetVenus(ctx, 16)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 16), "SetVenus failed")
 	choiceIndex := 0 // choose animal
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 13}
@@ -1972,7 +1973,7 @@ func TestSulphurEatingBacteria_Choice0_AddMicrobe(t *testing.T) {
 	cardID := "test-sulphur-eating-bacteria"
 	p.PlayedCards().AddCard(cardID, "Sulphur-Eating Bacteria", "active", []string{"microbe", "venus"})
 	p.Resources().AddToStorage(cardID, 0)
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Sulphur-Eating Bacteria",
@@ -1994,7 +1995,7 @@ func TestSulphurEatingBacteria_Choice1_SpendMicrobesForCredits(t *testing.T) {
 	cardID := "test-sulphur-eating-bacteria"
 	p.PlayedCards().AddCard(cardID, "Sulphur-Eating Bacteria", "active", []string{"microbe", "venus"})
 	p.Resources().AddToStorage(cardID, 3)
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Sulphur-Eating Bacteria",
@@ -2019,7 +2020,7 @@ func TestSulphurEatingBacteria_Choice1_FailsWithoutSelectedAmount(t *testing.T) 
 	cardID := "test-sulphur-eating-bacteria"
 	p.PlayedCards().AddCard(cardID, "Sulphur-Eating Bacteria", "active", []string{"microbe", "venus"})
 	p.Resources().AddToStorage(cardID, 3)
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Sulphur-Eating Bacteria",
@@ -2045,7 +2046,7 @@ func TestSulphurEatingBacteria_Choice1_SpendAllMicrobes(t *testing.T) {
 	cardID := "test-sulphur-eating-bacteria"
 	p.PlayedCards().AddCard(cardID, "Sulphur-Eating Bacteria", "active", []string{"microbe", "venus"})
 	p.Resources().AddToStorage(cardID, 5)
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Sulphur-Eating Bacteria",
@@ -2070,7 +2071,7 @@ func TestSulphurEatingBacteria_Choice1_FailsWhenInsufficientMicrobes(t *testing.
 	cardID := "test-sulphur-eating-bacteria"
 	p.PlayedCards().AddCard(cardID, "Sulphur-Eating Bacteria", "active", []string{"microbe", "venus"})
 	p.Resources().AddToStorage(cardID, 2)
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Sulphur-Eating Bacteria",
@@ -2119,12 +2120,12 @@ func TestVenusRequirement_BlocksWhenTooLow(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard("card-venus-req-low-test")
-	testGame.GlobalParameters().SetVenus(ctx, 6)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 6), "SetVenus failed")
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 5}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-venus-req-low-test", payment, nil, nil, nil, nil)
@@ -2160,12 +2161,12 @@ func TestVenusRequirement_BlocksWhenTooHigh(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard("card-venus-req-high-test")
-	testGame.GlobalParameters().SetVenus(ctx, 16)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 16), "SetVenus failed")
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 5}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-venus-req-high-test", payment, nil, nil, nil, nil)
@@ -2196,9 +2197,9 @@ func TestVenusIncrease_RaisesGlobalParameter(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard("card-venus-raise-test")
 	venusBefore := testGame.GlobalParameters().Venus()
@@ -2213,7 +2214,7 @@ func TestVenusIncrease_CappedAtMax(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
 	ctx := context.Background()
-	testGame.GlobalParameters().SetVenus(ctx, 28)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 28), "SetVenus failed")
 	actualSteps, err := testGame.GlobalParameters().IncreaseVenus(ctx, 2, "")
 	testutil.AssertNoError(t, err, "IncreaseVenus should not error")
 	testutil.AssertEqual(t, 1, actualSteps, "Should only increase 1 step (capped at 30)")
@@ -2248,13 +2249,13 @@ func TestVenusStateCalculator_RequirementValidation(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard("card-venus-state-calc-test")
 	g, _ := repo.Get(ctx, testGame.ID())
-	testGame.GlobalParameters().SetVenus(ctx, 8)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 8), "SetVenus failed")
 	state := action.CalculatePlayerCardState(&card, p, g, cardRegistry)
 	hasVenusError := false
 	for _, e := range state.Errors {
@@ -2263,7 +2264,7 @@ func TestVenusStateCalculator_RequirementValidation(t *testing.T) {
 		}
 	}
 	testutil.AssertTrue(t, hasVenusError, "State calculator should report venus-too-low when Venus is 8 and requirement is 10")
-	testGame.GlobalParameters().SetVenus(ctx, 10)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 10), "SetVenus failed")
 	state = action.CalculatePlayerCardState(&card, p, g, cardRegistry)
 	hasVenusError = false
 	for _, e := range state.Errors {

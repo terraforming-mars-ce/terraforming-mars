@@ -6,7 +6,7 @@ import (
 
 	turnAction "terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -25,14 +25,14 @@ func setupStartingSelectionGame(t *testing.T, hasPrelude bool) (*game.Game, *tur
 	if hasPrelude {
 		packs = append(packs, "prelude")
 	}
-	testGame.UpdateSettings(ctx, game.GameSettings{
+	testGame.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers: 4,
 		CardPacks:  packs,
 	})
 
-	err := testGame.UpdateStatus(ctx, game.GameStatusActive)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
 	testutil.AssertNoError(t, err, "Failed to set active status")
-	err = testGame.UpdatePhase(ctx, game.GamePhaseStartingSelection)
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseStartingSelection)
 	testutil.AssertNoError(t, err, "Failed to set starting selection phase")
 
 	players := testGame.GetAllPlayers()
@@ -48,7 +48,7 @@ func setupStartingSelectionGame(t *testing.T, hasPrelude bool) (*game.Game, *tur
 	for i, p := range players {
 		testutil.SetPlayerCredits(ctx, p, 100)
 
-		err = testGame.SetSelectCorporationPhase(ctx, p.ID(), &player.SelectCorporationPhase{
+		err = testGame.SetSelectCorporationPhase(ctx, p.ID(), &shared.SelectCorporationPhase{
 			AvailableCorporations: []string{corpIDs[i], "B03"},
 		})
 		testutil.AssertNoError(t, err, "Failed to set corporation phase")
@@ -61,7 +61,7 @@ func setupStartingSelectionGame(t *testing.T, hasPrelude bool) (*game.Game, *tur
 			preludeIDs, err := deck.DrawPreludeCards(ctx, 4)
 			testutil.AssertNoError(t, err, "Failed to draw prelude cards")
 
-			phase := &player.SelectPreludeCardsPhase{
+			phase := &shared.SelectPreludeCardsPhase{
 				AvailablePreludes: preludeIDs,
 				MaxSelectable:     2,
 			}
@@ -76,7 +76,7 @@ func setupStartingSelectionGame(t *testing.T, hasPrelude bool) (*game.Game, *tur
 		projectCards, err := deck.DrawProjectCards(ctx, 10)
 		testutil.AssertNoError(t, err, "Failed to draw project cards")
 
-		phase := &player.SelectStartingCardsPhase{
+		phase := &shared.SelectStartingCardsPhase{
 			AvailableCards: projectCards,
 		}
 		err = testGame.SetSelectStartingCardsPhase(ctx, p.ID(), phase)
@@ -93,14 +93,14 @@ func TestSelectStartingChoices_HappyPath_WithPreludes(t *testing.T) {
 
 	// Override prelude phases with known safe cards (no tile placements)
 	safePreludes := []string{"P01", "P03", "P04", "P07"}
-	testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &player.SelectPreludeCardsPhase{
+	testutil.AssertNoError(t, testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &shared.SelectPreludeCardsPhase{
 		AvailablePreludes: safePreludes,
 		MaxSelectable:     2,
-	})
-	testGame.SetSelectPreludeCardsPhase(ctx, playerID2, &player.SelectPreludeCardsPhase{
+	}), "set prelude phase for player 1")
+	testutil.AssertNoError(t, testGame.SetSelectPreludeCardsPhase(ctx, playerID2, &shared.SelectPreludeCardsPhase{
 		AvailablePreludes: safePreludes,
 		MaxSelectable:     2,
-	})
+	}), "set prelude phase for player 2")
 
 	// Player 1 selects corporation, preludes, and cards in one call
 	corpPhase1 := testGame.GetSelectCorporationPhase(playerID1)
@@ -129,7 +129,7 @@ func TestSelectStartingChoices_HappyPath_WithPreludes(t *testing.T) {
 	testutil.AssertEqual(t, corpID1, deferred1.CorporationID, "Deferred corp should match")
 
 	// Game should still be in starting_selection (player 2 hasn't selected)
-	testutil.AssertEqual(t, game.GamePhaseStartingSelection, testGame.CurrentPhase(), "Game should still be in starting selection phase")
+	testutil.AssertEqual(t, shared.GamePhaseStartingSelection, testGame.CurrentPhase(), "Game should still be in starting selection phase")
 
 	// Player 2 completes selection
 	corpPhase2 := testGame.GetSelectCorporationPhase(playerID2)
@@ -138,7 +138,7 @@ func TestSelectStartingChoices_HappyPath_WithPreludes(t *testing.T) {
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 2")
 
 	// Game should advance to init_apply_corp (not action phase)
-	testutil.AssertEqual(t, game.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Game should advance to init_apply_corp phase")
+	testutil.AssertEqual(t, shared.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Game should advance to init_apply_corp phase")
 
 	// No effects applied yet - waiting for first confirm
 	testutil.AssertTrue(t, testGame.InitPhaseWaitingForConfirm(), "Should be waiting for confirm")
@@ -162,7 +162,7 @@ func TestSelectStartingChoices_HappyPath_NoPreludes(t *testing.T) {
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 2")
 
 	// Should go to init_apply_corp (not directly to action phase)
-	testutil.AssertEqual(t, game.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Game should be in init_apply_corp phase")
+	testutil.AssertEqual(t, shared.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Game should be in init_apply_corp phase")
 }
 
 func TestSelectStartingChoices_DeferredStorage(t *testing.T) {
@@ -171,10 +171,10 @@ func TestSelectStartingChoices_DeferredStorage(t *testing.T) {
 
 	// Override with safe preludes
 	safePreludes := []string{"P01", "P03", "P04", "P07"}
-	testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &player.SelectPreludeCardsPhase{
+	testutil.AssertNoError(t, testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &shared.SelectPreludeCardsPhase{
 		AvailablePreludes: safePreludes,
 		MaxSelectable:     2,
-	})
+	}), "set prelude phase")
 
 	corpPhase1 := testGame.GetSelectCorporationPhase(playerID1)
 	corpID1 := corpPhase1.AvailableCorporations[0]
@@ -208,10 +208,10 @@ func TestSelectStartingChoices_Validation_WrongPreludeCount(t *testing.T) {
 	ctx := context.Background()
 
 	safePreludes := []string{"P01", "P03", "P04", "P07"}
-	testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &player.SelectPreludeCardsPhase{
+	testutil.AssertNoError(t, testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &shared.SelectPreludeCardsPhase{
 		AvailablePreludes: safePreludes,
 		MaxSelectable:     2,
-	})
+	}), "set prelude phase")
 
 	corpPhase := testGame.GetSelectCorporationPhase(playerID1)
 	corpID := corpPhase.AvailableCorporations[0]
@@ -230,10 +230,10 @@ func TestSelectStartingChoices_Validation_InvalidPreludeID(t *testing.T) {
 	ctx := context.Background()
 
 	safePreludes := []string{"P01", "P03", "P04", "P07"}
-	testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &player.SelectPreludeCardsPhase{
+	testutil.AssertNoError(t, testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &shared.SelectPreludeCardsPhase{
 		AvailablePreludes: safePreludes,
 		MaxSelectable:     2,
-	})
+	}), "set prelude phase")
 
 	corpPhase := testGame.GetSelectCorporationPhase(playerID1)
 	corpID := corpPhase.AvailableCorporations[0]
@@ -247,7 +247,7 @@ func TestSelectStartingChoices_Validation_WrongPhase(t *testing.T) {
 	ctx := context.Background()
 
 	// Change to action phase
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
 
 	corpPhase := testGame.GetSelectCorporationPhase(playerID1)
 	corpID := corpPhase.AvailableCorporations[0]

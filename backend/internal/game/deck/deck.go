@@ -4,24 +4,19 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"sync"
+
+	"go.uber.org/zap"
+
+	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/logger"
 )
 
-// Deck represents the card deck state for a game with encapsulated state
 type Deck struct {
-	mu             sync.RWMutex
-	gameID         string
-	projectCards   []string // Available project card IDs (draw pile)
-	corporations   []string // Available corporation card IDs
-	discardPile    []string // Discarded card IDs
-	removedCards   []string // Cards removed from game permanently
-	preludeCards   []string // Available prelude card IDs
-	drawnCardCount int      // Total cards drawn (for statistics)
-	shuffleCount   int      // Number of times deck was shuffled
+	ds     *datastore.DataStore
+	gameID string
 }
 
-// NewDeck creates a new game deck with all cards available
-func NewDeck(gameID string, projectCardIDs, corpIDs, preludeIDs []string) *Deck {
+func NewDeck(ds *datastore.DataStore, gameID string, projectCardIDs, corpIDs, preludeIDs []string) *Deck {
 	projectCopy := make([]string, len(projectCardIDs))
 	copy(projectCopy, projectCardIDs)
 	rand.Shuffle(len(projectCopy), func(i, j int) { projectCopy[i], projectCopy[j] = projectCopy[j], projectCopy[i] })
@@ -34,238 +29,237 @@ func NewDeck(gameID string, projectCardIDs, corpIDs, preludeIDs []string) *Deck 
 	copy(preludeCopy, preludeIDs)
 	rand.Shuffle(len(preludeCopy), func(i, j int) { preludeCopy[i], preludeCopy[j] = preludeCopy[j], preludeCopy[i] })
 
-	return &Deck{
-		gameID:         gameID,
-		projectCards:   projectCopy,
-		corporations:   corpCopy,
-		preludeCards:   preludeCopy,
-		discardPile:    make([]string, 0),
-		removedCards:   make([]string, 0),
-		drawnCardCount: 0,
-		shuffleCount:   0,
+	if err := ds.UpdateGame(gameID, func(s *datastore.GameState) {
+		s.ProjectCards = projectCopy
+		s.Corporations = corpCopy
+		s.PreludeCards = preludeCopy
+		s.DiscardPile = make([]string, 0)
+		s.RemovedCards = make([]string, 0)
+		s.DrawnCardCount = 0
+		s.ShuffleCount = 0
+	}); err != nil {
+		logger.Get().Error("Failed to initialize deck state", zap.String("game_id", gameID), zap.Error(err))
+	}
+
+	return &Deck{ds: ds, gameID: gameID}
+}
+
+func NewDeckView(ds *datastore.DataStore, gameID string) *Deck {
+	return &Deck{ds: ds, gameID: gameID}
+}
+
+func (d *Deck) update(fn func(s *datastore.GameState)) {
+	if err := d.ds.UpdateGame(d.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to update game state", zap.String("game_id", d.gameID), zap.Error(err))
 	}
 }
 
-// GameID returns the game ID this deck belongs to
+func (d *Deck) read(fn func(s *datastore.GameState)) {
+	if err := d.ds.ReadGame(d.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to read game state", zap.String("game_id", d.gameID), zap.Error(err))
+	}
+}
+
 func (d *Deck) GameID() string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
 	return d.gameID
 }
 
-// ProjectCards returns a copy of available project cards
 func (d *Deck) ProjectCards() []string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	cardsCopy := make([]string, len(d.projectCards))
-	copy(cardsCopy, d.projectCards)
-	return cardsCopy
+	var result []string
+	d.read(func(s *datastore.GameState) {
+		result = make([]string, len(s.ProjectCards))
+		copy(result, s.ProjectCards)
+	})
+	return result
 }
 
-// Corporations returns a copy of available corporation cards
 func (d *Deck) Corporations() []string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	corpsCopy := make([]string, len(d.corporations))
-	copy(corpsCopy, d.corporations)
-	return corpsCopy
+	var result []string
+	d.read(func(s *datastore.GameState) {
+		result = make([]string, len(s.Corporations))
+		copy(result, s.Corporations)
+	})
+	return result
 }
 
-// DiscardPile returns a copy of the discard pile
 func (d *Deck) DiscardPile() []string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	discardCopy := make([]string, len(d.discardPile))
-	copy(discardCopy, d.discardPile)
-	return discardCopy
+	var result []string
+	d.read(func(s *datastore.GameState) {
+		result = make([]string, len(s.DiscardPile))
+		copy(result, s.DiscardPile)
+	})
+	return result
 }
 
-// RemovedCards returns a copy of permanently removed cards
 func (d *Deck) RemovedCards() []string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	removedCopy := make([]string, len(d.removedCards))
-	copy(removedCopy, d.removedCards)
-	return removedCopy
+	var result []string
+	d.read(func(s *datastore.GameState) {
+		result = make([]string, len(s.RemovedCards))
+		copy(result, s.RemovedCards)
+	})
+	return result
 }
 
-// PreludeCards returns a copy of available prelude cards
 func (d *Deck) PreludeCards() []string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	preludeCopy := make([]string, len(d.preludeCards))
-	copy(preludeCopy, d.preludeCards)
-	return preludeCopy
+	var result []string
+	d.read(func(s *datastore.GameState) {
+		result = make([]string, len(s.PreludeCards))
+		copy(result, s.PreludeCards)
+	})
+	return result
 }
 
-// DrawnCardCount returns the total number of cards drawn
 func (d *Deck) DrawnCardCount() int {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return d.drawnCardCount
+	var v int
+	d.read(func(s *datastore.GameState) { v = s.DrawnCardCount })
+	return v
 }
 
-// ShuffleCount returns the number of times the deck was shuffled
 func (d *Deck) ShuffleCount() int {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return d.shuffleCount
+	var v int
+	d.read(func(s *datastore.GameState) { v = s.ShuffleCount })
+	return v
 }
 
-// GetAvailableCardCount returns the number of available project cards
 func (d *Deck) GetAvailableCardCount() int {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return len(d.projectCards)
+	var v int
+	d.read(func(s *datastore.GameState) { v = len(s.ProjectCards) })
+	return v
 }
 
-// DrawProjectCards draws N project cards from the deck
-// Returns the drawn card IDs or error if not enough cards available
 func (d *Deck) DrawProjectCards(ctx context.Context, count int) ([]string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	available := len(d.projectCards)
-	if count > available {
-		d.shuffleLocked()
-		available = len(d.projectCards)
+	var drawn []string
+	var drawErr error
+	d.update(func(s *datastore.GameState) {
+		available := len(s.ProjectCards)
 		if count > available {
-			return nil, fmt.Errorf("not enough cards available: requested %d, have %d", count, available)
+			shuffleDeck(s)
+			available = len(s.ProjectCards)
+			if count > available {
+				drawErr = fmt.Errorf("not enough cards available: requested %d, have %d", count, available)
+				return
+			}
 		}
-	}
 
-	drawnCards := make([]string, count)
-	copy(drawnCards, d.projectCards[:count])
-	d.projectCards = d.projectCards[count:]
-	d.drawnCardCount += count
-
-	return drawnCards, nil
+		drawn = make([]string, count)
+		copy(drawn, s.ProjectCards[:count])
+		s.ProjectCards = s.ProjectCards[count:]
+		s.DrawnCardCount += count
+	})
+	return drawn, drawErr
 }
 
-// DrawProjectCardsUntilMatching draws cards one at a time until the desired number of
-// matching cards is found. Returns matching cards and discarded (non-matching) cards separately.
-// The matcher function determines whether a card ID matches the criteria.
 func (d *Deck) DrawProjectCardsUntilMatching(ctx context.Context, count int, matcher func(cardID string) bool) (matched []string, discarded []string, err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, nil, err
 	}
 
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.update(func(s *datastore.GameState) {
+		for len(matched) < count {
+			if len(s.ProjectCards) == 0 {
+				shuffleDeck(s)
+				if len(s.ProjectCards) == 0 {
+					break
+				}
+			}
 
-	for len(matched) < count {
-		if len(d.projectCards) == 0 {
-			d.shuffleLocked()
-			if len(d.projectCards) == 0 {
-				break
+			cardID := s.ProjectCards[0]
+			s.ProjectCards = s.ProjectCards[1:]
+			s.DrawnCardCount++
+
+			if matcher(cardID) {
+				matched = append(matched, cardID)
+			} else {
+				discarded = append(discarded, cardID)
 			}
 		}
-
-		cardID := d.projectCards[0]
-		d.projectCards = d.projectCards[1:]
-		d.drawnCardCount++
-
-		if matcher(cardID) {
-			matched = append(matched, cardID)
-		} else {
-			discarded = append(discarded, cardID)
-		}
-	}
+	})
 
 	return matched, discarded, nil
 }
 
-// DrawCorporations draws N corporation cards
-// Returns the drawn corporation IDs or error if not enough available
 func (d *Deck) DrawCorporations(ctx context.Context, count int) ([]string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	var drawn []string
+	var drawErr error
+	d.update(func(s *datastore.GameState) {
+		available := len(s.Corporations)
+		if count > available {
+			drawErr = fmt.Errorf("not enough corporations available: requested %d, have %d", count, available)
+			return
+		}
 
-	available := len(d.corporations)
-	if count > available {
-		return nil, fmt.Errorf("not enough corporations available: requested %d, have %d", count, available)
-	}
-
-	drawnCorps := make([]string, count)
-	copy(drawnCorps, d.corporations[:count])
-	d.corporations = d.corporations[count:]
-
-	return drawnCorps, nil
+		drawn = make([]string, count)
+		copy(drawn, s.Corporations[:count])
+		s.Corporations = s.Corporations[count:]
+	})
+	return drawn, drawErr
 }
 
-// DrawPreludeCards draws N prelude cards from the deck
 func (d *Deck) DrawPreludeCards(ctx context.Context, count int) ([]string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	var drawn []string
+	var drawErr error
+	d.update(func(s *datastore.GameState) {
+		available := len(s.PreludeCards)
+		if count > available {
+			drawErr = fmt.Errorf("not enough prelude cards available: requested %d, have %d", count, available)
+			return
+		}
 
-	available := len(d.preludeCards)
-	if count > available {
-		return nil, fmt.Errorf("not enough prelude cards available: requested %d, have %d", count, available)
-	}
-
-	drawnPreludes := make([]string, count)
-	copy(drawnPreludes, d.preludeCards[:count])
-	d.preludeCards = d.preludeCards[count:]
-
-	return drawnPreludes, nil
+		drawn = make([]string, count)
+		copy(drawn, s.PreludeCards[:count])
+		s.PreludeCards = s.PreludeCards[count:]
+	})
+	return drawn, drawErr
 }
 
-// Discard adds cards to the discard pile
 func (d *Deck) Discard(ctx context.Context, cardIDs []string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	d.discardPile = append(d.discardPile, cardIDs...)
+	d.update(func(s *datastore.GameState) {
+		s.DiscardPile = append(s.DiscardPile, cardIDs...)
+	})
 	return nil
 }
 
-// Remove permanently removes cards from the game
 func (d *Deck) Remove(ctx context.Context, cardIDs []string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	d.removedCards = append(d.removedCards, cardIDs...)
+	d.update(func(s *datastore.GameState) {
+		s.RemovedCards = append(s.RemovedCards, cardIDs...)
+	})
 	return nil
 }
 
-// shuffleLocked reshuffles the discard pile back into the project cards.
-// Must be called while d.mu is already held.
-func (d *Deck) shuffleLocked() {
-	d.projectCards = append(d.projectCards, d.discardPile...)
-	rand.Shuffle(len(d.projectCards), func(i, j int) { d.projectCards[i], d.projectCards[j] = d.projectCards[j], d.projectCards[i] })
-	d.discardPile = make([]string, 0)
-	d.shuffleCount++
+func shuffleDeck(s *datastore.GameState) {
+	s.ProjectCards = append(s.ProjectCards, s.DiscardPile...)
+	rand.Shuffle(len(s.ProjectCards), func(i, j int) { s.ProjectCards[i], s.ProjectCards[j] = s.ProjectCards[j], s.ProjectCards[i] })
+	s.DiscardPile = make([]string, 0)
+	s.ShuffleCount++
 }
 
-// Shuffle reshuffles the discard pile back into the project cards
 func (d *Deck) Shuffle(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	d.shuffleLocked()
+	d.update(func(s *datastore.GameState) {
+		shuffleDeck(s)
+	})
 	return nil
 }

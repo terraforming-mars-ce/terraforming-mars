@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -31,7 +30,7 @@ func TestPredatorsStealAnimalFromOtherPlayer(t *testing.T) {
 			{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "steal-from-any-card"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        predatorsID,
 			CardName:      "Predators",
@@ -70,7 +69,7 @@ func TestPredatorsStealFromOwnCard(t *testing.T) {
 			{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "steal-from-any-card"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        predatorsID,
 			CardName:      "Predators",
@@ -105,7 +104,7 @@ func TestPredatorsSkipsStealWithNoSourceCard(t *testing.T) {
 			{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "steal-from-any-card"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        predatorsID,
 			CardName:      "Predators",
@@ -144,7 +143,7 @@ func TestPredatorsStealFromCardWithZeroAnimals(t *testing.T) {
 			{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "steal-from-any-card"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        predatorsID,
 			CardName:      "Predators",
@@ -184,7 +183,7 @@ func TestAntsStealMicrobeFromOtherPlayer(t *testing.T) {
 			{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "steal-from-any-card"},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        antsID,
 			CardName:      "Ants",

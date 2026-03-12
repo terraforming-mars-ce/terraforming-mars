@@ -1,134 +1,142 @@
 package player
 
 import (
-	"sync"
-	"terraforming-mars-backend/internal/game/shared"
 	"time"
 
+	"go.uber.org/zap"
+
 	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/logger"
 )
 
-// PlayerResources manages player resources, production, scoring
+// PlayerResources manages player resources, production, and scoring.
 type PlayerResources struct {
-	mu                        sync.RWMutex
-	resources                 shared.Resources
-	production                shared.Production
-	terraformRating           int
-	resourceStorage           map[string]int
-	paymentSubstitutes        []shared.PaymentSubstitute
-	storagePaymentSubstitutes []shared.StoragePaymentSubstitute
-	valueModifiers            map[shared.ResourceType]int // e.g., {"titanium": 1, "steel": 1} for cards like Phobolog, Advanced Alloys
-	eventBus                  *events.EventBusImpl
-	gameID                    string
-	playerID                  string
+	ds       *datastore.DataStore
+	eventBus *events.EventBusImpl
+	gameID   string
+	playerID string
 }
 
-func newResources(eventBus *events.EventBusImpl, gameID, playerID string) *PlayerResources {
+func newResources(ds *datastore.DataStore, eventBus *events.EventBusImpl, gameID, playerID string) *PlayerResources {
 	return &PlayerResources{
-		resources:          shared.Resources{},
-		production:         shared.Production{},
-		terraformRating:    20,
-		resourceStorage:    make(map[string]int),
-		paymentSubstitutes: []shared.PaymentSubstitute{},
-		valueModifiers:     make(map[shared.ResourceType]int),
-		eventBus:           eventBus,
-		gameID:             gameID,
-		playerID:           playerID,
+		ds:       ds,
+		eventBus: eventBus,
+		gameID:   gameID,
+		playerID: playerID,
+	}
+}
+
+func (r *PlayerResources) update(fn func(s *datastore.PlayerState)) {
+	if err := r.ds.UpdatePlayer(r.gameID, r.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to update player state", zap.String("game_id", r.gameID), zap.String("player_id", r.playerID), zap.Error(err))
+	}
+}
+
+func (r *PlayerResources) read(fn func(s *datastore.PlayerState)) {
+	if err := r.ds.ReadPlayer(r.gameID, r.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to read player state", zap.String("game_id", r.gameID), zap.String("player_id", r.playerID), zap.Error(err))
 	}
 }
 
 func (r *PlayerResources) Get() shared.Resources {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.resources
+	var res shared.Resources
+	r.read(func(s *datastore.PlayerState) {
+		res = s.Resources
+	})
+	return res
 }
 
 func (r *PlayerResources) Production() shared.Production {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.production
+	var prod shared.Production
+	r.read(func(s *datastore.PlayerState) {
+		prod = s.Production
+	})
+	return prod
 }
 
 func (r *PlayerResources) TerraformRating() int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.terraformRating
+	var tr int
+	r.read(func(s *datastore.PlayerState) {
+		tr = s.TerraformRating
+	})
+	return tr
 }
 
 func (r *PlayerResources) Storage() map[string]int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	storageCopy := make(map[string]int, len(r.resourceStorage))
-	for k, v := range r.resourceStorage {
-		storageCopy[k] = v
-	}
+	var storageCopy map[string]int
+	r.read(func(s *datastore.PlayerState) {
+		storageCopy = make(map[string]int, len(s.ResourceStorage))
+		for k, v := range s.ResourceStorage {
+			storageCopy[k] = v
+		}
+	})
 	return storageCopy
 }
 
-// Base payment values (also defined in cards.SteelValue/TitaniumValue)
 const (
 	baseSteelValue    = 2
 	baseTitaniumValue = 3
 )
 
 // PaymentSubstitutes returns all payment substitutes including steel/titanium with dynamic values.
-// Steel and titanium are always included with their effective values (base + modifiers from cards like Phobolog).
-// Additional substitutes (like heat for Helion) are appended.
 func (r *PlayerResources) PaymentSubstitutes() []shared.PaymentSubstitute {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	substitutes := []shared.PaymentSubstitute{
-		{ResourceType: shared.ResourceSteel, ConversionRate: baseSteelValue + r.valueModifiers[shared.ResourceSteel]},
-		{ResourceType: shared.ResourceTitanium, ConversionRate: baseTitaniumValue + r.valueModifiers[shared.ResourceTitanium]},
-	}
-
-	substitutes = append(substitutes, r.paymentSubstitutes...)
-
+	var substitutes []shared.PaymentSubstitute
+	r.read(func(s *datastore.PlayerState) {
+		substitutes = []shared.PaymentSubstitute{
+			{ResourceType: shared.ResourceSteel, ConversionRate: baseSteelValue + s.ValueModifiers[shared.ResourceSteel]},
+			{ResourceType: shared.ResourceTitanium, ConversionRate: baseTitaniumValue + s.ValueModifiers[shared.ResourceTitanium]},
+		}
+		substitutes = append(substitutes, s.PaymentSubstitutes...)
+	})
 	return substitutes
 }
 
 func (r *PlayerResources) AddPaymentSubstitute(resourceType shared.ResourceType, conversionRate int) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.paymentSubstitutes = append(r.paymentSubstitutes, shared.PaymentSubstitute{
-		ResourceType:   resourceType,
-		ConversionRate: conversionRate,
+	r.update(func(s *datastore.PlayerState) {
+		s.PaymentSubstitutes = append(s.PaymentSubstitutes, shared.PaymentSubstitute{
+			ResourceType:   resourceType,
+			ConversionRate: conversionRate,
+		})
 	})
 }
 
 // ValueModifiers returns a copy of the value modifiers map
 func (r *PlayerResources) ValueModifiers() map[shared.ResourceType]int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	modifiersCopy := make(map[shared.ResourceType]int, len(r.valueModifiers))
-	for k, v := range r.valueModifiers {
-		modifiersCopy[k] = v
-	}
+	var modifiersCopy map[shared.ResourceType]int
+	r.read(func(s *datastore.PlayerState) {
+		modifiersCopy = make(map[shared.ResourceType]int, len(s.ValueModifiers))
+		for k, v := range s.ValueModifiers {
+			modifiersCopy[k] = v
+		}
+	})
 	return modifiersCopy
 }
 
-// AddValueModifier adds a value modifier for a resource type (e.g., titanium +1 from Phobolog)
+// AddValueModifier adds a value modifier for a resource type
 func (r *PlayerResources) AddValueModifier(resourceType shared.ResourceType, amount int) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.valueModifiers == nil {
-		r.valueModifiers = make(map[shared.ResourceType]int)
-	}
-	r.valueModifiers[resourceType] += amount
+	r.update(func(s *datastore.PlayerState) {
+		if s.ValueModifiers == nil {
+			s.ValueModifiers = make(map[shared.ResourceType]int)
+		}
+		s.ValueModifiers[resourceType] += amount
+	})
 }
 
 // GetValueModifier returns the total value modifier for a resource type
 func (r *PlayerResources) GetValueModifier(resourceType shared.ResourceType) int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.valueModifiers[resourceType]
+	var val int
+	r.read(func(s *datastore.PlayerState) {
+		val = s.ValueModifiers[resourceType]
+	})
+	return val
 }
 
 func (r *PlayerResources) Set(resources shared.Resources) {
-	r.mu.Lock()
-	r.resources = resources
-	r.mu.Unlock()
+	r.update(func(s *datastore.PlayerState) {
+		s.Resources = resources
+	})
 
 	if r.eventBus != nil {
 		events.Publish(r.eventBus, events.ResourcesChangedEvent{
@@ -141,11 +149,12 @@ func (r *PlayerResources) Set(resources shared.Resources) {
 }
 
 func (r *PlayerResources) SetProduction(production shared.Production) {
-	r.mu.Lock()
-	oldProduction := r.production
-	r.production = production
-	newProduction := r.production
-	r.mu.Unlock()
+	var oldProduction, newProduction shared.Production
+	r.update(func(s *datastore.PlayerState) {
+		oldProduction = s.Production
+		s.Production = production
+		newProduction = s.Production
+	})
 
 	if r.eventBus != nil {
 		resourceTypes := []struct {
@@ -175,42 +184,42 @@ func (r *PlayerResources) SetProduction(production shared.Production) {
 }
 
 func (r *PlayerResources) SetTerraformRating(tr int) {
-	r.mu.Lock()
-	oldRating := r.terraformRating
-	r.terraformRating = tr
-	newRating := r.terraformRating
-	r.mu.Unlock()
+	var oldRating int
+	r.update(func(s *datastore.PlayerState) {
+		oldRating = s.TerraformRating
+		s.TerraformRating = tr
+	})
 
 	if r.eventBus != nil {
 		events.Publish(r.eventBus, events.TerraformRatingChangedEvent{
 			GameID:    r.gameID,
 			PlayerID:  r.playerID,
 			OldRating: oldRating,
-			NewRating: newRating,
+			NewRating: tr,
 			Timestamp: time.Now(),
 		})
 	}
 }
 
 func (r *PlayerResources) Add(changes map[shared.ResourceType]int) {
-	r.mu.Lock()
-	for resourceType, amount := range changes {
-		switch resourceType {
-		case shared.ResourceCredit:
-			r.resources.Credits += amount
-		case shared.ResourceSteel:
-			r.resources.Steel += amount
-		case shared.ResourceTitanium:
-			r.resources.Titanium += amount
-		case shared.ResourcePlant:
-			r.resources.Plants += amount
-		case shared.ResourceEnergy:
-			r.resources.Energy += amount
-		case shared.ResourceHeat:
-			r.resources.Heat += amount
+	r.update(func(s *datastore.PlayerState) {
+		for resourceType, amount := range changes {
+			switch resourceType {
+			case shared.ResourceCredit:
+				s.Resources.Credits += amount
+			case shared.ResourceSteel:
+				s.Resources.Steel += amount
+			case shared.ResourceTitanium:
+				s.Resources.Titanium += amount
+			case shared.ResourcePlant:
+				s.Resources.Plants += amount
+			case shared.ResourceEnergy:
+				s.Resources.Energy += amount
+			case shared.ResourceHeat:
+				s.Resources.Heat += amount
+			}
 		}
-	}
-	r.mu.Unlock()
+	})
 
 	if r.eventBus != nil {
 		changesMap := make(map[string]int, len(changes))
@@ -228,44 +237,45 @@ func (r *PlayerResources) Add(changes map[shared.ResourceType]int) {
 }
 
 func (r *PlayerResources) AddProduction(changes map[shared.ResourceType]int) {
-	r.mu.Lock()
-	oldProduction := r.production
-	for resourceType, amount := range changes {
-		switch resourceType {
-		case shared.ResourceCreditProduction:
-			r.production.Credits += amount
-			if r.production.Credits < shared.MinCreditProduction {
-				r.production.Credits = shared.MinCreditProduction
-			}
-		case shared.ResourceSteelProduction:
-			r.production.Steel += amount
-			if r.production.Steel < shared.MinOtherProduction {
-				r.production.Steel = shared.MinOtherProduction
-			}
-		case shared.ResourceTitaniumProduction:
-			r.production.Titanium += amount
-			if r.production.Titanium < shared.MinOtherProduction {
-				r.production.Titanium = shared.MinOtherProduction
-			}
-		case shared.ResourcePlantProduction:
-			r.production.Plants += amount
-			if r.production.Plants < shared.MinOtherProduction {
-				r.production.Plants = shared.MinOtherProduction
-			}
-		case shared.ResourceEnergyProduction:
-			r.production.Energy += amount
-			if r.production.Energy < shared.MinOtherProduction {
-				r.production.Energy = shared.MinOtherProduction
-			}
-		case shared.ResourceHeatProduction:
-			r.production.Heat += amount
-			if r.production.Heat < shared.MinOtherProduction {
-				r.production.Heat = shared.MinOtherProduction
+	var oldProduction, newProduction shared.Production
+	r.update(func(s *datastore.PlayerState) {
+		oldProduction = s.Production
+		for resourceType, amount := range changes {
+			switch resourceType {
+			case shared.ResourceCreditProduction:
+				s.Production.Credits += amount
+				if s.Production.Credits < shared.MinCreditProduction {
+					s.Production.Credits = shared.MinCreditProduction
+				}
+			case shared.ResourceSteelProduction:
+				s.Production.Steel += amount
+				if s.Production.Steel < shared.MinOtherProduction {
+					s.Production.Steel = shared.MinOtherProduction
+				}
+			case shared.ResourceTitaniumProduction:
+				s.Production.Titanium += amount
+				if s.Production.Titanium < shared.MinOtherProduction {
+					s.Production.Titanium = shared.MinOtherProduction
+				}
+			case shared.ResourcePlantProduction:
+				s.Production.Plants += amount
+				if s.Production.Plants < shared.MinOtherProduction {
+					s.Production.Plants = shared.MinOtherProduction
+				}
+			case shared.ResourceEnergyProduction:
+				s.Production.Energy += amount
+				if s.Production.Energy < shared.MinOtherProduction {
+					s.Production.Energy = shared.MinOtherProduction
+				}
+			case shared.ResourceHeatProduction:
+				s.Production.Heat += amount
+				if s.Production.Heat < shared.MinOtherProduction {
+					s.Production.Heat = shared.MinOtherProduction
+				}
 			}
 		}
-	}
-	newProduction := r.production
-	r.mu.Unlock()
+		newProduction = s.Production
+	})
 
 	if r.eventBus != nil {
 		for resourceType := range changes {
@@ -308,16 +318,16 @@ func (r *PlayerResources) AddProduction(changes map[shared.ResourceType]int) {
 				Timestamp:     time.Now(),
 			})
 		}
-
 	}
 }
 
 func (r *PlayerResources) UpdateTerraformRating(delta int) {
-	r.mu.Lock()
-	oldRating := r.terraformRating
-	r.terraformRating += delta
-	newRating := r.terraformRating
-	r.mu.Unlock()
+	var oldRating, newRating int
+	r.update(func(s *datastore.PlayerState) {
+		oldRating = s.TerraformRating
+		s.TerraformRating += delta
+		newRating = s.TerraformRating
+	})
 
 	if r.eventBus != nil {
 		events.Publish(r.eventBus, events.TerraformRatingChangedEvent{
@@ -331,16 +341,16 @@ func (r *PlayerResources) UpdateTerraformRating(delta int) {
 }
 
 // AddToStorage adds resources to a specific card's storage
-// cardID is the card ID, amount is the number of resources to add
 func (r *PlayerResources) AddToStorage(cardID string, amount int) {
-	r.mu.Lock()
-	if r.resourceStorage == nil {
-		r.resourceStorage = make(map[string]int)
-	}
-	oldAmount := r.resourceStorage[cardID]
-	r.resourceStorage[cardID] += amount
-	newAmount := r.resourceStorage[cardID]
-	r.mu.Unlock()
+	var oldAmount, newAmount int
+	r.update(func(s *datastore.PlayerState) {
+		if s.ResourceStorage == nil {
+			s.ResourceStorage = make(map[string]int)
+		}
+		oldAmount = s.ResourceStorage[cardID]
+		s.ResourceStorage[cardID] += amount
+		newAmount = s.ResourceStorage[cardID]
+	})
 
 	if r.eventBus != nil {
 		events.Publish(r.eventBus, events.ResourceStorageChangedEvent{
@@ -356,57 +366,62 @@ func (r *PlayerResources) AddToStorage(cardID string, amount int) {
 
 // GetCardStorage returns the amount of resources stored on a specific card
 func (r *PlayerResources) GetCardStorage(cardID string) int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.resourceStorage[cardID]
+	var val int
+	r.read(func(s *datastore.PlayerState) {
+		val = s.ResourceStorage[cardID]
+	})
+	return val
 }
 
 // RemoveCardStorage removes the storage entry for a specific card
 func (r *PlayerResources) RemoveCardStorage(cardID string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.resourceStorage, cardID)
+	r.update(func(s *datastore.PlayerState) {
+		delete(s.ResourceStorage, cardID)
+	})
 }
 
 // ClearPaymentSubstitutes removes all non-standard payment substitutes
-// (keeps steel and titanium which are always available)
 func (r *PlayerResources) ClearPaymentSubstitutes() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.paymentSubstitutes = []shared.PaymentSubstitute{}
+	r.update(func(s *datastore.PlayerState) {
+		s.PaymentSubstitutes = []shared.PaymentSubstitute{}
+	})
 }
 
 // ClearValueModifiers resets all value modifiers to zero
 func (r *PlayerResources) ClearValueModifiers() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.valueModifiers = make(map[shared.ResourceType]int)
+	r.update(func(s *datastore.PlayerState) {
+		s.ValueModifiers = make(map[shared.ResourceType]int)
+	})
 }
 
 // AddStoragePaymentSubstitute registers a card's storage resources as usable for payment
 func (r *PlayerResources) AddStoragePaymentSubstitute(sub shared.StoragePaymentSubstitute) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.storagePaymentSubstitutes = append(r.storagePaymentSubstitutes, sub)
+	r.update(func(s *datastore.PlayerState) {
+		s.StoragePaymentSubstitutes = append(s.StoragePaymentSubstitutes, sub)
+	})
 }
 
 // StoragePaymentSubstitutes returns all storage payment substitutes
 func (r *PlayerResources) StoragePaymentSubstitutes() []shared.StoragePaymentSubstitute {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	result := make([]shared.StoragePaymentSubstitute, len(r.storagePaymentSubstitutes))
-	copy(result, r.storagePaymentSubstitutes)
+	var result []shared.StoragePaymentSubstitute
+	r.read(func(s *datastore.PlayerState) {
+		result = make([]shared.StoragePaymentSubstitute, len(s.StoragePaymentSubstitutes))
+		copy(result, s.StoragePaymentSubstitutes)
+	})
 	return result
 }
 
 // GetStoragePaymentSubstitute returns the storage payment substitute for a specific card, or nil
 func (r *PlayerResources) GetStoragePaymentSubstitute(cardID string) *shared.StoragePaymentSubstitute {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	for _, sub := range r.storagePaymentSubstitutes {
-		if sub.CardID == cardID {
-			return &sub
+	var result *shared.StoragePaymentSubstitute
+	r.read(func(s *datastore.PlayerState) {
+		for _, sub := range s.StoragePaymentSubstitutes {
+			if sub.CardID == cardID {
+				subCopy := sub
+				result = &subCopy
+				return
+			}
 		}
-	}
-	return nil
+	})
+	return result
 }

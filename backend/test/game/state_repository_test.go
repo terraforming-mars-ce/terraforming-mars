@@ -14,7 +14,7 @@ func TestStateRepository_WriteInitialState(t *testing.T) {
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	repo := game.NewInMemoryGameStateRepository()
 
-	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", game.SourceTypeInitial, "", "Game created")
+	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}
@@ -22,7 +22,7 @@ func TestStateRepository_WriteInitialState(t *testing.T) {
 	testutil.AssertEqual(t, int64(1), diff.SequenceNumber, "First write should have sequence 1")
 	testutil.AssertEqual(t, testGame.ID(), diff.GameID, "GameID should match")
 	testutil.AssertEqual(t, "Game Setup", diff.Source, "Source should match")
-	testutil.AssertEqual(t, game.SourceTypeInitial, diff.SourceType, "SourceType should match")
+	testutil.AssertEqual(t, shared.SourceTypeInitial, diff.SourceType, "SourceType should match")
 	testutil.AssertEqual(t, "Game created", diff.Description, "Description should match")
 
 	if diff.Changes == nil {
@@ -39,7 +39,7 @@ func TestStateRepository_WriteIncrementalChanges(t *testing.T) {
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
 	repo := game.NewInMemoryGameStateRepository()
 
-	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", game.SourceTypeInitial, "", "Game created")
+	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
 	if err != nil {
 		t.Fatalf("First write failed: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestStateRepository_WriteIncrementalChanges(t *testing.T) {
 		shared.ResourceCredit: 10,
 	})
 
-	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Test Card", game.SourceTypeCardPlay, player.ID(), "Played Test Card")
+	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Test Card", shared.SourceTypeCardPlay, player.ID(), "Played Test Card")
 	if err != nil {
 		t.Fatalf("Second write failed: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestStateRepository_GetDiff(t *testing.T) {
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
 	repo := game.NewInMemoryGameStateRepository()
 
-	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", game.SourceTypeInitial, "", "Game created")
+	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
 	if err != nil {
 		t.Fatalf("First write failed: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestStateRepository_GetDiff(t *testing.T) {
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceSteel: 5,
 	})
-	_, err = repo.Write(context.Background(), testGame.ID(), testGame, "Card A", game.SourceTypeCardPlay, player.ID(), "Played Card A")
+	_, err = repo.Write(context.Background(), testGame.ID(), testGame, "Card A", shared.SourceTypeCardPlay, player.ID(), "Played Card A")
 	if err != nil {
 		t.Fatalf("Second write failed: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestStateRepository_GetDiff(t *testing.T) {
 	player.Resources().AddProduction(map[shared.ResourceType]int{
 		shared.ResourcePlantProduction: 2,
 	})
-	_, err = repo.Write(context.Background(), testGame.ID(), testGame, "Card B", game.SourceTypeCardPlay, player.ID(), "Played Card B")
+	_, err = repo.Write(context.Background(), testGame.ID(), testGame, "Card B", shared.SourceTypeCardPlay, player.ID(), "Played Card B")
 	if err != nil {
 		t.Fatalf("Third write failed: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestStateRepository_GetDiffGameNotFound(t *testing.T) {
 func TestStateRepository_WriteNilGameReturnsError(t *testing.T) {
 	repo := game.NewInMemoryGameStateRepository()
 
-	_, err := repo.Write(context.Background(), "test-game", nil, "Test", game.SourceTypeInitial, "", "Test")
+	_, err := repo.Write(context.Background(), "test-game", nil, "Test", shared.SourceTypeInitial, "", "Test")
 	if err == nil {
 		t.Fatal("Write should return error for nil game")
 	}
@@ -136,7 +136,7 @@ func TestStateRepository_WriteContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := repo.Write(ctx, testGame.ID(), testGame, "Test", game.SourceTypeInitial, "", "Test")
+	_, err := repo.Write(ctx, testGame.ID(), testGame, "Test", shared.SourceTypeInitial, "", "Test")
 	if err == nil {
 		t.Fatal("Write should return error when context is cancelled")
 	}
@@ -149,14 +149,17 @@ func TestStateRepository_GlobalParameterChanges(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	player := players[0]
 
-	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", game.SourceTypeInitial, "", "Game created")
+	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
 	if err != nil {
 		t.Fatalf("First write failed: %v", err)
 	}
 
-	testGame.GlobalParameters().IncreaseTemperature(context.Background(), 2, "")
+	_, err = testGame.GlobalParameters().IncreaseTemperature(context.Background(), 2, "")
+	if err != nil {
+		t.Fatalf("IncreaseTemperature failed: %v", err)
+	}
 
-	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Heat Conversion", game.SourceTypeResourceConvert, player.ID(), "Converted heat to temperature")
+	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Heat Conversion", shared.SourceTypeResourceConvert, player.ID(), "Converted heat to temperature")
 	if err != nil {
 		t.Fatalf("Second write failed: %v", err)
 	}
@@ -172,17 +175,17 @@ func TestStateRepository_PhaseChange(t *testing.T) {
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
 	repo := game.NewInMemoryGameStateRepository()
 
-	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", game.SourceTypeInitial, "", "Game created")
+	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
 	if err != nil {
 		t.Fatalf("First write failed: %v", err)
 	}
 
-	err = testGame.UpdatePhase(context.Background(), game.GamePhaseAction)
+	err = testGame.UpdatePhase(context.Background(), shared.GamePhaseAction)
 	if err != nil {
 		t.Fatalf("UpdatePhase failed: %v", err)
 	}
 
-	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Phase Transition", game.SourceTypeGameEvent, "", "Phase changed to action")
+	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Phase Transition", shared.SourceTypeGameEvent, "", "Phase changed to action")
 	if err != nil {
 		t.Fatalf("Second write failed: %v", err)
 	}
@@ -190,7 +193,7 @@ func TestStateRepository_PhaseChange(t *testing.T) {
 	if diff.Changes.Phase == nil {
 		t.Fatal("Phase change should be captured")
 	}
-	testutil.AssertEqual(t, string(game.GamePhaseAction), diff.Changes.Phase.New, "New phase should be action")
+	testutil.AssertEqual(t, string(shared.GamePhaseAction), diff.Changes.Phase.New, "New phase should be action")
 }
 
 func TestStateRepository_NoChangesProducesEmptyDiff(t *testing.T) {
@@ -198,12 +201,12 @@ func TestStateRepository_NoChangesProducesEmptyDiff(t *testing.T) {
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
 	repo := game.NewInMemoryGameStateRepository()
 
-	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", game.SourceTypeInitial, "", "Game created")
+	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
 	if err != nil {
 		t.Fatalf("First write failed: %v", err)
 	}
 
-	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "No Op", game.SourceTypeGameEvent, "", "No changes")
+	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "No Op", shared.SourceTypeGameEvent, "", "No changes")
 	if err != nil {
 		t.Fatalf("Second write failed: %v", err)
 	}

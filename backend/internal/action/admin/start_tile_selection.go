@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // StartTileSelectionAction handles the admin action to start tile selection for a player
@@ -54,7 +54,7 @@ func (a *StartTileSelectionAction) Execute(ctx context.Context, gameID string, p
 		return fmt.Errorf("player not found: %s", playerID)
 	}
 
-	queue := &player.PendingTileSelectionQueue{
+	queue := &shared.PendingTileSelectionQueue{
 		Items:  []string{tileType},
 		Source: "admin-tile-selection",
 	}

@@ -8,6 +8,7 @@ import (
 	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
@@ -19,19 +20,20 @@ func setupGenerationalEventsTestEnvironment(t *testing.T) (*game.Game, *player.P
 		t.Fatalf("Failed to initialize logger: %v", err)
 	}
 
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers:      5,
 		DevelopmentMode: true,
 	}
-	g := game.NewGame("test-game", "player1", settings)
+	ds, _ := datastore.NewDataStore()
+	g := game.NewGame(ds, "test-game", "player1", settings)
 
 	ctx := context.Background()
-	p := player.NewPlayer(g.EventBus(), "test-game", "player1", "Test Player")
-	if err := g.AddPlayer(ctx, p); err != nil {
+	p, err := g.AddNewPlayer(ctx, "player1", "Test Player")
+	if err != nil {
 		t.Fatalf("Failed to add player: %v", err)
 	}
 
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		t.Fatalf("Failed to set game phase: %v", err)
 	}
 

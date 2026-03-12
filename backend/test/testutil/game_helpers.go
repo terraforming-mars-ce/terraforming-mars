@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/player"
@@ -34,13 +35,13 @@ func StartTestGame(t *testing.T, g *game.Game) {
 	}
 
 	// Update status to active
-	err = g.UpdateStatus(ctx, game.GameStatusActive)
+	err = g.UpdateStatus(ctx, shared.GameStatusActive)
 	if err != nil {
 		t.Fatalf("Failed to update game status: %v", err)
 	}
 
 	// Update phase
-	err = g.UpdatePhase(ctx, game.GamePhaseAction)
+	err = g.UpdatePhase(ctx, shared.GamePhaseAction)
 	if err != nil {
 		t.Fatalf("Failed to update game phase: %v", err)
 	}
@@ -104,15 +105,15 @@ func SetupSoloGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardReg
 }
 
 // AddBotToGame adds a bot player to a game in lobby and returns it.
-func AddBotToGame(t *testing.T, g *game.Game, repo game.GameRepository, name, difficulty, speed string) *player.Player {
+func AddBotToGame(t *testing.T, g *game.Game, repo game.GameRepository, cardRegistry cards.CardRegistry, name, difficulty, speed string) *player.Player {
 	t.Helper()
 	ctx := context.Background()
 	botID := "bot-" + name
-	bot := player.NewBotPlayer(g.EventBus(), g.ID(), botID, name, player.BotDifficulty(difficulty), player.BotSpeed(speed))
-	err := g.AddPlayer(ctx, bot)
+	bot, err := g.AddNewBotPlayer(ctx, botID, name, player.BotDifficulty(difficulty), player.BotSpeed(speed))
 	if err != nil {
 		t.Fatalf("Failed to add bot: %v", err)
 	}
+	action.SetupPlayerCardStore(bot, g, cardRegistry)
 	return bot
 }
 

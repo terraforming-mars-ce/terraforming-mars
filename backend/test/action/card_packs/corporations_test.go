@@ -6,7 +6,6 @@ import (
 
 	"terraforming-mars-backend/internal/action"
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -65,7 +64,7 @@ func TestRobinsonIndustries_ActionSucceedsWithSufficientCredits(t *testing.T) {
 			}},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Robinson Industries",
@@ -135,7 +134,7 @@ func TestRobinsonIndustries_OnlyAllowsIncreasingLowestProduction(t *testing.T) {
 			}},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Robinson Industries",
@@ -178,7 +177,7 @@ func TestRobinsonIndustries_ActionFailsWithInsufficientCredits(t *testing.T) {
 			}},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Robinson Industries",
@@ -219,10 +218,9 @@ func TestRobinsonIndustries_StateCalculatorBlocksWhenUnaffordable(t *testing.T) 
 	}
 
 	cardID := testutil.CardID("Robinson Industries")
-	pca := player.NewPlayerCardAction(cardID, 1, behavior)
 
 	_ = ctx
-	state := action.CalculatePlayerCardActionState(cardID, behavior, pca.TimesUsedThisGeneration(), p, testGame)
+	state := action.CalculatePlayerCardActionState(cardID, behavior, 1, p, testGame)
 
 	testutil.AssertFalse(t, state.Available(), "Action should be unavailable with only 3 credits")
 
@@ -263,14 +261,17 @@ func TestSaturnSystems_CorporationPlays(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Saturn Systems should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID),
 		"Saturn Systems should be in played cards")
@@ -318,14 +319,17 @@ func TestTeractor_CorporationPlays(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
+	testutil.AssertNoError(t, err, "UpdateStatus failed")
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseAction)
+	testutil.AssertNoError(t, err, "UpdatePhase failed")
+	err = testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, err, "SetCurrentTurn failed")
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Teractor should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID),
 		"Teractor should be in played cards")

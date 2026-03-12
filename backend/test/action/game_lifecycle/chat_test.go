@@ -6,6 +6,7 @@ import (
 
 	"terraforming-mars-backend/internal/action/connection"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -101,7 +102,7 @@ func TestSendChatMessage_ExceedsMaxLength(t *testing.T) {
 	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	ctx := testutil.TestContext()
 
-	longMessage := strings.Repeat("a", game.MaxChatMessageLength+1)
+	longMessage := strings.Repeat("a", shared.MaxChatMessageLength+1)
 	action := newSendChatMessageAction(repo)
 	_, err := action.Execute(ctx, g.ID(), "player-a", "Player A", "#ff0000", longMessage, false)
 
@@ -113,7 +114,7 @@ func TestSendChatMessage_ExactMaxLength(t *testing.T) {
 	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
 	ctx := testutil.TestContext()
 
-	exactMessage := strings.Repeat("a", game.MaxChatMessageLength)
+	exactMessage := strings.Repeat("a", shared.MaxChatMessageLength)
 	action := newSendChatMessageAction(repo)
 	_, err := action.Execute(ctx, g.ID(), "player-a", "Player A", "#ff0000", exactMessage, false)
 
@@ -121,7 +122,7 @@ func TestSendChatMessage_ExactMaxLength(t *testing.T) {
 }
 
 func TestSendChatMessage_GameNotFound(t *testing.T) {
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	action := newSendChatMessageAction(repo)
 
 	_, err := action.Execute(testutil.TestContext(), "nonexistent", "player-1", "Player", "#ff0000", "Hello", false)
@@ -138,11 +139,11 @@ func TestChatMessage_TrimsOldMessages(t *testing.T) {
 	ctx := testutil.TestContext()
 
 	action := newSendChatMessageAction(repo)
-	for i := 0; i < game.MaxChatMessages+10; i++ {
+	for i := 0; i < shared.MaxChatMessages+10; i++ {
 		_, err := action.Execute(ctx, g.ID(), "player-1", "Player", "#ff0000", "msg", false)
 		testutil.AssertNoError(t, err, "Should send message")
 	}
 
 	messages := g.GetChatMessages()
-	testutil.AssertEqual(t, game.MaxChatMessages, len(messages), "Should trim to MaxChatMessages")
+	testutil.AssertEqual(t, shared.MaxChatMessages, len(messages), "Should trim to MaxChatMessages")
 }

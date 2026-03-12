@@ -8,7 +8,8 @@ import (
 
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 
 	"go.uber.org/zap"
@@ -103,7 +104,7 @@ func (h *MockHub) Reset() {
 // TestBroadcaster_BroadcastToPlayers tests that broadcaster sends to all players
 func TestBroadcaster_BroadcastToPlayers(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	hub := NewMockHub()
 	logger := testutil.TestLogger()
@@ -114,7 +115,7 @@ func TestBroadcaster_BroadcastToPlayers(t *testing.T) {
 	mockBroadcaster := testutil.NewMockBroadcaster()
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
 	ctx := context.Background()
-	repo.Create(ctx, testGame)
+	testutil.AssertNoError(t, repo.Create(ctx, testGame), "create game in repo")
 
 	// Broadcast to all players
 	players := testGame.GetAllPlayers()
@@ -144,7 +145,7 @@ func TestBroadcaster_BroadcastToPlayers(t *testing.T) {
 // TestBroadcaster_GameNotFound tests broadcaster handles missing games
 func TestBroadcaster_GameNotFound(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	hub := NewMockHub()
 	logger := testutil.TestLogger()
@@ -162,7 +163,7 @@ func TestBroadcaster_GameNotFound(t *testing.T) {
 // TestBroadcaster_EmptyPlayerList tests broadcaster with empty player list
 func TestBroadcaster_EmptyPlayerList(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	hub := NewMockHub()
 	logger := testutil.TestLogger()
@@ -173,7 +174,7 @@ func TestBroadcaster_EmptyPlayerList(t *testing.T) {
 	mockBroadcaster := testutil.NewMockBroadcaster()
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 0, mockBroadcaster)
 	ctx := context.Background()
-	repo.Create(ctx, testGame)
+	testutil.AssertNoError(t, repo.Create(ctx, testGame), "create game in repo")
 
 	// Broadcast with empty player list
 	broadcaster.BroadcastToPlayers(ctx, testGame.ID(), []string{})
@@ -188,7 +189,7 @@ func TestBroadcaster_PersonalizedGameState(t *testing.T) {
 	// We just verify that each player gets their own message
 
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	hub := NewMockHub()
 	logger := testutil.TestLogger()
@@ -199,7 +200,7 @@ func TestBroadcaster_PersonalizedGameState(t *testing.T) {
 	mockBroadcaster := testutil.NewMockBroadcaster()
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 3, mockBroadcaster)
 	ctx := context.Background()
-	repo.Create(ctx, testGame)
+	testutil.AssertNoError(t, repo.Create(ctx, testGame), "create game in repo")
 
 	players := testGame.GetAllPlayers()
 	playerIDs := make([]string, len(players))
@@ -222,7 +223,7 @@ func TestBroadcaster_PersonalizedGameState(t *testing.T) {
 // TestBroadcaster_ConcurrentBroadcasts tests thread-safety
 func TestBroadcaster_ConcurrentBroadcasts(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	hub := NewMockHub()
 	logger := testutil.TestLogger()
@@ -236,7 +237,7 @@ func TestBroadcaster_ConcurrentBroadcasts(t *testing.T) {
 	games := make([]*game.Game, 5)
 	for i := 0; i < 5; i++ {
 		testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
-		repo.Create(ctx, testGame)
+		testutil.AssertNoError(t, repo.Create(ctx, testGame), "create game in repo")
 		games[i] = testGame
 	}
 
@@ -268,7 +269,7 @@ func TestBroadcaster_ConcurrentBroadcasts(t *testing.T) {
 // TestBroadcaster_DirectBroadcast tests direct call to BroadcastToPlayers
 func TestBroadcaster_DirectBroadcast(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	hub := NewMockHub()
 	logger := testutil.TestLogger()
@@ -278,7 +279,7 @@ func TestBroadcaster_DirectBroadcast(t *testing.T) {
 	// Create game
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, nil)
 	ctx := context.Background()
-	repo.Create(ctx, testGame)
+	testutil.AssertNoError(t, repo.Create(ctx, testGame), "create game in repo")
 
 	players := testGame.GetAllPlayers()
 	playerIDs := make([]string, len(players))
@@ -296,17 +297,19 @@ func TestBroadcaster_DirectBroadcast(t *testing.T) {
 // TestBroadcaster_GameStateChanges tests broadcasting on state changes
 func TestBroadcaster_GameStateChanges(t *testing.T) {
 	// Setup
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: 2,
 		CardPacks:  []string{"base"},
 	}
 
-	testGame := game.NewGame("test-game", "", settings)
+	ds, err := datastore.NewDataStore()
+	testutil.AssertNoError(t, err, "create datastore")
+	testGame := game.NewGame(ds, "test-game", "", settings)
 	ctx := context.Background()
 
 	// Trigger state change
-	newPlayer := player.NewPlayer(testGame.EventBus(), testGame.ID(), "test-player-1", "TestPlayer")
-	testutil.AssertNoError(t, testGame.AddPlayer(ctx, newPlayer), "Failed to add player")
+	_, err = testGame.AddNewPlayer(ctx, "test-player-1", "TestPlayer")
+	testutil.AssertNoError(t, err, "Failed to add player")
 
 	// Verify player was added
 	players := testGame.GetAllPlayers()
@@ -316,7 +319,7 @@ func TestBroadcaster_GameStateChanges(t *testing.T) {
 // TestBroadcaster_CorrectGameID tests messages have correct game ID
 func TestBroadcaster_CorrectGameID(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	hub := NewMockHub()
 	logger := testutil.TestLogger()
@@ -327,7 +330,7 @@ func TestBroadcaster_CorrectGameID(t *testing.T) {
 	mockBroadcaster := testutil.NewMockBroadcaster()
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
 	ctx := context.Background()
-	repo.Create(ctx, testGame)
+	testutil.AssertNoError(t, repo.Create(ctx, testGame), "create game in repo")
 
 	players := testGame.GetAllPlayers()
 	playerIDs := make([]string, len(players))

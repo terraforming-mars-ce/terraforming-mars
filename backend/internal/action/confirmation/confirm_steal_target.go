@@ -60,7 +60,7 @@ func (a *ConfirmStealTargetAction) Execute(ctx context.Context, gameID string, p
 		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 
 		description := fmt.Sprintf("Skipped steal from %s", selection.Source)
-		a.WriteStateLog(ctx, g, selection.Source, game.SourceTypeCardPlay, playerID, description)
+		a.WriteStateLog(ctx, g, selection.Source, shared.SourceTypeCardPlay, playerID, description)
 
 		log.Info("Steal target skipped",
 			zap.String("source", selection.Source))
@@ -99,11 +99,11 @@ func (a *ConfirmStealTargetAction) Execute(ctx context.Context, gameID string, p
 
 	baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 
-	calculatedOutputs := []game.CalculatedOutput{
+	calculatedOutputs := []shared.CalculatedOutput{
 		{ResourceType: string(resourceType), Amount: stolenAmount},
 	}
 	description := fmt.Sprintf("Stole %d %s from %s", stolenAmount, resourceType, targetPlayer.Name())
-	a.WriteStateLogFull(ctx, g, selection.Source, game.SourceTypeCardPlay, playerID, description, nil, calculatedOutputs, nil)
+	a.WriteStateLogFull(ctx, g, selection.Source, shared.SourceTypeCardPlay, playerID, description, nil, calculatedOutputs, nil)
 
 	log.Info("Steal target confirmed",
 		zap.String("source", selection.Source),

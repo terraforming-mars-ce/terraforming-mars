@@ -7,7 +7,6 @@ import (
 	"terraforming-mars-backend/internal/action/admin"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 
@@ -168,7 +167,7 @@ func (h *AdminCommandHandler) handleSetPhase(ctx context.Context, gameID string,
 		return &adminError{message: "Missing phase"}
 	}
 
-	return h.setPhaseAction.Execute(ctx, gameID, game.GamePhase(phase))
+	return h.setPhaseAction.Execute(ctx, gameID, shared.GamePhase(phase))
 }
 
 func (h *AdminCommandHandler) handleSetResources(ctx context.Context, gameID string, payload interface{}) error {

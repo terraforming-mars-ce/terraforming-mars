@@ -10,7 +10,6 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -42,7 +41,7 @@ func TestRoverConstruction_GainCreditsOnAnyCityPlacement(t *testing.T) {
 	testutil.StartTestGame(t, testGame)
 
 	// Register Rover Construction passive effect
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-rover-construction",
 		CardName:      "Rover Construction",
 		BehaviorIndex: 0,
@@ -103,7 +102,7 @@ func TestRoverConstruction_TriggersOnSelfCityToo(t *testing.T) {
 	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-rover-construction",
 		CardName:      "Rover Construction",
 		BehaviorIndex: 0,
@@ -162,7 +161,7 @@ func TestRoverConstruction_DoesNotTriggerOnGreenery(t *testing.T) {
 	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-rover-construction",
 		CardName:      "Rover Construction",
 		BehaviorIndex: 0,
@@ -235,7 +234,7 @@ func TestOlympusConference_AddScienceOnScienceTagPlayed(t *testing.T) {
 	owner.Resources().AddToStorage("card-olympus-conference", 0)
 
 	// Register tag-played passive effect (choice 0: add science to self-card)
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-olympus-conference",
 		CardName:      "Olympus Conference",
 		BehaviorIndex: 0,
@@ -298,7 +297,7 @@ func TestOlympusConference_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 	owner.PlayedCards().AddCard("card-olympus-conference", "Olympus Conference", "active", []string{"building", "earth", "science"})
 	owner.Resources().AddToStorage("card-olympus-conference", 0)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-olympus-conference",
 		CardName:      "Olympus Conference",
 		BehaviorIndex: 0,
@@ -398,7 +397,7 @@ func TestOlympusConference_TriggeredChoice_CreatesPendingSelection(t *testing.T)
 	owner.PlayedCards().AddCard("card-olympus-conference", "Olympus Conference", "active", []string{"building", "earth", "science"})
 	owner.Resources().AddToStorage("card-olympus-conference", 0)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-olympus-conference",
 		CardName:      "Olympus Conference",
 		BehaviorIndex: 0,
@@ -452,7 +451,7 @@ func TestOlympusConference_Choice0_AddScience(t *testing.T) {
 	owner.PlayedCards().AddCard("card-olympus-conference", "Olympus Conference", "active", []string{"building", "earth", "science"})
 	owner.Resources().AddToStorage("card-olympus-conference", 0)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-olympus-conference",
 		CardName:      "Olympus Conference",
 		BehaviorIndex: 0,
@@ -510,7 +509,7 @@ func TestOlympusConference_Choice1_RemoveScienceToDrawCard(t *testing.T) {
 	owner.PlayedCards().AddCard("card-olympus-conference", "Olympus Conference", "active", []string{"building", "earth", "science"})
 	owner.Resources().AddToStorage("card-olympus-conference", 2)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-olympus-conference",
 		CardName:      "Olympus Conference",
 		BehaviorIndex: 0,
@@ -572,7 +571,7 @@ func TestOlympusConference_Choice1_FailsWithoutScience(t *testing.T) {
 	owner.PlayedCards().AddCard("card-olympus-conference", "Olympus Conference", "active", []string{"building", "earth", "science"})
 	owner.Resources().AddToStorage("card-olympus-conference", 0)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-olympus-conference",
 		CardName:      "Olympus Conference",
 		BehaviorIndex: 0,
@@ -629,7 +628,7 @@ func TestViralEnhancers_GainPlantOnPlantTagPlayed(t *testing.T) {
 	owner.PlayedCards().AddCard("card-viral-enhancers", "Viral Enhancers", "active", []string{"microbe", "science"})
 
 	// Register card-played passive effect (simplified to just gain plant)
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-viral-enhancers",
 		CardName:      "Viral Enhancers",
 		BehaviorIndex: 0,
@@ -703,7 +702,7 @@ func TestViralEnhancers_DoesNotTriggerOnBuildingTag(t *testing.T) {
 
 	owner.PlayedCards().AddCard("card-viral-enhancers", "Viral Enhancers", "active", []string{"microbe", "science"})
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-viral-enhancers",
 		CardName:      "Viral Enhancers",
 		BehaviorIndex: 0,
@@ -773,7 +772,7 @@ func TestArcticAlgae_GainPlantsOnAnyOceanPlacement(t *testing.T) {
 	other.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-arctic-algae",
 		CardName:      "Arctic Algae",
 		BehaviorIndex: 0,
@@ -831,7 +830,7 @@ func TestArcticAlgae_TriggersOnSelfOceanToo(t *testing.T) {
 	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-arctic-algae",
 		CardName:      "Arctic Algae",
 		BehaviorIndex: 0,
@@ -889,7 +888,7 @@ func TestArcticAlgae_DoesNotTriggerOnCityPlacement(t *testing.T) {
 	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	testutil.StartTestGame(t, testGame)
 
-	effect := player.CardEffect{
+	effect := shared.CardEffect{
 		CardID:        "card-arctic-algae",
 		CardName:      "Arctic Algae",
 		BehaviorIndex: 0,

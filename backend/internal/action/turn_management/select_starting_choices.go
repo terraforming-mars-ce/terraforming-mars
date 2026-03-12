@@ -59,7 +59,7 @@ func (a *SelectStartingChoicesAction) Execute(ctx context.Context, gameID string
 		return fmt.Errorf("game not found: %s", gameID)
 	}
 
-	if g.CurrentPhase() != game.GamePhaseStartingSelection {
+	if g.CurrentPhase() != shared.GamePhaseStartingSelection {
 		log.Error("Game not in starting selection phase", zap.String("phase", string(g.CurrentPhase())))
 		return fmt.Errorf("game not in starting selection phase")
 	}
@@ -84,7 +84,7 @@ func (a *SelectStartingChoicesAction) Execute(ctx context.Context, gameID string
 
 	p.SetCorporationID(corporationID)
 
-	if err := g.SetDeferredStartingChoices(ctx, playerID, &game.DeferredStartingChoices{
+	if err := g.SetDeferredStartingChoices(ctx, playerID, &shared.DeferredStartingChoices{
 		CorporationID: corporationID,
 		PreludeIDs:    preludeIDs,
 		CardIDs:       cardIDs,
@@ -276,7 +276,7 @@ func (a *SelectStartingChoicesAction) checkAndAdvanceToInitApplyCorp(ctx context
 
 	log.Debug("All players stored starting choices, advancing to init_apply_corp phase")
 
-	if err := g.UpdatePhase(ctx, game.GamePhaseInitApplyCorp); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseInitApplyCorp); err != nil {
 		log.Error("Failed to transition to init_apply_corp phase", zap.Error(err))
 		return
 	}
@@ -331,10 +331,10 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 	for _, effect := range triggerEffects {
 		p.Effects().AddEffect(effect)
 		baseaction.SubscribePassiveEffectToEvents(ctx, g, p, effect, log, cardRegistry)
-		g.AddTriggeredEffect(game.TriggeredEffect{
+		g.AddTriggeredEffect(shared.TriggeredEffect{
 			CardName:   corpCard.Name,
 			PlayerID:   p.ID(),
-			SourceType: game.SourceTypeEffectAdded,
+			SourceType: shared.SourceTypeEffectAdded,
 			Behaviors:  []shared.CardBehavior{effect.Behavior},
 		})
 	}
@@ -350,10 +350,10 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 	autoEffects := corpProc.GetAutoEffects(corpCard)
 	for _, effect := range autoEffects {
 		p.Effects().AddEffect(effect)
-		g.AddTriggeredEffect(game.TriggeredEffect{
+		g.AddTriggeredEffect(shared.TriggeredEffect{
 			CardName:   corpCard.Name,
 			PlayerID:   p.ID(),
-			SourceType: game.SourceTypeEffectAdded,
+			SourceType: shared.SourceTypeEffectAdded,
 			Behaviors:  []shared.CardBehavior{effect.Behavior},
 		})
 	}
@@ -374,15 +374,14 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 	manualActions := corpProc.GetManualActions(corpCard)
 	for _, action := range manualActions {
 		p.Actions().AddAction(action)
-		g.AddTriggeredEffect(game.TriggeredEffect{
+		g.AddTriggeredEffect(shared.TriggeredEffect{
 			CardName:   corpCard.Name,
 			PlayerID:   p.ID(),
-			SourceType: game.SourceTypeActionAdded,
+			SourceType: shared.SourceTypeActionAdded,
 			Behaviors:  []shared.CardBehavior{action.Behavior},
 		})
 	}
 
-	corpProc.WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, cardRegistry))
 	if err := corpProc.SetupForcedFirstAction(ctx, corpCard, g, p.ID()); err != nil {
 		return fmt.Errorf("failed to setup forced first action: %w", err)
 	}
@@ -395,7 +394,9 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 		})
 	}
 	if len(choices.CardIDs) > 0 {
-		baseaction.AddCardsToPlayerHand(choices.CardIDs, p, g, cardRegistry, log)
+		for _, cardID := range choices.CardIDs {
+			p.Hand().AddCard(cardID)
+		}
 	}
 
 	g.MarkCorpApplied(playerID)
@@ -468,8 +469,7 @@ func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, prelu
 		applier := gamecards.NewBehaviorApplier(p, g, card.Name, log).
 			WithSourceCardID(card.ID).
 			WithCardRegistry(cardRegistry).
-			WithSourceType(game.SourceTypeCardPlay).
-			WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, cardRegistry))
+			WithSourceType(shared.SourceTypeCardPlay)
 
 		_, err := applier.ApplyOutputsAndGetCalculated(ctx, outputs)
 		if err != nil {
@@ -477,7 +477,7 @@ func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, prelu
 		}
 
 		if gamecards.HasPersistentEffects(behavior) {
-			effect := player.CardEffect{
+			effect := shared.CardEffect{
 				CardID:        card.ID,
 				CardName:      card.Name,
 				BehaviorIndex: behaviorIndex,
@@ -498,7 +498,7 @@ func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, prelu
 			continue
 		}
 
-		effect := player.CardEffect{
+		effect := shared.CardEffect{
 			CardID:        card.ID,
 			CardName:      card.Name,
 			BehaviorIndex: behaviorIndex,
@@ -513,7 +513,7 @@ func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, prelu
 			continue
 		}
 
-		p.Actions().AddAction(player.CardAction{
+		p.Actions().AddAction(shared.CardAction{
 			CardID:        card.ID,
 			CardName:      card.Name,
 			BehaviorIndex: behaviorIndex,
@@ -526,7 +526,7 @@ func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, prelu
 
 // AdvanceToActionPhase transitions the game to the action phase and sets the first player's turn.
 func AdvanceToActionPhase(ctx context.Context, g *game.Game, allPlayers []*player.Player, log *zap.Logger) {
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		log.Error("Failed to transition game phase", zap.Error(err))
 		return
 	}
