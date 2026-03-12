@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // SpectateGameAction handles a spectator joining a game.
@@ -45,8 +46,8 @@ func (a *SpectateGameAction) Execute(ctx context.Context, gameID, spectatorName,
 		return nil, fmt.Errorf("game not found: %s", gameID)
 	}
 
-	if g.SpectatorCount() >= game.MaxSpectators {
-		return nil, fmt.Errorf("game %s already has the maximum number of spectators (%d)", gameID, game.MaxSpectators)
+	if g.SpectatorCount() >= shared.MaxSpectators {
+		return nil, fmt.Errorf("game %s already has the maximum number of spectators (%d)", gameID, shared.MaxSpectators)
 	}
 
 	color := g.NextSpectatorColor()

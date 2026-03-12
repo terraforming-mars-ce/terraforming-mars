@@ -13,6 +13,7 @@ import (
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
 	playerPkg "terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 
 	"go.uber.org/zap"
 )
@@ -76,7 +77,7 @@ func NewBotController(
 }
 
 // StartBot initializes and starts a bot session for the given player.
-func (bc *BotController) StartBot(gameID, playerID, botName, difficulty, speed string, settings game.GameSettings) error {
+func (bc *BotController) StartBot(gameID, playerID, botName, difficulty, speed string, settings shared.GameSettings) error {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
@@ -114,14 +115,20 @@ func (bc *BotController) StartBot(gameID, playerID, botName, difficulty, speed s
 
 	historyWriter, err := NewHistoryWriter(historyPath, botLogger)
 	if err != nil {
-		os.RemoveAll(runDir)
+		if removeErr := os.RemoveAll(runDir); removeErr != nil {
+			bc.logger.Warn("Failed to remove bot run directory", zap.String("path", runDir), zap.Error(removeErr))
+		}
 		return fmt.Errorf("create history writer: %w", err)
 	}
 
 	commandReader := NewCommandReader(commandPath, botLogger)
 	if err := commandReader.Start(); err != nil {
-		historyWriter.Close()
-		os.RemoveAll(runDir)
+		if closeErr := historyWriter.Close(); closeErr != nil {
+			bc.logger.Warn("Failed to close history writer", zap.Error(closeErr))
+		}
+		if removeErr := os.RemoveAll(runDir); removeErr != nil {
+			bc.logger.Warn("Failed to remove bot run directory", zap.String("path", runDir), zap.Error(removeErr))
+		}
 		return fmt.Errorf("start command reader: %w", err)
 	}
 
@@ -420,8 +427,8 @@ func (bc *BotController) handleChatMessage(ctx context.Context, session *BotSess
 	if len(p.Message) == 0 {
 		return
 	}
-	if len(p.Message) > game.MaxChatMessageLength {
-		p.Message = p.Message[:game.MaxChatMessageLength]
+	if len(p.Message) > shared.MaxChatMessageLength {
+		p.Message = p.Message[:shared.MaxChatMessageLength]
 	}
 
 	g, err := bc.gameRepo.Get(ctx, session.gameID)
@@ -436,7 +443,7 @@ func (bc *BotController) handleChatMessage(ctx context.Context, session *BotSess
 		return
 	}
 
-	chatMsg := game.ChatMessage{
+	chatMsg := shared.ChatMessage{
 		SenderID:    session.playerID,
 		SenderName:  bot.Name(),
 		SenderColor: bot.Color(),
@@ -461,6 +468,10 @@ func (bc *BotController) handleChatMessage(ctx context.Context, session *BotSess
 
 func (bc *BotController) cleanupSession(session *BotSession) {
 	session.commandReader.Stop()
-	session.historyWriter.Close()
-	os.RemoveAll(session.runDir)
+	if err := session.historyWriter.Close(); err != nil {
+		bc.logger.Warn("Failed to close history writer", zap.Error(err))
+	}
+	if err := os.RemoveAll(session.runDir); err != nil {
+		bc.logger.Warn("Failed to remove bot run directory", zap.String("path", session.runDir), zap.Error(err))
+	}
 }

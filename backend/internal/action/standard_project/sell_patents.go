@@ -10,7 +10,6 @@ import (
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
-	playerPkg "terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -41,7 +40,7 @@ func (a *SellPatentsAction) Execute(ctx context.Context, gameID string, playerID
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -67,7 +66,7 @@ func (a *SellPatentsAction) Execute(ctx context.Context, gameID string, playerID
 		cardRewards[cardID] = 1
 	}
 
-	pendingSelection := &playerPkg.PendingCardSelection{
+	pendingSelection := &shared.PendingCardSelection{
 		Source:         "sell-patents",
 		AvailableCards: playerCards,
 		CardCosts:      cardCosts,

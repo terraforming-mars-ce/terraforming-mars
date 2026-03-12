@@ -77,7 +77,7 @@ func (a *PlayCardAction) Execute(
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -279,8 +279,8 @@ func (a *PlayCardAction) Execute(
 	a.ConsumePlayerAction(g, log)
 
 	description := fmt.Sprintf("Played %s for %d credits", card.Name, totalValue)
-	displayData := baseaction.BuildCardDisplayData(card, game.SourceTypeCardPlay)
-	a.WriteStateLogFull(ctx, g, card.Name, game.SourceTypeCardPlay, playerID, description, choiceIndex, calculatedOutputs, displayData)
+	displayData := baseaction.BuildCardDisplayData(card, shared.SourceTypeCardPlay)
+	a.WriteStateLogFull(ctx, g, card.Name, shared.SourceTypeCardPlay, playerID, description, choiceIndex, calculatedOutputs, displayData)
 
 	log.Info("Card played",
 		zap.String("card_name", card.Name),
@@ -440,7 +440,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 	targetPlayerID *string,
 	selectedAmount *int,
 	log *zap.Logger,
-) ([]game.CalculatedOutput, error) {
+) ([]shared.CalculatedOutput, error) {
 	if len(card.Behaviors) == 0 {
 		log.Debug("No card behaviors to apply")
 		return nil, nil
@@ -450,7 +450,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 		zap.String("card_id", card.ID),
 		zap.Int("behavior_count", len(card.Behaviors)))
 
-	var allCalculatedOutputs []game.CalculatedOutput
+	var allCalculatedOutputs []shared.CalculatedOutput
 
 	for behaviorIndex, behavior := range card.Behaviors {
 		log.Debug("Processing behavior",
@@ -494,8 +494,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 			applier := gamecards.NewBehaviorApplier(p, g, card.Name, log).
 				WithSourceCardID(card.ID).
 				WithCardRegistry(a.CardRegistry()).
-				WithSourceType(game.SourceTypeCardPlay).
-				WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
+				WithSourceType(shared.SourceTypeCardPlay)
 			if len(cardStorageTargets) > 0 {
 				applier = applier.WithTargetCardIDs(cardStorageTargets)
 			}
@@ -514,7 +513,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 			allCalculatedOutputs = append(allCalculatedOutputs, calculatedOutputs...)
 
 			if deferred := applier.DeferredSteal(); deferred != nil {
-				callback := &player.TileCompletionCallback{
+				callback := &shared.TileCompletionCallback{
 					Type: "adjacent-steal",
 					Data: map[string]interface{}{
 						"resourceType": string(deferred.ResourceType),
@@ -532,7 +531,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 				log.Debug("Registering auto-trigger behavior with persistent effects",
 					zap.String("card_name", card.Name))
 
-				effect := player.CardEffect{
+				effect := shared.CardEffect{
 					CardID:        card.ID,
 					CardName:      card.Name,
 					BehaviorIndex: behaviorIndex,
@@ -546,10 +545,10 @@ func (a *PlayCardAction) applyCardBehaviors(
 					Timestamp: time.Now(),
 				})
 
-				g.AddTriggeredEffect(game.TriggeredEffect{
+				g.AddTriggeredEffect(shared.TriggeredEffect{
 					CardName:   card.Name,
 					PlayerID:   p.ID(),
-					SourceType: game.SourceTypeEffectAdded,
+					SourceType: shared.SourceTypeEffectAdded,
 					Behaviors:  []shared.CardBehavior{behavior},
 				})
 			}
@@ -559,7 +558,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 		if gamecards.HasManualTrigger(behavior) {
 			log.Debug("Found manual-trigger behavior, registering as player action")
 
-			p.Actions().AddAction(player.CardAction{
+			p.Actions().AddAction(shared.CardAction{
 				CardID:                  card.ID,
 				CardName:                card.Name,
 				BehaviorIndex:           behaviorIndex,
@@ -568,10 +567,10 @@ func (a *PlayCardAction) applyCardBehaviors(
 				TimesUsedThisGeneration: 0,
 			})
 
-			g.AddTriggeredEffect(game.TriggeredEffect{
+			g.AddTriggeredEffect(shared.TriggeredEffect{
 				CardName:   card.Name,
 				PlayerID:   p.ID(),
-				SourceType: game.SourceTypeActionAdded,
+				SourceType: shared.SourceTypeActionAdded,
 				Behaviors:  []shared.CardBehavior{behavior},
 			})
 		}
@@ -581,7 +580,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 			log.Debug("Found conditional-trigger behavior, registering as passive effect",
 				zap.Int("trigger_count", len(behavior.Triggers)))
 
-			effect := player.CardEffect{
+			effect := shared.CardEffect{
 				CardID:        card.ID,
 				CardName:      card.Name,
 				BehaviorIndex: behaviorIndex,
@@ -595,10 +594,10 @@ func (a *PlayCardAction) applyCardBehaviors(
 				Timestamp: time.Now(),
 			})
 
-			g.AddTriggeredEffect(game.TriggeredEffect{
+			g.AddTriggeredEffect(shared.TriggeredEffect{
 				CardName:   card.Name,
 				PlayerID:   p.ID(),
-				SourceType: game.SourceTypeEffectAdded,
+				SourceType: shared.SourceTypeEffectAdded,
 				Behaviors:  []shared.CardBehavior{behavior},
 			})
 
@@ -609,9 +608,9 @@ func (a *PlayCardAction) applyCardBehaviors(
 
 	// Add VP notification if card has VP conditions
 	if len(card.VPConditions) > 0 {
-		var vpForLog []game.VPConditionForLog
+		var vpForLog []shared.VPConditionForLog
 		for _, vp := range card.VPConditions {
-			vpLog := game.VPConditionForLog{
+			vpLog := shared.VPConditionForLog{
 				Amount:    vp.Amount,
 				Condition: string(vp.Condition),
 			}
@@ -637,10 +636,10 @@ func (a *PlayCardAction) applyCardBehaviors(
 			}
 			vpForLog = append(vpForLog, vpLog)
 		}
-		g.AddTriggeredEffect(game.TriggeredEffect{
+		g.AddTriggeredEffect(shared.TriggeredEffect{
 			CardName:     card.Name,
 			PlayerID:     p.ID(),
-			SourceType:   game.SourceTypeCardPlay,
+			SourceType:   shared.SourceTypeCardPlay,
 			VPConditions: vpForLog,
 		})
 	}
@@ -679,7 +678,7 @@ func (a *PlayCardAction) createPendingCardDiscard(
 		return
 	}
 
-	selection := &player.PendingCardDiscardSelection{
+	selection := &shared.PendingCardDiscardSelection{
 		MinCards:       minCards,
 		MaxCards:       maxCards,
 		Source:         card.Name,
@@ -718,7 +717,7 @@ func (a *PlayCardAction) createPendingCardDiscardFromOutputs(
 		}
 	}
 
-	selection := &player.PendingCardDiscardSelection{
+	selection := &shared.PendingCardDiscardSelection{
 		MinCards:       minCards,
 		MaxCards:       maxCards,
 		Source:         card.Name,

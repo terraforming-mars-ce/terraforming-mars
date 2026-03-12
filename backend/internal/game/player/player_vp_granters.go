@@ -1,128 +1,114 @@
 package player
 
 import (
-	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
 	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/logger"
 )
 
-type VPConditionType string
-
-const (
-	VPConditionFixed VPConditionType = "fixed"
-	VPConditionPer   VPConditionType = "per"
-	VPConditionOnce  VPConditionType = "once"
-)
-
-type VPPerCondition struct {
-	ResourceType shared.ResourceType
-	Amount       int
-	Target       *string
-	Tag          *shared.CardTag
-}
-
-type VPCondition struct {
-	Amount     int
-	Condition  VPConditionType
-	MaxTrigger *int
-	Per        *VPPerCondition
-}
-
+// VPRecalculationContext provides data needed to recalculate VP
 type VPRecalculationContext interface {
 	GetCardStorage(playerID string, cardID string) int
 	CountPlayerTagsByType(playerID string, tagType shared.CardTag) int
 	CountAllTilesOfType(tileType shared.ResourceType) int
 }
 
-type VPGranter struct {
-	CardID        string
-	CardName      string
-	Description   string
-	VPConditions  []VPCondition
-	ComputedValue int
-}
-
+// VPGranters manages VP-granting cards.
 type VPGranters struct {
-	mu       sync.RWMutex
-	granters []VPGranter
+	ds       *datastore.DataStore
 	eventBus *events.EventBusImpl
 	gameID   string
 	playerID string
 }
 
-func NewVPGranters(eventBus *events.EventBusImpl, gameID, playerID string) *VPGranters {
+// NewVPGranters creates a new VPGranters view backed by the DataStore.
+func NewVPGranters(ds *datastore.DataStore, eventBus *events.EventBusImpl, gameID, playerID string) *VPGranters {
 	return &VPGranters{
-		granters: make([]VPGranter, 0),
+		ds:       ds,
 		eventBus: eventBus,
 		gameID:   gameID,
 		playerID: playerID,
 	}
 }
 
-func (vg *VPGranters) Add(granter VPGranter) {
-	vg.mu.Lock()
-	defer vg.mu.Unlock()
-	vg.granters = append(vg.granters, granter)
+func (vg *VPGranters) update(fn func(s *datastore.PlayerState)) {
+	if err := vg.ds.UpdatePlayer(vg.gameID, vg.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to update player state", zap.String("game_id", vg.gameID), zap.String("player_id", vg.playerID), zap.Error(err))
+	}
 }
 
-func (vg *VPGranters) Prepend(granter VPGranter) {
-	vg.mu.Lock()
-	defer vg.mu.Unlock()
-	vg.granters = append([]VPGranter{granter}, vg.granters...)
+func (vg *VPGranters) read(fn func(s *datastore.PlayerState)) {
+	if err := vg.ds.ReadPlayer(vg.gameID, vg.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to read player state", zap.String("game_id", vg.gameID), zap.String("player_id", vg.playerID), zap.Error(err))
+	}
+}
+
+func (vg *VPGranters) Add(granter shared.VPGranter) {
+	vg.update(func(s *datastore.PlayerState) {
+		s.VPGranters = append(s.VPGranters, granter)
+	})
+}
+
+func (vg *VPGranters) Prepend(granter shared.VPGranter) {
+	vg.update(func(s *datastore.PlayerState) {
+		s.VPGranters = append([]shared.VPGranter{granter}, s.VPGranters...)
+	})
 }
 
 // RemoveByCardID removes all VP granters for the given card ID.
 func (vg *VPGranters) RemoveByCardID(cardID string) {
-	vg.mu.Lock()
-	defer vg.mu.Unlock()
-	filtered := vg.granters[:0]
-	for _, g := range vg.granters {
-		if g.CardID != cardID {
-			filtered = append(filtered, g)
+	vg.update(func(s *datastore.PlayerState) {
+		filtered := s.VPGranters[:0]
+		for _, g := range s.VPGranters {
+			if g.CardID != cardID {
+				filtered = append(filtered, g)
+			}
 		}
-	}
-	vg.granters = filtered
+		s.VPGranters = filtered
+	})
 }
 
-func (vg *VPGranters) GetAll() []VPGranter {
-	vg.mu.RLock()
-	defer vg.mu.RUnlock()
-	result := make([]VPGranter, len(vg.granters))
-	copy(result, vg.granters)
+func (vg *VPGranters) GetAll() []shared.VPGranter {
+	var result []shared.VPGranter
+	vg.read(func(s *datastore.PlayerState) {
+		result = make([]shared.VPGranter, len(s.VPGranters))
+		copy(result, s.VPGranters)
+	})
 	return result
 }
 
 func (vg *VPGranters) TotalComputedVP() int {
-	vg.mu.RLock()
-	defer vg.mu.RUnlock()
-	total := 0
-	for _, g := range vg.granters {
-		total += g.ComputedValue
-	}
+	var total int
+	vg.read(func(s *datastore.PlayerState) {
+		for _, g := range s.VPGranters {
+			total += g.ComputedValue
+		}
+	})
 	return total
 }
 
 const vpTargetSelfCard = "self-card"
 
 func (vg *VPGranters) RecalculateAll(ctx VPRecalculationContext) {
-	vg.mu.Lock()
-	defer vg.mu.Unlock()
+	var oldTotal, newTotal int
+	vg.update(func(s *datastore.PlayerState) {
+		for _, g := range s.VPGranters {
+			oldTotal += g.ComputedValue
+		}
 
-	oldTotal := 0
-	for _, g := range vg.granters {
-		oldTotal += g.ComputedValue
-	}
+		for i := range s.VPGranters {
+			s.VPGranters[i].ComputedValue = evaluateGranterVP(&s.VPGranters[i], vg.playerID, ctx)
+		}
 
-	for i := range vg.granters {
-		vg.granters[i].ComputedValue = evaluateGranterVP(&vg.granters[i], vg.playerID, ctx)
-	}
-
-	newTotal := 0
-	for _, g := range vg.granters {
-		newTotal += g.ComputedValue
-	}
+		for _, g := range s.VPGranters {
+			newTotal += g.ComputedValue
+		}
+	})
 
 	if oldTotal != newTotal {
 		events.Publish(vg.eventBus, events.VictoryPointsChangedEvent{
@@ -136,7 +122,7 @@ func (vg *VPGranters) RecalculateAll(ctx VPRecalculationContext) {
 	}
 }
 
-func evaluateGranterVP(granter *VPGranter, playerID string, ctx VPRecalculationContext) int {
+func evaluateGranterVP(granter *shared.VPGranter, playerID string, ctx VPRecalculationContext) int {
 	total := 0
 	for _, cond := range granter.VPConditions {
 		total += evaluateVPCondition(cond, granter.CardID, playerID, ctx)
@@ -144,12 +130,12 @@ func evaluateGranterVP(granter *VPGranter, playerID string, ctx VPRecalculationC
 	return total
 }
 
-func evaluateVPCondition(cond VPCondition, cardID string, playerID string, ctx VPRecalculationContext) int {
+func evaluateVPCondition(cond shared.VPCondition, cardID string, playerID string, ctx VPRecalculationContext) int {
 	switch cond.Condition {
-	case VPConditionFixed, VPConditionOnce:
+	case "fixed", "once":
 		return cond.Amount
 
-	case VPConditionPer:
+	case "per":
 		if cond.Per == nil {
 			return 0
 		}
@@ -170,7 +156,7 @@ func evaluateVPCondition(cond VPCondition, cardID string, playerID string, ctx V
 	}
 }
 
-func countPerCondition(per *VPPerCondition, cardID string, playerID string, ctx VPRecalculationContext) int {
+func countPerCondition(per *shared.VPPerCondition, cardID string, playerID string, ctx VPRecalculationContext) int {
 	if per.Target != nil && *per.Target == vpTargetSelfCard {
 		return ctx.GetCardStorage(playerID, cardID)
 	}

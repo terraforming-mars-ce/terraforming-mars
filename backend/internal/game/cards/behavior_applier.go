@@ -14,22 +14,21 @@ import (
 // BehaviorApplier handles applying card behavior inputs and outputs
 // This is the single source of truth for all input/output application
 type BehaviorApplier struct {
-	player             *player.Player         // Player affected by the behavior (may be nil for game-only effects)
-	game               *game.Game             // Game context for global params/tiles (may be nil for player-only effects)
-	source             string                 // Source identifier for logging (card name, action name, etc.)
-	sourceCardID       string                 // Card ID for self-card targeting (optional)
-	targetCardIDs      []string               // Card IDs for any-card targeting (positional, one per any-card output)
-	anyCardTargetIdx   int                    // Index into targetCardIDs, incremented each time an any-card output is processed
-	targetPlayerID     string                 // Player ID for any-player targeting (optional, set by caller)
-	stealSourceCardID  string                 // Card ID to steal resources from for steal-from-any-card outputs (optional)
-	sourceBehaviorIdx  int                    // Behavior index for card draw selection tracking
-	selectedAmount     int                    // Player-selected amount for variable-amount behaviors (0 = not applicable)
-	actionPayment      *CardPayment           // Optional payment for action inputs with paymentAllowed (e.g., titanium for Water Import From Europa)
-	cardRegistry       CardRegistryInterface  // Card registry for tag counting in per conditions (optional)
-	sourceType         game.SourceType        // Source type for triggered effect classification
-	onCardsAddedToHand func(cardIDs []string) // Callback when cards are drawn to hand (for PlayerCard caching)
-	deferredSteal      *shared.ResourceCondition
-	logger             *zap.Logger
+	player            *player.Player        // Player affected by the behavior (may be nil for game-only effects)
+	game              *game.Game            // Game context for global params/tiles (may be nil for player-only effects)
+	source            string                // Source identifier for logging (card name, action name, etc.)
+	sourceCardID      string                // Card ID for self-card targeting (optional)
+	targetCardIDs     []string              // Card IDs for any-card targeting (positional, one per any-card output)
+	anyCardTargetIdx  int                   // Index into targetCardIDs, incremented each time an any-card output is processed
+	targetPlayerID    string                // Player ID for any-player targeting (optional, set by caller)
+	stealSourceCardID string                // Card ID to steal resources from for steal-from-any-card outputs (optional)
+	sourceBehaviorIdx int                   // Behavior index for card draw selection tracking
+	selectedAmount    int                   // Player-selected amount for variable-amount behaviors (0 = not applicable)
+	actionPayment     *CardPayment          // Optional payment for action inputs with paymentAllowed (e.g., titanium for Water Import From Europa)
+	cardRegistry      CardRegistryInterface // Card registry for tag counting in per conditions (optional)
+	sourceType        shared.SourceType     // Source type for triggered effect classification
+	deferredSteal     *shared.ResourceCondition
+	logger            *zap.Logger
 }
 
 // DeferredSteal returns the deferred steal output, if any (for post-tile-placement processing)
@@ -114,15 +113,8 @@ func (a *BehaviorApplier) WithActionPayment(payment *CardPayment) *BehaviorAppli
 }
 
 // WithSourceType sets the source type for triggered effect classification
-func (a *BehaviorApplier) WithSourceType(sourceType game.SourceType) *BehaviorApplier {
+func (a *BehaviorApplier) WithSourceType(sourceType shared.SourceType) *BehaviorApplier {
 	a.sourceType = sourceType
-	return a
-}
-
-// WithOnCardsAddedToHand sets a callback invoked when cards are drawn directly to a player's hand.
-// Used by the action layer to create PlayerCard caches for drawn cards.
-func (a *BehaviorApplier) WithOnCardsAddedToHand(fn func(cardIDs []string)) *BehaviorApplier {
-	a.onCardsAddedToHand = fn
 	return a
 }
 
@@ -484,7 +476,7 @@ func (a *BehaviorApplier) ApplyOutputs(
 func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 	ctx context.Context,
 	outputs []shared.ResourceCondition,
-) ([]game.CalculatedOutput, error) {
+) ([]shared.CalculatedOutput, error) {
 	if len(outputs) == 0 {
 		return nil, nil
 	}
@@ -496,8 +488,8 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 
 	log.Debug("Processing behavior outputs")
 
-	var calculatedOutputs []game.CalculatedOutput
-	var notificationOutputs []game.CalculatedOutput
+	var calculatedOutputs []shared.CalculatedOutput
+	var notificationOutputs []shared.CalculatedOutput
 
 	for _, output := range outputs {
 		// Calculate the actual amount if this output has a Per condition
@@ -541,7 +533,7 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 
 		// Track for state diff log (existing behavior)
 		if isScaled || actualAmount != 0 {
-			calculatedOutputs = append(calculatedOutputs, game.CalculatedOutput{
+			calculatedOutputs = append(calculatedOutputs, shared.CalculatedOutput{
 				ResourceType: string(output.ResourceType),
 				Amount:       actualAmount,
 				IsScaled:     isScaled,
@@ -556,7 +548,7 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 			if resourceType == string(shared.ResourceCardResource) {
 				resourceType = a.resolveCardResourceType()
 			}
-			notificationOutputs = append(notificationOutputs, game.CalculatedOutput{
+			notificationOutputs = append(notificationOutputs, shared.CalculatedOutput{
 				ResourceType: resourceType,
 				Amount:       actualAmount,
 				IsScaled:     isScaled,
@@ -565,7 +557,7 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 	}
 
 	if a.game != nil && a.player != nil && len(outputs) > 0 {
-		a.game.AddTriggeredEffect(game.TriggeredEffect{
+		a.game.AddTriggeredEffect(shared.TriggeredEffect{
 			CardName:          a.source,
 			PlayerID:          a.player.ID(),
 			SourceType:        a.sourceType,
@@ -704,7 +696,7 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 		zap.Strings("drawn_cards", drawnCards))
 
 	// Create pending card draw selection
-	selection := &player.PendingCardDrawSelection{
+	selection := &shared.PendingCardDrawSelection{
 		AvailableCards:      drawnCards,
 		FreeTakeCount:       takeAmount,
 		MaxBuyCount:         buyAmount,
@@ -1447,9 +1439,6 @@ func (a *BehaviorApplier) applyOutput(
 			for _, cardID := range matched {
 				a.player.Hand().AddCard(cardID)
 			}
-			if a.onCardsAddedToHand != nil && len(matched) > 0 {
-				a.onCardsAddedToHand(matched)
-			}
 			if len(discarded) > 0 {
 				_ = a.game.Deck().Discard(ctx, discarded)
 			}
@@ -1464,9 +1453,6 @@ func (a *BehaviorApplier) applyOutput(
 			}
 			for _, cardID := range drawnCards {
 				a.player.Hand().AddCard(cardID)
-			}
-			if a.onCardsAddedToHand != nil && len(drawnCards) > 0 {
-				a.onCardsAddedToHand(drawnCards)
 			}
 			log.Debug("Drew cards and added to hand",
 				zap.Int("amount", len(drawnCards)))

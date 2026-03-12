@@ -106,7 +106,9 @@ func (r *CommandReader) Start() error {
 	if err != nil {
 		return fmt.Errorf("create command file: %w", err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		r.logger.Warn("Failed to close command file after creation", zap.Error(err))
+	}
 
 	go r.watch()
 	return nil
@@ -128,7 +130,9 @@ func (r *CommandReader) Reset() error {
 	if err != nil {
 		return fmt.Errorf("reset command file: %w", err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		r.logger.Warn("Failed to close command file after reset", zap.Error(err))
+	}
 	r.offset = 0
 	return nil
 }
@@ -152,7 +156,11 @@ func (r *CommandReader) readNewLines() {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			r.logger.Warn("Failed to close command file after reading", zap.Error(err))
+		}
+	}()
 
 	if _, err := f.Seek(r.offset, io.SeekStart); err != nil {
 		return

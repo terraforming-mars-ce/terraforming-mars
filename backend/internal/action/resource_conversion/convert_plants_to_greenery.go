@@ -9,7 +9,6 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	playerPkg "terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -48,7 +47,7 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -94,10 +93,10 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 		zap.Int("plants_spent", requiredPlants),
 		zap.Int("remaining_plants", resources.Plants))
 
-	queue := &playerPkg.PendingTileSelectionQueue{
+	queue := &shared.PendingTileSelectionQueue{
 		Items:  []string{"greenery"},
 		Source: "convert-plants-to-greenery",
-		OnComplete: &playerPkg.TileCompletionCallback{
+		OnComplete: &shared.TileCompletionCallback{
 			Type: "convert-plants-to-greenery",
 		},
 		TileRestrictions: &shared.TileRestrictions{

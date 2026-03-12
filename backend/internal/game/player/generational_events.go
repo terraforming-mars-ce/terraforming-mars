@@ -1,49 +1,72 @@
 package player
 
 import (
-	"sync"
+	"go.uber.org/zap"
 
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/logger"
 )
 
+// GenerationalEvents tracks per-generation player events.
 type GenerationalEvents struct {
-	mu     sync.RWMutex
-	counts map[shared.GenerationalEvent]int
+	ds       *datastore.DataStore
+	gameID   string
+	playerID string
 }
 
-func newGenerationalEvents() *GenerationalEvents {
-	return &GenerationalEvents{
-		counts: make(map[shared.GenerationalEvent]int),
+func newGenerationalEvents(ds *datastore.DataStore, gameID, playerID string) *GenerationalEvents {
+	return &GenerationalEvents{ds: ds, gameID: gameID, playerID: playerID}
+}
+
+func (ge *GenerationalEvents) update(fn func(s *datastore.PlayerState)) {
+	if err := ge.ds.UpdatePlayer(ge.gameID, ge.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to update player state", zap.String("game_id", ge.gameID), zap.String("player_id", ge.playerID), zap.Error(err))
+	}
+}
+
+func (ge *GenerationalEvents) read(fn func(s *datastore.PlayerState)) {
+	if err := ge.ds.ReadPlayer(ge.gameID, ge.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to read player state", zap.String("game_id", ge.gameID), zap.String("player_id", ge.playerID), zap.Error(err))
 	}
 }
 
 func (ge *GenerationalEvents) Increment(event shared.GenerationalEvent) {
-	ge.mu.Lock()
-	defer ge.mu.Unlock()
-	ge.counts[event]++
+	ge.update(func(s *datastore.PlayerState) {
+		if s.GenerationalEvents == nil {
+			s.GenerationalEvents = make(map[shared.GenerationalEvent]int)
+		}
+		s.GenerationalEvents[event]++
+	})
 }
 
 func (ge *GenerationalEvents) GetCount(event shared.GenerationalEvent) int {
-	ge.mu.RLock()
-	defer ge.mu.RUnlock()
-	return ge.counts[event]
+	var count int
+	ge.read(func(s *datastore.PlayerState) {
+		if s.GenerationalEvents == nil {
+			return
+		}
+		count = s.GenerationalEvents[event]
+	})
+	return count
 }
 
 func (ge *GenerationalEvents) GetAll() []shared.PlayerGenerationalEventEntry {
-	ge.mu.RLock()
-	defer ge.mu.RUnlock()
-	entries := make([]shared.PlayerGenerationalEventEntry, 0, len(ge.counts))
-	for event, count := range ge.counts {
-		entries = append(entries, shared.PlayerGenerationalEventEntry{
-			Event: event,
-			Count: count,
-		})
-	}
+	var entries []shared.PlayerGenerationalEventEntry
+	ge.read(func(s *datastore.PlayerState) {
+		entries = make([]shared.PlayerGenerationalEventEntry, 0, len(s.GenerationalEvents))
+		for event, count := range s.GenerationalEvents {
+			entries = append(entries, shared.PlayerGenerationalEventEntry{
+				Event: event,
+				Count: count,
+			})
+		}
+	})
 	return entries
 }
 
 func (ge *GenerationalEvents) Clear() {
-	ge.mu.Lock()
-	defer ge.mu.Unlock()
-	ge.counts = make(map[shared.GenerationalEvent]int)
+	ge.update(func(s *datastore.PlayerState) {
+		s.GenerationalEvents = make(map[shared.GenerationalEvent]int)
+	})
 }

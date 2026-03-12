@@ -52,7 +52,7 @@ func (a *BuildPowerPlantAction) Execute(
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -121,19 +121,19 @@ func (a *BuildPowerPlantAction) Execute(
 
 	a.ConsumePlayerAction(g, log)
 
-	calculatedOutputs := []game.CalculatedOutput{
+	calculatedOutputs := []shared.CalculatedOutput{
 		{ResourceType: string(shared.ResourceEnergyProduction), Amount: 1, IsScaled: false},
 	}
 
-	g.AddTriggeredEffect(game.TriggeredEffect{
+	g.AddTriggeredEffect(shared.TriggeredEffect{
 		CardName:          "Power Plant",
 		PlayerID:          playerID,
-		SourceType:        game.SourceTypeStandardProject,
+		SourceType:        shared.SourceTypeStandardProject,
 		CalculatedOutputs: calculatedOutputs,
 	})
 
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: Power Plant")
-	a.WriteStateLogFull(ctx, g, "Standard Project: Power Plant", game.SourceTypeStandardProject, playerID, "Built power plant", nil, calculatedOutputs, displayData)
+	a.WriteStateLogFull(ctx, g, "Standard Project: Power Plant", shared.SourceTypeStandardProject, playerID, "Built power plant", nil, calculatedOutputs, displayData)
 
 	log.Info("Power plant built",
 		zap.Int("new_energy_production", production.Energy),

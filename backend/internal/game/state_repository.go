@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // GameStateRepository manages game state with diff tracking
 type GameStateRepository interface {
-	Write(ctx context.Context, gameID string, game *Game, source string, sourceType SourceType, playerID, description string) (*StateDiff, error)
-	WriteWithChoice(ctx context.Context, gameID string, game *Game, source string, sourceType SourceType, playerID, description string, choiceIndex *int) (*StateDiff, error)
-	WriteWithChoiceAndOutputs(ctx context.Context, gameID string, game *Game, source string, sourceType SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []CalculatedOutput) (*StateDiff, error)
-	WriteFull(ctx context.Context, gameID string, game *Game, source string, sourceType SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []CalculatedOutput, displayData *LogDisplayData) (*StateDiff, error)
+	Write(ctx context.Context, gameID string, game *Game, source string, sourceType shared.SourceType, playerID, description string) (*StateDiff, error)
+	WriteWithChoice(ctx context.Context, gameID string, game *Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int) (*StateDiff, error)
+	WriteWithChoiceAndOutputs(ctx context.Context, gameID string, game *Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []shared.CalculatedOutput) (*StateDiff, error)
+	WriteFull(ctx context.Context, gameID string, game *Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []shared.CalculatedOutput, displayData *LogDisplayData) (*StateDiff, error)
 	Get(ctx context.Context, gameID string) (*Game, error)
 	GetDiff(ctx context.Context, gameID string) ([]StateDiff, error)
 }
@@ -73,22 +75,22 @@ func NewInMemoryGameStateRepository() *InMemoryGameStateRepository {
 }
 
 // Write stores the current game state and computes a diff from the previous state
-func (r *InMemoryGameStateRepository) Write(ctx context.Context, gameID string, game *Game, source string, sourceType SourceType, playerID, description string) (*StateDiff, error) {
+func (r *InMemoryGameStateRepository) Write(ctx context.Context, gameID string, game *Game, source string, sourceType shared.SourceType, playerID, description string) (*StateDiff, error) {
 	return r.WriteWithChoice(ctx, gameID, game, source, sourceType, playerID, description, nil)
 }
 
 // WriteWithChoice stores the current game state with an optional choice index
-func (r *InMemoryGameStateRepository) WriteWithChoice(ctx context.Context, gameID string, game *Game, source string, sourceType SourceType, playerID, description string, choiceIndex *int) (*StateDiff, error) {
+func (r *InMemoryGameStateRepository) WriteWithChoice(ctx context.Context, gameID string, game *Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int) (*StateDiff, error) {
 	return r.WriteWithChoiceAndOutputs(ctx, gameID, game, source, sourceType, playerID, description, choiceIndex, nil)
 }
 
 // WriteWithChoiceAndOutputs stores the current game state with optional choice index and calculated outputs
-func (r *InMemoryGameStateRepository) WriteWithChoiceAndOutputs(ctx context.Context, gameID string, game *Game, source string, sourceType SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []CalculatedOutput) (*StateDiff, error) {
+func (r *InMemoryGameStateRepository) WriteWithChoiceAndOutputs(ctx context.Context, gameID string, game *Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []shared.CalculatedOutput) (*StateDiff, error) {
 	return r.WriteFull(ctx, gameID, game, source, sourceType, playerID, description, choiceIndex, calculatedOutputs, nil)
 }
 
 // WriteFull stores the current game state with all optional fields including display data
-func (r *InMemoryGameStateRepository) WriteFull(ctx context.Context, gameID string, game *Game, source string, sourceType SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []CalculatedOutput, displayData *LogDisplayData) (*StateDiff, error) {
+func (r *InMemoryGameStateRepository) WriteFull(ctx context.Context, gameID string, game *Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []shared.CalculatedOutput, displayData *LogDisplayData) (*StateDiff, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}

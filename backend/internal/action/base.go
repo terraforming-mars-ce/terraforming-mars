@@ -9,6 +9,7 @@ import (
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 
 	"go.uber.org/zap"
@@ -73,22 +74,22 @@ func (b *BaseAction) StateRepository() game.GameStateRepository {
 }
 
 // WriteStateLog writes a state diff to the state repository if configured
-func (b *BaseAction) WriteStateLog(ctx context.Context, g *game.Game, source string, sourceType game.SourceType, playerID, description string) {
+func (b *BaseAction) WriteStateLog(ctx context.Context, g *game.Game, source string, sourceType shared.SourceType, playerID, description string) {
 	b.WriteStateLogWithChoice(ctx, g, source, sourceType, playerID, description, nil)
 }
 
 // WriteStateLogWithChoice writes a state diff with an optional choice index
-func (b *BaseAction) WriteStateLogWithChoice(ctx context.Context, g *game.Game, source string, sourceType game.SourceType, playerID, description string, choiceIndex *int) {
+func (b *BaseAction) WriteStateLogWithChoice(ctx context.Context, g *game.Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int) {
 	b.WriteStateLogWithChoiceAndOutputs(ctx, g, source, sourceType, playerID, description, choiceIndex, nil)
 }
 
 // WriteStateLogWithChoiceAndOutputs writes a state diff with optional choice index and calculated outputs
-func (b *BaseAction) WriteStateLogWithChoiceAndOutputs(ctx context.Context, g *game.Game, source string, sourceType game.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []game.CalculatedOutput) {
+func (b *BaseAction) WriteStateLogWithChoiceAndOutputs(ctx context.Context, g *game.Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []shared.CalculatedOutput) {
 	b.WriteStateLogFull(ctx, g, source, sourceType, playerID, description, choiceIndex, calculatedOutputs, nil)
 }
 
 // WriteStateLogFull writes a state diff with all optional fields including display data
-func (b *BaseAction) WriteStateLogFull(ctx context.Context, g *game.Game, source string, sourceType game.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []game.CalculatedOutput, displayData *game.LogDisplayData) {
+func (b *BaseAction) WriteStateLogFull(ctx context.Context, g *game.Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []shared.CalculatedOutput, displayData *game.LogDisplayData) {
 	if b.stateRepo == nil {
 		return
 	}

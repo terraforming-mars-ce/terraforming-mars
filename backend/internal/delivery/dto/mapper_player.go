@@ -65,9 +65,9 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		pendingTileSelection = convertPendingTileSelection(g.GetPendingTileSelection(p.ID()))
 		forcedFirstAction = convertForcedFirstAction(g.GetForcedFirstAction(p.ID()))
 	}
-	if g.CurrentPhase() == game.GamePhaseStartingSelection ||
-		g.CurrentPhase() == game.GamePhaseInitApplyCorp ||
-		g.CurrentPhase() == game.GamePhaseInitApplyPrelude {
+	if g.CurrentPhase() == shared.GamePhaseStartingSelection ||
+		g.CurrentPhase() == shared.GamePhaseInitApplyCorp ||
+		g.CurrentPhase() == shared.GamePhaseInitApplyPrelude {
 		pendingTileSelection = convertPendingTileSelection(g.GetPendingTileSelection(p.ID()))
 		forcedFirstAction = convertForcedFirstAction(g.GetForcedFirstAction(p.ID()))
 	}
@@ -184,7 +184,7 @@ func playerStatus(p *player.Player) PlayerStatus {
 	return PlayerStatusWaiting
 }
 
-func convertSelectCorporationPhase(phase *player.SelectCorporationPhase, cardRegistry cards.CardRegistry) *SelectCorporationPhaseDto {
+func convertSelectCorporationPhase(phase *shared.SelectCorporationPhase, cardRegistry cards.CardRegistry) *SelectCorporationPhaseDto {
 	if phase == nil {
 		return nil
 	}
@@ -194,7 +194,7 @@ func convertSelectCorporationPhase(phase *player.SelectCorporationPhase, cardReg
 	}
 }
 
-func convertSelectCorporationPhaseForOtherPlayer(phase *player.SelectCorporationPhase) *SelectCorporationOtherPlayerDto {
+func convertSelectCorporationPhaseForOtherPlayer(phase *shared.SelectCorporationPhase) *SelectCorporationOtherPlayerDto {
 	if phase == nil {
 		return nil
 	}
@@ -202,7 +202,7 @@ func convertSelectCorporationPhaseForOtherPlayer(phase *player.SelectCorporation
 	return &SelectCorporationOtherPlayerDto{}
 }
 
-func convertSelectStartingCardsPhase(phase *player.SelectStartingCardsPhase, cardRegistry cards.CardRegistry) *SelectStartingCardsPhaseDto {
+func convertSelectStartingCardsPhase(phase *shared.SelectStartingCardsPhase, cardRegistry cards.CardRegistry) *SelectStartingCardsPhaseDto {
 	if phase == nil {
 		return nil
 	}
@@ -212,7 +212,7 @@ func convertSelectStartingCardsPhase(phase *player.SelectStartingCardsPhase, car
 	}
 }
 
-func convertSelectStartingCardsPhaseForOtherPlayer(phase *player.SelectStartingCardsPhase) *SelectStartingCardsOtherPlayerDto {
+func convertSelectStartingCardsPhaseForOtherPlayer(phase *shared.SelectStartingCardsPhase) *SelectStartingCardsOtherPlayerDto {
 	if phase == nil {
 		return nil
 	}
@@ -221,7 +221,7 @@ func convertSelectStartingCardsPhaseForOtherPlayer(phase *player.SelectStartingC
 }
 
 // convertSelectPreludeCardsPhase converts SelectPreludeCardsPhase to DTO
-func convertSelectPreludeCardsPhase(phase *player.SelectPreludeCardsPhase, cardRegistry cards.CardRegistry) *SelectPreludeCardsPhaseDto {
+func convertSelectPreludeCardsPhase(phase *shared.SelectPreludeCardsPhase, cardRegistry cards.CardRegistry) *SelectPreludeCardsPhaseDto {
 	if phase == nil {
 		return nil
 	}
@@ -233,7 +233,7 @@ func convertSelectPreludeCardsPhase(phase *player.SelectPreludeCardsPhase, cardR
 }
 
 // convertSelectPreludeCardsPhaseForOtherPlayer converts SelectPreludeCardsPhase to DTO for other players
-func convertSelectPreludeCardsPhaseForOtherPlayer(phase *player.SelectPreludeCardsPhase) *SelectPreludeCardsOtherPlayerDto {
+func convertSelectPreludeCardsPhaseForOtherPlayer(phase *shared.SelectPreludeCardsPhase) *SelectPreludeCardsOtherPlayerDto {
 	if phase == nil {
 		return nil
 	}
@@ -242,7 +242,7 @@ func convertSelectPreludeCardsPhaseForOtherPlayer(phase *player.SelectPreludeCar
 }
 
 // convertProductionPhase converts production phase data to DTO for current player
-func convertProductionPhase(phase *player.ProductionPhase, cardRegistry cards.CardRegistry) *ProductionPhaseDto {
+func convertProductionPhase(phase *shared.ProductionPhase, cardRegistry cards.CardRegistry) *ProductionPhaseDto {
 	if phase == nil {
 		return nil
 	}
@@ -259,7 +259,7 @@ func convertProductionPhase(phase *player.ProductionPhase, cardRegistry cards.Ca
 }
 
 // convertProductionPhaseForOtherPlayer converts production phase data to DTO for other players
-func convertProductionPhaseForOtherPlayer(phase *player.ProductionPhase) *ProductionPhaseOtherPlayerDto {
+func convertProductionPhaseForOtherPlayer(phase *shared.ProductionPhase) *ProductionPhaseOtherPlayerDto {
 	if phase == nil {
 		return nil
 	}
@@ -275,7 +275,7 @@ func convertProductionPhaseForOtherPlayer(phase *player.ProductionPhase) *Produc
 }
 
 // convertPlayerEffects converts CardEffect slice to PlayerEffectDto slice
-func convertPlayerEffects(effects []player.CardEffect) []PlayerEffectDto {
+func convertPlayerEffects(effects []shared.CardEffect) []PlayerEffectDto {
 	if len(effects) == 0 {
 		return []PlayerEffectDto{}
 	}
@@ -294,7 +294,7 @@ func convertPlayerEffects(effects []player.CardEffect) []PlayerEffectDto {
 
 // convertPlayerActions converts CardAction slice to PlayerActionDto slice
 // Calculates state for each action to determine availability and errors.
-func convertPlayerActions(actions []player.CardAction, p *player.Player, g *game.Game) []PlayerActionDto {
+func convertPlayerActions(actions []shared.CardAction, p *player.Player, g *game.Game) []PlayerActionDto {
 	if len(actions) == 0 {
 		return []PlayerActionDto{}
 	}
@@ -373,7 +373,7 @@ func convertStoragePaymentSubstitutes(substitutes []shared.StoragePaymentSubstit
 }
 
 // convertPendingCardSelection converts PendingCardSelection to DTO
-func convertPendingCardSelection(selection *player.PendingCardSelection, cardRegistry cards.CardRegistry) *PendingCardSelectionDto {
+func convertPendingCardSelection(selection *shared.PendingCardSelection, cardRegistry cards.CardRegistry) *PendingCardSelectionDto {
 	if selection == nil {
 		return nil
 	}
@@ -391,7 +391,7 @@ func convertPendingCardSelection(selection *player.PendingCardSelection, cardReg
 }
 
 // convertPendingCardDrawSelection converts PendingCardDrawSelection to DTO
-func convertPendingCardDrawSelection(selection *player.PendingCardDrawSelection, cardRegistry cards.CardRegistry) *PendingCardDrawSelectionDto {
+func convertPendingCardDrawSelection(selection *shared.PendingCardDrawSelection, cardRegistry cards.CardRegistry) *PendingCardDrawSelectionDto {
 	if selection == nil {
 		return nil
 	}
@@ -409,7 +409,7 @@ func convertPendingCardDrawSelection(selection *player.PendingCardDrawSelection,
 }
 
 // convertPendingCardDiscardSelection converts PendingCardDiscardSelection to DTO
-func convertPendingCardDiscardSelection(selection *player.PendingCardDiscardSelection) *PendingCardDiscardSelectionDto {
+func convertPendingCardDiscardSelection(selection *shared.PendingCardDiscardSelection) *PendingCardDiscardSelectionDto {
 	if selection == nil {
 		return nil
 	}
@@ -422,7 +422,7 @@ func convertPendingCardDiscardSelection(selection *player.PendingCardDiscardSele
 	}
 }
 
-func convertPendingBehaviorChoiceSelection(selection *player.PendingBehaviorChoiceSelection, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) *PendingBehaviorChoiceSelectionDto {
+func convertPendingBehaviorChoiceSelection(selection *shared.PendingBehaviorChoiceSelection, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) *PendingBehaviorChoiceSelectionDto {
 	if selection == nil {
 		return nil
 	}
@@ -439,7 +439,7 @@ func convertPendingBehaviorChoiceSelection(selection *player.PendingBehaviorChoi
 	}
 }
 
-func convertPendingStealTargetSelection(selection *player.PendingStealTargetSelection) *PendingStealTargetSelectionDto {
+func convertPendingStealTargetSelection(selection *shared.PendingStealTargetSelection) *PendingStealTargetSelectionDto {
 	if selection == nil {
 		return nil
 	}
@@ -453,7 +453,7 @@ func convertPendingStealTargetSelection(selection *player.PendingStealTargetSele
 	}
 }
 
-func convertPendingColonyResourceSelection(selection *player.PendingColonyResourceSelection) *PendingColonyResourceSelectionDto {
+func convertPendingColonyResourceSelection(selection *shared.PendingColonyResourceSelection) *PendingColonyResourceSelectionDto {
 	if selection == nil {
 		return nil
 	}
@@ -481,7 +481,7 @@ func toChoiceDtoWithState(index int, choice shared.Choice, p *player.Player, g *
 }
 
 // convertForcedFirstAction converts ForcedFirstAction to DTO
-func convertForcedFirstAction(action *player.ForcedFirstAction) *ForcedFirstActionDto {
+func convertForcedFirstAction(action *shared.ForcedFirstAction) *ForcedFirstActionDto {
 	if action == nil {
 		return nil
 	}
@@ -495,7 +495,7 @@ func convertForcedFirstAction(action *player.ForcedFirstAction) *ForcedFirstActi
 }
 
 // convertPendingTileSelection converts PendingTileSelection to DTO
-func convertPendingTileSelection(selection *player.PendingTileSelection) *PendingTileSelectionDto {
+func convertPendingTileSelection(selection *shared.PendingTileSelection) *PendingTileSelectionDto {
 	if selection == nil {
 		return nil
 	}
@@ -566,21 +566,8 @@ func convertStateWarnings(warnings []player.StateWarning) []StateWarningDto {
 	return result
 }
 
-// ToPlayerCardDto converts a PlayerCard to PlayerCardDto with state information
-func ToPlayerCardDto(pc *player.PlayerCard) PlayerCardDto {
-	state := pc.State()
-
-	cardAny := pc.Card()
-	card, ok := cardAny.(*gamecards.Card)
-	if !ok {
-		// Defensive: return empty DTO if card type is wrong (should not happen)
-		return PlayerCardDto{
-			Available:     false,
-			Errors:        []StateErrorDto{{Code: ErrorCodeInvalidCardType, Category: ErrorCategoryInternal, Message: "Invalid card type"}},
-			EffectiveCost: 0,
-		}
-	}
-
+// ToPlayerCardDto converts a card and its computed state to a PlayerCardDto.
+func ToPlayerCardDto(card *gamecards.Card, state player.EntityState) PlayerCardDto {
 	discounts := make(map[string]int)
 	if discountData, ok := state.Metadata["discounts"].(map[string]int); ok {
 		discounts = discountData
@@ -623,7 +610,6 @@ func ToPlayerCardDto(pc *player.PlayerCard) PlayerCardDto {
 	}
 
 	return PlayerCardDto{
-		// Card data (same as CardDto)
 		ID:              card.ID,
 		Name:            card.Name,
 		Type:            CardType(card.Type),
@@ -643,46 +629,46 @@ func ToPlayerCardDto(pc *player.PlayerCard) PlayerCardDto {
 	}
 }
 
-// mapPlayerCards converts cached PlayerCard instances from hand to DTOs.
+// mapPlayerCards converts hand cards to DTOs using CardStateStore for cached state.
 // Enriches behavior choices with computed errors from the state calculator.
 func mapPlayerCards(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []PlayerCardDto {
 	handCardIDs := p.Hand().Cards()
 	result := make([]PlayerCardDto, 0, len(handCardIDs))
 
 	for _, cardID := range handCardIDs {
-		// Get cached PlayerCard from hand
-		pc, exists := p.Hand().GetPlayerCard(cardID)
+		state, exists := p.CardStateStore().GetState(cardID)
 		if !exists {
-			// PlayerCard not cached - skip (should not happen if architecture is working correctly)
+			continue
+		}
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
 			continue
 		}
 
-		dto := ToPlayerCardDto(pc)
+		dto := ToPlayerCardDto(card, state)
 
 		// Enrich choices with computed errors and apply choice policy filtering
-		if card, ok := pc.Card().(*gamecards.Card); ok {
-			for bi, behavior := range card.Behaviors {
-				if bi < len(dto.Behaviors) {
-					if behavior.ChoicePolicy != nil && len(dto.Behaviors[bi].Choices) > 0 {
-						production := p.Resources().Production()
-						validIndices := shared.FilterChoiceIndicesByPolicy(behavior.Choices, behavior.ChoicePolicy, production)
-						filtered := make([]ChoiceDto, 0, len(validIndices))
-						for _, idx := range validIndices {
-							choiceDto := dto.Behaviors[bi].Choices[idx]
-							choiceDto.OriginalIndex = idx
-							choiceErrors := action.CalculateChoiceErrors(behavior.Choices[idx], p, g, cardRegistry)
-							choiceDto.Available = len(choiceErrors) == 0
-							choiceDto.Errors = convertStateErrors(choiceErrors)
-							filtered = append(filtered, choiceDto)
-						}
-						dto.Behaviors[bi].Choices = filtered
-					} else {
-						for ci, choice := range behavior.Choices {
-							if ci < len(dto.Behaviors[bi].Choices) {
-								choiceErrors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
-								dto.Behaviors[bi].Choices[ci].Available = len(choiceErrors) == 0
-								dto.Behaviors[bi].Choices[ci].Errors = convertStateErrors(choiceErrors)
-							}
+		for bi, behavior := range card.Behaviors {
+			if bi < len(dto.Behaviors) {
+				if behavior.ChoicePolicy != nil && len(dto.Behaviors[bi].Choices) > 0 {
+					production := p.Resources().Production()
+					validIndices := shared.FilterChoiceIndicesByPolicy(behavior.Choices, behavior.ChoicePolicy, production)
+					filtered := make([]ChoiceDto, 0, len(validIndices))
+					for _, idx := range validIndices {
+						choiceDto := dto.Behaviors[bi].Choices[idx]
+						choiceDto.OriginalIndex = idx
+						choiceErrors := action.CalculateChoiceErrors(behavior.Choices[idx], p, g, cardRegistry)
+						choiceDto.Available = len(choiceErrors) == 0
+						choiceDto.Errors = convertStateErrors(choiceErrors)
+						filtered = append(filtered, choiceDto)
+					}
+					dto.Behaviors[bi].Choices = filtered
+				} else {
+					for ci, choice := range behavior.Choices {
+						if ci < len(dto.Behaviors[bi].Choices) {
+							choiceErrors := action.CalculateChoiceErrors(choice, p, g, cardRegistry)
+							dto.Behaviors[bi].Choices[ci].Available = len(choiceErrors) == 0
+							dto.Behaviors[bi].Choices[ci].Errors = convertStateErrors(choiceErrors)
 						}
 					}
 				}

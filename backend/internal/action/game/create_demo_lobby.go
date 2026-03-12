@@ -7,11 +7,11 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/deck"
-	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // CreateDemoLobbyAction handles creating a demo game lobby where player count is set
@@ -69,18 +69,17 @@ func (a *CreateDemoLobbyAction) Execute(
 
 	// Generate game ID and create base game
 	gameID := uuid.New().String()
-	baseSettings := game.GameSettings{
+	baseSettings := shared.GameSettings{
 		MaxPlayers:      settings.PlayerCount,
 		CardPacks:       settings.CardPacks,
 		DevelopmentMode: true,
 		DemoGame:        true,
 	}
 
-	newGame := game.NewGame(gameID, "", baseSettings)
+	newGame := game.NewGame(a.gameRepo.DataStore(), gameID, "", baseSettings)
 
 	projectCardIDs, corpIDs, preludeIDs := cards.GetCardIDsByPacks(a.cardRegistry, settings.CardPacks)
-	gameDeck := deck.NewDeck(gameID, projectCardIDs, corpIDs, preludeIDs)
-	newGame.SetDeck(gameDeck)
+	newGame.InitDeck(projectCardIDs, corpIDs, preludeIDs)
 	newGame.SetVPCardLookup(cards.NewVPCardLookupAdapter(a.cardRegistry))
 	log.Debug("Deck initialized",
 		zap.Int("project_cards", len(projectCardIDs)),
@@ -91,18 +90,19 @@ func (a *CreateDemoLobbyAction) Execute(
 		return nil, fmt.Errorf("failed to create game: %w", err)
 	}
 
-	// Create and add human player (other players join via normal lobby system)
+	// Set host before adding player (so auto-broadcast includes hostPlayerID)
 	playerID := uuid.New().String()
-	humanPlayer := player.NewPlayer(newGame.EventBus(), gameID, playerID, settings.PlayerName)
-	if err := newGame.AddPlayer(ctx, humanPlayer); err != nil {
-		return nil, fmt.Errorf("failed to add player: %w", err)
-	}
-	log.Debug("Human player added", zap.String("player_id", playerID), zap.String("name", settings.PlayerName))
-
-	// Set host to human player
 	if err := newGame.SetHostPlayerID(ctx, playerID); err != nil {
 		return nil, fmt.Errorf("failed to set host: %w", err)
 	}
+
+	// Create and add human player (other players join via normal lobby system)
+	demoPlayer, err := newGame.AddNewPlayer(ctx, playerID, settings.PlayerName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add player: %w", err)
+	}
+	action.SetupPlayerCardStore(demoPlayer, newGame, a.cardRegistry)
+	log.Debug("Human player added", zap.String("player_id", playerID), zap.String("name", settings.PlayerName))
 
 	// Game stays in lobby status - ready for configuration
 	log.Info("Demo lobby created", zap.String("game_id", gameID))

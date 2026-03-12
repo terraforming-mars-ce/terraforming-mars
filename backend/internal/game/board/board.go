@@ -3,7 +3,6 @@ package board
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"terraforming-mars-backend/internal/events"
@@ -110,30 +109,34 @@ type Tile struct {
 	ReservedBy  *string             `json:"reservedBy,omitempty" ts:"reservedBy"`
 }
 
-// Board represents the complete game board state with encapsulated tiles
+// TilesPtr is a pointer to a tile slice, used by Board as its backing store.
+// This allows Board to be a view into GameState's Tiles field.
+type TilesPtr = *[]Tile
+
+// Board represents the complete game board state.
 type Board struct {
-	mu       sync.RWMutex
+	tiles    TilesPtr
 	gameID   string
-	tiles    []Tile
 	eventBus *events.EventBusImpl
 }
 
-// NewBoard creates a new empty board
-func NewBoard(gameID string, eventBus *events.EventBusImpl) *Board {
+// NewBoard creates a new Board view backed by the given tiles pointer.
+func NewBoard(tiles TilesPtr, gameID string, eventBus *events.EventBusImpl) *Board {
 	return &Board{
+		tiles:    tiles,
 		gameID:   gameID,
-		tiles:    []Tile{},
 		eventBus: eventBus,
 	}
 }
 
-// NewBoardWithTiles creates a new board with the provided tiles
-func NewBoardWithTiles(gameID string, tiles []Tile, eventBus *events.EventBusImpl) *Board {
-	tilesCopy := make([]Tile, len(tiles))
-	copy(tilesCopy, tiles)
+// NewBoardWithTiles creates a new Board view and initializes the tiles.
+func NewBoardWithTiles(tiles TilesPtr, gameID string, initialTiles []Tile, eventBus *events.EventBusImpl) *Board {
+	tilesCopy := make([]Tile, len(initialTiles))
+	copy(tilesCopy, initialTiles)
+	*tiles = tilesCopy
 	return &Board{
+		tiles:    tiles,
 		gameID:   gameID,
-		tiles:    tilesCopy,
 		eventBus: eventBus,
 	}
 }
@@ -240,7 +243,6 @@ func GenerateMarsBoard(includeVenus bool) []Tile {
 			s := -q - r
 			pos := shared.HexPosition{Q: q, R: r, S: s}
 
-			// Determine tile type and bonuses
 			var tileType shared.ResourceType
 			var bonuses []TileBonus
 
@@ -250,12 +252,10 @@ func GenerateMarsBoard(includeVenus bool) []Tile {
 				tileType = shared.ResourceLandTile
 			}
 
-			// Add bonuses if this position has any
 			if tileBonuses, hasBonus := bonusTiles[pos]; hasBonus {
 				bonuses = append(bonuses, tileBonuses...)
 			}
 
-			// Build tags and display name for tagged tiles
 			var tags []string
 			var displayName *string
 			if tagInfo, hasTag := taggedTiles[pos]; hasTag {
@@ -334,7 +334,6 @@ func GenerateMarsBoard(includeVenus bool) []Tile {
 	return tiles
 }
 
-// Helper functions for min/max
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -351,10 +350,8 @@ func max(a, b int) int {
 
 // FreeOceanSpaces returns the count of unoccupied ocean-space tiles on the board
 func (b *Board) FreeOceanSpaces() int {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
 	count := 0
-	for _, tile := range b.tiles {
+	for _, tile := range *b.tiles {
 		if tile.Type == shared.ResourceOceanSpace && tile.OccupiedBy == nil {
 			count++
 		}
@@ -364,24 +361,17 @@ func (b *Board) FreeOceanSpaces() int {
 
 // Tiles returns a deep copy of all tiles to prevent external mutation
 func (b *Board) Tiles() []Tile {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
 	return b.deepCopyTiles()
 }
 
 // GetTile returns a copy of a specific tile by coordinates
 func (b *Board) GetTile(coords shared.HexPosition) (*Tile, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	for i := range b.tiles {
-		if b.tiles[i].Coordinates == coords {
-			tileCopy := b.deepCopyTile(&b.tiles[i])
+	for i := range *b.tiles {
+		if (*b.tiles)[i].Coordinates == coords {
+			tileCopy := b.deepCopyTile(&(*b.tiles)[i])
 			return tileCopy, nil
 		}
 	}
-
 	return nil, fmt.Errorf("tile not found at coordinates %v", coords)
 }
 
@@ -391,11 +381,9 @@ func (b *Board) SetTiles(ctx context.Context, tiles []Tile) error {
 		return err
 	}
 
-	b.mu.Lock()
-	b.tiles = make([]Tile, len(tiles))
-	copy(b.tiles, tiles)
-	b.mu.Unlock()
-
+	newTiles := make([]Tile, len(tiles))
+	copy(newTiles, tiles)
+	*b.tiles = newTiles
 	return nil
 }
 
@@ -406,18 +394,15 @@ func (b *Board) UpdateTileOccupancy(ctx context.Context, coords shared.HexPositi
 	}
 
 	var found bool
-
-	b.mu.Lock()
-	for i := range b.tiles {
-		if b.tiles[i].Coordinates == coords {
-			b.tiles[i].OccupiedBy = &occupant
-			b.tiles[i].OwnerID = &ownerID
-			b.tiles[i].ReservedBy = nil // Clear reservation when tile is occupied
+	for i := range *b.tiles {
+		if (*b.tiles)[i].Coordinates == coords {
+			(*b.tiles)[i].OccupiedBy = &occupant
+			(*b.tiles)[i].OwnerID = &ownerID
+			(*b.tiles)[i].ReservedBy = nil
 			found = true
 			break
 		}
 	}
-	b.mu.Unlock()
 
 	if !found {
 		return fmt.Errorf("tile not found at coordinates %v", coords)
@@ -444,18 +429,15 @@ func (b *Board) ClearTileOccupant(ctx context.Context, coords shared.HexPosition
 	}
 
 	var found bool
-
-	b.mu.Lock()
-	for i := range b.tiles {
-		if b.tiles[i].Coordinates == coords {
-			b.tiles[i].OccupiedBy = nil
-			b.tiles[i].OwnerID = nil
-			b.tiles[i].ReservedBy = nil
+	for i := range *b.tiles {
+		if (*b.tiles)[i].Coordinates == coords {
+			(*b.tiles)[i].OccupiedBy = nil
+			(*b.tiles)[i].OwnerID = nil
+			(*b.tiles)[i].ReservedBy = nil
 			found = true
 			break
 		}
 	}
-	b.mu.Unlock()
 
 	if !found {
 		return fmt.Errorf("tile not found at coordinates %v", coords)
@@ -478,16 +460,13 @@ func (b *Board) ClearTileBonuses(ctx context.Context, coords shared.HexPosition)
 	}
 
 	var found bool
-
-	b.mu.Lock()
-	for i := range b.tiles {
-		if b.tiles[i].Coordinates == coords {
-			b.tiles[i].Bonuses = nil
+	for i := range *b.tiles {
+		if (*b.tiles)[i].Coordinates == coords {
+			(*b.tiles)[i].Bonuses = nil
 			found = true
 			break
 		}
 	}
-	b.mu.Unlock()
 
 	if !found {
 		return fmt.Errorf("tile not found at coordinates %v", coords)
@@ -502,45 +481,34 @@ func (b *Board) ReserveTile(ctx context.Context, coords shared.HexPosition, play
 		return err
 	}
 
-	var found bool
-
-	b.mu.Lock()
-	for i := range b.tiles {
-		if b.tiles[i].Coordinates == coords {
-			if b.tiles[i].OccupiedBy != nil {
-				b.mu.Unlock()
+	for i := range *b.tiles {
+		if (*b.tiles)[i].Coordinates == coords {
+			if (*b.tiles)[i].OccupiedBy != nil {
 				return fmt.Errorf("cannot reserve tile at %v: already occupied", coords)
 			}
-			if b.tiles[i].ReservedBy != nil {
-				b.mu.Unlock()
+			if (*b.tiles)[i].ReservedBy != nil {
 				return fmt.Errorf("cannot reserve tile at %v: already reserved by another player", coords)
 			}
-			b.tiles[i].ReservedBy = &playerID
-			found = true
-			break
+			(*b.tiles)[i].ReservedBy = &playerID
+
+			if b.eventBus != nil {
+				events.Publish(b.eventBus, events.GameStateChangedEvent{
+					GameID:    b.gameID,
+					Timestamp: time.Now(),
+				})
+			}
+			return nil
 		}
 	}
-	b.mu.Unlock()
 
-	if !found {
-		return fmt.Errorf("tile not found at coordinates %v", coords)
-	}
-
-	if b.eventBus != nil {
-		events.Publish(b.eventBus, events.GameStateChangedEvent{
-			GameID:    b.gameID,
-			Timestamp: time.Now(),
-		})
-	}
-
-	return nil
+	return fmt.Errorf("tile not found at coordinates %v", coords)
 }
 
 // deepCopyTiles creates a deep copy of all tiles
 func (b *Board) deepCopyTiles() []Tile {
-	tiles := make([]Tile, len(b.tiles))
-	for i := range b.tiles {
-		tiles[i] = *b.deepCopyTile(&b.tiles[i])
+	tiles := make([]Tile, len(*b.tiles))
+	for i := range *b.tiles {
+		tiles[i] = *b.deepCopyTile(&(*b.tiles)[i])
 	}
 	return tiles
 }

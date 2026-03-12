@@ -1,60 +1,73 @@
 package player
 
 import (
-	"sync"
-	"terraforming-mars-backend/internal/events"
 	"time"
+
+	"go.uber.org/zap"
+
+	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/logger"
 )
 
-// PlayedCards manages all cards a player has played, including corporation
+// PlayedCards manages all cards a player has played.
 type PlayedCards struct {
-	mu       sync.RWMutex
-	cards    []string // Includes ALL played cards (corporation + project cards)
+	ds       *datastore.DataStore
 	eventBus *events.EventBusImpl
 	gameID   string
 	playerID string
 }
 
-func newPlayedCards(eventBus *events.EventBusImpl, gameID, playerID string) *PlayedCards {
+func newPlayedCards(ds *datastore.DataStore, eventBus *events.EventBusImpl, gameID, playerID string) *PlayedCards {
 	return &PlayedCards{
-		cards:    []string{},
+		ds:       ds,
 		eventBus: eventBus,
 		gameID:   gameID,
 		playerID: playerID,
 	}
 }
 
+func (pc *PlayedCards) update(fn func(s *datastore.PlayerState)) {
+	if err := pc.ds.UpdatePlayer(pc.gameID, pc.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to update player state", zap.String("game_id", pc.gameID), zap.String("player_id", pc.playerID), zap.Error(err))
+	}
+}
+
+func (pc *PlayedCards) read(fn func(s *datastore.PlayerState)) {
+	if err := pc.ds.ReadPlayer(pc.gameID, pc.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to read player state", zap.String("game_id", pc.gameID), zap.String("player_id", pc.playerID), zap.Error(err))
+	}
+}
+
 // Cards returns a copy of all played cards
 func (pc *PlayedCards) Cards() []string {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-	cardsCopy := make([]string, len(pc.cards))
-	copy(cardsCopy, pc.cards)
+	var cardsCopy []string
+	pc.read(func(s *datastore.PlayerState) {
+		cardsCopy = make([]string, len(s.PlayedCardIDs))
+		copy(cardsCopy, s.PlayedCardIDs)
+	})
 	return cardsCopy
 }
 
 // Contains checks if a specific card has been played
 func (pc *PlayedCards) Contains(cardID string) bool {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-	for _, id := range pc.cards {
-		if id == cardID {
-			return true
+	var found bool
+	pc.read(func(s *datastore.PlayerState) {
+		for _, id := range s.PlayedCardIDs {
+			if id == cardID {
+				found = true
+				return
+			}
 		}
-	}
-	return false
+	})
+	return found
 }
 
-// AddCard adds a card to played cards (used for both corporation and project cards)
-// Parameters:
-//   - cardID: The unique identifier of the card
-//   - cardName: The display name of the card
-//   - cardType: The type of card (event, automated, active, corporation, prelude)
-//   - tags: The tags on the card (for triggering tag-based passive effects)
+// AddCard adds a card to played cards
 func (pc *PlayedCards) AddCard(cardID, cardName, cardType string, tags []string) {
-	pc.mu.Lock()
-	pc.cards = append(pc.cards, cardID)
-	pc.mu.Unlock()
+	pc.update(func(s *datastore.PlayerState) {
+		s.PlayedCardIDs = append(s.PlayedCardIDs, cardID)
+	})
 
 	if pc.eventBus != nil {
 		events.Publish(pc.eventBus, events.CardPlayedEvent{
@@ -79,34 +92,38 @@ func (pc *PlayedCards) AddCard(cardID, cardName, cardType string, tags []string)
 	}
 }
 
-// RemoveCard removes a card from played cards (if it exists)
+// RemoveCard removes a card from played cards
 func (pc *PlayedCards) RemoveCard(cardID string) bool {
-	pc.mu.Lock()
-	defer pc.mu.Unlock()
-	for i, id := range pc.cards {
-		if id == cardID {
-			pc.cards = append(pc.cards[:i], pc.cards[i+1:]...)
-			return true
+	var removed bool
+	pc.update(func(s *datastore.PlayerState) {
+		for i, id := range s.PlayedCardIDs {
+			if id == cardID {
+				s.PlayedCardIDs = append(s.PlayedCardIDs[:i], s.PlayedCardIDs[i+1:]...)
+				removed = true
+				return
+			}
 		}
-	}
-	return false
+	})
+	return removed
 }
 
-// SetCards replaces all played cards (used for initialization/loading)
+// SetCards replaces all played cards
 func (pc *PlayedCards) SetCards(cards []string) {
-	pc.mu.Lock()
-	defer pc.mu.Unlock()
-	if cards == nil {
-		pc.cards = []string{}
-	} else {
-		pc.cards = make([]string, len(cards))
-		copy(pc.cards, cards)
-	}
+	pc.update(func(s *datastore.PlayerState) {
+		if cards == nil {
+			s.PlayedCardIDs = []string{}
+		} else {
+			s.PlayedCardIDs = make([]string, len(cards))
+			copy(s.PlayedCardIDs, cards)
+		}
+	})
 }
 
 // Count returns the number of played cards
 func (pc *PlayedCards) Count() int {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-	return len(pc.cards)
+	var count int
+	pc.read(func(s *datastore.PlayerState) {
+		count = len(s.PlayedCardIDs)
+	})
+	return count
 }

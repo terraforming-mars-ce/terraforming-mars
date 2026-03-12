@@ -44,7 +44,7 @@ func (a *LaunchAsteroidAction) Execute(ctx context.Context, gameID string, playe
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -113,24 +113,24 @@ func (a *LaunchAsteroidAction) Execute(ctx context.Context, gameID string, playe
 
 	a.ConsumePlayerAction(g, log)
 
-	calculatedOutputs := []game.CalculatedOutput{
+	calculatedOutputs := []shared.CalculatedOutput{
 		{ResourceType: string(shared.ResourceTemperature), Amount: stepsRaised, IsScaled: false},
 	}
 	if stepsRaised > 0 {
-		calculatedOutputs = append(calculatedOutputs, game.CalculatedOutput{
+		calculatedOutputs = append(calculatedOutputs, shared.CalculatedOutput{
 			ResourceType: string(shared.ResourceTR), Amount: 1, IsScaled: false,
 		})
 	}
 
-	g.AddTriggeredEffect(game.TriggeredEffect{
+	g.AddTriggeredEffect(shared.TriggeredEffect{
 		CardName:          "Asteroid",
 		PlayerID:          playerID,
-		SourceType:        game.SourceTypeStandardProject,
+		SourceType:        shared.SourceTypeStandardProject,
 		CalculatedOutputs: calculatedOutputs,
 	})
 
 	displayData := baseaction.GetStandardProjectDisplayData("Standard Project: Asteroid")
-	a.WriteStateLogFull(ctx, g, "Standard Project: Asteroid", game.SourceTypeStandardProject, playerID, "Launched asteroid", nil, calculatedOutputs, displayData)
+	a.WriteStateLogFull(ctx, g, "Standard Project: Asteroid", shared.SourceTypeStandardProject, playerID, "Launched asteroid", nil, calculatedOutputs, displayData)
 
 	log.Info("Asteroid launched",
 		zap.Int("remaining_credits", resources.Credits))

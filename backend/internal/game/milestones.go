@@ -3,29 +3,29 @@ package game
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
 	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/logger"
 )
 
-// Milestone constants
 const (
-	MilestoneClaimCost   = 8 // MC cost to claim a milestone
-	MaxClaimedMilestones = 3 // Maximum milestones that can be claimed per game
-	MilestoneVP          = 5 // VP awarded for each claimed milestone
+	MilestoneClaimCost   = 8
+	MaxClaimedMilestones = 3
+	MilestoneVP          = 5
 )
 
-// MilestoneInfo contains display information about a milestone
 type MilestoneInfo struct {
 	Type        shared.MilestoneType
 	Name        string
 	Description string
-	Requirement int // The numeric requirement to claim
+	Requirement int
 }
 
-// AllMilestones returns all available milestone types with their info
 var AllMilestones = []MilestoneInfo{
 	{Type: shared.MilestoneTerraformer, Name: "Terraformer", Description: "Have a Terraform Rating of at least 35", Requirement: 35},
 	{Type: shared.MilestoneMayor, Name: "Mayor", Description: "Own at least 3 city tiles", Requirement: 3},
@@ -34,122 +34,122 @@ var AllMilestones = []MilestoneInfo{
 	{Type: shared.MilestonePlanner, Name: "Planner", Description: "Have at least 16 cards in hand", Requirement: 16},
 }
 
-// ClaimedMilestone represents a milestone that has been claimed by a player
-type ClaimedMilestone struct {
-	Type       shared.MilestoneType
-	PlayerID   string
-	Generation int
-	ClaimedAt  time.Time
-}
-
-// Milestones manages the milestone state for a game
 type Milestones struct {
-	mu       sync.RWMutex
+	ds       *datastore.DataStore
 	gameID   string
-	claimed  []ClaimedMilestone
 	eventBus *events.EventBusImpl
 }
 
-// NewMilestones creates a new Milestones instance
-func NewMilestones(gameID string, eventBus *events.EventBusImpl) *Milestones {
+func NewMilestones(ds *datastore.DataStore, gameID string, eventBus *events.EventBusImpl) *Milestones {
 	return &Milestones{
+		ds:       ds,
 		gameID:   gameID,
-		claimed:  make([]ClaimedMilestone, 0, MaxClaimedMilestones),
 		eventBus: eventBus,
 	}
 }
 
-// ClaimedMilestones returns a copy of all claimed milestones
-func (m *Milestones) ClaimedMilestones() []ClaimedMilestone {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	result := make([]ClaimedMilestone, len(m.claimed))
-	copy(result, m.claimed)
+func (m *Milestones) update(fn func(s *datastore.GameState)) {
+	if err := m.ds.UpdateGame(m.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to update game state", zap.String("game_id", m.gameID), zap.Error(err))
+	}
+}
+
+func (m *Milestones) read(fn func(s *datastore.GameState)) {
+	if err := m.ds.ReadGame(m.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to read game state", zap.String("game_id", m.gameID), zap.Error(err))
+	}
+}
+
+func (m *Milestones) ClaimedMilestones() []shared.ClaimedMilestone {
+	var result []shared.ClaimedMilestone
+	m.read(func(s *datastore.GameState) {
+		result = make([]shared.ClaimedMilestone, len(s.ClaimedMilestones))
+		copy(result, s.ClaimedMilestones)
+	})
 	return result
 }
 
-// IsClaimed returns true if the specified milestone has been claimed
 func (m *Milestones) IsClaimed(milestoneType shared.MilestoneType) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	for _, claimed := range m.claimed {
-		if claimed.Type == milestoneType {
-			return true
+	var claimed bool
+	m.read(func(s *datastore.GameState) {
+		for _, c := range s.ClaimedMilestones {
+			if c.Type == milestoneType {
+				claimed = true
+				return
+			}
 		}
-	}
-	return false
+	})
+	return claimed
 }
 
-// IsClaimedBy returns true if the specified milestone was claimed by the given player
 func (m *Milestones) IsClaimedBy(milestoneType shared.MilestoneType, playerID string) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	for _, claimed := range m.claimed {
-		if claimed.Type == milestoneType && claimed.PlayerID == playerID {
-			return true
+	var claimed bool
+	m.read(func(s *datastore.GameState) {
+		for _, c := range s.ClaimedMilestones {
+			if c.Type == milestoneType && c.PlayerID == playerID {
+				claimed = true
+				return
+			}
 		}
-	}
-	return false
+	})
+	return claimed
 }
 
-// CanClaimMore returns true if more milestones can still be claimed (less than 3 claimed)
 func (m *Milestones) CanClaimMore() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return len(m.claimed) < MaxClaimedMilestones
+	var can bool
+	m.read(func(s *datastore.GameState) {
+		can = len(s.ClaimedMilestones) < MaxClaimedMilestones
+	})
+	return can
 }
 
-// ClaimedCount returns the number of milestones that have been claimed
 func (m *Milestones) ClaimedCount() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return len(m.claimed)
+	var count int
+	m.read(func(s *datastore.GameState) { count = len(s.ClaimedMilestones) })
+	return count
 }
 
-// GetClaimedByPlayer returns all milestones claimed by a specific player
-func (m *Milestones) GetClaimedByPlayer(playerID string) []ClaimedMilestone {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	var result []ClaimedMilestone
-	for _, claimed := range m.claimed {
-		if claimed.PlayerID == playerID {
-			result = append(result, claimed)
+func (m *Milestones) GetClaimedByPlayer(playerID string) []shared.ClaimedMilestone {
+	var result []shared.ClaimedMilestone
+	m.read(func(s *datastore.GameState) {
+		for _, c := range s.ClaimedMilestones {
+			if c.PlayerID == playerID {
+				result = append(result, c)
+			}
 		}
-	}
+	})
 	return result
 }
 
-// ClaimMilestone claims a milestone for a player
-// Returns an error if the milestone is already claimed or max milestones reached
-// Publishes MilestoneClaimedEvent after successful claim
 func (m *Milestones) ClaimMilestone(ctx context.Context, milestoneType shared.MilestoneType, playerID string, generation int) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
-	m.mu.Lock()
-
-	if len(m.claimed) >= MaxClaimedMilestones {
-		m.mu.Unlock()
-		return fmt.Errorf("maximum milestones (%d) already claimed", MaxClaimedMilestones)
-	}
-
-	for _, claimed := range m.claimed {
-		if claimed.Type == milestoneType {
-			m.mu.Unlock()
-			return fmt.Errorf("milestone %s is already claimed", milestoneType)
+	var claimErr error
+	m.update(func(s *datastore.GameState) {
+		if len(s.ClaimedMilestones) >= MaxClaimedMilestones {
+			claimErr = fmt.Errorf("maximum milestones (%d) already claimed", MaxClaimedMilestones)
+			return
 		}
-	}
 
-	claimed := ClaimedMilestone{
-		Type:       milestoneType,
-		PlayerID:   playerID,
-		Generation: generation,
-		ClaimedAt:  time.Now(),
-	}
-	m.claimed = append(m.claimed, claimed)
+		for _, c := range s.ClaimedMilestones {
+			if c.Type == milestoneType {
+				claimErr = fmt.Errorf("milestone %s is already claimed", milestoneType)
+				return
+			}
+		}
 
-	m.mu.Unlock()
+		s.ClaimedMilestones = append(s.ClaimedMilestones, shared.ClaimedMilestone{
+			Type:       milestoneType,
+			PlayerID:   playerID,
+			Generation: generation,
+			ClaimedAt:  time.Now(),
+		})
+	})
+	if claimErr != nil {
+		return claimErr
+	}
 
 	if m.eventBus != nil {
 		events.Publish(m.eventBus, events.MilestoneClaimedEvent{
@@ -163,7 +163,6 @@ func (m *Milestones) ClaimMilestone(ctx context.Context, milestoneType shared.Mi
 	return nil
 }
 
-// GetMilestoneInfo returns the info for a specific milestone type
 func GetMilestoneInfo(milestoneType shared.MilestoneType) (MilestoneInfo, bool) {
 	for _, info := range AllMilestones {
 		if info.Type == milestoneType {

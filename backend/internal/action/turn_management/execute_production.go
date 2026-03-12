@@ -70,7 +70,7 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 			drawnCards = append(drawnCards, cardIDs[0])
 		}
 
-		productionPhaseData := &playerPkg.ProductionPhase{
+		productionPhaseData := &shared.ProductionPhase{
 			AvailableCards:    drawnCards,
 			SelectionComplete: false,
 			BeforeResources:   currentResources,
@@ -155,9 +155,9 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 
 	log.Debug("Updating game phase to production_and_card_draw",
 		zap.String("current_phase", string(g.CurrentPhase())),
-		zap.String("new_phase", string(game.GamePhaseProductionAndCardDraw)))
+		zap.String("new_phase", string(shared.GamePhaseProductionAndCardDraw)))
 
-	err := g.UpdatePhase(ctx, game.GamePhaseProductionAndCardDraw)
+	err := g.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw)
 	if err != nil {
 		log.Error("Failed to update phase", zap.Error(err))
 		return fmt.Errorf("failed to update phase: %w", err)

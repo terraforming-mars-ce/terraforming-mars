@@ -66,7 +66,7 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -142,7 +142,7 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 	// Collect pending card-targeted resources per player, so same-type resources
 	// from trade income + colony bonus are combined into a single selection.
 	pendingByPlayer := map[string][]*PendingResource{}
-	outputsByPlayer := map[string][]game.CalculatedOutput{}
+	outputsByPlayer := map[string][]shared.CalculatedOutput{}
 
 	// Give trade income based on marker position
 	if tileState.MarkerPosition >= 0 && tileState.MarkerPosition < len(definition.Steps) {
@@ -153,7 +153,7 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 				if pending != nil {
 					pendingByPlayer[playerID] = append(pendingByPlayer[playerID], pending)
 				}
-				outputsByPlayer[playerID] = append(outputsByPlayer[playerID], game.CalculatedOutput{
+				outputsByPlayer[playerID] = append(outputsByPlayer[playerID], shared.CalculatedOutput{
 					ResourceType: output.Type,
 					Amount:       output.Amount,
 				})
@@ -173,7 +173,7 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 				if pending != nil {
 					pendingByPlayer[colonyOwnerID] = append(pendingByPlayer[colonyOwnerID], pending)
 				}
-				outputsByPlayer[colonyOwnerID] = append(outputsByPlayer[colonyOwnerID], game.CalculatedOutput{
+				outputsByPlayer[colonyOwnerID] = append(outputsByPlayer[colonyOwnerID], shared.CalculatedOutput{
 					ResourceType: bonus.Type,
 					Amount:       bonus.Amount,
 				})
@@ -198,15 +198,15 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 
 	// Add triggered effects for trader and colony bonus recipients
 	for pid, outputs := range outputsByPlayer {
-		g.AddTriggeredEffect(game.TriggeredEffect{
+		g.AddTriggeredEffect(shared.TriggeredEffect{
 			CardName:          "Trade: " + definition.Name,
 			PlayerID:          pid,
-			SourceType:        game.SourceTypeColonyTrade,
+			SourceType:        shared.SourceTypeColonyTrade,
 			CalculatedOutputs: combineCalculatedOutputs(outputs),
 		})
 	}
 
-	a.WriteStateLogFull(ctx, g, "Trade: "+definition.Name, game.SourceTypeColonyTrade,
+	a.WriteStateLogFull(ctx, g, "Trade: "+definition.Name, shared.SourceTypeColonyTrade,
 		playerID, fmt.Sprintf("Traded with %s", definition.Name), nil, combineCalculatedOutputs(outputsByPlayer[playerID]), nil)
 
 	// Reset marker to position after last colony
@@ -243,7 +243,7 @@ func setPendingColonyResource(p *player.Player, pending *PendingResource, colony
 		return
 	}
 
-	p.Selection().SetPendingColonyResourceSelection(&player.PendingColonyResourceSelection{
+	p.Selection().SetPendingColonyResourceSelection(&shared.PendingColonyResourceSelection{
 		ResourceType: pending.ResourceType,
 		Amount:       pending.Amount,
 		Source:       colonyName,

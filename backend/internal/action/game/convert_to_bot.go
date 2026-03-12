@@ -8,11 +8,12 @@ import (
 
 	gamePkg "terraforming-mars-backend/internal/game"
 	playerPkg "terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // BotStarter starts a bot session for a player.
 type BotStarter interface {
-	StartBot(gameID, playerID, botName, difficulty, speed string, settings gamePkg.GameSettings) error
+	StartBot(gameID, playerID, botName, difficulty, speed string, settings shared.GameSettings) error
 }
 
 // ConvertToBotAction converts a human player to a bot in an active game.
@@ -47,7 +48,7 @@ func (a *ConvertToBotAction) Execute(ctx context.Context, gameID string, request
 		return fmt.Errorf("game not found: %s", gameID)
 	}
 
-	if g.Status() != gamePkg.GameStatusActive {
+	if g.Status() != shared.GameStatusActive {
 		return fmt.Errorf("game is not active")
 	}
 

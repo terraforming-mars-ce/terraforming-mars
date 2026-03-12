@@ -41,10 +41,10 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		return fmt.Errorf("game not found: %s", gameID)
 	}
 
-	if g.CurrentPhase() != game.GamePhaseProductionAndCardDraw {
+	if g.CurrentPhase() != shared.GamePhaseProductionAndCardDraw {
 		log.Warn("Game is not in production phase",
 			zap.String("current_phase", string(g.CurrentPhase())),
-			zap.String("expected_phase", string(game.GamePhaseProductionAndCardDraw)))
+			zap.String("expected_phase", string(shared.GamePhaseProductionAndCardDraw)))
 		return fmt.Errorf("game is not in production phase")
 	}
 
@@ -100,7 +100,9 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		zap.Strings("card_ids", selectedCardIDs),
 		zap.Int("count", len(selectedCardIDs)))
 
-	baseaction.AddCardsToPlayerHand(selectedCardIDs, player, g, a.CardRegistry(), log)
+	for _, cardID := range selectedCardIDs {
+		player.Hand().AddCard(cardID)
+	}
 
 	log.Debug("Cards added to hand",
 		zap.Strings("card_ids_added", selectedCardIDs),
@@ -130,7 +132,7 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 	if allComplete {
 		log.Debug("All players completed production selection, advancing to action phase")
 
-		if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+		if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 			log.Error("Failed to transition game phase", zap.Error(err))
 			return fmt.Errorf("failed to transition game phase: %w", err)
 		}

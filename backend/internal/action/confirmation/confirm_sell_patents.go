@@ -40,7 +40,7 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -132,14 +132,14 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 		a.ConsumePlayerAction(g, log)
 
 		cardsSold := len(selectedCardIDs)
-		creditOutputs := []game.CalculatedOutput{
+		creditOutputs := []shared.CalculatedOutput{
 			{ResourceType: string(shared.ResourceCredit), Amount: totalReward, IsScaled: false},
 		}
 
-		g.AddTriggeredEffect(game.TriggeredEffect{
+		g.AddTriggeredEffect(shared.TriggeredEffect{
 			CardName:          "Sell Patents",
 			PlayerID:          playerID,
-			SourceType:        game.SourceTypeStandardProject,
+			SourceType:        shared.SourceTypeStandardProject,
 			CalculatedOutputs: creditOutputs,
 		})
 
@@ -152,7 +152,7 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 				}},
 			}},
 		}
-		a.WriteStateLogFull(ctx, g, "Standard Project: Sell Patents", game.SourceTypeStandardProject, playerID, "Sold patents", nil, creditOutputs, displayData)
+		a.WriteStateLogFull(ctx, g, "Standard Project: Sell Patents", shared.SourceTypeStandardProject, playerID, "Sold patents", nil, creditOutputs, displayData)
 	}
 
 	log.Info("Sell patents completed",

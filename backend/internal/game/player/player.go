@@ -1,8 +1,12 @@
 package player
 
 import (
+	"go.uber.org/zap"
+
 	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/logger"
 )
 
 // PlayerType represents the type of player (human or bot)
@@ -42,22 +46,12 @@ const (
 	BotSpeedThinker BotSpeed = "thinker"
 )
 
-// Player represents a player in the game with delegated component management
+// Player represents a player in the game.
 type Player struct {
-	id                 string
-	name               string
-	gameID             string
-	connected          bool
-	playerType         PlayerType
-	botStatus          BotStatus
-	botDifficulty      BotDifficulty
-	botSpeed           BotSpeed
-	eventBus           *events.EventBusImpl
-	corporationID      string
-	color              string
-	hasPassed          bool
-	hasExited          bool
-	demoSetupConfirmed bool
+	ds       *datastore.DataStore
+	gameID   string
+	playerID string
+	eventBus *events.EventBusImpl
 
 	hand               *Hand
 	playedCards        *PlayedCards
@@ -67,65 +61,50 @@ type Player struct {
 	effects            *Effects
 	generationalEvents *GenerationalEvents
 	vpGranters         *VPGranters
-	bonusTags          map[shared.CardTag]int
+	cardStateStore     *CardStateStore
 }
 
-// NewPlayer creates a new human player with initialized components
-// playerID must be provided (generated at handler level for session persistence)
-func NewPlayer(eventBus *events.EventBusImpl, gameID, playerID, name string) *Player {
+// NewPlayer creates a new human player view backed by the DataStore.
+func NewPlayer(ds *datastore.DataStore, gameID string, playerID string, eventBus *events.EventBusImpl) *Player {
 	return &Player{
-		id:                 playerID,
-		name:               name,
+		ds:                 ds,
 		gameID:             gameID,
-		connected:          true,
-		playerType:         PlayerTypeHuman,
+		playerID:           playerID,
 		eventBus:           eventBus,
-		corporationID:      "",
-		hasPassed:          false,
-		hand:               newHand(eventBus, gameID, playerID),
-		playedCards:        newPlayedCards(eventBus, gameID, playerID),
-		resources:          newResources(eventBus, gameID, playerID),
-		selection:          newSelection(eventBus, gameID, playerID),
-		actions:            NewActions(),
-		effects:            NewEffects(eventBus),
-		generationalEvents: newGenerationalEvents(),
-		vpGranters:         NewVPGranters(eventBus, gameID, playerID),
-		bonusTags:          make(map[shared.CardTag]int),
+		hand:               newHand(ds, eventBus, gameID, playerID),
+		playedCards:        newPlayedCards(ds, eventBus, gameID, playerID),
+		resources:          newResources(ds, eventBus, gameID, playerID),
+		selection:          newSelection(ds, eventBus, gameID, playerID),
+		actions:            NewActions(ds, gameID, playerID),
+		effects:            NewEffects(ds, eventBus, gameID, playerID),
+		generationalEvents: newGenerationalEvents(ds, gameID, playerID),
+		vpGranters:         NewVPGranters(ds, eventBus, gameID, playerID),
+		cardStateStore:     NewCardStateStore(),
 	}
 }
 
-// NewBotPlayer creates a new bot player (always connected, type bot)
-func NewBotPlayer(eventBus *events.EventBusImpl, gameID, playerID, name string, difficulty BotDifficulty, speed BotSpeed) *Player {
-	return &Player{
-		id:                 playerID,
-		name:               name,
-		gameID:             gameID,
-		connected:          true,
-		playerType:         PlayerTypeBot,
-		botStatus:          BotStatusLoading,
-		botDifficulty:      difficulty,
-		botSpeed:           speed,
-		eventBus:           eventBus,
-		corporationID:      "",
-		hasPassed:          false,
-		hand:               newHand(eventBus, gameID, playerID),
-		playedCards:        newPlayedCards(eventBus, gameID, playerID),
-		resources:          newResources(eventBus, gameID, playerID),
-		selection:          newSelection(eventBus, gameID, playerID),
-		actions:            NewActions(),
-		effects:            NewEffects(eventBus),
-		generationalEvents: newGenerationalEvents(),
-		vpGranters:         NewVPGranters(eventBus, gameID, playerID),
-		bonusTags:          make(map[shared.CardTag]int),
+func (p *Player) update(fn func(s *datastore.PlayerState)) {
+	if err := p.ds.UpdatePlayer(p.gameID, p.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to update player state", zap.String("game_id", p.gameID), zap.String("player_id", p.playerID), zap.Error(err))
+	}
+}
+
+func (p *Player) read(fn func(s *datastore.PlayerState)) {
+	if err := p.ds.ReadPlayer(p.gameID, p.playerID, fn); err != nil {
+		logger.Get().Warn("Failed to read player state", zap.String("game_id", p.gameID), zap.String("player_id", p.playerID), zap.Error(err))
 	}
 }
 
 func (p *Player) ID() string {
-	return p.id
+	return p.playerID
 }
 
 func (p *Player) Name() string {
-	return p.name
+	var name string
+	p.read(func(s *datastore.PlayerState) {
+		name = s.Name
+	})
+	return name
 }
 
 func (p *Player) GameID() string {
@@ -133,62 +112,103 @@ func (p *Player) GameID() string {
 }
 
 func (p *Player) PlayerType() PlayerType {
-	return p.playerType
+	var pt PlayerType
+	p.read(func(s *datastore.PlayerState) {
+		pt = PlayerType(s.PlayerType)
+	})
+	return pt
 }
 
 func (p *Player) IsBot() bool {
-	return p.playerType == PlayerTypeBot
+	var isBot bool
+	p.read(func(s *datastore.PlayerState) {
+		isBot = s.PlayerType == string(PlayerTypeBot)
+	})
+	return isBot
 }
 
 func (p *Player) BotStatus() BotStatus {
-	return p.botStatus
+	var status BotStatus
+	p.read(func(s *datastore.PlayerState) {
+		status = BotStatus(s.BotStatus)
+	})
+	return status
 }
 
 func (p *Player) SetBotStatus(status BotStatus) {
-	p.botStatus = status
+	p.update(func(s *datastore.PlayerState) {
+		s.BotStatus = string(status)
+	})
 }
 
 func (p *Player) BotDifficulty() BotDifficulty {
-	return p.botDifficulty
+	var diff BotDifficulty
+	p.read(func(s *datastore.PlayerState) {
+		diff = BotDifficulty(s.BotDifficulty)
+	})
+	return diff
 }
 
 func (p *Player) BotSpeed() BotSpeed {
-	return p.botSpeed
+	var speed BotSpeed
+	p.read(func(s *datastore.PlayerState) {
+		speed = BotSpeed(s.BotSpeed)
+	})
+	return speed
 }
 
 func (p *Player) SetPlayerType(playerType PlayerType) {
-	p.playerType = playerType
+	p.update(func(s *datastore.PlayerState) {
+		s.PlayerType = string(playerType)
+	})
 }
 
 func (p *Player) SetBotDifficulty(difficulty BotDifficulty) {
-	p.botDifficulty = difficulty
+	p.update(func(s *datastore.PlayerState) {
+		s.BotDifficulty = string(difficulty)
+	})
 }
 
 func (p *Player) SetBotSpeed(speed BotSpeed) {
-	p.botSpeed = speed
+	p.update(func(s *datastore.PlayerState) {
+		s.BotSpeed = string(speed)
+	})
 }
 
 func (p *Player) IsConnected() bool {
-	return p.connected
+	var connected bool
+	p.read(func(s *datastore.PlayerState) {
+		connected = s.Connected
+	})
+	return connected
 }
 
 func (p *Player) SetConnected(connected bool) {
-	p.connected = connected
-
-	if p.eventBus != nil {
-	}
+	p.update(func(s *datastore.PlayerState) {
+		s.Connected = connected
+	})
 }
 
 func (p *Player) CorporationID() string {
-	return p.corporationID
+	var corpID string
+	p.read(func(s *datastore.PlayerState) {
+		corpID = s.CorporationID
+	})
+	return corpID
 }
 
 func (p *Player) SetCorporationID(corporationID string) {
-	p.corporationID = corporationID
+	p.update(func(s *datastore.PlayerState) {
+		s.CorporationID = corporationID
+	})
 }
 
 func (p *Player) HasCorporation() bool {
-	return p.corporationID != ""
+	var has bool
+	p.read(func(s *datastore.PlayerState) {
+		has = s.CorporationID != ""
+	})
+	return has
 }
 
 func (p *Player) Hand() *Hand {
@@ -223,56 +243,101 @@ func (p *Player) VPGranters() *VPGranters {
 	return p.vpGranters
 }
 
+func (p *Player) CardStateStore() *CardStateStore {
+	return p.cardStateStore
+}
+
 func (p *Player) Color() string {
-	return p.color
+	var color string
+	p.read(func(s *datastore.PlayerState) {
+		color = s.Color
+	})
+	return color
 }
 
 func (p *Player) SetColor(color string) {
-	p.color = color
+	p.update(func(s *datastore.PlayerState) {
+		s.Color = color
+	})
 }
 
 func (p *Player) HasPassed() bool {
-	return p.hasPassed
+	var passed bool
+	p.read(func(s *datastore.PlayerState) {
+		passed = s.HasPassed
+	})
+	return passed
 }
 
 func (p *Player) SetPassed(passed bool) {
-	p.hasPassed = passed
-
-	if p.eventBus != nil {
-	}
+	p.update(func(s *datastore.PlayerState) {
+		s.HasPassed = passed
+	})
 }
 
 func (p *Player) HasExited() bool {
-	return p.hasExited
+	var exited bool
+	p.read(func(s *datastore.PlayerState) {
+		exited = s.HasExited
+	})
+	return exited
 }
 
 func (p *Player) SetExited(exited bool) {
-	p.hasExited = exited
+	p.update(func(s *datastore.PlayerState) {
+		s.HasExited = exited
+	})
 }
 
 func (p *Player) DemoSetupConfirmed() bool {
-	return p.demoSetupConfirmed
+	var confirmed bool
+	p.read(func(s *datastore.PlayerState) {
+		confirmed = s.DemoSetupConfirmed
+	})
+	return confirmed
 }
 
 func (p *Player) SetDemoSetupConfirmed(confirmed bool) {
-	p.demoSetupConfirmed = confirmed
+	p.update(func(s *datastore.PlayerState) {
+		s.DemoSetupConfirmed = confirmed
+	})
 }
 
-// BonusTags returns the player's bonus tags map (tag type → count)
+// BonusTags returns the player's bonus tags map (tag type -> count)
 func (p *Player) BonusTags() map[shared.CardTag]int {
-	result := make(map[shared.CardTag]int, len(p.bonusTags))
-	for k, v := range p.bonusTags {
-		result[k] = v
-	}
+	var result map[shared.CardTag]int
+	p.read(func(s *datastore.PlayerState) {
+		result = make(map[shared.CardTag]int, len(s.BonusTags))
+		for k, v := range s.BonusTags {
+			result[k] = v
+		}
+	})
 	return result
 }
 
 // AddBonusTags adds bonus tags of the specified type
 func (p *Player) AddBonusTags(tag shared.CardTag, count int) {
-	p.bonusTags[tag] = p.bonusTags[tag] + count
+	p.update(func(s *datastore.PlayerState) {
+		if s.BonusTags == nil {
+			s.BonusTags = make(map[shared.CardTag]int)
+		}
+		s.BonusTags[tag] = s.BonusTags[tag] + count
+	})
 }
 
 // BonusTagCount returns the number of bonus tags of the specified type
 func (p *Player) BonusTagCount(tag shared.CardTag) int {
-	return p.bonusTags[tag]
+	var count int
+	p.read(func(s *datastore.PlayerState) {
+		if s.BonusTags == nil {
+			return
+		}
+		count = s.BonusTags[tag]
+	})
+	return count
+}
+
+// EventBus returns the event bus (for use by actions that need to subscribe)
+func (p *Player) EventBus() *events.EventBusImpl {
+	return p.eventBus
 }

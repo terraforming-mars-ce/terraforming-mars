@@ -10,6 +10,7 @@ import (
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // ConfirmInitAdvanceAction advances the init phase to the next player's corp/prelude application.
@@ -51,7 +52,7 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 	}
 
 	phase := g.CurrentPhase()
-	if phase != game.GamePhaseInitApplyCorp && phase != game.GamePhaseInitApplyPrelude {
+	if phase != shared.GamePhaseInitApplyCorp && phase != shared.GamePhaseInitApplyPrelude {
 		return fmt.Errorf("game not in init apply phase, current: %s", phase)
 	}
 
@@ -86,9 +87,9 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 	needsApply := false
 	if choices != nil {
 		switch phase {
-		case game.GamePhaseInitApplyCorp:
+		case shared.GamePhaseInitApplyCorp:
 			needsApply = !choices.CorpApplied
-		case game.GamePhaseInitApplyPrelude:
+		case shared.GamePhaseInitApplyPrelude:
 			needsApply = !choices.PreludesApplied
 		}
 	}
@@ -100,15 +101,15 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 	return a.advanceToNextPlayer(ctx, g, phase, currentIndex, turnOrder, allPlayers, log)
 }
 
-func (a *ConfirmInitAdvanceAction) applyCurrentPlayer(ctx context.Context, g *game.Game, phase game.GamePhase, currentPlayerID string, log *zap.Logger) error {
+func (a *ConfirmInitAdvanceAction) applyCurrentPlayer(ctx context.Context, g *game.Game, phase shared.GamePhase, currentPlayerID string, log *zap.Logger) error {
 	switch phase {
-	case game.GamePhaseInitApplyCorp:
+	case shared.GamePhaseInitApplyCorp:
 		if err := ApplyCorpForPlayer(ctx, g, currentPlayerID, a.cardRegistry, a.corpProc, log); err != nil {
 			return fmt.Errorf("failed to apply corp for player %s: %w", currentPlayerID, err)
 		}
 		log.Debug("Applied corp effects", zap.String("player_id", currentPlayerID))
 
-	case game.GamePhaseInitApplyPrelude:
+	case shared.GamePhaseInitApplyPrelude:
 		if err := ApplyPreludesForPlayer(ctx, g, currentPlayerID, a.cardRegistry, log); err != nil {
 			return fmt.Errorf("failed to apply preludes for player %s: %w", currentPlayerID, err)
 		}
@@ -122,7 +123,7 @@ func (a *ConfirmInitAdvanceAction) applyCurrentPlayer(ctx context.Context, g *ga
 	return nil
 }
 
-func (a *ConfirmInitAdvanceAction) advanceToNextPlayer(ctx context.Context, g *game.Game, phase game.GamePhase, currentIndex int, turnOrder []string, allPlayers []*player.Player, log *zap.Logger) error {
+func (a *ConfirmInitAdvanceAction) advanceToNextPlayer(ctx context.Context, g *game.Game, phase shared.GamePhase, currentIndex int, turnOrder []string, allPlayers []*player.Player, log *zap.Logger) error {
 	nextPlayerID := findNextActivePlayer(g, turnOrder, currentIndex+1)
 
 	if nextPlayerID != "" {
@@ -138,10 +139,10 @@ func (a *ConfirmInitAdvanceAction) advanceToNextPlayer(ctx context.Context, g *g
 
 	// No more players in current phase
 	switch phase {
-	case game.GamePhaseInitApplyCorp:
+	case shared.GamePhaseInitApplyCorp:
 		if g.Settings().HasPrelude() {
 			log.Debug("All corps applied, advancing to init_apply_prelude phase")
-			if err := g.UpdatePhase(ctx, game.GamePhaseInitApplyPrelude); err != nil {
+			if err := g.UpdatePhase(ctx, shared.GamePhaseInitApplyPrelude); err != nil {
 				return fmt.Errorf("failed to transition to prelude phase: %w", err)
 			}
 
@@ -164,7 +165,7 @@ func (a *ConfirmInitAdvanceAction) advanceToNextPlayer(ctx context.Context, g *g
 		log.Info("All corps applied (no prelude), advancing to action phase")
 		AdvanceToActionPhase(ctx, g, allPlayers, log)
 
-	case game.GamePhaseInitApplyPrelude:
+	case shared.GamePhaseInitApplyPrelude:
 		log.Info("All preludes applied, advancing to action phase")
 		AdvanceToActionPhase(ctx, g, allPlayers, log)
 	}

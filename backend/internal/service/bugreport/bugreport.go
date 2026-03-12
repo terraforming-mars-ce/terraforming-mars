@@ -217,7 +217,11 @@ func (s *Service) processBugReport(id string, description string, author string,
 		s.logger.Error("Failed to create temp dir", zap.Error(err))
 		return
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			s.logger.Warn("Failed to remove temp directory", zap.String("path", tmpDir), zap.Error(err))
+		}
+	}()
 
 	var gameStatePath string
 	if len(gameState) > 0 {

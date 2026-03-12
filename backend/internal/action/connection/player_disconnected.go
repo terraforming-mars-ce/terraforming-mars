@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // PlayerDisconnectedAction handles the business logic for player disconnection
@@ -40,7 +41,7 @@ func (a *PlayerDisconnectedAction) Execute(ctx context.Context, gameID string, p
 		return fmt.Errorf("game not found: %s", gameID)
 	}
 
-	if g.Status() == game.GameStatusLobby {
+	if g.Status() == shared.GameStatusLobby {
 		wasHost := g.HostPlayerID() == playerID
 
 		if err := g.RemovePlayer(ctx, playerID); err != nil {

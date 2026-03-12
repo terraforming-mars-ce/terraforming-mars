@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -28,6 +29,7 @@ import (
 	wsHandler "terraforming-mars-backend/internal/delivery/websocket"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/logger"
 	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
 	"terraforming-mars-backend/internal/service/bot"
@@ -53,7 +55,11 @@ func main() {
 	if err := logger.Init(&logLevel); err != nil {
 		panic("Failed to initialize logger: " + err.Error())
 	}
-	defer logger.Shutdown()
+	defer func() {
+		if err := logger.Shutdown(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to shutdown logger: %v\n", err)
+		}
+	}()
 
 	log := logger.Get()
 	log.Info("Starting Terraforming Mars backend server")
@@ -93,7 +99,12 @@ func main() {
 	log.Debug("Colony registry initialized", zap.Int("colony_count", len(colonyData)))
 
 	// ========== Initialize Game Repository (Single Source of Truth) ==========
-	gameRepo := game.NewInMemoryGameRepository()
+	ds, err := datastore.NewDataStore()
+	if err != nil {
+		log.Fatal("Failed to create datastore", zap.Error(err))
+	}
+	rm := datastore.NewRuntimeManager()
+	gameRepo := game.NewMemDBGameRepository(ds, rm)
 	log.Debug("Game repository initialized")
 
 	// ========== Initialize Game State Repository (Diff Logging) ==========

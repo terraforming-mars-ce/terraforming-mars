@@ -71,7 +71,7 @@ func (a *UseCardActionAction) Execute(
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -121,8 +121,7 @@ func (a *UseCardActionAction) Execute(
 		WithSourceCardID(cardID).
 		WithSourceBehaviorIndex(behaviorIndex).
 		WithCardRegistry(a.CardRegistry()).
-		WithSourceType(game.SourceTypeCardAction).
-		WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
+		WithSourceType(shared.SourceTypeCardAction)
 	if len(cardStorageTargets) > 0 {
 		applier = applier.WithTargetCardIDs(cardStorageTargets)
 	}
@@ -189,9 +188,9 @@ func (a *UseCardActionAction) Execute(
 	description := fmt.Sprintf("Used %s action", cardAction.CardName)
 	var displayData *game.LogDisplayData
 	if cardFromRegistry, err := a.CardRegistry().GetByID(cardID); err == nil {
-		displayData = baseaction.BuildCardDisplayData(cardFromRegistry, game.SourceTypeCardAction)
+		displayData = baseaction.BuildCardDisplayData(cardFromRegistry, shared.SourceTypeCardAction)
 	}
-	a.WriteStateLogFull(ctx, g, cardAction.CardName, game.SourceTypeCardAction, playerID, description, choiceIndex, calculatedOutputs, displayData)
+	a.WriteStateLogFull(ctx, g, cardAction.CardName, shared.SourceTypeCardAction, playerID, description, choiceIndex, calculatedOutputs, displayData)
 
 	log.Info("Card action executed")
 	return nil
@@ -203,7 +202,7 @@ func (a *UseCardActionAction) findCardAction(
 	cardID string,
 	behaviorIndex int,
 	log *zap.Logger,
-) (*player.CardAction, error) {
+) (*shared.CardAction, error) {
 	actions := p.Actions().List()
 
 	for i := range actions {
@@ -247,7 +246,7 @@ func (a *UseCardActionAction) executeReuse(
 	ctx context.Context,
 	g *game.Game,
 	p *player.Player,
-	targetAction *player.CardAction,
+	targetAction *shared.CardAction,
 	targetCardID string,
 	targetBehaviorIndex int,
 	choiceIndex *int,
@@ -301,8 +300,7 @@ func (a *UseCardActionAction) executeReuse(
 		WithSourceCardID(targetCardID).
 		WithSourceBehaviorIndex(targetBehaviorIndex).
 		WithCardRegistry(a.CardRegistry()).
-		WithSourceType(game.SourceTypeCardAction).
-		WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
+		WithSourceType(shared.SourceTypeCardAction)
 	if len(cardStorageTargets) > 0 {
 		applier = applier.WithTargetCardIDs(cardStorageTargets)
 	}
@@ -359,9 +357,9 @@ func (a *UseCardActionAction) executeReuse(
 	description := fmt.Sprintf("Used %s to reuse %s action", reuseAction.CardName, targetAction.CardName)
 	var displayData *game.LogDisplayData
 	if cardFromRegistry, err := a.CardRegistry().GetByID(targetCardID); err == nil {
-		displayData = baseaction.BuildCardDisplayData(cardFromRegistry, game.SourceTypeCardAction)
+		displayData = baseaction.BuildCardDisplayData(cardFromRegistry, shared.SourceTypeCardAction)
 	}
-	a.WriteStateLogFull(ctx, g, targetAction.CardName, game.SourceTypeCardAction, p.ID(), description, choiceIndex, calculatedOutputs, displayData)
+	a.WriteStateLogFull(ctx, g, targetAction.CardName, shared.SourceTypeCardAction, p.ID(), description, choiceIndex, calculatedOutputs, displayData)
 
 	log.Info("Action reused",
 		zap.String("reuse_source", reuseAction.CardName),
@@ -373,7 +371,7 @@ func (a *UseCardActionAction) findActionReuseAction(
 	p *player.Player,
 	reuseSourceCardID string,
 	log *zap.Logger,
-) (*player.CardAction, error) {
+) (*shared.CardAction, error) {
 	actions := p.Actions().List()
 	for i := range actions {
 		if actions[i].CardID != reuseSourceCardID {

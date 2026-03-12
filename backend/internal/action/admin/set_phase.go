@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // SetPhaseAction handles the admin action to set the game phase
@@ -26,7 +27,7 @@ func NewSetPhaseAction(
 }
 
 // Execute performs the set phase admin action
-func (a *SetPhaseAction) Execute(ctx context.Context, gameID string, phase game.GamePhase) error {
+func (a *SetPhaseAction) Execute(ctx context.Context, gameID string, phase shared.GamePhase) error {
 	log := a.logger.With(
 		zap.String("game_id", gameID),
 		zap.String("action", "admin_set_phase"),

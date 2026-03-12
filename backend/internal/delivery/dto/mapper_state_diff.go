@@ -191,7 +191,7 @@ func toLogDisplayDataDto(data *game.LogDisplayData) *LogDisplayDataDto {
 	}
 }
 
-func toVPConditionForLogDto(vp game.VPConditionForLog) VPConditionDto {
+func toVPConditionForLogDto(vp shared.VPConditionForLog) VPConditionDto {
 	return VPConditionDto{
 		Amount:     vp.Amount,
 		Condition:  VPConditionType(vp.Condition),

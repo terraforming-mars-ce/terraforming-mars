@@ -88,7 +88,7 @@ func GetStandardProjectDisplayData(source string) *game.LogDisplayData {
 }
 
 // BuildCardDisplayData builds display data for a card log entry
-func BuildCardDisplayData(card *gamecards.Card, sourceType game.SourceType) *game.LogDisplayData {
+func BuildCardDisplayData(card *gamecards.Card, sourceType shared.SourceType) *game.LogDisplayData {
 	if card == nil {
 		return nil
 	}
@@ -99,7 +99,7 @@ func BuildCardDisplayData(card *gamecards.Card, sourceType game.SourceType) *gam
 
 	// Convert VP conditions
 	for _, vp := range card.VPConditions {
-		vpForLog := game.VPConditionForLog{
+		vpForLog := shared.VPConditionForLog{
 			Amount:    vp.Amount,
 			Condition: string(vp.Condition),
 		}
@@ -128,9 +128,9 @@ func BuildCardDisplayData(card *gamecards.Card, sourceType game.SourceType) *gam
 
 	// Select appropriate behaviors based on source type
 	switch sourceType {
-	case game.SourceTypeCardPlay:
+	case shared.SourceTypeCardPlay:
 		data.Behaviors = card.Behaviors
-	case game.SourceTypeCardAction:
+	case shared.SourceTypeCardAction:
 		// Only include manual trigger behaviors for card actions
 		for _, b := range card.Behaviors {
 			if gamecards.HasManualTrigger(b) {

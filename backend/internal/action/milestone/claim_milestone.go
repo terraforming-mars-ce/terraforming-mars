@@ -45,7 +45,7 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -110,7 +110,7 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 	if info, ok := game.GetMilestoneInfo(shared.MilestoneType(milestoneType)); ok {
 		milestoneName = info.Name
 	}
-	a.WriteStateLog(ctx, g, milestoneName, game.SourceTypeMilestone, playerID, fmt.Sprintf("Claimed %s milestone", milestoneName))
+	a.WriteStateLog(ctx, g, milestoneName, shared.SourceTypeMilestone, playerID, fmt.Sprintf("Claimed %s milestone", milestoneName))
 
 	log.Info("Milestone claimed",
 		zap.String("milestone", milestoneType),

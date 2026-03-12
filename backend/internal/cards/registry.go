@@ -5,7 +5,6 @@ import (
 
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -98,7 +97,7 @@ func (a *VPCardLookupAdapter) LookupVPCard(cardID string) (*game.VPCardInfo, err
 		return nil, err
 	}
 
-	vpConditions := make([]player.VPCondition, len(card.VPConditions))
+	vpConditions := make([]shared.VPCondition, len(card.VPConditions))
 	for i, vc := range card.VPConditions {
 		vpConditions[i] = convertVPCondition(vc)
 	}
@@ -116,15 +115,15 @@ func (a *VPCardLookupAdapter) LookupVPCard(cardID string) (*game.VPCardInfo, err
 	}, nil
 }
 
-func convertVPCondition(vc gamecards.VictoryPointCondition) player.VPCondition {
-	cond := player.VPCondition{
+func convertVPCondition(vc gamecards.VictoryPointCondition) shared.VPCondition {
+	cond := shared.VPCondition{
 		Amount:     vc.Amount,
-		Condition:  player.VPConditionType(vc.Condition),
+		Condition:  string(vc.Condition),
 		MaxTrigger: vc.MaxTrigger,
 	}
 
 	if vc.Per != nil {
-		perCond := &player.VPPerCondition{
+		perCond := &shared.VPPerCondition{
 			ResourceType: shared.ResourceType(vc.Per.Type),
 			Amount:       vc.Per.Amount,
 			Tag:          vc.Per.Tag,

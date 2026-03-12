@@ -3,32 +3,30 @@ package game
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
 	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/logger"
 )
 
-// Award constants
 const (
-	MaxFundedAwards = 3 // Maximum awards that can be funded per game
-	AwardFirstVP    = 5 // VP awarded for first place
-	AwardSecondVP   = 2 // VP awarded for second place
+	MaxFundedAwards = 3
+	AwardFirstVP    = 5
+	AwardSecondVP   = 2
 )
 
-// AwardFundingCosts returns the cost to fund awards based on how many have been funded
-// First award: 8 MC, Second: 14 MC, Third: 20 MC
 var AwardFundingCosts = []int{8, 14, 20}
 
-// AwardInfo contains display information about an award
 type AwardInfo struct {
 	Type        shared.AwardType
 	Name        string
 	Description string
 }
 
-// AllAwards returns all available award types with their info
 var AllAwards = []AwardInfo{
 	{Type: shared.AwardLandlord, Name: "Landlord", Description: "Most tiles on Mars"},
 	{Type: shared.AwardBanker, Name: "Banker", Description: "Highest MC production"},
@@ -37,124 +35,125 @@ var AllAwards = []AwardInfo{
 	{Type: shared.AwardMiner, Name: "Miner", Description: "Most steel and titanium resources"},
 }
 
-// FundedAward represents an award that has been funded by a player
-type FundedAward struct {
-	Type           shared.AwardType
-	FundedByPlayer string
-	FundingOrder   int // 0, 1, or 2 (order in which it was funded)
-	FundingCost    int
-	FundedAt       time.Time
-}
-
-// Awards manages the award state for a game
 type Awards struct {
-	mu       sync.RWMutex
+	ds       *datastore.DataStore
 	gameID   string
-	funded   []FundedAward
 	eventBus *events.EventBusImpl
 }
 
-// NewAwards creates a new Awards instance
-func NewAwards(gameID string, eventBus *events.EventBusImpl) *Awards {
+func NewAwards(ds *datastore.DataStore, gameID string, eventBus *events.EventBusImpl) *Awards {
 	return &Awards{
+		ds:       ds,
 		gameID:   gameID,
-		funded:   make([]FundedAward, 0, MaxFundedAwards),
 		eventBus: eventBus,
 	}
 }
 
-// FundedAwards returns a copy of all funded awards
-func (a *Awards) FundedAwards() []FundedAward {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	result := make([]FundedAward, len(a.funded))
-	copy(result, a.funded)
+func (a *Awards) update(fn func(s *datastore.GameState)) {
+	if err := a.ds.UpdateGame(a.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to update game state", zap.String("game_id", a.gameID), zap.Error(err))
+	}
+}
+
+func (a *Awards) read(fn func(s *datastore.GameState)) {
+	if err := a.ds.ReadGame(a.gameID, fn); err != nil {
+		logger.Get().Warn("Failed to read game state", zap.String("game_id", a.gameID), zap.Error(err))
+	}
+}
+
+func (a *Awards) FundedAwards() []shared.FundedAward {
+	var result []shared.FundedAward
+	a.read(func(s *datastore.GameState) {
+		result = make([]shared.FundedAward, len(s.FundedAwards))
+		copy(result, s.FundedAwards)
+	})
 	return result
 }
 
-// IsFunded returns true if the specified award has been funded
 func (a *Awards) IsFunded(awardType shared.AwardType) bool {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	for _, funded := range a.funded {
-		if funded.Type == awardType {
-			return true
+	var funded bool
+	a.read(func(s *datastore.GameState) {
+		for _, f := range s.FundedAwards {
+			if f.Type == awardType {
+				funded = true
+				return
+			}
 		}
-	}
-	return false
+	})
+	return funded
 }
 
-// IsFundedBy returns true if the specified award was funded by the given player
 func (a *Awards) IsFundedBy(awardType shared.AwardType, playerID string) bool {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	for _, funded := range a.funded {
-		if funded.Type == awardType && funded.FundedByPlayer == playerID {
-			return true
+	var funded bool
+	a.read(func(s *datastore.GameState) {
+		for _, f := range s.FundedAwards {
+			if f.Type == awardType && f.FundedByPlayer == playerID {
+				funded = true
+				return
+			}
 		}
-	}
-	return false
+	})
+	return funded
 }
 
-// CanFundMore returns true if more awards can still be funded (less than 3 funded)
 func (a *Awards) CanFundMore() bool {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	return len(a.funded) < MaxFundedAwards
+	var can bool
+	a.read(func(s *datastore.GameState) {
+		can = len(s.FundedAwards) < MaxFundedAwards
+	})
+	return can
 }
 
-// FundedCount returns the number of awards that have been funded
 func (a *Awards) FundedCount() int {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	return len(a.funded)
+	var count int
+	a.read(func(s *datastore.GameState) { count = len(s.FundedAwards) })
+	return count
 }
 
-// GetCurrentFundingCost returns the cost to fund the next award
 func (a *Awards) GetCurrentFundingCost() int {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	count := len(a.funded)
-	if count >= MaxFundedAwards {
-		return 0 // No more can be funded
-	}
-	return AwardFundingCosts[count]
+	var cost int
+	a.read(func(s *datastore.GameState) {
+		count := len(s.FundedAwards)
+		if count >= MaxFundedAwards {
+			return
+		}
+		cost = AwardFundingCosts[count]
+	})
+	return cost
 }
 
-// FundAward funds an award for a player
-// Returns an error if the award is already funded or max awards reached
-// Publishes AwardFundedEvent after successful funding
 func (a *Awards) FundAward(ctx context.Context, awardType shared.AwardType, playerID string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
-	a.mu.Lock()
-
-	if len(a.funded) >= MaxFundedAwards {
-		a.mu.Unlock()
-		return fmt.Errorf("maximum awards (%d) already funded", MaxFundedAwards)
-	}
-
-	for _, funded := range a.funded {
-		if funded.Type == awardType {
-			a.mu.Unlock()
-			return fmt.Errorf("award %s is already funded", awardType)
+	var fundErr error
+	var fundingCost int
+	a.update(func(s *datastore.GameState) {
+		if len(s.FundedAwards) >= MaxFundedAwards {
+			fundErr = fmt.Errorf("maximum awards (%d) already funded", MaxFundedAwards)
+			return
 		}
+
+		for _, f := range s.FundedAwards {
+			if f.Type == awardType {
+				fundErr = fmt.Errorf("award %s is already funded", awardType)
+				return
+			}
+		}
+
+		fundingCost = AwardFundingCosts[len(s.FundedAwards)]
+		s.FundedAwards = append(s.FundedAwards, shared.FundedAward{
+			Type:           awardType,
+			FundedByPlayer: playerID,
+			FundingOrder:   len(s.FundedAwards),
+			FundingCost:    fundingCost,
+			FundedAt:       time.Now(),
+		})
+	})
+	if fundErr != nil {
+		return fundErr
 	}
-
-	fundingCost := AwardFundingCosts[len(a.funded)]
-
-	funded := FundedAward{
-		Type:           awardType,
-		FundedByPlayer: playerID,
-		FundingOrder:   len(a.funded),
-		FundingCost:    fundingCost,
-		FundedAt:       time.Now(),
-	}
-	a.funded = append(a.funded, funded)
-
-	a.mu.Unlock()
 
 	if a.eventBus != nil {
 		events.Publish(a.eventBus, events.AwardFundedEvent{
@@ -169,7 +168,6 @@ func (a *Awards) FundAward(ctx context.Context, awardType shared.AwardType, play
 	return nil
 }
 
-// GetAwardInfo returns the info for a specific award type
 func GetAwardInfo(awardType shared.AwardType) (AwardInfo, bool) {
 	for _, info := range AllAwards {
 		if info.Type == awardType {

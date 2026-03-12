@@ -9,6 +9,7 @@ import (
 	"terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/game"
 	playerPkg "terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/service/bot"
 )
 
@@ -58,7 +59,7 @@ func (a *KickPlayerAction) Execute(ctx context.Context, gameID string, requester
 		return fmt.Errorf("cannot kick player: cannot kick yourself")
 	}
 
-	if g.Status() == game.GameStatusLobby {
+	if g.Status() == shared.GameStatusLobby {
 		return a.kickFromLobby(ctx, g, targetPlayerID, log)
 	}
 
@@ -112,11 +113,11 @@ func (a *KickPlayerAction) kickFromActiveGame(ctx context.Context, g *game.Game,
 	a.moveToEndOfTurnOrder(ctx, g, targetPlayerID, log)
 
 	switch g.CurrentPhase() {
-	case game.GamePhaseStartingSelection:
+	case shared.GamePhaseStartingSelection:
 		a.handleStartingSelectionKick(ctx, g, log)
-	case game.GamePhaseAction:
+	case shared.GamePhaseAction:
 		a.handleActionPhaseKick(ctx, g, gameID, targetPlayerID, log)
-	case game.GamePhaseProductionAndCardDraw:
+	case shared.GamePhaseProductionAndCardDraw:
 		a.handleProductionPhaseKick(ctx, g, log)
 	}
 
@@ -221,7 +222,7 @@ func (a *KickPlayerAction) handleStartingSelectionKick(ctx context.Context, g *g
 		}
 	}
 
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		log.Error("Failed to transition game phase", zap.Error(err))
 		return
 	}
@@ -338,7 +339,7 @@ func (a *KickPlayerAction) handleProductionPhaseKick(ctx context.Context, g *gam
 
 	log.Debug("All remaining players completed production after kick, advancing to action phase")
 
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		log.Error("Failed to transition game phase", zap.Error(err))
 		return
 	}

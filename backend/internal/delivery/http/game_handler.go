@@ -9,7 +9,7 @@ import (
 	"terraforming-mars-backend/internal/action/query"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 
 	"github.com/gorilla/mux"
@@ -98,9 +98,9 @@ func (h *GameHandler) ListGames(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("HTTP GET /api/v1/games")
 
-	var statusFilter *game.GameStatus
+	var statusFilter *shared.GameStatus
 	if statusParam := r.URL.Query().Get("status"); statusParam != "" {
-		status := game.GameStatus(statusParam)
+		status := shared.GameStatus(statusParam)
 		statusFilter = &status
 	}
 
@@ -142,7 +142,7 @@ func (h *GameHandler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers:       req.MaxPlayers,
 		VenusNextEnabled: req.VenusNextEnabled,
 		DevelopmentMode:  req.DevelopmentMode,

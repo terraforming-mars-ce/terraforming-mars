@@ -53,7 +53,7 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, game.GamePhaseAction, log); err != nil {
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
 		return err
 	}
 
@@ -128,24 +128,24 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 
 	a.ConsumePlayerAction(g, log)
 
-	calculatedOutputs := []game.CalculatedOutput{
+	calculatedOutputs := []shared.CalculatedOutput{
 		{ResourceType: string(shared.ResourceTemperature), Amount: stepsRaised, IsScaled: false},
 	}
 	if stepsRaised > 0 {
-		calculatedOutputs = append(calculatedOutputs, game.CalculatedOutput{
+		calculatedOutputs = append(calculatedOutputs, shared.CalculatedOutput{
 			ResourceType: string(shared.ResourceTR), Amount: 1, IsScaled: false,
 		})
 	}
 
-	g.AddTriggeredEffect(game.TriggeredEffect{
+	g.AddTriggeredEffect(shared.TriggeredEffect{
 		CardName:          "Convert Heat",
 		PlayerID:          playerID,
-		SourceType:        game.SourceTypeResourceConvert,
+		SourceType:        shared.SourceTypeResourceConvert,
 		CalculatedOutputs: calculatedOutputs,
 	})
 
 	displayData := baseaction.GetStandardProjectDisplayData("Convert Heat")
-	a.WriteStateLogFull(ctx, g, "Convert Heat", game.SourceTypeResourceConvert, playerID, "Converted heat to raise temperature", nil, calculatedOutputs, displayData)
+	a.WriteStateLogFull(ctx, g, "Convert Heat", shared.SourceTypeResourceConvert, playerID, "Converted heat to raise temperature", nil, calculatedOutputs, displayData)
 
 	log.Info("Heat converted",
 		zap.Int("heat_spent", requiredHeat))

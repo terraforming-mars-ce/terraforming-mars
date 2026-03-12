@@ -128,7 +128,9 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		log.Debug("Played selected prelude cards",
 			zap.Strings("prelude_ids", allSelectedCards))
 	} else {
-		baseaction.AddCardsToPlayerHand(allSelectedCards, p, g, a.CardRegistry(), log)
+		for _, cardID := range allSelectedCards {
+			p.Hand().AddCard(cardID)
+		}
 		log.Debug("Added selected cards to hand",
 			zap.Int("cards_taken", len(cardsToTake)),
 			zap.Int("cards_bought", len(cardsToBuy)),
@@ -192,7 +194,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 func (a *ConfirmCardDrawAction) completeSourceCardAction(
 	g *game.Game,
 	p *player.Player,
-	selection *player.PendingCardDrawSelection,
+	selection *shared.PendingCardDrawSelection,
 	log *zap.Logger,
 ) {
 	// Increment usage counts for the source card action

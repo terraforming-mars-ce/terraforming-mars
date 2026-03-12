@@ -8,6 +8,7 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/shared"
 
 	"go.uber.org/zap"
 )
@@ -72,8 +73,7 @@ func (a *ConfirmBehaviorChoiceAction) Execute(ctx context.Context, gameID string
 	applier := gamecards.NewBehaviorApplier(p, g, selection.Source, log).
 		WithSourceCardID(selection.SourceCardID).
 		WithCardRegistry(a.CardRegistry()).
-		WithSourceType(game.SourceTypePassiveEffect).
-		WithOnCardsAddedToHand(baseaction.MakeCardDrawCallback(p, g, a.CardRegistry()))
+		WithSourceType(shared.SourceTypePassiveEffect)
 
 	if len(cardStorageTargets) > 0 {
 		applier = applier.WithTargetCardIDs(cardStorageTargets)
