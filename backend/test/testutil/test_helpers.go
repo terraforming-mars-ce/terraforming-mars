@@ -160,16 +160,16 @@ func CreateTestGameWithPlayers(t *testing.T, numPlayers int, broadcaster *MockBr
 func CreateTestGameWithVenus(t *testing.T, numPlayers int, broadcaster *MockBroadcaster) (*game.Game, game.GameRepository) {
 	t.Helper()
 
-	repo := game.NewInMemoryGameRepository()
+	repo := NewTestGameRepository(t)
 	cardRegistry := CreateTestCardRegistry()
 
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers:       4,
 		CardPacks:        []string{"base-game", "venus-next"},
 		VenusNextEnabled: true,
 	}
 
-	testGame := game.NewGame("test-game-id", "", settings)
+	testGame := game.NewGame(repo.DataStore(), "test-game-id", "", settings)
 	allCards := cardRegistry.GetAll()
 
 	projectCards := make([]string, 0)
@@ -187,8 +187,7 @@ func CreateTestGameWithVenus(t *testing.T, numPlayers int, broadcaster *MockBroa
 		}
 	}
 
-	gameDeck := deck.NewDeck(testGame.ID(), projectCards, corpCards, preludeCards)
-	testGame.SetDeck(gameDeck)
+	testGame.InitDeck(projectCards, corpCards, preludeCards)
 	testGame.SetVPCardLookup(cards.NewVPCardLookupAdapter(cardRegistry))
 
 	err := repo.Create(context.Background(), testGame)
@@ -200,11 +199,11 @@ func CreateTestGameWithVenus(t *testing.T, numPlayers int, broadcaster *MockBroa
 	for i := 0; i < numPlayers; i++ {
 		playerID := fmt.Sprintf("player-%d", i+1)
 		playerName := "Player " + string(rune('A'+i))
-		newPlayer := player.NewPlayer(testGame.EventBus(), testGame.ID(), playerID, playerName)
-		err := testGame.AddPlayer(ctx, newPlayer)
+		p, err := testGame.AddNewPlayer(ctx, playerID, playerName)
 		if err != nil {
 			t.Fatalf("Failed to add player %d: %v", i, err)
 		}
+		action.SetupPlayerCardStore(p, testGame, cardRegistry)
 	}
 
 	if numPlayers > 0 {
