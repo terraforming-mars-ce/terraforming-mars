@@ -8,10 +8,9 @@ import (
 	"terraforming-mars-backend/internal/action/confirmation"
 	"terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/cards"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/deck"
-	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -28,7 +27,7 @@ func TestDeckRecycling_UnselectedCardsFromCardDraw(t *testing.T) {
 
 	// Set up pending card draw selection (buy up to 4 cards at 3 MC each)
 	testutil.SetPlayerCredits(ctx, p, 100)
-	p.Selection().SetPendingCardDrawSelection(&player.PendingCardDrawSelection{
+	p.Selection().SetPendingCardDrawSelection(&shared.PendingCardDrawSelection{
 		AvailableCards: drawnCards,
 		FreeTakeCount:  0,
 		MaxBuyCount:    4,
@@ -64,7 +63,7 @@ func TestDeckRecycling_DiscardedCardsFromHand(t *testing.T) {
 	}
 
 	// Set up pending card discard selection
-	p.Selection().SetPendingCardDiscardSelection(&player.PendingCardDiscardSelection{
+	p.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
 		MinCards: 1,
 		MaxCards: 2,
 		Source:   "test-discard",
@@ -99,7 +98,7 @@ func TestDeckRecycling_SoldPatents(t *testing.T) {
 	}
 
 	// Set up pending card selection for sell patents
-	p.Selection().SetPendingCardSelection(&player.PendingCardSelection{
+	p.Selection().SetPendingCardSelection(&shared.PendingCardSelection{
 		AvailableCards: cardsInHand,
 		MinCards:       0,
 		MaxCards:       len(cardsInHand),
@@ -127,9 +126,9 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 	ctx := context.Background()
 	log := testutil.TestLogger()
 
-	err := testGame.UpdateStatus(ctx, game.GameStatusActive)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
 	testutil.AssertNoError(t, err, "update game status")
-	err = testGame.UpdatePhase(ctx, game.GamePhaseStartingSelection)
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseStartingSelection)
 	testutil.AssertNoError(t, err, "update game phase")
 
 	playerID := "player-1"
@@ -139,13 +138,13 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 		"006", "007", "008", "009", "010",
 	}
 
-	err = testGame.SetSelectStartingCardsPhase(ctx, playerID, &player.SelectStartingCardsPhase{
+	err = testGame.SetSelectStartingCardsPhase(ctx, playerID, &shared.SelectStartingCardsPhase{
 		AvailableCards: availableCards,
 	})
 	testutil.AssertNoError(t, err, "set starting cards phase")
 
 	// Also set corporation phase (required by combined action)
-	err = testGame.SetSelectCorporationPhase(ctx, playerID, &player.SelectCorporationPhase{
+	err = testGame.SetSelectCorporationPhase(ctx, playerID, &shared.SelectCorporationPhase{
 		AvailableCorporations: []string{"B08", "B06"},
 	})
 	testutil.AssertNoError(t, err, "set corporation phase")
@@ -187,7 +186,8 @@ func TestDeckRecycling_AutoShuffleOnEmptyDrawPile(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a deck with only 2 project cards in draw pile
-	gameDeck := deck.NewDeck("test-game", []string{"card-a", "card-b"}, nil, nil)
+	ds := testutil.NewTestDataStoreWithGame(t, "test-game")
+	gameDeck := deck.NewDeck(ds, "test-game", []string{"card-a", "card-b"}, nil, nil)
 
 	// Draw all cards to empty the draw pile
 	drawn, err := gameDeck.DrawProjectCards(ctx, 2)
@@ -214,7 +214,8 @@ func TestDeckRecycling_PreludeCardsNeverReshuffledIntoProjectDeck(t *testing.T) 
 
 	projectCards := []string{"card-a", "card-b"}
 	preludeCards := []string{"P01", "P02", "P03", "P04"}
-	gameDeck := deck.NewDeck("test-game", projectCards, nil, preludeCards)
+	ds2 := testutil.NewTestDataStoreWithGame(t, "test-game")
+	gameDeck := deck.NewDeck(ds2, "test-game", projectCards, nil, preludeCards)
 
 	// Draw all project cards to empty the draw pile
 	drawn, err := gameDeck.DrawProjectCards(ctx, 2)
@@ -248,7 +249,8 @@ func TestDeckRecycling_AutoShuffleFailsWhenBothPilesEmpty(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a deck with only 1 project card
-	gameDeck := deck.NewDeck("test-game", []string{"card-a"}, nil, nil)
+	ds3 := testutil.NewTestDataStoreWithGame(t, "test-game")
+	gameDeck := deck.NewDeck(ds3, "test-game", []string{"card-a"}, nil, nil)
 
 	// Draw the only card
 	_, err := gameDeck.DrawProjectCards(ctx, 1)
@@ -268,7 +270,8 @@ func TestDeckRecycling_RealDeckNeverDealsPreludeOrCorporation(t *testing.T) {
 	testutil.AssertTrue(t, len(preludeIDs) > 0, "should have prelude cards")
 	testutil.AssertTrue(t, len(corpIDs) > 0, "should have corporation cards")
 
-	gameDeck := deck.NewDeck("test-game", projectCardIDs, corpIDs, preludeIDs)
+	ds4 := testutil.NewTestDataStoreWithGame(t, "test-game")
+	gameDeck := deck.NewDeck(ds4, "test-game", projectCardIDs, corpIDs, preludeIDs)
 
 	// Build lookup sets for non-project card types
 	preludeSet := make(map[string]bool, len(preludeIDs))

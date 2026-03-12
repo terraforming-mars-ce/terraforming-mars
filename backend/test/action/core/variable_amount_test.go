@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -128,7 +127,7 @@ func TestPowerInfrastructure_SpendEnergyGainCredits(t *testing.T) {
 			{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player", VariableAmount: true},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Power Infrastructure",
@@ -172,7 +171,7 @@ func TestPowerInfrastructure_SpendZeroEnergy(t *testing.T) {
 			{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player", VariableAmount: true},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Power Infrastructure",
@@ -216,7 +215,7 @@ func TestPowerInfrastructure_SpendAllEnergy(t *testing.T) {
 			{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player", VariableAmount: true},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Power Infrastructure",
@@ -260,7 +259,7 @@ func TestPowerInfrastructure_FailsWhenInsufficientEnergy(t *testing.T) {
 			{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player", VariableAmount: true},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Power Infrastructure",

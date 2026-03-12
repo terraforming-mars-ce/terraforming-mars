@@ -37,13 +37,19 @@ func TestFinalScoring_CardVPIncluded(t *testing.T) {
 	gp := g.GlobalParameters()
 	for !gp.IsMaxed() {
 		if gp.Temperature() < 8 {
-			gp.IncreaseTemperature(ctx, 1, "")
+			if _, err := gp.IncreaseTemperature(ctx, 1, ""); err != nil {
+				t.Fatalf("Failed to increase temperature: %v", err)
+			}
 		}
 		if gp.Oxygen() < 14 {
-			gp.IncreaseOxygen(ctx, 1, "")
+			if _, err := gp.IncreaseOxygen(ctx, 1, ""); err != nil {
+				t.Fatalf("Failed to increase oxygen: %v", err)
+			}
 		}
 		if gp.Oceans() < 9 {
-			gp.PlaceOcean(ctx, "")
+			if _, err := gp.PlaceOcean(ctx, ""); err != nil {
+				t.Fatalf("Failed to place ocean: %v", err)
+			}
 		}
 	}
 
@@ -132,13 +138,19 @@ func TestFinalScoring_GreeneryAndCityVP(t *testing.T) {
 	gp := g.GlobalParameters()
 	for !gp.IsMaxed() {
 		if gp.Temperature() < 8 {
-			gp.IncreaseTemperature(ctx, 1, "")
+			if _, err := gp.IncreaseTemperature(ctx, 1, ""); err != nil {
+				t.Fatalf("Failed to increase temperature: %v", err)
+			}
 		}
 		if gp.Oxygen() < 14 {
-			gp.IncreaseOxygen(ctx, 1, "")
+			if _, err := gp.IncreaseOxygen(ctx, 1, ""); err != nil {
+				t.Fatalf("Failed to increase oxygen: %v", err)
+			}
 		}
 		if gp.Oceans() < 9 {
-			gp.PlaceOcean(ctx, "")
+			if _, err := gp.PlaceOcean(ctx, ""); err != nil {
+				t.Fatalf("Failed to place ocean: %v", err)
+			}
 		}
 	}
 

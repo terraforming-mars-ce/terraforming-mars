@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"terraforming-mars-backend/internal/action/admin"
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -342,10 +341,10 @@ func TestSetPhase_Success(t *testing.T) {
 	ctx := context.Background()
 
 	action := admin.NewSetPhaseAction(repo, logger)
-	err := action.Execute(ctx, testGame.ID(), game.GamePhaseProductionAndCardDraw)
+	err := action.Execute(ctx, testGame.ID(), shared.GamePhaseProductionAndCardDraw)
 	testutil.AssertNoError(t, err, "SetPhase should succeed")
 
-	testutil.AssertEqual(t, game.GamePhaseProductionAndCardDraw, testGame.CurrentPhase(), "Phase should be production_and_card_draw")
+	testutil.AssertEqual(t, shared.GamePhaseProductionAndCardDraw, testGame.CurrentPhase(), "Phase should be production_and_card_draw")
 }
 
 func TestSetPhase_BackToAction(t *testing.T) {
@@ -355,13 +354,13 @@ func TestSetPhase_BackToAction(t *testing.T) {
 
 	action := admin.NewSetPhaseAction(repo, logger)
 
-	err := action.Execute(ctx, testGame.ID(), game.GamePhaseProductionAndCardDraw)
+	err := action.Execute(ctx, testGame.ID(), shared.GamePhaseProductionAndCardDraw)
 	testutil.AssertNoError(t, err, "SetPhase to production should succeed")
 
-	err = action.Execute(ctx, testGame.ID(), game.GamePhaseAction)
+	err = action.Execute(ctx, testGame.ID(), shared.GamePhaseAction)
 	testutil.AssertNoError(t, err, "SetPhase back to action should succeed")
 
-	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Phase should be action")
+	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "Phase should be action")
 }
 
 func TestSetPhase_InvalidGame(t *testing.T) {
@@ -370,7 +369,7 @@ func TestSetPhase_InvalidGame(t *testing.T) {
 	ctx := context.Background()
 
 	action := admin.NewSetPhaseAction(repo, logger)
-	err := action.Execute(ctx, "nonexistent-game", game.GamePhaseAction)
+	err := action.Execute(ctx, "nonexistent-game", shared.GamePhaseAction)
 	testutil.AssertError(t, err, "SetPhase should fail for invalid game")
 }
 

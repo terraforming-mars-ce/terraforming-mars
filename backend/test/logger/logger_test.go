@@ -1,7 +1,6 @@
 package logger_test
 
 import (
-	"os"
 	"testing"
 
 	"go.uber.org/zap"
@@ -10,7 +9,7 @@ import (
 
 func TestInit(t *testing.T) {
 	// Test development environment
-	os.Setenv("GO_ENV", "development")
+	t.Setenv("GO_ENV", "development")
 	err := logger.Init(nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize logger in development mode: %v", err)
@@ -22,7 +21,7 @@ func TestInit(t *testing.T) {
 	}
 
 	// Test production environment
-	os.Setenv("GO_ENV", "production")
+	t.Setenv("GO_ENV", "production")
 	err = logger.Init(nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize logger in production mode: %v", err)
@@ -34,8 +33,9 @@ func TestInit(t *testing.T) {
 	}
 
 	// Clean up
-	os.Unsetenv("GO_ENV")
-	logger.Shutdown()
+	if err := logger.Shutdown(); err != nil {
+		t.Logf("logger shutdown: %v", err)
+	}
 }
 
 func TestWithGameContext(t *testing.T) {
@@ -43,7 +43,7 @@ func TestWithGameContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize logger: %v", err)
 	}
-	defer logger.Shutdown()
+	defer func() { _ = logger.Shutdown() }()
 
 	gameID := "test-game-123"
 	playerID := "test-player-456"
@@ -65,7 +65,7 @@ func TestWithClientContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize logger: %v", err)
 	}
-	defer logger.Shutdown()
+	defer func() { _ = logger.Shutdown() }()
 
 	clientID := "client-123"
 	playerID := "player-456"
@@ -98,7 +98,7 @@ func TestWithContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize logger: %v", err)
 	}
-	defer logger.Shutdown()
+	defer func() { _ = logger.Shutdown() }()
 
 	contextLogger := logger.WithContext(
 		zap.String("service", "test"),

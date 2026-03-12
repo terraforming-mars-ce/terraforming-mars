@@ -9,8 +9,6 @@ import (
 	cardAction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/action/confirmation"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/deck"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -45,7 +43,8 @@ func TestAphrodite_Gain2MCWhenVenusRaised(t *testing.T) {
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 47, resources.Credits, "Aphrodite should have 47 credits before Venus increase")
 
-	testGame.GlobalParameters().IncreaseVenus(ctx, 1, "")
+	_, err = testGame.GlobalParameters().IncreaseVenus(ctx, 1, "")
+	testutil.AssertNoError(t, err, "IncreaseVenus failed")
 	time.Sleep(50 * time.Millisecond)
 
 	resources = p.Resources().Get()
@@ -92,8 +91,7 @@ func TestCelestic_FirstActionDrawsFloaterCards(t *testing.T) {
 	floaterCardIDs := []string{"213", "222"} // Aerial Mappers (floater storage), Dirigibles (floater storage+output)
 	nonFloaterCardIDs := []string{"001", "002", "003"}
 	allProjectCards := append(nonFloaterCardIDs, floaterCardIDs...)
-	customDeck := deck.NewDeck(testGame.ID(), allProjectCards, nil, nil)
-	testGame.SetDeck(customDeck)
+	testGame.InitDeck(allProjectCards, nil, nil)
 
 	// Clear hand before setting corporation
 	p, _ := testGame.GetPlayer(playerID)
@@ -327,7 +325,7 @@ func TestViron_ReuseBlueCardAction(t *testing.T) {
 	p.PlayedCards().AddCard("test-blue-card", "Test Blue Card", "active", []string{"microbe"})
 	p.Resources().AddToStorage("test-blue-card", 0)
 
-	testBlueAction := player.CardAction{
+	testBlueAction := shared.CardAction{
 		CardID:        "test-blue-card",
 		CardName:      "Test Blue Card",
 		BehaviorIndex: 0,
@@ -383,7 +381,7 @@ func TestViron_CannotReuseUnusedAction(t *testing.T) {
 	p.PlayedCards().AddCard("test-blue-card", "Test Blue Card", "active", []string{"microbe"})
 	p.Resources().AddToStorage("test-blue-card", 0)
 
-	testBlueAction := player.CardAction{
+	testBlueAction := shared.CardAction{
 		CardID:        "test-blue-card",
 		CardName:      "Test Blue Card",
 		BehaviorIndex: 0,
@@ -438,7 +436,7 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 	p.PlayedCards().AddCard("test-blue-card", "Test Blue Card", "active", []string{"microbe"})
 	p.Resources().AddToStorage("test-blue-card", 0)
 
-	testBlueAction := player.CardAction{
+	testBlueAction := shared.CardAction{
 		CardID:        "test-blue-card",
 		CardName:      "Test Blue Card",
 		BehaviorIndex: 0,
@@ -463,7 +461,7 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 
 	p.Resources().AddToStorage("test-blue-card", 0)
 
-	testBlueAction2 := player.CardAction{
+	testBlueAction2 := shared.CardAction{
 		CardID:        "test-blue-card-2",
 		CardName:      "Test Blue Card 2",
 		BehaviorIndex: 0,
@@ -490,8 +488,7 @@ func TestValleyTrust_FirstActionCreatesPreludeSelection(t *testing.T) {
 
 	// Set up controlled prelude deck with exactly 5 preludes
 	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
-	customDeck := deck.NewDeck(testGame.ID(), nil, nil, preludeIDs)
-	testGame.SetDeck(customDeck)
+	testGame.InitDeck(nil, nil, preludeIDs)
 
 	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))
@@ -526,8 +523,7 @@ func TestValleyTrust_ConfirmPreludeSelection(t *testing.T) {
 
 	// Set up controlled prelude deck
 	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
-	customDeck := deck.NewDeck(testGame.ID(), nil, nil, preludeIDs)
-	testGame.SetDeck(customDeck)
+	testGame.InitDeck(nil, nil, preludeIDs)
 
 	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))

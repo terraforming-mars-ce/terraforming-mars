@@ -6,7 +6,6 @@ import (
 
 	cardAction "terraforming-mars-backend/internal/action/card"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -216,7 +215,7 @@ func TestVariableAmount_StorageInput_SpendMultipleMicrobes(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Sulphur-Eating Bacteria",
@@ -268,7 +267,7 @@ func TestVariableAmount_StorageInput_InsufficientMicrobes(t *testing.T) {
 			},
 		},
 	}
-	p.Actions().SetActions([]player.CardAction{
+	p.Actions().SetActions([]shared.CardAction{
 		{
 			CardID:        cardID,
 			CardName:      "Sulphur-Eating Bacteria",

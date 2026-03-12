@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -26,9 +25,9 @@ func TestPlayCardAction_AsteroidRemovesPlantsFromTargetPlayer(t *testing.T) {
 	attacker.SetCorporationID(corpID)
 	target.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, attacker.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
 
 	attacker.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -69,9 +68,9 @@ func TestPlayCardAction_AsteroidSoloMode_SkipsTargetPlayer(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "set current turn")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -110,9 +109,9 @@ func TestPlayCardAction_AsteroidPartialRemoval(t *testing.T) {
 	attacker.SetCorporationID(corpID)
 	target.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, attacker.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
 
 	attacker.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -149,9 +148,9 @@ func TestPlayCardAction_InvalidTargetPlayerID(t *testing.T) {
 	attacker := players[0]
 	attacker.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, attacker.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
 
 	attacker.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -181,9 +180,9 @@ func TestPlayCardAction_AsteroidMiningConsortiumDecreasesTargetProduction(t *tes
 	attacker.SetCorporationID(corpID)
 	target.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, attacker.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
 
 	attacker.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -230,9 +229,9 @@ func TestPlayCardAction_HiredRaidersStealsSteelFromTarget(t *testing.T) {
 	attacker.SetCorporationID(corpID)
 	target.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, attacker.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
 
 	attacker.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -271,9 +270,9 @@ func TestPlayCardAction_HiredRaidersSoloMode(t *testing.T) {
 	player := players[0]
 	player.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "set current turn")
 
 	player.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -307,9 +306,9 @@ func TestPlayCardAction_StealPartialAmount(t *testing.T) {
 	attacker.SetCorporationID(corpID)
 	target.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, attacker.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
 
 	attacker.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -354,9 +353,9 @@ func TestGreatEscarpmentConsortium_StealSteelProduction(t *testing.T) {
 	attacker.SetCorporationID(corpID)
 	target.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, attacker.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
 
 	attacker.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -404,9 +403,9 @@ func TestGreatEscarpmentConsortium_SoloModeSkipsAnyPlayer(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID(corpID)
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,

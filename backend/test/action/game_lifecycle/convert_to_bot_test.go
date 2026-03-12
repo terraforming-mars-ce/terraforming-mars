@@ -8,6 +8,7 @@ import (
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -22,7 +23,7 @@ func newConvertAction(repo game.GameRepository) *gameaction.ConvertToBotAction {
 func TestConvertToBot_Success(t *testing.T) {
 	g, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
-	g.UpdateSettings(ctx, game.GameSettings{
+	g.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},
@@ -57,7 +58,7 @@ func TestConvertToBot_Success(t *testing.T) {
 func TestConvertToBot_NotHost_Fails(t *testing.T) {
 	g, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 3)
 	ctx := testutil.TestContext()
-	g.UpdateSettings(ctx, game.GameSettings{
+	g.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},
@@ -84,7 +85,7 @@ func TestConvertToBot_NotHost_Fails(t *testing.T) {
 func TestConvertToBot_Self_Fails(t *testing.T) {
 	g, repo, _, _ := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
-	g.UpdateSettings(ctx, game.GameSettings{
+	g.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},
@@ -100,7 +101,7 @@ func TestConvertToBot_Self_Fails(t *testing.T) {
 func TestConvertToBot_AlreadyBot_Fails(t *testing.T) {
 	g, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
-	g.UpdateSettings(ctx, game.GameSettings{
+	g.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},
@@ -129,7 +130,7 @@ func TestConvertToBot_AlreadyBot_Fails(t *testing.T) {
 func TestConvertToBot_Exited_Fails(t *testing.T) {
 	g, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
-	g.UpdateSettings(ctx, game.GameSettings{
+	g.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},
@@ -161,7 +162,7 @@ func TestConvertToBot_Exited_Fails(t *testing.T) {
 func TestPlayerTakeover_BlockedForBot(t *testing.T) {
 	g, repo, cardRegistry, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
-	g.UpdateSettings(ctx, game.GameSettings{
+	g.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},
@@ -197,7 +198,7 @@ func TestGameDeletedWhenLastHumanLeavesLobbyWithBots(t *testing.T) {
 	ctx := context.Background()
 
 	// Add a bot player manually
-	g.UpdateSettings(ctx, game.GameSettings{
+	g.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},
@@ -229,7 +230,7 @@ func TestHostReassignedToHumanNotBot(t *testing.T) {
 	ctx := context.Background()
 
 	// Add a bot player
-	g.UpdateSettings(ctx, game.GameSettings{
+	g.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers:   4,
 		ClaudeAPIKey: "test-key",
 		CardPacks:    []string{"base-game"},

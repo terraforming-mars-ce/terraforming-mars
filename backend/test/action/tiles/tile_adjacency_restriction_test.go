@@ -7,7 +7,6 @@ import (
 	"terraforming-mars-backend/internal/action"
 	cardAction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/cards"
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
@@ -57,9 +56,9 @@ func TestUrbanizedArea_CityAdjacentTo2Cities(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -116,9 +115,9 @@ func TestUrbanizedArea_NoCitiesYield0AvailableHexes(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// No cities placed — should have 0 available hexes with adjacentToType: "city", minAdjacentOfType: 2
 	minAdj := 2
@@ -138,9 +137,9 @@ func TestUrbanizedArea_OnlyOneCityYield0AvailableHexes(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Place only 1 city — no hex can be adjacent to 2 cities
 	city1 := shared.HexPosition{Q: 0, R: 0, S: 0}
@@ -199,9 +198,9 @@ func TestEcologicalZone_GreeneryAdjacentToGreenery(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -247,9 +246,9 @@ func TestEcologicalZone_NoGreeneryYields0AvailableHexes(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// No greenery placed — should have 0 available hexes
 	count := testGame.CountAvailableHexesForTile("greenery", p.ID(), &shared.TileRestrictions{
@@ -271,9 +270,9 @@ func TestAdjacentToOwned_OnlyCountsPlayerOwnedTiles(t *testing.T) {
 	p.SetCorporationID("corp-tharsis-republic")
 	other.SetCorporationID("corp-mining-guild")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// Place a greenery owned by OTHER player at (0,0,0)
 	greenery := shared.HexPosition{Q: 0, R: 0, S: 0}
@@ -343,9 +342,9 @@ func TestUrbanizedArea_StateCalculatorReturnsErrorWhenNoPlacements(t *testing.T)
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Resources().AddProduction(map[shared.ResourceType]int{shared.ResourceEnergyProduction: 1})
@@ -384,9 +383,9 @@ func TestUrbanizedArea_PlayCardRejectedWhenNoPlacements(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Resources().AddProduction(map[shared.ResourceType]int{shared.ResourceEnergyProduction: 1})
@@ -448,9 +447,9 @@ func TestPlantation_GreeneryAdjacentToOwnedTiles(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -500,9 +499,9 @@ func TestPlantation_FallbackWhenNoOwnedTiles(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -567,9 +566,9 @@ func TestMangrove_NotAffectedByAdjacentToOwned(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,

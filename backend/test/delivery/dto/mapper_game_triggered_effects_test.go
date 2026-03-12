@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -18,10 +18,10 @@ func TestToGameDto_TriggeredEffectsNotCleared(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 
-	testGame.AddTriggeredEffect(game.TriggeredEffect{
+	testGame.AddTriggeredEffect(shared.TriggeredEffect{
 		CardName:   "Test Card",
 		PlayerID:   players[0].ID(),
-		SourceType: game.SourceTypePassiveEffect,
+		SourceType: shared.SourceTypePassiveEffect,
 	})
 
 	// Build DTOs for each player sequentially (same order as broadcaster loop)

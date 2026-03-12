@@ -7,7 +7,7 @@ import (
 	"terraforming-mars-backend/internal/action/confirmation"
 	gameaction "terraforming-mars-backend/internal/action/game"
 	turnmgmt "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -31,7 +31,7 @@ func TestTurnOrderPreservedAfterProductionCardSelection(t *testing.T) {
 	testutil.AssertNoError(t, err, "Player 2 PASS should succeed")
 
 	// Verify: production phase triggered, turn order rotated
-	testutil.AssertEqual(t, game.GamePhaseProductionAndCardDraw, testGame.CurrentPhase(), "Game should be in production phase")
+	testutil.AssertEqual(t, shared.GamePhaseProductionAndCardDraw, testGame.CurrentPhase(), "Game should be in production phase")
 	testutil.AssertEqual(t, player2ID, testGame.TurnOrder()[0], "Player 2 should be first after rotation")
 	testutil.AssertEqual(t, player1ID, testGame.TurnOrder()[1], "Player 1 should be second after rotation")
 
@@ -45,7 +45,7 @@ func TestTurnOrderPreservedAfterProductionCardSelection(t *testing.T) {
 	testutil.AssertNoError(t, err, "Player 2 confirm production cards should succeed")
 
 	// After all confirm, game transitions back to action phase
-	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Game should be back in action phase")
+	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "Game should be back in action phase")
 
 	// The current turn should match turnOrder[0] (player2, not a random player)
 	testutil.AssertEqual(t, testGame.TurnOrder()[0], testGame.CurrentTurn().PlayerID(),
@@ -90,7 +90,7 @@ func TestTurnOrderRotatesCorrectlyWithFourPlayers(t *testing.T) {
 			testutil.AssertNoError(t, err, "Player PASS should succeed in generation %d")
 		}
 
-		testutil.AssertEqual(t, game.GamePhaseProductionAndCardDraw, testGame.CurrentPhase(),
+		testutil.AssertEqual(t, shared.GamePhaseProductionAndCardDraw, testGame.CurrentPhase(),
 			"Generation %d: game should be in production phase")
 
 		// All players confirm production cards
@@ -99,7 +99,7 @@ func TestTurnOrderRotatesCorrectlyWithFourPlayers(t *testing.T) {
 			testutil.AssertNoError(t, err, "Player confirm should succeed in generation %d")
 		}
 
-		testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(),
+		testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(),
 			"Generation %d: game should return to action phase")
 	}
 
@@ -139,7 +139,7 @@ func TestTurnOrderRotatesCorrectlyWithThreePlayers(t *testing.T) {
 			testutil.AssertNoError(t, err, "Player confirm should succeed in generation %d")
 		}
 
-		testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(),
+		testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(),
 			"Generation %d: game should return to action phase")
 	}
 

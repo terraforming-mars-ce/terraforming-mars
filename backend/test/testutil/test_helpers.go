@@ -8,11 +8,11 @@ import (
 
 	"go.uber.org/zap"
 
+	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/deck"
-	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 )
@@ -65,20 +65,46 @@ func CreateTestCardRegistryWithAdditionalCards(additionalCards []gamecards.Card)
 	return cards.NewInMemoryCardRegistry(allCards)
 }
 
+// NewTestDataStoreWithGame creates a DataStore with an empty GameState pre-inserted.
+func NewTestDataStoreWithGame(t *testing.T, gameID string) *datastore.DataStore {
+	t.Helper()
+	ds, err := datastore.NewDataStore()
+	if err != nil {
+		t.Fatalf("Failed to create datastore: %v", err)
+	}
+	txn := ds.BeginTxn()
+	if err := txn.InsertGame(&datastore.GameState{ID: gameID}); err != nil {
+		t.Fatalf("Failed to insert game state: %v", err)
+	}
+	txn.Commit()
+	return ds
+}
+
+// NewTestGameRepository creates a MemDB-backed game repository for tests.
+func NewTestGameRepository(t *testing.T) game.GameRepository {
+	t.Helper()
+	ds, err := datastore.NewDataStore()
+	if err != nil {
+		t.Fatalf("Failed to create datastore: %v", err)
+	}
+	rm := datastore.NewRuntimeManager()
+	return game.NewMemDBGameRepository(ds, rm)
+}
+
 // CreateTestGameWithPlayers creates a game with specified number of players
 func CreateTestGameWithPlayers(t *testing.T, numPlayers int, broadcaster *MockBroadcaster) (*game.Game, game.GameRepository) {
 	t.Helper()
 
-	repo := game.NewInMemoryGameRepository()
+	repo := NewTestGameRepository(t)
 	cardRegistry := CreateTestCardRegistry()
 
 	// Create game
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: 4,
 		CardPacks:  []string{"base-game"},
 	}
 
-	testGame := game.NewGame("test-game-id", "", settings)
+	testGame := game.NewGame(repo.DataStore(), "test-game-id", "", settings)
 	allCards := cardRegistry.GetAll()
 
 	// Separate cards by type
@@ -98,8 +124,7 @@ func CreateTestGameWithPlayers(t *testing.T, numPlayers int, broadcaster *MockBr
 	}
 
 	// Create and set deck
-	gameDeck := deck.NewDeck(testGame.ID(), projectCards, corpCards, preludeCards)
-	testGame.SetDeck(gameDeck)
+	testGame.InitDeck(projectCards, corpCards, preludeCards)
 	testGame.SetVPCardLookup(cards.NewVPCardLookupAdapter(cardRegistry))
 
 	err := repo.Create(context.Background(), testGame)
@@ -113,14 +138,12 @@ func CreateTestGameWithPlayers(t *testing.T, numPlayers int, broadcaster *MockBr
 		playerID := fmt.Sprintf("player-%d", i+1)
 		playerName := "Player " + string(rune('A'+i))
 
-		// Create player
-		newPlayer := player.NewPlayer(testGame.EventBus(), testGame.ID(), playerID, playerName)
-
-		// Add to game
-		err := testGame.AddPlayer(ctx, newPlayer)
+		// Create and add player
+		p, err := testGame.AddNewPlayer(ctx, playerID, playerName)
 		if err != nil {
 			t.Fatalf("Failed to add player %d: %v", i, err)
 		}
+		action.SetupPlayerCardStore(p, testGame, cardRegistry)
 	}
 
 	// Set first player as host (like JoinGameAction does)

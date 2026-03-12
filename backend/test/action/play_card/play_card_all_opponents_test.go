@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -47,9 +46,9 @@ func TestPlayCard_AllOpponentsDrawCard_TwoPlayers(t *testing.T) {
 	player1.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	player2.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player1.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player1.ID(), 2), "set current turn")
 
 	player1.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -91,9 +90,9 @@ func TestPlayCard_AllOpponentsDrawCard_ThreePlayers(t *testing.T) {
 	player2.SetCorporationID(testutil.CardID("Tharsis Republic"))
 	player3.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player1.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player1.ID(), 2), "set current turn")
 
 	player1.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
@@ -130,9 +129,9 @@ func TestPlayCard_AllOpponentsDrawCard_SoloMode(t *testing.T) {
 	player1 := players[0]
 	player1.SetCorporationID(testutil.CardID("Tharsis Republic"))
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, player1.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player1.ID(), 2), "set current turn")
 
 	player1.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,

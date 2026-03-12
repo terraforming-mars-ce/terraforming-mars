@@ -6,19 +6,20 @@ import (
 
 	gameAction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
 func TestCreateGameAction_Success(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
 	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
 
 	// Execute
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: 4,
 		CardPacks:  []string{"base"},
 	}
@@ -28,7 +29,7 @@ func TestCreateGameAction_Success(t *testing.T) {
 	// Assert
 	testutil.AssertNoError(t, err, "Failed to create game")
 	testutil.AssertNotEqual(t, "", createdGame.ID(), "Game ID should not be empty")
-	testutil.AssertEqual(t, game.GameStatusLobby, createdGame.Status(), "Game should start in lobby status")
+	testutil.AssertEqual(t, shared.GameStatusLobby, createdGame.Status(), "Game should start in lobby status")
 	testutil.AssertEqual(t, 4, createdGame.Settings().MaxPlayers, "Max players should be 4")
 
 	// Verify game exists in repository
@@ -39,14 +40,14 @@ func TestCreateGameAction_Success(t *testing.T) {
 
 func TestCreateGameAction_DefaultSettings(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
 	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
 
 	// Execute with empty settings
-	settings := game.GameSettings{}
+	settings := shared.GameSettings{}
 	createdGame, err := createAction.Execute(context.Background(), settings)
 
 	// Assert defaults are applied
@@ -57,14 +58,14 @@ func TestCreateGameAction_DefaultSettings(t *testing.T) {
 
 func TestCreateGameAction_DeckInitialization(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
 	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
 
 	// Execute
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: 4,
 		CardPacks:  []string{"base"},
 	}
@@ -83,14 +84,14 @@ func TestCreateGameAction_DeckInitialization(t *testing.T) {
 
 func TestCreateGameAction_MultipleCardPacks(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
 	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
 
 	// Execute with multiple packs
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: 4,
 		CardPacks:  []string{"base", "prelude"},
 	}
@@ -104,14 +105,14 @@ func TestCreateGameAction_MultipleCardPacks(t *testing.T) {
 
 func TestCreateGameAction_BoardInitialization(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
 	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
 
 	// Execute
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: 2,
 		CardPacks:  []string{"base"},
 	}

@@ -37,7 +37,7 @@ func TestGlobalParameters_TemperatureProgression(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	// Set as current turn
-	testGame.SetCurrentTurn(ctx, playerID, 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
 
 	initialTemp := testGame.GlobalParameters().Temperature()
 	initialTR := player.Resources().TerraformRating()
@@ -71,14 +71,14 @@ func TestGlobalParameters_TemperatureMax(t *testing.T) {
 	ctx := context.Background()
 
 	// Set temperature near max
-	testGame.GlobalParameters().SetTemperature(ctx, global_parameters.MaxTemperature-2)
+	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, global_parameters.MaxTemperature-2), "set temperature")
 
 	// Give player heat
 	player, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerHeat(ctx, player, 100)
 
 	// Set as current turn
-	testGame.SetCurrentTurn(ctx, playerID, 10)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 10), "set current turn")
 
 	logger := testutil.TestLogger()
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
@@ -131,7 +131,7 @@ func TestGlobalParameters_EventsPublished(t *testing.T) {
 	testutil.SetPlayerHeat(ctx, player, 8)
 
 	// Set as current turn
-	testGame.SetCurrentTurn(ctx, playerID, 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
 
 	logger := testutil.TestLogger()
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
@@ -160,7 +160,7 @@ func TestGlobalParameters_TRIncreasesWithTerraforming(t *testing.T) {
 
 	// Give heat and convert
 	testutil.SetPlayerHeat(ctx, player, 8)
-	testGame.SetCurrentTurn(ctx, playerID, 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
 
 	logger := testutil.TestLogger()
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
@@ -201,14 +201,14 @@ func TestGlobalParameters_MultiplePlayers(t *testing.T) {
 	// Player 1 raises temperature
 	player1, _ := testGame.GetPlayer(player1ID)
 	testutil.SetPlayerHeat(ctx, player1, 8)
-	testGame.SetCurrentTurn(ctx, player1ID, 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player1ID, 2), "set current turn for player 1")
 	err1 := convertAction.Execute(ctx, testGame.ID(), player1ID)
 
 	// Player 2 raises temperature
 	testGame, _ = repo.Get(ctx, testGame.ID())
 	player2, _ := testGame.GetPlayer(player2ID)
 	testutil.SetPlayerHeat(ctx, player2, 8)
-	testGame.SetCurrentTurn(ctx, player2ID, 2)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player2ID, 2), "set current turn for player 2")
 	err2 := convertAction.Execute(ctx, testGame.ID(), player2ID)
 
 	// Both should succeed (if temperature not maxed)

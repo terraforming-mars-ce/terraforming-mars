@@ -6,7 +6,7 @@ import (
 
 	gameAction "terraforming-mars-backend/internal/action/game"
 	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 
 	"github.com/google/uuid"
@@ -15,7 +15,7 @@ import (
 // TestGameLifecycle_CreateJoinStartPlay tests the complete game lifecycle
 func TestGameLifecycle_CreateJoinStartPlay(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -26,7 +26,7 @@ func TestGameLifecycle_CreateJoinStartPlay(t *testing.T) {
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
 
 	// Step 1: Create game
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: 4,
 		CardPacks:  []string{"base-game"},
 	}
@@ -36,7 +36,7 @@ func TestGameLifecycle_CreateJoinStartPlay(t *testing.T) {
 	gameID := createdGame.ID()
 
 	// Verify game is in lobby
-	testutil.AssertEqual(t, game.GameStatusLobby, createdGame.Status(), "Game should be in lobby")
+	testutil.AssertEqual(t, shared.GameStatusLobby, createdGame.Status(), "Game should be in lobby")
 
 	// Step 2: Players join
 	player1ID := uuid.New().String()
@@ -68,7 +68,7 @@ func TestGameLifecycle_CreateJoinStartPlay(t *testing.T) {
 
 	// Verify game started
 	gameAfterStart, _ := repo.Get(ctx, gameID)
-	testutil.AssertEqual(t, game.GameStatusActive, gameAfterStart.Status(), "Game should be active")
+	testutil.AssertEqual(t, shared.GameStatusActive, gameAfterStart.Status(), "Game should be active")
 	testutil.AssertTrue(t, gameAfterStart.CurrentPhase() != "", "Game phase should be set")
 	testutil.AssertTrue(t, gameAfterStart.Generation() >= 1, "Game generation should be set")
 
@@ -87,7 +87,7 @@ func TestGameLifecycle_CreateJoinStartPlay(t *testing.T) {
 // TestGameLifecycle_MultipleGames tests multiple games running concurrently
 func TestGameLifecycle_MultipleGames(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -96,13 +96,13 @@ func TestGameLifecycle_MultipleGames(t *testing.T) {
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Create 3 games
-	game1, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
+	game1, err := createAction.Execute(ctx, shared.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game 1")
 
-	game2, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
+	game2, err := createAction.Execute(ctx, shared.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game 2")
 
-	game3, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
+	game3, err := createAction.Execute(ctx, shared.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game 3")
 
 	// Add players to each game
@@ -130,7 +130,7 @@ func TestGameLifecycle_MultipleGames(t *testing.T) {
 // TestGameLifecycle_PlayerReconnection tests player reconnection scenario
 func TestGameLifecycle_PlayerReconnection(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -139,7 +139,7 @@ func TestGameLifecycle_PlayerReconnection(t *testing.T) {
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Create game
-	createdGame, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
+	createdGame, err := createAction.Execute(ctx, shared.GameSettings{MaxPlayers: 2, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game")
 
 	// Player joins
@@ -162,7 +162,7 @@ func TestGameLifecycle_PlayerReconnection(t *testing.T) {
 // TestGameLifecycle_SoloMode tests solo game mode
 func TestGameLifecycle_SoloMode(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -172,7 +172,7 @@ func TestGameLifecycle_SoloMode(t *testing.T) {
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
 
 	// Create game
-	createdGame, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 1, CardPacks: []string{"base-game"}})
+	createdGame, err := createAction.Execute(ctx, shared.GameSettings{MaxPlayers: 1, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game")
 
 	// Single player joins
@@ -192,13 +192,13 @@ func TestGameLifecycle_SoloMode(t *testing.T) {
 	testutil.AssertNoError(t, err, "Solo mode should be allowed")
 
 	gameAfterStart, _ := repo.Get(ctx, createdGame.ID())
-	testutil.AssertEqual(t, game.GameStatusActive, gameAfterStart.Status(), "Game should be active in solo mode")
+	testutil.AssertEqual(t, shared.GameStatusActive, gameAfterStart.Status(), "Game should be active in solo mode")
 }
 
 // TestGameLifecycle_GameStateConsistency tests that game state remains consistent
 func TestGameLifecycle_GameStateConsistency(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -207,7 +207,7 @@ func TestGameLifecycle_GameStateConsistency(t *testing.T) {
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Create game
-	createdGame, err := createAction.Execute(ctx, game.GameSettings{MaxPlayers: 4, CardPacks: []string{"base-game"}})
+	createdGame, err := createAction.Execute(ctx, shared.GameSettings{MaxPlayers: 4, CardPacks: []string{"base-game"}})
 	testutil.AssertNoError(t, err, "Failed to create game")
 	gameID := createdGame.ID()
 

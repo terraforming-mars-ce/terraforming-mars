@@ -6,7 +6,8 @@ import (
 
 	gameAction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 
 	"github.com/google/uuid"
@@ -67,7 +68,7 @@ func TestJoinGameAction_IdempotentJoin(t *testing.T) {
 
 func TestJoinGameAction_GameNotFound(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
@@ -113,29 +114,30 @@ func TestJoinGameAction_MaxPlayersReached(t *testing.T) {
 	// Setup
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 
 	// Create game with max 2 players
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: 2,
 		CardPacks:  []string{"base"},
 	}
 
-	testGame := game.NewGame("test-game", "", settings)
-	repo.Create(context.Background(), testGame)
+	ds, _ := datastore.NewDataStore()
+	testGame := game.NewGame(ds, "test-game", "", settings)
+	testutil.AssertNoError(t, repo.Create(context.Background(), testGame), "create game in repo")
 
 	// Add 2 players
 	ctx := context.Background()
-	p1 := player.NewPlayer(testGame.EventBus(), testGame.ID(), "player-1", "Player1")
-	p2 := player.NewPlayer(testGame.EventBus(), testGame.ID(), "player-2", "Player2")
-	testGame.AddPlayer(ctx, p1)
-	testGame.AddPlayer(ctx, p2)
+	_, err := testGame.AddNewPlayer(ctx, "player-1", "Player1")
+	testutil.AssertNoError(t, err, "add player 1")
+	_, err = testGame.AddNewPlayer(ctx, "player-2", "Player2")
+	testutil.AssertNoError(t, err, "add player 2")
 
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Try to add 3rd player
 	playerID := uuid.New().String()
-	_, err := joinAction.Execute(context.Background(), testGame.ID(), "Player3", playerID)
+	_, err = joinAction.Execute(context.Background(), testGame.ID(), "Player3", playerID)
 
 	// Assert
 	testutil.AssertError(t, err, "Should not allow joining when max players reached")

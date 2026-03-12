@@ -8,6 +8,7 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
@@ -22,16 +23,17 @@ func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, cards.CardR
 	}
 
 	// Create test game with default settings
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers:      5,
 		DevelopmentMode: true,
 	}
-	g := game.NewGame("test-game", "player1", settings)
+	ds, _ := datastore.NewDataStore()
+	g := game.NewGame(ds, "test-game", "player1", settings)
 
 	// Create and add test player
 	ctx := context.Background()
-	p := player.NewPlayer(g.EventBus(), "test-game", "player1", "Test Player")
-	if err := g.AddPlayer(ctx, p); err != nil {
+	p, err := g.AddNewPlayer(ctx, "player1", "Test Player")
+	if err != nil {
 		t.Fatalf("Failed to add player: %v", err)
 	}
 
@@ -106,7 +108,7 @@ func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, cards.CardR
 	cardRegistry := cards.NewInMemoryCardRegistry(testCards)
 
 	// Set game to action phase
-	if err := g.UpdatePhase(ctx, game.GamePhaseAction); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
 		t.Fatalf("Failed to set game phase: %v", err)
 	}
 
@@ -124,7 +126,7 @@ func TestCalculatePlayerCardState_Available(t *testing.T) {
 
 	// Set temperature to meet requirement
 	ctx := context.Background()
-	g.GlobalParameters().SetTemperature(ctx, -10)
+	testutil.AssertNoError(t, g.GlobalParameters().SetTemperature(ctx, -10), "set temperature")
 
 	// Get test card
 	card, err := cardRegistry.GetByID("card1")
@@ -201,7 +203,7 @@ func TestCalculatePlayerCardState_TemperatureRequirement(t *testing.T) {
 
 	// Set temperature BELOW requirement
 	ctx := context.Background()
-	g.GlobalParameters().SetTemperature(ctx, -20)
+	testutil.AssertNoError(t, g.GlobalParameters().SetTemperature(ctx, -20), "set temperature")
 
 	// Get test card (requires temp >= -10)
 	card, err := cardRegistry.GetByID("card1")
@@ -242,9 +244,11 @@ func TestCalculatePlayerCardState_MultipleRequirements(t *testing.T) {
 
 	// Set global parameters to NOT meet requirements
 	ctx := context.Background()
-	g.GlobalParameters().SetOxygen(ctx, 2)   // Need 5
-	g.GlobalParameters().PlaceOcean(ctx, "") // 1 ocean, need 3
-	g.GlobalParameters().PlaceOcean(ctx, "") // 2 oceans, need 3
+	testutil.AssertNoError(t, g.GlobalParameters().SetOxygen(ctx, 2), "set oxygen")
+	_, err := g.GlobalParameters().PlaceOcean(ctx, "") // 1 ocean, need 3
+	testutil.AssertNoError(t, err, "place ocean 1")
+	_, err = g.GlobalParameters().PlaceOcean(ctx, "") // 2 oceans, need 3
+	testutil.AssertNoError(t, err, "place ocean 2")
 
 	// Get test card (requires oxygen >= 5 AND oceans >= 3)
 	card, err := cardRegistry.GetByID("card3")
@@ -296,7 +300,7 @@ func TestCalculatePlayerCardState_WrongPhase(t *testing.T) {
 
 	// Set game to WRONG phase (waiting for game start instead of action)
 	ctx := context.Background()
-	if err := g.UpdatePhase(ctx, game.GamePhaseWaitingForGameStart); err != nil {
+	if err := g.UpdatePhase(ctx, shared.GamePhaseWaitingForGameStart); err != nil {
 		t.Fatalf("Failed to set game phase: %v", err)
 	}
 
@@ -354,10 +358,8 @@ func TestCalculatePlayerCardActionState_Available(t *testing.T) {
 		},
 	}
 
-	pca := player.NewPlayerCardAction("card1", 0, behavior)
-
 	// Calculate state
-	state := action.CalculatePlayerCardActionState("card1", behavior, pca.TimesUsedThisGeneration(), p, g)
+	state := action.CalculatePlayerCardActionState("card1", behavior, 0, p, g)
 
 	// Verify action is available
 	if !state.Available() {
@@ -392,10 +394,8 @@ func TestCalculatePlayerCardActionState_InsufficientResources(t *testing.T) {
 		},
 	}
 
-	pca := player.NewPlayerCardAction("card1", 0, behavior)
-
 	// Calculate state
-	state := action.CalculatePlayerCardActionState("card1", behavior, pca.TimesUsedThisGeneration(), p, g)
+	state := action.CalculatePlayerCardActionState("card1", behavior, 0, p, g)
 
 	// Verify action is NOT available
 	if state.Available() {
@@ -431,10 +431,8 @@ func TestCalculatePlayerCardActionState_NotPlayerTurn(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 	}
 
-	pca := player.NewPlayerCardAction("card1", 0, behavior)
-
 	// Calculate state
-	state := action.CalculatePlayerCardActionState("card1", behavior, pca.TimesUsedThisGeneration(), p, g)
+	state := action.CalculatePlayerCardActionState("card1", behavior, 0, p, g)
 
 	// Verify action is NOT available
 	if state.Available() {
@@ -657,7 +655,7 @@ func TestCalculatePlayerCardState_SteelCountedForBuildingCard(t *testing.T) {
 
 	// Set temperature to meet requirement for card1 (Building tag, cost 10, requires temp >= -10)
 	ctx := context.Background()
-	g.GlobalParameters().SetTemperature(ctx, -10)
+	testutil.AssertNoError(t, g.GlobalParameters().SetTemperature(ctx, -10), "set temperature")
 
 	card, err := cardRegistry.GetByID("card-building")
 	if err != nil {

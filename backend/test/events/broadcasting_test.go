@@ -5,25 +5,27 @@ import (
 	"testing"
 
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
 // TestBroadcasting_AutomaticOnStateChange tests that AddPlayer executes successfully
 func TestBroadcasting_AutomaticOnStateChange(t *testing.T) {
 	// Setup
-	settings := game.GameSettings{
+	ds, _ := datastore.NewDataStore()
+	settings := shared.GameSettings{
 		MaxPlayers: 2,
 		CardPacks:  []string{"base"},
 	}
 
 	// Create game without broadcaster
-	testGame := game.NewGame("test-game", "", settings)
+	testGame := game.NewGame(ds, "test-game", "", settings)
 
 	// Add a player
 	ctx := context.Background()
-	newPlayer := player.NewPlayer(testGame.EventBus(), testGame.ID(), "test-player-1", "TestPlayer")
-	err := testGame.AddPlayer(ctx, newPlayer)
+	_, err := testGame.AddNewPlayer(ctx, "test-player-1", "TestPlayer")
 
 	// Verify player was added
 	testutil.AssertNoError(t, err, "Failed to add player")
@@ -34,21 +36,22 @@ func TestBroadcasting_AutomaticOnStateChange(t *testing.T) {
 // TestBroadcasting_MultipleStateChanges tests adding multiple players
 func TestBroadcasting_MultipleStateChanges(t *testing.T) {
 	// Setup
-	settings := game.GameSettings{
+	ds, _ := datastore.NewDataStore()
+	settings := shared.GameSettings{
 		MaxPlayers: 4,
 		CardPacks:  []string{"base"},
 	}
 
-	testGame := game.NewGame("test-game", "", settings)
+	testGame := game.NewGame(ds, "test-game", "", settings)
 	ctx := context.Background()
 
 	// Add multiple players
-	p1 := player.NewPlayer(testGame.EventBus(), testGame.ID(), "player-1", "Player1")
-	p2 := player.NewPlayer(testGame.EventBus(), testGame.ID(), "player-2", "Player2")
-	p3 := player.NewPlayer(testGame.EventBus(), testGame.ID(), "player-3", "Player3")
-	testutil.AssertNoError(t, testGame.AddPlayer(ctx, p1), "Failed to add player 1")
-	testutil.AssertNoError(t, testGame.AddPlayer(ctx, p2), "Failed to add player 2")
-	testutil.AssertNoError(t, testGame.AddPlayer(ctx, p3), "Failed to add player 3")
+	_, err := testGame.AddNewPlayer(ctx, "player-1", "Player1")
+	testutil.AssertNoError(t, err, "Failed to add player 1")
+	_, err = testGame.AddNewPlayer(ctx, "player-2", "Player2")
+	testutil.AssertNoError(t, err, "Failed to add player 2")
+	_, err = testGame.AddNewPlayer(ctx, "player-3", "Player3")
+	testutil.AssertNoError(t, err, "Failed to add player 3")
 
 	// Verify all players were added
 	players := testGame.GetAllPlayers()
@@ -58,18 +61,19 @@ func TestBroadcasting_MultipleStateChanges(t *testing.T) {
 // TestBroadcasting_CorrectGameID tests that game ID is correct
 func TestBroadcasting_CorrectGameID(t *testing.T) {
 	// Setup
+	ds, _ := datastore.NewDataStore()
 	gameID := "test-game-123"
-	settings := game.GameSettings{
+	settings := shared.GameSettings{
 		MaxPlayers: 2,
 		CardPacks:  []string{"base"},
 	}
 
-	testGame := game.NewGame(gameID, "", settings)
+	testGame := game.NewGame(ds, gameID, "", settings)
 	ctx := context.Background()
 
 	// Add player and verify game ID
-	newPlayer := player.NewPlayer(testGame.EventBus(), testGame.ID(), "test-player-1", "TestPlayer")
-	testutil.AssertNoError(t, testGame.AddPlayer(ctx, newPlayer), "Failed to add player")
+	_, err := testGame.AddNewPlayer(ctx, "test-player-1", "TestPlayer")
+	testutil.AssertNoError(t, err, "Failed to add player")
 
 	// Verify game has correct ID
 	testutil.AssertEqual(t, gameID, testGame.ID(), "Game should have correct game ID")
@@ -117,19 +121,20 @@ func TestBroadcasting_GlobalParameterChanges(t *testing.T) {
 // TestBroadcasting_PerGameIsolation tests that game states are isolated
 func TestBroadcasting_PerGameIsolation(t *testing.T) {
 	// Setup
-	settings := game.GameSettings{
+	ds, _ := datastore.NewDataStore()
+	settings := shared.GameSettings{
 		MaxPlayers: 2,
 		CardPacks:  []string{"base"},
 	}
 
-	game1 := game.NewGame("game-1", "", settings)
-	game2 := game.NewGame("game-2", "", settings)
+	game1 := game.NewGame(ds, "game-1", "", settings)
+	game2 := game.NewGame(ds, "game-2", "", settings)
 
 	ctx := context.Background()
 
 	// Add player to game1
-	p1 := player.NewPlayer(game1.EventBus(), game1.ID(), "player-1", "Player1")
-	testutil.AssertNoError(t, game1.AddPlayer(ctx, p1), "Failed to add player to game1")
+	_, err := game1.AddNewPlayer(ctx, "player-1", "Player1")
+	testutil.AssertNoError(t, err, "Failed to add player to game1")
 
 	// Verify game1 has player
 	game1Players := game1.GetAllPlayers()
@@ -140,8 +145,8 @@ func TestBroadcasting_PerGameIsolation(t *testing.T) {
 	testutil.AssertEqual(t, 0, len(game2Players), "Game 2 should have 0 players")
 
 	// Add player to game2
-	p2 := player.NewPlayer(game2.EventBus(), game2.ID(), "player-1", "Player1")
-	testutil.AssertNoError(t, game2.AddPlayer(ctx, p2), "Failed to add player to game2")
+	_, err = game2.AddNewPlayer(ctx, "player-1", "Player1")
+	testutil.AssertNoError(t, err, "Failed to add player to game2")
 
 	// Verify final state
 	game1Players = game1.GetAllPlayers()
@@ -153,18 +158,19 @@ func TestBroadcasting_PerGameIsolation(t *testing.T) {
 // TestBroadcasting_WithoutBroadcaster tests that operations work without broadcaster
 func TestBroadcasting_WithoutBroadcaster(t *testing.T) {
 	// Setup - no broadcaster function
-	settings := game.GameSettings{
+	ds, _ := datastore.NewDataStore()
+	settings := shared.GameSettings{
 		MaxPlayers: 2,
 		CardPacks:  []string{"base"},
 	}
 
 	// Create game without broadcaster
-	testGame := game.NewGame("test-game", "", settings)
+	testGame := game.NewGame(ds, "test-game", "", settings)
 	ctx := context.Background()
 
 	// Perform operations
-	p1 := player.NewPlayer(testGame.EventBus(), testGame.ID(), "player-1", "Player1")
-	testutil.AssertNoError(t, testGame.AddPlayer(ctx, p1), "Failed to add player")
+	_, err := testGame.AddNewPlayer(ctx, "player-1", "Player1")
+	testutil.AssertNoError(t, err, "Failed to add player")
 
 	players := testGame.GetAllPlayers()
 	testutil.AssertEqual(t, 1, len(players), "Should have 1 player")

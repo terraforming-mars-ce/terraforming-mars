@@ -7,6 +7,7 @@ import (
 
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -51,7 +52,7 @@ func TestToSpectatorGameDto_IncludesSpectators(t *testing.T) {
 	ctx := context.Background()
 
 	spec := game.NewSpectator("spec-1", "Watcher", "#9b9b9b")
-	testGame.AddSpectator(ctx, spec)
+	testutil.AssertNoError(t, testGame.AddSpectator(ctx, spec), "add spectator")
 
 	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry)
 
@@ -67,14 +68,14 @@ func TestToSpectatorGameDto_IncludesChatMessages(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
-	testGame.AddChatMessage(ctx, game.ChatMessage{
+	testGame.AddChatMessage(ctx, shared.ChatMessage{
 		SenderName:  "Player A",
 		SenderColor: "#ff0000",
 		Message:     "Hello",
 		Timestamp:   time.Now(),
 		IsSpectator: false,
 	})
-	testGame.AddChatMessage(ctx, game.ChatMessage{
+	testGame.AddChatMessage(ctx, shared.ChatMessage{
 		SenderName:  "Spectator",
 		SenderColor: "#9b9b9b",
 		Message:     "Hi there",
@@ -96,7 +97,7 @@ func TestToGameDto_IncludesSpectatorList(t *testing.T) {
 	ctx := context.Background()
 
 	spec := game.NewSpectator("spec-1", "Watcher", "#9b9b9b")
-	testGame.AddSpectator(ctx, spec)
+	testutil.AssertNoError(t, testGame.AddSpectator(ctx, spec), "add spectator")
 
 	players := testGame.GetAllPlayers()
 	gameDto := dto.ToGameDto(testGame, cardRegistry, players[0].ID())
@@ -111,7 +112,7 @@ func TestToGameDto_IncludesChatMessages(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
-	testGame.AddChatMessage(ctx, game.ChatMessage{
+	testGame.AddChatMessage(ctx, shared.ChatMessage{
 		SenderName:  "Player A",
 		SenderColor: "#ff0000",
 		Message:     "Test message",

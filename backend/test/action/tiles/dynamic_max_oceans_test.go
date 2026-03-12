@@ -74,7 +74,8 @@ func TestMaxOceans_ReducesAfterOceansPlaced(t *testing.T) {
 		oceanOccupant := board.TileOccupant{Type: shared.ResourceOceanTile, Tags: []string{}}
 		err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], oceanOccupant, p.ID())
 		testutil.AssertNoError(t, err, "placing ocean tile")
-		testGame.GlobalParameters().PlaceOcean(ctx, "")
+		_, err = testGame.GlobalParameters().PlaceOcean(ctx, "")
+		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean %d", i))
 	}
 	time.Sleep(20 * time.Millisecond)
 
@@ -104,7 +105,8 @@ func TestMaxOceans_OceanTileOnOceanSpace_NoReduction(t *testing.T) {
 	oceanOccupant := board.TileOccupant{Type: shared.ResourceOceanTile, Tags: []string{}}
 	err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[0], oceanOccupant, p.ID())
 	testutil.AssertNoError(t, err, "placing ocean tile")
-	testGame.GlobalParameters().PlaceOcean(ctx, "")
+	_, err = testGame.GlobalParameters().PlaceOcean(ctx, "")
+	testutil.AssertNoError(t, err, "placing ocean")
 	time.Sleep(20 * time.Millisecond)
 
 	testutil.AssertEqual(t, 9, testGame.GlobalParameters().GetMaxOceans(), "maxOceans should remain 9")
@@ -143,15 +145,18 @@ func TestMaxOceans_IsMaxedRespectsReducedMax(t *testing.T) {
 	testutil.AssertEqual(t, 8, gp.GetMaxOceans(), "maxOceans should be 8")
 
 	// Max temperature and oxygen
-	gp.SetTemperature(ctx, global_parameters.MaxTemperature)
-	gp.SetOxygen(ctx, global_parameters.MaxOxygen)
+	err := gp.SetTemperature(ctx, global_parameters.MaxTemperature)
+	testutil.AssertNoError(t, err, "set max temperature")
+	err = gp.SetOxygen(ctx, global_parameters.MaxOxygen)
+	testutil.AssertNoError(t, err, "set max oxygen")
 
 	// Place 8 oceans (the new max)
 	for i := 4; i < 12; i++ {
 		oceanOccupant := board.TileOccupant{Type: shared.ResourceOceanTile, Tags: []string{}}
 		err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], oceanOccupant, p.ID())
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean %d", i-3))
-		gp.PlaceOcean(ctx, "")
+		_, err = gp.PlaceOcean(ctx, "")
+		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean %d", i-3))
 	}
 
 	testutil.AssertEqual(t, 8, gp.Oceans(), "should have 8 oceans")
@@ -180,8 +185,10 @@ func TestMaxOceans_FreeOceanSpaces_AlwaysGTE_Remaining(t *testing.T) {
 	// Place 3 ocean tiles
 	for i := 0; i < 3; i++ {
 		oceanOccupant := board.TileOccupant{Type: shared.ResourceOceanTile, Tags: []string{}}
-		testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], oceanOccupant, p.ID())
-		gp.PlaceOcean(ctx, "")
+		err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], oceanOccupant, p.ID())
+		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean tile %d", i))
+		_, err = gp.PlaceOcean(ctx, "")
+		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean %d", i))
 		time.Sleep(20 * time.Millisecond)
 		checkInvariant(fmt.Sprintf("after ocean %d", i+1))
 	}
@@ -189,7 +196,8 @@ func TestMaxOceans_FreeOceanSpaces_AlwaysGTE_Remaining(t *testing.T) {
 	// Place moholes on ocean spaces 3-6
 	moholeOccupant := board.TileOccupant{Type: shared.ResourceType("mohole-tile"), Tags: []string{}}
 	for i := 3; i < 7; i++ {
-		testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], moholeOccupant, p.ID())
+		err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], moholeOccupant, p.ID())
+		testutil.AssertNoError(t, err, fmt.Sprintf("placing mohole on space %d", i))
 		time.Sleep(20 * time.Millisecond)
 		checkInvariant(fmt.Sprintf("after mohole on space %d", i))
 	}
@@ -197,14 +205,17 @@ func TestMaxOceans_FreeOceanSpaces_AlwaysGTE_Remaining(t *testing.T) {
 	// Place 2 more ocean tiles
 	for i := 7; i < 9; i++ {
 		oceanOccupant := board.TileOccupant{Type: shared.ResourceOceanTile, Tags: []string{}}
-		testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], oceanOccupant, p.ID())
-		gp.PlaceOcean(ctx, "")
+		err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], oceanOccupant, p.ID())
+		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean tile on space %d", i))
+		_, err = gp.PlaceOcean(ctx, "")
+		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean on space %d", i))
 		time.Sleep(20 * time.Millisecond)
 		checkInvariant(fmt.Sprintf("after ocean on space %d", i))
 	}
 
 	// Place mohole on ocean space 9
-	testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[9], moholeOccupant, p.ID())
+	err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[9], moholeOccupant, p.ID())
+	testutil.AssertNoError(t, err, "placing mohole on space 9")
 	time.Sleep(20 * time.Millisecond)
 	checkInvariant("after mohole on space 9")
 

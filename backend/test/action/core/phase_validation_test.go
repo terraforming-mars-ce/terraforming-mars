@@ -10,6 +10,7 @@ import (
 	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
 	stdAction "terraforming-mars-backend/internal/action/standard_project"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -20,7 +21,7 @@ func setupProductionPhaseGame(t *testing.T) (*game.Game, game.GameRepository, st
 	_ = cardRegistry
 
 	ctx := context.Background()
-	err := testGame.UpdatePhase(ctx, game.GamePhaseProductionAndCardDraw)
+	err := testGame.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw)
 	if err != nil {
 		t.Fatalf("Failed to set production phase: %v", err)
 	}

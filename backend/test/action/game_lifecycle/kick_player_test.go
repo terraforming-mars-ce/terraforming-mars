@@ -8,6 +8,7 @@ import (
 	"terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -127,7 +128,7 @@ func TestKickPlayer_TheirTurn_AllPassedTriggersProduction(t *testing.T) {
 
 	// Should have triggered production phase (or end of generation)
 	phase := g.CurrentPhase()
-	testutil.AssertTrue(t, phase == game.GamePhaseProductionAndCardDraw || phase == game.GamePhaseComplete,
+	testutil.AssertTrue(t, phase == shared.GamePhaseProductionAndCardDraw || phase == shared.GamePhaseComplete,
 		"Should transition to production or complete phase, got: "+string(phase))
 }
 
@@ -138,8 +139,8 @@ func TestKickPlayer_StartingSelection_AdvancesGame(t *testing.T) {
 	kick := newKickAction(repo, nil)
 
 	// Set game to starting selection phase
-	_ = g.UpdateStatus(ctx, game.GameStatusActive)
-	_ = g.UpdatePhase(ctx, game.GamePhaseStartingSelection)
+	_ = g.UpdateStatus(ctx, shared.GameStatusActive)
+	_ = g.UpdatePhase(ctx, shared.GamePhaseStartingSelection)
 
 	hostID := g.HostPlayerID()
 	players := g.GetAllPlayers()
@@ -155,16 +156,16 @@ func TestKickPlayer_StartingSelection_AdvancesGame(t *testing.T) {
 	_ = g.SetTurnOrder(ctx, []string{hostID, targetID})
 
 	// Both players have pending starting selections
-	_ = g.SetSelectCorporationPhase(ctx, hostID, &player.SelectCorporationPhase{
+	_ = g.SetSelectCorporationPhase(ctx, hostID, &shared.SelectCorporationPhase{
 		AvailableCorporations: []string{"corp1"},
 	})
-	_ = g.SetSelectCorporationPhase(ctx, targetID, &player.SelectCorporationPhase{
+	_ = g.SetSelectCorporationPhase(ctx, targetID, &shared.SelectCorporationPhase{
 		AvailableCorporations: []string{"corp2"},
 	})
-	_ = g.SetSelectStartingCardsPhase(ctx, hostID, &player.SelectStartingCardsPhase{
+	_ = g.SetSelectStartingCardsPhase(ctx, hostID, &shared.SelectStartingCardsPhase{
 		AvailableCards: []string{"card1"},
 	})
-	_ = g.SetSelectStartingCardsPhase(ctx, targetID, &player.SelectStartingCardsPhase{
+	_ = g.SetSelectStartingCardsPhase(ctx, targetID, &shared.SelectStartingCardsPhase{
 		AvailableCards: []string{"card2"},
 	})
 
@@ -177,7 +178,7 @@ func TestKickPlayer_StartingSelection_AdvancesGame(t *testing.T) {
 	testutil.AssertNoError(t, err, "Should kick player during starting selection")
 
 	// Since all remaining (non-exited) players are done, should advance to action phase
-	testutil.AssertEqual(t, game.GamePhaseAction, g.CurrentPhase(), "Should advance to action phase")
+	testutil.AssertEqual(t, shared.GamePhaseAction, g.CurrentPhase(), "Should advance to action phase")
 }
 
 func TestKickPlayer_StartingSelection_WaitsForOthers(t *testing.T) {
@@ -186,8 +187,8 @@ func TestKickPlayer_StartingSelection_WaitsForOthers(t *testing.T) {
 	ctx := testutil.TestContext()
 	kick := newKickAction(repo, nil)
 
-	_ = g.UpdateStatus(ctx, game.GameStatusActive)
-	_ = g.UpdatePhase(ctx, game.GamePhaseStartingSelection)
+	_ = g.UpdateStatus(ctx, shared.GameStatusActive)
+	_ = g.UpdatePhase(ctx, shared.GamePhaseStartingSelection)
 
 	hostID := g.HostPlayerID()
 	players := g.GetAllPlayers()
@@ -205,7 +206,7 @@ func TestKickPlayer_StartingSelection_WaitsForOthers(t *testing.T) {
 
 	// All three have pending selection
 	for _, id := range []string{hostID, targetID, thirdPlayerID} {
-		_ = g.SetSelectCorporationPhase(ctx, id, &player.SelectCorporationPhase{
+		_ = g.SetSelectCorporationPhase(ctx, id, &shared.SelectCorporationPhase{
 			AvailableCorporations: []string{"corp1"},
 		})
 	}
@@ -215,7 +216,7 @@ func TestKickPlayer_StartingSelection_WaitsForOthers(t *testing.T) {
 	testutil.AssertNoError(t, err, "Should kick player")
 
 	// Should NOT advance because third player still has pending selection
-	testutil.AssertEqual(t, game.GamePhaseStartingSelection, g.CurrentPhase(), "Should remain in starting selection")
+	testutil.AssertEqual(t, shared.GamePhaseStartingSelection, g.CurrentPhase(), "Should remain in starting selection")
 }
 
 func TestKickPlayer_ProductionPhase_AdvancesWhenAllDone(t *testing.T) {
@@ -224,7 +225,7 @@ func TestKickPlayer_ProductionPhase_AdvancesWhenAllDone(t *testing.T) {
 	kick := newKickAction(repo, nil)
 
 	// Set phase to production
-	_ = g.UpdatePhase(ctx, game.GamePhaseProductionAndCardDraw)
+	_ = g.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw)
 
 	hostID := g.HostPlayerID()
 	var targetID string
@@ -236,10 +237,10 @@ func TestKickPlayer_ProductionPhase_AdvancesWhenAllDone(t *testing.T) {
 	}
 
 	// Host has completed production, target has not
-	_ = g.SetProductionPhase(ctx, hostID, &player.ProductionPhase{
+	_ = g.SetProductionPhase(ctx, hostID, &shared.ProductionPhase{
 		SelectionComplete: true,
 	})
-	_ = g.SetProductionPhase(ctx, targetID, &player.ProductionPhase{
+	_ = g.SetProductionPhase(ctx, targetID, &shared.ProductionPhase{
 		SelectionComplete: false,
 		AvailableCards:    []string{"card1"},
 	})
@@ -248,7 +249,7 @@ func TestKickPlayer_ProductionPhase_AdvancesWhenAllDone(t *testing.T) {
 	testutil.AssertNoError(t, err, "Should kick player in production phase")
 
 	// Since host (only remaining) has completed, should advance to action phase
-	testutil.AssertEqual(t, game.GamePhaseAction, g.CurrentPhase(), "Should advance to action phase")
+	testutil.AssertEqual(t, shared.GamePhaseAction, g.CurrentPhase(), "Should advance to action phase")
 }
 
 func TestKickPlayer_PendingTileSelection_Cleared(t *testing.T) {
@@ -266,7 +267,7 @@ func TestKickPlayer_PendingTileSelection_Cleared(t *testing.T) {
 	}
 
 	// Give target a pending tile selection
-	_ = g.SetPendingTileSelection(ctx, targetID, &player.PendingTileSelection{
+	_ = g.SetPendingTileSelection(ctx, targetID, &shared.PendingTileSelection{
 		TileType:       "city",
 		AvailableHexes: []string{"hex1", "hex2"},
 		Source:         "test",

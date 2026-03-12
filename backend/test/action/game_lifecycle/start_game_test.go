@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -30,13 +30,13 @@ func TestStartGameAction_Success(t *testing.T) {
 	testutil.AssertNoError(t, err, "Failed to start game")
 
 	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
-	testutil.AssertEqual(t, game.GameStatusActive, fetchedGame.Status(), "Game should be active")
+	testutil.AssertEqual(t, shared.GameStatusActive, fetchedGame.Status(), "Game should be active")
 	testutil.AssertTrue(t, fetchedGame.CurrentPhase() != "", "Game phase should be set")
 }
 
 func TestStartGameAction_GameNotFound(t *testing.T) {
 	// Setup
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	logger := testutil.TestLogger()
 
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
@@ -63,7 +63,7 @@ func TestStartGameAction_NotInLobby(t *testing.T) {
 
 	// Start game once using action
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
-	startAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID())
+	testutil.AssertNoError(t, startAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "start game")
 
 	// Try to start again
 	err := startAction.Execute(context.Background(), testGame.ID(), testGame.HostPlayerID())
@@ -122,7 +122,7 @@ func TestStartGameAction_MinimumPlayers(t *testing.T) {
 
 	// Verify game state
 	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
-	testutil.AssertEqual(t, game.GameStatusActive, fetchedGame.Status(), "Game should be active after start")
+	testutil.AssertEqual(t, shared.GameStatusActive, fetchedGame.Status(), "Game should be active after start")
 }
 
 func TestStartGameAction_AssignsPlayerColors(t *testing.T) {

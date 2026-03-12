@@ -7,7 +7,7 @@ import (
 	tileAction "terraforming-mars-backend/internal/action/tile"
 	turnAction "terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -26,14 +26,16 @@ func completeAllSelections(
 
 	if hasPrelude {
 		safePreludes := []string{"P01", "P03", "P04", "P07"}
-		testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &player.SelectPreludeCardsPhase{
+		err := testGame.SetSelectPreludeCardsPhase(ctx, playerID1, &shared.SelectPreludeCardsPhase{
 			AvailablePreludes: safePreludes,
 			MaxSelectable:     2,
 		})
-		testGame.SetSelectPreludeCardsPhase(ctx, playerID2, &player.SelectPreludeCardsPhase{
+		testutil.AssertNoError(t, err, "set prelude phase for player 1")
+		err = testGame.SetSelectPreludeCardsPhase(ctx, playerID2, &shared.SelectPreludeCardsPhase{
 			AvailablePreludes: safePreludes,
 			MaxSelectable:     2,
 		})
+		testutil.AssertNoError(t, err, "set prelude phase for player 2")
 	}
 
 	corpPhase1 := testGame.GetSelectCorporationPhase(playerID1)
@@ -66,7 +68,7 @@ func completeAllSelections(
 // gameRepoWithGame creates a repo and inserts the given game.
 func gameRepoWithGame(t *testing.T, g *game.Game) game.GameRepository {
 	t.Helper()
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	err := repo.Create(context.Background(), g)
 	testutil.AssertNoError(t, err, "Failed to create game in repo")
 	return repo
@@ -79,7 +81,7 @@ func TestInitPhase_CorpAppliedOneAtATime(t *testing.T) {
 	confirmAction := completeAllSelections(t, testGame, selectAction, playerID1, playerID2, false)
 
 	// After both players select, game should be in init_apply_corp with NO effects applied yet
-	testutil.AssertEqual(t, game.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
+	testutil.AssertEqual(t, shared.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
 	testutil.AssertTrue(t, testGame.InitPhaseWaitingForConfirm(), "Should be waiting for confirm")
 
 	// First confirm: apply player 1's corp
@@ -106,7 +108,7 @@ func TestInitPhase_CorpAppliedOneAtATime(t *testing.T) {
 	err = confirmAction.Execute(ctx, testGame.ID(), playerID2)
 	testutil.AssertNoError(t, err, "Should advance to action phase")
 
-	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Should be in action phase after all corps (no prelude)")
+	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "Should be in action phase after all corps (no prelude)")
 	testutil.AssertTrue(t, testGame.CurrentTurn() != nil, "Current turn should be set")
 }
 
@@ -116,7 +118,7 @@ func TestInitPhase_CorpThenPrelude(t *testing.T) {
 
 	confirmAction := completeAllSelections(t, testGame, selectAction, playerID1, playerID2, true)
 
-	testutil.AssertEqual(t, game.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
+	testutil.AssertEqual(t, shared.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
 
 	// Apply + advance through both corps (4 confirms: apply p1, advance, apply p2, advance)
 	err := confirmAction.Execute(ctx, testGame.ID(), playerID1)
@@ -132,7 +134,7 @@ func TestInitPhase_CorpThenPrelude(t *testing.T) {
 	testutil.AssertNoError(t, err, "Advance past corp phase")
 
 	// Should now be in init_apply_prelude
-	testutil.AssertEqual(t, game.GamePhaseInitApplyPrelude, testGame.CurrentPhase(), "Should be in init_apply_prelude")
+	testutil.AssertEqual(t, shared.GamePhaseInitApplyPrelude, testGame.CurrentPhase(), "Should be in init_apply_prelude")
 	testutil.AssertTrue(t, testGame.InitPhaseWaitingForConfirm(), "Should be waiting for confirm in prelude phase")
 
 	// Apply + advance through both preludes
@@ -156,7 +158,7 @@ func TestInitPhase_CorpThenPrelude(t *testing.T) {
 	err = confirmAction.Execute(ctx, testGame.ID(), playerID2)
 	testutil.AssertNoError(t, err, "Advance to action phase")
 
-	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Should be in action phase")
+	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "Should be in action phase")
 	testutil.AssertTrue(t, testGame.CurrentTurn() != nil, "Current turn should be set")
 }
 
@@ -166,7 +168,7 @@ func TestInitPhase_PreludeSkippedWhenDisabled(t *testing.T) {
 
 	confirmAction := completeAllSelections(t, testGame, selectAction, playerID1, playerID2, false)
 
-	testutil.AssertEqual(t, game.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
+	testutil.AssertEqual(t, shared.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
 
 	// Apply + advance through both corps (4 confirms)
 	err := confirmAction.Execute(ctx, testGame.ID(), playerID1)
@@ -182,7 +184,7 @@ func TestInitPhase_PreludeSkippedWhenDisabled(t *testing.T) {
 	testutil.AssertNoError(t, err, "Advance past corp phase")
 
 	// Should skip prelude phase entirely and go to action
-	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Should skip to action phase when no prelude")
+	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "Should skip to action phase when no prelude")
 }
 
 func TestInitPhase_RejectConfirmWrongPhase(t *testing.T) {
@@ -212,7 +214,7 @@ func TestInitPhase_RejectConfirmWhenNotWaiting(t *testing.T) {
 	testutil.AssertTrue(t, testGame.InitPhaseWaitingForConfirm(), "Should be waiting")
 
 	// Manually clear waiting flag
-	testGame.SetInitPhaseWaitingForConfirm(ctx, false)
+	testutil.AssertNoError(t, testGame.SetInitPhaseWaitingForConfirm(ctx, false), "clear waiting flag")
 
 	err := confirmAction.Execute(ctx, testGame.ID(), playerID1)
 	testutil.AssertError(t, err, "Should reject confirm when not waiting")
@@ -228,14 +230,14 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	stateRepo := game.NewInMemoryGameStateRepository()
 	ctx := context.Background()
 
-	testGame.UpdateSettings(ctx, game.GameSettings{
+	testGame.UpdateSettings(ctx, shared.GameSettings{
 		MaxPlayers: 4,
 		CardPacks:  []string{"base-game"},
 	})
 
-	err := testGame.UpdateStatus(ctx, game.GameStatusActive)
+	err := testGame.UpdateStatus(ctx, shared.GameStatusActive)
 	testutil.AssertNoError(t, err, "Failed to set active status")
-	err = testGame.UpdatePhase(ctx, game.GamePhaseStartingSelection)
+	err = testGame.UpdatePhase(ctx, shared.GamePhaseStartingSelection)
 	testutil.AssertNoError(t, err, "Failed to set starting selection phase")
 
 	players := testGame.GetAllPlayers()
@@ -248,13 +250,13 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	}
 
 	// Player 1 gets a corp without forced first action (B01)
-	err = testGame.SetSelectCorporationPhase(ctx, playerID1, &player.SelectCorporationPhase{
+	err = testGame.SetSelectCorporationPhase(ctx, playerID1, &shared.SelectCorporationPhase{
 		AvailableCorporations: []string{"B01"},
 	})
 	testutil.AssertNoError(t, err, "Failed to set corp phase for player 1")
 
 	// Player 2 (last) gets Tharsis Republic (B08) which has a forced city placement
-	err = testGame.SetSelectCorporationPhase(ctx, playerID2, &player.SelectCorporationPhase{
+	err = testGame.SetSelectCorporationPhase(ctx, playerID2, &shared.SelectCorporationPhase{
 		AvailableCorporations: []string{"B08"},
 	})
 	testutil.AssertNoError(t, err, "Failed to set corp phase for player 2")
@@ -263,7 +265,7 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	for _, p := range players {
 		projectCards, drawErr := deck.DrawProjectCards(ctx, 10)
 		testutil.AssertNoError(t, drawErr, "Failed to draw project cards")
-		err = testGame.SetSelectStartingCardsPhase(ctx, p.ID(), &player.SelectStartingCardsPhase{
+		err = testGame.SetSelectStartingCardsPhase(ctx, p.ID(), &shared.SelectStartingCardsPhase{
 			AvailableCards: projectCards,
 		})
 		testutil.AssertNoError(t, err, "Failed to set starting cards phase")
@@ -278,7 +280,7 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	err = selectAction.Execute(ctx, testGame.ID(), playerID2, "B08", []string{}, []string{})
 	testutil.AssertNoError(t, err, "Player 2 selection")
 
-	testutil.AssertEqual(t, game.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
+	testutil.AssertEqual(t, shared.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
 
 	confirmAction := turnAction.NewConfirmInitAdvanceAction(
 		gameRepoWithGame(t, testGame),
@@ -325,5 +327,5 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	err = confirmAction.Execute(ctx, testGame.ID(), playerID2)
 	testutil.AssertNoError(t, err, "Should advance to action phase after tile placed")
 
-	testutil.AssertEqual(t, game.GamePhaseAction, testGame.CurrentPhase(), "Should be in action phase")
+	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "Should be in action phase")
 }

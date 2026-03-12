@@ -5,6 +5,7 @@ import (
 
 	"terraforming-mars-backend/internal/action/connection"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -93,7 +94,7 @@ func TestSpectateGame_MaxSpectators(t *testing.T) {
 	ctx := testutil.TestContext()
 
 	action := newSpectateAction(repo)
-	for i := 0; i < game.MaxSpectators; i++ {
+	for i := 0; i < shared.MaxSpectators; i++ {
 		_, err := action.Execute(ctx, g.ID(), "Spec", "spec-"+string(rune('a'+i)))
 		testutil.AssertNoError(t, err, "Should join as spectator")
 	}
@@ -103,7 +104,7 @@ func TestSpectateGame_MaxSpectators(t *testing.T) {
 }
 
 func TestSpectateGame_GameNotFound(t *testing.T) {
-	repo := game.NewInMemoryGameRepository()
+	repo := testutil.NewTestGameRepository(t)
 	action := newSpectateAction(repo)
 
 	_, err := action.Execute(testutil.TestContext(), "nonexistent", "Spec", "spec-1")

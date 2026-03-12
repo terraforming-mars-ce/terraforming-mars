@@ -7,7 +7,6 @@ import (
 
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -103,13 +102,13 @@ func TestFixedVPConditions(t *testing.T) {
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
-			granter := player.VPGranter{
+			granter := shared.VPGranter{
 				CardID:   tt.cardID,
 				CardName: tt.cardName,
-				VPConditions: []player.VPCondition{
+				VPConditions: []shared.VPCondition{
 					{
 						Amount:    tt.vpAmount,
-						Condition: player.VPConditionFixed,
+						Condition: shared.VPConditionFixed,
 					},
 				},
 			}
@@ -167,14 +166,14 @@ func TestPerTagVPConditions(t *testing.T) {
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
-			granter := player.VPGranter{
+			granter := shared.VPGranter{
 				CardID:   tt.cardID,
 				CardName: tt.cardName,
-				VPConditions: []player.VPCondition{
+				VPConditions: []shared.VPCondition{
 					{
 						Amount:    tt.vpAmount,
-						Condition: player.VPConditionPer,
-						Per: &player.VPPerCondition{
+						Condition: shared.VPConditionPer,
+						Per: &shared.VPPerCondition{
 							Tag:    &tt.tag,
 							Amount: tt.perAmount,
 						},
@@ -236,14 +235,14 @@ func TestPerTileVPConditions(t *testing.T) {
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
-			granter := player.VPGranter{
+			granter := shared.VPGranter{
 				CardID:   tt.cardID,
 				CardName: tt.cardName,
-				VPConditions: []player.VPCondition{
+				VPConditions: []shared.VPCondition{
 					{
 						Amount:    tt.vpAmount,
-						Condition: player.VPConditionPer,
-						Per: &player.VPPerCondition{
+						Condition: shared.VPConditionPer,
+						Per: &shared.VPPerCondition{
 							ResourceType: tt.tileType,
 							Amount:       tt.perAmount,
 						},
@@ -318,15 +317,15 @@ func TestMaxTriggerCap(t *testing.T) {
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
-			granter := player.VPGranter{
+			granter := shared.VPGranter{
 				CardID:   tt.cardID,
 				CardName: tt.cardName,
-				VPConditions: []player.VPCondition{
+				VPConditions: []shared.VPCondition{
 					{
 						Amount:     tt.vpAmount,
-						Condition:  player.VPConditionPer,
+						Condition:  shared.VPConditionPer,
 						MaxTrigger: tt.maxTrigger,
-						Per: &player.VPPerCondition{
+						Per: &shared.VPPerCondition{
 							ResourceType: shared.ResourceScience,
 							Amount:       tt.perAmount,
 							Target:       &selfCard,
@@ -355,18 +354,18 @@ func TestVPOrderingAddThenGetAll(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
-	granterA := player.VPGranter{
+	granterA := shared.VPGranter{
 		CardID:   "card-a",
 		CardName: "Card A",
-		VPConditions: []player.VPCondition{
-			{Amount: 1, Condition: player.VPConditionFixed},
+		VPConditions: []shared.VPCondition{
+			{Amount: 1, Condition: shared.VPConditionFixed},
 		},
 	}
-	granterB := player.VPGranter{
+	granterB := shared.VPGranter{
 		CardID:   "card-b",
 		CardName: "Card B",
-		VPConditions: []player.VPCondition{
-			{Amount: 2, Condition: player.VPConditionFixed},
+		VPConditions: []shared.VPCondition{
+			{Amount: 2, Condition: shared.VPConditionFixed},
 		},
 	}
 
@@ -385,18 +384,18 @@ func TestVPOrderingPrependThenAdd(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
-	corpGranter := player.VPGranter{
+	corpGranter := shared.VPGranter{
 		CardID:   testutil.CardID("Arklight"),
 		CardName: "Arklight",
-		VPConditions: []player.VPCondition{
-			{Amount: 1, Condition: player.VPConditionFixed},
+		VPConditions: []shared.VPCondition{
+			{Amount: 1, Condition: shared.VPConditionFixed},
 		},
 	}
-	cardGranter := player.VPGranter{
+	cardGranter := shared.VPGranter{
 		CardID:   testutil.CardID("Birds"),
 		CardName: "Birds",
-		VPConditions: []player.VPCondition{
-			{Amount: 1, Condition: player.VPConditionFixed},
+		VPConditions: []shared.VPCondition{
+			{Amount: 1, Condition: shared.VPConditionFixed},
 		},
 	}
 
@@ -420,21 +419,21 @@ func TestMultipleGrantersTotalComputedVP(t *testing.T) {
 	birdsID := testutil.CardID("Birds")
 	ganymedeID := testutil.CardID("Ganymede Colony")
 
-	fixedGranter := player.VPGranter{
+	fixedGranter := shared.VPGranter{
 		CardID:   testutil.CardID("Dust Seals"),
 		CardName: "Dust Seals",
-		VPConditions: []player.VPCondition{
-			{Amount: 2, Condition: player.VPConditionFixed},
+		VPConditions: []shared.VPCondition{
+			{Amount: 2, Condition: shared.VPConditionFixed},
 		},
 	}
-	perGranter := player.VPGranter{
+	perGranter := shared.VPGranter{
 		CardID:   birdsID,
 		CardName: "Birds",
-		VPConditions: []player.VPCondition{
+		VPConditions: []shared.VPCondition{
 			{
 				Amount:    1,
-				Condition: player.VPConditionPer,
-				Per: &player.VPPerCondition{
+				Condition: shared.VPConditionPer,
+				Per: &shared.VPPerCondition{
 					ResourceType: shared.ResourceAnimal,
 					Amount:       1,
 					Target:       &selfCard,
@@ -442,14 +441,14 @@ func TestMultipleGrantersTotalComputedVP(t *testing.T) {
 			},
 		},
 	}
-	tagGranter := player.VPGranter{
+	tagGranter := shared.VPGranter{
 		CardID:   ganymedeID,
 		CardName: "Ganymede Colony",
-		VPConditions: []player.VPCondition{
+		VPConditions: []shared.VPCondition{
 			{
 				Amount:    1,
-				Condition: player.VPConditionPer,
-				Per: &player.VPPerCondition{
+				Condition: shared.VPConditionPer,
+				Per: &shared.VPPerCondition{
 					Tag:    ptrTag(shared.TagJovian),
 					Amount: 1,
 				},
@@ -613,14 +612,14 @@ func TestCorporationVPConditions(t *testing.T) {
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
-			granter := player.VPGranter{
+			granter := shared.VPGranter{
 				CardID:   tt.cardID,
 				CardName: tt.cardName,
-				VPConditions: []player.VPCondition{
+				VPConditions: []shared.VPCondition{
 					{
 						Amount:    tt.vpAmount,
-						Condition: player.VPConditionPer,
-						Per: &player.VPPerCondition{
+						Condition: shared.VPConditionPer,
+						Per: &shared.VPPerCondition{
 							ResourceType: tt.resourceType,
 							Amount:       tt.perAmount,
 							Target:       &selfCard,
@@ -651,14 +650,14 @@ func TestCorporationVPGranterIsPrepended(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
-	cardGranter := player.VPGranter{
+	cardGranter := shared.VPGranter{
 		CardID:   testutil.CardID("Birds"),
 		CardName: "Birds",
-		VPConditions: []player.VPCondition{
+		VPConditions: []shared.VPCondition{
 			{
 				Amount:    1,
-				Condition: player.VPConditionPer,
-				Per: &player.VPPerCondition{
+				Condition: shared.VPConditionPer,
+				Per: &shared.VPPerCondition{
 					ResourceType: shared.ResourceAnimal,
 					Amount:       1,
 					Target:       &selfCard,
@@ -666,14 +665,14 @@ func TestCorporationVPGranterIsPrepended(t *testing.T) {
 			},
 		},
 	}
-	corpGranter := player.VPGranter{
+	corpGranter := shared.VPGranter{
 		CardID:   testutil.CardID("Arklight"),
 		CardName: "Arklight",
-		VPConditions: []player.VPCondition{
+		VPConditions: []shared.VPCondition{
 			{
 				Amount:    1,
-				Condition: player.VPConditionPer,
-				Per: &player.VPPerCondition{
+				Condition: shared.VPConditionPer,
+				Per: &shared.VPPerCondition{
 					ResourceType: shared.ResourceAnimal,
 					Amount:       2,
 					Target:       &selfCard,
@@ -828,14 +827,14 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
-			granter := player.VPGranter{
+			granter := shared.VPGranter{
 				CardID:   tt.cardID,
 				CardName: tt.cardName,
-				VPConditions: []player.VPCondition{
+				VPConditions: []shared.VPCondition{
 					{
 						Amount:    tt.vpAmount,
-						Condition: player.VPConditionPer,
-						Per: &player.VPPerCondition{
+						Condition: shared.VPConditionPer,
+						Per: &shared.VPPerCondition{
 							ResourceType: tt.resourceType,
 							Amount:       tt.perAmount,
 							Target:       &selfCard,

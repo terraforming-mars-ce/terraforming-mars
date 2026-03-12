@@ -6,7 +6,6 @@ import (
 
 	cardAction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/cards"
-	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -65,9 +64,9 @@ func TestWorms_OneMicrobeTagBefore_GainsOnePlantProduction(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// 1 microbe tag already in play
 	p.PlayedCards().AddCard("card-microbe-1", "Microbe Card", "automated", []string{"microbe"})
@@ -102,9 +101,9 @@ func TestWorms_ZeroMicrobeTagsBefore_GainsZeroPlantProduction(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	// No microbe tags in play — Worms is the only microbe card
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
@@ -141,9 +140,9 @@ func TestWorms_ThreeMicrobeTagsBefore_GainsTwoPlantProduction(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.PlayedCards().AddCard("card-m1", "Microbe 1", "automated", []string{"microbe"})
 	p.PlayedCards().AddCard("card-m2", "Microbe 2", "automated", []string{"microbe"})
@@ -182,9 +181,9 @@ func TestWorms_TwoMicrobeTagsBefore_RoundsDown(t *testing.T) {
 	p := players[0]
 	p.SetCorporationID("corp-tharsis-republic")
 
-	testGame.UpdateStatus(ctx, game.GameStatusActive)
-	testGame.UpdatePhase(ctx, game.GamePhaseAction)
-	testGame.SetCurrentTurn(ctx, p.ID(), 2)
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
 
 	p.PlayedCards().AddCard("card-m1", "Microbe 1", "automated", []string{"microbe"})
 	p.PlayedCards().AddCard("card-m2", "Microbe 2", "automated", []string{"microbe"})
