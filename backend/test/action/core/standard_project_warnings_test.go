@@ -20,7 +20,9 @@ func TestStandardProject_AsteroidWarnsWhenTemperatureMaxed(t *testing.T) {
 		shared.ResourceCredit: 100,
 	})
 
-	g.GlobalParameters().SetTemperature(ctx, global_parameters.MaxTemperature)
+	if err := g.GlobalParameters().SetTemperature(ctx, global_parameters.MaxTemperature); err != nil {
+		t.Fatalf("Failed to set temperature to max: %v", err)
+	}
 
 	state := action.CalculatePlayerStandardProjectState(
 		shared.StandardProjectAsteroid,
@@ -60,7 +62,9 @@ func TestStandardProject_AsteroidNoWarningBelowMax(t *testing.T) {
 		shared.ResourceCredit: 100,
 	})
 
-	g.GlobalParameters().SetTemperature(ctx, 0)
+	if err := g.GlobalParameters().SetTemperature(ctx, 0); err != nil {
+		t.Fatalf("Failed to set temperature: %v", err)
+	}
 
 	state := action.CalculatePlayerStandardProjectState(
 		shared.StandardProjectAsteroid,
@@ -84,7 +88,9 @@ func TestStandardProject_GreeneryWarnsWhenOxygenMaxed(t *testing.T) {
 		shared.ResourceCredit: 100,
 	})
 
-	g.GlobalParameters().SetOxygen(ctx, global_parameters.MaxOxygen)
+	if err := g.GlobalParameters().SetOxygen(ctx, global_parameters.MaxOxygen); err != nil {
+		t.Fatalf("Failed to set oxygen to max: %v", err)
+	}
 
 	state := action.CalculatePlayerStandardProjectState(
 		shared.StandardProjectGreenery,
