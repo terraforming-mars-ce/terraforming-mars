@@ -128,7 +128,9 @@ func (c *Connection) CloseSend() {
 func (c *Connection) Close() {
 	c.closeOnce.Do(func() {
 		close(c.Done)
-		c.Conn.Close()
+		if err := c.Conn.Close(); err != nil {
+			c.logger.Debug("Best-effort connection close", zap.Error(err), zap.String("connection_id", c.ID))
+		}
 	})
 }
 
@@ -142,9 +144,13 @@ func (c *Connection) ReadPump() {
 	}()
 
 	c.Conn.SetReadLimit(maxMessageSize)
-	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	if err := c.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		c.logger.Warn("Failed to set initial read deadline", zap.Error(err), zap.String("connection_id", c.ID))
+	}
 	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+		if err := c.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+			c.logger.Warn("Failed to set read deadline in pong handler", zap.Error(err), zap.String("connection_id", c.ID))
+		}
 		return nil
 	})
 
@@ -180,15 +186,21 @@ func (c *Connection) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.Conn.Close()
+		if err := c.Conn.Close(); err != nil {
+			c.logger.Debug("Best-effort connection close in WritePump", zap.Error(err), zap.String("connection_id", c.ID))
+		}
 	}()
 
 	for {
 		select {
 		case message, ok := <-c.Send:
-			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.Conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				c.logger.Warn("Failed to set write deadline", zap.Error(err), zap.String("connection_id", c.ID))
+			}
 			if !ok {
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				if err := c.Conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					c.logger.Debug("Best-effort close message write", zap.Error(err), zap.String("connection_id", c.ID))
+				}
 				return
 			}
 
@@ -198,7 +210,9 @@ func (c *Connection) WritePump() {
 			}
 
 		case <-ticker.C:
-			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.Conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				c.logger.Warn("Failed to set write deadline for ping", zap.Error(err), zap.String("connection_id", c.ID))
+			}
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}

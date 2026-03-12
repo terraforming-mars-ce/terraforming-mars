@@ -29,7 +29,9 @@ func Recovery(next http.Handler) http.Handler {
 					Message: "Internal server error",
 				}
 
-				json.NewEncoder(w).Encode(errorResponse)
+				if err := json.NewEncoder(w).Encode(errorResponse); err != nil {
+					log.Warn("Failed to encode error response", zap.Error(err))
+				}
 			}
 		}()
 

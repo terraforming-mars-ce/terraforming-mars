@@ -71,7 +71,9 @@ func (c Card) MarshalJSON() ([]byte, error) {
 	// Add other fields
 	for key, value := range c.Other {
 		var v interface{}
-		json.Unmarshal(value, &v)
+		if err := json.Unmarshal(value, &v); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal field %q: %w", key, err)
+		}
 		result[key] = v
 	}
 

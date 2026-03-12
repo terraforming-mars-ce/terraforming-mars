@@ -107,7 +107,9 @@ typecheck:
 lint-backend:
 	@echo "🔍 Running backend linting (Go fmt)..."
 	cd backend && go fmt ./...
-	@echo "✅ Backend formatting complete"
+	@echo "🔍 Running errcheck..."
+	cd backend && errcheck ./...
+	@echo "✅ Backend linting complete"
 
 lint-frontend:
 	@echo "🔍 Running frontend linting (oxlint)..."

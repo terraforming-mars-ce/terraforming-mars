@@ -57,11 +57,17 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	h.hub.Register <- connection
 
-	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	if err := conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
+		h.logger.Warn("Failed to set initial read deadline", zap.Error(err), zap.String("connection_id", connectionID))
+	}
+	if err := conn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+		h.logger.Warn("Failed to set initial write deadline", zap.Error(err), zap.String("connection_id", connectionID))
+	}
 
 	conn.SetPongHandler(func(string) error {
-		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		if err := conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
+			h.logger.Warn("Failed to set read deadline in pong handler", zap.Error(err), zap.String("connection_id", connectionID))
+		}
 		return nil
 	})
 
