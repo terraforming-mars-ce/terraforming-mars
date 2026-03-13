@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
-import Tile, { TileHighlightMode } from "./Tile";
+import Tile from "./Tile";
 import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
 import { VENUS_RADIUS, VENUS_POSITION } from "./boardConstants";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
@@ -11,7 +11,6 @@ import { Html } from "@react-three/drei";
 interface VenusTileGridProps {
   gameState?: GameDto;
   onHexClick?: (hexCoordinate: string) => void;
-  tileHighlightMode?: TileHighlightMode;
   tileOpacity?: RefObject<number>;
 }
 
@@ -69,12 +68,7 @@ const convertBonuses = (bonuses: TileBonusDto[] | undefined) => {
   return converted;
 };
 
-export default function VenusTileGrid({
-  gameState,
-  onHexClick,
-  tileHighlightMode,
-  tileOpacity,
-}: VenusTileGridProps) {
+export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: VenusTileGridProps) {
   const venusTilesOnly = useMemo(
     () => gameState?.board?.tiles?.filter((t) => t.location === "venus"),
     [gameState?.board?.tiles],
@@ -309,7 +303,6 @@ export default function VenusTileGrid({
             }}
             isAvailableForPlacement={isAvailable}
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
-            highlightMode={tileHighlightMode === "city" && tileType === "city" ? "city" : null}
             sphereRadius={VENUS_RADIUS}
             sphereCenter={venusWorldCenter}
             tileOpacity={tileOpacity}

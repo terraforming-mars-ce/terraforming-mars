@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import TileGrid from "./TileGrid.tsx";
-import { TileHighlightMode } from "./Tile.tsx";
-import { TileVPIndicator } from "../../ui/overlay/EndGameOverlay.tsx";
+
 import { GameDto } from "../../../types/generated/api-types.ts";
 import { useMarsRotation } from "../../../contexts/MarsRotationContext.tsx";
 import { useTextures } from "../../../hooks/useTextures.ts";
@@ -12,16 +11,12 @@ import { SPHERE_RADIUS } from "./boardConstants.ts";
 interface MarsSphereProps {
   gameState?: GameDto;
   onHexClick?: (hex: string) => void;
-  tileHighlightMode?: TileHighlightMode;
-  vpIndicators?: TileVPIndicator[];
   animateHexEntrance?: boolean;
 }
 
 export default function MarsSphere({
   gameState,
   onHexClick,
-  tileHighlightMode,
-  vpIndicators = [],
   animateHexEntrance = false,
 }: MarsSphereProps) {
   const { marsGroupRef } = useMarsRotation();
@@ -100,8 +95,6 @@ export default function MarsSphere({
       <TileGrid
         gameState={gameState}
         onHexClick={onHexClick}
-        tileHighlightMode={tileHighlightMode}
-        vpIndicators={vpIndicators}
         animateHexEntrance={animateHexEntrance}
       />
     </group>

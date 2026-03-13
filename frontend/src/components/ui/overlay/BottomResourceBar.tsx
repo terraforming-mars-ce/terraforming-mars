@@ -322,6 +322,19 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     return Object.keys(displayPlayer.resourceStorage).length;
   }, [displayPlayer?.resourceStorage]);
 
+  const MAX_PANEL_WIDTH = 640;
+
+  const calcPanelWidth = () =>
+    Math.min(MAX_PANEL_WIDTH, Math.max(480, (window.innerWidth - 700) / 2));
+
+  const [panelWidth, setPanelWidth] = useState(calcPanelWidth);
+
+  useEffect(() => {
+    const handleResize = () => setPanelWidth(calcPanelWidth());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   if (!displayPlayer?.resources || !displayPlayer?.production) {
     return null;
   }
@@ -408,19 +421,6 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const isConversionDisabled = isTilePlacementActive;
 
   const BAR_HEIGHT = 90;
-
-  const MAX_PANEL_WIDTH = 640;
-
-  const calcPanelWidth = () =>
-    Math.min(MAX_PANEL_WIDTH, Math.max(480, (window.innerWidth - 700) / 2));
-
-  const [panelWidth, setPanelWidth] = useState(calcPanelWidth);
-
-  useEffect(() => {
-    const handleResize = () => setPanelWidth(calcPanelWidth());
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const LEFT_PANEL_WIDTH = panelWidth;
   const RIGHT_PANEL_WIDTH = panelWidth;

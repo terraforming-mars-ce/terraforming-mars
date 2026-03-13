@@ -7,7 +7,6 @@ import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 import { VENUS_RADIUS, VENUS_POSITION } from "./boardConstants";
 import VenusTileGrid from "./VenusTileGrid";
 import { GameDto } from "../../../types/generated/api-types";
-import { TileHighlightMode } from "./Tile";
 
 const LABEL_BOX_W = 100;
 const LABEL_BOX_H = 42;
@@ -82,14 +81,9 @@ function VenusLabel({ visible }: { visible: boolean }) {
 interface VenusSphereProps {
   gameState?: GameDto;
   onHexClick?: (hex: string) => void;
-  tileHighlightMode?: TileHighlightMode;
 }
 
-export default function VenusSphere({
-  gameState,
-  onHexClick,
-  tileHighlightMode,
-}: VenusSphereProps) {
+export default function VenusSphere({ gameState, onHexClick }: VenusSphereProps) {
   const [hovered, setHovered] = useState(false);
   const [labelMounted, setLabelMounted] = useState(false);
   const { activePlanet, setActivePlanet } = usePlanetFocus();
@@ -149,12 +143,7 @@ export default function VenusSphere({
           setActivePlanet("venus");
         }}
       />
-      <VenusTileGrid
-        gameState={gameState}
-        onHexClick={onHexClick}
-        tileHighlightMode={tileHighlightMode}
-        tileOpacity={tileOpacity}
-      />
+      <VenusTileGrid gameState={gameState} onHexClick={onHexClick} tileOpacity={tileOpacity} />
       {labelMounted && <VenusLabel visible={showLabel} />}
     </group>
   );

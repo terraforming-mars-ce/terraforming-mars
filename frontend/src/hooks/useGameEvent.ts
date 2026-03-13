@@ -7,6 +7,7 @@ export interface GameEvent {
   playerName?: string;
   playerColor?: string;
   duration: number;
+  size?: "normal" | "large";
 }
 
 type GameEventInput = Omit<GameEvent, "id">;
