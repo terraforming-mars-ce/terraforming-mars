@@ -123,6 +123,7 @@ func (b *BaseAction) ConsumePlayerAction(g *game.Game, log *zap.Logger) bool {
 		return false
 	}
 
+	currentTurn.IncrementGlobalActionCounter()
 	playerID := currentTurn.PlayerID()
 	consumed := currentTurn.ConsumeAction()
 	if consumed {

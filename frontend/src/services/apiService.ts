@@ -8,6 +8,8 @@ import {
   GameDto,
   GameSettingsDto,
   GetGameResponse,
+  GetGameHistoryResponse,
+  GameHistoryEntryDto,
   ListGamesResponse,
   ListCardsResponse,
 } from "../types/generated/api-types.ts";
@@ -138,6 +140,33 @@ export class ApiService {
       return data;
     } catch (error) {
       console.error("Failed to list cards:", error);
+      throw error;
+    }
+  }
+
+  async getGameHistory(
+    gameId: string,
+    options?: { phases?: string[]; policy?: string },
+  ): Promise<GameHistoryEntryDto[]> {
+    try {
+      const url = new URL(`${this.baseUrl}/games/${gameId}/history`, window.location.origin);
+      if (options?.phases && options.phases.length > 0) {
+        url.searchParams.set("phases", options.phases.join(","));
+      }
+      if (options?.policy) {
+        url.searchParams.set("policy", options.policy);
+      }
+
+      const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: GetGameHistoryResponse = await response.json();
+      return data.entries || [];
+    } catch (error) {
+      console.error("Failed to get game history:", error);
       throw error;
     }
   }

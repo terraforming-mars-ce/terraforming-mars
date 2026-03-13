@@ -176,6 +176,8 @@ func NewGame(
 	}
 	txn.Commit()
 
+	ds.RecordInitialHistory(state)
+
 	g := &Game{
 		ds:               ds,
 		id:               id,

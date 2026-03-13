@@ -1422,6 +1422,70 @@ export interface GenerationalEventRequirementDto {
 }
 
 //////////
+// source: game_history_dto.go
+
+/**
+ * GameHistoryEntryDto represents a single historical game state snapshot.
+ */
+export interface GameHistoryEntryDto {
+  sequence: number /* int64 */;
+  timestamp: string;
+  generation: number /* int */;
+  phase: GamePhase;
+  temperature: number /* int */;
+  oxygen: number /* int */;
+  oceans: number /* int */;
+  venus: number /* int */;
+  actionNumber: number /* int */;
+  board: BoardDto;
+  players: { [key: string]: GameHistoryPlayerDto };
+  milestones: ClaimedMilestoneDto[];
+  awards: FundedAwardDto[];
+  settings: GameSettingsDto;
+}
+/**
+ * GameHistoryPlayerDto contains the player data needed for graphs and replay.
+ */
+export interface GameHistoryPlayerDto {
+  id: string;
+  name: string;
+  color: string;
+  terraformRating: number /* int */;
+  credits: number /* int */;
+  steel: number /* int */;
+  titanium: number /* int */;
+  plants: number /* int */;
+  energy: number /* int */;
+  heat: number /* int */;
+  playedCardCount: number /* int */;
+  production: ProductionDto;
+  playedCardIds: string[];
+  handCardIds: string[];
+  corporationId: string;
+  resourceStorage: { [key: string]: number /* int */ };
+}
+/**
+ * ClaimedMilestoneDto represents a claimed milestone in history.
+ */
+export interface ClaimedMilestoneDto {
+  type: string;
+  playerId: string;
+}
+/**
+ * FundedAwardDto represents a funded award in history.
+ */
+export interface FundedAwardDto {
+  type: string;
+  playerId: string;
+}
+/**
+ * GetGameHistoryResponse is the HTTP response for the game history endpoint.
+ */
+export interface GetGameHistoryResponse {
+  entries: GameHistoryEntryDto[];
+}
+
+//////////
 // source: http_dto.go
 
 /**

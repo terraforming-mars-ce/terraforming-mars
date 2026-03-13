@@ -29,6 +29,7 @@ type GameState struct {
 	CurrentTurnPlayerID     string // empty = no current turn
 	CurrentTurnActions      int    // -1 = unlimited, 0 = none, >0 = specific count
 	CurrentTurnTotalActions int
+	GlobalActionCounter     int
 
 	Tiles []board.Tile
 
@@ -71,6 +72,14 @@ type GameState struct {
 	TradeFleets      map[string]bool
 
 	TriggeredEffects []shared.TriggeredEffect
+}
+
+// GameStateHistoryEntry stores a full GameState snapshot at a point in time.
+type GameStateHistoryEntry struct {
+	GameID    string
+	Sequence  int64
+	Timestamp time.Time
+	State     *GameState
 }
 
 // PlayerState holds a single player's data.
