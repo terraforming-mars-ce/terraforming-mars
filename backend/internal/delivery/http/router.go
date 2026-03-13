@@ -19,13 +19,14 @@ func SetupRouter(
 	createDemoLobbyAction *gameaction.CreateDemoLobbyAction,
 	getGameAction *query.GetGameAction,
 	getGameLogsAction *query.GetGameLogsAction,
+	getGameHistoryAction *query.GetGameHistoryAction,
 	listGamesAction *query.ListGamesAction,
 	listCardsAction *query.ListCardsAction,
 	getPlayerAction *query.GetPlayerAction,
 	cardRegistry cards.CardRegistry,
 	bugReportService *bugreport.Service,
 ) *mux.Router {
-	gameHandler := NewGameHandler(createGameAction, createDemoLobbyAction, getGameAction, getGameLogsAction, listGamesAction, listCardsAction, cardRegistry)
+	gameHandler := NewGameHandler(createGameAction, createDemoLobbyAction, getGameAction, getGameLogsAction, getGameHistoryAction, listGamesAction, listCardsAction, cardRegistry)
 	playerHandler := NewPlayerHandler(getPlayerAction, getGameAction, cardRegistry)
 	healthHandler := NewHealthHandler()
 	bugReportHandler := NewBugReportHandler(bugReportService)
@@ -47,6 +48,7 @@ func SetupRouter(
 	gameRoutes.HandleFunc("/demo/lobby", gameHandler.CreateDemoLobby).Methods(http.MethodPost)
 	gameRoutes.HandleFunc("/{gameId}", gameHandler.GetGame).Methods(http.MethodGet)
 	gameRoutes.HandleFunc("/{gameId}/logs", gameHandler.GetGameLogs).Methods(http.MethodGet)
+	gameRoutes.HandleFunc("/{gameId}/history", gameHandler.GetGameHistory).Methods(http.MethodGet)
 
 	playerRoutes := api.PathPrefix("/games/{gameId}/players").Subrouter()
 	playerRoutes.HandleFunc("/{playerId}", playerHandler.GetPlayer).Methods(http.MethodGet)

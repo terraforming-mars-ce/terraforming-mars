@@ -45,6 +45,11 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 
 	turnOrder := g.TurnOrder()
 
+	currentTurn := g.CurrentTurn()
+	if currentTurn != nil {
+		currentTurn.IncrementGlobalActionCounter()
+	}
+
 	currentPlayer, err := g.GetPlayer(playerID)
 	if err != nil {
 		log.Error("Current player not found in game")
@@ -72,7 +77,6 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 		}
 	}
 
-	currentTurn := g.CurrentTurn()
 	if currentTurn == nil {
 		log.Error("No current turn set")
 		return fmt.Errorf("no current turn set")

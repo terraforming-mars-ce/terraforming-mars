@@ -67,6 +67,18 @@ func (t *Turn) AddExtraActions(amount int) {
 	})
 }
 
+func (t *Turn) GlobalActionCounter() int {
+	var v int
+	t.read(func(s *datastore.GameState) { v = s.GlobalActionCounter })
+	return v
+}
+
+func (t *Turn) IncrementGlobalActionCounter() {
+	t.update(func(s *datastore.GameState) {
+		s.GlobalActionCounter++
+	})
+}
+
 func (t *Turn) ConsumeAction() bool {
 	var consumed bool
 	t.update(func(s *datastore.GameState) {

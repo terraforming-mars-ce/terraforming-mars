@@ -75,7 +75,7 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
         hoverSound.onMouseEnter?.();
       }}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative pointer-events-auto cursor-pointer"
+      className="relative pointer-events-auto cursor-pointer outline-none"
       style={{
         width,
         height,
@@ -132,6 +132,103 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
   );
 };
 
+const ENDGAME_ACCENT = "#3b82f6";
+
+function EndgameTabButton({
+  label,
+  width,
+  height,
+  isFirst,
+  isActive,
+  onClick,
+}: {
+  label: string;
+  width: number;
+  height: number;
+  isFirst: boolean;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+  const hoverSound = useHoverSound();
+
+  // "Left" direction: angled edges mirror the right-side style
+  const fillPoints = isFirst
+    ? `${ANGLE_INDENT},0 ${width},0 ${width - ANGLE_INDENT},${height} 0,${height}`
+    : `${ANGLE_INDENT},0 ${width},0 ${width - ANGLE_INDENT},${height} 0,${height}`;
+
+  const showAccent = isActive || isHovered;
+
+  return (
+    <button
+      onClick={() => {
+        hoverSound.onClick?.();
+        onClick();
+      }}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        hoverSound.onMouseEnter?.();
+      }}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative pointer-events-auto cursor-pointer outline-none"
+      style={{
+        width,
+        height,
+        marginRight: -ANGLE_INDENT + BUTTON_SPACING,
+      }}
+    >
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+      >
+        <polygon
+          points={fillPoints}
+          fill={isHovered ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
+        />
+        <line
+          x1={ANGLE_INDENT}
+          y1={0}
+          x2={width}
+          y2={0}
+          stroke={showAccent ? ENDGAME_ACCENT : BORDER_COLOR}
+          strokeWidth="3"
+        />
+        <line
+          x1={width}
+          y1={0}
+          x2={width - ANGLE_INDENT}
+          y2={height}
+          stroke={BORDER_COLOR}
+          strokeWidth="2"
+        />
+        <line x1={ANGLE_INDENT} y1={0} x2={0} y2={height} stroke={BORDER_COLOR} strokeWidth="2" />
+      </svg>
+      <div className="relative z-10 h-full flex items-center justify-center px-4">
+        <span
+          className={`font-orbitron font-bold text-sm uppercase tracking-wider transition-colors duration-200 ${
+            showAccent ? "text-white" : "text-white/60"
+          }`}
+        >
+          {label}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+interface EndgamePanelButton {
+  id: "score" | "graphs" | "replay";
+  label: string;
+  width: number;
+}
+
+const ENDGAME_BUTTONS: EndgamePanelButton[] = [
+  { id: "score", label: "SCORE", width: 120 },
+  { id: "graphs", label: "GRAPHS", width: 130 },
+  { id: "replay", label: "REPLAY", width: 130 },
+];
+
 interface TopMenuBarProps {
   gameState: GameDto;
   currentPlayer?: PlayerDto | null;
@@ -139,6 +236,10 @@ interface TopMenuBarProps {
   onLeaveGame?: () => void;
   onEndGame?: () => void;
   gameId?: string;
+  isEndgame?: boolean;
+  activeEndgamePanel?: "score" | "graphs" | "replay";
+  onEndgamePanelChange?: (panel: "score" | "graphs" | "replay") => void;
+  hasHistory?: boolean;
 }
 
 const TopMenuBar: React.FC<TopMenuBarProps> = ({
@@ -148,6 +249,10 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   onLeaveGame,
   onEndGame,
   gameId,
+  isEndgame = false,
+  activeEndgamePanel,
+  onEndgamePanelChange,
+  hasHistory = false,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [hamburgerHovered, setHamburgerHovered] = useState(false);
@@ -162,6 +267,16 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const handleToggleFullscreen = useCallback(() => {
@@ -266,6 +381,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
           style={{ transform: `scale(${topBarScale})` }}
         >
           {!isInitPhase &&
+            !isEndgame &&
             menuItems.map((item, index) => (
               <ParallelogramButton
                 key={item.id}
@@ -286,6 +402,26 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
           className="origin-top-right flex items-center"
           style={{ transform: `scale(${topBarScale})` }}
         >
+          {isEndgame && onEndgamePanelChange && (
+            <div className="flex items-center pointer-events-auto">
+              {ENDGAME_BUTTONS.filter(
+                (btn) => (btn.id !== "graphs" && btn.id !== "replay") || hasHistory,
+              ).map((btn, idx) => {
+                const isActive = activeEndgamePanel === btn.id;
+                return (
+                  <EndgameTabButton
+                    key={btn.id}
+                    label={btn.label}
+                    width={btn.width}
+                    height={buttonHeight}
+                    isFirst={idx === 0}
+                    isActive={isActive}
+                    onClick={() => onEndgamePanelChange(btn.id)}
+                  />
+                );
+              })}
+            </div>
+          )}
           {spectators.length > 0 && (
             <button
               ref={eyeButtonRef}
@@ -293,7 +429,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               onMouseEnter={() => setEyeHovered(true)}
               onMouseLeave={() => setEyeHovered(false)}
               aria-label="Spectators"
-              className="relative pointer-events-auto cursor-pointer"
+              className="relative pointer-events-auto cursor-pointer outline-none"
               style={{
                 width: EYE_WIDTH,
                 height: buttonHeight,
@@ -357,7 +493,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
             onMouseEnter={() => setHamburgerHovered(true)}
             onMouseLeave={() => setHamburgerHovered(false)}
             aria-label="Menu"
-            className="relative pointer-events-auto cursor-pointer"
+            className="relative pointer-events-auto cursor-pointer outline-none"
             style={{ width: HAMBURGER_WIDTH, height: buttonHeight }}
           >
             <svg

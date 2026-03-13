@@ -226,9 +226,10 @@ func main() {
 	adminStartTileSelectionAction := admin.NewStartTileSelectionAction(gameRepo, log)
 	adminSetTRAction := admin.NewSetTRAction(gameRepo, log)
 
-	// Query actions for HTTP (5)
+	// Query actions for HTTP (6)
 	getGameAction := query.NewGetGameAction(gameRepo, log)
 	getGameLogsAction := query.NewGetGameLogsAction(stateRepo, log)
+	getGameHistoryAction := query.NewGetGameHistoryAction(ds, log)
 	listGamesAction := query.NewListGamesAction(gameRepo, log)
 	listCardsAction := query.NewListCardsAction(cardRegistry, log)
 	getPlayerAction := query.NewGetPlayerAction(gameRepo, log)
@@ -322,6 +323,7 @@ func main() {
 		createDemoLobbyAction,
 		getGameAction,
 		getGameLogsAction,
+		getGameHistoryAction,
 		listGamesAction,
 		listCardsAction,
 		getPlayerAction,

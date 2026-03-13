@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
-import Tile, { TileHighlightMode } from "./Tile";
-import { TileVPIndicator } from "../../ui/overlay/EndGameOverlay";
+import Tile from "./Tile";
 import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import { useSoundEffects } from "../../../hooks/useSoundEffects";
@@ -13,14 +12,13 @@ import { SPHERE_RADIUS } from "./boardConstants";
 import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
 import { Html } from "@react-three/drei";
 import { panState } from "../controls/PanControls";
+import { useVPCounting } from "../../../contexts/VPCountingContext";
 
 const noop = () => {};
 
 interface TileGridProps {
   gameState?: GameDto;
   onHexClick?: (hexCoordinate: string) => void;
-  tileHighlightMode?: TileHighlightMode;
-  vpIndicators?: TileVPIndicator[];
   animateHexEntrance?: boolean;
 }
 
@@ -64,12 +62,11 @@ interface TileData {
 export default function TileGrid({
   gameState,
   onHexClick,
-  tileHighlightMode,
-  vpIndicators = [],
   animateHexEntrance = false,
 }: TileGridProps) {
   const newlyPlacedTiles = usePreviousTiles(gameState?.board?.tiles);
   const { playWaterPlacementSound, playOxygenSound, playConstructionSound } = useSoundEffects();
+  const { state: vpCountingState } = useVPCounting();
 
   // Play placement sounds for newly placed tiles
   useEffect(() => {
@@ -163,35 +160,6 @@ export default function TileGrid({
   const handleTileHoverLeave = useCallback(() => {
     setTooltipData(null);
   }, []);
-
-  // Create lookup map for VP indicators by coordinate
-  const vpIndicatorMap = useMemo(() => {
-    const map = new Map<string, TileVPIndicator>();
-    for (const indicator of vpIndicators) {
-      map.set(indicator.coordinate, indicator);
-    }
-    return map;
-  }, [vpIndicators]);
-
-  // Determine highlight mode for individual tiles based on VP indicators or global mode
-  const getHighlightModeForTile = (
-    tileType: TileType,
-    globalHighlightMode: TileHighlightMode | undefined,
-    vpIndicator: TileVPIndicator | undefined,
-  ): TileHighlightMode => {
-    // Priority 1: Use VP indicator if present (for end-game VP counting)
-    if (vpIndicator) {
-      if (vpIndicator.type === "greenery") return "greenery";
-      if (vpIndicator.type === "city-adjacency") return "adjacent";
-    }
-
-    // Priority 2: Use global highlight mode
-    if (!globalHighlightMode) return null;
-    if (globalHighlightMode === "greenery" && tileType === "greenery") return "greenery";
-    if (globalHighlightMode === "city" && tileType === "city") return "city";
-    // "adjacent" mode could be used for highlighting greeneries adjacent to cities
-    return null;
-  };
 
   // Convert hex coordinates to 2D pixel position (same as backend logic)
   const hexToPixel = (coord: { q: number; r: number; s: number }) => {
@@ -549,7 +517,13 @@ export default function TileGrid({
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
         const tileData = getTileData(tile);
         const isAvailable = availableHexes.includes(hexKey);
-        const vpIndicator = vpIndicatorMap.get(hexKey);
+
+        const isPrimaryHighlight = vpCountingState.highlightedTiles.has(hexKey);
+        const isSecondaryHighlight = vpCountingState.secondaryHighlightedTiles.has(hexKey);
+        const vpHighlightIntensity = isPrimaryHighlight ? 0.5 : isSecondaryHighlight ? 0.25 : 0;
+        const vpHighlightColor: [number, number, number] = isSecondaryHighlight
+          ? [0.4, 0.9, 0.4]
+          : [0.95, 0.95, 1.0];
 
         return (
           <Tile
@@ -566,12 +540,11 @@ export default function TileGrid({
             onClick={noop}
             isHovered={hoveredHexKey === hexKey}
             isAvailableForPlacement={isAvailable}
-            highlightMode={getHighlightModeForTile(tileData.type, tileHighlightMode, vpIndicator)}
-            vpAmount={vpIndicator?.showVPText ? vpIndicator.amount : undefined}
-            vpAnimating={vpIndicator?.isAnimating}
             animateEntrance={animateHexEntrance}
             entranceDelay={index * 15}
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
+            vpHighlightIntensity={vpHighlightIntensity}
+            vpHighlightColor={vpHighlightColor}
           />
         );
       })}

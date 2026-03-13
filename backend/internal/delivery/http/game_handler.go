@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/action/query"
@@ -22,6 +23,7 @@ type GameHandler struct {
 	createDemoLobbyAction *gameaction.CreateDemoLobbyAction
 	getGameAction         *query.GetGameAction
 	getGameLogsAction     *query.GetGameLogsAction
+	getGameHistoryAction  *query.GetGameHistoryAction
 	listGamesAction       *query.ListGamesAction
 	listCardsAction       *query.ListCardsAction
 	cardRegistry          cards.CardRegistry
@@ -33,6 +35,7 @@ func NewGameHandler(
 	createDemoLobbyAction *gameaction.CreateDemoLobbyAction,
 	getGameAction *query.GetGameAction,
 	getGameLogsAction *query.GetGameLogsAction,
+	getGameHistoryAction *query.GetGameHistoryAction,
 	listGamesAction *query.ListGamesAction,
 	listCardsAction *query.ListCardsAction,
 	cardRegistry cards.CardRegistry,
@@ -42,6 +45,7 @@ func NewGameHandler(
 		createDemoLobbyAction: createDemoLobbyAction,
 		getGameAction:         getGameAction,
 		getGameLogsAction:     getGameLogsAction,
+		getGameHistoryAction:  getGameHistoryAction,
 		listGamesAction:       listGamesAction,
 		listCardsAction:       listCardsAction,
 		cardRegistry:          cardRegistry,
@@ -310,4 +314,53 @@ func (h *GameHandler) CreateDemoLobby(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Debug("Demo lobby created", zap.String("game_id", result.GameDto.ID))
+}
+
+// GetGameHistory handles GET /api/v1/games/{gameId}/history
+func (h *GameHandler) GetGameHistory(w http.ResponseWriter, r *http.Request) {
+	log := logger.Get()
+	ctx := r.Context()
+
+	vars := mux.Vars(r)
+	gameID := vars["gameId"]
+
+	log.Debug("HTTP GET /api/v1/games/:gameId/history", zap.String("game_id", gameID))
+
+	var filter *query.HistoryFilter
+	queryParams := r.URL.Query()
+	phasesParam := queryParams.Get("phases")
+	policyParam := queryParams.Get("policy")
+
+	if phasesParam != "" || policyParam != "" {
+		filter = &query.HistoryFilter{}
+		if phasesParam != "" {
+			for _, p := range strings.Split(phasesParam, ",") {
+				phase := shared.GamePhase(strings.TrimSpace(p))
+				filter.Phases = append(filter.Phases, phase)
+			}
+		}
+		if policyParam != "" {
+			filter.Policy = query.HistoryPolicy(policyParam)
+		}
+	}
+
+	entries, err := h.getGameHistoryAction.Execute(ctx, gameID, filter)
+	if err != nil {
+		log.Error("Failed to get game history", zap.Error(err))
+		http.Error(w, "Failed to get game history", http.StatusInternalServerError)
+		return
+	}
+
+	response := dto.GetGameHistoryResponse{
+		Entries: dto.ToGameHistoryEntryDtos(entries),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Error("Failed to encode response", zap.Error(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	log.Debug("Game history retrieved", zap.String("game_id", gameID), zap.Int("count", len(entries)))
 }

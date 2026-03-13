@@ -5,8 +5,7 @@ import { PanControls } from "../controls/PanControls.tsx";
 import { FreeCamera, CameraFrustumHelper } from "../controls/FreeCamera.tsx";
 import MarsSphere from "../board/MarsSphere.tsx";
 import VenusSphere from "../board/VenusSphere.tsx";
-import { TileHighlightMode } from "../board/Tile.tsx";
-import { TileVPIndicator } from "../../ui/overlay/EndGameOverlay.tsx";
+
 import SkyboxLoader from "./SkyboxLoader.tsx";
 import GameIcon from "../../ui/display/GameIcon.tsx";
 import { GameDto } from "@/types/generated/api-types.ts";
@@ -154,8 +153,6 @@ function ReturnToMarsButton() {
 
 interface Game3DViewProps {
   gameState: GameDto;
-  tileHighlightMode?: TileHighlightMode;
-  vpIndicators?: TileVPIndicator[];
   animateHexEntrance?: boolean;
   onSkyboxReady?: () => void;
   onGpuReady?: () => void;
@@ -165,8 +162,6 @@ interface Game3DViewProps {
 
 export default function Game3DView({
   gameState,
-  tileHighlightMode,
-  vpIndicators = [],
   animateHexEntrance = false,
   onSkyboxReady,
   onGpuReady,
@@ -307,17 +302,11 @@ export default function Game3DView({
               <MarsSphere
                 gameState={gameState}
                 onHexClick={handleHexClick}
-                tileHighlightMode={tileHighlightMode}
-                vpIndicators={vpIndicators}
                 animateHexEntrance={animateHexEntrance}
               />
 
               {venusNextEnabled && (
-                <VenusSphere
-                  gameState={gameState}
-                  onHexClick={handleHexClick}
-                  tileHighlightMode={tileHighlightMode}
-                />
+                <VenusSphere gameState={gameState} onHexClick={handleHexClick} />
               )}
 
               <GpuWarmup onReady={onGpuReady} />

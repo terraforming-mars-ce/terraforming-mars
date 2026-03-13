@@ -31,8 +31,17 @@ import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import SpaceBackground from "../../3d/SpaceBackground.tsx";
-import EndGameOverlay, { TileVPIndicator } from "../../ui/overlay/EndGameOverlay.tsx";
-import { TileHighlightMode } from "../../game/board/Tile.tsx";
+import EndGameBottomBar from "../../ui/endgame/EndGameBottomBar.tsx";
+import { VPCountingProvider } from "../../../contexts/VPCountingContext.tsx";
+import { useVPCountingAnimation } from "@/hooks/useVPCountingAnimation.ts";
+
+import { useGameHistory } from "@/hooks/useGameHistory.ts";
+import { useGameReplay } from "@/hooks/useGameReplay.ts";
+import {
+  historyEntryToGameDto,
+  buildCardLookup,
+  historyPlayerToPlayerDto,
+} from "@/utils/historyToGameDto.ts";
 import ChoiceSelectionPopover from "../../ui/popover/ChoiceSelectionPopover.tsx";
 import CardStorageSelectionPopover from "../../ui/popover/CardStorageSelectionPopover.tsx";
 import TargetPlayerSelectionPopover from "../../ui/popover/TargetPlayerSelectionPopover.tsx";
@@ -113,6 +122,7 @@ export default function GameInterface() {
   const [showPerformanceWindow, setShowPerformanceWindow] = useState(false);
   const [showBugReportWindow, setShowBugReportWindow] = useState(false);
   const [spectatePlayerId, setSpectatePlayerId] = useState<string | null>(null);
+  const [replaySpectatePlayerId, setReplaySpectatePlayerId] = useState<string | null>(null);
   const [isSpectator, setIsSpectator] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessageDto[]>([]);
   const [showCorp, setShowCorp] = useState(false);
@@ -201,11 +211,95 @@ export default function GameInterface() {
   // Card discard selection state (for passive effects like Mars University)
   const [showCardDiscardSelection, setShowCardDiscardSelection] = useState(false);
 
-  // End game tile highlighting state
-  const [tileHighlightMode, setTileHighlightMode] = useState<TileHighlightMode>(null);
+  // VP counting animation
+  const isGameComplete =
+    game?.currentPhase === GamePhaseComplete && game?.status === GameStatusCompleted;
+  const vpCounting = useVPCountingAnimation(isGameComplete ? (game?.finalScores ?? []) : []);
+  const vpCountingStartedRef = useRef(false);
 
-  // End game VP indicators state
-  const [vpIndicators, setVPIndicators] = useState<TileVPIndicator[]>([]);
+  useEffect(() => {
+    if (isGameComplete && !vpCountingStartedRef.current && (game?.finalScores?.length ?? 0) > 0) {
+      vpCountingStartedRef.current = true;
+      vpCounting.start();
+    }
+  }, [isGameComplete, game?.finalScores, vpCounting.start]);
+
+  // Show winner banner when counting animation completes
+  const winnerBannerShownRef = useRef(false);
+  useEffect(() => {
+    if (vpCounting.state.isComplete && !winnerBannerShownRef.current && game?.finalScores?.length) {
+      winnerBannerShownRef.current = true;
+      const sorted = [...game.finalScores].sort(
+        (a, b) => b.vpBreakdown.totalVP - a.vpBreakdown.totalVP,
+      );
+      const w = sorted[0];
+      const allPlayers = [game.currentPlayer, ...(game.otherPlayers ?? [])];
+      const wp = allPlayers.find((p) => p?.id === w.playerId);
+      enqueueGameEvent({
+        title: `${w.playerName} WINS!`,
+        duration: 12000,
+        playerName: w.playerName,
+        playerColor: wp?.color ?? "#f59e0b",
+        size: "large",
+      });
+    }
+  }, [vpCounting.state.isComplete, game, enqueueGameEvent]);
+
+  // Game history and replay
+  const { entries: historyEntries } = useGameHistory(isGameComplete ? (game?.id ?? null) : null);
+  const replay = useGameReplay(historyEntries);
+  const hasHistory = (historyEntries?.length ?? 0) > 0;
+
+  // Endgame panel tracking (for UI fade control)
+  const [endgamePanel, setEndgamePanel] = useState<"score" | "graphs" | "replay">("score");
+  const endgameFadeUI = isGameComplete && endgamePanel !== "replay";
+
+  const handleEndgamePanelChange = useCallback(
+    (panel: "score" | "graphs" | "replay") => {
+      setEndgamePanel(panel);
+      const isCounting = vpCounting.state.isActive && !vpCounting.state.isComplete;
+      if (panel !== "score" && isCounting) {
+        vpCounting.skip();
+      }
+      if (panel !== "score") {
+        dismissGameEvent();
+      }
+      if (panel === "replay" && !replay.isActive) {
+        replay.start();
+      }
+      if (panel !== "replay" && replay.isActive) {
+        replay.exit();
+        setReplaySpectatePlayerId(null);
+      }
+    },
+    [vpCounting, replay, dismissGameEvent],
+  );
+
+  const cardLookup = useMemo(() => {
+    if (!game) {
+      return new Map();
+    }
+    return buildCardLookup(game);
+  }, [game]);
+
+  // Two-layer state: replay feeds historical state to 3D view
+  const replayGameState = useMemo(() => {
+    if (!replay.isActive || !replay.currentEntry || !game) {
+      return null;
+    }
+    return historyEntryToGameDto(replay.currentEntry, game, cardLookup);
+  }, [replay.isActive, replay.currentEntry, game, cardLookup]);
+
+  const replayViewAsPlayer = useMemo(() => {
+    if (!replay.isActive || !replay.currentEntry || !replaySpectatePlayerId) {
+      return null;
+    }
+    const historyPlayer = replay.currentEntry.players[replaySpectatePlayerId];
+    if (!historyPlayer) {
+      return null;
+    }
+    return historyPlayerToPlayerDto(historyPlayer, cardLookup);
+  }, [replay.isActive, replay.currentEntry, replaySpectatePlayerId, cardLookup]);
 
   // Choice selection state (for card play)
   const [showChoiceSelection, setShowChoiceSelection] = useState(false);
@@ -2848,7 +2942,15 @@ export default function GameInterface() {
   const shouldShowBackdrop = showStartingSelection;
 
   return (
-    <>
+    <VPCountingProvider
+      state={vpCounting.state}
+      controls={{
+        start: vpCounting.start,
+        skip: vpCounting.skip,
+        goToPhase: vpCounting.goToPhase,
+        phases: vpCounting.phases,
+      }}
+    >
       {/* Dev Mode Chip - Always visible in dev mode */}
       {game?.settings?.developmentMode && <DevModeChip />}
 
@@ -2881,11 +2983,11 @@ export default function GameInterface() {
         loadingPhase !== "joining" &&
         loadingPhase !== "spectating" && (
           <GameLayout
-            gameState={game}
-            currentPlayer={currentPlayer}
-            playedCards={currentPlayer?.playedCards || []}
-            corporationCard={corporationData}
-            showCorporation={showCorp}
+            gameState={replayGameState ?? game}
+            currentPlayer={replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer)}
+            playedCards={replayViewAsPlayer?.playedCards ?? currentPlayer?.playedCards ?? []}
+            corporationCard={replayViewAsPlayer?.corporation ?? corporationData}
+            showCorporation={!!replayViewAsPlayer || showCorp}
             initTurnPlayerId={displayedInitPlayerId}
             showStartingSelection={showStartingSelection}
             transitionPhase={transitionPhase}
@@ -2895,8 +2997,6 @@ export default function GameInterface() {
               transitionPhase === "complete"
             }
             changedPaths={changedPaths}
-            tileHighlightMode={tileHighlightMode}
-            vpIndicators={vpIndicators}
             triggeredEffects={triggeredEffects}
             bottomBarCallbacks={bottomBarCallbacks}
             onStandardProjectSelect={handleStandardProjectSelect}
@@ -2914,6 +3014,11 @@ export default function GameInterface() {
             onSendChatMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
             isLobbyPhase={isLobbyPhase}
             playerColorMap={playerColorMap}
+            endgameFadeUI={endgameFadeUI}
+            isEndgame={isGameComplete}
+            activeEndgamePanel={endgamePanel}
+            onEndgamePanelChange={handleEndgamePanelChange}
+            hasHistory={hasHistory}
           />
         )}
 
@@ -3230,37 +3335,39 @@ export default function GameInterface() {
         />
       )}
 
-      {/* Card fan overlay for hand cards (animated out when spectating another player) */}
-      {game && currentPlayer && (
-        <div
-          className={`transition-all duration-300 ease-in-out ${
-            spectatePlayerId
-              ? "opacity-0 pointer-events-none"
-              : transitionPhase === "animateUI"
-                ? "animate-[uiFadeIn_1200ms_ease-out_both]"
-                : transitionPhase === "loading" || transitionPhase === "fadeOutLobby"
-                  ? "opacity-0"
-                  : ""
-          }`}
-        >
-          <CardFanOverlay
-            ref={cardFanRef}
-            cards={currentPlayer.cards || []}
-            hideWhenModalOpen={
-              showStartingSelection ||
-              showPendingCardSelection ||
-              showCardDrawSelection ||
-              showCardDiscardSelection ||
-              showBehaviorChoiceSelection ||
-              isPreGamePhase
-            }
-            onCardSelect={(_cardId) => {
-              // TODO: Implement card selection logic (view details, etc.)
-            }}
-            onPlayCard={handlePlayCard}
-          />
-        </div>
-      )}
+      {/* Card fan overlay for hand cards (hidden during end game unless replay view-as is active) */}
+      {game &&
+        (currentPlayer || replayViewAsPlayer) &&
+        (game.currentPhase !== GamePhaseComplete || !!replayViewAsPlayer) && (
+          <div
+            className={`transition-all duration-300 ease-in-out ${
+              spectatePlayerId
+                ? "opacity-0 pointer-events-none"
+                : transitionPhase === "animateUI"
+                  ? "animate-[uiFadeIn_1200ms_ease-out_both]"
+                  : transitionPhase === "loading" || transitionPhase === "fadeOutLobby"
+                    ? "opacity-0"
+                    : ""
+            }`}
+          >
+            <CardFanOverlay
+              ref={cardFanRef}
+              cards={replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? []}
+              hideWhenModalOpen={
+                showStartingSelection ||
+                showPendingCardSelection ||
+                showCardDrawSelection ||
+                showCardDiscardSelection ||
+                showBehaviorChoiceSelection ||
+                isPreGamePhase
+              }
+              onCardSelect={(_cardId) => {
+                // TODO: Implement card selection logic (view details, etc.)
+              }}
+              onPlayCard={handlePlayCard}
+            />
+          </div>
+        )}
 
       {/* End game overlay - shown when game is completed */}
       {game &&
@@ -3269,16 +3376,27 @@ export default function GameInterface() {
         game.status === GameStatusCompleted &&
         game.finalScores &&
         game.finalScores.length > 0 && (
-          <EndGameOverlay
-            game={game}
-            playerId={playerId}
-            onTileHighlight={setTileHighlightMode}
-            onVPIndicators={setVPIndicators}
-            onReturnToMenu={() => {
-              clearGameSession();
-              navigate("/");
-            }}
-          />
+          <>
+            <EndGameBottomBar
+              game={game}
+              playerId={playerId}
+              historyEntries={historyEntries}
+              activePanel={endgamePanel}
+              isReplayActive={replay.isActive}
+              replayIndex={replay.currentIndex}
+              replayTotal={replay.totalStates}
+              replayPlaying={replay.isPlaying}
+              replaySpeed={replay.playbackSpeed}
+              onReplayPlay={replay.play}
+              onReplayPause={replay.pause}
+              onReplaySeek={replay.seekTo}
+              onReplayStepForward={replay.stepForward}
+              onReplayStepBackward={replay.stepBackward}
+              onReplaySpeedChange={replay.setPlaybackSpeed}
+              replaySpectatePlayerId={replaySpectatePlayerId}
+              onReplaySpectatePlayerChange={setReplaySpectatePlayerId}
+            />
+          </>
         )}
 
       {/* Choice selection popover for card play */}
@@ -3560,7 +3678,10 @@ export default function GameInterface() {
         </GameMenuButton>
       )}
 
-      <GameEventBanner event={currentEvent} onDismiss={dismissGameEvent} />
+      <GameEventBanner
+        event={endgamePanel === "score" ? currentEvent : null}
+        onDismiss={dismissGameEvent}
+      />
 
       {/* Loading overlay rendered LAST to ensure it covers all UI elements */}
       {overlayVisible && (
@@ -3570,6 +3691,6 @@ export default function GameInterface() {
           onTransitionEnd={handleLoadingTransitionEnd}
         />
       )}
-    </>
+    </VPCountingProvider>
   );
 }

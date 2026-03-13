@@ -35,9 +35,15 @@ export default function DustEffect({
 
   const { smoke: smokeTexture } = useTextures();
 
+  const initialPositionRef = useRef(position.clone());
+  const initialNormalRef = useRef(normal.clone());
+
   useEffect(() => {
+    const pos = initialPositionRef.current;
+    const nrm = initialNormalRef.current;
+
     const group = new THREE.Group();
-    group.position.copy(position);
+    group.position.copy(pos);
     scene.add(group);
     groupRef.current = group;
 
@@ -45,12 +51,12 @@ export default function DustEffect({
     const particleCount = 45;
 
     const tangent = new THREE.Vector3();
-    if (Math.abs(normal.y) < 0.9) {
-      tangent.crossVectors(normal, new THREE.Vector3(0, 1, 0)).normalize();
+    if (Math.abs(nrm.y) < 0.9) {
+      tangent.crossVectors(nrm, new THREE.Vector3(0, 1, 0)).normalize();
     } else {
-      tangent.crossVectors(normal, new THREE.Vector3(1, 0, 0)).normalize();
+      tangent.crossVectors(nrm, new THREE.Vector3(1, 0, 0)).normalize();
     }
-    const bitangent = new THREE.Vector3().crossVectors(normal, tangent).normalize();
+    const bitangent = new THREE.Vector3().crossVectors(nrm, tangent).normalize();
 
     for (let i = 0; i < particleCount; i++) {
       const geometry = new THREE.PlaneGeometry(0.15, 0.15);
@@ -82,7 +88,7 @@ export default function DustEffect({
       const spreadAngle = Math.random() * Math.PI * 2;
       const spreadRadius = 0.03 + Math.random() * 0.04;
       const velocity = new THREE.Vector3()
-        .copy(normal)
+        .copy(nrm)
         .multiplyScalar(0.02 + Math.random() * 0.015)
         .add(tangent.clone().multiplyScalar(Math.cos(spreadAngle) * spreadRadius))
         .add(bitangent.clone().multiplyScalar(Math.sin(spreadAngle) * spreadRadius));
@@ -108,7 +114,7 @@ export default function DustEffect({
       });
       scene.remove(group);
     };
-  }, [scene, position, normal, smokeTexture]);
+  }, [scene, smokeTexture]);
 
   useFrame((state, delta) => {
     if (startTimeRef.current === null) {

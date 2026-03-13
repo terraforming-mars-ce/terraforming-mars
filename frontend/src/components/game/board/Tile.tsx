@@ -15,7 +15,7 @@ import {
   sphereProjectionVertex,
   hoverGlowFragment,
   availableGlowFragment,
-  endgameHighlightFragment,
+  vpHighlightFragment,
   tileBorderVertex,
   tileBorderFragment,
   tileSurfaceVertexSnippet,
@@ -23,9 +23,6 @@ import {
 } from "./shaders";
 import { SPHERE_RADIUS, CHROME_Z_BASE, easeOutCubic } from "./boardConstants";
 
-const HIGHLIGHT_COLOR_GREENERY = new THREE.Vector3(0.13, 0.77, 0.27);
-const HIGHLIGHT_COLOR_CITY = new THREE.Vector3(0.58, 0.64, 0.7);
-const HIGHLIGHT_COLOR_ADJACENT = new THREE.Vector3(1.0, 0.84, 0.0);
 const BONUS_ICON_TINT = new THREE.Color(0.7, 0.7, 0.7);
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 const _bbWorldPos = new THREE.Vector3();
@@ -233,8 +230,6 @@ function ClampedBillboard({
   );
 }
 
-export type TileHighlightMode = "greenery" | "city" | "adjacent" | null;
-
 interface TileHoverInfo {
   position: { x: number; y: number };
   tileType: string;
@@ -269,9 +264,6 @@ interface TileProps {
   bonuses?: { [key: string]: number };
   onClick: () => void;
   isAvailableForPlacement?: boolean;
-  highlightMode?: TileHighlightMode;
-  vpAmount?: number;
-  vpAnimating?: boolean;
   animateEntrance?: boolean;
   entranceDelay?: number;
   isNewlyPlaced?: boolean;
@@ -283,6 +275,8 @@ interface TileProps {
   sphereRadius?: number;
   sphereCenter?: THREE.Vector3;
   tileOpacity?: RefObject<number>;
+  vpHighlightIntensity?: number;
+  vpHighlightColor?: [number, number, number];
 }
 
 function Tile({
@@ -296,9 +290,6 @@ function Tile({
   bonuses: _bonuses = {},
   onClick: _onClick,
   isAvailableForPlacement = false,
-  highlightMode = null,
-  vpAmount,
-  vpAnimating = false,
   animateEntrance = false,
   entranceDelay = 0,
   isNewlyPlaced = false,
@@ -307,13 +298,14 @@ function Tile({
   sphereRadius = SPHERE_RADIUS,
   sphereCenter = ORIGIN,
   tileOpacity,
+  vpHighlightIntensity = 0,
+  vpHighlightColor = [0.95, 0.95, 1.0],
 }: TileProps) {
   const tileGroupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
-  const vpTextRef = useRef<THREE.Group>(null);
+
   const extraMatsRef = useRef<THREE.Material[] | null>(null);
   const hovered = isHoveredProp;
-  const animationStartTimeRef = useRef<number | null>(null);
 
   const [entranceScale, setEntranceScale] = useState(animateEntrance ? 0 : 1);
   const entranceStartRef = useRef<number | null>(null);
@@ -383,16 +375,15 @@ function Tile({
     });
   }, [sphereRadius, sphereCenter]);
 
-  const endGameHighlightMaterial = useMemo(() => {
+  const vpHighlightMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       vertexShader: sphereProjectionVertex,
-      fragmentShader: endgameHighlightFragment,
+      fragmentShader: vpHighlightFragment,
       uniforms: {
-        time: { value: 0.0 },
-        highlightColor: { value: new THREE.Vector3(0.13, 0.77, 0.27) },
+        uColor: { value: new THREE.Vector3(0.95, 0.95, 1.0) },
         opacity: { value: 0.0 },
         uSphereRadius: { value: sphereRadius },
-        uZOffset: { value: CHROME_Z_BASE + 0.006 },
+        uZOffset: { value: CHROME_Z_BASE + 0.004 },
         uSphereCenter: { value: sphereCenter },
       },
       transparent: true,
@@ -469,60 +460,19 @@ function Tile({
       availableGlowMaterial.uniforms.time.value = state.clock.elapsedTime;
     }
 
-    if (endGameHighlightMaterial.uniforms) {
-      endGameHighlightMaterial.uniforms.time.value = state.clock.elapsedTime;
-
-      const targetOpacity = highlightMode ? 1.0 : 0.0;
-      endGameHighlightMaterial.uniforms.opacity.value = THREE.MathUtils.lerp(
-        endGameHighlightMaterial.uniforms.opacity.value,
-        targetOpacity,
-        0.1,
+    if (vpHighlightMaterial.uniforms) {
+      vpHighlightMaterial.uniforms.uColor.value.set(
+        vpHighlightColor[0],
+        vpHighlightColor[1],
+        vpHighlightColor[2],
       );
-
-      if (highlightMode) {
-        let color: THREE.Vector3;
-        switch (highlightMode) {
-          case "greenery":
-            color = HIGHLIGHT_COLOR_GREENERY;
-            break;
-          case "city":
-            color = HIGHLIGHT_COLOR_CITY;
-            break;
-          case "adjacent":
-            color = HIGHLIGHT_COLOR_ADJACENT;
-            break;
-          default:
-            color = HIGHLIGHT_COLOR_GREENERY;
-        }
-        endGameHighlightMaterial.uniforms.highlightColor.value = color;
-      }
-    }
-
-    if (vpTextRef.current && vpAmount !== undefined && vpAnimating) {
-      if (animationStartTimeRef.current === null) {
-        animationStartTimeRef.current = state.clock.elapsedTime;
-      }
-
-      const elapsed = state.clock.elapsedTime - animationStartTimeRef.current;
-      const duration = 2.0;
-
-      if (elapsed < 0.3) {
-        const progress = elapsed / 0.3;
-        vpTextRef.current.scale.setScalar(progress);
-        vpTextRef.current.position.z = 0.02 + progress * 0.05;
-      } else if (elapsed < 1.8) {
-        vpTextRef.current.scale.setScalar(1);
-        vpTextRef.current.position.z = 0.07 + Math.sin(elapsed * 2) * 0.01;
-      } else if (elapsed < duration) {
-        const progress = 1 - (elapsed - 1.8) / 0.2;
-        vpTextRef.current.scale.setScalar(Math.max(0, progress));
-      } else {
-        vpTextRef.current.scale.setScalar(0);
-      }
-    } else if (vpTextRef.current && !vpAnimating) {
-      animationStartTimeRef.current = null;
-      vpTextRef.current.scale.setScalar(vpAmount !== undefined ? 1 : 0);
-      vpTextRef.current.position.z = 0.07;
+      const lerpSpeed =
+        vpHighlightIntensity > vpHighlightMaterial.uniforms.opacity.value ? 0.08 : 0.04;
+      vpHighlightMaterial.uniforms.opacity.value = THREE.MathUtils.lerp(
+        vpHighlightMaterial.uniforms.opacity.value,
+        vpHighlightIntensity,
+        lerpSpeed,
+      );
     }
 
     if (tileOpacity && tileGroupRef.current) {
@@ -530,7 +480,6 @@ function Tile({
       hexTileMaterial.opacity = baseHexOpacity * o;
       borderMaterial.uniforms.uOpacity.value = 0.9 * o;
       hoverGlowMaterial.uniforms.opacity.value *= o;
-      endGameHighlightMaterial.uniforms.opacity.value *= o;
 
       if (!extraMatsRef.current) {
         const knownMats = new Set<THREE.Material>([
@@ -538,8 +487,8 @@ function Tile({
           borderMaterial,
           hoverGlowMaterial,
           availableGlowMaterial,
-          endGameHighlightMaterial,
           volcanicTintMaterial,
+          vpHighlightMaterial,
         ]);
         const extras: THREE.Material[] = [];
         tileGroupRef.current.traverse((child) => {
@@ -772,10 +721,8 @@ function Tile({
         <mesh geometry={overlayGeometry} material={availableGlowMaterial} renderOrder={23} />
       )}
 
-      {/* End game VP counting highlight - hidden for ocean tiles */}
-      {tileType !== "ocean" && (
-        <mesh geometry={overlayGeometry} material={endGameHighlightMaterial} renderOrder={24} />
-      )}
+      {/* VP counting highlight */}
+      <mesh geometry={overlayGeometry} material={vpHighlightMaterial} renderOrder={24} />
 
       {/* Building (city) 3D model */}
       {tileType === "city" && (
@@ -893,23 +840,6 @@ function Tile({
               color={`hsl(${(reservedById.charCodeAt(0) * 137.5) % 360}, 70%, 50%)`}
             />
           </mesh>
-        </group>
-      )}
-
-      {/* Floating VP indicator text */}
-      {vpAmount !== undefined && (
-        <group ref={vpTextRef} position={[0, 0, 0.07]}>
-          <Text
-            fontSize={0.08}
-            color="#FFD700"
-            anchorX="center"
-            anchorY="middle"
-            fontWeight="bold"
-            outlineWidth={0.005}
-            outlineColor="#000000"
-          >
-            +{vpAmount}
-          </Text>
         </group>
       )}
     </group>

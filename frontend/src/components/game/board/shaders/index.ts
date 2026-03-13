@@ -5,7 +5,8 @@ import sphereProjectionVertexRaw from "./sphere-projection.vert.glsl?raw";
 import oceanBorderFragmentRaw from "./ocean-border.frag.glsl?raw";
 import hoverGlowFragmentRaw from "./hover-glow.frag.glsl?raw";
 import availableGlowFragmentRaw from "./available-glow.frag.glsl?raw";
-import endgameHighlightFragmentRaw from "./endgame-highlight.frag.glsl?raw";
+import vpHighlightFragmentRaw from "./vp-highlight.frag.glsl?raw";
+
 import tileBorderVertexRaw from "./tile-border.vert.glsl?raw";
 import tileBorderFragmentRaw from "./tile-border.frag.glsl?raw";
 import volcanoVertexRaw from "./volcano.vert.glsl?raw";
@@ -30,7 +31,8 @@ export const sphereProjectionVertex = stripVersion(sphereProjectionVertexRaw);
 export const oceanBorderFragment = stripVersion(oceanBorderFragmentRaw);
 export const hoverGlowFragment = stripVersion(hoverGlowFragmentRaw);
 export const availableGlowFragment = stripVersion(availableGlowFragmentRaw);
-export const endgameHighlightFragment = stripVersion(endgameHighlightFragmentRaw);
+export const vpHighlightFragment = stripVersion(vpHighlightFragmentRaw);
+
 export const tileBorderVertex = stripVersion(tileBorderVertexRaw);
 export const tileBorderFragment = stripVersion(tileBorderFragmentRaw);
 export const volcanoVertex = stripVersion(volcanoVertexRaw);

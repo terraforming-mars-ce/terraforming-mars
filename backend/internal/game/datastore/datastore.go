@@ -1,7 +1,10 @@
 package datastore
 
 import (
+	"encoding/json"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/hashicorp/go-memdb"
 
@@ -10,7 +13,9 @@ import (
 
 // DataStore is the single source of truth for all game data.
 type DataStore struct {
-	db *memdb.MemDB
+	db              *memdb.MemDB
+	historySeqMu    sync.Mutex
+	historySequence map[string]int64 // per-game sequence counter
 }
 
 func NewDataStore() (*DataStore, error) {
@@ -18,7 +23,10 @@ func NewDataStore() (*DataStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create memdb: %w", err)
 	}
-	return &DataStore{db: db}, nil
+	return &DataStore{
+		db:              db,
+		historySequence: make(map[string]int64),
+	}, nil
 }
 
 func (ds *DataStore) GetGame(gameID string) (*GameState, error) {
@@ -77,7 +85,67 @@ func (ds *DataStore) UpdateGame(gameID string, fn func(state *GameState)) error 
 		return fmt.Errorf("failed to insert game %s: %w", state.ID, err)
 	}
 	txn.Commit()
+
+	ds.appendHistory(state)
+
 	return nil
+}
+
+func (ds *DataStore) appendHistory(state *GameState) {
+	copied := deepCopyGameState(state)
+	if copied == nil {
+		return
+	}
+
+	ds.historySeqMu.Lock()
+	ds.historySequence[state.ID]++
+	seq := ds.historySequence[state.ID]
+	ds.historySeqMu.Unlock()
+
+	entry := &GameStateHistoryEntry{
+		GameID:    state.ID,
+		Sequence:  seq,
+		Timestamp: time.Now(),
+		State:     copied,
+	}
+
+	htxn := ds.db.Txn(true)
+	_ = htxn.Insert("game_history", entry)
+	htxn.Commit()
+}
+
+func deepCopyGameState(src *GameState) *GameState {
+	data, err := json.Marshal(src)
+	if err != nil {
+		return nil
+	}
+	dst := &GameState{}
+	if err := json.Unmarshal(data, dst); err != nil {
+		return nil
+	}
+	return dst
+}
+
+// RecordInitialHistory records the initial game state as the first history entry.
+func (ds *DataStore) RecordInitialHistory(state *GameState) {
+	ds.appendHistory(state)
+}
+
+// GetGameHistory returns all history entries for a game in chronological order.
+func (ds *DataStore) GetGameHistory(gameID string) ([]*GameStateHistoryEntry, error) {
+	txn := ds.db.Txn(false)
+	defer txn.Abort()
+
+	it, err := txn.Get("game_history", "game_id", gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get game history for %s: %w", gameID, err)
+	}
+
+	var entries []*GameStateHistoryEntry
+	for obj := it.Next(); obj != nil; obj = it.Next() {
+		entries = append(entries, obj.(*GameStateHistoryEntry))
+	}
+	return entries, nil
 }
 
 // ReadGame fetches a game inside a read-only transaction and passes it to fn.
