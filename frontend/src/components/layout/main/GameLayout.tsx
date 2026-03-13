@@ -3,8 +3,7 @@ import LeftSidebar from "../panels/LeftSidebar.tsx";
 import TopMenuBar from "../panels/TopMenuBar.tsx";
 import RightSidebar from "../panels/RightSidebar.tsx";
 import MainContentDisplay from "../../ui/display/MainContentDisplay.tsx";
-import { TileHighlightMode } from "../../game/board/Tile.tsx";
-import { TileVPIndicator } from "../../ui/overlay/EndGameOverlay.tsx";
+
 import BottomResourceBar, {
   BottomResourceBarCallbacks,
 } from "../../ui/overlay/BottomResourceBar.tsx";
@@ -13,6 +12,7 @@ import { StandardProject } from "../../../types/cards.tsx";
 import {
   ChatMessageDto,
   GameDto,
+  GamePhaseComplete,
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
   PlayerDto,
@@ -44,8 +44,6 @@ interface GameLayoutProps {
   transitionPhase?: TransitionPhase;
   animateHexEntrance?: boolean;
   changedPaths?: Set<string>;
-  tileHighlightMode?: TileHighlightMode;
-  vpIndicators?: TileVPIndicator[];
   triggeredEffects?: TriggeredEffectDto[];
   bottomBarCallbacks?: BottomResourceBarCallbacks;
   onStandardProjectSelect?: (project: StandardProject) => void;
@@ -63,6 +61,11 @@ interface GameLayoutProps {
   onSendChatMessage?: (message: string) => void;
   isLobbyPhase?: boolean;
   playerColorMap?: Map<string, string>;
+  endgameFadeUI?: boolean;
+  isEndgame?: boolean;
+  activeEndgamePanel?: "score" | "graphs" | "replay";
+  onEndgamePanelChange?: (panel: "score" | "graphs" | "replay") => void;
+  hasHistory?: boolean;
 }
 
 const GameLayout: React.FC<GameLayoutProps> = ({
@@ -76,8 +79,6 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   transitionPhase = "idle",
   animateHexEntrance = false,
   changedPaths = new Set(),
-  tileHighlightMode,
-  vpIndicators = [],
   triggeredEffects = [],
   bottomBarCallbacks,
   onStandardProjectSelect,
@@ -95,6 +96,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   onSendChatMessage,
   isLobbyPhase = false,
   playerColorMap,
+  endgameFadeUI = false,
+  isEndgame = false,
+  activeEndgamePanel,
+  onEndgamePanelChange,
+  hasHistory = false,
 }) => {
   // Create a map of all players (current + others) for easy lookup
   const playerMap = new Map<string, PlayerDto | OtherPlayerDto>();
@@ -155,6 +161,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     transitionPhase === "animateUI" || transitionPhase === "complete" || transitionPhase === "idle";
   const isAnimatingIn = transitionPhase === "animateUI";
   const uiAnimationClass = isAnimatingIn ? "animate-[uiFadeIn_1200ms_ease-out_both]" : "";
+  const endgameFadeClass = endgameFadeUI ? "opacity-0 pointer-events-none" : "opacity-100";
 
   return (
     <div className="relative w-screen h-screen bg-[#000000] text-white overflow-hidden">
@@ -171,8 +178,6 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         <div className="absolute inset-0">
           <MainContentDisplay
             gameState={gameState}
-            tileHighlightMode={tileHighlightMode}
-            vpIndicators={vpIndicators}
             animateHexEntrance={animateHexEntrance}
             onSkyboxReady={onSkyboxReady}
             onGpuReady={onGpuReady}
@@ -182,9 +187,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         </div>
       )}
 
-      {/* TopMenuBar overlays on top */}
+      {/* TopMenuBar overlays on top — always visible in endgame */}
       {showUI && !showStartingSelection && (
-        <div className={uiAnimationClass}>
+        <div
+          className={`${uiAnimationClass} ${isEndgame ? "opacity-100" : endgameFadeClass} transition-opacity duration-700 ease-in-out`}
+        >
           <TopMenuBar
             gameState={gameState}
             currentPlayer={currentPlayer}
@@ -192,6 +199,10 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             onLeaveGame={onLeaveGame}
             onEndGame={onEndGame}
             gameId={gameState?.id}
+            isEndgame={isEndgame}
+            activeEndgamePanel={activeEndgamePanel}
+            onEndgamePanelChange={onEndgamePanelChange}
+            hasHistory={hasHistory}
           />
         </div>
       )}
@@ -203,6 +214,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             messages={chatMessages}
             onSendMessage={onSendChatMessage}
             isLobby={isLobbyPhase}
+            isEndgame={endgameFadeUI}
             playerColorMap={playerColorMap}
           />
         </div>
@@ -210,7 +222,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
       {/* Overlay Components */}
       {showUI && (
-        <div className={uiAnimationClass}>
+        <div
+          className={`${uiAnimationClass} ${endgameFadeClass} transition-opacity duration-700 ease-in-out`}
+        >
           <LeftSidebar
             players={allPlayers}
             currentPlayer={currentPlayer}
@@ -246,25 +260,28 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         </div>
       )}
 
-      {showUI && !showStartingSelection && (
-        <div className={uiAnimationClass}>
-          <BottomResourceBar
-            currentPlayer={currentPlayer}
-            gameState={gameState}
-            playedCards={playedCards}
-            changedPaths={changedPaths}
-            callbacks={bottomBarCallbacks}
-            gameId={gameState?.id}
-            corporation={corporationCard}
-            showCorporation={showCorporation}
-            spectatingPlayer={spectatingPlayer}
-            spectatingCorporation={spectatingCorporation}
-            spectatePlayerColor={spectatePlayerColor}
-            onStopSpectating={onStopSpectating}
-            isGameSpectator={isGameSpectator}
-          />
-        </div>
-      )}
+      {showUI &&
+        !showStartingSelection &&
+        (gameState?.currentPhase !== GamePhaseComplete ||
+          (isEndgame && activeEndgamePanel === "replay")) && (
+          <div className={uiAnimationClass}>
+            <BottomResourceBar
+              currentPlayer={currentPlayer}
+              gameState={gameState}
+              playedCards={playedCards}
+              changedPaths={changedPaths}
+              callbacks={bottomBarCallbacks}
+              gameId={gameState?.id}
+              corporation={corporationCard}
+              showCorporation={showCorporation}
+              spectatingPlayer={spectatingPlayer}
+              spectatingCorporation={spectatingCorporation}
+              spectatePlayerColor={spectatePlayerColor}
+              onStopSpectating={onStopSpectating}
+              isGameSpectator={isGameSpectator}
+            />
+          </div>
+        )}
 
       {pendingAction?.type === "kick" && (
         <GameMenuModal

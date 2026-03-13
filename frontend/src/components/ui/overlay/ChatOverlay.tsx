@@ -9,6 +9,7 @@ interface ChatOverlayProps {
   messages: ChatMessageDto[];
   onSendMessage: (message: string) => void;
   isLobby?: boolean;
+  isEndgame?: boolean;
   playerColorMap?: Map<string, string>;
 }
 
@@ -19,6 +20,7 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
   messages,
   onSendMessage,
   isLobby,
+  isEndgame,
   playerColorMap,
 }) => {
   const [inputValue, setInputValue] = useState("");
@@ -108,13 +110,21 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
   };
 
   const style: React.CSSProperties = isSnapped
-    ? {
-        position: "fixed",
-        bottom: snapBottom,
-        right: snapX > 0 ? undefined : 80,
-        left: snapX > 0 ? snapX : undefined,
-        zIndex: Z_INDEX.UI_BASE,
-      }
+    ? isEndgame
+      ? {
+          position: "fixed",
+          right: 16,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: Z_INDEX.UI_BASE,
+        }
+      : {
+          position: "fixed",
+          bottom: snapBottom,
+          right: snapX > 0 ? undefined : 80,
+          left: snapX > 0 ? snapX : undefined,
+          zIndex: Z_INDEX.UI_BASE,
+        }
     : {
         position: "fixed",
         left: position.x,
