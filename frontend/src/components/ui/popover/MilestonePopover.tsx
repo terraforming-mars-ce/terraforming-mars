@@ -10,6 +10,7 @@ import { webSocketService } from "@/services/webSocketService.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { FormattedDescription } from "../display/FormattedDescription";
+import GameButton from "../buttons/GameButton.tsx";
 
 interface MilestonePopoverProps {
   isVisible: boolean;
@@ -73,6 +74,10 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
     return players;
   }, [gameState]);
 
+  const longestNameLength = useMemo(() => {
+    return allPlayers.reduce((max, p) => Math.max(max, p.name.length), 0);
+  }, [allPlayers]);
+
   const getPlayerName = (playerId: string | undefined): string => {
     if (!playerId) return "Unknown";
     return allPlayers.find((p) => p.id === playerId)?.name ?? "Unknown";
@@ -93,7 +98,11 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
       header={{
         title: "Milestones",
         badge: <span>{claimedCount}/3 Claimed</span>,
-        showCloseButton: true,
+        rightContent: (
+          <GameButton buttonType="textonly" size="xs" onClick={onClose}>
+            ✕
+          </GameButton>
+        ),
       }}
       width={500}
       maxHeight="calc(100vh - 80px)"
@@ -134,15 +143,15 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
               className="mb-2 last:mb-0"
             >
               <div className="flex-1">
-                <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-white text-sm font-bold font-orbitron m-0">
+                    {milestone.name}
+                  </h3>
+                </div>
+
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-white text-sm font-bold font-orbitron m-0">
-                        {milestone.name}
-                      </h3>
-                    </div>
-
-                    <div className="flex items-center gap-2">
                       <GameIcon
                         iconType={ResourceTypeCredit}
                         amount={milestone.claimCost}
@@ -151,58 +160,46 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
                       <span className="text-white/60 text-xs">→</span>
                       <span className="text-amber-400 text-xs font-semibold">5 VP</span>
                     </div>
+
+                    <p className="text-white/70 text-xs leading-relaxed m-0 text-left">
+                      <FormattedDescription text={milestone.description} />
+                    </p>
+
+                    {isClaimed && milestone.claimedBy && (
+                      <div className="mt-2 text-xs text-blue-400/80 italic">
+                        Claimed by {getPlayerName(milestone.claimedBy)}
+                      </div>
+                    )}
                   </div>
 
-                  {canClaimMilestones && !isClaimed && (
-                    <button
-                      className={`flex-shrink-0 px-3 py-1.5 rounded text-xs font-semibold transition-all cursor-pointer ${
-                        isAvailable
-                          ? "bg-[var(--popover-accent)]/80 hover:bg-[var(--popover-accent)] text-white shadow-sm hover:shadow-md"
-                          : "bg-gray-600/50 text-gray-400"
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isExecutable) handleClaimMilestone(milestone.type);
-                      }}
-                      disabled={!isAvailable}
+                  {!isClaimed && required > 0 && (
+                    <div
+                      className="flex-shrink-0 grid grid-cols-[auto_auto] gap-x-3 gap-y-1"
+                      style={{ minWidth: `${longestNameLength + 5}ch` }}
                     >
-                      Claim
-                    </button>
+                      {sortedPlayers.map((player) => {
+                        const progress = playerProgress[player.id] ?? 0;
+                        const met = progress >= required;
+                        return (
+                          <React.Fragment key={player.id}>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span
+                                className="w-2 h-2 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: player.color }}
+                              />
+                              <span className="text-white/80">{player.name}</span>
+                            </div>
+                            <span
+                              className={`text-xs font-orbitron font-semibold ${met ? "text-green-400" : "text-white/50"}`}
+                            >
+                              {progress}/{required}
+                            </span>
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
-
-                <p className="text-white/70 text-xs leading-relaxed m-0 text-left">
-                  <FormattedDescription text={milestone.description} />
-                </p>
-
-                {isClaimed && milestone.claimedBy && (
-                  <div className="mt-2 text-xs text-blue-400/80 italic">
-                    Claimed by {getPlayerName(milestone.claimedBy)}
-                  </div>
-                )}
-
-                {!isClaimed && required > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {sortedPlayers.map((player) => {
-                      const progress = playerProgress[player.id] ?? 0;
-                      const met = progress >= required;
-                      return (
-                        <div key={player.id} className="flex items-center gap-2 text-xs">
-                          <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: player.color }}
-                          />
-                          <span className="text-white/80 truncate min-w-0">{player.name}</span>
-                          <span
-                            className={`ml-auto font-orbitron font-semibold ${met ? "text-green-400" : "text-white/50"}`}
-                          >
-                            {progress}/{required}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             </GamePopoverItem>
           );

@@ -20,6 +20,7 @@ interface TileGridProps {
   gameState?: GameDto;
   onHexClick?: (hexCoordinate: string) => void;
   animateHexEntrance?: boolean;
+  startHidden?: boolean;
 }
 
 // Local type for tiles with projected positions
@@ -63,6 +64,7 @@ export default function TileGrid({
   gameState,
   onHexClick,
   animateHexEntrance = false,
+  startHidden = false,
 }: TileGridProps) {
   const newlyPlacedTiles = usePreviousTiles(gameState?.board?.tiles);
   const { playWaterPlacementSound, playOxygenSound, playConstructionSound } = useSoundEffects();
@@ -541,6 +543,7 @@ export default function TileGrid({
             isHovered={hoveredHexKey === hexKey}
             isAvailableForPlacement={isAvailable}
             animateEntrance={animateHexEntrance}
+            startHidden={startHidden}
             entranceDelay={index * 15}
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
             vpHighlightIntensity={vpHighlightIntensity}

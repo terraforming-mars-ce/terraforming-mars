@@ -2,7 +2,6 @@ package card_packs_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
@@ -13,51 +12,14 @@ import (
 	"terraforming-mars-backend/test/testutil"
 )
 
-func formatHex(pos shared.HexPosition) string {
-	return fmt.Sprintf("%d,%d,%d", pos.Q, pos.R, pos.S)
-}
-
 // Known board positions from GenerateMarsBoard (official Tharsis layout):
 // Ocean at (4,-1,-3) is adjacent to land (3,-1,-2) and land (3,0,-3)
 var (
-	// An ocean tile position that is adjacent to landHexA and landHexB
-	oceanHexA = formatHex(shared.HexPosition{Q: 4, R: -1, S: -3})
-	// A land tile adjacent to oceanHexA
-	landHexA = formatHex(shared.HexPosition{Q: 3, R: -1, S: -2})
-	// Another land tile adjacent to oceanHexA
-	landHexB = formatHex(shared.HexPosition{Q: 3, R: 0, S: -3})
-
-	// An ocean tile at the bottom of the board for isolated test
-	oceanIsolated = formatHex(shared.HexPosition{Q: 0, R: 4, S: -4})
+	oceanHexA     = testutil.FormatHex(shared.HexPosition{Q: 4, R: -1, S: -3})
+	landHexA      = testutil.FormatHex(shared.HexPosition{Q: 3, R: -1, S: -2})
+	landHexB      = testutil.FormatHex(shared.HexPosition{Q: 3, R: 0, S: -3})
+	oceanIsolated = testutil.FormatHex(shared.HexPosition{Q: 0, R: 4, S: -4})
 )
-
-func placeTileForPlayer(ctx context.Context, t *testing.T, g *game.Game, repo game.GameRepository, playerID string, tileType string, hexStr string) {
-	t.Helper()
-	logger := testutil.TestLogger()
-	stateRepo := game.NewInMemoryGameStateRepository()
-	cr := testutil.CreateTestCardRegistry()
-
-	// Temporarily set turn to this player so tile placement is allowed
-	err := g.SetCurrentTurn(ctx, playerID, 2)
-	if err != nil {
-		t.Fatalf("Failed to set turn for tile placement: %v", err)
-	}
-
-	err = g.SetPendingTileSelection(ctx, playerID, &shared.PendingTileSelection{
-		TileType:       tileType,
-		AvailableHexes: []string{hexStr},
-		Source:         "test",
-	})
-	if err != nil {
-		t.Fatalf("Failed to set pending tile selection: %v", err)
-	}
-
-	selectTile := tileAction.NewSelectTileAction(repo, cr, stateRepo, logger)
-	_, err = selectTile.Execute(ctx, g.ID(), playerID, hexStr)
-	if err != nil {
-		t.Fatalf("Failed to place %s tile on %s: %v", tileType, hexStr, err)
-	}
-}
 
 func playFloodingCard(ctx context.Context, t *testing.T, g *game.Game, repo game.GameRepository, playerID string) {
 	t.Helper()
@@ -105,7 +67,7 @@ func TestFlooding_AdjacentOpponentTile_StealOffered(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p2, 100)
 
 	// Place a city for p2 on the land tile adjacent to the ocean spot
-	placeTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
 
 	// Play Flooding card for p1
 	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
@@ -123,9 +85,9 @@ func TestFlooding_AdjacentOpponentTile_StealOffered(t *testing.T) {
 	stealSelection := p1.Selection().GetPendingStealTargetSelection()
 	testutil.AssertTrue(t, stealSelection != nil, "Player should have pending steal target selection")
 	testutil.AssertEqual(t, 4, stealSelection.Amount, "Steal amount should be 4")
-	testutil.AssertTrue(t, contains(stealSelection.EligiblePlayerIDs, p2ID),
+	testutil.AssertTrue(t, testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p2ID),
 		"P2 should be in eligible steal targets")
-	testutil.AssertTrue(t, !contains(stealSelection.EligiblePlayerIDs, p1ID),
+	testutil.AssertTrue(t, !testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p1ID),
 		"P1 (self) should not be in eligible steal targets")
 }
 
@@ -163,8 +125,8 @@ func TestFlooding_MultipleAdjacentOpponents_AllEligible(t *testing.T) {
 	}
 
 	// Place cities for p2 and p3 on two different land tiles adjacent to same ocean
-	placeTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
-	placeTileForPlayer(ctx, t, testGame, repo, p3ID, "city", landHexB)
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p3ID, "city", landHexB)
 
 	// Play Flooding for p1
 	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
@@ -175,9 +137,9 @@ func TestFlooding_MultipleAdjacentOpponents_AllEligible(t *testing.T) {
 	p1, _ := testGame.GetPlayer(p1ID)
 	stealSelection := p1.Selection().GetPendingStealTargetSelection()
 	testutil.AssertTrue(t, stealSelection != nil, "Player should have pending steal target selection")
-	testutil.AssertTrue(t, contains(stealSelection.EligiblePlayerIDs, p2ID), "P2 should be eligible")
-	testutil.AssertTrue(t, contains(stealSelection.EligiblePlayerIDs, p3ID), "P3 should be eligible")
-	testutil.AssertTrue(t, !contains(stealSelection.EligiblePlayerIDs, p1ID), "P1 should not be eligible")
+	testutil.AssertTrue(t, testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p2ID), "P2 should be eligible")
+	testutil.AssertTrue(t, testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p3ID), "P3 should be eligible")
+	testutil.AssertTrue(t, !testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p1ID), "P1 should not be eligible")
 }
 
 func TestFlooding_ConfirmSteal_CreditsTransferred(t *testing.T) {
@@ -193,7 +155,7 @@ func TestFlooding_ConfirmSteal_CreditsTransferred(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p1, 100)
 	testutil.SetPlayerCredits(ctx, p2, 50)
 
-	placeTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
 
 	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
 	testutil.AssertNoError(t, err, "Failed to set turn")
@@ -227,7 +189,7 @@ func TestFlooding_PartialSteal_TargetHasLessThan4Credits(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p1, 100)
 	testutil.SetPlayerCredits(ctx, p2, 2)
 
-	placeTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
 
 	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
 	testutil.AssertNoError(t, err, "Failed to set turn")
@@ -257,7 +219,7 @@ func TestFlooding_SkipSteal_NoCreditsChange(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p1, 100)
 	testutil.SetPlayerCredits(ctx, p2, 50)
 
-	placeTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
 
 	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
 	testutil.AssertNoError(t, err, "Failed to set turn")
@@ -287,7 +249,7 @@ func TestFlooding_OwnTilesNotEligible(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p1, 100)
 
 	// Place a city for p1 (self) on the adjacent land tile
-	placeTileForPlayer(ctx, t, testGame, repo, p1ID, "city", landHexA)
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p1ID, "city", landHexA)
 
 	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
 	testutil.AssertNoError(t, err, "Failed to set turn")
@@ -312,7 +274,7 @@ func TestFlooding_InvalidTargetPlayer_Rejected(t *testing.T) {
 	p2, _ := testGame.GetPlayer(p2ID)
 	testutil.SetPlayerCredits(ctx, p2, 100)
 
-	placeTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", landHexA)
 
 	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
 	testutil.AssertNoError(t, err, "Failed to set turn")
@@ -322,13 +284,4 @@ func TestFlooding_InvalidTargetPlayer_Rejected(t *testing.T) {
 	confirmSteal := confirmAction.NewConfirmStealTargetAction(repo, cardRegistry, stateRepo, logger)
 	err = confirmSteal.Execute(ctx, testGame.ID(), p1ID, "nonexistent-player")
 	testutil.AssertTrue(t, err != nil, "Should fail when targeting ineligible player")
-}
-
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }

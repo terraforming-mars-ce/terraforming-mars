@@ -30,6 +30,12 @@ export function usePreviousTiles(tiles: TileDto[] | undefined): Set<string> {
 
         if (isOccupiedNow && !wasOccupiedBefore) {
           placed.add(key);
+        } else if (
+          isOccupiedNow &&
+          wasOccupiedBefore &&
+          tile.occupiedBy!.type !== previousTile!.occupiedBy!.type
+        ) {
+          placed.add(key);
         }
       }
     }

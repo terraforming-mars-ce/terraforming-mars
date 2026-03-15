@@ -44,8 +44,9 @@ const (
 
 // VPPerCondition defines the per-condition for VP calculation
 type VPPerCondition struct {
-	ResourceType ResourceType
-	Amount       int
-	Target       *string
-	Tag          *CardTag
+	ResourceType       ResourceType
+	Amount             int
+	Target             *string
+	Tag                *CardTag
+	AdjacentToSelfTile bool
 }

@@ -11,6 +11,8 @@ import {
   CardTypeCorporation,
 } from "../../../../types/generated/api-types.ts";
 import PlayerSelector from "../PlayerSelector.tsx";
+import GameCard from "../../cards/GameCard.tsx";
+import CorporationCard from "../../cards/CorporationCard.tsx";
 
 interface PlayerBehaviorPageProps {
   gameState: GameDto;
@@ -50,8 +52,12 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
   const [corpQuery, setCorpQuery] = useState("");
   const [showCorpDropdown, setShowCorpDropdown] = useState(false);
 
+  const [hoveredCard, setHoveredCard] = useState<CardDto | null>(null);
+
   const cardInputRef = useRef<HTMLDivElement>(null);
   const corpInputRef = useRef<HTMLDivElement>(null);
+  const cardDropdownRef = useRef<HTMLDivElement>(null);
+  const corpDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadCards = async () => {
@@ -268,7 +274,9 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
                 const pos = getDropdownPosition(cardInputRef);
                 return createPortal(
                   <div
+                    ref={cardDropdownRef}
                     style={{ ...dropdownBaseStyle, top: pos.top, left: pos.left, width: pos.width }}
+                    onMouseLeave={() => setHoveredCard(null)}
                   >
                     {filteredCards.length === 0 ? (
                       <div style={{ padding: "8px 12px", color: "#666", fontSize: "12px" }}>
@@ -282,12 +290,16 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
                             setCardId(card.id);
                             setCardQuery(`${card.id} - ${card.name}`);
                             setShowCardDropdown(false);
+                            setHoveredCard(null);
                           }}
                           style={dropdownItemStyle}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)")
-                          }
-                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)";
+                            setHoveredCard(card);
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                          }}
                         >
                           <span style={{ color: "#3b82f6", fontWeight: "bold" }}>{card.id}</span>
                           <span style={{ color: "#abb2bf" }}> - {card.name}</span>
@@ -362,7 +374,9 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
                 const pos = getDropdownPosition(corpInputRef);
                 return createPortal(
                   <div
+                    ref={corpDropdownRef}
                     style={{ ...dropdownBaseStyle, top: pos.top, left: pos.left, width: pos.width }}
+                    onMouseLeave={() => setHoveredCard(null)}
                   >
                     {filteredCorporations.length === 0 ? (
                       <div style={{ padding: "8px 12px", color: "#666", fontSize: "12px" }}>
@@ -376,12 +390,16 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
                             setCorporationId(card.id);
                             setCorpQuery(`${card.id} - ${card.name}`);
                             setShowCorpDropdown(false);
+                            setHoveredCard(null);
                           }}
                           style={dropdownItemStyle}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)")
-                          }
-                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)";
+                            setHoveredCard(card);
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                          }}
                         >
                           <span style={{ color: "#ffc107", fontWeight: "bold" }}>{card.id}</span>
                           <span style={{ color: "#abb2bf" }}> - {card.name}</span>
@@ -398,6 +416,55 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
           </button>
         </div>
       </div>
+      {hoveredCard &&
+        (() => {
+          const activeDropdownRef = showCardDropdown ? cardDropdownRef : corpDropdownRef;
+          const dropdownEl = activeDropdownRef.current;
+          if (!dropdownEl) {
+            return null;
+          }
+          const dropdownRect = dropdownEl.getBoundingClientRect();
+          const isCorporation = hoveredCard.type === CardTypeCorporation;
+          const corpScale = 0.85;
+          const cardWidth = isCorporation ? 400 * corpScale : 200;
+          const cardHeight = isCorporation ? 380 * corpScale : 280;
+          const gap = 8;
+          const previewLeft = dropdownRect.left - cardWidth - gap;
+          const dropdownCenterY = dropdownRect.top + dropdownRect.height / 2;
+          const previewTop = dropdownCenterY - cardHeight / 2;
+
+          return createPortal(
+            <div
+              style={{
+                position: "fixed",
+                left: previewLeft,
+                top: previewTop,
+                zIndex: 99999,
+                pointerEvents: "none",
+              }}
+            >
+              {isCorporation ? (
+                <div style={{ transform: `scale(${corpScale})`, transformOrigin: "top left" }}>
+                  <CorporationCard
+                    card={hoveredCard}
+                    isSelected={false}
+                    onSelect={() => {}}
+                    showCheckbox={false}
+                    disableInteraction={true}
+                  />
+                </div>
+              ) : (
+                <GameCard
+                  card={hoveredCard}
+                  isSelected={false}
+                  onSelect={() => {}}
+                  showCheckbox={false}
+                />
+              )}
+            </div>,
+            document.body,
+          );
+        })()}
     </div>
   );
 };

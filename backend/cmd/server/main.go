@@ -172,6 +172,7 @@ func main() {
 	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, log)
 	confirmStealTargetAction := confirmAction.NewConfirmStealTargetAction(gameRepo, cardRegistry, stateRepo, log)
 	confirmColonyResourceAction := confirmAction.NewConfirmColonyResourceAction(gameRepo, cardRegistry, stateRepo, log)
+	confirmAwardFundAction := confirmAction.NewConfirmAwardFundAction(gameRepo, cardRegistry, log)
 
 	// Turn management (4)
 	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
@@ -274,6 +275,7 @@ func main() {
 		confirmBehaviorChoiceAction,
 		confirmStealTargetAction,
 		confirmColonyResourceAction,
+		confirmAwardFundAction,
 		// Connection
 		playerDisconnectedAction,
 		playerTakeoverAction,

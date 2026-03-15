@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import MainMenuSettingsButton from "../buttons/MainMenuSettingsButton.tsx";
-import GameMenuButton from "../buttons/GameMenuButton.tsx";
+import BackButton from "../buttons/BackButton.tsx";
 
 interface GameMenuModalProps {
   title: string;
@@ -91,16 +91,7 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
         />
       )}
 
-      {onBack && (
-        <GameMenuButton
-          variant="secondary"
-          size="sm"
-          onClick={onBack}
-          className="fixed top-[30px] left-[30px] z-[10000]"
-        >
-          &larr; Back
-        </GameMenuButton>
-      )}
+      {onBack && <BackButton onClick={onBack} className="fixed top-[30px] left-[30px] z-[10000]" />}
       {showSettings && <MainMenuSettingsButton />}
       <div
         className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] max-w-[90vw] ${animationClass}`}

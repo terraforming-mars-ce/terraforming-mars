@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import GameMenuButton from "../ui/buttons/GameMenuButton.tsx";
+import { useNavigate, useLocation } from "react-router-dom";
+import GameButton from "../ui/buttons/GameButton.tsx";
 import { apiService } from "../../services/apiService";
 import { globalWebSocketManager } from "../../services/globalWebSocketManager.ts";
 import { useSpaceBackground } from "../../contexts/SpaceBackgroundContext.tsx";
@@ -182,27 +182,25 @@ const GameLandingPage: React.FC = () => {
           </h1>
 
           <div className="flex gap-5 justify-center">
-            <GameMenuButton
+            <GameButton
               as="link"
               to="/create"
-              variant="primary"
               size="lg"
               linkOnClick={handleCreateGame}
               className="px-10 py-5"
             >
               New Game
-            </GameMenuButton>
+            </GameButton>
 
-            <GameMenuButton
+            <GameButton
               as="link"
               to="/join"
-              variant="primary"
               size="lg"
               linkOnClick={handleJoinGame}
               className="px-10 py-5"
             >
               Browse
-            </GameMenuButton>
+            </GameButton>
           </div>
         </div>
 
@@ -288,14 +286,13 @@ const GameLandingPage: React.FC = () => {
                         )}
                       </div>
 
-                      <GameMenuButton
-                        variant="action"
+                      <GameButton
                         size="lg"
                         onClick={() => void handleReconnect()}
                         className="w-full"
                       >
                         {buttonLabel}
-                      </GameMenuButton>
+                      </GameButton>
                     </>
                   );
                 })()}
@@ -304,12 +301,15 @@ const GameLandingPage: React.FC = () => {
           )}
         </div>
 
-        <Link
+        <GameButton
+          as="link"
           to="/cards"
-          className="fixed bottom-[30px] right-[30px] bg-space-black-darker/80 border border-white/20 rounded-lg py-3 px-5 text-white/70 cursor-pointer transition-all duration-300 text-sm backdrop-blur-space-light font-orbitron hover:text-white/95 hover:border-space-blue-600 hover:bg-space-black-darker/95 hover:shadow-glow-sm no-underline"
+          buttonType="secondary"
+          size="sm"
+          className="fixed bottom-[30px] right-[30px]"
         >
           View Cards
-        </Link>
+        </GameButton>
 
         <span className="fixed bottom-[16px] left-[16px] text-white/30 text-xs select-none">
           {APP_VERSION}

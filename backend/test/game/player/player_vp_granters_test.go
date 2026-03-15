@@ -12,16 +12,18 @@ import (
 )
 
 type mockVPRecalculationContext struct {
-	cardStorage map[string]map[string]int
-	tagCounts   map[string]map[shared.CardTag]int
-	tileCounts  map[shared.ResourceType]int
+	cardStorage          map[string]map[string]int
+	tagCounts            map[string]map[shared.CardTag]int
+	tileCounts           map[shared.ResourceType]int
+	adjacentTilesForCard map[string]map[shared.ResourceType]int
 }
 
 func newMockVPRecalculationContext() *mockVPRecalculationContext {
 	return &mockVPRecalculationContext{
-		cardStorage: make(map[string]map[string]int),
-		tagCounts:   make(map[string]map[shared.CardTag]int),
-		tileCounts:  make(map[shared.ResourceType]int),
+		cardStorage:          make(map[string]map[string]int),
+		tagCounts:            make(map[string]map[shared.CardTag]int),
+		tileCounts:           make(map[shared.ResourceType]int),
+		adjacentTilesForCard: make(map[string]map[shared.ResourceType]int),
 	}
 }
 
@@ -41,6 +43,13 @@ func (m *mockVPRecalculationContext) CountPlayerTagsByType(playerID string, tagT
 
 func (m *mockVPRecalculationContext) CountAllTilesOfType(tileType shared.ResourceType) int {
 	return m.tileCounts[tileType]
+}
+
+func (m *mockVPRecalculationContext) CountAdjacentTilesForCard(cardID string, tileType shared.ResourceType) int {
+	if cardTiles, ok := m.adjacentTilesForCard[cardID]; ok {
+		return cardTiles[tileType]
+	}
+	return 0
 }
 
 func (m *mockVPRecalculationContext) setCardStorage(playerID string, cardID string, count int) {
@@ -568,6 +577,75 @@ func TestIntegrationTilePlacedRecalculatesAllPlayersVP(t *testing.T) {
 		"Player 1 VP should be 1 (3 cities / 3 per VP = 1)")
 	testutil.AssertEqual(t, 1, player2.VPGranters().TotalComputedVP(),
 		"Player 2 VP should also be 1 (tile changes affect all players)")
+}
+
+func TestPerAdjacentOceanTileVPGranter(t *testing.T) {
+	tests := []struct {
+		name           string
+		adjacentOceans int
+		totalOceans    int
+		expectedVP     int
+	}{
+		{
+			name:           "Capital: 0 adjacent oceans, 5 total = 0 VP",
+			adjacentOceans: 0,
+			totalOceans:    5,
+			expectedVP:     0,
+		},
+		{
+			name:           "Capital: 3 adjacent oceans, 9 total = 3 VP (not 9)",
+			adjacentOceans: 3,
+			totalOceans:    9,
+			expectedVP:     3,
+		},
+		{
+			name:           "Capital: 1 adjacent ocean, 1 total = 1 VP",
+			adjacentOceans: 1,
+			totalOceans:    1,
+			expectedVP:     1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			broadcaster := testutil.NewMockBroadcaster()
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			players := testGame.GetAllPlayers()
+			p := players[0]
+
+			capitalID := testutil.CardID("Capital")
+			granter := shared.VPGranter{
+				CardID:   capitalID,
+				CardName: "Capital",
+				VPConditions: []shared.VPCondition{
+					{
+						Amount:    1,
+						Condition: shared.VPConditionPer,
+						Per: &shared.VPPerCondition{
+							ResourceType:       shared.ResourceOceanTile,
+							Amount:             1,
+							AdjacentToSelfTile: true,
+						},
+					},
+				},
+			}
+
+			p.VPGranters().Add(granter)
+
+			ctx := newMockVPRecalculationContext()
+			ctx.tileCounts[shared.ResourceOceanTile] = tt.totalOceans
+			if _, ok := ctx.adjacentTilesForCard[capitalID]; !ok {
+				ctx.adjacentTilesForCard[capitalID] = make(map[shared.ResourceType]int)
+			}
+			ctx.adjacentTilesForCard[capitalID][shared.ResourceOceanTile] = tt.adjacentOceans
+			p.VPGranters().RecalculateAll(ctx)
+
+			granters := p.VPGranters().GetAll()
+			testutil.AssertEqual(t, 1, len(granters), "Should have exactly 1 VP granter")
+			testutil.AssertEqual(t, tt.expectedVP, granters[0].ComputedValue, "Capital VP should count only adjacent oceans")
+			testutil.AssertEqual(t, tt.expectedVP, p.VPGranters().TotalComputedVP(), "TotalComputedVP should match")
+		})
+	}
 }
 
 func TestCorporationVPConditions(t *testing.T) {

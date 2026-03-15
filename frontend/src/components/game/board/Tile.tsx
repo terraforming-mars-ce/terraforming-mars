@@ -265,6 +265,7 @@ interface TileProps {
   onClick: () => void;
   isAvailableForPlacement?: boolean;
   animateEntrance?: boolean;
+  startHidden?: boolean;
   entranceDelay?: number;
   isNewlyPlaced?: boolean;
   isVolcanic?: boolean;
@@ -291,6 +292,7 @@ function Tile({
   onClick: _onClick,
   isAvailableForPlacement = false,
   animateEntrance = false,
+  startHidden = false,
   entranceDelay = 0,
   isNewlyPlaced = false,
   isVolcanic = false,
@@ -307,7 +309,7 @@ function Tile({
   const extraMatsRef = useRef<THREE.Material[] | null>(null);
   const hovered = isHoveredProp;
 
-  const [entranceScale, setEntranceScale] = useState(animateEntrance ? 0 : 1);
+  const [entranceScale, setEntranceScale] = useState(animateEntrance || startHidden ? 0 : 1);
   const entranceStartRef = useRef<number | null>(null);
   const entranceDoneRef = useRef(!animateEntrance);
 

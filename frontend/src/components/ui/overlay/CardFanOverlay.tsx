@@ -8,6 +8,7 @@ import React, {
   forwardRef,
 } from "react";
 import GameCard from "../cards/GameCard.tsx";
+import BlurredOverlay from "./BlurredOverlay.tsx";
 import { PlayerCardDto } from "@/types/generated/api-types.ts";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 
@@ -71,6 +72,8 @@ function getCardTransform(i: number, scrollPos: number): CardTransform {
 
 export interface CardFanOverlayHandle {
   toggleExpand: () => void;
+  collapse: () => void;
+  readonly isExpanded: boolean;
 }
 
 interface CardFanOverlayProps {
@@ -176,6 +179,14 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
             handleExpand();
           }
         },
+        collapse: () => {
+          if (isExpanded) {
+            handleCollapse();
+          }
+        },
+        get isExpanded() {
+          return isExpanded;
+        },
       }),
       [isExpanded, handleCollapse, handleExpand],
     );
@@ -183,6 +194,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === "Escape" && isExpanded) {
+          e.stopImmediatePropagation();
           handleCollapse();
         }
       };
@@ -516,13 +528,15 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
 
     return (
       <>
-        {/* Backdrop with blur */}
-        <div
-          className={`card-fan-backdrop ${isExpanded ? "is-visible" : ""}`}
-          onClick={() => handleCollapse()}
-        />
+        <BlurredOverlay visible={isExpanded} onClose={() => handleCollapse()} zIndex={20200}>
+          <div />
+        </BlurredOverlay>
 
-        <div className="card-fan-overlay" ref={handRef}>
+        <div
+          className="card-fan-overlay"
+          ref={handRef}
+          style={isExpanded ? { zIndex: 20201 } : undefined}
+        >
           {cards.map((card) => {
             const index = cardOrder.indexOf(card.id);
             if (index === -1) return null;
@@ -642,6 +656,15 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                     ))}
                   </div>
                 )}
+                {!isExpanded && card.available && card.warnings && card.warnings.length > 0 && (
+                  <div className={`card-fan-warning-panel ${showErrors ? "is-visible" : ""}`}>
+                    {card.warnings.map((warn, i) => (
+                      <div key={i} className="card-fan-warning-item">
+                        {warn.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -664,23 +687,6 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
           )}
 
           <style>{`
-        .card-fan-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.4);
-          backdrop-filter: blur(6px);
-          z-index: 1099;
-          pointer-events: none;
-          opacity: 0;
-          transition: opacity 245ms ease;
-        }
-
-        .card-fan-backdrop.is-visible {
-          opacity: 1;
-          pointer-events: auto;
-          cursor: default;
-        }
-
         .card-fan-overlay {
           position: fixed;
           bottom: 48px;

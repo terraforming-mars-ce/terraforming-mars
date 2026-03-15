@@ -56,7 +56,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
       {error && state === "disabled" && (
         <div className="absolute top-2 right-2 z-[4] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(231,76,60,0.8)] shadow-[0_2px_8px_rgba(231,76,60,0.4)] flex items-center gap-1">
           <span>⚠</span>
-          <span className="max-w-[140px] truncate">
+          <span>
             {error.message}
             {error.count && error.count > 1 && ` (+${error.count - 1})`}
           </span>
@@ -66,7 +66,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
       {warning && state === "available" && (
         <div className="absolute top-2 right-2 z-[4] bg-[linear-gradient(135deg,#f39c12,#e67e22)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(243,156,18,0.8)] shadow-[0_2px_8px_rgba(243,156,18,0.4)] flex items-center gap-1">
           <span>⚠</span>
-          <span className="max-w-[140px] truncate">{warning.message}</span>
+          <span>{warning.message}</span>
         </div>
       )}
 

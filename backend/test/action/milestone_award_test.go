@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	awardAction "terraforming-mars-backend/internal/action/award"
+	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	milestoneAction "terraforming-mars-backend/internal/action/milestone"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
@@ -171,4 +172,76 @@ func TestFundAward_InsufficientCredits(t *testing.T) {
 	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "landlord")
 	testutil.AssertError(t, err, "Funding award with 0 credits should fail")
+}
+
+// --- Confirm Award Fund (Free) ---
+
+func TestConfirmAwardFund_Success(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+	logger := testutil.TestLogger()
+
+	p, _ := testGame.GetPlayer(playerID)
+	testutil.SetPlayerCredits(ctx, p, 10)
+
+	// Set up pending award fund selection
+	p.Selection().SetPendingAwardFundSelection(&shared.PendingAwardFundSelection{
+		AvailableAwards: []string{"landlord", "banker", "scientist"},
+		Source:          "corporation-starting-action",
+	})
+
+	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	err := action.Execute(ctx, testGame.ID(), playerID, "banker")
+	testutil.AssertNoError(t, err, "ConfirmAwardFund should succeed")
+
+	// Award should be funded
+	testutil.AssertTrue(t, testGame.Awards().IsFunded(shared.AwardBanker), "Banker award should be funded")
+
+	// Credits should be unchanged (free)
+	testutil.AssertEqual(t, 10, p.Resources().Get().Credits, "Credits should not be deducted")
+
+	// Pending selection should be cleared
+	testutil.AssertTrue(t, p.Selection().GetPendingAwardFundSelection() == nil, "Pending selection should be cleared")
+}
+
+func TestConfirmAwardFund_InvalidAwardType(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+	logger := testutil.TestLogger()
+
+	p, _ := testGame.GetPlayer(playerID)
+	p.Selection().SetPendingAwardFundSelection(&shared.PendingAwardFundSelection{
+		AvailableAwards: []string{"landlord"},
+		Source:          "corporation-starting-action",
+	})
+
+	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	err := action.Execute(ctx, testGame.ID(), playerID, "nonexistent")
+	testutil.AssertError(t, err, "Invalid award type should fail")
+}
+
+func TestConfirmAwardFund_AwardNotInAvailableList(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+	logger := testutil.TestLogger()
+
+	p, _ := testGame.GetPlayer(playerID)
+	p.Selection().SetPendingAwardFundSelection(&shared.PendingAwardFundSelection{
+		AvailableAwards: []string{"landlord"},
+		Source:          "corporation-starting-action",
+	})
+
+	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	err := action.Execute(ctx, testGame.ID(), playerID, "banker")
+	testutil.AssertError(t, err, "Award not in available list should fail")
+}
+
+func TestConfirmAwardFund_NoPendingSelection(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+	logger := testutil.TestLogger()
+
+	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	err := action.Execute(ctx, testGame.ID(), playerID, "landlord")
+	testutil.AssertError(t, err, "Should fail without pending selection")
 }

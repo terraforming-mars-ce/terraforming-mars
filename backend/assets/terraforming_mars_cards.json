@@ -8593,7 +8593,7 @@
         "outputs": [
           {
             "type": "credit-production",
-            "amount": -1,
+            "amount": -2,
             "target": "self-player"
           },
           {
@@ -15507,6 +15507,11 @@
         ],
         "outputs": [
           {
+            "type": "card-draw",
+            "amount": 3,
+            "target": "self-player"
+          },
+          {
             "type": "credit-production",
             "amount": 1,
             "target": "self-player"
@@ -16377,6 +16382,21 @@
           }
         ],
         "description": "When you play a card with a **non-negative** VP icon, including this, gain 3 M€"
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto-corporation-first-action"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "award-fund",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "As your first action, fund an award for free."
       }
     ]
   },
@@ -20073,7 +20093,7 @@
     "name": "Nuke",
     "type": "event",
     "cost": 30,
-    "description": "Destroy any tile on the board. If it's an ocean, reduce the ocean count by 1.",
+    "description": "Replace any non-ocean tile with a Nuclear Zone tile.",
     "pack": "experimental",
     "tags": [
       "event",
@@ -20088,12 +20108,20 @@
         ],
         "outputs": [
           {
-            "type": "tile-destruction",
+            "type": "tile-replacement",
             "amount": 1,
-            "target": "self-player"
+            "target": "self-player",
+            "tileType": "nuclear-zone"
           }
         ],
-        "description": "Destroy any tile on the board."
+        "description": "Replace any tile with a Nuclear Zone tile."
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": -2,
+        "condition": "fixed",
+        "description": "-2 VP"
       }
     ]
   }

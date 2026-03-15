@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import GameMenuButton from "./GameMenuButton.tsx";
+import GameButton from "./GameButton.tsx";
 
 interface CopyLinkButtonProps {
   textToCopy: string;
@@ -39,8 +39,8 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({
   };
 
   return (
-    <GameMenuButton
-      variant="primary"
+    <GameButton
+      buttonType="secondary"
       size="md"
       onClick={handleCopy}
       disabled={isCopied}
@@ -52,7 +52,7 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({
         {isCopied ? copiedText : defaultText}
         {icon && !isCopied && icon}
       </span>
-    </GameMenuButton>
+    </GameButton>
   );
 };
 

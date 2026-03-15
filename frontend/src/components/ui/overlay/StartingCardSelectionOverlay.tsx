@@ -14,7 +14,7 @@ import {
   RESOURCE_LABEL_CLASS,
   RESOURCE_DISPLAY_CLASS,
 } from "./overlayStyles.ts";
-import GameMenuButton from "../buttons/GameMenuButton.tsx";
+import GameButton from "../buttons/GameButton.tsx";
 import MainMenuSettingsButton from "../buttons/MainMenuSettingsButton.tsx";
 
 interface StartingCardSelectionOverlayProps {
@@ -25,6 +25,7 @@ interface StartingCardSelectionOverlayProps {
   cards: CardDto[];
   playerCredits: number;
   onConfirm: (corporationId: string, preludeIds: string[], cardIds: string[]) => void;
+  onHide?: () => void;
 }
 
 const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> = ({
@@ -35,6 +36,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
   cards,
   playerCredits,
   onConfirm,
+  onHide,
 }) => {
   const [selectedCorporationId, setSelectedCorporationId] = useState<string | null>(null);
   const [selectedPreludeIds, setSelectedPreludeIds] = useState<string[]>([]);
@@ -210,6 +212,12 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
           </div>
 
           <div className="flex items-center gap-4 max-[768px]:w-full max-[768px]:flex-col max-[768px]:gap-3">
+            {onHide && (
+              <GameButton buttonType="secondary" size="lg" onClick={onHide}>
+                Hide
+              </GameButton>
+            )}
+
             {!selectedCorporationId && (
               <span className="text-sm text-white/70">Select a corporation to continue</span>
             )}
@@ -222,15 +230,14 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
               </div>
             )}
 
-            <GameMenuButton
-              variant="primary"
+            <GameButton
               size="lg"
               onClick={handleConfirm}
               disabled={!allValid}
               className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
             >
               {showConfirmation ? "Confirm Skip" : "Confirm Selection"}
-            </GameMenuButton>
+            </GameButton>
           </div>
         </div>
       </div>

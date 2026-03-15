@@ -44,6 +44,61 @@ func CalculatePlayerCardState(
 
 	errors = append(errors, ValidateTileOutputs(card, p, g)...)
 
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+		warnings = append(warnings, validateGlobalParamWarnings(behavior.Outputs, g)...)
+		for _, choice := range behavior.Choices {
+			warnings = append(warnings, validateGlobalParamWarnings(choice.Outputs, g)...)
+		}
+	}
+
+	return player.EntityState{
+		Errors:         errors,
+		Warnings:       warnings,
+		Cost:           costMap,
+		Metadata:       metadata,
+		LastCalculated: time.Now(),
+	}
+}
+
+// CalculatePendingCardPlayability computes playability state for a pending card
+// (during card selection/buying). Skips phase, turn, and tile-selection checks
+// since those are irrelevant during card selection.
+func CalculatePendingCardPlayability(
+	card *gamecards.Card,
+	p *player.Player,
+	g *game.Game,
+	cardRegistry cards.CardRegistry,
+) player.EntityState {
+	var errors []player.StateError
+	var warnings []player.StateWarning
+	metadata := make(map[string]interface{})
+
+	costMap, discounts := calculateEffectiveCost(card, p, cardRegistry)
+	if len(discounts) > 0 {
+		metadata["discounts"] = discounts
+	}
+
+	errors = append(errors, validateAffordabilityWithSubstitutes(p, card, costMap)...)
+	errors = append(errors, validateRequirements(card, p, g, cardRegistry)...)
+	errors = append(errors, validateProductionOutputs(card, p)...)
+	errors = append(errors, validateCardResourceOutputs(card, p, cardRegistry)...)
+	errors = append(errors, validateCardDiscardOutputs(card, p)...)
+	errors = append(errors, validateNegativeResourceOutputsForCard(card, p)...)
+	errors = append(errors, ValidateTileOutputs(card, p, g)...)
+
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+		warnings = append(warnings, validateGlobalParamWarnings(behavior.Outputs, g)...)
+		for _, choice := range behavior.Choices {
+			warnings = append(warnings, validateGlobalParamWarnings(choice.Outputs, g)...)
+		}
+	}
+
 	return player.EntityState{
 		Errors:         errors,
 		Warnings:       warnings,
@@ -60,6 +115,7 @@ func CalculatePlayerCardActionState(
 	timesUsedThisGeneration int,
 	p *player.Player,
 	g *game.Game,
+	cardRegistry ...cards.CardRegistry,
 ) player.EntityState {
 	var errors []player.StateError
 
@@ -130,9 +186,29 @@ func CalculatePlayerCardActionState(
 	for _, output := range behavior.Outputs {
 		if output.Target == "steal-from-any-card" {
 			totalAvailable := 0
+			var reg cards.CardRegistry
+			if len(cardRegistry) > 0 {
+				reg = cardRegistry[0]
+			}
 			for _, anyPlayer := range g.GetAllPlayers() {
-				for _, cardID := range anyPlayer.PlayedCards().Cards() {
-					totalAvailable += anyPlayer.Resources().GetCardStorage(cardID)
+				for _, playerCardID := range anyPlayer.PlayedCards().Cards() {
+					if playerCardID == cardID && anyPlayer.ID() == p.ID() {
+						continue
+					}
+					storage := anyPlayer.Resources().GetCardStorage(playerCardID)
+					if storage <= 0 {
+						continue
+					}
+					if reg != nil {
+						registryCard, err := reg.GetByID(playerCardID)
+						if err != nil || registryCard.ResourceStorage == nil {
+							continue
+						}
+						if registryCard.ResourceStorage.Type != output.ResourceType {
+							continue
+						}
+					}
+					totalAvailable += storage
 				}
 			}
 			if totalAvailable < output.Amount {
@@ -151,10 +227,17 @@ func CalculatePlayerCardActionState(
 	errors = append(errors, validateGenerationalEventRequirements(behavior, p)...)
 	errors = append(errors, validateNegativeResourceOutputs(behavior, p)...)
 
+	var warnings []player.StateWarning
+	warnings = append(warnings, validateGlobalParamWarnings(behavior.Outputs, g)...)
+	for _, choice := range behavior.Choices {
+		warnings = append(warnings, validateGlobalParamWarnings(choice.Outputs, g)...)
+	}
+
 	return player.EntityState{
 		Errors:         errors,
-		Cost:           make(map[string]int), // Actions typically don't have credit costs (empty map)
-		Metadata:       make(map[string]interface{}),
+		Warnings:       warnings,
+		Cost:           make(map[string]int),
+		Metadata:       make(map[string]any),
 		LastCalculated: time.Now(),
 	}
 }
@@ -270,6 +353,22 @@ func CalculatePlayerStandardProjectState(
 
 	case shared.StandardProjectPowerPlant:
 
+	case shared.StandardProjectConvertHeatToTemperature:
+		if g.GlobalParameters().Temperature() >= global_parameters.MaxTemperature {
+			warnings = append(warnings, player.StateWarning{
+				Code:    player.WarningCodeGlobalParamMaxed,
+				Message: "Temperature already at maximum",
+			})
+		}
+
+	case shared.StandardProjectConvertPlantsToGreenery:
+		if g.GlobalParameters().Oxygen() >= global_parameters.MaxOxygen {
+			warnings = append(warnings, player.StateWarning{
+				Code:    player.WarningCodeGlobalParamMaxed,
+				Message: "Oxygen already at maximum",
+			})
+		}
+
 	default:
 	}
 
@@ -328,6 +427,13 @@ func validateNoActiveTileSelection(p *player.Player, g *game.Game) []player.Stat
 			Code:     player.ErrorCodeActiveTileSelection,
 			Category: player.ErrorCategoryPhase,
 			Message:  "Pending steal target selection",
+		}}
+	}
+	if p.Selection().GetPendingAwardFundSelection() != nil {
+		return []player.StateError{{
+			Code:     player.ErrorCodeActiveTileSelection,
+			Category: player.ErrorCategoryPhase,
+			Message:  "Pending award fund selection",
 		}}
 	}
 	return nil
@@ -730,6 +836,19 @@ func ValidateTileOutputs(
 					})
 				}
 
+			case shared.ResourceTileReplacement:
+				tileType := output.TileType
+				if tileType == "" {
+					continue
+				}
+				replacementPlacements := g.CountAvailableHexesForTile("tile-replacement:"+tileType, p.ID(), nil)
+				if replacementPlacements == 0 {
+					errors = append(errors, player.StateError{
+						Code:     player.ErrorCodeNoTilePlacements,
+						Category: player.ErrorCategoryAvailability,
+						Message:  "No valid tile placements",
+					})
+				}
 			case shared.ResourceTilePlacement:
 				tileType := output.TileType
 				if tileType == "" {
@@ -1271,6 +1390,53 @@ func isProducibleResource(resourceType shared.ResourceType) bool {
 	default:
 		return false
 	}
+}
+
+// validateGlobalParamWarnings checks behavior outputs for global parameter raises
+// that would have no effect because the parameter is already at maximum.
+func validateGlobalParamWarnings(outputs []shared.ResourceCondition, g *game.Game) []player.StateWarning {
+	var warnings []player.StateWarning
+	seen := make(map[player.StateWarningCode]bool)
+
+	addWarning := func(code player.StateWarningCode, msg string) {
+		if !seen[code] {
+			seen[code] = true
+			warnings = append(warnings, player.StateWarning{Code: code, Message: msg})
+		}
+	}
+
+	for _, output := range outputs {
+		if output.Amount <= 0 && !output.VariableAmount {
+			continue
+		}
+		switch output.ResourceType {
+		case shared.ResourceTemperature:
+			if g.GlobalParameters().Temperature() >= global_parameters.MaxTemperature {
+				addWarning(player.WarningCodeGlobalParamMaxed, "Temperature already at maximum")
+			}
+		case shared.ResourceOxygen:
+			if g.GlobalParameters().Oxygen() >= global_parameters.MaxOxygen {
+				addWarning(player.WarningCodeGlobalParamMaxed, "Oxygen already at maximum")
+			}
+		case shared.ResourceOcean, shared.ResourceOceanTile, shared.ResourceOceanPlacement:
+			if g.GlobalParameters().Oceans() >= g.GlobalParameters().GetMaxOceans() {
+				addWarning(player.WarningCodeGlobalParamMaxed, "All oceans already placed")
+			}
+		case shared.ResourceVenus:
+			if g.GlobalParameters().Venus() >= global_parameters.MaxVenus {
+				addWarning(player.WarningCodeGlobalParamMaxed, "Venus already at maximum")
+			}
+		}
+
+		// Greenery tiles raise oxygen
+		if output.ResourceType == shared.ResourceGreeneryTile {
+			if g.GlobalParameters().Oxygen() >= global_parameters.MaxOxygen {
+				addWarning(player.WarningCodeNoTRGain, "Oxygen already at maximum")
+			}
+		}
+	}
+
+	return warnings
 }
 
 // resourceDisplayNames maps ResourceType values to human-readable names for error messages

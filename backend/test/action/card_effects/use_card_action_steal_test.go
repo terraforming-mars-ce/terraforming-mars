@@ -88,7 +88,7 @@ func TestPredatorsStealFromOwnCard(t *testing.T) {
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(predatorsID), "Predators card should have 1 animal after steal")
 }
 
-func TestPredatorsSkipsStealWithNoSourceCard(t *testing.T) {
+func TestPredatorsRejectsWithNoSourceCard(t *testing.T) {
 	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
@@ -117,8 +117,7 @@ func TestPredatorsSkipsStealWithNoSourceCard(t *testing.T) {
 	ctx := context.Background()
 
 	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, nil, nil, nil, nil)
-	testutil.AssertNoError(t, err, "Predators without source card should succeed (skip steal)")
-
+	testutil.AssertError(t, err, "Predators without source card should be rejected")
 	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(predatorsID), "Predators card should have 0 animals when no source card specified")
 }
 
@@ -200,4 +199,37 @@ func TestAntsStealMicrobeFromOtherPlayer(t *testing.T) {
 
 	testutil.AssertEqual(t, 4, other.Resources().GetCardStorage(targetCardID), "Target card should have 4 microbes after steal")
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(antsID), "Ants card should have 1 microbe after steal")
+}
+
+func TestAntsRejectsWithNoSourceCard(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	antsID := "test-ants"
+	p.PlayedCards().AddCard(antsID, "Ants", "active", []string{"microbe"})
+	p.Resources().AddToStorage(antsID, 0)
+
+	antsBehavior := shared.CardBehavior{
+		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+		Outputs: []shared.ResourceCondition{
+			{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "steal-from-any-card"},
+		},
+	}
+	p.Actions().SetActions([]shared.CardAction{
+		{
+			CardID:        antsID,
+			CardName:      "Ants",
+			BehaviorIndex: 0,
+			Behavior:      antsBehavior,
+		},
+	})
+
+	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
+	ctx := context.Background()
+
+	err := useAction.Execute(ctx, testGame.ID(), playerID, antsID, 0, nil, []string{antsID}, nil, nil, nil, nil, nil)
+	testutil.AssertError(t, err, "Ants without source card should be rejected")
+	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(antsID), "Ants card should have 0 microbes when no source card specified")
 }

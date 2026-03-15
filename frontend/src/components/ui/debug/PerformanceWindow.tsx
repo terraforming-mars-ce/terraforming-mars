@@ -49,6 +49,7 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
   return (
     <div
       ref={dropdownRef}
+      data-overlay-layer
       onMouseDown={handleMouseDown}
       style={{
         position: "fixed",

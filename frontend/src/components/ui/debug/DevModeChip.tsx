@@ -13,6 +13,7 @@ const DevModeChip: React.FC = () => {
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      data-overlay-layer
       className="fixed top-0 left-1/2 -translate-x-1/2 bg-[#ff6b35] text-white text-[10px] font-bold py-1 px-3 rounded-b-lg border border-[#e55a2e] border-t-0 whitespace-nowrap shadow-[0_2px_4px_rgba(0,0,0,0.3)] cursor-pointer hover:bg-[#ff7f4d] transition-all duration-200"
       style={{
         minWidth: "120px",

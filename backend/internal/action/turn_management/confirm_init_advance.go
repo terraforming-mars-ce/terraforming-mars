@@ -76,6 +76,13 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 		return fmt.Errorf("current player has pending tile queue")
 	}
 
+	// Block if current player has pending award fund selection
+	if currentPlayer, err := g.GetPlayer(currentPlayerID); err == nil {
+		if currentPlayer.Selection().GetPendingAwardFundSelection() != nil {
+			return fmt.Errorf("current player has pending award fund selection")
+		}
+	}
+
 	if err := g.SetInitPhaseWaitingForConfirm(ctx, false); err != nil {
 		return fmt.Errorf("failed to clear waiting for confirm: %w", err)
 	}

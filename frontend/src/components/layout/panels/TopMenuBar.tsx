@@ -493,6 +493,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
             onMouseEnter={() => setHamburgerHovered(true)}
             onMouseLeave={() => setHamburgerHovered(false)}
             aria-label="Menu"
+            data-overlay-layer
             className="relative pointer-events-auto cursor-pointer outline-none"
             style={{ width: HAMBURGER_WIDTH, height: buttonHeight }}
           >
@@ -557,6 +558,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
           animation="slideDown"
           excludeRef={hamburgerButtonRef}
           zIndex={Z_INDEX.TOP_MENU_ALWAYS_ON_TOP + 1}
+          overlayLayer
         >
           <div className="py-1">
             <button

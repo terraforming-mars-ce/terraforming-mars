@@ -45,6 +45,7 @@ import {
   MessageTypeActionBehaviorChoiceConfirmed,
   MessageTypeActionConfirmStealTarget,
   MessageTypeActionConfirmColonyResource,
+  MessageTypeActionConfirmAwardFund,
   MessageTypeActionCardDiscardConfirmed,
   MessageTypeActionConfirmInitAdvance,
   MessageTypeRequestLogs,
@@ -409,6 +410,10 @@ export class WebSocketService {
 
   confirmColonyResource(cardId: string): string {
     return this.send(MessageTypeActionConfirmColonyResource, { cardId });
+  }
+
+  confirmAwardFund(awardType: string): string {
+    return this.send(MessageTypeActionConfirmAwardFund, { awardType });
   }
 
   addBot(botName?: string, difficulty?: string, speed?: string): string {

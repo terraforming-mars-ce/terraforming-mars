@@ -152,6 +152,11 @@ func (a *UseCardActionAction) Execute(
 		return fmt.Errorf("must select an amount for this action")
 	}
 
+	if hasStealFromAnyCard(outputs) && stealSourceCardID == nil {
+		log.Warn("Steal action requires a target card")
+		return fmt.Errorf("steal action requires a target card; select a card or cancel")
+	}
+
 	if err := validateOutputAffordability(p, outputs); err != nil {
 		log.Warn("Cannot afford negative resource outputs", zap.Error(err))
 		return err
@@ -324,6 +329,11 @@ func (a *UseCardActionAction) executeReuse(
 		return fmt.Errorf("must select an amount for this action")
 	}
 
+	if hasStealFromAnyCard(outputs) && stealSourceCardID == nil {
+		log.Warn("Reuse steal action requires a target card")
+		return fmt.Errorf("steal action requires a target card; select a card or cancel")
+	}
+
 	if err := validateOutputAffordability(p, outputs); err != nil {
 		log.Warn("Cannot afford negative resource outputs", zap.Error(err))
 		return err
@@ -404,6 +414,15 @@ func hasVariableAmount(inputs, outputs []shared.ResourceCondition) bool {
 	}
 	for _, output := range outputs {
 		if output.VariableAmount {
+			return true
+		}
+	}
+	return false
+}
+
+func hasStealFromAnyCard(outputs []shared.ResourceCondition) bool {
+	for _, output := range outputs {
+		if output.Target == "steal-from-any-card" {
 			return true
 		}
 	}

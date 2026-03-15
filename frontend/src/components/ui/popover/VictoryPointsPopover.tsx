@@ -29,6 +29,9 @@ const ConditionDisplay: React.FC<{ condition: VPGranterConditionDto }> = ({ cond
             className="w-[16px] h-[16px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] max-[768px]:w-[14px] max-[768px]:h-[14px]"
           />
         )}
+        {condition.adjacentToSelfTile && (
+          <span className="text-[10px] text-white/40 font-bold">*</span>
+        )}
       </div>
     );
   }

@@ -20,6 +20,7 @@ const GamePopover: React.FC<GamePopoverProps> = ({
   className = "",
   excludeRef,
   contentRef,
+  overlayLayer,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [computedPosition, setComputedPosition] = useState<{
@@ -108,6 +109,7 @@ const GamePopover: React.FC<GamePopoverProps> = ({
         maxHeight: maxHeightStyle,
         zIndex,
       }}
+      {...(overlayLayer ? { "data-overlay-layer": true } : {})}
     >
       {arrow?.enabled && (
         <div

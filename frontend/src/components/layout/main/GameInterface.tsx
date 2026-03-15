@@ -21,13 +21,16 @@ import StartingCardSelectionOverlay from "../../ui/overlay/StartingCardSelection
 import PendingCardSelectionOverlay from "../../ui/overlay/PendingCardSelectionOverlay.tsx";
 import CardDrawSelectionOverlay from "../../ui/overlay/CardDrawSelectionOverlay.tsx";
 import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOverlay.tsx";
+import AwardFundSelectionPopover from "../../ui/popover/AwardFundSelectionPopover.tsx";
 import CardFanOverlay, { CardFanOverlayHandle } from "../../ui/overlay/CardFanOverlay.tsx";
+import CorporationOverlay from "../../ui/overlay/CorporationOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
 import { useGameEvent } from "@/hooks/useGameEvent.ts";
+import { usePlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 import MainMenuSettingsButton from "../../ui/buttons/MainMenuSettingsButton.tsx";
-import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
+import GameButton from "../../ui/buttons/GameButton.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import SpaceBackground from "../../3d/SpaceBackground.tsx";
@@ -55,7 +58,6 @@ import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 import { useSpaceBackground } from "@/contexts/SpaceBackgroundContext.tsx";
 import { useNotifications } from "@/contexts/NotificationContext.tsx";
 import { skyboxCache } from "@/services/SkyboxCache.ts";
-import { audioService } from "@/services/audioService.ts";
 import { clearGameSession, getGameSession, saveGameSession } from "@/utils/sessionStorage.ts";
 import {
   CardDto,
@@ -85,8 +87,16 @@ import {
 import { shouldShowPaymentModal, createDefaultPayment } from "@/utils/paymentUtils.ts";
 import { deepClone, findChangedPaths } from "@/utils/deepCompare.ts";
 import { StandardProject } from "@/types/cards.tsx";
+import { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
 
-type TransitionPhase = "idle" | "lobby" | "loading" | "fadeOutLobby" | "animateUI" | "complete";
+type TransitionPhase =
+  | "idle"
+  | "lobby"
+  | "loading"
+  | "fadeOutLobby"
+  | "marsRevealed"
+  | "animateUI"
+  | "complete";
 
 type LoadingPhase = "checking" | "selecting" | "joining" | "spectating" | "connecting" | "ready";
 
@@ -94,19 +104,30 @@ export default function GameInterface() {
   const location = useLocation();
   const navigate = useNavigate();
   const { gameId: urlGameId } = useParams<{ gameId?: string }>();
-  const { playProductionSound, playTemperatureSound, playOxygenSound, playYourTurnSound } =
-    useSoundEffects();
+  const {
+    playProductionSound,
+    playTemperatureSound,
+    playOxygenSound,
+    playVenusSound,
+    playYourTurnSound,
+    playAwardFundedSound,
+    playGameStartSound,
+  } = useSoundEffects();
   const { showNotification } = useNotifications();
   const [game, setGame] = useState<GameDto | null>(null);
+  const gameRef = useRef<GameDto | null>(null);
   const {
     currentEvent,
     enqueue: enqueueGameEvent,
     dismissCurrent: dismissGameEvent,
   } = useGameEvent();
+  const playedCardNotification = usePlayedCardNotification();
+  const { enqueue: enqueuePlayedCard } = playedCardNotification;
   const [isConnected, setIsConnected] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>("idle");
   const wasInLobby = useRef(false);
   const cardFanRef = useRef<CardFanOverlayHandle>(null);
+  const playerListRef = useRef<PlayerListHandle>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectionStep, setReconnectionStep] = useState<"game" | "environment" | null>(null);
   const [currentPlayer, setCurrentPlayer] = useState<PlayerDto | null>(null);
@@ -115,6 +136,7 @@ export default function GameInterface() {
   const [gameForSelection, setGameForSelection] = useState<GameDto | null>(null);
   const [_showCorporationModal, setShowCorporationModal] = useState(false);
   const [corporationData, setCorporationData] = useState<CardDto | null>(null);
+  const [showCorporationOverlay, setShowCorporationOverlay] = useState(false);
 
   // New modal states
   const [showCardsPlayedModal, setShowCardsPlayedModal] = useState(false);
@@ -201,6 +223,8 @@ export default function GameInterface() {
 
   // Starting selection state (corporation + preludes + project cards)
   const [showStartingSelection, setShowStartingSelection] = useState(false);
+  const [isStartingSelectionHidden, setIsStartingSelectionHidden] = useState(false);
+  const [marsRevealedReady, setMarsRevealedReady] = useState(false);
 
   // Pending card selection state (for sell patents, etc.)
   const [showPendingCardSelection, setShowPendingCardSelection] = useState(false);
@@ -523,6 +547,12 @@ export default function GameInterface() {
           void playOxygenSound();
         }
 
+        const prevVenus = previousGameRef.current.globalParameters?.venus;
+        const newVenus = updatedGame.globalParameters?.venus;
+        if (prevVenus !== undefined && newVenus !== undefined && newVenus > prevVenus) {
+          void playVenusSound();
+        }
+
         // Detect when it becomes this player's action turn
         const prevTurn = previousGameRef.current.currentTurn;
         const prevPhase = previousGameRef.current.currentPhase;
@@ -565,6 +595,7 @@ export default function GameInterface() {
             if (aw.isFunded && aw.fundedBy) {
               const prev = prevAwards.find((p) => p.type === aw.type);
               if (prev && !prev.isFunded) {
+                void playAwardFundedSound();
                 const allPlayers = [updatedGame.currentPlayer, ...(updatedGame.otherPlayers ?? [])];
                 const fundPlayer = allPlayers.find((p) => p.id === aw.fundedBy);
                 enqueueGameEvent({
@@ -610,6 +641,7 @@ export default function GameInterface() {
         }
       }
 
+      gameRef.current = updatedGame;
       setGame(updatedGame);
       setIsConnected(true);
 
@@ -630,10 +662,59 @@ export default function GameInterface() {
         setShowCorporationModal(false);
       }
     },
-    [isReconnecting, playTemperatureSound, playOxygenSound, playYourTurnSound],
+    [
+      isReconnecting,
+      playTemperatureSound,
+      playOxygenSound,
+      playYourTurnSound,
+      playAwardFundedSound,
+      playGameStartSound,
+    ],
   );
 
-  const handleLogUpdate = useCallback((_logs: StateDiffDto[]) => {}, []);
+  const hasReceivedInitialLogs = useRef(false);
+  const handleLogUpdate = useCallback(
+    (logs: StateDiffDto[]) => {
+      if (!hasReceivedInitialLogs.current) {
+        hasReceivedInitialLogs.current = true;
+        return;
+      }
+      const latestGame = gameRef.current;
+      const myPlayerId = currentPlayerIdRef.current;
+      if (!latestGame || !myPlayerId || isReconnecting) {
+        return;
+      }
+      for (const log of logs) {
+        if (log.sourceType !== "card_play") {
+          continue;
+        }
+        if (log.playerId === myPlayerId) {
+          continue;
+        }
+        const playerChanges = log.changes?.playerChanges?.[log.playerId];
+        const cardIds = playerChanges?.cardsPlayed;
+        if (!cardIds || cardIds.length === 0) {
+          continue;
+        }
+        const otherPlayer = latestGame.otherPlayers?.find((p) => p.id === log.playerId);
+        if (!otherPlayer) {
+          continue;
+        }
+        for (const cardId of cardIds) {
+          const card = otherPlayer.playedCards.find((c) => c.id === cardId);
+          if (!card) {
+            continue;
+          }
+          enqueuePlayedCard({
+            card,
+            playerName: otherPlayer.name,
+            playerColor: otherPlayer.color,
+          });
+        }
+      }
+    },
+    [isReconnecting, enqueuePlayedCard],
+  );
 
   const handleFullState = useCallback(
     (statePayload: FullStatePayload) => {
@@ -1486,24 +1567,56 @@ export default function GameInterface() {
             undefined,
             pendingActionReuse.cardId,
           );
+          activeReuseSourceCardId.current = undefined;
         } else {
-          void globalWebSocketManager.playCardAction(
-            targetAction.cardId,
-            targetAction.behaviorIndex,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            pendingActionReuse.cardId,
-          );
+          // Check for any-card storage needs (e.g., Stratopolis floaters on any venus card)
+          const allStorageNeeds: Array<{
+            resourceType: ResourceType;
+            amount: number;
+            selectorTags?: string[];
+          }> = [];
+          const selections = getAllAnyCardStorageSelections(targetAction.behavior.outputs);
+          for (const sel of selections) {
+            allStorageNeeds.push({
+              resourceType: sel.resourceType,
+              amount: sel.amount,
+              selectorTags: sel.selectorTags,
+            });
+          }
+
+          if (allStorageNeeds.length > 0) {
+            const first = allStorageNeeds[0];
+            setPendingActionStorage({
+              cardId: targetAction.cardId,
+              behaviorIndex: targetAction.behaviorIndex,
+              choiceIndex: undefined,
+              allStorageNeeds,
+              collectedTargets: [],
+              currentIndex: 0,
+              resourceType: first.resourceType,
+              amount: first.amount,
+              selectorTags: first.selectorTags,
+            });
+            setShowActionStorageSelection(true);
+          } else {
+            void globalWebSocketManager.playCardAction(
+              targetAction.cardId,
+              targetAction.behaviorIndex,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              pendingActionReuse.cardId,
+            );
+            activeReuseSourceCardId.current = undefined;
+          }
         }
-        activeReuseSourceCardId.current = undefined;
       }
       setPendingActionReuse(null);
     },
-    [pendingActionReuse, needsCardStorageSelection],
+    [pendingActionReuse, needsCardStorageSelection, getAllAnyCardStorageSelections],
   );
 
   const handleActionReuseCancel = useCallback(() => {
@@ -1779,19 +1892,27 @@ export default function GameInterface() {
           return;
         }
 
+        const reuseId = activeReuseSourceCardId.current;
+        activeReuseSourceCardId.current = undefined;
         await globalWebSocketManager.playCardAction(
           pendingActionStorage.cardId,
           pendingActionStorage.behaviorIndex,
           pendingActionStorage.choiceIndex,
           newCollected,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          reuseId,
         );
         setPendingActionStorage(null);
       } catch (error) {
         console.error(
-          `❌ Failed to play action ${pendingActionStorage.cardId} with card storage target ${targetCardId}:`,
+          `Failed to play action ${pendingActionStorage.cardId} with card storage target ${targetCardId}:`,
           error,
         );
         setPendingActionStorage(null);
+        activeReuseSourceCardId.current = undefined;
       }
     },
     [pendingActionStorage, currentPlayer, needsTargetPlayerSelection],
@@ -1800,6 +1921,7 @@ export default function GameInterface() {
   const handleActionStorageCancel = useCallback(() => {
     setShowActionStorageSelection(false);
     setPendingActionStorage(null);
+    activeReuseSourceCardId.current = undefined;
   }, []);
 
   const handleTargetPlayerSelect = useCallback(
@@ -2600,6 +2722,7 @@ export default function GameInterface() {
       setShowStartingSelection(true);
     } else if (showStartingSelection && !corpPhase) {
       setShowStartingSelection(false);
+      setIsStartingSelectionHidden(false);
     }
   }, [
     game?.currentPhase,
@@ -2776,10 +2899,10 @@ export default function GameInterface() {
 
   const isLobbyPhase = game?.status === GameStatusLobby;
 
-  // Pre-game phase covers lobby and starting selection
-  const isPreGamePhase =
-    isLobbyPhase ||
-    (game?.status === GameStatusActive && game?.currentPhase === GamePhaseStartingSelection);
+  const isPreGamePhase = isLobbyPhase;
+
+  const isStartingSelectionPhase =
+    game?.status === GameStatusActive && game?.currentPhase === GamePhaseStartingSelection;
 
   const isInitApplyPhase =
     game?.status === GameStatusActive &&
@@ -2801,9 +2924,9 @@ export default function GameInterface() {
     if (isLobbyPhase) setLobbyMounted(true);
   }, [isLobbyPhase]);
 
-  // Transition state machine: lobby → loading → fadeOutLobby → animateUI → complete
+  // Transition state machine: lobby → loading → fadeOutLobby → marsRevealed → animateUI → complete
   useEffect(() => {
-    if (isPreGamePhase) {
+    if (isLobbyPhase) {
       setTransitionPhase("lobby");
       wasInLobby.current = true;
       return;
@@ -2813,12 +2936,11 @@ export default function GameInterface() {
 
     setTransitionPhase("loading");
     setOverlayVisible(true);
-    audioService.stopAmbientWithDuration(2000);
-  }, [isPreGamePhase]);
+  }, [isLobbyPhase]);
 
   useEffect(() => {
     if (transitionPhase === "fadeOutLobby") {
-      const timer = setTimeout(() => setTransitionPhase("animateUI"), 1500);
+      const timer = setTimeout(() => setTransitionPhase("marsRevealed"), 1500);
       return () => clearTimeout(timer);
     }
     if (transitionPhase === "animateUI") {
@@ -2828,12 +2950,42 @@ export default function GameInterface() {
     return undefined;
   }, [transitionPhase]);
 
-  // On mount: if game is already active (reload/reconnect), stop ambient immediately
+  // Advance from marsRevealed to animateUI when starting selection ends
   useEffect(() => {
-    if (game && !isPreGamePhase && !wasInLobby.current) {
-      audioService.stopAmbient();
+    if (transitionPhase === "marsRevealed" && !isStartingSelectionPhase) {
+      setTransitionPhase("animateUI");
     }
-  }, [game, isPreGamePhase]);
+  }, [transitionPhase, isStartingSelectionPhase]);
+
+  // Delay showing starting card selection 2s after marsRevealed (tiles animate first)
+  useEffect(() => {
+    if (transitionPhase === "marsRevealed") {
+      const timer = setTimeout(() => setMarsRevealedReady(true), 2000);
+      return () => clearTimeout(timer);
+    }
+    setMarsRevealedReady(false);
+    return undefined;
+  }, [transitionPhase]);
+
+  // Play game-start sound during Mars entrance animation
+  useEffect(() => {
+    if (transitionPhase === "fadeOutLobby") {
+      void playGameStartSound();
+    }
+  }, [transitionPhase, playGameStartSound]);
+
+  // Reconnection: skip entrance animation if joining during starting selection
+  useEffect(() => {
+    if (
+      isStartingSelectionPhase &&
+      transitionPhase === "idle" &&
+      !wasInLobby.current &&
+      isSkyboxReady &&
+      isGpuReady
+    ) {
+      setTransitionPhase("marsRevealed");
+    }
+  }, [isStartingSelectionPhase, transitionPhase, isSkyboxReady, isGpuReady]);
 
   // Auto-advance init phase after transition animation and notification queue complete
   // Host always sends confirms for all players (bots handle tile placements only)
@@ -2895,12 +3047,42 @@ export default function GameInterface() {
         showColonyResourceSelection ||
         showProductionPhaseModal ||
         showPaymentSelection ||
+        showChoiceSelection ||
+        showActionChoiceSelection ||
+        showActionReuseSelection ||
+        showCardStorageSelection ||
+        showActionStorageSelection ||
+        showTargetPlayerSelection ||
+        showActionTargetPlayerSelection ||
+        showCardResourceSelection ||
+        showAmountSelection ||
+        showBehaviorChoiceStorage ||
+        showLeaveGameConfirm ||
+        showEndGameConfirm ||
+        showCardsPlayedModal ||
         isPreGamePhase ||
         isInitApplyPhase;
 
       if (e.key === " ") {
         e.preventDefault();
-        if (!anyModalOpen && !spectatePlayerId && !isSpectator) {
+
+        if (showCorporationOverlay) {
+          setShowCorporationOverlay(false);
+          return;
+        }
+
+        if (cardFanRef.current?.isExpanded) {
+          cardFanRef.current.collapse();
+          return;
+        }
+
+        if (anyModalOpen || spectatePlayerId || isSpectator) {
+          return;
+        }
+
+        if (e.shiftKey) {
+          setShowCorporationOverlay(true);
+        } else {
           cardFanRef.current?.toggleExpand();
         }
       }
@@ -2913,7 +3095,7 @@ export default function GameInterface() {
           currentPlayer?.id === game?.currentTurn &&
           !currentPlayer?.pendingTileSelection
         ) {
-          void globalWebSocketManager.skipAction();
+          playerListRef.current?.requestSkipAction();
         }
       }
     };
@@ -2928,18 +3110,38 @@ export default function GameInterface() {
     showCardDrawSelection,
     showCardDiscardSelection,
     showBehaviorChoiceSelection,
+    showStealTargetSelection,
+    showColonyResourceSelection,
     showProductionPhaseModal,
     showPaymentSelection,
+    showChoiceSelection,
+    showActionChoiceSelection,
+    showActionReuseSelection,
+    showCardStorageSelection,
+    showActionStorageSelection,
+    showTargetPlayerSelection,
+    showActionTargetPlayerSelection,
+    showCardResourceSelection,
+    showAmountSelection,
+    showBehaviorChoiceStorage,
+    showLeaveGameConfirm,
+    showEndGameConfirm,
+    showCardsPlayedModal,
     isPreGamePhase,
     isInitApplyPhase,
     game?.currentPhase,
     game?.currentTurn,
     currentPlayer?.id,
     currentPlayer?.pendingTileSelection,
+    showCorporationOverlay,
   ]);
 
   // Check if we need the persistent backdrop (during overlay transitions)
-  const shouldShowBackdrop = showStartingSelection;
+  const shouldShowBackdrop =
+    (showStartingSelection &&
+      !isStartingSelectionHidden &&
+      (marsRevealedReady || transitionPhase === "idle")) ||
+    showWaitingForPlayers;
 
   return (
     <VPCountingProvider
@@ -2983,6 +3185,7 @@ export default function GameInterface() {
         loadingPhase !== "joining" &&
         loadingPhase !== "spectating" && (
           <GameLayout
+            ref={playerListRef}
             gameState={replayGameState ?? game}
             currentPlayer={replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer)}
             playedCards={replayViewAsPlayer?.playedCards ?? currentPlayer?.playedCards ?? []}
@@ -2992,9 +3195,15 @@ export default function GameInterface() {
             showStartingSelection={showStartingSelection}
             transitionPhase={transitionPhase}
             animateHexEntrance={
-              transitionPhase === "fadeOutLobby" ||
+              transitionPhase === "marsRevealed" ||
               transitionPhase === "animateUI" ||
               transitionPhase === "complete"
+            }
+            startDark={transitionPhase === "loading" || transitionPhase === "lobby"}
+            tilesHidden={
+              transitionPhase === "loading" ||
+              transitionPhase === "lobby" ||
+              transitionPhase === "fadeOutLobby"
             }
             changedPaths={changedPaths}
             triggeredEffects={triggeredEffects}
@@ -3019,6 +3228,10 @@ export default function GameInterface() {
             activeEndgamePanel={endgamePanel}
             onEndgamePanelChange={handleEndgamePanelChange}
             hasHistory={hasHistory}
+            playedCardNotification={playedCardNotification.currentNotification}
+            isPlayedCardPinned={playedCardNotification.isPinned}
+            onPlayedCardTogglePin={playedCardNotification.togglePin}
+            onPlayedCardAdvance={playedCardNotification.advance}
           />
         )}
 
@@ -3143,12 +3356,12 @@ export default function GameInterface() {
             You can reconnect to the game again without losing any progress.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameMenuButton variant="secondary" onClick={() => setShowLeaveGameConfirm(false)}>
+            <GameButton buttonType="secondary" onClick={() => setShowLeaveGameConfirm(false)}>
               Cancel
-            </GameMenuButton>
-            <GameMenuButton variant="error" onClick={handleConfirmLeaveGame}>
+            </GameButton>
+            <GameButton variant="error" onClick={handleConfirmLeaveGame}>
               Leave
-            </GameMenuButton>
+            </GameButton>
           </div>
         </GameMenuModal>
       )}
@@ -3165,19 +3378,23 @@ export default function GameInterface() {
             This will end the game for all players. This action cannot be undone.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameMenuButton variant="secondary" onClick={() => setShowEndGameConfirm(false)}>
+            <GameButton buttonType="secondary" onClick={() => setShowEndGameConfirm(false)}>
               Cancel
-            </GameMenuButton>
-            <GameMenuButton variant="error" onClick={handleConfirmEndGame}>
+            </GameButton>
+            <GameButton variant="error" onClick={handleConfirmEndGame}>
               End game
-            </GameMenuButton>
+            </GameButton>
           </div>
         </GameMenuModal>
       )}
 
       {/* Starting selection overlay (corporation + preludes + project cards) */}
       <StartingCardSelectionOverlay
-        isOpen={showStartingSelection}
+        isOpen={
+          showStartingSelection &&
+          !isStartingSelectionHidden &&
+          (marsRevealedReady || transitionPhase === "idle")
+        }
         availableCorporations={
           game?.currentPlayer?.selectCorporationPhase?.availableCorporations || []
         }
@@ -3186,7 +3403,18 @@ export default function GameInterface() {
         cards={game?.currentPlayer?.selectStartingCardsPhase?.availableCards || []}
         playerCredits={currentPlayer?.resources?.credits || 40}
         onConfirm={handleStartingChoicesConfirm}
+        onHide={() => setIsStartingSelectionHidden(true)}
       />
+
+      {/* Return to Selection button when starting selection is hidden */}
+      {showStartingSelection && isStartingSelectionHidden && marsRevealedReady && (
+        <GameButton
+          className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] z-[1000] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
+          onClick={() => setIsStartingSelectionHidden(false)}
+        >
+          Return to Selection
+        </GameButton>
+      )}
 
       {/* Waiting for other players to finish card selection */}
       {showWaitingForPlayers && game && (
@@ -3345,7 +3573,9 @@ export default function GameInterface() {
                 ? "opacity-0 pointer-events-none"
                 : transitionPhase === "animateUI"
                   ? "animate-[uiFadeIn_1200ms_ease-out_both]"
-                  : transitionPhase === "loading" || transitionPhase === "fadeOutLobby"
+                  : transitionPhase === "loading" ||
+                      transitionPhase === "fadeOutLobby" ||
+                      transitionPhase === "marsRevealed"
                     ? "opacity-0"
                     : ""
             }`}
@@ -3368,6 +3598,14 @@ export default function GameInterface() {
             />
           </div>
         )}
+
+      {/* Corporation cards overlay - press C to toggle */}
+      <CorporationOverlay
+        visible={showCorporationOverlay}
+        onClose={() => setShowCorporationOverlay(false)}
+        currentPlayer={replayViewAsPlayer ?? currentPlayer}
+        otherPlayers={game?.otherPlayers ?? []}
+      />
 
       {/* End game overlay - shown when game is completed */}
       {game &&
@@ -3623,6 +3861,15 @@ export default function GameInterface() {
         />
       )}
 
+      {/* Award fund selection popover (Vitor forced first action) */}
+      {game?.currentPlayer?.pendingAwardFundSelection && (
+        <AwardFundSelectionPopover
+          isOpen={true}
+          selection={game.currentPlayer.pendingAwardFundSelection}
+          gameState={game}
+        />
+      )}
+
       {/* Card resource selection popover (steal-from-any-card like Predators/Ants) */}
       {pendingCardResourceInput && (
         <CardResourceSelectionPopover
@@ -3666,8 +3913,7 @@ export default function GameInterface() {
       )}
 
       {showProductionPhaseModal && isProductionModalHidden && (
-        <GameMenuButton
-          variant="primary"
+        <GameButton
           className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] z-[1000] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
           onClick={() => {
             setIsProductionModalHidden(false);
@@ -3675,7 +3921,7 @@ export default function GameInterface() {
           }}
         >
           Return to Production
-        </GameMenuButton>
+        </GameButton>
       )}
 
       <GameEventBanner

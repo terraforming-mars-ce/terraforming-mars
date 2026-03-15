@@ -14,7 +14,7 @@ import {
   OVERLAY_CARDS_INNER_CLASS,
   OVERLAY_FOOTER_CLASS,
 } from "./overlayStyles.ts";
-import GameMenuButton from "../buttons/GameMenuButton.tsx";
+import GameButton from "../buttons/GameButton.tsx";
 
 interface CardDiscardSelectionOverlayProps {
   isOpen: boolean;
@@ -133,12 +133,11 @@ const CardDiscardSelectionOverlay: React.FC<CardDiscardSelectionOverlayProps> = 
 
           <div className="flex gap-3 items-center">
             {isOptional && (
-              <GameMenuButton variant="text" size="md" onClick={handleSkip}>
+              <GameButton buttonType="textonly" size="md" onClick={handleSkip}>
                 {showConfirmation && selectedCardIds.length === 0 ? "Confirm Skip" : "Skip"}
-              </GameMenuButton>
+              </GameButton>
             )}
-            <GameMenuButton
-              variant="primary"
+            <GameButton
               size="lg"
               onClick={handleConfirm}
               disabled={selectedCardIds.length < selection.minCards}
@@ -149,7 +148,7 @@ const CardDiscardSelectionOverlay: React.FC<CardDiscardSelectionOverlayProps> = 
                 : selectedCardIds.length === 0
                   ? "Confirm"
                   : `Discard ${selectedCardIds.length} & Draw`}
-            </GameMenuButton>
+            </GameButton>
           </div>
         </div>
       </div>

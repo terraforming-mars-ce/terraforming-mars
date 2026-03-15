@@ -62,12 +62,15 @@ class AudioService {
       },
       { key: "water-placement", path: "/sounds/water-placement.mp3", volumeMultiplier: 1.0 },
       { key: "oxygen-increase", path: "/sounds/oxygen-increase.mp3", volumeMultiplier: 1.0 },
+      { key: "venus-increase", path: "/sounds/venus-increase.mp3", volumeMultiplier: 1.0 },
       { key: "button-hover", path: "/sounds/button-hover.mp3", volumeMultiplier: 0.4 },
       { key: "button-click", path: "/sounds/button-click.mp3", volumeMultiplier: 0.4 },
       { key: "card-hover", path: "/sounds/card-hover.mp3", volumeMultiplier: 0.2 },
       { key: "construction", path: "/sounds/construction.mp3", volumeMultiplier: 1.0 },
       { key: "asteroid-impact", path: "/sounds/asteroid-impact.mp3", volumeMultiplier: 1.0 },
       { key: "your-turn", path: "/sounds/your-turn.mp3", volumeMultiplier: 1.0 },
+      { key: "award-funded", path: "/sounds/award-funded.mp3", volumeMultiplier: 1.0 },
+      { key: "game-start", path: "/sounds/game-start.mp3", volumeMultiplier: 1.0 },
     ];
 
     audioFiles.forEach(({ key, path, volumeMultiplier }) => {
@@ -126,6 +129,10 @@ class AudioService {
     return this.playSound("oxygen-increase");
   }
 
+  public async playVenusSound(): Promise<void> {
+    return this.playSound("venus-increase");
+  }
+
   public async playButtonHoverSound(): Promise<void> {
     return this.playSound("button-hover");
   }
@@ -148,6 +155,14 @@ class AudioService {
 
   public async playYourTurnSound(): Promise<void> {
     return this.playSound("your-turn");
+  }
+
+  public async playAwardFundedSound(): Promise<void> {
+    return this.playSound("award-funded");
+  }
+
+  public async playGameStartSound(): Promise<void> {
+    return this.playSound("game-start");
   }
 
   private createAmbientAudio(): HTMLAudioElement {

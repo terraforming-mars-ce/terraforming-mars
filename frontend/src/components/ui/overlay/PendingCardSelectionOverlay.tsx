@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import GameCard from "../cards/GameCard.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { PendingCardSelectionDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
@@ -14,7 +14,7 @@ import {
   OVERLAY_FOOTER_CLASS,
   RESOURCE_LABEL_CLASS,
 } from "./overlayStyles.ts";
-import GameMenuButton from "../buttons/GameMenuButton.tsx";
+import GameButton from "../buttons/GameButton.tsx";
 
 interface PendingCardSelectionOverlayProps {
   isOpen: boolean;
@@ -55,7 +55,11 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
     maxCards: selection.maxCards,
   });
 
+  const [showPlayability, setShowPlayability] = useState(false);
+
   if (!isOpen || selection.availableCards.length === 0) return null;
+
+  const isSellPatents = selection.source === "sell-patents";
 
   const getTitleAndDescription = (source: string): TitleInfo => {
     switch (source) {
@@ -119,8 +123,21 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
       <div className={OVERLAY_CONTAINER_CLASS}>
         {/* Header */}
         <div className={OVERLAY_HEADER_CLASS}>
-          <h2 className={OVERLAY_TITLE_CLASS}>{titleInfo.title}</h2>
-          <p className={OVERLAY_DESCRIPTION_CLASS}>{titleInfo.description}</p>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <h2 className={OVERLAY_TITLE_CLASS}>{titleInfo.title}</h2>
+              <p className={OVERLAY_DESCRIPTION_CLASS}>{titleInfo.description}</p>
+            </div>
+            {!isSellPatents && (
+              <GameButton
+                buttonType="secondary"
+                size="sm"
+                onClick={() => setShowPlayability((prev) => !prev)}
+              >
+                {showPlayability ? "Hide Playability" : "Show Playability"}
+              </GameButton>
+            )}
+          </div>
         </div>
 
         {/* Cards display */}
@@ -156,10 +173,23 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
                           : "FREE"}
                     </div>
                   )}
-                  {/* Unaffordable overlay */}
+                  {/* Unaffordable overlay (buy cost) */}
                   {!canAfford && !isSelected && (
                     <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center">
                       <span className="text-white/80 font-bold">Can't Afford</span>
+                    </div>
+                  )}
+                  {/* Playability errors */}
+                  {showPlayability && !card.available && card.errors.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 flex flex-col gap-0.5 z-10 max-h-24 overflow-y-auto">
+                      {card.errors.map((err, i) => (
+                        <div
+                          key={i}
+                          className="bg-[rgba(10,10,15,0.95)] border border-[rgba(231,76,60,0.6)] border-l-[3px] border-l-[#e74c3c] text-white/90 text-[10px] leading-tight px-1.5 py-1 rounded-sm"
+                        >
+                          {err.message}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -208,12 +238,11 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
             </div>
             <div className="flex gap-3 items-center">
               {(onCancel || selection.minCards === 0) && (
-                <GameMenuButton variant="text" size="md" onClick={handleCancel}>
+                <GameButton buttonType="textonly" size="md" onClick={handleCancel}>
                   Cancel
-                </GameMenuButton>
+                </GameButton>
               )}
-              <GameMenuButton
-                variant="primary"
+              <GameButton
                 size="lg"
                 onClick={handleConfirm}
                 disabled={!isValidSelection || totalCost > playerCredits}
@@ -224,7 +253,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
                   : selection.source === "sell-patents"
                     ? "Sell Cards"
                     : "Confirm Selection"}
-              </GameMenuButton>
+              </GameButton>
             </div>
           </div>
         </div>

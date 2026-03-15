@@ -61,6 +61,7 @@ export interface GamePopoverProps {
   className?: string;
   excludeRef?: React.RefObject<HTMLElement | null>;
   contentRef?: React.RefObject<HTMLDivElement | null>;
+  overlayLayer?: boolean;
 }
 
 export type PopoverItemState = "available" | "disabled" | "claimed";

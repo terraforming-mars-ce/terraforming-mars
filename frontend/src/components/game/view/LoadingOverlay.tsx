@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Z_INDEX } from "@/constants/zIndex";
 
 interface LoadingOverlayProps {
   message?: string;
@@ -30,7 +31,7 @@ export default function LoadingOverlay({
         width: "100vw",
         height: "100vh",
         backgroundColor: "#000000",
-        zIndex: 9999,
+        zIndex: Z_INDEX.LOADING_OVERLAY,
         opacity: showLoaded ? 0 : 1,
         transition: "opacity 0.8s ease-out",
         pointerEvents: showLoaded ? "none" : "auto",

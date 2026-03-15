@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,6 +77,46 @@ func (ctx *gameVPRecalculationContext) CountAllTilesOfType(tileType shared.Resou
 	for _, tile := range tiles {
 		if tile.OccupiedBy != nil && tile.OccupiedBy.Type == tileType {
 			count++
+		}
+	}
+	return count
+}
+
+func (ctx *gameVPRecalculationContext) CountAdjacentTilesForCard(cardID string, tileType shared.ResourceType) int {
+	tiles := ctx.game.board.Tiles()
+	sourceTag := "source:" + cardID
+
+	var sourceTile *board.Tile
+	for i := range tiles {
+		if tiles[i].OccupiedBy == nil {
+			continue
+		}
+		for _, tag := range tiles[i].OccupiedBy.Tags {
+			if tag == sourceTag {
+				sourceTile = &tiles[i]
+				break
+			}
+		}
+		if sourceTile != nil {
+			break
+		}
+	}
+
+	if sourceTile == nil {
+		return 0
+	}
+
+	neighbors := sourceTile.Coordinates.GetNeighbors()
+	count := 0
+	for _, tile := range tiles {
+		if tile.OccupiedBy == nil || tile.OccupiedBy.Type != tileType {
+			continue
+		}
+		for _, neighbor := range neighbors {
+			if tile.Coordinates == neighbor {
+				count++
+				break
+			}
 		}
 	}
 	return count
@@ -1398,6 +1439,14 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 		// Clear targets occupied or reserved tiles (inverse of normal placement)
 		if tileType == "clear" {
 			if tile.OccupiedBy != nil || tile.ReservedBy != nil {
+				availableHexes = append(availableHexes, tile.Coordinates.String())
+			}
+			continue
+		}
+
+		// Tile replacement targets any occupied non-ocean tile
+		if strings.HasPrefix(tileType, "tile-replacement:") {
+			if tile.OccupiedBy != nil && tile.OccupiedBy.Type != shared.ResourceOceanTile {
 				availableHexes = append(availableHexes, tile.Coordinates.String())
 			}
 			continue
