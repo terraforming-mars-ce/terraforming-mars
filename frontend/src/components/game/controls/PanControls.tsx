@@ -101,13 +101,14 @@ export function PanControls() {
       setShouldRecenter(false);
     }
 
-    const lerpFactor = isTransitioning ? 0.03 : 0.1;
+    const travelLerp = isTransitioning ? 0.03 : 0.1;
+    const panLerp = 0.1;
 
-    orbitCenter.current.lerp(targetOrbitCenter.current, lerpFactor);
+    orbitCenter.current.lerp(targetOrbitCenter.current, travelLerp);
 
-    spherical.theta += (targetSpherical.current.theta - spherical.theta) * lerpFactor;
-    spherical.phi += (targetSpherical.current.phi - spherical.phi) * lerpFactor;
-    spherical.radius += (targetSpherical.current.radius - spherical.radius) * lerpFactor;
+    spherical.theta += (targetSpherical.current.theta - spherical.theta) * panLerp;
+    spherical.phi += (targetSpherical.current.phi - spherical.phi) * panLerp;
+    spherical.radius += (targetSpherical.current.radius - spherical.radius) * panLerp;
 
     const pending = pendingCameraTransformRef.current;
     if (pending) {
@@ -137,8 +138,7 @@ export function PanControls() {
 
     if (isTransitioning) {
       const centerDist = orbitCenter.current.distanceTo(targetOrbitCenter.current);
-      const radiusDiff = Math.abs(spherical.radius - targetSpherical.current.radius);
-      if (centerDist < 0.01 && radiusDiff < 0.01) {
+      if (centerDist < 0.05) {
         setIsTransitioning(false);
       }
     }
@@ -156,7 +156,7 @@ export function PanControls() {
     };
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (settings.freeCameraEnabled || isTransitioningRef.current) return;
+      if (settings.freeCameraEnabled) return;
       isPointerDown.current = true;
       panState.isPanning = true;
       panState.hasDragged = false;
@@ -211,9 +211,8 @@ export function PanControls() {
     };
 
     const handleWheel = (event: WheelEvent) => {
-      if (settings.freeCameraEnabled || isTransitioningRef.current) return;
+      if (settings.freeCameraEnabled) return;
       event.preventDefault();
-
       const orbit = activePlanetRef.current === "venus" ? VENUS_ORBIT : MARS_ORBIT;
       const zoomSpeed = 0.5;
       const zoomDelta = event.deltaY * zoomSpeed * 0.01;

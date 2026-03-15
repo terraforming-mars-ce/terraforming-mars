@@ -49,22 +49,38 @@ function FreeCameraFrustum({ fov }: { fov: number }) {
   );
 }
 
-function DynamicSunLight() {
+function DynamicSunLight({ startDark = false }: { startDark?: boolean }) {
   const { settings } = useWorld3DSettings();
   const lightRef = useRef<THREE.DirectionalLight>(null);
+  const sunriseStartTime = useRef<number | null>(null);
 
-  useFrame(() => {
-    if (lightRef.current) {
-      // Scale direction by distance to position the light
-      const distance = 18;
-      lightRef.current.position.set(
-        settings.sunDirectionX * distance,
-        settings.sunDirectionY * distance,
-        settings.sunDirectionZ * distance + 5,
-      );
-      lightRef.current.intensity = 2.6 * settings.sunIntensity;
-      lightRef.current.color.setRGB(settings.sunColor.r, settings.sunColor.g, settings.sunColor.b);
+  useFrame((state) => {
+    if (!lightRef.current) {
+      return;
     }
+
+    const distance = 18;
+    lightRef.current.position.set(
+      settings.sunDirectionX * distance,
+      settings.sunDirectionY * distance,
+      settings.sunDirectionZ * distance + 5,
+    );
+
+    let intensityMultiplier = 1;
+    if (startDark) {
+      intensityMultiplier = 0;
+      sunriseStartTime.current = null;
+    } else if (sunriseStartTime.current === null) {
+      sunriseStartTime.current = state.clock.elapsedTime;
+      intensityMultiplier = 0;
+    } else {
+      const elapsed = state.clock.elapsedTime - sunriseStartTime.current;
+      const t = Math.min(elapsed / 1.5, 1);
+      intensityMultiplier = 1 - (1 - t) * (1 - t);
+    }
+
+    lightRef.current.intensity = 2.6 * settings.sunIntensity * intensityMultiplier;
+    lightRef.current.color.setRGB(settings.sunColor.r, settings.sunColor.g, settings.sunColor.b);
   });
 
   return (
@@ -154,6 +170,8 @@ function ReturnToMarsButton() {
 interface Game3DViewProps {
   gameState: GameDto;
   animateHexEntrance?: boolean;
+  startDark?: boolean;
+  tilesHidden?: boolean;
   onSkyboxReady?: () => void;
   onGpuReady?: () => void;
   showUI?: boolean;
@@ -163,6 +181,8 @@ interface Game3DViewProps {
 export default function Game3DView({
   gameState,
   animateHexEntrance = false,
+  startDark = false,
+  tilesHidden = false,
   onSkyboxReady,
   onGpuReady,
   showUI = true,
@@ -295,7 +315,7 @@ export default function Game3DView({
               <SkyboxRotation />
 
               <ambientLight intensity={0.4} color="#2a2a3e" />
-              <DynamicSunLight />
+              <DynamicSunLight startDark={startDark} />
               <directionalLight position={[-8, -3, -10]} intensity={0.35} color="#4488ff" />
               <fog attach="fog" args={["#0a0a1a", 8, 25]} />
 
@@ -303,6 +323,7 @@ export default function Game3DView({
                 gameState={gameState}
                 onHexClick={handleHexClick}
                 animateHexEntrance={animateHexEntrance}
+                startHidden={tilesHidden}
               />
 
               {venusNextEnabled && (

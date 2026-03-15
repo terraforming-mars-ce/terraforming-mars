@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from "react";
+import { useState, useCallback, forwardRef } from "react";
 import LeftSidebar from "../panels/LeftSidebar.tsx";
+import type { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
 import TopMenuBar from "../panels/TopMenuBar.tsx";
 import RightSidebar from "../panels/RightSidebar.tsx";
 import MainContentDisplay from "../../ui/display/MainContentDisplay.tsx";
@@ -8,6 +9,8 @@ import BottomResourceBar, {
   BottomResourceBarCallbacks,
 } from "../../ui/overlay/BottomResourceBar.tsx";
 import PlayerOverlay from "../../ui/overlay/PlayerOverlay.tsx";
+import PlayedCardNotificationOverlay from "../../ui/overlay/PlayedCardNotification.tsx";
+import type { PlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 import { StandardProject } from "../../../types/cards.tsx";
 import {
   ChatMessageDto,
@@ -22,7 +25,7 @@ import {
 } from "../../../types/generated/api-types.ts";
 import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
-import GameMenuButton from "../../ui/buttons/GameMenuButton.tsx";
+import GameButton from "../../ui/buttons/GameButton.tsx";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 
 export type TransitionPhase =
@@ -30,6 +33,7 @@ export type TransitionPhase =
   | "lobby"
   | "loading"
   | "fadeOutLobby"
+  | "marsRevealed"
   | "animateUI"
   | "complete";
 
@@ -43,6 +47,8 @@ interface GameLayoutProps {
   showStartingSelection?: boolean;
   transitionPhase?: TransitionPhase;
   animateHexEntrance?: boolean;
+  startDark?: boolean;
+  tilesHidden?: boolean;
   changedPaths?: Set<string>;
   triggeredEffects?: TriggeredEffectDto[];
   bottomBarCallbacks?: BottomResourceBarCallbacks;
@@ -66,42 +72,55 @@ interface GameLayoutProps {
   activeEndgamePanel?: "score" | "graphs" | "replay";
   onEndgamePanelChange?: (panel: "score" | "graphs" | "replay") => void;
   hasHistory?: boolean;
+  playedCardNotification?: PlayedCardNotification | null;
+  isPlayedCardPinned?: boolean;
+  onPlayedCardTogglePin?: () => void;
+  onPlayedCardAdvance?: () => void;
 }
 
-const GameLayout: React.FC<GameLayoutProps> = ({
-  gameState,
-  currentPlayer,
-  playedCards = [],
-  corporationCard = null,
-  showCorporation = true,
-  initTurnPlayerId = null,
-  showStartingSelection = false,
-  transitionPhase = "idle",
-  animateHexEntrance = false,
-  changedPaths = new Set(),
-  triggeredEffects = [],
-  bottomBarCallbacks,
-  onStandardProjectSelect,
-  onLeaveGame,
-  onEndGame,
-  onSkyboxReady,
-  onGpuReady,
-  onPlayerClick,
-  spectatingPlayer,
-  spectatingCorporation,
-  spectatePlayerColor,
-  onStopSpectating,
-  isGameSpectator = false,
-  chatMessages,
-  onSendChatMessage,
-  isLobbyPhase = false,
-  playerColorMap,
-  endgameFadeUI = false,
-  isEndgame = false,
-  activeEndgamePanel,
-  onEndgamePanelChange,
-  hasHistory = false,
-}) => {
+const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLayout(
+  {
+    gameState,
+    currentPlayer,
+    playedCards = [],
+    corporationCard = null,
+    showCorporation = true,
+    initTurnPlayerId = null,
+    showStartingSelection = false,
+    transitionPhase = "idle",
+    animateHexEntrance = false,
+    startDark = false,
+    tilesHidden = false,
+    changedPaths = new Set(),
+    triggeredEffects = [],
+    bottomBarCallbacks,
+    onStandardProjectSelect,
+    onLeaveGame,
+    onEndGame,
+    onSkyboxReady,
+    onGpuReady,
+    onPlayerClick,
+    spectatingPlayer,
+    spectatingCorporation,
+    spectatePlayerColor,
+    onStopSpectating,
+    isGameSpectator = false,
+    chatMessages,
+    onSendChatMessage,
+    isLobbyPhase = false,
+    playerColorMap,
+    endgameFadeUI = false,
+    isEndgame = false,
+    activeEndgamePanel,
+    onEndgamePanelChange,
+    hasHistory = false,
+    playedCardNotification,
+    isPlayedCardPinned,
+    onPlayedCardTogglePin,
+    onPlayedCardAdvance,
+  },
+  ref,
+) {
   // Create a map of all players (current + others) for easy lookup
   const playerMap = new Map<string, PlayerDto | OtherPlayerDto>();
   if (gameState?.currentPlayer) {
@@ -179,6 +198,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <MainContentDisplay
             gameState={gameState}
             animateHexEntrance={animateHexEntrance}
+            startDark={startDark}
+            tilesHidden={tilesHidden}
             onSkyboxReady={onSkyboxReady}
             onGpuReady={onGpuReady}
             showUI={showUI}
@@ -226,6 +247,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           className={`${uiAnimationClass} ${endgameFadeClass} transition-opacity duration-700 ease-in-out`}
         >
           <LeftSidebar
+            ref={ref}
             players={allPlayers}
             currentPlayer={currentPlayer}
             turnPlayerId={
@@ -257,6 +279,15 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           />
 
           <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
+
+          {playedCardNotification && onPlayedCardTogglePin && onPlayedCardAdvance && (
+            <PlayedCardNotificationOverlay
+              notification={playedCardNotification}
+              isPinned={isPlayedCardPinned ?? false}
+              onTogglePin={onPlayedCardTogglePin}
+              onAdvance={onPlayedCardAdvance}
+            />
+          )}
         </div>
       )}
 
@@ -295,12 +326,12 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             from the game and cannot rejoin.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameMenuButton variant="secondary" onClick={() => setPendingAction(null)}>
+            <GameButton buttonType="secondary" onClick={() => setPendingAction(null)}>
               Cancel
-            </GameMenuButton>
-            <GameMenuButton variant="error" onClick={() => void handleConfirmAction()}>
+            </GameButton>
+            <GameButton variant="error" onClick={() => void handleConfirmAction()}>
               Kick
-            </GameMenuButton>
+            </GameButton>
           </div>
         </GameMenuModal>
       )}
@@ -317,17 +348,17 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             replaced by a bot. This cannot be undone.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameMenuButton variant="secondary" onClick={() => setPendingAction(null)}>
+            <GameButton buttonType="secondary" onClick={() => setPendingAction(null)}>
               Cancel
-            </GameMenuButton>
-            <GameMenuButton variant="error" onClick={() => void handleConfirmAction()}>
+            </GameButton>
+            <GameButton variant="error" onClick={() => void handleConfirmAction()}>
               Convert
-            </GameMenuButton>
+            </GameButton>
           </div>
         </GameMenuModal>
       )}
     </div>
   );
-};
+});
 
 export default GameLayout;

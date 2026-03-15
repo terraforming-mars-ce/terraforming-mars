@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import {
   PlayerDto,
   OtherPlayerDto,
@@ -7,6 +7,12 @@ import {
 } from "@/types/generated/api-types.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import PlayerCard from "../cards/PlayerCard.tsx";
+import GameButton from "../buttons/GameButton.tsx";
+import { GameFlowPopover, GameFlowTitle, GameFlowFooter } from "../popover/GameFlowPopover.tsx";
+
+export interface PlayerListHandle {
+  requestSkipAction: () => void;
+}
 
 function measureTextWidth(text: string, font: string): number {
   const canvas = document.createElement("canvas");
@@ -31,18 +37,21 @@ interface PlayerListProps {
   onConvertToBot?: (playerId: string) => void;
 }
 
-const PlayerList: React.FC<PlayerListProps> = ({
-  players,
-  currentPlayer,
-  turnPlayerId,
-  currentPhase,
-  hostPlayerId,
-  pendingTilePlayerId,
-  triggeredEffects = [],
-  onPlayerClick,
-  onKickPlayer,
-  onConvertToBot,
-}) => {
+const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function PlayerList(
+  {
+    players,
+    currentPlayer,
+    turnPlayerId,
+    currentPhase,
+    hostPlayerId,
+    pendingTilePlayerId,
+    triggeredEffects = [],
+    onPlayerClick,
+    onKickPlayer,
+    onConvertToBot,
+  },
+  ref,
+) {
   const isActionPhase = currentPhase === "action";
 
   const { minNameWidth, minCardWidth } = useMemo(() => {
@@ -79,13 +88,55 @@ const PlayerList: React.FC<PlayerListProps> = ({
     return { minNameWidth: nameCol, minCardWidth: Math.ceil(cardWidth) };
   }, [players]);
 
-  const handleSkipAction = async () => {
+  const [showPassConfirmation, setShowPassConfirmation] = useState(false);
+
+  const dismissPassConfirmation = useCallback(() => {
+    setShowPassConfirmation(false);
+  }, []);
+
+  const doSkipAction = useCallback(async () => {
     try {
       await globalWebSocketManager.skipAction();
     } catch (error) {
       console.error("Failed to skip action:", error);
     }
-  };
+  }, []);
+
+  const handleSkipAction = useCallback(async () => {
+    if (!currentPlayer) {
+      await doSkipAction();
+      return;
+    }
+
+    const isPassing = currentPlayer.availableActions === 2 || currentPlayer.availableActions === -1;
+    if (!isPassing) {
+      await doSkipAction();
+      return;
+    }
+
+    const hasPlayableCards = currentPlayer.cards.some((c) => c.available);
+    const hasUsableActions = currentPlayer.actions.some((a) => a.available);
+
+    if (!hasPlayableCards && !hasUsableActions) {
+      await doSkipAction();
+      return;
+    }
+
+    setShowPassConfirmation(true);
+  }, [currentPlayer, doSkipAction]);
+
+  const handleConfirmPass = useCallback(async () => {
+    setShowPassConfirmation(false);
+    await doSkipAction();
+  }, [doSkipAction]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      requestSkipAction: () => void handleSkipAction(),
+    }),
+    [handleSkipAction],
+  );
 
   return (
     <div className="flex flex-col gap-0 overflow-y-auto overflow-x-visible max-h-[calc(100vh-200px)] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -108,8 +159,30 @@ const PlayerList: React.FC<PlayerListProps> = ({
           minCardWidth={minCardWidth}
         />
       ))}
+      <GameFlowPopover
+        isVisible={showPassConfirmation}
+        onClose={dismissPassConfirmation}
+        type="immediate"
+      >
+        <GameFlowTitle>
+          <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
+            Actions Available
+          </h3>
+          <div className="text-white/60 text-xs text-shadow-glow mt-1">
+            You still have unused actions this generation.
+          </div>
+        </GameFlowTitle>
+        <GameFlowFooter className="gap-3">
+          <GameButton buttonType="secondary" size="sm" onClick={dismissPassConfirmation}>
+            Cancel
+          </GameButton>
+          <GameButton variant="warn" size="sm" onClick={() => void handleConfirmPass()}>
+            Pass Anyway
+          </GameButton>
+        </GameFlowFooter>
+      </GameFlowPopover>
     </div>
   );
-};
+});
 
 export default PlayerList;

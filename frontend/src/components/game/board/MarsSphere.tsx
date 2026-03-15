@@ -12,12 +12,14 @@ interface MarsSphereProps {
   gameState?: GameDto;
   onHexClick?: (hex: string) => void;
   animateHexEntrance?: boolean;
+  startHidden?: boolean;
 }
 
 export default function MarsSphere({
   gameState,
   onHexClick,
   animateHexEntrance = false,
+  startHidden = false,
 }: MarsSphereProps) {
   const { marsGroupRef } = useMarsRotation();
   const { activePlanet, setActivePlanet } = usePlanetFocus();
@@ -96,6 +98,7 @@ export default function MarsSphere({
         gameState={gameState}
         onHexClick={onHexClick}
         animateHexEntrance={animateHexEntrance}
+        startHidden={startHidden}
       />
     </group>
   );

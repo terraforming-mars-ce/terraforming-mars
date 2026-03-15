@@ -7,6 +7,7 @@ import { VENUS_RADIUS, VENUS_POSITION } from "./boardConstants";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
 import { Html } from "@react-three/drei";
+import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 
 interface VenusTileGridProps {
   gameState?: GameDto;
@@ -69,6 +70,8 @@ const convertBonuses = (bonuses: TileBonusDto[] | undefined) => {
 };
 
 export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: VenusTileGridProps) {
+  const { activePlanet } = usePlanetFocus();
+
   const venusTilesOnly = useMemo(
     () => gameState?.board?.tiles?.filter((t) => t.location === "venus"),
     [gameState?.board?.tiles],
@@ -270,14 +273,17 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
 
   return (
     <>
-      {/* Invisible interaction sphere for click/hover handling */}
-      <mesh
-        geometry={interactionSphereGeometry}
-        onPointerMove={handleSpherePointerMove}
-        onPointerLeave={handleSpherePointerLeave}
-        onClick={handleSphereClick}
-        visible={false}
-      />
+      {/* Invisible interaction sphere for click/hover handling — disabled when viewing from Mars
+         so it doesn't block raycasts to the VenusSphere click-to-travel handler */}
+      {activePlanet === "venus" && (
+        <mesh
+          geometry={interactionSphereGeometry}
+          onPointerMove={handleSpherePointerMove}
+          onPointerLeave={handleSpherePointerLeave}
+          onClick={handleSphereClick}
+          visible={false}
+        />
+      )}
 
       <Html>
         <TileTooltip data={tooltipData} />

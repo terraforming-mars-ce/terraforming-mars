@@ -545,6 +545,7 @@ export interface PerConditionDto {
   location?: CardApplyLocation;
   target?: TargetType;
   tag?: CardTag;
+  adjacentToSelfTile: boolean;
 }
 /**
  * ChoiceDto represents a choice for client consumption
@@ -900,6 +901,7 @@ export interface PlayerActionDto {
   timesUsedThisGeneration: number /* int */; // Times used this generation
   available: boolean; // Computed: action is usable
   errors: StateErrorDto[]; // Reasons why action is not usable
+  warnings?: StateWarningDto[]; // Non-blocking warnings
 }
 /**
  * PlayerStandardProjectDto represents a standard project with availability state
@@ -936,7 +938,7 @@ export interface PendingTileSelectionDto {
  * PendingCardSelectionDto represents a pending card selection action (e.g., sell patents, card effects)
  */
 export interface PendingCardSelectionDto {
-  availableCards: CardDto[]; // Card IDs player can select from
+  availableCards: PlayerCardDto[]; // Cards with playability state
   cardCosts: { [key: string]: number /* int */ }; // Card ID -> cost to select (0 for sell patents, 3 for buying cards)
   cardRewards: { [key: string]: number /* int */ }; // Card ID -> reward for selecting (1 MC for sell patents)
   source: string; // What triggered this selection ("sell-patents", card ID, etc.)
@@ -947,7 +949,7 @@ export interface PendingCardSelectionDto {
  * PendingCardDrawSelectionDto represents a pending card draw/peek/take/buy action from card effects
  */
 export interface PendingCardDrawSelectionDto {
-  availableCards: CardDto[]; // Cards shown to player (drawn or peeked)
+  availableCards: PlayerCardDto[]; // Cards with playability state
   freeTakeCount: number /* int */; // Number of cards to take for free (mandatory for card-draw, 0 = optional)
   maxBuyCount: number /* int */; // Maximum cards to buy (optional, 0 = no buying allowed)
   cardBuyCost: number /* int */; // Cost per card when buying (typically 3 MC, 0 if no buying)
@@ -1000,6 +1002,13 @@ export interface PendingColonyResourceSelectionDto {
   reason: ColonyResourceReason;
 }
 /**
+ * PendingAwardFundSelectionDto represents a pending award fund selection for client consumption
+ */
+export interface PendingAwardFundSelectionDto {
+  availableAwards: string[];
+  source: string;
+}
+/**
  * PlayerStatus represents the current status of a player in the game
  */
 export type PlayerStatus = string;
@@ -1048,6 +1057,7 @@ export interface PlayerDto {
   pendingBehaviorChoiceSelection?: PendingBehaviorChoiceSelectionDto;
   pendingStealTargetSelection?: PendingStealTargetSelectionDto;
   pendingColonyResourceSelection?: PendingColonyResourceSelectionDto;
+  pendingAwardFundSelection?: PendingAwardFundSelectionDto;
   forcedFirstAction?: ForcedFirstActionDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
@@ -1310,6 +1320,7 @@ export interface VPGranterConditionDto {
   conditionType: string;
   perType?: string;
   perAmount?: number /* int */;
+  adjacentToSelfTile: boolean;
   count: number /* int */;
   computedVP: number /* int */;
   explanation: string;
@@ -1659,6 +1670,7 @@ export const MessageTypeActionConfirmStealTarget: MessageType = "action.card.con
 export const MessageTypeActionColonyTrade: MessageType = "action.colony.trade";
 export const MessageTypeActionColonyBuild: MessageType = "action.colony.build";
 export const MessageTypeActionConfirmColonyResource: MessageType = "action.confirm-colony-resource";
+export const MessageTypeActionConfirmAwardFund: MessageType = "action.confirm-award-fund";
 export const MessageTypeAdminCommand: MessageType = "admin-command";
 export const MessageTypeRequestLogs: MessageType = "request-logs";
 export const MessageTypePlayerTakeover: MessageType = "player-takeover";

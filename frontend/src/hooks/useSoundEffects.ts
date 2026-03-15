@@ -26,6 +26,10 @@ export function useSoundEffects() {
     return audioService.playOxygenSound();
   }, []);
 
+  const playVenusSound = useCallback(() => {
+    return audioService.playVenusSound();
+  }, []);
+
   const playButtonHoverSound = useCallback(() => {
     return audioService.playButtonHoverSound();
   }, []);
@@ -50,17 +54,28 @@ export function useSoundEffects() {
     return audioService.playYourTurnSound();
   }, []);
 
+  const playAwardFundedSound = useCallback(() => {
+    return audioService.playAwardFundedSound();
+  }, []);
+
+  const playGameStartSound = useCallback(() => {
+    return audioService.playGameStartSound();
+  }, []);
+
   return {
     playSound,
     playProductionSound,
     playTemperatureSound,
     playWaterPlacementSound,
     playOxygenSound,
+    playVenusSound,
     playButtonHoverSound,
     playButtonClickSound,
     playCardHoverSound,
     playConstructionSound,
     playAsteroidImpactSound,
     playYourTurnSound,
+    playAwardFundedSound,
+    playGameStartSound,
   };
 }
