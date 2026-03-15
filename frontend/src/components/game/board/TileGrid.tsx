@@ -65,7 +65,12 @@ export default function TileGrid({
   animateHexEntrance = false,
 }: TileGridProps) {
   const newlyPlacedTiles = usePreviousTiles(gameState?.board?.tiles);
-  const { playWaterPlacementSound, playOxygenSound, playConstructionSound } = useSoundEffects();
+  const {
+    playWaterPlacementSound,
+    playOxygenSound,
+    playConstructionSound,
+    playAsteroidImpactSound,
+  } = useSoundEffects();
   const { state: vpCountingState } = useVPCounting();
 
   // Play placement sounds for newly placed tiles
@@ -86,9 +91,11 @@ export default function TileGrid({
         case "ecological-zone-tile":
         case "natural-preserve-tile":
           break;
+        case "nuclear-zone-tile":
+          void playAsteroidImpactSound();
+          break;
         case "city-tile":
         case "special-tile":
-        case "nuclear-zone-tile":
         case "mining-tile":
         case "restricted-tile":
           void playConstructionSound();
@@ -101,6 +108,7 @@ export default function TileGrid({
     playWaterPlacementSound,
     playOxygenSound,
     playConstructionSound,
+    playAsteroidImpactSound,
   ]);
 
   const playerColorMap = useMemo(() => {

@@ -148,6 +148,56 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return result, nil
 	}
 
+	// Handle tile replacement - destroys occupant and places a new tile in one step
+	if strings.HasPrefix(tileType, "tile-replacement:") {
+		replacementTileType := strings.TrimPrefix(tileType, "tile-replacement:")
+
+		if err := g.Board().ClearTileOccupant(ctx, *coords); err != nil {
+			log.Warn("Failed to destroy tile for replacement", zap.Error(err))
+			return nil, fmt.Errorf("failed to destroy tile: %w", err)
+		}
+
+		occupantTags := []string{}
+		if pendingTileSelection.SourceCardID != "" {
+			occupantTags = append(occupantTags, "source:"+pendingTileSelection.SourceCardID)
+		}
+		occupant := board.TileOccupant{
+			Type: mapTileTypeToResourceType(replacementTileType),
+			Tags: occupantTags,
+		}
+
+		if err := g.Board().UpdateTileOccupancy(ctx, *coords, occupant, playerID); err != nil {
+			log.Warn("Failed to place replacement tile", zap.Error(err))
+			return nil, fmt.Errorf("failed to place replacement tile: %w", err)
+		}
+
+		result := &TilePlacementResult{
+			TileType:   replacementTileType,
+			Source:     pendingTileSelection.Source,
+			Hex:        selectedHex,
+			OnComplete: pendingTileSelection.OnComplete,
+		}
+
+		if err := g.SetPendingTileSelection(ctx, playerID, nil); err != nil {
+			return nil, fmt.Errorf("failed to clear pending tile selection: %w", err)
+		}
+
+		if err := g.ProcessNextTile(ctx, playerID); err != nil {
+			return nil, fmt.Errorf("failed to process next tile: %w", err)
+		}
+
+		if err := a.completionRegistry.Handle(ctx, g, playerID, result, result.OnComplete); err != nil {
+			log.Warn("Failed to handle completion callback", zap.Error(err))
+		}
+
+		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+
+		log.Info("Tile replaced",
+			zap.String("position", selectedHex),
+			zap.String("replacement_type", replacementTileType))
+		return result, nil
+	}
+
 	// Handle tile destruction - removes any tile (including oceans)
 	if tileType == "tile-destruction" {
 		destroyedTile, tileErr := g.Board().GetTile(*coords)

@@ -20073,7 +20073,7 @@
     "name": "Nuke",
     "type": "event",
     "cost": 30,
-    "description": "Destroy any tile on the board. If it's an ocean, reduce the ocean count by 1.",
+    "description": "Destroy any tile on the board. Place a Nuclear Zone tile. If it's an ocean, reduce the ocean count by 1.",
     "pack": "experimental",
     "tags": [
       "event",
@@ -20088,12 +20088,20 @@
         ],
         "outputs": [
           {
-            "type": "tile-destruction",
+            "type": "tile-replacement",
             "amount": 1,
-            "target": "self-player"
+            "target": "self-player",
+            "tileType": "nuclear-zone"
           }
         ],
-        "description": "Destroy any tile on the board."
+        "description": "Replace any tile with a Nuclear Zone tile."
+      }
+    ],
+    "vpConditions": [
+      {
+        "amount": -2,
+        "condition": "fixed",
+        "description": "-2 VP"
       }
     ]
   }

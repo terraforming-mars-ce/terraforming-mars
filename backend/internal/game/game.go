@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -1406,6 +1407,14 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 		// Tile destruction targets any occupied tile on the board
 		if tileType == "tile-destruction" {
 			if tile.OccupiedBy != nil {
+				availableHexes = append(availableHexes, tile.Coordinates.String())
+			}
+			continue
+		}
+
+		// Tile replacement targets any occupied non-ocean tile
+		if strings.HasPrefix(tileType, "tile-replacement:") {
+			if tile.OccupiedBy != nil && tile.OccupiedBy.Type != shared.ResourceOceanTile {
 				availableHexes = append(availableHexes, tile.Coordinates.String())
 			}
 			continue
