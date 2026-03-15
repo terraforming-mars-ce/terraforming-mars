@@ -843,6 +843,19 @@ func validateBehaviorTileOutputs(
 					Message:  "No ocean tiles remaining",
 				})
 			}
+		case shared.ResourceTileReplacement:
+			tileType := output.TileType
+			if tileType == "" {
+				continue
+			}
+			replacementPlacements := g.CountAvailableHexesForTile("tile-replacement:"+tileType, p.ID(), nil)
+			if replacementPlacements == 0 {
+				errors = append(errors, player.StateError{
+					Code:     player.ErrorCodeNoTilePlacements,
+					Category: player.ErrorCategoryAvailability,
+					Message:  "No valid tile placements",
+				})
+			}
 		case shared.ResourceTilePlacement:
 			tileType := output.TileType
 			if tileType == "" {
