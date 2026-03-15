@@ -1330,8 +1330,7 @@ func (a *BehaviorApplier) applyOutput(
 
 		case "steal-from-any-card":
 			if a.stealSourceCardID == "" {
-				log.Debug("Skipping steal-from-any-card: no source card specified")
-				return nil
+				return fmt.Errorf("steal-from-any-card requires a source card ID")
 			}
 			if a.game == nil {
 				return fmt.Errorf("cannot steal from card: no game context")
@@ -1517,6 +1516,23 @@ func (a *BehaviorApplier) applyOutput(
 			return fmt.Errorf("failed to append tile destruction to pending tile selection queue: %w", err)
 		}
 		log.Debug("Added tile destruction selection to queue")
+
+	case shared.ResourceTileReplacement:
+		if a.game == nil {
+			return fmt.Errorf("cannot apply tile replacement: no game context")
+		}
+		if a.player == nil {
+			return fmt.Errorf("cannot apply tile replacement: no player context")
+		}
+		tileTypes := make([]string, output.Amount)
+		for i := 0; i < output.Amount; i++ {
+			tileTypes[i] = "tile-replacement:" + output.TileType
+		}
+		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, nil); err != nil {
+			return fmt.Errorf("failed to append tile replacement to pending tile selection queue: %w", err)
+		}
+		log.Debug("Added tile replacement selection to queue",
+			zap.String("replacement_tile", output.TileType))
 
 	case shared.ResourceActionReuse:
 		log.Debug("Skipping action-reuse output (handled at action layer)")
