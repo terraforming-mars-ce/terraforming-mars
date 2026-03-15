@@ -90,3 +90,6 @@ __pycache__/
 
 # Deploy
 .deploy-staging/
+
+# tmp
+tmp/
