@@ -6073,3 +6073,42 @@ func TestLocalHeatTrapping_PlaysWithSufficientHeat(t *testing.T) {
 	testutil.AssertEqual(t, heatBefore-5, heatAfter, "Heat should decrease by 5")
 	testutil.AssertEqual(t, plantsBefore+4, plantsAfter, "Plants should increase by 4")
 }
+
+// --- Immigrant City (200) ---
+// "Effect: Each time a city tile is placed, including this, increase your M€ production 1 step.
+//
+//	Decrease your energy production 1 step and decrease your M€ production 2 steps. Place a city tile."
+func TestImmigrantCity_ProductionAndCityPlacement(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	card := testutil.GetCardByName("Immigrant City")
+	cardRegistry := testutil.CreateTestCardRegistry()
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	p.Resources().AddProduction(map[shared.ResourceType]int{
+		shared.ResourceEnergyProduction: 3,
+		shared.ResourceCreditProduction: 5,
+	})
+	p.Hand().AddCard(card.ID)
+	prodBefore := p.Resources().Production()
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 13}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Immigrant City should play successfully")
+	prodAfter := p.Resources().Production()
+	testutil.AssertEqual(t, prodBefore.Energy-1, prodAfter.Energy,
+		"Energy production should decrease by 1")
+	testutil.AssertEqual(t, prodBefore.Credits-2, prodAfter.Credits,
+		"Credit production should decrease by 2 (before city effect)")
+	selection := testGame.GetPendingTileSelection(p.ID())
+	testutil.AssertTrue(t, selection != nil, "Should have pending city tile selection")
+}

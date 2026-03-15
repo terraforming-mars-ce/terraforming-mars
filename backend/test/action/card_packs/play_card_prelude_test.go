@@ -925,10 +925,9 @@ func TestPrelude_PowerGeneration_EnergyProduction(t *testing.T) {
 // =============================================================================
 // P28 - Research Network (tags: wild)
 // "Draw 3 cards, and increase your M€ production 1 step."
-// Behavior: auto trigger, outputs: credit-production +1
-// Note: card draw and wild tag functionality are not in behavior outputs.
+// Behavior: auto trigger, outputs: card-draw 3, credit-production +1
 // =============================================================================
-func TestPrelude_ResearchNetwork_CreditProduction(t *testing.T) {
+func TestPrelude_ResearchNetwork_CreditProductionAndCardDraw(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
 	logger := testutil.TestLogger()
@@ -945,14 +944,17 @@ func TestPrelude_ResearchNetwork_CreditProduction(t *testing.T) {
 		shared.ResourceCredit: 100,
 	})
 	p.Hand().AddCard(card.ID)
+	handSizeBefore := p.Hand().CardCount()
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := cardAction.PaymentRequest{Credits: 0}
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Research Network should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Research Network should be in played cards")
+	handSizeAfter := p.Hand().CardCount()
 	prodAfter := p.Resources().Production()
 	testutil.AssertEqual(t, prodBefore.Credits+1, prodAfter.Credits, "M€ production should increase by 1")
+	testutil.AssertEqual(t, handSizeBefore+3-1, handSizeAfter, "Should draw 3 cards (minus the played prelude)")
 }
 
 // =============================================================================
