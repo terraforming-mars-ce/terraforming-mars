@@ -9,6 +9,7 @@ import (
 	connAction "terraforming-mars-backend/internal/action/connection"
 	gameAction "terraforming-mars-backend/internal/action/game"
 	milestoneAction "terraforming-mars-backend/internal/action/milestone"
+	pfAction "terraforming-mars-backend/internal/action/projectfunding"
 	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
 	stdprojAction "terraforming-mars-backend/internal/action/standard_project"
 	tileAction "terraforming-mars-backend/internal/action/tile"
@@ -23,6 +24,7 @@ import (
 	"terraforming-mars-backend/internal/delivery/websocket/handler/connection"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/game"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/milestone"
+	pfHandler "terraforming-mars-backend/internal/delivery/websocket/handler/projectfunding"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/resource_conversion"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/standard_project"
 	"terraforming-mars-backend/internal/delivery/websocket/handler/tile"
@@ -77,6 +79,7 @@ func RegisterHandlers(
 	fundAwardAction *awardAction.FundAwardAction,
 	colonyTradeAction *colonyAction.TradeAction,
 	colonyBuildAction *colonyAction.BuildColonyAction,
+	fundSeatAction *pfAction.FundSeatAction,
 	adminSetPhaseAction *adminAction.SetPhaseAction,
 	adminSetCurrentTurnAction *adminAction.SetCurrentTurnAction,
 	adminSetResourcesAction *adminAction.SetResourcesAction,
@@ -216,6 +219,9 @@ func RegisterHandlers(
 
 	colonyBuildHandler := colonyHandler.NewBuildColonyHandler(colonyBuildAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionColonyBuild, colonyBuildHandler)
+
+	fundSeatHandler := pfHandler.NewFundSeatHandler(fundSeatAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionProjectFundingSeat, fundSeatHandler)
 
 	adminCommandHandler := admin.NewAdminCommandHandler(
 		adminSetPhaseAction,

@@ -1132,6 +1132,7 @@ export interface GameDto {
   isSpectator: boolean;
   colonyTiles?: ColonyTileDto[];
   tradeFleetAvailable: boolean;
+  projectFunding?: ProjectFundingDto[];
 }
 /**
  * SpectatorDto represents a spectator visible to all clients.
@@ -1214,6 +1215,74 @@ export interface ColonySlotDto {
  * ColonyStyleDto provides visual hints for the frontend
  */
 export interface ColonyStyleDto {
+  color: string;
+  icon: string;
+}
+/**
+ * ProjectFundingDto represents a project funding tile in the game
+ */
+export interface ProjectFundingDto {
+  id: string;
+  name: string;
+  description: string;
+  seats: ProjectSeatDto[];
+  seatOwners: ProjectSeatOwnerDto[];
+  isCompleted: boolean;
+  nextSeatIndex: number /* int */;
+  nextSeatCost: number /* int */;
+  canBuySeat: boolean;
+  buyErrors: StateErrorDto[];
+  currentPlayerSeats: number /* int */;
+  currentPlayerTier?: ProjectRewardTierDto;
+  paymentSubstitutes: ProjectPaymentSubDto[];
+  rewardTiers: ProjectRewardTierDto[];
+  completionEffect: ProjectCompletionEffectDto;
+  style: ProjectStyleDto;
+}
+/**
+ * ProjectSeatDto represents a seat definition
+ */
+export interface ProjectSeatDto {
+  cost: number /* int */;
+  paymentSubstitutes: ProjectPaymentSubDto[];
+  ownerId: string;
+  ownerName: string;
+  ownerColor: string;
+  isFilled: boolean;
+}
+/**
+ * ProjectSeatOwnerDto represents a seat owner entry
+ */
+export interface ProjectSeatOwnerDto {
+  playerId: string;
+  name: string;
+  color: string;
+}
+/**
+ * ProjectRewardTierDto represents a reward tier
+ */
+export interface ProjectRewardTierDto {
+  seatsOwned: number /* int */;
+  rewards: ColonyOutputDto[];
+}
+/**
+ * ProjectCompletionEffectDto represents the completion effect
+ */
+export interface ProjectCompletionEffectDto {
+  description: string;
+  rewards: ColonyOutputDto[];
+}
+/**
+ * ProjectPaymentSubDto represents a payment substitute for a seat
+ */
+export interface ProjectPaymentSubDto {
+  resourceType: string;
+  conversionRate: number /* int */;
+}
+/**
+ * ProjectStyleDto provides visual hints for the frontend
+ */
+export interface ProjectStyleDto {
   color: string;
   icon: string;
 }
@@ -1613,6 +1682,19 @@ export interface BugReportStatusResponse {
 }
 
 //////////
+// source: mapper_game.go
+
+/**
+ * ToGameDto converts Game to GameDto with personalized view
+ * The playerID parameter determines which player is "currentPlayer" vs "otherPlayers"
+ * Registries bundles optional expansion registries for DTO mapping
+ */
+export interface Registries {
+  ColonyRegistry: any /* colonies.ColonyRegistry */;
+  ProjectFundingRegistry: any /* pfRegistry.ProjectFundingRegistry */;
+}
+
+//////////
 // source: message_types.go
 
 /**
@@ -1669,6 +1751,7 @@ export const MessageTypeActionBehaviorChoiceConfirmed: MessageType =
 export const MessageTypeActionConfirmStealTarget: MessageType = "action.card.confirm-steal-target";
 export const MessageTypeActionColonyTrade: MessageType = "action.colony.trade";
 export const MessageTypeActionColonyBuild: MessageType = "action.colony.build";
+export const MessageTypeActionProjectFundingSeat: MessageType = "action.project-funding.buy-seat";
 export const MessageTypeActionConfirmColonyResource: MessageType = "action.confirm-colony-resource";
 export const MessageTypeActionConfirmAwardFund: MessageType = "action.confirm-award-fund";
 export const MessageTypeAdminCommand: MessageType = "admin-command";

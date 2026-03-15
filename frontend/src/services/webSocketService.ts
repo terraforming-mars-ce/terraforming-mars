@@ -58,6 +58,7 @@ import {
   MessageTypeSpectatorKicked,
   MessageTypeActionColonyTrade,
   MessageTypeActionColonyBuild,
+  MessageTypeActionProjectFundingSeat,
   // Payload types
   ChatUpdatePayload,
   PlayerConnectedPayload,
@@ -386,6 +387,15 @@ export class WebSocketService {
 
   buildColony(colonyId: string): string {
     return this.send(MessageTypeActionColonyBuild, { colonyId });
+  }
+
+  buyProjectSeat(projectId: string, credits: number, steel: number, titanium: number): string {
+    return this.send(MessageTypeActionProjectFundingSeat, {
+      projectId,
+      credits,
+      steel,
+      titanium,
+    });
   }
 
   playerTakeover(targetPlayerId: string, gameId: string): void {

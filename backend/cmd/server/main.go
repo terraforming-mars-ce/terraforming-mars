@@ -18,6 +18,7 @@ import (
 	connAction "terraforming-mars-backend/internal/action/connection"
 	gameAction "terraforming-mars-backend/internal/action/game"
 	milestoneAction "terraforming-mars-backend/internal/action/milestone"
+	pfAction "terraforming-mars-backend/internal/action/projectfunding"
 	query "terraforming-mars-backend/internal/action/query"
 	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
 	stdprojAction "terraforming-mars-backend/internal/action/standard_project"
@@ -32,6 +33,7 @@ import (
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/logger"
 	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
+	pfLoader "terraforming-mars-backend/internal/projectfunding"
 	"terraforming-mars-backend/internal/service/bot"
 	"terraforming-mars-backend/internal/service/bugreport"
 
@@ -98,6 +100,17 @@ func main() {
 	colonyRegistry := colonies.NewInMemoryColonyRegistry(colonyData)
 	log.Debug("Colony registry initialized", zap.Int("colony_count", len(colonyData)))
 
+	// ========== Initialize Project Funding Registry ==========
+	pfPath := filepath.Join(wd, "assets", "terraforming_mars_project_funding.json")
+	log.Debug("Loading project funding from", zap.String("path", pfPath))
+
+	pfData, err := pfLoader.LoadProjectsFromJSON(pfPath)
+	if err != nil {
+		log.Fatal("Failed to load project funding", zap.Error(err))
+	}
+	pfRegistry := pfLoader.NewInMemoryProjectFundingRegistry(pfData)
+	log.Debug("Project funding registry initialized", zap.Int("project_count", len(pfData)))
+
 	// ========== Initialize Game Repository (Single Source of Truth) ==========
 	ds, err := datastore.NewDataStore()
 	if err != nil {
@@ -123,7 +136,7 @@ func main() {
 	log.Debug("WebSocket hub initialized")
 
 	// ========== Initialize Game State Broadcaster (Automatic Broadcasting) ==========
-	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry)
+	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry, pfRegistry)
 	log.Debug("Game state broadcaster initialized (provides automatic broadcasting for all games)")
 
 	// ========== Initialize Game Actions ==========
@@ -144,6 +157,9 @@ func main() {
 	// Colony actions (2)
 	colonyTradeAction := colonyAction.NewTradeAction(gameRepo, colonyRegistry, cardRegistry, stateRepo, log)
 	colonyBuildAction := colonyAction.NewBuildColonyAction(gameRepo, colonyRegistry, cardRegistry, stateRepo, log)
+
+	// Project funding actions (1)
+	fundSeatAction := pfAction.NewFundSeatAction(gameRepo, pfRegistry, stateRepo)
 
 	// Card actions (2)
 	playCardAction := cardAction.NewPlayCardAction(gameRepo, cardRegistry, stateRepo, log)
@@ -198,7 +214,7 @@ func main() {
 	botController := bot.NewBotController(gameRepo, stateRepo, cardRegistry, commandDispatcher, broadcaster, log)
 	broadcaster.SetBotNotifier(botController)
 
-	startGameAction := turnAction.NewStartGameAction(gameRepo, colonyRegistry, botController, log)
+	startGameAction := turnAction.NewStartGameAction(gameRepo, colonyRegistry, pfRegistry, botController, log)
 
 	// Game management (convert to bot)
 	convertToBotAction := gameAction.NewConvertToBotAction(gameRepo, botController, log)
@@ -295,6 +311,8 @@ func main() {
 		// Colony actions
 		colonyTradeAction,
 		colonyBuildAction,
+		// Project funding actions
+		fundSeatAction,
 		// Admin actions
 		adminSetPhaseAction,
 		adminSetCurrentTurnAction,

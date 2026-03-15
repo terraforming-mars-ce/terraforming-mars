@@ -1,0 +1,311 @@
+package projectfunding
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	baseaction "terraforming-mars-backend/internal/action"
+	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/player"
+	pf "terraforming-mars-backend/internal/game/projectfunding"
+	"terraforming-mars-backend/internal/game/shared"
+	pfRegistry "terraforming-mars-backend/internal/projectfunding"
+
+	"go.uber.org/zap"
+)
+
+// FundSeatPayment describes how the player pays for a seat
+type FundSeatPayment struct {
+	Credits  int
+	Steel    int
+	Titanium int
+}
+
+// FundSeatAction handles the business logic for purchasing a project funding seat
+type FundSeatAction struct {
+	baseaction.BaseAction
+	pfRegistry pfRegistry.ProjectFundingRegistry
+}
+
+// NewFundSeatAction creates a new fund seat action
+func NewFundSeatAction(
+	gameRepo game.GameRepository,
+	pfReg pfRegistry.ProjectFundingRegistry,
+	stateRepo game.GameStateRepository,
+) *FundSeatAction {
+	return &FundSeatAction{
+		BaseAction: baseaction.NewBaseActionWithStateRepo(gameRepo, nil, stateRepo),
+		pfRegistry: pfReg,
+	}
+}
+
+// Execute performs the fund seat action
+func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID string, projectID string, payment FundSeatPayment) error {
+	log := a.InitLogger(gameID, playerID).With(
+		zap.String("action", "fund_project_seat"),
+		zap.String("project_id", projectID),
+	)
+	log.Debug("Purchasing project seat")
+
+	g, err := baseaction.ValidateActiveGame(ctx, a.GameRepository(), gameID, log)
+	if err != nil {
+		return err
+	}
+
+	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
+		return err
+	}
+
+	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
+		return err
+	}
+
+	if err := baseaction.ValidateActionsRemaining(g, playerID, log); err != nil {
+		return err
+	}
+
+	if !g.HasProjectFunding() {
+		return fmt.Errorf("project funding expansion is not enabled")
+	}
+
+	player, err := a.GetPlayerFromGame(g, playerID, log)
+	if err != nil {
+		return err
+	}
+
+	projectState := g.GetProjectFundingState(projectID)
+	if projectState == nil {
+		return fmt.Errorf("project not found: %s", projectID)
+	}
+
+	if projectState.IsCompleted {
+		return fmt.Errorf("project is already completed: %s", projectID)
+	}
+
+	definition, err := a.pfRegistry.GetByID(projectID)
+	if err != nil {
+		return fmt.Errorf("project definition not found: %w", err)
+	}
+
+	seatIndex := len(projectState.SeatOwners)
+	if seatIndex >= len(definition.Seats) {
+		return fmt.Errorf("all seats are filled for project: %s", projectID)
+	}
+
+	seat := definition.Seats[seatIndex]
+	cost := seat.Cost
+
+	// Validate payment covers cost
+	totalPayment := payment.Credits
+	steelValue := 0
+	titaniumValue := 0
+
+	for _, sub := range seat.PaymentSubstitutes {
+		switch sub.ResourceType {
+		case "steel":
+			steelValue = sub.ConversionRate
+		case "titanium":
+			titaniumValue = sub.ConversionRate
+		}
+	}
+
+	if payment.Steel > 0 {
+		if steelValue == 0 {
+			return fmt.Errorf("steel cannot be used to pay for this seat")
+		}
+		totalPayment += payment.Steel * steelValue
+	}
+
+	if payment.Titanium > 0 {
+		if titaniumValue == 0 {
+			return fmt.Errorf("titanium cannot be used to pay for this seat")
+		}
+		totalPayment += payment.Titanium * titaniumValue
+	}
+
+	if totalPayment < cost {
+		return fmt.Errorf("insufficient payment: need %d, provided %d", cost, totalPayment)
+	}
+
+	// Validate player has the resources
+	resources := player.Resources().Get()
+	if resources.Credits < payment.Credits {
+		return fmt.Errorf("insufficient credits: need %d, have %d", payment.Credits, resources.Credits)
+	}
+	if resources.Steel < payment.Steel {
+		return fmt.Errorf("insufficient steel: need %d, have %d", payment.Steel, resources.Steel)
+	}
+	if resources.Titanium < payment.Titanium {
+		return fmt.Errorf("insufficient titanium: need %d, have %d", payment.Titanium, resources.Titanium)
+	}
+
+	// Deduct resources
+	deductions := map[shared.ResourceType]int{}
+	if payment.Credits > 0 {
+		deductions[shared.ResourceCredit] = -payment.Credits
+	}
+	if payment.Steel > 0 {
+		deductions[shared.ResourceSteel] = -payment.Steel
+	}
+	if payment.Titanium > 0 {
+		deductions[shared.ResourceTitanium] = -payment.Titanium
+	}
+	player.Resources().Add(deductions)
+
+	// Add seat owner
+	projectState.SeatOwners = append(projectState.SeatOwners, playerID)
+
+	calculatedOutputs := []shared.CalculatedOutput{
+		{ResourceType: "project-seat", Amount: 1},
+	}
+
+	g.AddTriggeredEffect(shared.TriggeredEffect{
+		CardName:          "Fund Project: " + definition.Name,
+		PlayerID:          playerID,
+		SourceType:        shared.SourceTypeProjectFundingSeat,
+		CalculatedOutputs: calculatedOutputs,
+	})
+
+	a.WriteStateLogFull(ctx, g, "Fund Project: "+definition.Name, shared.SourceTypeProjectFundingSeat,
+		playerID, fmt.Sprintf("Purchased seat %d on %s", seatIndex+1, definition.Name), nil, calculatedOutputs, nil)
+
+	events.Publish(g.EventBus(), events.ProjectSeatPurchasedEvent{
+		GameID:    g.ID(),
+		PlayerID:  playerID,
+		ProjectID: projectID,
+		SeatIndex: seatIndex,
+		Timestamp: time.Now(),
+	})
+
+	// Check for completion
+	if len(projectState.SeatOwners) >= len(definition.Seats) {
+		a.completeProject(ctx, g, projectState, definition, log)
+	}
+
+	a.ConsumePlayerAction(g, log)
+
+	log.Info("Project seat purchased",
+		zap.String("project_id", projectID),
+		zap.Int("seat_index", seatIndex))
+
+	return nil
+}
+
+func (a *FundSeatAction) completeProject(ctx context.Context, g *game.Game, state *pf.ProjectState, def *pf.ProjectDefinition, log *zap.Logger) {
+	state.IsCompleted = true
+
+	allPlayers := g.GetAllPlayers()
+
+	// Count seats per player
+	seatCounts := map[string]int{}
+	for _, ownerID := range state.SeatOwners {
+		seatCounts[ownerID]++
+	}
+
+	// Apply tier rewards to each funder
+	for playerID, count := range seatCounts {
+		tier := findBestTier(def.RewardTiers, count)
+		if tier == nil {
+			continue
+		}
+
+		p, err := g.GetPlayer(playerID)
+		if err != nil {
+			log.Error("Failed to get player for tier rewards", zap.String("player_id", playerID), zap.Error(err))
+			continue
+		}
+
+		tierOutputs := applyRewards(p, tier.Rewards)
+
+		g.AddTriggeredEffect(shared.TriggeredEffect{
+			CardName:          "Project Tier Reward: " + def.Name,
+			PlayerID:          playerID,
+			SourceType:        shared.SourceTypeProjectFundingCompletion,
+			CalculatedOutputs: tierOutputs,
+		})
+	}
+
+	// Apply completion effect to ALL players
+	for _, p := range allPlayers {
+		completionOutputs := applyRewards(p, def.CompletionEffect.Rewards)
+
+		g.AddTriggeredEffect(shared.TriggeredEffect{
+			CardName:          "Project Completed: " + def.Name,
+			PlayerID:          p.ID(),
+			SourceType:        shared.SourceTypeProjectFundingCompletion,
+			CalculatedOutputs: completionOutputs,
+		})
+	}
+
+	a.WriteStateLogFull(ctx, g, "Project Completed: "+def.Name, shared.SourceTypeProjectFundingCompletion,
+		"", fmt.Sprintf("Project %s completed", def.Name), nil, nil, nil)
+
+	events.Publish(g.EventBus(), events.ProjectCompletedEvent{
+		GameID:    g.ID(),
+		ProjectID: def.ID,
+		Timestamp: time.Now(),
+	})
+
+	log.Debug("Project completed",
+		zap.String("project_id", def.ID),
+		zap.Int("total_seats", len(state.SeatOwners)))
+}
+
+func findBestTier(tiers []pf.RewardTier, seatsOwned int) *pf.RewardTier {
+	var best *pf.RewardTier
+	for i := range tiers {
+		if tiers[i].SeatsOwned <= seatsOwned {
+			if best == nil || tiers[i].SeatsOwned > best.SeatsOwned {
+				best = &tiers[i]
+			}
+		}
+	}
+	return best
+}
+
+func applyRewards(p *player.Player, rewards []pf.Output) []shared.CalculatedOutput {
+	var outputs []shared.CalculatedOutput
+	resourceAdds := map[shared.ResourceType]int{}
+
+	for _, reward := range rewards {
+		outputs = append(outputs, shared.CalculatedOutput{
+			ResourceType: reward.Type,
+			Amount:       reward.Amount,
+		})
+
+		switch reward.Type {
+		case "credit":
+			resourceAdds[shared.ResourceCredit] += reward.Amount
+		case "steel":
+			resourceAdds[shared.ResourceSteel] += reward.Amount
+		case "titanium":
+			resourceAdds[shared.ResourceTitanium] += reward.Amount
+		case "plant":
+			resourceAdds[shared.ResourcePlant] += reward.Amount
+		case "energy":
+			resourceAdds[shared.ResourceEnergy] += reward.Amount
+		case "heat":
+			resourceAdds[shared.ResourceHeat] += reward.Amount
+		case "tr":
+			p.Resources().UpdateTerraformRating(reward.Amount)
+		case "vp":
+			p.VPGranters().Add(shared.VPGranter{
+				CardID:      "pf_" + p.ID(),
+				CardName:    "Project Funding",
+				Description: fmt.Sprintf("%d VP from project funding", reward.Amount),
+				VPConditions: []shared.VPCondition{
+					{Amount: reward.Amount, Condition: shared.VPConditionFixed},
+				},
+				ComputedValue: reward.Amount,
+			})
+		}
+	}
+
+	if len(resourceAdds) > 0 {
+		p.Resources().Add(resourceAdds)
+	}
+
+	return outputs
+}
