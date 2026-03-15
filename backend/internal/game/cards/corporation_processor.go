@@ -374,6 +374,38 @@ func (p *CorporationProcessor) createForcedAction(
 
 		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
 
+	case shared.ResourceAwardFund:
+		forcedAction := &shared.ForcedFirstAction{
+			ActionType:    "award-fund",
+			CorporationID: card.ID,
+			Source:        "corporation-starting-action",
+			Completed:     false,
+			Description:   fmt.Sprintf("Fund an award for free (%s starting action)", card.Name),
+		}
+		if err := g.SetForcedFirstAction(ctx, playerID, forcedAction); err != nil {
+			return fmt.Errorf("failed to set forced award fund action: %w", err)
+		}
+		log.Debug("Set forced award fund action",
+			zap.String("description", forcedAction.Description))
+
+		var availableAwards []string
+		for _, info := range game.AllAwards {
+			if !g.Awards().IsFunded(info.Type) {
+				availableAwards = append(availableAwards, string(info.Type))
+			}
+		}
+
+		pl, err := g.GetPlayer(playerID)
+		if err != nil {
+			return fmt.Errorf("failed to get player for award fund: %w", err)
+		}
+		pl.Selection().SetPendingAwardFundSelection(&shared.PendingAwardFundSelection{
+			AvailableAwards: availableAwards,
+			Source:          "corporation-starting-action",
+		})
+		log.Debug("Set pending award fund selection",
+			zap.Int("available_awards", len(availableAwards)))
+
 	case shared.ResourceCardDraw:
 		pl, err := g.GetPlayer(playerID)
 		if err != nil {

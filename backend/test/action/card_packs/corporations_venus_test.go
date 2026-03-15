@@ -481,6 +481,65 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 	testutil.AssertError(t, err, "Viron should not be able to reuse again this generation")
 }
 
+func TestViron_ReuseStratopolis_AddFloatersToSelf(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	vironCardID := testutil.CardID("Viron")
+	stratopolisCardID := testutil.CardID("Stratopolis")
+
+	p.PlayedCards().AddCard(stratopolisCardID, "Stratopolis", "active", []string{"city", "venus"})
+	p.Resources().AddToStorage(stratopolisCardID, 0)
+
+	stratopolisAction := shared.CardAction{
+		CardID:        stratopolisCardID,
+		CardName:      "Stratopolis",
+		BehaviorIndex: 1,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceFloater, Amount: 2, Target: "any-card"},
+			},
+		},
+		TimesUsedThisGeneration: 0,
+	}
+
+	existingActions := p.Actions().List()
+	existingActions = append(existingActions, stratopolisAction)
+	p.Actions().SetActions(existingActions)
+
+	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
+
+	// Step 1: Use Stratopolis action normally to add 2 floaters to itself
+	err = useAction.Execute(ctx, testGame.ID(), playerID, stratopolisCardID, 1, nil, []string{stratopolisCardID}, nil, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Stratopolis action should succeed")
+	testutil.AssertEqual(t, 2, p.Resources().GetCardStorage(stratopolisCardID), "Stratopolis should have 2 floaters after first use")
+
+	// Step 2: Use Viron to reuse Stratopolis action, adding 2 more floaters to itself
+	reuseSource := vironCardID
+	err = useAction.Execute(ctx, testGame.ID(), playerID, stratopolisCardID, 1, nil, []string{stratopolisCardID}, nil, nil, nil, nil, &reuseSource)
+	testutil.AssertNoError(t, err, "Viron reuse of Stratopolis should succeed")
+	testutil.AssertEqual(t, 4, p.Resources().GetCardStorage(stratopolisCardID), "Stratopolis should have 4 floaters after Viron reuse")
+
+	// Verify Viron's action is marked as used
+	actions := p.Actions().List()
+	for _, a := range actions {
+		if a.CardID == vironCardID {
+			for _, output := range a.Behavior.Outputs {
+				if output.ResourceType == shared.ResourceActionReuse {
+					testutil.AssertEqual(t, 1, a.TimesUsedThisGeneration, "Viron action should be marked as used")
+				}
+			}
+		}
+	}
+}
+
 func TestValleyTrust_FirstActionCreatesPreludeSelection(t *testing.T) {
 	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()

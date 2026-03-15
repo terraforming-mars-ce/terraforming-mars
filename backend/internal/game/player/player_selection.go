@@ -163,3 +163,17 @@ func (s *Selection) SetPendingColonyResourceSelection(selection *shared.PendingC
 		st.PendingColonyResourceSelection = selection
 	})
 }
+
+func (s *Selection) GetPendingAwardFundSelection() *shared.PendingAwardFundSelection {
+	var sel *shared.PendingAwardFundSelection
+	s.read(func(st *datastore.PlayerState) {
+		sel = st.PendingAwardFundSelection
+	})
+	return sel
+}
+
+func (s *Selection) SetPendingAwardFundSelection(selection *shared.PendingAwardFundSelection) {
+	s.update(func(st *datastore.PlayerState) {
+		st.PendingAwardFundSelection = selection
+	})
+}

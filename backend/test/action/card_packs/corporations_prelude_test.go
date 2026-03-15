@@ -7,6 +7,7 @@ import (
 
 	"terraforming-mars-backend/internal/action/admin"
 	cardAction "terraforming-mars-backend/internal/action/card"
+	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -199,6 +200,50 @@ func TestVitor_StartingResources(t *testing.T) {
 	p, _ := testGame.GetPlayer(playerID)
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 45, resources.Credits, "Vitor should start with 45 credits")
+}
+
+func TestVitor_FundAwardForFree(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Vitor"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed for Vitor")
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	// Should have pending award fund selection
+	pending := p.Selection().GetPendingAwardFundSelection()
+	testutil.AssertTrue(t, pending != nil, "Vitor should create pending award fund selection")
+	testutil.AssertTrue(t, len(pending.AvailableAwards) > 0, "Should have available awards")
+
+	// Should have a forced first action
+	forcedAction := testGame.GetForcedFirstAction(playerID)
+	testutil.AssertTrue(t, forcedAction != nil, "Vitor should create forced first action")
+	testutil.AssertEqual(t, "award-fund", forcedAction.ActionType, "Forced action should be award-fund")
+
+	// Record credits before
+	creditsBefore := p.Resources().Get().Credits
+
+	// Confirm the award fund
+	confirmAction := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	err = confirmAction.Execute(ctx, testGame.ID(), playerID, pending.AvailableAwards[0])
+	testutil.AssertNoError(t, err, "ConfirmAwardFund should succeed")
+
+	// Credits should be unchanged (free award)
+	creditsAfter := p.Resources().Get().Credits
+	testutil.AssertEqual(t, creditsBefore, creditsAfter, "Vitor should fund award for free (no credit deduction)")
+
+	// Award should be funded
+	testutil.AssertTrue(t, testGame.Awards().IsFunded(shared.AwardType(pending.AvailableAwards[0])), "Award should be funded")
+	testutil.AssertTrue(t, testGame.Awards().IsFundedBy(shared.AwardType(pending.AvailableAwards[0]), playerID), "Award should be funded by the player")
+
+	// Pending selection should be cleared
+	testutil.AssertTrue(t, p.Selection().GetPendingAwardFundSelection() == nil, "Pending award fund selection should be cleared")
+
+	// Forced first action should be cleared
+	testutil.AssertTrue(t, testGame.GetForcedFirstAction(playerID) == nil, "Forced first action should be cleared")
 }
 
 func TestVitor_Gain3MCWhenPlayingCardWithVP(t *testing.T) {

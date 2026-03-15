@@ -107,6 +107,12 @@ type PendingColonyResourceSelection struct {
 	Reason       string
 }
 
+// PendingAwardFundSelection represents a pending award fund selection (e.g., Vitor forced first action)
+type PendingAwardFundSelection struct {
+	AvailableAwards []string
+	Source          string
+}
+
 // ForcedFirstAction represents an action that must be completed first
 type ForcedFirstAction struct {
 	ActionType    string
