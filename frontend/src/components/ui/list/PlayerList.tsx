@@ -89,6 +89,7 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
   }, [players]);
 
   const [showPassConfirmation, setShowPassConfirmation] = useState(false);
+  const [passWarningReason, setPassWarningReason] = useState("");
 
   const dismissPassConfirmation = useCallback(() => {
     setShowPassConfirmation(false);
@@ -122,6 +123,13 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
       return;
     }
 
+    let reason = "You have unused card actions this generation.";
+    if (hasPlayableCards && hasUsableActions) {
+      reason = "You have playable cards and unused card actions.";
+    } else if (hasPlayableCards) {
+      reason = "You have cards you can still play.";
+    }
+    setPassWarningReason(reason);
     setShowPassConfirmation(true);
   }, [currentPlayer, doSkipAction]);
 
@@ -168,9 +176,7 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
           <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
             Actions Available
           </h3>
-          <div className="text-white/60 text-xs text-shadow-glow mt-1">
-            You still have unused actions this generation.
-          </div>
+          <div className="text-white/60 text-xs text-shadow-glow mt-1">{passWarningReason}</div>
         </GameFlowTitle>
         <GameFlowFooter className="gap-3">
           <GameButton buttonType="secondary" size="sm" onClick={dismissPassConfirmation}>
