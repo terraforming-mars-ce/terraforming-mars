@@ -77,6 +77,9 @@ const VictoryPointIcon: React.FC<VictoryPointIconProps> = ({
             {resourceIcon && (
               <img src={resourceIcon} alt={resourceType} className="w-3.5 h-3.5 object-contain" />
             )}
+            {perCondition.adjacentToSelfTile && (
+              <span className="text-[9px] text-white/40 font-bold">*</span>
+            )}
           </div>,
         );
       }
@@ -105,6 +108,9 @@ const VictoryPointIcon: React.FC<VictoryPointIconProps> = ({
             {perAmount > 1 && <span className="text-[11px] font-bold">{perAmount}</span>}
             {resourceIcon && (
               <img src={resourceIcon} alt={resourceType} className="w-3.5 h-3.5 object-contain" />
+            )}
+            {perCondition.adjacentToSelfTile && (
+              <span className="text-[9px] text-white/40 font-bold">*</span>
             )}
           </div>,
         );

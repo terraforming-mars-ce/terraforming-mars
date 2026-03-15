@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { GameDto, OtherPlayerDto, PlayerDto } from "../../../types/generated/api-types.ts";
 import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
 import CopyLinkButton from "../buttons/CopyLinkButton.tsx";
-import GameMenuButton from "../buttons/GameMenuButton.tsx";
+import GameButton from "../buttons/GameButton.tsx";
 import GameMenuModal from "./GameMenuModal.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../display/BotChips.tsx";
 
@@ -249,12 +249,12 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
           onClose={handleCancelLeave}
         >
           <div className="flex gap-3 justify-center">
-            <GameMenuButton variant="secondary" size="sm" onClick={handleCancelLeave}>
+            <GameButton buttonType="secondary" size="sm" onClick={handleCancelLeave}>
               Cancel
-            </GameMenuButton>
-            <GameMenuButton variant="error" size="sm" onClick={handleConfirmLeave}>
+            </GameButton>
+            <GameButton variant="error" size="sm" onClick={handleConfirmLeave}>
               Leave
-            </GameMenuButton>
+            </GameButton>
           </div>
         </GameMenuModal>
       )}
@@ -267,8 +267,8 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
         onExited={onExited}
       >
         {/* Leave Button - positioned at top-left of modal content */}
-        <GameMenuButton
-          variant="text"
+        <GameButton
+          buttonType="textonly"
           size="sm"
           onClick={openLeaveConfirm}
           className="absolute top-8 left-8 !p-2.5 hover:text-red-400"
@@ -288,7 +288,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-        </GameMenuButton>
+        </GameButton>
 
         <style>{`
           @keyframes playerSlideIn {
@@ -508,8 +508,8 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
             />
             {isHost && game.settings.hasClaudeApiKey && (
               <div className="relative" ref={botDropdownRef}>
-                <GameMenuButton
-                  variant="secondary"
+                <GameButton
+                  buttonType="secondary"
                   size="md"
                   onClick={() => setShowBotDropdown((prev) => !prev)}
                 >
@@ -529,7 +529,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                       <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                   </span>
-                </GameMenuButton>
+                </GameButton>
                 {showBotDropdown && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black border border-white/20 rounded-lg overflow-hidden shadow-lg z-10">
                     <div className="grid grid-cols-[auto_60px_60px] text-center">
@@ -573,15 +573,14 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
         {/* Start Game Button (Host only) */}
         {isHost && (
           <div className="text-center">
-            <GameMenuButton
-              variant="primary"
+            <GameButton
               size="lg"
               onClick={handleStartGame}
               disabled={playerCount < 1 || !allBotsReady}
               className="w-full"
             >
               START GAME
-            </GameMenuButton>
+            </GameButton>
           </div>
         )}
 

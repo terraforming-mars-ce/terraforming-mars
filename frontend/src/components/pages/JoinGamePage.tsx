@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiService } from "../../services/apiService";
 import { GameDto } from "../../types/generated/api-types.ts";
-import GameMenuButton from "../ui/buttons/GameMenuButton.tsx";
+import GameButton from "../ui/buttons/GameButton.tsx";
+import BackButton from "../ui/buttons/BackButton.tsx";
 import EnterCodePopover from "../ui/popover/EnterCodePopover.tsx";
 import SpectatePopover from "../ui/popover/SpectatePopover.tsx";
 import JoinGamePopover from "../ui/popover/JoinGamePopover.tsx";
@@ -89,14 +90,7 @@ const JoinGamePage: React.FC = () => {
       className={`transition-opacity duration-300 ease-in ${isFadedIn ? "opacity-100" : "opacity-0"}`}
     >
       <div className="relative z-[1] flex items-start justify-center w-full min-h-screen pt-[15vh]">
-        <GameMenuButton
-          variant="secondary"
-          size="sm"
-          onClick={handleBackToHome}
-          className="fixed top-[30px] left-[30px] z-[100]"
-        >
-          &larr; Back
-        </GameMenuButton>
+        <BackButton onClick={handleBackToHome} className="fixed top-[30px] left-[30px] z-[100]" />
         <div className="max-w-[600px] w-full px-5 py-10">
           <div className="text-center">
             <h1 className="font-orbitron text-[42px] text-white mb-8 text-shadow-glow font-bold tracking-wider">
@@ -129,17 +123,17 @@ const JoinGamePage: React.FC = () => {
                     className="w-full bg-space-black-darker/80 border border-white/20 rounded-lg py-2 pl-10 pr-3 text-white text-sm outline-none placeholder:text-white/40 focus:border-white/40 transition-colors backdrop-blur-space"
                   />
                 </div>
-                <GameMenuButton
+                <GameButton
                   ref={enterCodeButtonRef}
-                  variant="secondary"
+                  buttonType="secondary"
                   size="sm"
                   onClick={() => setShowEnterCodePopover(true)}
                   className="shrink-0"
                 >
                   Enter code
-                </GameMenuButton>
-                <GameMenuButton
-                  variant="secondary"
+                </GameButton>
+                <GameButton
+                  buttonType="secondary"
                   size="sm"
                   onClick={() => void fetchGames()}
                   disabled={isLoadingGames}
@@ -158,7 +152,7 @@ const JoinGamePage: React.FC = () => {
                     <path d="M21 12a9 9 0 1 1-6.22-8.56" />
                     <polyline points="21 3 21 9 15 9" />
                   </svg>
-                </GameMenuButton>
+                </GameButton>
               </div>
 
               <div className="h-[400px] overflow-y-auto">
@@ -213,27 +207,26 @@ const JoinGamePage: React.FC = () => {
                               </span>
                             </div>
                             <div className="flex gap-2 shrink-0 ml-4">
-                              <GameMenuButton
+                              <GameButton
                                 ref={(el) => {
                                   spectateButtonRefs.current.set(game.id, el);
                                 }}
-                                variant="secondary"
+                                buttonType="secondary"
                                 size="sm"
                                 onClick={() => setSpectateGameId(game.id)}
                               >
                                 Spectate
-                              </GameMenuButton>
+                              </GameButton>
                               {!isActive && (
-                                <GameMenuButton
+                                <GameButton
                                   ref={(el) => {
                                     joinButtonRefs.current.set(game.id, el);
                                   }}
-                                  variant="action"
                                   size="sm"
                                   onClick={() => void handleJoinGame(game)}
                                 >
                                   Join
-                                </GameMenuButton>
+                                </GameButton>
                               )}
                             </div>
                           </div>

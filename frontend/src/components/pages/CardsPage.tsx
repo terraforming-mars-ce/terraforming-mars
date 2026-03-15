@@ -6,6 +6,7 @@ import CorporationCard from "../ui/cards/CorporationCard";
 import CopyLinkButton from "../ui/buttons/CopyLinkButton";
 import { CardDto, CardTypeCorporation } from "@/types/generated/api-types";
 import GameIcon from "../ui/display/GameIcon.tsx";
+import BackButton from "../ui/buttons/BackButton.tsx";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 
 const CardsPage: React.FC = () => {
@@ -655,9 +656,7 @@ const CardsPage: React.FC = () => {
     >
       <div className={`sticky-header ${isScrolled ? "scrolled" : ""}`}>
         <div className="sticky-content">
-          <button onClick={handleBackToHome} className="back-button">
-            ← Back to Home
-          </button>
+          <BackButton onClick={handleBackToHome}>Back to Home</BackButton>
           <h1>Terraforming Mars Cards</h1>
           <div className="right-section">
             <div className="cards-info-header">

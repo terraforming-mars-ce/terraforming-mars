@@ -11,6 +11,7 @@ import GameIcon from "../display/GameIcon.tsx";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { FormattedDescription } from "../display/FormattedDescription";
+import GameButton from "../buttons/GameButton.tsx";
 
 interface StandardProjectsPopoverProps {
   isVisible: boolean;
@@ -95,7 +96,11 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
       header={{
         title: "Standard Projects",
         badge: `${availableCount}/${playerProjects.length} Available`,
-        showCloseButton: true,
+        rightContent: (
+          <GameButton buttonType="textonly" size="xs" onClick={onClose}>
+            ✕
+          </GameButton>
+        ),
       }}
       width={500}
       maxHeight="calc(100vh - 80px)"
@@ -116,19 +121,6 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
               key={project.projectType}
               state={project.available ? "available" : "disabled"}
               onClick={isExecutable ? () => handleProjectClick(project) : undefined}
-              error={
-                !project.available && project.errors && project.errors.length > 0
-                  ? {
-                      message: project.errors[0].message,
-                      count: project.errors.length,
-                    }
-                  : undefined
-              }
-              warning={
-                project.available && project.warnings && project.warnings.length > 0
-                  ? { message: project.warnings[0].message }
-                  : undefined
-              }
               hoverEffect="background"
               className="mb-2 last:mb-0"
             >
@@ -194,21 +186,20 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
                     </div>
                   </div>
 
-                  {canExecuteProjects && (
-                    <button
-                      className={`flex-shrink-0 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
-                        project.available
-                          ? "bg-green-600/80 hover:bg-green-600 text-white shadow-sm hover:shadow-md cursor-pointer"
-                          : "bg-gray-600/50 text-gray-400"
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isExecutable) handleProjectClick(project);
-                      }}
-                      disabled={!project.available}
-                    >
-                      Execute
-                    </button>
+                  {!project.available && project.errors && project.errors.length > 0 && (
+                    <div className="flex-shrink-0 bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(231,76,60,0.8)] shadow-[0_2px_8px_rgba(231,76,60,0.4)] flex items-center gap-1">
+                      <span>⚠</span>
+                      <span>
+                        {project.errors[0].message}
+                        {project.errors.length > 1 && ` (+${project.errors.length - 1})`}
+                      </span>
+                    </div>
+                  )}
+                  {project.available && project.warnings && project.warnings.length > 0 && (
+                    <div className="flex-shrink-0 bg-[linear-gradient(135deg,#f39c12,#e67e22)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(243,156,18,0.8)] shadow-[0_2px_8px_rgba(243,156,18,0.4)] flex items-center gap-1">
+                      <span>⚠</span>
+                      <span>{project.warnings[0].message}</span>
+                    </div>
                   )}
                 </div>
 

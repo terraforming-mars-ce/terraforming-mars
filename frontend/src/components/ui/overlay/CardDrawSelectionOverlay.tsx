@@ -16,7 +16,7 @@ import {
   OVERLAY_FOOTER_CLASS,
   RESOURCE_LABEL_CLASS,
 } from "./overlayStyles.ts";
-import GameMenuButton from "../buttons/GameMenuButton.tsx";
+import GameButton from "../buttons/GameButton.tsx";
 
 interface CardDrawSelectionOverlayProps {
   isOpen: boolean;
@@ -34,6 +34,7 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
   const [cardsToTake, setCardsToTake] = useState<string[]>([]);
   const [cardsToBuy, setCardsToBuy] = useState<string[]>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showPlayability, setShowPlayability] = useState(false);
 
   // Initialize selection when overlay opens
   useEffect(() => {
@@ -188,10 +189,23 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
       <div className={OVERLAY_CONTAINER_CLASS}>
         {/* Header */}
         <div className={OVERLAY_HEADER_CLASS}>
-          <h2 className={OVERLAY_TITLE_CLASS}>{titleInfo.title}</h2>
-          {titleInfo.description && (
-            <p className={OVERLAY_DESCRIPTION_CLASS}>{titleInfo.description}</p>
-          )}
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <h2 className={OVERLAY_TITLE_CLASS}>{titleInfo.title}</h2>
+              {titleInfo.description && (
+                <p className={OVERLAY_DESCRIPTION_CLASS}>{titleInfo.description}</p>
+              )}
+            </div>
+            {!isCardDraw && (
+              <GameButton
+                buttonType="secondary"
+                size="sm"
+                onClick={() => setShowPlayability((prev) => !prev)}
+              >
+                {showPlayability ? "Hide Playability" : "Show Playability"}
+              </GameButton>
+            )}
+          </div>
         </div>
 
         {/* Cards display */}
@@ -209,6 +223,18 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
                     animationDelay={index * 100}
                     showCheckbox={!isCardDraw}
                   />
+                  {showPlayability && !card.available && card.errors.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 flex flex-col gap-0.5 z-10 max-h-24 overflow-y-auto">
+                      {card.errors.map((err, i) => (
+                        <div
+                          key={i}
+                          className="bg-[rgba(10,10,15,0.95)] border border-[rgba(231,76,60,0.6)] border-l-[3px] border-l-[#e74c3c] text-white/90 text-[10px] leading-tight px-1.5 py-1 rounded-sm"
+                        >
+                          {err.message}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -261,15 +287,14 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
               )}
             </div>
             <div className="flex gap-3 items-center">
-              <GameMenuButton
-                variant="primary"
+              <GameButton
                 size="lg"
                 onClick={handleConfirm}
                 disabled={!isValidSelection || totalBuyCost > playerCredits}
                 className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
               >
                 {getButtonText()}
-              </GameMenuButton>
+              </GameButton>
             </div>
           </div>
         </div>

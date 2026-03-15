@@ -65,6 +65,7 @@ const TilePlacerWindow: React.FC<TilePlacerWindowProps> = ({ playerId, playerNam
 
   return (
     <div
+      data-overlay-layer
       onMouseDown={handleMouseDown}
       style={{
         position: "fixed",

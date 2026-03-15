@@ -244,6 +244,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if ((event.target as HTMLElement).closest?.("[data-overlay-layer]")) return;
       if (corpContainerRef.current && !corpContainerRef.current.contains(event.target as Node)) {
         handleCorpClose();
       }

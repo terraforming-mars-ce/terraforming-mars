@@ -14,21 +14,16 @@ export function usePopover({
   useEffect(() => {
     if (!isVisible) return;
 
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-
     const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
+      const target = e.target as HTMLElement;
+      if (target.closest?.("[data-overlay-layer]")) return;
       const outsidePopover = popoverRef.current && !popoverRef.current.contains(target);
       const outsideAnchor = !anchorRef?.current || !anchorRef.current.contains(target);
       if (outsidePopover && outsideAnchor) onClose();
     };
 
-    document.addEventListener("keydown", handleEscape);
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isVisible, onClose, popoverRef, anchorRef]);

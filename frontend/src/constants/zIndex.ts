@@ -47,6 +47,11 @@ export const Z_INDEX = {
   // Popover Layer (10000+)
   POPOVER: 10001,
   SELECTION_POPOVER: 10002,
+  IMMEDIATE_BACKDROP: 30000,
+  IMMEDIATE_POPOVER: 30001,
+
+  // Loading overlay - above everything
+  LOADING_OVERLAY: 99999,
 
   // Debug Windows Layer (20000-20099)
   DEBUG_WINDOWS: 20000,

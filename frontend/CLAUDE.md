@@ -202,18 +202,28 @@ Use Playwright MCP tools for live debugging:
 
 **CRITICAL**: Reuse existing components for main menu and game modals.
 
-**GameMenuButton** - All buttons in main menu and game modals:
+**GameButton** - All buttons across the app:
 
 ```tsx
-import GameMenuButton from "../buttons/GameMenuButton.tsx";
+import GameButton from "../buttons/GameButton.tsx";
 
-<GameMenuButton variant="primary" size="lg" onClick={handleClick}>START GAME</GameMenuButton>
-<GameMenuButton variant="secondary" size="sm">Cancel</GameMenuButton>
-<GameMenuButton variant="action" size="sm">Confirm</GameMenuButton>
-<GameMenuButton variant="text" size="sm">Icon-only button</GameMenuButton>
+<GameButton size="lg" onClick={handleClick}>START GAME</GameButton>
+<GameButton buttonType="secondary" size="sm">Cancel</GameButton>
+<GameButton variant="success" size="sm">Confirm</GameButton>
+<GameButton buttonType="textonly" size="sm">Hide</GameButton>
+<GameButton variant="error">Kick</GameButton>
 ```
 
-Variants: `primary`, `secondary`, `action`, `text`, `toolbar`, `error`. Sizes: `sm`, `md`, `lg`.
+Types: `primary` (default, filled accent), `secondary` (dark bg, accent border), `textonly` (no bg/border).
+Variants: `info` (default, blue), `success` (green), `warn` (yellow), `error` (red).
+Sizes: `sm`, `md`, `lg`.
+
+**BackButton** - Navigation back buttons:
+
+```tsx
+import BackButton from "../buttons/BackButton.tsx";
+<BackButton onClick={handleBack} />
+```
 
 **GameMenuModal** - All main menu modals and overlays:
 

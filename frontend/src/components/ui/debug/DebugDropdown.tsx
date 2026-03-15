@@ -104,6 +104,7 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
     <div
       ref={dropdownRef}
       className="debug-dropdown"
+      data-overlay-layer
       onMouseDown={handleMouseDown}
       style={{
         position: "fixed",

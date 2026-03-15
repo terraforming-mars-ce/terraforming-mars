@@ -17,7 +17,7 @@ import {
   RESOURCE_LABEL_CLASS,
   RESOURCE_DISPLAY_CLASS,
 } from "./overlayStyles.ts";
-import GameMenuButton from "../buttons/GameMenuButton.tsx";
+import GameButton from "../buttons/GameButton.tsx";
 
 interface ProductionCardSelectionOverlayProps {
   isOpen: boolean;
@@ -128,11 +128,10 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
               )}
             </div>
             <div className="flex gap-3 items-center">
-              <GameMenuButton variant="text" size="md" onClick={onReturn}>
+              <GameButton buttonType="textonly" size="md" onClick={onReturn}>
                 Hide
-              </GameMenuButton>
-              <GameMenuButton
-                variant="primary"
+              </GameButton>
+              <GameButton
                 size="lg"
                 onClick={() => handleConfirm(onSelectCards)}
                 disabled={!isValidSelection}
@@ -143,7 +142,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
                   : selectedCardIds.length === 0
                     ? "Skip Buy Cards"
                     : "Buy Cards"}
-              </GameMenuButton>
+              </GameButton>
             </div>
           </div>
         </div>

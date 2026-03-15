@@ -166,6 +166,7 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
     <div
       ref={windowRef}
       data-bug-report-window
+      data-overlay-layer
       onMouseDown={handleMouseDown}
       style={{
         position: "fixed",

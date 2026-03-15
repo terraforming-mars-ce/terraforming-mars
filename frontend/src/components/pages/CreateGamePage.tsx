@@ -6,8 +6,9 @@ import { GameSettingsDto } from "../../types/generated/api-types.ts";
 import { skyboxCache } from "../../services/SkyboxCache.ts";
 import { saveGameSession } from "../../utils/sessionStorage.ts";
 import LoadingOverlay from "../game/view/LoadingOverlay.tsx";
-import GameIcon from "../ui/display/GameIcon.tsx";
 import InfoTooltip from "../ui/display/InfoTooltip.tsx";
+import BackButton from "../ui/buttons/BackButton.tsx";
+import GameButton from "../ui/buttons/GameButton.tsx";
 import { useNotifications } from "../../contexts/NotificationContext.tsx";
 
 const CreateGamePage: React.FC = () => {
@@ -200,12 +201,7 @@ const CreateGamePage: React.FC = () => {
       className={`bg-transparent text-white min-h-screen flex items-center justify-center font-sans relative z-10 transition-opacity duration-300 ease-in ${isFadedIn ? "opacity-100" : "opacity-0"}`}
     >
       <div className="relative z-[1] flex items-center justify-center w-full min-h-screen">
-        <button
-          onClick={handleBackToHome}
-          className="fixed top-[30px] left-[30px] bg-space-black-darker/80 border border-white/20 rounded-lg py-2.5 px-4 text-white text-sm cursor-pointer hover:bg-white/20 transition-colors backdrop-blur-space z-[100]"
-        >
-          ← Back
-        </button>
+        <BackButton onClick={handleBackToHome} className="fixed top-[30px] left-[30px] z-[100]" />
         <div className="max-w-[600px] w-full px-5 py-10">
           <div className="text-center">
             <h1 className="font-orbitron text-[42px] text-white mb-[60px] text-shadow-glow font-bold tracking-wider">
@@ -234,28 +230,34 @@ const CreateGamePage: React.FC = () => {
                   disabled={isLoading || !playerName.trim()}
                   className="bg-transparent border-none py-4 px-5 cursor-pointer flex items-center justify-center transition-all duration-200 disabled:cursor-default disabled:opacity-60 group"
                 >
-                  <div className="w-4 h-6 brightness-0 invert transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] group-hover:scale-110">
-                    <GameIcon iconType="arrow" size="small" />
-                  </div>
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-white/70 transition-all duration-200 group-hover:text-white group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+                  >
+                    <polyline points="9 6 15 12 9 18" />
+                  </svg>
                 </button>
               </div>
 
               <div className="flex items-center justify-center gap-6 mt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowMore(!showMore)}
-                  className="text-white/50 text-sm py-1 px-3 cursor-pointer hover:text-white/70 transition-colors bg-transparent border-none"
-                >
+                <GameButton buttonType="textonly" size="sm" onClick={() => setShowMore(!showMore)}>
                   Settings
-                </button>
-                <button
-                  type="button"
+                </GameButton>
+                <GameButton
+                  buttonType="textonly"
+                  size="sm"
                   onClick={() => void handleDemoGame()}
                   disabled={isCreatingDemo}
-                  className="text-white/50 text-sm py-1 px-3 cursor-pointer hover:text-white/70 transition-colors bg-transparent border-none disabled:opacity-50 disabled:cursor-default"
                 >
                   {isCreatingDemo ? "Creating..." : "Demo game"}
-                </button>
+                </GameButton>
               </div>
 
               <div
