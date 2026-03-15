@@ -247,11 +247,12 @@ type ResourceConditionDto struct {
 
 // PerConditionDto represents a per condition for client consumption
 type PerConditionDto struct {
-	Type     ResourceType       `json:"type" ts:"ResourceType"`
-	Amount   int                `json:"amount" ts:"number"`
-	Location *CardApplyLocation `json:"location,omitempty" ts:"CardApplyLocation | undefined"`
-	Target   *TargetType        `json:"target,omitempty" ts:"TargetType | undefined"`
-	Tag      *CardTag           `json:"tag,omitempty" ts:"CardTag | undefined"`
+	Type               ResourceType       `json:"type" ts:"ResourceType"`
+	Amount             int                `json:"amount" ts:"number"`
+	Location           *CardApplyLocation `json:"location,omitempty" ts:"CardApplyLocation | undefined"`
+	Target             *TargetType        `json:"target,omitempty" ts:"TargetType | undefined"`
+	Tag                *CardTag           `json:"tag,omitempty" ts:"CardTag | undefined"`
+	AdjacentToSelfTile bool               `json:"adjacentToSelfTile" ts:"boolean"`
 }
 
 // ChoiceDto represents a choice for client consumption
@@ -594,8 +595,9 @@ type PlayerActionDto struct {
 	TimesUsedThisTurn       int `json:"timesUsedThisTurn" ts:"number"`       // Times used this turn
 	TimesUsedThisGeneration int `json:"timesUsedThisGeneration" ts:"number"` // Times used this generation
 
-	Available bool            `json:"available" ts:"boolean"`      // Computed: action is usable
-	Errors    []StateErrorDto `json:"errors" ts:"StateErrorDto[]"` // Reasons why action is not usable
+	Available bool              `json:"available" ts:"boolean"`                                // Computed: action is usable
+	Errors    []StateErrorDto   `json:"errors" ts:"StateErrorDto[]"`                           // Reasons why action is not usable
+	Warnings  []StateWarningDto `json:"warnings,omitempty" ts:"StateWarningDto[] | undefined"` // Non-blocking warnings
 }
 
 // PlayerStandardProjectDto represents a standard project with availability state
@@ -629,22 +631,22 @@ type PendingTileSelectionDto struct {
 
 // PendingCardSelectionDto represents a pending card selection action (e.g., sell patents, card effects)
 type PendingCardSelectionDto struct {
-	AvailableCards []CardDto      `json:"availableCards" ts:"CardDto[]"`           // Card IDs player can select from
-	CardCosts      map[string]int `json:"cardCosts" ts:"Record<string, number>"`   // Card ID -> cost to select (0 for sell patents, 3 for buying cards)
-	CardRewards    map[string]int `json:"cardRewards" ts:"Record<string, number>"` // Card ID -> reward for selecting (1 MC for sell patents)
-	Source         string         `json:"source" ts:"string"`                      // What triggered this selection ("sell-patents", card ID, etc.)
-	MinCards       int            `json:"minCards" ts:"number"`                    // Minimum cards to select (0 for sell patents)
-	MaxCards       int            `json:"maxCards" ts:"number"`                    // Maximum cards to select (hand size for sell patents)
+	AvailableCards []PlayerCardDto `json:"availableCards" ts:"PlayerCardDto[]"`     // Cards with playability state
+	CardCosts      map[string]int  `json:"cardCosts" ts:"Record<string, number>"`   // Card ID -> cost to select (0 for sell patents, 3 for buying cards)
+	CardRewards    map[string]int  `json:"cardRewards" ts:"Record<string, number>"` // Card ID -> reward for selecting (1 MC for sell patents)
+	Source         string          `json:"source" ts:"string"`                      // What triggered this selection ("sell-patents", card ID, etc.)
+	MinCards       int             `json:"minCards" ts:"number"`                    // Minimum cards to select (0 for sell patents)
+	MaxCards       int             `json:"maxCards" ts:"number"`                    // Maximum cards to select (hand size for sell patents)
 }
 
 // PendingCardDrawSelectionDto represents a pending card draw/peek/take/buy action from card effects
 type PendingCardDrawSelectionDto struct {
-	AvailableCards []CardDto `json:"availableCards" ts:"CardDto[]"` // Cards shown to player (drawn or peeked)
-	FreeTakeCount  int       `json:"freeTakeCount" ts:"number"`     // Number of cards to take for free (mandatory for card-draw, 0 = optional)
-	MaxBuyCount    int       `json:"maxBuyCount" ts:"number"`       // Maximum cards to buy (optional, 0 = no buying allowed)
-	CardBuyCost    int       `json:"cardBuyCost" ts:"number"`       // Cost per card when buying (typically 3 MC, 0 if no buying)
-	Source         string    `json:"source" ts:"string"`            // Card ID or action that triggered this
-	PlayAsPrelude  bool      `json:"playAsPrelude" ts:"boolean"`    // When true, selected card is played as prelude
+	AvailableCards []PlayerCardDto `json:"availableCards" ts:"PlayerCardDto[]"` // Cards with playability state
+	FreeTakeCount  int             `json:"freeTakeCount" ts:"number"`           // Number of cards to take for free (mandatory for card-draw, 0 = optional)
+	MaxBuyCount    int             `json:"maxBuyCount" ts:"number"`             // Maximum cards to buy (optional, 0 = no buying allowed)
+	CardBuyCost    int             `json:"cardBuyCost" ts:"number"`             // Cost per card when buying (typically 3 MC, 0 if no buying)
+	Source         string          `json:"source" ts:"string"`                  // Card ID or action that triggered this
+	PlayAsPrelude  bool            `json:"playAsPrelude" ts:"boolean"`          // When true, selected card is played as prelude
 }
 
 // PendingCardDiscardSelectionDto represents a pending card discard action from card effects
@@ -688,6 +690,12 @@ type PendingColonyResourceSelectionDto struct {
 	Source       string               `json:"source" ts:"string"`
 	ColonyID     string               `json:"colonyId" ts:"string"`
 	Reason       ColonyResourceReason `json:"reason" ts:"ColonyResourceReason"`
+}
+
+// PendingAwardFundSelectionDto represents a pending award fund selection for client consumption
+type PendingAwardFundSelectionDto struct {
+	AvailableAwards []string `json:"availableAwards" ts:"string[]"`
+	Source          string   `json:"source" ts:"string"`
 }
 
 // PlayerStatus represents the current status of a player in the game
@@ -740,6 +748,7 @@ type PlayerDto struct {
 	PendingBehaviorChoiceSelection *PendingBehaviorChoiceSelectionDto `json:"pendingBehaviorChoiceSelection" ts:"PendingBehaviorChoiceSelectionDto | null"`
 	PendingStealTargetSelection    *PendingStealTargetSelectionDto    `json:"pendingStealTargetSelection" ts:"PendingStealTargetSelectionDto | null"`
 	PendingColonyResourceSelection *PendingColonyResourceSelectionDto `json:"pendingColonyResourceSelection" ts:"PendingColonyResourceSelectionDto | null"`
+	PendingAwardFundSelection      *PendingAwardFundSelectionDto      `json:"pendingAwardFundSelection" ts:"PendingAwardFundSelectionDto | null"`
 	ForcedFirstAction              *ForcedFirstActionDto              `json:"forcedFirstAction" ts:"ForcedFirstActionDto | null"`
 	ResourceStorage                map[string]int                     `json:"resourceStorage" ts:"Record<string, number>"`
 	PaymentSubstitutes             []PaymentSubstituteDto             `json:"paymentSubstitutes" ts:"PaymentSubstituteDto[]"`
@@ -982,13 +991,14 @@ type PlayerAwardDto struct {
 
 // VPGranterConditionDto represents a single VP condition's computed breakdown for client consumption
 type VPGranterConditionDto struct {
-	Amount        int     `json:"amount" ts:"number"`
-	ConditionType string  `json:"conditionType" ts:"string"`
-	PerType       *string `json:"perType,omitempty" ts:"string | undefined"`
-	PerAmount     *int    `json:"perAmount,omitempty" ts:"number | undefined"`
-	Count         int     `json:"count" ts:"number"`
-	ComputedVP    int     `json:"computedVP" ts:"number"`
-	Explanation   string  `json:"explanation" ts:"string"`
+	Amount             int     `json:"amount" ts:"number"`
+	ConditionType      string  `json:"conditionType" ts:"string"`
+	PerType            *string `json:"perType,omitempty" ts:"string | undefined"`
+	PerAmount          *int    `json:"perAmount,omitempty" ts:"number | undefined"`
+	AdjacentToSelfTile bool    `json:"adjacentToSelfTile" ts:"boolean"`
+	Count              int     `json:"count" ts:"number"`
+	ComputedVP         int     `json:"computedVP" ts:"number"`
+	Explanation        string  `json:"explanation" ts:"string"`
 }
 
 // VPGranterDto represents a VP source from a played card or corporation for client consumption

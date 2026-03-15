@@ -16,6 +16,7 @@ type VPRecalculationContext interface {
 	GetCardStorage(playerID string, cardID string) int
 	CountPlayerTagsByType(playerID string, tagType shared.CardTag) int
 	CountAllTilesOfType(tileType shared.ResourceType) int
+	CountAdjacentTilesForCard(cardID string, tileType shared.ResourceType) int
 }
 
 // VPGranters manages VP-granting cards.
@@ -159,6 +160,10 @@ func evaluateVPCondition(cond shared.VPCondition, cardID string, playerID string
 func countPerCondition(per *shared.VPPerCondition, cardID string, playerID string, ctx VPRecalculationContext) int {
 	if per.Target != nil && *per.Target == vpTargetSelfCard {
 		return ctx.GetCardStorage(playerID, cardID)
+	}
+
+	if per.AdjacentToSelfTile {
+		return ctx.CountAdjacentTilesForCard(cardID, per.ResourceType)
 	}
 
 	if per.Tag != nil {

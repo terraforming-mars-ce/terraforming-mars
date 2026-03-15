@@ -73,4 +73,8 @@ type StateWarningCode string
 
 const (
 	WarningCodeGlobalParamMaxed StateWarningCode = "global-param-maxed"
+	WarningCodeNoTRGain         StateWarningCode = "no-tr-gain"
+	WarningCodeNoResourceTarget StateWarningCode = "no-resource-target"
+	WarningCodeNoStealTarget    StateWarningCode = "no-steal-target"
+	WarningCodeNoRemoveTarget   StateWarningCode = "no-remove-target"
 )

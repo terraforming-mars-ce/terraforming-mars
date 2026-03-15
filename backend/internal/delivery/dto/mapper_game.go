@@ -480,6 +480,7 @@ func toVPGranterConditionDto(cond shared.VPCondition) VPGranterConditionDto {
 			}
 			dto.PerType = &perType
 			dto.PerAmount = &cond.Per.Amount
+			dto.AdjacentToSelfTile = cond.Per.AdjacentToSelfTile
 			dto.Explanation = fmt.Sprintf("%d VP per %d %s", cond.Amount, cond.Per.Amount, perType)
 		}
 	}

@@ -111,3 +111,93 @@ func TestStandardProject_GreeneryWarnsWhenOxygenMaxed(t *testing.T) {
 		t.Errorf("Expected global-param-maxed warning for maxed oxygen, got warnings: %+v", state.Warnings)
 	}
 }
+
+func TestStandardProject_ConvertHeatWarnsWhenTemperatureMaxed(t *testing.T) {
+	g, p, cardRegistry := setupTestEnvironment(t)
+	ctx := context.Background()
+
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceHeat: 100,
+	})
+
+	if err := g.GlobalParameters().SetTemperature(ctx, global_parameters.MaxTemperature); err != nil {
+		t.Fatalf("Failed to set temperature to max: %v", err)
+	}
+
+	state := action.CalculatePlayerStandardProjectState(
+		shared.StandardProjectConvertHeatToTemperature,
+		p,
+		g,
+		cardRegistry,
+	)
+
+	if !state.Available() {
+		t.Errorf("Convert heat should be available even at max temperature, got errors: %+v", state.Errors)
+	}
+
+	found := false
+	for _, w := range state.Warnings {
+		if w.Code == player.WarningCodeGlobalParamMaxed {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected global-param-maxed warning, got warnings: %+v", state.Warnings)
+	}
+}
+
+func TestStandardProject_ConvertHeatNoWarningBelowMax(t *testing.T) {
+	g, p, cardRegistry := setupTestEnvironment(t)
+	ctx := context.Background()
+
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceHeat: 100,
+	})
+
+	if err := g.GlobalParameters().SetTemperature(ctx, 0); err != nil {
+		t.Fatalf("Failed to set temperature: %v", err)
+	}
+
+	state := action.CalculatePlayerStandardProjectState(
+		shared.StandardProjectConvertHeatToTemperature,
+		p,
+		g,
+		cardRegistry,
+	)
+
+	if len(state.Warnings) != 0 {
+		t.Errorf("Expected no warnings below max temperature, got: %+v", state.Warnings)
+	}
+}
+
+func TestStandardProject_ConvertPlantsWarnsWhenOxygenMaxed(t *testing.T) {
+	g, p, cardRegistry := setupTestEnvironment(t)
+	ctx := context.Background()
+
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourcePlant: 100,
+	})
+
+	if err := g.GlobalParameters().SetOxygen(ctx, global_parameters.MaxOxygen); err != nil {
+		t.Fatalf("Failed to set oxygen to max: %v", err)
+	}
+
+	state := action.CalculatePlayerStandardProjectState(
+		shared.StandardProjectConvertPlantsToGreenery,
+		p,
+		g,
+		cardRegistry,
+	)
+
+	found := false
+	for _, w := range state.Warnings {
+		if w.Code == player.WarningCodeGlobalParamMaxed {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected global-param-maxed warning for maxed oxygen, got warnings: %+v", state.Warnings)
+	}
+}

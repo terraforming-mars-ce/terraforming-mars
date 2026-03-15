@@ -313,10 +313,11 @@ func toVPConditionDto(vp gamecards.VictoryPointCondition) VPConditionDto {
 // This is separate from toPerConditionDto because gamecards.PerCondition uses Type instead of ResourceType field.
 func toVPPerConditionDto(pc gamecards.PerCondition) PerConditionDto {
 	return PerConditionDto{
-		Type:     ResourceType(pc.Type),
-		Amount:   pc.Amount,
-		Location: ptrCast(pc.Location, func(l gamecards.CardApplyLocation) CardApplyLocation { return CardApplyLocation(l) }),
-		Target:   ptrCast(pc.Target, func(t gamecards.TargetType) TargetType { return TargetType(t) }),
-		Tag:      ptrCast(pc.Tag, func(t shared.CardTag) CardTag { return CardTag(t) }),
+		Type:               ResourceType(pc.Type),
+		Amount:             pc.Amount,
+		Location:           ptrCast(pc.Location, func(l gamecards.CardApplyLocation) CardApplyLocation { return CardApplyLocation(l) }),
+		Target:             ptrCast(pc.Target, func(t gamecards.TargetType) TargetType { return TargetType(t) }),
+		Tag:                ptrCast(pc.Tag, func(t shared.CardTag) CardTag { return CardTag(t) }),
+		AdjacentToSelfTile: pc.AdjacentToSelfTile,
 	}
 }

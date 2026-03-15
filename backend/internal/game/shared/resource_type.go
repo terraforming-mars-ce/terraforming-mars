@@ -78,7 +78,10 @@ const (
 
 	ResourceExtraActions    ResourceType = "extra-actions"
 	ResourceTileDestruction ResourceType = "tile-destruction"
+	ResourceTileReplacement ResourceType = "tile-replacement"
 	ResourceBonusTags       ResourceType = "bonus-tags"
 
 	ResourceWorldTreeTile ResourceType = "world-tree-tile"
+
+	ResourceAwardFund ResourceType = "award-fund"
 )

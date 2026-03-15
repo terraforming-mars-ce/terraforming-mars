@@ -93,7 +93,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		IsConnected:      p.IsConnected(),
 		IsExited:         p.HasExited(),
 		Effects:          convertPlayerEffects(p.Effects().List()),
-		Actions:          convertPlayerActions(p.Actions().List(), p, g),
+		Actions:          convertPlayerActions(p.Actions().List(), p, g, cardRegistry),
 		StandardProjects: standardProjects, // PlayerStandardProjectDto[] with state
 		Milestones:       milestones,       // PlayerMilestoneDto[] with eligibility
 		Awards:           awards,           // PlayerAwardDto[] with eligibility
@@ -104,12 +104,13 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		ProductionPhase:                convertProductionPhase(g.GetProductionPhase(p.ID()), cardRegistry),
 		StartingCards:                  []CardDto{},
 		PendingTileSelection:           pendingTileSelection,
-		PendingCardSelection:           convertPendingCardSelection(p.Selection().GetPendingCardSelection(), cardRegistry),
-		PendingCardDrawSelection:       convertPendingCardDrawSelection(p.Selection().GetPendingCardDrawSelection(), cardRegistry),
+		PendingCardSelection:           convertPendingCardSelection(p.Selection().GetPendingCardSelection(), p, g, cardRegistry),
+		PendingCardDrawSelection:       convertPendingCardDrawSelection(p.Selection().GetPendingCardDrawSelection(), p, g, cardRegistry),
 		PendingCardDiscardSelection:    convertPendingCardDiscardSelection(p.Selection().GetPendingCardDiscardSelection()),
 		PendingBehaviorChoiceSelection: convertPendingBehaviorChoiceSelection(p.Selection().GetPendingBehaviorChoiceSelection(), p, g, cardRegistry),
 		PendingStealTargetSelection:    convertPendingStealTargetSelection(p.Selection().GetPendingStealTargetSelection()),
 		PendingColonyResourceSelection: convertPendingColonyResourceSelection(p.Selection().GetPendingColonyResourceSelection()),
+		PendingAwardFundSelection:      convertPendingAwardFundSelection(p.Selection().GetPendingAwardFundSelection()),
 		ForcedFirstAction:              forcedFirstAction,
 		ResourceStorage:                p.Resources().Storage(),
 		PaymentSubstitutes:             convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
@@ -152,7 +153,7 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		IsConnected:      p.IsConnected(),
 		IsExited:         p.HasExited(),
 		Effects:          convertPlayerEffects(p.Effects().List()),
-		Actions:          convertPlayerActions(p.Actions().List(), p, g),
+		Actions:          convertPlayerActions(p.Actions().List(), p, g, cardRegistry),
 
 		SelectCorporationPhase:    convertSelectCorporationPhaseForOtherPlayer(g.GetSelectCorporationPhase(p.ID())),
 		SelectStartingCardsPhase:  convertSelectStartingCardsPhaseForOtherPlayer(g.GetSelectStartingCardsPhase(p.ID())),
@@ -294,7 +295,7 @@ func convertPlayerEffects(effects []shared.CardEffect) []PlayerEffectDto {
 
 // convertPlayerActions converts CardAction slice to PlayerActionDto slice
 // Calculates state for each action to determine availability and errors.
-func convertPlayerActions(actions []shared.CardAction, p *player.Player, g *game.Game) []PlayerActionDto {
+func convertPlayerActions(actions []shared.CardAction, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []PlayerActionDto {
 	if len(actions) == 0 {
 		return []PlayerActionDto{}
 	}
@@ -308,6 +309,7 @@ func convertPlayerActions(actions []shared.CardAction, p *player.Player, g *game
 			act.TimesUsedThisGeneration,
 			p,
 			g,
+			cardRegistry,
 		)
 
 		behaviorDto := toCardBehaviorDto(act.Behavior)
@@ -333,6 +335,7 @@ func convertPlayerActions(actions []shared.CardAction, p *player.Player, g *game
 			TimesUsedThisGeneration: act.TimesUsedThisGeneration,
 			Available:               state.Available(),
 			Errors:                  convertStateErrors(state.Errors),
+			Warnings:                convertStateWarnings(state.Warnings),
 		}
 	}
 	return dtos
@@ -372,13 +375,21 @@ func convertStoragePaymentSubstitutes(substitutes []shared.StoragePaymentSubstit
 	return dtos
 }
 
-// convertPendingCardSelection converts PendingCardSelection to DTO
-func convertPendingCardSelection(selection *shared.PendingCardSelection, cardRegistry cards.CardRegistry) *PendingCardSelectionDto {
+// convertPendingCardSelection converts PendingCardSelection to DTO with playability state
+func convertPendingCardSelection(selection *shared.PendingCardSelection, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) *PendingCardSelectionDto {
 	if selection == nil {
 		return nil
 	}
 
-	availableCards := getPlayedCards(selection.AvailableCards, cardRegistry)
+	availableCards := make([]PlayerCardDto, 0, len(selection.AvailableCards))
+	for _, cardID := range selection.AvailableCards {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		state := action.CalculatePendingCardPlayability(card, p, g, cardRegistry)
+		availableCards = append(availableCards, ToPlayerCardDto(card, state))
+	}
 
 	return &PendingCardSelectionDto{
 		AvailableCards: availableCards,
@@ -390,13 +401,21 @@ func convertPendingCardSelection(selection *shared.PendingCardSelection, cardReg
 	}
 }
 
-// convertPendingCardDrawSelection converts PendingCardDrawSelection to DTO
-func convertPendingCardDrawSelection(selection *shared.PendingCardDrawSelection, cardRegistry cards.CardRegistry) *PendingCardDrawSelectionDto {
+// convertPendingCardDrawSelection converts PendingCardDrawSelection to DTO with playability state
+func convertPendingCardDrawSelection(selection *shared.PendingCardDrawSelection, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) *PendingCardDrawSelectionDto {
 	if selection == nil {
 		return nil
 	}
 
-	availableCards := getPlayedCards(selection.AvailableCards, cardRegistry)
+	availableCards := make([]PlayerCardDto, 0, len(selection.AvailableCards))
+	for _, cardID := range selection.AvailableCards {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		state := action.CalculatePendingCardPlayability(card, p, g, cardRegistry)
+		availableCards = append(availableCards, ToPlayerCardDto(card, state))
+	}
 
 	return &PendingCardDrawSelectionDto{
 		AvailableCards: availableCards,
@@ -477,6 +496,17 @@ func toChoiceDtoWithState(index int, choice shared.Choice, p *player.Player, g *
 		Requirements:  toChoiceRequirementsDto(choice.Requirements),
 		Available:     len(errors) == 0,
 		Errors:        convertStateErrors(errors),
+	}
+}
+
+func convertPendingAwardFundSelection(selection *shared.PendingAwardFundSelection) *PendingAwardFundSelectionDto {
+	if selection == nil {
+		return nil
+	}
+
+	return &PendingAwardFundSelectionDto{
+		AvailableAwards: selection.AvailableAwards,
+		Source:          selection.Source,
 	}
 }
 
