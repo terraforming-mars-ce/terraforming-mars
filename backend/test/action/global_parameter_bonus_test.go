@@ -80,6 +80,9 @@ func TestOxygenBonus_TemperatureStepAt8(t *testing.T) {
 	testGame, _, _, playerID := testutil.SetupSoloGame(t)
 	ctx := context.Background()
 
+	player, _ := testGame.GetPlayer(playerID)
+	initialTR := player.Resources().TerraformRating()
+
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetOxygen(ctx, 7), "set oxygen")
 	initialTemp := testGame.GlobalParameters().Temperature()
 
@@ -90,6 +93,10 @@ func TestOxygenBonus_TemperatureStepAt8(t *testing.T) {
 	finalTemp := testGame.GlobalParameters().Temperature()
 	testutil.AssertEqual(t, initialTemp+2, finalTemp,
 		"Temperature should increase by 2 degrees (1 step) when oxygen crosses 8%")
+
+	finalTR := player.Resources().TerraformRating()
+	testutil.AssertEqual(t, initialTR+1, finalTR,
+		"Player should gain +1 TR from the bonus temperature increase when oxygen crosses 8%")
 }
 
 func TestOxygenBonus_ChainedWithTemperatureBonus(t *testing.T) {
@@ -98,6 +105,7 @@ func TestOxygenBonus_ChainedWithTemperatureBonus(t *testing.T) {
 
 	player, _ := testGame.GetPlayer(playerID)
 	initialHeatProd := player.Resources().Production().Heat
+	initialTR := player.Resources().TerraformRating()
 
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -26), "set temperature")
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetOxygen(ctx, 7), "set oxygen")
@@ -113,6 +121,10 @@ func TestOxygenBonus_ChainedWithTemperatureBonus(t *testing.T) {
 	finalHeatProd := player.Resources().Production().Heat
 	testutil.AssertEqual(t, initialHeatProd+1, finalHeatProd,
 		"Player should gain +1 heat production from chained temperature bonus at -24C")
+
+	finalTR := player.Resources().TerraformRating()
+	testutil.AssertEqual(t, initialTR+1, finalTR,
+		"Player should gain +1 TR from the bonus temperature increase via oxygen bonus chain")
 }
 
 func TestVenusBonus_CardDrawAt8(t *testing.T) {
