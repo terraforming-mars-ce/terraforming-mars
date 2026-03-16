@@ -140,6 +140,21 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   const hasUnlimitedActions = player.availableActions === -1;
   const actionsRemaining = player.availableActions;
 
+  const [shouldFlash, setShouldFlash] = useState(false);
+  const prevIsCurrentTurnRef = useRef(isCurrentTurn);
+
+  useEffect(() => {
+    const wasCurrentTurn = prevIsCurrentTurnRef.current;
+    prevIsCurrentTurnRef.current = isCurrentTurn;
+
+    if (isCurrentTurn && !wasCurrentTurn && isCurrentPlayer) {
+      setShouldFlash(true);
+      const timer = setTimeout(() => setShouldFlash(false), 5000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [isCurrentTurn, isCurrentPlayer]);
+
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -280,6 +295,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           } as React.CSSProperties
         }
       >
+        {shouldFlash && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              boxShadow: `0 0 80px ${playerColor}, 0 0 40px ${playerColor}, inset 0 0 40px ${playerColor}99`,
+              animation: "turnFlash 5s ease-out forwards",
+              clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 100%, 0 100%)",
+            }}
+          />
+        )}
         <div className="flex flex-col items-start justify-center gap-1">
           <div className="flex gap-1 flex-wrap justify-start items-center">
             {isCurrentPlayer && (
