@@ -1,9 +1,8 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import GameIcon from "./GameIcon.tsx";
 
 export interface TileTooltipData {
-  position: { x: number; y: number };
   tileType: string;
   displayName?: string;
   ownerName?: string;
@@ -28,7 +27,29 @@ const TILE_TYPE_LABELS: Record<string, string> = {
   "natural-preserve": "Natural Preserve",
 };
 
-const TileTooltip: React.FC<{ data: TileTooltipData | null }> = ({ data }) => {
+interface TileTooltipProps {
+  data: TileTooltipData | null;
+  positionRef: React.RefObject<{ x: number; y: number }>;
+}
+
+const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!data || !containerRef.current) return;
+
+    let rafId: number;
+    const update = () => {
+      if (containerRef.current && positionRef.current) {
+        containerRef.current.style.left = positionRef.current.x + 12 + "px";
+        containerRef.current.style.top = positionRef.current.y + 12 + "px";
+      }
+      rafId = requestAnimationFrame(update);
+    };
+    rafId = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(rafId);
+  }, [data, positionRef]);
+
   if (!data) return null;
 
   const label = data.displayName || TILE_TYPE_LABELS[data.tileType] || data.tileType;
@@ -38,8 +59,9 @@ const TileTooltip: React.FC<{ data: TileTooltipData | null }> = ({ data }) => {
 
   return createPortal(
     <div
+      ref={containerRef}
       className="fixed w-max max-w-52 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
-      style={{ left: data.position.x + 12, top: data.position.y + 12, zIndex: 99999 }}
+      style={{ left: 0, top: 0, zIndex: 99999 }}
     >
       <div
         className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"

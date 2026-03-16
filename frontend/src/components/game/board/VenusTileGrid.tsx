@@ -110,19 +110,21 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
   }, [gameState]);
 
   const [tooltipData, setTooltipData] = useState<TileTooltipData | null>(null);
+  const tooltipPositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTileHoverInfo = useCallback(
     (
       data: Omit<TileTooltipData, "ownerName" | "ownerColor" | "reservedByName"> & {
+        position: { x: number; y: number };
         ownerId: string | null;
         reservedById: string | null;
       },
     ) => {
+      tooltipPositionRef.current = data.position;
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = setTimeout(() => {
         setTooltipData({
-          position: data.position,
           tileType: data.tileType,
           displayName: data.displayName,
           ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
@@ -138,7 +140,7 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
   );
 
   const handleTileHoverMove = useCallback((position: { x: number; y: number }) => {
-    setTooltipData((prev) => (prev ? { ...prev, position } : null));
+    tooltipPositionRef.current = position;
   }, []);
 
   const handleTileHoverLeave = useCallback(() => {
@@ -203,6 +205,7 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
   );
 
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
+  const hoveredHexKeyRef = useRef<string | null>(null);
 
   const handleSpherePointerMove = useCallback(
     (
@@ -214,7 +217,8 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
     ) => {
       const localPoint = event.object.worldToLocal(event.point.clone());
       const key = findNearestHex(localPoint);
-      if (key !== hoveredHexKey) {
+      if (key !== hoveredHexKeyRef.current) {
+        hoveredHexKeyRef.current = key;
         setHoveredHexKey(key);
         if (key) {
           const tile = venusTiles.find((t) => HexGrid2D.coordinateToKey(t.coordinate) === key);
@@ -238,17 +242,11 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
         handleTileHoverMove({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
       }
     },
-    [
-      hoveredHexKey,
-      venusTiles,
-      findNearestHex,
-      handleTileHoverInfo,
-      handleTileHoverMove,
-      handleTileHoverLeave,
-    ],
+    [venusTiles, findNearestHex, handleTileHoverInfo, handleTileHoverMove, handleTileHoverLeave],
   );
 
   const handleSpherePointerLeave = useCallback(() => {
+    hoveredHexKeyRef.current = null;
     setHoveredHexKey(null);
     handleTileHoverLeave();
   }, [handleTileHoverLeave]);
@@ -286,7 +284,7 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
       )}
 
       <Html>
-        <TileTooltip data={tooltipData} />
+        <TileTooltip data={tooltipData} positionRef={tooltipPositionRef} />
       </Html>
       {venusTiles.map((tile) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
