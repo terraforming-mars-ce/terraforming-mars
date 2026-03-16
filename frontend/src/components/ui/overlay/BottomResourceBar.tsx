@@ -276,11 +276,18 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   };
 
   const tagCounts = React.useMemo(() => {
-    if (!displayPlayedCards || displayPlayedCards.length === 0) return [];
+    if ((!displayPlayedCards || displayPlayedCards.length === 0) && !displayCorporation) return [];
 
     const counts: { [key: string]: number } = {};
 
-    displayPlayedCards.forEach((card) => {
+    if (displayCorporation?.tags) {
+      displayCorporation.tags.forEach((tag) => {
+        const tagKey = tag.toLowerCase();
+        counts[tagKey] = (counts[tagKey] || 0) + 1;
+      });
+    }
+
+    displayPlayedCards?.forEach((card) => {
       if (card.type === "event") {
         return;
       }
@@ -316,7 +323,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       tag,
       count: counts[tag] || 0,
     }));
-  }, [displayPlayedCards]);
+  }, [displayPlayedCards, displayCorporation]);
 
   const storageCardsCount = React.useMemo(() => {
     if (!displayPlayer?.resourceStorage) return 0;
