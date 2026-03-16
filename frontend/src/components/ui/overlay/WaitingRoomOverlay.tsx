@@ -6,6 +6,7 @@ import CopyLinkButton from "../buttons/CopyLinkButton.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import GameMenuModal from "./GameMenuModal.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../display/BotChips.tsx";
+import MainMenuHamburger from "../buttons/MainMenuHamburger.tsx";
 
 interface WaitingRoomOverlayProps {
   game: GameDto;
@@ -236,6 +237,8 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
 
   return (
     <>
+      <MainMenuHamburger gameId={game.id} onLeaveGame={openLeaveConfirm} />
+
       {/* Leave Confirmation Modal */}
       {showLeaveConfirm && (
         <GameMenuModal
@@ -244,7 +247,6 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
           visible={leaveConfirmVisible}
           onExited={handleLeaveConfirmExited}
           showBackdrop={true}
-          showSettings={false}
           zIndex={2000}
           onClose={handleCancelLeave}
         >
