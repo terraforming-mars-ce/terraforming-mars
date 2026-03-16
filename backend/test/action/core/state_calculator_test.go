@@ -837,3 +837,70 @@ func TestCalculatePlayerCardState_StoragePaymentSubstituteNotCountedForNonMatchi
 		t.Errorf("Expected insufficient-credits error, got errors: %+v", state.Errors)
 	}
 }
+
+// TestCalculatePlayerCardActionState_ProductionInput_Available verifies production inputs check player production
+func TestCalculatePlayerCardActionState_ProductionInput_Available(t *testing.T) {
+	g, p, _ := setupTestEnvironment(t)
+
+	ctx := context.Background()
+	if err := g.SetCurrentTurn(ctx, "player1", 2); err != nil {
+		t.Fatalf("Failed to set current turn: %v", err)
+	}
+
+	p.Resources().AddProduction(map[shared.ResourceType]int{
+		shared.ResourceEnergyProduction: 2,
+	})
+
+	behavior := shared.CardBehavior{
+		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+		Inputs: []shared.ResourceCondition{
+			{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+		},
+		Outputs: []shared.ResourceCondition{
+			{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"},
+		},
+	}
+
+	state := action.CalculatePlayerCardActionState("card1", behavior, 0, p, g)
+
+	if !state.Available() {
+		t.Errorf("Expected action to be available with sufficient energy production, got errors: %+v", state.Errors)
+	}
+}
+
+// TestCalculatePlayerCardActionState_ProductionInput_Insufficient verifies production inputs fail when production is 0
+func TestCalculatePlayerCardActionState_ProductionInput_Insufficient(t *testing.T) {
+	g, p, _ := setupTestEnvironment(t)
+
+	ctx := context.Background()
+	if err := g.SetCurrentTurn(ctx, "player1", 2); err != nil {
+		t.Fatalf("Failed to set current turn: %v", err)
+	}
+
+	behavior := shared.CardBehavior{
+		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+		Inputs: []shared.ResourceCondition{
+			{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+		},
+		Outputs: []shared.ResourceCondition{
+			{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"},
+		},
+	}
+
+	state := action.CalculatePlayerCardActionState("card1", behavior, 0, p, g)
+
+	if state.Available() {
+		t.Error("Expected action to be unavailable with 0 energy production")
+	}
+
+	prodFound := false
+	for _, err := range state.Errors {
+		if err.Code == player.ErrorCodeInsufficientResources && err.Category == player.ErrorCategoryInput {
+			prodFound = true
+			break
+		}
+	}
+	if !prodFound {
+		t.Errorf("Expected insufficient-resources error for production input, got errors: %+v", state.Errors)
+	}
+}

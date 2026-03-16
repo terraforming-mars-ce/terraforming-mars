@@ -173,6 +173,19 @@ func CalculatePlayerCardActionState(
 			continue
 		}
 
+		// Production inputs check player production instead of basic resources
+		if shared.IsProductionResourceType(input.ResourceType) {
+			available := p.Resources().Production().GetAmount(input.ResourceType)
+			if available < input.Amount {
+				errors = append(errors, player.StateError{
+					Code:     player.ErrorCodeInsufficientResources,
+					Category: player.ErrorCategoryInput,
+					Message:  fmt.Sprintf("Not enough %s", input.ResourceType),
+				})
+			}
+			continue
+		}
+
 		available := resources.GetAmount(input.ResourceType)
 		if available < input.Amount {
 			errors = append(errors, player.StateError{
