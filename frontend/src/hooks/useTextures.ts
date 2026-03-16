@@ -13,6 +13,7 @@ const TEXTURE_PATHS = {
   noiseMid: "/assets/textures/noise_mid.png",
   noiseHigh: "/assets/textures/noise_high.png",
   smoke: "/assets/effects/smoke.png",
+  concrete: "/assets/textures/concrete.jpg",
 } as const;
 
 const RESOURCE_ICON_PATHS = {
@@ -45,6 +46,7 @@ useTexture.preload(TEXTURE_PATHS.waterNormals);
 useTexture.preload(TEXTURE_PATHS.noiseMid);
 useTexture.preload(TEXTURE_PATHS.noiseHigh);
 useLoader.preload(THREE.TextureLoader, TEXTURE_PATHS.smoke);
+useTexture.preload(TEXTURE_PATHS.concrete);
 useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.steel);
 useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.titanium);
 useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.plant);
@@ -60,6 +62,7 @@ interface TextureAssets {
   waterNormals: THREE.Texture;
   noiseMid: THREE.Texture;
   noiseHigh: THREE.Texture;
+  concrete: THREE.Texture;
   smoke: THREE.Texture;
   resourceIcons: Record<ResourceIconName, THREE.Texture>;
   getResourceIcon: (bonusType: string) => THREE.Texture;
@@ -74,6 +77,7 @@ export function useTextures(): TextureAssets {
   const waterNormals = useTexture(TEXTURE_PATHS.waterNormals);
   const noiseMid = useTexture(TEXTURE_PATHS.noiseMid);
   const noiseHigh = useTexture(TEXTURE_PATHS.noiseHigh);
+  const concrete = useTexture(TEXTURE_PATHS.concrete);
   const smoke = useLoader(THREE.TextureLoader, TEXTURE_PATHS.smoke);
 
   const steelIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.steel);
@@ -100,7 +104,10 @@ export function useTextures(): TextureAssets {
 
     noiseMid.wrapS = noiseMid.wrapT = THREE.RepeatWrapping;
     noiseHigh.wrapS = noiseHigh.wrapT = THREE.RepeatWrapping;
-  }, [mars, venus, grass, sand, waterNormals, noiseMid, noiseHigh]);
+
+    concrete.wrapS = concrete.wrapT = THREE.RepeatWrapping;
+    concrete.colorSpace = THREE.SRGBColorSpace;
+  }, [mars, venus, grass, sand, waterNormals, noiseMid, noiseHigh, concrete]);
 
   const resourceIcons = useMemo(
     () => ({
@@ -131,6 +138,7 @@ export function useTextures(): TextureAssets {
     waterNormals,
     noiseMid,
     noiseHigh,
+    concrete,
     smoke,
     resourceIcons,
     getResourceIcon,

@@ -15,6 +15,9 @@ import nuclearZoneVertexRaw from "./nuclear-zone.vert.glsl?raw";
 import nuclearZoneFragmentRaw from "./nuclear-zone.frag.glsl?raw";
 import worldTreeVertexRaw from "./world-tree.vert.glsl?raw";
 import worldTreeFragmentRaw from "./world-tree.frag.glsl?raw";
+import moholeVertexRaw from "./mohole.vert.glsl?raw";
+import moholeFragmentRaw from "./mohole.frag.glsl?raw";
+import moholeMaskFragmentRaw from "./mohole-mask.frag.glsl?raw";
 
 export { default as tileSurfaceVertexSnippet } from "./tile-surface.vert.glsl?raw";
 export { default as greeneryGroundVertexSnippet } from "./greenery-ground.vert.glsl?raw";
@@ -41,6 +44,9 @@ export const nuclearZoneVertex = stripVersion(nuclearZoneVertexRaw);
 export const nuclearZoneFragment = stripVersion(nuclearZoneFragmentRaw);
 export const worldTreeVertex = stripVersion(worldTreeVertexRaw);
 export const worldTreeFragment = stripVersion(worldTreeFragmentRaw);
+export const moholeVertex = stripVersion(moholeVertexRaw);
+export const moholeFragment = stripVersion(moholeFragmentRaw);
+export const moholeMaskFragment = stripVersion(moholeMaskFragmentRaw);
 
 export function splitSnippet(raw: string): { header: string; body: string } {
   const marker = "//#pragma body\n";
@@ -179,4 +185,59 @@ export function createWorldTreeMaterial(seed: number): THREE.ShaderMaterial {
     depthTest: true,
     side: THREE.DoubleSide,
   });
+}
+
+export function createMoholeMaterial(
+  seed: number,
+  concreteTexture?: THREE.Texture,
+): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    vertexShader: moholeVertex,
+    fragmentShader: moholeFragment,
+    uniforms: {
+      uSphereRadius: { value: 2.02 },
+      uHoleRadius: { value: 0.4 },
+      uHoleDepth: { value: 0.06 },
+      uEmergence: { value: 1.0 },
+      uTime: { value: 0.0 },
+      uSeed: { value: seed },
+      uSunDirection: { value: new THREE.Vector3(0.9, 0.0, 0.8).normalize() },
+      uSunIntensity: { value: 1.0 },
+      uSunColor: { value: new THREE.Vector3(1.0, 0.86, 0.72) },
+      uEmergenceRadius: { value: 1.0 },
+      uConcreteTexture: { value: concreteTexture ?? null },
+    },
+    transparent: true,
+    depthWrite: true,
+    depthTest: true,
+    side: THREE.DoubleSide,
+  });
+}
+
+export function createMoholeMaskMaterial(seed: number): THREE.ShaderMaterial {
+  const mat = new THREE.ShaderMaterial({
+    vertexShader: moholeVertex,
+    fragmentShader: moholeMaskFragment,
+    uniforms: {
+      uSphereRadius: { value: 2.02 },
+      uHoleRadius: { value: 0.4 },
+      uHoleDepth: { value: 0.0 },
+      uEmergence: { value: 1.0 },
+      uEmergenceRadius: { value: 1.0 },
+      uSeed: { value: seed },
+    },
+    transparent: false,
+    colorWrite: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  mat.stencilWrite = true;
+  mat.stencilRef = 1;
+  mat.stencilFunc = THREE.AlwaysStencilFunc;
+  mat.stencilZPass = THREE.ReplaceStencilOp;
+  mat.stencilFail = THREE.KeepStencilOp;
+  mat.stencilZFail = THREE.KeepStencilOp;
+
+  return mat;
 }
