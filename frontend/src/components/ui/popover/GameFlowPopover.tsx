@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Z_INDEX } from "@/constants/zIndex";
 
 type GameFlowType = "immediate" | "interactive" | "interactive-mandatory";
@@ -197,7 +198,7 @@ export function GameFlowPopover({
     </div>
   );
 
-  return (
+  const rendered = (
     <GameFlowCtx.Provider value={{ requestClose, onDragStart, onDragMove, onDragEnd }}>
       {type === "immediate" && (
         <div
@@ -288,6 +289,12 @@ export function GameFlowPopover({
       `}</style>
     </GameFlowCtx.Provider>
   );
+
+  if (type === "immediate") {
+    return createPortal(rendered, document.body);
+  }
+
+  return rendered;
 }
 
 interface GameFlowTitleProps {
