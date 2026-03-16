@@ -147,14 +147,18 @@ const GameCard: React.FC<GameCardProps> = ({
 
       {/* Cost in top-left (hidden for prelude cards) */}
       {card.type !== "prelude" && (
-        <div
-          className={`absolute top-2 left-2 flex items-center justify-start z-[2] shrink-0 group/cost ${actualDiscountAmount > 0 ? "animate-[goldenPulse_2.5s_ease-in-out_infinite]" : ""}`}
-        >
-          <div className={actualDiscountAmount > 0 ? "group-hover/cost:hidden" : ""}>
+        <div className="absolute top-2 left-2 flex items-center justify-start z-[2] shrink-0 group/cost">
+          <div
+            className={
+              actualDiscountAmount > 0
+                ? "animate-[goldenPulse_2.5s_ease-in-out_infinite] transition-opacity duration-400 ease-in-out opacity-100 group-hover/cost:opacity-0"
+                : ""
+            }
+          >
             <GameIcon iconType={ResourceTypeCredit} amount={effectiveCost} size="medium" />
           </div>
           {actualDiscountAmount > 0 && (
-            <div className="hidden group-hover/cost:block [filter:none]">
+            <div className="absolute inset-0 transition-opacity duration-400 ease-in-out opacity-0 group-hover/cost:opacity-100">
               <GameIcon iconType={ResourceTypeCredit} amount={displayCost} size="medium" />
             </div>
           )}

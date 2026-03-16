@@ -345,6 +345,18 @@ code {
   }
 }
 
+@keyframes turnFlash {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Attack pulse animations for behavior section */
 @keyframes attackPulse {
   0%,
@@ -911,11 +923,11 @@ code {
 @keyframes goldenPulse {
   0%,
   100% {
-    filter: drop-shadow(0 0 3px rgba(255, 200, 50, 0.4)) brightness(1.05) sepia(0.15) saturate(1.6)
+    filter: drop-shadow(0 0 5px rgba(255, 200, 50, 0.6)) brightness(1.1) sepia(0.15) saturate(1.6)
       hue-rotate(-10deg);
   }
   50% {
-    filter: drop-shadow(0 0 6px rgba(255, 200, 50, 0.7)) brightness(1.15) sepia(0.2) saturate(1.8)
+    filter: drop-shadow(0 0 10px rgba(255, 200, 50, 0.9)) brightness(1.2) sepia(0.2) saturate(1.8)
       hue-rotate(-10deg);
   }
 }
