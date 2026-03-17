@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Z_INDEX } from "@/constants/zIndex";
 
 interface LoadingOverlayProps {
@@ -13,6 +13,8 @@ export default function LoadingOverlay({
   onTransitionEnd,
 }: LoadingOverlayProps) {
   const [hasMounted, setHasMounted] = useState(false);
+  const [fadeComplete, setFadeComplete] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -22,8 +24,30 @@ export default function LoadingOverlay({
 
   const showLoaded = hasMounted && isLoaded;
 
+  useEffect(() => {
+    if (!showLoaded || !ref.current) {
+      return;
+    }
+
+    const animation = ref.current.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 800,
+      easing: "ease-out",
+      fill: "forwards",
+    });
+
+    void animation.finished.then(() => {
+      setFadeComplete(true);
+      onTransitionEnd?.();
+    });
+
+    return () => {
+      animation.cancel();
+    };
+  }, [showLoaded, onTransitionEnd]);
+
   return (
     <div
+      ref={ref}
       style={{
         position: "fixed",
         top: 0,
@@ -32,8 +56,7 @@ export default function LoadingOverlay({
         height: "100vh",
         backgroundColor: "#000000",
         zIndex: Z_INDEX.LOADING_OVERLAY,
-        opacity: showLoaded ? 0 : 1,
-        transition: "opacity 0.8s ease-out",
+        opacity: fadeComplete ? 0 : 1,
         pointerEvents: showLoaded ? "none" : "auto",
         display: "flex",
         flexDirection: "column",
@@ -41,11 +64,6 @@ export default function LoadingOverlay({
         justifyContent: "center",
         color: "white",
         fontSize: "18px",
-      }}
-      onTransitionEnd={(e) => {
-        if (e.propertyName === "opacity" && showLoaded) {
-          onTransitionEnd?.();
-        }
       }}
     >
       <div
