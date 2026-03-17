@@ -13,6 +13,7 @@ import StandardProjectPopover from "../../ui/popover/StandardProjectPopover.tsx"
 import MilestonePopover from "../../ui/popover/MilestonePopover.tsx";
 import AwardPopover from "../../ui/popover/AwardPopover.tsx";
 import ColonyPopover from "../../ui/popover/ColonyPopover.tsx";
+import ProjectFundingPopover from "../../ui/popover/ProjectFundingPopover.tsx";
 import { GamePopover } from "../../ui/GamePopover";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
 import {
@@ -305,10 +306,12 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   const [showMilestonePopover, setShowMilestonePopover] = useState(false);
   const [showAwardPopover, setShowAwardPopover] = useState(false);
   const [showColonyPopover, setShowColonyPopover] = useState(false);
+  const [showProjectFundingPopover, setShowProjectFundingPopover] = useState(false);
   const standardProjectsButtonRef = useRef<HTMLButtonElement>(null);
   const milestonesButtonRef = useRef<HTMLButtonElement>(null);
   const awardsButtonRef = useRef<HTMLButtonElement>(null);
   const coloniesButtonRef = useRef<HTMLButtonElement>(null);
+  const projectFundingButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleCopyGameLink = async () => {
     if (gameId) {
@@ -338,12 +341,14 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     gameState?.currentPhase === GamePhaseInitApplyPrelude;
 
   const hasColonies = (gameState?.colonyTiles?.length ?? 0) > 0;
+  const hasProjectFunding = (gameState?.projectFunding?.length ?? 0) > 0;
 
   const menuItems: { id: string; label: string; color: string }[] = [
     { id: "projects", label: "STANDARD PROJECTS", color: "#4a90e2" },
     { id: "milestones", label: "MILESTONES", color: "#ff6b35" },
     { id: "awards", label: "AWARDS", color: "#f39c12" },
     ...(hasColonies ? [{ id: "colonies", label: "COLONIES", color: "#7c6fc4" }] : []),
+    ...(hasProjectFunding ? [{ id: "funding", label: "FUNDING", color: "#10b981" }] : []),
   ];
 
   const handleTabClick = (tabId: string) => {
@@ -357,6 +362,8 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
       setShowAwardPopover((prev) => !prev);
     } else if (tabId === "colonies") {
       setShowColonyPopover((prev) => !prev);
+    } else if (tabId === "funding") {
+      setShowProjectFundingPopover((prev) => !prev);
     }
   };
 
@@ -365,6 +372,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     if (itemId === "milestones") return milestonesButtonRef;
     if (itemId === "awards") return awardsButtonRef;
     if (itemId === "colonies") return coloniesButtonRef;
+    if (itemId === "funding") return projectFundingButtonRef;
     return null;
   };
 
@@ -379,7 +387,13 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
 
   const spectators: SpectatorDto[] = gameState?.spectators || [];
   const baseWidths = [250, 190, 160];
-  const buttonWidths = hasColonies ? [...baseWidths, 170] : baseWidths;
+  let buttonWidths = [...baseWidths];
+  if (hasColonies) {
+    buttonWidths.push(170);
+  }
+  if (hasProjectFunding) {
+    buttonWidths.push(160);
+  }
   const buttonHeight = 40;
   const EYE_WIDTH = 68;
 
@@ -673,6 +687,15 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
           onClose={() => setShowColonyPopover(false)}
           gameState={gameState}
           anchorRef={coloniesButtonRef}
+        />
+      )}
+
+      {hasProjectFunding && (
+        <ProjectFundingPopover
+          isVisible={showProjectFundingPopover}
+          onClose={() => setShowProjectFundingPopover(false)}
+          gameState={gameState}
+          anchorRef={projectFundingButtonRef}
         />
       )}
 

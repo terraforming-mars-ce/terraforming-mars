@@ -12,7 +12,9 @@ import (
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/colony"
 	playerPkg "terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/projectfunding"
 	"terraforming-mars-backend/internal/game/shared"
+	pfRegistry "terraforming-mars-backend/internal/projectfunding"
 )
 
 // BotStarter starts bot sessions when a game begins.
@@ -23,24 +25,27 @@ type BotStarter interface {
 // StartGameAction handles the business logic for starting games
 // NOTE: Deck initialization is handled separately before calling this action
 type StartGameAction struct {
-	gameRepo       game.GameRepository
-	colonyRegistry colonies.ColonyRegistry
-	botStarter     BotStarter
-	logger         *zap.Logger
+	gameRepo               game.GameRepository
+	colonyRegistry         colonies.ColonyRegistry
+	projectFundingRegistry pfRegistry.ProjectFundingRegistry
+	botStarter             BotStarter
+	logger                 *zap.Logger
 }
 
 // NewStartGameAction creates a new start game action
 func NewStartGameAction(
 	gameRepo game.GameRepository,
 	colonyRegistry colonies.ColonyRegistry,
+	projectFundingRegistry pfRegistry.ProjectFundingRegistry,
 	botStarter BotStarter,
 	logger *zap.Logger,
 ) *StartGameAction {
 	return &StartGameAction{
-		gameRepo:       gameRepo,
-		colonyRegistry: colonyRegistry,
-		botStarter:     botStarter,
-		logger:         logger,
+		gameRepo:               gameRepo,
+		colonyRegistry:         colonyRegistry,
+		projectFundingRegistry: projectFundingRegistry,
+		botStarter:             botStarter,
+		logger:                 logger,
 	}
 }
 
@@ -96,6 +101,11 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 	// 5b. BUSINESS LOGIC: Initialize colony tiles if colonies pack enabled
 	if g.Settings().HasColonies() {
 		a.initializeColonies(g, playerIDs, rng, log)
+	}
+
+	// 5c. BUSINESS LOGIC: Initialize project funding if enabled
+	if g.Settings().HasProjectFunding() {
+		a.initializeProjectFunding(g, playerIDs, rng, log)
 	}
 
 	// 6. BUSINESS LOGIC: Ensure deck is initialized
@@ -210,6 +220,49 @@ func (a *StartGameAction) initializeColonies(g *game.Game, playerIDs []string, r
 
 	log.Debug("Colony tiles initialized",
 		zap.Int("colony_count", len(states)),
+		zap.Int("player_count", len(playerIDs)))
+}
+
+func (a *StartGameAction) initializeProjectFunding(g *game.Game, playerIDs []string, rng *rand.Rand, log *zap.Logger) {
+	if a.projectFundingRegistry == nil {
+		log.Warn("No project funding registry available")
+		return
+	}
+
+	allProjects := a.projectFundingRegistry.GetAll()
+	if len(allProjects) == 0 {
+		log.Warn("No project funding definitions available")
+		return
+	}
+
+	// Select N+2 projects (min 4)
+	numToSelect := len(playerIDs) + 2
+	if numToSelect < 4 {
+		numToSelect = 4
+	}
+	if numToSelect > len(allProjects) {
+		numToSelect = len(allProjects)
+	}
+
+	// Shuffle and pick
+	rng.Shuffle(len(allProjects), func(i, j int) {
+		allProjects[i], allProjects[j] = allProjects[j], allProjects[i]
+	})
+	selected := allProjects[:numToSelect]
+
+	// Initialize project states
+	states := make([]*projectfunding.ProjectState, len(selected))
+	for i, def := range selected {
+		states[i] = &projectfunding.ProjectState{
+			DefinitionID: def.ID,
+			SeatOwners:   []string{},
+			IsCompleted:  false,
+		}
+	}
+	g.SetProjectFundingStates(states)
+
+	log.Debug("Project funding initialized",
+		zap.Int("project_count", len(states)),
 		zap.Int("player_count", len(playerIDs)))
 }
 

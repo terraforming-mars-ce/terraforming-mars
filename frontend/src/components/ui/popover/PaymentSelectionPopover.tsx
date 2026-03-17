@@ -14,27 +14,34 @@ import { cardMatchesStorageSubstitute } from "@/utils/paymentUtils.ts";
 import GameButton from "../buttons/GameButton.tsx";
 import { GameFlowPopover, GameFlowTitle, GameFlowFooter } from "./GameFlowPopover.tsx";
 
+export interface GenericPaymentConfig {
+  name: string;
+  cost: number;
+  substitutes: Array<{ resourceType: string; conversionRate: number }>;
+}
+
 interface PaymentSelectionPopoverProps {
-  cardId: string;
-  card: PlayerCardDto;
+  cardId?: string;
+  card?: PlayerCardDto;
   playerResources: ResourcesDto;
-  paymentConstants: PaymentConstantsDto;
+  paymentConstants?: PaymentConstantsDto;
   playerPaymentSubstitutes?: PaymentSubstituteDto[];
   storagePaymentSubstitutes?: StoragePaymentSubstituteDto[];
   resourceStorage?: { [key: string]: number };
+  genericPayment?: GenericPaymentConfig;
   onConfirm: (payment: CardPaymentDto) => void;
   onCancel: () => void;
   isVisible: boolean;
 }
 
 const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
-  cardId: _cardId,
   card,
   playerResources,
   paymentConstants,
   playerPaymentSubstitutes,
   storagePaymentSubstitutes,
   resourceStorage,
+  genericPayment,
   onConfirm,
   onCancel,
   isVisible,
@@ -44,22 +51,33 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
   const [substitutes, setSubstitutes] = useState<Record<string, number>>({});
   const [storageSubstitutes, setStorageSubstitutes] = useState<Record<string, number>>({});
 
-  const steelValue =
-    playerPaymentSubstitutes?.find((s) => s.resourceType === "steel")?.conversionRate ??
-    paymentConstants.steelValue;
-  const titaniumValue =
-    playerPaymentSubstitutes?.find((s) => s.resourceType === "titanium")?.conversionRate ??
-    paymentConstants.titaniumValue;
+  const isGenericMode = !!genericPayment;
+  const effectiveCost = genericPayment?.cost ?? card?.effectiveCost ?? 0;
+  const effectiveName = genericPayment?.name ?? card?.name ?? "";
+
+  const genericSteelSub = genericPayment?.substitutes.find((s) => s.resourceType === "steel");
+  const genericTitaniumSub = genericPayment?.substitutes.find((s) => s.resourceType === "titanium");
+
+  const steelValue = isGenericMode
+    ? (genericSteelSub?.conversionRate ?? 0)
+    : (playerPaymentSubstitutes?.find((s) => s.resourceType === "steel")?.conversionRate ??
+      paymentConstants?.steelValue ??
+      2);
+  const titaniumValue = isGenericMode
+    ? (genericTitaniumSub?.conversionRate ?? 0)
+    : (playerPaymentSubstitutes?.find((s) => s.resourceType === "titanium")?.conversionRate ??
+      paymentConstants?.titaniumValue ??
+      3);
 
   const applicableStorageSubstitutes = useMemo(() => {
-    if (!storagePaymentSubstitutes || !resourceStorage) {
+    if (isGenericMode || !storagePaymentSubstitutes || !resourceStorage) {
       return [];
     }
     return storagePaymentSubstitutes.filter((sub) => {
       const available = resourceStorage[sub.cardId] ?? 0;
-      return available > 0 && cardMatchesStorageSubstitute(card, sub);
+      return available > 0 && cardMatchesStorageSubstitute(card!, sub);
     });
-  }, [storagePaymentSubstitutes, resourceStorage, card]);
+  }, [isGenericMode, storagePaymentSubstitutes, resourceStorage, card]);
 
   useEffect(() => {
     if (isVisible) {
@@ -68,7 +86,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
       setSubstitutes({});
       setStorageSubstitutes({});
     }
-  }, [isVisible, card.effectiveCost]);
+  }, [isVisible, effectiveCost]);
 
   let storageSubstitutesValue = 0;
   for (const [cardId, amount] of Object.entries(storageSubstitutes)) {
@@ -89,7 +107,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
   }
 
   const finalCost =
-    card.effectiveCost -
+    effectiveCost -
     steel * steelValue -
     titanium * titaniumValue -
     substitutesValue -
@@ -129,15 +147,15 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
     return total;
   };
 
-  const canUseSteel = card.tags?.includes(TagBuilding);
-  const canUseTitanium = card.tags?.includes(TagSpace);
+  const canUseSteel = isGenericMode ? !!genericSteelSub : card?.tags?.includes(TagBuilding);
+  const canUseTitanium = isGenericMode ? !!genericTitaniumSub : card?.tags?.includes(TagSpace);
 
-  const remainingCostForSteel = card.effectiveCost - totalOtherPaymentValue(true, false);
+  const remainingCostForSteel = effectiveCost - totalOtherPaymentValue(true, false);
   const maxSteelUnits = canUseSteel
     ? Math.min(playerResources.steel, Math.ceil(Math.max(0, remainingCostForSteel) / steelValue))
     : 0;
 
-  const remainingCostForTitanium = card.effectiveCost - totalOtherPaymentValue(false, true);
+  const remainingCostForTitanium = effectiveCost - totalOtherPaymentValue(false, true);
   const maxTitaniumUnits = canUseTitanium
     ? Math.min(
         playerResources.titanium,
@@ -202,10 +220,10 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
           Select Payment Method
         </h3>
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-sm text-gray-400">Pay for: {card.name}</span>
+          <span className="text-sm text-gray-400">Pay for: {effectiveName}</span>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-400">Cost:</span>
-            <GameIcon iconType="credit" amount={card.effectiveCost} size="small" />
+            <GameIcon iconType="credit" amount={effectiveCost} size="small" />
           </div>
         </div>
       </GameFlowTitle>
@@ -299,7 +317,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
               const currentAmount = substitutes[resourceType] || 0;
 
               const remainingCostForThisSubstitute =
-                card.effectiveCost - totalOtherPaymentValue(false, false, resourceType, undefined);
+                effectiveCost - totalOtherPaymentValue(false, false, resourceType, undefined);
 
               const maxUnits = Math.min(
                 available,
@@ -375,7 +393,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
           const currentAmount = storageSubstitutes[substitute.cardId] || 0;
 
           const remainingCostForThis =
-            card.effectiveCost - totalOtherPaymentValue(false, false, undefined, substitute.cardId);
+            effectiveCost - totalOtherPaymentValue(false, false, undefined, substitute.cardId);
 
           const maxUnits = Math.min(
             available,
@@ -447,7 +465,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
           (!playerPaymentSubstitutes || playerPaymentSubstitutes.length === 0) &&
           applicableStorageSubstitutes.length === 0 && (
             <div className="text-center text-gray-400 py-4">
-              This card cannot use alternative payment methods
+              No alternative payment methods available
             </div>
           )}
       </div>
@@ -455,7 +473,9 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
       <div className="px-4 pb-4">
         <div className="rounded-md border border-space-blue-500/30 bg-space-black/30 p-4">
           <div className="flex items-center justify-between">
-            <span className="text-gray-400">Card cost:</span>
+            <span className="text-gray-400">
+              {isGenericMode ? "Credits needed:" : "Card cost:"}
+            </span>
             <div
               className={`flex items-center gap-2 ${finalCost < 0 ? "opacity-90" : cannotAfford ? "opacity-90" : ""}`}
             >

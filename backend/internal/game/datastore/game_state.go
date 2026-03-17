@@ -5,6 +5,7 @@ import (
 
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/colony"
+	"terraforming-mars-backend/internal/game/projectfunding"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -68,8 +69,9 @@ type GameState struct {
 	InitPhaseWaitingForConfirm bool
 	InitPhaseConfirmVersion    int
 
-	ColonyTileStates []*colony.TileState
-	TradeFleets      map[string]bool
+	ColonyTileStates     []*colony.TileState
+	TradeFleets          map[string]bool
+	ProjectFundingStates []*projectfunding.ProjectState
 
 	TriggeredEffects []shared.TriggeredEffect
 }

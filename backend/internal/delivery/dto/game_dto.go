@@ -822,6 +822,7 @@ type GameDto struct {
 	IsSpectator         bool                   `json:"isSpectator" ts:"boolean"`
 	ColonyTiles         []ColonyTileDto        `json:"colonyTiles,omitempty" ts:"ColonyTileDto[] | undefined"`
 	TradeFleetAvailable bool                   `json:"tradeFleetAvailable" ts:"boolean"`
+	ProjectFunding      []ProjectFundingDto    `json:"projectFunding,omitempty" ts:"ProjectFundingDto[] | undefined"`
 }
 
 // SpectatorDto represents a spectator visible to all clients.
@@ -897,6 +898,69 @@ type ColonySlotDto struct {
 
 // ColonyStyleDto provides visual hints for the frontend
 type ColonyStyleDto struct {
+	Color string `json:"color" ts:"string"`
+	Icon  string `json:"icon" ts:"string"`
+}
+
+// Project Funding DTOs
+
+// ProjectFundingDto represents a project funding tile in the game
+type ProjectFundingDto struct {
+	ID                 string                     `json:"id" ts:"string"`
+	Name               string                     `json:"name" ts:"string"`
+	Description        string                     `json:"description" ts:"string"`
+	Seats              []ProjectSeatDto           `json:"seats" ts:"ProjectSeatDto[]"`
+	SeatOwners         []ProjectSeatOwnerDto      `json:"seatOwners" ts:"ProjectSeatOwnerDto[]"`
+	IsCompleted        bool                       `json:"isCompleted" ts:"boolean"`
+	NextSeatIndex      int                        `json:"nextSeatIndex" ts:"number"`
+	NextSeatCost       int                        `json:"nextSeatCost" ts:"number"`
+	CanBuySeat         bool                       `json:"canBuySeat" ts:"boolean"`
+	BuyErrors          []StateErrorDto            `json:"buyErrors" ts:"StateErrorDto[]"`
+	CurrentPlayerSeats int                        `json:"currentPlayerSeats" ts:"number"`
+	CurrentPlayerTier  *ProjectRewardTierDto      `json:"currentPlayerTier,omitempty" ts:"ProjectRewardTierDto | undefined"`
+	PaymentSubstitutes []ProjectPaymentSubDto     `json:"paymentSubstitutes" ts:"ProjectPaymentSubDto[]"`
+	RewardTiers        []ProjectRewardTierDto     `json:"rewardTiers" ts:"ProjectRewardTierDto[]"`
+	CompletionEffect   ProjectCompletionEffectDto `json:"completionEffect" ts:"ProjectCompletionEffectDto"`
+	Style              ProjectStyleDto            `json:"style" ts:"ProjectStyleDto"`
+}
+
+// ProjectSeatDto represents a seat definition
+type ProjectSeatDto struct {
+	Cost               int                    `json:"cost" ts:"number"`
+	PaymentSubstitutes []ProjectPaymentSubDto `json:"paymentSubstitutes" ts:"ProjectPaymentSubDto[]"`
+	OwnerID            string                 `json:"ownerId" ts:"string"`
+	OwnerName          string                 `json:"ownerName" ts:"string"`
+	OwnerColor         string                 `json:"ownerColor" ts:"string"`
+	IsFilled           bool                   `json:"isFilled" ts:"boolean"`
+}
+
+// ProjectSeatOwnerDto represents a seat owner entry
+type ProjectSeatOwnerDto struct {
+	PlayerID string `json:"playerId" ts:"string"`
+	Name     string `json:"name" ts:"string"`
+	Color    string `json:"color" ts:"string"`
+}
+
+// ProjectRewardTierDto represents a reward tier
+type ProjectRewardTierDto struct {
+	SeatsOwned int               `json:"seatsOwned" ts:"number"`
+	Rewards    []ColonyOutputDto `json:"rewards" ts:"ColonyOutputDto[]"`
+}
+
+// ProjectCompletionEffectDto represents the completion effect
+type ProjectCompletionEffectDto struct {
+	Description string            `json:"description" ts:"string"`
+	Rewards     []ColonyOutputDto `json:"rewards" ts:"ColonyOutputDto[]"`
+}
+
+// ProjectPaymentSubDto represents a payment substitute for a seat
+type ProjectPaymentSubDto struct {
+	ResourceType   string `json:"resourceType" ts:"string"`
+	ConversionRate int    `json:"conversionRate" ts:"number"`
+}
+
+// ProjectStyleDto provides visual hints for the frontend
+type ProjectStyleDto struct {
 	Color string `json:"color" ts:"string"`
 	Icon  string `json:"icon" ts:"string"`
 }

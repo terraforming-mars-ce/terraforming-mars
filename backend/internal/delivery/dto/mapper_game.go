@@ -12,12 +12,34 @@ import (
 	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
+	pfDomain "terraforming-mars-backend/internal/game/projectfunding"
 	"terraforming-mars-backend/internal/game/shared"
+	pfRegistry "terraforming-mars-backend/internal/projectfunding"
 )
 
 // ToGameDto converts Game to GameDto with personalized view
 // The playerID parameter determines which player is "currentPlayer" vs "otherPlayers"
+// Registries bundles optional expansion registries for DTO mapping
+type Registries struct {
+	ColonyRegistry         colonies.ColonyRegistry
+	ProjectFundingRegistry pfRegistry.ProjectFundingRegistry
+}
+
 func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string, colonyRegistry ...colonies.ColonyRegistry) GameDto {
+	return ToGameDtoFull(g, cardRegistry, playerID, Registries{
+		ColonyRegistry: firstOrNil(colonyRegistry),
+	})
+}
+
+func firstOrNil(regs []colonies.ColonyRegistry) colonies.ColonyRegistry {
+	if len(regs) > 0 {
+		return regs[0]
+	}
+	return nil
+}
+
+// ToGameDtoFull converts Game to GameDto with all expansion registries
+func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID string, registries Registries) GameDto {
 	players := g.GetAllPlayers()
 
 	var currentPlayer PlayerDto
@@ -185,9 +207,13 @@ func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string, c
 		ChatMessages:       toChatMessageDtos(g),
 	}
 
-	if g.HasColonies() && len(colonyRegistry) > 0 && colonyRegistry[0] != nil {
-		result.ColonyTiles = toColonyTileDtos(g, colonyRegistry[0], playerID)
+	if g.HasColonies() && registries.ColonyRegistry != nil {
+		result.ColonyTiles = toColonyTileDtos(g, registries.ColonyRegistry, playerID)
 		result.TradeFleetAvailable = g.GetTradeFleetAvailable(playerID)
+	}
+
+	if g.HasProjectFunding() && registries.ProjectFundingRegistry != nil {
+		result.ProjectFunding = toProjectFundingDtos(g, registries.ProjectFundingRegistry, playerID)
 	}
 
 	return result
@@ -673,6 +699,176 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, play
 			BuildAvailable: buildAvailable,
 			TradeErrors:    tradeErrors,
 			BuildErrors:    buildErrors,
+		})
+	}
+
+	return dtos
+}
+
+func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegistry, playerID string) []ProjectFundingDto {
+	states := g.ProjectFundingStates()
+	if len(states) == 0 {
+		return nil
+	}
+
+	playerObj, _ := g.GetPlayer(playerID)
+	var playerCredits int
+	if playerObj != nil {
+		playerCredits = playerObj.Resources().Get().Credits
+	}
+
+	dtos := make([]ProjectFundingDto, 0, len(states))
+	for _, state := range states {
+		def, err := registry.GetByID(state.DefinitionID)
+		if err != nil {
+			continue
+		}
+
+		// Build seat DTOs
+		seats := make([]ProjectSeatDto, len(def.Seats))
+		for i, seatDef := range def.Seats {
+			subs := make([]ProjectPaymentSubDto, len(seatDef.PaymentSubstitutes))
+			for j, sub := range seatDef.PaymentSubstitutes {
+				subs[j] = ProjectPaymentSubDto{
+					ResourceType:   sub.ResourceType,
+					ConversionRate: sub.ConversionRate,
+				}
+			}
+
+			seat := ProjectSeatDto{
+				Cost:               seatDef.Cost,
+				PaymentSubstitutes: subs,
+			}
+
+			if i < len(state.SeatOwners) {
+				ownerID := state.SeatOwners[i]
+				seat.IsFilled = true
+				seat.OwnerID = ownerID
+				if p, err := g.GetPlayer(ownerID); err == nil {
+					seat.OwnerName = p.Name()
+					seat.OwnerColor = p.Color()
+				}
+			}
+
+			seats[i] = seat
+		}
+
+		// Build seat owners list
+		seatOwners := make([]ProjectSeatOwnerDto, len(state.SeatOwners))
+		for i, ownerID := range state.SeatOwners {
+			owner := ProjectSeatOwnerDto{PlayerID: ownerID}
+			if p, err := g.GetPlayer(ownerID); err == nil {
+				owner.Name = p.Name()
+				owner.Color = p.Color()
+			}
+			seatOwners[i] = owner
+		}
+
+		// Next seat info
+		nextSeatIndex := len(state.SeatOwners)
+		nextSeatCost := 0
+		var nextSeatSubs []ProjectPaymentSubDto
+		if nextSeatIndex < len(def.Seats) {
+			nextSeatCost = def.Seats[nextSeatIndex].Cost
+			for _, sub := range def.Seats[nextSeatIndex].PaymentSubstitutes {
+				nextSeatSubs = append(nextSeatSubs, ProjectPaymentSubDto{
+					ResourceType:   sub.ResourceType,
+					ConversionRate: sub.ConversionRate,
+				})
+			}
+		}
+		if nextSeatSubs == nil {
+			nextSeatSubs = []ProjectPaymentSubDto{}
+		}
+
+		// Buy availability
+		canBuy := true
+		var buyErrors []StateErrorDto
+		if state.IsCompleted {
+			canBuy = false
+			buyErrors = append(buyErrors, StateErrorDto{
+				Code:    StateErrorCode("project-completed"),
+				Message: "This project is already completed",
+			})
+		} else if nextSeatIndex >= len(def.Seats) {
+			canBuy = false
+			buyErrors = append(buyErrors, StateErrorDto{
+				Code:    StateErrorCode("all-seats-filled"),
+				Message: "All seats are filled",
+			})
+		} else if playerCredits < nextSeatCost {
+			canBuy = false
+			buyErrors = append(buyErrors, StateErrorDto{
+				Code:    StateErrorCode("insufficient-credits"),
+				Message: fmt.Sprintf("Insufficient credits: need %d, have %d", nextSeatCost, playerCredits),
+			})
+		}
+
+		// Count current player seats and find tier
+		currentPlayerSeats := 0
+		for _, ownerID := range state.SeatOwners {
+			if ownerID == playerID {
+				currentPlayerSeats++
+			}
+		}
+
+		var currentPlayerTier *ProjectRewardTierDto
+		if currentPlayerSeats > 0 {
+			tier := pfDomain.FindBestTier(def.RewardTiers, currentPlayerSeats)
+			if tier != nil {
+				rewards := make([]ColonyOutputDto, len(tier.Rewards))
+				for j, r := range tier.Rewards {
+					rewards[j] = ColonyOutputDto{Type: r.Type, Amount: r.Amount}
+				}
+				currentPlayerTier = &ProjectRewardTierDto{
+					SeatsOwned: tier.SeatsOwned,
+					Rewards:    rewards,
+				}
+			}
+		}
+
+		// Reward tiers
+		rewardTiers := make([]ProjectRewardTierDto, len(def.RewardTiers))
+		for i, tier := range def.RewardTiers {
+			rewards := make([]ColonyOutputDto, len(tier.Rewards))
+			for j, r := range tier.Rewards {
+				rewards[j] = ColonyOutputDto{Type: r.Type, Amount: r.Amount}
+			}
+			rewardTiers[i] = ProjectRewardTierDto{
+				SeatsOwned: tier.SeatsOwned,
+				Rewards:    rewards,
+			}
+		}
+
+		// Completion effect
+		completionRewards := make([]ColonyOutputDto, len(def.CompletionEffect.Rewards))
+		for j, r := range def.CompletionEffect.Rewards {
+			completionRewards[j] = ColonyOutputDto{Type: r.Type, Amount: r.Amount}
+		}
+
+		dtos = append(dtos, ProjectFundingDto{
+			ID:                 def.ID,
+			Name:               def.Name,
+			Description:        def.Description,
+			Seats:              seats,
+			SeatOwners:         seatOwners,
+			IsCompleted:        state.IsCompleted,
+			NextSeatIndex:      nextSeatIndex,
+			NextSeatCost:       nextSeatCost,
+			CanBuySeat:         canBuy,
+			BuyErrors:          buyErrors,
+			CurrentPlayerSeats: currentPlayerSeats,
+			CurrentPlayerTier:  currentPlayerTier,
+			PaymentSubstitutes: nextSeatSubs,
+			RewardTiers:        rewardTiers,
+			CompletionEffect: ProjectCompletionEffectDto{
+				Description: def.CompletionEffect.Description,
+				Rewards:     completionRewards,
+			},
+			Style: ProjectStyleDto{
+				Color: def.Style.Color,
+				Icon:  def.Style.Icon,
+			},
 		})
 	}
 

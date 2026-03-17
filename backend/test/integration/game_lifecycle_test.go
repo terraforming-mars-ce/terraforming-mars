@@ -23,7 +23,7 @@ func TestGameLifecycle_CreateJoinStartPlay(t *testing.T) {
 	// Create actions
 	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
-	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, logger)
 
 	// Step 1: Create game
 	settings := shared.GameSettings{
@@ -169,7 +169,7 @@ func TestGameLifecycle_SoloMode(t *testing.T) {
 
 	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
-	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, logger)
 
 	// Create game
 	createdGame, err := createAction.Execute(ctx, shared.GameSettings{MaxPlayers: 1, CardPacks: []string{"base-game"}})

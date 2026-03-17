@@ -266,6 +266,22 @@ type ColonyTradedEvent struct {
 	Timestamp time.Time
 }
 
+// ProjectSeatPurchasedEvent is published when a player purchases a seat in a project
+type ProjectSeatPurchasedEvent struct {
+	GameID    string
+	PlayerID  string
+	ProjectID string
+	SeatIndex int
+	Timestamp time.Time
+}
+
+// ProjectCompletedEvent is published when all seats in a project are filled
+type ProjectCompletedEvent struct {
+	GameID    string
+	ProjectID string
+	Timestamp time.Time
+}
+
 // GameEndedEvent is published when the game ends (all global parameters maxed)
 type GameEndedEvent struct {
 	GameID    string

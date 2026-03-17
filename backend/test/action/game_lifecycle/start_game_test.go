@@ -21,7 +21,7 @@ func TestStartGameAction_Success(t *testing.T) {
 		p.SetCorporationID("corp-tharsis-republic")
 	}
 
-	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, logger)
 
 	// Execute
 	err := startAction.Execute(context.Background(), testGame.ID(), testGame.HostPlayerID())
@@ -39,7 +39,7 @@ func TestStartGameAction_GameNotFound(t *testing.T) {
 	repo := testutil.NewTestGameRepository(t)
 	logger := testutil.TestLogger()
 
-	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, logger)
 
 	// Execute
 	err := startAction.Execute(context.Background(), "non-existent-game", "some-player")
@@ -62,7 +62,7 @@ func TestStartGameAction_NotInLobby(t *testing.T) {
 	}
 
 	// Start game once using action
-	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, logger)
 	testutil.AssertNoError(t, startAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "start game")
 
 	// Try to start again
@@ -84,7 +84,7 @@ func TestStartGameAction_NotHost(t *testing.T) {
 		p.SetCorporationID("corp-tharsis-republic")
 	}
 
-	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, logger)
 
 	// Get non-host player
 	nonHostPlayer := ""
@@ -112,7 +112,7 @@ func TestStartGameAction_MinimumPlayers(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	players[0].SetCorporationID("corp-tharsis-republic")
 
-	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, logger)
 
 	// Execute - should allow solo play
 	err := startAction.Execute(context.Background(), testGame.ID(), testGame.HostPlayerID())
@@ -135,7 +135,7 @@ func TestStartGameAction_AssignsPlayerColors(t *testing.T) {
 		p.SetCorporationID("corp-tharsis-republic")
 	}
 
-	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, logger)
 	err := startAction.Execute(context.Background(), testGame.ID(), testGame.HostPlayerID())
 	testutil.AssertNoError(t, err, "Failed to start game")
 
@@ -163,7 +163,7 @@ func TestStartGameAction_InitialResourcesSet(t *testing.T) {
 		p.SetCorporationID("corp-tharsis-republic")
 	}
 
-	startAction := turnAction.NewStartGameAction(repo, nil, nil, logger)
+	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, logger)
 
 	// Execute
 	err := startAction.Execute(context.Background(), testGame.ID(), testGame.HostPlayerID())

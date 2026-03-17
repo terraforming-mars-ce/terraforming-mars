@@ -46,12 +46,13 @@ type GameSettings struct {
 
 // Card pack constants
 const (
-	PackBaseGame     = "base-game"
-	PackFuture       = "future"
-	PackPrelude      = "prelude"
-	PackVenus        = "venus-next"
-	PackExperimental = "experimental"
-	PackColonies     = "colonies"
+	PackBaseGame       = "base-game"
+	PackFuture         = "future"
+	PackPrelude        = "prelude"
+	PackVenus          = "venus-next"
+	PackExperimental   = "experimental"
+	PackColonies       = "colonies"
+	PackProjectFunding = "project-funding"
 )
 
 // HasPrelude returns true if the prelude card pack is enabled
@@ -62,6 +63,11 @@ func (s GameSettings) HasPrelude() bool {
 // HasColonies returns true if the Colonies expansion is enabled
 func (s GameSettings) HasColonies() bool {
 	return slices.Contains(s.CardPacks, PackColonies)
+}
+
+// HasProjectFunding returns true if the Project Funding expansion is enabled
+func (s GameSettings) HasProjectFunding() bool {
+	return slices.Contains(s.CardPacks, PackProjectFunding)
 }
 
 // HasVenus returns true if the Venus expansion is enabled
@@ -78,20 +84,22 @@ func DefaultCardPacks() []string {
 type SourceType string
 
 const (
-	SourceTypeCardPlay        SourceType = "card_play"
-	SourceTypeCardAction      SourceType = "card_action"
-	SourceTypeStandardProject SourceType = "standard_project"
-	SourceTypePassiveEffect   SourceType = "passive_effect"
-	SourceTypeResourceConvert SourceType = "resource_convert"
-	SourceTypeGameEvent       SourceType = "game_event"
-	SourceTypeInitial         SourceType = "initial"
-	SourceTypeAward           SourceType = "award"
-	SourceTypeMilestone       SourceType = "milestone"
-	SourceTypeActionAdded     SourceType = "action_added"
-	SourceTypeEffectAdded     SourceType = "effect_added"
-	SourceTypeGlobalBonus     SourceType = "global_bonus"
-	SourceTypeColonyTrade     SourceType = "colony_trade"
-	SourceTypeColonyBuild     SourceType = "colony_build"
+	SourceTypeCardPlay                 SourceType = "card_play"
+	SourceTypeCardAction               SourceType = "card_action"
+	SourceTypeStandardProject          SourceType = "standard_project"
+	SourceTypePassiveEffect            SourceType = "passive_effect"
+	SourceTypeResourceConvert          SourceType = "resource_convert"
+	SourceTypeGameEvent                SourceType = "game_event"
+	SourceTypeInitial                  SourceType = "initial"
+	SourceTypeAward                    SourceType = "award"
+	SourceTypeMilestone                SourceType = "milestone"
+	SourceTypeActionAdded              SourceType = "action_added"
+	SourceTypeEffectAdded              SourceType = "effect_added"
+	SourceTypeGlobalBonus              SourceType = "global_bonus"
+	SourceTypeColonyTrade              SourceType = "colony_trade"
+	SourceTypeColonyBuild              SourceType = "colony_build"
+	SourceTypeProjectFundingSeat       SourceType = "project_funding_seat"
+	SourceTypeProjectFundingCompletion SourceType = "project_funding_completion"
 )
 
 // Chat constants

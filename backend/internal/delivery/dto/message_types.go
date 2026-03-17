@@ -51,6 +51,7 @@ const (
 
 	MessageTypeActionColonyTrade           MessageType = "action.colony.trade"
 	MessageTypeActionColonyBuild           MessageType = "action.colony.build"
+	MessageTypeActionProjectFundingSeat    MessageType = "action.project-funding.buy-seat"
 	MessageTypeActionConfirmColonyResource MessageType = "action.confirm-colony-resource"
 	MessageTypeActionConfirmAwardFund      MessageType = "action.confirm-award-fund"
 

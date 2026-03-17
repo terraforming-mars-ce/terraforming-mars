@@ -16,6 +16,7 @@ import (
 	"terraforming-mars-backend/internal/game/deck"
 	"terraforming-mars-backend/internal/game/global_parameters"
 	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/projectfunding"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 )
@@ -2191,4 +2192,38 @@ func (g *Game) InitializeTradeFleets(playerIDs []string) {
 		}
 		s.UpdatedAt = time.Now()
 	})
+}
+
+// HasProjectFunding returns true if the project funding expansion is enabled
+func (g *Game) HasProjectFunding() bool {
+	return g.Settings().HasProjectFunding()
+}
+
+// ProjectFundingStates returns the project funding states
+func (g *Game) ProjectFundingStates() []*projectfunding.ProjectState {
+	var result []*projectfunding.ProjectState
+	g.read(func(s *datastore.GameState) { result = s.ProjectFundingStates })
+	return result
+}
+
+// SetProjectFundingStates sets the project funding states
+func (g *Game) SetProjectFundingStates(states []*projectfunding.ProjectState) {
+	g.update(func(s *datastore.GameState) {
+		s.ProjectFundingStates = states
+		s.UpdatedAt = time.Now()
+	})
+}
+
+// GetProjectFundingState returns the state for a specific project
+func (g *Game) GetProjectFundingState(projectID string) *projectfunding.ProjectState {
+	var result *projectfunding.ProjectState
+	g.read(func(s *datastore.GameState) {
+		for _, state := range s.ProjectFundingStates {
+			if state.DefinitionID == projectID {
+				result = state
+				return
+			}
+		}
+	})
+	return result
 }
