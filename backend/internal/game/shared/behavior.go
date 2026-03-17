@@ -242,7 +242,7 @@ func filterLowestProductionChoices(choices []Choice, production Production) []in
 	var valid []int
 	for i, choice := range choices {
 		for _, output := range choice.Outputs {
-			if isProductionResourceType(output.ResourceType) && production.GetAmount(output.ResourceType) == minValue {
+			if IsProductionResourceType(output.ResourceType) && production.GetAmount(output.ResourceType) == minValue {
 				valid = append(valid, i)
 				break
 			}
@@ -251,7 +251,8 @@ func filterLowestProductionChoices(choices []Choice, production Production) []in
 	return valid
 }
 
-func isProductionResourceType(rt ResourceType) bool {
+// IsProductionResourceType returns true if the resource type is a production type.
+func IsProductionResourceType(rt ResourceType) bool {
 	switch rt {
 	case ResourceCreditProduction, ResourceSteelProduction, ResourceTitaniumProduction,
 		ResourcePlantProduction, ResourceEnergyProduction, ResourceHeatProduction:

@@ -7,6 +7,7 @@ import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import { useSoundEffects } from "../../../hooks/useSoundEffects";
 import { useHoverSound } from "../../../hooks/useHoverSound";
 import GreeneryRenderer from "./GreeneryRenderer";
+import PrimitiveRenderer from "./PrimitiveManager";
 import BirdRenderer from "./BirdRenderer";
 import { SPHERE_RADIUS } from "./boardConstants";
 import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
@@ -15,6 +16,8 @@ import { panState } from "../controls/PanControls";
 import { useVPCounting } from "../../../contexts/VPCountingContext";
 
 const noop = () => {};
+const VP_COLOR_SECONDARY: [number, number, number] = [0.4, 0.9, 0.4];
+const VP_COLOR_PRIMARY: [number, number, number] = [0.95, 0.95, 1.0];
 
 interface TileGridProps {
   gameState?: GameDto;
@@ -47,12 +50,11 @@ type TileType =
   | "restricted"
   | "ecological-zone"
   | "natural-preserve"
-  | "world-tree";
+  | "world-tree"
+  | "mohole";
 
 // Labels for special tile types (keyed by occupant type from backend)
-const SPECIAL_TILE_LABELS: Record<string, string> = {
-  "mohole-tile": "Mohole",
-};
+const SPECIAL_TILE_LABELS: Record<string, string> = {};
 
 interface TileData {
   type: TileType;
@@ -132,16 +134,18 @@ export default function TileGrid({
   }, [gameState]);
 
   const [tooltipData, setTooltipData] = useState<TileTooltipData | null>(null);
+  const tooltipPositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const handleTileHoverInfo = useCallback(
     (
       data: Omit<TileTooltipData, "ownerName" | "ownerColor" | "reservedByName"> & {
+        position: { x: number; y: number };
         ownerId: string | null;
         reservedById: string | null;
       },
     ) => {
+      tooltipPositionRef.current = data.position;
       setTooltipData({
-        position: data.position,
         tileType: data.tileType,
         displayName: data.displayName,
         ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
@@ -156,7 +160,7 @@ export default function TileGrid({
   );
 
   const handleTileHoverMove = useCallback((position: { x: number; y: number }) => {
-    setTooltipData((prev) => (prev ? { ...prev, position } : null));
+    tooltipPositionRef.current = position;
   }, []);
 
   const handleTileHoverLeave = useCallback(() => {
@@ -286,6 +290,12 @@ export default function TileGrid({
               ownerId: backendTile.ownerId || null,
               specialLabel: null,
             };
+          case "mohole-tile":
+            return {
+              type: "mohole",
+              ownerId: backendTile.ownerId || null,
+              specialLabel: null,
+            };
           default:
             return {
               type: "special",
@@ -397,6 +407,7 @@ export default function TileGrid({
 
   // --- Centralized interaction sphere (single raycast target) ---
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
+  const hoveredHexKeyRef = useRef<string | null>(null);
   const hoverSound = useHoverSound();
   const interactionSphereGeometry = useMemo(
     () => new THREE.SphereGeometry(SPHERE_RADIUS + 0.02, 64, 64),
@@ -423,14 +434,16 @@ export default function TileGrid({
   const handleSpherePointerMove = useCallback(
     (event: THREE.Event & { point: THREE.Vector3; nativeEvent: PointerEvent }) => {
       if (panState.isPanning) {
-        if (hoveredHexKey) {
+        if (hoveredHexKeyRef.current) {
+          hoveredHexKeyRef.current = null;
           setHoveredHexKey(null);
           handleTileHoverLeave();
         }
         return;
       }
       const key = findNearestHex(event.point);
-      if (key !== hoveredHexKey) {
+      if (key !== hoveredHexKeyRef.current) {
+        hoveredHexKeyRef.current = key;
         setHoveredHexKey(key);
         if (key) {
           const tile = projectedHexGrid.find(
@@ -461,7 +474,6 @@ export default function TileGrid({
       }
     },
     [
-      hoveredHexKey,
       projectedHexGrid,
       availableHexes,
       findNearestHex,
@@ -473,6 +485,7 @@ export default function TileGrid({
   );
 
   const handleSpherePointerLeave = useCallback(() => {
+    hoveredHexKeyRef.current = null;
     setHoveredHexKey(null);
     handleTileHoverLeave();
   }, [handleTileHoverLeave]);
@@ -503,9 +516,9 @@ export default function TileGrid({
         visible={false}
       />
 
-      {/* Tile hover tooltip (portals to document.body) */}
+      {/* Tile hover tooltip — Html bridges R3F→DOM, TileTooltip portals to body */}
       <Html>
-        <TileTooltip data={tooltipData} />
+        <TileTooltip data={tooltipData} positionRef={tooltipPositionRef} />
       </Html>
       {/* Single GreeneryRenderer handles ALL greenery + volcano vegetation */}
       <GreeneryRenderer
@@ -514,6 +527,7 @@ export default function TileGrid({
         livingGreeneryTiles={livingGreeneryTiles}
         newTileKeys={newGreeneryKeys}
       />
+      <PrimitiveRenderer />
       <BirdRenderer livingGreeneryTiles={livingGreeneryTiles} />
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
@@ -523,9 +537,7 @@ export default function TileGrid({
         const isPrimaryHighlight = vpCountingState.highlightedTiles.has(hexKey);
         const isSecondaryHighlight = vpCountingState.secondaryHighlightedTiles.has(hexKey);
         const vpHighlightIntensity = isPrimaryHighlight ? 0.5 : isSecondaryHighlight ? 0.25 : 0;
-        const vpHighlightColor: [number, number, number] = isSecondaryHighlight
-          ? [0.4, 0.9, 0.4]
-          : [0.95, 0.95, 1.0];
+        const vpHighlightColor = isSecondaryHighlight ? VP_COLOR_SECONDARY : VP_COLOR_PRIMARY;
 
         return (
           <Tile

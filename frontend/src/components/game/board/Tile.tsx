@@ -10,6 +10,7 @@ import NuclearZoneTile from "./NuclearZoneTile";
 import MiningTile from "./MiningTile";
 import ReservedAreaTile from "./ReservedAreaTile";
 import WorldTreeTile from "./WorldTreeTile";
+import MoholeTile from "./MoholeTile";
 import { useTextures } from "../../../hooks/useTextures";
 import {
   sphereProjectionVertex,
@@ -255,7 +256,8 @@ interface TileProps {
     | "restricted"
     | "ecological-zone"
     | "natural-preserve"
-    | "world-tree";
+    | "world-tree"
+    | "mohole";
   ownerId?: string | null;
   ownerColor?: string;
   reservedById?: string | null;
@@ -548,6 +550,8 @@ function Tile({
         return new THREE.Color("#2d6e2e");
       case "world-tree":
         return new THREE.Color("#1a3a12");
+      case "mohole":
+        return new THREE.Color("#3a2a1a");
       default:
         return new THREE.Color("#6d4c41").multiplyScalar(0.8);
     }
@@ -575,7 +579,8 @@ function Tile({
         tileType === "restricted" ||
         tileType === "ecological-zone" ||
         tileType === "natural-preserve" ||
-        tileType === "world-tree"
+        tileType === "world-tree" ||
+        tileType === "mohole"
           ? 0
           : tileType === "empty"
             ? 0.3
@@ -748,6 +753,15 @@ function Tile({
       {/* Nuclear Zone 3D tile */}
       {tileType === "nuclear-zone" && (
         <NuclearZoneTile
+          isNewlyPlaced={isNewlyPlaced}
+          surfaceNormal={tileData.normal}
+          worldPosition={adjustedPosition}
+        />
+      )}
+
+      {/* Mohole 3D tile */}
+      {tileType === "mohole" && (
+        <MoholeTile
           isNewlyPlaced={isNewlyPlaced}
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}

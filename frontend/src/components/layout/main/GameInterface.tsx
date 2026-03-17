@@ -28,10 +28,10 @@ import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
 import { useGameEvent } from "@/hooks/useGameEvent.ts";
 import { usePlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
-import MainMenuSettingsButton from "../../ui/buttons/MainMenuSettingsButton.tsx";
 import GameButton from "../../ui/buttons/GameButton.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
+import MainMenuHamburger from "../../ui/buttons/MainMenuHamburger.tsx";
 import SpaceBackground from "../../3d/SpaceBackground.tsx";
 import EndGameBottomBar from "../../ui/endgame/EndGameBottomBar.tsx";
 import { VPCountingProvider } from "../../../contexts/VPCountingContext.tsx";
@@ -131,6 +131,7 @@ export default function GameInterface() {
   const showTabConflict = useUIOverlayStore((s) => s.showTabConflict);
   const conflictingTabInfo = useUIOverlayStore((s) => s.conflictingTabInfo);
   const showLeaveGameConfirm = useUIOverlayStore((s) => s.showLeaveGameConfirm);
+  const showCloseGameConfirm = useUIOverlayStore((s) => s.showCloseGameConfirm);
   const showEndGameConfirm = useUIOverlayStore((s) => s.showEndGameConfirm);
   const showStartingSelection = useUIOverlayStore((s) => s.showStartingSelection);
   const isStartingSelectionHidden = useUIOverlayStore((s) => s.isStartingSelectionHidden);
@@ -385,6 +386,8 @@ export default function GameInterface() {
   }, []);
 
   const handleConfirmLeaveGame = useCallback(() => {
+    useUIOverlayStore.getState().setShowLeaveGameConfirm(false);
+    useUIOverlayStore.getState().setShowCloseGameConfirm(false);
     clearGameSession();
     globalWebSocketManager.disconnect();
     setTimeout(() => {
@@ -731,6 +734,30 @@ export default function GameInterface() {
         </GameMenuModal>
       )}
 
+      {showCloseGameConfirm && (
+        <GameMenuModal
+          title="Close game?"
+          showBackdrop={true}
+          onClose={() => useUIOverlayStore.getState().setShowCloseGameConfirm(false)}
+          zIndex={10000}
+        >
+          <p className="text-white/80 text-center mb-6">
+            You can reconnect to the game again without losing any progress.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <GameButton
+              buttonType="secondary"
+              onClick={() => useUIOverlayStore.getState().setShowCloseGameConfirm(false)}
+            >
+              Cancel
+            </GameButton>
+            <GameButton variant="error" onClick={handleConfirmLeaveGame}>
+              Close
+            </GameButton>
+          </div>
+        </GameMenuModal>
+      )}
+
       {showEndGameConfirm && (
         <GameMenuModal
           title="End game?"
@@ -755,6 +782,13 @@ export default function GameInterface() {
         </GameMenuModal>
       )}
 
+      {showStartingSelection && !isStartingSelectionHidden && game && (
+        <MainMenuHamburger
+          gameId={game.id}
+          onLeaveGame={handleLeaveGame}
+          onEndGame={playerId === game.hostPlayerId ? handleEndGame : undefined}
+        />
+      )}
       <StartingCardSelectionOverlay
         isOpen={
           showStartingSelection &&
@@ -783,7 +817,11 @@ export default function GameInterface() {
 
       {showWaitingForPlayers && game && (
         <>
-          <MainMenuSettingsButton />
+          <MainMenuHamburger
+            gameId={game.id}
+            onLeaveGame={handleLeaveGame}
+            onEndGame={playerId === game.hostPlayerId ? handleEndGame : undefined}
+          />
           <div className="fixed inset-0 z-[1000] flex items-center justify-center">
             <div className="w-[450px] max-w-[90vw] bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] p-8 backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(30,60,150,0.3)] animate-[modalFadeIn_0.3s_ease-out]">
               <div className="text-center mb-6">

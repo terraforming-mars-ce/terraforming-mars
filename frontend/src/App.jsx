@@ -14,9 +14,12 @@ import { World3DSettingsProvider } from "./contexts/World3DSettingsContext.tsx";
 import NotificationContainer from "./components/ui/notifications/NotificationContainer.tsx";
 import { audioService } from "./services/audioService.ts";
 import { skyboxCache } from "./services/SkyboxCache.ts";
-import MainMenuSettingsButton from "./components/ui/buttons/MainMenuSettingsButton.tsx";
+import MainMenuHamburger from "./components/ui/buttons/MainMenuHamburger.tsx";
 import SpaceBackground from "./components/3d/SpaceBackground.tsx";
 import LoadingOverlay from "./components/game/view/LoadingOverlay.tsx";
+import BugReportWindow from "./components/ui/debug/BugReportWindow.tsx";
+import { WindowManagerProvider } from "./components/ui/debug/WindowManager.tsx";
+import { APP_VERSION } from "./config.ts";
 import "./App.css";
 
 function App() {
@@ -108,7 +111,8 @@ function AppWithBackground() {
       {showSpaceBackground && overlayVisible && (
         <LoadingOverlay isLoaded={skyboxReady} onTransitionEnd={() => setOverlayVisible(false)} />
       )}
-      {showSpaceBackground && !overlayVisible && <MainMenuSettingsButton />}
+      {showSpaceBackground && !overlayVisible && <MainMenuHamburger />}
+      {showSpaceBackground && !overlayVisible && <MenuFooter />}
       <Routes>
         <Route path="/" element={<GameLandingPage />} />
         <Route path="/create" element={<CreateGamePage />} />
@@ -118,6 +122,38 @@ function AppWithBackground() {
         <Route path="/game/:gameId" element={<GameInterface />} />
         <Route path="/game" element={<GameInterface />} />
       </Routes>
+    </>
+  );
+}
+
+function MenuFooter() {
+  const [showBugReportWindow, setShowBugReportWindow] = useState(false);
+
+  useEffect(() => {
+    const handleToggleBugReport = () => setShowBugReportWindow((prev) => !prev);
+    window.addEventListener("toggle-bug-report-window", handleToggleBugReport);
+    return () => window.removeEventListener("toggle-bug-report-window", handleToggleBugReport);
+  }, []);
+
+  return (
+    <>
+      <span className="fixed bottom-[16px] left-[16px] text-white/30 text-xs select-none z-10">
+        {APP_VERSION}
+        <span className="mx-1">|</span>
+        <button
+          className="hover:text-white/70 transition-colors cursor-pointer"
+          onClick={() => window.dispatchEvent(new CustomEvent("toggle-bug-report-window"))}
+        >
+          Bug report
+        </button>
+      </span>
+      <WindowManagerProvider>
+        <BugReportWindow
+          isVisible={showBugReportWindow}
+          onClose={() => setShowBugReportWindow(false)}
+          gameState={null}
+        />
+      </WindowManagerProvider>
     </>
   );
 }

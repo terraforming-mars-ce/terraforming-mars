@@ -15,7 +15,6 @@ import {
   RESOURCE_DISPLAY_CLASS,
 } from "./overlayStyles.ts";
 import GameButton from "../buttons/GameButton.tsx";
-import MainMenuSettingsButton from "../buttons/MainMenuSettingsButton.tsx";
 
 interface StartingCardSelectionOverlayProps {
   isOpen: boolean;
@@ -101,7 +100,6 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
-      <MainMenuSettingsButton />
       <div className={OVERLAY_CONTAINER_CLASS}>
         <div className={OVERLAY_HEADER_CLASS}>
           <h2 className={OVERLAY_TITLE_CLASS}>Select Starting Cards</h2>

@@ -33,7 +33,6 @@ const JoinGameOverlay: React.FC<JoinGameOverlayProps> = ({
         visible={visible}
         onExited={onExited}
         showBackdrop={true}
-        showSettings={false}
         onClose={onCancel}
         showCloseButton={true}
       >

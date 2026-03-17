@@ -306,6 +306,7 @@ export default function Game3DView({
             zIndex: 0,
           }}
           resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
+          gl={{ stencil: true }}
           dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
           shadows
         >

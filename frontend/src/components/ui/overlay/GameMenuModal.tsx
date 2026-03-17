@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import MainMenuSettingsButton from "../buttons/MainMenuSettingsButton.tsx";
 import BackButton from "../buttons/BackButton.tsx";
 
 interface GameMenuModalProps {
@@ -10,7 +9,6 @@ interface GameMenuModalProps {
   visible?: boolean;
   onExited?: () => void;
   showBackdrop?: boolean;
-  showSettings?: boolean;
   zIndex?: number;
   onClose?: () => void;
   showCloseButton?: boolean;
@@ -24,7 +22,6 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
   visible,
   onExited,
   showBackdrop = false,
-  showSettings = true,
   zIndex = 1000,
   onClose,
   showCloseButton = false,
@@ -92,7 +89,6 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
       )}
 
       {onBack && <BackButton onClick={onBack} className="fixed top-[30px] left-[30px] z-[10000]" />}
-      {showSettings && <MainMenuSettingsButton />}
       <div
         className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] max-w-[90vw] ${animationClass}`}
         style={{ zIndex }}

@@ -57,6 +57,14 @@ export default function MarsSphere({
       metalness: 0.05,
     });
 
+    mat.stencilWrite = true;
+    mat.stencilFunc = THREE.NotEqualStencilFunc;
+    mat.stencilRef = 1;
+    mat.stencilFuncMask = 0xff;
+    mat.stencilFail = THREE.KeepStencilOp;
+    mat.stencilZFail = THREE.KeepStencilOp;
+    mat.stencilZPass = THREE.KeepStencilOp;
+
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uSaturation = { value: 0.3 };
       shader.fragmentShader = shader.fragmentShader.replace(

@@ -38,7 +38,6 @@ const SpectateGameOverlay: React.FC<SpectateGameOverlayProps> = ({
       title="Spectate Game"
       onBack={onCancel}
       showBackdrop={true}
-      showSettings={false}
       onClose={onCancel}
       showCloseButton={true}
     >

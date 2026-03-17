@@ -80,6 +80,7 @@ export default function DustEffect({
       mesh.position.copy(tangent.clone().multiplyScalar(offsetX));
       mesh.position.add(bitangent.clone().multiplyScalar(offsetY));
 
+      mesh.renderOrder = 20;
       mesh.rotation.z = Math.random() * Math.PI * 2;
 
       const initialScale = 0.3 + Math.random() * 0.4;

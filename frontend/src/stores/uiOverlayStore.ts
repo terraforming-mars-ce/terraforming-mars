@@ -7,6 +7,7 @@ interface UIOverlayState {
   showBugReportWindow: boolean;
   showCorporationOverlay: boolean;
   showLeaveGameConfirm: boolean;
+  showCloseGameConfirm: boolean;
   showEndGameConfirm: boolean;
   showProductionPhaseModal: boolean;
   isProductionModalHidden: boolean;
@@ -28,6 +29,7 @@ interface UIOverlayState {
   setShowBugReportWindow: (show: boolean) => void;
   setShowCorporationOverlay: (show: boolean) => void;
   setShowLeaveGameConfirm: (show: boolean) => void;
+  setShowCloseGameConfirm: (show: boolean) => void;
   setShowEndGameConfirm: (show: boolean) => void;
   setShowProductionPhaseModal: (show: boolean) => void;
   setIsProductionModalHidden: (hidden: boolean) => void;
@@ -54,6 +56,7 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   showBugReportWindow: false,
   showCorporationOverlay: false,
   showLeaveGameConfirm: false,
+  showCloseGameConfirm: false,
   showEndGameConfirm: false,
   showProductionPhaseModal: false,
   isProductionModalHidden: false,
@@ -75,6 +78,7 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   setShowBugReportWindow: (show) => set({ showBugReportWindow: show }),
   setShowCorporationOverlay: (show) => set({ showCorporationOverlay: show }),
   setShowLeaveGameConfirm: (show) => set({ showLeaveGameConfirm: show }),
+  setShowCloseGameConfirm: (show) => set({ showCloseGameConfirm: show }),
   setShowEndGameConfirm: (show) => set({ showEndGameConfirm: show }),
   setShowProductionPhaseModal: (show) => set({ showProductionPhaseModal: show }),
   setIsProductionModalHidden: (hidden) => set({ isProductionModalHidden: hidden }),
