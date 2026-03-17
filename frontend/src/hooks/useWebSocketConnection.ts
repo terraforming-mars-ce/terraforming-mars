@@ -199,6 +199,26 @@ export function useWebSocketConnection(
           }
         }
 
+        const prevProjects = previousGameRef.current.projectFunding;
+        const newProjects = updatedGame.projectFunding;
+        if (prevProjects && newProjects) {
+          for (const proj of newProjects) {
+            const prev = prevProjects.find((p) => p.id === proj.id);
+            if (prev && proj.seatOwners.length > prev.seatOwners.length) {
+              const newOwner = proj.seatOwners[proj.seatOwners.length - 1];
+              const allPlayers = [updatedGame.currentPlayer, ...(updatedGame.otherPlayers ?? [])];
+              const fundPlayer = allPlayers.find((p) => p.id === newOwner.playerId);
+              enqueueGameEvent({
+                title: "PROJECT FUNDED",
+                achievementName: proj.name,
+                playerName: fundPlayer?.name ?? "Unknown",
+                playerColor: fundPlayer?.color ?? "#64c8ff",
+                duration: 4000,
+              });
+            }
+          }
+        }
+
         if (changes.size > 0) {
           setTimeout(() => {
             useGameStore.getState().setChangedPaths(new Set());

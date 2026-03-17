@@ -162,14 +162,14 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 	}
 
 	g.AddTriggeredEffect(shared.TriggeredEffect{
-		CardName:          "Fund Project: " + definition.Name,
+		CardName:          definition.Name,
 		PlayerID:          playerID,
 		SourceType:        shared.SourceTypeProjectFundingSeat,
 		CalculatedOutputs: calculatedOutputs,
 	})
 
-	a.WriteStateLogFull(ctx, g, "Fund Project: "+definition.Name, shared.SourceTypeProjectFundingSeat,
-		playerID, fmt.Sprintf("Purchased seat %d on %s", seatIndex+1, definition.Name), nil, calculatedOutputs, nil)
+	a.WriteStateLogFull(ctx, g, definition.Name, shared.SourceTypeProjectFundingSeat,
+		playerID, fmt.Sprintf("Funded %s project", definition.Name), nil, calculatedOutputs, nil)
 
 	events.Publish(g.EventBus(), events.ProjectSeatPurchasedEvent{
 		GameID:    g.ID(),
