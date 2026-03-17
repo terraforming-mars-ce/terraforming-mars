@@ -24,5 +24,11 @@ func LoadProjectsFromJSON(filepath string) ([]projectfunding.ProjectDefinition, 
 		return nil, fmt.Errorf("no projects found in file: %s", filepath)
 	}
 
+	for _, p := range projects {
+		if len(p.Seats) == 0 {
+			return nil, fmt.Errorf("project %q has no seats defined", p.ID)
+		}
+	}
+
 	return projects, nil
 }

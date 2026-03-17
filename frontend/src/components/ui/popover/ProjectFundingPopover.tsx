@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
+  CardPaymentDto,
   GameDto,
   GameStatusActive,
   GamePhaseAction,
@@ -12,6 +13,8 @@ import { webSocketService } from "@/services/webSocketService.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover } from "../GamePopover";
 import { mapOutputTypeToIcon } from "./ColonySteps.tsx";
+import PaymentSelectionPopover from "./PaymentSelectionPopover.tsx";
+import type { GenericPaymentConfig } from "./PaymentSelectionPopover.tsx";
 
 interface ProjectFundingPopoverProps {
   isVisible: boolean;
@@ -34,48 +37,98 @@ const ProjectFundingPopover: React.FC<ProjectFundingPopoverProps> = ({
 
   const projects = gameState?.projectFunding ?? [];
 
+  const [pendingProject, setPendingProject] = useState<ProjectFundingDto | null>(null);
+  const resources = gameState?.currentPlayer?.resources;
+
+  const paymentConfig: GenericPaymentConfig | undefined = pendingProject
+    ? {
+        name: `${pendingProject.name} Seat`,
+        cost: pendingProject.nextSeatCost,
+        substitutes: pendingProject.paymentSubstitutes.map((s) => ({
+          resourceType: s.resourceType,
+          conversionRate: s.conversionRate,
+        })),
+      }
+    : undefined;
+
+  const handlePaymentConfirm = useCallback(
+    (payment: CardPaymentDto) => {
+      if (pendingProject) {
+        void webSocketService.buyProjectSeat(
+          pendingProject.id,
+          payment.credits,
+          payment.steel,
+          payment.titanium,
+        );
+        setPendingProject(null);
+      }
+    },
+    [pendingProject],
+  );
+
+  const handlePaymentCancel = useCallback(() => {
+    setPendingProject(null);
+  }, []);
+
+  const handleBuySeat = useCallback((project: ProjectFundingDto) => {
+    if (project.paymentSubstitutes.length > 0) {
+      setPendingProject(project);
+    } else {
+      void webSocketService.buyProjectSeat(project.id, project.nextSeatCost, 0, 0);
+    }
+  }, []);
+
   return (
-    <GamePopover
-      isVisible={isVisible}
-      onClose={onClose}
-      position={{ type: "fixed", top: 60, left: 20 }}
-      theme="colonies"
-      excludeRef={anchorRef}
-      header={{
-        title: "Project Funding",
-        showCloseButton: true,
-      }}
-      width={560}
-      maxHeight="80vh"
-      animation="slideDown"
-      className="!bg-space-black-darker"
-    >
-      <div className="p-2 space-y-2">
-        {projects.map((project) => (
-          <ProjectCard key={project.id} project={project} canAct={canAct} gameState={gameState} />
-        ))}
-      </div>
-    </GamePopover>
+    <>
+      <GamePopover
+        isVisible={isVisible}
+        onClose={onClose}
+        position={{ type: "fixed", top: 60, left: 20 }}
+        theme="colonies"
+        excludeRef={anchorRef}
+        header={{
+          title: "Project Funding",
+          showCloseButton: true,
+        }}
+        width={560}
+        maxHeight="80vh"
+        animation="slideDown"
+        className="!bg-space-black-darker"
+      >
+        <div className="p-2 space-y-2">
+          {projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              canAct={canAct}
+              onBuySeat={handleBuySeat}
+            />
+          ))}
+        </div>
+      </GamePopover>
+
+      {resources && paymentConfig && (
+        <PaymentSelectionPopover
+          genericPayment={paymentConfig}
+          playerResources={resources}
+          onConfirm={handlePaymentConfirm}
+          onCancel={handlePaymentCancel}
+          isVisible={!!pendingProject}
+        />
+      )}
+    </>
   );
 };
 
 interface ProjectCardProps {
   project: ProjectFundingDto;
   canAct: boolean;
-  gameState?: GameDto;
+  onBuySeat: (project: ProjectFundingDto) => void;
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, gameState }) => {
-  const [showPayment, setShowPayment] = useState(false);
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat }) => {
   const canBuy = canAct && project.canBuySeat;
   const dimmed = canAct && !canBuy && !project.isCompleted;
-
-  const resources = gameState?.currentPlayer?.resources;
-
-  const handleBuySeat = (credits: number, steel: number, titanium: number) => {
-    void webSocketService.buyProjectSeat(project.id, credits, steel, titanium);
-    setShowPayment(false);
-  };
 
   const filledSeats = project.seats.filter((s) => s.isFilled).length;
   const totalSeats = project.seats.length;
@@ -101,37 +154,20 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, gameState })
         </div>
 
         {canAct && !project.isCompleted && (
-          <div>
-            {showPayment ? (
-              <PaymentSelector
-                project={project}
-                resources={resources}
-                onConfirm={handleBuySeat}
-                onCancel={() => setShowPayment(false)}
-              />
-            ) : (
-              <button
-                className={`px-3 py-1 rounded text-xs font-semibold font-orbitron transition-all cursor-pointer ${
-                  canBuy
-                    ? "bg-white/15 hover:bg-white/25 text-white"
-                    : "bg-gray-600/30 text-gray-500"
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (canBuy) {
-                    if (project.paymentSubstitutes.length > 0) {
-                      setShowPayment(true);
-                    } else {
-                      handleBuySeat(project.nextSeatCost, 0, 0);
-                    }
-                  }
-                }}
-                disabled={!canBuy}
-              >
-                Buy Seat
-              </button>
-            )}
-          </div>
+          <button
+            className={`px-3 py-1 rounded text-xs font-semibold font-orbitron transition-all cursor-pointer ${
+              canBuy ? "bg-white/15 hover:bg-white/25 text-white" : "bg-gray-600/30 text-gray-500"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (canBuy) {
+                onBuySeat(project);
+              }
+            }}
+            disabled={!canBuy}
+          >
+            Buy Seat
+          </button>
         )}
       </div>
 
@@ -218,106 +254,6 @@ const SeatBar: React.FC<SeatBarProps> = ({ seats, styleColor }) => {
           )}
         </div>
       ))}
-    </div>
-  );
-};
-
-interface PaymentSelectorProps {
-  project: ProjectFundingDto;
-  resources?: {
-    credits?: number;
-    steel?: number;
-    titanium?: number;
-  };
-  onConfirm: (credits: number, steel: number, titanium: number) => void;
-  onCancel: () => void;
-}
-
-const PaymentSelector: React.FC<PaymentSelectorProps> = ({
-  project,
-  resources,
-  onConfirm,
-  onCancel,
-}) => {
-  const cost = project.nextSeatCost;
-  const subs = project.paymentSubstitutes;
-
-  const hasSteelSub = subs.find((s) => s.resourceType === "steel");
-  const hasTitaniumSub = subs.find((s) => s.resourceType === "titanium");
-
-  const [steelAmount, setSteelAmount] = useState(0);
-  const [titaniumAmount, setTitaniumAmount] = useState(0);
-
-  const steelValue = hasSteelSub ? steelAmount * hasSteelSub.conversionRate : 0;
-  const titaniumValue = hasTitaniumSub ? titaniumAmount * hasTitaniumSub.conversionRate : 0;
-  const creditsNeeded = Math.max(0, cost - steelValue - titaniumValue);
-
-  const canAfford = creditsNeeded <= (resources?.credits ?? 0);
-  const maxSteel = Math.min(
-    resources?.steel ?? 0,
-    hasSteelSub ? Math.ceil(cost / hasSteelSub.conversionRate) : 0,
-  );
-  const maxTitanium = Math.min(
-    resources?.titanium ?? 0,
-    hasTitaniumSub ? Math.ceil(cost / hasTitaniumSub.conversionRate) : 0,
-  );
-
-  return (
-    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-      {hasSteelSub && (
-        <div className="flex items-center gap-1">
-          <GameIcon iconType="steel" size="small" />
-          <input
-            type="number"
-            min={0}
-            max={maxSteel}
-            value={steelAmount}
-            onChange={(e) =>
-              setSteelAmount(Math.min(maxSteel, Math.max(0, parseInt(e.target.value) || 0)))
-            }
-            className="w-10 bg-white/10 text-white text-xs text-center rounded px-1 py-0.5 border border-white/20 cursor-text"
-          />
-        </div>
-      )}
-      {hasTitaniumSub && (
-        <div className="flex items-center gap-1">
-          <GameIcon iconType="titanium" size="small" />
-          <input
-            type="number"
-            min={0}
-            max={maxTitanium}
-            value={titaniumAmount}
-            onChange={(e) =>
-              setTitaniumAmount(Math.min(maxTitanium, Math.max(0, parseInt(e.target.value) || 0)))
-            }
-            className="w-10 bg-white/10 text-white text-xs text-center rounded px-1 py-0.5 border border-white/20 cursor-text"
-          />
-        </div>
-      )}
-      <div className="flex items-center gap-1 text-[10px] text-white/60">
-        <GameIcon iconType="credit" amount={creditsNeeded} size="small" />
-      </div>
-      <button
-        className={`px-2 py-1 rounded text-xs font-semibold font-orbitron transition-all cursor-pointer ${
-          canAfford
-            ? "bg-emerald-500/30 hover:bg-emerald-500/50 text-emerald-300"
-            : "bg-gray-600/30 text-gray-500"
-        }`}
-        onClick={() => {
-          if (canAfford) {
-            onConfirm(creditsNeeded, steelAmount, titaniumAmount);
-          }
-        }}
-        disabled={!canAfford}
-      >
-        Buy
-      </button>
-      <button
-        className="px-2 py-1 rounded text-xs font-semibold font-orbitron bg-white/10 hover:bg-white/20 text-white/60 transition-all cursor-pointer"
-        onClick={onCancel}
-      >
-        X
-      </button>
     </div>
   );
 };

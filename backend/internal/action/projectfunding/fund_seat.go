@@ -97,6 +97,10 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 	seat := definition.Seats[seatIndex]
 	cost := seat.Cost
 
+	if payment.Credits < 0 || payment.Steel < 0 || payment.Titanium < 0 {
+		return fmt.Errorf("payment amounts must be non-negative")
+	}
+
 	// Validate payment covers cost
 	totalPayment := payment.Credits
 	steelValue := 0
@@ -179,12 +183,12 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 		Timestamp: time.Now(),
 	})
 
+	a.ConsumePlayerAction(g, log)
+
 	// Check for completion
 	if len(projectState.SeatOwners) >= len(definition.Seats) {
 		a.completeProject(ctx, g, projectState, definition, log)
 	}
-
-	a.ConsumePlayerAction(g, log)
 
 	log.Info("Project seat purchased",
 		zap.String("project_id", projectID),
@@ -206,7 +210,7 @@ func (a *FundSeatAction) completeProject(ctx context.Context, g *game.Game, stat
 
 	// Apply tier rewards to each funder
 	for playerID, count := range seatCounts {
-		tier := findBestTier(def.RewardTiers, count)
+		tier := pf.FindBestTier(def.RewardTiers, count)
 		if tier == nil {
 			continue
 		}
@@ -251,18 +255,6 @@ func (a *FundSeatAction) completeProject(ctx context.Context, g *game.Game, stat
 	log.Debug("Project completed",
 		zap.String("project_id", def.ID),
 		zap.Int("total_seats", len(state.SeatOwners)))
-}
-
-func findBestTier(tiers []pf.RewardTier, seatsOwned int) *pf.RewardTier {
-	var best *pf.RewardTier
-	for i := range tiers {
-		if tiers[i].SeatsOwned <= seatsOwned {
-			if best == nil || tiers[i].SeatsOwned > best.SeatsOwned {
-				best = &tiers[i]
-			}
-		}
-	}
-	return best
 }
 
 func applyRewards(p *player.Player, rewards []pf.Output) []shared.CalculatedOutput {

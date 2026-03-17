@@ -47,6 +47,19 @@ type Style struct {
 	Icon  string `json:"icon"`
 }
 
+// FindBestTier returns the highest reward tier the player qualifies for based on seats owned.
+func FindBestTier(tiers []RewardTier, seatsOwned int) *RewardTier {
+	var best *RewardTier
+	for i := range tiers {
+		if tiers[i].SeatsOwned <= seatsOwned {
+			if best == nil || tiers[i].SeatsOwned > best.SeatsOwned {
+				best = &tiers[i]
+			}
+		}
+	}
+	return best
+}
+
 // ProjectState is the runtime mutable state per project in a game
 type ProjectState struct {
 	DefinitionID string

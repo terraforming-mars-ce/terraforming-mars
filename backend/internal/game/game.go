@@ -1955,8 +1955,15 @@ func (g *Game) subscribeToGlobalParameterBonuses() {
 
 		if e.OldValue < 8 && e.NewValue >= 8 {
 			ctx := context.Background()
-			if _, err := g.globalParameters.IncreaseTemperature(ctx, 1, e.ChangedBy); err != nil {
+			actualSteps, err := g.globalParameters.IncreaseTemperature(ctx, 1, e.ChangedBy)
+			if err != nil {
 				logger.Get().Warn("Failed to increase temperature from oxygen bonus", zap.Error(err))
+			}
+			if actualSteps > 0 {
+				p, pErr := g.GetPlayer(e.ChangedBy)
+				if pErr == nil {
+					p.Resources().UpdateTerraformRating(actualSteps)
+				}
 			}
 			g.AddTriggeredEffect(shared.TriggeredEffect{
 				CardName:   "Oxygen Bonus",

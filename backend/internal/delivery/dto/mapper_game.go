@@ -814,7 +814,7 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 
 		var currentPlayerTier *ProjectRewardTierDto
 		if currentPlayerSeats > 0 {
-			tier := findBestRewardTier(def.RewardTiers, currentPlayerSeats)
+			tier := pfDomain.FindBestTier(def.RewardTiers, currentPlayerSeats)
 			if tier != nil {
 				rewards := make([]ColonyOutputDto, len(tier.Rewards))
 				for j, r := range tier.Rewards {
@@ -873,16 +873,4 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 	}
 
 	return dtos
-}
-
-func findBestRewardTier(tiers []pfDomain.RewardTier, seatsOwned int) *pfDomain.RewardTier {
-	var best *pfDomain.RewardTier
-	for i := range tiers {
-		if tiers[i].SeatsOwned <= seatsOwned {
-			if best == nil || tiers[i].SeatsOwned > best.SeatsOwned {
-				best = &tiers[i]
-			}
-		}
-	}
-	return best
 }
