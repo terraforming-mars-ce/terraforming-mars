@@ -38,12 +38,12 @@ export function useGameHotkeys(
   }, []);
 
   useEffect(() => {
-    const handleToggleBugReport = () => {
-      useUIOverlayStore.getState().toggleShowBugReportWindow();
+    const handleToggleFeedback = () => {
+      useUIOverlayStore.getState().toggleShowFeedbackWindow();
     };
-    window.addEventListener("toggle-bug-report-window", handleToggleBugReport);
+    window.addEventListener("toggle-feedback-window", handleToggleFeedback);
     return () => {
-      window.removeEventListener("toggle-bug-report-window", handleToggleBugReport);
+      window.removeEventListener("toggle-feedback-window", handleToggleFeedback);
     };
   }, []);
 

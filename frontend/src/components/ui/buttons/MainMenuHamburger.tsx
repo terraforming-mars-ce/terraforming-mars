@@ -7,7 +7,7 @@ import {
   CopyIcon,
   FullscreenIcon,
   ExitFullscreenIcon,
-  BugIcon,
+  FeedbackIcon,
   LeaveIcon,
   EndGameIcon,
 } from "../menuIcons.tsx";
@@ -45,9 +45,9 @@ const MainMenuHamburger: React.FC<MainMenuHamburgerProps> = ({
     setMenuOpen(false);
   }, [isFullscreen]);
 
-  const handleReportBug = useCallback(() => {
+  const handleFeedback = useCallback(() => {
     setMenuOpen(false);
-    window.dispatchEvent(new CustomEvent("toggle-bug-report-window"));
+    window.dispatchEvent(new CustomEvent("toggle-feedback-window"));
   }, []);
 
   const handleCopyGameLink = useCallback(async () => {
@@ -114,7 +114,7 @@ const MainMenuHamburger: React.FC<MainMenuHamburgerProps> = ({
           onClick={handleToggleFullscreen}
         />
         <MenuPopoverDivider />
-        <MenuPopoverItem icon={<BugIcon />} label="Report Bug" onClick={handleReportBug} />
+        <MenuPopoverItem icon={<FeedbackIcon />} label="Feedback" onClick={handleFeedback} />
         {onLeaveGame && (
           <>
             <MenuPopoverDivider />

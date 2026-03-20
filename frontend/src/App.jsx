@@ -17,7 +17,7 @@ import { skyboxCache } from "./services/SkyboxCache.ts";
 import MainMenuHamburger from "./components/ui/buttons/MainMenuHamburger.tsx";
 import SpaceBackground from "./components/3d/SpaceBackground.tsx";
 import LoadingOverlay from "./components/game/view/LoadingOverlay.tsx";
-import BugReportWindow from "./components/ui/debug/BugReportWindow.tsx";
+import FeedbackWindow from "./components/ui/debug/FeedbackWindow.tsx";
 import { WindowManagerProvider } from "./components/ui/debug/WindowManager.tsx";
 import { APP_VERSION } from "./config.ts";
 import "./App.css";
@@ -127,12 +127,12 @@ function AppWithBackground() {
 }
 
 function MenuFooter() {
-  const [showBugReportWindow, setShowBugReportWindow] = useState(false);
+  const [showFeedbackWindow, setShowFeedbackWindow] = useState(false);
 
   useEffect(() => {
-    const handleToggleBugReport = () => setShowBugReportWindow((prev) => !prev);
-    window.addEventListener("toggle-bug-report-window", handleToggleBugReport);
-    return () => window.removeEventListener("toggle-bug-report-window", handleToggleBugReport);
+    const handleToggleFeedback = () => setShowFeedbackWindow((prev) => !prev);
+    window.addEventListener("toggle-feedback-window", handleToggleFeedback);
+    return () => window.removeEventListener("toggle-feedback-window", handleToggleFeedback);
   }, []);
 
   return (
@@ -143,9 +143,9 @@ function MenuFooter() {
           <span className="mx-1">|</span>
           <button
             className="hover:text-white/70 transition-colors cursor-pointer"
-            onClick={() => window.dispatchEvent(new CustomEvent("toggle-bug-report-window"))}
+            onClick={() => window.dispatchEvent(new CustomEvent("toggle-feedback-window"))}
           >
-            Bug report
+            Feedback
           </button>
         </span>
         <a
@@ -156,9 +156,9 @@ function MenuFooter() {
         </a>
       </div>
       <WindowManagerProvider>
-        <BugReportWindow
-          isVisible={showBugReportWindow}
-          onClose={() => setShowBugReportWindow(false)}
+        <FeedbackWindow
+          isVisible={showFeedbackWindow}
+          onClose={() => setShowFeedbackWindow(false)}
           gameState={null}
         />
       </WindowManagerProvider>
