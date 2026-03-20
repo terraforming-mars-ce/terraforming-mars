@@ -11365,6 +11365,13 @@
             "target": "self-player"
           }
         ],
+        "outputs": [
+          {
+            "type": "venus",
+            "amount": 1,
+            "target": "none"
+          }
+        ],
         "description": "Decrease your energy production 1 step to raise Venus 1 step."
       }
     ]
