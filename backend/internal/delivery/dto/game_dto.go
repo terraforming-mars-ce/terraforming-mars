@@ -602,12 +602,12 @@ type PlayerActionDto struct {
 
 // PlayerStandardProjectDto represents a standard project with availability state
 type PlayerStandardProjectDto struct {
-	ProjectType string                   `json:"projectType" ts:"string"`
-	Name        string                   `json:"name" ts:"string"`
-	Description string                   `json:"description" ts:"string"`
-	Behaviors   []CardBehaviorDto        `json:"behaviors" ts:"CardBehaviorDto[]"`
-	Style       *StandardProjectStyleDto `json:"style,omitempty" ts:"StandardProjectStyleDto | undefined"`
-	BaseCost    map[string]int           `json:"baseCost" ts:"Record<string, number>"`
+	ProjectType string            `json:"projectType" ts:"string"`
+	Name        string            `json:"name" ts:"string"`
+	Description string            `json:"description" ts:"string"`
+	Behaviors   []CardBehaviorDto `json:"behaviors" ts:"CardBehaviorDto[]"`
+	Style       *StyleDto         `json:"style,omitempty" ts:"StyleDto | undefined"`
+	BaseCost    map[string]int    `json:"baseCost" ts:"Record<string, number>"`
 
 	Available     bool                   `json:"available" ts:"boolean"`
 	Errors        []StateErrorDto        `json:"errors" ts:"StateErrorDto[]"`
@@ -617,8 +617,8 @@ type PlayerStandardProjectDto struct {
 	Metadata      map[string]interface{} `json:"metadata,omitempty" ts:"Record<string, any> | undefined"`
 }
 
-// StandardProjectStyleDto provides visual hints for the frontend
-type StandardProjectStyleDto struct {
+// StyleDto provides visual hints for the frontend
+type StyleDto struct {
 	Color string `json:"color" ts:"string"`
 	Icon  string `json:"icon" ts:"string"`
 }
@@ -882,7 +882,7 @@ type ColonyTileDto struct {
 	PlayerColonies []string          `json:"playerColonies" ts:"string[]"`
 	TradedThisGen  bool              `json:"tradedThisGen" ts:"boolean"`
 	TraderID       string            `json:"traderId" ts:"string"`
-	Style          ColonyStyleDto    `json:"style" ts:"ColonyStyleDto"`
+	Style          StyleDto          `json:"style" ts:"StyleDto"`
 	TradeAvailable bool              `json:"tradeAvailable" ts:"boolean"`
 	BuildAvailable bool              `json:"buildAvailable" ts:"boolean"`
 	TradeErrors    []StateErrorDto   `json:"tradeErrors" ts:"StateErrorDto[]"`
@@ -905,12 +905,6 @@ type ColonySlotDto struct {
 	Reward []ColonyOutputDto `json:"reward" ts:"ColonyOutputDto[]"`
 }
 
-// ColonyStyleDto provides visual hints for the frontend
-type ColonyStyleDto struct {
-	Color string `json:"color" ts:"string"`
-	Icon  string `json:"icon" ts:"string"`
-}
-
 // Project Funding DTOs
 
 // ProjectFundingDto represents a project funding tile in the game
@@ -930,7 +924,7 @@ type ProjectFundingDto struct {
 	PaymentSubstitutes []ProjectPaymentSubDto     `json:"paymentSubstitutes" ts:"ProjectPaymentSubDto[]"`
 	RewardTiers        []ProjectRewardTierDto     `json:"rewardTiers" ts:"ProjectRewardTierDto[]"`
 	CompletionEffect   ProjectCompletionEffectDto `json:"completionEffect" ts:"ProjectCompletionEffectDto"`
-	Style              ProjectStyleDto            `json:"style" ts:"ProjectStyleDto"`
+	Style              StyleDto                   `json:"style" ts:"StyleDto"`
 }
 
 // ProjectSeatDto represents a seat definition
@@ -966,12 +960,6 @@ type ProjectCompletionEffectDto struct {
 type ProjectPaymentSubDto struct {
 	ResourceType   string `json:"resourceType" ts:"string"`
 	ConversionRate int    `json:"conversionRate" ts:"number"`
-}
-
-// ProjectStyleDto provides visual hints for the frontend
-type ProjectStyleDto struct {
-	Color string `json:"color" ts:"string"`
-	Icon  string `json:"icon" ts:"string"`
 }
 
 // Board-related DTOs for tygo generation
@@ -1020,13 +1008,21 @@ type MilestoneDto struct {
 
 // AwardDto represents an award for client consumption
 type AwardDto struct {
-	Type           string         `json:"type" ts:"string"`
-	Name           string         `json:"name" ts:"string"`
-	Description    string         `json:"description" ts:"string"`
-	IsFunded       bool           `json:"isFunded" ts:"boolean"`
-	FundedBy       *string        `json:"fundedBy" ts:"string | null"`
-	FundingCost    int            `json:"fundingCost" ts:"number"`
-	PlayerProgress map[string]int `json:"playerProgress" ts:"Record<string, number>"`
+	Type           string           `json:"type" ts:"string"`
+	Name           string           `json:"name" ts:"string"`
+	Description    string           `json:"description" ts:"string"`
+	IsFunded       bool             `json:"isFunded" ts:"boolean"`
+	FundedBy       *string          `json:"fundedBy" ts:"string | null"`
+	FundingCost    int              `json:"fundingCost" ts:"number"`
+	PlayerProgress map[string]int   `json:"playerProgress" ts:"Record<string, number>"`
+	Rewards        []AwardRewardDto `json:"rewards" ts:"AwardRewardDto[]"`
+	Style          *StyleDto        `json:"style,omitempty" ts:"StyleDto | undefined"`
+}
+
+// AwardRewardDto represents a placement reward
+type AwardRewardDto struct {
+	Place   int                    `json:"place" ts:"number"`
+	Outputs []ResourceConditionDto `json:"outputs" ts:"ResourceConditionDto[]"`
 }
 
 // AwardResultDto represents the placement results for a single funded award
@@ -1060,6 +1056,7 @@ type PlayerAwardDto struct {
 	FundedBy    *string         `json:"fundedBy" ts:"string | null"`
 	Available   bool            `json:"available" ts:"boolean"`      // Can this player fund this award?
 	Errors      []StateErrorDto `json:"errors" ts:"StateErrorDto[]"` // Reasons why not available
+	Style       *StyleDto       `json:"style,omitempty" ts:"StyleDto | undefined"`
 }
 
 // VPGranterConditionDto represents a single VP condition's computed breakdown for client consumption

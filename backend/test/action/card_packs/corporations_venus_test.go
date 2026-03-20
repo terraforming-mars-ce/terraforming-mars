@@ -18,7 +18,7 @@ func TestAphrodite_StartingResources(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Aphrodite"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -35,7 +35,7 @@ func TestAphrodite_Gain2MCWhenVenusRaised(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Aphrodite"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -56,7 +56,7 @@ func TestCelestic_StartingResources(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Celestic"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -70,7 +70,7 @@ func TestCelestic_FloaterStorageRegistered(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Celestic"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -99,7 +99,7 @@ func TestCelestic_FirstActionDrawsFloaterCards(t *testing.T) {
 		p.Hand().RemoveCard(c)
 	}
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Celestic"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -149,7 +149,7 @@ func TestCelestic_AddFloaterToAnyCard(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Celestic"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -176,7 +176,7 @@ func TestManutech_StartingResources(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Manutech"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -198,7 +198,7 @@ func TestManutech_GainResourceWhenProductionIncreased(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Manutech"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -230,7 +230,7 @@ func TestMorningStarInc_StartingResources(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Morning Star Inc."))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -244,7 +244,7 @@ func TestMorningStarInc_VenusLenienceRegistered(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Morning Star Inc."))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -275,7 +275,7 @@ func TestViron_StartingResources(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -289,7 +289,7 @@ func TestViron_HasActionReuseAction(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -315,7 +315,7 @@ func TestViron_ReuseBlueCardAction(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -371,7 +371,7 @@ func TestViron_CannotReuseUnusedAction(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -409,7 +409,7 @@ func TestViron_CannotReuseSelf(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -426,7 +426,7 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -486,7 +486,7 @@ func TestViron_ReuseStratopolis_AddFloatersToSelf(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Viron"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -549,7 +549,7 @@ func TestValleyTrust_FirstActionCreatesPreludeSelection(t *testing.T) {
 	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
 	testGame.InitDeck(nil, nil, preludeIDs)
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
@@ -584,7 +584,7 @@ func TestValleyTrust_ConfirmPreludeSelection(t *testing.T) {
 	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
 	testGame.InitDeck(nil, nil, preludeIDs)
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 

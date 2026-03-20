@@ -6,9 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"path/filepath"
+	"runtime"
+
 	"go.uber.org/zap"
 
 	"terraforming-mars-backend/internal/action"
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
@@ -56,6 +60,17 @@ func (m *MockBroadcaster) Reset() {
 // CreateTestCardRegistry returns the real card registry loaded from the JSON database.
 func CreateTestCardRegistry() cards.CardRegistry {
 	return GetCardDB()
+}
+
+// CreateTestAwardRegistry returns an award registry loaded from the JSON database.
+func CreateTestAwardRegistry() awards.AwardRegistry {
+	_, currentFile, _, _ := runtime.Caller(0)
+	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "terraforming_mars_awards.json")
+	awardList, err := awards.LoadAwardsFromJSON(jsonPath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load award DB for tests: %v", err))
+	}
+	return awards.NewInMemoryAwardRegistry(awardList)
 }
 
 // CreateTestCardRegistryWithAdditionalCards creates a card registry with real cards plus additional synthetic cards.

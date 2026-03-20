@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	baseaction "terraforming-mars-backend/internal/action"
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/shared"
@@ -16,16 +17,19 @@ import (
 // ConfirmAwardFundAction handles confirming a free award fund selection (e.g., Vitor)
 type ConfirmAwardFundAction struct {
 	baseaction.BaseAction
+	awardRegistry awards.AwardRegistry
 }
 
 // NewConfirmAwardFundAction creates a new confirm award fund action
 func NewConfirmAwardFundAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
+	awardRegistry awards.AwardRegistry,
 	logger *zap.Logger,
 ) *ConfirmAwardFundAction {
 	return &ConfirmAwardFundAction{
-		BaseAction: baseaction.NewBaseAction(gameRepo, cardRegistry),
+		BaseAction:    baseaction.NewBaseAction(gameRepo, cardRegistry),
+		awardRegistry: awardRegistry,
 	}
 }
 
@@ -56,11 +60,12 @@ func (a *ConfirmAwardFundAction) Execute(ctx context.Context, gameID string, pla
 		return fmt.Errorf("award %s is not available for selection", awardType)
 	}
 
-	if !shared.ValidAwardType(awardType) {
+	def, err := a.awardRegistry.GetByID(awardType)
+	if err != nil {
 		return fmt.Errorf("invalid award type: %s", awardType)
 	}
 
-	if err := g.Awards().FundAward(ctx, shared.AwardType(awardType), playerID); err != nil {
+	if err := g.Awards().FundAward(ctx, shared.AwardType(awardType), playerID, 0); err != nil {
 		return fmt.Errorf("failed to fund award: %w", err)
 	}
 
@@ -70,14 +75,8 @@ func (a *ConfirmAwardFundAction) Execute(ctx context.Context, gameID string, pla
 		return fmt.Errorf("failed to clear forced first action: %w", err)
 	}
 
-	awardName := awardType
-	if info, ok := game.GetAwardInfo(shared.AwardType(awardType)); ok {
-		awardName = info.Name
-	}
-
 	log.Info("Award funded for free",
-		zap.String("award", awardType))
+		zap.String("award", def.Name))
 
-	_ = awardName
 	return nil
 }

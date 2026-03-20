@@ -3,6 +3,7 @@ package cards
 import (
 	"fmt"
 
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -86,6 +87,7 @@ func CalculatePlayerVP(
 	fundedAwards []FundedAwardInfo,
 	allPlayers []*player.Player,
 	cardRegistry CardRegistryInterface,
+	awardRegistry awards.AwardRegistry,
 ) VPBreakdown {
 	breakdown := VPBreakdown{}
 
@@ -104,7 +106,7 @@ func CalculatePlayerVP(
 	breakdown.MilestoneVP = calculateMilestoneVP(p.ID(), claimedMilestones)
 
 	// 4. Award VP
-	breakdown.AwardVP = calculateAwardVP(p.ID(), fundedAwards, allPlayers, b, cardRegistry)
+	breakdown.AwardVP = calculateAwardVP(p.ID(), fundedAwards, allPlayers, b, cardRegistry, awardRegistry)
 
 	// 5. Greenery VP (1 VP per greenery tile owned) with detailed breakdown
 	greeneryDetails := calculateGreeneryVPDetailed(p.ID(), b)
@@ -192,7 +194,7 @@ func evaluateVPConditionDetailed(
 			return detail
 		}
 
-		count := countPerCondition(vpCond.Per, p, b, card, cardRegistry)
+		count := CountPerCondition(vpCond.Per, card.ID, p, b, cardRegistry, nil)
 		detail.Count = count
 
 		if vpCond.Per.Amount > 0 {
@@ -226,15 +228,14 @@ func evaluateVPConditionDetailed(
 	return detail
 }
 
-// getPerConditionTypeName returns a human-readable name for the per condition type
-func getPerConditionTypeName(per *PerCondition) string {
-	if per.Target != nil && *per.Target == TargetSelfCard {
+func getPerConditionTypeName(per *shared.PerCondition) string {
+	if per.Target != nil && *per.Target == "self-card" {
 		return "on this card"
 	}
 	if per.Tag != nil {
 		return string(*per.Tag) + " tags"
 	}
-	switch per.Type {
+	switch per.ResourceType {
 	case shared.ResourceOceanTile:
 		return "ocean tiles"
 	case shared.ResourceCityTile:
@@ -242,57 +243,7 @@ func getPerConditionTypeName(per *PerCondition) string {
 	case shared.ResourceGreeneryTile:
 		return "greenery tiles"
 	default:
-		return string(per.Type)
-	}
-}
-
-// countPerCondition counts the number of items matching a per condition
-func countPerCondition(
-	per *PerCondition,
-	p *player.Player,
-	b *board.Board,
-	card *Card,
-	cardRegistry CardRegistryInterface,
-) int {
-	// Handle resource storage on card (e.g., animals on this card)
-	if per.Target != nil && *per.Target == TargetSelfCard {
-		storage := p.Resources().GetCardStorage(card.ID)
-		return storage
-	}
-
-	// Handle adjacency to tile placed by this card (e.g., Capital: 1 VP per adjacent ocean)
-	if per.AdjacentToSelfTile {
-		return countAdjacentTilesOfTypeForCard(b, card.ID, per.Type)
-	}
-
-	// Handle adjacency-based counting (e.g., World Tree: 1 VP per adjacent forest)
-	if per.AdjacentToTileType != nil {
-		return countAdjacentTilesOfType(p.ID(), b, per.Type, *per.AdjacentToTileType)
-	}
-
-	cityTileType := shared.ResourceCityTile
-	greeneryTileType := shared.ResourceGreeneryTile
-
-	switch per.Type {
-	case shared.ResourceOceanTile:
-		return CountAllTilesOfType(b, shared.ResourceOceanTile)
-	case shared.ResourceCityTile:
-		if per.Target != nil && *per.Target == TargetSelfPlayer {
-			return CountPlayerTiles(p.ID(), b, &cityTileType)
-		}
-		return CountAllTilesOfType(b, shared.ResourceCityTile)
-	case shared.ResourceGreeneryTile:
-		if per.Target != nil && *per.Target == TargetSelfPlayer {
-			return CountPlayerTiles(p.ID(), b, &greeneryTileType)
-		}
-		return CountAllTilesOfType(b, shared.ResourceGreeneryTile)
-	default:
-		// Check if it's a tag type
-		if per.Tag != nil {
-			return CountPlayerTagsByType(p, cardRegistry, *per.Tag)
-		}
-		// Default: try to count as a tag
-		return CountPlayerTagsByType(p, cardRegistry, shared.CardTag(per.Type))
+		return string(per.ResourceType)
 	}
 }
 
@@ -307,21 +258,25 @@ func calculateMilestoneVP(playerID string, claimedMilestones []ClaimedMilestoneI
 	return vp
 }
 
-// calculateAwardVP calculates VP from awards
 func calculateAwardVP(
 	playerID string,
 	fundedAwards []FundedAwardInfo,
 	allPlayers []*player.Player,
 	b *board.Board,
 	cardRegistry CardRegistryInterface,
+	awardRegistry awards.AwardRegistry,
 ) int {
 	totalVP := 0
 
-	for _, award := range fundedAwards {
-		placements := ScoreAward(shared.AwardType(award.Type), allPlayers, b, cardRegistry)
+	for _, fundedAward := range fundedAwards {
+		def, err := awardRegistry.GetByID(fundedAward.Type)
+		if err != nil {
+			continue
+		}
+		placements := ScoreAward(def, allPlayers, b, cardRegistry)
 		for _, placement := range placements {
 			if placement.PlayerID == playerID {
-				totalVP += GetAwardVP(placement.Placement)
+				totalVP += GetAwardVP(def, placement.Placement)
 				break
 			}
 		}

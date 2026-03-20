@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/player"
@@ -14,15 +15,17 @@ import (
 
 // CorporationProcessor handles applying corporation card effects
 type CorporationProcessor struct {
-	cardRegistry CardRegistryInterface
-	logger       *zap.Logger
+	cardRegistry  CardRegistryInterface
+	awardRegistry awards.AwardRegistry
+	logger        *zap.Logger
 }
 
 // NewCorporationProcessor creates a new corporation processor
-func NewCorporationProcessor(cardRegistry CardRegistryInterface, logger *zap.Logger) *CorporationProcessor {
+func NewCorporationProcessor(cardRegistry CardRegistryInterface, awardRegistry awards.AwardRegistry, logger *zap.Logger) *CorporationProcessor {
 	return &CorporationProcessor{
-		cardRegistry: cardRegistry,
-		logger:       logger,
+		cardRegistry:  cardRegistry,
+		awardRegistry: awardRegistry,
+		logger:        logger,
 	}
 }
 
@@ -389,9 +392,9 @@ func (p *CorporationProcessor) createForcedAction(
 			zap.String("description", forcedAction.Description))
 
 		var availableAwards []string
-		for _, info := range game.AllAwards {
-			if !g.Awards().IsFunded(info.Type) {
-				availableAwards = append(availableAwards, string(info.Type))
+		for _, def := range p.awardRegistry.GetAll() {
+			if !g.Awards().IsFunded(shared.AwardType(def.ID)) {
+				availableAwards = append(availableAwards, def.ID)
 			}
 		}
 

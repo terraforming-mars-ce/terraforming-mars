@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
@@ -1616,11 +1617,13 @@ func CalculateAwardState(
 	awardType shared.AwardType,
 	p *player.Player,
 	g *game.Game,
+	awardRegistry awards.AwardRegistry,
 ) player.EntityState {
 	var errors []player.StateError
 	metadata := make(map[string]interface{})
 
-	if !shared.ValidAwardType(string(awardType)) {
+	def, err := awardRegistry.GetByID(string(awardType))
+	if err != nil {
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeInvalidRequirement,
 			Category: player.ErrorCategoryConfiguration,
@@ -1634,12 +1637,12 @@ func CalculateAwardState(
 		}
 	}
 
-	awards := g.Awards()
+	gameAwards := g.Awards()
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
 	errors = append(errors, validateNoActiveTileSelection(p, g)...)
 
-	if awards.IsFunded(awardType) {
+	if gameAwards.IsFunded(awardType) {
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeAwardAlreadyFunded,
 			Category: player.ErrorCategoryAchievement,
@@ -1647,7 +1650,7 @@ func CalculateAwardState(
 		})
 	}
 
-	if awards.FundedCount() >= game.MaxFundedAwards {
+	if gameAwards.FundedCount() >= game.MaxFundedAwards {
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeMaxAwardsFunded,
 			Category: player.ErrorCategoryAchievement,
@@ -1655,7 +1658,7 @@ func CalculateAwardState(
 		})
 	}
 
-	cost := awards.GetCurrentFundingCost()
+	cost := def.GetCostForFundedCount(gameAwards.FundedCount())
 	metadata["fundingCost"] = cost
 
 	if p.Resources().Get().Credits < cost {

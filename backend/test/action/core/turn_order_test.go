@@ -21,7 +21,7 @@ func TestTurnOrderPreservedAfterProductionCardSelection(t *testing.T) {
 	testutil.AssertEqual(t, player2ID, testGame.TurnOrder()[1], "Player 2 should be second in initial turn order")
 
 	// Both players pass to trigger production phase (turn order rotates to [player2, player1])
-	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
 
 	err := skipAction.Execute(ctx, testGame.ID(), player1ID)
@@ -59,7 +59,7 @@ func TestTurnOrderRotatesCorrectlyWithFourPlayers(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
 	confirmAction := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, logger)
 
@@ -115,7 +115,7 @@ func TestTurnOrderRotatesCorrectlyWithThreePlayers(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
 	confirmAction := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, logger)
 

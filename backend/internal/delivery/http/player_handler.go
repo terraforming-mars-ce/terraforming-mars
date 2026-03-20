@@ -63,7 +63,7 @@ func (h *PlayerHandler) GetPlayer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to DTO
-	playerDto := dto.ToPlayerDto(player, game, h.cardRegistry)
+	playerDto := dto.ToPlayerDto(player, game, h.cardRegistry, nil, nil)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(playerDto); err != nil {

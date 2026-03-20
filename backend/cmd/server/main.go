@@ -24,6 +24,7 @@ import (
 	stdprojAction "terraforming-mars-backend/internal/action/standard_project"
 	tileAction "terraforming-mars-backend/internal/action/tile"
 	turnAction "terraforming-mars-backend/internal/action/turn_management"
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/colonies"
 	httpHandler "terraforming-mars-backend/internal/delivery/http"
@@ -123,6 +124,17 @@ func main() {
 	stdProjRegistry := stdprojLoader.NewInMemoryStandardProjectRegistry(stdProjData)
 	log.Debug("Standard project registry initialized", zap.Int("project_count", len(stdProjData)))
 
+	// ========== Initialize Award Registry ==========
+	awardPath := filepath.Join(wd, "assets", "terraforming_mars_awards.json")
+	log.Debug("Loading awards from", zap.String("path", awardPath))
+
+	awardData, err := awards.LoadAwardsFromJSON(awardPath)
+	if err != nil {
+		log.Fatal("Failed to load awards", zap.Error(err))
+	}
+	awardRegistry := awards.NewInMemoryAwardRegistry(awardData)
+	log.Debug("Award registry initialized", zap.Int("award_count", len(awardData)))
+
 	// ========== Initialize Game Repository (Single Source of Truth) ==========
 	ds, err := datastore.NewDataStore()
 	if err != nil {
@@ -148,7 +160,7 @@ func main() {
 	log.Debug("WebSocket hub initialized")
 
 	// ========== Initialize Game State Broadcaster (Automatic Broadcasting) ==========
-	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry, pfRegistry, stdProjRegistry)
+	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry, pfRegistry, stdProjRegistry, awardRegistry)
 	log.Debug("Game state broadcaster initialized (provides automatic broadcasting for all games)")
 
 	// ========== Initialize Game Actions ==========
@@ -159,12 +171,12 @@ func main() {
 	joinGameAction := gameAction.NewJoinGameAction(gameRepo, cardRegistry, log)
 	healthChecker := bot.NewHealthChecker(log)
 	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, healthChecker, broadcaster, log)
-	confirmDemoSetupAction := gameAction.NewConfirmDemoSetupAction(gameRepo, cardRegistry, log)
-	finalScoringAction := gameAction.NewFinalScoringAction(gameRepo, cardRegistry, log)
+	confirmDemoSetupAction := gameAction.NewConfirmDemoSetupAction(gameRepo, cardRegistry, awardRegistry, log)
+	finalScoringAction := gameAction.NewFinalScoringAction(gameRepo, cardRegistry, awardRegistry, log)
 
 	// Milestones & Awards (2)
 	claimMilestoneAction := milestoneAction.NewClaimMilestoneAction(gameRepo, cardRegistry, stateRepo, log)
-	fundAwardAction := awardAction.NewFundAwardAction(gameRepo, cardRegistry, stateRepo, log)
+	fundAwardAction := awardAction.NewFundAwardAction(gameRepo, cardRegistry, stateRepo, awardRegistry, log)
 
 	// Colony actions (2)
 	colonyTradeAction := colonyAction.NewTradeAction(gameRepo, colonyRegistry, cardRegistry, stateRepo, log)
@@ -195,12 +207,12 @@ func main() {
 	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, log)
 	confirmStealTargetAction := confirmAction.NewConfirmStealTargetAction(gameRepo, cardRegistry, stateRepo, log)
 	confirmColonyResourceAction := confirmAction.NewConfirmColonyResourceAction(gameRepo, cardRegistry, stateRepo, log)
-	confirmAwardFundAction := confirmAction.NewConfirmAwardFundAction(gameRepo, cardRegistry, log)
+	confirmAwardFundAction := confirmAction.NewConfirmAwardFundAction(gameRepo, cardRegistry, awardRegistry, log)
 
 	// Turn management (4)
 	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
-	selectStartingChoicesAction := turnAction.NewSelectStartingChoicesAction(gameRepo, cardRegistry, log)
-	confirmInitAdvanceAction := turnAction.NewConfirmInitAdvanceAction(gameRepo, cardRegistry, log)
+	selectStartingChoicesAction := turnAction.NewSelectStartingChoicesAction(gameRepo, cardRegistry, awardRegistry, log)
+	confirmInitAdvanceAction := turnAction.NewConfirmInitAdvanceAction(gameRepo, cardRegistry, awardRegistry, log)
 
 	// Bot service
 	commandDispatcher := bot.NewCommandDispatcher(
@@ -244,7 +256,7 @@ func main() {
 	adminSetProductionAction := admin.NewSetProductionAction(gameRepo, log)
 	adminSetGlobalParametersAction := admin.NewSetGlobalParametersAction(gameRepo, log)
 	adminGiveCardAction := admin.NewGiveCardAction(gameRepo, cardRegistry, log)
-	adminSetCorporationAction := admin.NewSetCorporationAction(gameRepo, cardRegistry, log)
+	adminSetCorporationAction := admin.NewSetCorporationAction(gameRepo, cardRegistry, awardRegistry, log)
 	adminStartTileSelectionAction := admin.NewStartTileSelectionAction(gameRepo, log)
 	adminSetTRAction := admin.NewSetTRAction(gameRepo, log)
 

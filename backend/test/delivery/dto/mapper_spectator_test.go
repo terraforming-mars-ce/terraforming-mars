@@ -16,7 +16,7 @@ func TestToSpectatorGameDto_AllPlayersAsOtherPlayers(t *testing.T) {
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 3, mockBroadcaster)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
-	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry)
+	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry, nil)
 
 	testutil.AssertEqual(t, 3, len(gameDto.OtherPlayers), "All players should be OtherPlayers")
 	testutil.AssertEqual(t, "", gameDto.CurrentPlayer.ID, "CurrentPlayer should be empty")
@@ -28,7 +28,7 @@ func TestToSpectatorGameDto_IsSpectatorTrue(t *testing.T) {
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
-	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry)
+	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry, nil)
 
 	testutil.AssertTrue(t, gameDto.IsSpectator, "IsSpectator should be true")
 }
@@ -38,7 +38,7 @@ func TestToSpectatorGameDto_NoHandCards(t *testing.T) {
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
-	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry)
+	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry, nil)
 
 	for _, op := range gameDto.OtherPlayers {
 		testutil.AssertEqual(t, 0, op.HandCardCount, "OtherPlayer hand card count should be 0 initially")
@@ -54,7 +54,7 @@ func TestToSpectatorGameDto_IncludesSpectators(t *testing.T) {
 	spec := game.NewSpectator("spec-1", "Watcher", "#9b9b9b")
 	testutil.AssertNoError(t, testGame.AddSpectator(ctx, spec), "add spectator")
 
-	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry)
+	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry, nil)
 
 	testutil.AssertEqual(t, 1, len(gameDto.Spectators), "Should include spectators")
 	testutil.AssertEqual(t, "spec-1", gameDto.Spectators[0].ID, "Spectator ID mismatch")
@@ -83,7 +83,7 @@ func TestToSpectatorGameDto_IncludesChatMessages(t *testing.T) {
 		IsSpectator: true,
 	})
 
-	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry)
+	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry, nil)
 
 	testutil.AssertEqual(t, 2, len(gameDto.ChatMessages), "Should include chat messages")
 	testutil.AssertEqual(t, "Hello", gameDto.ChatMessages[0].Message, "First message mismatch")

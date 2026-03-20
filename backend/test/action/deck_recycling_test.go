@@ -154,7 +154,7 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 
 	// Player selects corporation B08 and 3 out of 10 project cards
 	selectedCards := []string{"001", "002", "003"}
-	action := turn_management.NewSelectStartingChoicesAction(repo, cardRegistry, log)
+	action := turn_management.NewSelectStartingChoicesAction(repo, cardRegistry, nil, log)
 	err = action.Execute(ctx, testGame.ID(), playerID, "B08", []string{}, selectedCards)
 	testutil.AssertNoError(t, err, "select starting cards")
 

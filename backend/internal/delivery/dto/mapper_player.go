@@ -2,6 +2,7 @@ package dto
 
 import (
 	"terraforming-mars-backend/internal/action"
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
@@ -47,7 +48,7 @@ func calculateResourceDelta(before, after shared.Resources) ResourcesDto {
 }
 
 // ToPlayerDto converts Player to PlayerDto
-func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry, stdProjRegistry ...standardprojects.StandardProjectRegistry) PlayerDto {
+func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry, stdProjRegistry standardprojects.StandardProjectRegistry, awardRegistry awards.AwardRegistry) PlayerDto {
 	resourcesComponent := p.Resources()
 	resources := resourcesComponent.Get()
 	production := resourcesComponent.Production()
@@ -56,13 +57,9 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 	playedCardIDs := p.PlayedCards().Cards()
 	playedCards := getPlayedCards(playedCardIDs, cardRegistry)
 	handCards := mapPlayerCards(p, g, cardRegistry)
-	var registry standardprojects.StandardProjectRegistry
-	if len(stdProjRegistry) > 0 {
-		registry = stdProjRegistry[0]
-	}
-	standardProjects := mapPlayerStandardProjects(p, g, cardRegistry, registry)
+	standardProjects := mapPlayerStandardProjects(p, g, cardRegistry, stdProjRegistry)
 	milestones := mapPlayerMilestones(p, g, cardRegistry)
-	awards := mapPlayerAwards(p, g)
+	awards := mapPlayerAwards(p, g, awardRegistry)
 	var pendingTileSelection *PendingTileSelectionDto
 	var forcedFirstAction *ForcedFirstActionDto
 	currentTurn := g.CurrentTurn()
@@ -763,7 +760,7 @@ func mapPlayerStandardProjects(p *player.Player, g *game.Game, cardRegistry card
 			Name:          def.Name,
 			Description:   def.Description,
 			Behaviors:     behaviorDtos,
-			Style:         &StandardProjectStyleDto{Color: def.Style.Color, Icon: def.Style.Icon},
+			Style:         &StyleDto{Color: def.Style.Color, Icon: def.Style.Icon},
 			BaseCost:      baseCost,
 			Available:     state.Available(),
 			Errors:        convertStateErrors(state.Errors),
@@ -841,34 +838,55 @@ func convertGenerationalEvents(entries []shared.PlayerGenerationalEventEntry) []
 
 // mapPlayerAwards calculates state for all awards and converts to DTOs.
 // Uses the state calculator to compute availability on-the-fly (same pattern as standard projects).
-func mapPlayerAwards(p *player.Player, g *game.Game) []PlayerAwardDto {
-	result := make([]PlayerAwardDto, 0, len(game.AllAwards))
+func mapPlayerAwards(p *player.Player, g *game.Game, awardRegistry awards.AwardRegistry) []PlayerAwardDto {
+	if awardRegistry == nil {
+		return nil
+	}
+	allDefs := awardRegistry.GetAll()
+	settings := g.Settings()
+	enabledPacks := make(map[string]bool, len(settings.CardPacks))
+	for _, pack := range settings.CardPacks {
+		enabledPacks[pack] = true
+	}
+	if settings.VenusNextEnabled {
+		enabledPacks[shared.PackVenus] = true
+	}
+
+	result := make([]PlayerAwardDto, 0, len(allDefs))
 	gameAwards := g.Awards()
-	currentCost := gameAwards.GetCurrentFundingCost()
+	fundedCount := gameAwards.FundedCount()
 
-	for _, info := range game.AllAwards {
-		// Calculate state on-the-fly using the state calculator
-		state := action.CalculateAwardState(info.Type, p, g)
+	for _, def := range allDefs {
+		if def.Pack != "" && !enabledPacks[def.Pack] {
+			continue
+		}
+		awardType := shared.AwardType(def.ID)
+		state := action.CalculateAwardState(awardType, p, g, awardRegistry)
 
-		// Get funding status from game-level awards
-		isFunded := gameAwards.IsFunded(info.Type)
+		isFunded := gameAwards.IsFunded(awardType)
 		var fundedBy *string
 		for _, funded := range gameAwards.FundedAwards() {
-			if funded.Type == info.Type {
+			if funded.Type == awardType {
 				fundedBy = &funded.FundedByPlayer
 				break
 			}
 		}
 
+		var styleDtoPtr *StyleDto
+		if def.Style.Color != "" || def.Style.Icon != "" {
+			styleDtoPtr = &StyleDto{Color: def.Style.Color, Icon: def.Style.Icon}
+		}
+
 		dto := PlayerAwardDto{
-			Type:        string(info.Type),
-			Name:        info.Name,
-			Description: info.Description,
-			FundingCost: currentCost,
+			Type:        def.ID,
+			Name:        def.Name,
+			Description: def.Description,
+			FundingCost: def.GetCostForFundedCount(fundedCount),
 			IsFunded:    isFunded,
 			FundedBy:    fundedBy,
 			Available:   state.Available(),
 			Errors:      convertStateErrors(state.Errors),
+			Style:       styleDtoPtr,
 		}
 		result = append(result, dto)
 	}

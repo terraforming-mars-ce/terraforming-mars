@@ -13,34 +13,17 @@ import (
 	"terraforming-mars-backend/internal/logger"
 )
 
-const (
-	MaxFundedAwards = 3
-	AwardFirstVP    = 5
-	AwardSecondVP   = 2
-)
+// MaxFundedAwards is the maximum number of awards that can be funded in a game
+const MaxFundedAwards = 3
 
-var AwardFundingCosts = []int{8, 14, 20}
-
-type AwardInfo struct {
-	Type        shared.AwardType
-	Name        string
-	Description string
-}
-
-var AllAwards = []AwardInfo{
-	{Type: shared.AwardLandlord, Name: "Landlord", Description: "Most tiles on Mars"},
-	{Type: shared.AwardBanker, Name: "Banker", Description: "Highest MC production"},
-	{Type: shared.AwardScientist, Name: "Scientist", Description: "Most science tags in play"},
-	{Type: shared.AwardThermalist, Name: "Thermalist", Description: "Most heat resources"},
-	{Type: shared.AwardMiner, Name: "Miner", Description: "Most steel and titanium resources"},
-}
-
+// Awards manages award funding state for a game
 type Awards struct {
 	ds       *datastore.DataStore
 	gameID   string
 	eventBus *events.EventBusImpl
 }
 
+// NewAwards creates a new Awards state tracker
 func NewAwards(ds *datastore.DataStore, gameID string, eventBus *events.EventBusImpl) *Awards {
 	return &Awards{
 		ds:       ds,
@@ -61,6 +44,7 @@ func (a *Awards) read(fn func(s *datastore.GameState)) {
 	}
 }
 
+// FundedAwards returns a copy of all funded awards
 func (a *Awards) FundedAwards() []shared.FundedAward {
 	var result []shared.FundedAward
 	a.read(func(s *datastore.GameState) {
@@ -70,6 +54,7 @@ func (a *Awards) FundedAwards() []shared.FundedAward {
 	return result
 }
 
+// IsFunded returns true if the given award has been funded
 func (a *Awards) IsFunded(awardType shared.AwardType) bool {
 	var funded bool
 	a.read(func(s *datastore.GameState) {
@@ -83,6 +68,7 @@ func (a *Awards) IsFunded(awardType shared.AwardType) bool {
 	return funded
 }
 
+// IsFundedBy returns true if the given award was funded by the specified player
 func (a *Awards) IsFundedBy(awardType shared.AwardType, playerID string) bool {
 	var funded bool
 	a.read(func(s *datastore.GameState) {
@@ -96,6 +82,7 @@ func (a *Awards) IsFundedBy(awardType shared.AwardType, playerID string) bool {
 	return funded
 }
 
+// CanFundMore returns true if fewer than MaxFundedAwards have been funded
 func (a *Awards) CanFundMore() bool {
 	var can bool
 	a.read(func(s *datastore.GameState) {
@@ -104,31 +91,20 @@ func (a *Awards) CanFundMore() bool {
 	return can
 }
 
+// FundedCount returns the number of currently funded awards
 func (a *Awards) FundedCount() int {
 	var count int
 	a.read(func(s *datastore.GameState) { count = len(s.FundedAwards) })
 	return count
 }
 
-func (a *Awards) GetCurrentFundingCost() int {
-	var cost int
-	a.read(func(s *datastore.GameState) {
-		count := len(s.FundedAwards)
-		if count >= MaxFundedAwards {
-			return
-		}
-		cost = AwardFundingCosts[count]
-	})
-	return cost
-}
-
-func (a *Awards) FundAward(ctx context.Context, awardType shared.AwardType, playerID string) error {
+// FundAward funds an award for a player at the given cost
+func (a *Awards) FundAward(ctx context.Context, awardType shared.AwardType, playerID string, fundingCost int) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
 	var fundErr error
-	var fundingCost int
 	a.update(func(s *datastore.GameState) {
 		if len(s.FundedAwards) >= MaxFundedAwards {
 			fundErr = fmt.Errorf("maximum awards (%d) already funded", MaxFundedAwards)
@@ -142,7 +118,6 @@ func (a *Awards) FundAward(ctx context.Context, awardType shared.AwardType, play
 			}
 		}
 
-		fundingCost = AwardFundingCosts[len(s.FundedAwards)]
 		s.FundedAwards = append(s.FundedAwards, shared.FundedAward{
 			Type:           awardType,
 			FundedByPlayer: playerID,
@@ -166,13 +141,4 @@ func (a *Awards) FundAward(ctx context.Context, awardType shared.AwardType, play
 	}
 
 	return nil
-}
-
-func GetAwardInfo(awardType shared.AwardType) (AwardInfo, bool) {
-	for _, info := range AllAwards {
-		if info.Type == awardType {
-			return info, true
-		}
-	}
-	return AwardInfo{}, false
 }

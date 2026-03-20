@@ -3,61 +3,35 @@ package cards
 import (
 	"sort"
 
+	"terraforming-mars-backend/internal/game/award"
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-)
-
-// Award VP constants
-const (
-	AwardFirstPlaceVP  = 5 // VP for first place in an award
-	AwardSecondPlaceVP = 2 // VP for second place in an award
 )
 
 // AwardPlacement represents a player's placement in an award
 type AwardPlacement struct {
 	PlayerID  string
 	Score     int
-	Placement int // 1 = first place (5 VP), 2 = second place (2 VP), 0 = no placement
+	Placement int // 1 = first place, 2 = second place, 0 = no placement
 }
 
-// CalculateAwardScore calculates a player's score for a specific award
+// CalculateAwardScore calculates a player's score for an award using its quantifier definition
 func CalculateAwardScore(
-	awardType shared.AwardType,
+	def *award.AwardDefinition,
 	p *player.Player,
 	b *board.Board,
 	cardRegistry CardRegistryInterface,
 ) int {
-	switch awardType {
-	case shared.AwardLandlord:
-		// Most cities + greeneries on Mars (oceans don't count)
-		cityType := shared.ResourceCityTile
-		greeneryType := shared.ResourceGreeneryTile
-		return CountPlayerTiles(p.ID(), b, &cityType) + CountPlayerTiles(p.ID(), b, &greeneryType)
-	case shared.AwardBanker:
-		// Highest MC production
-		production := p.Resources().Production()
-		return production.Credits
-	case shared.AwardScientist:
-		// Most science tags in play
-		return CountPlayerTagsByType(p, cardRegistry, shared.TagScience)
-	case shared.AwardThermalist:
-		// Most heat resources
-		resources := p.Resources().Get()
-		return resources.Heat
-	case shared.AwardMiner:
-		// Most steel + titanium resources
-		resources := p.Resources().Get()
-		return resources.Steel + resources.Titanium
-	default:
-		return 0
+	total := 0
+	for _, q := range def.Quantifier {
+		total += CountPerCondition(&q, "", p, b, cardRegistry, nil)
 	}
+	return total
 }
 
 // ScoreAward calculates placements for all players for an award
-// Returns a slice of AwardPlacement sorted by placement (1st, 2nd, then others)
 func ScoreAward(
-	awardType shared.AwardType,
+	def *award.AwardDefinition,
 	players []*player.Player,
 	b *board.Board,
 	cardRegistry CardRegistryInterface,
@@ -66,7 +40,7 @@ func ScoreAward(
 	for i, p := range players {
 		placements[i] = AwardPlacement{
 			PlayerID: p.ID(),
-			Score:    CalculateAwardScore(awardType, p, b, cardRegistry),
+			Score:    CalculateAwardScore(def, p, b, cardRegistry),
 		}
 	}
 
@@ -117,14 +91,7 @@ func ScoreAward(
 	return placements
 }
 
-// GetAwardVP returns the VP for a specific placement
-func GetAwardVP(placement int) int {
-	switch placement {
-	case 1:
-		return AwardFirstPlaceVP
-	case 2:
-		return AwardSecondPlaceVP
-	default:
-		return 0
-	}
+// GetAwardVP returns the VP for a specific placement using the award definition
+func GetAwardVP(def *award.AwardDefinition, placement int) int {
+	return def.GetRewardVP(placement)
 }

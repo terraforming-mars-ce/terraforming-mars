@@ -46,7 +46,7 @@ func TestDispatcher_SkipAction(t *testing.T) {
 	g, repo, cardRegistry, p1, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
-	finalScoringAction := gameAction.NewFinalScoringAction(repo, cardRegistry, logger)
+	finalScoringAction := gameAction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	skipAction := turnAction.NewSkipActionAction(repo, finalScoringAction, logger)
 
 	dispatcher := bot.NewCommandDispatcher(

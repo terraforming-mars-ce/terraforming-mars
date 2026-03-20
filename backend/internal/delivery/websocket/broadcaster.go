@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/colonies"
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -31,6 +32,7 @@ type Broadcaster struct {
 	colonyRegistry          colonies.ColonyRegistry
 	projectFundingRegistry  pfRegistry.ProjectFundingRegistry
 	standardProjectRegistry standardprojects.StandardProjectRegistry
+	awardRegistry           awards.AwardRegistry
 	botNotifier             BotNotifier
 	logger                  *zap.Logger
 	lastBroadcastedSeq      map[string]int64 // gameID -> last broadcasted log sequence
@@ -46,6 +48,7 @@ func NewBroadcaster(
 	colonyRegistry colonies.ColonyRegistry,
 	pfReg pfRegistry.ProjectFundingRegistry,
 	stdProjReg standardprojects.StandardProjectRegistry,
+	awardReg awards.AwardRegistry,
 ) *Broadcaster {
 	broadcaster := &Broadcaster{
 		gameRepo:                gameRepo,
@@ -55,6 +58,7 @@ func NewBroadcaster(
 		colonyRegistry:          colonyRegistry,
 		projectFundingRegistry:  pfReg,
 		standardProjectRegistry: stdProjReg,
+		awardRegistry:           awardReg,
 		logger:                  logger.Get(),
 		lastBroadcastedSeq:      make(map[string]int64),
 	}
@@ -197,6 +201,7 @@ func (b *Broadcaster) sendToPlayer(ctx context.Context, game *game.Game, playerI
 		ColonyRegistry:          b.colonyRegistry,
 		ProjectFundingRegistry:  b.projectFundingRegistry,
 		StandardProjectRegistry: b.standardProjectRegistry,
+		AwardRegistry:           b.awardRegistry,
 	})
 
 	message := dto.WebSocketMessage{
@@ -259,7 +264,7 @@ func (b *Broadcaster) broadcastToSpectators(g *game.Game) {
 		return
 	}
 
-	gameDto := dto.ToSpectatorGameDto(g, b.cardRegistry)
+	gameDto := dto.ToSpectatorGameDto(g, b.cardRegistry, b.awardRegistry)
 	message := dto.WebSocketMessage{
 		Type:   dto.MessageTypeGameUpdated,
 		GameID: g.ID(),

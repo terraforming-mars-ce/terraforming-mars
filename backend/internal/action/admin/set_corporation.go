@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/zap"
 	baseaction "terraforming-mars-backend/internal/action"
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
@@ -15,23 +16,26 @@ import (
 
 // SetCorporationAction handles the admin action to set a player's corporation
 type SetCorporationAction struct {
-	gameRepo     game.GameRepository
-	cardRegistry cards.CardRegistry
-	corpProc     *gamecards.CorporationProcessor
-	logger       *zap.Logger
+	gameRepo      game.GameRepository
+	cardRegistry  cards.CardRegistry
+	awardRegistry awards.AwardRegistry
+	corpProc      *gamecards.CorporationProcessor
+	logger        *zap.Logger
 }
 
 // NewSetCorporationAction creates a new set corporation admin action
 func NewSetCorporationAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
+	awardRegistry awards.AwardRegistry,
 	logger *zap.Logger,
 ) *SetCorporationAction {
 	return &SetCorporationAction{
-		gameRepo:     gameRepo,
-		cardRegistry: cardRegistry,
-		corpProc:     gamecards.NewCorporationProcessor(cardRegistry, logger),
-		logger:       logger,
+		gameRepo:      gameRepo,
+		cardRegistry:  cardRegistry,
+		awardRegistry: awardRegistry,
+		corpProc:      gamecards.NewCorporationProcessor(cardRegistry, awardRegistry, logger),
+		logger:        logger,
 	}
 }
 

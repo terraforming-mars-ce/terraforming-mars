@@ -83,7 +83,7 @@ func setupStartingSelectionGame(t *testing.T, hasPrelude bool) (*game.Game, *tur
 		testutil.AssertNoError(t, err, "Failed to set starting cards phase")
 	}
 
-	action := turnAction.NewSelectStartingChoicesAction(repo, cardRegistry, logger)
+	action := turnAction.NewSelectStartingChoicesAction(repo, cardRegistry, nil, logger)
 	return testGame, action, playerIDs[0], playerIDs[1]
 }
 

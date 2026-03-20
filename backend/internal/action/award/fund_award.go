@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	baseaction "terraforming-mars-backend/internal/action"
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/shared"
@@ -15,6 +16,7 @@ import (
 // FundAwardAction handles the business logic for funding an award
 type FundAwardAction struct {
 	baseaction.BaseAction
+	awardRegistry awards.AwardRegistry
 }
 
 // NewFundAwardAction creates a new fund award action
@@ -22,10 +24,12 @@ func NewFundAwardAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
 	stateRepo game.GameStateRepository,
+	awardRegistry awards.AwardRegistry,
 	logger *zap.Logger,
 ) *FundAwardAction {
 	return &FundAwardAction{
-		BaseAction: baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),
+		BaseAction:    baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),
+		awardRegistry: awardRegistry,
 	}
 }
 
@@ -34,7 +38,8 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "fund_award"), zap.String("award", awardType))
 	log.Debug("Funding award")
 
-	if !shared.ValidAwardType(awardType) {
+	def, err := a.awardRegistry.GetByID(awardType)
+	if err != nil {
 		log.Warn("Invalid award type", zap.String("award_type", awardType))
 		return fmt.Errorf("invalid award type: %s", awardType)
 	}
@@ -61,19 +66,19 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 		return err
 	}
 
-	awards := g.Awards()
+	awardState := g.Awards()
 	at := shared.AwardType(awardType)
-	if awards.IsFunded(at) {
+	if awardState.IsFunded(at) {
 		log.Warn("Award already funded", zap.String("award", awardType))
 		return fmt.Errorf("award %s is already funded", awardType)
 	}
 
-	if !awards.CanFundMore() {
+	if !awardState.CanFundMore() {
 		log.Warn("Maximum awards already funded", zap.Int("max", game.MaxFundedAwards))
 		return fmt.Errorf("maximum awards (%d) already funded", game.MaxFundedAwards)
 	}
 
-	fundingCost := awards.GetCurrentFundingCost()
+	fundingCost := def.GetCostForFundedCount(awardState.FundedCount())
 	resources := player.Resources().Get()
 	if resources.Credits < fundingCost {
 		log.Warn("Insufficient credits for award",
@@ -89,22 +94,18 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 		zap.Int("cost", fundingCost),
 		zap.Int("remaining_credits", player.Resources().Get().Credits))
 
-	if err := awards.FundAward(ctx, at, playerID); err != nil {
+	if err := awardState.FundAward(ctx, at, playerID, fundingCost); err != nil {
 		log.Error("Failed to fund award", zap.Error(err))
 		return fmt.Errorf("failed to fund award: %w", err)
 	}
 
 	a.ConsumePlayerAction(g, log)
 
-	awardName := awardType
-	if info, ok := game.GetAwardInfo(shared.AwardType(awardType)); ok {
-		awardName = info.Name
-	}
-	a.WriteStateLog(ctx, g, awardName, shared.SourceTypeAward, playerID, fmt.Sprintf("Funded %s award", awardName))
+	a.WriteStateLog(ctx, g, def.Name, shared.SourceTypeAward, playerID, fmt.Sprintf("Funded %s award", def.Name))
 
 	log.Info("Award funded",
 		zap.String("award", awardType),
-		zap.Int("total_funded", awards.FundedCount()))
+		zap.Int("total_funded", awardState.FundedCount()))
 
 	return nil
 }

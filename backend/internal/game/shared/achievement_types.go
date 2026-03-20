@@ -3,25 +3,6 @@ package shared
 // AwardType represents the type of award
 type AwardType string
 
-// Award types available in the base game
-const (
-	AwardLandlord   AwardType = "landlord"   // Most tiles on Mars
-	AwardBanker     AwardType = "banker"     // Most MC production
-	AwardScientist  AwardType = "scientist"  // Most science tags
-	AwardThermalist AwardType = "thermalist" // Most heat resources
-	AwardMiner      AwardType = "miner"      // Most steel + titanium resources
-)
-
-// ValidAwardType returns true if the string is a valid award type
-func ValidAwardType(s string) bool {
-	switch AwardType(s) {
-	case AwardLandlord, AwardBanker, AwardScientist, AwardThermalist, AwardMiner:
-		return true
-	default:
-		return false
-	}
-}
-
 // MilestoneType represents the type of milestone
 type MilestoneType string
 
