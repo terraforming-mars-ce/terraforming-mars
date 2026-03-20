@@ -19,7 +19,6 @@ func TestDispatcher_UnknownType(t *testing.T) {
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil,
 		nil, logger,
 	)
 
@@ -32,7 +31,6 @@ func TestDispatcher_InvalidJSON(t *testing.T) {
 	logger := testutil.TestLogger()
 
 	dispatcher := bot.NewCommandDispatcher(
-		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
@@ -53,7 +51,6 @@ func TestDispatcher_SkipAction(t *testing.T) {
 
 	dispatcher := bot.NewCommandDispatcher(
 		nil, nil, skipAction, nil, nil,
-		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, logger,

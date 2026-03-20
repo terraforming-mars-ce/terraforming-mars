@@ -4,10 +4,14 @@ import (
 	"context"
 	"testing"
 
+	"path/filepath"
+	"runtime"
+
 	cardAction "terraforming-mars-backend/internal/action/card"
 	gameaction "terraforming-mars-backend/internal/action/game"
 	spAction "terraforming-mars-backend/internal/action/standard_project"
 	turnmgmt "terraforming-mars-backend/internal/action/turn_management"
+	"terraforming-mars-backend/internal/standardprojects"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -35,6 +39,17 @@ func TestPlayCardIncrementsGlobalActionCounter(t *testing.T) {
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().GlobalActionCounter(), "Global action counter should be 1 after playing a card")
 }
 
+func createStdProjRegistry(t *testing.T) standardprojects.StandardProjectRegistry {
+	t.Helper()
+	_, currentFile, _, _ := runtime.Caller(0)
+	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "terraforming_mars_standard_projects.json")
+	stdProjData, err := standardprojects.LoadStandardProjectsFromJSON(stdProjPath)
+	if err != nil {
+		t.Fatalf("Failed to load standard projects: %v", err)
+	}
+	return standardprojects.NewInMemoryStandardProjectRegistry(stdProjData)
+}
+
 func TestStandardProjectIncrementsGlobalActionCounter(t *testing.T) {
 	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
@@ -42,9 +57,10 @@ func TestStandardProjectIncrementsGlobalActionCounter(t *testing.T) {
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(context.Background(), p, 100)
 
-	buildAction := spAction.NewBuildPowerPlantAction(repo, cardRegistry, nil, logger)
+	stdProjRegistry := createStdProjRegistry(t)
+	buildAction := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 
-	err := buildAction.Execute(context.Background(), testGame.ID(), playerID)
+	err := buildAction.Execute(context.Background(), testGame.ID(), playerID, "power-plant")
 	testutil.AssertNoError(t, err, "Building power plant should succeed")
 
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().GlobalActionCounter(), "Global action counter should be 1 after standard project")
@@ -107,8 +123,9 @@ func TestMultipleActionsIncrementCounterSequentially(t *testing.T) {
 	p2, _ := testGame.GetPlayer(player2ID)
 	testutil.SetPlayerCredits(context.Background(), p2, 200)
 
-	buildAction := spAction.NewBuildPowerPlantAction(repo, cardRegistry, nil, logger)
-	err = buildAction.Execute(context.Background(), testGame.ID(), player2ID)
+	stdProjRegistry := createStdProjRegistry(t)
+	buildAction := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
+	err = buildAction.Execute(context.Background(), testGame.ID(), player2ID, "power-plant")
 	testutil.AssertNoError(t, err, "Player 2 building power plant should succeed")
 	testutil.AssertEqual(t, 3, testGame.CurrentTurn().GlobalActionCounter(), "Counter should be 3 after player 2 action")
 }
@@ -129,13 +146,14 @@ func TestCounterIncrementsDuringUnlimitedActions(t *testing.T) {
 	testutil.SetPlayerCredits(context.Background(), p1, 200)
 
 	// Play standard project with unlimited actions (counter should still increment)
-	buildAction := spAction.NewBuildPowerPlantAction(repo, cardRegistry, nil, logger)
+	stdProjRegistry := createStdProjRegistry(t)
+	buildAction := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 
-	err = buildAction.Execute(context.Background(), testGame.ID(), player1ID)
+	err = buildAction.Execute(context.Background(), testGame.ID(), player1ID, "power-plant")
 	testutil.AssertNoError(t, err, "First action with unlimited should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().GlobalActionCounter(), "Counter should increment even with unlimited actions")
 
-	err = buildAction.Execute(context.Background(), testGame.ID(), player1ID)
+	err = buildAction.Execute(context.Background(), testGame.ID(), player1ID, "power-plant")
 	testutil.AssertNoError(t, err, "Second action with unlimited should succeed")
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().GlobalActionCounter(), "Counter should be 2 after second unlimited action")
 }
