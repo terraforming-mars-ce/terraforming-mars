@@ -10,16 +10,18 @@ const (
 	StandardProjectAquifer                  StandardProject = "aquifer"
 	StandardProjectGreenery                 StandardProject = "greenery"
 	StandardProjectCity                     StandardProject = "city"
+	StandardProjectAirScrapping             StandardProject = "air-scrapping"
 	StandardProjectConvertPlantsToGreenery  StandardProject = "convert-plants-to-greenery"
 	StandardProjectConvertHeatToTemperature StandardProject = "convert-heat-to-temperature"
 )
 
 // StandardProjectCost represents the credit cost for each standard project
 var StandardProjectCost = map[StandardProject]int{
-	StandardProjectSellPatents: 0,
-	StandardProjectPowerPlant:  11,
-	StandardProjectAsteroid:    14,
-	StandardProjectAquifer:     18,
-	StandardProjectGreenery:    23,
-	StandardProjectCity:        25,
+	StandardProjectSellPatents:  0,
+	StandardProjectPowerPlant:   11,
+	StandardProjectAsteroid:     14,
+	StandardProjectAquifer:      18,
+	StandardProjectGreenery:     23,
+	StandardProjectCity:         25,
+	StandardProjectAirScrapping: 15,
 }
