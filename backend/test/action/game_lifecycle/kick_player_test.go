@@ -104,7 +104,7 @@ func TestKickPlayer_TheirTurn_AllPassedTriggersProduction(t *testing.T) {
 	g, repo, cardRegistry, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
 
-	finalScoring := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, testutil.TestLogger())
+	finalScoring := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, nil, testutil.TestLogger())
 	kick := newKickAction(repo, finalScoring)
 
 	hostID := g.HostPlayerID()
@@ -504,7 +504,7 @@ func TestKickPlayer_ExitedPlayerStaysAtBottomAcrossGenerations(t *testing.T) {
 	g, repo, cardRegistry, playerIDs := testutil.SetupMultiPlayerGame(t, 3)
 	ctx := testutil.TestContext()
 
-	finalScoring := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, testutil.TestLogger())
+	finalScoring := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, nil, testutil.TestLogger())
 	kick := newKickAction(repo, finalScoring)
 
 	hostID := g.HostPlayerID()

@@ -34,6 +34,7 @@ import (
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/logger"
 	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
+	msLoader "terraforming-mars-backend/internal/milestones"
 	pfLoader "terraforming-mars-backend/internal/projectfunding"
 	"terraforming-mars-backend/internal/service/bot"
 	"terraforming-mars-backend/internal/service/bugreport"
@@ -135,6 +136,17 @@ func main() {
 	awardRegistry := awards.NewInMemoryAwardRegistry(awardData)
 	log.Debug("Award registry initialized", zap.Int("award_count", len(awardData)))
 
+	// ========== Initialize Milestone Registry ==========
+	milestonePath := filepath.Join(wd, "assets", "terraforming_mars_milestones.json")
+	log.Debug("Loading milestones from", zap.String("path", milestonePath))
+
+	milestoneData, err := msLoader.LoadMilestonesFromJSON(milestonePath)
+	if err != nil {
+		log.Fatal("Failed to load milestones", zap.Error(err))
+	}
+	milestoneRegistry := msLoader.NewInMemoryMilestoneRegistry(milestoneData)
+	log.Debug("Milestone registry initialized", zap.Int("milestone_count", len(milestoneData)))
+
 	// ========== Initialize Game Repository (Single Source of Truth) ==========
 	ds, err := datastore.NewDataStore()
 	if err != nil {
@@ -159,7 +171,7 @@ func main() {
 	log.Debug("WebSocket hub initialized")
 
 	// ========== Initialize Game State Broadcaster (Automatic Broadcasting) ==========
-	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry, pfRegistry, stdProjRegistry, awardRegistry)
+	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry, pfRegistry, stdProjRegistry, awardRegistry, milestoneRegistry)
 	log.Debug("Game state broadcaster initialized (provides automatic broadcasting for all games)")
 
 	// ========== Initialize Game Actions ==========
@@ -171,10 +183,10 @@ func main() {
 	healthChecker := bot.NewHealthChecker(log)
 	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, healthChecker, broadcaster, log)
 	confirmDemoSetupAction := gameAction.NewConfirmDemoSetupAction(gameRepo, cardRegistry, awardRegistry, log)
-	finalScoringAction := gameAction.NewFinalScoringAction(gameRepo, cardRegistry, awardRegistry, log)
+	finalScoringAction := gameAction.NewFinalScoringAction(gameRepo, cardRegistry, awardRegistry, milestoneRegistry, log)
 
 	// Milestones & Awards (2)
-	claimMilestoneAction := milestoneAction.NewClaimMilestoneAction(gameRepo, cardRegistry, stateRepo, log)
+	claimMilestoneAction := milestoneAction.NewClaimMilestoneAction(gameRepo, cardRegistry, stateRepo, milestoneRegistry, log)
 	fundAwardAction := awardAction.NewFundAwardAction(gameRepo, cardRegistry, stateRepo, awardRegistry, log)
 
 	// Colony actions (2)

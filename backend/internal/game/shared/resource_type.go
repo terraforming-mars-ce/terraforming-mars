@@ -85,4 +85,5 @@ const (
 	ResourceWorldTreeTile ResourceType = "world-tree-tile"
 
 	ResourceAwardFund ResourceType = "award-fund"
+	ResourceCardCount ResourceType = "card-count"
 )

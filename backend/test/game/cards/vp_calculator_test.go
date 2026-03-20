@@ -28,6 +28,7 @@ func TestFixedVPCard(t *testing.T) {
 		g.GetAllPlayers(),
 		cardRegistry,
 		nil,
+		nil,
 	)
 
 	if breakdown.CardVP != 2 {
@@ -63,6 +64,7 @@ func TestPerStorageVPCard(t *testing.T) {
 		nil,
 		g.GetAllPlayers(),
 		cardRegistry,
+		nil,
 		nil,
 	)
 
@@ -121,6 +123,7 @@ func TestPerOceanTileVPCard(t *testing.T) {
 		g.GetAllPlayers(),
 		cardRegistry,
 		nil,
+		nil,
 	)
 
 	// Only 2 adjacent oceans should count, not the distant one
@@ -156,6 +159,7 @@ func TestGreeneryVP(t *testing.T) {
 		nil,
 		g.GetAllPlayers(),
 		cardRegistry,
+		nil,
 		nil,
 	)
 
@@ -200,6 +204,7 @@ func TestCityVP(t *testing.T) {
 		g.GetAllPlayers(),
 		cardRegistry,
 		nil,
+		nil,
 	)
 
 	if breakdown.CityVP != 2 {
@@ -229,6 +234,7 @@ func TestMultipleVPCards(t *testing.T) {
 		nil,
 		g.GetAllPlayers(),
 		cardRegistry,
+		nil,
 		nil,
 	)
 
@@ -266,6 +272,7 @@ func TestTotalVPSumsAllCategories(t *testing.T) {
 		nil,
 		g.GetAllPlayers(),
 		cardRegistry,
+		nil,
 		nil,
 	)
 
@@ -308,6 +315,7 @@ func TestNegativeFixedVPCard(t *testing.T) {
 		g.GetAllPlayers(),
 		cardRegistry,
 		nil,
+		nil,
 	)
 
 	if breakdown.CardVP != -2 {
@@ -343,6 +351,7 @@ func TestNegativeVPReducesTotalScore(t *testing.T) {
 		g.GetAllPlayers(),
 		cardRegistry,
 		nil,
+		nil,
 	)
 
 	// 2 + (-2) + (-1) = -1
@@ -370,6 +379,7 @@ func TestNoVPCards(t *testing.T) {
 		nil,
 		g.GetAllPlayers(),
 		cardRegistry,
+		nil,
 		nil,
 	)
 

@@ -13,9 +13,11 @@ import (
 	"terraforming-mars-backend/internal/game/award"
 	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/milestone"
 	"terraforming-mars-backend/internal/game/player"
 	pfDomain "terraforming-mars-backend/internal/game/projectfunding"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/milestones"
 	pfRegistry "terraforming-mars-backend/internal/projectfunding"
 	"terraforming-mars-backend/internal/standardprojects"
 )
@@ -28,6 +30,7 @@ type Registries struct {
 	ProjectFundingRegistry  pfRegistry.ProjectFundingRegistry
 	StandardProjectRegistry standardprojects.StandardProjectRegistry
 	AwardRegistry           awards.AwardRegistry
+	MilestoneRegistry       milestones.MilestoneRegistry
 }
 
 func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string, colonyRegistry ...colonies.ColonyRegistry) GameDto {
@@ -54,7 +57,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 	for _, p := range players {
 		if p.ID() == playerID {
 			viewingPlayer = p
-			currentPlayer = ToPlayerDto(p, g, cardRegistry, registries.StandardProjectRegistry, registries.AwardRegistry)
+			currentPlayer = ToPlayerDto(p, g, cardRegistry, registries.StandardProjectRegistry, registries.AwardRegistry, registries.MilestoneRegistry)
 		} else {
 			otherPlayers = append(otherPlayers, ToOtherPlayerDto(p, g, cardRegistry))
 		}
@@ -62,7 +65,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 
 	if viewingPlayer == nil && len(players) > 0 {
 		otherPlayers = make([]OtherPlayerDto, 0)
-		currentPlayer = ToPlayerDto(players[0], g, cardRegistry, registries.StandardProjectRegistry, registries.AwardRegistry)
+		currentPlayer = ToPlayerDto(players[0], g, cardRegistry, registries.StandardProjectRegistry, registries.AwardRegistry, registries.MilestoneRegistry)
 		for i := 1; i < len(players); i++ {
 			otherPlayers = append(otherPlayers, ToOtherPlayerDto(players[i], g, cardRegistry))
 		}
@@ -201,7 +204,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 			Tiles: tileDtos,
 		},
 		PaymentConstants:   paymentConstants,
-		Milestones:         ToMilestonesDto(g, cardRegistry),
+		Milestones:         ToMilestonesDto(g, cardRegistry, registries.MilestoneRegistry),
 		Awards:             ToAwardsDto(g, cardRegistry, registries.AwardRegistry),
 		AwardResults:       ToAwardResultsDto(g, cardRegistry, registries.AwardRegistry),
 		FinalScores:        finalScoreDtos,
@@ -289,18 +292,40 @@ func convertTileBonuses(bonuses []board.TileBonus) []TileBonusDto {
 }
 
 // ToMilestonesDto converts all milestones to DTOs including claim status and per-player progress
-func ToMilestonesDto(g *game.Game, cardRegistry cards.CardRegistry) []MilestoneDto {
-	milestones := g.Milestones()
+func ToMilestonesDto(g *game.Game, cardRegistry cards.CardRegistry, milestoneRegistry milestones.MilestoneRegistry) []MilestoneDto {
+	if milestoneRegistry == nil {
+		return nil
+	}
+	gameMilestones := g.Milestones()
 	players := g.GetAllPlayers()
 	b := g.Board()
 
-	dtos := make([]MilestoneDto, len(game.AllMilestones))
-	for i, info := range game.AllMilestones {
+	allDefs := milestoneRegistry.GetAll()
+	settings := g.Settings()
+	enabledPacks := make(map[string]bool, len(settings.CardPacks))
+	for _, pack := range settings.CardPacks {
+		enabledPacks[pack] = true
+	}
+	if settings.VenusNextEnabled {
+		enabledPacks[shared.PackVenus] = true
+	}
+
+	filteredDefs := make([]milestone.MilestoneDefinition, 0, len(allDefs))
+	for _, def := range allDefs {
+		if def.Pack != "" && !enabledPacks[def.Pack] {
+			continue
+		}
+		filteredDefs = append(filteredDefs, def)
+	}
+
+	dtos := make([]MilestoneDto, len(filteredDefs))
+	for i, def := range filteredDefs {
+		milestoneType := shared.MilestoneType(def.ID)
 		var claimedBy *string
-		isClaimed := milestones.IsClaimed(info.Type)
+		isClaimed := gameMilestones.IsClaimed(milestoneType)
 		if isClaimed {
-			for _, claimed := range milestones.ClaimedMilestones() {
-				if claimed.Type == info.Type {
+			for _, claimed := range gameMilestones.ClaimedMilestones() {
+				if claimed.Type == milestoneType {
 					claimedBy = &claimed.PlayerID
 					break
 				}
@@ -309,21 +334,51 @@ func ToMilestonesDto(g *game.Game, cardRegistry cards.CardRegistry) []MilestoneD
 
 		playerProgress := make(map[string]int, len(players))
 		for _, p := range players {
-			playerProgress[p.ID()] = gamecards.GetPlayerMilestoneProgress(info.Type, p, b, cardRegistry)
+			playerProgress[p.ID()] = gamecards.CalculateMilestoneProgress(&def, p, b, cardRegistry)
+		}
+
+		rewardDtos := buildMilestoneRewardDtos(def.Reward)
+
+		var styleDtoPtr *StyleDto
+		if def.Style.Color != "" || def.Style.Icon != "" {
+			styleDtoPtr = &StyleDto{Color: def.Style.Color, Icon: def.Style.Icon}
 		}
 
 		dtos[i] = MilestoneDto{
-			Type:           string(info.Type),
-			Name:           info.Name,
-			Description:    info.Description,
+			Type:           def.ID,
+			Name:           def.Name,
+			Description:    def.Description,
 			IsClaimed:      isClaimed,
 			ClaimedBy:      claimedBy,
-			ClaimCost:      game.MilestoneClaimCost,
-			Required:       info.Requirement,
+			ClaimCost:      def.ClaimCost,
+			Required:       def.GetRequired(),
 			PlayerProgress: playerProgress,
+			Reward:         rewardDtos,
+			Style:          styleDtoPtr,
 		}
 	}
 	return dtos
+}
+
+// buildMilestoneRewardDtos converts milestone reward outputs to AwardRewardDto slice
+func buildMilestoneRewardDtos(rewards []award.RewardOutput) []AwardRewardDto {
+	if len(rewards) == 0 {
+		return nil
+	}
+	outputs := make([]ResourceConditionDto, len(rewards))
+	for i, r := range rewards {
+		outputs[i] = ResourceConditionDto{
+			Type:   ResourceType(r.Type),
+			Amount: r.Amount,
+			Target: "self-player",
+		}
+	}
+	return []AwardRewardDto{
+		{
+			Place:   1,
+			Outputs: outputs,
+		},
+	}
 }
 
 // ToAwardsDto converts all awards to DTOs including funding status and per-player scores

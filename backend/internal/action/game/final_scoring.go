@@ -13,14 +13,16 @@ import (
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/milestones"
 )
 
 // FinalScoringAction handles the business logic for calculating final scores and ending the game
 type FinalScoringAction struct {
-	gameRepo      game.GameRepository
-	cardRegistry  cards.CardRegistry
-	awardRegistry awards.AwardRegistry
-	logger        *zap.Logger
+	gameRepo          game.GameRepository
+	cardRegistry      cards.CardRegistry
+	awardRegistry     awards.AwardRegistry
+	milestoneRegistry milestones.MilestoneRegistry
+	logger            *zap.Logger
 }
 
 // NewFinalScoringAction creates a new final scoring action
@@ -28,13 +30,15 @@ func NewFinalScoringAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
 	awardRegistry awards.AwardRegistry,
+	milestoneRegistry milestones.MilestoneRegistry,
 	logger *zap.Logger,
 ) *FinalScoringAction {
 	return &FinalScoringAction{
-		gameRepo:      gameRepo,
-		cardRegistry:  cardRegistry,
-		awardRegistry: awardRegistry,
-		logger:        logger,
+		gameRepo:          gameRepo,
+		cardRegistry:      cardRegistry,
+		awardRegistry:     awardRegistry,
+		milestoneRegistry: milestoneRegistry,
+		logger:            logger,
 	}
 }
 
@@ -86,6 +90,7 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 			allPlayers,
 			a.cardRegistry,
 			a.awardRegistry,
+			a.milestoneRegistry,
 		)
 		scores[i] = PlayerScore{
 			PlayerID:   p.ID(),

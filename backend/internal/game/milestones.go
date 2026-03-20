@@ -14,25 +14,8 @@ import (
 )
 
 const (
-	MilestoneClaimCost   = 8
 	MaxClaimedMilestones = 3
-	MilestoneVP          = 5
 )
-
-type MilestoneInfo struct {
-	Type        shared.MilestoneType
-	Name        string
-	Description string
-	Requirement int
-}
-
-var AllMilestones = []MilestoneInfo{
-	{Type: shared.MilestoneTerraformer, Name: "Terraformer", Description: "Have a Terraform Rating of at least 35", Requirement: 35},
-	{Type: shared.MilestoneMayor, Name: "Mayor", Description: "Own at least 3 city tiles", Requirement: 3},
-	{Type: shared.MilestoneGardener, Name: "Gardener", Description: "Own at least 3 greenery tiles", Requirement: 3},
-	{Type: shared.MilestoneBuilder, Name: "Builder", Description: "Have at least 8 building tags in play", Requirement: 8},
-	{Type: shared.MilestonePlanner, Name: "Planner", Description: "Have at least 16 cards in hand", Requirement: 16},
-}
 
 type Milestones struct {
 	ds       *datastore.DataStore
@@ -161,13 +144,4 @@ func (m *Milestones) ClaimMilestone(ctx context.Context, milestoneType shared.Mi
 	}
 
 	return nil
-}
-
-func GetMilestoneInfo(milestoneType shared.MilestoneType) (MilestoneInfo, bool) {
-	for _, info := range AllMilestones {
-		if info.Type == milestoneType {
-			return info, true
-		}
-	}
-	return MilestoneInfo{}, false
 }

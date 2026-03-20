@@ -12,6 +12,7 @@ import (
 	"terraforming-mars-backend/internal/game/global_parameters"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/milestones"
 )
 
 // CalculatePlayerCardState computes playability state for a card.
@@ -1539,12 +1540,13 @@ func CalculateMilestoneState(
 	p *player.Player,
 	g *game.Game,
 	cardRegistry cards.CardRegistry,
+	milestoneRegistry milestones.MilestoneRegistry,
 ) player.EntityState {
 	var errors []player.StateError
 	metadata := make(map[string]interface{})
 
-	milestoneInfo, found := game.GetMilestoneInfo(milestoneType)
-	if !found {
+	def, err := milestoneRegistry.GetByID(string(milestoneType))
+	if err != nil {
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeInvalidRequirement,
 			Category: player.ErrorCategoryConfiguration,
@@ -1558,12 +1560,12 @@ func CalculateMilestoneState(
 		}
 	}
 
-	milestones := g.Milestones()
+	ms := g.Milestones()
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
 	errors = append(errors, validateNoActiveTileSelection(p, g)...)
 
-	if milestones.IsClaimed(milestoneType) {
+	if ms.IsClaimed(milestoneType) {
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeMilestoneAlreadyClaimed,
 			Category: player.ErrorCategoryAchievement,
@@ -1571,7 +1573,7 @@ func CalculateMilestoneState(
 		})
 	}
 
-	if milestones.ClaimedCount() >= game.MaxClaimedMilestones {
+	if ms.ClaimedCount() >= game.MaxClaimedMilestones {
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeMaxMilestonesClaimed,
 			Category: player.ErrorCategoryAchievement,
@@ -1579,8 +1581,8 @@ func CalculateMilestoneState(
 		})
 	}
 
-	progress := gamecards.GetPlayerMilestoneProgress(milestoneType, p, g.Board(), cardRegistry)
-	required := milestoneInfo.Requirement
+	progress := gamecards.CalculateMilestoneProgress(def, p, g.Board(), cardRegistry)
+	required := def.GetRequired()
 	metadata["progress"] = progress
 	metadata["required"] = required
 
@@ -1588,11 +1590,11 @@ func CalculateMilestoneState(
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeMilestoneRequirementNotMet,
 			Category: player.ErrorCategoryRequirement,
-			Message:  formatMilestoneRequirementError(milestoneType),
+			Message:  "Requirement not met",
 		})
 	}
 
-	cost := game.MilestoneClaimCost
+	cost := def.ClaimCost
 	if p.Resources().Get().Credits < cost {
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeInsufficientCredits,
@@ -1873,22 +1875,4 @@ func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *g
 	}
 
 	return nil
-}
-
-// formatMilestoneRequirementError returns a short error message for milestone requirements.
-func formatMilestoneRequirementError(milestoneType shared.MilestoneType) string {
-	switch milestoneType {
-	case shared.MilestoneTerraformer:
-		return "Not enough TR"
-	case shared.MilestoneMayor:
-		return "Not enough cities"
-	case shared.MilestoneGardener:
-		return "Not enough greeneries"
-	case shared.MilestoneBuilder:
-		return "Not enough building tags"
-	case shared.MilestonePlanner:
-		return "Not enough cards"
-	default:
-		return "Requirement not met"
-	}
 }

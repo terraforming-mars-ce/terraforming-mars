@@ -25,7 +25,8 @@ func TestClaimMilestone_Terraformer_LogsCorrectName(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 100)
 	p.Resources().SetTerraformRating(35)
 
-	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, logger)
+	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
+	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "terraformer")
 	testutil.AssertNoError(t, err, "Claiming terraformer milestone should succeed")
 
@@ -63,7 +64,8 @@ func TestClaimMilestone_Gardener_LogsCorrectName(t *testing.T) {
 		}
 	}
 
-	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, logger)
+	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
+	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "gardener")
 	testutil.AssertNoError(t, err, "Claiming gardener milestone should succeed")
 
@@ -82,7 +84,8 @@ func TestClaimMilestone_InvalidType(t *testing.T) {
 	logger := testutil.TestLogger()
 	stateRepo := game.NewInMemoryGameStateRepository()
 
-	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, logger)
+	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
+	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
 	err := action.Execute(ctx, "some-game", playerID, "nonexistent")
 	testutil.AssertError(t, err, "Invalid milestone type should fail")
 }
@@ -97,7 +100,8 @@ func TestClaimMilestone_InsufficientCredits(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 0)
 	p.Resources().SetTerraformRating(35)
 
-	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, logger)
+	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
+	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "terraformer")
 	testutil.AssertError(t, err, "Claiming milestone with 0 credits should fail")
 }

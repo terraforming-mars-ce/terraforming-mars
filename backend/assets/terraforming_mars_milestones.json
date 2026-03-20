@@ -1,0 +1,80 @@
+[
+  {
+    "id": "terraformer",
+    "name": "Terraformer",
+    "description": "Have a Terraform Rating of at least 35",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "tr", "min": 35 }
+    },
+    "style": { "color": "#FFD700", "icon": "tr" }
+  },
+  {
+    "id": "mayor",
+    "name": "Mayor",
+    "description": "Own at least 3 city tiles",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "city-tile", "target": "self-player", "min": 3 }
+    },
+    "style": { "color": "#795548", "icon": "city-tile" }
+  },
+  {
+    "id": "gardener",
+    "name": "Gardener",
+    "description": "Own at least 3 greenery tiles",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "greenery-tile", "target": "self-player", "min": 3 }
+    },
+    "style": { "color": "#4CAF50", "icon": "greenery-tile" }
+  },
+  {
+    "id": "builder",
+    "name": "Builder",
+    "description": "Have at least 8 building tags in play",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "tag", "tag": "building", "min": 8 }
+    },
+    "style": { "color": "#9E9E9E", "icon": "building-tag" }
+  },
+  {
+    "id": "planner",
+    "name": "Planner",
+    "description": "Have at least 16 cards in hand",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "card-count", "min": 16 }
+    },
+    "style": { "color": "#2196F3", "icon": "card-draw" }
+  },
+  {
+    "id": "hoverlord",
+    "name": "Hoverlord",
+    "description": "Have at least 7 floater resources on your cards",
+    "pack": "venus-next",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "floater", "target": "self-player", "min": 7 }
+    },
+    "style": { "color": "#FFD700", "icon": "floater" }
+  }
+]

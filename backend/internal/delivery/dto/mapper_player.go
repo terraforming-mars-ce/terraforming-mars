@@ -8,6 +8,7 @@ import (
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/milestones"
 	"terraforming-mars-backend/internal/standardprojects"
 )
 
@@ -48,7 +49,7 @@ func calculateResourceDelta(before, after shared.Resources) ResourcesDto {
 }
 
 // ToPlayerDto converts Player to PlayerDto
-func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry, stdProjRegistry standardprojects.StandardProjectRegistry, awardRegistry awards.AwardRegistry) PlayerDto {
+func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry, stdProjRegistry standardprojects.StandardProjectRegistry, awardRegistry awards.AwardRegistry, milestoneRegistry milestones.MilestoneRegistry) PlayerDto {
 	resourcesComponent := p.Resources()
 	resources := resourcesComponent.Get()
 	production := resourcesComponent.Production()
@@ -58,7 +59,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 	playedCards := getPlayedCards(playedCardIDs, cardRegistry)
 	handCards := mapPlayerCards(p, g, cardRegistry)
 	standardProjects := mapPlayerStandardProjects(p, g, cardRegistry, stdProjRegistry)
-	milestones := mapPlayerMilestones(p, g, cardRegistry)
+	milestones := mapPlayerMilestones(p, g, cardRegistry, milestoneRegistry)
 	awards := mapPlayerAwards(p, g, awardRegistry)
 	var pendingTileSelection *PendingTileSelectionDto
 	var forcedFirstAction *ForcedFirstActionDto
@@ -778,41 +779,64 @@ func mapPlayerStandardProjects(p *player.Player, g *game.Game, cardRegistry card
 
 // mapPlayerMilestones calculates state for all milestones and converts to DTOs.
 // Uses the state calculator to compute availability on-the-fly (same pattern as standard projects).
-func mapPlayerMilestones(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []PlayerMilestoneDto {
-	result := make([]PlayerMilestoneDto, 0, len(game.AllMilestones))
+func mapPlayerMilestones(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry, milestoneRegistry milestones.MilestoneRegistry) []PlayerMilestoneDto {
+	if milestoneRegistry == nil {
+		return nil
+	}
+	allDefs := milestoneRegistry.GetAll()
+	settings := g.Settings()
+	enabledPacks := make(map[string]bool, len(settings.CardPacks))
+	for _, pack := range settings.CardPacks {
+		enabledPacks[pack] = true
+	}
+	if settings.VenusNextEnabled {
+		enabledPacks[shared.PackVenus] = true
+	}
+
+	result := make([]PlayerMilestoneDto, 0, len(allDefs))
 	gameMilestones := g.Milestones()
 
-	for _, info := range game.AllMilestones {
-		// Calculate state on-the-fly using the state calculator
-		state := action.CalculateMilestoneState(info.Type, p, g, cardRegistry)
+	for _, def := range allDefs {
+		if def.Pack != "" && !enabledPacks[def.Pack] {
+			continue
+		}
+		milestoneType := shared.MilestoneType(def.ID)
+		state := action.CalculateMilestoneState(milestoneType, p, g, cardRegistry, milestoneRegistry)
 
-		// Get claim status from game-level milestones
-		isClaimed := gameMilestones.IsClaimed(info.Type)
+		isClaimed := gameMilestones.IsClaimed(milestoneType)
 		var claimedBy *string
 		for _, claimed := range gameMilestones.ClaimedMilestones() {
-			if claimed.Type == info.Type {
+			if claimed.Type == milestoneType {
 				claimedBy = &claimed.PlayerID
 				break
 			}
 		}
 
-		// Extract progress from metadata
 		progress := 0
 		if prog, ok := state.Metadata["progress"].(int); ok {
 			progress = prog
 		}
 
+		rewardDtos := buildMilestoneRewardDtos(def.Reward)
+
+		var styleDtoPtr *StyleDto
+		if def.Style.Color != "" || def.Style.Icon != "" {
+			styleDtoPtr = &StyleDto{Color: def.Style.Color, Icon: def.Style.Icon}
+		}
+
 		dto := PlayerMilestoneDto{
-			Type:        string(info.Type),
-			Name:        info.Name,
-			Description: info.Description,
-			ClaimCost:   game.MilestoneClaimCost,
+			Type:        def.ID,
+			Name:        def.Name,
+			Description: def.Description,
+			ClaimCost:   def.ClaimCost,
 			IsClaimed:   isClaimed,
 			ClaimedBy:   claimedBy,
 			Available:   state.Available(),
 			Progress:    progress,
-			Required:    info.Requirement,
+			Required:    def.GetRequired(),
 			Errors:      convertStateErrors(state.Errors),
+			Reward:      rewardDtos,
+			Style:       styleDtoPtr,
 		}
 		result = append(result, dto)
 	}
