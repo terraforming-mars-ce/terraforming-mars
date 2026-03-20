@@ -24,6 +24,11 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
   tileScaleInfo,
 }) => {
   const cleanType = resourceType?.toLowerCase().replace(/[_\s]/g, "-");
+
+  if (cleanType === "vp") {
+    return <span className="font-orbitron font-bold text-white text-xs leading-none">VP</span>;
+  }
+
   const icon = getIconPath(resourceType);
 
   if (!icon) return null;

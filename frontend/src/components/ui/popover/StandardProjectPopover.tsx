@@ -88,7 +88,7 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   {project.style?.icon && (
-                    <div className="opacity-70">
+                    <div className="opacity-70 flex items-center">
                       <GameIcon iconType={project.style.icon} size="small" />
                     </div>
                   )}

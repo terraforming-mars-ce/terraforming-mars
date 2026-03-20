@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import {
+  AwardRewardDto,
   GameDto,
   GameStatusActive,
   GamePhaseAction,
@@ -11,6 +12,7 @@ import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { FormattedDescription } from "../display/FormattedDescription";
 import GameButton from "../buttons/GameButton.tsx";
+import BehaviorSection from "../cards/BehaviorSection/BehaviorSection.tsx";
 
 interface AwardPopoverProps {
   isVisible: boolean;
@@ -96,7 +98,7 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
       isVisible={isVisible}
       onClose={onClose}
       position={{ type: "fixed", top: 60, left: 20 }}
-      theme="awards"
+      theme="colonies"
       excludeRef={anchorRef}
       header={{
         title: "Awards",
@@ -108,16 +110,17 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
         ),
       }}
       width={500}
-      maxHeight="calc(100vh - 80px)"
+      maxHeight="80vh"
       animation="slideDown"
     >
-      <div className="p-2">
+      <div className="p-2 flex flex-col gap-2">
         {awards.map((award) => {
           const isFunded = award.isFunded;
           const isAvailable = award.available && !isFunded;
           const isExecutable = canFundAwards && isAvailable;
 
           const globalData = globalAwards.find((a) => a.type === award.type);
+          const styleColor = globalData?.style?.color ?? "#f39c12";
           const playerProgress = globalData?.playerProgress ?? {};
 
           const sortedPlayers = [...allPlayers].sort(
@@ -141,12 +144,34 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
                   : undefined
               }
               statusBadge={isFunded ? "Funded" : undefined}
-              hoverEffect="background"
-              className="mb-2 last:mb-0"
+              borderColor={styleColor}
+              style={
+                isFunded
+                  ? {
+                      borderColor: styleColor + "BB",
+                      background: "rgba(255,255,255,0.06)",
+                    }
+                  : undefined
+              }
             >
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
+                  {globalData?.style?.icon && (
+                    <div className="opacity-70 flex items-center">
+                      <GameIcon iconType={globalData.style.icon} size="small" />
+                    </div>
+                  )}
                   <h3 className="text-white text-sm font-bold font-orbitron m-0">{award.name}</h3>
+                  {isFunded && award.fundedBy && (
+                    <span className="text-white/50 text-xs">
+                      Funded by{" "}
+                      <span
+                        style={{ color: allPlayers.find((p) => p.id === award.fundedBy)?.color }}
+                      >
+                        {getPlayerName(award.fundedBy)}
+                      </span>
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-start justify-between gap-4">
@@ -158,20 +183,30 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
                         size="small"
                       />
                       <span className="text-white/60 text-xs">→</span>
-                      <span className="text-amber-400 text-xs font-semibold">
-                        5 VP (1st), 2 VP (2nd)
-                      </span>
+                      {(globalData?.rewards ?? []).map((reward: AwardRewardDto) => (
+                        <div key={reward.place} className="flex items-center gap-1">
+                          <span className="text-white/50 text-[10px] font-orbitron">
+                            {reward.place === 1 ? "1st" : `${reward.place}nd`}:
+                          </span>
+                          <div className="[&>div]:items-center [&_div]:justify-start">
+                            <BehaviorSection
+                              behaviors={[
+                                {
+                                  triggers: [],
+                                  inputs: [],
+                                  outputs: reward.outputs,
+                                },
+                              ]}
+                              noContainer
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
 
                     <p className="text-white/70 text-xs leading-relaxed m-0 text-left">
                       <FormattedDescription text={award.description} />
                     </p>
-
-                    {isFunded && award.fundedBy && (
-                      <div className="mt-2 text-xs text-blue-400/80 italic">
-                        Funded by {getPlayerName(award.fundedBy)}
-                      </div>
-                    )}
                   </div>
 
                   <div
@@ -182,14 +217,14 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
                       const score = playerProgress[player.id] ?? 0;
                       return (
                         <React.Fragment key={player.id}>
-                          <div className="flex items-center gap-2 text-xs">
+                          <div className="flex items-center gap-2 text-sm">
                             <span
                               className="w-2 h-2 rounded-full flex-shrink-0"
                               style={{ backgroundColor: player.color }}
                             />
                             <span className="text-white/80">{player.name}</span>
                           </div>
-                          <span className="text-xs font-orbitron font-semibold text-white/50">
+                          <span className="text-sm font-orbitron font-semibold text-white/50">
                             {score}
                           </span>
                         </React.Fragment>

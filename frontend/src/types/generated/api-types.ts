@@ -911,7 +911,7 @@ export interface PlayerStandardProjectDto {
   name: string;
   description: string;
   behaviors: CardBehaviorDto[];
-  style?: StandardProjectStyleDto;
+  style?: StyleDto;
   baseCost: { [key: string]: number /* int */ };
   available: boolean;
   errors: StateErrorDto[];
@@ -921,9 +921,9 @@ export interface PlayerStandardProjectDto {
   metadata?: { [key: string]: any };
 }
 /**
- * StandardProjectStyleDto provides visual hints for the frontend
+ * StyleDto provides visual hints for the frontend
  */
-export interface StandardProjectStyleDto {
+export interface StyleDto {
   color: string;
   icon: string;
 }
@@ -1196,7 +1196,7 @@ export interface ColonyTileDto {
   playerColonies: string[];
   tradedThisGen: boolean;
   traderId: string;
-  style: ColonyStyleDto;
+  style: StyleDto;
   tradeAvailable: boolean;
   buildAvailable: boolean;
   tradeErrors: StateErrorDto[];
@@ -1222,13 +1222,6 @@ export interface ColonySlotDto {
   reward: ColonyOutputDto[];
 }
 /**
- * ColonyStyleDto provides visual hints for the frontend
- */
-export interface ColonyStyleDto {
-  color: string;
-  icon: string;
-}
-/**
  * ProjectFundingDto represents a project funding tile in the game
  */
 export interface ProjectFundingDto {
@@ -1247,7 +1240,7 @@ export interface ProjectFundingDto {
   paymentSubstitutes: ProjectPaymentSubDto[];
   rewardTiers: ProjectRewardTierDto[];
   completionEffect: ProjectCompletionEffectDto;
-  style: ProjectStyleDto;
+  style: StyleDto;
 }
 /**
  * ProjectSeatDto represents a seat definition
@@ -1288,13 +1281,6 @@ export interface ProjectCompletionEffectDto {
 export interface ProjectPaymentSubDto {
   resourceType: string;
   conversionRate: number /* int */;
-}
-/**
- * ProjectStyleDto provides visual hints for the frontend
- */
-export interface ProjectStyleDto {
-  color: string;
-  icon: string;
 }
 /**
  * TileBonusDto represents a resource bonus provided by a tile when occupied
@@ -1354,6 +1340,15 @@ export interface AwardDto {
   fundedBy?: string;
   fundingCost: number /* int */;
   playerProgress: { [key: string]: number /* int */ };
+  rewards: AwardRewardDto[];
+  style?: StyleDto;
+}
+/**
+ * AwardRewardDto represents a placement reward
+ */
+export interface AwardRewardDto {
+  place: number /* int */;
+  outputs: ResourceConditionDto[];
 }
 /**
  * AwardResultDto represents the placement results for a single funded award
@@ -1390,6 +1385,7 @@ export interface PlayerAwardDto {
   fundedBy?: string;
   available: boolean; // Can this player fund this award?
   errors: StateErrorDto[]; // Reasons why not available
+  style?: StyleDto;
 }
 /**
  * VPGranterConditionDto represents a single VP condition's computed breakdown for client consumption
@@ -1703,6 +1699,7 @@ export interface Registries {
   ColonyRegistry: any /* colonies.ColonyRegistry */;
   ProjectFundingRegistry: any /* pfRegistry.ProjectFundingRegistry */;
   StandardProjectRegistry: any /* standardprojects.StandardProjectRegistry */;
+  AwardRegistry: any /* awards.AwardRegistry */;
 }
 
 //////////

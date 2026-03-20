@@ -41,6 +41,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
 
   const isCredits = resourceType === "credit" || resourceType === "credit-production";
   const isDiscount = resourceType === "discount";
+  const isVP = resourceType === "vp";
   const isProduction = resourceType?.includes("-production");
   const hasPer = resource?.per;
   const isAttack =
@@ -273,6 +274,14 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
       <div className={discountClasses}>
         <GameIcon iconType="credit" amount={-amount} size="small" />
       </div>
+    );
+  }
+
+  if (isVP) {
+    return (
+      <span className="font-orbitron font-bold text-white text-sm leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+        {amount} VP
+      </span>
     );
   }
 
