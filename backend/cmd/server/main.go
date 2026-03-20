@@ -36,6 +36,7 @@ import (
 	pfLoader "terraforming-mars-backend/internal/projectfunding"
 	"terraforming-mars-backend/internal/service/bot"
 	"terraforming-mars-backend/internal/service/bugreport"
+	stdprojLoader "terraforming-mars-backend/internal/standardprojects"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -111,6 +112,17 @@ func main() {
 	pfRegistry := pfLoader.NewInMemoryProjectFundingRegistry(pfData)
 	log.Debug("Project funding registry initialized", zap.Int("project_count", len(pfData)))
 
+	// ========== Initialize Standard Project Registry ==========
+	stdProjPath := filepath.Join(wd, "assets", "terraforming_mars_standard_projects.json")
+	log.Debug("Loading standard projects from", zap.String("path", stdProjPath))
+
+	stdProjData, err := stdprojLoader.LoadStandardProjectsFromJSON(stdProjPath)
+	if err != nil {
+		log.Fatal("Failed to load standard projects", zap.Error(err))
+	}
+	stdProjRegistry := stdprojLoader.NewInMemoryStandardProjectRegistry(stdProjData)
+	log.Debug("Standard project registry initialized", zap.Int("project_count", len(stdProjData)))
+
 	// ========== Initialize Game Repository (Single Source of Truth) ==========
 	ds, err := datastore.NewDataStore()
 	if err != nil {
@@ -136,7 +148,7 @@ func main() {
 	log.Debug("WebSocket hub initialized")
 
 	// ========== Initialize Game State Broadcaster (Automatic Broadcasting) ==========
-	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry, pfRegistry)
+	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry, pfRegistry, stdProjRegistry)
 	log.Debug("Game state broadcaster initialized (provides automatic broadcasting for all games)")
 
 	// ========== Initialize Game Actions ==========
@@ -165,13 +177,8 @@ func main() {
 	playCardAction := cardAction.NewPlayCardAction(gameRepo, cardRegistry, stateRepo, log)
 	useCardActionAction := cardAction.NewUseCardActionAction(gameRepo, cardRegistry, stateRepo, log)
 
-	// Standard projects (6)
-	launchAsteroidAction := stdprojAction.NewLaunchAsteroidAction(gameRepo, stateRepo, log)
-	buildPowerPlantAction := stdprojAction.NewBuildPowerPlantAction(gameRepo, cardRegistry, stateRepo, log)
-	buildAquiferAction := stdprojAction.NewBuildAquiferAction(gameRepo, stateRepo, log)
-	buildCityAction := stdprojAction.NewBuildCityAction(gameRepo, stateRepo, log)
-	plantGreeneryAction := stdprojAction.NewPlantGreeneryAction(gameRepo, stateRepo, log)
-	sellPatentsAction := stdprojAction.NewSellPatentsAction(gameRepo, stateRepo, log)
+	// Standard projects (1 unified action)
+	executeStandardProjectAction := stdprojAction.NewExecuteStandardProjectAction(gameRepo, cardRegistry, stdProjRegistry, stateRepo, log)
 
 	// Resource conversions (2)
 	convertHeatAction := resconvAction.NewConvertHeatToTemperatureAction(gameRepo, cardRegistry, stateRepo, log)
@@ -203,9 +210,7 @@ func main() {
 		confirmProductionCardsAction, confirmCardDrawAction,
 		confirmCardDiscardAction, confirmBehaviorChoiceAction,
 		confirmSellPatentsAction,
-		launchAsteroidAction, buildPowerPlantAction,
-		buildAquiferAction, buildCityAction, plantGreeneryAction,
-		sellPatentsAction,
+		executeStandardProjectAction,
 		convertHeatAction, convertPlantsAction,
 		claimMilestoneAction, fundAwardAction,
 		confirmInitAdvanceAction,
@@ -267,12 +272,7 @@ func main() {
 		playCardAction,
 		useCardActionAction,
 		// Standard projects
-		launchAsteroidAction,
-		buildPowerPlantAction,
-		buildAquiferAction,
-		buildCityAction,
-		plantGreeneryAction,
-		sellPatentsAction,
+		executeStandardProjectAction,
 		// Resource conversions
 		convertHeatAction,
 		convertPlantsAction,

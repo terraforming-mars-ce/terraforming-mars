@@ -463,7 +463,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
       )}
 
       {/* Output side */}
-      <div className="flex flex-col gap-0.5 items-center min-w-0">
+      <div className="flex flex-row flex-wrap gap-0.5 items-center min-w-0">
         {/* Regular non-card outputs */}
         {nonCardOutputs.map((output: any, outputIndex: number) => {
           const displayInfo = analyzeResourceDisplayWithConstraints(output, 3, false);

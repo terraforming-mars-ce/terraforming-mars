@@ -4,6 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"path/filepath"
+	"runtime"
+
 	awardAction "terraforming-mars-backend/internal/action/award"
 	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	milestoneAction "terraforming-mars-backend/internal/action/milestone"
@@ -11,6 +14,7 @@ import (
 	stdAction "terraforming-mars-backend/internal/action/standard_project"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/standardprojects"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -59,12 +63,24 @@ func TestConvertPlantsToGreenery_RejectsDuringProductionPhase(t *testing.T) {
 	testutil.AssertError(t, err, "Convert plants should be rejected during production phase")
 }
 
+func createPhaseTestStdProjRegistry(t *testing.T) standardprojects.StandardProjectRegistry {
+	t.Helper()
+	_, currentFile, _, _ := runtime.Caller(0)
+	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "terraforming_mars_standard_projects.json")
+	stdProjData, err := standardprojects.LoadStandardProjectsFromJSON(stdProjPath)
+	if err != nil {
+		t.Fatalf("Failed to load standard projects: %v", err)
+	}
+	return standardprojects.NewInMemoryStandardProjectRegistry(stdProjData)
+}
+
 func TestSellPatents_RejectsDuringProductionPhase(t *testing.T) {
 	testGame, repo, playerID := setupProductionPhaseGame(t)
 	logger := testutil.TestLogger()
 
-	action := stdAction.NewSellPatentsAction(repo, nil, logger)
-	err := action.Execute(context.Background(), testGame.ID(), playerID)
+	stdProjRegistry := createPhaseTestStdProjRegistry(t)
+	action := stdAction.NewExecuteStandardProjectAction(repo, nil, stdProjRegistry, nil, logger)
+	err := action.Execute(context.Background(), testGame.ID(), playerID, "sell-patents")
 
 	testutil.AssertError(t, err, "Sell patents should be rejected during production phase")
 }
@@ -77,8 +93,9 @@ func TestBuildPowerPlant_RejectsDuringProductionPhase(t *testing.T) {
 	player, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(context.Background(), player, 20)
 
-	action := stdAction.NewBuildPowerPlantAction(repo, cardRegistry, nil, logger)
-	err := action.Execute(context.Background(), testGame.ID(), playerID)
+	stdProjRegistry := createPhaseTestStdProjRegistry(t)
+	action := stdAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
+	err := action.Execute(context.Background(), testGame.ID(), playerID, "power-plant")
 
 	testutil.AssertError(t, err, "Build power plant should be rejected during production phase")
 }
@@ -90,8 +107,9 @@ func TestBuildAquifer_RejectsDuringProductionPhase(t *testing.T) {
 	player, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(context.Background(), player, 20)
 
-	action := stdAction.NewBuildAquiferAction(repo, nil, logger)
-	err := action.Execute(context.Background(), testGame.ID(), playerID)
+	stdProjRegistry := createPhaseTestStdProjRegistry(t)
+	action := stdAction.NewExecuteStandardProjectAction(repo, nil, stdProjRegistry, nil, logger)
+	err := action.Execute(context.Background(), testGame.ID(), playerID, "aquifer")
 
 	testutil.AssertError(t, err, "Build aquifer should be rejected during production phase")
 }

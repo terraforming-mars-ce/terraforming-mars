@@ -44,12 +44,7 @@ func RegisterHandlers(
 	confirmDemoSetupAction *gameAction.ConfirmDemoSetupAction,
 	playCardAction *cardAction.PlayCardAction,
 	useCardActionAction *cardAction.UseCardActionAction,
-	launchAsteroidAction *stdprojAction.LaunchAsteroidAction,
-	buildPowerPlantAction *stdprojAction.BuildPowerPlantAction,
-	buildAquiferAction *stdprojAction.BuildAquiferAction,
-	buildCityAction *stdprojAction.BuildCityAction,
-	plantGreeneryAction *stdprojAction.PlantGreeneryAction,
-	sellPatentsAction *stdprojAction.SellPatentsAction,
+	executeStandardProjectAction *stdprojAction.ExecuteStandardProjectAction,
 	convertHeatAction *resconvAction.ConvertHeatToTemperatureAction,
 	convertPlantsAction *resconvAction.ConvertPlantsToGreeneryAction,
 	selectTileAction *tileAction.SelectTileAction,
@@ -112,23 +107,15 @@ func RegisterHandlers(
 	useCardActionHandler := card.NewUseCardActionHandler(useCardActionAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionCardAction, useCardActionHandler)
 
-	launchAsteroidHandler := standard_project.NewLaunchAsteroidHandler(launchAsteroidAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeActionLaunchAsteroid, launchAsteroidHandler)
-
-	buildPowerPlantHandler := standard_project.NewBuildPowerPlantHandler(buildPowerPlantAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeActionBuildPowerPlant, buildPowerPlantHandler)
-
-	buildAquiferHandler := standard_project.NewBuildAquiferHandler(buildAquiferAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeActionBuildAquifer, buildAquiferHandler)
-
-	buildCityHandler := standard_project.NewBuildCityHandler(buildCityAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeActionBuildCity, buildCityHandler)
-
-	plantGreeneryHandler := standard_project.NewPlantGreeneryHandler(plantGreeneryAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeActionPlantGreenery, plantGreeneryHandler)
-
-	sellPatentsHandler := standard_project.NewSellPatentsHandler(sellPatentsAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeActionSellPatents, sellPatentsHandler)
+	stdProjHandler := standard_project.NewExecuteHandler(executeStandardProjectAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionStandardProject, stdProjHandler)
+	// Legacy message types for backwards compatibility
+	hub.RegisterHandler(dto.MessageTypeActionSellPatents, stdProjHandler)
+	hub.RegisterHandler(dto.MessageTypeActionLaunchAsteroid, stdProjHandler)
+	hub.RegisterHandler(dto.MessageTypeActionBuildPowerPlant, stdProjHandler)
+	hub.RegisterHandler(dto.MessageTypeActionBuildAquifer, stdProjHandler)
+	hub.RegisterHandler(dto.MessageTypeActionPlantGreenery, stdProjHandler)
+	hub.RegisterHandler(dto.MessageTypeActionBuildCity, stdProjHandler)
 
 	convertHeatHandler := resource_conversion.NewConvertHeatHandler(convertHeatAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConvertHeatToTemperature, convertHeatHandler)

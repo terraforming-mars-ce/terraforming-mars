@@ -6,62 +6,8 @@ import (
 	"terraforming-mars-backend/internal/game/shared"
 )
 
-// standardProjectDisplayData contains pre-built display data for standard projects
+// standardProjectDisplayData contains pre-built display data for resource conversion projects
 var standardProjectDisplayData = map[string]*game.LogDisplayData{
-	"Standard Project: Power Plant": {
-		Behaviors: []shared.CardBehavior{{
-			Outputs: []shared.ResourceCondition{{
-				ResourceType: shared.ResourceEnergyProduction,
-				Amount:       1,
-				Target:       "self-player",
-			}},
-		}},
-	},
-	"Standard Project: Asteroid": {
-		Behaviors: []shared.CardBehavior{{
-			Outputs: []shared.ResourceCondition{{
-				ResourceType: shared.ResourceTemperature,
-				Amount:       1,
-				Target:       "global",
-			}},
-		}},
-	},
-	"Standard Project: Aquifer": {
-		Behaviors: []shared.CardBehavior{{
-			Outputs: []shared.ResourceCondition{{
-				ResourceType: shared.ResourceOceanPlacement,
-				Amount:       1,
-				Target:       "global",
-			}},
-		}},
-	},
-	"Standard Project: Greenery": {
-		Behaviors: []shared.CardBehavior{{
-			Outputs: []shared.ResourceCondition{{
-				ResourceType: shared.ResourceGreeneryPlacement,
-				Amount:       1,
-				Target:       "global",
-			}},
-		}},
-	},
-	"Standard Project: City": {
-		Behaviors: []shared.CardBehavior{{
-			Outputs: []shared.ResourceCondition{{
-				ResourceType: shared.ResourceCityPlacement,
-				Amount:       1,
-				Target:       "global",
-			}},
-		}},
-	},
-	"Standard Project: Sell Patents": {
-		Behaviors: []shared.CardBehavior{{
-			Outputs: []shared.ResourceCondition{{
-				ResourceType: shared.ResourceCredit,
-				Amount:       1,
-				Target:       "self-player",
-			}},
-		}},
-	},
 	"Convert Heat": {
 		Behaviors: []shared.CardBehavior{{
 			Outputs: []shared.ResourceCondition{{

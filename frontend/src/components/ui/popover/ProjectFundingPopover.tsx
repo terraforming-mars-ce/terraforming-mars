@@ -11,7 +11,7 @@ import {
 import GameIcon from "../display/GameIcon.tsx";
 import { webSocketService } from "@/services/webSocketService.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
-import { GamePopover } from "../GamePopover";
+import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { mapOutputTypeToIcon } from "./ColonySteps.tsx";
 import PaymentSelectionPopover from "./PaymentSelectionPopover.tsx";
 import type { GenericPaymentConfig } from "./PaymentSelectionPopover.tsx";
@@ -134,11 +134,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
   const totalSeats = project.seats.length;
 
   return (
-    <div
-      className={`rounded-lg border py-2.5 px-[15px] transition-all duration-200 ${
-        dimmed ? "opacity-50" : ""
-      } ${project.isCompleted ? "border-emerald-500/40" : ""}`}
-      style={{ borderColor: project.isCompleted ? undefined : project.style.color + "60" }}
+    <GamePopoverItem
+      state={dimmed ? "disabled" : "available"}
+      borderColor={project.isCompleted ? "#10b981" : project.style.color}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -224,7 +222,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
           )}
         </div>
       )}
-    </div>
+    </GamePopoverItem>
   );
 };
 

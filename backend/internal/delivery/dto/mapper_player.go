@@ -7,6 +7,7 @@ import (
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/standardprojects"
 )
 
 // toResourcesDto converts shared.Resources to ResourcesDto.
@@ -46,7 +47,7 @@ func calculateResourceDelta(before, after shared.Resources) ResourcesDto {
 }
 
 // ToPlayerDto converts Player to PlayerDto
-func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) PlayerDto {
+func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry, stdProjRegistry ...standardprojects.StandardProjectRegistry) PlayerDto {
 	resourcesComponent := p.Resources()
 	resources := resourcesComponent.Get()
 	production := resourcesComponent.Production()
@@ -55,7 +56,11 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 	playedCardIDs := p.PlayedCards().Cards()
 	playedCards := getPlayedCards(playedCardIDs, cardRegistry)
 	handCards := mapPlayerCards(p, g, cardRegistry)
-	standardProjects := mapPlayerStandardProjects(p, g, cardRegistry)
+	var registry standardprojects.StandardProjectRegistry
+	if len(stdProjRegistry) > 0 {
+		registry = stdProjRegistry[0]
+	}
+	standardProjects := mapPlayerStandardProjects(p, g, cardRegistry, registry)
 	milestones := mapPlayerMilestones(p, g, cardRegistry)
 	awards := mapPlayerAwards(p, g)
 	var pendingTileSelection *PendingTileSelectionDto
@@ -713,33 +718,52 @@ func mapPlayerCards(p *player.Player, g *game.Game, cardRegistry cards.CardRegis
 
 // mapPlayerStandardProjects calculates state for all standard projects and converts to DTOs.
 // Uses the state calculator to compute availability and effective costs for each project.
-// Will be rewritten when standard projects are part of the cards JSON DB as metadata cards (instead of hard coded).
 // NOTE: Conversion projects (plants→greenery, heat→temperature) are NOT included here - they
 // are handled separately via resource buttons in the bottom bar.
-func mapPlayerStandardProjects(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []PlayerStandardProjectDto {
-	projectTypes := []shared.StandardProject{
-		shared.StandardProjectSellPatents,
-		shared.StandardProjectPowerPlant,
-		shared.StandardProjectAsteroid,
-		shared.StandardProjectAquifer,
-		shared.StandardProjectGreenery,
-		shared.StandardProjectCity,
+func mapPlayerStandardProjects(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry, stdProjRegistry standardprojects.StandardProjectRegistry) []PlayerStandardProjectDto {
+	if stdProjRegistry == nil {
+		return nil
+	}
+	allDefinitions := stdProjRegistry.GetAll()
+	settings := g.Settings()
+	enabledPacks := make(map[string]bool, len(settings.CardPacks))
+	for _, pack := range settings.CardPacks {
+		enabledPacks[pack] = true
+	}
+	if settings.VenusNextEnabled {
+		enabledPacks[shared.PackVenus] = true
 	}
 
-	result := make([]PlayerStandardProjectDto, 0, len(projectTypes))
-	for _, projectType := range projectTypes {
-		// Calculate state using the state calculator
+	result := make([]PlayerStandardProjectDto, 0, len(allDefinitions))
+
+	for _, def := range allDefinitions {
+		if def.Pack != "" && !enabledPacks[def.Pack] {
+			continue
+		}
+		projectType := shared.StandardProject(def.ID)
 		state := action.CalculatePlayerStandardProjectState(projectType, p, g, cardRegistry)
 
-		baseCost := action.GetStandardProjectBaseCosts(projectType)
+		baseCost := map[string]int{}
+		if creditCost := def.CreditCost(); creditCost > 0 {
+			baseCost[string(shared.ResourceCredit)] = creditCost
+		}
 
 		discounts := make(map[string]int)
 		if discountData, ok := state.Metadata["discounts"].(map[string]int); ok {
 			discounts = discountData
 		}
 
+		behaviorDtos := make([]CardBehaviorDto, 0, len(def.Behaviors))
+		for _, b := range def.Behaviors {
+			behaviorDtos = append(behaviorDtos, toCardBehaviorDto(b))
+		}
+
 		dto := PlayerStandardProjectDto{
-			ProjectType:   string(projectType),
+			ProjectType:   def.ID,
+			Name:          def.Name,
+			Description:   def.Description,
+			Behaviors:     behaviorDtos,
+			Style:         &StandardProjectStyleDto{Color: def.Style.Color, Icon: def.Style.Icon},
 			BaseCost:      baseCost,
 			Available:     state.Available(),
 			Errors:        convertStateErrors(state.Errors),

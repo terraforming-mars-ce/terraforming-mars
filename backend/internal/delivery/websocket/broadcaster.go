@@ -11,6 +11,7 @@ import (
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/logger"
 	pfRegistry "terraforming-mars-backend/internal/projectfunding"
+	"terraforming-mars-backend/internal/standardprojects"
 
 	"go.uber.org/zap"
 )
@@ -23,16 +24,17 @@ type BotNotifier interface {
 // Broadcaster handles game state broadcasting to WebSocket clients
 // Called explicitly by WebSocket handlers after actions complete
 type Broadcaster struct {
-	gameRepo               game.GameRepository
-	stateRepo              game.GameStateRepository
-	hub                    *core.Hub
-	cardRegistry           cards.CardRegistry
-	colonyRegistry         colonies.ColonyRegistry
-	projectFundingRegistry pfRegistry.ProjectFundingRegistry
-	botNotifier            BotNotifier
-	logger                 *zap.Logger
-	lastBroadcastedSeq     map[string]int64 // gameID -> last broadcasted log sequence
-	lastBroadcastedLock    sync.RWMutex
+	gameRepo                game.GameRepository
+	stateRepo               game.GameStateRepository
+	hub                     *core.Hub
+	cardRegistry            cards.CardRegistry
+	colonyRegistry          colonies.ColonyRegistry
+	projectFundingRegistry  pfRegistry.ProjectFundingRegistry
+	standardProjectRegistry standardprojects.StandardProjectRegistry
+	botNotifier             BotNotifier
+	logger                  *zap.Logger
+	lastBroadcastedSeq      map[string]int64 // gameID -> last broadcasted log sequence
+	lastBroadcastedLock     sync.RWMutex
 }
 
 // NewBroadcaster creates a broadcaster for explicit broadcasting
@@ -43,16 +45,18 @@ func NewBroadcaster(
 	cardRegistry cards.CardRegistry,
 	colonyRegistry colonies.ColonyRegistry,
 	pfReg pfRegistry.ProjectFundingRegistry,
+	stdProjReg standardprojects.StandardProjectRegistry,
 ) *Broadcaster {
 	broadcaster := &Broadcaster{
-		gameRepo:               gameRepo,
-		stateRepo:              stateRepo,
-		hub:                    hub,
-		cardRegistry:           cardRegistry,
-		colonyRegistry:         colonyRegistry,
-		projectFundingRegistry: pfReg,
-		logger:                 logger.Get(),
-		lastBroadcastedSeq:     make(map[string]int64),
+		gameRepo:                gameRepo,
+		stateRepo:               stateRepo,
+		hub:                     hub,
+		cardRegistry:            cardRegistry,
+		colonyRegistry:          colonyRegistry,
+		projectFundingRegistry:  pfReg,
+		standardProjectRegistry: stdProjReg,
+		logger:                  logger.Get(),
+		lastBroadcastedSeq:      make(map[string]int64),
 	}
 
 	broadcaster.logger.Debug("Broadcaster initialized")
@@ -190,8 +194,9 @@ func (b *Broadcaster) sendToPlayer(ctx context.Context, game *game.Game, playerI
 	)
 
 	gameDto := dto.ToGameDtoFull(game, b.cardRegistry, playerID, dto.Registries{
-		ColonyRegistry:         b.colonyRegistry,
-		ProjectFundingRegistry: b.projectFundingRegistry,
+		ColonyRegistry:          b.colonyRegistry,
+		ProjectFundingRegistry:  b.projectFundingRegistry,
+		StandardProjectRegistry: b.standardProjectRegistry,
 	})
 
 	message := dto.WebSocketMessage{

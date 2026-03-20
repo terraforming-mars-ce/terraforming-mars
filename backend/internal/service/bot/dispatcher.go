@@ -32,12 +32,7 @@ type CommandDispatcher struct {
 	confirmCardDiscard     *confirmAction.ConfirmCardDiscardAction
 	confirmBehaviorChoice  *confirmAction.ConfirmBehaviorChoiceAction
 	confirmSellPatents     *confirmAction.ConfirmSellPatentsAction
-	launchAsteroid         *stdprojAction.LaunchAsteroidAction
-	buildPowerPlant        *stdprojAction.BuildPowerPlantAction
-	buildAquifer           *stdprojAction.BuildAquiferAction
-	buildCity              *stdprojAction.BuildCityAction
-	plantGreenery          *stdprojAction.PlantGreeneryAction
-	sellPatents            *stdprojAction.SellPatentsAction
+	executeStandardProject *stdprojAction.ExecuteStandardProjectAction
 	convertHeat            *resconvAction.ConvertHeatToTemperatureAction
 	convertPlants          *resconvAction.ConvertPlantsToGreeneryAction
 	claimMilestone         *milestoneAction.ClaimMilestoneAction
@@ -58,12 +53,7 @@ func NewCommandDispatcher(
 	confirmCardDiscard *confirmAction.ConfirmCardDiscardAction,
 	confirmBehaviorChoice *confirmAction.ConfirmBehaviorChoiceAction,
 	confirmSellPatents *confirmAction.ConfirmSellPatentsAction,
-	launchAsteroid *stdprojAction.LaunchAsteroidAction,
-	buildPowerPlant *stdprojAction.BuildPowerPlantAction,
-	buildAquifer *stdprojAction.BuildAquiferAction,
-	buildCity *stdprojAction.BuildCityAction,
-	plantGreenery *stdprojAction.PlantGreeneryAction,
-	sellPatents *stdprojAction.SellPatentsAction,
+	executeStandardProject *stdprojAction.ExecuteStandardProjectAction,
 	convertHeat *resconvAction.ConvertHeatToTemperatureAction,
 	convertPlants *resconvAction.ConvertPlantsToGreeneryAction,
 	claimMilestone *milestoneAction.ClaimMilestoneAction,
@@ -82,12 +72,7 @@ func NewCommandDispatcher(
 		confirmCardDiscard:     confirmCardDiscard,
 		confirmBehaviorChoice:  confirmBehaviorChoice,
 		confirmSellPatents:     confirmSellPatents,
-		launchAsteroid:         launchAsteroid,
-		buildPowerPlant:        buildPowerPlant,
-		buildAquifer:           buildAquifer,
-		buildCity:              buildCity,
-		plantGreenery:          plantGreenery,
-		sellPatents:            sellPatents,
+		executeStandardProject: executeStandardProject,
 		convertHeat:            convertHeat,
 		convertPlants:          convertPlants,
 		claimMilestone:         claimMilestone,
@@ -133,20 +118,22 @@ func (d *CommandDispatcher) Dispatch(ctx context.Context, gameID, playerID strin
 		return d.dispatchConfirmBehaviorChoice(ctx, gameID, playerID, envelope.Payload)
 	case "action.card.select-cards":
 		return d.dispatchConfirmSellPatents(ctx, gameID, playerID, envelope.Payload)
+	case "action.standard-project":
+		return d.dispatchStandardProject(ctx, gameID, playerID, envelope.Payload)
 	case "action.standard-project.sell-patents":
-		return d.sellPatents.Execute(ctx, gameID, playerID)
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "sell-patents")
 	case "action.standard-project.confirm-sell-patents":
 		return d.dispatchConfirmSellPatents(ctx, gameID, playerID, envelope.Payload)
 	case "action.standard-project.launch-asteroid":
-		return d.launchAsteroid.Execute(ctx, gameID, playerID)
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "asteroid")
 	case "action.standard-project.build-power-plant":
-		return d.buildPowerPlant.Execute(ctx, gameID, playerID)
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "power-plant")
 	case "action.standard-project.build-aquifer":
-		return d.buildAquifer.Execute(ctx, gameID, playerID)
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "aquifer")
 	case "action.standard-project.plant-greenery":
-		return d.plantGreenery.Execute(ctx, gameID, playerID)
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "greenery")
 	case "action.standard-project.build-city":
-		return d.buildCity.Execute(ctx, gameID, playerID)
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "city")
 	case "action.resource-conversion.convert-heat-to-temperature":
 		return d.convertHeat.Execute(ctx, gameID, playerID)
 	case "action.resource-conversion.convert-plants-to-greenery":
@@ -327,4 +314,14 @@ func (d *CommandDispatcher) dispatchFundAward(ctx context.Context, gameID, playe
 		return fmt.Errorf("parse fund-award payload: %w", err)
 	}
 	return d.fundAward.Execute(ctx, gameID, playerID, p.AwardType)
+}
+
+func (d *CommandDispatcher) dispatchStandardProject(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
+	var p struct {
+		ProjectID string `json:"projectId"`
+	}
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return fmt.Errorf("parse standard-project payload: %w", err)
+	}
+	return d.executeStandardProject.Execute(ctx, gameID, playerID, p.ProjectID)
 }

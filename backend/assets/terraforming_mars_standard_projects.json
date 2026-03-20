@@ -1,0 +1,129 @@
+[
+  {
+    "id": "sell-patents",
+    "name": "Sell Patents",
+    "description": "Discard any number of cards from hand for 1 M€ each",
+    "pack": "base-game",
+    "behaviors": [
+      {
+        "triggers": [{"type": "manual"}],
+        "inputs": [
+          {"type": "card-discard", "amount": 1, "target": "self-player", "variableAmount": true}
+        ],
+        "outputs": [
+          {"type": "credit", "amount": 1, "target": "self-player", "variableAmount": true}
+        ]
+      }
+    ],
+    "style": {"color": "#FFD700", "icon": "card-draw"}
+  },
+  {
+    "id": "power-plant",
+    "name": "Power Plant",
+    "description": "Spend 11 M€ to increase your energy production 1 step.",
+    "pack": "base-game",
+    "behaviors": [
+      {
+        "triggers": [{"type": "manual"}],
+        "inputs": [
+          {"type": "credit", "amount": 11, "target": "self-player"}
+        ],
+        "outputs": [
+          {"type": "energy-production", "amount": 1, "target": "self-player"}
+        ]
+      }
+    ],
+    "style": {"color": "#9C27B0", "icon": "energy"}
+  },
+  {
+    "id": "asteroid",
+    "name": "Asteroid",
+    "description": "Spend 14 M€ to raise temperature 1 step and gain 1 TR.",
+    "pack": "base-game",
+    "behaviors": [
+      {
+        "triggers": [{"type": "manual"}],
+        "inputs": [
+          {"type": "credit", "amount": 14, "target": "self-player"}
+        ],
+        "outputs": [
+          {"type": "temperature", "amount": 1, "target": "none"}
+        ]
+      }
+    ],
+    "style": {"color": "#FF5722", "icon": "asteroid"}
+  },
+  {
+    "id": "aquifer",
+    "name": "Aquifer",
+    "description": "Spend 18 M€ to place an ocean tile and gain 1 TR.",
+    "pack": "base-game",
+    "behaviors": [
+      {
+        "triggers": [{"type": "manual"}],
+        "inputs": [
+          {"type": "credit", "amount": 18, "target": "self-player"}
+        ],
+        "outputs": [
+          {"type": "ocean-placement", "amount": 1, "target": "none"}
+        ]
+      }
+    ],
+    "style": {"color": "#2196F3", "icon": "ocean-tile"}
+  },
+  {
+    "id": "greenery",
+    "name": "Greenery",
+    "description": "Spend 23 M€ to place a greenery tile, raise oxygen 1%, and gain 1 TR.",
+    "pack": "base-game",
+    "behaviors": [
+      {
+        "triggers": [{"type": "manual"}],
+        "inputs": [
+          {"type": "credit", "amount": 23, "target": "self-player"}
+        ],
+        "outputs": [
+          {"type": "greenery-placement", "amount": 1, "target": "none"}
+        ]
+      }
+    ],
+    "style": {"color": "#4CAF50", "icon": "greenery-tile"}
+  },
+  {
+    "id": "city",
+    "name": "City",
+    "description": "Spend 25 M€ to place a city tile and increase M€ production by 1.",
+    "pack": "base-game",
+    "behaviors": [
+      {
+        "triggers": [{"type": "manual"}],
+        "inputs": [
+          {"type": "credit", "amount": 25, "target": "self-player"}
+        ],
+        "outputs": [
+          {"type": "city-placement", "amount": 1, "target": "none"},
+          {"type": "credit-production", "amount": 1, "target": "self-player"}
+        ]
+      }
+    ],
+    "style": {"color": "#795548", "icon": "city-tile"}
+  },
+  {
+    "id": "air-scrapping",
+    "name": "Air Scrapping",
+    "description": "Spend 15 M€ to raise Venus 1 step and gain 1 TR.",
+    "pack": "venus-next",
+    "behaviors": [
+      {
+        "triggers": [{"type": "manual"}],
+        "inputs": [
+          {"type": "credit", "amount": 15, "target": "self-player"}
+        ],
+        "outputs": [
+          {"type": "venus", "amount": 1, "target": "none"}
+        ]
+      }
+    ],
+    "style": {"color": "#E040FB", "icon": "venus"}
+  }
+]

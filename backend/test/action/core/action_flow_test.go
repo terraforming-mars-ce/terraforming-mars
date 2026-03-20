@@ -4,6 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"path/filepath"
+	"runtime"
+
 	"terraforming-mars-backend/internal/action"
 	baseaction "terraforming-mars-backend/internal/action"
 	cardAction "terraforming-mars-backend/internal/action/card"
@@ -13,6 +16,7 @@ import (
 	turnmgmt "terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/standardprojects"
 	"terraforming-mars-backend/test/testutil"
 )
 
@@ -63,9 +67,14 @@ func TestZeroActionsBlocksStandardProject(t *testing.T) {
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(context.Background(), p, 100)
 
-	buildAction := spAction.NewBuildPowerPlantAction(repo, cardRegistry, nil, logger)
+	_, currentFile, _, _ := runtime.Caller(0)
+	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "terraforming_mars_standard_projects.json")
+	stdProjData, _ := standardprojects.LoadStandardProjectsFromJSON(stdProjPath)
+	stdProjRegistry := standardprojects.NewInMemoryStandardProjectRegistry(stdProjData)
 
-	err = buildAction.Execute(context.Background(), testGame.ID(), playerID)
+	buildAction := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
+
+	err = buildAction.Execute(context.Background(), testGame.ID(), playerID, "power-plant")
 	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
 }
 

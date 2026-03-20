@@ -33,6 +33,17 @@ export const analyzeResourceDisplayWithConstraints = (
       amount,
       displayMode: "number",
       iconCount: 1,
+      variableAmount: !!resource.variableAmount,
+    };
+  }
+
+  if (resource.variableAmount) {
+    return {
+      resourceType,
+      amount,
+      displayMode: "number",
+      iconCount: 1,
+      variableAmount: true,
     };
   }
 

@@ -905,17 +905,27 @@ export interface PlayerActionDto {
 }
 /**
  * PlayerStandardProjectDto represents a standard project with availability state
- * Part of the Player-Scoped Card Architecture
  */
 export interface PlayerStandardProjectDto {
-  projectType: string; // Standard project type (e.g., "sell_patents", "aquifer")
-  baseCost: { [key: string]: number /* int */ }; // Base cost per resource type (e.g., {"credits": 23} or {"plants": 8})
-  available: boolean; // Computed: project is available
-  errors: StateErrorDto[]; // Reasons why project is not available
-  warnings?: StateWarningDto[]; // Non-blocking warnings
-  effectiveCost: { [key: string]: number /* int */ }; // Cost per resource type after discounts
-  discounts?: { [key: string]: number /* int */ }; // Discount amounts per resource type (if any)
-  metadata?: { [key: string]: any }; // Project-specific context (e.g., oceansRemaining)
+  projectType: string;
+  name: string;
+  description: string;
+  behaviors: CardBehaviorDto[];
+  style?: StandardProjectStyleDto;
+  baseCost: { [key: string]: number /* int */ };
+  available: boolean;
+  errors: StateErrorDto[];
+  warnings?: StateWarningDto[];
+  effectiveCost: { [key: string]: number /* int */ };
+  discounts?: { [key: string]: number /* int */ };
+  metadata?: { [key: string]: any };
+}
+/**
+ * StandardProjectStyleDto provides visual hints for the frontend
+ */
+export interface StandardProjectStyleDto {
+  color: string;
+  icon: string;
 }
 /**
  * ForcedFirstActionDto represents an action that must be completed as the player's first turn action
@@ -1692,6 +1702,7 @@ export interface BugReportStatusResponse {
 export interface Registries {
   ColonyRegistry: any /* colonies.ColonyRegistry */;
   ProjectFundingRegistry: any /* pfRegistry.ProjectFundingRegistry */;
+  StandardProjectRegistry: any /* standardprojects.StandardProjectRegistry */;
 }
 
 //////////
@@ -1711,9 +1722,13 @@ export const MessageTypeError: MessageType = "error";
 export const MessageTypeFullState: MessageType = "full-state";
 export const MessageTypeProductionPhaseStarted: MessageType = "production-phase-started";
 export const MessageTypeLogUpdate: MessageType = "log-update";
-export const MessageTypeActionSellPatents: MessageType = "action.standard-project.sell-patents";
+export const MessageTypeActionStandardProject: MessageType = "action.standard-project";
 export const MessageTypeActionConfirmSellPatents: MessageType =
   "action.standard-project.confirm-sell-patents";
+/**
+ * Legacy message types for backwards compatibility (all route to unified handler)
+ */
+export const MessageTypeActionSellPatents: MessageType = "action.standard-project.sell-patents";
 export const MessageTypeActionLaunchAsteroid: MessageType =
   "action.standard-project.launch-asteroid";
 export const MessageTypeActionBuildPowerPlant: MessageType =

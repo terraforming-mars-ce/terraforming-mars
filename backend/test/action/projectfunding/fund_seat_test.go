@@ -65,7 +65,9 @@ func TestFundSeat_WrongPhase_Fails(t *testing.T) {
 	ctx := context.Background()
 
 	setupProjectState(testGame, "pf_orbital_station", nil)
-	testGame.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw)
+	if err := testGame.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw); err != nil {
+		t.Fatalf("Failed to update phase: %v", err)
+	}
 
 	p1, _ := testGame.GetPlayer(player1)
 	testutil.SetPlayerCredits(ctx, p1, 100)
@@ -207,11 +209,15 @@ func TestFundSeat_SamePlayerMultipleSeats(t *testing.T) {
 
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 6})
 	testutil.AssertNoError(t, err, "Buy first seat should succeed")
-	testGame.SetCurrentTurn(ctx, player1, 2)
+	if err := testGame.SetCurrentTurn(ctx, player1, 2); err != nil {
+		t.Fatalf("Failed to set current turn: %v", err)
+	}
 
 	err = action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 8})
 	testutil.AssertNoError(t, err, "Buy second seat should succeed")
-	testGame.SetCurrentTurn(ctx, player1, 2)
+	if err := testGame.SetCurrentTurn(ctx, player1, 2); err != nil {
+		t.Fatalf("Failed to set current turn: %v", err)
+	}
 
 	err = action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 10})
 	testutil.AssertNoError(t, err, "Buy third seat should succeed")

@@ -177,34 +177,9 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.playerConnect(playerName, gameId, playerId);
   }
 
-  async sellPatents(): Promise<string> {
+  async standardProject(projectId: string): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.sellPatents();
-  }
-
-  async launchAsteroid(): Promise<string> {
-    await this.ensureConnected();
-    return webSocketService.launchAsteroid();
-  }
-
-  async buildPowerPlant(): Promise<string> {
-    await this.ensureConnected();
-    return webSocketService.buildPowerPlant();
-  }
-
-  async buildAquifer(): Promise<string> {
-    await this.ensureConnected();
-    return webSocketService.buildAquifer();
-  }
-
-  async plantGreenery(): Promise<string> {
-    await this.ensureConnected();
-    return webSocketService.plantGreenery();
-  }
-
-  async buildCity(): Promise<string> {
-    await this.ensureConnected();
-    return webSocketService.buildCity();
+    return webSocketService.standardProject(projectId);
   }
 
   async convertPlantsToGreenery(): Promise<string> {

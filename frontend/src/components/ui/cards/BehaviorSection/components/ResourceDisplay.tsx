@@ -9,6 +9,7 @@ interface IconDisplayInfo {
   amount: number;
   displayMode: "individual" | "number";
   iconCount: number;
+  variableAmount?: boolean;
 }
 
 interface TileScaleInfo {
@@ -36,6 +37,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   tileScaleInfo,
 }) => {
   const { resourceType, amount, displayMode } = displayInfo;
+  const isVariableAmount = !!displayInfo.variableAmount;
 
   const isCredits = resourceType === "credit" || resourceType === "credit-production";
   const isDiscount = resourceType === "discount";
@@ -253,7 +255,11 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
             -
           </span>
         )}
-        <GameIcon iconType="credit" amount={Math.abs(amount)} size="small" />
+        <GameIcon
+          iconType="credit"
+          amount={isVariableAmount ? "X" : Math.abs(amount)}
+          size="small"
+        />
       </div>
     );
   }
@@ -421,7 +427,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
             </span>
           )}
         <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center justify-center">
-          {Math.abs(amount)}
+          {isVariableAmount ? "X" : Math.abs(amount)}
         </span>
         {baseIconElement}
         {renderSelectorBadges()}

@@ -1,4 +1,4 @@
-import type { HexPositionDto, CardPaymentDto } from "./generated/api-types.ts";
+import type { CardPaymentDto } from "./generated/api-types.ts";
 
 // Common interface for WebSocket connections used throughout the app
 export interface WebSocketConnection {
@@ -10,12 +10,7 @@ export interface WebSocketConnection {
   playerConnect(playerName: string, gameId: string, playerId?: string): Promise<any>;
 
   // Standard project actions
-  sellPatents(cardCount: number): Promise<string>;
-  launchAsteroid(): Promise<string>;
-  buildPowerPlant(): Promise<string>;
-  buildAquifer(hexPosition: HexPositionDto): Promise<string>;
-  plantGreenery(hexPosition: HexPositionDto): Promise<string>;
-  buildCity(hexPosition: HexPositionDto): Promise<string>;
+  standardProject(projectId: string): Promise<string>;
 
   // Resource conversion actions
   convertPlantsToGreenery(): Promise<string>;

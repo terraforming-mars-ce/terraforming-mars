@@ -3,15 +3,15 @@ import {
   GameDto,
   GameStatusActive,
   GamePhaseAction,
-  ResourceTypeCredit,
   PlayerStandardProjectDto,
 } from "@/types/generated/api-types.ts";
-import { StandardProject, STANDARD_PROJECTS, STANDARD_PROJECT_COSTS } from "@/types/cards.tsx";
+import { StandardProject } from "@/types/cards.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { FormattedDescription } from "../display/FormattedDescription";
 import GameButton from "../buttons/GameButton.tsx";
+import BehaviorSection from "../cards/BehaviorSection/BehaviorSection.tsx";
 
 interface StandardProjectsPopoverProps {
   isVisible: boolean;
@@ -34,22 +34,8 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
   const canExecuteProjects =
     isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
 
-  const serverProjects = gameState?.currentPlayer?.standardProjects ?? [];
-
-  // For spectators, derive items from static data
   const playerProjects: PlayerStandardProjectDto[] =
-    serverProjects.length > 0
-      ? serverProjects
-      : Object.entries(STANDARD_PROJECTS).map(([key]) => {
-          const cost = STANDARD_PROJECT_COSTS[key as StandardProject];
-          return {
-            projectType: key,
-            baseCost: { credit: cost },
-            effectiveCost: { credit: cost },
-            available: false,
-            errors: [],
-          };
-        });
+    gameState?.currentPlayer?.standardProjects ?? [];
   const availableCount = playerProjects.filter((p) => p.available).length;
 
   const handleProjectClick = (project: PlayerStandardProjectDto) => {
@@ -57,41 +43,12 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
     onProjectSelect(project.projectType as StandardProject);
   };
 
-  const renderEffects = (projectType: string) => {
-    const effects: React.ReactElement[] = [];
-    const staticProject = STANDARD_PROJECTS[projectType as StandardProject];
-
-    if (!staticProject?.behaviors || staticProject.behaviors.length === 0) {
-      return effects;
-    }
-
-    const outputs = staticProject.behaviors[0].outputs || [];
-
-    outputs.forEach((output, idx) => {
-      const outputType = output.type as string;
-      effects.push(
-        <GameIcon
-          key={`output-${idx}`}
-          iconType={outputType}
-          amount={output.amount}
-          size="small"
-        />,
-      );
-    });
-
-    return effects;
-  };
-
-  const getStaticProjectInfo = (projectType: string) => {
-    return STANDARD_PROJECTS[projectType as StandardProject];
-  };
-
   return (
     <GamePopover
       isVisible={isVisible}
       onClose={onClose}
       position={{ type: "fixed", top: 60, left: 20 }}
-      theme="standardProjects"
+      theme="colonies"
       excludeRef={anchorRef}
       header={{
         title: "Standard Projects",
@@ -103,108 +60,59 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
         ),
       }}
       width={500}
-      maxHeight="calc(100vh - 80px)"
+      maxHeight="80vh"
       animation="slideDown"
     >
-      <div className="p-2">
+      <div className="p-2 flex flex-col gap-2">
         {playerProjects.map((project) => {
-          const staticInfo = getStaticProjectInfo(project.projectType);
           const isExecutable = canExecuteProjects && project.available;
-          const effects = renderEffects(project.projectType);
-
-          const effectiveCreditCost = project.effectiveCost["credit"] ?? 0;
-          const baseCreditCost = project.baseCost["credit"] ?? 0;
-          const hasDiscount = effectiveCreditCost < baseCreditCost;
+          const styleColor = project.style?.color ?? "#6b7280";
 
           return (
             <GamePopoverItem
               key={project.projectType}
               state={project.available ? "available" : "disabled"}
               onClick={isExecutable ? () => handleProjectClick(project) : undefined}
-              hoverEffect="background"
-              className="mb-2 last:mb-0"
+              borderColor={styleColor}
+              error={
+                !project.available && project.errors?.length
+                  ? { message: project.errors[0].message, count: project.errors.length }
+                  : undefined
+              }
+              warning={
+                project.available && project.warnings?.length
+                  ? { message: project.warnings[0].message }
+                  : undefined
+              }
             >
               <div className="flex-1">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      {staticInfo?.icon && <div className="opacity-70">{staticInfo.icon}</div>}
-                      <h3 className="text-white text-sm font-bold font-orbitron m-0">
-                        {staticInfo?.name ?? project.projectType}
-                      </h3>
-                      {staticInfo?.behaviors?.[0]?.outputs?.some((o) =>
-                        (o.type as string).includes("-tile"),
-                      ) && (
-                        <span className="text-[10px] text-white/60 bg-[rgba(var(--popover-accent-rgb),0.3)] px-1.5 py-0.5 rounded">
-                          Tile
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {hasDiscount ? (
-                        <div className="flex items-center gap-1">
-                          <div className="grayscale-[0.7] flex items-center">
-                            <GameIcon
-                              iconType={ResourceTypeCredit}
-                              amount={baseCreditCost}
-                              size="small"
-                            />
-                          </div>
-                          <svg
-                            width="10"
-                            height="8"
-                            viewBox="0 0 10 8"
-                            className="opacity-70 mx-0.5 flex-shrink-0"
-                          >
-                            <path
-                              d="M10 4 L4 0 L4 2 L0 2 L0 6 L4 6 L4 8 Z"
-                              fill="rgba(76, 175, 80, 0.9)"
-                            />
-                          </svg>
-                          <div className="flex items-center">
-                            <GameIcon
-                              iconType={ResourceTypeCredit}
-                              amount={effectiveCreditCost}
-                              size="small"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <GameIcon
-                          iconType={ResourceTypeCredit}
-                          amount={effectiveCreditCost}
-                          size="small"
-                        />
-                      )}
-                      {effects.length > 0 && (
-                        <>
-                          <span className="text-white/60 text-xs">→</span>
-                          {effects}
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {!project.available && project.errors && project.errors.length > 0 && (
-                    <div className="flex-shrink-0 bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(231,76,60,0.8)] shadow-[0_2px_8px_rgba(231,76,60,0.4)] flex items-center gap-1">
-                      <span>⚠</span>
-                      <span>
-                        {project.errors[0].message}
-                        {project.errors.length > 1 && ` (+${project.errors.length - 1})`}
-                      </span>
+                <div className="flex items-center gap-2 mb-2">
+                  {project.style?.icon && (
+                    <div className="opacity-70">
+                      <GameIcon iconType={project.style.icon} size="small" />
                     </div>
                   )}
-                  {project.available && project.warnings && project.warnings.length > 0 && (
-                    <div className="flex-shrink-0 bg-[linear-gradient(135deg,#f39c12,#e67e22)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(243,156,18,0.8)] shadow-[0_2px_8px_rgba(243,156,18,0.4)] flex items-center gap-1">
-                      <span>⚠</span>
-                      <span>{project.warnings[0].message}</span>
-                    </div>
+                  <h3 className="text-white text-sm font-bold font-orbitron m-0">{project.name}</h3>
+                  {project.behaviors?.[0]?.outputs?.some((o) =>
+                    (o.type as string).includes("-tile"),
+                  ) && (
+                    <span
+                      className="text-[10px] text-white/60 px-1.5 py-0.5 rounded"
+                      style={{ background: `${styleColor}33` }}
+                    >
+                      Tile
+                    </span>
                   )}
                 </div>
 
+                {project.behaviors && project.behaviors.length > 0 && (
+                  <div className="[&>div]:items-start [&_div]:justify-start mb-2">
+                    <BehaviorSection behaviors={project.behaviors} noContainer />
+                  </div>
+                )}
+
                 <p className="text-white/70 text-xs leading-relaxed m-0 text-left">
-                  <FormattedDescription text={staticInfo?.description ?? ""} />
+                  <FormattedDescription text={project.description ?? ""} />
                 </p>
               </div>
             </GamePopoverItem>

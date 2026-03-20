@@ -1116,26 +1116,7 @@ export function useCardPlayFlow() {
       return;
     }
 
-    switch (project) {
-      case StandardProject.SELL_PATENTS:
-        void globalWebSocketManager.sellPatents();
-        break;
-      case StandardProject.POWER_PLANT:
-        void globalWebSocketManager.buildPowerPlant();
-        break;
-      case StandardProject.ASTEROID:
-        void globalWebSocketManager.launchAsteroid();
-        break;
-      case StandardProject.AQUIFER:
-        void globalWebSocketManager.buildAquifer();
-        break;
-      case StandardProject.GREENERY:
-        void globalWebSocketManager.plantGreenery();
-        break;
-      case StandardProject.CITY:
-        void globalWebSocketManager.buildCity();
-        break;
-    }
+    void globalWebSocketManager.standardProject(project);
   }, []);
 
   const handleConvertPlantsToGreenery = useCallback(() => {
