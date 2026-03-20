@@ -290,16 +290,6 @@ const GameLandingPage: React.FC = () => {
             </div>
           )}
         </div>
-
-        <GameButton
-          as="link"
-          to="/cards"
-          buttonType="secondary"
-          size="sm"
-          className="fixed bottom-[30px] right-[30px]"
-        >
-          View Cards
-        </GameButton>
       </div>
     </div>
   );
