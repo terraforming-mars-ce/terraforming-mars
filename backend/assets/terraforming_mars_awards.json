@@ -1,0 +1,117 @@
+[
+  {
+    "id": "landlord",
+    "name": "Landlord",
+    "description": "Most tiles on Mars",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "land-tile", "target": "self-player" }
+    ],
+    "style": { "color": "#5D4037", "icon": "tile" }
+  },
+  {
+    "id": "banker",
+    "name": "Banker",
+    "description": "Highest MC production",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "credit-production", "target": "self-player" }
+    ],
+    "style": { "color": "#FFD700", "icon": "credit" }
+  },
+  {
+    "id": "scientist",
+    "name": "Scientist",
+    "description": "Most science tags in play",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "tag", "tag": "science" }
+    ],
+    "style": { "color": "#FFFFFF", "icon": "science-tag" }
+  },
+  {
+    "id": "thermalist",
+    "name": "Thermalist",
+    "description": "Most heat resources",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "heat", "target": "self-player" }
+    ],
+    "style": { "color": "#FF5722", "icon": "heat" }
+  },
+  {
+    "id": "miner",
+    "name": "Miner",
+    "description": "Most steel and titanium resources",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "steel", "target": "self-player" },
+      { "type": "titanium", "target": "self-player" }
+    ],
+    "style": { "color": "#795548", "icon": "steel" }
+  },
+  {
+    "id": "venuphile",
+    "name": "Venuphile",
+    "description": "Most Venus tags in play",
+    "pack": "venus-next",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "tag", "tag": "venus" }
+    ],
+    "style": { "color": "#FFD700", "icon": "venus" }
+  }
+]
