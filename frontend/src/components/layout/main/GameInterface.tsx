@@ -493,7 +493,8 @@ export default function GameInterface() {
     showCardDrawSelection ||
     showCardDiscardSelection ||
     showBehaviorChoiceSelection ||
-    isPreGamePhase;
+    isPreGamePhase ||
+    !!currentPlayer?.pendingTileSelection;
 
   const cardFanTransitionClass = (() => {
     if (spectatePlayerId) {

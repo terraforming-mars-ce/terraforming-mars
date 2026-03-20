@@ -83,13 +83,10 @@ const ProjectFundingPopover: React.FC<ProjectFundingPopoverProps> = ({
       <GamePopover
         isVisible={isVisible}
         onClose={onClose}
-        position={{ type: "fixed", top: 60, left: 20 }}
+        position={{ type: "anchor", anchorRef, placement: "below" }}
         theme="colonies"
         excludeRef={anchorRef}
-        header={{
-          title: "Project Funding",
-          showCloseButton: true,
-        }}
+        header={undefined}
         width={560}
         maxHeight="80vh"
         animation="slideDown"

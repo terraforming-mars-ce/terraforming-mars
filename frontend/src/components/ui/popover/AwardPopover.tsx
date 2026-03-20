@@ -11,7 +11,6 @@ import { webSocketService } from "@/services/webSocketService.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { FormattedDescription } from "../display/FormattedDescription";
-import GameButton from "../buttons/GameButton.tsx";
 import BehaviorSection from "../cards/BehaviorSection/BehaviorSection.tsx";
 
 interface AwardPopoverProps {
@@ -56,7 +55,6 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
           available: false,
           errors: [] as import("@/types/generated/api-types.ts").StateErrorDto[],
         }));
-  const fundedCount = awards.filter((a) => a.isFunded).length;
 
   const longestNameLength = useMemo(() => {
     if (!gameState) return 0;
@@ -97,18 +95,10 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
     <GamePopover
       isVisible={isVisible}
       onClose={onClose}
-      position={{ type: "fixed", top: 60, left: 20 }}
+      position={{ type: "anchor", anchorRef, placement: "below" }}
       theme="colonies"
       excludeRef={anchorRef}
-      header={{
-        title: "Awards",
-        badge: <span>{fundedCount}/3 Funded</span>,
-        rightContent: (
-          <GameButton buttonType="textonly" size="xs" onClick={onClose}>
-            ✕
-          </GameButton>
-        ),
-      }}
+      header={undefined}
       width={500}
       maxHeight="80vh"
       animation="slideDown"
