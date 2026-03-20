@@ -177,12 +177,21 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <GameIcon
-                        iconType={ResourceTypeCredit}
-                        amount={award.fundingCost}
-                        size="small"
-                      />
-                      <span className="text-white/60 text-xs">→</span>
+                      <div
+                        className="flex items-center gap-2 overflow-hidden transition-all duration-700 ease-in-out"
+                        style={
+                          isFunded
+                            ? { maxWidth: 0, opacity: 0, gap: 0 }
+                            : { maxWidth: "100px", opacity: 1 }
+                        }
+                      >
+                        <GameIcon
+                          iconType={ResourceTypeCredit}
+                          amount={award.fundingCost}
+                          size="small"
+                        />
+                        <span className="text-white/60 text-xs">→</span>
+                      </div>
                       {(globalData?.rewards ?? []).map((reward: AwardRewardDto) => (
                         <div key={reward.place} className="flex items-center gap-1">
                           <span className="text-white/50 text-[10px] font-orbitron">
