@@ -9,6 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
@@ -20,23 +21,26 @@ import (
 // SelectStartingChoicesAction handles the combined selection of corporation, preludes, and starting cards.
 // Selections are validated and stored but effects are NOT applied until the init_apply phases.
 type SelectStartingChoicesAction struct {
-	gameRepo     game.GameRepository
-	cardRegistry cards.CardRegistry
-	corpProc     *gamecards.CorporationProcessor
-	logger       *zap.Logger
+	gameRepo      game.GameRepository
+	cardRegistry  cards.CardRegistry
+	awardRegistry awards.AwardRegistry
+	corpProc      *gamecards.CorporationProcessor
+	logger        *zap.Logger
 }
 
 // NewSelectStartingChoicesAction creates a new select starting choices action
 func NewSelectStartingChoicesAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
+	awardRegistry awards.AwardRegistry,
 	logger *zap.Logger,
 ) *SelectStartingChoicesAction {
 	return &SelectStartingChoicesAction{
-		gameRepo:     gameRepo,
-		cardRegistry: cardRegistry,
-		corpProc:     gamecards.NewCorporationProcessor(cardRegistry, logger),
-		logger:       logger,
+		gameRepo:      gameRepo,
+		cardRegistry:  cardRegistry,
+		awardRegistry: awardRegistry,
+		corpProc:      gamecards.NewCorporationProcessor(cardRegistry, awardRegistry, logger),
+		logger:        logger,
 	}
 }
 

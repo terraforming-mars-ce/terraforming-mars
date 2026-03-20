@@ -32,7 +32,7 @@ type VPCondition struct {
 	Amount     int
 	Condition  string // "fixed", "per", "once"
 	MaxTrigger *int
-	Per        *VPPerCondition
+	Per        *PerCondition
 }
 
 // VP condition type constants
@@ -41,12 +41,3 @@ const (
 	VPConditionPer   = "per"
 	VPConditionOnce  = "once"
 )
-
-// VPPerCondition defines the per-condition for VP calculation
-type VPPerCondition struct {
-	ResourceType       ResourceType
-	Amount             int
-	Target             *string
-	Tag                *CardTag
-	AdjacentToSelfTile bool
-}

@@ -18,7 +18,7 @@ func TestCheungShingMars_StartingResources(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Cheung Shing Mars"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Cheung Shing Mars")
 
@@ -35,7 +35,7 @@ func TestCheungShingMars_DiscountEffectRegistered(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Cheung Shing Mars"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Cheung Shing Mars")
 
@@ -79,7 +79,7 @@ func TestPointLuna_StartingResources(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Point Luna"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Point Luna")
 
@@ -100,7 +100,7 @@ func TestPointLuna_DrawCardWhenPlayingEarthTag(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Point Luna"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Point Luna")
 
@@ -132,7 +132,7 @@ func TestValleyTrust_StartingResources(t *testing.T) {
 	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
 	testGame.InitDeck(nil, nil, preludeIDs)
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Valley Trust")
 
@@ -149,7 +149,7 @@ func TestValleyTrust_DiscountEffectRegistered(t *testing.T) {
 	preludeIDs := []string{"P01", "P02", "P03", "P04", "P05"}
 	testGame.InitDeck(nil, nil, preludeIDs)
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Valley Trust"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Valley Trust")
 
@@ -193,7 +193,7 @@ func TestVitor_StartingResources(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Vitor"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Vitor")
 
@@ -207,7 +207,7 @@ func TestVitor_FundAwardForFree(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Vitor"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Vitor")
 
@@ -227,7 +227,7 @@ func TestVitor_FundAwardForFree(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 
 	// Confirm the award fund
-	confirmAction := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	confirmAction := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err = confirmAction.Execute(ctx, testGame.ID(), playerID, pending.AvailableAwards[0])
 	testutil.AssertNoError(t, err, "ConfirmAwardFund should succeed")
 
@@ -251,7 +251,7 @@ func TestVitor_Gain3MCWhenPlayingCardWithVP(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, testutil.CreateTestAwardRegistry(), logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Vitor"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Vitor")
 

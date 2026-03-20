@@ -1,5 +1,7 @@
 package colony
 
+import "terraforming-mars-backend/internal/game/shared"
+
 // ColonyTileDefinition is the static template loaded from JSON
 type ColonyTileDefinition struct {
 	ID          string       `json:"id"`
@@ -7,7 +9,7 @@ type ColonyTileDefinition struct {
 	Steps       []ColonyStep `json:"steps"`
 	ColonyBonus []Output     `json:"colonyBonus"`
 	Colonies    []ColonySlot `json:"colonies"`
-	Style       Style        `json:"style"`
+	Style       shared.Style `json:"style"`
 }
 
 // ColonyStep represents one position on the trade track
@@ -24,12 +26,6 @@ type Output struct {
 // ColonySlot represents a colony placement slot with its placement reward
 type ColonySlot struct {
 	Reward []Output `json:"reward"`
-}
-
-// Style provides visual hints for the frontend
-type Style struct {
-	Color string `json:"color"`
-	Icon  string `json:"icon"`
 }
 
 // TileState is the runtime mutable state per colony tile in a game

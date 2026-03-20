@@ -202,7 +202,7 @@ func TestSkipWithOneActionAdvancesToNextPlayer(t *testing.T) {
 	testutil.AssertNoError(t, err, "Setting turn should succeed")
 
 	// Create skip action
-	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
 
 	// Player 1 SKIPs with 1 action
@@ -259,7 +259,7 @@ func TestSkipGrantsUnlimitedActionsToLastNonPassedPlayer(t *testing.T) {
 	testutil.AssertNoError(t, err, "Setting turn should succeed")
 
 	// Create skip action
-	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
 
 	// Player 1 SKIPs
@@ -281,7 +281,7 @@ func TestTurnOrderRotatesAfterGeneration(t *testing.T) {
 	testutil.AssertEqual(t, player2ID, initialTurnOrder[1], "Player 2 should be second in initial turn order")
 
 	// Both players pass to trigger production phase
-	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
 
 	// Player 1 passes (2 actions = pass)

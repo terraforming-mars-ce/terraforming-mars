@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
@@ -582,58 +583,14 @@ func (a *BehaviorApplier) resolveCardResourceType() string {
 	return string(targetCard.ResourceStorage.Type)
 }
 
-// countPerCondition counts items matching a Per condition
 func (a *BehaviorApplier) countPerCondition(per *shared.PerCondition) int {
-	if per == nil {
-		return 0
-	}
-
-	// Handle resource storage on card (e.g., animals on this card)
-	if per.Target != nil && *per.Target == string(TargetSelfCard) {
-		if a.sourceCardID != "" {
-			return a.player.Resources().GetCardStorage(a.sourceCardID)
-		}
-		return 0
-	}
-
-	// Handle tag counting
-	if per.Tag != nil && a.cardRegistry != nil {
-		if per.Target != nil && *per.Target == string(TargetAnyPlayer) && a.game != nil {
-			return CountAllPlayersTagsByType(a.game.GetAllPlayers(), a.cardRegistry, *per.Tag)
-		}
-		if per.Target != nil && *per.Target == string(TargetOtherPlayers) && a.game != nil {
-			return CountOtherPlayersTagsByType(a.game.GetAllPlayers(), a.player.ID(), a.cardRegistry, *per.Tag)
-		}
-		return CountPlayerTagsByType(a.player, a.cardRegistry, *per.Tag)
-	}
-
-	// Handle tile counting
+	var b *board.Board
+	var allPlayers []*player.Player
 	if a.game != nil {
-		cityTileType := shared.ResourceCityTile
-		greeneryTileType := shared.ResourceGreeneryTile
-
-		switch per.ResourceType {
-		case shared.ResourceOceanTile:
-			return CountAllTilesOfType(a.game.Board(), shared.ResourceOceanTile)
-		case shared.ResourceCityTile:
-			if per.Target != nil && *per.Target == string(TargetSelfPlayer) {
-				return CountPlayerTiles(a.player.ID(), a.game.Board(), &cityTileType)
-			}
-			return CountAllTilesOfType(a.game.Board(), shared.ResourceCityTile)
-		case shared.ResourceGreeneryTile:
-			if per.Target != nil && *per.Target == string(TargetSelfPlayer) {
-				return CountPlayerTiles(a.player.ID(), a.game.Board(), &greeneryTileType)
-			}
-			return CountAllTilesOfType(a.game.Board(), shared.ResourceGreeneryTile)
-		}
+		b = a.game.Board()
+		allPlayers = a.game.GetAllPlayers()
 	}
-
-	// Try to count as a tag type if cardRegistry is available
-	if a.cardRegistry != nil {
-		return CountPlayerTagsByType(a.player, a.cardRegistry, shared.CardTag(per.ResourceType))
-	}
-
-	return 0
+	return CountPerCondition(per, a.sourceCardID, a.player, b, a.cardRegistry, allPlayers)
 }
 
 // ApplyCardDrawOutputs processes card-peek/take/buy outputs together

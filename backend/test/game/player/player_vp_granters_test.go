@@ -182,7 +182,7 @@ func TestPerTagVPConditions(t *testing.T) {
 					{
 						Amount:    tt.vpAmount,
 						Condition: shared.VPConditionPer,
-						Per: &shared.VPPerCondition{
+						Per: &shared.PerCondition{
 							Tag:    &tt.tag,
 							Amount: tt.perAmount,
 						},
@@ -251,7 +251,7 @@ func TestPerTileVPConditions(t *testing.T) {
 					{
 						Amount:    tt.vpAmount,
 						Condition: shared.VPConditionPer,
-						Per: &shared.VPPerCondition{
+						Per: &shared.PerCondition{
 							ResourceType: tt.tileType,
 							Amount:       tt.perAmount,
 						},
@@ -334,7 +334,7 @@ func TestMaxTriggerCap(t *testing.T) {
 						Amount:     tt.vpAmount,
 						Condition:  shared.VPConditionPer,
 						MaxTrigger: tt.maxTrigger,
-						Per: &shared.VPPerCondition{
+						Per: &shared.PerCondition{
 							ResourceType: shared.ResourceScience,
 							Amount:       tt.perAmount,
 							Target:       &selfCard,
@@ -442,7 +442,7 @@ func TestMultipleGrantersTotalComputedVP(t *testing.T) {
 			{
 				Amount:    1,
 				Condition: shared.VPConditionPer,
-				Per: &shared.VPPerCondition{
+				Per: &shared.PerCondition{
 					ResourceType: shared.ResourceAnimal,
 					Amount:       1,
 					Target:       &selfCard,
@@ -457,7 +457,7 @@ func TestMultipleGrantersTotalComputedVP(t *testing.T) {
 			{
 				Amount:    1,
 				Condition: shared.VPConditionPer,
-				Per: &shared.VPPerCondition{
+				Per: &shared.PerCondition{
 					Tag:    ptrTag(shared.TagJovian),
 					Amount: 1,
 				},
@@ -621,7 +621,7 @@ func TestPerAdjacentOceanTileVPGranter(t *testing.T) {
 					{
 						Amount:    1,
 						Condition: shared.VPConditionPer,
-						Per: &shared.VPPerCondition{
+						Per: &shared.PerCondition{
 							ResourceType:       shared.ResourceOceanTile,
 							Amount:             1,
 							AdjacentToSelfTile: true,
@@ -697,7 +697,7 @@ func TestCorporationVPConditions(t *testing.T) {
 					{
 						Amount:    tt.vpAmount,
 						Condition: shared.VPConditionPer,
-						Per: &shared.VPPerCondition{
+						Per: &shared.PerCondition{
 							ResourceType: tt.resourceType,
 							Amount:       tt.perAmount,
 							Target:       &selfCard,
@@ -735,7 +735,7 @@ func TestCorporationVPGranterIsPrepended(t *testing.T) {
 			{
 				Amount:    1,
 				Condition: shared.VPConditionPer,
-				Per: &shared.VPPerCondition{
+				Per: &shared.PerCondition{
 					ResourceType: shared.ResourceAnimal,
 					Amount:       1,
 					Target:       &selfCard,
@@ -750,7 +750,7 @@ func TestCorporationVPGranterIsPrepended(t *testing.T) {
 			{
 				Amount:    1,
 				Condition: shared.VPConditionPer,
-				Per: &shared.VPPerCondition{
+				Per: &shared.PerCondition{
 					ResourceType: shared.ResourceAnimal,
 					Amount:       2,
 					Target:       &selfCard,
@@ -912,7 +912,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 					{
 						Amount:    tt.vpAmount,
 						Condition: shared.VPConditionPer,
-						Per: &shared.VPPerCondition{
+						Per: &shared.PerCondition{
 							ResourceType: tt.resourceType,
 							Amount:       tt.perAmount,
 							Target:       &selfCard,

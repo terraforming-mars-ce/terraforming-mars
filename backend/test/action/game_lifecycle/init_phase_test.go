@@ -61,6 +61,7 @@ func completeAllSelections(
 	return turnAction.NewConfirmInitAdvanceAction(
 		gameRepoWithGame(t, testGame),
 		cardRegistry,
+		nil,
 		logger,
 	)
 }
@@ -196,6 +197,7 @@ func TestInitPhase_RejectConfirmWrongPhase(t *testing.T) {
 	confirmAction := turnAction.NewConfirmInitAdvanceAction(
 		gameRepoWithGame(t, testGame),
 		cardRegistry,
+		nil,
 		logger,
 	)
 
@@ -271,7 +273,7 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 		testutil.AssertNoError(t, err, "Failed to set starting cards phase")
 	}
 
-	selectAction := turnAction.NewSelectStartingChoicesAction(repo, cardRegistry, logger)
+	selectAction := turnAction.NewSelectStartingChoicesAction(repo, cardRegistry, nil, logger)
 
 	// Both players select their starting choices
 	err = selectAction.Execute(ctx, testGame.ID(), playerID1, "B01", []string{}, []string{})
@@ -285,6 +287,7 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	confirmAction := turnAction.NewConfirmInitAdvanceAction(
 		gameRepoWithGame(t, testGame),
 		cardRegistry,
+		nil,
 		logger,
 	)
 

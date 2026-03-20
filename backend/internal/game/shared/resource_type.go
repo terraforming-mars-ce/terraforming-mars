@@ -42,8 +42,9 @@ const (
 	ResourceMoholeTile          ResourceType = "mohole-tile"
 	ResourceRestrictedTile      ResourceType = "restricted-tile"
 
-	ResourceLandTile   ResourceType = "land"
-	ResourceOceanSpace ResourceType = "ocean-space"
+	ResourceLandTile     ResourceType = "land"
+	ResourceNonOceanTile ResourceType = "land-tile"
+	ResourceOceanSpace   ResourceType = "ocean-space"
 
 	ResourceTemperature     ResourceType = "temperature"
 	ResourceOxygen          ResourceType = "oxygen"

@@ -86,6 +86,7 @@ export interface GamePopoverItemProps {
   children: React.ReactNode;
   className?: string;
   borderColor?: string; // Custom border color (hex). When set, uses dark background with this color as border instead of accent-tinted background.
+  style?: React.CSSProperties;
 }
 
 export interface GamePopoverEmptyProps {

@@ -137,16 +137,24 @@ function MenuFooter() {
 
   return (
     <>
-      <span className="fixed bottom-[16px] left-[16px] text-white/30 text-xs select-none z-10">
-        {APP_VERSION}
-        <span className="mx-1">|</span>
-        <button
-          className="hover:text-white/70 transition-colors cursor-pointer"
-          onClick={() => window.dispatchEvent(new CustomEvent("toggle-bug-report-window"))}
+      <div className="fixed bottom-[16px] left-[16px] right-[16px] flex items-center justify-between text-white/30 text-xs select-none z-20 pointer-events-none">
+        <span className="pointer-events-auto">
+          {APP_VERSION}
+          <span className="mx-1">|</span>
+          <button
+            className="hover:text-white/70 transition-colors cursor-pointer"
+            onClick={() => window.dispatchEvent(new CustomEvent("toggle-bug-report-window"))}
+          >
+            Bug report
+          </button>
+        </span>
+        <a
+          href="/cards"
+          className="pointer-events-auto bg-space-black-darker/90 border-2 border-space-blue-500 rounded-lg font-orbitron font-semibold text-white text-sm py-1.5 px-3 no-underline inline-block backdrop-blur-space hover:border-space-blue-400 hover:shadow-[0_0_12px_rgba(255,255,255,0.15)] transition-all duration-200"
         >
-          Bug report
-        </button>
-      </span>
+          View Cards
+        </a>
+      </div>
       <WindowManagerProvider>
         <BugReportWindow
           isVisible={showBugReportWindow}

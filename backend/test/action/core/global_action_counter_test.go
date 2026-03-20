@@ -73,7 +73,7 @@ func TestSkipIncrementsGlobalActionCounter(t *testing.T) {
 	err := testGame.SetCurrentTurn(context.Background(), player1ID, 1)
 	testutil.AssertNoError(t, err, "Setting turn should succeed")
 
-	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
 
 	err = skipAction.Execute(context.Background(), testGame.ID(), player1ID)
@@ -86,7 +86,7 @@ func TestPassIncrementsGlobalActionCounter(t *testing.T) {
 	testGame, repo, cardRegistry, player1ID, _ := testutil.SetupTwoPlayerGame(t)
 	logger := testutil.TestLogger()
 
-	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
 
 	// Player 1 passes (has 2 actions = pass)

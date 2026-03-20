@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
@@ -16,23 +17,26 @@ import (
 // ConfirmInitAdvanceAction advances the init phase to the next player's corp/prelude application.
 // The frontend sends this after displaying effects and completing any required tile placements.
 type ConfirmInitAdvanceAction struct {
-	gameRepo     game.GameRepository
-	cardRegistry cards.CardRegistry
-	corpProc     *gamecards.CorporationProcessor
-	logger       *zap.Logger
+	gameRepo      game.GameRepository
+	cardRegistry  cards.CardRegistry
+	awardRegistry awards.AwardRegistry
+	corpProc      *gamecards.CorporationProcessor
+	logger        *zap.Logger
 }
 
 // NewConfirmInitAdvanceAction creates a new confirm init advance action
 func NewConfirmInitAdvanceAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
+	awardRegistry awards.AwardRegistry,
 	logger *zap.Logger,
 ) *ConfirmInitAdvanceAction {
 	return &ConfirmInitAdvanceAction{
-		gameRepo:     gameRepo,
-		cardRegistry: cardRegistry,
-		corpProc:     gamecards.NewCorporationProcessor(cardRegistry, logger),
-		logger:       logger,
+		gameRepo:      gameRepo,
+		cardRegistry:  cardRegistry,
+		awardRegistry: awardRegistry,
+		corpProc:      gamecards.NewCorporationProcessor(cardRegistry, awardRegistry, logger),
+		logger:        logger,
 	}
 }
 

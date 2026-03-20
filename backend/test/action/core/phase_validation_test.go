@@ -130,7 +130,8 @@ func TestFundAward_RejectsDuringProductionPhase(t *testing.T) {
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 
-	action := awardAction.NewFundAwardAction(repo, cardRegistry, nil, logger)
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	action := awardAction.NewFundAwardAction(repo, cardRegistry, nil, awardRegistry, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, "landlord")
 
 	testutil.AssertError(t, err, "Fund award should be rejected during production phase")

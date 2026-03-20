@@ -54,7 +54,7 @@ func TestFinalScoring_CardVPIncluded(t *testing.T) {
 	}
 
 	// Execute final scoring
-	action := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	action := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(ctx, g.ID())
 	if err != nil {
 		t.Fatalf("FinalScoringAction failed: %v", err)
@@ -154,7 +154,7 @@ func TestFinalScoring_GreeneryAndCityVP(t *testing.T) {
 		}
 	}
 
-	action := gameaction.NewFinalScoringAction(repo, cardRegistry, logger)
+	action := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, logger)
 	err = action.Execute(ctx, g.ID())
 	if err != nil {
 		t.Fatalf("FinalScoringAction failed: %v", err)

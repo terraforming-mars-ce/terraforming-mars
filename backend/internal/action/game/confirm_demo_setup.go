@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"terraforming-mars-backend/internal/action"
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/events"
@@ -19,23 +20,26 @@ import (
 
 // ConfirmDemoSetupAction handles a player confirming their demo setup configuration
 type ConfirmDemoSetupAction struct {
-	gameRepo     internalgame.GameRepository
-	cardRegistry cards.CardRegistry
-	corpProc     *gamecards.CorporationProcessor
-	logger       *zap.Logger
+	gameRepo      internalgame.GameRepository
+	cardRegistry  cards.CardRegistry
+	awardRegistry awards.AwardRegistry
+	corpProc      *gamecards.CorporationProcessor
+	logger        *zap.Logger
 }
 
 // NewConfirmDemoSetupAction creates a new confirm demo setup action
 func NewConfirmDemoSetupAction(
 	gameRepo internalgame.GameRepository,
 	cardRegistry cards.CardRegistry,
+	awardRegistry awards.AwardRegistry,
 	logger *zap.Logger,
 ) *ConfirmDemoSetupAction {
 	return &ConfirmDemoSetupAction{
-		gameRepo:     gameRepo,
-		cardRegistry: cardRegistry,
-		corpProc:     gamecards.NewCorporationProcessor(cardRegistry, logger),
-		logger:       logger,
+		gameRepo:      gameRepo,
+		cardRegistry:  cardRegistry,
+		awardRegistry: awardRegistry,
+		corpProc:      gamecards.NewCorporationProcessor(cardRegistry, awardRegistry, logger),
+		logger:        logger,
 	}
 }
 

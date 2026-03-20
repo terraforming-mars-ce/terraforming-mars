@@ -288,6 +288,72 @@ func TestPerCondition_ZeroMultiplierSkipsOutput(t *testing.T) {
 	testutil.AssertEqual(t, 10, credits, "credits should remain unchanged when multiplier is zero")
 }
 
+func TestCountPerConditionResourceCounting(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	p := g.GetAllPlayers()[0]
+	ctx := context.Background()
+
+	// Set heat=10, steel=5, titanium=3
+	resources := p.Resources().Get()
+	resources.Heat = 10
+	resources.Steel = 5
+	resources.Titanium = 3
+	p.Resources().Set(resources)
+
+	selfPlayer := "self-player"
+
+	// Heat counting
+	heatPer := &shared.PerCondition{
+		ResourceType: shared.ResourceHeat,
+		Amount:       1,
+		Target:       &selfPlayer,
+	}
+	count := gamecards.CountPerCondition(heatPer, "", p, g.Board(), nil, nil)
+	testutil.AssertEqual(t, 10, count, "should count 10 heat")
+
+	// Steel counting
+	steelPer := &shared.PerCondition{
+		ResourceType: shared.ResourceSteel,
+		Amount:       1,
+		Target:       &selfPlayer,
+	}
+	count = gamecards.CountPerCondition(steelPer, "", p, g.Board(), nil, nil)
+	testutil.AssertEqual(t, 5, count, "should count 5 steel")
+
+	// Titanium counting
+	titaniumPer := &shared.PerCondition{
+		ResourceType: shared.ResourceTitanium,
+		Amount:       1,
+		Target:       &selfPlayer,
+	}
+	count = gamecards.CountPerCondition(titaniumPer, "", p, g.Board(), nil, nil)
+	testutil.AssertEqual(t, 3, count, "should count 3 titanium")
+
+	_ = ctx
+}
+
+func TestCountPerConditionProductionCounting(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	p := g.GetAllPlayers()[0]
+
+	// Set credit production=3
+	prod := p.Resources().Production()
+	prod.Credits = 3
+	p.Resources().SetProduction(prod)
+
+	selfPlayer := "self-player"
+
+	creditProdPer := &shared.PerCondition{
+		ResourceType: shared.ResourceCreditProduction,
+		Amount:       1,
+		Target:       &selfPlayer,
+	}
+	count := gamecards.CountPerCondition(creditProdPer, "", p, g.Board(), nil, nil)
+	testutil.AssertEqual(t, 3, count, "should count 3 credit production")
+}
+
 func TestPerCondition_NilPerProceedsNormally(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)

@@ -13,6 +13,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   children,
   className = "",
   borderColor,
+  style: externalStyle,
 }) => {
   const { playButtonHoverSound, playButtonClickSound } = useSoundEffects();
   const isClickable = state === "available" && onClick;
@@ -61,6 +62,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
       style={{
         animationDelay: `${animationDelay}s`,
         ...(borderColor ? { borderColor: borderColor + "60" } : {}),
+        ...externalStyle,
       }}
     >
       {error && state === "disabled" && (

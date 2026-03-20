@@ -6,9 +6,11 @@ import (
 
 	"slices"
 
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/colonies"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/award"
 	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
@@ -25,6 +27,7 @@ type Registries struct {
 	ColonyRegistry          colonies.ColonyRegistry
 	ProjectFundingRegistry  pfRegistry.ProjectFundingRegistry
 	StandardProjectRegistry standardprojects.StandardProjectRegistry
+	AwardRegistry           awards.AwardRegistry
 }
 
 func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string, colonyRegistry ...colonies.ColonyRegistry) GameDto {
@@ -51,7 +54,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 	for _, p := range players {
 		if p.ID() == playerID {
 			viewingPlayer = p
-			currentPlayer = ToPlayerDto(p, g, cardRegistry, registries.StandardProjectRegistry)
+			currentPlayer = ToPlayerDto(p, g, cardRegistry, registries.StandardProjectRegistry, registries.AwardRegistry)
 		} else {
 			otherPlayers = append(otherPlayers, ToOtherPlayerDto(p, g, cardRegistry))
 		}
@@ -59,7 +62,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 
 	if viewingPlayer == nil && len(players) > 0 {
 		otherPlayers = make([]OtherPlayerDto, 0)
-		currentPlayer = ToPlayerDto(players[0], g, cardRegistry, registries.StandardProjectRegistry)
+		currentPlayer = ToPlayerDto(players[0], g, cardRegistry, registries.StandardProjectRegistry, registries.AwardRegistry)
 		for i := 1; i < len(players); i++ {
 			otherPlayers = append(otherPlayers, ToOtherPlayerDto(players[i], g, cardRegistry))
 		}
@@ -199,8 +202,8 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 		},
 		PaymentConstants:   paymentConstants,
 		Milestones:         ToMilestonesDto(g, cardRegistry),
-		Awards:             ToAwardsDto(g, cardRegistry),
-		AwardResults:       ToAwardResultsDto(g, cardRegistry),
+		Awards:             ToAwardsDto(g, cardRegistry, registries.AwardRegistry),
+		AwardResults:       ToAwardResultsDto(g, cardRegistry, registries.AwardRegistry),
 		FinalScores:        finalScoreDtos,
 		TriggeredEffects:   triggeredEffectDtos,
 		PlaceableTileTypes: ToPlaceableTileTypeDtos(),
@@ -324,22 +327,44 @@ func ToMilestonesDto(g *game.Game, cardRegistry cards.CardRegistry) []MilestoneD
 }
 
 // ToAwardsDto converts all awards to DTOs including funding status and per-player scores
-func ToAwardsDto(g *game.Game, cardRegistry cards.CardRegistry) []AwardDto {
-	awards := g.Awards()
+func ToAwardsDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegistry awards.AwardRegistry) []AwardDto {
+	if awardRegistry == nil {
+		return nil
+	}
+	gameAwards := g.Awards()
 	players := g.GetAllPlayers()
 	b := g.Board()
 
-	dtos := make([]AwardDto, len(game.AllAwards))
-	fundedCount := awards.FundedCount()
+	allDefs := awardRegistry.GetAll()
+	settings := g.Settings()
+	enabledPacks := make(map[string]bool, len(settings.CardPacks))
+	for _, pack := range settings.CardPacks {
+		enabledPacks[pack] = true
+	}
+	if settings.VenusNextEnabled {
+		enabledPacks[shared.PackVenus] = true
+	}
 
-	for i, info := range game.AllAwards {
+	filteredDefs := make([]award.AwardDefinition, 0, len(allDefs))
+	for _, def := range allDefs {
+		if def.Pack != "" && !enabledPacks[def.Pack] {
+			continue
+		}
+		filteredDefs = append(filteredDefs, def)
+	}
+
+	dtos := make([]AwardDto, len(filteredDefs))
+	fundedCount := gameAwards.FundedCount()
+
+	for i, def := range filteredDefs {
+		awardType := shared.AwardType(def.ID)
 		var fundedBy *string
-		isFunded := awards.IsFunded(info.Type)
-		fundingCost := game.AwardFundingCosts[0]
+		isFunded := gameAwards.IsFunded(awardType)
+		fundingCost := def.GetCostForFundedCount(0)
 
 		if isFunded {
-			for _, funded := range awards.FundedAwards() {
-				if funded.Type == info.Type {
+			for _, funded := range gameAwards.FundedAwards() {
+				if funded.Type == awardType {
 					fundedBy = &funded.FundedByPlayer
 					fundingCost = funded.FundingCost
 					break
@@ -347,35 +372,65 @@ func ToAwardsDto(g *game.Game, cardRegistry cards.CardRegistry) []AwardDto {
 			}
 		} else {
 			if fundedCount < game.MaxFundedAwards {
-				fundingCost = game.AwardFundingCosts[fundedCount]
+				fundingCost = def.GetCostForFundedCount(fundedCount)
 			}
 		}
 
 		playerProgress := make(map[string]int, len(players))
 		for _, p := range players {
-			playerProgress[p.ID()] = gamecards.CalculateAwardScore(info.Type, p, b, cardRegistry)
+			playerProgress[p.ID()] = gamecards.CalculateAwardScore(&def, p, b, cardRegistry)
+		}
+
+		rewardDtos := make([]AwardRewardDto, len(def.Rewards))
+		for ri, r := range def.Rewards {
+			outputs := make([]ResourceConditionDto, len(r.Outputs))
+			for oi, o := range r.Outputs {
+				outputs[oi] = ResourceConditionDto{
+					Type:   ResourceType(o.Type),
+					Amount: o.Amount,
+					Target: "self-player",
+				}
+			}
+			rewardDtos[ri] = AwardRewardDto{
+				Place:   r.Place,
+				Outputs: outputs,
+			}
+		}
+
+		var styleDtoPtr *StyleDto
+		if def.Style.Color != "" || def.Style.Icon != "" {
+			styleDtoPtr = &StyleDto{Color: def.Style.Color, Icon: def.Style.Icon}
 		}
 
 		dtos[i] = AwardDto{
-			Type:           string(info.Type),
-			Name:           info.Name,
-			Description:    info.Description,
+			Type:           def.ID,
+			Name:           def.Name,
+			Description:    def.Description,
 			IsFunded:       isFunded,
 			FundedBy:       fundedBy,
 			FundingCost:    fundingCost,
 			PlayerProgress: playerProgress,
+			Rewards:        rewardDtos,
+			Style:          styleDtoPtr,
 		}
 	}
 	return dtos
 }
 
 // ToAwardResultsDto converts funded awards to placement results
-func ToAwardResultsDto(g *game.Game, cardRegistry cards.CardRegistry) []AwardResultDto {
+func ToAwardResultsDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegistry awards.AwardRegistry) []AwardResultDto {
+	if awardRegistry == nil {
+		return nil
+	}
 	fundedAwards := g.Awards().FundedAwards()
 	results := make([]AwardResultDto, 0, len(fundedAwards))
 
 	for _, funded := range fundedAwards {
-		placements := gamecards.ScoreAward(funded.Type, g.GetAllPlayers(), g.Board(), cardRegistry)
+		def, err := awardRegistry.GetByID(string(funded.Type))
+		if err != nil {
+			continue
+		}
+		placements := gamecards.ScoreAward(def, g.GetAllPlayers(), g.Board(), cardRegistry)
 
 		firstPlace := make([]string, 0)
 		secondPlace := make([]string, 0)
@@ -693,7 +748,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, play
 			PlayerColonies: playerColonies,
 			TradedThisGen:  state.TradedThisGen,
 			TraderID:       state.TraderID,
-			Style: ColonyStyleDto{
+			Style: StyleDto{
 				Color: def.Style.Color,
 				Icon:  def.Style.Icon,
 			},
@@ -867,7 +922,7 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 				Description: def.CompletionEffect.Description,
 				Rewards:     completionRewards,
 			},
-			Style: ProjectStyleDto{
+			Style: StyleDto{
 				Color: def.Style.Color,
 				Icon:  def.Style.Icon,
 			},

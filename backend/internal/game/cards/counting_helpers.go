@@ -81,6 +81,32 @@ func HasTag(card *Card, tag shared.CardTag) bool {
 	return false
 }
 
+// CountPlayerNonOceanTiles counts all non-ocean tiles owned by a player.
+func CountPlayerNonOceanTiles(playerID string, b *board.Board) int {
+	count := 0
+	for _, tile := range b.Tiles() {
+		if tile.OwnerID == nil || *tile.OwnerID != playerID {
+			continue
+		}
+		if tile.OccupiedBy == nil || tile.OccupiedBy.Type == shared.ResourceOceanTile {
+			continue
+		}
+		count++
+	}
+	return count
+}
+
+// CountAllNonOceanTiles counts all non-ocean tiles on the board.
+func CountAllNonOceanTiles(b *board.Board) int {
+	count := 0
+	for _, tile := range b.Tiles() {
+		if tile.OccupiedBy != nil && tile.OccupiedBy.Type != shared.ResourceOceanTile {
+			count++
+		}
+	}
+	return count
+}
+
 // CountAllTilesOfType counts all tiles of a specific type on the board, regardless of owner.
 func CountAllTilesOfType(b *board.Board, tileType shared.ResourceType) int {
 	count := 0
@@ -130,4 +156,118 @@ func CountOtherPlayersTagsByType(players []*player.Player, excludePlayerID strin
 		count += CountPlayerTagsByType(p, cardRegistry, tagType)
 	}
 	return count
+}
+
+// CountPerCondition is the unified counter for PerCondition evaluation.
+// Used by card behaviors (scaled outputs), VP calculations, and award scoring.
+// Parameters:
+//   - per: the condition to evaluate
+//   - sourceCardID: card ID for self-card storage or adjacency (empty string if N/A)
+//   - p: the player to evaluate for
+//   - b: the game board (nil-safe for non-tile conditions)
+//   - cardRegistry: card registry for tag lookups (nil-safe for non-tag conditions)
+//   - allPlayers: all players in game (only needed for any-player/other-players targeting, nil otherwise)
+func CountPerCondition(
+	per *shared.PerCondition,
+	sourceCardID string,
+	p *player.Player,
+	b *board.Board,
+	cardRegistry CardRegistryInterface,
+	allPlayers []*player.Player,
+) int {
+	if per == nil {
+		return 0
+	}
+
+	// Card storage (e.g., animals on this card)
+	if per.Target != nil && *per.Target == "self-card" {
+		if sourceCardID != "" {
+			return p.Resources().GetCardStorage(sourceCardID)
+		}
+		return 0
+	}
+
+	// Adjacent to tile placed by this card (e.g., Capital: 1 VP per adjacent ocean)
+	if per.AdjacentToSelfTile && b != nil {
+		return countAdjacentTilesOfTypeForCard(b, sourceCardID, per.ResourceType)
+	}
+
+	// Adjacent to tile type (e.g., World Tree: 1 VP per adjacent forest)
+	if per.AdjacentToTileType != nil && b != nil {
+		return countAdjacentTilesOfType(p.ID(), b, per.ResourceType, *per.AdjacentToTileType)
+	}
+
+	// Tag counting
+	if per.Tag != nil && cardRegistry != nil {
+		if per.Target != nil && *per.Target == "any-player" && allPlayers != nil {
+			return CountAllPlayersTagsByType(allPlayers, cardRegistry, *per.Tag)
+		}
+		if per.Target != nil && *per.Target == "other-players" && allPlayers != nil {
+			return CountOtherPlayersTagsByType(allPlayers, p.ID(), cardRegistry, *per.Tag)
+		}
+		return CountPlayerTagsByType(p, cardRegistry, *per.Tag)
+	}
+
+	// Tile counting
+	if b != nil {
+		switch per.ResourceType {
+		case shared.ResourceOceanTile:
+			return CountAllTilesOfType(b, shared.ResourceOceanTile)
+		case shared.ResourceNonOceanTile:
+			if per.Target != nil && *per.Target == "self-player" {
+				return CountPlayerNonOceanTiles(p.ID(), b)
+			}
+			return CountAllNonOceanTiles(b)
+		case shared.ResourceCityTile:
+			if per.Target != nil && *per.Target == "self-player" {
+				rt := shared.ResourceCityTile
+				return CountPlayerTiles(p.ID(), b, &rt)
+			}
+			return CountAllTilesOfType(b, shared.ResourceCityTile)
+		case shared.ResourceGreeneryTile:
+			if per.Target != nil && *per.Target == "self-player" {
+				rt := shared.ResourceGreeneryTile
+				return CountPlayerTiles(p.ID(), b, &rt)
+			}
+			return CountAllTilesOfType(b, shared.ResourceGreeneryTile)
+		case shared.ResourceColonyTile:
+			return CountAllTilesOfType(b, shared.ResourceColonyTile)
+		}
+	}
+
+	// Production counting (e.g., credit-production)
+	if isProductionType(per.ResourceType) {
+		return p.Resources().Production().GetAmount(per.ResourceType)
+	}
+
+	// Resource counting (e.g., heat, steel, titanium)
+	if isBasicResourceType(per.ResourceType) {
+		return p.Resources().Get().GetAmount(per.ResourceType)
+	}
+
+	// Fallback: try to count as a tag type
+	if cardRegistry != nil {
+		return CountPlayerTagsByType(p, cardRegistry, shared.CardTag(per.ResourceType))
+	}
+
+	return 0
+}
+
+func isProductionType(rt shared.ResourceType) bool {
+	switch rt {
+	case shared.ResourceCreditProduction, shared.ResourceSteelProduction,
+		shared.ResourceTitaniumProduction, shared.ResourcePlantProduction,
+		shared.ResourceEnergyProduction, shared.ResourceHeatProduction:
+		return true
+	}
+	return false
+}
+
+func isBasicResourceType(rt shared.ResourceType) bool {
+	switch rt {
+	case shared.ResourceCredit, shared.ResourceSteel, shared.ResourceTitanium,
+		shared.ResourcePlant, shared.ResourceEnergy, shared.ResourceHeat:
+		return true
+	}
+	return false
 }

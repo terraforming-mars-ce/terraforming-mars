@@ -1,5 +1,7 @@
 package projectfunding
 
+import "terraforming-mars-backend/internal/game/shared"
+
 // ProjectDefinition is the static template loaded from JSON
 type ProjectDefinition struct {
 	ID               string           `json:"id"`
@@ -8,7 +10,7 @@ type ProjectDefinition struct {
 	Seats            []SeatDefinition `json:"seats"`
 	RewardTiers      []RewardTier     `json:"rewardTiers"`
 	CompletionEffect CompletionEffect `json:"completionEffect"`
-	Style            Style            `json:"style"`
+	Style            shared.Style     `json:"style"`
 }
 
 // SeatDefinition represents one purchasable seat in a project
@@ -39,12 +41,6 @@ type CompletionEffect struct {
 type Output struct {
 	Type   string `json:"type"`
 	Amount int    `json:"amount"`
-}
-
-// Style provides visual hints for the frontend
-type Style struct {
-	Color string `json:"color"`
-	Icon  string `json:"icon"`
 }
 
 // FindBestTier returns the highest reward tier the player qualifies for based on seats owned.

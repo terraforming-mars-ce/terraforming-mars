@@ -433,7 +433,7 @@ func TestSetCorporation_Success(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	corpID := testutil.CardID("CrediCor")
 	err := action.Execute(ctx, testGame.ID(), playerID, corpID)
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
@@ -447,7 +447,7 @@ func TestSetCorporation_ChangeCorporation(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 
 	corp1 := testutil.CardID("CrediCor")
 	err := action.Execute(ctx, testGame.ID(), playerID, corp1)
@@ -466,7 +466,7 @@ func TestSetCorporation_InvalidGame(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(ctx, "nonexistent-game", "some-player", testutil.CardID("CrediCor"))
 	testutil.AssertError(t, err, "SetCorporation should fail for invalid game")
 }
@@ -476,7 +476,7 @@ func TestSetCorporation_InvalidPlayer(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", testutil.CardID("CrediCor"))
 	testutil.AssertError(t, err, "SetCorporation should fail for invalid player")
 }
@@ -486,7 +486,7 @@ func TestSetCorporation_InvalidCardID(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "nonexistent-card-id")
 	testutil.AssertError(t, err, "SetCorporation should fail for invalid card ID")
 }
@@ -496,7 +496,7 @@ func TestSetCorporation_RegistersVPGranter(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	corpID := testutil.CardID("Arklight")
 	err := action.Execute(ctx, testGame.ID(), playerID, corpID)
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
@@ -512,7 +512,7 @@ func TestSetCorporation_ChangeCorporation_ClearsOldVPGranter(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 
 	// Set Arklight (has VP granter: 1 VP per 2 animals)
 	arklightID := testutil.CardID("Arklight")
@@ -539,7 +539,7 @@ func TestSetCorporation_NoVPGranterForCorpWithoutVP(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	corpID := testutil.CardID("CrediCor")
 	err := action.Execute(ctx, testGame.ID(), playerID, corpID)
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
@@ -554,7 +554,7 @@ func TestSetCorporation_NonCorporationCard(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	action := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Asteroid Mining"))
 	testutil.AssertError(t, err, "SetCorporation should fail for non-corporation card")
 }
@@ -638,7 +638,7 @@ func TestAdminActions_CombinedSetup(t *testing.T) {
 	ctx := context.Background()
 
 	// Set corporation
-	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, logger)
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("CrediCor"))
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 

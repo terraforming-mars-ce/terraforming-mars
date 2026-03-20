@@ -113,7 +113,8 @@ func TestFundAward_Landlord_LogsCorrectName(t *testing.T) {
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 100)
 
-	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, logger)
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "landlord")
 	testutil.AssertNoError(t, err, "Funding landlord award should succeed")
 
@@ -136,7 +137,8 @@ func TestFundAward_Scientist_LogsCorrectName(t *testing.T) {
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 100)
 
-	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, logger)
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "scientist")
 	testutil.AssertNoError(t, err, "Funding scientist award should succeed")
 
@@ -155,7 +157,8 @@ func TestFundAward_InvalidType(t *testing.T) {
 	logger := testutil.TestLogger()
 	stateRepo := game.NewInMemoryGameStateRepository()
 
-	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, logger)
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
 	err := action.Execute(ctx, "some-game", playerID, "nonexistent")
 	testutil.AssertError(t, err, "Invalid award type should fail")
 }
@@ -169,7 +172,8 @@ func TestFundAward_InsufficientCredits(t *testing.T) {
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 0)
 
-	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, logger)
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "landlord")
 	testutil.AssertError(t, err, "Funding award with 0 credits should fail")
 }
@@ -190,12 +194,13 @@ func TestConfirmAwardFund_Success(t *testing.T) {
 		Source:          "corporation-starting-action",
 	})
 
-	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "banker")
 	testutil.AssertNoError(t, err, "ConfirmAwardFund should succeed")
 
 	// Award should be funded
-	testutil.AssertTrue(t, testGame.Awards().IsFunded(shared.AwardBanker), "Banker award should be funded")
+	testutil.AssertTrue(t, testGame.Awards().IsFunded(shared.AwardType("banker")), "Banker award should be funded")
 
 	// Credits should be unchanged (free)
 	testutil.AssertEqual(t, 10, p.Resources().Get().Credits, "Credits should not be deducted")
@@ -215,7 +220,8 @@ func TestConfirmAwardFund_InvalidAwardType(t *testing.T) {
 		Source:          "corporation-starting-action",
 	})
 
-	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "nonexistent")
 	testutil.AssertError(t, err, "Invalid award type should fail")
 }
@@ -231,7 +237,8 @@ func TestConfirmAwardFund_AwardNotInAvailableList(t *testing.T) {
 		Source:          "corporation-starting-action",
 	})
 
-	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "banker")
 	testutil.AssertError(t, err, "Award not in available list should fail")
 }
@@ -241,7 +248,8 @@ func TestConfirmAwardFund_NoPendingSelection(t *testing.T) {
 	ctx := context.Background()
 	logger := testutil.TestLogger()
 
-	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, logger)
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "landlord")
 	testutil.AssertError(t, err, "Should fail without pending selection")
 }
