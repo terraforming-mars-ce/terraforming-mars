@@ -996,14 +996,16 @@ type BoardDto struct {
 
 // MilestoneDto represents a milestone for client consumption
 type MilestoneDto struct {
-	Type           string         `json:"type" ts:"string"`
-	Name           string         `json:"name" ts:"string"`
-	Description    string         `json:"description" ts:"string"`
-	IsClaimed      bool           `json:"isClaimed" ts:"boolean"`
-	ClaimedBy      *string        `json:"claimedBy" ts:"string | null"`
-	ClaimCost      int            `json:"claimCost" ts:"number"`
-	Required       int            `json:"required" ts:"number"`
-	PlayerProgress map[string]int `json:"playerProgress" ts:"Record<string, number>"`
+	Type           string           `json:"type" ts:"string"`
+	Name           string           `json:"name" ts:"string"`
+	Description    string           `json:"description" ts:"string"`
+	IsClaimed      bool             `json:"isClaimed" ts:"boolean"`
+	ClaimedBy      *string          `json:"claimedBy" ts:"string | null"`
+	ClaimCost      int              `json:"claimCost" ts:"number"`
+	Required       int              `json:"required" ts:"number"`
+	PlayerProgress map[string]int   `json:"playerProgress" ts:"Record<string, number>"`
+	Reward         []AwardRewardDto `json:"rewards" ts:"AwardRewardDto[]"`
+	Style          *StyleDto        `json:"style,omitempty" ts:"StyleDto | undefined"`
 }
 
 // AwardDto represents an award for client consumption
@@ -1034,16 +1036,18 @@ type AwardResultDto struct {
 
 // PlayerMilestoneDto represents a milestone with player-specific eligibility state
 type PlayerMilestoneDto struct {
-	Type        string          `json:"type" ts:"string"`
-	Name        string          `json:"name" ts:"string"`
-	Description string          `json:"description" ts:"string"`
-	ClaimCost   int             `json:"claimCost" ts:"number"`
-	IsClaimed   bool            `json:"isClaimed" ts:"boolean"`
-	ClaimedBy   *string         `json:"claimedBy" ts:"string | null"`
-	Available   bool            `json:"available" ts:"boolean"`      // Can this player claim this milestone?
-	Progress    int             `json:"progress" ts:"number"`        // Current progress towards requirement
-	Required    int             `json:"required" ts:"number"`        // Requirement threshold
-	Errors      []StateErrorDto `json:"errors" ts:"StateErrorDto[]"` // Reasons why not available
+	Type        string           `json:"type" ts:"string"`
+	Name        string           `json:"name" ts:"string"`
+	Description string           `json:"description" ts:"string"`
+	ClaimCost   int              `json:"claimCost" ts:"number"`
+	IsClaimed   bool             `json:"isClaimed" ts:"boolean"`
+	ClaimedBy   *string          `json:"claimedBy" ts:"string | null"`
+	Available   bool             `json:"available" ts:"boolean"`      // Can this player claim this milestone?
+	Progress    int              `json:"progress" ts:"number"`        // Current progress towards requirement
+	Required    int              `json:"required" ts:"number"`        // Requirement threshold
+	Errors      []StateErrorDto  `json:"errors" ts:"StateErrorDto[]"` // Reasons why not available
+	Reward      []AwardRewardDto `json:"rewards" ts:"AwardRewardDto[]"`
+	Style       *StyleDto        `json:"style,omitempty" ts:"StyleDto | undefined"`
 }
 
 // PlayerAwardDto represents an award with player-specific eligibility state

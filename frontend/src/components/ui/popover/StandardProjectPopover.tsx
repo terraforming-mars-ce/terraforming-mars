@@ -10,7 +10,6 @@ import GameIcon from "../display/GameIcon.tsx";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { FormattedDescription } from "../display/FormattedDescription";
-import GameButton from "../buttons/GameButton.tsx";
 import BehaviorSection from "../cards/BehaviorSection/BehaviorSection.tsx";
 
 interface StandardProjectsPopoverProps {
@@ -36,7 +35,6 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
 
   const playerProjects: PlayerStandardProjectDto[] =
     gameState?.currentPlayer?.standardProjects ?? [];
-  const availableCount = playerProjects.filter((p) => p.available).length;
 
   const handleProjectClick = (project: PlayerStandardProjectDto) => {
     if (!canExecuteProjects || !project.available) return;
@@ -47,18 +45,10 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
     <GamePopover
       isVisible={isVisible}
       onClose={onClose}
-      position={{ type: "fixed", top: 60, left: 20 }}
+      position={{ type: "anchor", anchorRef, placement: "below" }}
       theme="colonies"
       excludeRef={anchorRef}
-      header={{
-        title: "Standard Projects",
-        badge: `${availableCount}/${playerProjects.length} Available`,
-        rightContent: (
-          <GameButton buttonType="textonly" size="xs" onClick={onClose}>
-            ✕
-          </GameButton>
-        ),
-      }}
+      header={undefined}
       width={500}
       maxHeight="80vh"
       animation="slideDown"

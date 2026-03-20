@@ -1328,6 +1328,8 @@ export interface MilestoneDto {
   claimCost: number /* int */;
   required: number /* int */;
   playerProgress: { [key: string]: number /* int */ };
+  rewards: AwardRewardDto[];
+  style?: StyleDto;
 }
 /**
  * AwardDto represents an award for client consumption
@@ -1372,6 +1374,8 @@ export interface PlayerMilestoneDto {
   progress: number /* int */; // Current progress towards requirement
   required: number /* int */; // Requirement threshold
   errors: StateErrorDto[]; // Reasons why not available
+  rewards: AwardRewardDto[];
+  style?: StyleDto;
 }
 /**
  * PlayerAwardDto represents an award with player-specific eligibility state
@@ -1699,6 +1703,7 @@ export interface Registries {
   ProjectFundingRegistry: any /* pfRegistry.ProjectFundingRegistry */;
   StandardProjectRegistry: any /* standardprojects.StandardProjectRegistry */;
   AwardRegistry: any /* awards.AwardRegistry */;
+  MilestoneRegistry: any /* milestones.MilestoneRegistry */;
 }
 
 //////////

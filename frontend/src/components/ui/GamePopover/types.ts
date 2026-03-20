@@ -75,11 +75,16 @@ export interface PopoverItemWarning {
   message: string;
 }
 
+export interface PopoverItemInfo {
+  message: string;
+}
+
 export interface GamePopoverItemProps {
   state: PopoverItemState;
   onClick?: () => void;
   error?: PopoverItemError;
   warning?: PopoverItemWarning;
+  info?: PopoverItemInfo;
   statusBadge?: string; // "played", "claimed", "funded"
   hoverEffect?: "translate-x" | "glow" | "background" | "none";
   animationDelay?: number;

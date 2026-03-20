@@ -7,6 +7,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   onClick,
   error,
   warning,
+  info,
   statusBadge,
   hoverEffect = "background",
   animationDelay = 0,
@@ -79,6 +80,12 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
         <div className="absolute top-2 right-2 z-[4] bg-[linear-gradient(135deg,#f39c12,#e67e22)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(243,156,18,0.8)] shadow-[0_2px_8px_rgba(243,156,18,0.4)] flex items-center gap-1">
           <span>⚠</span>
           <span>{warning.message}</span>
+        </div>
+      )}
+
+      {info && state === "disabled" && !error && (
+        <div className="absolute top-2 right-2 z-[4] bg-space-black-darker/90 text-white/60 text-[9px] font-bold px-2 py-1 rounded border border-white/20 flex items-center gap-1">
+          <span>{info.message}</span>
         </div>
       )}
 

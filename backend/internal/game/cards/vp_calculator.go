@@ -7,10 +7,8 @@ import (
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/milestones"
 )
-
-// Milestone VP constant
-const MilestoneClaimedVP = 5 // VP for each claimed milestone
 
 // CardVPConditionDetail represents the detailed calculation of a single VP condition
 type CardVPConditionDetail struct {
@@ -88,6 +86,7 @@ func CalculatePlayerVP(
 	allPlayers []*player.Player,
 	cardRegistry CardRegistryInterface,
 	awardRegistry awards.AwardRegistry,
+	milestoneRegistry milestones.MilestoneRegistry,
 ) VPBreakdown {
 	breakdown := VPBreakdown{}
 
@@ -102,8 +101,8 @@ func CalculatePlayerVP(
 		breakdown.CardVP += detail.TotalVP
 	}
 
-	// 3. Milestone VP (5 VP per claimed milestone)
-	breakdown.MilestoneVP = calculateMilestoneVP(p.ID(), claimedMilestones)
+	// 3. Milestone VP
+	breakdown.MilestoneVP = calculateMilestoneVP(p.ID(), claimedMilestones, milestoneRegistry)
 
 	// 4. Award VP
 	breakdown.AwardVP = calculateAwardVP(p.ID(), fundedAwards, allPlayers, b, cardRegistry, awardRegistry)
@@ -247,13 +246,21 @@ func getPerConditionTypeName(per *shared.PerCondition) string {
 	}
 }
 
-// calculateMilestoneVP calculates VP from claimed milestones
-func calculateMilestoneVP(playerID string, claimedMilestones []ClaimedMilestoneInfo) int {
+// calculateMilestoneVP calculates VP from claimed milestones using per-milestone reward VP
+func calculateMilestoneVP(playerID string, claimedMilestones []ClaimedMilestoneInfo, milestoneRegistry milestones.MilestoneRegistry) int {
 	vp := 0
-	for _, milestone := range claimedMilestones {
-		if milestone.PlayerID == playerID {
-			vp += MilestoneClaimedVP
+	for _, ms := range claimedMilestones {
+		if ms.PlayerID != playerID {
+			continue
 		}
+		if milestoneRegistry != nil {
+			def, err := milestoneRegistry.GetByID(ms.Type)
+			if err == nil {
+				vp += def.GetRewardVP()
+				continue
+			}
+		}
+		vp += 5 // fallback
 	}
 	return vp
 }

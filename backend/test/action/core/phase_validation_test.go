@@ -119,7 +119,8 @@ func TestClaimMilestone_RejectsDuringProductionPhase(t *testing.T) {
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 
-	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, nil, logger)
+	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
+	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, nil, milestoneRegistry, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, "terraformer")
 
 	testutil.AssertError(t, err, "Claim milestone should be rejected during production phase")

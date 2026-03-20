@@ -6,11 +6,12 @@ import (
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/milestones"
 )
 
 // ToSpectatorGameDto creates a GameDto for spectators where all players are shown
 // as OtherPlayerDto (no hidden information like hand cards or pending selections).
-func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegistry awards.AwardRegistry) GameDto {
+func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegistry awards.AwardRegistry, milestoneRegistry milestones.MilestoneRegistry) GameDto {
 	players := g.GetAllPlayers()
 
 	otherPlayers := make([]OtherPlayerDto, 0, len(players))
@@ -148,7 +149,7 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegi
 			Tiles: tileDtos,
 		},
 		PaymentConstants:   paymentConstants,
-		Milestones:         ToMilestonesDto(g, cardRegistry),
+		Milestones:         ToMilestonesDto(g, cardRegistry, milestoneRegistry),
 		Awards:             ToAwardsDto(g, cardRegistry, awardRegistry),
 		AwardResults:       ToAwardResultsDto(g, cardRegistry, awardRegistry),
 		FinalScores:        finalScoreDtos,

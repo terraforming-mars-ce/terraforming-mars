@@ -6,6 +6,11 @@ import (
 	"terraforming-mars-backend/internal/game/shared"
 )
 
+// CardRegistryInterface defines the interface for looking up cards
+type CardRegistryInterface interface {
+	GetByID(cardID string) (*Card, error)
+}
+
 // CountPlayerTiles counts tiles owned by a player on the board.
 // If tileType is nil, counts all tiles owned by the player.
 // If tileType is specified, counts only tiles of that type.
@@ -235,6 +240,21 @@ func CountPerCondition(
 		}
 	}
 
+	// Terraform rating
+	if per.ResourceType == shared.ResourceTR {
+		return p.Resources().TerraformRating()
+	}
+
+	// Cards in hand
+	if per.ResourceType == shared.ResourceCardCount {
+		return p.Hand().CardCount()
+	}
+
+	// Card storage resources (floater, animal, microbe, science, etc.)
+	if isCardStorageType(per.ResourceType) && cardRegistry != nil {
+		return CountPlayerCardStorageByType(p, cardRegistry, per.ResourceType)
+	}
+
 	// Production counting (e.g., credit-production)
 	if isProductionType(per.ResourceType) {
 		return p.Resources().Production().GetAmount(per.ResourceType)
@@ -270,4 +290,28 @@ func isBasicResourceType(rt shared.ResourceType) bool {
 		return true
 	}
 	return false
+}
+
+func isCardStorageType(rt shared.ResourceType) bool {
+	switch rt {
+	case shared.ResourceFloater, shared.ResourceAnimal, shared.ResourceMicrobe,
+		shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceFighter,
+		shared.ResourceDisease:
+		return true
+	}
+	return false
+}
+
+// CountPlayerCardStorageByType sums card storage across all played cards
+// where the card's storage type matches the given type.
+func CountPlayerCardStorageByType(p *player.Player, cardRegistry CardRegistryInterface, storageType shared.ResourceType) int {
+	total := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil || card.ResourceStorage == nil || card.ResourceStorage.Type != storageType {
+			continue
+		}
+		total += p.Resources().GetCardStorage(cardID)
+	}
+	return total
 }

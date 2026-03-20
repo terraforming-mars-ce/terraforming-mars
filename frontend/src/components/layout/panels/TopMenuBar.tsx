@@ -46,6 +46,7 @@ interface ParallelogramButtonProps {
   children: React.ReactNode;
   onClick: () => void;
   buttonRef: React.RefObject<HTMLButtonElement | null>;
+  isActive?: boolean;
 }
 
 const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
@@ -56,6 +57,7 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
   children,
   onClick,
   buttonRef,
+  isActive = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const hoverSound = useHoverSound();
@@ -104,14 +106,14 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
       >
         <polygon
           points={fillPoints}
-          fill={isHovered ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
+          fill={isHovered || isActive ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
         />
         <line
           x1={topEdge.x1}
           y1={topEdge.y1}
           x2={topEdge.x2}
           y2={topEdge.y2}
-          stroke={isHovered ? color : BORDER_COLOR}
+          stroke={isHovered || isActive ? color : BORDER_COLOR}
           strokeWidth="3"
         />
         <line
@@ -136,7 +138,7 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
       <div className="relative z-10 h-full flex items-center justify-center px-4">
         <span
           className={`font-orbitron font-bold text-sm uppercase tracking-wider transition-colors duration-200 ${
-            isHovered ? "text-white" : "text-white/80"
+            isHovered || isActive ? "text-white" : "text-white/80"
           }`}
         >
           {children}
@@ -419,6 +421,13 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
                 color={item.color}
                 onClick={() => handleTabClick(item.id)}
                 buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
+                isActive={
+                  (item.id === "projects" && showStandardProjectsPopover) ||
+                  (item.id === "milestones" && showMilestonePopover) ||
+                  (item.id === "awards" && showAwardPopover) ||
+                  (item.id === "colonies" && showColonyPopover) ||
+                  (item.id === "funding" && showProjectFundingPopover)
+                }
               >
                 {item.label}
               </ParallelogramButton>

@@ -59,6 +59,7 @@ func TestWorldTreeVP_AdjacentGreeneries(t *testing.T) {
 		g.GetAllPlayers(),
 		cardRegistry,
 		nil,
+		nil,
 	)
 
 	// World Tree should give 2 VP (2 adjacent greeneries)
@@ -123,6 +124,7 @@ func TestWorldTreeVP_AdjacentWorldTreeCountsAsForest(t *testing.T) {
 		g.GetAllPlayers(),
 		cardRegistry,
 		nil,
+		nil,
 	)
 
 	// Should be 2 VP: 1 for adjacent world-tree (counts as forest) + 1 for adjacent greenery
@@ -163,6 +165,7 @@ func TestWorldTreeVP_NoAdjacentForests(t *testing.T) {
 		nil,
 		g.GetAllPlayers(),
 		cardRegistry,
+		nil,
 		nil,
 	)
 
@@ -212,6 +215,7 @@ func TestWorldTreeVP_DeduplicatesSharedNeighbors(t *testing.T) {
 		nil,
 		g.GetAllPlayers(),
 		cardRegistry,
+		nil,
 		nil,
 	)
 

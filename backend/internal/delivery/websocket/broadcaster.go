@@ -11,6 +11,7 @@ import (
 	"terraforming-mars-backend/internal/delivery/websocket/core"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/logger"
+	"terraforming-mars-backend/internal/milestones"
 	pfRegistry "terraforming-mars-backend/internal/projectfunding"
 	"terraforming-mars-backend/internal/standardprojects"
 
@@ -33,6 +34,7 @@ type Broadcaster struct {
 	projectFundingRegistry  pfRegistry.ProjectFundingRegistry
 	standardProjectRegistry standardprojects.StandardProjectRegistry
 	awardRegistry           awards.AwardRegistry
+	milestoneRegistry       milestones.MilestoneRegistry
 	botNotifier             BotNotifier
 	logger                  *zap.Logger
 	lastBroadcastedSeq      map[string]int64 // gameID -> last broadcasted log sequence
@@ -49,6 +51,7 @@ func NewBroadcaster(
 	pfReg pfRegistry.ProjectFundingRegistry,
 	stdProjReg standardprojects.StandardProjectRegistry,
 	awardReg awards.AwardRegistry,
+	msReg milestones.MilestoneRegistry,
 ) *Broadcaster {
 	broadcaster := &Broadcaster{
 		gameRepo:                gameRepo,
@@ -59,6 +62,7 @@ func NewBroadcaster(
 		projectFundingRegistry:  pfReg,
 		standardProjectRegistry: stdProjReg,
 		awardRegistry:           awardReg,
+		milestoneRegistry:       msReg,
 		logger:                  logger.Get(),
 		lastBroadcastedSeq:      make(map[string]int64),
 	}
@@ -202,6 +206,7 @@ func (b *Broadcaster) sendToPlayer(ctx context.Context, game *game.Game, playerI
 		ProjectFundingRegistry:  b.projectFundingRegistry,
 		StandardProjectRegistry: b.standardProjectRegistry,
 		AwardRegistry:           b.awardRegistry,
+		MilestoneRegistry:       b.milestoneRegistry,
 	})
 
 	message := dto.WebSocketMessage{
@@ -264,7 +269,7 @@ func (b *Broadcaster) broadcastToSpectators(g *game.Game) {
 		return
 	}
 
-	gameDto := dto.ToSpectatorGameDto(g, b.cardRegistry, b.awardRegistry)
+	gameDto := dto.ToSpectatorGameDto(g, b.cardRegistry, b.awardRegistry, b.milestoneRegistry)
 	message := dto.WebSocketMessage{
 		Type:   dto.MessageTypeGameUpdated,
 		GameID: g.ID(),

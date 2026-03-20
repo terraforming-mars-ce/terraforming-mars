@@ -124,25 +124,29 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
     <GamePopover
       isVisible={isVisible}
       onClose={onClose}
-      position={{ type: "fixed", top: 60, left: 20 }}
+      position={{ type: "anchor", anchorRef, placement: "below" }}
       theme="colonies"
       excludeRef={anchorRef}
-      header={{
-        title: "Colonies",
-        centerContent: (
-          <div style={{ opacity: mode === "trade" ? 1 : 0, transition: "opacity 300ms" }}>
-            <TradePaymentSelector
-              selected={tradePayment}
-              onSelect={setTradePayment}
-              canAffordCredits={canAffordCredits}
-              canAffordEnergy={canAffordEnergy}
-              canAffordTitanium={canAffordTitanium}
-            />
-          </div>
-        ),
-        rightContent: toggleButton,
-        showCloseButton: true,
-      }}
+      header={
+        mode === "trade"
+          ? {
+              title: "",
+              badge: (
+                <TradePaymentSelector
+                  selected={tradePayment}
+                  onSelect={setTradePayment}
+                  canAffordCredits={canAffordCredits}
+                  canAffordEnergy={canAffordEnergy}
+                  canAffordTitanium={canAffordTitanium}
+                />
+              ),
+              rightContent: toggleButton,
+            }
+          : {
+              title: "",
+              rightContent: toggleButton,
+            }
+      }
       width={560}
       maxHeight="80vh"
       animation="slideDown"
