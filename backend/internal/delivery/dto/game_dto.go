@@ -601,17 +601,26 @@ type PlayerActionDto struct {
 }
 
 // PlayerStandardProjectDto represents a standard project with availability state
-// Part of the Player-Scoped Card Architecture
 type PlayerStandardProjectDto struct {
-	ProjectType string         `json:"projectType" ts:"string"`              // Standard project type (e.g., "sell_patents", "aquifer")
-	BaseCost    map[string]int `json:"baseCost" ts:"Record<string, number>"` // Base cost per resource type (e.g., {"credits": 23} or {"plants": 8})
+	ProjectType string                   `json:"projectType" ts:"string"`
+	Name        string                   `json:"name" ts:"string"`
+	Description string                   `json:"description" ts:"string"`
+	Behaviors   []CardBehaviorDto        `json:"behaviors" ts:"CardBehaviorDto[]"`
+	Style       *StandardProjectStyleDto `json:"style,omitempty" ts:"StandardProjectStyleDto | undefined"`
+	BaseCost    map[string]int           `json:"baseCost" ts:"Record<string, number>"`
 
-	Available     bool                   `json:"available" ts:"boolean"`                                      // Computed: project is available
-	Errors        []StateErrorDto        `json:"errors" ts:"StateErrorDto[]"`                                 // Reasons why project is not available
-	Warnings      []StateWarningDto      `json:"warnings,omitempty" ts:"StateWarningDto[] | undefined"`       // Non-blocking warnings
-	EffectiveCost map[string]int         `json:"effectiveCost" ts:"Record<string, number>"`                   // Cost per resource type after discounts
-	Discounts     map[string]int         `json:"discounts,omitempty" ts:"Record<string, number> | undefined"` // Discount amounts per resource type (if any)
-	Metadata      map[string]interface{} `json:"metadata,omitempty" ts:"Record<string, any> | undefined"`     // Project-specific context (e.g., oceansRemaining)
+	Available     bool                   `json:"available" ts:"boolean"`
+	Errors        []StateErrorDto        `json:"errors" ts:"StateErrorDto[]"`
+	Warnings      []StateWarningDto      `json:"warnings,omitempty" ts:"StateWarningDto[] | undefined"`
+	EffectiveCost map[string]int         `json:"effectiveCost" ts:"Record<string, number>"`
+	Discounts     map[string]int         `json:"discounts,omitempty" ts:"Record<string, number> | undefined"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty" ts:"Record<string, any> | undefined"`
+}
+
+// StandardProjectStyleDto provides visual hints for the frontend
+type StandardProjectStyleDto struct {
+	Color string `json:"color" ts:"string"`
+	Icon  string `json:"icon" ts:"string"`
 }
 
 // ForcedFirstActionDto represents an action that must be completed as the player's first turn action

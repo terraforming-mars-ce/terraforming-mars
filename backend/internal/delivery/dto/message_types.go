@@ -16,13 +16,16 @@ const (
 	MessageTypeProductionPhaseStarted MessageType = "production-phase-started"
 	MessageTypeLogUpdate              MessageType = "log-update"
 
-	MessageTypeActionSellPatents        MessageType = "action.standard-project.sell-patents"
+	MessageTypeActionStandardProject    MessageType = "action.standard-project"
 	MessageTypeActionConfirmSellPatents MessageType = "action.standard-project.confirm-sell-patents"
-	MessageTypeActionLaunchAsteroid     MessageType = "action.standard-project.launch-asteroid"
-	MessageTypeActionBuildPowerPlant    MessageType = "action.standard-project.build-power-plant"
-	MessageTypeActionBuildAquifer       MessageType = "action.standard-project.build-aquifer"
-	MessageTypeActionPlantGreenery      MessageType = "action.standard-project.plant-greenery"
-	MessageTypeActionBuildCity          MessageType = "action.standard-project.build-city"
+
+	// Legacy message types for backwards compatibility (all route to unified handler)
+	MessageTypeActionSellPatents     MessageType = "action.standard-project.sell-patents"
+	MessageTypeActionLaunchAsteroid  MessageType = "action.standard-project.launch-asteroid"
+	MessageTypeActionBuildPowerPlant MessageType = "action.standard-project.build-power-plant"
+	MessageTypeActionBuildAquifer    MessageType = "action.standard-project.build-aquifer"
+	MessageTypeActionPlantGreenery   MessageType = "action.standard-project.plant-greenery"
+	MessageTypeActionBuildCity       MessageType = "action.standard-project.build-city"
 
 	MessageTypeActionConvertPlantsToGreenery  MessageType = "action.resource-conversion.convert-plants-to-greenery"
 	MessageTypeActionConvertHeatToTemperature MessageType = "action.resource-conversion.convert-heat-to-temperature"

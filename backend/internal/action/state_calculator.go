@@ -366,6 +366,14 @@ func CalculatePlayerStandardProjectState(
 
 	case shared.StandardProjectPowerPlant:
 
+	case shared.StandardProjectAirScrapping:
+		if g.GlobalParameters().Venus() >= global_parameters.MaxVenus {
+			warnings = append(warnings, player.StateWarning{
+				Code:    player.WarningCodeGlobalParamMaxed,
+				Message: "Venus is already at maximum",
+			})
+		}
+
 	case shared.StandardProjectConvertHeatToTemperature:
 		if g.GlobalParameters().Temperature() >= global_parameters.MaxTemperature {
 			warnings = append(warnings, player.StateWarning{

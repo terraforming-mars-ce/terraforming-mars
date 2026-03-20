@@ -15,14 +15,16 @@ import (
 	pfDomain "terraforming-mars-backend/internal/game/projectfunding"
 	"terraforming-mars-backend/internal/game/shared"
 	pfRegistry "terraforming-mars-backend/internal/projectfunding"
+	"terraforming-mars-backend/internal/standardprojects"
 )
 
 // ToGameDto converts Game to GameDto with personalized view
 // The playerID parameter determines which player is "currentPlayer" vs "otherPlayers"
 // Registries bundles optional expansion registries for DTO mapping
 type Registries struct {
-	ColonyRegistry         colonies.ColonyRegistry
-	ProjectFundingRegistry pfRegistry.ProjectFundingRegistry
+	ColonyRegistry          colonies.ColonyRegistry
+	ProjectFundingRegistry  pfRegistry.ProjectFundingRegistry
+	StandardProjectRegistry standardprojects.StandardProjectRegistry
 }
 
 func ToGameDto(g *game.Game, cardRegistry cards.CardRegistry, playerID string, colonyRegistry ...colonies.ColonyRegistry) GameDto {
@@ -49,7 +51,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 	for _, p := range players {
 		if p.ID() == playerID {
 			viewingPlayer = p
-			currentPlayer = ToPlayerDto(p, g, cardRegistry)
+			currentPlayer = ToPlayerDto(p, g, cardRegistry, registries.StandardProjectRegistry)
 		} else {
 			otherPlayers = append(otherPlayers, ToOtherPlayerDto(p, g, cardRegistry))
 		}
@@ -57,7 +59,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 
 	if viewingPlayer == nil && len(players) > 0 {
 		otherPlayers = make([]OtherPlayerDto, 0)
-		currentPlayer = ToPlayerDto(players[0], g, cardRegistry)
+		currentPlayer = ToPlayerDto(players[0], g, cardRegistry, registries.StandardProjectRegistry)
 		for i := 1; i < len(players); i++ {
 			otherPlayers = append(otherPlayers, ToOtherPlayerDto(players[i], g, cardRegistry))
 		}
