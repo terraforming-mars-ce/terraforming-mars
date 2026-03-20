@@ -81,13 +81,16 @@ type TargetRestriction struct {
 	Adjacent string `json:"adjacent,omitempty" ts:"string"` // "self-card" = only players with tiles adjacent to this card's tile placement
 }
 
-// PerCondition represents what to count for conditional resource gains
+// PerCondition represents what to count for conditional resource gains.
+// Used by card behaviors, VP conditions, and award quantifiers.
 type PerCondition struct {
-	ResourceType ResourceType `json:"type"`
-	Amount       int          `json:"amount"`
-	Location     *string      `json:"location,omitempty"`
-	Target       *string      `json:"target,omitempty"`
-	Tag          *CardTag     `json:"tag,omitempty"`
+	ResourceType       ResourceType  `json:"type"`
+	Amount             int           `json:"amount"`
+	Location           *string       `json:"location,omitempty"`
+	Target             *string       `json:"target,omitempty"`
+	Tag                *CardTag      `json:"tag,omitempty"`
+	AdjacentToTileType *ResourceType `json:"adjacentToTileType,omitempty"`
+	AdjacentToSelfTile bool          `json:"adjacentToSelfTile,omitempty"`
 }
 
 // ChoiceRequirement represents a requirement that gates whether a choice is available to a player.

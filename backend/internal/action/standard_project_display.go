@@ -54,7 +54,7 @@ func BuildCardDisplayData(card *gamecards.Card, sourceType shared.SourceType) *g
 		}
 		if vp.Per != nil {
 			vpForLog.Per = &shared.PerCondition{
-				ResourceType: vp.Per.Type,
+				ResourceType: vp.Per.ResourceType,
 				Amount:       vp.Per.Amount,
 			}
 			if vp.Per.Location != nil {

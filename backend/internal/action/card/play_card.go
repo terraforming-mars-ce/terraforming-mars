@@ -619,7 +619,7 @@ func (a *PlayCardAction) applyCardBehaviors(
 			}
 			if vp.Per != nil {
 				vpLog.Per = &shared.PerCondition{
-					ResourceType: vp.Per.Type,
+					ResourceType: vp.Per.ResourceType,
 					Amount:       vp.Per.Amount,
 				}
 				if vp.Per.Location != nil {

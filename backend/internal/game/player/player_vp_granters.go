@@ -157,7 +157,7 @@ func evaluateVPCondition(cond shared.VPCondition, cardID string, playerID string
 	}
 }
 
-func countPerCondition(per *shared.VPPerCondition, cardID string, playerID string, ctx VPRecalculationContext) int {
+func countPerCondition(per *shared.PerCondition, cardID string, playerID string, ctx VPRecalculationContext) int {
 	if per.Target != nil && *per.Target == vpTargetSelfCard {
 		return ctx.GetCardStorage(playerID, cardID)
 	}

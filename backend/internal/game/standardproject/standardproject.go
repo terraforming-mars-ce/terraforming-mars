@@ -9,7 +9,7 @@ type StandardProjectDefinition struct {
 	Description string                `json:"description"`
 	Pack        string                `json:"pack"`
 	Behaviors   []shared.CardBehavior `json:"behaviors"`
-	Style       Style                 `json:"style"`
+	Style       shared.Style          `json:"style"`
 }
 
 // CreditCost extracts the credit input amount from behaviors (the cost to execute this project)
@@ -22,10 +22,4 @@ func (d *StandardProjectDefinition) CreditCost() int {
 		}
 	}
 	return 0
-}
-
-// Style provides visual hints for the frontend
-type Style struct {
-	Color string `json:"color"`
-	Icon  string `json:"icon"`
 }

@@ -120,21 +120,7 @@ func convertVPCondition(vc gamecards.VictoryPointCondition) shared.VPCondition {
 		Amount:     vc.Amount,
 		Condition:  string(vc.Condition),
 		MaxTrigger: vc.MaxTrigger,
+		Per:        vc.Per,
 	}
-
-	if vc.Per != nil {
-		perCond := &shared.VPPerCondition{
-			ResourceType:       shared.ResourceType(vc.Per.Type),
-			Amount:             vc.Per.Amount,
-			Tag:                vc.Per.Tag,
-			AdjacentToSelfTile: vc.Per.AdjacentToSelfTile,
-		}
-		if vc.Per.Target != nil {
-			target := string(*vc.Per.Target)
-			perCond.Target = &target
-		}
-		cond.Per = perCond
-	}
-
 	return cond
 }

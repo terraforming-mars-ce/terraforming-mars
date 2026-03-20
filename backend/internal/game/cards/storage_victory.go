@@ -14,11 +14,11 @@ type ResourceStorage struct {
 
 // VictoryPointCondition represents a VP condition
 type VictoryPointCondition struct {
-	Amount      int             `json:"amount"`
-	Condition   VPConditionType `json:"condition"`
-	MaxTrigger  *int            `json:"maxTrigger,omitempty"`
-	Per         *PerCondition   `json:"per,omitempty"`
-	Description string          `json:"description,omitempty" ts:"string | undefined"`
+	Amount      int                  `json:"amount"`
+	Condition   VPConditionType      `json:"condition"`
+	MaxTrigger  *int                 `json:"maxTrigger,omitempty"`
+	Per         *shared.PerCondition `json:"per,omitempty"`
+	Description string               `json:"description,omitempty" ts:"string | undefined"`
 }
 
 // VPConditionType represents different types of VP conditions

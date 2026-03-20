@@ -141,8 +141,8 @@ func validateResourceCondition(cardID string, behaviorIndex int, condType string
 
 func validateVictoryPointCondition(cardID string, index int, vp VictoryPointCondition) error {
 	if vp.Per != nil {
-		if !isValidResourceType(vp.Per.Type) {
-			return fmt.Errorf("card %s: victory_point_condition[%d].per has invalid resource type: %s", cardID, index, vp.Per.Type)
+		if !isValidResourceType(vp.Per.ResourceType) {
+			return fmt.Errorf("card %s: victory_point_condition[%d].per has invalid resource type: %s", cardID, index, vp.Per.ResourceType)
 		}
 	}
 
