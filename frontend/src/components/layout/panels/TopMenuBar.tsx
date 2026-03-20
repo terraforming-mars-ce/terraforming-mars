@@ -26,7 +26,7 @@ import {
   FullscreenIcon,
   ExitFullscreenIcon,
   PerformanceIcon,
-  BugIcon,
+  FeedbackIcon,
   LeaveIcon,
   EndGameIcon,
 } from "../../ui/menuIcons.tsx";
@@ -627,12 +627,12 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
             />
             <MenuPopoverDivider />
             <MenuPopoverItem
-              icon={<BugIcon />}
-              label="Report Bug"
+              icon={<FeedbackIcon />}
+              label="Feedback"
               onClick={() => {
                 menuItemHover.onClick?.();
                 setMenuOpen(false);
-                window.dispatchEvent(new CustomEvent("toggle-bug-report-window"));
+                window.dispatchEvent(new CustomEvent("toggle-feedback-window"));
               }}
               onMouseEnter={menuItemHover.onMouseEnter}
             />
