@@ -1,42 +1,44 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import html2canvas from "html2canvas";
 import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
 import { apiService } from "@/services/apiService.ts";
-import { BugReportDto, GameDto } from "@/types/generated/api-types.ts";
+import { FeedbackDto, GameDto } from "@/types/generated/api-types.ts";
 
-interface BugReportWindowProps {
+interface FeedbackWindowProps {
   isVisible: boolean;
   onClose: () => void;
   gameState: GameDto | null;
 }
 
-const WINDOW_ID = "bug-report";
-const WINDOW_WIDTH = 380;
+const WINDOW_ID = "feedback";
+const WINDOW_WIDTH = 400;
 const ACCENT = "#f59e0b";
 const ACCENT_SHADOW = "rgba(245, 158, 11, 0.3)";
-const EXCLUDE_SELECTORS = [".bug-report-content-area"];
+const EXCLUDE_SELECTORS = [".feedback-content-area"];
 const POLL_INTERVAL_MS = 2000;
+
+type FeedbackTag = "bug" | "feature-request";
 
 type ServiceStatus =
   | { state: "loading" }
   | { state: "available" }
   | { state: "unavailable"; reason: string };
 
-const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, gameState }) => {
+const FeedbackWindow: React.FC<FeedbackWindowProps> = ({ isVisible, onClose, gameState }) => {
   const windowRef = useRef<HTMLDivElement>(null);
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [author, setAuthor] = useState("");
-  const [includeScreenshot, setIncludeScreenshot] = useState(true);
+  const [tags, setTags] = useState<FeedbackTag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [report, setReport] = useState<BugReportDto | null>(null);
+  const [report, setReport] = useState<FeedbackDto | null>(null);
   const [status, setStatus] = useState<ServiceStatus>({ state: "loading" });
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { position, isDragging, handleMouseDown } = useWindowDrag({
     windowId: WINDOW_ID,
     width: WINDOW_WIDTH,
-    height: 420,
+    height: 480,
     defaultPosition:
       typeof window !== "undefined"
         ? { x: Math.max(20, window.innerWidth / 2 - WINDOW_WIDTH / 2), y: 80 }
@@ -63,8 +65,10 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
     setStatus({ state: "loading" });
     setReport(null);
     setErrorMessage(null);
+    setTitle("");
     setDescription("");
     setAuthor("");
+    setTags([]);
 
     apiService
       .getBugReportStatus()
@@ -82,6 +86,10 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
     return stopPolling;
   }, [isVisible, stopPolling]);
 
+  const toggleTag = (tag: FeedbackTag) => {
+    setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  };
+
   const startPolling = useCallback(
     (reportId: string) => {
       stopPolling();
@@ -97,7 +105,7 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
           .catch(() => {
             stopPolling();
             setReport(null);
-            setErrorMessage("Lost connection while processing bug report");
+            setErrorMessage("Lost connection while processing feedback");
           });
       }, POLL_INTERVAL_MS);
     },
@@ -105,67 +113,58 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
   );
 
   const handleSubmit = async () => {
-    if (description.trim().length === 0 || status.state !== "available") return;
+    if (title.trim().length === 0 || status.state !== "available") {
+      return;
+    }
 
     setErrorMessage(null);
 
     try {
-      let screenshot: string | undefined;
-
-      if (includeScreenshot) {
-        const bugWindow = document.querySelector("[data-bug-report-window]") as HTMLElement;
-        if (bugWindow) bugWindow.style.display = "none";
-        try {
-          const canvas = await html2canvas(document.body, {
-            useCORS: true,
-            logging: false,
-            scale: 0.5,
-            onclone: (clonedDoc) => {
-              clonedDoc.querySelectorAll("*").forEach((el) => {
-                const style = (el as HTMLElement).style;
-                if (style?.colorScheme) style.colorScheme = "";
-              });
-            },
-          });
-          screenshot = canvas.toDataURL("image/png");
-        } catch {
-          console.warn("Screenshot capture failed, submitting without screenshot");
-        } finally {
-          if (bugWindow) bugWindow.style.display = "";
-        }
-      }
-
       setIsSubmitting(true);
 
-      const result = await apiService.submitBugReport({
+      const result = await apiService.submitFeedback({
+        title: title.trim(),
         description: description.trim(),
+        tags,
         author: author.trim() || gameState?.currentPlayer?.name,
-        includeScreenshot,
-        screenshot,
         gameState: gameState ?? undefined,
       });
 
       setReport(result);
       startPolling(result.id);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Failed to submit bug report");
+      setErrorMessage(err instanceof Error ? err.message : "Failed to submit feedback");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
 
   const isProcessing = report !== null && report.status === "processing";
   const isCompleted = report !== null && report.status === "completed";
   const isFailed = report !== null && report.status === "failed";
   const showForm = status.state === "available" && !report && !isSubmitting;
-  const canSubmit = showForm && description.trim().length > 0;
+  const canSubmit = showForm && title.trim().length > 0;
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    background: "rgba(255, 255, 255, 0.05)",
+    border: "1px solid #444",
+    borderRadius: "4px",
+    padding: "8px",
+    color: "#fff",
+    fontSize: "13px",
+    fontFamily: "inherit",
+    outline: "none",
+  };
 
   return (
     <div
       ref={windowRef}
-      data-bug-report-window
+      data-feedback-window
       data-overlay-layer
       onMouseDown={handleMouseDown}
       style={{
@@ -186,7 +185,6 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
         transition: isDragging ? "none" : "top 0.2s ease-out, left 0.2s ease-out",
       }}
     >
-      {/* Title bar */}
       <div
         style={{
           display: "flex",
@@ -224,7 +222,7 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
             <circle cx="2" cy="12" r="1.5" />
             <circle cx="8" cy="12" r="1.5" />
           </svg>
-          Report Bug
+          Feedback
         </h3>
         <button
           onClick={onClose}
@@ -243,9 +241,8 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
         </button>
       </div>
 
-      {/* Content area */}
       <div
-        className="bug-report-content-area"
+        className="feedback-content-area"
         style={{
           flex: 1,
           display: "flex",
@@ -256,7 +253,7 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
         {status.state === "loading" && <CenteredMessage text="Checking availability..." />}
 
         {status.state === "unavailable" && (
-          <CenteredMessage text={`Bug reporting is not available: ${status.reason}`} />
+          <CenteredMessage text={`Feedback is not available: ${status.reason}`} />
         )}
 
         {(isSubmitting || isProcessing) && (
@@ -396,42 +393,51 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
 
         {showForm && (
           <>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <TagChip
+                label="Bug"
+                selected={tags.includes("bug")}
+                onClick={() => toggleTag("bug")}
+                color="#f87171"
+              />
+              <TagChip
+                label="Feature Request"
+                selected={tags.includes("feature-request")}
+                onClick={() => toggleTag("feature-request")}
+                color="#60a5fa"
+              />
+            </div>
+
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Title"
+              spellCheck={false}
+              autoCorrect="off"
+              autoComplete="off"
+              maxLength={200}
+              style={inputStyle}
+              onFocus={(e) => (e.target.style.borderColor = ACCENT)}
+              onBlur={(e) => (e.target.style.borderColor = "#444")}
+            />
+
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the bug..."
+              placeholder="Add details..."
               spellCheck={false}
               autoCorrect="off"
               autoComplete="off"
               maxLength={30000}
               style={{
-                width: "100%",
-                minHeight: "120px",
+                ...inputStyle,
+                minHeight: "100px",
                 resize: "vertical",
-                background: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid #444",
-                borderRadius: "4px",
-                padding: "8px",
-                color: "#fff",
-                fontSize: "13px",
-                fontFamily: "inherit",
-                outline: "none",
               }}
               onFocus={(e) => (e.target.style.borderColor = ACCENT)}
               onBlur={(e) => (e.target.style.borderColor = "#444")}
             />
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                fontSize: "11px",
-                color: "rgba(255, 255, 255, 0.3)",
-              }}
-            >
-              <span>{description.length.toLocaleString()}/30,000</span>
-            </div>
 
             <input
               type="text"
@@ -442,39 +448,10 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
               autoCorrect="off"
               autoComplete="off"
               maxLength={100}
-              style={{
-                width: "100%",
-                background: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid #444",
-                borderRadius: "4px",
-                padding: "8px",
-                color: "#fff",
-                fontSize: "13px",
-                fontFamily: "inherit",
-                outline: "none",
-              }}
+              style={inputStyle}
               onFocus={(e) => (e.target.style.borderColor = ACCENT)}
               onBlur={(e) => (e.target.style.borderColor = "#444")}
             />
-
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                color: "rgba(255, 255, 255, 0.7)",
-                fontSize: "13px",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={includeScreenshot}
-                onChange={(e) => setIncludeScreenshot(e.target.checked)}
-                style={{ accentColor: ACCENT }}
-              />
-              Include screenshot
-            </label>
 
             <button
               onClick={() => void handleSubmit()}
@@ -514,6 +491,31 @@ const BugReportWindow: React.FC<BugReportWindowProps> = ({ isVisible, onClose, g
   );
 };
 
+const TagChip: React.FC<{
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  color: string;
+}> = ({ label, selected, onClick, color }) => (
+  <button
+    onClick={onClick}
+    onMouseDown={(e) => e.stopPropagation()}
+    style={{
+      padding: "4px 12px",
+      borderRadius: "16px",
+      fontSize: "12px",
+      fontWeight: 600,
+      border: `1.5px solid ${selected ? color : "#555"}`,
+      background: selected ? `${color}20` : "transparent",
+      color: selected ? color : "rgba(255, 255, 255, 0.5)",
+      cursor: "pointer",
+      transition: "all 0.15s ease",
+    }}
+  >
+    {label}
+  </button>
+);
+
 const CenteredMessage: React.FC<{ text: string }> = ({ text }) => (
   <div
     style={{
@@ -531,4 +533,4 @@ const CenteredMessage: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
-export default BugReportWindow;
+export default FeedbackWindow;

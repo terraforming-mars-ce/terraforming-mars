@@ -1,6 +1,6 @@
 import {
-  BugReportDto,
-  BugReportResponse,
+  FeedbackDto,
+  FeedbackResponse,
   CreateGameRequest,
   CreateGameResponse,
   CreateDemoLobbyRequest,
@@ -186,13 +186,13 @@ export class ApiService {
     }
   }
 
-  async submitBugReport(request: {
+  async submitFeedback(request: {
+    title: string;
     description: string;
+    tags: string[];
     author?: string;
-    includeScreenshot: boolean;
-    screenshot?: string;
     gameState?: GameDto;
-  }): Promise<BugReportDto> {
+  }): Promise<FeedbackDto> {
     try {
       const response = await fetch(`${this.baseUrl}/bugs`, {
         method: "POST",
@@ -209,15 +209,15 @@ export class ApiService {
         );
       }
 
-      const data: BugReportResponse = await response.json();
+      const data: FeedbackResponse = await response.json();
       return data.report;
     } catch (error) {
-      console.error("Failed to submit bug report:", error);
+      console.error("Failed to submit feedback:", error);
       throw error;
     }
   }
 
-  async getBugReport(id: string): Promise<BugReportDto> {
+  async getBugReport(id: string): Promise<FeedbackDto> {
     try {
       const response = await fetch(`${this.baseUrl}/bugs/${id}`);
 
@@ -226,7 +226,7 @@ export class ApiService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data: BugReportResponse = await response.json();
+      const data: FeedbackResponse = await response.json();
       return data.report;
     } catch (error) {
       console.error("Failed to get bug report:", error);

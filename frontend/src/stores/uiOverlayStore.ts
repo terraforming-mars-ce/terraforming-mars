@@ -4,7 +4,7 @@ interface UIOverlayState {
   showCardsPlayedModal: boolean;
   showDebugDropdown: boolean;
   showPerformanceWindow: boolean;
-  showBugReportWindow: boolean;
+  showFeedbackWindow: boolean;
   showCorporationOverlay: boolean;
   showLeaveGameConfirm: boolean;
   showCloseGameConfirm: boolean;
@@ -26,7 +26,7 @@ interface UIOverlayState {
   setShowCardsPlayedModal: (show: boolean) => void;
   setShowDebugDropdown: (show: boolean) => void;
   setShowPerformanceWindow: (show: boolean) => void;
-  setShowBugReportWindow: (show: boolean) => void;
+  setShowFeedbackWindow: (show: boolean) => void;
   setShowCorporationOverlay: (show: boolean) => void;
   setShowLeaveGameConfirm: (show: boolean) => void;
   setShowCloseGameConfirm: (show: boolean) => void;
@@ -46,14 +46,14 @@ interface UIOverlayState {
   setShowCorporationModal: (show: boolean) => void;
   toggleShowDebugDropdown: () => void;
   toggleShowPerformanceWindow: () => void;
-  toggleShowBugReportWindow: () => void;
+  toggleShowFeedbackWindow: () => void;
 }
 
 export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   showCardsPlayedModal: false,
   showDebugDropdown: false,
   showPerformanceWindow: false,
-  showBugReportWindow: false,
+  showFeedbackWindow: false,
   showCorporationOverlay: false,
   showLeaveGameConfirm: false,
   showCloseGameConfirm: false,
@@ -75,7 +75,7 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   setShowCardsPlayedModal: (show) => set({ showCardsPlayedModal: show }),
   setShowDebugDropdown: (show) => set({ showDebugDropdown: show }),
   setShowPerformanceWindow: (show) => set({ showPerformanceWindow: show }),
-  setShowBugReportWindow: (show) => set({ showBugReportWindow: show }),
+  setShowFeedbackWindow: (show) => set({ showFeedbackWindow: show }),
   setShowCorporationOverlay: (show) => set({ showCorporationOverlay: show }),
   setShowLeaveGameConfirm: (show) => set({ showLeaveGameConfirm: show }),
   setShowCloseGameConfirm: (show) => set({ showCloseGameConfirm: show }),
@@ -96,5 +96,5 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   toggleShowDebugDropdown: () => set((s) => ({ showDebugDropdown: !s.showDebugDropdown })),
   toggleShowPerformanceWindow: () =>
     set((s) => ({ showPerformanceWindow: !s.showPerformanceWindow })),
-  toggleShowBugReportWindow: () => set((s) => ({ showBugReportWindow: !s.showBugReportWindow })),
+  toggleShowFeedbackWindow: () => set((s) => ({ showFeedbackWindow: !s.showFeedbackWindow })),
 }));

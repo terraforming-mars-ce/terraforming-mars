@@ -151,9 +151,8 @@ func main() {
 	// ========== Initialize Bug Report Service ==========
 	bugReportService := bugreport.NewService(log)
 	caps := bugReportService.Capabilities()
-	log.Debug("Bug report service",
-		zap.Bool("github_app", caps.GitHubApp),
-		zap.Bool("claude", caps.Claude))
+	log.Debug("Feedback service",
+		zap.Bool("github_app", caps.GitHubApp))
 
 	// ========== Initialize WebSocket Hub ==========
 	hub := core.NewHub()

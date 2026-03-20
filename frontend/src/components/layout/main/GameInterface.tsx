@@ -7,7 +7,7 @@ import PaymentSelectionPopover from "../../ui/popover/PaymentSelectionPopover.ts
 import DebugDropdown from "../../ui/debug/DebugDropdown.tsx";
 import DevModeChip from "../../ui/debug/DevModeChip.tsx";
 import PerformanceWindow from "../../ui/debug/PerformanceWindow.tsx";
-import BugReportWindow from "../../ui/debug/BugReportWindow.tsx";
+import FeedbackWindow from "../../ui/debug/FeedbackWindow.tsx";
 
 import { WindowManagerProvider } from "../../ui/debug/WindowManager.tsx";
 import WaitingRoomOverlay from "../../ui/overlay/WaitingRoomOverlay.tsx";
@@ -127,7 +127,7 @@ export default function GameInterface() {
   const openProductionToCardSelection = useUIOverlayStore((s) => s.openProductionToCardSelection);
   const showDebugDropdown = useUIOverlayStore((s) => s.showDebugDropdown);
   const showPerformanceWindow = useUIOverlayStore((s) => s.showPerformanceWindow);
-  const showBugReportWindow = useUIOverlayStore((s) => s.showBugReportWindow);
+  const showFeedbackWindow = useUIOverlayStore((s) => s.showFeedbackWindow);
   const showTabConflict = useUIOverlayStore((s) => s.showTabConflict);
   const conflictingTabInfo = useUIOverlayStore((s) => s.conflictingTabInfo);
   const showLeaveGameConfirm = useUIOverlayStore((s) => s.showLeaveGameConfirm);
@@ -636,9 +636,9 @@ export default function GameInterface() {
           onClose={() => useUIOverlayStore.getState().setShowPerformanceWindow(false)}
         />
 
-        <BugReportWindow
-          isVisible={showBugReportWindow}
-          onClose={() => useUIOverlayStore.getState().setShowBugReportWindow(false)}
+        <FeedbackWindow
+          isVisible={showFeedbackWindow}
+          onClose={() => useUIOverlayStore.getState().setShowFeedbackWindow(false)}
           gameState={game}
         />
       </WindowManagerProvider>

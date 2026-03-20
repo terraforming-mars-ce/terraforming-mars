@@ -1654,36 +1654,35 @@ export interface CreateDemoLobbyResponse {
   playerId: string;
 }
 /**
- * BugReportRequest represents the request body for submitting a bug report
+ * FeedbackRequest represents the request body for submitting feedback
  */
-export interface BugReportRequest {
+export interface FeedbackRequest {
+  title: string;
   description: string;
+  tags: string[];
   author?: string;
-  includeScreenshot: boolean;
-  screenshot?: string;
   gameState?: any /* json.RawMessage */;
 }
 /**
- * BugReportDto represents a bug report's current state
+ * FeedbackDto represents a feedback submission's current state
  */
-export interface BugReportDto {
+export interface FeedbackDto {
   id: string;
   status: string;
   statusMessage: string;
   issueUrl?: string;
 }
 /**
- * BugReportResponse represents the response for bug report operations
+ * FeedbackResponse represents the response for feedback operations
  */
-export interface BugReportResponse {
-  report: BugReportDto;
+export interface FeedbackResponse {
+  report: FeedbackDto;
 }
 /**
- * BugReportStatusResponse represents the response for bug report availability status
+ * FeedbackStatusResponse represents the response for feedback service availability
  */
-export interface BugReportStatusResponse {
+export interface FeedbackStatusResponse {
   available: boolean;
-  claude: boolean;
   reason?: string;
 }
 

@@ -27,10 +27,8 @@ func NewBugReportHandler(service *bugreport.Service) *BugReportHandler {
 func (h *BugReportHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	h.logger.Debug("GET /api/v1/bugs/status")
 
-	caps := h.service.Capabilities()
-	resp := dto.BugReportStatusResponse{
+	resp := dto.FeedbackStatusResponse{
 		Available: h.service.IsAvailable(),
-		Claude:    caps.Claude,
 	}
 	if !resp.Available {
 		resp.Reason = "GitHub App not configured"
@@ -47,7 +45,7 @@ func (h *BugReportHandler) SubmitBugReport(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var req dto.BugReportRequest
+	var req dto.FeedbackRequest
 	if err := h.ParseJSONRequest(r, &req); err != nil {
 		h.WriteErrorResponse(w, http.StatusBadRequest, "Invalid request body")
 		return
@@ -68,10 +66,10 @@ func (h *BugReportHandler) SubmitBugReport(w http.ResponseWriter, r *http.Reques
 		author = author[:100]
 	}
 
-	id := h.service.SubmitBugReport(req.Description, author, req.Screenshot, req.GameState)
+	id := h.service.SubmitBugReport(req.Title, req.Description, req.Tags, author, req.GameState)
 	report := h.service.GetReport(id)
 
-	h.WriteJSONResponse(w, http.StatusAccepted, dto.BugReportResponse{
+	h.WriteJSONResponse(w, http.StatusAccepted, dto.FeedbackResponse{
 		Report: toReportDto(report),
 	})
 }
@@ -86,13 +84,13 @@ func (h *BugReportHandler) GetReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.WriteJSONResponse(w, http.StatusOK, dto.BugReportResponse{
+	h.WriteJSONResponse(w, http.StatusOK, dto.FeedbackResponse{
 		Report: toReportDto(report),
 	})
 }
 
-func toReportDto(r *bugreport.Report) dto.BugReportDto {
-	return dto.BugReportDto{
+func toReportDto(r *bugreport.Report) dto.FeedbackDto {
+	return dto.FeedbackDto{
 		ID:            r.ID,
 		Status:        r.Status,
 		StatusMessage: r.StatusMessage,
