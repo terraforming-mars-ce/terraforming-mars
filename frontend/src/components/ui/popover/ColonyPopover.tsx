@@ -12,7 +12,7 @@ import {
 import GameIcon from "../display/GameIcon.tsx";
 import { webSocketService } from "@/services/webSocketService.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
-import { GamePopover } from "../GamePopover";
+import { GamePopover, GamePopoverItem } from "../GamePopover";
 import ColonySteps, { getTradeExpression, mapOutputTypeToIcon } from "./ColonySteps.tsx";
 
 type ColonyMode = "trade" | "build";
@@ -228,12 +228,7 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
   }, [markerOutput, viewerColonyCount, colony.colonyBonus]);
 
   return (
-    <div
-      className={`rounded-lg border py-2.5 px-[15px] transition-all duration-200 ${
-        dimmed ? "opacity-50" : ""
-      }`}
-      style={{ borderColor: colony.style.color + "60" }}
-    >
+    <GamePopoverItem state={dimmed ? "disabled" : "available"} borderColor={colony.style.color}>
       {/* Header: name, traded chip, action button */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -378,7 +373,7 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </GamePopoverItem>
   );
 };
 

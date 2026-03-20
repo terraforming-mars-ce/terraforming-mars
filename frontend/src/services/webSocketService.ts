@@ -16,13 +16,7 @@ import {
   MessageTypePlayerConnected,
   MessageTypePlayerDisconnected,
   MessageTypePlayerKicked,
-  // New message types
-  MessageTypeActionSellPatents,
-  MessageTypeActionLaunchAsteroid,
-  MessageTypeActionBuildPowerPlant,
-  MessageTypeActionBuildAquifer,
-  MessageTypeActionPlantGreenery,
-  MessageTypeActionBuildCity,
+  MessageTypeActionStandardProject,
   MessageTypeActionStartGame,
   MessageTypeActionSkipAction,
   MessageTypeActionPlayCard,
@@ -247,28 +241,8 @@ export class WebSocketService {
     this.currentGameId = gameId;
   }
 
-  sellPatents(): string {
-    return this.send(MessageTypeActionSellPatents, {});
-  }
-
-  launchAsteroid(): string {
-    return this.send(MessageTypeActionLaunchAsteroid, {});
-  }
-
-  buildPowerPlant(): string {
-    return this.send(MessageTypeActionBuildPowerPlant, {});
-  }
-
-  buildAquifer(): string {
-    return this.send(MessageTypeActionBuildAquifer, {});
-  }
-
-  plantGreenery(): string {
-    return this.send(MessageTypeActionPlantGreenery, {});
-  }
-
-  buildCity(): string {
-    return this.send(MessageTypeActionBuildCity, {});
+  standardProject(projectId: string): string {
+    return this.send(MessageTypeActionStandardProject, { projectId });
   }
 
   convertPlantsToGreenery(): string {

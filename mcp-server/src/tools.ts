@@ -10,12 +10,7 @@ import {
   MessageTypeActionSkipAction,
   MessageTypeActionPlayCard,
   MessageTypeActionCardAction,
-  MessageTypeActionSellPatents,
-  MessageTypeActionBuildPowerPlant,
-  MessageTypeActionLaunchAsteroid,
-  MessageTypeActionBuildAquifer,
-  MessageTypeActionPlantGreenery,
-  MessageTypeActionBuildCity,
+  MessageTypeActionStandardProject,
   MessageTypeActionConvertPlantsToGreenery,
   MessageTypeActionConvertHeatToTemperature,
   MessageTypeActionSelectStartingChoices,
@@ -334,16 +329,7 @@ export function registerTools(
         .describe("Standard project type"),
     },
     async ({ project }) => {
-      const messageMap: Record<string, string> = {
-        "sell-patents": MessageTypeActionSellPatents,
-        "power-plant": MessageTypeActionBuildPowerPlant,
-        asteroid: MessageTypeActionLaunchAsteroid,
-        aquifer: MessageTypeActionBuildAquifer,
-        greenery: MessageTypeActionPlantGreenery,
-        city: MessageTypeActionBuildCity,
-      };
-
-      return sendAction(conn, state, messageMap[project], {});
+      return sendAction(conn, state, MessageTypeActionStandardProject, { projectId: project });
     },
   );
 

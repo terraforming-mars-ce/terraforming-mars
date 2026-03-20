@@ -40,6 +40,7 @@ export interface IconDisplayInfo {
   amount: number;
   displayMode: "individual" | "number";
   iconCount: number;
+  variableAmount?: boolean;
 }
 
 export interface LayoutPlan {

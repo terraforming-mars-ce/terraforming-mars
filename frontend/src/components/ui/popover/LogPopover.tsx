@@ -225,11 +225,10 @@ const PlayerTurnSection: React.FC<PlayerTurnSectionProps> = ({
 const LogEntry: React.FC<LogEntryProps> = ({ diff, playerNames }) => {
   const isCardPlay = diff.sourceType === "card_play";
   const isCardAction = diff.sourceType === "card_action";
-  const isStandardProject = diff.sourceType === "standard_project";
   const isResourceConvert = diff.sourceType === "resource_convert";
   const isGameEvent = diff.sourceType === "game_event";
   const isCardSource = isCardPlay || isCardAction;
-  const isBehaviorSource = isStandardProject || isResourceConvert || isGameEvent;
+  const isBehaviorSource = isResourceConvert || isGameEvent;
   const displayData = diff.displayData;
 
   const playerName = playerNames.get(diff.playerId) || "Unknown";

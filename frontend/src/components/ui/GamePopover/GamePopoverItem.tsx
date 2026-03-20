@@ -12,6 +12,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   animationDelay = 0,
   children,
   className = "",
+  borderColor,
 }) => {
   const { playButtonHoverSound, playButtonClickSound } = useSoundEffects();
   const isClickable = state === "available" && onClick;
@@ -24,6 +25,12 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   };
 
   const getStateClasses = () => {
+    if (borderColor) {
+      return `${state === "disabled" ? "opacity-50" : ""} ${
+        isClickable ? "cursor-pointer hover:brightness-125" : "cursor-default"
+      }`;
+    }
+
     switch (state) {
       case "available":
         return `border-[rgba(var(--popover-accent-rgb),0.3)] bg-[rgba(var(--popover-accent-rgb),0.2)] ${
@@ -48,10 +55,13 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
 
   return (
     <div
-      className={`relative flex items-center gap-3 py-2.5 px-[15px] rounded-lg border transition-all duration-200 animate-[itemSlideIn_0.4s_ease-out_both] max-[768px]:py-2 max-[768px]:px-3 ${getStateClasses()} ${className}`}
+      className={`relative ${borderColor ? "" : "flex items-center gap-3"} py-2.5 px-[15px] rounded-lg border transition-all duration-200 animate-[itemSlideIn_0.4s_ease-out_both] max-[768px]:py-2 max-[768px]:px-3 ${getStateClasses()} ${className}`}
       onClick={isClickable ? handleClick : undefined}
       onMouseEnter={isClickable ? () => void playButtonHoverSound() : undefined}
-      style={{ animationDelay: `${animationDelay}s` }}
+      style={{
+        animationDelay: `${animationDelay}s`,
+        ...(borderColor ? { borderColor: borderColor + "60" } : {}),
+      }}
     >
       {error && state === "disabled" && (
         <div className="absolute top-2 right-2 z-[4] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(231,76,60,0.8)] shadow-[0_2px_8px_rgba(231,76,60,0.4)] flex items-center gap-1">
