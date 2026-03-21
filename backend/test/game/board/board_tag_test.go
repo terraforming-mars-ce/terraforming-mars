@@ -65,9 +65,9 @@ func TestGenerateMarsBoard_UntaggedTilesHaveNoTags(t *testing.T) {
 		}
 	}
 
-	// Noctis City, 4 volcanic tiles, and 3 off-Mars tiles (Phobos, Dawn City, Ganymede Colony) should be tagged
-	if taggedCount != 8 {
-		t.Errorf("expected exactly 8 tagged tiles (Noctis City, 4 volcanic, 3 off-Mars), got %d", taggedCount)
+	// Noctis City, 4 volcanic tiles, and 4 off-Mars tiles (Phobos, Dawn City, Ganymede Colony, Luna Metropolis) should be tagged
+	if taggedCount != 9 {
+		t.Errorf("expected exactly 9 tagged tiles (Noctis City, 4 volcanic, 4 off-Mars), got %d", taggedCount)
 	}
 
 	// All other tiles should have empty tags
@@ -79,8 +79,8 @@ func TestGenerateMarsBoard_UntaggedTilesHaveNoTags(t *testing.T) {
 func TestGenerateMarsBoard_TotalTileCount(t *testing.T) {
 	tiles := board.GenerateMarsBoard(false)
 
-	// Standard Mars board with radius 4 has 61 hex tiles + 3 off-Mars tiles = 64
-	expectedCount := 64
+	// Standard Mars board with radius 4 has 61 hex tiles + 4 off-Mars tiles = 65
+	expectedCount := 65
 	if len(tiles) != expectedCount {
 		t.Errorf("expected %d tiles, got %d", expectedCount, len(tiles))
 	}

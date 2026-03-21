@@ -10342,7 +10342,7 @@
     "name": "Luna Metropolis",
     "type": "automated",
     "cost": 21,
-    "description": "Increase your M€ production 1 step for each Earth tag you have, including this. Build Ganymede Colony.",
+    "description": "Increase your M€ production 1 step for each Earth tag you have, including this. Build Luna Metropolis.",
     "pack": "venus-next",
     "tags": [
       "city",
@@ -10368,9 +10368,19 @@
               "target": "self-player",
               "tag": "earth"
             }
+          },
+          {
+            "type": "city-placement",
+            "amount": 1,
+            "target": "none",
+            "tileRestrictions": {
+              "boardTags": [
+                "luna-metropolis"
+              ]
+            }
           }
         ],
-        "description": "Increase your M€ production 1 step for each Earth tag you have, including this. Build Ganymede Colony."
+        "description": "Increase your M€ production 1 step for each Earth tag you have, including this. Build Luna Metropolis."
       }
     ],
     "vpConditions": [
