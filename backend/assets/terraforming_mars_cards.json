@@ -12975,6 +12975,11 @@
             "type": "ocean-placement",
             "amount": 1,
             "target": "none"
+          },
+          {
+            "type": "colony-tile",
+            "amount": 1,
+            "target": "self-player"
           }
         ],
         "description": "Place 1 colony and 1 ocean."
@@ -13034,6 +13039,23 @@
     "tags": [
       "earth",
       "space"
+    ],
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "colony-tile",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "Place a colony."
+      }
     ]
   },
   {
@@ -13387,6 +13409,11 @@
             "type": "titanium-production",
             "amount": 1,
             "target": "self-player"
+          },
+          {
+            "type": "colony-tile",
+            "amount": 1,
+            "target": "self-player"
           }
         ],
         "description": "Increase your titanium production 1 step. Place a colony."
@@ -13414,6 +13441,11 @@
           {
             "type": "credit-production",
             "amount": -2,
+            "target": "self-player"
+          },
+          {
+            "type": "colony-tile",
+            "amount": 1,
             "target": "self-player"
           }
         ],
@@ -13530,6 +13562,11 @@
           {
             "type": "credit-production",
             "amount": -2,
+            "target": "self-player"
+          },
+          {
+            "type": "colony-tile",
+            "amount": 1,
             "target": "self-player"
           }
         ],
@@ -13717,6 +13754,12 @@
           }
         ],
         "outputs": [
+          {
+            "type": "colony-tile",
+            "amount": 1,
+            "target": "self-player",
+            "allowDuplicatePlayerColony": true
+          },
           {
             "type": "card-draw",
             "amount": 2,
@@ -13918,6 +13961,24 @@
     "pack": "colonies",
     "tags": [
       "space"
+    ],
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "colony-tile",
+            "amount": 1,
+            "target": "self-player",
+            "allowDuplicatePlayerColony": true
+          }
+        ],
+        "description": "Place a colony (may be placed where you already have one)."
+      }
     ],
     "vpConditions": [
       {
@@ -14259,6 +14320,23 @@
     "pack": "colonies",
     "tags": [
       "space"
+    ],
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "colony-tile",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "Place a colony."
+      }
     ]
   },
   {
@@ -14530,7 +14608,12 @@
       {
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "colony-placed",
+              "location": "anywhere",
+              "target": "any-player"
+            }
           }
         ],
         "outputs": [
@@ -14541,6 +14624,21 @@
           }
         ],
         "description": "Raise your M€ production 1 step when any colony is placed, including this"
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto-corporation-first-action"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "colony-tile",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "As your first action, place a colony."
       }
     ]
   },

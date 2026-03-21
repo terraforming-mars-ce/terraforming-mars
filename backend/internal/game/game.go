@@ -83,6 +83,18 @@ func (ctx *gameVPRecalculationContext) CountAllTilesOfType(tileType shared.Resou
 	return count
 }
 
+func (ctx *gameVPRecalculationContext) CountPlayerTilesOfType(playerID string, tileType shared.ResourceType) int {
+	tiles := ctx.game.board.Tiles()
+	count := 0
+	for _, tile := range tiles {
+		if tile.OccupiedBy != nil && tile.OccupiedBy.Type == tileType &&
+			tile.OwnerID != nil && *tile.OwnerID == playerID {
+			count++
+		}
+	}
+	return count
+}
+
 func (ctx *gameVPRecalculationContext) CountAdjacentTilesForCard(cardID string, tileType shared.ResourceType) int {
 	tiles := ctx.game.board.Tiles()
 	sourceTag := "source:" + cardID
@@ -2141,6 +2153,17 @@ func (g *Game) ColonyTileStates() []*colony.TileState {
 	var result []*colony.TileState
 	g.read(func(s *datastore.GameState) { result = s.ColonyTileStates })
 	return result
+}
+
+// GetAvailableColonyIDs returns the definition IDs of all colony tiles in the game.
+// Capacity and duplicate checks are validated at confirmation time.
+func (g *Game) GetAvailableColonyIDs() []string {
+	tiles := g.ColonyTileStates()
+	ids := make([]string, 0, len(tiles))
+	for _, ts := range tiles {
+		ids = append(ids, ts.DefinitionID)
+	}
+	return ids
 }
 
 func (g *Game) SetColonyTileStates(states []*colony.TileState) {

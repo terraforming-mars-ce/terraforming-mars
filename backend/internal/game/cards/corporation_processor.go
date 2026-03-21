@@ -425,6 +425,42 @@ func (p *CorporationProcessor) createForcedAction(
 		log.Debug("Applied card-draw forced action",
 			zap.Int("amount", output.Amount))
 
+	case shared.ResourceColonyTile:
+		action := &shared.ForcedFirstAction{
+			ActionType:    "colony-placement",
+			CorporationID: card.ID,
+			Source:        "corporation-starting-action",
+			Completed:     false,
+			Description:   fmt.Sprintf("Place a colony (%s starting action)", card.Name),
+		}
+		if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
+			return fmt.Errorf("failed to set forced colony placement action: %w", err)
+		}
+		log.Debug("Set forced colony placement action",
+			zap.String("description", action.Description))
+
+		if !inStartingSelection {
+			pl, err := g.GetPlayer(playerID)
+			if err != nil {
+				return fmt.Errorf("failed to get player for colony placement: %w", err)
+			}
+			colonyIDs := g.GetAvailableColonyIDs()
+			if len(colonyIDs) > 0 {
+				pl.Selection().SetPendingColonySelection(&shared.PendingColonySelection{
+					AvailableColonyIDs:         colonyIDs,
+					AllowDuplicatePlayerColony: output.AllowDuplicatePlayerColony,
+					Source:                     "corporation-starting-action",
+					SourceCardID:               card.ID,
+				})
+				log.Debug("Set pending colony selection for forced action",
+					zap.Int("available_colonies", len(colonyIDs)))
+			}
+		} else {
+			log.Debug("Deferred colony selection to action phase")
+		}
+
+		p.subscribeColonyForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
+
 	default:
 		log.Warn("Unhandled forced action type",
 			zap.String("type", string(output.ResourceType)))
@@ -448,8 +484,8 @@ func (p *CorporationProcessor) subscribeForcedActionCompletion(
 		return
 	}
 
-	// Subscribe to TilePlacedEvent
-	events.Subscribe(eventBus, func(event events.TilePlacedEvent) {
+	var subID events.SubscriptionID
+	subID = events.Subscribe(eventBus, func(event events.TilePlacedEvent) {
 		// Only handle events for this player
 		if event.PlayerID != playerID {
 			return
@@ -474,19 +510,57 @@ func (p *CorporationProcessor) subscribeForcedActionCompletion(
 			return
 		}
 
-		// Queue is empty - forced action is complete!
-		// Note: Forced first actions are FREE - they don't consume player actions
 		log.Debug("Forced first action completed (free action)",
 			zap.String("action_type", forcedAction.ActionType),
 			zap.String("corporation_id", forcedAction.CorporationID))
 
-		// Clear forced first action
 		if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
 			log.Error("Failed to clear forced first action", zap.Error(err))
 		}
+		eventBus.Unsubscribe(subID)
 	})
 
 	log.Debug("Subscribed to TilePlacedEvent for forced action completion",
+		zap.String("player_id", playerID),
+		zap.String("source", source))
+}
+
+// subscribeColonyForcedActionCompletion subscribes to ColonyBuiltEvent to handle forced colony placement completion
+func (p *CorporationProcessor) subscribeColonyForcedActionCompletion(
+	ctx context.Context,
+	g *game.Game,
+	playerID string,
+	source string,
+	log *zap.Logger,
+) {
+	eventBus := g.EventBus()
+	if eventBus == nil {
+		log.Warn("No event bus available, cannot subscribe to forced colony action completion")
+		return
+	}
+
+	var subID events.SubscriptionID
+	subID = events.Subscribe(eventBus, func(event events.ColonyBuiltEvent) {
+		if event.PlayerID != playerID {
+			return
+		}
+
+		forcedAction := g.GetForcedFirstAction(playerID)
+		if forcedAction == nil || forcedAction.ActionType != "colony-placement" {
+			return
+		}
+
+		log.Debug("Forced colony placement completed",
+			zap.String("corporation_id", forcedAction.CorporationID),
+			zap.String("colony_id", event.ColonyID))
+
+		if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
+			log.Error("Failed to clear forced colony placement action", zap.Error(err))
+		}
+		eventBus.Unsubscribe(subID)
+	})
+
+	log.Debug("Subscribed to ColonyBuiltEvent for forced colony placement completion",
 		zap.String("player_id", playerID),
 		zap.String("source", source))
 }

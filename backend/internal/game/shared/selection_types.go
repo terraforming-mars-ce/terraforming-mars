@@ -113,6 +113,14 @@ type PendingAwardFundSelection struct {
 	Source          string
 }
 
+// PendingColonySelection represents a pending colony tile selection from a card effect
+type PendingColonySelection struct {
+	AvailableColonyIDs         []string
+	AllowDuplicatePlayerColony bool
+	Source                     string
+	SourceCardID               string
+}
+
 // ForcedFirstAction represents an action that must be completed first
 type ForcedFirstAction struct {
 	ActionType    string

@@ -707,6 +707,14 @@ type PendingAwardFundSelectionDto struct {
 	Source          string   `json:"source" ts:"string"`
 }
 
+// PendingColonySelectionDto represents a pending colony tile selection from a card effect
+type PendingColonySelectionDto struct {
+	AvailableColonyIDs         []string `json:"availableColonyIds" ts:"string[]"`
+	AllowDuplicatePlayerColony bool     `json:"allowDuplicatePlayerColony" ts:"boolean"`
+	Source                     string   `json:"source" ts:"string"`
+	SourceCardID               string   `json:"sourceCardId" ts:"string"`
+}
+
 // PlayerStatus represents the current status of a player in the game
 type PlayerStatus string
 
@@ -758,6 +766,7 @@ type PlayerDto struct {
 	PendingStealTargetSelection    *PendingStealTargetSelectionDto    `json:"pendingStealTargetSelection" ts:"PendingStealTargetSelectionDto | null"`
 	PendingColonyResourceSelection *PendingColonyResourceSelectionDto `json:"pendingColonyResourceSelection" ts:"PendingColonyResourceSelectionDto | null"`
 	PendingAwardFundSelection      *PendingAwardFundSelectionDto      `json:"pendingAwardFundSelection" ts:"PendingAwardFundSelectionDto | null"`
+	PendingColonySelection         *PendingColonySelectionDto         `json:"pendingColonySelection" ts:"PendingColonySelectionDto | null"`
 	ForcedFirstAction              *ForcedFirstActionDto              `json:"forcedFirstAction" ts:"ForcedFirstActionDto | null"`
 	ResourceStorage                map[string]int                     `json:"resourceStorage" ts:"Record<string, number>"`
 	PaymentSubstitutes             []PaymentSubstituteDto             `json:"paymentSubstitutes" ts:"PaymentSubstituteDto[]"`

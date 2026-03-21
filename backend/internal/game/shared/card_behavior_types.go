@@ -61,19 +61,20 @@ const (
 
 // ResourceCondition represents a resource amount (input or output)
 type ResourceCondition struct {
-	ResourceType      ResourceType       `json:"type"`
-	Amount            int                `json:"amount"`
-	Target            string             `json:"target"`
-	Selectors         []Selector         `json:"selectors,omitempty"`
-	MaxTrigger        *int               `json:"maxTrigger,omitempty"`
-	Per               *PerCondition      `json:"per,omitempty"`
-	TileRestrictions  *TileRestrictions  `json:"tileRestrictions,omitempty" ts:"TileRestrictions | undefined"`
-	TileType          string             `json:"tileType,omitempty" ts:"string | undefined"` // For tile-placement: specifies the tile type to place
-	VariableAmount    bool               `json:"variableAmount,omitempty" ts:"boolean | undefined"`
-	Temporary         string             `json:"temporary,omitempty" ts:"string | undefined"`              // "next-card" or "generation-end"
-	Optional          bool               `json:"optional,omitempty" ts:"boolean | undefined"`              // Player can skip this input
-	PaymentAllowed    []ResourceType     `json:"paymentAllowed,omitempty" ts:"ResourceType[] | undefined"` // Alternative resources accepted as payment (e.g., ["titanium"] for "titanium may be used")
-	TargetRestriction *TargetRestriction `json:"targetRestriction,omitempty" ts:"TargetRestriction | undefined"`
+	ResourceType               ResourceType       `json:"type"`
+	Amount                     int                `json:"amount"`
+	Target                     string             `json:"target"`
+	Selectors                  []Selector         `json:"selectors,omitempty"`
+	MaxTrigger                 *int               `json:"maxTrigger,omitempty"`
+	Per                        *PerCondition      `json:"per,omitempty"`
+	TileRestrictions           *TileRestrictions  `json:"tileRestrictions,omitempty" ts:"TileRestrictions | undefined"`
+	TileType                   string             `json:"tileType,omitempty" ts:"string | undefined"` // For tile-placement: specifies the tile type to place
+	VariableAmount             bool               `json:"variableAmount,omitempty" ts:"boolean | undefined"`
+	Temporary                  string             `json:"temporary,omitempty" ts:"string | undefined"`              // "next-card" or "generation-end"
+	Optional                   bool               `json:"optional,omitempty" ts:"boolean | undefined"`              // Player can skip this input
+	PaymentAllowed             []ResourceType     `json:"paymentAllowed,omitempty" ts:"ResourceType[] | undefined"` // Alternative resources accepted as payment (e.g., ["titanium"] for "titanium may be used")
+	TargetRestriction          *TargetRestriction `json:"targetRestriction,omitempty" ts:"TargetRestriction | undefined"`
+	AllowDuplicatePlayerColony bool               `json:"allowDuplicatePlayerColony,omitempty" ts:"boolean | undefined"`
 }
 
 // TargetRestriction restricts which players can be targeted by an output.
