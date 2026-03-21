@@ -16,6 +16,7 @@ type VPRecalculationContext interface {
 	GetCardStorage(playerID string, cardID string) int
 	CountPlayerTagsByType(playerID string, tagType shared.CardTag) int
 	CountAllTilesOfType(tileType shared.ResourceType) int
+	CountPlayerTilesOfType(playerID string, tileType shared.ResourceType) int
 	CountAdjacentTilesForCard(cardID string, tileType shared.ResourceType) int
 }
 
@@ -171,7 +172,17 @@ func countPerCondition(per *shared.PerCondition, cardID string, playerID string,
 	}
 
 	switch per.ResourceType {
-	case shared.ResourceOceanTile, shared.ResourceCityTile, shared.ResourceGreeneryTile, shared.ResourceColonyTile:
+	case shared.ResourceCityTile:
+		if per.Target != nil && *per.Target == "self-player" {
+			return ctx.CountPlayerTilesOfType(playerID, shared.ResourceCityTile)
+		}
+		return ctx.CountAllTilesOfType(per.ResourceType)
+	case shared.ResourceGreeneryTile:
+		if per.Target != nil && *per.Target == "self-player" {
+			return ctx.CountPlayerTilesOfType(playerID, shared.ResourceGreeneryTile)
+		}
+		return ctx.CountAllTilesOfType(per.ResourceType)
+	case shared.ResourceOceanTile, shared.ResourceColonyTile:
 		return ctx.CountAllTilesOfType(per.ResourceType)
 	default:
 		return ctx.CountPlayerTagsByType(playerID, shared.CardTag(per.ResourceType))

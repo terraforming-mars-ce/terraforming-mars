@@ -11,6 +11,8 @@ import (
 	"terraforming-mars-backend/internal/colonies"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
+	gamecolony "terraforming-mars-backend/internal/game/colony"
+	gameplayer "terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 
 	"go.uber.org/zap"
@@ -153,6 +155,63 @@ func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID
 
 	log.Info("Colony built",
 		zap.String("colony_id", colonyID),
+		zap.Int("slot_index", slotIndex))
+
+	return nil
+}
+
+// PlaceColonyOnTile places a colony on the given tile for free (no cost deduction).
+// It applies the placement reward, records the triggered effect, and publishes ColonyBuiltEvent.
+// Used by card-triggered colony placements (e.g., Mining Colony, Poseidon first action).
+func PlaceColonyOnTile(
+	ctx context.Context,
+	g *game.Game,
+	player *gameplayer.Player,
+	definition *gamecolony.ColonyTileDefinition,
+	tileState *gamecolony.TileState,
+	cardRegistry cards.CardRegistry,
+	source string,
+	log *zap.Logger,
+) error {
+	slotIndex := len(tileState.PlayerColonies)
+	tileState.PlayerColonies = append(tileState.PlayerColonies, player.ID())
+
+	calculatedOutputs := []shared.CalculatedOutput{
+		{ResourceType: "colony-tile", Amount: 1},
+	}
+	if slotIndex < len(definition.Colonies) {
+		slot := definition.Colonies[slotIndex]
+		for _, reward := range slot.Reward {
+			if reward.Amount > 0 {
+				pending := applyOutput(ctx, g, player, reward.Type, reward.Amount, cardRegistry, log)
+				if pending != nil {
+					setPendingColonyResource(player, pending, definition.Name, tileState.DefinitionID, "build", cardRegistry, log)
+				}
+				calculatedOutputs = append(calculatedOutputs, shared.CalculatedOutput{
+					ResourceType: reward.Type,
+					Amount:       reward.Amount,
+				})
+			}
+		}
+	}
+
+	g.AddTriggeredEffect(shared.TriggeredEffect{
+		CardName:          source + ": " + definition.Name,
+		PlayerID:          player.ID(),
+		SourceType:        shared.SourceTypeColonyBuild,
+		CalculatedOutputs: calculatedOutputs,
+	})
+
+	events.Publish(g.EventBus(), events.ColonyBuiltEvent{
+		GameID:    g.ID(),
+		PlayerID:  player.ID(),
+		ColonyID:  tileState.DefinitionID,
+		Timestamp: time.Now(),
+	})
+
+	log.Debug("Colony placed (free)",
+		zap.String("colony_id", tileState.DefinitionID),
+		zap.String("player_id", player.ID()),
 		zap.Int("slot_index", slotIndex))
 
 	return nil

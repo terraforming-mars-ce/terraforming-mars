@@ -60,6 +60,7 @@ func RegisterHandlers(
 	confirmStealTargetAction *confirmAction.ConfirmStealTargetAction,
 	confirmColonyResourceAction *confirmAction.ConfirmColonyResourceAction,
 	confirmAwardFundAction *confirmAction.ConfirmAwardFundAction,
+	confirmColonyPlacementAction *confirmAction.ConfirmColonyPlacementAction,
 	playerDisconnectedAction *connAction.PlayerDisconnectedAction,
 	playerTakeoverAction *connAction.PlayerTakeoverAction,
 	kickPlayerAction *connAction.KickPlayerAction,
@@ -161,6 +162,9 @@ func RegisterHandlers(
 
 	confirmAwardFundHandler := confirmation.NewConfirmAwardFundHandler(confirmAwardFundAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConfirmAwardFund, confirmAwardFundHandler)
+
+	confirmColonyPlacementHandler := confirmation.NewConfirmColonyPlacementHandler(confirmColonyPlacementAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionConfirmColonyPlacement, confirmColonyPlacementHandler)
 
 	requestLogsHandler := connection.NewRequestLogsHandler(broadcaster)
 	hub.RegisterHandler(dto.MessageTypeRequestLogs, requestLogsHandler)

@@ -15,6 +15,7 @@ type mockVPRecalculationContext struct {
 	cardStorage          map[string]map[string]int
 	tagCounts            map[string]map[shared.CardTag]int
 	tileCounts           map[shared.ResourceType]int
+	playerTileCounts     map[string]map[shared.ResourceType]int
 	adjacentTilesForCard map[string]map[shared.ResourceType]int
 }
 
@@ -23,6 +24,7 @@ func newMockVPRecalculationContext() *mockVPRecalculationContext {
 		cardStorage:          make(map[string]map[string]int),
 		tagCounts:            make(map[string]map[shared.CardTag]int),
 		tileCounts:           make(map[shared.ResourceType]int),
+		playerTileCounts:     make(map[string]map[shared.ResourceType]int),
 		adjacentTilesForCard: make(map[string]map[shared.ResourceType]int),
 	}
 }
@@ -43,6 +45,13 @@ func (m *mockVPRecalculationContext) CountPlayerTagsByType(playerID string, tagT
 
 func (m *mockVPRecalculationContext) CountAllTilesOfType(tileType shared.ResourceType) int {
 	return m.tileCounts[tileType]
+}
+
+func (m *mockVPRecalculationContext) CountPlayerTilesOfType(playerID string, tileType shared.ResourceType) int {
+	if playerTiles, ok := m.playerTileCounts[playerID]; ok {
+		return playerTiles[tileType]
+	}
+	return 0
 }
 
 func (m *mockVPRecalculationContext) CountAdjacentTilesForCard(cardID string, tileType shared.ResourceType) int {

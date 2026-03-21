@@ -83,6 +83,18 @@ func (ctx *gameVPRecalculationContext) CountAllTilesOfType(tileType shared.Resou
 	return count
 }
 
+func (ctx *gameVPRecalculationContext) CountPlayerTilesOfType(playerID string, tileType shared.ResourceType) int {
+	tiles := ctx.game.board.Tiles()
+	count := 0
+	for _, tile := range tiles {
+		if tile.OccupiedBy != nil && tile.OccupiedBy.Type == tileType &&
+			tile.OwnerID != nil && *tile.OwnerID == playerID {
+			count++
+		}
+	}
+	return count
+}
+
 func (ctx *gameVPRecalculationContext) CountAdjacentTilesForCard(cardID string, tileType shared.ResourceType) int {
 	tiles := ctx.game.board.Tiles()
 	sourceTag := "source:" + cardID

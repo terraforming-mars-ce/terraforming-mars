@@ -1019,6 +1019,15 @@ export interface PendingAwardFundSelectionDto {
   source: string;
 }
 /**
+ * PendingColonySelectionDto represents a pending colony tile selection from a card effect
+ */
+export interface PendingColonySelectionDto {
+  availableColonyIds: string[];
+  allowDuplicatePlayerColony: boolean;
+  source: string;
+  sourceCardId: string;
+}
+/**
  * PlayerStatus represents the current status of a player in the game
  */
 export type PlayerStatus = string;
@@ -1068,6 +1077,7 @@ export interface PlayerDto {
   pendingStealTargetSelection?: PendingStealTargetSelectionDto;
   pendingColonyResourceSelection?: PendingColonyResourceSelectionDto;
   pendingAwardFundSelection?: PendingAwardFundSelectionDto;
+  pendingColonySelection?: PendingColonySelectionDto;
   forcedFirstAction?: ForcedFirstActionDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
@@ -1779,6 +1789,8 @@ export const MessageTypeActionColonyBuild: MessageType = "action.colony.build";
 export const MessageTypeActionProjectFundingSeat: MessageType = "action.project-funding.buy-seat";
 export const MessageTypeActionConfirmColonyResource: MessageType = "action.confirm-colony-resource";
 export const MessageTypeActionConfirmAwardFund: MessageType = "action.confirm-award-fund";
+export const MessageTypeActionConfirmColonyPlacement: MessageType =
+  "action.confirm-colony-placement";
 export const MessageTypeAdminCommand: MessageType = "admin-command";
 export const MessageTypeRequestLogs: MessageType = "request-logs";
 export const MessageTypePlayerTakeover: MessageType = "player-takeover";

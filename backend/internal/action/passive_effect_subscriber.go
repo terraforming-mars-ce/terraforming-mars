@@ -81,6 +81,11 @@ func SubscribePassiveEffectToEvents(
 			subID = subscribeProductionIncreasedEffect(ctx, g, p, effect, trigger, log, cr)
 		}
 
+		// Handle colony-placed trigger
+		if trigger.Condition.Type == "colony-placed" {
+			subID = subscribeColonyPlacedEffect(ctx, g, p, effect, trigger, log, cr)
+		}
+
 		// Register subscription for cleanup when effect is removed
 		if subID != "" {
 			p.Effects().RegisterSubscription(effect.CardID, subID)
@@ -780,4 +785,51 @@ func createPassiveBehaviorChoice(p *player.Player, effect shared.CardEffect, log
 	log.Debug("Created pending behavior choice selection from passive effect",
 		zap.String("card_name", effect.CardName),
 		zap.Int("num_choices", len(effect.Behavior.Choices)))
+}
+
+// subscribeColonyPlacedEffect subscribes to ColonyBuiltEvent for colony-placed triggers
+func subscribeColonyPlacedEffect(
+	_ context.Context,
+	g *game.Game,
+	p *player.Player,
+	effect shared.CardEffect,
+	trigger shared.Trigger,
+	log *zap.Logger,
+	cr cards.CardRegistry,
+) events.SubscriptionID {
+	subID := events.Subscribe(g.EventBus(), func(event events.ColonyBuiltEvent) {
+		if event.GameID != g.ID() {
+			return
+		}
+
+		target := "self-player"
+		if trigger.Condition.Target != nil {
+			target = *trigger.Condition.Target
+		}
+
+		if target == "self-player" && event.PlayerID != p.ID() {
+			return
+		}
+
+		log.Debug("Passive effect triggered (colony placed)",
+			zap.String("card_name", effect.CardName),
+			zap.String("player_id", p.ID()),
+			zap.String("placed_by", event.PlayerID),
+			zap.String("colony_id", event.ColonyID))
+
+		applier := gamecards.NewBehaviorApplier(p, g, effect.CardName, log).
+			WithSourceCardID(effect.CardID).
+			WithCardRegistry(cr).
+			WithSourceType(shared.SourceTypePassiveEffect)
+		if err := applier.ApplyOutputs(context.Background(), effect.Behavior.Outputs); err != nil {
+			log.Error("Failed to apply passive effect outputs",
+				zap.String("card_name", effect.CardName),
+				zap.Error(err))
+		}
+	})
+
+	log.Debug("Subscribed passive effect to ColonyBuiltEvent",
+		zap.String("card_name", effect.CardName))
+
+	return subID
 }

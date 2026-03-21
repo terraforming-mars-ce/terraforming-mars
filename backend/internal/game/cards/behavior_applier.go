@@ -1494,6 +1494,35 @@ func (a *BehaviorApplier) applyOutput(
 	case shared.ResourceActionReuse:
 		log.Debug("Skipping action-reuse output (handled at action layer)")
 
+	case shared.ResourceColonyTile:
+		if a.game == nil {
+			return fmt.Errorf("cannot apply colony tile: no game context")
+		}
+		if a.player == nil {
+			return fmt.Errorf("cannot apply colony tile: no player context")
+		}
+		if !a.game.HasColonies() {
+			log.Warn("Colony tile output ignored: colonies expansion not enabled")
+			return nil
+		}
+		var colonyIDs []string
+		for _, ts := range a.game.ColonyTileStates() {
+			colonyIDs = append(colonyIDs, ts.DefinitionID)
+		}
+		if len(colonyIDs) == 0 {
+			log.Warn("No colony tiles available for placement")
+			return nil
+		}
+		a.player.Selection().SetPendingColonySelection(&shared.PendingColonySelection{
+			AvailableColonyIDs:         colonyIDs,
+			AllowDuplicatePlayerColony: output.AllowDuplicatePlayerColony,
+			Source:                     a.source,
+			SourceCardID:               a.sourceCardID,
+		})
+		log.Debug("Set pending colony selection",
+			zap.Int("available_colonies", len(colonyIDs)),
+			zap.Bool("allow_duplicate", output.AllowDuplicatePlayerColony))
+
 	default:
 		log.Warn("Unhandled output type",
 			zap.String("type", string(output.ResourceType)))
