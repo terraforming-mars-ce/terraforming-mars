@@ -957,6 +957,19 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 		for j, r := range def.CompletionEffect.Rewards {
 			completionRewards[j] = ColonyOutputDto{Type: r.Type, Amount: r.Amount}
 		}
+		var completionGlobalEffects []ProjectGlobalOutputDto
+		for _, ge := range def.CompletionEffect.GlobalEffects {
+			completionGlobalEffects = append(completionGlobalEffects, ProjectGlobalOutputDto{
+				Type:   ge.Type,
+				Amount: ge.Amount,
+			})
+		}
+
+		// First-funder bonus
+		var firstFunderBonus []ColonyOutputDto
+		for _, b := range def.FirstFunderBonus {
+			firstFunderBonus = append(firstFunderBonus, ColonyOutputDto{Type: b.Type, Amount: b.Amount})
+		}
 
 		dtos = append(dtos, ProjectFundingDto{
 			ID:                 def.ID,
@@ -974,9 +987,11 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 			PaymentSubstitutes: nextSeatSubs,
 			RewardTiers:        rewardTiers,
 			CompletionEffect: ProjectCompletionEffectDto{
-				Description: def.CompletionEffect.Description,
-				Rewards:     completionRewards,
+				Description:   def.CompletionEffect.Description,
+				Rewards:       completionRewards,
+				GlobalEffects: completionGlobalEffects,
 			},
+			FirstFunderBonus: firstFunderBonus,
 			Style: StyleDto{
 				Color: def.Style.Color,
 				Icon:  def.Style.Icon,

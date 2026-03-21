@@ -1240,6 +1240,7 @@ export interface ProjectFundingDto {
   paymentSubstitutes: ProjectPaymentSubDto[];
   rewardTiers: ProjectRewardTierDto[];
   completionEffect: ProjectCompletionEffectDto;
+  firstFunderBonus?: ColonyOutputDto[];
   style: StyleDto;
 }
 /**
@@ -1274,6 +1275,14 @@ export interface ProjectRewardTierDto {
 export interface ProjectCompletionEffectDto {
   description: string;
   rewards: ColonyOutputDto[];
+  globalEffects?: ProjectGlobalOutputDto[];
+}
+/**
+ * ProjectGlobalOutputDto represents a one-time game-wide effect on project completion
+ */
+export interface ProjectGlobalOutputDto {
+  type: string;
+  amount: number /* int */;
 }
 /**
  * ProjectPaymentSubDto represents a payment substitute for a seat

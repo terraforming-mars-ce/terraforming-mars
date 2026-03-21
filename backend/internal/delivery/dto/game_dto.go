@@ -924,6 +924,7 @@ type ProjectFundingDto struct {
 	PaymentSubstitutes []ProjectPaymentSubDto     `json:"paymentSubstitutes" ts:"ProjectPaymentSubDto[]"`
 	RewardTiers        []ProjectRewardTierDto     `json:"rewardTiers" ts:"ProjectRewardTierDto[]"`
 	CompletionEffect   ProjectCompletionEffectDto `json:"completionEffect" ts:"ProjectCompletionEffectDto"`
+	FirstFunderBonus   []ColonyOutputDto          `json:"firstFunderBonus,omitempty" ts:"ColonyOutputDto[] | undefined"`
 	Style              StyleDto                   `json:"style" ts:"StyleDto"`
 }
 
@@ -952,8 +953,15 @@ type ProjectRewardTierDto struct {
 
 // ProjectCompletionEffectDto represents the completion effect
 type ProjectCompletionEffectDto struct {
-	Description string            `json:"description" ts:"string"`
-	Rewards     []ColonyOutputDto `json:"rewards" ts:"ColonyOutputDto[]"`
+	Description   string                   `json:"description" ts:"string"`
+	Rewards       []ColonyOutputDto        `json:"rewards" ts:"ColonyOutputDto[]"`
+	GlobalEffects []ProjectGlobalOutputDto `json:"globalEffects,omitempty" ts:"ProjectGlobalOutputDto[] | undefined"`
+}
+
+// ProjectGlobalOutputDto represents a one-time game-wide effect on project completion
+type ProjectGlobalOutputDto struct {
+	Type   string `json:"type" ts:"string"`
+	Amount int    `json:"amount" ts:"number"`
 }
 
 // ProjectPaymentSubDto represents a payment substitute for a seat

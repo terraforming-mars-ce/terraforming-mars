@@ -2214,6 +2214,21 @@ func (g *Game) SetProjectFundingStates(states []*projectfunding.ProjectState) {
 	})
 }
 
+// IsNextGenTurnOrderFrozen returns true if turn order rotation is skipped next generation.
+func (g *Game) IsNextGenTurnOrderFrozen() bool {
+	var v bool
+	g.read(func(s *datastore.GameState) { v = s.NextGenTurnOrderFrozen })
+	return v
+}
+
+// SetNextGenTurnOrderFrozen sets whether turn order rotation is skipped next generation.
+func (g *Game) SetNextGenTurnOrderFrozen(frozen bool) {
+	g.update(func(s *datastore.GameState) {
+		s.NextGenTurnOrderFrozen = frozen
+		s.UpdatedAt = time.Now()
+	})
+}
+
 // GetProjectFundingState returns the state for a specific project
 func (g *Game) GetProjectFundingState(projectID string) *projectfunding.ProjectState {
 	var result *projectfunding.ProjectState
