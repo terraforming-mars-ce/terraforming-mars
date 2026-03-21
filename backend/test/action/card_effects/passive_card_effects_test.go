@@ -925,3 +925,194 @@ func TestArcticAlgae_DoesNotTriggerOnCityPlacement(t *testing.T) {
 	testutil.AssertEqual(t, plantsBefore, plantsAfter,
 		"Arctic Algae should NOT trigger on city placement")
 }
+
+// --- Pets (172) ---
+// "Effect: Add an animal to this card when any city is built."
+
+func TestPets_GainsAnimalWhenOtherPlayerPlacesCity(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	anyPlayerTarget := "any-player"
+	petsCard := gamecards.Card{
+		ID:              "card-pets",
+		Name:            "Pets",
+		Type:            gamecards.CardTypeActive,
+		Cost:            10,
+		Tags:            []shared.CardTag{shared.TagAnimal, shared.TagEarth},
+		ResourceStorage: &gamecards.ResourceStorage{Type: shared.ResourceAnimal, Starting: 0},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{petsCard})
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	other := players[1]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	other.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	owner.PlayedCards().AddCard("card-pets", "Pets", "active", []string{"animal", "earth"})
+
+	effect := shared.CardEffect{
+		CardID:        "card-pets",
+		CardName:      "Pets",
+		BehaviorIndex: 1,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:     "city-placed",
+						Location: testutil.StrPtr("anywhere"),
+						Target:   &anyPlayerTarget,
+					},
+				},
+			},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			},
+		},
+	}
+	owner.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
+
+	animalsBefore := owner.Resources().GetCardStorage("card-pets")
+
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: other.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+
+	time.Sleep(20 * time.Millisecond)
+
+	animalsAfter := owner.Resources().GetCardStorage("card-pets")
+	testutil.AssertEqual(t, animalsBefore+1, animalsAfter,
+		"Pets should gain 1 animal when any player places a city")
+}
+
+func TestPets_GainsAnimalWhenSelfPlacesCity(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	anyPlayerTarget := "any-player"
+	petsCard := gamecards.Card{
+		ID:              "card-pets",
+		Name:            "Pets",
+		Type:            gamecards.CardTypeActive,
+		Cost:            10,
+		Tags:            []shared.CardTag{shared.TagAnimal, shared.TagEarth},
+		ResourceStorage: &gamecards.ResourceStorage{Type: shared.ResourceAnimal, Starting: 0},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{petsCard})
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	owner.PlayedCards().AddCard("card-pets", "Pets", "active", []string{"animal", "earth"})
+
+	effect := shared.CardEffect{
+		CardID:        "card-pets",
+		CardName:      "Pets",
+		BehaviorIndex: 1,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:     "city-placed",
+						Location: testutil.StrPtr("anywhere"),
+						Target:   &anyPlayerTarget,
+					},
+				},
+			},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			},
+		},
+	}
+	owner.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
+
+	animalsBefore := owner.Resources().GetCardStorage("card-pets")
+
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: owner.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+
+	time.Sleep(20 * time.Millisecond)
+
+	animalsAfter := owner.Resources().GetCardStorage("card-pets")
+	testutil.AssertEqual(t, animalsBefore+1, animalsAfter,
+		"Pets should gain 1 animal when owner places a city")
+}
+
+func TestPets_DoesNotTriggerOnGreeneryPlacement(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	anyPlayerTarget := "any-player"
+	petsCard := gamecards.Card{
+		ID:              "card-pets",
+		Name:            "Pets",
+		Type:            gamecards.CardTypeActive,
+		Cost:            10,
+		Tags:            []shared.CardTag{shared.TagAnimal, shared.TagEarth},
+		ResourceStorage: &gamecards.ResourceStorage{Type: shared.ResourceAnimal, Starting: 0},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{petsCard})
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	owner.PlayedCards().AddCard("card-pets", "Pets", "active", []string{"animal", "earth"})
+
+	effect := shared.CardEffect{
+		CardID:        "card-pets",
+		CardName:      "Pets",
+		BehaviorIndex: 1,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:     "city-placed",
+						Location: testutil.StrPtr("anywhere"),
+						Target:   &anyPlayerTarget,
+					},
+				},
+			},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			},
+		},
+	}
+	owner.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
+
+	animalsBefore := owner.Resources().GetCardStorage("card-pets")
+
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: owner.ID(),
+		TileType: string(shared.ResourceGreeneryTile),
+	})
+
+	time.Sleep(20 * time.Millisecond)
+
+	animalsAfter := owner.Resources().GetCardStorage("card-pets")
+	testutil.AssertEqual(t, animalsBefore, animalsAfter,
+		"Pets should NOT gain animals on greenery placement")
+}
