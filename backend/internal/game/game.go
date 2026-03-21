@@ -2156,6 +2156,7 @@ func (g *Game) ColonyTileStates() []*colony.TileState {
 }
 
 // GetAvailableColonyIDs returns the definition IDs of all colony tiles in the game.
+// Capacity and duplicate checks are validated at confirmation time.
 func (g *Game) GetAvailableColonyIDs() []string {
 	tiles := g.ColonyTileStates()
 	ids := make([]string, 0, len(tiles))

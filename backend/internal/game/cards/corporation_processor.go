@@ -484,8 +484,8 @@ func (p *CorporationProcessor) subscribeForcedActionCompletion(
 		return
 	}
 
-	// Subscribe to TilePlacedEvent
-	events.Subscribe(eventBus, func(event events.TilePlacedEvent) {
+	var subID events.SubscriptionID
+	subID = events.Subscribe(eventBus, func(event events.TilePlacedEvent) {
 		// Only handle events for this player
 		if event.PlayerID != playerID {
 			return
@@ -510,16 +510,14 @@ func (p *CorporationProcessor) subscribeForcedActionCompletion(
 			return
 		}
 
-		// Queue is empty - forced action is complete!
-		// Note: Forced first actions are FREE - they don't consume player actions
 		log.Debug("Forced first action completed (free action)",
 			zap.String("action_type", forcedAction.ActionType),
 			zap.String("corporation_id", forcedAction.CorporationID))
 
-		// Clear forced first action
 		if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
 			log.Error("Failed to clear forced first action", zap.Error(err))
 		}
+		eventBus.Unsubscribe(subID)
 	})
 
 	log.Debug("Subscribed to TilePlacedEvent for forced action completion",
