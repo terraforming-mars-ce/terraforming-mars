@@ -33,8 +33,9 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
   const canExecuteProjects =
     isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
 
-  const playerProjects: PlayerStandardProjectDto[] =
-    gameState?.currentPlayer?.standardProjects ?? [];
+  const playerProjects: PlayerStandardProjectDto[] = [
+    ...(gameState?.currentPlayer?.standardProjects ?? []),
+  ].sort((a, b) => (a.effectiveCost["credit"] ?? 0) - (b.effectiveCost["credit"] ?? 0));
 
   const handleProjectClick = (project: PlayerStandardProjectDto) => {
     if (!canExecuteProjects || !project.available) return;
