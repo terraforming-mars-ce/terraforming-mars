@@ -105,7 +105,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 
 	// 5c. BUSINESS LOGIC: Initialize project funding if enabled
 	if g.Settings().HasProjectFunding() {
-		a.initializeProjectFunding(g, playerIDs, rng, log)
+		a.initializeProjectFunding(g, log)
 	}
 
 	// 6. BUSINESS LOGIC: Ensure deck is initialized
@@ -223,7 +223,7 @@ func (a *StartGameAction) initializeColonies(g *game.Game, playerIDs []string, r
 		zap.Int("player_count", len(playerIDs)))
 }
 
-func (a *StartGameAction) initializeProjectFunding(g *game.Game, playerIDs []string, rng *rand.Rand, log *zap.Logger) {
+func (a *StartGameAction) initializeProjectFunding(g *game.Game, log *zap.Logger) {
 	if a.projectFundingRegistry == nil {
 		log.Warn("No project funding registry available")
 		return
@@ -235,24 +235,8 @@ func (a *StartGameAction) initializeProjectFunding(g *game.Game, playerIDs []str
 		return
 	}
 
-	// Select N+2 projects (min 4)
-	numToSelect := len(playerIDs) + 2
-	if numToSelect < 4 {
-		numToSelect = 4
-	}
-	if numToSelect > len(allProjects) {
-		numToSelect = len(allProjects)
-	}
-
-	// Shuffle and pick
-	rng.Shuffle(len(allProjects), func(i, j int) {
-		allProjects[i], allProjects[j] = allProjects[j], allProjects[i]
-	})
-	selected := allProjects[:numToSelect]
-
-	// Initialize project states
-	states := make([]*projectfunding.ProjectState, len(selected))
-	for i, def := range selected {
+	states := make([]*projectfunding.ProjectState, len(allProjects))
+	for i, def := range allProjects {
 		states[i] = &projectfunding.ProjectState{
 			DefinitionID: def.ID,
 			SeatOwners:   []string{},
@@ -261,9 +245,7 @@ func (a *StartGameAction) initializeProjectFunding(g *game.Game, playerIDs []str
 	}
 	g.SetProjectFundingStates(states)
 
-	log.Debug("Project funding initialized",
-		zap.Int("project_count", len(states)),
-		zap.Int("player_count", len(playerIDs)))
+	log.Debug("Project funding initialized", zap.Int("project_count", len(states)))
 }
 
 func (a *StartGameAction) distributeCorporations(ctx context.Context, g *game.Game, players []*playerPkg.Player) error {

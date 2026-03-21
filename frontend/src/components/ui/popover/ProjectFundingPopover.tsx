@@ -7,6 +7,7 @@ import {
   ProjectFundingDto,
   ProjectSeatDto,
   ColonyOutputDto,
+  ProjectGlobalOutputDto,
 } from "@/types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import { webSocketService } from "@/services/webSocketService.ts";
@@ -184,6 +185,15 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
 
       <div style={{ height: "1px", background: "rgba(255,255,255,0.15)", margin: "10px 0" }} />
 
+      {project.firstFunderBonus && project.firstFunderBonus.length > 0 && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className="text-[10px] font-orbitron text-amber-400/70 uppercase tracking-wider">
+            First Funder
+          </span>
+          <OutputDisplay outputs={project.firstFunderBonus} />
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-orbitron text-white/40 uppercase tracking-wider">
@@ -203,7 +213,15 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
           <span className="text-[10px] font-orbitron text-white/40 uppercase tracking-wider">
             Completion
           </span>
-          <OutputDisplay outputs={project.completionEffect.rewards} />
+          <div className="flex flex-col items-end gap-0.5">
+            {project.completionEffect.rewards.length > 0 && (
+              <OutputDisplay outputs={project.completionEffect.rewards} />
+            )}
+            {project.completionEffect.globalEffects &&
+              project.completionEffect.globalEffects.length > 0 && (
+                <GlobalEffectsDisplay effects={project.completionEffect.globalEffects} />
+              )}
+          </div>
         </div>
       </div>
 
@@ -277,6 +295,39 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ outputs }) => {
         );
       })}
     </span>
+  );
+};
+
+interface GlobalEffectsDisplayProps {
+  effects: ProjectGlobalOutputDto[];
+}
+
+const globalEffectLabel = (effect: ProjectGlobalOutputDto): string => {
+  switch (effect.type) {
+    case "freeze-turn-order":
+      return "Freeze turn order";
+    case "production-choice":
+      return `Each player: +${effect.amount} any production`;
+    case "card-draw":
+      return `Each player: +${effect.amount} cards`;
+    case "temperature":
+      return `+${effect.amount} temperature`;
+    case "oxygen":
+      return `+${effect.amount} oxygen`;
+    default:
+      return effect.type;
+  }
+};
+
+const GlobalEffectsDisplay: React.FC<GlobalEffectsDisplayProps> = ({ effects }) => {
+  return (
+    <div className="flex flex-col items-end gap-0.5">
+      {effects.map((effect, i) => (
+        <span key={i} className="text-[10px] font-orbitron text-purple-300/80">
+          {globalEffectLabel(effect)}
+        </span>
+      ))}
+    </div>
   );
 };
 

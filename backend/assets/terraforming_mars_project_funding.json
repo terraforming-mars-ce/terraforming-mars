@@ -9,41 +9,42 @@
       { "cost": 10, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
       { "cost": 12 },
       { "cost": 15 },
-      { "cost": 18 },
-      { "cost": 21 },
-      { "cost": 25 }
+      { "cost": 18 }
     ],
     "rewardTiers": [
       { "seatsOwned": 2, "rewards": [{ "type": "credit", "amount": 5 }, { "type": "titanium", "amount": 2 }] },
       { "seatsOwned": 4, "rewards": [{ "type": "credit", "amount": 12 }, { "type": "titanium", "amount": 4 }, { "type": "tr", "amount": 1 }] }
     ],
     "completionEffect": {
-      "description": "All players gain 1 titanium and 1 TR",
-      "rewards": [{ "type": "titanium", "amount": 1 }, { "type": "tr", "amount": 1 }]
+      "description": "Each player is dealt 20 cards directly to hand",
+      "rewards": [],
+      "globalEffects": [{ "type": "card-draw", "amount": 20 }]
     },
+    "firstFunderBonus": [{ "type": "titanium", "amount": 2 }],
     "style": { "color": "#4A90D9", "icon": "orbital-station" }
   },
   {
-    "id": "pf_deep_mine",
-    "name": "Deep Mine Network",
-    "description": "An interconnected network of deep mining operations.",
+    "id": "pf_solar_forge",
+    "name": "Solar Forge",
+    "description": "A massive solar installation converting light to industrial heat.",
     "seats": [
-      { "cost": 5, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 8, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 11, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 14, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 17, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 21, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] }
+      { "cost": 5 },
+      { "cost": 8 },
+      { "cost": 12 },
+      { "cost": 16 },
+      { "cost": 21 }
     ],
     "rewardTiers": [
-      { "seatsOwned": 1, "rewards": [{ "type": "steel", "amount": 3 }, { "type": "titanium", "amount": 1 }] },
-      { "seatsOwned": 3, "rewards": [{ "type": "steel", "amount": 8 }, { "type": "titanium", "amount": 3 }, { "type": "vp", "amount": 2 }] }
+      { "seatsOwned": 1, "rewards": [{ "type": "heat", "amount": 4 }, { "type": "energy", "amount": 2 }] },
+      { "seatsOwned": 3, "rewards": [{ "type": "heat", "amount": 10 }, { "type": "energy", "amount": 5 }, { "type": "energy-production", "amount": 1 }] }
     ],
     "completionEffect": {
-      "description": "All players gain 2 steel",
-      "rewards": [{ "type": "steel", "amount": 2 }]
+      "description": "Each player chooses +10 production of any type",
+      "rewards": [],
+      "globalEffects": [{ "type": "production-choice", "amount": 10 }]
     },
-    "style": { "color": "#8B4513", "icon": "deep-mine" }
+    "firstFunderBonus": [{ "type": "heat", "amount": 4 }],
+    "style": { "color": "#FFD700", "icon": "solar-forge" }
   },
   {
     "id": "pf_terraforming_hub",
@@ -55,197 +56,20 @@
       { "cost": 9 },
       { "cost": 11 },
       { "cost": 13 },
-      { "cost": 15 },
-      { "cost": 17 },
-      { "cost": 19 },
-      { "cost": 21 },
-      { "cost": 23 },
-      { "cost": 26 },
-      { "cost": 30 }
+      { "cost": 16 },
+      { "cost": 20 }
     ],
     "rewardTiers": [
       { "seatsOwned": 2, "rewards": [{ "type": "tr", "amount": 1 }, { "type": "plant", "amount": 3 }] },
-      { "seatsOwned": 4, "rewards": [{ "type": "tr", "amount": 2 }, { "type": "plant", "amount": 6 }, { "type": "vp", "amount": 2 }] },
+      { "seatsOwned": 4, "rewards": [{ "type": "tr", "amount": 2 }, { "type": "plant", "amount": 6 }, { "type": "plant-production", "amount": 1 }] },
       { "seatsOwned": 6, "rewards": [{ "type": "tr", "amount": 4 }, { "type": "plant", "amount": 10 }, { "type": "vp", "amount": 5 }] }
     ],
     "completionEffect": {
-      "description": "All players gain 1 TR and 2 plants",
-      "rewards": [{ "type": "tr", "amount": 1 }, { "type": "plant", "amount": 2 }]
+      "description": "+5 TR to all players + raise oxygen 2 steps",
+      "rewards": [{ "type": "tr", "amount": 5 }],
+      "globalEffects": [{ "type": "oxygen", "amount": 2 }]
     },
+    "firstFunderBonus": [{ "type": "tr", "amount": 2 }],
     "style": { "color": "#2E8B57", "icon": "terraforming-hub" }
-  },
-  {
-    "id": "pf_solar_forge",
-    "name": "Solar Forge",
-    "description": "A massive solar installation converting light to industrial heat.",
-    "seats": [
-      { "cost": 4 },
-      { "cost": 6 },
-      { "cost": 9 },
-      { "cost": 12 },
-      { "cost": 15 },
-      { "cost": 19 },
-      { "cost": 24 }
-    ],
-    "rewardTiers": [
-      { "seatsOwned": 1, "rewards": [{ "type": "heat", "amount": 4 }, { "type": "energy", "amount": 2 }] },
-      { "seatsOwned": 3, "rewards": [{ "type": "heat", "amount": 10 }, { "type": "energy", "amount": 5 }, { "type": "tr", "amount": 1 }] }
-    ],
-    "completionEffect": {
-      "description": "All players gain 4 heat",
-      "rewards": [{ "type": "heat", "amount": 4 }]
-    },
-    "style": { "color": "#FFD700", "icon": "solar-forge" }
-  },
-  {
-    "id": "pf_genesis_preserve",
-    "name": "Genesis Preserve",
-    "description": "A massive bio-engineering preserve cultivating alien ecosystems.",
-    "seats": [
-      { "cost": 7 },
-      { "cost": 9 },
-      { "cost": 11 },
-      { "cost": 13 },
-      { "cost": 15 },
-      { "cost": 17 },
-      { "cost": 20 },
-      { "cost": 24 }
-    ],
-    "rewardTiers": [
-      { "seatsOwned": 2, "rewards": [{ "type": "plant", "amount": 6 }, { "type": "heat", "amount": 2 }] },
-      { "seatsOwned": 4, "rewards": [{ "type": "plant", "amount": 12 }, { "type": "heat", "amount": 4 }, { "type": "vp", "amount": 3 }] }
-    ],
-    "completionEffect": {
-      "description": "All players gain 3 plants and 1 VP",
-      "rewards": [{ "type": "plant", "amount": 3 }, { "type": "vp", "amount": 1 }]
-    },
-    "style": { "color": "#228B22", "icon": "genesis-preserve" }
-  },
-  {
-    "id": "pf_space_elevator",
-    "name": "Space Elevator",
-    "description": "A tethered structure connecting the surface to orbit.",
-    "seats": [
-      { "cost": 5, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 7, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 9, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 11, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 13, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 16 },
-      { "cost": 19 },
-      { "cost": 22 },
-      { "cost": 25 },
-      { "cost": 29 }
-    ],
-    "rewardTiers": [
-      { "seatsOwned": 2, "rewards": [{ "type": "titanium", "amount": 4 }, { "type": "credit", "amount": 4 }] },
-      { "seatsOwned": 4, "rewards": [{ "type": "titanium", "amount": 8 }, { "type": "credit", "amount": 10 }, { "type": "vp", "amount": 1 }] },
-      { "seatsOwned": 6, "rewards": [{ "type": "titanium", "amount": 14 }, { "type": "credit", "amount": 18 }, { "type": "vp", "amount": 3 }] }
-    ],
-    "completionEffect": {
-      "description": "All players gain 2 titanium",
-      "rewards": [{ "type": "titanium", "amount": 2 }]
-    },
-    "style": { "color": "#708090", "icon": "space-elevator" }
-  },
-  {
-    "id": "pf_phobos_research_lab",
-    "name": "Phobos Research Lab",
-    "description": "A high-risk research station on Phobos pushing scientific boundaries.",
-    "seats": [
-      { "cost": 10, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 14, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 18, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 23, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 28, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] }
-    ],
-    "rewardTiers": [
-      { "seatsOwned": 1, "rewards": [{ "type": "vp", "amount": 2 }] },
-      { "seatsOwned": 2, "rewards": [{ "type": "vp", "amount": 4 }, { "type": "titanium", "amount": 3 }] },
-      { "seatsOwned": 3, "rewards": [{ "type": "vp", "amount": 7 }, { "type": "titanium", "amount": 6 }] }
-    ],
-    "completionEffect": {
-      "description": "All players gain 2 VP",
-      "rewards": [{ "type": "vp", "amount": 2 }]
-    },
-    "style": { "color": "#9370DB", "icon": "phobos-research-lab" }
-  },
-  {
-    "id": "pf_thermal_plant",
-    "name": "Thermal Plant",
-    "description": "A geothermal energy plant tapping into the planet's core.",
-    "seats": [
-      { "cost": 4, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 6, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 8, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 10, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 13 },
-      { "cost": 16 },
-      { "cost": 19 },
-      { "cost": 23 }
-    ],
-    "rewardTiers": [
-      { "seatsOwned": 2, "rewards": [{ "type": "heat", "amount": 8 }, { "type": "energy", "amount": 3 }] },
-      { "seatsOwned": 4, "rewards": [{ "type": "heat", "amount": 14 }, { "type": "energy", "amount": 6 }, { "type": "tr", "amount": 1 }] }
-    ],
-    "completionEffect": {
-      "description": "All players gain 3 heat and 1 energy",
-      "rewards": [{ "type": "heat", "amount": 3 }, { "type": "energy", "amount": 1 }]
-    },
-    "style": { "color": "#DC143C", "icon": "thermal-plant" }
-  },
-  {
-    "id": "pf_aquifer_network",
-    "name": "Aquifer Network",
-    "description": "Underground water infrastructure distributing water across the colony.",
-    "seats": [
-      { "cost": 5, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 7, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 9, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 11 },
-      { "cost": 14 },
-      { "cost": 17 },
-      { "cost": 20 },
-      { "cost": 23 },
-      { "cost": 27 }
-    ],
-    "rewardTiers": [
-      { "seatsOwned": 2, "rewards": [{ "type": "credit", "amount": 6 }, { "type": "plant", "amount": 4 }] },
-      { "seatsOwned": 4, "rewards": [{ "type": "credit", "amount": 12 }, { "type": "plant", "amount": 8 }, { "type": "tr", "amount": 1 }] },
-      { "seatsOwned": 6, "rewards": [{ "type": "credit", "amount": 20 }, { "type": "plant", "amount": 14 }, { "type": "vp", "amount": 2 }] }
-    ],
-    "completionEffect": {
-      "description": "All players gain 2 credits and 2 plants",
-      "rewards": [{ "type": "credit", "amount": 2 }, { "type": "plant", "amount": 2 }]
-    },
-    "style": { "color": "#4169E1", "icon": "aquifer-network" }
-  },
-  {
-    "id": "pf_hellas_rail",
-    "name": "Hellas Rail",
-    "description": "A transcontinental rail system through Hellas basin connecting settlements.",
-    "seats": [
-      { "cost": 3, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 5, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 7, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 9, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 11, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 13, "paymentSubstitutes": [{ "resourceType": "steel", "conversionRate": 2 }] },
-      { "cost": 15 },
-      { "cost": 17 },
-      { "cost": 20 },
-      { "cost": 23 },
-      { "cost": 27 }
-    ],
-    "rewardTiers": [
-      { "seatsOwned": 2, "rewards": [{ "type": "steel", "amount": 4 }, { "type": "credit", "amount": 4 }] },
-      { "seatsOwned": 5, "rewards": [{ "type": "steel", "amount": 10 }, { "type": "credit", "amount": 10 }, { "type": "vp", "amount": 2 }] },
-      { "seatsOwned": 8, "rewards": [{ "type": "steel", "amount": 16 }, { "type": "credit", "amount": 18 }, { "type": "vp", "amount": 5 }] }
-    ],
-    "completionEffect": {
-      "description": "All players gain 2 steel and 1 credit",
-      "rewards": [{ "type": "steel", "amount": 2 }, { "type": "credit", "amount": 1 }]
-    },
-    "style": { "color": "#B8860B", "icon": "hellas-rail" }
   }
 ]
