@@ -219,6 +219,7 @@ func main() {
 	confirmStealTargetAction := confirmAction.NewConfirmStealTargetAction(gameRepo, cardRegistry, stateRepo, log)
 	confirmColonyResourceAction := confirmAction.NewConfirmColonyResourceAction(gameRepo, cardRegistry, stateRepo, log)
 	confirmAwardFundAction := confirmAction.NewConfirmAwardFundAction(gameRepo, cardRegistry, awardRegistry, log)
+	confirmColonyPlacementAction := confirmAction.NewConfirmColonyPlacementAction(gameRepo, cardRegistry, colonyRegistry, log)
 
 	// Turn management (4)
 	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
@@ -315,6 +316,7 @@ func main() {
 		confirmStealTargetAction,
 		confirmColonyResourceAction,
 		confirmAwardFundAction,
+		confirmColonyPlacementAction,
 		// Connection
 		playerDisconnectedAction,
 		playerTakeoverAction,
