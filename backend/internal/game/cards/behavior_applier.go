@@ -1505,10 +1505,7 @@ func (a *BehaviorApplier) applyOutput(
 			log.Warn("Colony tile output ignored: colonies expansion not enabled")
 			return nil
 		}
-		var colonyIDs []string
-		for _, ts := range a.game.ColonyTileStates() {
-			colonyIDs = append(colonyIDs, ts.DefinitionID)
-		}
+		colonyIDs := a.game.GetAvailableColonyIDs()
 		if len(colonyIDs) == 0 {
 			log.Warn("No colony tiles available for placement")
 			return nil

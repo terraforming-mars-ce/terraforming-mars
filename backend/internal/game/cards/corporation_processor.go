@@ -444,10 +444,7 @@ func (p *CorporationProcessor) createForcedAction(
 			if err != nil {
 				return fmt.Errorf("failed to get player for colony placement: %w", err)
 			}
-			var colonyIDs []string
-			for _, ts := range g.ColonyTileStates() {
-				colonyIDs = append(colonyIDs, ts.DefinitionID)
-			}
+			colonyIDs := g.GetAvailableColonyIDs()
 			if len(colonyIDs) > 0 {
 				pl.Selection().SetPendingColonySelection(&shared.PendingColonySelection{
 					AvailableColonyIDs:         colonyIDs,
@@ -544,7 +541,8 @@ func (p *CorporationProcessor) subscribeColonyForcedActionCompletion(
 		return
 	}
 
-	events.Subscribe(eventBus, func(event events.ColonyBuiltEvent) {
+	var subID events.SubscriptionID
+	subID = events.Subscribe(eventBus, func(event events.ColonyBuiltEvent) {
 		if event.PlayerID != playerID {
 			return
 		}
@@ -561,6 +559,7 @@ func (p *CorporationProcessor) subscribeColonyForcedActionCompletion(
 		if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
 			log.Error("Failed to clear forced colony placement action", zap.Error(err))
 		}
+		eventBus.Unsubscribe(subID)
 	})
 
 	log.Debug("Subscribed to ColonyBuiltEvent for forced colony placement completion",

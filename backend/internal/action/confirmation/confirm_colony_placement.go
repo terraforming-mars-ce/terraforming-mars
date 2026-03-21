@@ -75,12 +75,8 @@ func (a *ConfirmColonyPlacementAction) Execute(ctx context.Context, gameID strin
 		return fmt.Errorf("colony tile is full: %d/%d colonies", len(tileState.PlayerColonies), maxColonies)
 	}
 
-	if !pending.AllowDuplicatePlayerColony {
-		for _, pid := range tileState.PlayerColonies {
-			if pid == playerID {
-				return fmt.Errorf("player already has a colony on this tile")
-			}
-		}
+	if !pending.AllowDuplicatePlayerColony && slices.Contains(tileState.PlayerColonies, playerID) {
+		return fmt.Errorf("player already has a colony on this tile")
 	}
 
 	source := pending.Source
@@ -93,13 +89,6 @@ func (a *ConfirmColonyPlacementAction) Execute(ctx context.Context, gameID strin
 	}
 
 	p.Selection().SetPendingColonySelection(nil)
-
-	forcedAction := g.GetForcedFirstAction(playerID)
-	if forcedAction != nil && forcedAction.ActionType == "colony-placement" {
-		if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
-			log.Error("Failed to clear forced colony placement action", zap.Error(err))
-		}
-	}
 
 	log.Info("Colony placed from card effect",
 		zap.String("colony_id", colonyID))

@@ -2155,6 +2155,16 @@ func (g *Game) ColonyTileStates() []*colony.TileState {
 	return result
 }
 
+// GetAvailableColonyIDs returns the definition IDs of all colony tiles in the game.
+func (g *Game) GetAvailableColonyIDs() []string {
+	tiles := g.ColonyTileStates()
+	ids := make([]string, 0, len(tiles))
+	for _, ts := range tiles {
+		ids = append(ids, ts.DefinitionID)
+	}
+	return ids
+}
+
 func (g *Game) SetColonyTileStates(states []*colony.TileState) {
 	g.update(func(s *datastore.GameState) {
 		s.ColonyTileStates = states
