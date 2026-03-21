@@ -64,6 +64,34 @@ func TestColonizerTrainingCamp_PlaysSuccessfully(t *testing.T) {
 		"Colonizer Training Camp should be in played cards")
 }
 
+// --- Pets (172) ---
+// "Effect: Add an animal to this card when any city is built. Add 1 animal to this card. 1 VP per 2 animals here."
+func TestPets_PlaysSuccessfully(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	card := testutil.GetCardByName("Pets")
+	cardRegistry := testutil.CreateTestCardRegistry()
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set current turn")
+	p.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	p.Hand().AddCard(card.ID)
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 10}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Pets should play successfully")
+	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Pets should be in played cards")
+	storage := p.Resources().GetCardStorage(card.ID)
+	testutil.AssertEqual(t, 1, storage, "Pets should have 1 initial animal on play")
+}
+
 // --- Deep Well Heating (003) ---
 // "Increase your energy production 1 step. Increase temperature 1 step."
 func TestDeepWellHeating_EnergyProductionAndTemperature(t *testing.T) {
