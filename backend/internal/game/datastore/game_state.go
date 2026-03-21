@@ -69,6 +69,8 @@ type GameState struct {
 	InitPhaseWaitingForConfirm bool
 	InitPhaseConfirmVersion    int
 
+	NextGenTurnOrderFrozen bool
+
 	ColonyTileStates     []*colony.TileState
 	TradeFleets          map[string]bool
 	ProjectFundingStates []*projectfunding.ProjectState

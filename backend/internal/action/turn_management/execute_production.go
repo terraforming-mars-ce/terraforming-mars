@@ -103,7 +103,10 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 	newGeneration := g.Generation()
 
 	turnOrder := g.TurnOrder()
-	if len(turnOrder) > 1 {
+	if g.IsNextGenTurnOrderFrozen() {
+		g.SetNextGenTurnOrderFrozen(false)
+		log.Debug("Turn order frozen, skipping rotation for this generation")
+	} else if len(turnOrder) > 1 {
 		var activePart []string
 		var exitedPart []string
 		for _, id := range turnOrder {

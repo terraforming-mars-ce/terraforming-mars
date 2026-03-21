@@ -10,6 +10,7 @@ type ProjectDefinition struct {
 	Seats            []SeatDefinition `json:"seats"`
 	RewardTiers      []RewardTier     `json:"rewardTiers"`
 	CompletionEffect CompletionEffect `json:"completionEffect"`
+	FirstFunderBonus []Output         `json:"firstFunderBonus,omitempty"`
 	Style            shared.Style     `json:"style"`
 }
 
@@ -33,8 +34,15 @@ type RewardTier struct {
 
 // CompletionEffect defines rewards granted to ALL players when a project completes
 type CompletionEffect struct {
-	Description string   `json:"description"`
-	Rewards     []Output `json:"rewards"`
+	Description   string         `json:"description"`
+	Rewards       []Output       `json:"rewards"`
+	GlobalEffects []GlobalOutput `json:"globalEffects,omitempty"`
+}
+
+// GlobalOutput represents a one-time game-wide effect on project completion
+type GlobalOutput struct {
+	Type   string `json:"type"`             // "temperature", "oxygen", "freeze-turn-order", "production-choice", "card-draw"
+	Amount int    `json:"amount,omitempty"` // used for card-draw (N cards)
 }
 
 // Output represents a resource gain (type + amount)
