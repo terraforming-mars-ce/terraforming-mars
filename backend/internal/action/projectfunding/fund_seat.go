@@ -172,6 +172,17 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 		CalculatedOutputs: calculatedOutputs,
 	})
 
+	// Apply first-funder bonus to the first seat buyer
+	if seatIndex == 0 && len(definition.FirstFunderBonus) > 0 {
+		bonusOutputs := applyRewards(player, definition.FirstFunderBonus)
+		g.AddTriggeredEffect(shared.TriggeredEffect{
+			CardName:          definition.Name + " (First Funder)",
+			PlayerID:          playerID,
+			SourceType:        shared.SourceTypeProjectFundingSeat,
+			CalculatedOutputs: bonusOutputs,
+		})
+	}
+
 	a.WriteStateLogFull(ctx, g, definition.Name, shared.SourceTypeProjectFundingSeat,
 		playerID, fmt.Sprintf("Funded %s project", definition.Name), nil, calculatedOutputs, nil)
 
@@ -231,7 +242,7 @@ func (a *FundSeatAction) completeProject(ctx context.Context, g *game.Game, stat
 		})
 	}
 
-	// Apply completion effect to ALL players
+	// Apply static completion rewards to ALL players
 	for _, p := range allPlayers {
 		completionOutputs := applyRewards(p, def.CompletionEffect.Rewards)
 
@@ -241,6 +252,12 @@ func (a *FundSeatAction) completeProject(ctx context.Context, g *game.Game, stat
 			SourceType:        shared.SourceTypeProjectFundingCompletion,
 			CalculatedOutputs: completionOutputs,
 		})
+	}
+
+	// Apply global completion effects
+	if len(def.CompletionEffect.GlobalEffects) > 0 {
+		completingPlayerID := state.SeatOwners[len(state.SeatOwners)-1]
+		a.applyGlobalEffects(ctx, g, def, allPlayers, completingPlayerID, log)
 	}
 
 	a.WriteStateLogFull(ctx, g, "Project Completed: "+def.Name, shared.SourceTypeProjectFundingCompletion,
@@ -257,9 +274,80 @@ func (a *FundSeatAction) completeProject(ctx context.Context, g *game.Game, stat
 		zap.Int("total_seats", len(state.SeatOwners)))
 }
 
+func (a *FundSeatAction) applyGlobalEffects(ctx context.Context, g *game.Game, def *pf.ProjectDefinition, allPlayers []*player.Player, completingPlayerID string, log *zap.Logger) {
+	for _, effect := range def.CompletionEffect.GlobalEffects {
+		switch effect.Type {
+		case "temperature":
+			if _, err := g.GlobalParameters().IncreaseTemperature(ctx, effect.Amount, completingPlayerID); err != nil {
+				log.Error("Failed to increase temperature for project completion", zap.Error(err))
+			}
+		case "oxygen":
+			if _, err := g.GlobalParameters().IncreaseOxygen(ctx, effect.Amount, completingPlayerID); err != nil {
+				log.Error("Failed to increase oxygen for project completion", zap.Error(err))
+			}
+		case "freeze-turn-order":
+			g.SetNextGenTurnOrderFrozen(true)
+			log.Debug("Turn order frozen by project completion", zap.String("project", def.Name))
+		case "production-choice":
+			amount := effect.Amount
+			if amount <= 0 {
+				amount = 1
+			}
+			choices := buildProductionChoices(amount)
+			for _, p := range allPlayers {
+				p.Selection().SetPendingBehaviorChoiceSelection(&shared.PendingBehaviorChoiceSelection{
+					Choices:      choices,
+					Source:       "project-funding-completion",
+					SourceCardID: def.ID,
+				})
+			}
+			log.Debug("Production choice set for all players", zap.String("project", def.Name))
+		case "card-draw":
+			n := effect.Amount
+			if n <= 0 {
+				n = 1
+			}
+			for _, p := range allPlayers {
+				cardIDs, err := g.Deck().DrawProjectCards(ctx, n)
+				if err != nil {
+					log.Error("Failed to draw cards for project completion", zap.Error(err))
+					break
+				}
+				for _, cardID := range cardIDs {
+					p.Hand().AddCard(cardID)
+				}
+				log.Debug("Cards drawn for player",
+					zap.String("player_id", p.ID()),
+					zap.Int("count", len(cardIDs)))
+			}
+		}
+	}
+}
+
+func buildProductionChoices(amount int) []shared.Choice {
+	productionTypes := []shared.ResourceType{
+		shared.ResourceCreditProduction,
+		shared.ResourceSteelProduction,
+		shared.ResourceTitaniumProduction,
+		shared.ResourcePlantProduction,
+		shared.ResourceEnergyProduction,
+		shared.ResourceHeatProduction,
+	}
+	choices := make([]shared.Choice, len(productionTypes))
+	for i, rt := range productionTypes {
+		choices[i] = shared.Choice{
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: rt, Amount: amount, Target: "self-player"},
+			},
+		}
+	}
+	return choices
+}
+
 func applyRewards(p *player.Player, rewards []pf.Output) []shared.CalculatedOutput {
 	var outputs []shared.CalculatedOutput
 	resourceAdds := map[shared.ResourceType]int{}
+	productionAdds := map[shared.ResourceType]int{}
 
 	for _, reward := range rewards {
 		outputs = append(outputs, shared.CalculatedOutput{
@@ -292,11 +380,26 @@ func applyRewards(p *player.Player, rewards []pf.Output) []shared.CalculatedOutp
 				},
 				ComputedValue: reward.Amount,
 			})
+		case "credit-production":
+			productionAdds[shared.ResourceCreditProduction] += reward.Amount
+		case "steel-production":
+			productionAdds[shared.ResourceSteelProduction] += reward.Amount
+		case "titanium-production":
+			productionAdds[shared.ResourceTitaniumProduction] += reward.Amount
+		case "plant-production":
+			productionAdds[shared.ResourcePlantProduction] += reward.Amount
+		case "energy-production":
+			productionAdds[shared.ResourceEnergyProduction] += reward.Amount
+		case "heat-production":
+			productionAdds[shared.ResourceHeatProduction] += reward.Amount
 		}
 	}
 
 	if len(resourceAdds) > 0 {
 		p.Resources().Add(resourceAdds)
+	}
+	if len(productionAdds) > 0 {
+		p.Resources().AddProduction(productionAdds)
 	}
 
 	return outputs

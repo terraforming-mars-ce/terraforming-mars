@@ -260,6 +260,7 @@ func TestFundSeat_Completion_AllPlayersGetCompletionEffect(t *testing.T) {
 	testGame, repo, pfRegistry, player1, player2 := setupProjectFundingGame(t)
 	ctx := context.Background()
 
+	// pf_orbital_station completion effect: card-draw (5 cards for each player)
 	def, _ := pfRegistry.GetByID("pf_orbital_station")
 	owners := make([]string, len(def.Seats)-1)
 	for i := range owners {
@@ -270,33 +271,17 @@ func TestFundSeat_Completion_AllPlayersGetCompletionEffect(t *testing.T) {
 	p1, _ := testGame.GetPlayer(player1)
 	p2, _ := testGame.GetPlayer(player2)
 	testutil.SetPlayerCredits(ctx, p1, 500)
-	testutil.SetPlayerCredits(ctx, p2, 100)
 
-	p2CreditsBefore := testutil.GetPlayerCredits(p2)
+	p2HandBefore := len(p2.Hand().Cards())
 	lastSeatCost := def.Seats[len(def.Seats)-1].Cost
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: lastSeatCost})
 	testutil.AssertNoError(t, err, "Buy last seat should succeed")
 
-	// Player2 should receive completion effect even though they have no seats
-	hasCompletionReward := false
-	for _, reward := range def.CompletionEffect.Rewards {
-		if reward.Type == "credit" && reward.Amount > 0 {
-			p2CreditsAfter := testutil.GetPlayerCredits(p2)
-			if p2CreditsAfter > p2CreditsBefore {
-				hasCompletionReward = true
-			}
-		}
-	}
-
-	// If completion reward is not credits, check other resources
-	if !hasCompletionReward && len(def.CompletionEffect.Rewards) > 0 {
-		// Completion effect was applied (we trust the code path)
-		hasCompletionReward = true
-	}
-
-	testutil.AssertTrue(t, hasCompletionReward, "Player2 should get completion effect even without seats")
+	// Player2 should receive the card-draw completion effect even though they have no seats
+	p2HandAfter := len(p2.Hand().Cards())
+	testutil.AssertTrue(t, p2HandAfter > p2HandBefore, "Player2 should receive cards from completion effect even without seats")
 }
 
 func TestFundSeat_NotCompleted_WhenSeatsRemain(t *testing.T) {
@@ -314,4 +299,99 @@ func TestFundSeat_NotCompleted_WhenSeatsRemain(t *testing.T) {
 
 	state := testGame.GetProjectFundingState("pf_orbital_station")
 	testutil.AssertFalse(t, state.IsCompleted, "Project should not be completed with seats remaining")
+}
+
+// --- Global Effect Tests ---
+
+func TestFundSeat_Completion_TerraformingHub_TRAndOxygen(t *testing.T) {
+	testGame, repo, pfRegistry, player1, player2 := setupProjectFundingGame(t)
+	ctx := context.Background()
+
+	// pf_terraforming_hub: completion gives +3 TR to all players + raises oxygen 2 steps
+	def, _ := pfRegistry.GetByID("pf_terraforming_hub")
+	// Use "other_player" for all preceding seats so P1 only owns the final seat (no tier reward)
+	owners := make([]string, len(def.Seats)-1)
+	for i := range owners {
+		owners[i] = "other_player"
+	}
+	setupProjectState(testGame, "pf_terraforming_hub", owners)
+
+	p1, _ := testGame.GetPlayer(player1)
+	p2, _ := testGame.GetPlayer(player2)
+	testutil.SetPlayerCredits(ctx, p1, 500)
+
+	p1TRBefore := p1.Resources().TerraformRating()
+	p2TRBefore := p2.Resources().TerraformRating()
+	oxygenBefore := testGame.GlobalParameters().Oxygen()
+	lastSeatCost := def.Seats[len(def.Seats)-1].Cost
+
+	action := newAction(repo, pfRegistry)
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_terraforming_hub", pfAction.FundSeatPayment{Credits: lastSeatCost})
+	testutil.AssertNoError(t, err, "Buy last seat should succeed")
+
+	testutil.AssertEqual(t, p1TRBefore+5, p1.Resources().TerraformRating(), "P1 should gain +5 TR from completion")
+	testutil.AssertEqual(t, p2TRBefore+5, p2.Resources().TerraformRating(), "P2 should gain +5 TR from completion")
+	testutil.AssertEqual(t, oxygenBefore+2, testGame.GlobalParameters().Oxygen(), "Oxygen should increase by 2")
+}
+
+func TestFundSeat_Completion_ProductionChoice_SetForAllPlayers(t *testing.T) {
+	testGame, repo, pfRegistry, player1, player2 := setupProjectFundingGame(t)
+	ctx := context.Background()
+
+	// pf_solar_forge: completion gives each player production choice
+	def, _ := pfRegistry.GetByID("pf_solar_forge")
+	owners := make([]string, len(def.Seats)-1)
+	for i := range owners {
+		owners[i] = player1
+	}
+	setupProjectState(testGame, "pf_solar_forge", owners)
+
+	p1, _ := testGame.GetPlayer(player1)
+	p2, _ := testGame.GetPlayer(player2)
+	testutil.SetPlayerCredits(ctx, p1, 500)
+
+	lastSeatCost := def.Seats[len(def.Seats)-1].Cost
+
+	action := newAction(repo, pfRegistry)
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_solar_forge", pfAction.FundSeatPayment{Credits: lastSeatCost})
+	testutil.AssertNoError(t, err, "Buy last seat should succeed")
+
+	p1Choice := p1.Selection().GetPendingBehaviorChoiceSelection()
+	p2Choice := p2.Selection().GetPendingBehaviorChoiceSelection()
+
+	testutil.AssertTrue(t, p1Choice != nil, "P1 should have pending production choice")
+	testutil.AssertTrue(t, p2Choice != nil, "P2 should have pending production choice")
+	testutil.AssertEqual(t, 6, len(p1Choice.Choices), "Should have 6 production type choices")
+	testutil.AssertEqual(t, "project-funding-completion", p1Choice.Source, "Source should be project-funding-completion")
+}
+
+func TestFundSeat_Completion_MassCardDraw(t *testing.T) {
+	testGame, repo, pfRegistry, player1, player2 := setupProjectFundingGame(t)
+	ctx := context.Background()
+
+	// pf_orbital_station: completion deals 20 cards to each player
+	def, _ := pfRegistry.GetByID("pf_orbital_station")
+	owners := make([]string, len(def.Seats)-1)
+	for i := range owners {
+		owners[i] = player1
+	}
+	setupProjectState(testGame, "pf_orbital_station", owners)
+
+	p1, _ := testGame.GetPlayer(player1)
+	p2, _ := testGame.GetPlayer(player2)
+	testutil.SetPlayerCredits(ctx, p1, 500)
+
+	p1HandBefore := len(p1.Hand().Cards())
+	p2HandBefore := len(p2.Hand().Cards())
+	lastSeatCost := def.Seats[len(def.Seats)-1].Cost
+
+	action := newAction(repo, pfRegistry)
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: lastSeatCost})
+	testutil.AssertNoError(t, err, "Buy last seat should succeed")
+
+	p1HandAfter := len(p1.Hand().Cards())
+	p2HandAfter := len(p2.Hand().Cards())
+
+	testutil.AssertEqual(t, p1HandBefore+20, p1HandAfter, "P1 should receive 20 cards")
+	testutil.AssertEqual(t, p2HandBefore+20, p2HandAfter, "P2 should receive 20 cards")
 }
