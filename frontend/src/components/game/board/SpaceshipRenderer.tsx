@@ -64,7 +64,6 @@ function extractSpaceshipPrimitive(scene: THREE.Group) {
   return spaceshipCache;
 }
 
-
 const SPACING = 0.17;
 const PAD_GEO_RADIUS = 0.264;
 const PAD_SOLID_RADIUS = 0.096;
@@ -88,7 +87,6 @@ const VENUS_LANDING_POS = VENUS_CENTER.clone().addScaledVector(VENUS_LANDING_NOR
 const FAR_AWAY_POS = new THREE.Vector3(50, 80, -200);
 const FAR_AWAY_NORMAL = FAR_AWAY_POS.clone().normalize();
 
-
 function easeInCubic(t: number): number {
   return t * t * t;
 }
@@ -104,7 +102,6 @@ function easeInQuad(t: number): number {
 function smoothstep(t: number): number {
   return t * t * (3 - 2 * t);
 }
-
 
 function cubicBezier(
   P0: THREE.Vector3,
@@ -136,7 +133,6 @@ function cubicBezierTangent(
   return tangent;
 }
 
-
 function pointOnSphere(
   theta: number,
   phi: number,
@@ -149,7 +145,6 @@ function pointOnSphere(
   return { position: pos, normal: pos.clone().normalize() };
 }
 
-
 const _tmpLookMatrix = new THREE.Matrix4();
 
 function orientationFromDirection(forward: THREE.Vector3, up: THREE.Vector3): THREE.Quaternion {
@@ -160,7 +155,6 @@ function orientationFromDirection(forward: THREE.Vector3, up: THREE.Vector3): TH
   return new THREE.Quaternion().setFromRotationMatrix(_tmpLookMatrix);
 }
 
-
 function getDestination(location: string): {
   landingPos: THREE.Vector3;
   landingNormal: THREE.Vector3;
@@ -170,7 +164,6 @@ function getDestination(location: string): {
   }
   return { landingPos: FAR_AWAY_POS.clone(), landingNormal: FAR_AWAY_NORMAL.clone() };
 }
-
 
 interface FlightPath {
   startPos: THREE.Vector3;
@@ -241,7 +234,6 @@ function computeFlightPath(parkedMatrix: THREE.Matrix4, location: string): Fligh
   };
 }
 
-
 interface ShipState {
   playerId: string;
   status: "parked" | "flying" | "landed";
@@ -256,7 +248,6 @@ interface ShipState {
   hoverSmokeDone: boolean;
 }
 
-
 interface ExhaustConfig {
   id: number;
   position: THREE.Vector3;
@@ -267,7 +258,6 @@ interface ExhaustConfig {
 }
 
 let nextExhaustId = 0;
-
 
 interface SpaceshipRendererProps {
   gameState?: GameDto;
@@ -285,7 +275,6 @@ export default function SpaceshipRenderer({ gameState }: SpaceshipRendererProps)
   const primitive = useMemo(() => {
     return extractSpaceshipPrimitive(spaceshipScene);
   }, [spaceshipScene]);
-
 
   const padGeometry = useMemo(() => {
     return new THREE.CircleGeometry(PAD_GEO_RADIUS, 48);
@@ -315,7 +304,6 @@ export default function SpaceshipRenderer({ gameState }: SpaceshipRendererProps)
     addSphereProjectionWithSoftEdges(mat, 0.004, noiseTexture, noiseHighTexture, PAD_SOLID_RADIUS);
     return mat;
   }, [padConcreteTexture, noiseTexture, noiseHighTexture]);
-
 
   const warningLineGeometry = useMemo(() => {
     return new THREE.RingGeometry(
