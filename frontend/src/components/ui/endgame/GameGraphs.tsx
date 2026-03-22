@@ -25,7 +25,8 @@ type GraphMode =
   | "plants"
   | "energy"
   | "heat"
-  | "cards-played";
+  | "cards-played"
+  | "resource-value";
 
 const GRAPH_MODE_LABELS: Record<GraphMode, string> = {
   "global-params": "Global Parameters",
@@ -42,6 +43,7 @@ const GRAPH_MODE_LABELS: Record<GraphMode, string> = {
   energy: "Energy",
   heat: "Heat",
   "cards-played": "Cards Played",
+  "resource-value": "Total Resource Value",
 };
 
 interface GameGraphsProps {
@@ -417,6 +419,14 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
           return (e, pid) => e.players[pid]?.heat ?? 0;
         case "cards-played":
           return (e, pid) => e.players[pid]?.playedCardCount ?? 0;
+        case "resource-value":
+          return (e, pid) => {
+            const p = e.players[pid];
+            if (!p) {
+              return 0;
+            }
+            return p.credits + p.steel * 2 + p.titanium * 3 + p.plants * 2.87 + p.energy + p.heat;
+          };
         default:
           return () => 0;
       }
