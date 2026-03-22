@@ -5448,6 +5448,15 @@
       "animal",
       "plant"
     ],
+    "requirements": {
+      "description": "Requires a greenery tile.",
+      "items": [
+        {
+          "type": "greenery",
+          "min": 1
+        }
+      ]
+    },
     "behaviors": [
       {
         "triggers": [
@@ -14342,7 +14351,28 @@
     "type": "active",
     "cost": 6,
     "description": "Effect: You may first increase that colony track 1 step when trading.",
-    "pack": "colonies"
+    "pack": "colonies",
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "trading",
+              "target": "self-player"
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "type": "colony-track-step",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "Increase that colony track 1 step when trading."
+      }
+    ]
   },
   {
     "id": "C47",
@@ -14369,6 +14399,25 @@
           }
         ],
         "description": "Place a colony."
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto",
+            "condition": {
+              "type": "trading",
+              "target": "self-player"
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "type": "colony-track-step",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "Increase that colony track 1 step when trading."
       }
     ]
   },

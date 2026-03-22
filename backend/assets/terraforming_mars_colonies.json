@@ -63,13 +63,13 @@
     "id": "europa",
     "name": "Europa",
     "steps": [
-      { "outputs": [{ "type": "credit-production", "amount": 0 }] },
       { "outputs": [{ "type": "credit-production", "amount": 1 }] },
       { "outputs": [{ "type": "credit-production", "amount": 1 }] },
-      { "outputs": [{ "type": "credit-production", "amount": 1 }] },
-      { "outputs": [{ "type": "credit-production", "amount": 1 }] },
-      { "outputs": [{ "type": "credit-production", "amount": 2 }] },
-      { "outputs": [{ "type": "credit-production", "amount": 3 }] }
+      { "outputs": [{ "type": "energy-production", "amount": 1 }] },
+      { "outputs": [{ "type": "energy-production", "amount": 1 }] },
+      { "outputs": [{ "type": "plant-production", "amount": 1 }] },
+      { "outputs": [{ "type": "plant-production", "amount": 1 }] },
+      { "outputs": [{ "type": "plant-production", "amount": 1 }] }
     ],
     "colonyBonus": [{ "type": "credit-production", "amount": 1 }],
     "colonies": [
