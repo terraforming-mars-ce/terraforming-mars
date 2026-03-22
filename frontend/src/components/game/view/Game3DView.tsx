@@ -6,6 +6,7 @@ import { FreeCamera, CameraFrustumHelper } from "../controls/FreeCamera.tsx";
 import MarsSphere from "../board/MarsSphere.tsx";
 import VenusSphere from "../board/VenusSphere.tsx";
 import OrbitalStation from "../board/OrbitalStation.tsx";
+import AsteroidImpact from "../board/AsteroidImpact.tsx";
 
 import SkyboxLoader from "./SkyboxLoader.tsx";
 import GameIcon from "../../ui/display/GameIcon.tsx";
@@ -342,6 +343,8 @@ export default function Game3DView({
                   name={orbitalProject.name}
                 />
               )}
+
+              <AsteroidImpact />
 
               <GpuWarmup onReady={onGpuReady} />
               <PerformanceProbe />
