@@ -19,7 +19,6 @@ type PendingResource struct {
 }
 
 // ApplyTradeOutput applies a colony output to a player's resources or production.
-// Exported for use by free trade confirmation.
 func ApplyTradeOutput(ctx context.Context, g *game.Game, p *player.Player, outputType string, amount int, cardRegistry cards.CardRegistry, log *zap.Logger) *PendingResource {
 	return applyOutput(ctx, g, p, outputType, amount, cardRegistry, log)
 }

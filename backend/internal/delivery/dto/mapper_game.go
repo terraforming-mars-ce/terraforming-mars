@@ -707,6 +707,12 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 		return nil
 	}
 
+	playerObj, _ := g.GetPlayer(playerID)
+	tradeStepBonus := 0
+	if playerObj != nil && cardRegistry != nil {
+		tradeStepBonus = colonyAction.CountTradeStepBonus(playerObj, cardRegistry)
+	}
+
 	dtos := make([]ColonyTileDto, 0, len(tileStates))
 	for _, state := range tileStates {
 		def, err := colonyRegistry.GetByID(state.DefinitionID)
@@ -759,7 +765,6 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 				Message: "Your trade fleet is not available",
 			})
 		}
-		playerObj, _ := g.GetPlayer(playerID)
 		if playerObj != nil {
 			resources := playerObj.Resources().Get()
 			canAffordAny := resources.Credits >= 9 || resources.Energy >= 3 || resources.Titanium >= 3
@@ -770,12 +775,6 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 					Message: "Cannot afford trade: need 9 MC, 3 energy, or 3 titanium",
 				})
 			}
-		}
-
-		// Calculate trade step bonus from cards like Trade Envoys
-		tradeStepBonus := 0
-		if playerObj != nil && cardRegistry != nil {
-			tradeStepBonus = colonyAction.CountTradeStepBonus(playerObj, cardRegistry)
 		}
 
 		// Calculate build availability

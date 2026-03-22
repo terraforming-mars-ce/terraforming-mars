@@ -1,22 +1,15 @@
 import React, { useState, useMemo } from "react";
-import { createPortal } from "react-dom";
 import {
   PendingFreeTradeSelectionDto,
   ColonyTileDto,
   ColonyOutputDto,
   CardDto,
 } from "@/types/generated/api-types.ts";
-import GameIcon from "../display/GameIcon.tsx";
-import ColonySteps, { mapOutputTypeToIcon } from "../popover/ColonySteps.tsx";
+import ColonySteps from "../popover/ColonySteps.tsx";
 import GameButton from "../buttons/GameButton.tsx";
-
-const STORAGE_RESOURCE_TYPES = ["floater", "microbe", "animal"];
-
-interface PlayerInfo {
-  id: string;
-  name: string;
-  color: string;
-}
+import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
+import StorageWarningDialog from "../display/StorageWarningDialog.tsx";
+import { PlayerInfo, getStorageWarning } from "@/utils/colonyUtils.ts";
 
 interface FreeTradeSelectionOverlayProps {
   isOpen: boolean;
@@ -80,14 +73,12 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
           <span className="text-xs text-white/40">{pendingSelection.source}</span>
         </div>
 
-        {/* Trade fleet status */}
         {!tradeFleetAvailable && (
           <div className="px-4 py-2 bg-red-900/20 border-b border-red-500/30">
             <span className="text-xs text-red-400 font-orbitron">No trade fleet available</span>
           </div>
         )}
 
-        {/* Ships display */}
         <div className="px-4 py-2 border-b border-white/10 flex flex-wrap items-center gap-2">
           <span className="text-[10px] font-orbitron text-white/50 uppercase tracking-wider">
             Ships:
@@ -159,7 +150,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
                   {tradeable && (
                     <div className="flex items-center gap-1">
                       <span className="text-white/30 text-sm">→</span>
-                      <OutputDisplay outputs={tradeGainOutputs} />
+                      <ColonyOutputDisplay outputs={tradeGainOutputs} />
                     </div>
                   )}
                 </div>
@@ -176,7 +167,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
 
                 <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40">
                   <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
-                  <OutputDisplay outputs={colony.colonyBonus} />
+                  <ColonyOutputDisplay outputs={colony.colonyBonus} />
                 </div>
               </button>
             );
@@ -193,19 +184,9 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
               const colony = colonyTiles.find((c) => c.id === selectedColonyId);
               if (colony) {
                 const tradeOutputs = colony.steps[colony.markerPosition]?.outputs ?? [];
-                const storageIssue = tradeOutputs.find(
-                  (o) =>
-                    STORAGE_RESOURCE_TYPES.includes(o.type) &&
-                    o.amount > 0 &&
-                    ![...playedCards, ...(corporation ? [corporation] : [])].some(
-                      (c) => c.resourceStorage && c.resourceStorage.type === o.type,
-                    ),
-                );
-                if (storageIssue) {
-                  setStorageWarning({
-                    message: `You have no cards that can store ${storageIssue.type}. Resources will be lost.`,
-                    colonyId: selectedColonyId,
-                  });
+                const warning = getStorageWarning(tradeOutputs, playedCards, corporation);
+                if (warning) {
+                  setStorageWarning({ message: warning, colonyId: selectedColonyId });
                   return;
                 }
               }
@@ -218,65 +199,17 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
         </div>
       </div>
 
-      {storageWarning &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[10010] flex items-center justify-center animate-[fadeIn_0.2s_ease]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="absolute inset-0 bg-black/50" onClick={() => setStorageWarning(null)} />
-            <div className="relative z-[1] bg-space-black-darker/95 border border-amber-500/50 rounded-lg p-5 max-w-[340px] shadow-glow-lg">
-              <h3 className="font-orbitron text-sm font-bold text-amber-400 m-0 mb-2">
-                No Storage Available
-              </h3>
-              <p className="text-white/70 text-xs mb-4 leading-relaxed">
-                {storageWarning.message}
-              </p>
-              <div className="flex gap-2 justify-end">
-                <button
-                  className="px-3 py-1.5 rounded text-xs font-orbitron text-white/50 hover:text-white/80 transition-colors cursor-pointer"
-                  onClick={() => setStorageWarning(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="px-3 py-1.5 rounded text-xs font-orbitron font-bold bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer"
-                  onClick={() => {
-                    onConfirm(storageWarning.colonyId);
-                    setStorageWarning(null);
-                  }}
-                >
-                  Continue Anyway
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {storageWarning && (
+        <StorageWarningDialog
+          message={storageWarning.message}
+          onCancel={() => setStorageWarning(null)}
+          onContinue={() => {
+            onConfirm(storageWarning.colonyId);
+            setStorageWarning(null);
+          }}
+        />
+      )}
     </div>
-  );
-};
-
-const OutputDisplay: React.FC<{ outputs: ColonyOutputDto[] }> = ({ outputs }) => {
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {outputs.map((output, i) => {
-        const icon = mapOutputTypeToIcon(output.type);
-        const useAmountProp = output.type === "credit" || output.type === "credit-production";
-        return (
-          <span key={i} className="inline-flex items-center gap-0.5">
-            {!useAmountProp && output.amount > 1 && (
-              <span className="text-xs text-white/70 font-orbitron font-bold">{output.amount}</span>
-            )}
-            <GameIcon
-              iconType={icon}
-              amount={useAmountProp ? output.amount : undefined}
-              size="small"
-            />
-          </span>
-        );
-      })}
-    </span>
   );
 };
 

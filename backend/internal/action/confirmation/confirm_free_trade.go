@@ -29,7 +29,6 @@ func NewConfirmFreeTradeAction(
 	cardRegistry cards.CardRegistry,
 	colonyRegistry colonies.ColonyRegistry,
 	stateRepo game.GameStateRepository,
-	logger *zap.Logger,
 ) *ConfirmFreeTradeAction {
 	return &ConfirmFreeTradeAction{
 		BaseAction:     baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),

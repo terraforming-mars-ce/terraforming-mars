@@ -1,24 +1,14 @@
 import React, { useState, useMemo } from "react";
-import {
-  PendingColonySelectionDto,
-  ColonyTileDto,
-  ColonyOutputDto,
-} from "@/types/generated/api-types.ts";
-import GameIcon from "../display/GameIcon.tsx";
-import ColonySteps, { mapOutputTypeToIcon } from "../popover/ColonySteps.tsx";
+import { PendingColonySelectionDto, ColonyTileDto } from "@/types/generated/api-types.ts";
+import ColonySteps from "../popover/ColonySteps.tsx";
 import GameButton from "../buttons/GameButton.tsx";
-
-interface PlayerInfo {
-  id: string;
-  name: string;
-  color: string;
-}
+import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
+import { PlayerInfo } from "@/utils/colonyUtils.ts";
 
 interface ColonySelectionOverlayProps {
   isOpen: boolean;
   pendingSelection: PendingColonySelectionDto;
   colonyTiles: ColonyTileDto[];
-  viewingPlayerId: string;
   allPlayers: PlayerInfo[];
   onConfirm: (colonyId: string) => void;
 }
@@ -95,7 +85,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
                       <span className="text-[9px] font-orbitron text-white/40 uppercase">
                         Reward
                       </span>
-                      <OutputDisplay outputs={reward} />
+                      <ColonyOutputDisplay outputs={reward} />
                     </div>
                   )}
                 </div>
@@ -111,7 +101,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
 
                 <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40">
                   <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
-                  <OutputDisplay outputs={colony.colonyBonus} />
+                  <ColonyOutputDisplay outputs={colony.colonyBonus} />
                 </div>
               </button>
             );
@@ -133,29 +123,6 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
         </div>
       </div>
     </div>
-  );
-};
-
-const OutputDisplay: React.FC<{ outputs: ColonyOutputDto[] }> = ({ outputs }) => {
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {outputs.map((output, i) => {
-        const icon = mapOutputTypeToIcon(output.type);
-        const useAmountProp = output.type === "credit" || output.type === "credit-production";
-        return (
-          <span key={i} className="inline-flex items-center gap-0.5">
-            {!useAmountProp && output.amount > 1 && (
-              <span className="text-xs text-white/70 font-orbitron font-bold">{output.amount}</span>
-            )}
-            <GameIcon
-              iconType={icon}
-              amount={useAmountProp ? output.amount : undefined}
-              size="small"
-            />
-          </span>
-        );
-      })}
-    </span>
   );
 };
 

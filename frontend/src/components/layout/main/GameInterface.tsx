@@ -74,7 +74,7 @@ import {
   GameStatusLobby,
   ResourceType,
 } from "@/types/generated/api-types.ts";
-import type { PlayerDto, OtherPlayerDto } from "@/types/generated/api-types.ts";
+import type { PlayerDto, OtherPlayerDto, CardDto } from "@/types/generated/api-types.ts";
 import { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
 
 import { useGameStore } from "@/stores/gameStore.ts";
@@ -499,6 +499,29 @@ export default function GameInterface() {
     showWaitingForPlayers;
 
   // --- Card fan visibility ---
+  const colonyAllPlayers = useMemo(() => {
+    if (!game) {
+      return [];
+    }
+    return [
+      ...(game.currentPlayer
+        ? [
+            {
+              id: game.currentPlayer.id,
+              name: game.currentPlayer.name,
+              color: game.currentPlayer.color,
+            },
+          ]
+        : []),
+      ...(game.otherPlayers?.map((p) => ({ id: p.id, name: p.name, color: p.color })) ?? []),
+    ];
+  }, [
+    game?.currentPlayer?.id,
+    game?.currentPlayer?.name,
+    game?.currentPlayer?.color,
+    game?.otherPlayers,
+  ]);
+
   const hideCardFanForModals =
     showStartingSelection ||
     showPendingCardSelection ||
@@ -1112,7 +1135,7 @@ export default function GameInterface() {
               (c) => c.id === pendingCardStorage.cardId,
             );
             if (cardBeingPlayed && !played.some((p) => p.id === cardBeingPlayed.id)) {
-              return [...played, cardBeingPlayed as any];
+              return [...played, cardBeingPlayed as unknown as CardDto];
             }
             return played;
           })()}
@@ -1255,23 +1278,7 @@ export default function GameInterface() {
           isOpen={showColonyPlacementSelection}
           pendingSelection={game.currentPlayer.pendingColonySelection}
           colonyTiles={game.colonyTiles ?? []}
-          viewingPlayerId={game.viewingPlayerId ?? ""}
-          allPlayers={[
-            ...(game.currentPlayer
-              ? [
-                  {
-                    id: game.currentPlayer.id,
-                    name: game.currentPlayer.name,
-                    color: game.currentPlayer.color,
-                  },
-                ]
-              : []),
-            ...(game.otherPlayers?.map((p) => ({
-              id: p.id,
-              name: p.name,
-              color: p.color,
-            })) ?? []),
-          ]}
+          allPlayers={colonyAllPlayers}
           onConfirm={(colonyId) => void globalWebSocketManager.confirmColonyPlacement(colonyId)}
         />
       )}
@@ -1283,22 +1290,7 @@ export default function GameInterface() {
           colonyTiles={game.colonyTiles ?? []}
           viewingPlayerId={game.viewingPlayerId ?? ""}
           tradeFleetAvailable={game.tradeFleetAvailable}
-          allPlayers={[
-            ...(game.currentPlayer
-              ? [
-                  {
-                    id: game.currentPlayer.id,
-                    name: game.currentPlayer.name,
-                    color: game.currentPlayer.color,
-                  },
-                ]
-              : []),
-            ...(game.otherPlayers?.map((p) => ({
-              id: p.id,
-              name: p.name,
-              color: p.color,
-            })) ?? []),
-          ]}
+          allPlayers={colonyAllPlayers}
           playedCards={currentPlayer?.playedCards ?? []}
           corporation={currentPlayer?.corporation}
           onConfirm={(colonyId) => void globalWebSocketManager.confirmFreeTrade(colonyId)}

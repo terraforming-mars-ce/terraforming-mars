@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   GameDto,
   GameStatusActive,
@@ -13,6 +12,9 @@ import {
 import GameIcon from "../display/GameIcon.tsx";
 import { webSocketService } from "@/services/webSocketService.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
+import { PlayerInfo, getStorageWarning } from "@/utils/colonyUtils.ts";
+import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
+import StorageWarningDialog from "../display/StorageWarningDialog.tsx";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import ColonySteps, { getTradeExpression, mapOutputTypeToIcon } from "./ColonySteps.tsx";
 
@@ -24,43 +26,6 @@ interface ColonyPopoverProps {
   onClose: () => void;
   gameState?: GameDto;
   anchorRef: React.RefObject<HTMLButtonElement | null>;
-}
-
-interface PlayerInfo {
-  id: string;
-  name: string;
-  color: string;
-}
-
-const STORAGE_RESOURCE_TYPES = ["floater", "microbe", "animal"];
-
-function hasStorageCardForType(
-  resourceType: string,
-  playedCards: { resourceStorage?: { type: string }; tags?: string[] }[],
-  corporation?: { resourceStorage?: { type: string } } | null,
-): boolean {
-  const cards = [...playedCards];
-  if (corporation?.resourceStorage) {
-    cards.push(corporation as any);
-  }
-  return cards.some((c) => c.resourceStorage && c.resourceStorage.type === resourceType);
-}
-
-function getStorageWarning(
-  outputs: ColonyOutputDto[],
-  playedCards: { resourceStorage?: { type: string } }[],
-  corporation?: { resourceStorage?: { type: string } } | null,
-): string | null {
-  for (const output of outputs) {
-    if (
-      STORAGE_RESOURCE_TYPES.includes(output.type) &&
-      output.amount > 0 &&
-      !hasStorageCardForType(output.type, playedCards, corporation)
-    ) {
-      return `You have no cards that can store ${output.type}. Resources will be lost.`;
-    }
-  }
-  return null;
 }
 
 const ColonyPopover: React.FC<ColonyPopoverProps> = ({
@@ -272,36 +237,13 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
         </div>
       </GamePopover>
 
-      {storageWarning &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[10010] flex items-center justify-center animate-[fadeIn_0.2s_ease]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="absolute inset-0 bg-black/50" onClick={() => setStorageWarning(null)} />
-            <div className="relative z-[1] bg-space-black-darker/95 border border-amber-500/50 rounded-lg p-5 max-w-[340px] shadow-glow-lg">
-              <h3 className="font-orbitron text-sm font-bold text-amber-400 m-0 mb-2">
-                No Storage Available
-              </h3>
-              <p className="text-white/70 text-xs mb-4 leading-relaxed">{storageWarning.message}</p>
-              <div className="flex gap-2 justify-end">
-                <button
-                  className="px-3 py-1.5 rounded text-xs font-orbitron text-white/50 hover:text-white/80 transition-colors cursor-pointer"
-                  onClick={() => setStorageWarning(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="px-3 py-1.5 rounded text-xs font-orbitron font-bold bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer"
-                  onClick={storageWarning.action}
-                >
-                  Continue Anyway
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {storageWarning && (
+        <StorageWarningDialog
+          message={storageWarning.message}
+          onCancel={() => setStorageWarning(null)}
+          onContinue={storageWarning.action}
+        />
+      )}
     </>
   );
 };
@@ -494,7 +436,7 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
       <div className="flex items-center justify-between text-[10px] text-white/40">
         <div className="flex items-center gap-2">
           <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
-          <OutputDisplay outputs={colony.colonyBonus} />
+          <ColonyOutputDisplay outputs={colony.colonyBonus} />
         </div>
         {tradeExpression && (
           <div className="flex items-center gap-2">
@@ -569,34 +511,7 @@ const TradePaymentSelector: React.FC<TradePaymentSelectorProps> = ({
   );
 };
 
-interface OutputDisplayProps {
-  outputs: ColonyOutputDto[];
-}
-
-const OutputDisplay: React.FC<OutputDisplayProps> = ({ outputs }) => {
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {outputs.map((output, i) => {
-        const icon = mapOutputTypeToIcon(output.type);
-        const useAmountProp = output.type === "credit" || output.type === "credit-production";
-        return (
-          <span key={i} className="inline-flex items-center gap-0.5">
-            {!useAmountProp && (
-              <span className="text-xs text-white/70 font-orbitron font-bold">{output.amount}</span>
-            )}
-            <GameIcon
-              iconType={icon}
-              amount={useAmountProp ? output.amount : undefined}
-              size="small"
-            />
-          </span>
-        );
-      })}
-    </span>
-  );
-};
-
-const CostDisplay: React.FC<OutputDisplayProps> = ({ outputs }) => {
+const CostDisplay: React.FC<{ outputs: ColonyOutputDto[] }> = ({ outputs }) => {
   return (
     <span className="inline-flex items-center gap-0.5">
       {outputs.map((output, i) => {
