@@ -27,29 +27,15 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
   isOpen,
   pendingSelection,
   colonyTiles,
-  viewingPlayerId,
   allPlayers,
   onConfirm,
 }) => {
   const [selectedColonyId, setSelectedColonyId] = useState<string | null>(null);
 
-  const availableColonies = useMemo(() => {
-    const availableIds = new Set(pendingSelection.availableColonyIds);
-    return colonyTiles.filter((colony) => availableIds.has(colony.id));
-  }, [colonyTiles, pendingSelection]);
-
-  const isColonySelectable = (colony: ColonyTileDto): boolean => {
-    if (colony.playerColonies.length >= colony.colonies.length) {
-      return false;
-    }
-    if (
-      !pendingSelection.allowDuplicatePlayerColony &&
-      colony.playerColonies.includes(viewingPlayerId)
-    ) {
-      return false;
-    }
-    return true;
-  };
+  const selectableIds = useMemo(
+    () => new Set(pendingSelection.availableColonyIds),
+    [pendingSelection],
+  );
 
   const getPlayerColor = (playerId: string): string => {
     return allPlayers.find((p) => p.id === playerId)?.color ?? "#666";
@@ -76,8 +62,8 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {availableColonies.map((colony) => {
-            const selectable = isColonySelectable(colony);
+          {colonyTiles.map((colony) => {
+            const selectable = selectableIds.has(colony.id);
             const isSelected = selectedColonyId === colony.id;
             const nextSlotIndex = colony.playerColonies.length;
             const reward = colony.colonies[nextSlotIndex]?.reward ?? [];
