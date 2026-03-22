@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"terraforming-mars-backend/internal/action"
+	cardAction "terraforming-mars-backend/internal/action/card"
 	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
@@ -1115,4 +1116,364 @@ func TestPets_DoesNotTriggerOnGreeneryPlacement(t *testing.T) {
 	animalsAfter := owner.Resources().GetCardStorage("card-pets")
 	testutil.AssertEqual(t, animalsBefore, animalsAfter,
 		"Pets should NOT gain animals on greenery placement")
+}
+
+func TestPets_DoesNotTriggerOnOceanPlacement(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	anyPlayerTarget := "any-player"
+	petsCard := gamecards.Card{
+		ID:              "card-pets",
+		Name:            "Pets",
+		Type:            gamecards.CardTypeActive,
+		Cost:            10,
+		Tags:            []shared.CardTag{shared.TagAnimal, shared.TagEarth},
+		ResourceStorage: &gamecards.ResourceStorage{Type: shared.ResourceAnimal, Starting: 0},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{petsCard})
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	owner.PlayedCards().AddCard("card-pets", "Pets", "active", []string{"animal", "earth"})
+
+	effect := shared.CardEffect{
+		CardID:        "card-pets",
+		CardName:      "Pets",
+		BehaviorIndex: 1,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:     "city-placed",
+						Location: testutil.StrPtr("anywhere"),
+						Target:   &anyPlayerTarget,
+					},
+				},
+			},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			},
+		},
+	}
+	owner.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
+
+	animalsBefore := owner.Resources().GetCardStorage("card-pets")
+
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: owner.ID(),
+		TileType: string(shared.ResourceOceanTile),
+	})
+
+	animalsAfter := owner.Resources().GetCardStorage("card-pets")
+	testutil.AssertEqual(t, animalsBefore, animalsAfter,
+		"Pets should NOT gain animals on ocean placement")
+}
+
+func TestPets_AccumulatesAnimalsFromMultipleCities(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	anyPlayerTarget := "any-player"
+	petsCard := gamecards.Card{
+		ID:              "card-pets",
+		Name:            "Pets",
+		Type:            gamecards.CardTypeActive,
+		Cost:            10,
+		Tags:            []shared.CardTag{shared.TagAnimal, shared.TagEarth},
+		ResourceStorage: &gamecards.ResourceStorage{Type: shared.ResourceAnimal, Starting: 0},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{petsCard})
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	other := players[1]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	other.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	owner.PlayedCards().AddCard("card-pets", "Pets", "active", []string{"animal", "earth"})
+
+	effect := shared.CardEffect{
+		CardID:        "card-pets",
+		CardName:      "Pets",
+		BehaviorIndex: 1,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:     "city-placed",
+						Location: testutil.StrPtr("anywhere"),
+						Target:   &anyPlayerTarget,
+					},
+				},
+			},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			},
+		},
+	}
+	owner.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
+
+	animalsBefore := owner.Resources().GetCardStorage("card-pets")
+
+	for i := 0; i < 5; i++ {
+		playerID := owner.ID()
+		if i%2 == 1 {
+			playerID = other.ID()
+		}
+		events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+			GameID:   testGame.ID(),
+			PlayerID: playerID,
+			TileType: string(shared.ResourceCityTile),
+		})
+	}
+
+	animalsAfter := owner.Resources().GetCardStorage("card-pets")
+	testutil.AssertEqual(t, animalsBefore+5, animalsAfter,
+		"Pets should accumulate 5 animals from 5 city placements")
+}
+
+func TestPets_DoesNotTriggerForWrongGameID(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	anyPlayerTarget := "any-player"
+	petsCard := gamecards.Card{
+		ID:              "card-pets",
+		Name:            "Pets",
+		Type:            gamecards.CardTypeActive,
+		Cost:            10,
+		Tags:            []shared.CardTag{shared.TagAnimal, shared.TagEarth},
+		ResourceStorage: &gamecards.ResourceStorage{Type: shared.ResourceAnimal, Starting: 0},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{petsCard})
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	owner.PlayedCards().AddCard("card-pets", "Pets", "active", []string{"animal", "earth"})
+
+	effect := shared.CardEffect{
+		CardID:        "card-pets",
+		CardName:      "Pets",
+		BehaviorIndex: 1,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:     "city-placed",
+						Location: testutil.StrPtr("anywhere"),
+						Target:   &anyPlayerTarget,
+					},
+				},
+			},
+			Outputs: []shared.ResourceCondition{
+				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			},
+		},
+	}
+	owner.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
+
+	animalsBefore := owner.Resources().GetCardStorage("card-pets")
+
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   "wrong-game-id",
+		PlayerID: owner.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+
+	animalsAfter := owner.Resources().GetCardStorage("card-pets")
+	testutil.AssertEqual(t, animalsBefore, animalsAfter,
+		"Pets should NOT trigger for events from a different game")
+}
+
+// --- Pets End-to-End Integration Tests ---
+// These test the full flow: PlayCardAction → passive effect registration → event trigger
+
+func TestPets_EndToEnd_PassiveEffectRegisteredOnPlay(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	card := testutil.GetCardByName("Pets")
+	cardRegistry := testutil.CreateTestCardRegistry()
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	other := players[1]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	other.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	owner.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	owner.Hand().AddCard(card.ID)
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 10}
+	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Pets should play successfully")
+
+	// Verify 1 initial animal from auto trigger
+	storage := owner.Resources().GetCardStorage(card.ID)
+	testutil.AssertEqual(t, 1, storage, "Pets should have 1 initial animal after play")
+
+	// Now another player places a city — passive effect should trigger
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: other.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+
+	storageAfter := owner.Resources().GetCardStorage(card.ID)
+	testutil.AssertEqual(t, 2, storageAfter,
+		"Pets should gain 1 animal when another player places a city (end-to-end)")
+}
+
+func TestPets_EndToEnd_MultipleCityPlacements(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	card := testutil.GetCardByName("Pets")
+	cardRegistry := testutil.CreateTestCardRegistry()
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	other := players[1]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	other.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	owner.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	owner.Hand().AddCard(card.ID)
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 10}
+	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Pets should play successfully")
+
+	// Place 3 cities: 1 by owner, 2 by other player
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: owner.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: other.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: other.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+
+	// 1 initial + 3 from cities = 4
+	storage := owner.Resources().GetCardStorage(card.ID)
+	testutil.AssertEqual(t, 4, storage,
+		"Pets should have 4 animals (1 initial + 3 from city placements)")
+}
+
+func TestPets_EndToEnd_DoesNotTriggerOnOcean(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	card := testutil.GetCardByName("Pets")
+	cardRegistry := testutil.CreateTestCardRegistry()
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	owner.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	owner.Hand().AddCard(card.ID)
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 10}
+	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Pets should play successfully")
+
+	storageBefore := owner.Resources().GetCardStorage(card.ID)
+
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: owner.ID(),
+		TileType: string(shared.ResourceOceanTile),
+	})
+
+	storageAfter := owner.Resources().GetCardStorage(card.ID)
+	testutil.AssertEqual(t, storageBefore, storageAfter,
+		"Pets should NOT gain animals on ocean placement (end-to-end)")
+}
+
+func TestPets_DoesNotGainAnimalsForPreexistingCities(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	card := testutil.GetCardByName("Pets")
+	cardRegistry := testutil.CreateTestCardRegistry()
+
+	players := testGame.GetAllPlayers()
+	owner := players[0]
+	other := players[1]
+	owner.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	other.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.StartTestGame(t, testGame)
+
+	// Place cities BEFORE Pets is played
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: other.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+	events.Publish(testGame.EventBus(), events.TilePlacedEvent{
+		GameID:   testGame.ID(),
+		PlayerID: owner.ID(),
+		TileType: string(shared.ResourceCityTile),
+	})
+
+	// Now play Pets
+	owner.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	owner.Hand().AddCard(card.ID)
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 10}
+	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Pets should play successfully")
+
+	// Only 1 initial animal — no retroactive animals from preexisting cities
+	storage := owner.Resources().GetCardStorage(card.ID)
+	testutil.AssertEqual(t, 1, storage,
+		"Pets should only have 1 initial animal, no retroactive animals for preexisting cities")
 }
