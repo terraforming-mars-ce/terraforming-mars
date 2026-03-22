@@ -31,6 +31,37 @@ interface PlayerInfo {
   color: string;
 }
 
+const STORAGE_RESOURCE_TYPES = ["floater", "microbe", "animal"];
+
+function hasStorageCardForType(
+  resourceType: string,
+  playedCards: { resourceStorage?: { type: string }; tags?: string[] }[],
+  corporation?: { resourceStorage?: { type: string } } | null,
+): boolean {
+  const cards = [...playedCards];
+  if (corporation?.resourceStorage) {
+    cards.push(corporation as any);
+  }
+  return cards.some((c) => c.resourceStorage && c.resourceStorage.type === resourceType);
+}
+
+function getStorageWarning(
+  outputs: ColonyOutputDto[],
+  playedCards: { resourceStorage?: { type: string } }[],
+  corporation?: { resourceStorage?: { type: string } } | null,
+): string | null {
+  for (const output of outputs) {
+    if (
+      STORAGE_RESOURCE_TYPES.includes(output.type) &&
+      output.amount > 0 &&
+      !hasStorageCardForType(output.type, playedCards, corporation)
+    ) {
+      return `You have no cards that can store ${output.type}. Resources will be lost.`;
+    }
+  }
+  return null;
+}
+
 const ColonyPopover: React.FC<ColonyPopoverProps> = ({
   isVisible,
   onClose,
@@ -38,6 +69,10 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
   anchorRef,
 }) => {
   const [mode, setMode] = useState<ColonyMode>("trade");
+  const [storageWarning, setStorageWarning] = useState<{
+    message: string;
+    action: () => void;
+  } | null>(null);
 
   const resources = gameState?.currentPlayer?.resources;
   const canAffordCredits = (resources?.credits ?? 0) >= 9;
@@ -87,11 +122,50 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
 
   const handleTrade = (colonyId: string) => {
     if (!canAct) return;
+    const colony = colonyTiles.find((c) => c.id === colonyId);
+    if (colony) {
+      const tradeOutputs = colony.steps[colony.markerPosition]?.outputs ?? [];
+      const warning = getStorageWarning(
+        tradeOutputs,
+        gameState?.currentPlayer?.playedCards ?? [],
+        gameState?.currentPlayer?.corporation,
+      );
+      if (warning) {
+        setStorageWarning({
+          message: warning,
+          action: () => {
+            void webSocketService.tradeWithColony(colonyId, tradePayment);
+            setStorageWarning(null);
+          },
+        });
+        return;
+      }
+    }
     void webSocketService.tradeWithColony(colonyId, tradePayment);
   };
 
   const handleBuild = (colonyId: string) => {
     if (!canAct) return;
+    const colony = colonyTiles.find((c) => c.id === colonyId);
+    if (colony) {
+      const slotIndex = colony.playerColonies.length;
+      const reward = colony.colonies[slotIndex]?.reward ?? [];
+      const warning = getStorageWarning(
+        reward,
+        gameState?.currentPlayer?.playedCards ?? [],
+        gameState?.currentPlayer?.corporation,
+      );
+      if (warning) {
+        setStorageWarning({
+          message: warning,
+          action: () => {
+            void webSocketService.buildColony(colonyId);
+            setStorageWarning(null);
+          },
+        });
+        return;
+      }
+    }
     void webSocketService.buildColony(colonyId);
   };
 
@@ -121,80 +195,108 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
   );
 
   return (
-    <GamePopover
-      isVisible={isVisible}
-      onClose={onClose}
-      position={{ type: "anchor", anchorRef, placement: "below" }}
-      theme="colonies"
-      excludeRef={anchorRef}
-      header={
-        mode === "trade"
-          ? {
-              title: "",
-              badge: (
-                <TradePaymentSelector
-                  selected={tradePayment}
-                  onSelect={setTradePayment}
-                  canAffordCredits={canAffordCredits}
-                  canAffordEnergy={canAffordEnergy}
-                  canAffordTitanium={canAffordTitanium}
-                />
-              ),
-              rightContent: toggleButton,
-            }
-          : {
-              title: "",
-              rightContent: toggleButton,
-            }
-      }
-      width={560}
-      maxHeight="80vh"
-      animation="slideDown"
-      className="!bg-space-black-darker"
-    >
-      {/* Player trade fleets */}
-      {gameState?.tradeFleets && (
-        <div className="px-3 py-2 border-b border-white/10 flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-orbitron text-white/50 uppercase tracking-wider">
-            Ships:
-          </span>
-          {allPlayers.map((player) => {
-            const hasFleet = gameState.tradeFleets?.[player.id] ?? false;
-            return (
-              <div key={player.id} className="flex items-center gap-1">
-                <div
-                  className={`w-3 h-3 rounded-sm ${!hasFleet ? "opacity-30" : ""}`}
-                  style={{ backgroundColor: player.color }}
-                />
-                <GameIcon iconType="trade" size="small" />
-                <span
-                  className={`text-[10px] font-orbitron ${hasFleet ? "text-white/60" : "text-white/25"}`}
-                >
-                  {hasFleet ? "1" : "0"}
-                </span>
-              </div>
-            );
-          })}
+    <>
+      <GamePopover
+        isVisible={isVisible}
+        onClose={onClose}
+        position={{ type: "anchor", anchorRef, placement: "below" }}
+        theme="colonies"
+        excludeRef={anchorRef}
+        header={
+          mode === "trade"
+            ? {
+                title: "",
+                badge: (
+                  <TradePaymentSelector
+                    selected={tradePayment}
+                    onSelect={setTradePayment}
+                    canAffordCredits={canAffordCredits}
+                    canAffordEnergy={canAffordEnergy}
+                    canAffordTitanium={canAffordTitanium}
+                  />
+                ),
+                rightContent: toggleButton,
+              }
+            : {
+                title: "",
+                rightContent: toggleButton,
+              }
+        }
+        width={560}
+        maxHeight="80vh"
+        animation="slideDown"
+        className="!bg-space-black-darker"
+      >
+        {/* Player trade fleets */}
+        {gameState?.tradeFleets && (
+          <div className="px-3 py-2 border-b border-white/10 flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-orbitron text-white/50 uppercase tracking-wider">
+              Ships:
+            </span>
+            {allPlayers.map((player) => {
+              const hasFleet = gameState.tradeFleets?.[player.id] ?? false;
+              return (
+                <div key={player.id} className="flex items-center gap-1">
+                  <div
+                    className={`w-3 h-3 rounded-sm ${!hasFleet ? "opacity-30" : ""}`}
+                    style={{ backgroundColor: player.color }}
+                  />
+                  <GameIcon iconType="trade" size="small" />
+                  <span
+                    className={`text-[10px] font-orbitron ${hasFleet ? "text-white/60" : "text-white/25"}`}
+                  >
+                    {hasFleet ? "1" : "0"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="p-2 space-y-2">
+          {colonyTiles.map((colony) => (
+            <ColonyTileCard
+              key={colony.id}
+              colony={colony}
+              mode={mode}
+              canAct={canAct}
+              viewingPlayerId={gameState?.viewingPlayerId ?? ""}
+              tradePayment={tradePayment}
+              getPlayerColor={getPlayerColor}
+              getPlayerName={getPlayerName}
+              onTrade={handleTrade}
+              onBuild={handleBuild}
+            />
+          ))}
+        </div>
+      </GamePopover>
+
+      {storageWarning && (
+        <div className="fixed inset-0 z-[10010] flex items-center justify-center animate-[fadeIn_0.2s_ease]">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setStorageWarning(null)} />
+          <div className="relative z-[1] bg-space-black-darker/95 border border-amber-500/50 rounded-lg p-5 max-w-[340px] shadow-glow-lg">
+            <h3 className="font-orbitron text-sm font-bold text-amber-400 m-0 mb-2">
+              No Storage Available
+            </h3>
+            <p className="text-white/70 text-xs mb-4 leading-relaxed">{storageWarning.message}</p>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="px-3 py-1.5 rounded text-xs font-orbitron text-white/50 hover:text-white/80 transition-colors cursor-pointer"
+                onClick={() => setStorageWarning(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-3 py-1.5 rounded text-xs font-orbitron font-bold bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer"
+                onClick={storageWarning.action}
+              >
+                Continue Anyway
+              </button>
+            </div>
+          </div>
         </div>
       )}
-
-      <div className="p-2 space-y-2">
-        {colonyTiles.map((colony) => (
-          <ColonyTileCard
-            key={colony.id}
-            colony={colony}
-            mode={mode}
-            canAct={canAct}
-            viewingPlayerId={gameState?.viewingPlayerId ?? ""}
-            tradePayment={tradePayment}
-            getPlayerColor={getPlayerColor}
-            getPlayerName={getPlayerName}
-            onTrade={handleTrade}
-            onBuild={handleBuild}
-          />
-        ))}
-      </div>
-    </GamePopover>
+    </>
   );
 };
 
