@@ -531,7 +531,11 @@ export default function TileGrid({
       <PrimitiveRenderer />
       <BirdRenderer livingGreeneryTiles={livingGreeneryTiles} />
       {gameState?.settings?.cardPacks?.includes("colonies") && (
-        <SpaceshipRenderer gameState={gameState} />
+        <SpaceshipRenderer
+          gameState={gameState}
+          animateEntrance={animateHexEntrance}
+          startHidden={startHidden}
+        />
       )}
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);

@@ -5,7 +5,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { useModels } from "../../../hooks/useModels";
 import { useTextures } from "../../../hooks/useTextures";
 import { usePrimitiveInstances } from "./PrimitiveManager";
-import { SPHERE_RADIUS, VENUS_POSITION, VENUS_RADIUS } from "./boardConstants";
+import { SPHERE_RADIUS, VENUS_POSITION, VENUS_RADIUS, easeOutCubic } from "./boardConstants";
 import { GameDto, ColonyTileDto } from "../../../types/generated/api-types";
 import { addSphereProjectionWithSoftEdges } from "./GreeneryRenderer";
 import ExhaustEffect from "./effects/ExhaustEffect";
@@ -259,11 +259,20 @@ interface ExhaustConfig {
 
 let nextExhaustId = 0;
 
+const ENTRANCE_DELAY_MS = 1200;
+const ENTRANCE_DURATION_MS = 400;
+
 interface SpaceshipRendererProps {
   gameState?: GameDto;
+  animateEntrance?: boolean;
+  startHidden?: boolean;
 }
 
-export default function SpaceshipRenderer({ gameState }: SpaceshipRendererProps) {
+export default function SpaceshipRenderer({
+  gameState,
+  animateEntrance = false,
+  startHidden = false,
+}: SpaceshipRendererProps) {
   const { spaceshipScene } = useModels();
   const {
     concrete: concreteTexture,
@@ -271,6 +280,17 @@ export default function SpaceshipRenderer({ gameState }: SpaceshipRendererProps)
     noiseHigh: noiseHighTexture,
   } = useTextures();
   const [exhaustEffects, setExhaustEffects] = useState<ExhaustConfig[]>([]);
+  const [entranceScale, setEntranceScale] = useState(animateEntrance || startHidden ? 0 : 1);
+  const entranceStartRef = useRef<number | null>(null);
+  const entranceDoneRef = useRef(!animateEntrance && !startHidden);
+
+  useEffect(() => {
+    if (animateEntrance && entranceDoneRef.current) {
+      setEntranceScale(0);
+      entranceStartRef.current = null;
+      entranceDoneRef.current = false;
+    }
+  }, [animateEntrance]);
 
   const primitive = useMemo(() => {
     return extractSpaceshipPrimitive(spaceshipScene);
@@ -533,6 +553,20 @@ export default function SpaceshipRenderer({ gameState }: SpaceshipRendererProps)
   }, [gameState?.colonyTiles, parkedMatrices, setTransforms]);
 
   useFrame((state) => {
+    if (animateEntrance && !entranceDoneRef.current) {
+      if (entranceStartRef.current === null) {
+        entranceStartRef.current = state.clock.elapsedTime;
+      }
+      const elapsed = (state.clock.elapsedTime - entranceStartRef.current) * 1000;
+      if (elapsed >= ENTRANCE_DELAY_MS) {
+        const t = Math.min((elapsed - ENTRANCE_DELAY_MS) / ENTRANCE_DURATION_MS, 1);
+        setEntranceScale(easeOutCubic(t));
+        if (t >= 1) {
+          entranceDoneRef.current = true;
+        }
+      }
+    }
+
     const ships = shipsRef.current;
     if (ships.length === 0) {
       return;
@@ -625,7 +659,16 @@ export default function SpaceshipRenderer({ gameState }: SpaceshipRendererProps)
       matrices.push(new THREE.Matrix4().compose(position, quat, new THREE.Vector3(1, 1, 1)));
     }
 
-    if (needsUpdate) {
+    if (needsUpdate || entranceScale < 1) {
+      if (entranceScale < 1) {
+        const s = entranceScale;
+        const scaleVec = new THREE.Vector3(s, s, s);
+        for (let j = 0; j < matrices.length; j++) {
+          const pos = new THREE.Vector3().setFromMatrixPosition(matrices[j]);
+          const rot = new THREE.Quaternion().setFromRotationMatrix(matrices[j]);
+          matrices[j] = new THREE.Matrix4().compose(pos, rot, scaleVec);
+        }
+      }
       setTransforms(matrices);
     }
   });
@@ -637,7 +680,7 @@ export default function SpaceshipRenderer({ gameState }: SpaceshipRendererProps)
   return (
     <>
       {padPositions.map((pad, i) => (
-        <group key={`pad-${i}`}>
+        <group key={`pad-${i}`} scale={entranceScale}>
           <mesh
             geometry={padGeometry}
             material={padMaterial}
