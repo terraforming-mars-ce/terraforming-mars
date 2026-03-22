@@ -11,6 +11,7 @@ interface Batch {
   geometry: THREE.BufferGeometry;
   material: THREE.Material;
   renderOrder: number;
+  castShadow: boolean;
   registrations: Map<string, Registration>;
   mesh: THREE.InstancedMesh | null;
   needsRebuild: boolean;
@@ -30,6 +31,7 @@ export function usePrimitiveInstances(
   geometry: THREE.BufferGeometry | null,
   material: THREE.Material | null,
   renderOrder: number = 10,
+  castShadow: boolean = false,
 ): PrimitiveHandle {
   const regIdRef = useRef(`pm-${nextId++}`);
   const batchKeyRef = useRef(batchKey);
@@ -45,6 +47,7 @@ export function usePrimitiveInstances(
         geometry,
         material,
         renderOrder,
+        castShadow,
         registrations: new Map(),
         mesh: null,
         needsRebuild: true,
@@ -168,6 +171,7 @@ export default function PrimitiveRenderer() {
         const mesh = new THREE.InstancedMesh(batch.geometry, batch.material, total);
         mesh.renderOrder = batch.renderOrder;
         mesh.frustumCulled = false;
+        mesh.castShadow = batch.castShadow;
 
         let idx = 0;
         for (const [, reg] of batch.registrations) {

@@ -6,6 +6,7 @@ import "terraforming-mars-backend/internal/game/shared"
 type ColonyTileDefinition struct {
 	ID          string       `json:"id"`
 	Name        string       `json:"name"`
+	Location    string       `json:"location"`
 	Steps       []ColonyStep `json:"steps"`
 	ColonyBonus []Output     `json:"colonyBonus"`
 	Colonies    []ColonySlot `json:"colonies"`

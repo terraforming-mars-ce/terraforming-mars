@@ -94,10 +94,11 @@ function DynamicSunLight({ startDark = false }: { startDark?: boolean }) {
       shadow-mapSize-width={2048}
       shadow-mapSize-height={2048}
       shadow-camera-far={50}
-      shadow-camera-left={-20}
-      shadow-camera-right={-20}
-      shadow-camera-top={20}
-      shadow-camera-bottom={-20}
+      shadow-camera-left={-5}
+      shadow-camera-right={5}
+      shadow-camera-top={5}
+      shadow-camera-bottom={-5}
+      shadow-bias={-0.0005}
     />
   );
 }
@@ -311,7 +312,7 @@ export default function Game3DView({
           resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
           gl={{ stencil: true }}
           dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
-          shadows
+          shadows={{ type: THREE.PCFSoftShadowMap }}
         >
           <MarsRotationProvider>
             <Suspense fallback={null}>
@@ -320,7 +321,6 @@ export default function Game3DView({
 
               <ambientLight intensity={0.4} color="#2a2a3e" />
               <DynamicSunLight startDark={startDark} />
-              <directionalLight position={[-8, -3, -10]} intensity={0.35} color="#4488ff" />
               <fog attach="fog" args={["#0a0a1a", 8, 25]} />
 
               <MarsSphere

@@ -17,6 +17,7 @@
       { "reward": [{ "type": "credit-production", "amount": 2 }] },
       { "reward": [{ "type": "credit-production", "amount": 2 }] }
     ],
+    "location": "venus",
     "style": { "color": "#C0C0C0", "icon": "luna" }
   },
   {
@@ -37,6 +38,7 @@
       { "reward": [{ "type": "heat-production", "amount": 1 }] },
       { "reward": [{ "type": "heat-production", "amount": 1 }] }
     ],
+    "location": "venus",
     "style": { "color": "#FFD700", "icon": "io" }
   },
   {
@@ -57,6 +59,7 @@
       { "reward": [{ "type": "steel-production", "amount": 1 }] },
       { "reward": [{ "type": "steel-production", "amount": 1 }] }
     ],
+    "location": "venus",
     "style": { "color": "#8B4513", "icon": "ceres" }
   },
   {
@@ -71,12 +74,13 @@
       { "outputs": [{ "type": "plant-production", "amount": 1 }] },
       { "outputs": [{ "type": "plant-production", "amount": 1 }] }
     ],
-    "colonyBonus": [{ "type": "credit-production", "amount": 1 }],
+    "colonyBonus": [{ "type": "credit", "amount": 1 }],
     "colonies": [
       { "reward": [{ "type": "ocean-placement", "amount": 1 }] },
       { "reward": [{ "type": "ocean-placement", "amount": 1 }] },
       { "reward": [{ "type": "ocean-placement", "amount": 1 }] }
     ],
+    "location": "venus",
     "style": { "color": "#4169E1", "icon": "europa" }
   },
   {
@@ -97,6 +101,7 @@
       { "reward": [{ "type": "plant-production", "amount": 1 }] },
       { "reward": [{ "type": "plant-production", "amount": 1 }] }
     ],
+    "location": "venus",
     "style": { "color": "#228B22", "icon": "ganymede" }
   },
   {
@@ -117,6 +122,7 @@
       { "reward": [{ "type": "energy-production", "amount": 1 }] },
       { "reward": [{ "type": "energy-production", "amount": 1 }] }
     ],
+    "location": "venus",
     "style": { "color": "#9370DB", "icon": "callisto" }
   },
   {
@@ -137,6 +143,7 @@
       { "reward": [{ "type": "titanium", "amount": 3 }] },
       { "reward": [{ "type": "titanium", "amount": 3 }] }
     ],
+    "location": "venus",
     "style": { "color": "#1E90FF", "icon": "triton" }
   },
   {
@@ -157,6 +164,7 @@
       { "reward": [{ "type": "microbe", "amount": 3 }] },
       { "reward": [{ "type": "microbe", "amount": 3 }] }
     ],
+    "location": "venus",
     "style": { "color": "#00CED1", "icon": "enceladus" }
   },
   {
@@ -177,6 +185,7 @@
       { "reward": [{ "type": "animal", "amount": 1 }] },
       { "reward": [{ "type": "animal", "amount": 1 }] }
     ],
+    "location": "venus",
     "style": { "color": "#FF69B4", "icon": "miranda" }
   },
   {
@@ -197,6 +206,7 @@
       { "reward": [{ "type": "card-draw", "amount": 2 }] },
       { "reward": [{ "type": "card-draw", "amount": 2 }] }
     ],
+    "location": "venus",
     "style": { "color": "#696969", "icon": "pluto" }
   },
   {
@@ -217,6 +227,7 @@
       { "reward": [{ "type": "floater", "amount": 3 }] },
       { "reward": [{ "type": "floater", "amount": 3 }] }
     ],
+    "location": "venus",
     "style": { "color": "#FF8C00", "icon": "titan" }
   }
 ]

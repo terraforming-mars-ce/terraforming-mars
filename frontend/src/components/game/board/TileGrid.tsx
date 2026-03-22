@@ -9,6 +9,7 @@ import { useHoverSound } from "../../../hooks/useHoverSound";
 import GreeneryRenderer from "./GreeneryRenderer";
 import PrimitiveRenderer from "./PrimitiveManager";
 import BirdRenderer from "./BirdRenderer";
+import SpaceshipRenderer from "./SpaceshipRenderer";
 import { SPHERE_RADIUS } from "./boardConstants";
 import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
 import { Html } from "@react-three/drei";
@@ -529,6 +530,13 @@ export default function TileGrid({
       />
       <PrimitiveRenderer />
       <BirdRenderer livingGreeneryTiles={livingGreeneryTiles} />
+      {gameState?.settings?.cardPacks?.includes("colonies") && (
+        <SpaceshipRenderer
+          gameState={gameState}
+          animateEntrance={animateHexEntrance}
+          startHidden={startHidden}
+        />
+      )}
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
         const tileData = getTileData(tile);

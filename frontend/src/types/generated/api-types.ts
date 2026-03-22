@@ -1210,6 +1210,7 @@ export interface InitPhaseDto {
 export interface ColonyTileDto {
   id: string;
   name: string;
+  location: string;
   steps: ColonyStepDto[];
   colonyBonus: ColonyOutputDto[];
   colonies: ColonySlotDto[];
