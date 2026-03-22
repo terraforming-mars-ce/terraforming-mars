@@ -93,6 +93,11 @@ const ActionsPopover: React.FC<ActionsPopoverProps> = ({
                       greyOutAll={isPlayed}
                     />
                   </div>
+                  {isAvailable && action.warnings && action.warnings.length > 0 && (
+                    <div className="text-[10px] text-amber-400/80 font-orbitron mt-1">
+                      {action.warnings[0].message}
+                    </div>
+                  )}
                 </div>
               </GamePopoverItem>
             );

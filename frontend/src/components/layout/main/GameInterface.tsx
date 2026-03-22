@@ -498,6 +498,7 @@ export default function GameInterface() {
     showCardDiscardSelection ||
     showBehaviorChoiceSelection ||
     showColonyPlacementSelection ||
+    showFreeTradeSelection ||
     isPreGamePhase ||
     !!currentPlayer?.pendingTileSelection;
 

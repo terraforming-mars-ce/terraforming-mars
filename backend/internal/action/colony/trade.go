@@ -302,6 +302,13 @@ func hasEligibleStorageCard(p *player.Player, resourceType string, cardRegistry 
 	return false
 }
 
+// SetPendingColonyResourceFromTrade handles pending card-targeted resources from trade/colony operations.
+func SetPendingColonyResourceFromTrade(p *player.Player, pendings []*PendingResource, colonyName string, colonyID string, reason string, cardRegistry cards.CardRegistry, log *zap.Logger) {
+	for _, combined := range combinePendingResources(pendings) {
+		setPendingColonyResource(p, combined, colonyName, colonyID, reason, cardRegistry, log)
+	}
+}
+
 // CountTradeStepBonus counts how many colony track step bonuses a player has from
 // played cards with "trading" condition triggers (e.g., Trade Envoys, Trading Colony).
 func CountTradeStepBonus(p *player.Player, cardRegistry cards.CardRegistry) int {
