@@ -35,13 +35,13 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
 }) => {
   const [selectedColonyId, setSelectedColonyId] = useState<string | null>(null);
 
-  const availableColonies = useMemo(() => {
-    const availableIds = new Set(pendingSelection.availableColonyIds);
-    return colonyTiles.filter((colony) => availableIds.has(colony.id));
-  }, [colonyTiles, pendingSelection]);
+  const tradeableIds = useMemo(
+    () => new Set(pendingSelection.availableColonyIds),
+    [pendingSelection],
+  );
 
   const isColonyTradeable = (colony: ColonyTileDto): boolean => {
-    return !colony.tradedThisGen && tradeFleetAvailable;
+    return tradeableIds.has(colony.id) && !colony.tradedThisGen && tradeFleetAvailable;
   };
 
   const getPlayerColor = (playerId: string): string => {
@@ -89,7 +89,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {availableColonies.map((colony) => {
+          {colonyTiles.map((colony) => {
             const tradeable = isColonyTradeable(colony);
             const isSelected = selectedColonyId === colony.id;
             const markerOutput = colony.steps[colony.markerPosition]?.outputs ?? [];
