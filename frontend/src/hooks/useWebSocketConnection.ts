@@ -6,6 +6,7 @@ import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import { skyboxCache } from "@/services/SkyboxCache.ts";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
+import { useAsteroidEventStore } from "@/stores/asteroidEventStore.ts";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 import { deepClone, findChangedPaths } from "@/utils/deepCompare.ts";
 import { clearGameSession, getGameSession, saveGameSession } from "@/utils/sessionStorage.ts";
@@ -290,32 +291,57 @@ export function useWebSocketConnection(
       if (!latestGame || !myPlayerId || store.isReconnecting) {
         return;
       }
+      const allPlayers = [latestGame.currentPlayer, ...(latestGame.otherPlayers ?? [])];
       for (const log of logs) {
+        if (
+          log.sourceType === "standard_project" &&
+          log.source.toLowerCase().includes("asteroid")
+        ) {
+          const player = allPlayers.find((p) => p.id === log.playerId);
+          useAsteroidEventStore.getState().enqueue({
+            cardName: "Asteroid",
+            playerName: player?.name ?? "Unknown",
+            playerColor: player?.color ?? "#FF5722",
+          });
+        }
+
         if (log.sourceType !== "card_play") {
           continue;
         }
-        if (log.playerId === myPlayerId) {
-          continue;
-        }
+
         const playerChanges = log.changes?.playerChanges?.[log.playerId];
         const cardIds = playerChanges?.cardsPlayed;
         if (!cardIds || cardIds.length === 0) {
           continue;
         }
-        const otherPlayer = latestGame.otherPlayers?.find((p) => p.id === log.playerId);
-        if (!otherPlayer) {
+
+        const isMe = log.playerId === myPlayerId;
+        const player = isMe
+          ? latestGame.currentPlayer
+          : latestGame.otherPlayers?.find((p) => p.id === log.playerId);
+        if (!player) {
           continue;
         }
+
         for (const cardId of cardIds) {
-          const card = otherPlayer.playedCards.find((c) => c.id === cardId);
+          const card = player.playedCards.find((c) => c.id === cardId);
           if (!card) {
             continue;
           }
-          enqueuePlayedCard({
-            card,
-            playerName: otherPlayer.name,
-            playerColor: otherPlayer.color,
-          });
+          if (!isMe) {
+            enqueuePlayedCard({
+              card,
+              playerName: player.name,
+              playerColor: player.color,
+            });
+          }
+          if (card.name.toLowerCase().includes("asteroid")) {
+            useAsteroidEventStore.getState().enqueue({
+              cardName: card.name,
+              playerName: player.name,
+              playerColor: player.color,
+            });
+          }
         }
       }
     };
