@@ -35,22 +35,21 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
 
   const availableColonies = useMemo(() => {
     const availableIds = new Set(pendingSelection.availableColonyIds);
-    return colonyTiles.filter((colony) => {
-      if (!availableIds.has(colony.id)) {
-        return false;
-      }
-      if (colony.playerColonies.length >= colony.colonies.length) {
-        return false;
-      }
-      if (
-        !pendingSelection.allowDuplicatePlayerColony &&
-        colony.playerColonies.includes(viewingPlayerId)
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [colonyTiles, pendingSelection, viewingPlayerId]);
+    return colonyTiles.filter((colony) => availableIds.has(colony.id));
+  }, [colonyTiles, pendingSelection]);
+
+  const isColonySelectable = (colony: ColonyTileDto): boolean => {
+    if (colony.playerColonies.length >= colony.colonies.length) {
+      return false;
+    }
+    if (
+      !pendingSelection.allowDuplicatePlayerColony &&
+      colony.playerColonies.includes(viewingPlayerId)
+    ) {
+      return false;
+    }
+    return true;
+  };
 
   const getPlayerColor = (playerId: string): string => {
     return allPlayers.find((p) => p.id === playerId)?.color ?? "#666";
@@ -60,7 +59,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
     return allPlayers.find((p) => p.id === playerId)?.name ?? "Unknown";
   };
 
-  if (!isOpen || availableColonies.length === 0) {
+  if (!isOpen) {
     return null;
   }
 
@@ -78,6 +77,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {availableColonies.map((colony) => {
+            const selectable = isColonySelectable(colony);
             const isSelected = selectedColonyId === colony.id;
             const nextSlotIndex = colony.playerColonies.length;
             const reward = colony.colonies[nextSlotIndex]?.reward ?? [];
@@ -86,15 +86,21 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
               <button
                 key={colony.id}
                 type="button"
-                className={`w-full text-left px-3 py-2.5 rounded border transition-all cursor-pointer ${
-                  isSelected
-                    ? "bg-white/10"
-                    : "border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04]"
+                className={`w-full text-left px-3 py-2.5 rounded border transition-all ${
+                  !selectable
+                    ? "border-white/5 bg-white/[0.01] opacity-40 cursor-default"
+                    : isSelected
+                      ? "bg-white/10 cursor-pointer"
+                      : "border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04] cursor-pointer"
                 }`}
                 style={{
-                  borderColor: isSelected ? colony.style.color : undefined,
+                  borderColor: isSelected && selectable ? colony.style.color : undefined,
                 }}
-                onClick={() => setSelectedColonyId(colony.id)}
+                onClick={() => {
+                  if (selectable) {
+                    setSelectedColonyId(colony.id);
+                  }
+                }}
               >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-white text-xs font-bold font-orbitron m-0">{colony.name}</h3>
