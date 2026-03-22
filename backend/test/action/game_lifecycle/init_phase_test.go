@@ -62,6 +62,7 @@ func completeAllSelections(
 		gameRepoWithGame(t, testGame),
 		cardRegistry,
 		nil,
+		nil,
 		logger,
 	)
 }
@@ -198,6 +199,7 @@ func TestInitPhase_RejectConfirmWrongPhase(t *testing.T) {
 		gameRepoWithGame(t, testGame),
 		cardRegistry,
 		nil,
+		nil,
 		logger,
 	)
 
@@ -287,6 +289,7 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	confirmAction := turnAction.NewConfirmInitAdvanceAction(
 		gameRepoWithGame(t, testGame),
 		cardRegistry,
+		nil,
 		nil,
 		logger,
 	)
