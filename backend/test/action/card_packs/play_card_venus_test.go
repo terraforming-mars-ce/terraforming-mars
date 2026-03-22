@@ -972,6 +972,29 @@ func TestLunaMetropolis_CreditProductionPerEarthTag(t *testing.T) {
 		"Credit production should increase by 3 (1 per earth tag: 2 existing + 1 from this card)")
 }
 
+func TestLunaMetropolis_PlacesCityTile(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	card := testutil.GetCardByName("Luna Metropolis")
+	cardRegistry := testutil.CreateTestCardRegistry()
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
+	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
+	p.Hand().AddCard(card.ID)
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 21}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Luna Metropolis should play successfully")
+	selection := testGame.GetPendingTileSelection(p.ID())
+	testutil.AssertTrue(t, selection != nil, "Should have pending city tile selection after playing Luna Metropolis")
+}
+
 // =============================================================================
 // Card 237: Luxury Foods (automated)
 // "Requires Venus, Earth and Jovian tags." No behaviors, just VP.

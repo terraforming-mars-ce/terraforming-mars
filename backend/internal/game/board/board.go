@@ -74,6 +74,7 @@ const (
 	BoardTagDawnCity         BoardTag = "dawn-city"
 	BoardTagMaxwellBase      BoardTag = "maxwell-base"
 	BoardTagStratopolis      BoardTag = "stratopolis"
+	BoardTagLunaMetropolis   BoardTag = "luna-metropolis"
 )
 
 // TileLocation represents the celestial body where tiles are located
@@ -289,6 +290,7 @@ func GenerateMarsBoard(includeVenus bool) []Tile {
 		{shared.HexPosition{Q: 0, R: -5, S: 5}, []string{BoardTagPhobosSpaceHaven}, "Phobos Space Haven"},
 		{shared.HexPosition{Q: -5, R: 0, S: 5}, []string{BoardTagDawnCity}, "Dawn City"},
 		{shared.HexPosition{Q: 5, R: -5, S: 0}, []string{BoardTagGanymedeColony}, "Ganymede Colony"},
+		{shared.HexPosition{Q: -5, R: 5, S: 0}, []string{BoardTagLunaMetropolis}, "Luna Metropolis"},
 	}
 	for _, ot := range offMarsTiles {
 		displayName := ot.DisplayName
