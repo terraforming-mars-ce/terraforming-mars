@@ -199,6 +199,10 @@ export function useWebSocketConnection(
           }
         }
 
+        if (!previousGameRef.current.isLastRound && updatedGame.isLastRound) {
+          enqueueGameEvent({ title: "LAST ROUND", duration: 4000 });
+        }
+
         const prevProjects = previousGameRef.current.projectFunding;
         const newProjects = updatedGame.projectFunding;
         if (prevProjects && newProjects) {

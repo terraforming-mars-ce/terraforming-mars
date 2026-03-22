@@ -1153,6 +1153,7 @@ export interface GameDto {
   colonyTiles?: ColonyTileDto[];
   tradeFleetAvailable: boolean;
   projectFunding?: ProjectFundingDto[];
+  isLastRound: boolean;
 }
 /**
  * SpectatorDto represents a spectator visible to all clients.

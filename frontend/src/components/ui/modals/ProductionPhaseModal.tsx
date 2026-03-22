@@ -58,6 +58,16 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
     [onClose],
   );
 
+  const isLastRound = gameState?.isLastRound ?? false;
+
+  const handleNextClick = useCallback(() => {
+    if (isLastRound) {
+      void handleCardSelection([]);
+    } else {
+      setShowCardSelection(true);
+    }
+  }, [isLastRound, handleCardSelection]);
+
   const handleReturnFromCardSelection = useCallback(() => {
     if (onHide) {
       onHide();
@@ -245,7 +255,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Enter" && !hasSubmittedCardSelection && !showCardSelection) {
-        setShowCardSelection(true);
+        handleNextClick();
       }
     };
 
@@ -255,7 +265,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
     }
 
     return () => {};
-  }, [isOpen, hasSubmittedCardSelection, showCardSelection]);
+  }, [isOpen, hasSubmittedCardSelection, showCardSelection, handleNextClick]);
 
   if (!isOpen) return null;
   if (!modalProductionData) return null;
@@ -530,7 +540,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
     !hasSubmittedCardSelection && !showCardSelection ? (
       <button
         className="ml-5 flex-shrink-0 bg-[linear-gradient(135deg,rgba(30,60,150,0.8)_0%,rgba(20,40,120,0.9)_100%)] border-2 border-space-blue-400 rounded-full text-white text-[32px] font-bold w-[60px] h-[60px] cursor-pointer transition-all duration-300 text-shadow-dark shadow-[0_4px_15px_rgba(0,0,0,0.4)] flex items-center justify-center p-0 hover:bg-[linear-gradient(135deg,rgba(40,70,160,0.9)_0%,rgba(30,50,130,1)_100%)] hover:border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-95 active:shadow-[0_2px_10px_rgba(0,0,0,0.3)]"
-        onClick={() => setShowCardSelection(true)}
+        onClick={handleNextClick}
       >
         →
       </button>

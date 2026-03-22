@@ -172,3 +172,69 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 
 	return nil
 }
+
+// ExecuteFinalProductionPhase runs the production phase for the final generation.
+// Per TM rules, there is no research phase (no card drawing) after the final production.
+// Sets up ProductionPhase data for the modal and transitions to production_and_card_draw.
+func ExecuteFinalProductionPhase(ctx context.Context, g *game.Game, players []*playerPkg.Player, log *zap.Logger) error {
+	log = log.With(zap.String("game_id", g.ID()))
+	log.Debug("Starting final production phase",
+		zap.Int("player_count", len(players)),
+		zap.Int("generation", g.Generation()))
+
+	if g.HasColonies() {
+		for _, state := range g.ColonyTileStates() {
+			state.TradedThisGen = false
+			state.TraderID = ""
+			if state.MarkerPosition < 6 {
+				state.MarkerPosition++
+			}
+		}
+		for _, p := range players {
+			g.SetTradeFleetAvailable(p.ID(), true)
+		}
+		log.Debug("Solar phase complete: colony markers advanced, trade fleets reset")
+	}
+
+	for _, p := range players {
+		currentResources := p.Resources().Get()
+		energyConverted := currentResources.Energy
+		production := p.Resources().Production()
+		tr := p.Resources().TerraformRating()
+		newResources := shared.Resources{
+			Credits:  currentResources.Credits + production.Credits + tr,
+			Steel:    currentResources.Steel + production.Steel,
+			Titanium: currentResources.Titanium + production.Titanium,
+			Plants:   currentResources.Plants + production.Plants,
+			Energy:   production.Energy,
+			Heat:     currentResources.Heat + energyConverted + production.Heat,
+		}
+		p.Resources().Set(newResources)
+		p.SetPassed(false)
+
+		productionPhaseData := &shared.ProductionPhase{
+			AvailableCards:    []string{},
+			SelectionComplete: false,
+			BeforeResources:   currentResources,
+			AfterResources:    newResources,
+			EnergyConverted:   energyConverted,
+			CreditsIncome:     production.Credits + tr,
+		}
+		if err := g.SetProductionPhase(ctx, p.ID(), productionPhaseData); err != nil {
+			log.Error("Failed to set final production phase", zap.Error(err))
+			return fmt.Errorf("failed to set final production phase: %w", err)
+		}
+		log.Debug("Final production applied",
+			zap.String("player_id", p.ID()),
+			zap.Int("credits_income", production.Credits+tr),
+			zap.Int("energy_converted", energyConverted))
+	}
+
+	if err := g.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw); err != nil {
+		log.Error("Failed to update phase", zap.Error(err))
+		return fmt.Errorf("failed to update phase: %w", err)
+	}
+
+	log.Info("Final production phase set up, awaiting player confirmation")
+	return nil
+}

@@ -215,6 +215,8 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 		ChatMessages:       toChatMessageDtos(g),
 	}
 
+	result.IsLastRound = g.GlobalParameters().IsMaxed()
+
 	if g.HasColonies() && registries.ColonyRegistry != nil {
 		result.ColonyTiles = toColonyTileDtos(g, registries.ColonyRegistry, playerID)
 		result.TradeFleetAvailable = g.GetTradeFleetAvailable(playerID)
