@@ -14365,7 +14365,7 @@
           {
             "type": "auto",
             "condition": {
-              "type": "trading",
+              "type": "before-colony-trade",
               "target": "self-player"
             }
           }
@@ -14412,7 +14412,7 @@
           {
             "type": "auto",
             "condition": {
-              "type": "trading",
+              "type": "before-colony-trade",
               "target": "self-player"
             }
           }

@@ -310,7 +310,7 @@ func SetPendingColonyResourceFromTrade(p *player.Player, pendings []*PendingReso
 }
 
 // CountTradeStepBonus counts how many colony track step bonuses a player has from
-// played cards with "trading" condition triggers (e.g., Trade Envoys, Trading Colony).
+// played cards with "before-colony-trade" condition triggers (e.g., Trade Envoys, Trading Colony).
 func CountTradeStepBonus(p *player.Player, cardRegistry cards.CardRegistry) int {
 	if cardRegistry == nil {
 		return 0
@@ -338,7 +338,7 @@ func countTradeStepBonusFromBehaviors(behaviors []shared.CardBehavior) int {
 		for _, trigger := range behavior.Triggers {
 			if trigger.Type == shared.TriggerTypeAuto &&
 				trigger.Condition != nil &&
-				trigger.Condition.Type == "trading" {
+				trigger.Condition.Type == "before-colony-trade" {
 				for _, output := range behavior.Outputs {
 					if output.ResourceType == "colony-track-step" {
 						bonus += output.Amount
