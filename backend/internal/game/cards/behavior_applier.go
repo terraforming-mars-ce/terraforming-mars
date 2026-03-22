@@ -1514,7 +1514,7 @@ func (a *BehaviorApplier) applyOutput(
 			log.Warn("Colony tile output ignored: colonies expansion not enabled")
 			return nil
 		}
-		colonyIDs := a.game.GetAvailableColonyIDs()
+		colonyIDs := a.game.GetPlaceableColonyIDs(a.player.ID(), output.AllowDuplicatePlayerColony)
 		if len(colonyIDs) == 0 {
 			log.Warn("No colony tiles available for placement")
 			return nil

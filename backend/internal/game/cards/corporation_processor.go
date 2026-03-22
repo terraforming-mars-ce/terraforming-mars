@@ -444,7 +444,7 @@ func (p *CorporationProcessor) createForcedAction(
 			if err != nil {
 				return fmt.Errorf("failed to get player for colony placement: %w", err)
 			}
-			colonyIDs := g.GetAvailableColonyIDs()
+			colonyIDs := g.GetPlaceableColonyIDs(pl.ID(), output.AllowDuplicatePlayerColony)
 			if len(colonyIDs) > 0 {
 				pl.Selection().SetPendingColonySelection(&shared.PendingColonySelection{
 					AvailableColonyIDs:         colonyIDs,
