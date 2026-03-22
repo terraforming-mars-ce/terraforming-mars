@@ -24,6 +24,12 @@ import AwardFundSelectionPopover from "../../ui/popover/AwardFundSelectionPopove
 import CardFanOverlay, { CardFanOverlayHandle } from "../../ui/overlay/CardFanOverlay.tsx";
 import ColonySelectionOverlay from "../../ui/overlay/ColonySelectionOverlay.tsx";
 import FreeTradeSelectionOverlay from "../../ui/overlay/FreeTradeSelectionOverlay.tsx";
+import {
+  GameFlowPopover,
+  GameFlowTitle,
+  GameFlowBody,
+  GameFlowFooter,
+} from "../../ui/popover/GameFlowPopover.tsx";
 import CorporationOverlay from "../../ui/overlay/CorporationOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
@@ -154,6 +160,8 @@ export default function GameInterface() {
   const showActionChoiceSelection = useCardPlayFlowStore((s) => s.showActionChoiceSelection);
   const pendingActionReuse = useCardPlayFlowStore((s) => s.pendingActionReuse);
   const showActionReuseSelection = useCardPlayFlowStore((s) => s.showActionReuseSelection);
+  const pendingFreeTradeWarning = useCardPlayFlowStore((s) => s.pendingFreeTradeWarning);
+  const showFreeTradeWarning = useCardPlayFlowStore((s) => s.showFreeTradeWarning);
   const pendingBehaviorChoiceStorage = useCardPlayFlowStore((s) => s.pendingBehaviorChoiceStorage);
   const showBehaviorChoiceStorage = useCardPlayFlowStore((s) => s.showBehaviorChoiceStorage);
   const pendingCardStorage = useCardPlayFlowStore((s) => s.pendingCardStorage);
@@ -1293,6 +1301,39 @@ export default function GameInterface() {
           ]}
           onConfirm={(colonyId) => void globalWebSocketManager.confirmFreeTrade(colonyId)}
         />
+      )}
+
+      {showFreeTradeWarning && pendingFreeTradeWarning && (
+        <GameFlowPopover
+          isVisible={true}
+          onClose={() => {
+            useCardPlayFlowStore.getState().setShowFreeTradeWarning(false);
+            useCardPlayFlowStore.getState().setPendingFreeTradeWarning(null);
+          }}
+          type="interactive"
+        >
+          <GameFlowTitle>
+            <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
+              Cannot Trade
+            </h3>
+          </GameFlowTitle>
+          <GameFlowBody>
+            <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+              <p className="text-white/70 text-sm">{pendingFreeTradeWarning}</p>
+            </div>
+          </GameFlowBody>
+          <GameFlowFooter>
+            <GameButton
+              size="sm"
+              onClick={() => {
+                useCardPlayFlowStore.getState().setShowFreeTradeWarning(false);
+                useCardPlayFlowStore.getState().setPendingFreeTradeWarning(null);
+              }}
+            >
+              OK
+            </GameButton>
+          </GameFlowFooter>
+        </GameFlowPopover>
       )}
 
       {game?.currentPlayer?.pendingAwardFundSelection && (

@@ -848,6 +848,7 @@ type GameDto struct {
 	IsSpectator         bool                   `json:"isSpectator" ts:"boolean"`
 	ColonyTiles         []ColonyTileDto        `json:"colonyTiles,omitempty" ts:"ColonyTileDto[] | undefined"`
 	TradeFleetAvailable bool                   `json:"tradeFleetAvailable" ts:"boolean"`
+	TradeFleets         map[string]bool        `json:"tradeFleets,omitempty" ts:"Record<string, boolean> | undefined"`
 	ProjectFunding      []ProjectFundingDto    `json:"projectFunding,omitempty" ts:"ProjectFundingDto[] | undefined"`
 	IsLastRound         bool                   `json:"isLastRound" ts:"boolean"`
 }

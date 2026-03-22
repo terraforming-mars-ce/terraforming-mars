@@ -152,6 +152,32 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
       animation="slideDown"
       className="!bg-space-black-darker"
     >
+      {/* Player trade fleets */}
+      {gameState?.tradeFleets && (
+        <div className="px-3 py-2 border-b border-white/10 flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-orbitron text-white/50 uppercase tracking-wider">
+            Ships:
+          </span>
+          {allPlayers.map((player) => {
+            const hasFleet = gameState.tradeFleets?.[player.id] ?? false;
+            return (
+              <div key={player.id} className="flex items-center gap-1">
+                <div
+                  className={`w-3 h-3 rounded-sm ${!hasFleet ? "opacity-30" : ""}`}
+                  style={{ backgroundColor: player.color }}
+                />
+                <GameIcon iconType="trade" size="small" />
+                <span
+                  className={`text-[10px] font-orbitron ${hasFleet ? "text-white/60" : "text-white/25"}`}
+                >
+                  {hasFleet ? "1" : "0"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div className="p-2 space-y-2">
         {colonyTiles.map((colony) => (
           <ColonyTileCard

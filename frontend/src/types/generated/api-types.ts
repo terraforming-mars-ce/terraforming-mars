@@ -1161,6 +1161,7 @@ export interface GameDto {
   isSpectator: boolean;
   colonyTiles?: ColonyTileDto[];
   tradeFleetAvailable: boolean;
+  tradeFleets?: { [key: string]: boolean };
   projectFunding?: ProjectFundingDto[];
   isLastRound: boolean;
 }

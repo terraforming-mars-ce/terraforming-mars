@@ -221,6 +221,11 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 	if g.HasColonies() && registries.ColonyRegistry != nil {
 		result.ColonyTiles = toColonyTileDtos(g, registries.ColonyRegistry, cardRegistry, playerID)
 		result.TradeFleetAvailable = g.GetTradeFleetAvailable(playerID)
+		fleets := make(map[string]bool)
+		for _, p := range players {
+			fleets[p.ID()] = g.GetTradeFleetAvailable(p.ID())
+		}
+		result.TradeFleets = fleets
 	}
 
 	if g.HasProjectFunding() && registries.ProjectFundingRegistry != nil {
