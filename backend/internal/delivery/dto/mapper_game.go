@@ -6,6 +6,7 @@ import (
 
 	"slices"
 
+	colonyAction "terraforming-mars-backend/internal/action/colony"
 	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/colonies"
@@ -218,7 +219,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 	result.IsLastRound = g.GlobalParameters().IsMaxed()
 
 	if g.HasColonies() && registries.ColonyRegistry != nil {
-		result.ColonyTiles = toColonyTileDtos(g, registries.ColonyRegistry, playerID)
+		result.ColonyTiles = toColonyTileDtos(g, registries.ColonyRegistry, cardRegistry, playerID)
 		result.TradeFleetAvailable = g.GetTradeFleetAvailable(playerID)
 	}
 
@@ -695,7 +696,7 @@ func buildGlobalParameterBonuses(venusEnabled bool) []GlobalParameterBonusDto {
 	return bonuses
 }
 
-func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, playerID string) []ColonyTileDto {
+func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, cardRegistry cards.CardRegistry, playerID string) []ColonyTileDto {
 	tileStates := g.ColonyTileStates()
 	if len(tileStates) == 0 {
 		return nil
@@ -766,6 +767,12 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, play
 			}
 		}
 
+		// Calculate trade step bonus from cards like Trade Envoys
+		tradeStepBonus := 0
+		if playerObj != nil && cardRegistry != nil {
+			tradeStepBonus = colonyAction.CountTradeStepBonus(playerObj, cardRegistry)
+		}
+
 		// Calculate build availability
 		buildAvailable := true
 		var buildErrors []StateErrorDto
@@ -809,6 +816,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, play
 				Color: def.Style.Color,
 				Icon:  def.Style.Icon,
 			},
+			TradeStepBonus: tradeStepBonus,
 			TradeAvailable: tradeAvailable,
 			BuildAvailable: buildAvailable,
 			TradeErrors:    tradeErrors,

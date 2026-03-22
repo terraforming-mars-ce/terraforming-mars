@@ -1208,6 +1208,7 @@ export interface ColonyTileDto {
   tradedThisGen: boolean;
   traderId: string;
   style: StyleDto;
+  tradeStepBonus: number /* int */;
   tradeAvailable: boolean;
   buildAvailable: boolean;
   tradeErrors: StateErrorDto[];

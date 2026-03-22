@@ -207,7 +207,11 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
   const isDisabled = mode === "trade" ? !canTrade : !canBuild;
   const dimmed = canAct && isDisabled;
 
-  const markerOutput = colony.steps[colony.markerPosition]?.outputs ?? [];
+  const boostedPosition = Math.min(
+    colony.markerPosition + (colony.tradeStepBonus ?? 0),
+    colony.steps.length - 1,
+  );
+  const markerOutput = colony.steps[boostedPosition]?.outputs ?? [];
   const buildReward = colony.colonies[0]?.reward ?? [];
   const tradeExpression = getTradeExpression(colony.steps);
 
@@ -344,6 +348,7 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
         <ColonySteps
           steps={colony.steps}
           markerPosition={colony.markerPosition}
+          tradeStepBonus={colony.tradeStepBonus}
           playerColonies={colony.playerColonies}
           maxSlots={colony.colonies.length}
           getPlayerColor={getPlayerColor}

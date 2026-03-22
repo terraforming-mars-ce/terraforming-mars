@@ -316,6 +316,11 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.confirmColonyResource(cardId);
   }
 
+  async confirmColonyPlacement(colonyId: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.confirmColonyPlacement(colonyId);
+  }
+
   async tradeWithColony(colonyId: string, paymentType: string): Promise<string> {
     await this.ensureConnected();
     return webSocketService.tradeWithColony(colonyId, paymentType);

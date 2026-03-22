@@ -19,6 +19,7 @@ interface UIOverlayState {
   showCardDiscardSelection: boolean;
   showStealTargetSelection: boolean;
   showColonyResourceSelection: boolean;
+  showColonyPlacementSelection: boolean;
   showTabConflict: boolean;
   conflictingTabInfo: { gameId: string; playerName: string } | null;
   showCorporationModal: boolean;
@@ -41,6 +42,7 @@ interface UIOverlayState {
   setShowCardDiscardSelection: (show: boolean) => void;
   setShowStealTargetSelection: (show: boolean) => void;
   setShowColonyResourceSelection: (show: boolean) => void;
+  setShowColonyPlacementSelection: (show: boolean) => void;
   setShowTabConflict: (show: boolean) => void;
   setConflictingTabInfo: (info: { gameId: string; playerName: string } | null) => void;
   setShowCorporationModal: (show: boolean) => void;
@@ -68,6 +70,7 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   showCardDiscardSelection: false,
   showStealTargetSelection: false,
   showColonyResourceSelection: false,
+  showColonyPlacementSelection: false,
   showTabConflict: false,
   conflictingTabInfo: null,
   showCorporationModal: false,
@@ -90,6 +93,7 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   setShowCardDiscardSelection: (show) => set({ showCardDiscardSelection: show }),
   setShowStealTargetSelection: (show) => set({ showStealTargetSelection: show }),
   setShowColonyResourceSelection: (show) => set({ showColonyResourceSelection: show }),
+  setShowColonyPlacementSelection: (show) => set({ showColonyPlacementSelection: show }),
   setShowTabConflict: (show) => set({ showTabConflict: show }),
   setConflictingTabInfo: (info) => set({ conflictingTabInfo: info }),
   setShowCorporationModal: (show) => set({ showCorporationModal: show }),

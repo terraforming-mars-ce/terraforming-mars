@@ -893,6 +893,7 @@ type ColonyTileDto struct {
 	TradedThisGen  bool              `json:"tradedThisGen" ts:"boolean"`
 	TraderID       string            `json:"traderId" ts:"string"`
 	Style          StyleDto          `json:"style" ts:"StyleDto"`
+	TradeStepBonus int               `json:"tradeStepBonus" ts:"number"`
 	TradeAvailable bool              `json:"tradeAvailable" ts:"boolean"`
 	BuildAvailable bool              `json:"buildAvailable" ts:"boolean"`
 	TradeErrors    []StateErrorDto   `json:"tradeErrors" ts:"StateErrorDto[]"`
