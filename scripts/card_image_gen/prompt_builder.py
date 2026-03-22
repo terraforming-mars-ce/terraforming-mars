@@ -108,6 +108,7 @@ _NAME_OVERRIDES = {
     "218": "comet plunging into Venus thick atmosphere, brilliant fireball visible from orbit",
     "246": "huge asteroid slamming into Venus surface at oblique angle, enormous explosion, debris cloud engulfing the planet",
     "P19": "metallic asteroid crashing into Mars, molten metal splashing from impact, glowing crater",
+    "EXP004": "nuclear detonation on Mars, enormous mushroom cloud rising over Martian desert, shockwave rippling across red terrain, intense blinding flash",
 }
 
 # Keywords that indicate a sentence is about game mechanics, not visuals
