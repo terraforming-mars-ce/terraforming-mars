@@ -1299,6 +1299,8 @@ export default function GameInterface() {
               color: p.color,
             })) ?? []),
           ]}
+          playedCards={currentPlayer?.playedCards ?? []}
+          corporation={currentPlayer?.corporation}
           onConfirm={(colonyId) => void globalWebSocketManager.confirmFreeTrade(colonyId)}
         />
       )}

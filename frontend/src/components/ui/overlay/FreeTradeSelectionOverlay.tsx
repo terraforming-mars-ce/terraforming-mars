@@ -1,12 +1,16 @@
 import React, { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   PendingFreeTradeSelectionDto,
   ColonyTileDto,
   ColonyOutputDto,
+  CardDto,
 } from "@/types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import ColonySteps, { mapOutputTypeToIcon } from "../popover/ColonySteps.tsx";
 import GameButton from "../buttons/GameButton.tsx";
+
+const STORAGE_RESOURCE_TYPES = ["floater", "microbe", "animal"];
 
 interface PlayerInfo {
   id: string;
@@ -21,6 +25,8 @@ interface FreeTradeSelectionOverlayProps {
   viewingPlayerId: string;
   tradeFleetAvailable: boolean;
   allPlayers: PlayerInfo[];
+  playedCards: CardDto[];
+  corporation?: CardDto | null;
   onConfirm: (colonyId: string) => void;
 }
 
@@ -31,9 +37,15 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
   viewingPlayerId,
   tradeFleetAvailable,
   allPlayers,
+  playedCards,
+  corporation,
   onConfirm,
 }) => {
   const [selectedColonyId, setSelectedColonyId] = useState<string | null>(null);
+  const [storageWarning, setStorageWarning] = useState<{
+    message: string;
+    colonyId: string;
+  } | null>(null);
 
   const tradeableIds = useMemo(
     () => new Set(pendingSelection.availableColonyIds),
@@ -175,9 +187,29 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
           <GameButton
             size="sm"
             onClick={() => {
-              if (selectedColonyId) {
-                onConfirm(selectedColonyId);
+              if (!selectedColonyId) {
+                return;
               }
+              const colony = colonyTiles.find((c) => c.id === selectedColonyId);
+              if (colony) {
+                const tradeOutputs = colony.steps[colony.markerPosition]?.outputs ?? [];
+                const storageIssue = tradeOutputs.find(
+                  (o) =>
+                    STORAGE_RESOURCE_TYPES.includes(o.type) &&
+                    o.amount > 0 &&
+                    ![...playedCards, ...(corporation ? [corporation] : [])].some(
+                      (c) => c.resourceStorage && c.resourceStorage.type === o.type,
+                    ),
+                );
+                if (storageIssue) {
+                  setStorageWarning({
+                    message: `You have no cards that can store ${storageIssue.type}. Resources will be lost.`,
+                    colonyId: selectedColonyId,
+                  });
+                  return;
+                }
+              }
+              onConfirm(selectedColonyId);
             }}
             disabled={!selectedColonyId}
           >
@@ -185,6 +217,42 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
           </GameButton>
         </div>
       </div>
+
+      {storageWarning &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[10010] flex items-center justify-center animate-[fadeIn_0.2s_ease]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute inset-0 bg-black/50" onClick={() => setStorageWarning(null)} />
+            <div className="relative z-[1] bg-space-black-darker/95 border border-amber-500/50 rounded-lg p-5 max-w-[340px] shadow-glow-lg">
+              <h3 className="font-orbitron text-sm font-bold text-amber-400 m-0 mb-2">
+                No Storage Available
+              </h3>
+              <p className="text-white/70 text-xs mb-4 leading-relaxed">
+                {storageWarning.message}
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  className="px-3 py-1.5 rounded text-xs font-orbitron text-white/50 hover:text-white/80 transition-colors cursor-pointer"
+                  onClick={() => setStorageWarning(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-3 py-1.5 rounded text-xs font-orbitron font-bold bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer"
+                  onClick={() => {
+                    onConfirm(storageWarning.colonyId);
+                    setStorageWarning(null);
+                  }}
+                >
+                  Continue Anyway
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };
