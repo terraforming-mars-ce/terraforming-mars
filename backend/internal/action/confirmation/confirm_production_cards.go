@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	baseaction "terraforming-mars-backend/internal/action"
+	gameaction "terraforming-mars-backend/internal/action/game"
 
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/cards"
@@ -14,16 +15,19 @@ import (
 // ConfirmProductionCardsAction handles the business logic for confirming production card selection
 type ConfirmProductionCardsAction struct {
 	baseaction.BaseAction
+	finalScoringAction *gameaction.FinalScoringAction
 }
 
 // NewConfirmProductionCardsAction creates a new confirm production cards action
 func NewConfirmProductionCardsAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
+	finalScoringAction *gameaction.FinalScoringAction,
 	logger *zap.Logger,
 ) *ConfirmProductionCardsAction {
 	return &ConfirmProductionCardsAction{
-		BaseAction: baseaction.NewBaseAction(gameRepo, cardRegistry),
+		BaseAction:         baseaction.NewBaseAction(gameRepo, cardRegistry),
+		finalScoringAction: finalScoringAction,
 	}
 }
 
@@ -130,6 +134,24 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 	}
 
 	if allComplete {
+		for _, p := range allPlayers {
+			if err := g.SetProductionPhase(ctx, p.ID(), nil); err != nil {
+				log.Warn("Failed to clear production phase",
+					zap.String("player_id", p.ID()),
+					zap.Error(err))
+			}
+		}
+
+		if g.GlobalParameters().IsMaxed() {
+			log.Debug("All global parameters maxed after final production - triggering final scoring")
+			if err := a.finalScoringAction.Execute(ctx, gameID); err != nil {
+				log.Error("Failed to execute final scoring", zap.Error(err))
+				return fmt.Errorf("failed to execute final scoring: %w", err)
+			}
+			log.Info("Game ended, final scores calculated")
+			return nil
+		}
+
 		log.Debug("All players completed production selection, advancing to action phase")
 
 		if err := g.UpdatePhase(ctx, shared.GamePhaseAction); err != nil {
@@ -166,14 +188,6 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		for _, p := range allPlayers {
 			if !p.HasExited() {
 				p.Actions().ResetGenerationCounts()
-			}
-		}
-
-		for _, p := range allPlayers {
-			if err := g.SetProductionPhase(ctx, p.ID(), nil); err != nil {
-				log.Warn("Failed to clear production phase",
-					zap.String("player_id", p.ID()),
-					zap.Error(err))
 			}
 		}
 	}
