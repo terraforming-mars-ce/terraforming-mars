@@ -20207,7 +20207,8 @@
     "description": "Replace any non-ocean tile with a Nuclear Zone tile.",
     "pack": "experimental",
     "tags": [
-      "event",
+      "building",
+      "space",
       "earth"
     ],
     "behaviors": [
