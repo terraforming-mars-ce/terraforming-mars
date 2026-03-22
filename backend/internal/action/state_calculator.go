@@ -544,6 +544,10 @@ func validateRequirements(
 
 	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
 
+	if calculator.HasIgnoreGlobalRequirements(p) {
+		return nil
+	}
+
 	var errors []player.StateError
 
 	for _, req := range card.Requirements.Items {

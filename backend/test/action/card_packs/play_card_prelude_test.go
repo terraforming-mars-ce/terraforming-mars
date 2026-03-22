@@ -320,7 +320,6 @@ func TestPrelude_EarlySettlement_PlantProductionAndCity(t *testing.T) {
 // P10: Ecology Experts (prelude, cost 0, tags: [microbe, plant])
 // "Increase your plant production 1 step. Play a card from hand, ignoring global requirements"
 // Behavior: auto trigger, outputs: plant-production +1
-// (The "play a card ignoring requirements" part is not tested here)
 // =============================================================================
 func TestPrelude_EcologyExperts_PlantProduction(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
@@ -347,6 +346,37 @@ func TestPrelude_EcologyExperts_PlantProduction(t *testing.T) {
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Ecology Experts should be in played cards")
 	prodAfter := p.Resources().Production()
 	testutil.AssertEqual(t, prodBefore.Plants+1, prodAfter.Plants, "Plant production should increase by 1")
+}
+
+func TestPrelude_EcologyExperts_PlayCardIgnoringRequirements(t *testing.T) {
+	// Trees (060) requires temperature >= -4°C, game starts at -30°C
+	// After playing Ecology Experts, Trees should succeed despite unmet temperature requirement
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	ecologyExperts := testutil.GetCardByName("Ecology Experts")
+	trees := testutil.GetCardByName("Trees")
+	cardRegistry := testutil.CreateTestCardRegistry()
+	players := testGame.GetAllPlayers()
+	p := players[0]
+	p.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "UpdateStatus failed")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "UpdatePhase failed")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "SetCurrentTurn failed")
+	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
+	p.Hand().AddCard(ecologyExperts.ID)
+	p.Hand().AddCard(trees.ID)
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), ecologyExperts.ID, cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Ecology Experts should play successfully")
+	plantsBefore := p.Resources().Get().Plants
+	prodBefore := p.Resources().Production()
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), trees.ID, cardAction.PaymentRequest{Credits: 13}, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Trees should play successfully when ignoring global requirements")
+	testutil.AssertTrue(t, p.PlayedCards().Contains(trees.ID), "Trees should be in played cards")
+	testutil.AssertEqual(t, plantsBefore+1, p.Resources().Get().Plants, "Should gain 1 plant")
+	testutil.AssertEqual(t, prodBefore.Plants+3, p.Resources().Production().Plants, "Plant production should increase by 3")
 }
 
 // =============================================================================

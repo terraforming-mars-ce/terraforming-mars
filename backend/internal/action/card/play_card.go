@@ -297,6 +297,10 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 		return nil // No requirements to validate
 	}
 
+	if calculator.HasIgnoreGlobalRequirements(player) {
+		return nil
+	}
+
 	for _, req := range card.Requirements.Items {
 		switch req.Type {
 		case gamecards.RequirementTemperature:

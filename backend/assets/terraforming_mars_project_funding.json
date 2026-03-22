@@ -7,9 +7,9 @@
       { "cost": 6, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
       { "cost": 8, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
       { "cost": 10, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
-      { "cost": 12 },
-      { "cost": 15 },
-      { "cost": 18 }
+      { "cost": 12, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
+      { "cost": 15, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] },
+      { "cost": 18, "paymentSubstitutes": [{ "resourceType": "titanium", "conversionRate": 3 }] }
     ],
     "rewardTiers": [
       { "seatsOwned": 2, "rewards": [{ "type": "credit", "amount": 5 }, { "type": "titanium", "amount": 2 }] },

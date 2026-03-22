@@ -363,6 +363,104 @@ func TestNegativeVPReducesTotalScore(t *testing.T) {
 	}
 }
 
+// --- Pets (172) ---
+// "1 VP per 2 animals here."
+
+func TestPetsVP_ZeroAnimals(t *testing.T) {
+	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(playerID)
+
+	cardID := testutil.CardID("Pets")
+	p.PlayedCards().AddCard(cardID, "Pets", "active", []string{"animal", "earth"})
+
+	breakdown := gamecards.CalculatePlayerVP(
+		p,
+		g.Board(),
+		nil,
+		nil,
+		g.GetAllPlayers(),
+		cardRegistry,
+		nil,
+		nil,
+	)
+
+	if breakdown.CardVP != 0 {
+		t.Fatalf("expected CardVP=0 for Pets with 0 animals, got %d", breakdown.CardVP)
+	}
+}
+
+func TestPetsVP_OneAnimal(t *testing.T) {
+	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(playerID)
+
+	cardID := testutil.CardID("Pets")
+	p.PlayedCards().AddCard(cardID, "Pets", "active", []string{"animal", "earth"})
+	p.Resources().AddToStorage(cardID, 1)
+
+	breakdown := gamecards.CalculatePlayerVP(
+		p,
+		g.Board(),
+		nil,
+		nil,
+		g.GetAllPlayers(),
+		cardRegistry,
+		nil,
+		nil,
+	)
+
+	if breakdown.CardVP != 0 {
+		t.Fatalf("expected CardVP=0 for Pets with 1 animal (floor division), got %d", breakdown.CardVP)
+	}
+}
+
+func TestPetsVP_TwoAnimals(t *testing.T) {
+	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(playerID)
+
+	cardID := testutil.CardID("Pets")
+	p.PlayedCards().AddCard(cardID, "Pets", "active", []string{"animal", "earth"})
+	p.Resources().AddToStorage(cardID, 2)
+
+	breakdown := gamecards.CalculatePlayerVP(
+		p,
+		g.Board(),
+		nil,
+		nil,
+		g.GetAllPlayers(),
+		cardRegistry,
+		nil,
+		nil,
+	)
+
+	if breakdown.CardVP != 1 {
+		t.Fatalf("expected CardVP=1 for Pets with 2 animals, got %d", breakdown.CardVP)
+	}
+}
+
+func TestPetsVP_FiveAnimals(t *testing.T) {
+	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(playerID)
+
+	cardID := testutil.CardID("Pets")
+	p.PlayedCards().AddCard(cardID, "Pets", "active", []string{"animal", "earth"})
+	p.Resources().AddToStorage(cardID, 5)
+
+	breakdown := gamecards.CalculatePlayerVP(
+		p,
+		g.Board(),
+		nil,
+		nil,
+		g.GetAllPlayers(),
+		cardRegistry,
+		nil,
+		nil,
+	)
+
+	if breakdown.CardVP != 2 {
+		t.Fatalf("expected CardVP=2 for Pets with 5 animals, got %d", breakdown.CardVP)
+	}
+}
+
 // TestNoVPCards verifies that cards without VP conditions don't contribute.
 func TestNoVPCards(t *testing.T) {
 	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)

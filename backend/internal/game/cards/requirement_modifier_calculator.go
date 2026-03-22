@@ -220,6 +220,22 @@ func (c *RequirementModifierCalculator) CalculateGlobalParameterLenience(p *play
 	return totalLenience
 }
 
+// HasIgnoreGlobalRequirements returns true if the player has an active effect
+// that ignores all global parameter requirements (e.g. from Ecology Experts).
+func (c *RequirementModifierCalculator) HasIgnoreGlobalRequirements(p *player.Player) bool {
+	if p == nil {
+		return false
+	}
+	for _, effect := range p.Effects().List() {
+		for _, output := range effect.Behavior.Outputs {
+			if output.ResourceType == shared.ResourceIgnoreGlobalRequirements {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func matchesGlobalParameterSelector(selectors []shared.Selector, paramType string) bool {
 	for _, sel := range selectors {
 		if slices.Contains(sel.GlobalParameters, paramType) {
