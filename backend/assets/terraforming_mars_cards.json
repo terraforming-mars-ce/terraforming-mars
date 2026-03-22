@@ -15029,6 +15029,12 @@
             "type": "plant-production",
             "amount": 1,
             "target": "self-player"
+          },
+          {
+            "type": "ignore-global-requirements",
+            "amount": 1,
+            "target": "self-player",
+            "temporary": "next-card"
           }
         ],
         "description": "Increase your plant production 1 step. Play a card from hand, ignoring global requirements"

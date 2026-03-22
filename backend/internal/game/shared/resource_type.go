@@ -65,12 +65,13 @@ const (
 
 	ResourceTag ResourceType = "tag"
 
-	ResourceGlobalParameterLenience ResourceType = "global-parameter-lenience"
-	ResourceDefense                 ResourceType = "defense"
-	ResourceDiscount                ResourceType = "discount"
-	ResourceValueModifier           ResourceType = "value-modifier"
-	ResourcePaymentSubstitute       ResourceType = "payment-substitute"
-	ResourceOceanAdjacencyBonus     ResourceType = "ocean-adjacency-bonus"
+	ResourceGlobalParameterLenience  ResourceType = "global-parameter-lenience"
+	ResourceIgnoreGlobalRequirements ResourceType = "ignore-global-requirements"
+	ResourceDefense                  ResourceType = "defense"
+	ResourceDiscount                 ResourceType = "discount"
+	ResourceValueModifier            ResourceType = "value-modifier"
+	ResourcePaymentSubstitute        ResourceType = "payment-substitute"
+	ResourceOceanAdjacencyBonus      ResourceType = "ocean-adjacency-bonus"
 
 	ResourceLandClaim                ResourceType = "land-claim"
 	ResourceStoragePaymentSubstitute ResourceType = "storage-payment-substitute"
