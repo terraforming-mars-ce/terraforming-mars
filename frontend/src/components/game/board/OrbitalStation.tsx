@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { useRef, useMemo, useState, useCallback, useEffect } from "react";
 import { useFrame, useThree, ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { Html } from "@react-three/drei";
@@ -9,6 +9,7 @@ import {
   easeOutCubic,
 } from "./boardConstants";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
+import { useModels } from "../../../hooks/useModels";
 
 interface OrbitalStationProps {
   filledSeats: number;
@@ -17,9 +18,8 @@ interface OrbitalStationProps {
   name: string;
 }
 
-const MODULE_COUNT = 6;
-const ENTRANCE_SPEED = 1.5;
 const HIT_SPHERE_RADIUS = 0.12;
+const SPAWN_SPEED = 1.2;
 
 function OrbitalStationTooltip({
   name,
@@ -80,24 +80,36 @@ export default function OrbitalStation({
   name,
 }: OrbitalStationProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const prevSeatsRef = useRef(filledSeats);
-  const moduleScalesRef = useRef<number[]>(
-    Array.from({ length: MODULE_COUNT }, (_, i) => (i < filledSeats ? 1 : 0)),
-  );
-  const animatingRef = useRef<Set<number>>(new Set());
+  const modelRef = useRef<THREE.Group>(null);
+  const spawnProgress = useRef(isCompleted ? 1 : 0);
+  const wasCompleted = useRef(isCompleted);
   const [hovered, setHovered] = useState(false);
   const { gl } = useThree();
   const { activePlanet, setActivePlanet } = usePlanetFocus();
+  const { satelliteScene } = useModels();
+
+  const satelliteClone = useMemo(() => {
+    const clone = satelliteScene.clone(true);
+    const toRemove: THREE.Object3D[] = [];
+    clone.traverse((child) => {
+      if (child.name === "Text" || child.name === "Earth") {
+        toRemove.push(child);
+      }
+    });
+    toRemove.forEach((child) => child.removeFromParent());
+    const sat = clone.getObjectByName("Satlite");
+    if (sat) {
+      sat.position.set(0, 0, 0);
+    }
+    return clone;
+  }, [satelliteScene]);
 
   useEffect(() => {
-    const prev = prevSeatsRef.current;
-    if (filledSeats > prev) {
-      for (let i = prev; i < filledSeats; i++) {
-        animatingRef.current.add(i);
-      }
+    if (isCompleted && !wasCompleted.current) {
+      spawnProgress.current = 0;
     }
-    prevSeatsRef.current = filledSeats;
-  }, [filledSeats]);
+    wasCompleted.current = isCompleted;
+  }, [isCompleted]);
 
   const handlePointerEnter = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
@@ -123,82 +135,8 @@ export default function OrbitalStation({
     [activePlanet, setActivePlanet],
   );
 
-  const hubGeometry = useMemo(() => new THREE.CylinderGeometry(0.02, 0.02, 0.05, 8), []);
-  const panelGeometry = useMemo(() => new THREE.BoxGeometry(0.07, 0.002, 0.025), []);
-  const strutGeometry = useMemo(() => new THREE.CylinderGeometry(0.002, 0.002, 0.05, 4), []);
-  const ringGeometry = useMemo(() => new THREE.TorusGeometry(0.04, 0.006, 8, 24), []);
-  const dockGeometry = useMemo(() => new THREE.CylinderGeometry(0.008, 0.008, 0.03, 6), []);
-  const antennaGeometry = useMemo(() => new THREE.CylinderGeometry(0.002, 0.002, 0.06, 4), []);
-  const dishGeometry = useMemo(
-    () => new THREE.SphereGeometry(0.012, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-    [],
-  );
   const hitSphereGeometry = useMemo(() => new THREE.SphereGeometry(HIT_SPHERE_RADIUS, 8, 8), []);
-
-  const hubMaterial = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: "#4A90D9",
-        emissive: "#1a3a6a",
-        emissiveIntensity: 0.3,
-        metalness: 0.8,
-        roughness: 0.3,
-      }),
-    [],
-  );
-
-  const panelMaterial = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: "#1a2744",
-        metalness: 0.9,
-        roughness: 0.2,
-      }),
-    [],
-  );
-
-  const ringMaterial = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: "#6ab0e8",
-        metalness: 0.6,
-        roughness: 0.4,
-      }),
-    [],
-  );
-
-  const ghostMaterial = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        color: "#4A90D9",
-        wireframe: true,
-        transparent: true,
-        opacity: 0.15,
-      }),
-    [],
-  );
-
-  const glowMaterial = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: "#4A90D9",
-        emissive: "#4A90D9",
-        emissiveIntensity: 1.2,
-        metalness: 0.8,
-        roughness: 0.2,
-        transparent: true,
-        opacity: 0.9,
-      }),
-    [],
-  );
-
-  const hitSphereMaterial = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        visible: false,
-      }),
-    [],
-  );
+  const hitSphereMaterial = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
 
   const lookTarget = useMemo(() => new THREE.Vector3(), []);
 
@@ -222,114 +160,22 @@ export default function OrbitalStation({
     lookTarget.set(Math.cos(nextAngle) * r, Math.sin(nextAngle) * tiltY, Math.sin(nextAngle) * r);
     groupRef.current.lookAt(lookTarget);
 
-    for (const idx of animatingRef.current) {
-      moduleScalesRef.current[idx] = Math.min(
-        moduleScalesRef.current[idx] + delta * ENTRANCE_SPEED,
-        1,
-      );
-      if (moduleScalesRef.current[idx] >= 1) {
-        animatingRef.current.delete(idx);
-      }
+    if (isCompleted && spawnProgress.current < 1) {
+      spawnProgress.current = Math.min(spawnProgress.current + delta * SPAWN_SPEED, 1);
     }
 
-    const children = groupRef.current.children;
-    // Skip first child (hub) and last child (hit sphere)
-    for (let i = 1; i < children.length - 1; i++) {
-      const moduleIdx = i - 1;
-      if (moduleIdx < MODULE_COUNT) {
-        const raw = moduleScalesRef.current[moduleIdx];
-        const scale = moduleIdx < filledSeats ? easeOutCubic(raw) : 0;
-        children[i].scale.setScalar(scale);
-        children[i].visible = scale > 0;
-      }
+    if (modelRef.current) {
+      const scale = easeOutCubic(spawnProgress.current) * 0.006;
+      modelRef.current.scale.setScalar(scale);
+      modelRef.current.visible = isCompleted;
+      modelRef.current.rotation.z = t * 0.3;
     }
   });
 
-  const completed = filledSeats >= MODULE_COUNT;
-
   return (
-    <group ref={groupRef}>
-      {/* Core hub - always visible */}
-      <mesh
-        geometry={hubGeometry}
-        material={filledSeats > 0 ? (completed ? glowMaterial : hubMaterial) : ghostMaterial}
-        rotation={[Math.PI / 2, 0, 0]}
-      />
+    <group ref={groupRef} visible={isCompleted}>
+      <primitive ref={modelRef} object={satelliteClone} />
 
-      {/* Module 0 (seat 1): Solar panel arm A */}
-      <group>
-        <mesh geometry={panelGeometry} material={panelMaterial} position={[0.055, 0, 0]} />
-        <mesh
-          geometry={strutGeometry}
-          material={hubMaterial}
-          position={[0.03, 0, 0]}
-          rotation={[0, 0, Math.PI / 2]}
-        />
-      </group>
-
-      {/* Module 1 (seat 2): Solar panel arm B */}
-      <group>
-        <mesh geometry={panelGeometry} material={panelMaterial} position={[-0.055, 0, 0]} />
-        <mesh
-          geometry={strutGeometry}
-          material={hubMaterial}
-          position={[-0.03, 0, 0]}
-          rotation={[0, 0, Math.PI / 2]}
-        />
-      </group>
-
-      {/* Module 2 (seat 3): Habitat ring (partial) */}
-      <group>
-        <mesh geometry={ringGeometry} rotation={[Math.PI / 2, 0, 0]}>
-          <meshStandardMaterial
-            color="#6ab0e8"
-            metalness={0.6}
-            roughness={0.4}
-            transparent
-            opacity={0.5}
-          />
-        </mesh>
-      </group>
-
-      {/* Module 3 (seat 4): Habitat ring full + docking port */}
-      <group>
-        <mesh geometry={ringGeometry} material={ringMaterial} rotation={[Math.PI / 2, 0, 0]} />
-        <mesh
-          geometry={dockGeometry}
-          material={hubMaterial}
-          position={[0, 0, 0.04]}
-          rotation={[Math.PI / 2, 0, 0]}
-        />
-      </group>
-
-      {/* Module 4 (seat 5): Antenna + comm dish */}
-      <group>
-        <mesh geometry={antennaGeometry} material={hubMaterial} position={[0, 0.05, 0]} />
-        <mesh
-          geometry={dishGeometry}
-          material={panelMaterial}
-          position={[0, 0.08, 0]}
-          rotation={[Math.PI, 0, 0]}
-        />
-        <mesh
-          geometry={dockGeometry}
-          material={hubMaterial}
-          position={[0, 0, -0.04]}
-          rotation={[Math.PI / 2, 0, 0]}
-        />
-      </group>
-
-      {/* Module 5 (seat 6): Completion glow ring */}
-      <group>
-        <mesh
-          geometry={ringGeometry}
-          material={glowMaterial}
-          rotation={[0, 0, Math.PI / 2]}
-          scale={1.3}
-        />
-      </group>
-
-      {/* Invisible hit sphere for hover detection */}
       <mesh
         geometry={hitSphereGeometry}
         material={hitSphereMaterial}
