@@ -972,7 +972,7 @@ export default function GameInterface() {
               cards={replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? []}
               hideWhenModalOpen={hideCardFanForModals}
               onCardSelect={(_cardId) => {}}
-              onPlayCard={flow.handlePlayCard}
+              onPlayCard={spectatePlayerId ? undefined : flow.handlePlayCard}
             />
           </div>
         )}

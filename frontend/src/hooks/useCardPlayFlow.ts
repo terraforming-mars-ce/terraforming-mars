@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore.ts";
+import { useSpectateStore } from "@/stores/spectateStore.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import { shouldShowPaymentModal, createDefaultPayment } from "@/utils/paymentUtils.ts";
 import { StandardProject } from "@/types/cards.tsx";
@@ -110,6 +111,10 @@ export function useCardPlayFlow() {
         const g = useGameStore.getState().game;
         const cp = useGameStore.getState().currentPlayer;
         const store = useCardPlayFlowStore.getState();
+
+        if (useSpectateStore.getState().spectatePlayerId) {
+          return;
+        }
 
         if (g?.currentTurn !== g?.viewingPlayerId) {
           throw new Error("Not your turn");
