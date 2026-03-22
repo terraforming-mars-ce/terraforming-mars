@@ -35,13 +35,13 @@ make generate     # Generate TypeScript types from Go structs
 
 ### Pre-Commit
 
-**CRITICAL**: Before any `git add`, `git commit`, or `git push`, run:
+**CRITICAL**: Before any `git add`, `git commit`, `git push`, or creating a PR, run:
 
 ```bash
 make prepare-for-commit
 ```
 
-Fix all errors before proceeding with git operations.
+Fix all errors before proceeding with git operations. **Always run this before `make pr` or `gh pr create`.**
 
 ### Build
 ```bash
