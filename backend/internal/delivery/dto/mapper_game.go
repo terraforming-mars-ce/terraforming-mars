@@ -967,12 +967,6 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 			})
 		}
 
-		// First-funder bonus
-		var firstFunderBonus []ColonyOutputDto
-		for _, b := range def.FirstFunderBonus {
-			firstFunderBonus = append(firstFunderBonus, ColonyOutputDto{Type: b.Type, Amount: b.Amount})
-		}
-
 		dtos = append(dtos, ProjectFundingDto{
 			ID:                 def.ID,
 			Name:               def.Name,
@@ -993,7 +987,6 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 				Rewards:       completionRewards,
 				GlobalEffects: completionGlobalEffects,
 			},
-			FirstFunderBonus: firstFunderBonus,
 			Style: StyleDto{
 				Color: def.Style.Color,
 				Icon:  def.Style.Icon,

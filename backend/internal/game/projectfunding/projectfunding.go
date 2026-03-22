@@ -10,7 +10,6 @@ type ProjectDefinition struct {
 	Seats            []SeatDefinition `json:"seats"`
 	RewardTiers      []RewardTier     `json:"rewardTiers"`
 	CompletionEffect CompletionEffect `json:"completionEffect"`
-	FirstFunderBonus []Output         `json:"firstFunderBonus,omitempty"`
 	Style            shared.Style     `json:"style"`
 }
 

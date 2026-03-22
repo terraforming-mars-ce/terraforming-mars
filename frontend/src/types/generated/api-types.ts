@@ -1251,7 +1251,6 @@ export interface ProjectFundingDto {
   paymentSubstitutes: ProjectPaymentSubDto[];
   rewardTiers: ProjectRewardTierDto[];
   completionEffect: ProjectCompletionEffectDto;
-  firstFunderBonus?: ColonyOutputDto[];
   style: StyleDto;
 }
 /**
