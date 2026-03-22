@@ -7,14 +7,6 @@ import {
 import GameIcon from "../display/GameIcon.tsx";
 import ColonySteps, { mapOutputTypeToIcon } from "../popover/ColonySteps.tsx";
 import GameButton from "../buttons/GameButton.tsx";
-import {
-  OVERLAY_BACKGROUND_CLASS,
-  OVERLAY_CONTAINER_CLASS,
-  OVERLAY_HEADER_CLASS,
-  OVERLAY_TITLE_CLASS,
-  OVERLAY_DESCRIPTION_CLASS,
-  OVERLAY_FOOTER_CLASS,
-} from "./overlayStyles.ts";
 
 interface PlayerInfo {
   id: string;
@@ -47,8 +39,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
       if (!availableIds.has(colony.id)) {
         return false;
       }
-      const isFull = colony.playerColonies.length >= colony.colonies.length;
-      if (isFull) {
+      if (colony.playerColonies.length >= colony.colonies.length) {
         return false;
       }
       if (
@@ -75,17 +66,17 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
-      <div className={OVERLAY_BACKGROUND_CLASS} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-      <div className={OVERLAY_CONTAINER_CLASS}>
-        <div className={OVERLAY_HEADER_CLASS}>
-          <h2 className={OVERLAY_TITLE_CLASS}>Place Colony</h2>
-          <p className={OVERLAY_DESCRIPTION_CLASS}>
-            Select a colony to place from {pendingSelection.source}.
-          </p>
+      <div className="relative z-[1] w-[480px] max-h-[80vh] flex flex-col bg-space-black-darker/95 border border-space-blue-500 rounded-lg overflow-hidden shadow-glow-lg">
+        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+          <h2 className="font-orbitron text-base font-bold text-white tracking-wider m-0">
+            Place Colony
+          </h2>
+          <span className="text-xs text-white/40">{pendingSelection.source}</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-3">
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {availableColonies.map((colony) => {
             const isSelected = selectedColonyId === colony.id;
             const nextSlotIndex = colony.playerColonies.length;
@@ -95,21 +86,21 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
               <button
                 key={colony.id}
                 type="button"
-                className={`w-full text-left p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                className={`w-full text-left px-3 py-2.5 rounded border transition-all cursor-pointer ${
                   isSelected
-                    ? "border-white/60 bg-white/10"
-                    : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
+                    ? "bg-white/10"
+                    : "border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04]"
                 }`}
                 style={{
                   borderColor: isSelected ? colony.style.color : undefined,
                 }}
                 onClick={() => setSelectedColonyId(colony.id)}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-white text-sm font-bold font-orbitron m-0">{colony.name}</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-white text-xs font-bold font-orbitron m-0">{colony.name}</h3>
                   {reward.length > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-orbitron text-white/40 uppercase tracking-wider">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-orbitron text-white/40 uppercase">
                         Reward
                       </span>
                       <OutputDisplay outputs={reward} />
@@ -126,7 +117,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
                   getPlayerName={getPlayerName}
                 />
 
-                <div className="flex items-center gap-2 mt-2 text-[10px] text-white/40">
+                <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40">
                   <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
                   <OutputDisplay outputs={colony.colonyBonus} />
                 </div>
@@ -135,14 +126,9 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
           })}
         </div>
 
-        <div className={OVERLAY_FOOTER_CLASS}>
-          <div className="text-sm text-white/70">
-            {selectedColonyId
-              ? `Selected: ${availableColonies.find((c) => c.id === selectedColonyId)?.name}`
-              : "Select a colony"}
-          </div>
+        <div className="px-4 py-3 border-t border-white/10 flex items-center justify-end">
           <GameButton
-            size="lg"
+            size="sm"
             onClick={() => {
               if (selectedColonyId) {
                 onConfirm(selectedColonyId);
@@ -150,7 +136,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
             }}
             disabled={!selectedColonyId}
           >
-            Confirm Placement
+            Confirm
           </GameButton>
         </div>
       </div>
