@@ -104,6 +104,10 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
           const isClaimed = milestone.isClaimed;
           const isAvailable = milestone.available && !isClaimed;
           const isExecutable = canClaimMilestones && isAvailable;
+          const meetsRequirement =
+            canClaimMilestones &&
+            !isClaimed &&
+            !(milestone.errors ?? []).some((e) => e.category === "requirement");
 
           const globalData = globalMilestones.find((m) => m.type === milestone.type);
           const styleColor = globalData?.style?.color ?? "#ff6b35";
@@ -124,9 +128,16 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
             <GamePopoverItem
               key={milestone.type}
               state={getState()}
+              className={meetsRequirement ? "milestone-eligible-glow" : ""}
               onClick={isExecutable ? () => handleClaimMilestone(milestone.type) : undefined}
               error={(() => {
                 if (isAvailable || isClaimed || !milestone.errors?.length) {
+                  return undefined;
+                }
+                const hasRequirementError = milestone.errors.some(
+                  (e) => e.category === "requirement",
+                );
+                if (hasRequirementError) {
                   return undefined;
                 }
                 const realErrors = milestone.errors.filter((e) => e.category !== "requirement");
@@ -148,12 +159,15 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
               statusBadge={isClaimed ? "Claimed" : undefined}
               borderColor={styleColor}
               style={
-                isClaimed
-                  ? {
-                      borderColor: styleColor + "BB",
-                      background: "rgba(255,255,255,0.06)",
-                    }
-                  : undefined
+                {
+                  ...(isClaimed
+                    ? {
+                        borderColor: styleColor + "BB",
+                        background: "rgba(255,255,255,0.06)",
+                      }
+                    : {}),
+                  "--milestone-glow-rgb": `${parseInt(styleColor.slice(1, 3), 16)}, ${parseInt(styleColor.slice(3, 5), 16)}, ${parseInt(styleColor.slice(5, 7), 16)}`,
+                } as React.CSSProperties
               }
             >
               <div className="flex-1">

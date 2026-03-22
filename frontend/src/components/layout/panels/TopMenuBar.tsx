@@ -1,13 +1,16 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   GameDto,
+  GamePhaseAction,
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
+  GameStatusActive,
   PlayerDto,
   SpectatorDto,
 } from "@/types/generated/api-types.ts";
 import { StandardProject } from "@/types/cards.tsx";
 import { Z_INDEX } from "@/constants/zIndex";
+import { canPerformActions } from "@/utils/actionUtils.ts";
 import SoundToggleButton from "../../ui/buttons/SoundToggleButton.tsx";
 import StandardProjectPopover from "../../ui/popover/StandardProjectPopover.tsx";
 import MilestonePopover from "../../ui/popover/MilestonePopover.tsx";
@@ -345,6 +348,19 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   const hasColonies = (gameState?.colonyTiles?.length ?? 0) > 0;
   const hasProjectFunding = (gameState?.projectFunding?.length ?? 0) > 0;
 
+  const hasEligibleMilestones = useMemo(() => {
+    const isGameActive = gameState?.status === GameStatusActive;
+    const isActionPhase = gameState?.currentPhase === GamePhaseAction;
+    const isCurrentPlayerTurn = gameState?.currentTurn === gameState?.viewingPlayerId;
+    if (!isGameActive || !isActionPhase || !isCurrentPlayerTurn || !canPerformActions(gameState)) {
+      return false;
+    }
+    const milestones = gameState?.currentPlayer?.milestones ?? [];
+    return milestones.some(
+      (m) => !m.isClaimed && !(m.errors ?? []).some((e) => e.category === "requirement"),
+    );
+  }, [gameState]);
+
   const menuItems: { id: string; label: string; color: string }[] = [
     { id: "projects", label: "STANDARD PROJECTS", color: "#4a90e2" },
     { id: "milestones", label: "MILESTONES", color: "#ff6b35" },
@@ -412,25 +428,41 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
           {!isInitPhase &&
             !isEndgame &&
             menuItems.map((item, index) => (
-              <ParallelogramButton
-                key={item.id}
-                index={index}
-                total={menuItems.length}
-                width={buttonWidths[index]}
-                height={buttonHeight}
-                color={item.color}
-                onClick={() => handleTabClick(item.id)}
-                buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
-                isActive={
-                  (item.id === "projects" && showStandardProjectsPopover) ||
-                  (item.id === "milestones" && showMilestonePopover) ||
-                  (item.id === "awards" && showAwardPopover) ||
-                  (item.id === "colonies" && showColonyPopover) ||
-                  (item.id === "funding" && showProjectFundingPopover)
-                }
-              >
-                {item.label}
-              </ParallelogramButton>
+              <div key={item.id} className="relative">
+                <ParallelogramButton
+                  index={index}
+                  total={menuItems.length}
+                  width={buttonWidths[index]}
+                  height={buttonHeight}
+                  color={item.color}
+                  onClick={() => handleTabClick(item.id)}
+                  buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
+                  isActive={
+                    (item.id === "projects" && showStandardProjectsPopover) ||
+                    (item.id === "milestones" && showMilestonePopover) ||
+                    (item.id === "awards" && showAwardPopover) ||
+                    (item.id === "colonies" && showColonyPopover) ||
+                    (item.id === "funding" && showProjectFundingPopover)
+                  }
+                >
+                  {item.label}
+                </ParallelogramButton>
+                {item.id === "milestones" && (
+                  <div
+                    className={`absolute left-1/2 -translate-x-1/2 pointer-events-none transition-opacity duration-500 ${
+                      hasEligibleMilestones && !showMilestonePopover ? "opacity-100" : "opacity-0"
+                    }`}
+                    style={{ top: buttonHeight + 6 }}
+                  >
+                    <span
+                      className="font-orbitron font-bold text-sm animate-[milestoneIndicatorPulse_2s_ease-in-out_infinite] flex items-center justify-center w-5 h-5 rounded-full border border-yellow-400/70"
+                      style={{ color: "#facc15" }}
+                    >
+                      !
+                    </span>
+                  </div>
+                )}
+              </div>
             ))}
         </div>
 
