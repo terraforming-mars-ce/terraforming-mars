@@ -414,7 +414,7 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 
 // ApplyPreludesForPlayer applies all prelude card effects for a single player
 // during the init_apply_prelude phase.
-func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, cardRegistry cards.CardRegistry, log *zap.Logger) error {
+func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, cardRegistry cards.CardRegistry, stateRepo game.GameStateRepository, log *zap.Logger) error {
 	choices := g.GetDeferredStartingChoices(playerID)
 	if choices == nil {
 		return fmt.Errorf("no deferred starting choices for player %s", playerID)
@@ -434,7 +434,7 @@ func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, 
 		zap.Strings("preludes", choices.PreludeIDs))
 
 	for _, preludeID := range choices.PreludeIDs {
-		if err := ApplyPreludeCard(ctx, g, p, preludeID, cardRegistry, log); err != nil {
+		if err := ApplyPreludeCard(ctx, g, p, preludeID, cardRegistry, stateRepo, log); err != nil {
 			return fmt.Errorf("failed to apply prelude %s: %w", preludeID, err)
 		}
 	}
@@ -447,7 +447,7 @@ func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, 
 
 // ApplyPreludeCard applies a single prelude card's effects: adds to played cards,
 // processes auto behaviors, registers trigger effects and manual actions.
-func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, preludeID string, cardRegistry cards.CardRegistry, log *zap.Logger) error {
+func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, preludeID string, cardRegistry cards.CardRegistry, stateRepo game.GameStateRepository, log *zap.Logger) error {
 	card, err := cardRegistry.GetByID(preludeID)
 	if err != nil {
 		return fmt.Errorf("prelude card not found: %s", preludeID)
@@ -523,6 +523,14 @@ func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, prelu
 			BehaviorIndex: behaviorIndex,
 			Behavior:      behavior,
 		})
+	}
+
+	if stateRepo != nil {
+		description := fmt.Sprintf("Played prelude %s", card.Name)
+		displayData := baseaction.BuildCardDisplayData(card, shared.SourceTypeCardPlay)
+		if _, err := stateRepo.WriteFull(ctx, g.ID(), g, card.Name, shared.SourceTypeCardPlay, p.ID(), description, nil, nil, displayData); err != nil {
+			log.Warn("Failed to write prelude state log", zap.String("card", card.Name), zap.Error(err))
+		}
 	}
 
 	return nil

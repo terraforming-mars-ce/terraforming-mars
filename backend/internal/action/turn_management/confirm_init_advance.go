@@ -20,6 +20,7 @@ type ConfirmInitAdvanceAction struct {
 	gameRepo      game.GameRepository
 	cardRegistry  cards.CardRegistry
 	awardRegistry awards.AwardRegistry
+	stateRepo     game.GameStateRepository
 	corpProc      *gamecards.CorporationProcessor
 	logger        *zap.Logger
 }
@@ -29,12 +30,14 @@ func NewConfirmInitAdvanceAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
 	awardRegistry awards.AwardRegistry,
+	stateRepo game.GameStateRepository,
 	logger *zap.Logger,
 ) *ConfirmInitAdvanceAction {
 	return &ConfirmInitAdvanceAction{
 		gameRepo:      gameRepo,
 		cardRegistry:  cardRegistry,
 		awardRegistry: awardRegistry,
+		stateRepo:     stateRepo,
 		corpProc:      gamecards.NewCorporationProcessor(cardRegistry, awardRegistry, logger),
 		logger:        logger,
 	}
@@ -121,7 +124,7 @@ func (a *ConfirmInitAdvanceAction) applyCurrentPlayer(ctx context.Context, g *ga
 		log.Debug("Applied corp effects", zap.String("player_id", currentPlayerID))
 
 	case shared.GamePhaseInitApplyPrelude:
-		if err := ApplyPreludesForPlayer(ctx, g, currentPlayerID, a.cardRegistry, log); err != nil {
+		if err := ApplyPreludesForPlayer(ctx, g, currentPlayerID, a.cardRegistry, a.stateRepo, log); err != nil {
 			return fmt.Errorf("failed to apply preludes for player %s: %w", currentPlayerID, err)
 		}
 		log.Debug("Applied prelude effects", zap.String("player_id", currentPlayerID))

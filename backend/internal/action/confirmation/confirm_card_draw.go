@@ -121,7 +121,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 	if selection.PlayAsPrelude {
 		// Play selected prelude cards instead of adding to hand
 		for _, preludeID := range allSelectedCards {
-			if err := turn_management.ApplyPreludeCard(ctx, g, p, preludeID, a.CardRegistry(), log); err != nil {
+			if err := turn_management.ApplyPreludeCard(ctx, g, p, preludeID, a.CardRegistry(), a.StateRepository(), log); err != nil {
 				return fmt.Errorf("failed to play prelude card %s: %w", preludeID, err)
 			}
 		}
