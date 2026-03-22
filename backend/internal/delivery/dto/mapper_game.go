@@ -6,6 +6,7 @@ import (
 
 	"slices"
 
+	colonyAction "terraforming-mars-backend/internal/action/colony"
 	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/colonies"
@@ -218,8 +219,13 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 	result.IsLastRound = g.GlobalParameters().IsMaxed()
 
 	if g.HasColonies() && registries.ColonyRegistry != nil {
-		result.ColonyTiles = toColonyTileDtos(g, registries.ColonyRegistry, playerID)
+		result.ColonyTiles = toColonyTileDtos(g, registries.ColonyRegistry, cardRegistry, playerID)
 		result.TradeFleetAvailable = g.GetTradeFleetAvailable(playerID)
+		fleets := make(map[string]bool)
+		for _, p := range players {
+			fleets[p.ID()] = g.GetTradeFleetAvailable(p.ID())
+		}
+		result.TradeFleets = fleets
 	}
 
 	if g.HasProjectFunding() && registries.ProjectFundingRegistry != nil {
@@ -695,10 +701,16 @@ func buildGlobalParameterBonuses(venusEnabled bool) []GlobalParameterBonusDto {
 	return bonuses
 }
 
-func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, playerID string) []ColonyTileDto {
+func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, cardRegistry cards.CardRegistry, playerID string) []ColonyTileDto {
 	tileStates := g.ColonyTileStates()
 	if len(tileStates) == 0 {
 		return nil
+	}
+
+	playerObj, _ := g.GetPlayer(playerID)
+	tradeStepBonus := 0
+	if playerObj != nil && cardRegistry != nil {
+		tradeStepBonus = colonyAction.CountTradeStepBonus(playerObj, cardRegistry)
 	}
 
 	dtos := make([]ColonyTileDto, 0, len(tileStates))
@@ -753,7 +765,6 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, play
 				Message: "Your trade fleet is not available",
 			})
 		}
-		playerObj, _ := g.GetPlayer(playerID)
 		if playerObj != nil {
 			resources := playerObj.Resources().Get()
 			canAffordAny := resources.Credits >= 9 || resources.Energy >= 3 || resources.Titanium >= 3
@@ -809,6 +820,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, play
 				Color: def.Style.Color,
 				Icon:  def.Style.Icon,
 			},
+			TradeStepBonus: tradeStepBonus,
 			TradeAvailable: tradeAvailable,
 			BuildAvailable: buildAvailable,
 			TradeErrors:    tradeErrors,

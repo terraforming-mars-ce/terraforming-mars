@@ -220,6 +220,7 @@ func main() {
 	confirmColonyResourceAction := confirmAction.NewConfirmColonyResourceAction(gameRepo, cardRegistry, stateRepo, log)
 	confirmAwardFundAction := confirmAction.NewConfirmAwardFundAction(gameRepo, cardRegistry, awardRegistry, log)
 	confirmColonyPlacementAction := confirmAction.NewConfirmColonyPlacementAction(gameRepo, cardRegistry, colonyRegistry, log)
+	confirmFreeTradeAction := confirmAction.NewConfirmFreeTradeAction(gameRepo, cardRegistry, colonyRegistry, stateRepo)
 
 	// Turn management (4)
 	skipActionAction := turnAction.NewSkipActionAction(gameRepo, finalScoringAction, log)
@@ -317,6 +318,7 @@ func main() {
 		confirmColonyResourceAction,
 		confirmAwardFundAction,
 		confirmColonyPlacementAction,
+		confirmFreeTradeAction,
 		// Connection
 		playerDisconnectedAction,
 		playerTakeoverAction,

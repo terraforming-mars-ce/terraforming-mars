@@ -262,7 +262,7 @@ export default function Game3DView({
       case "volcano":
         return "volcano-tile";
       default:
-        return "city-tile"; // fallback
+        return "tile-placement";
     }
   };
 

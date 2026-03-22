@@ -6,6 +6,7 @@ import GameIcon from "../display/GameIcon.tsx";
 interface ColonyStepsProps {
   steps: ColonyStepDto[];
   markerPosition: number;
+  tradeStepBonus?: number;
   playerColonies: string[];
   maxSlots: number;
   getPlayerColor: (id: string) => string;
@@ -74,6 +75,10 @@ function getStepAmount(outputs: ColonyOutputDto[]): number {
   return outputs.reduce((sum, o) => sum + o.amount, 0);
 }
 
+function isCreditType(type: string): boolean {
+  return type === "credit" || type === "credit-production";
+}
+
 const ColonySlotTooltip: React.FC<{
   data: { x: number; y: number; label: string; color?: string } | null;
 }> = ({ data }) => {
@@ -99,6 +104,7 @@ const ColonySlotTooltip: React.FC<{
 const ColonySteps: React.FC<ColonyStepsProps> = ({
   steps,
   markerPosition,
+  tradeStepBonus = 0,
   playerColonies,
   maxSlots,
   getPlayerColor,
@@ -175,6 +181,18 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
           }}
         />
 
+        {/* Boosted marker from Trade Envoys */}
+        {tradeStepBonus > 0 && (
+          <div
+            className="absolute top-0 h-full pointer-events-none z-[8] ring-1 ring-amber-400/60 bg-amber-400/15 rounded-sm"
+            style={{
+              width: `${100 / stepCount}%`,
+              left: `${(Math.min(markerPosition + tradeStepBonus, stepCount - 1) / stepCount) * 100}%`,
+              transition: "left 500ms cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          />
+        )}
+
         {steps.map((step, i) => {
           const isFirst = i === 0;
           const isLast = i === steps.length - 1;
@@ -183,29 +201,52 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
           return (
             <div
               key={i}
-              className={`flex-1 flex items-center justify-center py-1 text-[10px] font-orbitron font-bold min-h-[24px] ${roundingClass} bg-white/[0.02] text-white/50`}
+              className={`flex-1 flex items-center justify-center py-1 text-[10px] font-orbitron font-bold min-h-[24px] ${roundingClass} bg-white/[0.02] text-white/50 relative z-20`}
             >
               {pattern === "same-resource-all-one" && sameType && (
-                <GameIcon iconType={mapOutputTypeToIcon(sameType)} size="small" />
+                <GameIcon
+                  iconType={mapOutputTypeToIcon(sameType)}
+                  amount={isCreditType(sameType) ? 1 : undefined}
+                  size="small"
+                />
+              )}
+              {pattern === "same-resource-varying" && sameType && isCreditType(sameType) && (
+                <GameIcon
+                  iconType={mapOutputTypeToIcon(sameType)}
+                  amount={getStepAmount(step.outputs)}
+                  size="small"
+                />
               )}
               {pattern === "mixed-all-one" &&
                 step.outputs.map((o, j) => (
-                  <GameIcon key={j} iconType={mapOutputTypeToIcon(o.type)} size="small" />
+                  <GameIcon
+                    key={j}
+                    iconType={mapOutputTypeToIcon(o.type)}
+                    amount={isCreditType(o.type) ? o.amount : undefined}
+                    size="small"
+                  />
                 ))}
               {pattern === "mixed-varying" &&
-                step.outputs.map((o, j) => (
-                  <span key={j} className="inline-flex items-center gap-0.5">
-                    <span>{o.amount}</span>
-                    <GameIcon iconType={mapOutputTypeToIcon(o.type)} size="small" />
-                  </span>
-                ))}
+                step.outputs.map((o, j) => {
+                  const useAmountProp = isCreditType(o.type);
+                  return (
+                    <span key={j} className="inline-flex items-center gap-0.5">
+                      {!useAmountProp && <span>{o.amount}</span>}
+                      <GameIcon
+                        iconType={mapOutputTypeToIcon(o.type)}
+                        amount={useAmountProp ? o.amount : undefined}
+                        size="small"
+                      />
+                    </span>
+                  );
+                })}
             </div>
           );
         })}
       </div>
 
-      {/* Numbers underneath (only for same-resource-varying) */}
-      {pattern === "same-resource-varying" && (
+      {/* Numbers underneath (only for same-resource-varying with non-credit types) */}
+      {pattern === "same-resource-varying" && sameType && !isCreditType(sameType) && (
         <div className="flex w-full mt-0.5">
           {steps.map((step, i) => (
             <div

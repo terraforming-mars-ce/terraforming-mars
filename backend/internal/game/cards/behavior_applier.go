@@ -1503,6 +1503,31 @@ func (a *BehaviorApplier) applyOutput(
 	case shared.ResourceActionReuse:
 		log.Debug("Skipping action-reuse output (handled at action layer)")
 
+	case shared.ResourceFreeTrade:
+		if a.game == nil || a.player == nil {
+			return fmt.Errorf("cannot apply free trade: missing game or player context")
+		}
+		if !a.game.HasColonies() {
+			log.Warn("Free trade output ignored: colonies expansion not enabled")
+			return nil
+		}
+		if !a.game.GetTradeFleetAvailable(a.player.ID()) {
+			log.Warn("Free trade output ignored: no trade fleet available")
+			return nil
+		}
+		tradeableColonyIDs := a.game.GetTradeableColonyIDs()
+		if len(tradeableColonyIDs) == 0 {
+			log.Warn("Free trade output ignored: no colonies available for trading")
+			return nil
+		}
+		a.player.Selection().SetPendingFreeTradeSelection(&shared.PendingFreeTradeSelection{
+			AvailableColonyIDs: tradeableColonyIDs,
+			Source:             a.source,
+			SourceCardID:       a.sourceCardID,
+		})
+		log.Debug("Set pending free trade selection",
+			zap.Int("available_colonies", len(tradeableColonyIDs)))
+
 	case shared.ResourceColonyTile:
 		if a.game == nil {
 			return fmt.Errorf("cannot apply colony tile: no game context")
@@ -1514,7 +1539,7 @@ func (a *BehaviorApplier) applyOutput(
 			log.Warn("Colony tile output ignored: colonies expansion not enabled")
 			return nil
 		}
-		colonyIDs := a.game.GetAvailableColonyIDs()
+		colonyIDs := a.game.GetPlaceableColonyIDs(a.player.ID(), output.AllowDuplicatePlayerColony)
 		if len(colonyIDs) == 0 {
 			log.Warn("No colony tiles available for placement")
 			return nil

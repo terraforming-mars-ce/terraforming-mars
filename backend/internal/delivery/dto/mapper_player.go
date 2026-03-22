@@ -115,6 +115,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		PendingColonyResourceSelection: convertPendingColonyResourceSelection(p.Selection().GetPendingColonyResourceSelection()),
 		PendingAwardFundSelection:      convertPendingAwardFundSelection(p.Selection().GetPendingAwardFundSelection()),
 		PendingColonySelection:         convertPendingColonySelection(p.Selection().GetPendingColonySelection()),
+		PendingFreeTradeSelection:      convertPendingFreeTradeSelection(p.Selection().GetPendingFreeTradeSelection()),
 		ForcedFirstAction:              forcedFirstAction,
 		ResourceStorage:                p.Resources().Storage(),
 		PaymentSubstitutes:             convertPaymentSubstitutes(p.Resources().PaymentSubstitutes()),
@@ -524,6 +525,18 @@ func convertPendingColonySelection(selection *shared.PendingColonySelection) *Pe
 		AllowDuplicatePlayerColony: selection.AllowDuplicatePlayerColony,
 		Source:                     selection.Source,
 		SourceCardID:               selection.SourceCardID,
+	}
+}
+
+func convertPendingFreeTradeSelection(selection *shared.PendingFreeTradeSelection) *PendingFreeTradeSelectionDto {
+	if selection == nil {
+		return nil
+	}
+
+	return &PendingFreeTradeSelectionDto{
+		AvailableColonyIDs: selection.AvailableColonyIDs,
+		Source:             selection.Source,
+		SourceCardID:       selection.SourceCardID,
 	}
 }
 

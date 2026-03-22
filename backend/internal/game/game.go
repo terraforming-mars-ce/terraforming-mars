@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -2156,12 +2157,41 @@ func (g *Game) ColonyTileStates() []*colony.TileState {
 }
 
 // GetAvailableColonyIDs returns the definition IDs of all colony tiles in the game.
-// Capacity and duplicate checks are validated at confirmation time.
 func (g *Game) GetAvailableColonyIDs() []string {
 	tiles := g.ColonyTileStates()
 	ids := make([]string, 0, len(tiles))
 	for _, ts := range tiles {
 		ids = append(ids, ts.DefinitionID)
+	}
+	return ids
+}
+
+// GetPlaceableColonyIDs returns colony IDs where the player can actually place a colony
+// (not full and player doesn't already have a colony there, unless allowDuplicate is true).
+func (g *Game) GetPlaceableColonyIDs(playerID string, allowDuplicate bool) []string {
+	const maxColoniesPerTile = 3
+	tiles := g.ColonyTileStates()
+	ids := make([]string, 0, len(tiles))
+	for _, ts := range tiles {
+		if len(ts.PlayerColonies) >= maxColoniesPerTile {
+			continue
+		}
+		if !allowDuplicate && slices.Contains(ts.PlayerColonies, playerID) {
+			continue
+		}
+		ids = append(ids, ts.DefinitionID)
+	}
+	return ids
+}
+
+// GetTradeableColonyIDs returns colony IDs that haven't been traded this generation.
+func (g *Game) GetTradeableColonyIDs() []string {
+	tiles := g.ColonyTileStates()
+	ids := make([]string, 0, len(tiles))
+	for _, ts := range tiles {
+		if !ts.TradedThisGen {
+			ids = append(ids, ts.DefinitionID)
+		}
 	}
 	return ids
 }

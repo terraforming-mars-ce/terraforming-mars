@@ -333,6 +333,15 @@ const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode 
     );
   }
 
+  // Handle trading trigger (e.g., Trade Envoys, Trading Colony)
+  if (trigger.condition?.type === "before-colony-trade") {
+    return (
+      <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
+        <GameIcon iconType="trade" size="small" />
+      </div>
+    );
+  }
+
   // Handle production-increased trigger (e.g., Manutech partial group)
   const isProductionIncreased = trigger.condition?.type === "production-increased";
   if (isProductionIncreased) {

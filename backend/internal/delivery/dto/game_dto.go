@@ -715,6 +715,13 @@ type PendingColonySelectionDto struct {
 	SourceCardID               string   `json:"sourceCardId" ts:"string"`
 }
 
+// PendingFreeTradeSelectionDto represents a pending free trade colony selection
+type PendingFreeTradeSelectionDto struct {
+	AvailableColonyIDs []string `json:"availableColonyIds" ts:"string[]"`
+	Source             string   `json:"source" ts:"string"`
+	SourceCardID       string   `json:"sourceCardId" ts:"string"`
+}
+
 // PlayerStatus represents the current status of a player in the game
 type PlayerStatus string
 
@@ -767,6 +774,7 @@ type PlayerDto struct {
 	PendingColonyResourceSelection *PendingColonyResourceSelectionDto `json:"pendingColonyResourceSelection" ts:"PendingColonyResourceSelectionDto | null"`
 	PendingAwardFundSelection      *PendingAwardFundSelectionDto      `json:"pendingAwardFundSelection" ts:"PendingAwardFundSelectionDto | null"`
 	PendingColonySelection         *PendingColonySelectionDto         `json:"pendingColonySelection" ts:"PendingColonySelectionDto | null"`
+	PendingFreeTradeSelection      *PendingFreeTradeSelectionDto      `json:"pendingFreeTradeSelection" ts:"PendingFreeTradeSelectionDto | null"`
 	ForcedFirstAction              *ForcedFirstActionDto              `json:"forcedFirstAction" ts:"ForcedFirstActionDto | null"`
 	ResourceStorage                map[string]int                     `json:"resourceStorage" ts:"Record<string, number>"`
 	PaymentSubstitutes             []PaymentSubstituteDto             `json:"paymentSubstitutes" ts:"PaymentSubstituteDto[]"`
@@ -840,6 +848,7 @@ type GameDto struct {
 	IsSpectator         bool                   `json:"isSpectator" ts:"boolean"`
 	ColonyTiles         []ColonyTileDto        `json:"colonyTiles,omitempty" ts:"ColonyTileDto[] | undefined"`
 	TradeFleetAvailable bool                   `json:"tradeFleetAvailable" ts:"boolean"`
+	TradeFleets         map[string]bool        `json:"tradeFleets,omitempty" ts:"Record<string, boolean> | undefined"`
 	ProjectFunding      []ProjectFundingDto    `json:"projectFunding,omitempty" ts:"ProjectFundingDto[] | undefined"`
 	IsLastRound         bool                   `json:"isLastRound" ts:"boolean"`
 }
@@ -893,6 +902,7 @@ type ColonyTileDto struct {
 	TradedThisGen  bool              `json:"tradedThisGen" ts:"boolean"`
 	TraderID       string            `json:"traderId" ts:"string"`
 	Style          StyleDto          `json:"style" ts:"StyleDto"`
+	TradeStepBonus int               `json:"tradeStepBonus" ts:"number"`
 	TradeAvailable bool              `json:"tradeAvailable" ts:"boolean"`
 	BuildAvailable bool              `json:"buildAvailable" ts:"boolean"`
 	TradeErrors    []StateErrorDto   `json:"tradeErrors" ts:"StateErrorDto[]"`

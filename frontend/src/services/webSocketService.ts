@@ -39,6 +39,8 @@ import {
   MessageTypeActionBehaviorChoiceConfirmed,
   MessageTypeActionConfirmStealTarget,
   MessageTypeActionConfirmColonyResource,
+  MessageTypeActionConfirmColonyPlacement,
+  MessageTypeActionConfirmFreeTrade,
   MessageTypeActionConfirmAwardFund,
   MessageTypeActionCardDiscardConfirmed,
   MessageTypeActionConfirmInitAdvance,
@@ -394,6 +396,14 @@ export class WebSocketService {
 
   confirmColonyResource(cardId: string): string {
     return this.send(MessageTypeActionConfirmColonyResource, { cardId });
+  }
+
+  confirmColonyPlacement(colonyId: string): string {
+    return this.send(MessageTypeActionConfirmColonyPlacement, { colonyId });
+  }
+
+  confirmFreeTrade(colonyId: string): string {
+    return this.send(MessageTypeActionConfirmFreeTrade, { colonyId });
   }
 
   confirmAwardFund(awardType: string): string {

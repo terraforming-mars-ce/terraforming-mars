@@ -139,6 +139,20 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		})
 	}
 
+	// Apply trade step bonus from cards like Trade Envoys (advance marker before calculating income)
+	tradeStepBonus := CountTradeStepBonus(traderPlayer, a.cardRegistry)
+	if tradeStepBonus > 0 {
+		maxStep := len(definition.Steps) - 1
+		newPosition := tileState.MarkerPosition + tradeStepBonus
+		if newPosition > maxStep {
+			newPosition = maxStep
+		}
+		tileState.MarkerPosition = newPosition
+		log.Debug("Applied trade step bonus",
+			zap.Int("bonus", tradeStepBonus),
+			zap.Int("new_marker_position", newPosition))
+	}
+
 	// Collect pending card-targeted resources per player, so same-type resources
 	// from trade income + colony bonus are combined into a single selection.
 	pendingByPlayer := map[string][]*PendingResource{}
@@ -286,4 +300,52 @@ func hasEligibleStorageCard(p *player.Player, resourceType string, cardRegistry 
 	}
 
 	return false
+}
+
+// SetPendingColonyResourceFromTrade handles pending card-targeted resources from trade/colony operations.
+func SetPendingColonyResourceFromTrade(p *player.Player, pendings []*PendingResource, colonyName string, colonyID string, reason string, cardRegistry cards.CardRegistry, log *zap.Logger) {
+	for _, combined := range combinePendingResources(pendings) {
+		setPendingColonyResource(p, combined, colonyName, colonyID, reason, cardRegistry, log)
+	}
+}
+
+// CountTradeStepBonus counts how many colony track step bonuses a player has from
+// played cards with "before-colony-trade" condition triggers (e.g., Trade Envoys, Trading Colony).
+func CountTradeStepBonus(p *player.Player, cardRegistry cards.CardRegistry) int {
+	if cardRegistry == nil {
+		return 0
+	}
+	bonus := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		bonus += countTradeStepBonusFromBehaviors(card.Behaviors)
+	}
+	if corpID := p.CorporationID(); corpID != "" {
+		corp, err := cardRegistry.GetByID(corpID)
+		if err == nil {
+			bonus += countTradeStepBonusFromBehaviors(corp.Behaviors)
+		}
+	}
+	return bonus
+}
+
+func countTradeStepBonusFromBehaviors(behaviors []shared.CardBehavior) int {
+	bonus := 0
+	for _, behavior := range behaviors {
+		for _, trigger := range behavior.Triggers {
+			if trigger.Type == shared.TriggerTypeAuto &&
+				trigger.Condition != nil &&
+				trigger.Condition.Type == "before-colony-trade" {
+				for _, output := range behavior.Outputs {
+					if output.ResourceType == "colony-track-step" {
+						bonus += output.Amount
+					}
+				}
+			}
+		}
+	}
+	return bonus
 }

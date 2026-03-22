@@ -22,6 +22,14 @@ import CardDrawSelectionOverlay from "../../ui/overlay/CardDrawSelectionOverlay.
 import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOverlay.tsx";
 import AwardFundSelectionPopover from "../../ui/popover/AwardFundSelectionPopover.tsx";
 import CardFanOverlay, { CardFanOverlayHandle } from "../../ui/overlay/CardFanOverlay.tsx";
+import ColonySelectionOverlay from "../../ui/overlay/ColonySelectionOverlay.tsx";
+import FreeTradeSelectionOverlay from "../../ui/overlay/FreeTradeSelectionOverlay.tsx";
+import {
+  GameFlowPopover,
+  GameFlowTitle,
+  GameFlowBody,
+  GameFlowFooter,
+} from "../../ui/popover/GameFlowPopover.tsx";
 import CorporationOverlay from "../../ui/overlay/CorporationOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
@@ -66,7 +74,7 @@ import {
   GameStatusLobby,
   ResourceType,
 } from "@/types/generated/api-types.ts";
-import type { PlayerDto, OtherPlayerDto } from "@/types/generated/api-types.ts";
+import type { PlayerDto, OtherPlayerDto, CardDto } from "@/types/generated/api-types.ts";
 import { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
 
 import { useGameStore } from "@/stores/gameStore.ts";
@@ -141,6 +149,8 @@ export default function GameInterface() {
   const showCorporationOverlay = useUIOverlayStore((s) => s.showCorporationOverlay);
   const showStealTargetSelection = useUIOverlayStore((s) => s.showStealTargetSelection);
   const showColonyResourceSelection = useUIOverlayStore((s) => s.showColonyResourceSelection);
+  const showColonyPlacementSelection = useUIOverlayStore((s) => s.showColonyPlacementSelection);
+  const showFreeTradeSelection = useUIOverlayStore((s) => s.showFreeTradeSelection);
 
   const showBehaviorChoiceSelection = useCardPlayFlowStore((s) => s.showBehaviorChoiceSelection);
   const cardPendingChoice = useCardPlayFlowStore((s) => s.cardPendingChoice);
@@ -150,6 +160,8 @@ export default function GameInterface() {
   const showActionChoiceSelection = useCardPlayFlowStore((s) => s.showActionChoiceSelection);
   const pendingActionReuse = useCardPlayFlowStore((s) => s.pendingActionReuse);
   const showActionReuseSelection = useCardPlayFlowStore((s) => s.showActionReuseSelection);
+  const pendingFreeTradeWarning = useCardPlayFlowStore((s) => s.pendingFreeTradeWarning);
+  const showFreeTradeWarning = useCardPlayFlowStore((s) => s.showFreeTradeWarning);
   const pendingBehaviorChoiceStorage = useCardPlayFlowStore((s) => s.pendingBehaviorChoiceStorage);
   const showBehaviorChoiceStorage = useCardPlayFlowStore((s) => s.showBehaviorChoiceStorage);
   const pendingCardStorage = useCardPlayFlowStore((s) => s.pendingCardStorage);
@@ -487,12 +499,37 @@ export default function GameInterface() {
     showWaitingForPlayers;
 
   // --- Card fan visibility ---
+  const colonyAllPlayers = useMemo(() => {
+    if (!game) {
+      return [];
+    }
+    return [
+      ...(game.currentPlayer
+        ? [
+            {
+              id: game.currentPlayer.id,
+              name: game.currentPlayer.name,
+              color: game.currentPlayer.color,
+            },
+          ]
+        : []),
+      ...(game.otherPlayers?.map((p) => ({ id: p.id, name: p.name, color: p.color })) ?? []),
+    ];
+  }, [
+    game?.currentPlayer?.id,
+    game?.currentPlayer?.name,
+    game?.currentPlayer?.color,
+    game?.otherPlayers,
+  ]);
+
   const hideCardFanForModals =
     showStartingSelection ||
     showPendingCardSelection ||
     showCardDrawSelection ||
     showCardDiscardSelection ||
     showBehaviorChoiceSelection ||
+    showColonyPlacementSelection ||
+    showFreeTradeSelection ||
     isPreGamePhase ||
     !!currentPlayer?.pendingTileSelection;
 
@@ -1092,7 +1129,16 @@ export default function GameInterface() {
           resourceType={pendingCardStorage.resourceType}
           amount={pendingCardStorage.amount}
           selectorTags={pendingCardStorage.selectorTags}
-          playedCards={currentPlayer?.playedCards || []}
+          playedCards={(() => {
+            const played = currentPlayer?.playedCards || [];
+            const cardBeingPlayed = currentPlayer?.cards?.find(
+              (c) => c.id === pendingCardStorage.cardId,
+            );
+            if (cardBeingPlayed && !played.some((p) => p.id === cardBeingPlayed.id)) {
+              return [...played, cardBeingPlayed as unknown as CardDto];
+            }
+            return played;
+          })()}
           corporationCard={currentPlayer?.corporation}
           resourceStorage={currentPlayer?.resourceStorage}
           onCardSelect={flow.handleCardStorageSelect}
@@ -1225,6 +1271,63 @@ export default function GameInterface() {
           onCancel={flow.handleColonyResourceSkip}
           isVisible={showColonyResourceSelection}
         />
+      )}
+
+      {game?.currentPlayer?.pendingColonySelection && game && (
+        <ColonySelectionOverlay
+          isOpen={showColonyPlacementSelection}
+          pendingSelection={game.currentPlayer.pendingColonySelection}
+          colonyTiles={game.colonyTiles ?? []}
+          allPlayers={colonyAllPlayers}
+          onConfirm={(colonyId) => void globalWebSocketManager.confirmColonyPlacement(colonyId)}
+        />
+      )}
+
+      {game?.currentPlayer?.pendingFreeTradeSelection && game && (
+        <FreeTradeSelectionOverlay
+          isOpen={showFreeTradeSelection}
+          pendingSelection={game.currentPlayer.pendingFreeTradeSelection}
+          colonyTiles={game.colonyTiles ?? []}
+          viewingPlayerId={game.viewingPlayerId ?? ""}
+          tradeFleetAvailable={game.tradeFleetAvailable}
+          allPlayers={colonyAllPlayers}
+          playedCards={currentPlayer?.playedCards ?? []}
+          corporation={currentPlayer?.corporation}
+          onConfirm={(colonyId) => void globalWebSocketManager.confirmFreeTrade(colonyId)}
+        />
+      )}
+
+      {showFreeTradeWarning && pendingFreeTradeWarning && (
+        <GameFlowPopover
+          isVisible={true}
+          onClose={() => {
+            useCardPlayFlowStore.getState().setShowFreeTradeWarning(false);
+            useCardPlayFlowStore.getState().setPendingFreeTradeWarning(null);
+          }}
+          type="interactive"
+        >
+          <GameFlowTitle>
+            <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
+              Cannot Trade
+            </h3>
+          </GameFlowTitle>
+          <GameFlowBody>
+            <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+              <p className="text-white/70 text-sm">{pendingFreeTradeWarning}</p>
+            </div>
+          </GameFlowBody>
+          <GameFlowFooter>
+            <GameButton
+              size="sm"
+              onClick={() => {
+                useCardPlayFlowStore.getState().setShowFreeTradeWarning(false);
+                useCardPlayFlowStore.getState().setPendingFreeTradeWarning(null);
+              }}
+            >
+              OK
+            </GameButton>
+          </GameFlowFooter>
+        </GameFlowPopover>
       )}
 
       {game?.currentPlayer?.pendingAwardFundSelection && (

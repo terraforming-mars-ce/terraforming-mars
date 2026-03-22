@@ -390,6 +390,25 @@ export function useCardPlayFlow() {
           store.setActionPendingChoice(null);
         } else {
           const g = useGameStore.getState().game;
+
+          // Check if choice has trade output - validate fleet/colonies before proceeding
+          const hasFreeTrade = selectedChoice?.outputs?.some((o: any) => o.type === "trade");
+          if (hasFreeTrade) {
+            if (!g?.tradeFleetAvailable) {
+              store.setPendingFreeTradeWarning("No trade fleet available");
+              store.setShowFreeTradeWarning(true);
+              store.setActionPendingChoice(null);
+              return;
+            }
+            const tradeableColonies = (g?.colonyTiles ?? []).filter((c) => !c.tradedThisGen);
+            if (tradeableColonies.length === 0) {
+              store.setPendingFreeTradeWarning("No colonies available for trading");
+              store.setShowFreeTradeWarning(true);
+              store.setActionPendingChoice(null);
+              return;
+            }
+          }
+
           const targetInfo = needsTargetPlayerSelection(selectedChoice?.outputs, g?.otherPlayers);
           if (targetInfo) {
             store.setPendingActionTargetPlayer({

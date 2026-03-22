@@ -133,6 +133,9 @@ interface CardPlayFlowState {
   showActionReuseSelection: boolean;
   pendingActionReuse: { cardId: string; behaviorIndex: number } | null;
 
+  showFreeTradeWarning: boolean;
+  pendingFreeTradeWarning: string | null;
+
   // Behavior choice flow (passive triggered)
   showBehaviorChoiceSelection: boolean;
   showBehaviorChoiceStorage: boolean;
@@ -160,6 +163,8 @@ interface CardPlayFlowState {
   setPendingCardResourceInput: (pending: CardResourceInputPending | null) => void;
   setShowActionReuseSelection: (show: boolean) => void;
   setPendingActionReuse: (pending: { cardId: string; behaviorIndex: number } | null) => void;
+  setShowFreeTradeWarning: (show: boolean) => void;
+  setPendingFreeTradeWarning: (warning: string | null) => void;
   setShowBehaviorChoiceSelection: (show: boolean) => void;
   setShowBehaviorChoiceStorage: (show: boolean) => void;
   setPendingBehaviorChoiceStorage: (pending: BehaviorChoiceStoragePending | null) => void;
@@ -194,6 +199,8 @@ const actionFlowInitial = {
   pendingCardResourceInput: null,
   showActionReuseSelection: false,
   pendingActionReuse: null,
+  showFreeTradeWarning: false,
+  pendingFreeTradeWarning: null,
 };
 
 const behaviorChoiceInitial = {
@@ -232,6 +239,8 @@ export const useCardPlayFlowStore = create<CardPlayFlowState>((set) => ({
   setPendingCardResourceInput: (pending) => set({ pendingCardResourceInput: pending }),
   setShowActionReuseSelection: (show) => set({ showActionReuseSelection: show }),
   setPendingActionReuse: (pending) => set({ pendingActionReuse: pending }),
+  setShowFreeTradeWarning: (show) => set({ showFreeTradeWarning: show }),
+  setPendingFreeTradeWarning: (warning) => set({ pendingFreeTradeWarning: warning }),
   setShowBehaviorChoiceSelection: (show) => set({ showBehaviorChoiceSelection: show }),
   setShowBehaviorChoiceStorage: (show) => set({ showBehaviorChoiceStorage: show }),
   setPendingBehaviorChoiceStorage: (pending) => set({ pendingBehaviorChoiceStorage: pending }),
