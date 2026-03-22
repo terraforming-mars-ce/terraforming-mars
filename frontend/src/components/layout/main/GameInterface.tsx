@@ -23,6 +23,7 @@ import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOv
 import AwardFundSelectionPopover from "../../ui/popover/AwardFundSelectionPopover.tsx";
 import CardFanOverlay, { CardFanOverlayHandle } from "../../ui/overlay/CardFanOverlay.tsx";
 import ColonySelectionOverlay from "../../ui/overlay/ColonySelectionOverlay.tsx";
+import FreeTradeSelectionOverlay from "../../ui/overlay/FreeTradeSelectionOverlay.tsx";
 import CorporationOverlay from "../../ui/overlay/CorporationOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
@@ -143,6 +144,7 @@ export default function GameInterface() {
   const showStealTargetSelection = useUIOverlayStore((s) => s.showStealTargetSelection);
   const showColonyResourceSelection = useUIOverlayStore((s) => s.showColonyResourceSelection);
   const showColonyPlacementSelection = useUIOverlayStore((s) => s.showColonyPlacementSelection);
+  const showFreeTradeSelection = useUIOverlayStore((s) => s.showFreeTradeSelection);
 
   const showBehaviorChoiceSelection = useCardPlayFlowStore((s) => s.showBehaviorChoiceSelection);
   const cardPendingChoice = useCardPlayFlowStore((s) => s.cardPendingChoice);
@@ -1262,6 +1264,33 @@ export default function GameInterface() {
             })) ?? []),
           ]}
           onConfirm={(colonyId) => void globalWebSocketManager.confirmColonyPlacement(colonyId)}
+        />
+      )}
+
+      {game?.currentPlayer?.pendingFreeTradeSelection && game && (
+        <FreeTradeSelectionOverlay
+          isOpen={showFreeTradeSelection}
+          pendingSelection={game.currentPlayer.pendingFreeTradeSelection}
+          colonyTiles={game.colonyTiles ?? []}
+          viewingPlayerId={game.viewingPlayerId ?? ""}
+          tradeFleetAvailable={game.tradeFleetAvailable}
+          allPlayers={[
+            ...(game.currentPlayer
+              ? [
+                  {
+                    id: game.currentPlayer.id,
+                    name: game.currentPlayer.name,
+                    color: game.currentPlayer.color,
+                  },
+                ]
+              : []),
+            ...(game.otherPlayers?.map((p) => ({
+              id: p.id,
+              name: p.name,
+              color: p.color,
+            })) ?? []),
+          ]}
+          onConfirm={(colonyId) => void globalWebSocketManager.confirmFreeTrade(colonyId)}
         />
       )}
 

@@ -43,6 +43,7 @@ export function useGameTransitions(
     (s) => s.game?.currentPlayer?.pendingColonyResourceSelection,
   );
   const pendingColonyPlacement = useGameStore((s) => s.game?.currentPlayer?.pendingColonySelection);
+  const pendingFreeTrade = useGameStore((s) => s.game?.currentPlayer?.pendingFreeTradeSelection);
   const initPhase = useGameStore((s) => s.game?.initPhase);
   const hostPlayerId = useGameStore((s) => s.game?.hostPlayerId);
   const currentPlayerId = useGameStore((s) => s.currentPlayer?.id);
@@ -249,6 +250,16 @@ export function useGameTransitions(
       setShowColonyPlacementSelection(false);
     }
   }, [pendingColonyPlacement]);
+
+  useEffect(() => {
+    const { showFreeTradeSelection, setShowFreeTradeSelection } = useUIOverlayStore.getState();
+
+    if (pendingFreeTrade && !showFreeTradeSelection) {
+      setShowFreeTradeSelection(true);
+    } else if (!pendingFreeTrade && showFreeTradeSelection) {
+      setShowFreeTradeSelection(false);
+    }
+  }, [pendingFreeTrade]);
 
   useEffect(() => {
     if (isLobbyPhase) {

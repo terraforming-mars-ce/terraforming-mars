@@ -248,6 +248,21 @@ func CalculatePlayerCardActionState(
 		warnings = append(warnings, validateGlobalParamWarnings(choice.Outputs, g)...)
 	}
 
+	// Warn if any choice has free-trade but no trade fleet available
+	if g.HasColonies() && !g.GetTradeFleetAvailable(p.ID()) {
+		for _, choice := range behavior.Choices {
+			for _, output := range choice.Outputs {
+				if output.ResourceType == shared.ResourceFreeTrade {
+					warnings = append(warnings, player.StateWarning{
+						Code:    "no-trade-fleet",
+						Message: "No trade fleet available for free trade",
+					})
+					break
+				}
+			}
+		}
+	}
+
 	return player.EntityState{
 		Errors:         errors,
 		Warnings:       warnings,

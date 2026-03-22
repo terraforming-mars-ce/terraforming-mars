@@ -121,6 +121,13 @@ type PendingColonySelection struct {
 	SourceCardID               string
 }
 
+// PendingFreeTradeSelection represents a pending free trade colony selection from a card effect
+type PendingFreeTradeSelection struct {
+	AvailableColonyIDs []string
+	Source             string
+	SourceCardID       string
+}
+
 // ForcedFirstAction represents an action that must be completed first
 type ForcedFirstAction struct {
 	ActionType    string

@@ -1028,6 +1028,14 @@ export interface PendingColonySelectionDto {
   sourceCardId: string;
 }
 /**
+ * PendingFreeTradeSelectionDto represents a pending free trade colony selection
+ */
+export interface PendingFreeTradeSelectionDto {
+  availableColonyIds: string[];
+  source: string;
+  sourceCardId: string;
+}
+/**
  * PlayerStatus represents the current status of a player in the game
  */
 export type PlayerStatus = string;
@@ -1078,6 +1086,7 @@ export interface PlayerDto {
   pendingColonyResourceSelection?: PendingColonyResourceSelectionDto;
   pendingAwardFundSelection?: PendingAwardFundSelectionDto;
   pendingColonySelection?: PendingColonySelectionDto;
+  pendingFreeTradeSelection?: PendingFreeTradeSelectionDto;
   forcedFirstAction?: ForcedFirstActionDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
@@ -1792,6 +1801,7 @@ export const MessageTypeActionConfirmColonyResource: MessageType = "action.confi
 export const MessageTypeActionConfirmAwardFund: MessageType = "action.confirm-award-fund";
 export const MessageTypeActionConfirmColonyPlacement: MessageType =
   "action.confirm-colony-placement";
+export const MessageTypeActionConfirmFreeTrade: MessageType = "action.confirm-free-trade";
 export const MessageTypeAdminCommand: MessageType = "admin-command";
 export const MessageTypeRequestLogs: MessageType = "request-logs";
 export const MessageTypePlayerTakeover: MessageType = "player-takeover";

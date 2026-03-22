@@ -191,3 +191,17 @@ func (s *Selection) SetPendingColonySelection(selection *shared.PendingColonySel
 		st.PendingColonySelection = selection
 	})
 }
+
+func (s *Selection) GetPendingFreeTradeSelection() *shared.PendingFreeTradeSelection {
+	var sel *shared.PendingFreeTradeSelection
+	s.read(func(st *datastore.PlayerState) {
+		sel = st.PendingFreeTradeSelection
+	})
+	return sel
+}
+
+func (s *Selection) SetPendingFreeTradeSelection(selection *shared.PendingFreeTradeSelection) {
+	s.update(func(st *datastore.PlayerState) {
+		st.PendingFreeTradeSelection = selection
+	})
+}

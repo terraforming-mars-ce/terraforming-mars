@@ -58,6 +58,7 @@ const (
 	MessageTypeActionConfirmColonyResource  MessageType = "action.confirm-colony-resource"
 	MessageTypeActionConfirmAwardFund       MessageType = "action.confirm-award-fund"
 	MessageTypeActionConfirmColonyPlacement MessageType = "action.confirm-colony-placement"
+	MessageTypeActionConfirmFreeTrade       MessageType = "action.confirm-free-trade"
 
 	MessageTypeAdminCommand MessageType = "admin-command"
 

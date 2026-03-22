@@ -14265,6 +14265,13 @@
                 "amount": 1,
                 "target": "self-card"
               }
+            ],
+            "outputs": [
+              {
+                "type": "free-trade",
+                "amount": 1,
+                "target": "self-player"
+              }
             ]
           }
         ],

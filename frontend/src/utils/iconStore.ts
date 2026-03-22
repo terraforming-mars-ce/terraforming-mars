@@ -78,6 +78,7 @@ export const TILE_ICONS: { [key: string]: string } = {
   greenery: "/assets/tiles/greenery_no_O2.png",
   trade: "/assets/tiles/trade.png",
   "colony-track-step": "/assets/tiles/colony.png",
+  "free-trade": "/assets/tiles/trade.png",
 };
 
 export const GLOBAL_PARAMETER_ICONS: { [key: string]: string } = {

@@ -2184,6 +2184,18 @@ func (g *Game) GetPlaceableColonyIDs(playerID string, allowDuplicate bool) []str
 	return ids
 }
 
+// GetTradeableColonyIDs returns colony IDs that haven't been traded this generation.
+func (g *Game) GetTradeableColonyIDs() []string {
+	tiles := g.ColonyTileStates()
+	ids := make([]string, 0, len(tiles))
+	for _, ts := range tiles {
+		if !ts.TradedThisGen {
+			ids = append(ids, ts.DefinitionID)
+		}
+	}
+	return ids
+}
+
 func (g *Game) SetColonyTileStates(states []*colony.TileState) {
 	g.update(func(s *datastore.GameState) {
 		s.ColonyTileStates = states

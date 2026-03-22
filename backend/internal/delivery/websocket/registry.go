@@ -61,6 +61,7 @@ func RegisterHandlers(
 	confirmColonyResourceAction *confirmAction.ConfirmColonyResourceAction,
 	confirmAwardFundAction *confirmAction.ConfirmAwardFundAction,
 	confirmColonyPlacementAction *confirmAction.ConfirmColonyPlacementAction,
+	confirmFreeTradeAction *confirmAction.ConfirmFreeTradeAction,
 	playerDisconnectedAction *connAction.PlayerDisconnectedAction,
 	playerTakeoverAction *connAction.PlayerTakeoverAction,
 	kickPlayerAction *connAction.KickPlayerAction,
@@ -165,6 +166,9 @@ func RegisterHandlers(
 
 	confirmColonyPlacementHandler := confirmation.NewConfirmColonyPlacementHandler(confirmColonyPlacementAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConfirmColonyPlacement, confirmColonyPlacementHandler)
+
+	confirmFreeTradeHandler := confirmation.NewConfirmFreeTradeHandler(confirmFreeTradeAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionConfirmFreeTrade, confirmFreeTradeHandler)
 
 	requestLogsHandler := connection.NewRequestLogsHandler(broadcaster)
 	hub.RegisterHandler(dto.MessageTypeRequestLogs, requestLogsHandler)
