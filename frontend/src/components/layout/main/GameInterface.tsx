@@ -1095,7 +1095,16 @@ export default function GameInterface() {
           resourceType={pendingCardStorage.resourceType}
           amount={pendingCardStorage.amount}
           selectorTags={pendingCardStorage.selectorTags}
-          playedCards={currentPlayer?.playedCards || []}
+          playedCards={(() => {
+            const played = currentPlayer?.playedCards || [];
+            const cardBeingPlayed = currentPlayer?.cards?.find(
+              (c) => c.id === pendingCardStorage.cardId,
+            );
+            if (cardBeingPlayed && !played.some((p) => p.id === cardBeingPlayed.id)) {
+              return [...played, cardBeingPlayed as any];
+            }
+            return played;
+          })()}
           corporationCard={currentPlayer?.corporation}
           resourceStorage={currentPlayer?.resourceStorage}
           onCardSelect={flow.handleCardStorageSelect}
