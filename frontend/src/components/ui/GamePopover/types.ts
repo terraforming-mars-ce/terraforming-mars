@@ -35,7 +35,7 @@ export type PopoverPosition =
     };
 
 export interface PopoverHeader {
-  title: string;
+  title: React.ReactNode;
   badge?: React.ReactNode;
   showCloseButton?: boolean;
   centerContent?: React.ReactNode;
