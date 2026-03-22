@@ -16,11 +16,10 @@
       { "seatsOwned": 4, "rewards": [{ "type": "credit", "amount": 12 }, { "type": "titanium", "amount": 4 }, { "type": "tr", "amount": 1 }] }
     ],
     "completionEffect": {
-      "description": "Each player is dealt 20 cards directly to hand",
+      "description": "Each player is dealt 3 cards directly to hand",
       "rewards": [],
-      "globalEffects": [{ "type": "card-draw", "amount": 20 }]
+      "globalEffects": [{ "type": "card-draw", "amount": 3 }]
     },
-    "firstFunderBonus": [{ "type": "titanium", "amount": 2 }],
     "style": { "color": "#4A90D9", "icon": "orbital-station" }
   },
   {
@@ -39,11 +38,10 @@
       { "seatsOwned": 3, "rewards": [{ "type": "heat", "amount": 10 }, { "type": "energy", "amount": 5 }, { "type": "energy-production", "amount": 1 }] }
     ],
     "completionEffect": {
-      "description": "Each player chooses +10 production of any type",
+      "description": "Each player chooses +2 production of any type",
       "rewards": [],
-      "globalEffects": [{ "type": "production-choice", "amount": 10 }]
+      "globalEffects": [{ "type": "production-choice", "amount": 2 }]
     },
-    "firstFunderBonus": [{ "type": "heat", "amount": 4 }],
     "style": { "color": "#FFD700", "icon": "solar-forge" }
   },
   {
@@ -65,11 +63,9 @@
       { "seatsOwned": 6, "rewards": [{ "type": "tr", "amount": 4 }, { "type": "plant", "amount": 10 }, { "type": "vp", "amount": 5 }] }
     ],
     "completionEffect": {
-      "description": "+5 TR to all players + raise oxygen 2 steps",
-      "rewards": [{ "type": "tr", "amount": 5 }],
-      "globalEffects": [{ "type": "oxygen", "amount": 2 }]
+      "description": "+2 TR to all players",
+      "rewards": [{ "type": "tr", "amount": 2 }]
     },
-    "firstFunderBonus": [{ "type": "tr", "amount": 2 }],
     "style": { "color": "#2E8B57", "icon": "terraforming-hub" }
   }
 ]

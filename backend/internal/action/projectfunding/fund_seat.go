@@ -172,17 +172,6 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 		CalculatedOutputs: calculatedOutputs,
 	})
 
-	// Apply first-funder bonus to the first seat buyer
-	if seatIndex == 0 && len(definition.FirstFunderBonus) > 0 {
-		bonusOutputs := applyRewards(player, definition.FirstFunderBonus)
-		g.AddTriggeredEffect(shared.TriggeredEffect{
-			CardName:          definition.Name + " (First Funder)",
-			PlayerID:          playerID,
-			SourceType:        shared.SourceTypeProjectFundingSeat,
-			CalculatedOutputs: bonusOutputs,
-		})
-	}
-
 	a.WriteStateLogFull(ctx, g, definition.Name, shared.SourceTypeProjectFundingSeat,
 		playerID, fmt.Sprintf("Funded %s project", definition.Name), nil, calculatedOutputs, nil)
 

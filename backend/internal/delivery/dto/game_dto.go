@@ -934,7 +934,6 @@ type ProjectFundingDto struct {
 	PaymentSubstitutes []ProjectPaymentSubDto     `json:"paymentSubstitutes" ts:"ProjectPaymentSubDto[]"`
 	RewardTiers        []ProjectRewardTierDto     `json:"rewardTiers" ts:"ProjectRewardTierDto[]"`
 	CompletionEffect   ProjectCompletionEffectDto `json:"completionEffect" ts:"ProjectCompletionEffectDto"`
-	FirstFunderBonus   []ColonyOutputDto          `json:"firstFunderBonus,omitempty" ts:"ColonyOutputDto[] | undefined"`
 	Style              StyleDto                   `json:"style" ts:"StyleDto"`
 }
 

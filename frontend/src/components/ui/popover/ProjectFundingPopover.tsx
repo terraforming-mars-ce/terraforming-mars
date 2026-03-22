@@ -185,15 +185,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
 
       <div style={{ height: "1px", background: "rgba(255,255,255,0.15)", margin: "10px 0" }} />
 
-      {project.firstFunderBonus && project.firstFunderBonus.length > 0 && (
-        <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[10px] font-orbitron text-amber-400/70 uppercase tracking-wider">
-            First Funder
-          </span>
-          <OutputDisplay outputs={project.firstFunderBonus} />
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-orbitron text-white/40 uppercase tracking-wider">
