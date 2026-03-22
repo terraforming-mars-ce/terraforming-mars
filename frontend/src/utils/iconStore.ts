@@ -74,6 +74,7 @@ export const TILE_ICONS: { [key: string]: string } = {
   "volcano-tile": "/assets/tiles/hazard.png",
   "volcano-placement": "/assets/tiles/hazard.png",
   "colony-tile": "/assets/tiles/colony.png",
+  "colony-count": "/assets/tiles/colony.png",
 };
 
 export const GLOBAL_PARAMETER_ICONS: { [key: string]: string } = {
