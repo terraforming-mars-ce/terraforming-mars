@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
-type PlanetTarget = "mars" | "venus";
+type PlanetTarget = "mars" | "venus" | "orbital-station";
 
 interface PlanetFocusContextType {
   activePlanet: PlanetTarget;
