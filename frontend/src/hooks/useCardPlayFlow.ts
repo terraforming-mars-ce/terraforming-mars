@@ -391,8 +391,8 @@ export function useCardPlayFlow() {
         } else {
           const g = useGameStore.getState().game;
 
-          // Check if choice has free-trade output - validate fleet/colonies before proceeding
-          const hasFreeTrade = selectedChoice?.outputs?.some((o: any) => o.type === "free-trade");
+          // Check if choice has trade output - validate fleet/colonies before proceeding
+          const hasFreeTrade = selectedChoice?.outputs?.some((o: any) => o.type === "trade");
           if (hasFreeTrade) {
             if (!g?.tradeFleetAvailable) {
               store.setPendingFreeTradeWarning("No trade fleet available");

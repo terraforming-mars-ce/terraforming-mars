@@ -14268,7 +14268,7 @@
             ],
             "outputs": [
               {
-                "type": "free-trade",
+                "type": "trade",
                 "amount": 1,
                 "target": "self-player"
               }
