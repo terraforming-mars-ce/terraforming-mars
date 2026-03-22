@@ -2186,6 +2186,17 @@ func (g *Game) GetColonyTileState(colonyID string) *colony.TileState {
 	return result
 }
 
+// CountAllColonies returns the total number of colonies placed across all colony tiles.
+func (g *Game) CountAllColonies() int {
+	var total int
+	g.read(func(s *datastore.GameState) {
+		for _, state := range s.ColonyTileStates {
+			total += len(state.PlayerColonies)
+		}
+	})
+	return total
+}
+
 func (g *Game) GetTradeFleetAvailable(playerID string) bool {
 	var v bool
 	g.read(func(s *datastore.GameState) {

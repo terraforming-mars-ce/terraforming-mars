@@ -584,6 +584,9 @@ func (a *BehaviorApplier) resolveCardResourceType() string {
 }
 
 func (a *BehaviorApplier) countPerCondition(per *shared.PerCondition) int {
+	if per != nil && per.ResourceType == shared.ResourceColonyCount && a.game != nil {
+		return a.game.CountAllColonies()
+	}
 	var b *board.Board
 	var allPlayers []*player.Player
 	if a.game != nil {

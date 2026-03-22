@@ -12803,7 +12803,29 @@
     "type": "automated",
     "cost": 3,
     "description": "Increase your M€ production 1 step per 3 floaters you have.",
-    "pack": "colonies"
+    "pack": "colonies",
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "credit-production",
+            "amount": 1,
+            "target": "self-player",
+            "per": {
+              "type": "floater",
+              "amount": 3,
+              "location": "anywhere"
+            }
+          }
+        ],
+        "description": "Increase your M€ production 1 step per 3 floaters you have."
+      }
+    ]
   },
   {
     "id": "C11",
@@ -13477,6 +13499,16 @@
             "target": "self-player",
             "per": {
               "type": "city-tile",
+              "amount": 1,
+              "location": "anywhere"
+            }
+          },
+          {
+            "type": "credit",
+            "amount": 1,
+            "target": "self-player",
+            "per": {
+              "type": "colony-count",
               "amount": 1,
               "location": "anywhere"
             }
