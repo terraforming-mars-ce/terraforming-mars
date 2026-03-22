@@ -138,7 +138,7 @@ format-check:
 	@echo "✅ All code is properly formatted"
 
 # Pre-commit preparation
-prepare-for-commit: format lint
+prepare-for-commit: format lint typecheck test
 	@echo "✅ Ready to commit"
 
 # Build and deployment

@@ -454,7 +454,7 @@ func isStorageResourceType(rt shared.ResourceType) bool {
 func isEffectOutputType(rt shared.ResourceType) bool {
 	switch rt {
 	case shared.ResourceDiscount, shared.ResourcePaymentSubstitute, shared.ResourceValueModifier,
-		shared.ResourceGlobalParameterLenience,
+		shared.ResourceGlobalParameterLenience, shared.ResourceIgnoreGlobalRequirements,
 		shared.ResourceStoragePaymentSubstitute, shared.ResourceOceanAdjacencyBonus,
 		shared.ResourceDefense, shared.ResourceActionReuse:
 		return true
@@ -1205,6 +1205,12 @@ func (a *BehaviorApplier) applyOutput(
 		// during requirement validation. It widens the min/max window for global parameter checks.
 		log.Debug("Global parameter lenience effect registered",
 			zap.Int("amount", output.Amount),
+			zap.String("temporary", output.Temporary))
+
+	case shared.ResourceIgnoreGlobalRequirements:
+		// Registered as an effect and checked by RequirementModifierCalculator.
+		// When active, all global parameter requirements are bypassed for the next card played.
+		log.Debug("Ignore global requirements effect registered",
 			zap.String("temporary", output.Temporary))
 
 	case shared.ResourceValueModifier:
