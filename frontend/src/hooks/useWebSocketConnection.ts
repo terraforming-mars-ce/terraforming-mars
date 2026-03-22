@@ -230,8 +230,8 @@ export function useWebSocketConnection(
         }
       }
 
-      if (!previousGameRef.current && updatedGame.chatMessages?.length) {
-        useGameStore.getState().setChatMessages(updatedGame.chatMessages);
+      if (!previousGameRef.current) {
+        useGameStore.getState().setChatMessages(updatedGame.chatMessages ?? []);
       }
 
       previousGameRef.current = deepClone(updatedGame);
