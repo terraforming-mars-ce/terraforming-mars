@@ -894,6 +894,7 @@ type InitPhaseDto struct {
 type ColonyTileDto struct {
 	ID             string            `json:"id" ts:"string"`
 	Name           string            `json:"name" ts:"string"`
+	Location       string            `json:"location" ts:"string"`
 	Steps          []ColonyStepDto   `json:"steps" ts:"ColonyStepDto[]"`
 	ColonyBonus    []ColonyOutputDto `json:"colonyBonus" ts:"ColonyOutputDto[]"`
 	Colonies       []ColonySlotDto   `json:"colonies" ts:"ColonySlotDto[]"`

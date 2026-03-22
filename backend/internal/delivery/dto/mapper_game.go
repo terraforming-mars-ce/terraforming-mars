@@ -809,6 +809,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 		dtos = append(dtos, ColonyTileDto{
 			ID:             def.ID,
 			Name:           def.Name,
+			Location:       def.Location,
 			Steps:          steps,
 			ColonyBonus:    colonyBonus,
 			Colonies:       colonySlots,
