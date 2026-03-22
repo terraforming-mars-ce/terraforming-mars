@@ -230,7 +230,7 @@ export function useWebSocketConnection(
         }
       }
 
-      if (!previousGameRef.current) {
+      if (!previousGameRef.current || previousGameRef.current.id !== updatedGame.id) {
         useGameStore.getState().setChatMessages(updatedGame.chatMessages ?? []);
       }
 
