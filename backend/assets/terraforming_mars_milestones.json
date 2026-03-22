@@ -23,7 +23,7 @@
       "kind": "countable",
       "countable": { "type": "city-tile", "target": "self-player", "min": 3 }
     },
-    "style": { "color": "#795548", "icon": "city-tile" }
+    "style": { "color": "#9E9E9E", "icon": "city-tile" }
   },
   {
     "id": "gardener",
@@ -49,7 +49,7 @@
       "kind": "countable",
       "countable": { "type": "tag", "tag": "building", "min": 8 }
     },
-    "style": { "color": "#9E9E9E", "icon": "building-tag" }
+    "style": { "color": "#795548", "icon": "building-tag" }
   },
   {
     "id": "planner",
