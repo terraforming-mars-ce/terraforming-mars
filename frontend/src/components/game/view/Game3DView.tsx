@@ -5,6 +5,7 @@ import { PanControls } from "../controls/PanControls.tsx";
 import { FreeCamera, CameraFrustumHelper } from "../controls/FreeCamera.tsx";
 import MarsSphere from "../board/MarsSphere.tsx";
 import VenusSphere from "../board/VenusSphere.tsx";
+import OrbitalStation from "../board/OrbitalStation.tsx";
 
 import SkyboxLoader from "./SkyboxLoader.tsx";
 import GameIcon from "../../ui/display/GameIcon.tsx";
@@ -131,7 +132,7 @@ function AutoNavigateForTileSelection({ gameState }: { gameState: GameDto }) {
 
 function ReturnToMarsButton() {
   const { activePlanet, setActivePlanet } = usePlanetFocus();
-  const showButton = activePlanet === "venus";
+  const showButton = activePlanet === "venus" || activePlanet === "orbital-station";
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -189,6 +190,8 @@ export default function Game3DView({
   uiAnimationClass = "",
 }: Game3DViewProps) {
   const venusNextEnabled = gameState.settings?.venusNextEnabled ?? false;
+  const orbitalProject = gameState.projectFunding?.find((p) => p.id === "pf_orbital_station");
+  const orbitalStationSeats = orbitalProject ? orbitalProject.seatOwners.length : 0;
   const containerRef = useRef<HTMLDivElement>(null);
   const [cameraConfig, setCameraConfig] = useState({
     position: [0, 0, 8] as [number, number, number],
@@ -291,7 +294,7 @@ export default function Game3DView({
         )}
 
         {venusNextEnabled && <AutoNavigateForTileSelection gameState={gameState} />}
-        {venusNextEnabled && <ReturnToMarsButton />}
+        {(venusNextEnabled || orbitalProject) && <ReturnToMarsButton />}
 
         <Canvas
           camera={{
@@ -329,6 +332,15 @@ export default function Game3DView({
 
               {venusNextEnabled && (
                 <VenusSphere gameState={gameState} onHexClick={handleHexClick} />
+              )}
+
+              {orbitalProject && (
+                <OrbitalStation
+                  filledSeats={orbitalStationSeats}
+                  totalSeats={orbitalProject.seats.length}
+                  isCompleted={orbitalProject.isCompleted}
+                  name={orbitalProject.name}
+                />
               )}
 
               <GpuWarmup onReady={onGpuReady} />

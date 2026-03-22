@@ -3,7 +3,12 @@ import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
-import { VENUS_POSITION } from "../board/boardConstants";
+import {
+  VENUS_POSITION,
+  ORBITAL_STATION_ORBIT_RADIUS,
+  ORBITAL_STATION_ORBIT_SPEED,
+  ORBITAL_STATION_TILT,
+} from "../board/boardConstants";
 
 export const panState = { isPanning: false, hasDragged: false };
 
@@ -12,6 +17,14 @@ const VENUS_CENTER = new THREE.Vector3(VENUS_POSITION[0], VENUS_POSITION[1], VEN
 
 const MARS_ORBIT = { minDistance: 2.4, maxDistance: 20, defaultRadius: 8 };
 const VENUS_ORBIT = { minDistance: 2.4, maxDistance: 20, defaultRadius: 6.5 };
+const ORBITAL_STATION_ORBIT = { minDistance: 0.3, maxDistance: 5, defaultRadius: 0.8 };
+
+function getOrbitalStationPosition(elapsedTime: number): THREE.Vector3 {
+  const angle = elapsedTime * ORBITAL_STATION_ORBIT_SPEED;
+  const r = ORBITAL_STATION_ORBIT_RADIUS;
+  const tiltY = Math.sin(ORBITAL_STATION_TILT) * r * 0.3;
+  return new THREE.Vector3(Math.cos(angle) * r, Math.sin(angle) * tiltY, Math.sin(angle) * r);
+}
 
 export function PanControls() {
   const { camera, gl, size } = useThree();
@@ -50,7 +63,7 @@ export function PanControls() {
 
   const wasFreeCameraEnabled = useRef(settings.freeCameraEnabled);
 
-  useFrame(() => {
+  useFrame((state) => {
     // Handle free camera toggle
     if (settings.freeCameraEnabled && !wasFreeCameraEnabled.current) {
       setStoredCameraState({
@@ -83,11 +96,23 @@ export function PanControls() {
       previousPlanet.current = activePlanet;
       setIsTransitioning(true);
 
-      const orbit = activePlanet === "venus" ? VENUS_ORBIT : MARS_ORBIT;
-      targetOrbitCenter.current.copy(activePlanet === "venus" ? VENUS_CENTER : MARS_CENTER);
+      let orbit = MARS_ORBIT;
+      if (activePlanet === "venus") {
+        orbit = VENUS_ORBIT;
+        targetOrbitCenter.current.copy(VENUS_CENTER);
+      } else if (activePlanet === "orbital-station") {
+        orbit = ORBITAL_STATION_ORBIT;
+      } else {
+        targetOrbitCenter.current.copy(MARS_CENTER);
+      }
       targetSpherical.current.radius = orbit.defaultRadius;
       targetSpherical.current.phi = Math.PI / 2;
       targetSpherical.current.theta = 0;
+    }
+
+    // Continuously track orbital station position since it moves
+    if (activePlanet === "orbital-station") {
+      targetOrbitCenter.current.copy(getOrbitalStationPosition(state.clock.elapsedTime));
     }
 
     if (size.width !== previousSize.current.width || size.height !== previousSize.current.height) {
@@ -101,7 +126,8 @@ export function PanControls() {
       setShouldRecenter(false);
     }
 
-    const travelLerp = isTransitioning ? 0.03 : 0.1;
+    const isOrbitalStation = activePlanet === "orbital-station";
+    const travelLerp = isTransitioning ? 0.03 : isOrbitalStation ? 0.15 : 0.1;
     const panLerp = 0.1;
 
     orbitCenter.current.lerp(targetOrbitCenter.current, travelLerp);
@@ -213,7 +239,13 @@ export function PanControls() {
     const handleWheel = (event: WheelEvent) => {
       if (settings.freeCameraEnabled) return;
       event.preventDefault();
-      const orbit = activePlanetRef.current === "venus" ? VENUS_ORBIT : MARS_ORBIT;
+      const planet = activePlanetRef.current;
+      const orbit =
+        planet === "venus"
+          ? VENUS_ORBIT
+          : planet === "orbital-station"
+            ? ORBITAL_STATION_ORBIT
+            : MARS_ORBIT;
       const zoomSpeed = 0.5;
       const zoomDelta = event.deltaY * zoomSpeed * 0.01;
 
