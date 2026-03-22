@@ -841,6 +841,7 @@ type GameDto struct {
 	ColonyTiles         []ColonyTileDto        `json:"colonyTiles,omitempty" ts:"ColonyTileDto[] | undefined"`
 	TradeFleetAvailable bool                   `json:"tradeFleetAvailable" ts:"boolean"`
 	ProjectFunding      []ProjectFundingDto    `json:"projectFunding,omitempty" ts:"ProjectFundingDto[] | undefined"`
+	IsLastRound         bool                   `json:"isLastRound" ts:"boolean"`
 }
 
 // SpectatorDto represents a spectator visible to all clients.

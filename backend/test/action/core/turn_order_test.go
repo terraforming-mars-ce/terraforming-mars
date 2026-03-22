@@ -36,7 +36,7 @@ func TestTurnOrderPreservedAfterProductionCardSelection(t *testing.T) {
 	testutil.AssertEqual(t, player1ID, testGame.TurnOrder()[1], "Player 1 should be second after rotation")
 
 	// Both players confirm production cards (select none)
-	confirmAction := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, logger)
+	confirmAction := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
 
 	err = confirmAction.Execute(ctx, testGame.ID(), player1ID, []string{})
 	testutil.AssertNoError(t, err, "Player 1 confirm production cards should succeed")
@@ -61,7 +61,7 @@ func TestTurnOrderRotatesCorrectlyWithFourPlayers(t *testing.T) {
 
 	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
-	confirmAction := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, logger)
+	confirmAction := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
 
 	// Verify initial turn order: [p0, p1, p2, p3]
 	for i, id := range playerIDs {
@@ -117,7 +117,7 @@ func TestTurnOrderRotatesCorrectlyWithThreePlayers(t *testing.T) {
 
 	finalScoringAction := gameaction.NewFinalScoringAction(repo, cardRegistry, nil, nil, logger)
 	skipAction := turnmgmt.NewSkipActionAction(repo, finalScoringAction, logger)
-	confirmAction := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, logger)
+	confirmAction := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
 
 	// Run through 3 generations to verify full rotation cycle
 	for gen := 0; gen < 3; gen++ {

@@ -127,18 +127,25 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 		zap.Bool("all_players_finished", allPlayersFinished))
 
 	if allPlayersFinished {
+		var activePlayers []*playerPkg.Player
+		for _, p := range g.GetAllPlayers() {
+			if !p.HasExited() {
+				activePlayers = append(activePlayers, p)
+			}
+		}
+
 		if g.GlobalParameters().IsMaxed() {
-			log.Debug("All global parameters maxed - triggering final scoring",
+			log.Debug("All global parameters maxed - running final production phase",
 				zap.String("game_id", gameID),
 				zap.Int("generation", g.Generation()))
 
-			err = a.finalScoringAction.Execute(ctx, gameID)
+			err = ExecuteFinalProductionPhase(ctx, g, activePlayers, log)
 			if err != nil {
-				log.Error("Failed to execute final scoring", zap.Error(err))
-				return fmt.Errorf("failed to execute final scoring: %w", err)
+				log.Error("Failed to execute final production phase", zap.Error(err))
+				return fmt.Errorf("failed to execute final production phase: %w", err)
 			}
 
-			log.Info("Game ended, final scores calculated")
+			log.Info("Final production phase started, awaiting player confirmation")
 			return nil
 		}
 
@@ -147,12 +154,6 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 			zap.Int("generation", g.Generation()),
 			zap.Int("passed_or_exited_players", passedOrExitedCount))
 
-		var activePlayers []*playerPkg.Player
-		for _, p := range g.GetAllPlayers() {
-			if !p.HasExited() {
-				activePlayers = append(activePlayers, p)
-			}
-		}
 		err = ExecuteProductionPhase(ctx, g, activePlayers, log)
 		if err != nil {
 			log.Error("Failed to execute production phase", zap.Error(err))
