@@ -12819,7 +12819,8 @@
             "per": {
               "type": "floater",
               "amount": 3,
-              "location": "anywhere"
+              "location": "anywhere",
+              "target": "self-player"
             }
           }
         ],
