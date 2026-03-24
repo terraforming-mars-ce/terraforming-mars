@@ -2,6 +2,7 @@
 precision highp float;
 
 uniform float uSphereRadius;
+uniform vec3 uSphereCenter;
 uniform float uHeight;
 uniform float uCraterRadius;
 uniform float uCraterDepth;
@@ -118,7 +119,7 @@ void main() {
   vUv = uv;
 
   vec4 worldPos = modelMatrix * vec4(position, 1.0);
-  vec3 sphereDir = normalize(worldPos.xyz);
+  vec3 sphereDir = normalize(worldPos.xyz - uSphereCenter);
 
   vec2 centered = (uv - 0.5) * 2.0;
   vDistFromCenter = length(centered);
@@ -149,7 +150,7 @@ void main() {
   float uvScale = 0.15;
   vWorldNormal = normalize(up * uvScale - right * dhdx - fwd * dhdy);
 
-  vec3 projectedPos = sphereDir * (uSphereRadius + 0.003 + h);
+  vec3 projectedPos = uSphereCenter + sphereDir * (uSphereRadius + 0.003 + h);
   vWorldPosition = projectedPos;
 
   gl_Position = projectionMatrix * viewMatrix * vec4(projectedPos, 1.0);
