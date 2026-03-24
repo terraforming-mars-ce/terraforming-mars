@@ -3,19 +3,24 @@ import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import Tile from "./Tile";
 import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
-import { VENUS_RADIUS, VENUS_POSITION } from "./boardConstants";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
 import { Html } from "@react-three/drei";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 
-interface VenusTileGridProps {
+interface CelestialTileGridProps {
   gameState?: GameDto;
   onHexClick?: (hexCoordinate: string) => void;
   tileOpacity?: RefObject<number>;
+  location: string;
+  radius: number;
+  coordOffset: { q: number; r: number; s: number };
+  worldCenter: THREE.Vector3;
+  activePlanetId: string;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
-interface ProjectedVenusTile {
+interface ProjectedTile {
   backendTile: TileDto;
   coordinate: { q: number; r: number; s: number };
   position: { x: number; y: number };
@@ -27,16 +32,17 @@ interface ProjectedVenusTile {
 
 type TileType = "city" | "empty" | "special";
 
-const VENUS_COORD_OFFSET = { q: 100, r: 0, s: -100 };
-
-const hexToPixel = (coord: { q: number; r: number; s: number }) => {
-  const q = coord.q - VENUS_COORD_OFFSET.q;
-  const r = coord.r - VENUS_COORD_OFFSET.r;
+function hexToPixel(
+  coord: { q: number; r: number; s: number },
+  offset: { q: number; r: number; s: number },
+) {
+  const q = coord.q - offset.q;
+  const r = coord.r - offset.r;
   const size = 0.3;
   const x = size * Math.sqrt(3) * (q + r / 2);
   const y = ((size * 3) / 2) * r;
   return { x, y };
-};
+}
 
 function projectToSphere(position2D: { x: number; y: number }, radius: number): THREE.Vector3 {
   const scale = 0.4;
@@ -69,19 +75,24 @@ const convertBonuses = (bonuses: TileBonusDto[] | undefined) => {
   return converted;
 };
 
-export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: VenusTileGridProps) {
+export default function CelestialTileGrid({
+  gameState,
+  onHexClick,
+  tileOpacity,
+  location,
+  radius,
+  coordOffset,
+  worldCenter,
+  activePlanetId,
+  groupInverseMatrix,
+}: CelestialTileGridProps) {
   const { activePlanet } = usePlanetFocus();
 
-  const venusTilesOnly = useMemo(
-    () => gameState?.board?.tiles?.filter((t) => t.location === "venus"),
-    [gameState?.board?.tiles],
+  const filteredTiles = useMemo(
+    () => gameState?.board?.tiles?.filter((t) => t.location === location),
+    [gameState?.board?.tiles, location],
   );
-  const newlyPlacedTiles = usePreviousTiles(venusTilesOnly);
-
-  const venusWorldCenter = useMemo(
-    () => new THREE.Vector3(VENUS_POSITION[0], VENUS_POSITION[1], VENUS_POSITION[2]),
-    [],
-  );
+  const newlyPlacedTiles = usePreviousTiles(filteredTiles);
 
   const playerColorMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -90,7 +101,9 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
         map.set(gameState.currentPlayer.id, gameState.currentPlayer.color);
       }
       gameState.otherPlayers?.forEach((p) => {
-        if (p.color) map.set(p.id, p.color);
+        if (p.color) {
+          map.set(p.id, p.color);
+        }
       });
     }
     return map;
@@ -122,7 +135,9 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
       },
     ) => {
       tooltipPositionRef.current = data.position;
-      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
       hoverTimerRef.current = setTimeout(() => {
         setTooltipData({
           tileType: data.tileType,
@@ -151,14 +166,16 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
     setTooltipData(null);
   }, []);
 
-  const venusTiles = useMemo((): ProjectedVenusTile[] => {
-    if (!gameState?.board?.tiles) return [];
+  const projectedTiles = useMemo((): ProjectedTile[] => {
+    if (!gameState?.board?.tiles) {
+      return [];
+    }
 
     return gameState.board.tiles
-      .filter((tile: TileDto) => tile.location === "venus")
-      .map((tile: TileDto): ProjectedVenusTile => {
-        const position2D = hexToPixel(tile.coordinates);
-        const spherePosition = projectToSphere(position2D, VENUS_RADIUS);
+      .filter((tile: TileDto) => tile.location === location)
+      .map((tile: TileDto): ProjectedTile => {
+        const position2D = hexToPixel(tile.coordinates, coordOffset);
+        const spherePosition = projectToSphere(position2D, radius);
 
         return {
           backendTile: tile,
@@ -170,21 +187,23 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
           bonuses: convertBonuses(tile.bonuses),
         };
       });
-  }, [gameState?.board?.tiles]);
+  }, [gameState?.board?.tiles, location, coordOffset, radius]);
 
   const availableHexes = gameState?.currentPlayer?.pendingTileSelection?.availableHexes || [];
 
-  const getTileType = (tile: ProjectedVenusTile): TileType => {
+  const getTileType = (tile: ProjectedTile): TileType => {
     if (tile.backendTile.occupiedBy) {
-      if (tile.backendTile.occupiedBy.type === "city-tile") return "city";
+      if (tile.backendTile.occupiedBy.type === "city-tile") {
+        return "city";
+      }
       return "special";
     }
     return "empty";
   };
 
   const interactionSphereGeometry = useMemo(
-    () => new THREE.SphereGeometry(VENUS_RADIUS + 0.02, 32, 32),
-    [],
+    () => new THREE.SphereGeometry(radius + 0.02, 32, 32),
+    [radius],
   );
 
   const findNearestHex = useCallback(
@@ -192,7 +211,7 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
       let bestKey: string | null = null;
       let bestDist = Infinity;
       const HEX_HIT_RADIUS = 0.17;
-      for (const tile of venusTiles) {
+      for (const tile of projectedTiles) {
         const dist = hitPoint.distanceTo(tile.spherePosition);
         if (dist < bestDist && dist < HEX_HIT_RADIUS) {
           bestDist = dist;
@@ -201,7 +220,7 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
       }
       return bestKey;
     },
-    [venusTiles],
+    [projectedTiles],
   );
 
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
@@ -221,7 +240,7 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
         hoveredHexKeyRef.current = key;
         setHoveredHexKey(key);
         if (key) {
-          const tile = venusTiles.find((t) => HexGrid2D.coordinateToKey(t.coordinate) === key);
+          const tile = projectedTiles.find((t) => HexGrid2D.coordinateToKey(t.coordinate) === key);
           if (tile) {
             const ownerId = tile.backendTile.ownerId || null;
             handleTileHoverInfo({
@@ -242,7 +261,13 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
         handleTileHoverMove({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
       }
     },
-    [venusTiles, findNearestHex, handleTileHoverInfo, handleTileHoverMove, handleTileHoverLeave],
+    [
+      projectedTiles,
+      findNearestHex,
+      handleTileHoverInfo,
+      handleTileHoverMove,
+      handleTileHoverLeave,
+    ],
   );
 
   const handleSpherePointerLeave = useCallback(() => {
@@ -271,9 +296,7 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
 
   return (
     <>
-      {/* Invisible interaction sphere for click/hover handling — disabled when viewing from Mars
-         so it doesn't block raycasts to the VenusSphere click-to-travel handler */}
-      {activePlanet === "venus" && (
+      {activePlanet === activePlanetId && (
         <mesh
           geometry={interactionSphereGeometry}
           onPointerMove={handleSpherePointerMove}
@@ -286,7 +309,7 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
       <Html>
         <TileTooltip data={tooltipData} positionRef={tooltipPositionRef} />
       </Html>
-      {venusTiles.map((tile) => {
+      {projectedTiles.map((tile) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
         const tileType = getTileType(tile);
         const isAvailable = availableHexes.includes(hexKey);
@@ -307,8 +330,9 @@ export default function VenusTileGrid({ gameState, onHexClick, tileOpacity }: Ve
             }}
             isAvailableForPlacement={isAvailable}
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
-            sphereRadius={VENUS_RADIUS}
-            sphereCenter={venusWorldCenter}
+            sphereRadius={radius}
+            sphereCenter={worldCenter}
+            groupInverseMatrix={groupInverseMatrix}
             tileOpacity={tileOpacity}
             onHoverInfo={handleTileHoverInfo}
             onHoverMove={handleTileHoverMove}

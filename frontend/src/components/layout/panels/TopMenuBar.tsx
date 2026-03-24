@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
 import {
   GameDto,
   GamePhaseAction,
@@ -12,6 +13,7 @@ import { StandardProject } from "@/types/cards.tsx";
 import { Z_INDEX } from "@/constants/zIndex";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import SoundToggleButton from "../../ui/buttons/SoundToggleButton.tsx";
+import TravelPopover from "../../ui/popover/TravelPopover.tsx";
 import StandardProjectPopover from "../../ui/popover/StandardProjectPopover.tsx";
 import MilestonePopover from "../../ui/popover/MilestonePopover.tsx";
 import AwardPopover from "../../ui/popover/AwardPopover.tsx";
@@ -39,6 +41,8 @@ const BUTTON_SPACING = 6;
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
 const HAMBURGER_WIDTH = 56;
 const HAMBURGER_COLOR = "#ffffff";
+const TRAVEL_WIDTH = 140;
+const TRAVEL_COLOR = "#7eb8da";
 
 interface ParallelogramButtonProps {
   index: number;
@@ -273,8 +277,12 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   onEndgamePanelChange,
   hasHistory = false,
 }) => {
+  const { activePlanet } = usePlanetFocus();
   const [menuOpen, setMenuOpen] = useState(false);
   const [hamburgerHovered, setHamburgerHovered] = useState(false);
+  const [travelHovered, setTravelHovered] = useState(false);
+  const [showTravelPopover, setShowTravelPopover] = useState(false);
+  const travelButtonRef = useRef<HTMLButtonElement>(null);
   const [eyeHovered, setEyeHovered] = useState(false);
   const [spectatorsOpen, setSpectatorsOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
@@ -422,7 +430,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     >
       <div className="flex justify-between items-center px-2 h-[60px] max-lg:h-[50px] max-md:flex-wrap">
         <div
-          className="flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left"
+          className={`flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left transition-opacity duration-500 ease-in-out ${activePlanet === "solar-system" ? "opacity-0 pointer-events-none" : "opacity-100"}`}
           style={{ transform: `scale(${topBarScale})` }}
         >
           {!isInitPhase &&
@@ -555,6 +563,65 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               </div>
             </button>
           )}
+          <button
+            ref={travelButtonRef}
+            onClick={() => setShowTravelPopover((prev) => !prev)}
+            onMouseEnter={() => setTravelHovered(true)}
+            onMouseLeave={() => setTravelHovered(false)}
+            aria-label="Travel"
+            className="relative pointer-events-auto cursor-pointer outline-none"
+            style={{
+              width: TRAVEL_WIDTH,
+              height: buttonHeight,
+              marginRight: -ANGLE_INDENT + BUTTON_SPACING,
+            }}
+          >
+            <svg
+              className="absolute inset-0 w-full h-full"
+              viewBox={`0 0 ${TRAVEL_WIDTH} ${buttonHeight}`}
+              preserveAspectRatio="none"
+            >
+              <polygon
+                points={`${ANGLE_INDENT},0 ${TRAVEL_WIDTH},0 ${TRAVEL_WIDTH - ANGLE_INDENT},${buttonHeight} 0,${buttonHeight}`}
+                fill={
+                  travelHovered || showTravelPopover ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"
+                }
+              />
+              <line
+                x1={ANGLE_INDENT}
+                y1={0}
+                x2={TRAVEL_WIDTH}
+                y2={0}
+                stroke={travelHovered || showTravelPopover ? TRAVEL_COLOR : BORDER_COLOR}
+                strokeWidth="3"
+              />
+              <line
+                x1={TRAVEL_WIDTH}
+                y1={0}
+                x2={TRAVEL_WIDTH - ANGLE_INDENT}
+                y2={buttonHeight}
+                stroke={BORDER_COLOR}
+                strokeWidth="2"
+              />
+              <line
+                x1={ANGLE_INDENT}
+                y1={0}
+                x2={0}
+                y2={buttonHeight}
+                stroke={BORDER_COLOR}
+                strokeWidth="2"
+              />
+            </svg>
+            <div className="relative z-10 h-full flex items-center justify-center px-4">
+              <span
+                className={`font-orbitron font-bold text-sm uppercase tracking-wider transition-colors duration-200 ${
+                  travelHovered || showTravelPopover ? "text-white" : "text-white/80"
+                }`}
+              >
+                TRAVEL
+              </span>
+            </div>
+          </button>
           <button
             ref={hamburgerButtonRef}
             onClick={() => setMenuOpen(!menuOpen)}
@@ -699,6 +766,12 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
           </div>
         </GamePopover>
       </div>
+
+      <TravelPopover
+        isVisible={showTravelPopover}
+        onClose={() => setShowTravelPopover(false)}
+        anchorRef={travelButtonRef}
+      />
 
       <StandardProjectPopover
         isVisible={showStandardProjectsPopover}

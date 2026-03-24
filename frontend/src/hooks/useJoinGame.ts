@@ -108,7 +108,7 @@ export function useJoinGame({ game }: UseJoinGameOptions): UseJoinGameReturn {
   };
 
   const loadingMessage = (() => {
-    if (loadingStep === "environment") return "Loading 3D environment...";
+    if (loadingStep === "environment") return "Loading...";
     return "Joining game...";
   })();
 

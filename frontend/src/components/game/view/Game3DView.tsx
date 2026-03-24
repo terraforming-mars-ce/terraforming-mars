@@ -1,10 +1,11 @@
-import { Suspense, useEffect, useState, useRef, useCallback } from "react";
+import { Suspense, useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { PanControls } from "../controls/PanControls.tsx";
 import { FreeCamera, CameraFrustumHelper } from "../controls/FreeCamera.tsx";
 import MarsSphere from "../board/MarsSphere.tsx";
-import VenusSphere from "../board/VenusSphere.tsx";
+import CelestialBody from "../board/CelestialBody.tsx";
+import PhobosBody from "../board/PhobosBody.tsx";
 import OrbitalStation from "../board/OrbitalStation.tsx";
 import AsteroidImpact from "../board/AsteroidImpact.tsx";
 
@@ -12,29 +13,21 @@ import SkyboxLoader from "./SkyboxLoader.tsx";
 import GameIcon from "../../ui/display/GameIcon.tsx";
 import { GameDto } from "@/types/generated/api-types.ts";
 import { MarsRotationProvider } from "../../../contexts/MarsRotationContext.tsx";
-import { PlanetFocusProvider, usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
+import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
 import { webSocketService } from "../../../services/webSocketService.ts";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext.tsx";
+import { useTextures } from "../../../hooks/useTextures.ts";
+import sunCoronaVert from "../board/shaders/sun-corona.vert.glsl?raw";
+import sunCoronaFrag from "../board/shaders/sun-corona.frag.glsl?raw";
 import GpuWarmup from "../board/GpuWarmup.tsx";
 import PerformanceProbe from "../board/PerformanceProbe.tsx";
-
-function SkyboxRotation() {
-  const { scene } = useThree();
-
-  useFrame((_, delta) => {
-    const skybox = scene.children.find(
-      (child) =>
-        child instanceof THREE.Mesh &&
-        child.geometry instanceof THREE.SphereGeometry &&
-        (child.material as THREE.MeshBasicMaterial).side === THREE.BackSide,
-    );
-    if (skybox) {
-      skybox.rotation.y += delta * 0.002;
-    }
-  });
-
-  return null;
-}
+import SolarSystemOverview from "../board/SolarSystemOverview.tsx";
+import {
+  PLANET_CONFIGS,
+  LOCATION_TO_PLANET,
+  getMarsOrbitalPosition,
+  getPlanetOrbit,
+} from "../board/solarSystemConfig.ts";
 
 function FreeCameraFrustum({ fov }: { fov: number }) {
   const { size } = useThree();
@@ -51,22 +44,15 @@ function FreeCameraFrustum({ fov }: { fov: number }) {
   );
 }
 
-function DynamicSunLight({ startDark = false }: { startDark?: boolean }) {
+function CentralSunLight({ startDark = false }: { startDark?: boolean }) {
   const { settings } = useWorld3DSettings();
-  const lightRef = useRef<THREE.DirectionalLight>(null);
+  const lightRef = useRef<THREE.PointLight>(null);
   const sunriseStartTime = useRef<number | null>(null);
 
   useFrame((state) => {
     if (!lightRef.current) {
       return;
     }
-
-    const distance = 18;
-    lightRef.current.position.set(
-      settings.sunDirectionX * distance,
-      settings.sunDirectionY * distance,
-      settings.sunDirectionZ * distance + 5,
-    );
 
     let intensityMultiplier = 1;
     if (startDark) {
@@ -81,92 +67,197 @@ function DynamicSunLight({ startDark = false }: { startDark?: boolean }) {
       intensityMultiplier = 1 - (1 - t) * (1 - t);
     }
 
-    lightRef.current.intensity = 2.6 * settings.sunIntensity * intensityMultiplier;
+    lightRef.current.intensity = settings.sunIntensity * intensityMultiplier;
     lightRef.current.color.setRGB(settings.sunColor.r, settings.sunColor.g, settings.sunColor.b);
   });
 
+  return <pointLight ref={lightRef} position={[0, 0, 0]} intensity={1} distance={0} decay={0} />;
+}
+
+function SunMesh() {
+  const { sun: sunTexture } = useTextures();
+  const { camera } = useThree();
+
+  const SUN_RADIUS = 22;
+
+  const geometry = useMemo(() => new THREE.SphereGeometry(SUN_RADIUS, 64, 32), []);
+  const material = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        map: sunTexture,
+        color: new THREE.Color(1, 1, 1),
+        fog: false,
+      }),
+    [sunTexture],
+  );
+
+  const coronaGeometry = useMemo(() => new THREE.SphereGeometry(SUN_RADIUS, 32, 16), []);
+  const coronaMaterial = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          viewVector: { value: new THREE.Vector3() },
+          glowColor: { value: new THREE.Color(1.0, 0.6, 0.2) },
+          glowPower: { value: 3.0 },
+        },
+        vertexShader: sunCoronaVert,
+        fragmentShader: sunCoronaFrag,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false,
+        fog: false,
+      }),
+    [],
+  );
+
+  const innerGlowMaterial = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          viewVector: { value: new THREE.Vector3() },
+          glowColor: { value: new THREE.Color(1.0, 0.9, 0.6) },
+          glowPower: { value: 1.2 },
+        },
+        vertexShader: sunCoronaVert,
+        fragmentShader: sunCoronaFrag,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false,
+        fog: false,
+      }),
+    [],
+  );
+
+  const hazeTexture = useMemo(() => {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    gradient.addColorStop(0, "rgba(255, 200, 100, 0.6)");
+    gradient.addColorStop(0.15, "rgba(255, 150, 50, 0.3)");
+    gradient.addColorStop(0.4, "rgba(255, 100, 20, 0.08)");
+    gradient.addColorStop(1, "rgba(255, 80, 0, 0.0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(canvas);
+  }, []);
+
+  useFrame(() => {
+    const viewVec = camera.position.clone();
+    coronaMaterial.uniforms.viewVector.value.copy(viewVec);
+    innerGlowMaterial.uniforms.viewVector.value.copy(viewVec);
+  });
+
   return (
-    <directionalLight
-      ref={lightRef}
-      position={[8, 6, 15]}
-      intensity={2.6}
-      color="#ffdcb8"
-      castShadow
-      shadow-mapSize-width={2048}
-      shadow-mapSize-height={2048}
-      shadow-camera-far={50}
-      shadow-camera-left={-5}
-      shadow-camera-right={5}
-      shadow-camera-top={5}
-      shadow-camera-bottom={-5}
-      shadow-bias={-0.0005}
-    />
+    <group>
+      <mesh geometry={geometry} material={material} />
+      <mesh geometry={coronaGeometry} material={coronaMaterial} scale={[1.35, 1.35, 1.35]} />
+      <mesh geometry={coronaGeometry} material={innerGlowMaterial} scale={[1.15, 1.15, 1.15]} />
+      <sprite scale={[SUN_RADIUS * 5, SUN_RADIUS * 5, 1]}>
+        <spriteMaterial
+          map={hazeTexture}
+          blending={THREE.AdditiveBlending}
+          transparent={true}
+          depthWrite={false}
+          color="#ffaa44"
+          fog={false}
+        />
+      </sprite>
+    </group>
   );
 }
 
+function DynamicFog() {
+  const { scene } = useThree();
+  const { activePlanet } = usePlanetFocus();
+
+  useFrame(() => {
+    if (activePlanet === "solar-system") {
+      scene.fog = null;
+    } else if (!scene.fog) {
+      scene.fog = new THREE.Fog("#0a0a0a", 8, 25);
+    }
+  });
+
+  return <fog attach="fog" args={["#0a0a0a", 8, 25]} />;
+}
+
 function AutoNavigateForTileSelection({ gameState }: { gameState: GameDto }) {
-  const { activePlanet, setActivePlanet } = usePlanetFocus();
+  const { setActivePlanet } = usePlanetFocus();
   const pendingTileSelection = gameState.currentPlayer?.pendingTileSelection;
 
   useEffect(() => {
-    if (!pendingTileSelection || !gameState.board?.tiles) return;
-
-    const venusTileKeys = new Set(
-      gameState.board.tiles
-        .filter((t) => t.location === "venus")
-        .map((t) => `${t.coordinates.q},${t.coordinates.r},${t.coordinates.s}`),
-    );
-
-    const hasVenusHex = pendingTileSelection.availableHexes.some((hex) => venusTileKeys.has(hex));
-    const hasNonVenusHex = pendingTileSelection.availableHexes.some(
-      (hex) => !venusTileKeys.has(hex),
-    );
-
-    if (hasVenusHex && !hasNonVenusHex && activePlanet !== "venus") {
-      setActivePlanet("venus");
-    } else if (!hasVenusHex && hasNonVenusHex && activePlanet !== "mars") {
-      setActivePlanet("mars");
+    if (!pendingTileSelection || !gameState.board?.tiles) {
+      return;
     }
-  }, [pendingTileSelection, gameState.board?.tiles, activePlanet, setActivePlanet]);
+
+    const tileKeyToLocation = new Map<string, string>();
+    for (const tile of gameState.board.tiles) {
+      const key = `${tile.coordinates.q},${tile.coordinates.r},${tile.coordinates.s}`;
+      tileKeyToLocation.set(key, tile.location);
+    }
+
+    const targetPlanets = new Set<string>();
+    for (const hex of pendingTileSelection.availableHexes) {
+      const location = tileKeyToLocation.get(hex);
+      if (location) {
+        const planet = LOCATION_TO_PLANET[location] || "mars";
+        targetPlanets.add(planet);
+      }
+    }
+
+    if (targetPlanets.size === 1) {
+      const target = [...targetPlanets][0];
+      setActivePlanet(target as Parameters<typeof setActivePlanet>[0]);
+    }
+    // Only navigate once when pendingTileSelection changes — don't re-trigger on manual navigation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingTileSelection, gameState.board?.tiles]);
 
   return null;
 }
 
-function ReturnToMarsButton() {
-  const { activePlanet, setActivePlanet } = usePlanetFocus();
-  const showButton = activePlanet === "venus" || activePlanet === "orbital-station";
-  const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
+function TravelFade() {
+  const { activePlanet } = usePlanetFocus();
+  const divRef = useRef<HTMLDivElement>(null);
+  const prevPlanetRef = useRef(activePlanet);
 
   useEffect(() => {
-    if (showButton) {
-      setMounted(true);
-      requestAnimationFrame(() => setVisible(true));
+    if (activePlanet === prevPlanetRef.current) {
       return;
     }
-    setVisible(false);
-    const timeout = setTimeout(() => setMounted(false), 300);
-    return () => clearTimeout(timeout);
-  }, [showButton]);
+    prevPlanetRef.current = activePlanet;
+    const el = divRef.current;
+    if (!el) {
+      return;
+    }
 
-  if (!mounted) return null;
+    // Instantly go black (no transition) to hide the teleport
+    el.style.transition = "none";
+    el.style.opacity = "1";
+    // Force reflow so the browser applies opacity:1 immediately
+    void el.offsetHeight;
+    // Then fade back to transparent
+    el.style.transition = "opacity 400ms ease-in-out";
+    el.style.opacity = "0";
+  }, [activePlanet]);
+
   return (
     <div
-      className="absolute right-[15%] top-1/2 transform -translate-y-1/2 z-50"
+      ref={divRef}
       style={{
-        opacity: visible ? 1 : 0,
-        transition: "opacity 0.3s ease-out",
+        position: "absolute",
+        inset: 0,
+        backgroundColor: "black",
+        opacity: 0,
+        pointerEvents: "none",
+        zIndex: 10,
       }}
-    >
-      <button
-        onClick={() => setActivePlanet("mars")}
-        className="bg-space-black/90 backdrop-blur-space border border-space-blue-500
-                   rounded-lg px-6 py-3 shadow-glow-lg font-orbitron text-sm text-white
-                   tracking-wider-2xl hover:border-white/50 transition-colors cursor-pointer"
-      >
-        RETURN TO MARS
-      </button>
-    </div>
+    />
   );
 }
 
@@ -191,30 +282,39 @@ export default function Game3DView({
   showUI = true,
   uiAnimationClass = "",
 }: Game3DViewProps) {
-  const venusNextEnabled = gameState.settings?.venusNextEnabled ?? false;
   const orbitalProject = gameState.projectFunding?.find((p) => p.id === "pf_orbital_station");
   const orbitalStationSeats = orbitalProject ? orbitalProject.seatOwners.length : 0;
   const containerRef = useRef<HTMLDivElement>(null);
+  const initialCameraPos = useMemo((): [number, number, number] => {
+    const mp = getMarsOrbitalPosition(0);
+    const center = new THREE.Vector3(mp[0], mp[1], mp[2]);
+    const radius = getPlanetOrbit("mars").defaultRadius;
+    const offset = new THREE.Vector3().setFromSpherical(
+      new THREE.Spherical(radius, Math.PI / 2, 0),
+    );
+    const toSun = center.clone().negate().normalize();
+    const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), toSun);
+    offset.applyQuaternion(quat);
+    return [center.x + offset.x, center.y + offset.y, center.z + offset.z];
+  }, []);
+
   const [cameraConfig, setCameraConfig] = useState({
-    position: [0, 0, 8] as [number, number, number],
+    position: initialCameraPos,
     fov: 50,
   });
 
   const updateCameraConfig = useCallback(() => {
     const width = window.innerWidth;
     let fov = 50;
-    let position: [number, number, number] = [0, 0, 8];
 
     if (width <= 768) {
       fov = 60;
-      position = [0, 0, 10];
     } else if (width <= 1200) {
       fov = 55;
-      position = [0, 0, 9];
     }
 
-    setCameraConfig({ position, fov });
-  }, []);
+    setCameraConfig({ position: initialCameraPos, fov });
+  }, [initialCameraPos]);
 
   useEffect(() => {
     updateCameraConfig();
@@ -271,91 +371,100 @@ export default function Game3DView({
   const pendingTileSelection = gameState.currentPlayer?.pendingTileSelection;
 
   return (
-    <PlanetFocusProvider>
-      <div
-        ref={containerRef}
-        style={{
-          flex: 1,
-          height: "100%",
-          width: "100%",
-          minHeight: 0,
-          position: "relative",
-        }}
-      >
-        {showUI && pendingTileSelection && (
-          <div
-            className={`absolute top-[66px] left-1/2 transform -translate-x-1/2 z-50
+    <div
+      ref={containerRef}
+      style={{
+        flex: 1,
+        height: "100%",
+        width: "100%",
+        minHeight: 0,
+        position: "relative",
+      }}
+    >
+      {showUI && pendingTileSelection && (
+        <div
+          className={`absolute top-[66px] left-1/2 transform -translate-x-1/2 z-50
                        bg-space-black/90 backdrop-blur-space border border-space-blue-500
                        rounded-lg px-6 py-3 shadow-glow-lg ${uiAnimationClass}`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-orbitron text-lg text-white tracking-wider-2xl">Place</span>
-              <GameIcon iconType={getTileIconType(pendingTileSelection.tileType)} size="medium" />
-            </div>
-          </div>
-        )}
-
-        {venusNextEnabled && <AutoNavigateForTileSelection gameState={gameState} />}
-        {(venusNextEnabled || orbitalProject) && <ReturnToMarsButton />}
-
-        <Canvas
-          camera={{
-            position: cameraConfig.position,
-            fov: cameraConfig.fov,
-          }}
-          style={{
-            background: "#000000",
-            width: "100%",
-            height: "100%",
-            position: "relative",
-            zIndex: 0,
-          }}
-          resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
-          gl={{ stencil: true }}
-          dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
-          shadows={{ type: THREE.PCFSoftShadowMap }}
         >
-          <MarsRotationProvider>
-            <Suspense fallback={null}>
-              <SkyboxLoader onReady={onSkyboxReady} />
-              <SkyboxRotation />
+          <div className="flex items-center gap-2">
+            <span className="font-orbitron text-lg text-white tracking-wider-2xl">Place</span>
+            <GameIcon iconType={getTileIconType(pendingTileSelection.tileType)} size="medium" />
+          </div>
+        </div>
+      )}
 
-              <ambientLight intensity={0.4} color="#2a2a3e" />
-              <DynamicSunLight startDark={startDark} />
-              <fog attach="fog" args={["#0a0a1a", 8, 25]} />
+      <AutoNavigateForTileSelection gameState={gameState} />
+      <TravelFade />
 
-              <MarsSphere
+      <Canvas
+        camera={{
+          position: cameraConfig.position,
+          fov: cameraConfig.fov,
+          near: 0.1,
+          far: 5000,
+        }}
+        style={{
+          background: "#000000",
+          width: "100%",
+          height: "100%",
+          position: "relative",
+          zIndex: 0,
+        }}
+        resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
+        gl={{ stencil: true }}
+        dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
+        shadows={{ type: THREE.PCFSoftShadowMap }}
+      >
+        <MarsRotationProvider>
+          <Suspense fallback={null}>
+            <SkyboxLoader onReady={onSkyboxReady} />
+
+            <ambientLight intensity={0.4} color="#2a2a2a" />
+            <CentralSunLight startDark={startDark} />
+            <SunMesh />
+            <DynamicFog />
+
+            <MarsSphere
+              gameState={gameState}
+              onHexClick={handleHexClick}
+              animateHexEntrance={animateHexEntrance}
+              startHidden={tilesHidden}
+            />
+
+            <PhobosBody gameState={gameState} onHexClick={handleHexClick} />
+
+            {PLANET_CONFIGS.map((config) => (
+              <CelestialBody
+                key={config.id}
+                config={config}
                 gameState={gameState}
                 onHexClick={handleHexClick}
-                animateHexEntrance={animateHexEntrance}
-                startHidden={tilesHidden}
               />
+            ))}
 
-              {venusNextEnabled && (
-                <VenusSphere gameState={gameState} onHexClick={handleHexClick} />
-              )}
+            <SolarSystemOverview />
 
-              {orbitalProject && (
-                <OrbitalStation
-                  filledSeats={orbitalStationSeats}
-                  totalSeats={orbitalProject.seats.length}
-                  isCompleted={orbitalProject.isCompleted}
-                  name={orbitalProject.name}
-                />
-              )}
+            {orbitalProject && (
+              <OrbitalStation
+                filledSeats={orbitalStationSeats}
+                totalSeats={orbitalProject.seats.length}
+                isCompleted={orbitalProject.isCompleted}
+                name={orbitalProject.name}
+              />
+            )}
 
-              <AsteroidImpact />
+            <AsteroidImpact />
 
-              <GpuWarmup onReady={onGpuReady} />
-              <PerformanceProbe />
+            <GpuWarmup onReady={onGpuReady} />
+            <PerformanceProbe />
 
-              <PanControls />
-              <FreeCamera />
-              <FreeCameraFrustum fov={cameraConfig.fov} />
-            </Suspense>
-          </MarsRotationProvider>
-        </Canvas>
-      </div>
-    </PlanetFocusProvider>
+            <PanControls />
+            <FreeCamera />
+            <FreeCameraFrustum fov={cameraConfig.fov} />
+          </Suspense>
+        </MarsRotationProvider>
+      </Canvas>
+    </div>
   );
 }

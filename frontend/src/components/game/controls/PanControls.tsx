@@ -1,29 +1,83 @@
-import { useRef, useEffect, useState } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 import {
-  VENUS_POSITION,
   ORBITAL_STATION_ORBIT_RADIUS,
   ORBITAL_STATION_ORBIT_SPEED,
   ORBITAL_STATION_TILT,
 } from "../board/boardConstants";
+import {
+  getPlanetCenter,
+  getPlanetCameraTargetOffset,
+  getPlanetCameraDefaultSpherical,
+  getPlanetOrbit,
+  getMarsOrbitalPosition,
+} from "../board/solarSystemConfig";
+import { audioService } from "../../../services/audioService";
 
 export const panState = { isPanning: false, hasDragged: false };
 
-const MARS_CENTER = new THREE.Vector3(0, 0, 0);
-const VENUS_CENTER = new THREE.Vector3(VENUS_POSITION[0], VENUS_POSITION[1], VENUS_POSITION[2]);
-
-const MARS_ORBIT = { minDistance: 2.4, maxDistance: 20, defaultRadius: 8 };
-const VENUS_ORBIT = { minDistance: 2.4, maxDistance: 20, defaultRadius: 6.5 };
-const ORBITAL_STATION_ORBIT = { minDistance: 0.3, maxDistance: 5, defaultRadius: 0.8 };
+const ORBITAL_STATION_ORBIT_CONFIG = { minDistance: 0.3, maxDistance: 5, defaultRadius: 0.8 };
 
 function getOrbitalStationPosition(elapsedTime: number): THREE.Vector3 {
   const angle = elapsedTime * ORBITAL_STATION_ORBIT_SPEED;
   const r = ORBITAL_STATION_ORBIT_RADIUS;
   const tiltY = Math.sin(ORBITAL_STATION_TILT) * r * 0.3;
-  return new THREE.Vector3(Math.cos(angle) * r, Math.sin(angle) * tiltY, Math.sin(angle) * r);
+  const marsPos = getMarsOrbitalPosition(elapsedTime);
+  return new THREE.Vector3(
+    marsPos[0] + Math.cos(angle) * r,
+    marsPos[1] + Math.sin(angle) * tiltY,
+    marsPos[2] + Math.sin(angle) * r,
+  );
+}
+
+function computePlanetCenter(
+  planet: string,
+  elapsedTime: number,
+  toSun: THREE.Vector3,
+  quat: THREE.Quaternion,
+  zAxis: THREE.Vector3,
+  camOffset: THREE.Vector3,
+): THREE.Vector3 {
+  let center: THREE.Vector3;
+  if (planet === "orbital-station") {
+    center = getOrbitalStationPosition(elapsedTime);
+  } else if (planet === "solar-system") {
+    center = new THREE.Vector3(0, 0, 0);
+  } else {
+    center = getPlanetCenter(planet, elapsedTime);
+  }
+
+  const offset = getPlanetCameraTargetOffset(planet);
+  if (offset && planet !== "solar-system") {
+    toSun.copy(center).negate().normalize();
+    quat.setFromUnitVectors(zAxis, toSun);
+    camOffset.set(offset[0], offset[1], offset[2]);
+    camOffset.applyQuaternion(quat);
+    center.add(camOffset);
+  }
+
+  return center;
+}
+
+function sphericalToWorldOffset(
+  sph: THREE.Spherical,
+  planet: string,
+  center: THREE.Vector3,
+  toSun: THREE.Vector3,
+  quat: THREE.Quaternion,
+  zAxis: THREE.Vector3,
+  out: THREE.Vector3,
+): THREE.Vector3 {
+  out.setFromSpherical(sph);
+  if (planet !== "solar-system") {
+    toSun.copy(center).negate().normalize();
+    quat.setFromUnitVectors(zAxis, toSun);
+    out.applyQuaternion(quat);
+  }
+  return out;
 }
 
 export function PanControls() {
@@ -35,36 +89,37 @@ export function PanControls() {
     cameraStateRef,
     pendingCameraTransformRef,
   } = useWorld3DSettings();
-  const { activePlanet, isTransitioning, setIsTransitioning } = usePlanetFocus();
+  const { activePlanet } = usePlanetFocus();
   const isPointerDown = useRef(false);
   const previousPointer = useRef({ x: 0, y: 0 });
   const pointerDownOrigin = useRef({ x: 0, y: 0 });
   const [shouldRecenter, setShouldRecenter] = useState(false);
   const previousSize = useRef({ width: size.width, height: size.height });
 
+  const marsInitPos = getMarsOrbitalPosition(0);
+  const marsOrbit = getPlanetOrbit("mars");
+
   const [spherical] = useState(() => {
-    const s = new THREE.Spherical();
-    s.setFromVector3(camera.position);
-    if (s.radius < 3) s.radius = 8;
-    return s;
+    return new THREE.Spherical(marsOrbit.defaultRadius, Math.PI / 2, 0);
   });
+  const targetSpherical = useRef(new THREE.Spherical(marsOrbit.defaultRadius, Math.PI / 2, 0));
 
-  const targetSpherical = useRef(
-    new THREE.Spherical(spherical.radius, spherical.phi, spherical.theta),
-  );
-
-  const orbitCenter = useRef(new THREE.Vector3(0, 0, 0));
-  const targetOrbitCenter = useRef(new THREE.Vector3(0, 0, 0));
-  const previousPlanet = useRef(activePlanet);
+  const orbitCenter = useRef(new THREE.Vector3(marsInitPos[0], marsInitPos[1], marsInitPos[2]));
+  const lastPlanetRef = useRef(activePlanet);
   const activePlanetRef = useRef(activePlanet);
-  const isTransitioningRef = useRef(isTransitioning);
   activePlanetRef.current = activePlanet;
-  isTransitioningRef.current = isTransitioning;
 
   const wasFreeCameraEnabled = useRef(settings.freeCameraEnabled);
 
+  // Reusable temp vectors
+  const _toSun = useMemo(() => new THREE.Vector3(), []);
+  const _quat = useMemo(() => new THREE.Quaternion(), []);
+  const _zAxis = useMemo(() => new THREE.Vector3(0, 0, 1), []);
+  const _offset = useMemo(() => new THREE.Vector3(), []);
+  const _camOffset = useMemo(() => new THREE.Vector3(), []);
+
   useFrame((state) => {
-    // Handle free camera toggle
+    // --- Free camera toggle ---
     if (settings.freeCameraEnabled && !wasFreeCameraEnabled.current) {
       setStoredCameraState({
         position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
@@ -91,29 +146,53 @@ export function PanControls() {
       return;
     }
 
-    // Detect planet change and start transition
-    if (activePlanet !== previousPlanet.current) {
-      previousPlanet.current = activePlanet;
-      setIsTransitioning(true);
+    // --- Detect planet change → instant teleport ---
+    if (activePlanet !== lastPlanetRef.current) {
+      void audioService.playTravelSound();
+      lastPlanetRef.current = activePlanet;
 
-      let orbit = MARS_ORBIT;
-      if (activePlanet === "venus") {
-        orbit = VENUS_ORBIT;
-        targetOrbitCenter.current.copy(VENUS_CENTER);
-      } else if (activePlanet === "orbital-station") {
-        orbit = ORBITAL_STATION_ORBIT;
-      } else {
-        targetOrbitCenter.current.copy(MARS_CENTER);
-      }
-      targetSpherical.current.radius = orbit.defaultRadius;
-      targetSpherical.current.phi = Math.PI / 2;
-      targetSpherical.current.theta = 0;
+      const orbit =
+        activePlanet === "orbital-station"
+          ? ORBITAL_STATION_ORBIT_CONFIG
+          : getPlanetOrbit(activePlanet);
+      const defaultSpherical = getPlanetCameraDefaultSpherical(activePlanet);
+      targetSpherical.current.radius = defaultSpherical?.radius ?? orbit.defaultRadius;
+      targetSpherical.current.phi =
+        activePlanet === "solar-system" ? 1.281 : (defaultSpherical?.phi ?? Math.PI / 2);
+      targetSpherical.current.theta = defaultSpherical?.theta ?? 0;
+
+      // Snap spherical immediately
+      spherical.radius = targetSpherical.current.radius;
+      spherical.phi = targetSpherical.current.phi;
+      spherical.theta = targetSpherical.current.theta;
+
+      // Snap orbit center
+      const center = computePlanetCenter(
+        activePlanet,
+        state.clock.elapsedTime,
+        _toSun,
+        _quat,
+        _zAxis,
+        _camOffset,
+      );
+      orbitCenter.current.copy(center);
+
+      // Snap camera position
+      sphericalToWorldOffset(spherical, activePlanet, center, _toSun, _quat, _zAxis, _offset);
+      camera.position.copy(center).add(_offset);
+      camera.lookAt(center);
     }
 
-    // Continuously track orbital station position since it moves
-    if (activePlanet === "orbital-station") {
-      targetOrbitCenter.current.copy(getOrbitalStationPosition(state.clock.elapsedTime));
-    }
+    // --- Steady state: follow orbiting planet + apply pan/zoom ---
+    const targetCenter = computePlanetCenter(
+      activePlanet,
+      state.clock.elapsedTime,
+      _toSun,
+      _quat,
+      _zAxis,
+      _camOffset,
+    );
+    orbitCenter.current.copy(targetCenter);
 
     if (size.width !== previousSize.current.width || size.height !== previousSize.current.height) {
       setShouldRecenter(true);
@@ -126,11 +205,8 @@ export function PanControls() {
       setShouldRecenter(false);
     }
 
-    const isOrbitalStation = activePlanet === "orbital-station";
-    const travelLerp = isTransitioning ? 0.03 : isOrbitalStation ? 0.15 : 0.1;
-    const panLerp = 0.1;
-
-    orbitCenter.current.lerp(targetOrbitCenter.current, travelLerp);
+    const radiusDelta = Math.abs(targetSpherical.current.radius - spherical.radius);
+    const panLerp = radiusDelta > 50 ? 0.02 : 0.1;
 
     spherical.theta += (targetSpherical.current.theta - spherical.theta) * panLerp;
     spherical.phi += (targetSpherical.current.phi - spherical.phi) * panLerp;
@@ -153,21 +229,22 @@ export function PanControls() {
       pendingCameraTransformRef.current = null;
     }
 
-    const offset = new THREE.Vector3().setFromSpherical(spherical);
-    camera.position.copy(orbitCenter.current).add(offset);
+    sphericalToWorldOffset(
+      spherical,
+      activePlanet,
+      orbitCenter.current,
+      _toSun,
+      _quat,
+      _zAxis,
+      _offset,
+    );
+    camera.position.copy(orbitCenter.current).add(_offset);
     camera.lookAt(orbitCenter.current);
 
     cameraStateRef.current = {
       position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
       rotation: { x: camera.rotation.x, y: camera.rotation.y, z: camera.rotation.z },
     };
-
-    if (isTransitioning) {
-      const centerDist = orbitCenter.current.distanceTo(targetOrbitCenter.current);
-      if (centerDist < 0.05) {
-        setIsTransitioning(false);
-      }
-    }
   });
 
   useEffect(() => {
@@ -182,7 +259,9 @@ export function PanControls() {
     };
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (settings.freeCameraEnabled) return;
+      if (settings.freeCameraEnabled) {
+        return;
+      }
       isPointerDown.current = true;
       panState.isPanning = true;
       panState.hasDragged = false;
@@ -195,7 +274,9 @@ export function PanControls() {
     };
 
     const handlePointerMove = (event: PointerEvent) => {
-      if (!isPointerDown.current) return;
+      if (!isPointerDown.current) {
+        return;
+      }
 
       if (!panState.hasDragged) {
         const dx = event.clientX - pointerDownOrigin.current.x;
@@ -209,20 +290,9 @@ export function PanControls() {
       const deltaY = event.clientY - previousPointer.current.y;
 
       const orbitSpeed = 0.0003;
-      const maxAngle = Math.PI / 4;
-      const equator = Math.PI / 2;
 
       targetSpherical.current.theta -= deltaX * orbitSpeed;
       targetSpherical.current.phi -= deltaY * orbitSpeed;
-
-      targetSpherical.current.theta = Math.max(
-        -maxAngle,
-        Math.min(maxAngle, targetSpherical.current.theta),
-      );
-      targetSpherical.current.phi = Math.max(
-        equator - maxAngle,
-        Math.min(equator + maxAngle, targetSpherical.current.phi),
-      );
 
       previousPointer.current = { x: event.clientX, y: event.clientY };
     };
@@ -237,15 +307,16 @@ export function PanControls() {
     };
 
     const handleWheel = (event: WheelEvent) => {
-      if (settings.freeCameraEnabled) return;
+      if (settings.freeCameraEnabled) {
+        return;
+      }
       event.preventDefault();
       const planet = activePlanetRef.current;
+      if (planet === "solar-system") {
+        return;
+      }
       const orbit =
-        planet === "venus"
-          ? VENUS_ORBIT
-          : planet === "orbital-station"
-            ? ORBITAL_STATION_ORBIT
-            : MARS_ORBIT;
+        planet === "orbital-station" ? ORBITAL_STATION_ORBIT_CONFIG : getPlanetOrbit(planet);
       const zoomSpeed = 0.5;
       const zoomDelta = event.deltaY * zoomSpeed * 0.01;
 
