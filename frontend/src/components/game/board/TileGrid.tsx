@@ -15,6 +15,7 @@ import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
 import { Html } from "@react-three/drei";
 import { panState } from "../controls/PanControls";
 import { useVPCounting } from "../../../contexts/VPCountingContext";
+import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 
 const noop = () => {};
 const VP_COLOR_SECONDARY: [number, number, number] = [0.4, 0.9, 0.4];
@@ -25,6 +26,8 @@ interface TileGridProps {
   onHexClick?: (hexCoordinate: string) => void;
   animateHexEntrance?: boolean;
   startHidden?: boolean;
+  sphereCenter?: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
 // Local type for tiles with projected positions
@@ -63,15 +66,20 @@ interface TileData {
   specialLabel: string | null;
 }
 
+const ORIGIN = new THREE.Vector3(0, 0, 0);
+
 export default function TileGrid({
   gameState,
   onHexClick,
   animateHexEntrance = false,
   startHidden = false,
+  sphereCenter = ORIGIN,
+  groupInverseMatrix,
 }: TileGridProps) {
   const newlyPlacedTiles = usePreviousTiles(gameState?.board?.tiles);
   const { playWaterPlacementSound, playOxygenSound, playConstructionSound } = useSoundEffects();
   const { state: vpCountingState } = useVPCounting();
+  const { activePlanet } = usePlanetFocus();
 
   // Play placement sounds for newly placed tiles
   useEffect(() => {
@@ -192,7 +200,7 @@ export default function TileGrid({
     // Use backend tiles if available (filter to Mars-only)
     if (gameState?.board?.tiles) {
       return gameState.board.tiles
-        .filter((tile: TileDto) => tile.location !== "venus")
+        .filter((tile: TileDto) => tile.location === "mars")
         .map((tile: TileDto): ProjectedTile => {
           // Convert hex coordinate to 2D position for projection
           const position2D = hexToPixel(tile.coordinates);
@@ -433,7 +441,13 @@ export default function TileGrid({
   );
 
   const handleSpherePointerMove = useCallback(
-    (event: THREE.Event & { point: THREE.Vector3; nativeEvent: PointerEvent }) => {
+    (
+      event: THREE.Event & {
+        point: THREE.Vector3;
+        nativeEvent: PointerEvent;
+        object: THREE.Object3D;
+      },
+    ) => {
       if (panState.isPanning) {
         if (hoveredHexKeyRef.current) {
           hoveredHexKeyRef.current = null;
@@ -442,7 +456,8 @@ export default function TileGrid({
         }
         return;
       }
-      const key = findNearestHex(event.point);
+      const localPoint = event.object.worldToLocal(event.point.clone());
+      const key = findNearestHex(localPoint);
       if (key !== hoveredHexKeyRef.current) {
         hoveredHexKeyRef.current = key;
         setHoveredHexKey(key);
@@ -492,9 +507,10 @@ export default function TileGrid({
   }, [handleTileHoverLeave]);
 
   const handleSphereClick = useCallback(
-    (event: THREE.Event & { point: THREE.Vector3 }) => {
+    (event: THREE.Event & { point: THREE.Vector3; object: THREE.Object3D }) => {
       if (panState.isPanning || panState.hasDragged) return;
-      const key = findNearestHex(event.point);
+      const localPoint = event.object.worldToLocal(event.point.clone());
+      const key = findNearestHex(localPoint);
       if (key) {
         const isAvailable = availableHexes.includes(key);
         if (isAvailable) {
@@ -509,13 +525,15 @@ export default function TileGrid({
   return (
     <>
       {/* Single invisible sphere for all pointer interaction */}
-      <mesh
-        geometry={interactionSphereGeometry}
-        onPointerMove={handleSpherePointerMove}
-        onPointerLeave={handleSpherePointerLeave}
-        onClick={handleSphereClick}
-        visible={false}
-      />
+      {activePlanet === "mars" && (
+        <mesh
+          geometry={interactionSphereGeometry}
+          onPointerMove={handleSpherePointerMove}
+          onPointerLeave={handleSpherePointerLeave}
+          onClick={handleSphereClick}
+          visible={false}
+        />
+      )}
 
       {/* Tile hover tooltip — Html bridges R3F→DOM, TileTooltip portals to body */}
       <Html>
@@ -527,6 +545,8 @@ export default function TileGrid({
         volcanoTiles={volcanoTiles}
         livingGreeneryTiles={livingGreeneryTiles}
         newTileKeys={newGreeneryKeys}
+        sphereCenter={sphereCenter}
+        groupInverseMatrix={groupInverseMatrix}
       />
       <PrimitiveRenderer />
       <BirdRenderer livingGreeneryTiles={livingGreeneryTiles} />
@@ -535,6 +555,8 @@ export default function TileGrid({
           gameState={gameState}
           animateEntrance={animateHexEntrance}
           startHidden={startHidden}
+          sphereCenter={sphereCenter}
+          groupInverseMatrix={groupInverseMatrix}
         />
       )}
       {projectedHexGrid.map((tile, index) => {
@@ -568,6 +590,8 @@ export default function TileGrid({
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
             vpHighlightIntensity={vpHighlightIntensity}
             vpHighlightColor={vpHighlightColor}
+            sphereCenter={sphereCenter}
+            groupInverseMatrix={groupInverseMatrix}
           />
         );
       })}

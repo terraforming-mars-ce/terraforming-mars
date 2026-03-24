@@ -168,10 +168,12 @@ interface TileData3D extends HexTile2D {
 function ClampedBillboard({
   children,
   damping = 0.175,
+  sphereCenter,
   ...groupProps
 }: {
   children: React.ReactNode;
   damping?: number;
+  sphereCenter?: THREE.Vector3;
 } & React.JSX.IntrinsicElements["group"]) {
   const ref = useRef<THREE.Group>(null);
   const billboardQuat = useMemo(() => new THREE.Quaternion(), []);
@@ -196,7 +198,11 @@ function ClampedBillboard({
     }
 
     group.getWorldPosition(_bbWorldPos);
-    _bbNormal.copy(_bbWorldPos).normalize();
+    if (sphereCenter) {
+      _bbNormal.copy(_bbWorldPos).sub(sphereCenter).normalize();
+    } else {
+      _bbNormal.copy(_bbWorldPos).normalize();
+    }
     _bbToCamera.copy(camera.position).sub(_bbWorldPos).normalize();
     const dot = _bbNormal.dot(_bbToCamera);
 
@@ -277,6 +283,7 @@ interface TileProps {
   onHoverLeave?: () => void;
   sphereRadius?: number;
   sphereCenter?: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
   tileOpacity?: RefObject<number>;
   vpHighlightIntensity?: number;
   vpHighlightColor?: [number, number, number];
@@ -301,6 +308,7 @@ function Tile({
   isHovered: isHoveredProp = false,
   sphereRadius = SPHERE_RADIUS,
   sphereCenter = ORIGIN,
+  groupInverseMatrix,
   tileOpacity,
   vpHighlightIntensity = 0,
   vpHighlightColor = [0.95, 0.95, 1.0],
@@ -599,7 +607,11 @@ function Tile({
       shader.vertexShader =
         snippet.header +
         "\n" +
-        shader.vertexShader.replace("#include <begin_vertex>", snippet.body);
+        shader.vertexShader.replace("#include <begin_vertex>", snippet.body).replace(
+          "#include <project_vertex>",
+          `vec4 mvPosition = viewMatrix * vec4(projectedPos, 1.0);
+             gl_Position = projectionMatrix * mvPosition;`,
+        );
     };
 
     return material;
@@ -628,6 +640,7 @@ function Tile({
         uOpacity: { value: 0.9 },
         uNoiseTex: { value: borderNoiseTexture },
         uSphereCenter: { value: sphereCenter },
+        uGroupInverseMatrix: { value: groupInverseMatrix || new THREE.Matrix4() },
       },
       transparent: true,
       depthWrite: false,
@@ -711,6 +724,7 @@ function Tile({
         overlayGeometry={overlayGeometry}
         isOceanSpace={tileData.isOceanSpace}
         tileType={tileType}
+        sphereCenter={sphereCenter}
       />
 
       {/* Volcanic space indicator - red tint for unoccupied volcanic tiles */}
@@ -747,6 +761,8 @@ function Tile({
           isNewlyPlaced={isNewlyPlaced}
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}
+          sphereCenter={sphereCenter}
+          groupInverseMatrix={groupInverseMatrix}
         />
       )}
 
@@ -756,6 +772,8 @@ function Tile({
           isNewlyPlaced={isNewlyPlaced}
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}
+          sphereCenter={sphereCenter}
+          groupInverseMatrix={groupInverseMatrix}
         />
       )}
 
@@ -765,6 +783,8 @@ function Tile({
           isNewlyPlaced={isNewlyPlaced}
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}
+          sphereCenter={sphereCenter}
+          groupInverseMatrix={groupInverseMatrix}
         />
       )}
 
@@ -774,6 +794,8 @@ function Tile({
           isNewlyPlaced={isNewlyPlaced}
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}
+          sphereCenter={sphereCenter}
+          groupInverseMatrix={groupInverseMatrix}
         />
       )}
 
@@ -784,6 +806,8 @@ function Tile({
           ownerColor={ownerColor}
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}
+          sphereCenter={sphereCenter}
+          groupInverseMatrix={groupInverseMatrix}
         />
       )}
 
@@ -793,6 +817,8 @@ function Tile({
           isNewlyPlaced={isNewlyPlaced}
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}
+          sphereCenter={sphereCenter}
+          groupInverseMatrix={groupInverseMatrix}
         />
       )}
 
@@ -805,7 +831,7 @@ function Tile({
           tileType !== "natural-preserve" &&
           tileType !== "world-tree" &&
           bonusIconGroups.length > 0)) && (
-        <ClampedBillboard position={[0, 0, 0.02]} renderOrder={110}>
+        <ClampedBillboard position={[0, 0, 0.02]} renderOrder={110} sphereCenter={sphereCenter}>
           {displayName && (
             <Text
               fontSize={0.045}

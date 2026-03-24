@@ -17,6 +17,8 @@ interface MoholeTileProps {
   seed?: number;
   surfaceNormal?: THREE.Vector3;
   worldPosition?: THREE.Vector3;
+  sphereCenter?: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
 const DISC_RADIUS = 0.14;
@@ -151,6 +153,8 @@ export default function MoholeTile({
   seed: seedProp,
   surfaceNormal,
   worldPosition,
+  sphereCenter,
+  groupInverseMatrix,
 }: MoholeTileProps) {
   const groupRef = useRef<THREE.Group>(null);
   const emergenceStartRef = useRef<number | null>(null);
@@ -211,7 +215,15 @@ export default function MoholeTile({
       opacity: isEmergingRef.current ? 0 : 1,
     });
     const fenceHexR = RIM_OUTER_RADIUS - 0.035;
-    addSphereProjectionWithSoftEdges(mat, 0.006, noiseTexture, noiseHighTexture, fenceHexR);
+    addSphereProjectionWithSoftEdges(
+      mat,
+      0.006,
+      noiseTexture,
+      noiseHighTexture,
+      fenceHexR,
+      sphereCenter,
+      groupInverseMatrix,
+    );
     return mat;
   }, [rimConcreteTexture, noiseTexture, noiseHighTexture]);
 
@@ -220,18 +232,20 @@ export default function MoholeTile({
       uniforms: {
         uConcreteTexture: { value: concreteTexture ?? null },
         uSphereRadius: { value: SPHERE_RADIUS },
+        uSphereCenter: { value: sphereCenter || new THREE.Vector3() },
         uOpacity: { value: isEmergingRef.current ? 0.0 : 1.0 },
       },
       vertexShader: `
         uniform float uSphereRadius;
+        uniform vec3 uSphereCenter;
         varying vec2 vPos;
         varying vec2 vUv;
         void main() {
           vPos = position.xy;
           vUv = uv;
           vec4 worldPos = modelMatrix * vec4(position, 1.0);
-          vec3 sphereDir = normalize(worldPos.xyz);
-          vec3 projected = sphereDir * (uSphereRadius + 0.007);
+          vec3 sphereDir = normalize(worldPos.xyz - uSphereCenter);
+          vec3 projected = uSphereCenter + sphereDir * (uSphereRadius + 0.007);
           gl_Position = projectionMatrix * viewMatrix * vec4(projected, 1.0);
         }
       `,
@@ -324,13 +338,15 @@ export default function MoholeTile({
     });
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uSphereRadius = { value: SPHERE_RADIUS };
+      shader.uniforms.uSphereCenter = { value: sphereCenter || new THREE.Vector3() };
       shader.vertexShader =
-        "uniform float uSphereRadius;\nvarying float vDepth;\n" + shader.vertexShader;
+        "uniform float uSphereRadius;\nuniform vec3 uSphereCenter;\nvarying float vDepth;\n" +
+        shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
         vec4 pipeWorldPos = modelMatrix * vec4(position, 1.0);
-        float pipeR = length(pipeWorldPos.xyz);
+        float pipeR = length(pipeWorldPos.xyz - uSphereCenter);
         vDepth = pipeR - uSphereRadius;`,
       );
       shader.fragmentShader = "varying float vDepth;\n" + shader.fragmentShader;
@@ -446,14 +462,14 @@ export default function MoholeTile({
   }, [fenceLayout, tileWorldMatrix]);
 
   const moholeMaterial = useMemo(() => {
-    const mat = createMoholeMaterial(seed, concreteTexture);
+    const mat = createMoholeMaterial(seed, concreteTexture, sphereCenter);
     mat.uniforms.uEmergence.value = isEmergingRef.current ? 0.0 : 1.0;
     mat.uniforms.uEmergenceRadius.value = 1.0;
     return mat;
   }, [seed, concreteTexture]);
 
   const maskMaterial = useMemo(() => {
-    const mat = createMoholeMaskMaterial(seed);
+    const mat = createMoholeMaskMaterial(seed, sphereCenter);
     mat.uniforms.uEmergence.value = isEmergingRef.current ? 0.0 : 1.0;
     mat.uniforms.uEmergenceRadius.value = 1.0;
     return mat;

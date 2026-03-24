@@ -266,12 +266,16 @@ interface SpaceshipRendererProps {
   gameState?: GameDto;
   animateEntrance?: boolean;
   startHidden?: boolean;
+  sphereCenter?: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
 export default function SpaceshipRenderer({
   gameState,
   animateEntrance = false,
   startHidden = false,
+  sphereCenter,
+  groupInverseMatrix,
 }: SpaceshipRendererProps) {
   const { spaceshipScene } = useModels();
   const {
@@ -321,7 +325,15 @@ export default function SpaceshipRenderer({
       alphaTest: 0.01,
       depthWrite: false,
     });
-    addSphereProjectionWithSoftEdges(mat, 0.004, noiseTexture, noiseHighTexture, PAD_SOLID_RADIUS);
+    addSphereProjectionWithSoftEdges(
+      mat,
+      0.004,
+      noiseTexture,
+      noiseHighTexture,
+      PAD_SOLID_RADIUS,
+      sphereCenter,
+      groupInverseMatrix,
+    );
     return mat;
   }, [padConcreteTexture, noiseTexture, noiseHighTexture]);
 
@@ -360,18 +372,20 @@ export default function SpaceshipRenderer({
         uniforms: {
           uConcreteTexture: { value: concreteTexture ?? null },
           uSphereRadius: { value: SPHERE_RADIUS },
+          uSphereCenter: { value: sphereCenter || new THREE.Vector3() },
           uPlayerColor: { value: new THREE.Vector3(c.r, c.g, c.b) },
         },
         vertexShader: `
           uniform float uSphereRadius;
+          uniform vec3 uSphereCenter;
           varying vec2 vPos;
           varying vec2 vUv;
           void main() {
             vPos = position.xy;
             vUv = uv;
             vec4 worldPos = modelMatrix * vec4(position, 1.0);
-            vec3 sphereDir = normalize(worldPos.xyz);
-            vec3 projected = sphereDir * (uSphereRadius + 0.007);
+            vec3 sphereDir = normalize(worldPos.xyz - uSphereCenter);
+            vec3 projected = uSphereCenter + sphereDir * (uSphereRadius + 0.007);
             gl_Position = projectionMatrix * viewMatrix * vec4(projected, 1.0);
           }
         `,

@@ -245,11 +245,15 @@ export function addSphereProjectionWithSoftEdges(
   noiseMap: THREE.Texture,
   noiseMapHigh: THREE.Texture,
   hexRadius: number,
+  sphereCenter?: THREE.Vector3,
+  groupInverseMatrix?: THREE.Matrix4,
 ): void {
   const grassOverflow = hexRadius * 0.25;
   const bandWidth = hexRadius * 0.35;
   const warpAmount = hexRadius * 0.2;
   const noiseScale = 1.5 / hexRadius;
+  const centerVec = sphereCenter || new THREE.Vector3(0, 0, 0);
+  const invMatrix = groupInverseMatrix || new THREE.Matrix4();
 
   const vertSnippet = splitSnippet(greeneryGroundVertexSnippet);
   const fragSnippet = splitSnippet(greeneryGroundFragmentSnippet);
@@ -258,6 +262,8 @@ export function addSphereProjectionWithSoftEdges(
     (material as any).__shader = shader;
     shader.uniforms.uSphereRadius = { value: SPHERE_RADIUS };
     shader.uniforms.uZOffset = { value: zOffset };
+    shader.uniforms.uSphereCenter = { value: centerVec };
+    shader.uniforms.uGroupInverseMatrix = { value: invMatrix };
     shader.uniforms.uNoiseMap = { value: noiseMap };
     shader.uniforms.uNoiseMapHigh = { value: noiseMapHigh };
     shader.uniforms.uHexRadius = { value: hexRadius };
@@ -270,7 +276,11 @@ export function addSphereProjectionWithSoftEdges(
     shader.vertexShader =
       vertSnippet.header +
       "\n" +
-      shader.vertexShader.replace("#include <begin_vertex>", vertSnippet.body);
+      shader.vertexShader.replace("#include <begin_vertex>", vertSnippet.body).replace(
+        "#include <project_vertex>",
+        `vec4 mvPosition = viewMatrix * vec4(projectedPos, 1.0);
+           gl_Position = projectionMatrix * mvPosition;`,
+      );
 
     shader.fragmentShader =
       fragSnippet.header +
@@ -383,6 +393,8 @@ interface GreeneryRendererProps {
   livingGreeneryTiles?: GreeneryTileData[];
   newTileKeys: Set<string>;
   hexRadius?: number;
+  sphereCenter?: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
 export default function GreeneryRenderer({
@@ -391,6 +403,8 @@ export default function GreeneryRenderer({
   livingGreeneryTiles = [],
   newTileKeys,
   hexRadius = 0.166,
+  sphereCenter,
+  groupInverseMatrix,
 }: GreeneryRendererProps) {
   const treeInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
   const bushInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
@@ -947,7 +961,15 @@ export default function GreeneryRenderer({
       alphaTest: 0.01,
       depthWrite: false,
     });
-    addSphereProjectionWithSoftEdges(mat, 0.003, noiseTexture, noiseHighTexture, hexRadius);
+    addSphereProjectionWithSoftEdges(
+      mat,
+      0.003,
+      noiseTexture,
+      noiseHighTexture,
+      hexRadius,
+      sphereCenter,
+      groupInverseMatrix,
+    );
     return mat;
   }, [grassTexture, noiseTexture, noiseHighTexture, hexRadius]);
 
@@ -1407,6 +1429,8 @@ export default function GreeneryRenderer({
               noiseTexture,
               noiseHighTexture,
               hexRadius,
+              sphereCenter,
+              groupInverseMatrix,
             );
             clone.needsUpdate = true;
             groundMaterialClonesRef.current.set(ground.tileKey, clone);
