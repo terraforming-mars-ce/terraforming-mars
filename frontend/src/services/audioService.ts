@@ -71,6 +71,7 @@ class AudioService {
       { key: "your-turn", path: "/sounds/your-turn.mp3", volumeMultiplier: 1.0 },
       { key: "award-funded", path: "/sounds/award-funded.mp3", volumeMultiplier: 1.0 },
       { key: "game-start", path: "/sounds/game-start.mp3", volumeMultiplier: 1.0 },
+      { key: "travel", path: "/sounds/travel.mp3", volumeMultiplier: 0.8 },
     ];
 
     audioFiles.forEach(({ key, path, volumeMultiplier }) => {
@@ -163,6 +164,10 @@ class AudioService {
 
   public async playGameStartSound(): Promise<void> {
     return this.playSound("game-start");
+  }
+
+  public async playTravelSound(): Promise<void> {
+    return this.playSound("travel");
   }
 
   private createAmbientAudio(): HTMLAudioElement {
