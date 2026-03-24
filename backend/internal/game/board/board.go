@@ -81,8 +81,14 @@ const (
 type TileLocation string
 
 const (
-	TileLocationMars  TileLocation = "mars"
-	TileLocationVenus TileLocation = "venus"
+	TileLocationMars     TileLocation = "mars"
+	TileLocationVenus    TileLocation = "venus"
+	TileLocationJupiter  TileLocation = "jupiter"
+	TileLocationGanymede TileLocation = "ganymede"
+	TileLocationEarth    TileLocation = "earth"
+	TileLocationLuna     TileLocation = "luna"
+	TileLocationMercury  TileLocation = "mercury"
+	TileLocationPhobos   TileLocation = "phobos"
 )
 
 // TileBonus represents a resource bonus provided by a tile when occupied
@@ -281,24 +287,25 @@ func GenerateMarsBoard(includeVenus bool) []Tile {
 		}
 	}
 
-	// Add off-Mars reserved area tiles (outside main grid)
-	offMarsTiles := []struct {
+	// Add celestial body tiles (planets and moons outside Mars)
+	celestialTiles := []struct {
 		Pos         shared.HexPosition
 		Tags        []string
 		DisplayName string
+		Location    TileLocation
 	}{
-		{shared.HexPosition{Q: 0, R: -5, S: 5}, []string{BoardTagPhobosSpaceHaven}, "Phobos Space Haven"},
-		{shared.HexPosition{Q: -5, R: 0, S: 5}, []string{BoardTagDawnCity}, "Dawn City"},
-		{shared.HexPosition{Q: 5, R: -5, S: 0}, []string{BoardTagGanymedeColony}, "Ganymede Colony"},
-		{shared.HexPosition{Q: -5, R: 5, S: 0}, []string{BoardTagLunaMetropolis}, "Luna Metropolis"},
+		{shared.HexPosition{Q: 500, R: 0, S: -500}, []string{BoardTagPhobosSpaceHaven}, "Phobos Space Haven", TileLocationPhobos},
+		{shared.HexPosition{Q: 400, R: 0, S: -400}, []string{BoardTagDawnCity}, "Dawn City", TileLocationMercury},
+		{shared.HexPosition{Q: 200, R: 0, S: -200}, []string{BoardTagGanymedeColony}, "Ganymede Colony", TileLocationGanymede},
+		{shared.HexPosition{Q: 300, R: 0, S: -300}, []string{BoardTagLunaMetropolis}, "Luna Metropolis", TileLocationLuna},
 	}
-	for _, ot := range offMarsTiles {
-		displayName := ot.DisplayName
+	for _, ct := range celestialTiles {
+		displayName := ct.DisplayName
 		tiles = append(tiles, Tile{
-			Coordinates: ot.Pos,
+			Coordinates: ct.Pos,
 			Type:        shared.ResourceLandTile,
-			Location:    TileLocationMars,
-			Tags:        ot.Tags,
+			Location:    ct.Location,
+			Tags:        ct.Tags,
 			DisplayName: &displayName,
 			Bonuses:     nil,
 			OccupiedBy:  nil,
