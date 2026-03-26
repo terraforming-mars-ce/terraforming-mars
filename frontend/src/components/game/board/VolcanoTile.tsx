@@ -15,6 +15,8 @@ interface VolcanoTileProps {
   seed?: number;
   surfaceNormal?: THREE.Vector3;
   worldPosition?: THREE.Vector3;
+  sphereCenter?: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
 const VOLCANO_HEIGHT = 0.14;
@@ -71,6 +73,8 @@ export default function VolcanoTile({
   seed: seedProp,
   surfaceNormal,
   worldPosition,
+  sphereCenter,
+  groupInverseMatrix,
 }: VolcanoTileProps) {
   const groupRef = useRef<THREE.Group>(null);
   const emergenceStartRef = useRef<number | null>(null);
@@ -108,7 +112,7 @@ export default function VolcanoTile({
   } = useTextures();
 
   const volcanoMaterial = useMemo(() => {
-    const mat = createVolcanoMaterial(grassTexture, flowTexture, seed);
+    const mat = createVolcanoMaterial(grassTexture, flowTexture, seed, sphereCenter);
     mat.uniforms.uEmergence.value = isEmergingRef.current ? 0.0 : 1.0;
     return mat;
   }, [grassTexture, flowTexture, seed]);
@@ -124,7 +128,15 @@ export default function VolcanoTile({
       alphaTest: 0.01,
       depthWrite: false,
     });
-    addSphereProjectionWithSoftEdges(mat, 0.003, noiseTexture, noiseHighTexture, HEX_RADIUS);
+    addSphereProjectionWithSoftEdges(
+      mat,
+      0.003,
+      noiseTexture,
+      noiseHighTexture,
+      HEX_RADIUS,
+      sphereCenter,
+      groupInverseMatrix,
+    );
     return mat;
   }, [grassTexture, noiseTexture, noiseHighTexture]);
 

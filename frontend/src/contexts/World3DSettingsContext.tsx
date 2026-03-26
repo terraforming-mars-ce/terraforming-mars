@@ -43,7 +43,7 @@ const defaultSettings: World3DSettings = {
   sunDirectionX: 0.9,
   sunDirectionY: 0.0,
   sunDirectionZ: 0.8,
-  sunIntensity: 0.75,
+  sunIntensity: 1,
   sunColor: { r: 1.0, g: 0.86, b: 0.72 },
   waterColor: { r: 0.05, g: 0.09, b: 0.1 },
   reflectance: 0.1,

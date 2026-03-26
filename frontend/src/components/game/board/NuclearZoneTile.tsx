@@ -14,6 +14,8 @@ interface NuclearZoneTileProps {
   seed?: number;
   surfaceNormal?: THREE.Vector3;
   worldPosition?: THREE.Vector3;
+  sphereCenter?: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
 const HEX_RADIUS = 0.166;
@@ -69,6 +71,8 @@ export default function NuclearZoneTile({
   seed: seedProp,
   surfaceNormal,
   worldPosition,
+  sphereCenter,
+  groupInverseMatrix,
 }: NuclearZoneTileProps) {
   const groupRef = useRef<THREE.Group>(null);
   const emergenceStartRef = useRef<number | null>(null);
@@ -101,7 +105,7 @@ export default function NuclearZoneTile({
   const { noiseMid: noiseTexture, noiseHigh: noiseHighTexture } = useTextures();
 
   const nuclearZoneMaterial = useMemo(() => {
-    const mat = createNuclearZoneMaterial(seed);
+    const mat = createNuclearZoneMaterial(seed, sphereCenter);
     mat.uniforms.uEmergence.value = isEmergingRef.current ? 0.0 : 1.0;
     return mat;
   }, [seed]);
@@ -116,7 +120,15 @@ export default function NuclearZoneTile({
       alphaTest: 0.01,
       depthWrite: false,
     });
-    addSphereProjectionWithSoftEdges(mat, 0.003, noiseTexture, noiseHighTexture, HEX_RADIUS);
+    addSphereProjectionWithSoftEdges(
+      mat,
+      0.003,
+      noiseTexture,
+      noiseHighTexture,
+      HEX_RADIUS,
+      sphereCenter,
+      groupInverseMatrix,
+    );
     return mat;
   }, [noiseTexture, noiseHighTexture]);
 

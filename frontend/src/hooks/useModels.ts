@@ -10,6 +10,7 @@ const MODEL_PATHS = {
   fence: "/assets/models/fence.glb",
   spaceship: "/assets/models/spaceship.glb",
   satellite: "/assets/models/satellite.glb",
+  phobos: "/assets/models/phobos.glb",
 } as const;
 
 useGLTF.preload(MODEL_PATHS.trees);
@@ -20,6 +21,7 @@ useGLTF.preload(MODEL_PATHS.bird);
 useGLTF.preload(MODEL_PATHS.fence);
 useGLTF.preload(MODEL_PATHS.spaceship);
 useGLTF.preload(MODEL_PATHS.satellite);
+useGLTF.preload(MODEL_PATHS.phobos);
 
 interface Models {
   treesScene: THREE.Group;
@@ -31,6 +33,7 @@ interface Models {
   fenceScene: THREE.Group;
   spaceshipScene: THREE.Group;
   satelliteScene: THREE.Group;
+  phobosScene: THREE.Group;
 }
 
 export function useModels(): Models {
@@ -42,6 +45,7 @@ export function useModels(): Models {
   const { scene: fenceScene } = useGLTF(MODEL_PATHS.fence);
   const { scene: spaceshipScene } = useGLTF(MODEL_PATHS.spaceship);
   const { scene: satelliteScene } = useGLTF(MODEL_PATHS.satellite);
+  const { scene: phobosScene } = useGLTF(MODEL_PATHS.phobos);
 
   return {
     treesScene,
@@ -53,5 +57,6 @@ export function useModels(): Models {
     fenceScene,
     spaceshipScene,
     satelliteScene,
+    phobosScene,
   };
 }

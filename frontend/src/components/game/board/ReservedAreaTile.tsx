@@ -11,6 +11,8 @@ interface ReservedAreaTileProps {
   ownerColor?: string;
   surfaceNormal?: THREE.Vector3;
   worldPosition?: THREE.Vector3;
+  sphereCenter?: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
 const HEX_RADIUS = 0.166;
@@ -75,6 +77,8 @@ export default function ReservedAreaTile({
   ownerColor,
   surfaceNormal,
   worldPosition,
+  sphereCenter,
+  groupInverseMatrix,
 }: ReservedAreaTileProps) {
   const groupRef = useRef<THREE.Group>(null);
   const emergenceStartRef = useRef<number | null>(null);
@@ -107,7 +111,15 @@ export default function ReservedAreaTile({
       alphaTest: 0.01,
       depthWrite: false,
     });
-    addSphereProjectionWithSoftEdges(mat, 0.003, noiseTexture, noiseHighTexture, HEX_RADIUS);
+    addSphereProjectionWithSoftEdges(
+      mat,
+      0.003,
+      noiseTexture,
+      noiseHighTexture,
+      HEX_RADIUS - 0.03,
+      sphereCenter,
+      groupInverseMatrix,
+    );
     return mat;
   }, [noiseTexture, noiseHighTexture]);
 

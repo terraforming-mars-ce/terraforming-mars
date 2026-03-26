@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { SPHERE_RADIUS } from "../boardConstants";
 import oceanVertexRaw from "./ocean.vert.glsl?raw";
 import oceanFragmentRaw from "./ocean.frag.glsl?raw";
 import sphereProjectionVertexRaw from "./sphere-projection.vert.glsl?raw";
@@ -28,8 +29,6 @@ function stripVersion(raw: string): string {
   return raw.replace(/^#version\s+\d+(\s+es)?\s*\n/, "");
 }
 
-export const oceanVertexShader = stripVersion(oceanVertexRaw);
-export const oceanFragmentShader = stripVersion(oceanFragmentRaw);
 export const sphereProjectionVertex = stripVersion(sphereProjectionVertexRaw);
 export const oceanBorderFragment = stripVersion(oceanBorderFragmentRaw);
 export const hoverGlowFragment = stripVersion(hoverGlowFragmentRaw);
@@ -58,72 +57,102 @@ export function splitSnippet(raw: string): { header: string; body: string } {
   };
 }
 
-export function createOceanMaterial(
+export { default as oceanVertexSnippet } from "./ocean.vert.glsl?raw";
+export { default as oceanFragmentSnippet } from "./ocean.frag.glsl?raw";
+
+export interface OceanUniformOverrides {
+  uSphereCenter?: THREE.Vector3;
+  uRadius?: number;
+  uAspect?: number;
+  uRotation?: number;
+  uEdgeScale?: number;
+  uSeedOffset?: THREE.Vector2;
+}
+
+export function addOceanProjection(
+  material: THREE.Material,
   waterNormals: THREE.Texture,
   sandTexture: THREE.Texture,
-  overrides?: Record<string, { value: unknown }>,
-): THREE.ShaderMaterial {
-  const defaults: Record<string, { value: unknown }> = {
-    uSphereRadius: { value: 2.02 },
-    time: { value: 0.0 },
-    size: { value: 250.0 },
-    alpha: { value: 1.0 },
-    rf0: { value: 0.1 },
-    sunIntensity: { value: 1.0 },
-    normalSampler: { value: waterNormals },
-    sunColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) },
-    sunDirection: { value: new THREE.Vector3(0.9, 0.0, 0.8).normalize() },
-    eye: { value: new THREE.Vector3() },
-    waterColor: { value: new THREE.Vector3(0.01, 0.03, 0.03) },
-    uRadius: { value: 0.5 },
-    uAspect: { value: 1.0 },
-    uRotation: { value: 0 },
-    uEdgeBand: { value: 0.08 },
-    uEdgeStrength: { value: 0.11 },
-    uEdgeScale: { value: 3.5 },
-    uWarpScale: { value: 2.0 },
-    uWarpAmount: { value: 0.07 },
-    uSandWidth: { value: 0.8 },
-    uGrainScale: { value: 18.0 },
-    sandSampler: { value: sandTexture },
-    uSandTexScale: { value: 3.0 },
-    uShallowWidth: { value: 0.22 },
-    uShallowStrength: { value: 0.55 },
-    uEdgeSoftness: { value: 0.03 },
-    uSeedOffset: { value: new THREE.Vector2(0, 0) },
-    uFoamWidth: { value: 0.08 },
-    uFoamStrength: { value: 0.7 },
-    uFoamScale: { value: 8.0 },
-    uFoamSpeed: { value: 0.08 },
-    uFoamCutoff: { value: 0.52 },
-    uFoamPulseSpeed: { value: 0.9 },
-    uFoamPulseAmount: { value: 0.5 },
+  sphereCenter: THREE.Vector3,
+  zOffset: number,
+  overrides?: OceanUniformOverrides,
+): void {
+  const vertSnippet = splitSnippet(oceanVertexRaw);
+  const fragSnippet = splitSnippet(oceanFragmentRaw);
+
+  material.onBeforeCompile = (shader) => {
+    (material as any).__shader = shader;
+
+    // Vertex uniforms
+    shader.uniforms.uSphereRadius = { value: SPHERE_RADIUS };
+    shader.uniforms.uZOffset = { value: zOffset };
+    shader.uniforms.uSphereCenter = { value: sphereCenter };
+
+    // Fragment uniforms
+    shader.uniforms.time = { value: 0.0 };
+    shader.uniforms.oceanSize = { value: 250.0 };
+    shader.uniforms.oceanAlpha = { value: 1.0 };
+    shader.uniforms.rf0 = { value: 0.1 };
+    shader.uniforms.sunIntensity = { value: 1.0 };
+    shader.uniforms.normalSampler = { value: waterNormals };
+    shader.uniforms.sunColor = { value: new THREE.Vector3(1.0, 1.0, 1.0) };
+    shader.uniforms.sunDirection = { value: new THREE.Vector3(0.9, 0.0, 0.8).normalize() };
+    shader.uniforms.eye = { value: new THREE.Vector3() };
+    shader.uniforms.waterColor = { value: new THREE.Vector3(0.01, 0.03, 0.03) };
+    shader.uniforms.uRadius = { value: overrides?.uRadius ?? 0.5 };
+    shader.uniforms.uAspect = { value: overrides?.uAspect ?? 1.0 };
+    shader.uniforms.uRotation = { value: overrides?.uRotation ?? 0 };
+    shader.uniforms.uEdgeBand = { value: 0.08 };
+    shader.uniforms.uEdgeStrength = { value: 0.11 };
+    shader.uniforms.uEdgeScale = { value: overrides?.uEdgeScale ?? 3.5 };
+    shader.uniforms.uWarpScale = { value: 2.0 };
+    shader.uniforms.uWarpAmount = { value: 0.07 };
+    shader.uniforms.uSandWidth = { value: 0.8 };
+    shader.uniforms.uGrainScale = { value: 18.0 };
+    shader.uniforms.sandSampler = { value: sandTexture };
+    shader.uniforms.uSandTexScale = { value: 3.0 };
+    shader.uniforms.uShallowWidth = { value: 0.22 };
+    shader.uniforms.uShallowStrength = { value: 0.55 };
+    shader.uniforms.uEdgeSoftness = { value: 0.03 };
+    shader.uniforms.uSeedOffset = { value: overrides?.uSeedOffset ?? new THREE.Vector2(0, 0) };
+    shader.uniforms.uFoamWidth = { value: 0.08 };
+    shader.uniforms.uFoamStrength = { value: 0.7 };
+    shader.uniforms.uFoamScale = { value: 8.0 };
+    shader.uniforms.uFoamSpeed = { value: 0.08 };
+    shader.uniforms.uFoamCutoff = { value: 0.52 };
+    shader.uniforms.uFoamPulseSpeed = { value: 0.9 };
+    shader.uniforms.uFoamPulseAmount = { value: 0.5 };
+
+    // Vertex: inject sphere projection
+    shader.vertexShader =
+      vertSnippet.header +
+      "\n" +
+      shader.vertexShader.replace("#include <begin_vertex>", vertSnippet.body).replace(
+        "#include <project_vertex>",
+        `vec4 mvPosition = viewMatrix * vec4(projectedPos, 1.0);
+           gl_Position = projectionMatrix * mvPosition;`,
+      );
+
+    // Fragment: inject ocean color computation
+    shader.fragmentShader =
+      fragSnippet.header +
+      "\n" +
+      shader.fragmentShader.replace("#include <opaque_fragment>", fragSnippet.body);
   };
-
-  const merged = { ...defaults, ...overrides };
-
-  return new THREE.ShaderMaterial({
-    vertexShader: oceanVertexShader,
-    fragmentShader: oceanFragmentShader,
-    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.lights, merged]),
-    lights: true,
-    transparent: true,
-    premultipliedAlpha: true,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-  });
 }
 
 export function createVolcanoMaterial(
   grassTexture: THREE.Texture,
   flowTexture: THREE.Texture,
   seed: number,
+  sphereCenter?: THREE.Vector3,
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: volcanoVertex,
     fragmentShader: volcanoFragment,
     uniforms: {
       uSphereRadius: { value: 2.02 },
+      uSphereCenter: { value: sphereCenter || new THREE.Vector3() },
       uHeight: { value: 0.14 },
       uCraterRadius: { value: 0.22 },
       uCraterDepth: { value: 0.08 },
@@ -144,12 +173,16 @@ export function createVolcanoMaterial(
   });
 }
 
-export function createNuclearZoneMaterial(seed: number): THREE.ShaderMaterial {
+export function createNuclearZoneMaterial(
+  seed: number,
+  sphereCenter?: THREE.Vector3,
+): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: nuclearZoneVertex,
     fragmentShader: nuclearZoneFragment,
     uniforms: {
       uSphereRadius: { value: 2.02 },
+      uSphereCenter: { value: sphereCenter || new THREE.Vector3() },
       uCraterDepth: { value: 0.04 },
       uCraterRadius: { value: 0.35 },
       uEmergence: { value: 1.0 },
@@ -166,12 +199,16 @@ export function createNuclearZoneMaterial(seed: number): THREE.ShaderMaterial {
   });
 }
 
-export function createWorldTreeMaterial(seed: number): THREE.ShaderMaterial {
+export function createWorldTreeMaterial(
+  seed: number,
+  sphereCenter?: THREE.Vector3,
+): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: worldTreeVertex,
     fragmentShader: worldTreeFragment,
     uniforms: {
       uSphereRadius: { value: 2.02 },
+      uSphereCenter: { value: sphereCenter || new THREE.Vector3() },
       uTrunkHeight: { value: 0.1 },
       uEmergence: { value: 1.0 },
       uTime: { value: 0.0 },
@@ -190,12 +227,14 @@ export function createWorldTreeMaterial(seed: number): THREE.ShaderMaterial {
 export function createMoholeMaterial(
   seed: number,
   concreteTexture?: THREE.Texture,
+  sphereCenter?: THREE.Vector3,
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: moholeVertex,
     fragmentShader: moholeFragment,
     uniforms: {
       uSphereRadius: { value: 2.02 },
+      uSphereCenter: { value: sphereCenter || new THREE.Vector3() },
       uHoleRadius: { value: 0.4 },
       uHoleDepth: { value: 0.06 },
       uEmergence: { value: 1.0 },
@@ -214,12 +253,16 @@ export function createMoholeMaterial(
   });
 }
 
-export function createMoholeMaskMaterial(seed: number): THREE.ShaderMaterial {
+export function createMoholeMaskMaterial(
+  seed: number,
+  sphereCenter?: THREE.Vector3,
+): THREE.ShaderMaterial {
   const mat = new THREE.ShaderMaterial({
     vertexShader: moholeVertex,
     fragmentShader: moholeMaskFragment,
     uniforms: {
       uSphereRadius: { value: 2.02 },
+      uSphereCenter: { value: sphereCenter || new THREE.Vector3() },
       uHoleRadius: { value: 0.4 },
       uHoleDepth: { value: 0.0 },
       uEmergence: { value: 1.0 },

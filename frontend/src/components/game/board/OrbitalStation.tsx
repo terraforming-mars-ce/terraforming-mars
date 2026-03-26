@@ -10,6 +10,7 @@ import {
 } from "./boardConstants";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 import { useModels } from "../../../hooks/useModels";
+import { getMarsOrbitalPosition } from "./solarSystemConfig";
 
 interface OrbitalStationProps {
   filledSeats: number;
@@ -150,14 +151,19 @@ export default function OrbitalStation({
     const r = ORBITAL_STATION_ORBIT_RADIUS;
     const tiltY = Math.sin(ORBITAL_STATION_TILT) * r * 0.3;
 
+    const marsPos = getMarsOrbitalPosition(t);
     groupRef.current.position.set(
-      Math.cos(angle) * r,
-      Math.sin(angle) * tiltY,
-      Math.sin(angle) * r,
+      marsPos[0] + Math.cos(angle) * r,
+      marsPos[1] + Math.sin(angle) * tiltY,
+      marsPos[2] + Math.sin(angle) * r,
     );
 
     const nextAngle = angle + 0.1;
-    lookTarget.set(Math.cos(nextAngle) * r, Math.sin(nextAngle) * tiltY, Math.sin(nextAngle) * r);
+    lookTarget.set(
+      marsPos[0] + Math.cos(nextAngle) * r,
+      marsPos[1] + Math.sin(nextAngle) * tiltY,
+      marsPos[2] + Math.sin(nextAngle) * r,
+    );
     groupRef.current.lookAt(lookTarget);
 
     if (isCompleted && spawnProgress.current < 1) {

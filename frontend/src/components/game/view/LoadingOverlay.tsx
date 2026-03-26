@@ -3,12 +3,14 @@ import { Z_INDEX } from "@/constants/zIndex";
 
 interface LoadingOverlayProps {
   message?: string;
+  subtitle?: string;
   isLoaded: boolean;
   onTransitionEnd?: () => void;
 }
 
 export default function LoadingOverlay({
-  message = "Loading...",
+  message = "Loading",
+  subtitle,
   isLoaded,
   onTransitionEnd,
 }: LoadingOverlayProps) {
@@ -64,6 +66,7 @@ export default function LoadingOverlay({
         justifyContent: "center",
         color: "white",
         fontSize: "18px",
+        fontFamily: "Orbitron, sans-serif",
       }}
     >
       <div
@@ -86,6 +89,18 @@ export default function LoadingOverlay({
         `}
       </style>
       {message}
+      {subtitle && (
+        <div
+          style={{
+            marginTop: "8px",
+            fontSize: "13px",
+            color: "rgba(255, 255, 255, 0.4)",
+            fontFamily: "Orbitron, sans-serif",
+          }}
+        >
+          {subtitle}
+        </div>
+      )}
     </div>
   );
 }

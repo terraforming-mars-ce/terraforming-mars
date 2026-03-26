@@ -12,6 +12,8 @@ interface MiningTileProps {
   seed?: number;
   surfaceNormal?: THREE.Vector3;
   worldPosition?: THREE.Vector3;
+  sphereCenter?: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
 const HEX_RADIUS = 0.166;
@@ -124,6 +126,8 @@ export default function MiningTile({
   seed: seedProp,
   surfaceNormal,
   worldPosition,
+  sphereCenter,
+  groupInverseMatrix,
 }: MiningTileProps) {
   const groupRef = useRef<THREE.Group>(null);
   const cartRef = useRef<THREE.Group>(null);
@@ -171,7 +175,15 @@ export default function MiningTile({
       alphaTest: 0.01,
       depthWrite: false,
     });
-    addSphereProjectionWithSoftEdges(mat, 0.003, noiseTexture, noiseHighTexture, HEX_RADIUS);
+    addSphereProjectionWithSoftEdges(
+      mat,
+      0.003,
+      noiseTexture,
+      noiseHighTexture,
+      HEX_RADIUS,
+      sphereCenter,
+      groupInverseMatrix,
+    );
     return mat;
   }, [noiseTexture, noiseHighTexture]);
 

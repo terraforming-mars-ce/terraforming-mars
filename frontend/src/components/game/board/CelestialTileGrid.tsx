@@ -1,0 +1,346 @@
+import { useCallback, useMemo, useRef, useState, type RefObject } from "react";
+import * as THREE from "three";
+import { HexGrid2D } from "../../../utils/hex-grid-2d";
+import Tile from "./Tile";
+import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
+import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
+import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
+import { Html } from "@react-three/drei";
+import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
+
+interface CelestialTileGridProps {
+  gameState?: GameDto;
+  onHexClick?: (hexCoordinate: string) => void;
+  tileOpacity?: RefObject<number>;
+  location: string;
+  radius: number;
+  coordOffset: { q: number; r: number; s: number };
+  worldCenter: THREE.Vector3;
+  activePlanetId: string;
+  groupInverseMatrix?: THREE.Matrix4;
+}
+
+interface ProjectedTile {
+  backendTile: TileDto;
+  coordinate: { q: number; r: number; s: number };
+  position: { x: number; y: number };
+  spherePosition: THREE.Vector3;
+  normal: THREE.Vector3;
+  isOceanSpace: boolean;
+  bonuses: { [key: string]: number };
+}
+
+type TileType = "city" | "empty" | "special";
+
+function hexToPixel(
+  coord: { q: number; r: number; s: number },
+  offset: { q: number; r: number; s: number },
+) {
+  const q = coord.q - offset.q;
+  const r = coord.r - offset.r;
+  const size = 0.3;
+  const x = size * Math.sqrt(3) * (q + r / 2);
+  const y = ((size * 3) / 2) * r;
+  return { x, y };
+}
+
+function projectToSphere(position2D: { x: number; y: number }, radius: number): THREE.Vector3 {
+  const scale = 0.4;
+  const x = position2D.x * scale;
+  const y = position2D.y * scale;
+
+  const r = Math.sqrt(x * x + y * y);
+
+  if (r === 0) {
+    return new THREE.Vector3(0, 0, radius);
+  }
+
+  const theta = Math.atan2(y, x);
+  const phi = (r / radius) * (Math.PI / 2);
+
+  const sphereX = radius * Math.sin(phi) * Math.cos(theta);
+  const sphereY = radius * Math.sin(phi) * Math.sin(theta);
+  const sphereZ = radius * Math.cos(phi);
+
+  return new THREE.Vector3(sphereX, sphereY, sphereZ);
+}
+
+const convertBonuses = (bonuses: TileBonusDto[] | undefined) => {
+  const converted: { [key: string]: number } = {};
+  if (bonuses) {
+    bonuses.forEach((bonus) => {
+      converted[bonus.type] = bonus.amount;
+    });
+  }
+  return converted;
+};
+
+export default function CelestialTileGrid({
+  gameState,
+  onHexClick,
+  tileOpacity,
+  location,
+  radius,
+  coordOffset,
+  worldCenter,
+  activePlanetId,
+  groupInverseMatrix,
+}: CelestialTileGridProps) {
+  const { activePlanet } = usePlanetFocus();
+
+  const filteredTiles = useMemo(
+    () => gameState?.board?.tiles?.filter((t) => t.location === location),
+    [gameState?.board?.tiles, location],
+  );
+  const newlyPlacedTiles = usePreviousTiles(filteredTiles);
+
+  const playerColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (gameState) {
+      if (gameState.currentPlayer?.color) {
+        map.set(gameState.currentPlayer.id, gameState.currentPlayer.color);
+      }
+      gameState.otherPlayers?.forEach((p) => {
+        if (p.color) {
+          map.set(p.id, p.color);
+        }
+      });
+    }
+    return map;
+  }, [gameState]);
+
+  const playerNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (gameState) {
+      if (gameState.currentPlayer) {
+        map.set(gameState.currentPlayer.id, gameState.currentPlayer.name);
+      }
+      gameState.otherPlayers?.forEach((p) => {
+        map.set(p.id, p.name);
+      });
+    }
+    return map;
+  }, [gameState]);
+
+  const [tooltipData, setTooltipData] = useState<TileTooltipData | null>(null);
+  const tooltipPositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleTileHoverInfo = useCallback(
+    (
+      data: Omit<TileTooltipData, "ownerName" | "ownerColor" | "reservedByName"> & {
+        position: { x: number; y: number };
+        ownerId: string | null;
+        reservedById: string | null;
+      },
+    ) => {
+      tooltipPositionRef.current = data.position;
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+      hoverTimerRef.current = setTimeout(() => {
+        setTooltipData({
+          tileType: data.tileType,
+          displayName: data.displayName,
+          ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
+          ownerColor: data.ownerId ? playerColorMap.get(data.ownerId) : undefined,
+          reservedByName: data.reservedById ? playerNameMap.get(data.reservedById) : undefined,
+          isOceanSpace: data.isOceanSpace,
+          isVolcanic: data.isVolcanic,
+          bonuses: data.bonuses,
+        });
+      }, 200);
+    },
+    [playerNameMap, playerColorMap],
+  );
+
+  const handleTileHoverMove = useCallback((position: { x: number; y: number }) => {
+    tooltipPositionRef.current = position;
+  }, []);
+
+  const handleTileHoverLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    setTooltipData(null);
+  }, []);
+
+  const projectedTiles = useMemo((): ProjectedTile[] => {
+    if (!gameState?.board?.tiles) {
+      return [];
+    }
+
+    return gameState.board.tiles
+      .filter((tile: TileDto) => tile.location === location)
+      .map((tile: TileDto): ProjectedTile => {
+        const position2D = hexToPixel(tile.coordinates, coordOffset);
+        const spherePosition = projectToSphere(position2D, radius);
+
+        return {
+          backendTile: tile,
+          coordinate: tile.coordinates,
+          position: position2D,
+          spherePosition,
+          normal: spherePosition.clone().normalize(),
+          isOceanSpace: false,
+          bonuses: convertBonuses(tile.bonuses),
+        };
+      });
+  }, [gameState?.board?.tiles, location, coordOffset, radius]);
+
+  const availableHexes = gameState?.currentPlayer?.pendingTileSelection?.availableHexes || [];
+
+  const getTileType = (tile: ProjectedTile): TileType => {
+    if (tile.backendTile.occupiedBy) {
+      if (tile.backendTile.occupiedBy.type === "city-tile") {
+        return "city";
+      }
+      return "special";
+    }
+    return "empty";
+  };
+
+  const interactionSphereGeometry = useMemo(
+    () => new THREE.SphereGeometry(radius + 0.02, 32, 32),
+    [radius],
+  );
+
+  const findNearestHex = useCallback(
+    (hitPoint: THREE.Vector3): string | null => {
+      let bestKey: string | null = null;
+      let bestDist = Infinity;
+      const HEX_HIT_RADIUS = 0.17;
+      for (const tile of projectedTiles) {
+        const dist = hitPoint.distanceTo(tile.spherePosition);
+        if (dist < bestDist && dist < HEX_HIT_RADIUS) {
+          bestDist = dist;
+          bestKey = HexGrid2D.coordinateToKey(tile.coordinate);
+        }
+      }
+      return bestKey;
+    },
+    [projectedTiles],
+  );
+
+  const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
+  const hoveredHexKeyRef = useRef<string | null>(null);
+
+  const handleSpherePointerMove = useCallback(
+    (
+      event: THREE.Event & {
+        point: THREE.Vector3;
+        nativeEvent: PointerEvent;
+        object: THREE.Object3D;
+      },
+    ) => {
+      const localPoint = event.object.worldToLocal(event.point.clone());
+      const key = findNearestHex(localPoint);
+      if (key !== hoveredHexKeyRef.current) {
+        hoveredHexKeyRef.current = key;
+        setHoveredHexKey(key);
+        if (key) {
+          const tile = projectedTiles.find((t) => HexGrid2D.coordinateToKey(t.coordinate) === key);
+          if (tile) {
+            const ownerId = tile.backendTile.ownerId || null;
+            handleTileHoverInfo({
+              position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
+              tileType: getTileType(tile),
+              displayName: tile.backendTile.displayName,
+              ownerId,
+              reservedById: tile.backendTile.reservedBy || null,
+              isOceanSpace: false,
+              isVolcanic: false,
+              bonuses: tile.bonuses,
+            });
+          }
+        } else {
+          handleTileHoverLeave();
+        }
+      } else if (key) {
+        handleTileHoverMove({ x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
+      }
+    },
+    [
+      projectedTiles,
+      findNearestHex,
+      handleTileHoverInfo,
+      handleTileHoverMove,
+      handleTileHoverLeave,
+    ],
+  );
+
+  const handleSpherePointerLeave = useCallback(() => {
+    hoveredHexKeyRef.current = null;
+    setHoveredHexKey(null);
+    handleTileHoverLeave();
+  }, [handleTileHoverLeave]);
+
+  const handleSphereClick = useCallback(
+    (
+      event: THREE.Event & {
+        point: THREE.Vector3;
+        object: THREE.Object3D;
+        stopPropagation: () => void;
+      },
+    ) => {
+      event.stopPropagation();
+      const localPoint = event.object.worldToLocal(event.point.clone());
+      const key = findNearestHex(localPoint);
+      if (key) {
+        onHexClick?.(key);
+      }
+    },
+    [findNearestHex, onHexClick],
+  );
+
+  return (
+    <>
+      {activePlanet === activePlanetId && (
+        <mesh
+          geometry={interactionSphereGeometry}
+          onPointerMove={handleSpherePointerMove}
+          onPointerLeave={handleSpherePointerLeave}
+          onClick={handleSphereClick}
+          visible={false}
+        />
+      )}
+
+      <Html>
+        <TileTooltip data={tooltipData} positionRef={tooltipPositionRef} />
+      </Html>
+      {projectedTiles.map((tile) => {
+        const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
+        const tileType = getTileType(tile);
+        const isAvailable = availableHexes.includes(hexKey);
+        const ownerId = tile.backendTile.ownerId || null;
+
+        return (
+          <Tile
+            key={hexKey}
+            tileData={tile}
+            tileType={tileType}
+            ownerId={ownerId}
+            ownerColor={ownerId ? playerColorMap.get(ownerId) : undefined}
+            reservedById={tile.backendTile.reservedBy || null}
+            displayName={tile.backendTile.displayName}
+            isVolcanic={false}
+            onClick={() => {
+              onHexClick?.(hexKey);
+            }}
+            isAvailableForPlacement={isAvailable}
+            isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
+            sphereRadius={radius}
+            sphereCenter={worldCenter}
+            groupInverseMatrix={groupInverseMatrix}
+            tileOpacity={tileOpacity}
+            onHoverInfo={handleTileHoverInfo}
+            onHoverMove={handleTileHoverMove}
+            onHoverLeave={handleTileHoverLeave}
+            isHovered={hoveredHexKey === hexKey}
+          />
+        );
+      })}
+    </>
+  );
+}

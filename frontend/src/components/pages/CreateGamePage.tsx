@@ -192,7 +192,7 @@ const CreateGamePage: React.FC = () => {
 
   const getLoadingMessage = () => {
     if (loadingStep === "game") return "Creating game...";
-    if (loadingStep === "environment") return "Loading 3D environment...";
+    if (loadingStep === "environment") return "Loading...";
     return "Loading...";
   };
 

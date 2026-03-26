@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import TileGrid from "./TileGrid.tsx";
 
@@ -7,6 +8,7 @@ import { useMarsRotation } from "../../../contexts/MarsRotationContext.tsx";
 import { useTextures } from "../../../hooks/useTextures.ts";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
 import { SPHERE_RADIUS } from "./boardConstants.ts";
+import { getMarsOrbitalPosition } from "./solarSystemConfig.ts";
 
 interface MarsSphereProps {
   gameState?: GameDto;
@@ -23,38 +25,32 @@ export default function MarsSphere({
 }: MarsSphereProps) {
   const { marsGroupRef } = useMarsRotation();
   const { activePlanet, setActivePlanet } = usePlanetFocus();
+  const worldCenterRef = useRef(new THREE.Vector3());
+  const groupInverseMatrixRef = useRef(new THREE.Matrix4());
 
   const { mars: diffuseMap } = useTextures();
 
-  // Get Mars color based on terraforming progress for tinting
-  const marsColorTint = useMemo(() => {
-    const temp = gameState?.globalParameters?.temperature || -30;
-    const oxygen = gameState?.globalParameters?.oxygen || 0;
-
-    const tempProgress = Math.max(0, (temp + 30) / 38);
-    const oxygenProgress = oxygen / 14;
-
-    const red = 1 - tempProgress * 0.3;
-    const green = tempProgress * 0.2 + oxygenProgress * 0.3;
-    const blue = oxygenProgress * 0.2;
-
-    return new THREE.Color(red, green, blue);
-  }, [gameState?.globalParameters]);
+  useFrame((state) => {
+    if (marsGroupRef.current) {
+      const pos = getMarsOrbitalPosition(state.clock.elapsedTime);
+      marsGroupRef.current.position.set(pos[0], pos[1], pos[2]);
+      marsGroupRef.current.lookAt(0, 0, 0);
+      marsGroupRef.current.updateMatrixWorld(true);
+      worldCenterRef.current.set(pos[0], pos[1], pos[2]);
+      groupInverseMatrixRef.current.copy(marsGroupRef.current.matrixWorld).invert();
+    }
+  });
 
   const sphereGeometry = useMemo(() => {
     return new THREE.SphereGeometry(SPHERE_RADIUS, 128, 64);
   }, []);
 
-  // Create material with terraforming tint and desaturated texture
   const marsMaterial = useMemo(() => {
-    const baseMarsColor = new THREE.Color(1, 1, 1);
-    const tintedColor = baseMarsColor.lerp(marsColorTint, 0.3);
-
     const mat = new THREE.MeshStandardMaterial({
       map: diffuseMap,
-      color: tintedColor,
-      roughness: 0.85,
+      roughness: 0.8,
       metalness: 0.05,
+      fog: false,
     });
 
     mat.stencilWrite = true;
@@ -65,48 +61,29 @@ export default function MarsSphere({
     mat.stencilZFail = THREE.KeepStencilOp;
     mat.stencilZPass = THREE.KeepStencilOp;
 
-    mat.onBeforeCompile = (shader) => {
-      shader.uniforms.uSaturation = { value: 0.3 };
-      shader.fragmentShader = shader.fragmentShader.replace(
-        "#include <map_fragment>",
-        `
-        #ifdef USE_MAP
-          vec4 sampledDiffuseColor = texture2D( map, vMapUv );
-          float grey = dot(sampledDiffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-          sampledDiffuseColor.r = mix(grey, sampledDiffuseColor.r, 0.7);
-          sampledDiffuseColor.g = mix(grey, sampledDiffuseColor.g, 0.85);
-          sampledDiffuseColor.b = mix(grey, sampledDiffuseColor.b, 0.85);
-          diffuseColor *= sampledDiffuseColor;
-        #endif
-        `,
-      );
-    };
-
     return mat;
-  }, [diffuseMap, marsColorTint]);
+  }, [diffuseMap]);
 
   return (
     <group ref={marsGroupRef}>
       <mesh
         geometry={sphereGeometry}
         material={marsMaterial}
-        rotation={[0, (65 * Math.PI) / 180, 0]}
-        castShadow
-        receiveShadow
         onClick={(e) => {
-          if (activePlanet === "venus") {
+          if (activePlanet !== "mars") {
             e.stopPropagation();
             setActivePlanet("mars");
           }
         }}
       />
 
-      {/* Projected hexagonal grid "wrapped" around Mars sphere */}
       <TileGrid
         gameState={gameState}
         onHexClick={onHexClick}
         animateHexEntrance={animateHexEntrance}
         startHidden={startHidden}
+        sphereCenter={worldCenterRef.current}
+        groupInverseMatrix={groupInverseMatrixRef.current}
       />
     </group>
   );

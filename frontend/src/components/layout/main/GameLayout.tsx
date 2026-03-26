@@ -2,6 +2,7 @@ import { useState, useCallback, forwardRef } from "react";
 import LeftSidebar from "../panels/LeftSidebar.tsx";
 import type { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
 import TopMenuBar from "../panels/TopMenuBar.tsx";
+import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
 import RightSidebar from "../panels/RightSidebar.tsx";
 import MainContentDisplay from "../../ui/display/MainContentDisplay.tsx";
 
@@ -27,6 +28,14 @@ import { globalWebSocketManager } from "../../../services/globalWebSocketManager
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import GameButton from "../../ui/buttons/GameButton.tsx";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
+
+export function SolarSystemFade({ children }: { children: React.ReactNode }) {
+  const { activePlanet } = usePlanetFocus();
+  if (activePlanet === "solar-system") {
+    return null;
+  }
+  return <>{children}</>;
+}
 
 export type TransitionPhase =
   | "idle"
@@ -230,18 +239,20 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
 
       {/* Chat overlay - rendered before sidebars so it's behind them in z-order */}
       {showUI && !showStartingSelection && chatMessages && onSendChatMessage && (
-        <div className={uiAnimationClass}>
-          <ChatOverlay
-            messages={chatMessages}
-            onSendMessage={onSendChatMessage}
-            isLobby={isLobbyPhase}
-            isEndgame={endgameFadeUI}
-            playerColorMap={playerColorMap}
-          />
-        </div>
+        <SolarSystemFade>
+          <div className={uiAnimationClass}>
+            <ChatOverlay
+              messages={chatMessages}
+              onSendMessage={onSendChatMessage}
+              isLobby={isLobbyPhase}
+              isEndgame={endgameFadeUI}
+              playerColorMap={playerColorMap}
+            />
+          </div>
+        </SolarSystemFade>
       )}
 
-      {/* Overlay Components */}
+      {/* Player list — stays visible in solar system view */}
       {showUI && (
         <div
           className={`${uiAnimationClass} ${endgameFadeClass} transition-opacity duration-700 ease-in-out`}
@@ -270,48 +281,59 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
             onKickPlayer={handleKickPlayer}
             onConvertToBot={gameState?.settings?.hasClaudeApiKey ? handleConvertToBot : undefined}
           />
-
-          <RightSidebar
-            globalParameters={gameState?.globalParameters}
-            generation={gameState?.generation}
-            currentPlayer={currentTurnPlayer}
-            showVenus={gameState?.settings?.venusNextEnabled}
-          />
-
-          <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
-
-          {playedCardNotification && onPlayedCardTogglePin && onPlayedCardAdvance && (
-            <PlayedCardNotificationOverlay
-              notification={playedCardNotification}
-              isPinned={isPlayedCardPinned ?? false}
-              onTogglePin={onPlayedCardTogglePin}
-              onAdvance={onPlayedCardAdvance}
-            />
-          )}
         </div>
+      )}
+
+      {/* Overlay Components — fade out in solar system view */}
+      {showUI && (
+        <SolarSystemFade>
+          <div
+            className={`${uiAnimationClass} ${endgameFadeClass} transition-opacity duration-700 ease-in-out`}
+          >
+            <RightSidebar
+              globalParameters={gameState?.globalParameters}
+              generation={gameState?.generation}
+              currentPlayer={currentTurnPlayer}
+              showVenus={gameState?.settings?.venusNextEnabled}
+            />
+
+            <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
+
+            {playedCardNotification && onPlayedCardTogglePin && onPlayedCardAdvance && (
+              <PlayedCardNotificationOverlay
+                notification={playedCardNotification}
+                isPinned={isPlayedCardPinned ?? false}
+                onTogglePin={onPlayedCardTogglePin}
+                onAdvance={onPlayedCardAdvance}
+              />
+            )}
+          </div>
+        </SolarSystemFade>
       )}
 
       {showUI &&
         !showStartingSelection &&
         (gameState?.currentPhase !== GamePhaseComplete ||
           (isEndgame && activeEndgamePanel === "replay")) && (
-          <div className={uiAnimationClass}>
-            <BottomResourceBar
-              currentPlayer={currentPlayer}
-              gameState={gameState}
-              playedCards={playedCards}
-              changedPaths={changedPaths}
-              callbacks={bottomBarCallbacks}
-              gameId={gameState?.id}
-              corporation={corporationCard}
-              showCorporation={showCorporation}
-              spectatingPlayer={spectatingPlayer}
-              spectatingCorporation={spectatingCorporation}
-              spectatePlayerColor={spectatePlayerColor}
-              onStopSpectating={onStopSpectating}
-              isGameSpectator={isGameSpectator}
-            />
-          </div>
+          <SolarSystemFade>
+            <div className={uiAnimationClass}>
+              <BottomResourceBar
+                currentPlayer={currentPlayer}
+                gameState={gameState}
+                playedCards={playedCards}
+                changedPaths={changedPaths}
+                callbacks={bottomBarCallbacks}
+                gameId={gameState?.id}
+                corporation={corporationCard}
+                showCorporation={showCorporation}
+                spectatingPlayer={spectatingPlayer}
+                spectatingCorporation={spectatingCorporation}
+                spectatePlayerColor={spectatePlayerColor}
+                onStopSpectating={onStopSpectating}
+                isGameSpectator={isGameSpectator}
+              />
+            </div>
+          </SolarSystemFade>
         )}
 
       {pendingAction?.type === "kick" && (

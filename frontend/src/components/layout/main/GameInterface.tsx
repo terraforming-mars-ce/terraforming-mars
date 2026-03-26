@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import GameLayout from "./GameLayout.tsx";
+import GameLayout, { SolarSystemFade } from "./GameLayout.tsx";
 import CardsPlayedModal from "../../ui/modals/CardsPlayedModal.tsx";
 import ProductionPhaseModal from "../../ui/modals/ProductionPhaseModal.tsx";
 import PaymentSelectionPopover from "../../ui/popover/PaymentSelectionPopover.tsx";
@@ -87,6 +87,7 @@ import { useWebSocketConnection } from "@/hooks/useWebSocketConnection.ts";
 import { useGameInitialization } from "@/hooks/useGameInitialization.ts";
 import { useGameTransitions } from "@/hooks/useGameTransitions.ts";
 import { useGameHotkeys } from "@/hooks/useGameHotkeys.ts";
+import { PlanetFocusProvider } from "../../../contexts/PlanetFocusContext.tsx";
 
 export default function GameInterface() {
   const location = useLocation();
@@ -439,28 +440,41 @@ export default function GameInterface() {
       loadingPhase === "spectating"
     ) {
       if (!isSpaceBgLoaded) {
-        return "Loading 3D environment...";
+        return "Loading";
       }
-      return "Loading game...";
+      return "Loading game";
     }
     if (loadingPhase === "checking") {
-      return "Loading game...";
+      return "Loading game";
     }
     if (loadingPhase === "connecting") {
-      return "Connecting...";
+      return "Connecting";
     }
     if (isReconnecting && reconnectionStep) {
       if (reconnectionStep === "game") {
-        return "Reconnecting to game...";
+        return "Reconnecting to game";
       }
       if (reconnectionStep === "environment") {
-        return "Loading 3D environment...";
+        return "Loading";
       }
     }
     if (!isSkyboxReady) {
-      return "Loading 3D environment...";
+      return "Loading";
     }
-    return "Connecting to game...";
+    return "Connecting to game";
+  })();
+
+  const loadingSubtitle = (() => {
+    if (!isSkyboxReady || !isGpuReady) {
+      if (isSkyboxReady && !isGpuReady) {
+        return "Preparing renderer";
+      }
+      if (!isSkyboxReady) {
+        return "Preparing environment";
+      }
+      return "Loading assets";
+    }
+    return "";
   })();
 
   // --- Loading state ---
@@ -551,22 +565,23 @@ export default function GameInterface() {
   })();
 
   return (
-    <VPCountingProvider
-      state={vpCounting.state}
-      controls={{
-        start: vpCounting.start,
-        skip: vpCounting.skip,
-        goToPhase: vpCounting.goToPhase,
-        phases: vpCounting.phases,
-      }}
-    >
-      {game?.settings?.developmentMode && <DevModeChip />}
+    <PlanetFocusProvider>
+      <VPCountingProvider
+        state={vpCounting.state}
+        controls={{
+          start: vpCounting.start,
+          skip: vpCounting.skip,
+          goToPhase: vpCounting.goToPhase,
+          phases: vpCounting.phases,
+        }}
+      >
+        {game?.settings?.developmentMode && <DevModeChip />}
 
-      {shouldShowBackdrop && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] animate-[backdropFadeIn_0.3s_ease-out]" />
-      )}
+        {shouldShowBackdrop && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] animate-[backdropFadeIn_0.3s_ease-out]" />
+        )}
 
-      <style>{`
+        <style>{`
         @keyframes backdropFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -585,823 +600,829 @@ export default function GameInterface() {
         }
       `}</style>
 
-      {game &&
-        loadingPhase !== "selecting" &&
-        loadingPhase !== "joining" &&
-        loadingPhase !== "spectating" && (
-          <GameLayout
-            ref={playerListRef}
-            gameState={replayGameState ?? game}
-            currentPlayer={replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer)}
-            playedCards={replayViewAsPlayer?.playedCards ?? currentPlayer?.playedCards ?? []}
-            corporationCard={replayViewAsPlayer?.corporation ?? corporationData}
-            showCorporation={!!replayViewAsPlayer || showCorp}
-            initTurnPlayerId={displayedInitPlayerId}
-            showStartingSelection={showStartingSelection}
-            transitionPhase={transitionPhase}
-            animateHexEntrance={
-              transitionPhase === "marsRevealed" ||
-              transitionPhase === "animateUI" ||
-              transitionPhase === "complete"
-            }
-            startDark={transitionPhase === "loading" || transitionPhase === "lobby"}
-            tilesHidden={
-              transitionPhase === "loading" ||
-              transitionPhase === "lobby" ||
-              transitionPhase === "fadeOutLobby"
-            }
+        {game &&
+          loadingPhase !== "selecting" &&
+          loadingPhase !== "joining" &&
+          loadingPhase !== "spectating" && (
+            <GameLayout
+              ref={playerListRef}
+              gameState={replayGameState ?? game}
+              currentPlayer={replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer)}
+              playedCards={replayViewAsPlayer?.playedCards ?? currentPlayer?.playedCards ?? []}
+              corporationCard={replayViewAsPlayer?.corporation ?? corporationData}
+              showCorporation={!!replayViewAsPlayer || showCorp}
+              initTurnPlayerId={displayedInitPlayerId}
+              showStartingSelection={showStartingSelection}
+              transitionPhase={transitionPhase}
+              animateHexEntrance={
+                transitionPhase === "marsRevealed" ||
+                transitionPhase === "animateUI" ||
+                transitionPhase === "complete"
+              }
+              startDark={transitionPhase === "loading" || transitionPhase === "lobby"}
+              tilesHidden={
+                transitionPhase === "loading" ||
+                transitionPhase === "lobby" ||
+                transitionPhase === "fadeOutLobby"
+              }
+              changedPaths={changedPaths}
+              triggeredEffects={triggeredEffects}
+              bottomBarCallbacks={bottomBarCallbacks}
+              onStandardProjectSelect={flow.handleStandardProjectSelect}
+              onLeaveGame={handleLeaveGame}
+              onEndGame={handleEndGame}
+              onSkyboxReady={handleSkyboxReady}
+              onGpuReady={handleGpuReady}
+              onPlayerClick={handlePlayerClick}
+              spectatingPlayer={spectatePlayer}
+              spectatingCorporation={spectatePlayer?.corporation ?? null}
+              spectatePlayerColor={spectatePlayerColor}
+              onStopSpectating={handleStopSpectating}
+              isGameSpectator={isSpectator}
+              chatMessages={chatMessages}
+              onSendChatMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
+              isLobbyPhase={isLobbyPhase}
+              playerColorMap={playerColorMap}
+              endgameFadeUI={endgameFadeUI}
+              isEndgame={isGameComplete}
+              activeEndgamePanel={endgamePanel}
+              onEndgamePanelChange={handleEndgamePanelChange}
+              hasHistory={hasHistory}
+              playedCardNotification={playedCardNotification.currentNotification}
+              isPlayedCardPinned={playedCardNotification.isPinned}
+              onPlayedCardTogglePin={playedCardNotification.togglePin}
+              onPlayedCardAdvance={playedCardNotification.advance}
+            />
+          )}
+
+        <CardsPlayedModal
+          isVisible={showCardsPlayedModal}
+          onClose={() => useUIOverlayStore.getState().setShowCardsPlayedModal(false)}
+          cards={(spectatePlayer?.playedCards ?? currentPlayer?.playedCards) || []}
+        />
+
+        <ProductionPhaseModal
+          isOpen={showProductionPhaseModal && !isProductionModalHidden}
+          gameState={game}
+          onClose={() => {
+            useUIOverlayStore.getState().setShowProductionPhaseModal(false);
+            useUIOverlayStore.getState().setIsProductionModalHidden(false);
+            useUIOverlayStore.getState().setOpenProductionToCardSelection(false);
+          }}
+          onHide={() => {
+            useUIOverlayStore.getState().setIsProductionModalHidden(true);
+            useUIOverlayStore.getState().setOpenProductionToCardSelection(false);
+          }}
+          openDirectlyToCardSelection={openProductionToCardSelection}
+        />
+
+        <WindowManagerProvider>
+          <DebugDropdown
+            isVisible={showDebugDropdown}
+            onClose={() => useUIOverlayStore.getState().setShowDebugDropdown(false)}
+            gameState={game}
             changedPaths={changedPaths}
-            triggeredEffects={triggeredEffects}
-            bottomBarCallbacks={bottomBarCallbacks}
-            onStandardProjectSelect={flow.handleStandardProjectSelect}
-            onLeaveGame={handleLeaveGame}
-            onEndGame={handleEndGame}
-            onSkyboxReady={handleSkyboxReady}
-            onGpuReady={handleGpuReady}
-            onPlayerClick={handlePlayerClick}
-            spectatingPlayer={spectatePlayer}
-            spectatingCorporation={spectatePlayer?.corporation ?? null}
-            spectatePlayerColor={spectatePlayerColor}
-            onStopSpectating={handleStopSpectating}
-            isGameSpectator={isSpectator}
-            chatMessages={chatMessages}
-            onSendChatMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
-            isLobbyPhase={isLobbyPhase}
-            playerColorMap={playerColorMap}
-            endgameFadeUI={endgameFadeUI}
-            isEndgame={isGameComplete}
-            activeEndgamePanel={endgamePanel}
-            onEndgamePanelChange={handleEndgamePanelChange}
-            hasHistory={hasHistory}
-            playedCardNotification={playedCardNotification.currentNotification}
-            isPlayedCardPinned={playedCardNotification.isPinned}
-            onPlayedCardTogglePin={playedCardNotification.togglePin}
-            onPlayedCardAdvance={playedCardNotification.advance}
+          />
+
+          <PerformanceWindow
+            isVisible={showPerformanceWindow}
+            onClose={() => useUIOverlayStore.getState().setShowPerformanceWindow(false)}
+          />
+
+          <FeedbackWindow
+            isVisible={showFeedbackWindow}
+            onClose={() => useUIOverlayStore.getState().setShowFeedbackWindow(false)}
+            gameState={game}
+          />
+        </WindowManagerProvider>
+
+        {(transitionPhase === "lobby" ||
+          transitionPhase === "loading" ||
+          transitionPhase === "fadeOutLobby" ||
+          loadingPhase === "selecting" ||
+          loadingPhase === "joining" ||
+          loadingPhase === "spectating") && (
+          <div
+            className={
+              transitionPhase === "fadeOutLobby" ? "animate-[fadeOut_1500ms_ease-out_forwards]" : ""
+            }
+          >
+            <SpaceBackground animationSpeed={0.5} overlayOpacity={0.3} />
+          </div>
+        )}
+
+        {lobbyMounted && game && (playerId || isSpectator) && (
+          <>
+            <WaitingRoomOverlay
+              game={game}
+              playerId={playerId ?? "spectator"}
+              visible={isLobbyPhase}
+              onExited={() => useTransitionStore.getState().setLobbyMounted(false)}
+            />
+            {isLobbyPhase && (
+              <ChatOverlay
+                messages={chatMessages}
+                onSendMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
+                isLobby={true}
+                playerColorMap={playerColorMap}
+              />
+            )}
+          </>
+        )}
+
+        {game?.currentPhase === GamePhaseDemoSetup && game && playerId && (
+          <DemoSetupOverlay game={game} playerId={playerId} />
+        )}
+
+        {showTabConflict && conflictingTabInfo && (
+          <TabConflictOverlay
+            activeGameInfo={conflictingTabInfo}
+            onTakeOver={init.handleTabTakeOver}
+            onCancel={init.handleTabCancel}
           />
         )}
 
-      <CardsPlayedModal
-        isVisible={showCardsPlayedModal}
-        onClose={() => useUIOverlayStore.getState().setShowCardsPlayedModal(false)}
-        cards={(spectatePlayer?.playedCards ?? currentPlayer?.playedCards) || []}
-      />
-
-      <ProductionPhaseModal
-        isOpen={showProductionPhaseModal && !isProductionModalHidden}
-        gameState={game}
-        onClose={() => {
-          useUIOverlayStore.getState().setShowProductionPhaseModal(false);
-          useUIOverlayStore.getState().setIsProductionModalHidden(false);
-          useUIOverlayStore.getState().setOpenProductionToCardSelection(false);
-        }}
-        onHide={() => {
-          useUIOverlayStore.getState().setIsProductionModalHidden(true);
-          useUIOverlayStore.getState().setOpenProductionToCardSelection(false);
-        }}
-        openDirectlyToCardSelection={openProductionToCardSelection}
-      />
-
-      <WindowManagerProvider>
-        <DebugDropdown
-          isVisible={showDebugDropdown}
-          onClose={() => useUIOverlayStore.getState().setShowDebugDropdown(false)}
-          gameState={game}
-          changedPaths={changedPaths}
-        />
-
-        <PerformanceWindow
-          isVisible={showPerformanceWindow}
-          onClose={() => useUIOverlayStore.getState().setShowPerformanceWindow(false)}
-        />
-
-        <FeedbackWindow
-          isVisible={showFeedbackWindow}
-          onClose={() => useUIOverlayStore.getState().setShowFeedbackWindow(false)}
-          gameState={game}
-        />
-      </WindowManagerProvider>
-
-      {(transitionPhase === "lobby" ||
-        transitionPhase === "loading" ||
-        transitionPhase === "fadeOutLobby" ||
-        loadingPhase === "selecting" ||
-        loadingPhase === "joining" ||
-        loadingPhase === "spectating") && (
-        <div
-          className={
-            transitionPhase === "fadeOutLobby" ? "animate-[fadeOut_1500ms_ease-out_forwards]" : ""
-          }
-        >
-          <SpaceBackground animationSpeed={0.5} overlayOpacity={0.3} />
-        </div>
-      )}
-
-      {lobbyMounted && game && (playerId || isSpectator) && (
-        <>
-          <WaitingRoomOverlay
-            game={game}
-            playerId={playerId ?? "spectator"}
-            visible={isLobbyPhase}
-            onExited={() => useTransitionStore.getState().setLobbyMounted(false)}
+        {loadingPhase === "selecting" && gameForSelection && (
+          <PlayerSelectionOverlay
+            game={gameForSelection}
+            onSelectPlayer={(pid, playerName) => void init.handlePlayerSelected(pid, playerName)}
+            onSpectate={init.handleSpectatorConnected}
+            onCancel={init.handlePlayerSelectionCancel}
           />
-          {isLobbyPhase && (
-            <ChatOverlay
-              messages={chatMessages}
-              onSendMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
-              isLobby={true}
-              playerColorMap={playerColorMap}
-            />
-          )}
-        </>
-      )}
+        )}
 
-      {game?.currentPhase === GamePhaseDemoSetup && game && playerId && (
-        <DemoSetupOverlay game={game} playerId={playerId} />
-      )}
+        {loadingPhase === "joining" && gameForSelection && (
+          <JoinGameOverlay game={gameForSelection} onCancel={init.handlePlayerSelectionCancel} />
+        )}
 
-      {showTabConflict && conflictingTabInfo && (
-        <TabConflictOverlay
-          activeGameInfo={conflictingTabInfo}
-          onTakeOver={init.handleTabTakeOver}
-          onCancel={init.handleTabCancel}
-        />
-      )}
+        {loadingPhase === "spectating" && gameForSelection && (
+          <SpectateGameOverlay
+            game={gameForSelection}
+            onCancel={init.handlePlayerSelectionCancel}
+            onConnected={init.handleSpectatorConnected}
+          />
+        )}
 
-      {loadingPhase === "selecting" && gameForSelection && (
-        <PlayerSelectionOverlay
-          game={gameForSelection}
-          onSelectPlayer={(pid, playerName) => void init.handlePlayerSelected(pid, playerName)}
-          onSpectate={init.handleSpectatorConnected}
-          onCancel={init.handlePlayerSelectionCancel}
-        />
-      )}
+        {showLeaveGameConfirm && (
+          <GameMenuModal
+            title="Leave game?"
+            showBackdrop={true}
+            onClose={() => useUIOverlayStore.getState().setShowLeaveGameConfirm(false)}
+            zIndex={10000}
+          >
+            <p className="text-white/80 text-center mb-6">
+              You can reconnect to the game again without losing any progress.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <GameButton
+                buttonType="secondary"
+                onClick={() => useUIOverlayStore.getState().setShowLeaveGameConfirm(false)}
+              >
+                Cancel
+              </GameButton>
+              <GameButton variant="error" onClick={handleConfirmLeaveGame}>
+                Leave
+              </GameButton>
+            </div>
+          </GameMenuModal>
+        )}
 
-      {loadingPhase === "joining" && gameForSelection && (
-        <JoinGameOverlay game={gameForSelection} onCancel={init.handlePlayerSelectionCancel} />
-      )}
+        {showCloseGameConfirm && (
+          <GameMenuModal
+            title="Close game?"
+            showBackdrop={true}
+            onClose={() => useUIOverlayStore.getState().setShowCloseGameConfirm(false)}
+            zIndex={10000}
+          >
+            <p className="text-white/80 text-center mb-6">
+              You can reconnect to the game again without losing any progress.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <GameButton
+                buttonType="secondary"
+                onClick={() => useUIOverlayStore.getState().setShowCloseGameConfirm(false)}
+              >
+                Cancel
+              </GameButton>
+              <GameButton variant="error" onClick={handleConfirmLeaveGame}>
+                Close
+              </GameButton>
+            </div>
+          </GameMenuModal>
+        )}
 
-      {loadingPhase === "spectating" && gameForSelection && (
-        <SpectateGameOverlay
-          game={gameForSelection}
-          onCancel={init.handlePlayerSelectionCancel}
-          onConnected={init.handleSpectatorConnected}
-        />
-      )}
+        {showEndGameConfirm && (
+          <GameMenuModal
+            title="End game?"
+            showBackdrop={true}
+            onClose={() => useUIOverlayStore.getState().setShowEndGameConfirm(false)}
+            zIndex={10000}
+          >
+            <p className="text-white/80 text-center mb-6">
+              This will end the game for all players. This action cannot be undone.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <GameButton
+                buttonType="secondary"
+                onClick={() => useUIOverlayStore.getState().setShowEndGameConfirm(false)}
+              >
+                Cancel
+              </GameButton>
+              <GameButton variant="error" onClick={handleConfirmEndGame}>
+                End game
+              </GameButton>
+            </div>
+          </GameMenuModal>
+        )}
 
-      {showLeaveGameConfirm && (
-        <GameMenuModal
-          title="Leave game?"
-          showBackdrop={true}
-          onClose={() => useUIOverlayStore.getState().setShowLeaveGameConfirm(false)}
-          zIndex={10000}
-        >
-          <p className="text-white/80 text-center mb-6">
-            You can reconnect to the game again without losing any progress.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <GameButton
-              buttonType="secondary"
-              onClick={() => useUIOverlayStore.getState().setShowLeaveGameConfirm(false)}
-            >
-              Cancel
-            </GameButton>
-            <GameButton variant="error" onClick={handleConfirmLeaveGame}>
-              Leave
-            </GameButton>
-          </div>
-        </GameMenuModal>
-      )}
-
-      {showCloseGameConfirm && (
-        <GameMenuModal
-          title="Close game?"
-          showBackdrop={true}
-          onClose={() => useUIOverlayStore.getState().setShowCloseGameConfirm(false)}
-          zIndex={10000}
-        >
-          <p className="text-white/80 text-center mb-6">
-            You can reconnect to the game again without losing any progress.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <GameButton
-              buttonType="secondary"
-              onClick={() => useUIOverlayStore.getState().setShowCloseGameConfirm(false)}
-            >
-              Cancel
-            </GameButton>
-            <GameButton variant="error" onClick={handleConfirmLeaveGame}>
-              Close
-            </GameButton>
-          </div>
-        </GameMenuModal>
-      )}
-
-      {showEndGameConfirm && (
-        <GameMenuModal
-          title="End game?"
-          showBackdrop={true}
-          onClose={() => useUIOverlayStore.getState().setShowEndGameConfirm(false)}
-          zIndex={10000}
-        >
-          <p className="text-white/80 text-center mb-6">
-            This will end the game for all players. This action cannot be undone.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <GameButton
-              buttonType="secondary"
-              onClick={() => useUIOverlayStore.getState().setShowEndGameConfirm(false)}
-            >
-              Cancel
-            </GameButton>
-            <GameButton variant="error" onClick={handleConfirmEndGame}>
-              End game
-            </GameButton>
-          </div>
-        </GameMenuModal>
-      )}
-
-      {showStartingSelection && !isStartingSelectionHidden && game && (
-        <MainMenuHamburger
-          gameId={game.id}
-          onLeaveGame={handleLeaveGame}
-          onEndGame={playerId === game.hostPlayerId ? handleEndGame : undefined}
-        />
-      )}
-      <StartingCardSelectionOverlay
-        isOpen={
-          showStartingSelection &&
-          !isStartingSelectionHidden &&
-          (marsRevealedReady || transitionPhase === "idle")
-        }
-        availableCorporations={
-          game?.currentPlayer?.selectCorporationPhase?.availableCorporations || []
-        }
-        availablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.availablePreludes || []}
-        maxSelectablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.maxSelectable || 2}
-        cards={game?.currentPlayer?.selectStartingCardsPhase?.availableCards || []}
-        playerCredits={currentPlayer?.resources?.credits || 40}
-        onConfirm={handleStartingChoicesConfirm}
-        onHide={() => useUIOverlayStore.getState().setIsStartingSelectionHidden(true)}
-      />
-
-      {showStartingSelection && isStartingSelectionHidden && marsRevealedReady && (
-        <GameButton
-          className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] z-[1000] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
-          onClick={() => useUIOverlayStore.getState().setIsStartingSelectionHidden(false)}
-        >
-          Return to Selection
-        </GameButton>
-      )}
-
-      {showWaitingForPlayers && game && (
-        <>
+        {showStartingSelection && !isStartingSelectionHidden && game && (
           <MainMenuHamburger
             gameId={game.id}
             onLeaveGame={handleLeaveGame}
             onEndGame={playerId === game.hostPlayerId ? handleEndGame : undefined}
           />
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center">
-            <div className="w-[450px] max-w-[90vw] bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] p-8 backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(30,60,150,0.3)] animate-[modalFadeIn_0.3s_ease-out]">
-              <div className="text-center mb-6">
-                <h2 className="font-orbitron text-white text-[24px] m-0 mb-2 text-shadow-glow font-bold tracking-wider">
-                  Waiting for players...
-                </h2>
-              </div>
+        )}
+        <StartingCardSelectionOverlay
+          isOpen={
+            showStartingSelection &&
+            !isStartingSelectionHidden &&
+            (marsRevealedReady || transitionPhase === "idle")
+          }
+          availableCorporations={
+            game?.currentPlayer?.selectCorporationPhase?.availableCorporations || []
+          }
+          availablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.availablePreludes || []}
+          maxSelectablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.maxSelectable || 2}
+          cards={game?.currentPlayer?.selectStartingCardsPhase?.availableCards || []}
+          playerCredits={currentPlayer?.resources?.credits || 40}
+          onConfirm={handleStartingChoicesConfirm}
+          onHide={() => useUIOverlayStore.getState().setIsStartingSelectionHidden(true)}
+        />
 
-              <div className="mb-6">
-                <h3 className="text-white text-sm font-semibold mb-2 uppercase tracking-wide">
-                  Players
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {(() => {
-                    const allPlayers: {
-                      id: string;
-                      name: string;
-                      isReady: boolean;
-                      isSelf: boolean;
-                      playerType: string;
-                      botDifficulty?: string;
-                      botSpeed?: string;
-                    }[] = [];
+        {showStartingSelection && isStartingSelectionHidden && marsRevealedReady && (
+          <GameButton
+            className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] z-[1000] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
+            onClick={() => useUIOverlayStore.getState().setIsStartingSelectionHidden(false)}
+          >
+            Return to Selection
+          </GameButton>
+        )}
 
-                    if (game.currentPlayer) {
-                      allPlayers.push({
-                        id: game.currentPlayer.id,
-                        name: game.currentPlayer.name,
-                        isReady:
-                          !game.currentPlayer.selectCorporationPhase &&
-                          !game.currentPlayer.selectPreludeCardsPhase &&
-                          !game.currentPlayer.selectStartingCardsPhase &&
-                          !!game.currentPlayer.corporation,
-                        isSelf: true,
-                        playerType: game.currentPlayer.playerType,
-                        botDifficulty: game.currentPlayer.botDifficulty || undefined,
-                        botSpeed: game.currentPlayer.botSpeed || undefined,
+        {showWaitingForPlayers && game && (
+          <>
+            <MainMenuHamburger
+              gameId={game.id}
+              onLeaveGame={handleLeaveGame}
+              onEndGame={playerId === game.hostPlayerId ? handleEndGame : undefined}
+            />
+            <div className="fixed inset-0 z-[1000] flex items-center justify-center">
+              <div className="w-[450px] max-w-[90vw] bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] p-8 backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(30,60,150,0.3)] animate-[modalFadeIn_0.3s_ease-out]">
+                <div className="text-center mb-6">
+                  <h2 className="font-orbitron text-white text-[24px] m-0 mb-2 text-shadow-glow font-bold tracking-wider">
+                    Waiting for players...
+                  </h2>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="text-white text-sm font-semibold mb-2 uppercase tracking-wide">
+                    Players
+                  </h3>
+                  <div className="flex flex-col gap-2">
+                    {(() => {
+                      const allPlayers: {
+                        id: string;
+                        name: string;
+                        isReady: boolean;
+                        isSelf: boolean;
+                        playerType: string;
+                        botDifficulty?: string;
+                        botSpeed?: string;
+                      }[] = [];
+
+                      if (game.currentPlayer) {
+                        allPlayers.push({
+                          id: game.currentPlayer.id,
+                          name: game.currentPlayer.name,
+                          isReady:
+                            !game.currentPlayer.selectCorporationPhase &&
+                            !game.currentPlayer.selectPreludeCardsPhase &&
+                            !game.currentPlayer.selectStartingCardsPhase &&
+                            !!game.currentPlayer.corporation,
+                          isSelf: true,
+                          playerType: game.currentPlayer.playerType,
+                          botDifficulty: game.currentPlayer.botDifficulty || undefined,
+                          botSpeed: game.currentPlayer.botSpeed || undefined,
+                        });
+                      }
+
+                      game.otherPlayers?.forEach((other) => {
+                        allPlayers.push({
+                          id: other.id,
+                          name: other.name,
+                          isReady:
+                            !other.selectStartingCardsPhase &&
+                            !other.selectCorporationPhase &&
+                            !other.selectPreludeCardsPhase &&
+                            !!other.corporation,
+                          isSelf: false,
+                          playerType: other.playerType,
+                          botDifficulty: other.botDifficulty || undefined,
+                          botSpeed: other.botSpeed || undefined,
+                        });
                       });
-                    }
 
-                    game.otherPlayers?.forEach((other) => {
-                      allPlayers.push({
-                        id: other.id,
-                        name: other.name,
-                        isReady:
-                          !other.selectStartingCardsPhase &&
-                          !other.selectCorporationPhase &&
-                          !other.selectPreludeCardsPhase &&
-                          !!other.corporation,
-                        isSelf: false,
-                        playerType: other.playerType,
-                        botDifficulty: other.botDifficulty || undefined,
-                        botSpeed: other.botSpeed || undefined,
-                      });
-                    });
+                      const ordered = game.turnOrder?.length
+                        ? game.turnOrder
+                            .map((pid) => allPlayers.find((p) => p.id === pid))
+                            .filter((p) => p !== undefined)
+                        : allPlayers;
 
-                    const ordered = game.turnOrder?.length
-                      ? game.turnOrder
-                          .map((pid) => allPlayers.find((p) => p.id === pid))
-                          .filter((p) => p !== undefined)
-                      : allPlayers;
-
-                    return ordered.map((player) => (
-                      <div
-                        key={player.id}
-                        className="flex justify-between items-center py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50"
-                      >
-                        <span className="text-white text-sm font-medium">{player.name}</span>
-                        <div className="flex gap-1.5 items-center">
-                          {player.isSelf && (
-                            <span className="bg-space-blue-800 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                              You
-                            </span>
-                          )}
-                          {player.playerType === "bot" && (
-                            <>
-                              <BotDifficultyChip difficulty={player.botDifficulty} />
-                              <BotSpeedChip speed={player.botSpeed} />
-                            </>
-                          )}
-                          {player.isReady ? (
-                            <span className="flex items-center gap-1 bg-emerald-700/80 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                              <svg
-                                width="10"
-                                height="10"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                              Ready
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 bg-white/10 text-white/70 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                              <div className="w-2.5 h-2.5 border border-white/50 border-t-transparent rounded-full animate-spin" />
-                              Selecting...
-                            </span>
-                          )}
+                      return ordered.map((player) => (
+                        <div
+                          key={player.id}
+                          className="flex justify-between items-center py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50"
+                        >
+                          <span className="text-white text-sm font-medium">{player.name}</span>
+                          <div className="flex gap-1.5 items-center">
+                            {player.isSelf && (
+                              <span className="bg-space-blue-800 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                                You
+                              </span>
+                            )}
+                            {player.playerType === "bot" && (
+                              <>
+                                <BotDifficultyChip difficulty={player.botDifficulty} />
+                                <BotSpeedChip speed={player.botSpeed} />
+                              </>
+                            )}
+                            {player.isReady ? (
+                              <span className="flex items-center gap-1 bg-emerald-700/80 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                                <svg
+                                  width="10"
+                                  height="10"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                Ready
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 bg-white/10 text-white/70 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                                <div className="w-2.5 h-2.5 border border-white/50 border-t-transparent rounded-full animate-spin" />
+                                Selecting...
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ));
-                  })()}
+                      ));
+                    })()}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </>
-      )}
-
-      {game?.currentPlayer?.pendingCardSelection && (
-        <PendingCardSelectionOverlay
-          isOpen={showPendingCardSelection}
-          selection={game.currentPlayer.pendingCardSelection}
-          playerCredits={currentPlayer?.resources?.credits || 0}
-          onSelectCards={handlePendingCardSelection}
-        />
-      )}
-
-      {game?.currentPlayer?.pendingCardDrawSelection && (
-        <CardDrawSelectionOverlay
-          isOpen={showCardDrawSelection}
-          selection={game.currentPlayer.pendingCardDrawSelection}
-          playerCredits={currentPlayer?.resources?.credits || 0}
-          onConfirm={handleCardDrawConfirm}
-        />
-      )}
-
-      {game?.currentPlayer?.pendingCardDiscardSelection && currentPlayer && (
-        <CardDiscardSelectionOverlay
-          isOpen={showCardDiscardSelection}
-          selection={game.currentPlayer.pendingCardDiscardSelection}
-          handCards={currentPlayer.cards || []}
-          onConfirm={handleCardDiscardConfirm}
-        />
-      )}
-
-      {game &&
-        (currentPlayer || replayViewAsPlayer) &&
-        (game.currentPhase !== GamePhaseComplete || !!replayViewAsPlayer) && (
-          <div className={`transition-all duration-300 ease-in-out ${cardFanTransitionClass}`}>
-            <CardFanOverlay
-              ref={cardFanRef}
-              cards={replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? []}
-              hideWhenModalOpen={hideCardFanForModals}
-              onCardSelect={(_cardId) => {}}
-              onPlayCard={spectatePlayerId ? undefined : flow.handlePlayCard}
-            />
-          </div>
-        )}
-
-      <CorporationOverlay
-        visible={showCorporationOverlay}
-        onClose={() => useUIOverlayStore.getState().setShowCorporationOverlay(false)}
-        currentPlayer={replayViewAsPlayer ?? currentPlayer}
-        otherPlayers={game?.otherPlayers ?? []}
-      />
-
-      {game &&
-        playerId &&
-        game.currentPhase === GamePhaseComplete &&
-        game.status === GameStatusCompleted &&
-        game.finalScores &&
-        game.finalScores.length > 0 && (
-          <>
-            <EndGameBottomBar
-              game={game}
-              playerId={playerId}
-              historyEntries={historyEntries}
-              activePanel={endgamePanel}
-              isReplayActive={replay.isActive}
-              replayIndex={replay.currentIndex}
-              replayTotal={replay.totalStates}
-              replayPlaying={replay.isPlaying}
-              replaySpeed={replay.playbackSpeed}
-              onReplayPlay={replay.play}
-              onReplayPause={replay.pause}
-              onReplaySeek={replay.seekTo}
-              onReplayStepForward={replay.stepForward}
-              onReplayStepBackward={replay.stepBackward}
-              onReplaySpeedChange={replay.setPlaybackSpeed}
-              replaySpectatePlayerId={replaySpectatePlayerId}
-              onReplaySpectatePlayerChange={(id) =>
-                useSpectateStore.getState().setReplaySpectatePlayerId(id)
-              }
-            />
           </>
         )}
 
-      {cardPendingChoice && (
-        <ChoiceSelectionPopover
-          cardId={cardPendingChoice.id}
-          cardName={cardPendingChoice.name}
-          behaviors={cardPendingChoice.behaviors || []}
-          behaviorIndex={pendingCardBehaviorIndex}
-          onChoiceSelect={flow.handleChoiceSelect}
-          onCancel={flow.handleChoiceCancel}
-          isVisible={showChoiceSelection}
-          playerResources={currentPlayer?.resources}
-          resourceStorage={currentPlayer?.resourceStorage}
-        />
-      )}
+        {game?.currentPlayer?.pendingCardSelection && (
+          <PendingCardSelectionOverlay
+            isOpen={showPendingCardSelection}
+            selection={game.currentPlayer.pendingCardSelection}
+            playerCredits={currentPlayer?.resources?.credits || 0}
+            onSelectCards={handlePendingCardSelection}
+          />
+        )}
 
-      {actionPendingChoice && (
-        <ChoiceSelectionPopover
-          cardId={actionPendingChoice.cardId}
-          cardName={actionPendingChoice.cardName}
-          behaviors={[actionPendingChoice.behavior]}
-          behaviorIndex={0}
-          onChoiceSelect={flow.handleActionChoiceSelect}
-          onCancel={flow.handleActionChoiceCancel}
-          isVisible={showActionChoiceSelection}
-          isAction={true}
-          playerResources={currentPlayer?.resources}
-          resourceStorage={currentPlayer?.resourceStorage}
-        />
-      )}
+        {game?.currentPlayer?.pendingCardDrawSelection && (
+          <CardDrawSelectionOverlay
+            isOpen={showCardDrawSelection}
+            selection={game.currentPlayer.pendingCardDrawSelection}
+            playerCredits={currentPlayer?.resources?.credits || 0}
+            onConfirm={handleCardDrawConfirm}
+          />
+        )}
 
-      {pendingActionReuse && currentPlayer?.actions && (
-        <ActionReusePopover
-          isVisible={showActionReuseSelection}
-          onClose={flow.handleActionReuseCancel}
-          actions={currentPlayer.actions}
-          reuseSourceCardId={pendingActionReuse.cardId}
-          onActionSelect={flow.handleActionReuseSelect}
-          gameState={game ?? undefined}
-        />
-      )}
+        {game?.currentPlayer?.pendingCardDiscardSelection && currentPlayer && (
+          <CardDiscardSelectionOverlay
+            isOpen={showCardDiscardSelection}
+            selection={game.currentPlayer.pendingCardDiscardSelection}
+            handCards={currentPlayer.cards || []}
+            onConfirm={handleCardDiscardConfirm}
+          />
+        )}
 
-      {game?.currentPlayer?.pendingBehaviorChoiceSelection && (
-        <ChoiceSelectionPopover
-          cardId={game.currentPlayer.pendingBehaviorChoiceSelection.sourceCardId}
-          cardName={`Triggered: ${game.currentPlayer.pendingBehaviorChoiceSelection.source}`}
-          behaviors={[
-            {
-              choices: game.currentPlayer.pendingBehaviorChoiceSelection.choices,
-            },
-          ]}
-          behaviorIndex={0}
-          onChoiceSelect={flow.handleBehaviorChoiceSelect}
-          onCancel={() => {}}
-          isVisible={showBehaviorChoiceSelection}
-          playerResources={currentPlayer?.resources}
-          resourceStorage={currentPlayer?.resourceStorage}
-        />
-      )}
+        {game &&
+          (currentPlayer || replayViewAsPlayer) &&
+          (game.currentPhase !== GamePhaseComplete || !!replayViewAsPlayer) && (
+            <SolarSystemFade>
+              <div className={`transition-all duration-300 ease-in-out ${cardFanTransitionClass}`}>
+                <CardFanOverlay
+                  ref={cardFanRef}
+                  cards={replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? []}
+                  hideWhenModalOpen={hideCardFanForModals}
+                  onCardSelect={(_cardId) => {}}
+                  onPlayCard={spectatePlayerId ? undefined : flow.handlePlayCard}
+                />
+              </div>
+            </SolarSystemFade>
+          )}
 
-      {pendingBehaviorChoiceStorage && (
-        <CardStorageSelectionPopover
-          resourceType={pendingBehaviorChoiceStorage.resourceType}
-          amount={pendingBehaviorChoiceStorage.amount}
-          selectorTags={pendingBehaviorChoiceStorage.selectorTags}
-          playedCards={currentPlayer?.playedCards || []}
-          corporationCard={currentPlayer?.corporation}
-          resourceStorage={currentPlayer?.resourceStorage}
-          onCardSelect={flow.handleBehaviorChoiceStorageSelect}
-          onCancel={flow.handleBehaviorChoiceStorageCancel}
-          isVisible={showBehaviorChoiceStorage}
+        <CorporationOverlay
+          visible={showCorporationOverlay}
+          onClose={() => useUIOverlayStore.getState().setShowCorporationOverlay(false)}
+          currentPlayer={replayViewAsPlayer ?? currentPlayer}
+          otherPlayers={game?.otherPlayers ?? []}
         />
-      )}
 
-      {pendingCardStorage && (
-        <CardStorageSelectionPopover
-          resourceType={pendingCardStorage.resourceType}
-          amount={pendingCardStorage.amount}
-          selectorTags={pendingCardStorage.selectorTags}
-          playedCards={(() => {
-            const played = currentPlayer?.playedCards || [];
-            const cardBeingPlayed = currentPlayer?.cards?.find(
-              (c) => c.id === pendingCardStorage.cardId,
-            );
-            if (cardBeingPlayed && !played.some((p) => p.id === cardBeingPlayed.id)) {
-              return [...played, cardBeingPlayed as unknown as CardDto];
+        {game &&
+          playerId &&
+          game.currentPhase === GamePhaseComplete &&
+          game.status === GameStatusCompleted &&
+          game.finalScores &&
+          game.finalScores.length > 0 && (
+            <>
+              <EndGameBottomBar
+                game={game}
+                playerId={playerId}
+                historyEntries={historyEntries}
+                activePanel={endgamePanel}
+                isReplayActive={replay.isActive}
+                replayIndex={replay.currentIndex}
+                replayTotal={replay.totalStates}
+                replayPlaying={replay.isPlaying}
+                replaySpeed={replay.playbackSpeed}
+                onReplayPlay={replay.play}
+                onReplayPause={replay.pause}
+                onReplaySeek={replay.seekTo}
+                onReplayStepForward={replay.stepForward}
+                onReplayStepBackward={replay.stepBackward}
+                onReplaySpeedChange={replay.setPlaybackSpeed}
+                replaySpectatePlayerId={replaySpectatePlayerId}
+                onReplaySpectatePlayerChange={(id) =>
+                  useSpectateStore.getState().setReplaySpectatePlayerId(id)
+                }
+              />
+            </>
+          )}
+
+        {cardPendingChoice && (
+          <ChoiceSelectionPopover
+            cardId={cardPendingChoice.id}
+            cardName={cardPendingChoice.name}
+            behaviors={cardPendingChoice.behaviors || []}
+            behaviorIndex={pendingCardBehaviorIndex}
+            onChoiceSelect={flow.handleChoiceSelect}
+            onCancel={flow.handleChoiceCancel}
+            isVisible={showChoiceSelection}
+            playerResources={currentPlayer?.resources}
+            resourceStorage={currentPlayer?.resourceStorage}
+          />
+        )}
+
+        {actionPendingChoice && (
+          <ChoiceSelectionPopover
+            cardId={actionPendingChoice.cardId}
+            cardName={actionPendingChoice.cardName}
+            behaviors={[actionPendingChoice.behavior]}
+            behaviorIndex={0}
+            onChoiceSelect={flow.handleActionChoiceSelect}
+            onCancel={flow.handleActionChoiceCancel}
+            isVisible={showActionChoiceSelection}
+            isAction={true}
+            playerResources={currentPlayer?.resources}
+            resourceStorage={currentPlayer?.resourceStorage}
+          />
+        )}
+
+        {pendingActionReuse && currentPlayer?.actions && (
+          <ActionReusePopover
+            isVisible={showActionReuseSelection}
+            onClose={flow.handleActionReuseCancel}
+            actions={currentPlayer.actions}
+            reuseSourceCardId={pendingActionReuse.cardId}
+            onActionSelect={flow.handleActionReuseSelect}
+            gameState={game ?? undefined}
+          />
+        )}
+
+        {game?.currentPlayer?.pendingBehaviorChoiceSelection && (
+          <ChoiceSelectionPopover
+            cardId={game.currentPlayer.pendingBehaviorChoiceSelection.sourceCardId}
+            cardName={`Triggered: ${game.currentPlayer.pendingBehaviorChoiceSelection.source}`}
+            behaviors={[
+              {
+                choices: game.currentPlayer.pendingBehaviorChoiceSelection.choices,
+              },
+            ]}
+            behaviorIndex={0}
+            onChoiceSelect={flow.handleBehaviorChoiceSelect}
+            onCancel={() => {}}
+            isVisible={showBehaviorChoiceSelection}
+            playerResources={currentPlayer?.resources}
+            resourceStorage={currentPlayer?.resourceStorage}
+          />
+        )}
+
+        {pendingBehaviorChoiceStorage && (
+          <CardStorageSelectionPopover
+            resourceType={pendingBehaviorChoiceStorage.resourceType}
+            amount={pendingBehaviorChoiceStorage.amount}
+            selectorTags={pendingBehaviorChoiceStorage.selectorTags}
+            playedCards={currentPlayer?.playedCards || []}
+            corporationCard={currentPlayer?.corporation}
+            resourceStorage={currentPlayer?.resourceStorage}
+            onCardSelect={flow.handleBehaviorChoiceStorageSelect}
+            onCancel={flow.handleBehaviorChoiceStorageCancel}
+            isVisible={showBehaviorChoiceStorage}
+          />
+        )}
+
+        {pendingCardStorage && (
+          <CardStorageSelectionPopover
+            resourceType={pendingCardStorage.resourceType}
+            amount={pendingCardStorage.amount}
+            selectorTags={pendingCardStorage.selectorTags}
+            playedCards={(() => {
+              const played = currentPlayer?.playedCards || [];
+              const cardBeingPlayed = currentPlayer?.cards?.find(
+                (c) => c.id === pendingCardStorage.cardId,
+              );
+              if (cardBeingPlayed && !played.some((p) => p.id === cardBeingPlayed.id)) {
+                return [...played, cardBeingPlayed as unknown as CardDto];
+              }
+              return played;
+            })()}
+            corporationCard={currentPlayer?.corporation}
+            resourceStorage={currentPlayer?.resourceStorage}
+            onCardSelect={flow.handleCardStorageSelect}
+            onCancel={flow.handleCardStorageCancel}
+            isVisible={showCardStorageSelection}
+          />
+        )}
+
+        {pendingCardPayment && game && currentPlayer && (
+          <PaymentSelectionPopover
+            cardId={pendingCardPayment.card.id}
+            card={pendingCardPayment.card}
+            playerResources={currentPlayer.resources}
+            paymentConstants={game.paymentConstants}
+            playerPaymentSubstitutes={currentPlayer.paymentSubstitutes}
+            storagePaymentSubstitutes={currentPlayer.storagePaymentSubstitutes}
+            resourceStorage={currentPlayer.resourceStorage}
+            onConfirm={flow.handlePaymentConfirm}
+            onCancel={flow.handlePaymentCancel}
+            isVisible={showPaymentSelection}
+          />
+        )}
+
+        {pendingActionStorage && (
+          <CardStorageSelectionPopover
+            resourceType={pendingActionStorage.resourceType}
+            amount={pendingActionStorage.amount}
+            selectorTags={pendingActionStorage.selectorTags}
+            playedCards={currentPlayer?.playedCards || []}
+            corporationCard={currentPlayer?.corporation}
+            resourceStorage={currentPlayer?.resourceStorage}
+            onCardSelect={flow.handleActionStorageSelect}
+            onCancel={flow.handleActionStorageCancel}
+            isVisible={showActionStorageSelection}
+          />
+        )}
+
+        {pendingTargetPlayer && game && (
+          <TargetPlayerSelectionPopover
+            resourceType={pendingTargetPlayer.resourceType}
+            amount={pendingTargetPlayer.amount}
+            isSteal={pendingTargetPlayer.isSteal}
+            players={[
+              ...(currentPlayer
+                ? [
+                    {
+                      id: currentPlayer.id,
+                      name: currentPlayer.name,
+                      resources: currentPlayer.resources,
+                      production: currentPlayer.production,
+                    },
+                  ]
+                : []),
+              ...(game.otherPlayers || []).map((p) => ({
+                id: p.id,
+                name: p.name,
+                resources: p.resources,
+                production: p.production,
+              })),
+            ]}
+            onPlayerSelect={flow.handleTargetPlayerSelect}
+            onCancel={flow.handleTargetPlayerCancel}
+            isVisible={showTargetPlayerSelection}
+          />
+        )}
+
+        {pendingActionTargetPlayer && game && (
+          <TargetPlayerSelectionPopover
+            resourceType={pendingActionTargetPlayer.resourceType}
+            amount={pendingActionTargetPlayer.amount}
+            isSteal={pendingActionTargetPlayer.isSteal}
+            players={[
+              ...(currentPlayer
+                ? [
+                    {
+                      id: currentPlayer.id,
+                      name: currentPlayer.name,
+                      resources: currentPlayer.resources,
+                      production: currentPlayer.production,
+                    },
+                  ]
+                : []),
+              ...(game.otherPlayers || []).map((p) => ({
+                id: p.id,
+                name: p.name,
+                resources: p.resources,
+                production: p.production,
+              })),
+            ]}
+            onPlayerSelect={flow.handleActionTargetPlayerSelect}
+            onCancel={flow.handleActionTargetPlayerCancel}
+            isVisible={showActionTargetPlayerSelection}
+          />
+        )}
+
+        {game?.currentPlayer?.pendingStealTargetSelection && game && (
+          <TargetPlayerSelectionPopover
+            resourceType={
+              game.currentPlayer.pendingStealTargetSelection.resourceType as ResourceType
             }
-            return played;
-          })()}
-          corporationCard={currentPlayer?.corporation}
-          resourceStorage={currentPlayer?.resourceStorage}
-          onCardSelect={flow.handleCardStorageSelect}
-          onCancel={flow.handleCardStorageCancel}
-          isVisible={showCardStorageSelection}
+            amount={game.currentPlayer.pendingStealTargetSelection.amount}
+            isSteal={true}
+            players={(game.otherPlayers || [])
+              .filter((p) =>
+                game.currentPlayer!.pendingStealTargetSelection!.eligiblePlayerIds.includes(p.id),
+              )
+              .map((p) => ({
+                id: p.id,
+                name: p.name,
+                resources: p.resources,
+                production: p.production,
+              }))}
+            onPlayerSelect={flow.handleStealTargetSelect}
+            onCancel={flow.handleStealTargetSkip}
+            isVisible={showStealTargetSelection}
+            mandatory
+          />
+        )}
+
+        {game?.currentPlayer?.pendingColonyResourceSelection && currentPlayer && (
+          <CardStorageSelectionPopover
+            resourceType={
+              game.currentPlayer.pendingColonyResourceSelection.resourceType as ResourceType
+            }
+            amount={game.currentPlayer.pendingColonyResourceSelection.amount}
+            reason={game.currentPlayer.pendingColonyResourceSelection.reason}
+            mandatory
+            playedCards={currentPlayer.playedCards || []}
+            corporationCard={currentPlayer.corporation}
+            resourceStorage={currentPlayer.resourceStorage}
+            onCardSelect={flow.handleColonyResourceSelect}
+            onCancel={flow.handleColonyResourceSkip}
+            isVisible={showColonyResourceSelection}
+          />
+        )}
+
+        {game?.currentPlayer?.pendingColonySelection && game && (
+          <ColonySelectionOverlay
+            isOpen={showColonyPlacementSelection}
+            pendingSelection={game.currentPlayer.pendingColonySelection}
+            colonyTiles={game.colonyTiles ?? []}
+            allPlayers={colonyAllPlayers}
+            onConfirm={(colonyId) => void globalWebSocketManager.confirmColonyPlacement(colonyId)}
+          />
+        )}
+
+        {game?.currentPlayer?.pendingFreeTradeSelection && game && (
+          <FreeTradeSelectionOverlay
+            isOpen={showFreeTradeSelection}
+            pendingSelection={game.currentPlayer.pendingFreeTradeSelection}
+            colonyTiles={game.colonyTiles ?? []}
+            viewingPlayerId={game.viewingPlayerId ?? ""}
+            tradeFleetAvailable={game.tradeFleetAvailable}
+            allPlayers={colonyAllPlayers}
+            playedCards={currentPlayer?.playedCards ?? []}
+            corporation={currentPlayer?.corporation}
+            onConfirm={(colonyId) => void globalWebSocketManager.confirmFreeTrade(colonyId)}
+          />
+        )}
+
+        {showFreeTradeWarning && pendingFreeTradeWarning && (
+          <GameFlowPopover
+            isVisible={true}
+            onClose={() => {
+              useCardPlayFlowStore.getState().setShowFreeTradeWarning(false);
+              useCardPlayFlowStore.getState().setPendingFreeTradeWarning(null);
+            }}
+            type="interactive"
+          >
+            <GameFlowTitle>
+              <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
+                Cannot Trade
+              </h3>
+            </GameFlowTitle>
+            <GameFlowBody>
+              <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                <p className="text-white/70 text-sm">{pendingFreeTradeWarning}</p>
+              </div>
+            </GameFlowBody>
+            <GameFlowFooter>
+              <GameButton
+                size="sm"
+                onClick={() => {
+                  useCardPlayFlowStore.getState().setShowFreeTradeWarning(false);
+                  useCardPlayFlowStore.getState().setPendingFreeTradeWarning(null);
+                }}
+              >
+                OK
+              </GameButton>
+            </GameFlowFooter>
+          </GameFlowPopover>
+        )}
+
+        {game?.currentPlayer?.pendingAwardFundSelection && (
+          <AwardFundSelectionPopover
+            isOpen={true}
+            selection={game.currentPlayer.pendingAwardFundSelection}
+            gameState={game}
+          />
+        )}
+
+        {pendingCardResourceInput && (
+          <CardResourceSelectionPopover
+            resourceType={pendingCardResourceInput.resourceType}
+            amount={pendingCardResourceInput.amount}
+            excludeCardId={pendingCardResourceInput.cardId}
+            players={[
+              ...(currentPlayer
+                ? [
+                    {
+                      id: currentPlayer.id,
+                      name: currentPlayer.name,
+                      playedCards: currentPlayer.playedCards,
+                      resourceStorage: currentPlayer.resourceStorage,
+                    },
+                  ]
+                : []),
+              ...(game?.otherPlayers || []).map((p) => ({
+                id: p.id,
+                name: p.name,
+                playedCards: p.playedCards,
+                resourceStorage: p.resourceStorage,
+              })),
+            ]}
+            onCardSelect={flow.handleCardResourceSelect}
+            onCancel={flow.handleCardResourceCancel}
+            isVisible={showCardResourceSelection}
+          />
+        )}
+
+        {pendingVariableAmount && (
+          <AmountSelectionPopover
+            cardName={pendingVariableAmount.cardName}
+            resourceLabel={pendingVariableAmount.resourceLabel}
+            maxAmount={pendingVariableAmount.maxAmount}
+            onAmountSelect={flow.handleAmountSelect}
+            onCancel={flow.handleAmountCancel}
+            isVisible={showAmountSelection}
+          />
+        )}
+
+        {showProductionPhaseModal && isProductionModalHidden && (
+          <GameButton
+            className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] z-[1000] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
+            onClick={() => {
+              useUIOverlayStore.getState().setIsProductionModalHidden(false);
+              useUIOverlayStore.getState().setOpenProductionToCardSelection(true);
+            }}
+          >
+            Return to Production
+          </GameButton>
+        )}
+
+        <GameEventBanner
+          event={endgamePanel === "score" ? currentEvent : null}
+          onDismiss={dismissGameEvent}
         />
-      )}
 
-      {pendingCardPayment && game && currentPlayer && (
-        <PaymentSelectionPopover
-          cardId={pendingCardPayment.card.id}
-          card={pendingCardPayment.card}
-          playerResources={currentPlayer.resources}
-          paymentConstants={game.paymentConstants}
-          playerPaymentSubstitutes={currentPlayer.paymentSubstitutes}
-          storagePaymentSubstitutes={currentPlayer.storagePaymentSubstitutes}
-          resourceStorage={currentPlayer.resourceStorage}
-          onConfirm={flow.handlePaymentConfirm}
-          onCancel={flow.handlePaymentCancel}
-          isVisible={showPaymentSelection}
-        />
-      )}
-
-      {pendingActionStorage && (
-        <CardStorageSelectionPopover
-          resourceType={pendingActionStorage.resourceType}
-          amount={pendingActionStorage.amount}
-          selectorTags={pendingActionStorage.selectorTags}
-          playedCards={currentPlayer?.playedCards || []}
-          corporationCard={currentPlayer?.corporation}
-          resourceStorage={currentPlayer?.resourceStorage}
-          onCardSelect={flow.handleActionStorageSelect}
-          onCancel={flow.handleActionStorageCancel}
-          isVisible={showActionStorageSelection}
-        />
-      )}
-
-      {pendingTargetPlayer && game && (
-        <TargetPlayerSelectionPopover
-          resourceType={pendingTargetPlayer.resourceType}
-          amount={pendingTargetPlayer.amount}
-          isSteal={pendingTargetPlayer.isSteal}
-          players={[
-            ...(currentPlayer
-              ? [
-                  {
-                    id: currentPlayer.id,
-                    name: currentPlayer.name,
-                    resources: currentPlayer.resources,
-                    production: currentPlayer.production,
-                  },
-                ]
-              : []),
-            ...(game.otherPlayers || []).map((p) => ({
-              id: p.id,
-              name: p.name,
-              resources: p.resources,
-              production: p.production,
-            })),
-          ]}
-          onPlayerSelect={flow.handleTargetPlayerSelect}
-          onCancel={flow.handleTargetPlayerCancel}
-          isVisible={showTargetPlayerSelection}
-        />
-      )}
-
-      {pendingActionTargetPlayer && game && (
-        <TargetPlayerSelectionPopover
-          resourceType={pendingActionTargetPlayer.resourceType}
-          amount={pendingActionTargetPlayer.amount}
-          isSteal={pendingActionTargetPlayer.isSteal}
-          players={[
-            ...(currentPlayer
-              ? [
-                  {
-                    id: currentPlayer.id,
-                    name: currentPlayer.name,
-                    resources: currentPlayer.resources,
-                    production: currentPlayer.production,
-                  },
-                ]
-              : []),
-            ...(game.otherPlayers || []).map((p) => ({
-              id: p.id,
-              name: p.name,
-              resources: p.resources,
-              production: p.production,
-            })),
-          ]}
-          onPlayerSelect={flow.handleActionTargetPlayerSelect}
-          onCancel={flow.handleActionTargetPlayerCancel}
-          isVisible={showActionTargetPlayerSelection}
-        />
-      )}
-
-      {game?.currentPlayer?.pendingStealTargetSelection && game && (
-        <TargetPlayerSelectionPopover
-          resourceType={game.currentPlayer.pendingStealTargetSelection.resourceType as ResourceType}
-          amount={game.currentPlayer.pendingStealTargetSelection.amount}
-          isSteal={true}
-          players={(game.otherPlayers || [])
-            .filter((p) =>
-              game.currentPlayer!.pendingStealTargetSelection!.eligiblePlayerIds.includes(p.id),
-            )
-            .map((p) => ({
-              id: p.id,
-              name: p.name,
-              resources: p.resources,
-              production: p.production,
-            }))}
-          onPlayerSelect={flow.handleStealTargetSelect}
-          onCancel={flow.handleStealTargetSkip}
-          isVisible={showStealTargetSelection}
-          mandatory
-        />
-      )}
-
-      {game?.currentPlayer?.pendingColonyResourceSelection && currentPlayer && (
-        <CardStorageSelectionPopover
-          resourceType={
-            game.currentPlayer.pendingColonyResourceSelection.resourceType as ResourceType
-          }
-          amount={game.currentPlayer.pendingColonyResourceSelection.amount}
-          reason={game.currentPlayer.pendingColonyResourceSelection.reason}
-          mandatory
-          playedCards={currentPlayer.playedCards || []}
-          corporationCard={currentPlayer.corporation}
-          resourceStorage={currentPlayer.resourceStorage}
-          onCardSelect={flow.handleColonyResourceSelect}
-          onCancel={flow.handleColonyResourceSkip}
-          isVisible={showColonyResourceSelection}
-        />
-      )}
-
-      {game?.currentPlayer?.pendingColonySelection && game && (
-        <ColonySelectionOverlay
-          isOpen={showColonyPlacementSelection}
-          pendingSelection={game.currentPlayer.pendingColonySelection}
-          colonyTiles={game.colonyTiles ?? []}
-          allPlayers={colonyAllPlayers}
-          onConfirm={(colonyId) => void globalWebSocketManager.confirmColonyPlacement(colonyId)}
-        />
-      )}
-
-      {game?.currentPlayer?.pendingFreeTradeSelection && game && (
-        <FreeTradeSelectionOverlay
-          isOpen={showFreeTradeSelection}
-          pendingSelection={game.currentPlayer.pendingFreeTradeSelection}
-          colonyTiles={game.colonyTiles ?? []}
-          viewingPlayerId={game.viewingPlayerId ?? ""}
-          tradeFleetAvailable={game.tradeFleetAvailable}
-          allPlayers={colonyAllPlayers}
-          playedCards={currentPlayer?.playedCards ?? []}
-          corporation={currentPlayer?.corporation}
-          onConfirm={(colonyId) => void globalWebSocketManager.confirmFreeTrade(colonyId)}
-        />
-      )}
-
-      {showFreeTradeWarning && pendingFreeTradeWarning && (
-        <GameFlowPopover
-          isVisible={true}
-          onClose={() => {
-            useCardPlayFlowStore.getState().setShowFreeTradeWarning(false);
-            useCardPlayFlowStore.getState().setPendingFreeTradeWarning(null);
-          }}
-          type="interactive"
-        >
-          <GameFlowTitle>
-            <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
-              Cannot Trade
-            </h3>
-          </GameFlowTitle>
-          <GameFlowBody>
-            <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-              <p className="text-white/70 text-sm">{pendingFreeTradeWarning}</p>
-            </div>
-          </GameFlowBody>
-          <GameFlowFooter>
-            <GameButton
-              size="sm"
-              onClick={() => {
-                useCardPlayFlowStore.getState().setShowFreeTradeWarning(false);
-                useCardPlayFlowStore.getState().setPendingFreeTradeWarning(null);
-              }}
-            >
-              OK
-            </GameButton>
-          </GameFlowFooter>
-        </GameFlowPopover>
-      )}
-
-      {game?.currentPlayer?.pendingAwardFundSelection && (
-        <AwardFundSelectionPopover
-          isOpen={true}
-          selection={game.currentPlayer.pendingAwardFundSelection}
-          gameState={game}
-        />
-      )}
-
-      {pendingCardResourceInput && (
-        <CardResourceSelectionPopover
-          resourceType={pendingCardResourceInput.resourceType}
-          amount={pendingCardResourceInput.amount}
-          excludeCardId={pendingCardResourceInput.cardId}
-          players={[
-            ...(currentPlayer
-              ? [
-                  {
-                    id: currentPlayer.id,
-                    name: currentPlayer.name,
-                    playedCards: currentPlayer.playedCards,
-                    resourceStorage: currentPlayer.resourceStorage,
-                  },
-                ]
-              : []),
-            ...(game?.otherPlayers || []).map((p) => ({
-              id: p.id,
-              name: p.name,
-              playedCards: p.playedCards,
-              resourceStorage: p.resourceStorage,
-            })),
-          ]}
-          onCardSelect={flow.handleCardResourceSelect}
-          onCancel={flow.handleCardResourceCancel}
-          isVisible={showCardResourceSelection}
-        />
-      )}
-
-      {pendingVariableAmount && (
-        <AmountSelectionPopover
-          cardName={pendingVariableAmount.cardName}
-          resourceLabel={pendingVariableAmount.resourceLabel}
-          maxAmount={pendingVariableAmount.maxAmount}
-          onAmountSelect={flow.handleAmountSelect}
-          onCancel={flow.handleAmountCancel}
-          isVisible={showAmountSelection}
-        />
-      )}
-
-      {showProductionPhaseModal && isProductionModalHidden && (
-        <GameButton
-          className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] z-[1000] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
-          onClick={() => {
-            useUIOverlayStore.getState().setIsProductionModalHidden(false);
-            useUIOverlayStore.getState().setOpenProductionToCardSelection(true);
-          }}
-        >
-          Return to Production
-        </GameButton>
-      )}
-
-      <GameEventBanner
-        event={endgamePanel === "score" ? currentEvent : null}
-        onDismiss={dismissGameEvent}
-      />
-
-      {overlayVisible && (
-        <LoadingOverlay
-          isLoaded={isFullyLoaded}
-          message={loadingMessage}
-          onTransitionEnd={handleLoadingTransitionEnd}
-        />
-      )}
-    </VPCountingProvider>
+        {overlayVisible && (
+          <LoadingOverlay
+            isLoaded={isFullyLoaded}
+            message={loadingMessage}
+            subtitle={loadingSubtitle}
+            onTransitionEnd={handleLoadingTransitionEnd}
+          />
+        )}
+      </VPCountingProvider>
+    </PlanetFocusProvider>
   );
 }
