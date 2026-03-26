@@ -79,6 +79,11 @@ The backend follows clean architecture principles with strict separation of conc
 - `internal/cards/`: Card registry and JSON loader
 - `internal/game/cards/`: Card behavior logic, validation, requirement checking (NO state mutation)
 
+**Bug Report Service** (`internal/service/bugreport/` + `internal/delivery/http/bugreport_handler.go`)
+
+- Submits bug reports to GitHub Issues via `POST /api/v1/bugs`
+- Status and individual report retrieval via `GET /api/v1/bugs/status` and `GET /api/v1/bugs/{id}`
+
 **Event System** (`internal/events/`)
 
 - Type-safe event bus for pub/sub
