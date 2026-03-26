@@ -1,6 +1,9 @@
 package player
 
-import "time"
+import (
+	"terraforming-mars-backend/internal/game/shared"
+	"time"
+)
 
 // EntityState holds calculated state for any entity (card, action, project).
 // This generic structure eliminates redundant boolean flags and works across all entity types.
@@ -10,7 +13,15 @@ type EntityState struct {
 	Warnings       []StateWarning
 	Cost           map[string]int
 	Metadata       map[string]any
+	ComputedValues []ComputedBehaviorValue
 	LastCalculated time.Time
+}
+
+// ComputedBehaviorValue holds pre-computed output values for a specific behavior.
+// Target uses the format "behaviors::N" where N is the behavior index.
+type ComputedBehaviorValue struct {
+	Target  string
+	Outputs []shared.CalculatedOutput
 }
 
 // Available returns true if there are no errors (computed, not stored).
