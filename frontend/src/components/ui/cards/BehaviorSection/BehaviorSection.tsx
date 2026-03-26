@@ -1,5 +1,6 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { BehaviorSectionProps, ClassifiedBehavior } from "./types.ts";
+import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
 import { classifyBehaviors } from "./utils/behaviorClassifier.ts";
 import { detectTilePlacementScale } from "./utils/tileScaling.ts";
 import { isResourceAffordable } from "./utils/resourceValidation.ts";
@@ -18,6 +19,7 @@ import BehaviorIcon from "./components/BehaviorIcon.tsx";
 
 const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   behaviors,
+  computedValues,
   playerResources,
   resourceStorage,
   cardId,
@@ -29,6 +31,19 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   const handleBehaviorHover = useCallback((index: number | null) => {
     setHoveredBehaviorIndex(index);
   }, []);
+
+  const computedValuesByIndex = useMemo(() => {
+    const map = new Map<number, CalculatedOutputDto[]>();
+    if (computedValues) {
+      for (const cv of computedValues) {
+        const match = cv.target.match(/^behaviors::(\d+)$/);
+        if (match) {
+          map.set(parseInt(match[1], 10), cv.outputs);
+        }
+      }
+    }
+    return map;
+  }, [computedValues]);
 
   if (!behaviors || behaviors.length === 0) {
     return null;
@@ -89,6 +104,10 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   ): React.ReactNode => {
     const { behavior, type } = classifiedBehavior;
     const layoutPlan = cardLayoutPlan.behaviors[index]?.layoutPlan;
+    const behaviorComputedOutputs =
+      classifiedBehavior.originalIndex !== undefined
+        ? computedValuesByIndex.get(classifiedBehavior.originalIndex)
+        : undefined;
 
     let content: React.ReactNode = null;
 
@@ -102,6 +121,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
             analyzeResourceDisplayWithConstraints={analyzeResourceDisplayWithConstraints}
             tileScaleInfo={tileScaleInfo}
             hideActionChip={hideActionChip}
+            computedOutputs={behaviorComputedOutputs}
           />
         );
         break;
@@ -115,6 +135,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
             isResourceAffordable={checkResourceAffordable}
             analyzeResourceDisplayWithConstraints={analyzeResourceDisplayWithConstraints}
             tileScaleInfo={tileScaleInfo}
+            computedOutputs={behaviorComputedOutputs}
           />
         );
         break;
@@ -130,6 +151,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
             analyzeResourceDisplayWithConstraints={analyzeResourceDisplayWithConstraints}
             tileScaleInfo={tileScaleInfo}
             renderIcon={renderIcon}
+            computedOutputs={behaviorComputedOutputs}
           />
         );
         break;

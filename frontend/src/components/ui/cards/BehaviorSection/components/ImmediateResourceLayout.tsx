@@ -8,6 +8,7 @@ import Slash from "./Slash.tsx";
 import { getIconPath, getTagIconPath } from "@/utils/iconStore.ts";
 import { analyzeCardOutputs } from "../utils/displayAnalysis.ts";
 import ChoiceRequirementBox from "./ChoiceRequirementBox.tsx";
+import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
 
 interface IconDisplayInfo {
   resourceType: string;
@@ -44,6 +45,7 @@ interface ImmediateResourceLayoutProps {
     context: "standalone" | "action" | "production" | "default",
     isAffordable: boolean,
   ) => React.ReactNode;
+  computedOutputs?: CalculatedOutputDto[];
 }
 
 const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
@@ -53,6 +55,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
   analyzeResourceDisplayWithConstraints,
   tileScaleInfo,
   renderIcon,
+  computedOutputs,
 }) => {
   const isGlobalParamOrTile = (output: any): boolean => {
     const type = output.resourceType || output.type || "";
@@ -120,6 +123,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                     context="standalone"
                     isAffordable={isResourceAffordable(output, false)}
                     tileScaleInfo={tileScaleInfo}
+                    computedOutputs={computedOutputs}
                   />
                 </React.Fragment>
               );
@@ -145,6 +149,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </div>
                 );
@@ -168,6 +173,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                         context="standalone"
                         isAffordable={isResourceAffordable(output, false)}
                         tileScaleInfo={tileScaleInfo}
+                        computedOutputs={computedOutputs}
                       />
                     </React.Fragment>
                   );
@@ -205,6 +211,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                     context="standalone"
                     isAffordable={isResourceAffordable(output, false)}
                     tileScaleInfo={tileScaleInfo}
+                    computedOutputs={computedOutputs}
                   />
                 </React.Fragment>
               );
@@ -230,6 +237,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </div>
                 );
@@ -253,6 +261,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                         context="standalone"
                         isAffordable={isResourceAffordable(output, false)}
                         tileScaleInfo={tileScaleInfo}
+                        computedOutputs={computedOutputs}
                       />
                     </React.Fragment>
                   );
@@ -344,6 +353,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                 context="standalone"
                 isAffordable={isResourceAffordable(output, false)}
                 tileScaleInfo={tileScaleInfo}
+                computedOutputs={computedOutputs}
               />
             </React.Fragment>
           );
@@ -404,6 +414,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                             context="production"
                             isAffordable={isResourceAffordable(output, false)}
                             tileScaleInfo={tileScaleInfo}
+                            computedOutputs={computedOutputs}
                           />
                         );
                       })}
@@ -426,6 +437,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                             context="standalone"
                             isAffordable={isResourceAffordable(output, false)}
                             tileScaleInfo={tileScaleInfo}
+                            computedOutputs={computedOutputs}
                           />
                         );
                       })}
@@ -491,6 +503,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                               context="standalone"
                               isAffordable={isResourceAffordable(output, false)}
                               tileScaleInfo={tileScaleInfo}
+                              computedOutputs={computedOutputs}
                             />
                           </React.Fragment>
                         );
@@ -516,6 +529,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                               context="standalone"
                               isAffordable={isResourceAffordable(output, false)}
                               tileScaleInfo={tileScaleInfo}
+                              computedOutputs={computedOutputs}
                             />
                           </React.Fragment>
                         );
@@ -541,6 +555,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </React.Fragment>
                 );
@@ -586,6 +601,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                             context="standalone"
                             isAffordable={isResourceAffordable(output, false)}
                             tileScaleInfo={tileScaleInfo}
+                            computedOutputs={computedOutputs}
                           />
                         </React.Fragment>
                       );
@@ -795,6 +811,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                   context="standalone"
                   isAffordable={isResourceAffordable(output, false)}
                   tileScaleInfo={tileScaleInfo}
+                  computedOutputs={computedOutputs}
                 />
               </React.Fragment>
             );
@@ -819,6 +836,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </React.Fragment>
                 );
@@ -837,6 +855,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                   context="standalone"
                   isAffordable={isResourceAffordable(output, false)}
                   tileScaleInfo={tileScaleInfo}
+                  computedOutputs={computedOutputs}
                 />
               </React.Fragment>
             );
@@ -865,6 +884,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                     context="standalone"
                     isAffordable={isResourceAffordable(output, false)}
                     tileScaleInfo={tileScaleInfo}
+                    computedOutputs={computedOutputs}
                   />
                 </React.Fragment>
               );
@@ -908,6 +928,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </React.Fragment>
                 );
@@ -935,6 +956,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </React.Fragment>
                 );
@@ -956,6 +978,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </React.Fragment>
                 );
@@ -986,6 +1009,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                     context="standalone"
                     isAffordable={isResourceAffordable(output, false)}
                     tileScaleInfo={tileScaleInfo}
+                    computedOutputs={computedOutputs}
                   />
                 </React.Fragment>
               );
@@ -1045,6 +1069,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                             context="standalone"
                             isAffordable={isResourceAffordable(output, false)}
                             tileScaleInfo={tileScaleInfo}
+                            computedOutputs={computedOutputs}
                           />
                         </React.Fragment>
                       );
@@ -1073,6 +1098,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                           context="standalone"
                           isAffordable={isResourceAffordable(output, false)}
                           tileScaleInfo={tileScaleInfo}
+                          computedOutputs={computedOutputs}
                         />
                       </div>
                     );
@@ -1195,6 +1221,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                             context="standalone"
                             isAffordable={isResourceAffordable(output, false)}
                             tileScaleInfo={tileScaleInfo}
+                            computedOutputs={computedOutputs}
                           />
                         </React.Fragment>
                       );
@@ -1234,6 +1261,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </React.Fragment>
                 );
@@ -1276,6 +1304,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                         context="standalone"
                         isAffordable={isResourceAffordable(output, false)}
                         tileScaleInfo={tileScaleInfo}
+                        computedOutputs={computedOutputs}
                       />
                     </React.Fragment>
                   );
@@ -1304,6 +1333,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </div>
                 );
@@ -1409,6 +1439,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                             context="standalone"
                             isAffordable={isResourceAffordable(output, false)}
                             tileScaleInfo={tileScaleInfo}
+                            computedOutputs={computedOutputs}
                           />
                         </React.Fragment>
                       );
@@ -1434,6 +1465,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                               context="standalone"
                               isAffordable={isResourceAffordable(output, false)}
                               tileScaleInfo={tileScaleInfo}
+                              computedOutputs={computedOutputs}
                             />
                           </div>
                         );
@@ -1488,6 +1520,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                                 context="standalone"
                                 isAffordable={isResourceAffordable(output, false)}
                                 tileScaleInfo={tileScaleInfo}
+                                computedOutputs={computedOutputs}
                               />
                             </React.Fragment>
                           );
@@ -1514,6 +1547,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                       context="standalone"
                       isAffordable={isResourceAffordable(output, false)}
                       tileScaleInfo={tileScaleInfo}
+                      computedOutputs={computedOutputs}
                     />
                   </React.Fragment>
                 );
@@ -1542,6 +1576,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                   context="standalone"
                   isAffordable={isResourceAffordable(output, false)}
                   tileScaleInfo={tileScaleInfo}
+                  computedOutputs={computedOutputs}
                 />
               </React.Fragment>
             );
@@ -1566,6 +1601,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                     context="standalone"
                     isAffordable={isResourceAffordable(output, false)}
                     tileScaleInfo={tileScaleInfo}
+                    computedOutputs={computedOutputs}
                   />
                 </React.Fragment>
               );
@@ -1596,6 +1632,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                         context="standalone"
                         isAffordable={isResourceAffordable(output, false)}
                         tileScaleInfo={tileScaleInfo}
+                        computedOutputs={computedOutputs}
                       />
                     </React.Fragment>
                   );
@@ -1625,6 +1662,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                           context="standalone"
                           isAffordable={isResourceAffordable(output, false)}
                           tileScaleInfo={tileScaleInfo}
+                          computedOutputs={computedOutputs}
                         />
                       </React.Fragment>
                     );
@@ -1650,6 +1688,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                           context="standalone"
                           isAffordable={isResourceAffordable(output, false)}
                           tileScaleInfo={tileScaleInfo}
+                          computedOutputs={computedOutputs}
                         />
                       </div>
                     );
@@ -1673,6 +1712,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                             context="standalone"
                             isAffordable={isResourceAffordable(output, false)}
                             tileScaleInfo={tileScaleInfo}
+                            computedOutputs={computedOutputs}
                           />
                         </React.Fragment>
                       );

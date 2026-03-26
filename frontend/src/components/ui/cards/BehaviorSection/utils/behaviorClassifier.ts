@@ -2,7 +2,7 @@ import { CardBehaviorDto } from "@/types/generated/api-types.ts";
 import { ClassifiedBehavior } from "../types.ts";
 
 export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehavior[] => {
-  return behaviors.flatMap((behavior): ClassifiedBehavior | ClassifiedBehavior[] => {
+  return behaviors.flatMap((behavior, originalIndex): ClassifiedBehavior | ClassifiedBehavior[] => {
     const hasTrigger = behavior.triggers && behavior.triggers.length > 0;
     const triggerType = hasTrigger ? behavior.triggers?.[0]?.type : null;
     const hasCondition = behavior.triggers?.[0]?.condition !== undefined;
@@ -34,50 +34,51 @@ export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehav
         const discountBehavior = { ...behavior, outputs: discountOutputs };
         const remainderBehavior = { ...behavior, outputs: otherOutputs };
         return [
-          { behavior: discountBehavior, type: "discount" as const, description },
+          { behavior: discountBehavior, type: "discount" as const, description, originalIndex },
           {
             behavior: remainderBehavior,
             type: "auto-no-background" as const,
             description: undefined,
+            originalIndex,
           },
         ];
       }
 
-      return [{ behavior, type: "discount" as const, description }];
+      return [{ behavior, type: "discount" as const, description, originalIndex }];
     }
 
     if (hasPaymentSubstitute) {
-      return { behavior, type: "payment-substitute", description };
+      return { behavior, type: "payment-substitute", description, originalIndex };
     }
 
     if (hasValueModifier) {
-      return { behavior, type: "value-modifier", description };
+      return { behavior, type: "value-modifier", description, originalIndex };
     }
 
     if (hasDefense) {
-      return { behavior, type: "defense", description };
+      return { behavior, type: "defense", description, originalIndex };
     }
 
     if (triggerType === "manual") {
-      return { behavior, type: "manual-action", description };
+      return { behavior, type: "manual-action", description, originalIndex };
     }
 
     if (triggerType === "auto" && hasCondition) {
-      return { behavior, type: "triggered-effect", description };
+      return { behavior, type: "triggered-effect", description, originalIndex };
     }
 
     if (triggerType === "auto" && !hasInputs) {
-      return { behavior, type: "auto-no-background", description };
+      return { behavior, type: "auto-no-background", description, originalIndex };
     }
 
     if (hasTrigger && hasInputs) {
-      return { behavior, type: "triggered-effect", description };
+      return { behavior, type: "triggered-effect", description, originalIndex };
     }
 
     if (hasProduction && (!hasTrigger || triggerType === "auto")) {
-      return { behavior, type: "immediate-production", description };
+      return { behavior, type: "immediate-production", description, originalIndex };
     }
 
-    return { behavior, type: "immediate-effect", description };
+    return { behavior, type: "immediate-effect", description, originalIndex };
   });
 };

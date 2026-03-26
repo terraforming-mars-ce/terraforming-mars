@@ -3,6 +3,7 @@ import GameIcon from "../../../display/GameIcon.tsx";
 import { getIconPath, getTagIconPath } from "@/utils/iconStore.ts";
 import BehaviorIcon from "./BehaviorIcon.tsx";
 import Slash from "./Slash.tsx";
+import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
 
 interface IconDisplayInfo {
   resourceType: string;
@@ -25,7 +26,39 @@ interface ResourceDisplayProps {
   context?: "standalone" | "action" | "production" | "default";
   isAffordable?: boolean;
   tileScaleInfo: TileScaleInfo;
+  computedAmount?: number;
+  computedOutputs?: CalculatedOutputDto[];
 }
+
+const ComputedValueDisplay: React.FC<{
+  amount: number;
+  resourceType: string;
+}> = ({ amount, resourceType }) => {
+  const isCredits = resourceType === "credit" || resourceType === "credit-production";
+  const isProduction = resourceType.includes("-production");
+  const parenClasses = isProduction
+    ? "text-[26px] font-normal text-white/70 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]"
+    : "text-[22px] font-bold text-white/70 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]";
+
+  return (
+    <span className="flex items-center gap-[2px] opacity-80 ml-1">
+      <span className={parenClasses}>(</span>
+      {isCredits ? (
+        <GameIcon iconType={resourceType} amount={amount} size="small" />
+      ) : (
+        <span className="flex items-center gap-[2px]">
+          {amount > 1 && (
+            <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+              {amount}
+            </span>
+          )}
+          <GameIcon iconType={resourceType} size="small" />
+        </span>
+      )}
+      <span className={parenClasses}>)</span>
+    </span>
+  );
+};
 
 const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   displayInfo,
@@ -35,6 +68,8 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   context = "default",
   isAffordable = true,
   tileScaleInfo,
+  computedAmount,
+  computedOutputs,
 }) => {
   const { resourceType, amount, displayMode } = displayInfo;
   const isVariableAmount = !!displayInfo.variableAmount;
@@ -48,6 +83,12 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     resource?.target === "any-player" ||
     resource?.target === "all-opponents" ||
     resource?.target?.startsWith("steal-");
+
+  const resolvedComputedAmount =
+    computedAmount ??
+    (hasPer && computedOutputs
+      ? computedOutputs.find((o) => o.resourceType === resourceType)?.amount
+      : undefined);
 
   // Handle production with per condition (e.g., 1 plant production per plant tag)
   if (isProduction && hasPer) {
@@ -88,12 +129,17 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
           : "flex items-center gap-px relative";
 
         return (
-          <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-            <div className={itemClasses}>
-              <GameIcon iconType="credit" amount={Math.abs(amount)} size="small" />
+          <div className="flex items-center gap-[3px]">
+            <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+              <div className={itemClasses}>
+                <GameIcon iconType="credit" amount={Math.abs(amount)} size="small" />
+              </div>
+              <Slash />
+              {perIconEl}
             </div>
-            <Slash />
-            {perIconEl}
+            {resolvedComputedAmount !== undefined && (
+              <ComputedValueDisplay amount={resolvedComputedAmount} resourceType={resourceType} />
+            )}
           </div>
         );
       } else {
@@ -110,17 +156,22 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
         );
         if (productionIcon) {
           return (
-            <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-              <div className="flex items-center gap-px relative">
-                {amount > 1 && (
-                  <span className="text-[20px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center ml-0.5 max-md:text-xs">
-                    {amount}
-                  </span>
-                )}
-                {productionIcon}
+            <div className="flex items-center gap-[3px]">
+              <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+                <div className="flex items-center gap-px relative">
+                  {amount > 1 && (
+                    <span className="text-[20px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center ml-0.5 max-md:text-xs">
+                      {amount}
+                    </span>
+                  )}
+                  {productionIcon}
+                </div>
+                <Slash />
+                {perIconEl}
               </div>
-              <Slash />
-              {perIconEl}
+              {resolvedComputedAmount !== undefined && (
+                <ComputedValueDisplay amount={resolvedComputedAmount} resourceType={resourceType} />
+              )}
             </div>
           );
         }
@@ -197,6 +248,9 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
                   : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
               }`}
             />
+            {resolvedComputedAmount !== undefined && (
+              <ComputedValueDisplay amount={resolvedComputedAmount} resourceType={resourceType} />
+            )}
           </div>
         );
       } else {
@@ -233,6 +287,9 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
                     : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
                 }`}
               />
+              {resolvedComputedAmount !== undefined && (
+                <ComputedValueDisplay amount={resolvedComputedAmount} resourceType={resourceType} />
+              )}
             </div>
           );
         }
