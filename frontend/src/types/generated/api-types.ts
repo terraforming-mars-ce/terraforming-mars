@@ -518,6 +518,7 @@ export interface SelectorDto {
   requiredOriginalCost?: MinMaxValueDto;
   vp?: MinMaxValueDto;
   globalParameters?: string[];
+  actions?: string[];
 }
 /**
  * ResourceConditionDto represents a resource condition for client consumption
@@ -1094,6 +1095,23 @@ export interface PlayerDto {
   generationalEvents: PlayerGenerationalEventEntryDto[];
   vpGranters: VPGranterDto[];
   bonusTags: { [key: string]: number /* int */ };
+  actionCosts: ActionCostDto[];
+}
+/**
+ * ActionCostDto represents the costs for a specific action type (e.g., card-buying, colony-trade)
+ */
+export interface ActionCostDto {
+  actionType: string;
+  costs: ActionCostEntryDto[];
+}
+/**
+ * ActionCostEntryDto represents a single resource cost for an action
+ */
+export interface ActionCostEntryDto {
+  resource: string;
+  baseCost: number /* int */;
+  effectiveCost: number /* int */;
+  discount: number /* int */;
 }
 /**
  * OtherPlayerDto represents another player from the viewing player's perspective (limited data)

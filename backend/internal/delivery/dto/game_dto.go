@@ -227,6 +227,7 @@ type SelectorDto struct {
 	RequiredOriginalCost *MinMaxValueDto   `json:"requiredOriginalCost,omitempty" ts:"MinMaxValueDto | undefined"`
 	VP                   *MinMaxValueDto   `json:"vp,omitempty" ts:"MinMaxValueDto | undefined"`
 	GlobalParameters     []string          `json:"globalParameters,omitempty" ts:"string[] | undefined"`
+	Actions              []string          `json:"actions,omitempty" ts:"string[] | undefined"`
 }
 
 // ResourceConditionDto represents a resource condition for client consumption
@@ -782,6 +783,21 @@ type PlayerDto struct {
 	GenerationalEvents             []PlayerGenerationalEventEntryDto  `json:"generationalEvents" ts:"PlayerGenerationalEventEntryDto[]"`
 	VPGranters                     []VPGranterDto                     `json:"vpGranters" ts:"VPGranterDto[]"`
 	BonusTags                      map[string]int                     `json:"bonusTags" ts:"Record<string, number>"`
+	ActionCosts                    []ActionCostDto                    `json:"actionCosts" ts:"ActionCostDto[]"`
+}
+
+// ActionCostDto represents the costs for a specific action type (e.g., card-buying, colony-trade)
+type ActionCostDto struct {
+	ActionType string               `json:"actionType" ts:"string"`
+	Costs      []ActionCostEntryDto `json:"costs" ts:"ActionCostEntryDto[]"`
+}
+
+// ActionCostEntryDto represents a single resource cost for an action
+type ActionCostEntryDto struct {
+	Resource      string `json:"resource" ts:"string"`
+	BaseCost      int    `json:"baseCost" ts:"number"`
+	EffectiveCost int    `json:"effectiveCost" ts:"number"`
+	Discount      int    `json:"discount" ts:"number"`
 }
 
 // OtherPlayerDto represents another player from the viewing player's perspective (limited data)

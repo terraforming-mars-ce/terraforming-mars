@@ -281,7 +281,7 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
       )}
 
       {/* Corporation logo area */}
-      <div className="relative z-[1] mb-1 p-4 bg-black/30 rounded-lg flex justify-center items-center min-h-[110px] [&>*]:box-content [&>*]:[filter:drop-shadow(0_2px_4px_rgba(0,0,0,0.8))] [&>*]:rounded-[4px] [&>*>*]:rounded-[4px] [&>*>*]:[filter:drop-shadow(0_2px_4px_rgba(0,0,0,0.8))]">
+      <div className="relative z-[1] mb-1 p-4 bg-black/30 rounded-lg flex justify-center items-center min-h-[110px] [&>*]:box-content [&>*]:[filter:drop-shadow(0_2px_4px_rgba(0,0,0,0.3))] [&>*]:rounded-[4px] [&>*>*]:rounded-[4px]">
         <div className="transform scale-[1.3] origin-center">
           {getCorporationLogo(card.name.toLowerCase())}
         </div>

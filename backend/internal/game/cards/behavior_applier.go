@@ -655,12 +655,20 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 		zap.Bool("is_prelude", isPrelude),
 		zap.Strings("drawn_cards", drawnCards))
 
+	// Calculate card buy cost (accounts for discounts like Polyphemos)
+	cardBuyCost := 3
+	if a.player != nil && a.cardRegistry != nil {
+		calc := NewRequirementModifierCalculator(a.cardRegistry)
+		discounts := calc.CalculateActionDiscounts(a.player, shared.ActionCardBuying)
+		cardBuyCost = max(3-discounts[shared.ResourceCredit], 0)
+	}
+
 	// Create pending card draw selection
 	selection := &shared.PendingCardDrawSelection{
 		AvailableCards:      drawnCards,
 		FreeTakeCount:       takeAmount,
 		MaxBuyCount:         buyAmount,
-		CardBuyCost:         3, // Standard card cost
+		CardBuyCost:         cardBuyCost,
 		Source:              a.source,
 		SourceCardID:        a.sourceCardID,
 		SourceBehaviorIndex: a.sourceBehaviorIdx,

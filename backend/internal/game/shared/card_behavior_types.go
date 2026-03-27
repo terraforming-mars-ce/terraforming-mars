@@ -29,6 +29,7 @@ type Selector struct {
 	RequiredOriginalCost *MinMaxValue      `json:"requiredOriginalCost,omitempty"`
 	VP                   *MinMaxValue      `json:"vp,omitempty"`
 	GlobalParameters     []string          `json:"globalParameters,omitempty"`
+	Actions              []string          `json:"actions,omitempty"`
 }
 
 // ResourceTriggerCondition represents what triggers an automatic resource exchange

@@ -23,6 +23,7 @@ interface ProductionCardSelectionOverlayProps {
   isOpen: boolean;
   cards: CardDto[];
   playerCredits: number;
+  costPerCard: number;
   onSelectCards: (selectedCardIds: string[]) => void;
   onReturn: () => void;
   initialSelectedCardIds?: string[];
@@ -33,6 +34,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
   isOpen,
   cards,
   playerCredits,
+  costPerCard,
   onSelectCards,
   onReturn,
   initialSelectedCardIds,
@@ -49,7 +51,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
     cards,
     isOpen,
     playerCredits,
-    costPerCard: 3,
+    costPerCard,
     minCards: 0,
     initialSelectedCardIds,
     onSelectionChange,
@@ -68,7 +70,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
         <div className={OVERLAY_HEADER_CLASS}>
           <h2 className={OVERLAY_TITLE_CLASS}>Select Cards to Buy</h2>
           <p className={OVERLAY_DESCRIPTION_CLASS}>
-            Choose cards to buy for your next turn. Each card costs 3 MC.
+            Choose cards to buy for your next turn. Each card costs {costPerCard} MC.
           </p>
         </div>
 

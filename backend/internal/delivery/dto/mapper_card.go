@@ -211,6 +211,7 @@ func toSelectorDto(sel shared.Selector) SelectorDto {
 		RequiredOriginalCost: ptrCast(sel.RequiredOriginalCost, toMinMaxValueDto),
 		VP:                   ptrCast(sel.VP, toMinMaxValueDto),
 		GlobalParameters:     sel.GlobalParameters,
+		Actions:              sel.Actions,
 	}
 }
 

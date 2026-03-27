@@ -44,8 +44,14 @@ func (c *RequirementModifierCalculator) Calculate(p *player.Player) []shared.Req
 
 			// Check selectors for discount targeting
 			if len(output.Selectors) > 0 {
-				hasCardSelectors := HasCardSelectors(output.Selectors)
+				hasCardSelectors := HasCardSelectorsExcludingResources(output.Selectors)
 				hasStandardProjectSelectors := HasStandardProjectSelectors(output.Selectors)
+				hasActionSelectors := HasActionSelectors(output.Selectors)
+
+				// Skip action-only selectors (e.g., card-buying, colony-trade)
+				if hasActionSelectors && !hasCardSelectors && !hasStandardProjectSelectors {
+					continue
+				}
 
 				// Case 1: Standard project discount
 				if hasStandardProjectSelectors {
@@ -71,7 +77,7 @@ func (c *RequirementModifierCalculator) Calculate(p *player.Player) []shared.Req
 							continue
 						}
 
-						if MatchesAnySelector(card, output.Selectors) {
+						if MatchesAnySelectorExcludingResources(card, output.Selectors) {
 							cardIDCopy := cardID
 							modifier := shared.RequirementModifier{
 								Amount:            output.Amount,
@@ -167,15 +173,20 @@ func (c *RequirementModifierCalculator) CalculateCardDiscounts(p *player.Player,
 
 			// Check selectors first (new system with AND logic within selector, OR between selectors)
 			if len(output.Selectors) > 0 {
-				hasCardSelectors := HasCardSelectors(output.Selectors)
+				hasCardSelectors := HasCardSelectorsExcludingResources(output.Selectors)
 				hasOnlyStandardProjectSelectors := HasStandardProjectSelectors(output.Selectors) && !hasCardSelectors
+
+				// Skip action-only selectors (e.g., card-buying, colony-trade)
+				if HasActionSelectors(output.Selectors) && !hasCardSelectors {
+					continue
+				}
 
 				if hasOnlyStandardProjectSelectors {
 					continue
 				}
 
 				if hasCardSelectors {
-					if MatchesAnySelector(card, output.Selectors) {
+					if MatchesAnySelectorExcludingResources(card, output.Selectors) {
 						totalDiscount += output.Amount
 					}
 					continue
@@ -243,6 +254,54 @@ func matchesGlobalParameterSelector(selectors []shared.Selector, paramType strin
 		}
 	}
 	return false
+}
+
+// CalculateActionDiscounts computes discounts for a specific action type (e.g., card-buying, colony-trade).
+// Returns a map of resource type to discount amount.
+// Affected resources are read from the selector's resources field; defaults to credits if unspecified.
+func (c *RequirementModifierCalculator) CalculateActionDiscounts(
+	p *player.Player,
+	actionType string,
+) map[shared.ResourceType]int {
+	discounts := make(map[shared.ResourceType]int)
+
+	if p == nil {
+		return discounts
+	}
+
+	for _, effect := range p.Effects().List() {
+		for _, output := range effect.Behavior.Outputs {
+			if output.ResourceType != shared.ResourceDiscount {
+				continue
+			}
+
+			if len(output.Selectors) > 0 && MatchesAnyActionSelector(actionType, output.Selectors) {
+				affectedResources := c.convertAffectedResources(GetResourcesFromSelectors(output.Selectors))
+				for _, rt := range affectedResources {
+					discounts[rt] += output.Amount
+				}
+			}
+		}
+	}
+
+	return discounts
+}
+
+// CalculateActionDiscountsFromCard computes action discounts from a specific card's behaviors.
+// Used during starting selection when corporation effects are not yet applied to the player.
+func CalculateActionDiscountsFromCard(card *Card, actionType string) int {
+	totalDiscount := 0
+	for _, behavior := range card.Behaviors {
+		for _, output := range behavior.Outputs {
+			if output.ResourceType != shared.ResourceDiscount {
+				continue
+			}
+			if MatchesAnyActionSelector(actionType, output.Selectors) {
+				totalDiscount += output.Amount
+			}
+		}
+	}
+	return totalDiscount
 }
 
 // CalculateStandardProjectDiscounts computes discounts for a specific standard project.

@@ -18,6 +18,14 @@ const getStandardProjectIcon = (project: string): string | null => {
   return mapping[project] || null;
 };
 
+const getActionIcon = (action: string): string | null => {
+  const mapping: { [key: string]: string } = {
+    "card-buying": "card-buy",
+    "colony-trade": "trade",
+  };
+  return mapping[action] || null;
+};
+
 const IconWithBadge: React.FC<{
   iconType: string;
   showSpBadge?: boolean;
@@ -36,13 +44,16 @@ const IconWithBadge: React.FC<{
 
 const DiscountAmount: React.FC<{
   amount: number;
-  resourceType: string;
-}> = ({ amount, resourceType }) => {
-  if (resourceType === "credit") {
+  resourceTypes: string[];
+  isNegativeDiscount?: boolean;
+}> = ({ amount, resourceTypes, isNegativeDiscount = false }) => {
+  const sign = isNegativeDiscount ? "+" : "-";
+
+  if (resourceTypes.length === 1 && resourceTypes[0] === "credit") {
     return (
       <div className="flex items-center gap-0.5">
         <span className="text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-          -
+          {sign}
         </span>
         <GameIcon iconType="credit" amount={amount} size="small" />
       </div>
@@ -52,9 +63,14 @@ const DiscountAmount: React.FC<{
   return (
     <div className="flex items-center gap-[2px]">
       <span className="text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-        -{amount}
+        {sign}
       </span>
-      <GameIcon iconType={resourceType} size="small" />
+      {resourceTypes.map((rt, i) => {
+        const isCredit = rt === "credit" || rt === "credit-production";
+        return (
+          <GameIcon key={i} iconType={rt} size="small" amount={isCredit ? amount : undefined} />
+        );
+      })}
     </div>
   );
 };
@@ -62,8 +78,9 @@ const DiscountAmount: React.FC<{
 const DiscountRow: React.FC<{
   icons: React.ReactNode;
   amount: number;
-  resourceType: string;
-}> = ({ icons, amount, resourceType }) => {
+  resourceTypes: string[];
+  isNegativeDiscount?: boolean;
+}> = ({ icons, amount, resourceTypes, isNegativeDiscount = false }) => {
   return (
     <div className="flex gap-[3px] items-center justify-center">
       <div className="flex gap-[3px] items-center">{icons}</div>
@@ -72,7 +89,11 @@ const DiscountRow: React.FC<{
         :
       </span>
 
-      <DiscountAmount amount={amount} resourceType={resourceType} />
+      <DiscountAmount
+        amount={amount}
+        resourceTypes={resourceTypes}
+        isNegativeDiscount={isNegativeDiscount}
+      />
     </div>
   );
 };
@@ -120,6 +141,15 @@ const renderSelectorIcons = (selector: any): React.ReactNode => {
     });
   }
 
+  if (selector.actions && selector.actions.length > 0) {
+    selector.actions.forEach((action: string, actionIndex: number) => {
+      const iconType = getActionIcon(action);
+      if (iconType) {
+        elements.push(<GameIcon key={`action-${actionIndex}`} iconType={iconType} size="small" />);
+      }
+    });
+  }
+
   return elements;
 };
 
@@ -129,11 +159,23 @@ const DiscountLayout: React.FC<DiscountLayoutProps> = ({ behavior }) => {
   const discountOutput = behavior.outputs.find((output: any) => output.type === "discount");
   if (!discountOutput) return null;
 
-  const amount = Math.abs(discountOutput.amount ?? 0);
+  const rawAmount = discountOutput.amount ?? 0;
+  const isNegativeDiscount = rawAmount < 0;
+  const amount = Math.abs(rawAmount);
   const selectors: any[] = discountOutput.selectors || [];
 
-  // Discount resource type defaults to "credit"
-  const discountResourceType = "credit";
+  // Extract affected resource types from selectors
+  const affectedResources: string[] = [];
+  for (const sel of selectors) {
+    for (const r of sel.resources ?? []) {
+      if (!affectedResources.includes(r)) {
+        affectedResources.push(r);
+      }
+    }
+  }
+  if (affectedResources.length === 0) {
+    affectedResources.push("credit");
+  }
 
   // If we have selectors, render them with OR separators between selectors
   if (selectors.length > 0) {
@@ -145,7 +187,12 @@ const DiscountLayout: React.FC<DiscountLayoutProps> = ({ behavior }) => {
     ));
 
     return (
-      <DiscountRow icons={selectorIcons} amount={amount} resourceType={discountResourceType} />
+      <DiscountRow
+        icons={selectorIcons}
+        amount={amount}
+        resourceTypes={affectedResources}
+        isNegativeDiscount={isNegativeDiscount}
+      />
     );
   }
 
@@ -158,7 +205,7 @@ const DiscountLayout: React.FC<DiscountLayoutProps> = ({ behavior }) => {
         </span>
       }
       amount={amount}
-      resourceType={discountResourceType}
+      resourceTypes={affectedResources}
     />
   );
 };
