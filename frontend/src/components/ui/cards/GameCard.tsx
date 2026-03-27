@@ -261,7 +261,10 @@ const GameCard: React.FC<GameCardProps> = ({
       <div
         className={`absolute left-2 right-2 flex items-center justify-center z-[3] max-md:left-1.5 max-md:right-1.5 bottom-4 max-md:bottom-3 ${(card.vpConditions && card.vpConditions.length > 0) || card.resourceStorage ? "top-[calc(50%+38px)] max-md:top-[calc(50%+40px)]" : "top-[calc(50%+20px)] max-md:top-[calc(50%+25px)]"}`}
       >
-        <BehaviorSection behaviors={card.behaviors} />
+        <BehaviorSection
+          behaviors={card.behaviors}
+          computedValues={hasState ? card.computedValues : undefined}
+        />
       </div>
 
       {/* Selection indicator at bottom center, peeking out (only shown when showCheckbox is true) */}

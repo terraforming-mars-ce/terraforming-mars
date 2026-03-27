@@ -3,6 +3,7 @@ import ResourceDisplay from "./ResourceDisplay.tsx";
 import CardIcon from "./CardIcon.tsx";
 import OrChip from "./OrChip.tsx";
 import { analyzeCardOutputs } from "../utils/displayAnalysis.ts";
+import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
 
 interface IconDisplayInfo {
   resourceType: string;
@@ -33,6 +34,7 @@ interface ManualActionLayoutProps {
   ) => IconDisplayInfo;
   tileScaleInfo: TileScaleInfo;
   hideActionChip?: boolean;
+  computedOutputs?: CalculatedOutputDto[];
 }
 
 const isCardResourceType = (type: string): boolean =>
@@ -125,6 +127,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
   analyzeResourceDisplayWithConstraints,
   tileScaleInfo,
   hideActionChip = false,
+  computedOutputs,
 }) => {
   // Handle choice-based behaviors
   if (behavior.choices && behavior.choices.length > 0) {
@@ -477,6 +480,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
                 context="action"
                 isAffordable={isResourceAffordable(output, false)}
                 tileScaleInfo={tileScaleInfo}
+                computedOutputs={computedOutputs}
               />
             </React.Fragment>
           );

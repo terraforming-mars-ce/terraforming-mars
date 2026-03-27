@@ -95,7 +95,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		TotalActions:     getTotalActionsForPlayer(g, p.ID()),
 		IsConnected:      p.IsConnected(),
 		IsExited:         p.HasExited(),
-		Effects:          convertPlayerEffects(p.Effects().List()),
+		Effects:          convertPlayerEffects(p.Effects().List(), p, g, cardRegistry),
 		Actions:          convertPlayerActions(p.Actions().List(), p, g, cardRegistry),
 		StandardProjects: standardProjects, // PlayerStandardProjectDto[] with state
 		Milestones:       milestones,       // PlayerMilestoneDto[] with eligibility
@@ -157,7 +157,7 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		TotalActions:     getTotalActionsForPlayer(g, p.ID()),
 		IsConnected:      p.IsConnected(),
 		IsExited:         p.HasExited(),
-		Effects:          convertPlayerEffects(p.Effects().List()),
+		Effects:          convertPlayerEffects(p.Effects().List(), p, g, cardRegistry),
 		Actions:          convertPlayerActions(p.Actions().List(), p, g, cardRegistry),
 
 		SelectCorporationPhase:    convertSelectCorporationPhaseForOtherPlayer(g.GetSelectCorporationPhase(p.ID())),
@@ -281,18 +281,45 @@ func convertProductionPhaseForOtherPlayer(phase *shared.ProductionPhase) *Produc
 }
 
 // convertPlayerEffects converts CardEffect slice to PlayerEffectDto slice
-func convertPlayerEffects(effects []shared.CardEffect) []PlayerEffectDto {
+func convertPlayerEffects(effects []shared.CardEffect, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []PlayerEffectDto {
 	if len(effects) == 0 {
 		return []PlayerEffectDto{}
 	}
 
+	board := g.Board()
+	allPlayers := g.GetAllPlayers()
+
 	dtos := make([]PlayerEffectDto, len(effects))
 	for i, effect := range effects {
+		var computedValues []ComputedBehaviorValueDto
+		var outputs []CalculatedOutputDto
+		for _, output := range effect.Behavior.Outputs {
+			if output.Per == nil {
+				continue
+			}
+			count := gamecards.CountPerCondition(output.Per, effect.CardID, p, board, cardRegistry, allPlayers)
+			if output.Per.Amount > 0 {
+				multiplier := count / output.Per.Amount
+				actualAmount := output.Amount * multiplier
+				outputs = append(outputs, CalculatedOutputDto{
+					ResourceType: string(output.ResourceType),
+					Amount:       actualAmount,
+					IsScaled:     true,
+				})
+			}
+		}
+		if len(outputs) > 0 {
+			computedValues = []ComputedBehaviorValueDto{{
+				Target:  "behaviors::0",
+				Outputs: outputs,
+			}}
+		}
 		dtos[i] = PlayerEffectDto{
-			CardID:        effect.CardID,
-			CardName:      effect.CardName,
-			BehaviorIndex: effect.BehaviorIndex,
-			Behavior:      toCardBehaviorDto(effect.Behavior),
+			CardID:         effect.CardID,
+			CardName:       effect.CardName,
+			BehaviorIndex:  effect.BehaviorIndex,
+			Behavior:       toCardBehaviorDto(effect.Behavior),
+			ComputedValues: computedValues,
 		}
 	}
 	return dtos
@@ -341,6 +368,31 @@ func convertPlayerActions(actions []shared.CardAction, p *player.Player, g *game
 			Available:               state.Available(),
 			Errors:                  convertStateErrors(state.Errors),
 			Warnings:                convertStateWarnings(state.Warnings),
+			ComputedValues:          convertComputedValues(state.ComputedValues),
+		}
+	}
+	return dtos
+}
+
+// convertComputedValues converts ComputedBehaviorValue slice to DTO slice
+func convertComputedValues(values []player.ComputedBehaviorValue) []ComputedBehaviorValueDto {
+	if len(values) == 0 {
+		return nil
+	}
+
+	dtos := make([]ComputedBehaviorValueDto, len(values))
+	for i, v := range values {
+		outputs := make([]CalculatedOutputDto, len(v.Outputs))
+		for j, o := range v.Outputs {
+			outputs[j] = CalculatedOutputDto{
+				ResourceType: o.ResourceType,
+				Amount:       o.Amount,
+				IsScaled:     o.IsScaled,
+			}
+		}
+		dtos[i] = ComputedBehaviorValueDto{
+			Target:  v.Target,
+			Outputs: outputs,
 		}
 	}
 	return dtos
@@ -686,6 +738,7 @@ func ToPlayerCardDto(card *gamecards.Card, state player.EntityState) PlayerCardD
 		Warnings:        convertStateWarnings(state.Warnings),
 		EffectiveCost:   effectiveCost,
 		Discounts:       discounts,
+		ComputedValues:  convertComputedValues(state.ComputedValues),
 	}
 }
 

@@ -77,6 +77,10 @@ func SetupPlayerCardStore(p *player.Player, g *game.Game, cardRegistry cards.Car
 		recalculateAll()
 	})
 
+	events.Subscribe(eventBus, func(_ events.ResourceStorageChangedEvent) {
+		recalculateAll()
+	})
+
 	events.Subscribe(eventBus, func(e events.PlayerEffectsChangedEvent) {
 		if e.PlayerID == p.ID() {
 			recalculateAll()

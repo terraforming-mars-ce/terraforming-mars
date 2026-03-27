@@ -72,6 +72,13 @@ type CalculatedOutputDto struct {
 	IsScaled     bool   `json:"isScaled" ts:"boolean"`
 }
 
+// ComputedBehaviorValueDto holds pre-computed per-condition output values for a behavior.
+// Target uses the format "behaviors::N" where N is the behavior index.
+type ComputedBehaviorValueDto struct {
+	Target  string                `json:"target" ts:"string"`
+	Outputs []CalculatedOutputDto `json:"outputs" ts:"CalculatedOutputDto[]"`
+}
+
 // LogDisplayDataDto contains pre-computed display information for log entries
 type LogDisplayDataDto struct {
 	Behaviors    []CardBehaviorDto `json:"behaviors,omitempty" ts:"CardBehaviorDto[] | undefined"`

@@ -4,7 +4,12 @@ import CardIcon from "./CardIcon.tsx";
 import OrChip from "./OrChip.tsx";
 import Slash from "./Slash.tsx";
 import GameIcon from "../../../display/GameIcon.tsx";
-import { CardBehaviorDto, SelectorDto, MinMaxValueDto } from "@/types/generated/api-types.ts";
+import {
+  CalculatedOutputDto,
+  CardBehaviorDto,
+  SelectorDto,
+  MinMaxValueDto,
+} from "@/types/generated/api-types.ts";
 
 interface IconDisplayInfo {
   resourceType: string;
@@ -35,6 +40,7 @@ interface TriggeredEffectLayoutProps {
     forceCompact: boolean,
   ) => IconDisplayInfo;
   tileScaleInfo: TileScaleInfo;
+  computedOutputs?: CalculatedOutputDto[];
 }
 
 // Extract requiredOriginalCost from selectors (new location) or condition level (legacy)
@@ -385,6 +391,7 @@ const renderBehaviorRow = (
     forceCompact: boolean,
   ) => IconDisplayInfo,
   tileScaleInfo: TileScaleInfo,
+  computedOutputs?: CalculatedOutputDto[],
 ): React.ReactNode => {
   // Check if this is a global-parameter-lenience effect (special case)
   const isGlobalParameterLenience =
@@ -520,6 +527,7 @@ const renderBehaviorRow = (
                     context="default"
                     isAffordable={isResourceAffordable(output, false)}
                     tileScaleInfo={tileScaleInfo}
+                    computedOutputs={computedOutputs}
                   />
                 </React.Fragment>
               );
@@ -773,6 +781,7 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
   isResourceAffordable,
   analyzeResourceDisplayWithConstraints,
   tileScaleInfo,
+  computedOutputs,
 }) => {
   // Collect all behaviors to render (primary + merged)
   const allBehaviors = [behavior, ...(mergedBehaviors || [])];
@@ -824,6 +833,7 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
             isResourceAffordable,
             analyzeResourceDisplayWithConstraints,
             tileScaleInfo,
+            computedOutputs,
           ),
         )}
       </div>
@@ -840,6 +850,7 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
           isResourceAffordable,
           analyzeResourceDisplayWithConstraints,
           tileScaleInfo,
+          computedOutputs,
         ),
       )}
     </div>

@@ -50,7 +50,11 @@ const EffectsPopover: React.FC<EffectsPopoverProps> = ({
                 </div>
 
                 <div className="relative w-full min-h-[32px] [&>div]:!relative [&>div]:!bottom-auto [&>div]:!left-auto [&>div]:!right-auto [&>div]:w-full [&>div:hover]:!transform-none [&>div:hover]:!shadow-none [&>div:hover]:!filter-none">
-                  <BehaviorSection behaviors={[effect.behavior]} greyOutAll={false} />
+                  <BehaviorSection
+                    behaviors={[effect.behavior]}
+                    computedValues={effect.computedValues}
+                    greyOutAll={false}
+                  />
                 </div>
               </div>
             </GamePopoverItem>

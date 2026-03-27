@@ -43,7 +43,6 @@ func CalculatePlayerCardState(
 	errors = append(errors, validateCardResourceOutputs(card, p, cardRegistry)...)
 	errors = append(errors, validateCardDiscardOutputs(card, p)...)
 	errors = append(errors, validateNegativeResourceOutputsForCard(card, p)...)
-
 	errors = append(errors, ValidateTileOutputs(card, p, g)...)
 
 	for _, behavior := range card.Behaviors {
@@ -56,11 +55,14 @@ func CalculatePlayerCardState(
 		}
 	}
 
+	computedValues := computeBehaviorValues(card.Behaviors, "", p, g, cardRegistry)
+
 	return player.EntityState{
 		Errors:         errors,
 		Warnings:       warnings,
 		Cost:           costMap,
 		Metadata:       metadata,
+		ComputedValues: computedValues,
 		LastCalculated: time.Now(),
 	}
 }
@@ -248,11 +250,18 @@ func CalculatePlayerCardActionState(
 		warnings = append(warnings, validateGlobalParamWarnings(choice.Outputs, g)...)
 	}
 
+	var reg cards.CardRegistry
+	if len(cardRegistry) > 0 {
+		reg = cardRegistry[0]
+	}
+	computedValues := computeBehaviorValues([]shared.CardBehavior{behavior}, cardID, p, g, reg)
+
 	return player.EntityState{
 		Errors:         errors,
 		Warnings:       warnings,
 		Cost:           make(map[string]int),
 		Metadata:       make(map[string]any),
+		ComputedValues: computedValues,
 		LastCalculated: time.Now(),
 	}
 }
@@ -1879,4 +1888,63 @@ func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *g
 	}
 
 	return nil
+}
+
+// computeBehaviorValues computes per-condition output values for card behaviors.
+// Returns a slice of ComputedBehaviorValue with target format "behaviors::N".
+func computeBehaviorValues(
+	behaviors []shared.CardBehavior,
+	sourceCardID string,
+	p *player.Player,
+	g *game.Game,
+	cardRegistry cards.CardRegistry,
+) []player.ComputedBehaviorValue {
+	var result []player.ComputedBehaviorValue
+
+	board := g.Board()
+	allPlayers := g.GetAllPlayers()
+
+	for i, behavior := range behaviors {
+		var outputs []shared.CalculatedOutput
+		for _, output := range behavior.Outputs {
+			if output.Per == nil {
+				continue
+			}
+			count := gamecards.CountPerCondition(output.Per, sourceCardID, p, board, cardRegistry, allPlayers)
+			if output.Per.Amount > 0 {
+				multiplier := count / output.Per.Amount
+				actualAmount := output.Amount * multiplier
+				outputs = append(outputs, shared.CalculatedOutput{
+					ResourceType: string(output.ResourceType),
+					Amount:       actualAmount,
+					IsScaled:     true,
+				})
+			}
+		}
+		for _, choice := range behavior.Choices {
+			for _, output := range choice.Outputs {
+				if output.Per == nil {
+					continue
+				}
+				count := gamecards.CountPerCondition(output.Per, sourceCardID, p, board, cardRegistry, allPlayers)
+				if output.Per.Amount > 0 {
+					multiplier := count / output.Per.Amount
+					actualAmount := output.Amount * multiplier
+					outputs = append(outputs, shared.CalculatedOutput{
+						ResourceType: string(output.ResourceType),
+						Amount:       actualAmount,
+						IsScaled:     true,
+					})
+				}
+			}
+		}
+		if len(outputs) > 0 {
+			result = append(result, player.ComputedBehaviorValue{
+				Target:  fmt.Sprintf("behaviors::%d", i),
+				Outputs: outputs,
+			})
+		}
+	}
+
+	return result
 }

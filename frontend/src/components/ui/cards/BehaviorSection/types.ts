@@ -1,7 +1,12 @@
-import { CardBehaviorDto, ResourcesDto } from "@/types/generated/api-types.ts";
+import {
+  CardBehaviorDto,
+  ComputedBehaviorValueDto,
+  ResourcesDto,
+} from "@/types/generated/api-types.ts";
 
 export interface BehaviorSectionProps {
   behaviors?: CardBehaviorDto[];
+  computedValues?: ComputedBehaviorValueDto[];
   playerResources?: ResourcesDto;
   resourceStorage?: { [cardId: string]: number };
   cardId?: string;
@@ -24,6 +29,7 @@ export interface ClassifiedBehavior {
     | "defense";
   description?: string;
   mergedBehaviors?: CardBehaviorDto[];
+  originalIndex?: number;
 }
 
 export interface LayoutRequirement {

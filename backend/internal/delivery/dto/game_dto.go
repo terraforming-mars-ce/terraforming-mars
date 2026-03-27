@@ -567,21 +567,22 @@ type PlayerCardDto struct {
 	ResourceStorage *ResourceStorageDto  `json:"resourceStorage,omitempty" ts:"ResourceStorageDto | undefined"`
 	VPConditions    []VPConditionDto     `json:"vpConditions,omitempty" ts:"VPConditionDto[] | undefined"`
 
-	Available     bool              `json:"available" ts:"boolean"`                                      // Computed: len(Errors) == 0
-	Errors        []StateErrorDto   `json:"errors" ts:"StateErrorDto[]"`                                 // Single source of truth for availability
-	Warnings      []StateWarningDto `json:"warnings,omitempty" ts:"StateWarningDto[] | undefined"`       // Non-blocking warnings
-	EffectiveCost int               `json:"effectiveCost" ts:"number"`                                   // Effective cost after discounts (credits)
-	Discounts     map[string]int    `json:"discounts,omitempty" ts:"Record<string, number> | undefined"` // Discount amounts per resource type (if any)
+	Available      bool                       `json:"available" ts:"boolean"`                                               // Computed: len(Errors) == 0
+	Errors         []StateErrorDto            `json:"errors" ts:"StateErrorDto[]"`                                          // Single source of truth for availability
+	Warnings       []StateWarningDto          `json:"warnings,omitempty" ts:"StateWarningDto[] | undefined"`                // Non-blocking warnings
+	EffectiveCost  int                        `json:"effectiveCost" ts:"number"`                                            // Effective cost after discounts (credits)
+	Discounts      map[string]int             `json:"discounts,omitempty" ts:"Record<string, number> | undefined"`          // Discount amounts per resource type (if any)
+	ComputedValues []ComputedBehaviorValueDto `json:"computedValues,omitempty" ts:"ComputedBehaviorValueDto[] | undefined"` // Pre-computed per-condition values
 }
 
 // PlayerEffectDto represents ongoing effects that a player has active for client consumption
 // Aligned with PlayerActionDto structure for consistent behavior handling
 type PlayerEffectDto struct {
-	CardID        string          `json:"cardId" ts:"string"`            // ID of the card that provides this effect
-	CardName      string          `json:"cardName" ts:"string"`          // Name of the card for display purposes
-	BehaviorIndex int             `json:"behaviorIndex" ts:"number"`     // Which behavior on the card this effect represents
-	Behavior      CardBehaviorDto `json:"behavior" ts:"CardBehaviorDto"` // The actual behavior definition with inputs/outputs
-	// Note: No PlayCount since effects are ongoing, not per-generation like actions
+	CardID         string                     `json:"cardId" ts:"string"`                                                   // ID of the card that provides this effect
+	CardName       string                     `json:"cardName" ts:"string"`                                                 // Name of the card for display purposes
+	BehaviorIndex  int                        `json:"behaviorIndex" ts:"number"`                                            // Which behavior on the card this effect represents
+	Behavior       CardBehaviorDto            `json:"behavior" ts:"CardBehaviorDto"`                                        // The actual behavior definition with inputs/outputs
+	ComputedValues []ComputedBehaviorValueDto `json:"computedValues,omitempty" ts:"ComputedBehaviorValueDto[] | undefined"` // Pre-computed per-condition values
 }
 
 // PlayerActionDto represents an action that a player can take for client consumption
@@ -595,9 +596,10 @@ type PlayerActionDto struct {
 	TimesUsedThisTurn       int `json:"timesUsedThisTurn" ts:"number"`       // Times used this turn
 	TimesUsedThisGeneration int `json:"timesUsedThisGeneration" ts:"number"` // Times used this generation
 
-	Available bool              `json:"available" ts:"boolean"`                                // Computed: action is usable
-	Errors    []StateErrorDto   `json:"errors" ts:"StateErrorDto[]"`                           // Reasons why action is not usable
-	Warnings  []StateWarningDto `json:"warnings,omitempty" ts:"StateWarningDto[] | undefined"` // Non-blocking warnings
+	Available      bool                       `json:"available" ts:"boolean"`                                               // Computed: action is usable
+	Errors         []StateErrorDto            `json:"errors" ts:"StateErrorDto[]"`                                          // Reasons why action is not usable
+	Warnings       []StateWarningDto          `json:"warnings,omitempty" ts:"StateWarningDto[] | undefined"`                // Non-blocking warnings
+	ComputedValues []ComputedBehaviorValueDto `json:"computedValues,omitempty" ts:"ComputedBehaviorValueDto[] | undefined"` // Pre-computed per-condition values
 }
 
 // PlayerStandardProjectDto represents a standard project with availability state

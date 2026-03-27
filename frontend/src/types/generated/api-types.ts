@@ -877,6 +877,7 @@ export interface PlayerCardDto {
   warnings?: StateWarningDto[]; // Non-blocking warnings
   effectiveCost: number /* int */; // Effective cost after discounts (credits)
   discounts?: { [key: string]: number /* int */ }; // Discount amounts per resource type (if any)
+  computedValues?: ComputedBehaviorValueDto[]; // Pre-computed per-condition values
 }
 /**
  * PlayerEffectDto represents ongoing effects that a player has active for client consumption
@@ -887,6 +888,7 @@ export interface PlayerEffectDto {
   cardName: string; // Name of the card for display purposes
   behaviorIndex: number /* int */; // Which behavior on the card this effect represents
   behavior: CardBehaviorDto; // The actual behavior definition with inputs/outputs
+  computedValues?: ComputedBehaviorValueDto[]; // Pre-computed per-condition values
 }
 /**
  * PlayerActionDto represents an action that a player can take for client consumption
@@ -902,6 +904,7 @@ export interface PlayerActionDto {
   available: boolean; // Computed: action is usable
   errors: StateErrorDto[]; // Reasons why action is not usable
   warnings?: StateWarningDto[]; // Non-blocking warnings
+  computedValues?: ComputedBehaviorValueDto[]; // Pre-computed per-condition values
 }
 /**
  * PlayerStandardProjectDto represents a standard project with availability state
@@ -1903,6 +1906,14 @@ export interface CalculatedOutputDto {
   resourceType: string;
   amount: number /* int */;
   isScaled: boolean;
+}
+/**
+ * ComputedBehaviorValueDto holds pre-computed per-condition output values for a behavior.
+ * Target uses the format "behaviors::N" where N is the behavior index.
+ */
+export interface ComputedBehaviorValueDto {
+  target: string;
+  outputs: CalculatedOutputDto[];
 }
 /**
  * LogDisplayDataDto contains pre-computed display information for log entries
