@@ -128,6 +128,78 @@ func HasCardSelectors(selectors []shared.Selector) bool {
 	return false
 }
 
+// HasCardSelectorsExcludingResources returns true if any selector targets cards via tags, types, cost, or VP.
+// Unlike HasCardSelectors, this ignores the Resources field which on discount selectors
+// indicates the affected resource type rather than a card filter.
+func HasCardSelectorsExcludingResources(selectors []shared.Selector) bool {
+	for _, sel := range selectors {
+		if len(sel.Tags) > 0 || len(sel.CardTypes) > 0 || sel.RequiredOriginalCost != nil || sel.VP != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// MatchesSelectorExcludingResources checks if a card matches a selector, ignoring the Resources field.
+// Used for discount calculations where Resources indicates the discounted resource type, not a card filter.
+func MatchesSelectorExcludingResources(card *Card, selector shared.Selector) bool {
+	if len(selector.Tags) == 0 && len(selector.CardTypes) == 0 && selector.RequiredOriginalCost == nil && selector.VP == nil {
+		return false
+	}
+
+	if len(selector.Tags) > 0 {
+		for _, requiredTag := range selector.Tags {
+			if !slices.Contains(card.Tags, requiredTag) {
+				return false
+			}
+		}
+	}
+
+	if len(selector.CardTypes) > 0 {
+		if !slices.Contains(selector.CardTypes, string(card.Type)) {
+			return false
+		}
+	}
+
+	if selector.RequiredOriginalCost != nil {
+		if selector.RequiredOriginalCost.Min != nil && card.Cost < *selector.RequiredOriginalCost.Min {
+			return false
+		}
+		if selector.RequiredOriginalCost.Max != nil && card.Cost > *selector.RequiredOriginalCost.Max {
+			return false
+		}
+	}
+
+	if selector.VP != nil {
+		hasVP := false
+		for _, vp := range card.VPConditions {
+			if selector.VP.Min != nil && vp.Amount < *selector.VP.Min {
+				continue
+			}
+			if selector.VP.Max != nil && vp.Amount > *selector.VP.Max {
+				continue
+			}
+			hasVP = true
+			break
+		}
+		if !hasVP {
+			return false
+		}
+	}
+
+	return true
+}
+
+// MatchesAnySelectorExcludingResources checks if a card matches any selector, ignoring Resources field.
+func MatchesAnySelectorExcludingResources(card *Card, selectors []shared.Selector) bool {
+	for _, sel := range selectors {
+		if MatchesSelectorExcludingResources(card, sel) {
+			return true
+		}
+	}
+	return false
+}
+
 // HasStandardProjectSelectors returns true if any selector targets standard projects
 func HasStandardProjectSelectors(selectors []shared.Selector) bool {
 	for _, sel := range selectors {
@@ -167,6 +239,26 @@ func GetResourcesFromSelectors(selectors []shared.Selector) []string {
 func hasPreludeCardType(selectors []shared.Selector) bool {
 	for _, sel := range selectors {
 		if slices.Contains(sel.CardTypes, "prelude") {
+			return true
+		}
+	}
+	return false
+}
+
+// HasActionSelectors returns true if any selector targets actions
+func HasActionSelectors(selectors []shared.Selector) bool {
+	for _, sel := range selectors {
+		if len(sel.Actions) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// MatchesAnyActionSelector checks if an action type matches any selector (OR between selectors)
+func MatchesAnyActionSelector(actionType string, selectors []shared.Selector) bool {
+	for _, sel := range selectors {
+		if slices.Contains(sel.Actions, actionType) {
 			return true
 		}
 	}

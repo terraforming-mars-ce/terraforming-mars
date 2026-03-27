@@ -891,7 +891,12 @@
           {
             "type": "discount",
             "amount": 1,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "resources": ["credit"]
+              }
+            ]
           }
         ],
         "description": "Build a city **next to no other city**. Pay 1 M€ less for all cards."
@@ -1116,9 +1121,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "space"
-                ]
+                "tags": ["space"],
+                "resources": ["credit"]
               }
             ]
           }
@@ -1693,7 +1697,18 @@
           }
         ],
         "description": "Raise your TR 2 steps and temperature 1 step. Increase your plant production 1 step, or 4 steps if you have 3 plant tags.",
-        "choicePolicy": {"type": "auto", "default": 0, "select": {"option": 1, "minMax": {"min": 3}, "resourceType": "tag", "tag": "plant"}}
+        "choicePolicy": {
+          "type": "auto",
+          "default": 0,
+          "select": {
+            "option": 1,
+            "minMax": {
+              "min": 3
+            },
+            "resourceType": "tag",
+            "tag": "plant"
+          }
+        }
       }
     ]
   },
@@ -3156,7 +3171,12 @@
           {
             "type": "discount",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "resources": ["credit"]
+              }
+            ]
           }
         ],
         "description": "Pay 2 M€ less for cards."
@@ -3586,9 +3606,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "space"
-                ]
+                "tags": ["space"],
+                "resources": ["credit"]
               }
             ]
           },
@@ -4154,9 +4173,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "space"
-                ]
+                "tags": ["space"],
+                "resources": ["credit"]
               }
             ]
           },
@@ -4588,9 +4606,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "earth"
-                ]
+                "tags": ["earth"],
+                "resources": ["credit"]
               }
             ]
           }
@@ -6493,7 +6510,12 @@
           {
             "type": "discount",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "resources": ["credit"]
+              }
+            ]
           }
         ],
         "description": "Pay 2 M€ less for all cards"
@@ -7141,9 +7163,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "space"
-                ]
+                "tags": ["space"],
+                "resources": ["credit"]
               }
             ]
           }
@@ -8396,7 +8417,12 @@
             "type": "discount",
             "amount": 8,
             "target": "self-player",
-            "temporary": "next-card"
+            "temporary": "next-card",
+            "selectors": [
+              {
+                "resources": ["credit"]
+              }
+            ]
           }
         ]
       }
@@ -11459,9 +11485,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "venus"
-                ]
+                "tags": ["venus"],
+                "resources": ["credit"]
               }
             ]
           }
@@ -12241,14 +12266,12 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "power"
-                ]
+                "tags": ["power"],
+                "resources": ["credit"]
               },
               {
-                "standardProjects": [
-                  "power-plant"
-                ]
+                "standardProjects": ["power-plant"],
+                "resources": ["credit"]
               }
             ]
           }
@@ -12413,9 +12436,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "earth"
-                ]
+                "tags": ["earth"],
+                "resources": ["credit"]
               }
             ]
           }
@@ -13839,31 +13861,21 @@
             "type": "auto"
           }
         ],
-        "choices": [
+        "outputs": [
           {
-            "outputs": [
+            "type": "discount",
+            "amount": 1,
+            "target": "self-player",
+            "selectors": [
               {
-                "type": "credit",
-                "amount": 1,
-                "target": "self-player"
-              }
-            ]
-          },
-          {
-            "outputs": [
-              {
-                "type": "titanium",
-                "amount": 1,
-                "target": "self-player"
-              }
-            ]
-          },
-          {
-            "outputs": [
-              {
-                "type": "energy",
-                "amount": 1,
-                "target": "self-player"
+                "actions": [
+                  "colony-trade"
+                ],
+                "resources": [
+                  "credit",
+                  "energy",
+                  "titanium"
+                ]
               }
             ]
           }
@@ -13904,7 +13916,12 @@
           {
             "type": "discount",
             "amount": 1,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "resources": ["credit"]
+              }
+            ]
           }
         ],
         "description": "Pay 1 M€ less for all cards. Gain 1 Trade Fleet."
@@ -14505,9 +14522,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "space"
-                ]
+                "tags": ["space"],
+                "resources": ["credit"]
               }
             ]
           }
@@ -14678,6 +14694,31 @@
           }
         ],
         "description": "You start with 50 M€. Increase your M€ production 5 steps. Gain 5 titanium."
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "discount",
+            "amount": -2,
+            "target": "self-player",
+            "selectors": [
+              {
+                "actions": [
+                  "card-buying"
+                ],
+                "resources": [
+                  "credit"
+                ]
+              }
+            ]
+          }
+        ],
+        "description": "Pay 5 M€ instead of 3 M€ when buying cards."
       }
     ]
   },
@@ -16285,9 +16326,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "building"
-                ]
+                "tags": ["building"],
+                "resources": ["credit"]
               }
             ]
           }
@@ -16396,7 +16436,9 @@
             "target": "self-player"
           }
         ],
-        "choicePolicy": {"type": "lowest"},
+        "choicePolicy": {
+          "type": "lowest"
+        },
         "choices": [
           {
             "outputs": [
@@ -16496,9 +16538,8 @@
             "target": "self-player",
             "selectors": [
               {
-                "tags": [
-                  "science"
-                ]
+                "tags": ["science"],
+                "resources": ["credit"]
               }
             ]
           }
@@ -17245,7 +17286,12 @@
           {
             "type": "discount",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "resources": ["credit"]
+              }
+            ]
           }
         ],
         "description": "Cards cost 1 M€, including your starting hand"
@@ -18501,7 +18547,12 @@
           {
             "type": "discount",
             "amount": 2,
-            "target": "self-player"
+            "target": "self-player",
+            "selectors": [
+              {
+                "resources": ["credit"]
+              }
+            ]
           }
         ],
         "description": "Pay 2 M€ less for cards with requirements"

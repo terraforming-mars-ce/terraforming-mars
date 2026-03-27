@@ -123,6 +123,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		GenerationalEvents:             convertGenerationalEvents(p.GenerationalEvents().GetAll()),
 		VPGranters:                     toVPGranterDtos(p.VPGranters().GetAll()),
 		BonusTags:                      convertBonusTags(p.BonusTags()),
+		ActionCosts:                    mapPlayerActionCosts(p, g, cardRegistry),
 	}
 }
 
@@ -993,6 +994,62 @@ func mapPlayerAwards(p *player.Player, g *game.Game, awardRegistry awards.AwardR
 			Style:       styleDtoPtr,
 		}
 		result = append(result, dto)
+	}
+
+	return result
+}
+
+func mapPlayerActionCosts(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []ActionCostDto {
+	calc := gamecards.NewRequirementModifierCalculator(cardRegistry)
+
+	cardBuyDiscounts := calc.CalculateActionDiscounts(p, shared.ActionCardBuying)
+	creditDiscount := cardBuyDiscounts[shared.ResourceCredit]
+	cardBuyBase := 3
+	cardBuyEffective := cardBuyBase - creditDiscount
+	if cardBuyEffective < 0 {
+		cardBuyEffective = 0
+	}
+
+	result := []ActionCostDto{
+		{
+			ActionType: shared.ActionCardBuying,
+			Costs: []ActionCostEntryDto{
+				{
+					Resource:      string(shared.ResourceCredit),
+					BaseCost:      cardBuyBase,
+					EffectiveCost: cardBuyEffective,
+					Discount:      creditDiscount,
+				},
+			},
+		},
+	}
+
+	if g.HasColonies() {
+		tradeDiscounts := calc.CalculateActionDiscounts(p, shared.ActionColonyTrade)
+		tradeCosts := []ActionCostEntryDto{
+			{
+				Resource:      string(shared.ResourceCredit),
+				BaseCost:      9,
+				EffectiveCost: max(9-tradeDiscounts[shared.ResourceCredit], 0),
+				Discount:      tradeDiscounts[shared.ResourceCredit],
+			},
+			{
+				Resource:      string(shared.ResourceEnergy),
+				BaseCost:      3,
+				EffectiveCost: max(3-tradeDiscounts[shared.ResourceEnergy], 0),
+				Discount:      tradeDiscounts[shared.ResourceEnergy],
+			},
+			{
+				Resource:      string(shared.ResourceTitanium),
+				BaseCost:      3,
+				EffectiveCost: max(3-tradeDiscounts[shared.ResourceTitanium], 0),
+				Discount:      tradeDiscounts[shared.ResourceTitanium],
+			},
+		}
+		result = append(result, ActionCostDto{
+			ActionType: shared.ActionColonyTrade,
+			Costs:      tradeCosts,
+		})
 	}
 
 	return result

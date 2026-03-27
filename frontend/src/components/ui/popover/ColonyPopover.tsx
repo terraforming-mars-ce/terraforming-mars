@@ -41,9 +41,19 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
   } | null>(null);
 
   const resources = gameState?.currentPlayer?.resources;
-  const canAffordCredits = (resources?.credits ?? 0) >= 9;
-  const canAffordEnergy = (resources?.energy ?? 0) >= 3;
-  const canAffordTitanium = (resources?.titanium ?? 0) >= 3;
+  const tradeActionCosts = gameState?.currentPlayer?.actionCosts?.find(
+    (a) => a.actionType === "colony-trade",
+  );
+  const tradeCreditsCost =
+    tradeActionCosts?.costs.find((c) => c.resource === "credit")?.effectiveCost ?? 9;
+  const tradeEnergyCost =
+    tradeActionCosts?.costs.find((c) => c.resource === "energy")?.effectiveCost ?? 3;
+  const tradeTitaniumCost =
+    tradeActionCosts?.costs.find((c) => c.resource === "titanium")?.effectiveCost ?? 3;
+
+  const canAffordCredits = (resources?.credits ?? 0) >= tradeCreditsCost;
+  const canAffordEnergy = (resources?.energy ?? 0) >= tradeEnergyCost;
+  const canAffordTitanium = (resources?.titanium ?? 0) >= tradeTitaniumCost;
 
   const defaultPayment = (): TradePaymentType => {
     if (canAffordCredits) return "credits";
@@ -228,6 +238,11 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
               canAct={canAct}
               viewingPlayerId={gameState?.viewingPlayerId ?? ""}
               tradePayment={tradePayment}
+              tradeCosts={{
+                credits: { icon: ResourceTypeCredit, amount: tradeCreditsCost },
+                energy: { icon: ResourceTypeEnergy, amount: tradeEnergyCost },
+                titanium: { icon: ResourceTypeTitanium, amount: tradeTitaniumCost },
+              }}
               getPlayerColor={getPlayerColor}
               getPlayerName={getPlayerName}
               onTrade={handleTrade}
@@ -254,17 +269,12 @@ interface ColonyTileCardProps {
   canAct: boolean;
   viewingPlayerId: string;
   tradePayment: TradePaymentType;
+  tradeCosts: Record<TradePaymentType, { icon: string; amount: number }>;
   getPlayerColor: (playerId: string) => string;
   getPlayerName: (playerId: string) => string;
   onTrade: (colonyId: string) => void;
   onBuild: (colonyId: string) => void;
 }
-
-const TRADE_PAYMENT_CONFIG: Record<TradePaymentType, { icon: string; amount: number }> = {
-  credits: { icon: ResourceTypeCredit, amount: 9 },
-  energy: { icon: ResourceTypeEnergy, amount: 3 },
-  titanium: { icon: ResourceTypeTitanium, amount: 3 },
-};
 
 const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
   colony,
@@ -272,6 +282,7 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
   canAct,
   viewingPlayerId,
   tradePayment,
+  tradeCosts,
   getPlayerColor,
   getPlayerName,
   onTrade,
@@ -367,7 +378,7 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
       {/* Info row: cost → gain (layered for cross-fade without re-mount) */}
       <div className="relative h-7">
         {(["credits", "energy", "titanium"] as TradePaymentType[]).map((pt) => {
-          const config = TRADE_PAYMENT_CONFIG[pt];
+          const config = tradeCosts[pt];
           return (
             <div
               key={pt}

@@ -230,13 +230,29 @@ func (a *SelectStartingChoicesAction) validateStartingCards(g *game.Game, p *pla
 		}
 	}
 
-	cost := len(cardIDs) * 3
+	costPerCard := getCardBuyCost(a.cardRegistry, corporationID)
+	cost := len(cardIDs) * costPerCard
 	startingCredits := getCorpStartingCredits(a.cardRegistry, corporationID)
 	if startingCredits < cost {
 		return fmt.Errorf("insufficient credits: need %d, corp provides %d", cost, startingCredits)
 	}
 
 	return nil
+}
+
+// getCardBuyCost returns the per-card buy cost accounting for corporation effects (e.g., Polyphemos pays 5 instead of 3)
+func getCardBuyCost(cardRegistry cards.CardRegistry, corporationID string) int {
+	baseCost := 3
+	corpCard, err := cardRegistry.GetByID(corporationID)
+	if err != nil {
+		return baseCost
+	}
+	discount := gamecards.CalculateActionDiscountsFromCard(corpCard, shared.ActionCardBuying)
+	effectiveCost := baseCost - discount
+	if effectiveCost < 0 {
+		effectiveCost = 0
+	}
+	return effectiveCost
 }
 
 // getCorpStartingCredits calculates the starting credits a corporation provides
@@ -391,7 +407,8 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 	}
 
 	// Purchase project cards now that starting credits are applied
-	cost := len(choices.CardIDs) * 3
+	costPerCard := getCardBuyCost(cardRegistry, choices.CorporationID)
+	cost := len(choices.CardIDs) * costPerCard
 	if cost > 0 {
 		p.Resources().Add(map[shared.ResourceType]int{
 			shared.ResourceCredit: -cost,

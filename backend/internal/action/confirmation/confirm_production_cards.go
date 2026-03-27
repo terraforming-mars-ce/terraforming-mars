@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -81,7 +82,10 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		}
 	}
 
-	cost := len(selectedCardIDs) * 3
+	calc := gamecards.NewRequirementModifierCalculator(a.CardRegistry())
+	cardBuyDiscounts := calc.CalculateActionDiscounts(player, shared.ActionCardBuying)
+	costPerCard := max(3-cardBuyDiscounts[shared.ResourceCredit], 0)
+	cost := len(selectedCardIDs) * costPerCard
 
 	resources := player.Resources().Get()
 	if resources.Credits < cost {

@@ -177,5 +177,6 @@ export function historyPlayerToPlayerDto(
     generationalEvents: [],
     vpGranters: [],
     bonusTags: {},
+    actionCosts: [],
   };
 }

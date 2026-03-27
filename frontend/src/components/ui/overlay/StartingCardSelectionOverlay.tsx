@@ -45,7 +45,45 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
     [availableCorporations, selectedCorporationId],
   );
 
-  const effectiveCredits = selectedCorp?.startingResources?.credits ?? playerCredits;
+  const effectiveCredits = useMemo(() => {
+    if (!selectedCorp) {
+      return playerCredits;
+    }
+    if (selectedCorp.startingResources?.credits != null) {
+      return selectedCorp.startingResources.credits;
+    }
+    let credits = 0;
+    for (const behavior of selectedCorp.behaviors ?? []) {
+      const isCorpStart = behavior.triggers?.some((t) => t.type === "auto-corporation-start");
+      if (isCorpStart) {
+        for (const output of behavior.outputs ?? []) {
+          if (output.type === "credit") {
+            credits += output.amount;
+          }
+        }
+      }
+    }
+    return credits || playerCredits;
+  }, [selectedCorp, playerCredits]);
+
+  const costPerCard = useMemo(() => {
+    if (!selectedCorp?.behaviors) {
+      return 3;
+    }
+    let discount = 0;
+    for (const behavior of selectedCorp.behaviors) {
+      for (const output of behavior.outputs ?? []) {
+        if (output.type === "discount" && output.selectors) {
+          for (const sel of output.selectors) {
+            if (sel.actions?.includes("card-buying")) {
+              discount += output.amount;
+            }
+          }
+        }
+      }
+    }
+    return Math.max(3 - discount, 0);
+  }, [selectedCorp]);
 
   const {
     selectedCardIds,
@@ -58,7 +96,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
     cards,
     isOpen,
     playerCredits: effectiveCredits,
-    costPerCard: 3,
+    costPerCard,
     minCards: 0,
   });
 
@@ -106,7 +144,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
           <p className={OVERLAY_DESCRIPTION_CLASS}>
             Choose your corporation
             {hasPreludes ? ", prelude cards," : ""} and starting project cards. Each project card
-            costs 3 MC.
+            costs {costPerCard} MC.
           </p>
         </div>
 
