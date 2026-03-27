@@ -137,14 +137,14 @@ The PR body should be a concise, scannable list of what changed — no test plan
 - For small PRs: a flat bullet list of changes
 - For larger PRs: group bullets under feature-area headings
 
-### Closing issues
+### Closes issues
 
-When the PR closes one or more issues, list each `Closing #xxx` on its own line at the end of the body. Never combine them on a single line.
+When the PR closes one or more issues, list each `Closes #xxx` on its own line at the end of the body. Never combine them on a single line.
 
 ```
-Closing #12
-Closing #34
-Closing #56
+Closes #12
+Closes #34
+Closes #56
 ```
 
 ```bash
