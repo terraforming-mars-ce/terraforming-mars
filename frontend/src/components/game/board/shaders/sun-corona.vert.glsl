@@ -1,9 +1,11 @@
-uniform vec3 viewVector;
-uniform float glowPower;
-varying float intensity;
+varying vec3 vNormal;
+varying vec3 vViewPosition;
+varying vec3 vWorldPosition;
 
 void main() {
-  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
-  vec3 actual_normal = vec3(modelMatrix * vec4(normal, 0.0));
-  intensity = pow(dot(normalize(viewVector), actual_normal), glowPower);
+  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  vViewPosition = normalize(mvPosition.xyz);
+  vNormal = normalize(normalMatrix * normal);
+  vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+  gl_Position = projectionMatrix * mvPosition;
 }

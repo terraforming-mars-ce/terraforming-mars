@@ -8,6 +8,8 @@ import {
   createNuclearZoneMaterial,
   createWorldTreeMaterial,
 } from "./shaders";
+import sunCoronaVert from "./shaders/sun-corona.vert.glsl?raw";
+import sunCoronaFrag from "./shaders/sun-corona.frag.glsl?raw";
 import { computeFlowMap } from "./volcanoFlowMap";
 import {
   variantCache,
@@ -20,8 +22,6 @@ import {
 } from "./GreeneryRenderer";
 import { useModels } from "../../../hooks/useModels";
 import { useTextures } from "../../../hooks/useTextures";
-import sunCoronaVert from "./shaders/sun-corona.vert.glsl?raw";
-import sunCoronaFrag from "./shaders/sun-corona.frag.glsl?raw";
 
 const WARMUP_SCALE = 0.001;
 const WARMUP_FRAMES = 3;
@@ -198,13 +198,26 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   // --- Solar system warmup materials ---
   const solarSphereGeometry = useMemo(() => new THREE.SphereGeometry(WARMUP_SCALE, 8, 4), []);
 
+  const sunBasicMaterial = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        map: textures.sun,
+        color: new THREE.Color(1, 1, 1),
+        fog: false,
+      }),
+    [textures.sun],
+  );
+
   const sunCoronaMaterial = useMemo(
     () =>
       new THREE.ShaderMaterial({
         uniforms: {
-          viewVector: { value: new THREE.Vector3(0, 0, 1) },
-          glowColor: { value: new THREE.Color(1.0, 0.6, 0.2) },
-          glowPower: { value: 3.0 },
+          glowColor: { value: new THREE.Color(1.0, 0.5, 0.1) },
+          glowPower: { value: 2.0 },
+          glowStrength: { value: 1.5 },
+          uTime: { value: 0 },
+          noiseScale: { value: 3.0 },
+          noiseStrength: { value: 0.7 },
         },
         vertexShader: sunCoronaVert,
         fragmentShader: sunCoronaFrag,
@@ -215,16 +228,6 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
         fog: false,
       }),
     [],
-  );
-
-  const sunBasicMaterial = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        map: textures.sun,
-        color: new THREE.Color(1, 1, 1),
-        fog: false,
-      }),
-    [textures.sun],
   );
 
   const planetTextureKeys = [

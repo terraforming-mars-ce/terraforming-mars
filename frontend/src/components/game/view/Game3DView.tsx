@@ -76,7 +76,6 @@ function CentralSunLight({ startDark = false }: { startDark?: boolean }) {
 
 function SunMesh() {
   const { sun: sunTexture } = useTextures();
-  const { camera } = useThree();
 
   const SUN_RADIUS = 22;
 
@@ -91,18 +90,22 @@ function SunMesh() {
     [sunTexture],
   );
 
-  const coronaGeometry = useMemo(() => new THREE.SphereGeometry(SUN_RADIUS, 32, 16), []);
-  const coronaMaterial = useMemo(
+  const coronaGeometry = useMemo(() => new THREE.SphereGeometry(SUN_RADIUS, 48, 24), []);
+
+  const outerCoronaMaterial = useMemo(
     () =>
       new THREE.ShaderMaterial({
         uniforms: {
-          viewVector: { value: new THREE.Vector3() },
-          glowColor: { value: new THREE.Color(1.0, 0.6, 0.2) },
-          glowPower: { value: 3.0 },
+          glowColor: { value: new THREE.Color(1.0, 0.5, 0.1) },
+          glowPower: { value: 2.0 },
+          glowStrength: { value: 1.2 },
+          uTime: { value: 0 },
+          noiseScale: { value: 3.0 },
+          noiseStrength: { value: 0.7 },
         },
         vertexShader: sunCoronaVert,
         fragmentShader: sunCoronaFrag,
-        side: THREE.BackSide,
+        side: THREE.FrontSide,
         blending: THREE.AdditiveBlending,
         transparent: true,
         depthWrite: false,
@@ -111,17 +114,20 @@ function SunMesh() {
     [],
   );
 
-  const innerGlowMaterial = useMemo(
+  const innerCoronaMaterial = useMemo(
     () =>
       new THREE.ShaderMaterial({
         uniforms: {
-          viewVector: { value: new THREE.Vector3() },
-          glowColor: { value: new THREE.Color(1.0, 0.9, 0.6) },
-          glowPower: { value: 1.2 },
+          glowColor: { value: new THREE.Color(1.0, 0.85, 0.5) },
+          glowPower: { value: 3.5 },
+          glowStrength: { value: 2.0 },
+          uTime: { value: 0 },
+          noiseScale: { value: 5.0 },
+          noiseStrength: { value: 0.3 },
         },
         vertexShader: sunCoronaVert,
         fragmentShader: sunCoronaFrag,
-        side: THREE.BackSide,
+        side: THREE.FrontSide,
         blending: THREE.AdditiveBlending,
         transparent: true,
         depthWrite: false,
@@ -130,43 +136,17 @@ function SunMesh() {
     [],
   );
 
-  const hazeTexture = useMemo(() => {
-    const size = 256;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d")!;
-    const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-    gradient.addColorStop(0, "rgba(255, 200, 100, 0.6)");
-    gradient.addColorStop(0.15, "rgba(255, 150, 50, 0.3)");
-    gradient.addColorStop(0.4, "rgba(255, 100, 20, 0.08)");
-    gradient.addColorStop(1, "rgba(255, 80, 0, 0.0)");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, size, size);
-    return new THREE.CanvasTexture(canvas);
-  }, []);
-
-  useFrame(() => {
-    const viewVec = camera.position.clone();
-    coronaMaterial.uniforms.viewVector.value.copy(viewVec);
-    innerGlowMaterial.uniforms.viewVector.value.copy(viewVec);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    outerCoronaMaterial.uniforms.uTime.value = t;
+    innerCoronaMaterial.uniforms.uTime.value = t;
   });
 
   return (
     <group>
       <mesh geometry={geometry} material={material} />
-      <mesh geometry={coronaGeometry} material={coronaMaterial} scale={[1.35, 1.35, 1.35]} />
-      <mesh geometry={coronaGeometry} material={innerGlowMaterial} scale={[1.15, 1.15, 1.15]} />
-      <sprite scale={[SUN_RADIUS * 5, SUN_RADIUS * 5, 1]}>
-        <spriteMaterial
-          map={hazeTexture}
-          blending={THREE.AdditiveBlending}
-          transparent={true}
-          depthWrite={false}
-          color="#ffaa44"
-          fog={false}
-        />
-      </sprite>
+      <mesh geometry={coronaGeometry} material={outerCoronaMaterial} scale={[1.3, 1.3, 1.3]} />
+      <mesh geometry={coronaGeometry} material={innerCoronaMaterial} scale={[1.15, 1.15, 1.15]} />
     </group>
   );
 }
