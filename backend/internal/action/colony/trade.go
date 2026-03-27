@@ -10,6 +10,7 @@ import (
 	"terraforming-mars-backend/internal/colonies"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 
@@ -100,19 +101,26 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		return fmt.Errorf("colony tile already traded this generation")
 	}
 
+	// Calculate effective trade costs with discounts (e.g., Rim Freighters)
+	calc := gamecards.NewRequirementModifierCalculator(a.cardRegistry)
+	tradeDiscounts := calc.CalculateActionDiscounts(traderPlayer, shared.ActionColonyTrade)
+	effectiveCreditsCost := max(TradeCreditsCost-tradeDiscounts[shared.ResourceCredit], 0)
+	effectiveEnergyCost := max(TradeEnergyCost-tradeDiscounts[shared.ResourceEnergy], 0)
+	effectiveTitaniumCost := max(TradeTitaniumCost-tradeDiscounts[shared.ResourceTitanium], 0)
+
 	resources := traderPlayer.Resources().Get()
 	switch paymentType {
 	case TradePaymentCredits:
-		if resources.Credits < TradeCreditsCost {
-			return fmt.Errorf("insufficient credits: need %d, have %d", TradeCreditsCost, resources.Credits)
+		if resources.Credits < effectiveCreditsCost {
+			return fmt.Errorf("insufficient credits: need %d, have %d", effectiveCreditsCost, resources.Credits)
 		}
 	case TradePaymentEnergy:
-		if resources.Energy < TradeEnergyCost {
-			return fmt.Errorf("insufficient energy: need %d, have %d", TradeEnergyCost, resources.Energy)
+		if resources.Energy < effectiveEnergyCost {
+			return fmt.Errorf("insufficient energy: need %d, have %d", effectiveEnergyCost, resources.Energy)
 		}
 	case TradePaymentTitanium:
-		if resources.Titanium < TradeTitaniumCost {
-			return fmt.Errorf("insufficient titanium: need %d, have %d", TradeTitaniumCost, resources.Titanium)
+		if resources.Titanium < effectiveTitaniumCost {
+			return fmt.Errorf("insufficient titanium: need %d, have %d", effectiveTitaniumCost, resources.Titanium)
 		}
 	default:
 		return fmt.Errorf("invalid trade payment type: %s", paymentType)
@@ -127,15 +135,15 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 	switch paymentType {
 	case TradePaymentCredits:
 		traderPlayer.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceCredit: -TradeCreditsCost,
+			shared.ResourceCredit: -effectiveCreditsCost,
 		})
 	case TradePaymentEnergy:
 		traderPlayer.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceEnergy: -TradeEnergyCost,
+			shared.ResourceEnergy: -effectiveEnergyCost,
 		})
 	case TradePaymentTitanium:
 		traderPlayer.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceTitanium: -TradeTitaniumCost,
+			shared.ResourceTitanium: -effectiveTitaniumCost,
 		})
 	}
 
