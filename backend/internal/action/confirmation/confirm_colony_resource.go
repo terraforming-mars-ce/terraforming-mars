@@ -47,14 +47,11 @@ func (a *ConfirmColonyResourceAction) Execute(ctx context.Context, gameID string
 		return err
 	}
 
-	selection := p.Selection().GetPendingColonyResourceSelection()
+	selection := p.Selection().PopPendingColonyResource()
 	if selection == nil {
 		log.Warn("No pending colony resource selection found")
 		return fmt.Errorf("no pending colony resource selection found")
 	}
-
-	// Clear the selection first
-	p.Selection().SetPendingColonyResourceSelection(nil)
 
 	// If empty target, player skipped (no eligible card or chose to skip)
 	if targetCardID == "" {

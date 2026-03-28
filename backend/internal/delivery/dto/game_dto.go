@@ -690,9 +690,10 @@ type PendingStealTargetSelectionDto struct {
 type ColonyResourceReason string
 
 const (
-	ColonyResourceReasonTrade     ColonyResourceReason = "trade"
-	ColonyResourceReasonColonyTax ColonyResourceReason = "colony-tax"
-	ColonyResourceReasonBuild     ColonyResourceReason = "build"
+	ColonyResourceReasonTrade       ColonyResourceReason = "trade"
+	ColonyResourceReasonColonyTax   ColonyResourceReason = "colony-tax"
+	ColonyResourceReasonBuild       ColonyResourceReason = "build"
+	ColonyResourceReasonColonyBonus ColonyResourceReason = "colony-bonus"
 )
 
 // PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
@@ -733,6 +734,7 @@ const (
 	PlayerStatusSelectingProductionCards PlayerStatus = "selecting-production-cards"
 	PlayerStatusWaiting                  PlayerStatus = "waiting"
 	PlayerStatusActive                   PlayerStatus = "active"
+	PlayerStatusSelection                PlayerStatus = "selection"
 	PlayerStatusExited                   PlayerStatus = "exited"
 )
 

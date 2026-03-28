@@ -86,7 +86,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		Resources:        toResourcesDto(resources),
 		Production:       toProductionDto(production),
 		TerraformRating:  resourcesComponent.TerraformRating(),
-		Status:           playerStatus(p),
+		Status:           playerStatus(p, g),
 		Corporation:      corporation,
 		Cards:            handCards, // PlayerCardDto[] with state
 		PlayedCards:      playedCards,
@@ -112,7 +112,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		PendingCardDiscardSelection:    convertPendingCardDiscardSelection(p.Selection().GetPendingCardDiscardSelection()),
 		PendingBehaviorChoiceSelection: convertPendingBehaviorChoiceSelection(p.Selection().GetPendingBehaviorChoiceSelection(), p, g, cardRegistry),
 		PendingStealTargetSelection:    convertPendingStealTargetSelection(p.Selection().GetPendingStealTargetSelection()),
-		PendingColonyResourceSelection: convertPendingColonyResourceSelection(p.Selection().GetPendingColonyResourceSelection()),
+		PendingColonyResourceSelection: convertPendingColonyResourceFromQueue(p.Selection().GetPendingColonyResourceQueue()),
 		PendingAwardFundSelection:      convertPendingAwardFundSelection(p.Selection().GetPendingAwardFundSelection()),
 		PendingColonySelection:         convertPendingColonySelection(p.Selection().GetPendingColonySelection()),
 		PendingFreeTradeSelection:      convertPendingFreeTradeSelection(p.Selection().GetPendingFreeTradeSelection()),
@@ -149,7 +149,7 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		Resources:        toResourcesDto(resources),
 		Production:       toProductionDto(production),
 		TerraformRating:  resourcesComponent.TerraformRating(),
-		Status:           playerStatus(p),
+		Status:           playerStatus(p, g),
 		Corporation:      corporation,
 		HandCardCount:    handCardCount,
 		PlayedCards:      playedCards,
@@ -184,9 +184,12 @@ func convertBonusTags(tags map[shared.CardTag]int) map[string]int {
 	return result
 }
 
-func playerStatus(p *player.Player) PlayerStatus {
+func playerStatus(p *player.Player, g *game.Game) PlayerStatus {
 	if p.HasExited() {
 		return PlayerStatusExited
+	}
+	if g.HasAnyPendingSelection(p.ID()) {
+		return PlayerStatusSelection
 	}
 	return PlayerStatusWaiting
 }
@@ -530,11 +533,11 @@ func convertPendingStealTargetSelection(selection *shared.PendingStealTargetSele
 	}
 }
 
-func convertPendingColonyResourceSelection(selection *shared.PendingColonyResourceSelection) *PendingColonyResourceSelectionDto {
-	if selection == nil {
+func convertPendingColonyResourceFromQueue(queue []shared.PendingColonyResourceSelection) *PendingColonyResourceSelectionDto {
+	if len(queue) == 0 {
 		return nil
 	}
-
+	selection := queue[0]
 	return &PendingColonyResourceSelectionDto{
 		ResourceType: selection.ResourceType,
 		Amount:       selection.Amount,

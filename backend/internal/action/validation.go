@@ -154,3 +154,16 @@ func ValidateActionsRemaining(
 
 	return nil
 }
+
+// ValidateNoPendingSelections validates that the player has no pending selections.
+// Actions should be blocked while a player is resolving a pending selection.
+func ValidateNoPendingSelections(
+	gameInstance *game.Game,
+	playerID string,
+	log *zap.Logger,
+) error {
+	if gameInstance.HasAnyPendingSelection(playerID) {
+		return fmt.Errorf("pending selection")
+	}
+	return nil
+}
