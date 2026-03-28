@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
 import {
   GameDto,
@@ -12,7 +12,7 @@ import {
 import { StandardProject } from "@/types/cards.tsx";
 import { Z_INDEX } from "@/constants/zIndex";
 import { canPerformActions } from "@/utils/actionUtils.ts";
-import SoundToggleButton from "../../ui/buttons/SoundToggleButton.tsx";
+import GameHamburgerMenu from "../../ui/GameHamburgerMenu.tsx";
 import TravelPopover from "../../ui/popover/TravelPopover.tsx";
 import StandardProjectPopover from "../../ui/popover/StandardProjectPopover.tsx";
 import MilestonePopover from "../../ui/popover/MilestonePopover.tsx";
@@ -21,32 +21,35 @@ import ColonyPopover from "../../ui/popover/ColonyPopover.tsx";
 import ProjectFundingPopover from "../../ui/popover/ProjectFundingPopover.tsx";
 import { GamePopover } from "../../ui/GamePopover";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
-import {
-  MenuPopoverItem,
-  MenuPopoverDivider,
-  MenuPopoverVersion,
-} from "../../ui/MenuPopoverItem.tsx";
-import {
-  CopyIcon,
-  FullscreenIcon,
-  ExitFullscreenIcon,
-  PerformanceIcon,
-  FeedbackIcon,
-  LeaveIcon,
-  EndGameIcon,
-} from "../../ui/menuIcons.tsx";
+import { HamburgerIcon, EyeIcon } from "../../ui/menuIcons.tsx";
 
 const ANGLE_INDENT = 20;
 const BUTTON_SPACING = 6;
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
-const HAMBURGER_WIDTH = 56;
+const HAMBURGER_WIDTH = 65;
 const HAMBURGER_COLOR = "#ffffff";
 const TRAVEL_WIDTH = 140;
 const TRAVEL_COLOR = "#7eb8da";
 
+const MilestoneAlertIndicator: React.FC<{ visible: boolean; top: number }> = ({ visible, top }) => (
+  <div
+    className={`absolute left-1/2 -translate-x-1/2 pointer-events-none transition-opacity duration-500 ${
+      visible ? "opacity-100" : "opacity-0"
+    }`}
+    style={{ top }}
+  >
+    <span
+      className="font-orbitron font-bold text-[11px] leading-none animate-[milestoneIndicatorPulse_2s_ease-in-out_infinite] flex items-center justify-center w-5 h-5 rounded-full border border-yellow-400/70"
+      style={{ color: "#facc15", paddingTop: 1 }}
+    >
+      !
+    </span>
+  </div>
+);
+
+type EdgeStyle = "slope-left" | "slope-right" | "flat";
+
 interface ParallelogramButtonProps {
-  index: number;
-  total: number;
   width: number;
   height: number;
   color: string;
@@ -54,10 +57,13 @@ interface ParallelogramButtonProps {
   onClick: () => void;
   buttonRef: React.RefObject<HTMLButtonElement | null>;
   isActive?: boolean;
+  leftEdge?: EdgeStyle;
+  rightEdge?: EdgeStyle;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
-  index,
   width,
   height,
   color,
@@ -65,26 +71,39 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
   onClick,
   buttonRef,
   isActive = false,
+  leftEdge: left = "flat",
+  rightEdge: right = "flat",
+  className = "",
+  style: extraStyle,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const hoverSound = useHoverSound();
-  const isFirst = index === 0;
+  const active = isHovered || isActive;
 
-  // For parallelogram: both angled edges slant the same direction (\)
-  // First button: flat left, angled right
-  // Others: angled left (top-left to bottom-right), angled right
-  const fillPoints = isFirst
-    ? `0,0 ${width - ANGLE_INDENT},0 ${width},${height} 0,${height}`
-    : `0,0 ${width - ANGLE_INDENT},0 ${width},${height} ${ANGLE_INDENT},${height}`;
+  const ai = ANGLE_INDENT;
+  const w = width;
+  const h = height;
 
-  const topEdge = isFirst
-    ? { x1: 0, y1: 0, x2: width - ANGLE_INDENT, y2: 0 }
-    : { x1: 0, y1: 0, x2: width - ANGLE_INDENT, y2: 0 };
+  // slope-left (\): top indented, bottom at edge
+  // slope-right (/): top at edge, bottom indented
+  const tl = left === "slope-left" ? ai : 0;
+  const bl = left === "slope-right" ? ai : 0;
+  const tr = right === "slope-left" ? w - ai : w;
+  const br = right === "slope-right" ? w - ai : w;
 
-  const rightEdge = { x1: width - ANGLE_INDENT, y1: 0, x2: width, y2: height };
+  const fillPoints = `${tl},0 ${tr},0 ${br},${h} ${bl},${h}`;
 
-  // Left edge for non-first: from (0, 0) to (ANGLE_INDENT, height) - same slant direction as right
-  const leftEdge = isFirst ? null : { x1: 0, y1: 0, x2: ANGLE_INDENT, y2: height };
+  const edges: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+  if (left === "slope-left") {
+    edges.push({ x1: ai, y1: 0, x2: 0, y2: h });
+  } else if (left === "slope-right") {
+    edges.push({ x1: 0, y1: 0, x2: ai, y2: h });
+  }
+  if (right === "slope-left") {
+    edges.push({ x1: w - ai, y1: 0, x2: w, y2: h });
+  } else if (right === "slope-right") {
+    edges.push({ x1: w, y1: 0, x2: w - ai, y2: h });
+  }
 
   return (
     <button
@@ -98,54 +117,42 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
         hoverSound.onMouseEnter?.();
       }}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative pointer-events-auto cursor-pointer outline-none"
-      style={{
-        width,
-        height,
-        marginLeft: isFirst ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
-        zIndex: 10 - index,
-      }}
+      className={`relative pointer-events-auto cursor-pointer outline-none ${className}`}
+      style={{ width, height, ...extraStyle }}
     >
       <svg
         className="absolute inset-0 w-full h-full"
-        viewBox={`0 0 ${width} ${height}`}
+        viewBox={`0 0 ${w} ${h}`}
         preserveAspectRatio="none"
       >
         <polygon
           points={fillPoints}
-          fill={isHovered || isActive ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
+          fill={active ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
         />
         <line
-          x1={topEdge.x1}
-          y1={topEdge.y1}
-          x2={topEdge.x2}
-          y2={topEdge.y2}
-          stroke={isHovered || isActive ? color : BORDER_COLOR}
+          x1={tl}
+          y1={0}
+          x2={tr}
+          y2={0}
+          stroke={active ? color : BORDER_COLOR}
           strokeWidth="3"
         />
-        <line
-          x1={rightEdge.x1}
-          y1={rightEdge.y1}
-          x2={rightEdge.x2}
-          y2={rightEdge.y2}
-          stroke={BORDER_COLOR}
-          strokeWidth="2"
-        />
-        {leftEdge && (
+        {edges.map((e, i) => (
           <line
-            x1={leftEdge.x1}
-            y1={leftEdge.y1}
-            x2={leftEdge.x2}
-            y2={leftEdge.y2}
+            key={i}
+            x1={e.x1}
+            y1={e.y1}
+            x2={e.x2}
+            y2={e.y2}
             stroke={BORDER_COLOR}
             strokeWidth="2"
           />
-        )}
+        ))}
       </svg>
       <div className="relative z-10 h-full flex items-center justify-center px-4">
         <span
           className={`font-orbitron font-bold text-sm uppercase tracking-wider transition-colors duration-200 ${
-            isHovered || isActive ? "text-white" : "text-white/80"
+            active ? "text-white" : "text-white/80"
           }`}
         >
           {children}
@@ -279,41 +286,12 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
 }) => {
   const { activePlanet } = usePlanetFocus();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hamburgerHovered, setHamburgerHovered] = useState(false);
-  const [travelHovered, setTravelHovered] = useState(false);
   const [showTravelPopover, setShowTravelPopover] = useState(false);
   const travelButtonRef = useRef<HTMLButtonElement>(null);
-  const [eyeHovered, setEyeHovered] = useState(false);
+
   const [spectatorsOpen, setSpectatorsOpen] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
   const hamburgerButtonRef = useRef<HTMLButtonElement>(null);
   const eyeButtonRef = useRef<HTMLButtonElement>(null);
-  const menuItemHover = useHoverSound();
-
-  useEffect(() => {
-    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setMenuOpen((prev) => !prev);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const handleToggleFullscreen = useCallback(() => {
-    if (isFullscreen) {
-      void document.exitFullscreen();
-    } else {
-      void document.documentElement.requestFullscreen();
-    }
-    setMenuOpen(false);
-  }, [isFullscreen]);
 
   const [showStandardProjectsPopover, setShowStandardProjectsPopover] = useState(false);
   const [showMilestonePopover, setShowMilestonePopover] = useState(false);
@@ -325,24 +303,6 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   const awardsButtonRef = useRef<HTMLButtonElement>(null);
   const coloniesButtonRef = useRef<HTMLButtonElement>(null);
   const projectFundingButtonRef = useRef<HTMLButtonElement>(null);
-
-  const handleCopyGameLink = async () => {
-    if (gameId) {
-      const url = `${window.location.origin}/game/${gameId}`;
-      await navigator.clipboard.writeText(url);
-      setMenuOpen(false);
-    }
-  };
-
-  const handleLeaveGame = () => {
-    setMenuOpen(false);
-    onLeaveGame?.();
-  };
-
-  const handleEndGame = () => {
-    setMenuOpen(false);
-    onEndGame?.();
-  };
 
   const handleStandardProjectSelect = (project: StandardProject) => {
     setShowStandardProjectsPopover(false);
@@ -424,430 +384,221 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   const EYE_WIDTH = 68;
 
   return (
-    <div
-      className="bg-transparent relative pointer-events-none"
-      style={{ zIndex: Z_INDEX.TOP_MENU_ALWAYS_ON_TOP }}
-    >
-      <div className="flex justify-between items-center px-2 h-[60px] max-lg:h-[50px] max-md:flex-wrap">
-        <div
-          className={`flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left transition-opacity duration-500 ease-in-out ${activePlanet === "solar-system" ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-          style={{ transform: `scale(${topBarScale})` }}
-        >
-          {!isInitPhase &&
-            !isEndgame &&
-            menuItems.map((item, index) => (
-              <div key={item.id} className="relative">
-                <ParallelogramButton
-                  index={index}
-                  total={menuItems.length}
-                  width={buttonWidths[index]}
-                  height={buttonHeight}
-                  color={item.color}
-                  onClick={() => handleTabClick(item.id)}
-                  buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
-                  isActive={
-                    (item.id === "projects" && showStandardProjectsPopover) ||
-                    (item.id === "milestones" && showMilestonePopover) ||
-                    (item.id === "awards" && showAwardPopover) ||
-                    (item.id === "colonies" && showColonyPopover) ||
-                    (item.id === "funding" && showProjectFundingPopover)
-                  }
-                >
-                  {item.label}
-                </ParallelogramButton>
-                {item.id === "milestones" && (
-                  <div
-                    className={`absolute left-1/2 -translate-x-1/2 pointer-events-none transition-opacity duration-500 ${
-                      hasEligibleMilestones && !showMilestonePopover ? "opacity-100" : "opacity-0"
-                    }`}
-                    style={{ top: buttonHeight + 6 }}
-                  >
-                    <span
-                      className="font-orbitron font-bold text-sm animate-[milestoneIndicatorPulse_2s_ease-in-out_infinite] flex items-center justify-center w-5 h-5 rounded-full border border-yellow-400/70"
-                      style={{ color: "#facc15" }}
-                    >
-                      !
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-        </div>
-
-        <div
-          className="origin-top-right flex items-center"
-          style={{ transform: `scale(${topBarScale})` }}
-        >
-          {isEndgame && onEndgamePanelChange && (
-            <div className="flex items-center pointer-events-auto">
-              {ENDGAME_BUTTONS.filter(
-                (btn) => (btn.id !== "graphs" && btn.id !== "replay") || hasHistory,
-              ).map((btn, idx) => {
-                const isActive = activeEndgamePanel === btn.id;
-                return (
-                  <EndgameTabButton
-                    key={btn.id}
-                    label={btn.label}
-                    width={btn.width}
+    <>
+      <div
+        className="bg-transparent relative pointer-events-none"
+        style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}
+      >
+        <div className="flex justify-between items-center px-2 h-[60px] max-lg:h-[50px] max-md:flex-wrap">
+          <div
+            className={`flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left transition-opacity duration-500 ease-in-out ${activePlanet === "solar-system" ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+            style={{ transform: `scale(${topBarScale})` }}
+          >
+            {!isInitPhase &&
+              !isEndgame &&
+              menuItems.map((item, index) => (
+                <div key={item.id} className="relative">
+                  <ParallelogramButton
+                    width={buttonWidths[index]}
                     height={buttonHeight}
-                    isFirst={idx === 0}
-                    isActive={isActive}
-                    onClick={() => onEndgamePanelChange(btn.id)}
-                  />
-                );
-              })}
-            </div>
-          )}
-          {spectators.length > 0 && (
-            <button
-              ref={eyeButtonRef}
-              onClick={() => setSpectatorsOpen(!spectatorsOpen)}
-              onMouseEnter={() => setEyeHovered(true)}
-              onMouseLeave={() => setEyeHovered(false)}
-              aria-label="Spectators"
-              className="relative pointer-events-auto cursor-pointer outline-none"
-              style={{
-                width: EYE_WIDTH,
-                height: buttonHeight,
-                marginRight: -ANGLE_INDENT + BUTTON_SPACING,
-              }}
-            >
-              <svg
-                className="absolute inset-0 w-full h-full"
-                viewBox={`0 0 ${EYE_WIDTH} ${buttonHeight}`}
-                preserveAspectRatio="none"
-              >
-                <polygon
-                  points={`${ANGLE_INDENT},0 ${EYE_WIDTH},0 ${EYE_WIDTH - ANGLE_INDENT},${buttonHeight} 0,${buttonHeight}`}
-                  fill={eyeHovered ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
-                />
-                <line
-                  x1={ANGLE_INDENT}
-                  y1={0}
-                  x2={EYE_WIDTH}
-                  y2={0}
-                  stroke={eyeHovered ? "#7eb8da" : BORDER_COLOR}
-                  strokeWidth="3"
-                />
-                <line
-                  x1={EYE_WIDTH}
-                  y1={0}
-                  x2={EYE_WIDTH - ANGLE_INDENT}
-                  y2={buttonHeight}
-                  stroke={BORDER_COLOR}
-                  strokeWidth="2"
-                />
-                <line
-                  x1={ANGLE_INDENT}
-                  y1={0}
-                  x2={0}
-                  y2={buttonHeight}
-                  stroke={BORDER_COLOR}
-                  strokeWidth="2"
-                />
-              </svg>
-              <div className="relative z-10 h-full flex items-center justify-center">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={eyeHovered ? "white" : "rgba(255,255,255,0.8)"}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </div>
-            </button>
-          )}
-          <button
-            ref={travelButtonRef}
-            onClick={() => setShowTravelPopover((prev) => !prev)}
-            onMouseEnter={() => setTravelHovered(true)}
-            onMouseLeave={() => setTravelHovered(false)}
-            aria-label="Travel"
-            className="relative pointer-events-auto cursor-pointer outline-none"
-            style={{
-              width: TRAVEL_WIDTH,
-              height: buttonHeight,
-              marginRight: -ANGLE_INDENT + BUTTON_SPACING,
-            }}
-          >
-            <svg
-              className="absolute inset-0 w-full h-full"
-              viewBox={`0 0 ${TRAVEL_WIDTH} ${buttonHeight}`}
-              preserveAspectRatio="none"
-            >
-              <polygon
-                points={`${ANGLE_INDENT},0 ${TRAVEL_WIDTH},0 ${TRAVEL_WIDTH - ANGLE_INDENT},${buttonHeight} 0,${buttonHeight}`}
-                fill={
-                  travelHovered || showTravelPopover ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"
-                }
-              />
-              <line
-                x1={ANGLE_INDENT}
-                y1={0}
-                x2={TRAVEL_WIDTH}
-                y2={0}
-                stroke={travelHovered || showTravelPopover ? TRAVEL_COLOR : BORDER_COLOR}
-                strokeWidth="3"
-              />
-              <line
-                x1={TRAVEL_WIDTH}
-                y1={0}
-                x2={TRAVEL_WIDTH - ANGLE_INDENT}
-                y2={buttonHeight}
-                stroke={BORDER_COLOR}
-                strokeWidth="2"
-              />
-              <line
-                x1={ANGLE_INDENT}
-                y1={0}
-                x2={0}
-                y2={buttonHeight}
-                stroke={BORDER_COLOR}
-                strokeWidth="2"
-              />
-            </svg>
-            <div className="relative z-10 h-full flex items-center justify-center px-4">
-              <span
-                className={`font-orbitron font-bold text-sm uppercase tracking-wider transition-colors duration-200 ${
-                  travelHovered || showTravelPopover ? "text-white" : "text-white/80"
-                }`}
-              >
-                TRAVEL
-              </span>
-            </div>
-          </button>
-          <button
-            ref={hamburgerButtonRef}
-            onClick={() => setMenuOpen(!menuOpen)}
-            onMouseEnter={() => setHamburgerHovered(true)}
-            onMouseLeave={() => setHamburgerHovered(false)}
-            aria-label="Menu"
-            data-overlay-layer
-            className="relative pointer-events-auto cursor-pointer outline-none"
-            style={{ width: HAMBURGER_WIDTH, height: buttonHeight }}
-          >
-            <svg
-              className="absolute inset-0 w-full h-full"
-              viewBox={`0 0 ${HAMBURGER_WIDTH} ${buttonHeight}`}
-              preserveAspectRatio="none"
-            >
-              <polygon
-                points={`${ANGLE_INDENT},0 ${HAMBURGER_WIDTH},0 ${HAMBURGER_WIDTH},${buttonHeight} 0,${buttonHeight}`}
-                fill={hamburgerHovered ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
-              />
-              <line
-                x1={ANGLE_INDENT}
-                y1={0}
-                x2={HAMBURGER_WIDTH}
-                y2={0}
-                stroke={hamburgerHovered ? HAMBURGER_COLOR : BORDER_COLOR}
-                strokeWidth="3"
-              />
-              <line
-                x1={ANGLE_INDENT}
-                y1={0}
-                x2={0}
-                y2={buttonHeight}
-                stroke={BORDER_COLOR}
-                strokeWidth="2"
-              />
-            </svg>
-            <div
-              className="relative z-10 h-full flex items-center justify-center"
-              style={{ paddingLeft: ANGLE_INDENT / 2 }}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={hamburgerHovered ? "white" : "rgba(255,255,255,0.8)"}
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
-            </div>
-          </button>
-        </div>
-
-        <GamePopover
-          isVisible={menuOpen}
-          onClose={() => setMenuOpen(false)}
-          position={{
-            type: "anchor",
-            anchorRef: hamburgerButtonRef,
-            placement: "below",
-          }}
-          theme="menu"
-          width={200}
-          maxHeight="auto"
-          animation="slideDown"
-          excludeRef={hamburgerButtonRef}
-          zIndex={Z_INDEX.TOP_MENU_ALWAYS_ON_TOP + 1}
-          overlayLayer
-        >
-          <div className="py-1">
-            <MenuPopoverItem
-              icon={<CopyIcon />}
-              label="Copy game link"
-              onClick={() => {
-                menuItemHover.onClick?.();
-                void handleCopyGameLink();
-              }}
-              onMouseEnter={menuItemHover.onMouseEnter}
-            />
-            <MenuPopoverDivider />
-            <SoundToggleButton />
-            <MenuPopoverDivider />
-            <MenuPopoverItem
-              icon={isFullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}
-              label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-              onClick={handleToggleFullscreen}
-            />
-            <MenuPopoverDivider />
-            <MenuPopoverItem
-              icon={<PerformanceIcon />}
-              label="Performance"
-              onClick={() => {
-                menuItemHover.onClick?.();
-                setMenuOpen(false);
-                window.dispatchEvent(new CustomEvent("toggle-performance-window"));
-              }}
-              onMouseEnter={menuItemHover.onMouseEnter}
-            />
-            <MenuPopoverDivider />
-            <MenuPopoverItem
-              icon={<FeedbackIcon />}
-              label="Feedback"
-              onClick={() => {
-                menuItemHover.onClick?.();
-                setMenuOpen(false);
-                window.dispatchEvent(new CustomEvent("toggle-feedback-window"));
-              }}
-              onMouseEnter={menuItemHover.onMouseEnter}
-            />
-            <MenuPopoverDivider />
-            <MenuPopoverItem
-              icon={<LeaveIcon />}
-              label="Leave game"
-              variant="danger"
-              onClick={() => {
-                menuItemHover.onClick?.();
-                handleLeaveGame();
-              }}
-              onMouseEnter={menuItemHover.onMouseEnter}
-            />
-            {currentPlayer?.id === gameState.hostPlayerId && (
-              <>
-                <MenuPopoverDivider />
-                <MenuPopoverItem
-                  icon={<EndGameIcon />}
-                  label="End game"
-                  variant="danger"
-                  onClick={() => {
-                    menuItemHover.onClick?.();
-                    handleEndGame();
-                  }}
-                  onMouseEnter={menuItemHover.onMouseEnter}
-                />
-              </>
-            )}
-            <MenuPopoverDivider />
-            <MenuPopoverVersion />
-          </div>
-        </GamePopover>
-      </div>
-
-      <TravelPopover
-        isVisible={showTravelPopover}
-        onClose={() => setShowTravelPopover(false)}
-        anchorRef={travelButtonRef}
-      />
-
-      <StandardProjectPopover
-        isVisible={showStandardProjectsPopover}
-        onClose={() => setShowStandardProjectsPopover(false)}
-        onProjectSelect={handleStandardProjectSelect}
-        gameState={gameState}
-        anchorRef={standardProjectsButtonRef}
-      />
-
-      <MilestonePopover
-        isVisible={showMilestonePopover}
-        onClose={() => setShowMilestonePopover(false)}
-        gameState={gameState}
-        anchorRef={milestonesButtonRef}
-      />
-
-      <AwardPopover
-        isVisible={showAwardPopover}
-        onClose={() => setShowAwardPopover(false)}
-        gameState={gameState}
-        anchorRef={awardsButtonRef}
-      />
-
-      {hasColonies && (
-        <ColonyPopover
-          isVisible={showColonyPopover}
-          onClose={() => setShowColonyPopover(false)}
-          gameState={gameState}
-          anchorRef={coloniesButtonRef}
-        />
-      )}
-
-      {hasProjectFunding && (
-        <ProjectFundingPopover
-          isVisible={showProjectFundingPopover}
-          onClose={() => setShowProjectFundingPopover(false)}
-          gameState={gameState}
-          anchorRef={projectFundingButtonRef}
-        />
-      )}
-
-      {spectators.length > 0 && (
-        <GamePopover
-          isVisible={spectatorsOpen}
-          onClose={() => setSpectatorsOpen(false)}
-          position={{
-            type: "anchor",
-            anchorRef: eyeButtonRef,
-            placement: "below",
-          }}
-          theme="menu"
-          width={180}
-          maxHeight="auto"
-          animation="slideDown"
-          excludeRef={eyeButtonRef}
-          zIndex={Z_INDEX.TOP_MENU_ALWAYS_ON_TOP + 1}
-        >
-          <div className="py-2 px-3">
-            <div className="text-white/40 text-[10px] font-orbitron font-bold uppercase tracking-wider mb-2">
-              Spectators ({spectators.length})
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {spectators.map((s) => (
-                <div key={s.id} className="flex items-center gap-2">
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: s.color }}
-                  />
-                  <span className="text-white/80 text-sm truncate">{s.name}</span>
+                    color={item.color}
+                    onClick={() => handleTabClick(item.id)}
+                    buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
+                    leftEdge={index === 0 ? "flat" : "slope-right"}
+                    rightEdge="slope-left"
+                    style={{
+                      marginLeft: index === 0 ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
+                      zIndex: 10 - index,
+                    }}
+                    isActive={
+                      (item.id === "projects" && showStandardProjectsPopover) ||
+                      (item.id === "milestones" && showMilestonePopover) ||
+                      (item.id === "awards" && showAwardPopover) ||
+                      (item.id === "colonies" && showColonyPopover) ||
+                      (item.id === "funding" && showProjectFundingPopover)
+                    }
+                  >
+                    {item.label}
+                  </ParallelogramButton>
+                  {item.id === "milestones" && (
+                    <MilestoneAlertIndicator
+                      visible={hasEligibleMilestones && !showMilestonePopover}
+                      top={buttonHeight + 6}
+                    />
+                  )}
                 </div>
               ))}
+          </div>
+
+          <div style={{ marginRight: HAMBURGER_WIDTH * topBarScale }}>
+            <div
+              className="origin-top-right flex items-center"
+              style={{ transform: `scale(${topBarScale})` }}
+            >
+              {isEndgame && onEndgamePanelChange && (
+                <div className="flex items-center pointer-events-auto">
+                  {ENDGAME_BUTTONS.filter(
+                    (btn) => (btn.id !== "graphs" && btn.id !== "replay") || hasHistory,
+                  ).map((btn, idx) => {
+                    const isActive = activeEndgamePanel === btn.id;
+                    return (
+                      <EndgameTabButton
+                        key={btn.id}
+                        label={btn.label}
+                        width={btn.width}
+                        height={buttonHeight}
+                        isFirst={idx === 0}
+                        isActive={isActive}
+                        onClick={() => onEndgamePanelChange(btn.id)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              {spectators.length > 0 && (
+                <ParallelogramButton
+                  width={EYE_WIDTH}
+                  height={buttonHeight}
+                  color="#7eb8da"
+                  onClick={() => setSpectatorsOpen(!spectatorsOpen)}
+                  buttonRef={eyeButtonRef}
+                  isActive={spectatorsOpen}
+                  leftEdge="slope-left"
+                  rightEdge="slope-right"
+                  style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
+                >
+                  <EyeIcon />
+                </ParallelogramButton>
+              )}
+              <ParallelogramButton
+                width={TRAVEL_WIDTH}
+                height={buttonHeight}
+                color={TRAVEL_COLOR}
+                onClick={() => setShowTravelPopover((prev) => !prev)}
+                buttonRef={travelButtonRef}
+                isActive={showTravelPopover}
+                leftEdge="slope-left"
+                rightEdge="slope-right"
+                style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
+              >
+                TRAVEL
+              </ParallelogramButton>
             </div>
           </div>
-        </GamePopover>
-      )}
-    </div>
+        </div>
+
+        <TravelPopover
+          isVisible={showTravelPopover}
+          onClose={() => setShowTravelPopover(false)}
+          anchorRef={travelButtonRef}
+        />
+
+        <StandardProjectPopover
+          isVisible={showStandardProjectsPopover}
+          onClose={() => setShowStandardProjectsPopover(false)}
+          onProjectSelect={handleStandardProjectSelect}
+          gameState={gameState}
+          anchorRef={standardProjectsButtonRef}
+        />
+
+        <MilestonePopover
+          isVisible={showMilestonePopover}
+          onClose={() => setShowMilestonePopover(false)}
+          gameState={gameState}
+          anchorRef={milestonesButtonRef}
+        />
+
+        <AwardPopover
+          isVisible={showAwardPopover}
+          onClose={() => setShowAwardPopover(false)}
+          gameState={gameState}
+          anchorRef={awardsButtonRef}
+        />
+
+        {hasColonies && (
+          <ColonyPopover
+            isVisible={showColonyPopover}
+            onClose={() => setShowColonyPopover(false)}
+            gameState={gameState}
+            anchorRef={coloniesButtonRef}
+          />
+        )}
+
+        {hasProjectFunding && (
+          <ProjectFundingPopover
+            isVisible={showProjectFundingPopover}
+            onClose={() => setShowProjectFundingPopover(false)}
+            gameState={gameState}
+            anchorRef={projectFundingButtonRef}
+          />
+        )}
+
+        {spectators.length > 0 && (
+          <GamePopover
+            isVisible={spectatorsOpen}
+            onClose={() => setSpectatorsOpen(false)}
+            position={{
+              type: "anchor",
+              anchorRef: eyeButtonRef,
+              placement: "below",
+            }}
+            theme="menu"
+            width={180}
+            maxHeight="auto"
+            animation="slideDown"
+            excludeRef={eyeButtonRef}
+            zIndex={Z_INDEX.TOP_MENU_ALWAYS_ON_TOP + 1}
+          >
+            <div className="py-2 px-3">
+              <div className="text-white/40 text-[10px] font-orbitron font-bold uppercase tracking-wider mb-2">
+                Spectators ({spectators.length})
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {spectators.map((s) => (
+                  <div key={s.id} className="flex items-center gap-2">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: s.color }}
+                    />
+                    <span className="text-white/80 text-sm truncate">{s.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </GamePopover>
+        )}
+      </div>
+      <div
+        className="fixed right-0 px-2 h-[60px] max-lg:h-[50px] flex items-center pointer-events-none origin-top-right"
+        style={{
+          zIndex: Z_INDEX.TOP_MENU_ALWAYS_ON_TOP,
+          transform: `scale(${topBarScale})`,
+          top: topBarScale < 1 ? 1 : 0,
+        }}
+      >
+        <ParallelogramButton
+          width={HAMBURGER_WIDTH}
+          height={buttonHeight}
+          color={HAMBURGER_COLOR}
+          onClick={() => setMenuOpen(!menuOpen)}
+          buttonRef={hamburgerButtonRef}
+          isActive={menuOpen}
+          leftEdge="slope-left"
+          rightEdge="flat"
+        >
+          <HamburgerIcon />
+        </ParallelogramButton>
+      </div>
+      <GameHamburgerMenu
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        anchorRef={hamburgerButtonRef}
+        gameId={gameId}
+        isHost={currentPlayer?.id === gameState.hostPlayerId}
+        onLeaveGame={onLeaveGame}
+        onEndGame={currentPlayer?.id === gameState.hostPlayerId ? onEndGame : undefined}
+      />
+    </>
   );
 };
 
