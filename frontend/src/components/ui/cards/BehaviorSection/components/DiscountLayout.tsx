@@ -20,6 +20,7 @@ const getStandardProjectIcon = (project: string): string | null => {
 
 const getActionIcon = (action: string): string | null => {
   const mapping: { [key: string]: string } = {
+    "card-playing": "card-draw",
     "card-buying": "card-buy",
     "colony-trade": "trade",
   };

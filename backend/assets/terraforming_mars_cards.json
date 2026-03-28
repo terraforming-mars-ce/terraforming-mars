@@ -894,6 +894,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -1121,6 +1122,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -3174,6 +3176,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -3606,6 +3609,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -4173,6 +4177,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -4606,6 +4611,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["earth"],
                 "resources": ["credit"]
               }
@@ -6513,6 +6519,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -7163,6 +7170,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -8420,6 +8428,7 @@
             "temporary": "next-card",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -11485,6 +11494,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["venus"],
                 "resources": ["credit"]
               }
@@ -12436,6 +12446,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["earth"],
                 "resources": ["credit"]
               }
@@ -13936,6 +13947,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -14539,6 +14551,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -16343,6 +16356,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["building"],
                 "resources": ["credit"]
               }
@@ -16555,6 +16569,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["science"],
                 "resources": ["credit"]
               }
@@ -17306,6 +17321,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -18567,6 +18583,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]

@@ -176,8 +176,8 @@ func (c *RequirementModifierCalculator) CalculateCardDiscounts(p *player.Player,
 				hasCardSelectors := HasCardSelectorsExcludingResources(output.Selectors)
 				hasOnlyStandardProjectSelectors := HasStandardProjectSelectors(output.Selectors) && !hasCardSelectors
 
-				// Skip action-only selectors (e.g., card-buying, colony-trade)
-				if HasActionSelectors(output.Selectors) && !hasCardSelectors {
+				// Skip non-card-playing action selectors (e.g., card-buying, colony-trade)
+				if HasActionSelectors(output.Selectors) && !hasCardSelectors && !hasAction(output.Selectors, shared.ActionCardPlaying) {
 					continue
 				}
 
@@ -338,4 +338,13 @@ func (c *RequirementModifierCalculator) CalculateStandardProjectDiscounts(
 	}
 
 	return discounts
+}
+
+func hasAction(selectors []shared.Selector, actionType string) bool {
+	for _, sel := range selectors {
+		if slices.Contains(sel.Actions, actionType) {
+			return true
+		}
+	}
+	return false
 }

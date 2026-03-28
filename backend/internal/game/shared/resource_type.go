@@ -95,5 +95,6 @@ const (
 // ActionType constants for action-level selectors (discounts targeting specific game actions)
 const (
 	ActionCardBuying  = "card-buying"
+	ActionCardPlaying = "card-playing"
 	ActionColonyTrade = "colony-trade"
 )
