@@ -71,7 +71,7 @@ func TestBuildColony_CardTargetedReward_CreatesPendingSelection(t *testing.T) {
 	err := action.Execute(ctx, testGame.ID(), playerID, "titan")
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
-	selection := p.Selection().GetPendingColonyResourceSelection()
+	selection := firstColonyResourceFromQueue(p)
 	testutil.AssertTrue(t, selection != nil, "Should have pending colony resource selection")
 	testutil.AssertEqual(t, 3, selection.Amount, "Titan first slot reward is 3 floaters")
 	testutil.AssertEqual(t, "floater", selection.ResourceType, "Resource type should be floater")

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
+	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	tileAction "terraforming-mars-backend/internal/action/tile"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
@@ -6139,4 +6140,269 @@ func TestImmigrantCity_ProductionAndCityPlacement(t *testing.T) {
 		"Credit production should decrease by 2 (before city effect)")
 	selection := testGame.GetPendingTileSelection(p.ID())
 	testutil.AssertTrue(t, selection != nil, "Should have pending city tile selection")
+}
+
+// =============================================================================
+// Flooding (188, event, base-game)
+// Place an ocean. If there are tiles adjacent to this ocean, you may remove
+// 4 M€ from the owner of one of those tiles.
+// =============================================================================
+
+var (
+	floodingOceanHexA     = testutil.FormatHex(shared.HexPosition{Q: 4, R: -1, S: -3})
+	floodingLandHexA      = testutil.FormatHex(shared.HexPosition{Q: 3, R: -1, S: -2})
+	floodingLandHexB      = testutil.FormatHex(shared.HexPosition{Q: 3, R: 0, S: -3})
+	floodingOceanIsolated = testutil.FormatHex(shared.HexPosition{Q: 0, R: 4, S: -4})
+)
+
+func playFloodingCard(ctx context.Context, t *testing.T, g *game.Game, repo game.GameRepository, playerID string) {
+	t.Helper()
+	logger := testutil.TestLogger()
+	stateRepo := game.NewInMemoryGameStateRepository()
+	cr := testutil.CreateTestCardRegistry()
+
+	p, _ := g.GetPlayer(playerID)
+	card := testutil.GetCardByName("Flooding")
+	p.Hand().AddCard(card.ID)
+
+	playCard := cardAction.NewPlayCardAction(repo, cr, stateRepo, logger)
+	payment := cardAction.PaymentRequest{Credits: card.Cost}
+	err := playCard.Execute(ctx, g.ID(), playerID, card.ID, payment, nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("Flooding card should play: %v", err)
+	}
+}
+
+func selectFloodingOceanTile(ctx context.Context, t *testing.T, g *game.Game, repo game.GameRepository, playerID string, oceanHex string) {
+	t.Helper()
+	logger := testutil.TestLogger()
+	stateRepo := game.NewInMemoryGameStateRepository()
+	cr := testutil.CreateTestCardRegistry()
+
+	selectTile := tileAction.NewSelectTileAction(repo, cr, stateRepo, logger)
+	_, err := selectTile.Execute(ctx, g.ID(), playerID, oceanHex)
+	if err != nil {
+		t.Fatalf("Ocean tile placement should succeed: %v", err)
+	}
+}
+
+func TestFlooding_AdjacentOpponentTile_StealOffered(t *testing.T) {
+	ctx := context.Background()
+	testGame, repo, cardRegistry, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
+	_ = cardRegistry
+	p1ID := playerIDs[0]
+	p2ID := playerIDs[1]
+
+	p1, _ := testGame.GetPlayer(p1ID)
+	testutil.SetPlayerCredits(ctx, p1, 100)
+	p2, _ := testGame.GetPlayer(p2ID)
+	testutil.SetPlayerCredits(ctx, p2, 100)
+
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", floodingLandHexA)
+
+	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
+	testutil.AssertNoError(t, err, "Failed to set turn")
+	playFloodingCard(ctx, t, testGame, repo, p1ID)
+
+	pending := testGame.GetPendingTileSelection(p1ID)
+	testutil.AssertTrue(t, pending != nil, "Player should have pending ocean tile selection")
+
+	selectFloodingOceanTile(ctx, t, testGame, repo, p1ID, floodingOceanHexA)
+
+	stealSelection := p1.Selection().GetPendingStealTargetSelection()
+	testutil.AssertTrue(t, stealSelection != nil, "Player should have pending steal target selection")
+	testutil.AssertEqual(t, 4, stealSelection.Amount, "Steal amount should be 4")
+	testutil.AssertTrue(t, testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p2ID),
+		"P2 should be in eligible steal targets")
+	testutil.AssertTrue(t, !testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p1ID),
+		"P1 (self) should not be in eligible steal targets")
+}
+
+func TestFlooding_NoAdjacentOwnedTiles_NoPrompt(t *testing.T) {
+	ctx := context.Background()
+	testGame, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
+	p1ID := playerIDs[0]
+
+	p1, _ := testGame.GetPlayer(p1ID)
+	testutil.SetPlayerCredits(ctx, p1, 100)
+
+	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
+	testutil.AssertNoError(t, err, "Failed to set turn")
+	playFloodingCard(ctx, t, testGame, repo, p1ID)
+
+	selectFloodingOceanTile(ctx, t, testGame, repo, p1ID, floodingOceanIsolated)
+
+	stealSelection := p1.Selection().GetPendingStealTargetSelection()
+	testutil.AssertTrue(t, stealSelection == nil, "No steal target selection expected when no adjacent owned tiles")
+}
+
+func TestFlooding_MultipleAdjacentOpponents_AllEligible(t *testing.T) {
+	ctx := context.Background()
+	testGame, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 3)
+	p1ID := playerIDs[0]
+	p2ID := playerIDs[1]
+	p3ID := playerIDs[2]
+
+	for _, pid := range playerIDs {
+		p, _ := testGame.GetPlayer(pid)
+		testutil.SetPlayerCredits(ctx, p, 100)
+	}
+
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", floodingLandHexA)
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p3ID, "city", floodingLandHexB)
+
+	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
+	testutil.AssertNoError(t, err, "Failed to set turn")
+	playFloodingCard(ctx, t, testGame, repo, p1ID)
+	selectFloodingOceanTile(ctx, t, testGame, repo, p1ID, floodingOceanHexA)
+
+	p1, _ := testGame.GetPlayer(p1ID)
+	stealSelection := p1.Selection().GetPendingStealTargetSelection()
+	testutil.AssertTrue(t, stealSelection != nil, "Player should have pending steal target selection")
+	testutil.AssertTrue(t, testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p2ID), "P2 should be eligible")
+	testutil.AssertTrue(t, testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p3ID), "P3 should be eligible")
+	testutil.AssertTrue(t, !testutil.ContainsHex(stealSelection.EligiblePlayerIDs, p1ID), "P1 should not be eligible")
+}
+
+func TestFlooding_ConfirmSteal_CreditsTransferred(t *testing.T) {
+	ctx := context.Background()
+	testGame, repo, cardRegistry, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
+	logger := testutil.TestLogger()
+	stateRepo := game.NewInMemoryGameStateRepository()
+	p1ID := playerIDs[0]
+	p2ID := playerIDs[1]
+
+	p1, _ := testGame.GetPlayer(p1ID)
+	p2, _ := testGame.GetPlayer(p2ID)
+	testutil.SetPlayerCredits(ctx, p1, 100)
+	testutil.SetPlayerCredits(ctx, p2, 50)
+
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", floodingLandHexA)
+
+	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
+	testutil.AssertNoError(t, err, "Failed to set turn")
+	playFloodingCard(ctx, t, testGame, repo, p1ID)
+	selectFloodingOceanTile(ctx, t, testGame, repo, p1ID, floodingOceanHexA)
+
+	p1CreditsBefore := testutil.GetPlayerCredits(p1)
+	p2CreditsBefore := testutil.GetPlayerCredits(p2)
+
+	confirmSteal := confirmAction.NewConfirmStealTargetAction(repo, cardRegistry, stateRepo, logger)
+	err = confirmSteal.Execute(ctx, testGame.ID(), p1ID, p2ID)
+	testutil.AssertNoError(t, err, "Confirm steal should succeed")
+
+	testutil.AssertEqual(t, p1CreditsBefore+4, testutil.GetPlayerCredits(p1), "P1 should gain 4 credits")
+	testutil.AssertEqual(t, p2CreditsBefore-4, testutil.GetPlayerCredits(p2), "P2 should lose 4 credits")
+
+	testutil.AssertTrue(t, p1.Selection().GetPendingStealTargetSelection() == nil,
+		"Pending steal selection should be cleared after confirm")
+}
+
+func TestFlooding_PartialSteal_TargetHasLessThan4Credits(t *testing.T) {
+	ctx := context.Background()
+	testGame, repo, cardRegistry, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
+	logger := testutil.TestLogger()
+	stateRepo := game.NewInMemoryGameStateRepository()
+	p1ID := playerIDs[0]
+	p2ID := playerIDs[1]
+
+	p1, _ := testGame.GetPlayer(p1ID)
+	p2, _ := testGame.GetPlayer(p2ID)
+	testutil.SetPlayerCredits(ctx, p1, 100)
+	testutil.SetPlayerCredits(ctx, p2, 2)
+
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", floodingLandHexA)
+
+	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
+	testutil.AssertNoError(t, err, "Failed to set turn")
+	playFloodingCard(ctx, t, testGame, repo, p1ID)
+	selectFloodingOceanTile(ctx, t, testGame, repo, p1ID, floodingOceanHexA)
+
+	p1CreditsBefore := testutil.GetPlayerCredits(p1)
+
+	confirmSteal := confirmAction.NewConfirmStealTargetAction(repo, cardRegistry, stateRepo, logger)
+	err = confirmSteal.Execute(ctx, testGame.ID(), p1ID, p2ID)
+	testutil.AssertNoError(t, err, "Confirm steal should succeed")
+
+	testutil.AssertEqual(t, p1CreditsBefore+2, testutil.GetPlayerCredits(p1), "P1 should gain only 2 credits")
+	testutil.AssertEqual(t, 0, testutil.GetPlayerCredits(p2), "P2 should have 0 credits")
+}
+
+func TestFlooding_SkipSteal_NoCreditsChange(t *testing.T) {
+	ctx := context.Background()
+	testGame, repo, cardRegistry, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
+	logger := testutil.TestLogger()
+	stateRepo := game.NewInMemoryGameStateRepository()
+	p1ID := playerIDs[0]
+	p2ID := playerIDs[1]
+
+	p1, _ := testGame.GetPlayer(p1ID)
+	p2, _ := testGame.GetPlayer(p2ID)
+	testutil.SetPlayerCredits(ctx, p1, 100)
+	testutil.SetPlayerCredits(ctx, p2, 50)
+
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", floodingLandHexA)
+
+	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
+	testutil.AssertNoError(t, err, "Failed to set turn")
+	playFloodingCard(ctx, t, testGame, repo, p1ID)
+	selectFloodingOceanTile(ctx, t, testGame, repo, p1ID, floodingOceanHexA)
+
+	p1CreditsBefore := testutil.GetPlayerCredits(p1)
+	p2CreditsBefore := testutil.GetPlayerCredits(p2)
+
+	confirmSteal := confirmAction.NewConfirmStealTargetAction(repo, cardRegistry, stateRepo, logger)
+	err = confirmSteal.Execute(ctx, testGame.ID(), p1ID, "")
+	testutil.AssertNoError(t, err, "Skip steal should succeed")
+
+	testutil.AssertEqual(t, p1CreditsBefore, testutil.GetPlayerCredits(p1), "P1 credits should be unchanged")
+	testutil.AssertEqual(t, p2CreditsBefore, testutil.GetPlayerCredits(p2), "P2 credits should be unchanged")
+
+	testutil.AssertTrue(t, p1.Selection().GetPendingStealTargetSelection() == nil,
+		"Pending steal selection should be cleared after skip")
+}
+
+func TestFlooding_OwnTilesNotEligible(t *testing.T) {
+	ctx := context.Background()
+	testGame, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
+	p1ID := playerIDs[0]
+
+	p1, _ := testGame.GetPlayer(p1ID)
+	testutil.SetPlayerCredits(ctx, p1, 100)
+
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p1ID, "city", floodingLandHexA)
+
+	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
+	testutil.AssertNoError(t, err, "Failed to set turn")
+	playFloodingCard(ctx, t, testGame, repo, p1ID)
+	selectFloodingOceanTile(ctx, t, testGame, repo, p1ID, floodingOceanHexA)
+
+	stealSelection := p1.Selection().GetPendingStealTargetSelection()
+	testutil.AssertTrue(t, stealSelection == nil,
+		"No steal target selection expected when only own tiles are adjacent")
+}
+
+func TestFlooding_InvalidTargetPlayer_Rejected(t *testing.T) {
+	ctx := context.Background()
+	testGame, repo, cardRegistry, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
+	logger := testutil.TestLogger()
+	stateRepo := game.NewInMemoryGameStateRepository()
+	p1ID := playerIDs[0]
+	p2ID := playerIDs[1]
+
+	p1, _ := testGame.GetPlayer(p1ID)
+	testutil.SetPlayerCredits(ctx, p1, 100)
+	p2, _ := testGame.GetPlayer(p2ID)
+	testutil.SetPlayerCredits(ctx, p2, 100)
+
+	testutil.PlaceTileForPlayer(ctx, t, testGame, repo, p2ID, "city", floodingLandHexA)
+
+	err := testGame.SetCurrentTurn(ctx, p1ID, 2)
+	testutil.AssertNoError(t, err, "Failed to set turn")
+	playFloodingCard(ctx, t, testGame, repo, p1ID)
+	selectFloodingOceanTile(ctx, t, testGame, repo, p1ID, floodingOceanHexA)
+
+	confirmSteal := confirmAction.NewConfirmStealTargetAction(repo, cardRegistry, stateRepo, logger)
+	err = confirmSteal.Execute(ctx, testGame.ID(), p1ID, "nonexistent-player")
+	testutil.AssertTrue(t, err != nil, "Should fail when targeting ineligible player")
 }

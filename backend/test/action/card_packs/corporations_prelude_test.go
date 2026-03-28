@@ -256,6 +256,11 @@ func TestVitor_Gain3MCWhenPlayingCardWithVP(t *testing.T) {
 	testutil.AssertNoError(t, err, "SetCorporation should succeed for Vitor")
 
 	p, _ := testGame.GetPlayer(playerID)
+
+	// Clear Vitor's forced award fund selection so card play is not blocked
+	p.Selection().SetPendingAwardFundSelection(nil)
+	testutil.AssertNoError(t, testGame.SetForcedFirstAction(ctx, playerID, nil), "clear forced first action")
+
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
