@@ -178,10 +178,10 @@ func main() {
 
 	// Game lifecycle (6)
 	createGameAction := gameAction.NewCreateGameAction(gameRepo, cardRegistry, log)
-	createDemoLobbyAction := gameAction.NewCreateDemoLobbyAction(gameRepo, cardRegistry, log)
-	joinGameAction := gameAction.NewJoinGameAction(gameRepo, cardRegistry, log)
+	createDemoLobbyAction := gameAction.NewCreateDemoLobbyAction(gameRepo, cardRegistry, log, colonyRegistry)
+	joinGameAction := gameAction.NewJoinGameAction(gameRepo, cardRegistry, log, colonyRegistry)
 	healthChecker := bot.NewHealthChecker(log)
-	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, healthChecker, broadcaster, log)
+	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, healthChecker, broadcaster, log, colonyRegistry)
 	confirmDemoSetupAction := gameAction.NewConfirmDemoSetupAction(gameRepo, cardRegistry, awardRegistry, log)
 	finalScoringAction := gameAction.NewFinalScoringAction(gameRepo, cardRegistry, awardRegistry, milestoneRegistry, log)
 
@@ -197,7 +197,7 @@ func main() {
 	fundSeatAction := pfAction.NewFundSeatAction(gameRepo, pfRegistry, stateRepo)
 
 	// Card actions (2)
-	playCardAction := cardAction.NewPlayCardAction(gameRepo, cardRegistry, stateRepo, log)
+	playCardAction := cardAction.NewPlayCardAction(gameRepo, cardRegistry, stateRepo, log, colonyRegistry)
 	useCardActionAction := cardAction.NewUseCardActionAction(gameRepo, cardRegistry, stateRepo, log)
 
 	// Standard projects (1 unified action)

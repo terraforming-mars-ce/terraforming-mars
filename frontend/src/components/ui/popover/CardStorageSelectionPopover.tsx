@@ -6,6 +6,7 @@ import {
   ColonyResourceReasonTrade,
   ColonyResourceReasonColonyTax,
   ColonyResourceReasonBuild,
+  ColonyResourceReasonColonyBonus,
 } from "@/types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import CardPreviewPanel from "./CardPreviewPanel.tsx";
@@ -91,6 +92,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
     [ColonyResourceReasonTrade]: "Trading Complete",
     [ColonyResourceReasonColonyTax]: "Colony Taxes Received",
     [ColonyResourceReasonBuild]: "Colony Built",
+    [ColonyResourceReasonColonyBonus]: "Colony Bonus",
   };
   const title = hasNoStorage
     ? "No Storage Available"

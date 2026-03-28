@@ -1005,6 +1005,7 @@ export type ColonyResourceReason = string;
 export const ColonyResourceReasonTrade: ColonyResourceReason = "trade";
 export const ColonyResourceReasonColonyTax: ColonyResourceReason = "colony-tax";
 export const ColonyResourceReasonBuild: ColonyResourceReason = "build";
+export const ColonyResourceReasonColonyBonus: ColonyResourceReason = "colony-bonus";
 /**
  * PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
  */
@@ -1047,6 +1048,7 @@ export const PlayerStatusSelectingStartingCards: PlayerStatus = "selecting-start
 export const PlayerStatusSelectingProductionCards: PlayerStatus = "selecting-production-cards";
 export const PlayerStatusWaiting: PlayerStatus = "waiting";
 export const PlayerStatusActive: PlayerStatus = "active";
+export const PlayerStatusSelection: PlayerStatus = "selection";
 export const PlayerStatusExited: PlayerStatus = "exited";
 /**
  * PlayerDto represents a player in the game for client consumption

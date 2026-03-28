@@ -13661,7 +13661,24 @@
     "type": "automated",
     "cost": 0,
     "description": "Gain all your colony bonuses",
-    "pack": "colonies"
+    "pack": "colonies",
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "colony-bonus",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "Gain all your colony bonuses."
+      }
+    ]
   },
   {
     "id": "C31",

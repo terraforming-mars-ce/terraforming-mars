@@ -22,6 +22,7 @@ import (
 // moving card to played cards, applying immediate effects, and deducting payment
 type PlayCardAction struct {
 	baseaction.BaseAction
+	colonyBonusLookup gamecards.ColonyBonusLookup
 }
 
 // NewPlayCardAction creates a new play card action
@@ -30,9 +31,15 @@ func NewPlayCardAction(
 	cardRegistry cards.CardRegistry,
 	stateRepo game.GameStateRepository,
 	logger *zap.Logger,
+	colonyBonusLookup ...gamecards.ColonyBonusLookup,
 ) *PlayCardAction {
+	var lookup gamecards.ColonyBonusLookup
+	if len(colonyBonusLookup) > 0 {
+		lookup = colonyBonusLookup[0]
+	}
 	return &PlayCardAction{
-		BaseAction: baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),
+		BaseAction:        baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),
+		colonyBonusLookup: lookup,
 	}
 }
 
@@ -86,6 +93,10 @@ func (a *PlayCardAction) Execute(
 	}
 
 	if err := baseaction.ValidateActionsRemaining(g, playerID, log); err != nil {
+		return err
+	}
+
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
 		return err
 	}
 
@@ -499,6 +510,9 @@ func (a *PlayCardAction) applyCardBehaviors(
 				WithSourceCardID(card.ID).
 				WithCardRegistry(a.CardRegistry()).
 				WithSourceType(shared.SourceTypeCardPlay)
+			if a.colonyBonusLookup != nil {
+				applier = applier.WithColonyBonusLookup(a.colonyBonusLookup)
+			}
 			if len(cardStorageTargets) > 0 {
 				applier = applier.WithTargetCardIDs(cardStorageTargets)
 			}

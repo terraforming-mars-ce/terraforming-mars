@@ -23,6 +23,7 @@ func CalculatePlayerCardState(
 	p *player.Player,
 	g *game.Game,
 	cardRegistry cards.CardRegistry,
+	colonyBonusLookup ...gamecards.ColonyBonusLookup,
 ) player.EntityState {
 	var errors []player.StateError
 	var warnings []player.StateWarning
@@ -30,7 +31,7 @@ func CalculatePlayerCardState(
 
 	errors = append(errors, validatePhase(g)...)
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	costMap, discounts := calculateEffectiveCost(card, p, cardRegistry)
 	if len(discounts) > 0 {
@@ -55,7 +56,12 @@ func CalculatePlayerCardState(
 		}
 	}
 
-	computedValues := computeBehaviorValues(card.Behaviors, "", p, g, cardRegistry)
+	var lookup gamecards.ColonyBonusLookup
+	if len(colonyBonusLookup) > 0 {
+		lookup = colonyBonusLookup[0]
+	}
+	warnings = append(warnings, validateColonyBonusStorageTargets(card, p, g, cardRegistry, lookup)...)
+	computedValues := computeBehaviorValues(card.Behaviors, "", p, g, cardRegistry, lookup)
 
 	return player.EntityState{
 		Errors:         errors,
@@ -133,7 +139,7 @@ func CalculatePlayerCardActionState(
 	}
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	resources := p.Resources().Get()
 	for _, input := range behavior.Inputs {
@@ -143,7 +149,7 @@ func CalculatePlayerCardActionState(
 		}
 
 		// Storage resource inputs (target: "self-card") check card storage instead of player resources
-		if input.Target == "self-card" && isStorageResourceType(input.ResourceType) {
+		if input.Target == "self-card" && gamecards.IsStorageResourceType(input.ResourceType) {
 			storage := p.Resources().GetCardStorage(cardID)
 			if storage < input.Amount {
 				errors = append(errors, player.StateError{
@@ -254,7 +260,7 @@ func CalculatePlayerCardActionState(
 	if len(cardRegistry) > 0 {
 		reg = cardRegistry[0]
 	}
-	computedValues := computeBehaviorValues([]shared.CardBehavior{behavior}, cardID, p, g, reg)
+	computedValues := computeBehaviorValues([]shared.CardBehavior{behavior}, cardID, p, g, reg, nil)
 
 	return player.EntityState{
 		Errors:         errors,
@@ -278,7 +284,7 @@ func CalculatePlayerStandardProjectState(
 	metadata := make(map[string]interface{})
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	baseCosts := getStandardProjectBaseCosts(projectType)
 	if baseCosts == nil {
@@ -445,27 +451,13 @@ func validatePhase(g *game.Game) []player.StateError {
 	return nil
 }
 
-// validateNoActiveTileSelection checks if player has an active tile selection pending.
-func validateNoActiveTileSelection(p *player.Player, g *game.Game) []player.StateError {
-	if g.GetPendingTileSelection(p.ID()) != nil {
+// validateNoPendingSelection checks if player has any pending selection that blocks actions.
+func validateNoPendingSelection(p *player.Player, g *game.Game) []player.StateError {
+	if g.HasAnyPendingSelection(p.ID()) {
 		return []player.StateError{{
 			Code:     player.ErrorCodeActiveTileSelection,
 			Category: player.ErrorCategoryPhase,
-			Message:  "Active tile selection",
-		}}
-	}
-	if p.Selection().GetPendingStealTargetSelection() != nil {
-		return []player.StateError{{
-			Code:     player.ErrorCodeActiveTileSelection,
-			Category: player.ErrorCategoryPhase,
-			Message:  "Pending steal target selection",
-		}}
-	}
-	if p.Selection().GetPendingAwardFundSelection() != nil {
-		return []player.StateError{{
-			Code:     player.ErrorCodeActiveTileSelection,
-			Category: player.ErrorCategoryPhase,
-			Message:  "Pending award fund selection",
+			Message:  "Pending selection",
 		}}
 	}
 	return nil
@@ -762,6 +754,69 @@ func validateCardResourceOutputs(
 	}
 
 	return nil
+}
+
+// validateColonyBonusStorageTargets warns when colony bonuses include card-targeted resources
+// but the player has no valid card to store them on.
+func validateColonyBonusStorageTargets(
+	card *gamecards.Card,
+	p *player.Player,
+	g *game.Game,
+	cardRegistry cards.CardRegistry,
+	colonyBonusLookup gamecards.ColonyBonusLookup,
+) []player.StateWarning {
+	if colonyBonusLookup == nil || g == nil || !g.HasColonies() {
+		return nil
+	}
+
+	hasColonyBonusOutput := false
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+		for _, output := range behavior.Outputs {
+			if output.ResourceType == shared.ResourceColonyBonus {
+				hasColonyBonusOutput = true
+				break
+			}
+		}
+	}
+	if !hasColonyBonusOutput {
+		return nil
+	}
+
+	bonuses := gamecards.CollectColonyBonuses(p.ID(), g.ColonyTileStates(), colonyBonusLookup)
+
+	hasReward := false
+	for _, b := range bonuses {
+		if b.Amount > 0 {
+			hasReward = true
+			break
+		}
+	}
+	if !hasReward {
+		return []player.StateWarning{{
+			Code:    "no-colony-bonus-reward",
+			Message: "No reward",
+		}}
+	}
+
+	var warnings []player.StateWarning
+	seen := map[string]bool{}
+	for _, b := range bonuses {
+		rt := shared.ResourceType(b.ResourceType)
+		if !gamecards.IsStorageResourceType(rt) || seen[b.ResourceType] {
+			continue
+		}
+		seen[b.ResourceType] = true
+		if !gamecards.HasEligibleStorageCard(p, rt, cardRegistry) {
+			warnings = append(warnings, player.StateWarning{
+				Code:    "no-storage-for-colony-bonus",
+				Message: fmt.Sprintf("No %s storage", b.ResourceType),
+			})
+		}
+	}
+	return warnings
 }
 
 // validateCardDiscardOutputs checks that the player has enough cards in hand to satisfy
@@ -1576,7 +1631,7 @@ func CalculateMilestoneState(
 	ms := g.Milestones()
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	if ms.IsClaimed(milestoneType) {
 		errors = append(errors, player.StateError{
@@ -1655,7 +1710,7 @@ func CalculateAwardState(
 	gameAwards := g.Awards()
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	if gameAwards.IsFunded(awardType) {
 		errors = append(errors, player.StateError{
@@ -1692,16 +1747,6 @@ func CalculateAwardState(
 		Metadata:       metadata,
 		LastCalculated: time.Now(),
 	}
-}
-
-// isStorageResourceType returns true for resource types that are stored on cards
-func isStorageResourceType(rt shared.ResourceType) bool {
-	switch rt {
-	case shared.ResourceMicrobe, shared.ResourceAnimal, shared.ResourceFloater,
-		shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceFighter, shared.ResourceDisease:
-		return true
-	}
-	return false
 }
 
 // CalculateChoiceErrors validates a single choice's requirements against the player/game state.
@@ -1898,6 +1943,7 @@ func computeBehaviorValues(
 	p *player.Player,
 	g *game.Game,
 	cardRegistry cards.CardRegistry,
+	colonyBonusLookup gamecards.ColonyBonusLookup,
 ) []player.ComputedBehaviorValue {
 	var result []player.ComputedBehaviorValue
 
@@ -1907,6 +1953,15 @@ func computeBehaviorValues(
 	for i, behavior := range behaviors {
 		var outputs []shared.CalculatedOutput
 		for _, output := range behavior.Outputs {
+			if output.ResourceType == shared.ResourceColonyBonus {
+				bonusOutputs := computeColonyBonusValues(p, g, colonyBonusLookup)
+				if outputs == nil {
+					outputs = bonusOutputs
+				} else {
+					outputs = append(outputs, bonusOutputs...)
+				}
+				continue
+			}
 			if output.Per == nil {
 				continue
 			}
@@ -1938,7 +1993,7 @@ func computeBehaviorValues(
 				}
 			}
 		}
-		if len(outputs) > 0 {
+		if outputs != nil {
 			result = append(result, player.ComputedBehaviorValue{
 				Target:  fmt.Sprintf("behaviors::%d", i),
 				Outputs: outputs,
@@ -1947,4 +2002,17 @@ func computeBehaviorValues(
 	}
 
 	return result
+}
+
+func computeColonyBonusValues(
+	p *player.Player,
+	g *game.Game,
+	colonyBonusLookup gamecards.ColonyBonusLookup,
+) []shared.CalculatedOutput {
+	if p == nil || g == nil || colonyBonusLookup == nil || !g.HasColonies() {
+		return []shared.CalculatedOutput{}
+	}
+	return gamecards.ColonyBonusesToCalculatedOutputs(
+		gamecards.CollectColonyBonuses(p.ID(), g.ColonyTileStates(), colonyBonusLookup),
+	)
 }

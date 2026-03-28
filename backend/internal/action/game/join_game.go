@@ -7,6 +7,7 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 
 	"go.uber.org/zap"
@@ -15,9 +16,10 @@ import (
 // JoinGameAction handles players joining games
 // New architecture: Uses only GameRepository + logger, events handle broadcasting
 type JoinGameAction struct {
-	gameRepo     game.GameRepository
-	cardRegistry cards.CardRegistry
-	logger       *zap.Logger
+	gameRepo          game.GameRepository
+	cardRegistry      cards.CardRegistry
+	colonyBonusLookup gamecards.ColonyBonusLookup
+	logger            *zap.Logger
 }
 
 // JoinGameResult contains the result of joining a game
@@ -31,11 +33,17 @@ func NewJoinGameAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
 	logger *zap.Logger,
+	colonyBonusLookup ...gamecards.ColonyBonusLookup,
 ) *JoinGameAction {
+	var lookup gamecards.ColonyBonusLookup
+	if len(colonyBonusLookup) > 0 {
+		lookup = colonyBonusLookup[0]
+	}
 	return &JoinGameAction{
-		gameRepo:     gameRepo,
-		cardRegistry: cardRegistry,
-		logger:       logger,
+		gameRepo:          gameRepo,
+		cardRegistry:      cardRegistry,
+		colonyBonusLookup: lookup,
+		logger:            logger,
 	}
 }
 
@@ -126,7 +134,7 @@ func (a *JoinGameAction) Execute(
 		log.Error("Failed to add player to game", zap.Error(err))
 		return nil, fmt.Errorf("failed to add player to game: %w", err)
 	}
-	action.SetupPlayerCardStore(newPlayer, g, a.cardRegistry)
+	action.SetupPlayerCardStore(newPlayer, g, a.cardRegistry, a.colonyBonusLookup)
 	log.Debug("Player added to game")
 
 	// 10. Convert to DTO with personalized view for the joining player
