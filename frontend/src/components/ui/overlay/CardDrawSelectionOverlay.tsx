@@ -6,7 +6,8 @@ import {
   ResourceTypeCredit,
 } from "../../../types/generated/api-types.ts";
 import {
-  OVERLAY_BACKGROUND_CLASS,
+  OVERLAY_BACKDROP_BLUR_CLASS,
+  OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_CONTAINER_CLASS,
   OVERLAY_HEADER_CLASS,
   OVERLAY_TITLE_CLASS,
@@ -181,9 +182,9 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
     isCardDraw || totalSelected <= selection.freeTakeCount + selection.maxBuyCount;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
-      {/* Translucent background */}
-      <div className={OVERLAY_BACKGROUND_CLASS} />
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center">
+      <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
+      <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 
       {/* Content container */}
       <div className={OVERLAY_CONTAINER_CLASS}>
