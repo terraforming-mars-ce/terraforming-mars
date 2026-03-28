@@ -45,6 +45,7 @@ import EndGameBottomBar from "../../ui/endgame/EndGameBottomBar.tsx";
 import { VPCountingProvider } from "../../../contexts/VPCountingContext.tsx";
 import { useVPCountingAnimation } from "@/hooks/useVPCountingAnimation.ts";
 
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useGameHistory } from "@/hooks/useGameHistory.ts";
 import { useGameReplay } from "@/hooks/useGameReplay.ts";
 import {
@@ -395,6 +396,7 @@ export default function GameInterface() {
 
   // --- Leave/end game handlers ---
   const handleLeaveGame = useCallback(() => {
+    useUIOverlayStore.getState().setShowEndGameConfirm(false);
     useUIOverlayStore.getState().setShowLeaveGameConfirm(true);
   }, []);
 
@@ -409,6 +411,7 @@ export default function GameInterface() {
   }, [navigate]);
 
   const handleEndGame = useCallback(() => {
+    useUIOverlayStore.getState().setShowLeaveGameConfirm(false);
     useUIOverlayStore.getState().setShowEndGameConfirm(true);
   }, []);
 
@@ -506,7 +509,13 @@ export default function GameInterface() {
   }, []);
 
   // --- Backdrop ---
-  const shouldShowBackdrop =
+  const hasPendingActionSelection =
+    showStealTargetSelection ||
+    showColonyResourceSelection ||
+    showColonyPlacementSelection ||
+    showFreeTradeSelection;
+
+  const shouldShowStartingBackdrop =
     (showStartingSelection &&
       !isStartingSelectionHidden &&
       (marsRevealedReady || transitionPhase === "idle")) ||
@@ -577,8 +586,14 @@ export default function GameInterface() {
       >
         {game?.settings?.developmentMode && <DevModeChip />}
 
-        {shouldShowBackdrop && (
+        {shouldShowStartingBackdrop && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] animate-[backdropFadeIn_0.3s_ease-out]" />
+        )}
+        {hasPendingActionSelection && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-[backdropFadeIn_0.3s_ease-out]"
+            style={{ zIndex: Z_INDEX.PENDING_ACTION_BACKDROP }}
+          />
         )}
 
         <style>{`
