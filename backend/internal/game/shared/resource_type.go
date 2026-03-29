@@ -87,9 +87,10 @@ const (
 
 	ResourceWorldTreeTile ResourceType = "world-tree-tile"
 
-	ResourceAwardFund ResourceType = "award-fund"
-	ResourceFreeTrade ResourceType = "trade"
-	ResourceCardCount ResourceType = "card-count"
+	ResourceAwardFund       ResourceType = "award-fund"
+	ResourceFreeTrade       ResourceType = "trade"
+	ResourceCardCount       ResourceType = "card-count"
+	ResourceColonyTrackStep ResourceType = "colony-track-step"
 )
 
 // ActionType constants for action-level selectors (discounts targeting specific game actions)
