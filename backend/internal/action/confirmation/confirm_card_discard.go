@@ -137,14 +137,14 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 ) ([]shared.CalculatedOutput, error) {
 	var selfOutputs []shared.CalculatedOutput
 
-	for _, output := range selection.PendingOutputs {
-		if output.ResourceType == shared.ResourceCardDraw {
-			if output.Target == "all-opponents" {
+	for _, outputBC := range selection.PendingOutputs {
+		if outputBC.GetResourceType() == shared.ResourceCardDraw {
+			if outputBC.GetTarget() == "all-opponents" {
 				for _, opponent := range g.GetAllPlayers() {
 					if opponent.ID() == p.ID() {
 						continue
 					}
-					drawnCards, err := g.Deck().DrawProjectCards(ctx, output.Amount)
+					drawnCards, err := g.Deck().DrawProjectCards(ctx, outputBC.GetAmount())
 					if err != nil {
 						log.Warn("Failed to draw cards for opponent",
 							zap.String("opponent_id", opponent.ID()),
@@ -170,7 +170,7 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 				continue
 			}
 
-			drawnCards, err := g.Deck().DrawProjectCards(ctx, output.Amount)
+			drawnCards, err := g.Deck().DrawProjectCards(ctx, outputBC.GetAmount())
 			if err != nil {
 				return nil, fmt.Errorf("failed to draw cards: %w", err)
 			}
@@ -191,7 +191,7 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 			WithSourceCardID(selection.SourceCardID).
 			WithCardRegistry(a.CardRegistry()).
 			WithSourceType(shared.SourceTypePassiveEffect)
-		if err := applier.ApplyOutputs(ctx, []shared.ResourceCondition{output}); err != nil {
+		if err := applier.ApplyOutputs(ctx, []shared.BehaviorCondition{outputBC}); err != nil {
 			return nil, err
 		}
 	}

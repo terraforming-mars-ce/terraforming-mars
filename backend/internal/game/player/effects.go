@@ -102,7 +102,7 @@ func (e *Effects) RemoveTemporaryEffects(temporaryType string) []string {
 		for _, effect := range s.Effects {
 			hasTemporary := false
 			for _, output := range effect.Behavior.Outputs {
-				if output.Temporary == temporaryType {
+				if shared.GetTemporary(output) == temporaryType {
 					hasTemporary = true
 					break
 				}

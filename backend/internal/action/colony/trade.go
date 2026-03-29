@@ -352,8 +352,8 @@ func countTradeStepBonusFromBehaviors(behaviors []shared.CardBehavior) int {
 				trigger.Condition != nil &&
 				trigger.Condition.Type == "before-colony-trade" {
 				for _, output := range behavior.Outputs {
-					if output.ResourceType == "colony-track-step" {
-						bonus += output.Amount
+					if output.GetResourceType() == "colony-track-step" {
+						bonus += output.GetAmount()
 					}
 				}
 			}

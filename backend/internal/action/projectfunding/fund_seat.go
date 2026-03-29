@@ -329,8 +329,8 @@ func buildProductionChoices(amount int) []shared.Choice {
 	choices := make([]shared.Choice, len(productionTypes))
 	for i, rt := range productionTypes {
 		choices[i] = shared.Choice{
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: rt, Amount: amount, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: rt, Amount: amount, Target: "self-player"}},
 			},
 		}
 	}

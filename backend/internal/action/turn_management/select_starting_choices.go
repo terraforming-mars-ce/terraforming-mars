@@ -268,8 +268,8 @@ func getCorpStartingCredits(cardRegistry cards.CardRegistry, corporationID strin
 		for _, trigger := range behavior.Triggers {
 			if trigger.Type == string(gamecards.ResourceTriggerAutoCorporationStart) {
 				for _, output := range behavior.Outputs {
-					if output.ResourceType == shared.ResourceCredit {
-						credits += output.Amount
+					if output.GetResourceType() == shared.ResourceCredit {
+						credits += output.GetAmount()
 					}
 				}
 			}

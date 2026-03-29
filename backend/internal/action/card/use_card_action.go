@@ -392,7 +392,7 @@ func (a *UseCardActionAction) findActionReuseAction(
 			continue
 		}
 		for _, output := range actions[i].Behavior.Outputs {
-			if output.ResourceType == shared.ResourceActionReuse {
+			if output.GetResourceType() == shared.ResourceActionReuse {
 				return &actions[i], nil
 			}
 		}
@@ -410,23 +410,23 @@ func (a *UseCardActionAction) hasManualTrigger(behavior shared.CardBehavior) boo
 	return false
 }
 
-func hasVariableAmount(inputs, outputs []shared.ResourceCondition) bool {
+func hasVariableAmount(inputs, outputs []shared.BehaviorCondition) bool {
 	for _, input := range inputs {
-		if input.VariableAmount {
+		if shared.IsVariableAmount(input) {
 			return true
 		}
 	}
 	for _, output := range outputs {
-		if output.VariableAmount {
+		if shared.IsVariableAmount(output) {
 			return true
 		}
 	}
 	return false
 }
 
-func hasStealFromAnyCard(outputs []shared.ResourceCondition) bool {
+func hasStealFromAnyCard(outputs []shared.BehaviorCondition) bool {
 	for _, output := range outputs {
-		if output.Target == "steal-from-any-card" {
+		if output.GetTarget() == "steal-from-any-card" {
 			return true
 		}
 	}
@@ -436,14 +436,14 @@ func hasStealFromAnyCard(outputs []shared.ResourceCondition) bool {
 // validateOutputAffordability checks that the player can afford all negative resource outputs
 // before they are applied. This is a defense-in-depth check; card costs should be modeled as
 // inputs, but this catches any negative resource outputs that slip through.
-func validateOutputAffordability(p *player.Player, outputs []shared.ResourceCondition) error {
+func validateOutputAffordability(p *player.Player, outputs []shared.BehaviorCondition) error {
 	resources := p.Resources().Get()
 	for _, output := range outputs {
-		if output.VariableAmount || output.Amount >= 0 {
+		if shared.IsVariableAmount(output) || output.GetAmount() >= 0 {
 			continue
 		}
 		var available int
-		switch output.ResourceType {
+		switch output.GetResourceType() {
 		case shared.ResourceCredit:
 			available = resources.Credits
 		case shared.ResourceSteel:
@@ -459,8 +459,8 @@ func validateOutputAffordability(p *player.Player, outputs []shared.ResourceCond
 		default:
 			continue
 		}
-		if available < -output.Amount {
-			return fmt.Errorf("insufficient %s: need %d, have %d", output.ResourceType, -output.Amount, available)
+		if available < -output.GetAmount() {
+			return fmt.Errorf("insufficient %s: need %d, have %d", output.GetResourceType(), -output.GetAmount(), available)
 		}
 	}
 	return nil
