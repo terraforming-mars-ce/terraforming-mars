@@ -2,108 +2,108 @@ package dto
 
 // DiffValueStringDto represents old/new values for string fields
 type DiffValueStringDto struct {
-	Old string `json:"old" ts:"string"`
-	New string `json:"new" ts:"string"`
+	Old string `json:"old"`
+	New string `json:"new"`
 }
 
 // DiffValueIntDto represents old/new values for integer fields
 type DiffValueIntDto struct {
-	Old int `json:"old" ts:"number"`
-	New int `json:"new" ts:"number"`
+	Old int `json:"old"`
+	New int `json:"new"`
 }
 
 // DiffValueBoolDto represents old/new values for boolean fields
 type DiffValueBoolDto struct {
-	Old bool `json:"old" ts:"boolean"`
-	New bool `json:"new" ts:"boolean"`
+	Old bool `json:"old"`
+	New bool `json:"new"`
 }
 
 // TilePlacementDto records a single tile placement on the board
 type TilePlacementDto struct {
-	HexID    string `json:"hexId" ts:"string"`
-	TileType string `json:"tileType" ts:"string"`
-	OwnerID  string `json:"ownerId,omitempty" ts:"string | undefined"`
+	HexID    string `json:"hexId"`
+	TileType string `json:"tileType"`
+	OwnerID  string `json:"ownerId,omitempty"`
 }
 
 // BoardChangesDto contains all changes to the game board
 type BoardChangesDto struct {
-	TilesPlaced []TilePlacementDto `json:"tilesPlaced,omitempty" ts:"TilePlacementDto[] | undefined"`
+	TilesPlaced []TilePlacementDto `json:"tilesPlaced,omitempty"`
 }
 
 // PlayerChangesDto contains all changes to a single player's state
 type PlayerChangesDto struct {
-	Credits            *DiffValueIntDto    `json:"credits,omitempty" ts:"DiffValueIntDto | undefined"`
-	Steel              *DiffValueIntDto    `json:"steel,omitempty" ts:"DiffValueIntDto | undefined"`
-	Titanium           *DiffValueIntDto    `json:"titanium,omitempty" ts:"DiffValueIntDto | undefined"`
-	Plants             *DiffValueIntDto    `json:"plants,omitempty" ts:"DiffValueIntDto | undefined"`
-	Energy             *DiffValueIntDto    `json:"energy,omitempty" ts:"DiffValueIntDto | undefined"`
-	Heat               *DiffValueIntDto    `json:"heat,omitempty" ts:"DiffValueIntDto | undefined"`
-	TerraformRating    *DiffValueIntDto    `json:"terraformRating,omitempty" ts:"DiffValueIntDto | undefined"`
-	CreditsProduction  *DiffValueIntDto    `json:"creditsProduction,omitempty" ts:"DiffValueIntDto | undefined"`
-	SteelProduction    *DiffValueIntDto    `json:"steelProduction,omitempty" ts:"DiffValueIntDto | undefined"`
-	TitaniumProduction *DiffValueIntDto    `json:"titaniumProduction,omitempty" ts:"DiffValueIntDto | undefined"`
-	PlantsProduction   *DiffValueIntDto    `json:"plantsProduction,omitempty" ts:"DiffValueIntDto | undefined"`
-	EnergyProduction   *DiffValueIntDto    `json:"energyProduction,omitempty" ts:"DiffValueIntDto | undefined"`
-	HeatProduction     *DiffValueIntDto    `json:"heatProduction,omitempty" ts:"DiffValueIntDto | undefined"`
-	CardsAdded         []string            `json:"cardsAdded,omitempty" ts:"string[] | undefined"`
-	CardsRemoved       []string            `json:"cardsRemoved,omitempty" ts:"string[] | undefined"`
-	CardsPlayed        []string            `json:"cardsPlayed,omitempty" ts:"string[] | undefined"`
-	Corporation        *DiffValueStringDto `json:"corporation,omitempty" ts:"DiffValueStringDto | undefined"`
-	Passed             *DiffValueBoolDto   `json:"passed,omitempty" ts:"DiffValueBoolDto | undefined"`
+	Credits            *DiffValueIntDto    `json:"credits,omitempty"`
+	Steel              *DiffValueIntDto    `json:"steel,omitempty"`
+	Titanium           *DiffValueIntDto    `json:"titanium,omitempty"`
+	Plants             *DiffValueIntDto    `json:"plants,omitempty"`
+	Energy             *DiffValueIntDto    `json:"energy,omitempty"`
+	Heat               *DiffValueIntDto    `json:"heat,omitempty"`
+	TerraformRating    *DiffValueIntDto    `json:"terraformRating,omitempty"`
+	CreditsProduction  *DiffValueIntDto    `json:"creditsProduction,omitempty"`
+	SteelProduction    *DiffValueIntDto    `json:"steelProduction,omitempty"`
+	TitaniumProduction *DiffValueIntDto    `json:"titaniumProduction,omitempty"`
+	PlantsProduction   *DiffValueIntDto    `json:"plantsProduction,omitempty"`
+	EnergyProduction   *DiffValueIntDto    `json:"energyProduction,omitempty"`
+	HeatProduction     *DiffValueIntDto    `json:"heatProduction,omitempty"`
+	CardsAdded         []string            `json:"cardsAdded,omitempty"`
+	CardsRemoved       []string            `json:"cardsRemoved,omitempty"`
+	CardsPlayed        []string            `json:"cardsPlayed,omitempty"`
+	Corporation        *DiffValueStringDto `json:"corporation,omitempty"`
+	Passed             *DiffValueBoolDto   `json:"passed,omitempty"`
 }
 
 // GameChangesDto contains all changes in a single state transition
 type GameChangesDto struct {
-	Status              *DiffValueStringDto          `json:"status,omitempty" ts:"DiffValueStringDto | undefined"`
-	Phase               *DiffValueStringDto          `json:"phase,omitempty" ts:"DiffValueStringDto | undefined"`
-	Generation          *DiffValueIntDto             `json:"generation,omitempty" ts:"DiffValueIntDto | undefined"`
-	CurrentTurnPlayerID *DiffValueStringDto          `json:"currentTurnPlayerId,omitempty" ts:"DiffValueStringDto | undefined"`
-	Temperature         *DiffValueIntDto             `json:"temperature,omitempty" ts:"DiffValueIntDto | undefined"`
-	Oxygen              *DiffValueIntDto             `json:"oxygen,omitempty" ts:"DiffValueIntDto | undefined"`
-	Oceans              *DiffValueIntDto             `json:"oceans,omitempty" ts:"DiffValueIntDto | undefined"`
-	PlayerChanges       map[string]*PlayerChangesDto `json:"playerChanges,omitempty" ts:"Record<string, PlayerChangesDto> | undefined"`
-	BoardChanges        *BoardChangesDto             `json:"boardChanges,omitempty" ts:"BoardChangesDto | undefined"`
+	Status              *DiffValueStringDto          `json:"status,omitempty"`
+	Phase               *DiffValueStringDto          `json:"phase,omitempty"`
+	Generation          *DiffValueIntDto             `json:"generation,omitempty"`
+	CurrentTurnPlayerID *DiffValueStringDto          `json:"currentTurnPlayerId,omitempty"`
+	Temperature         *DiffValueIntDto             `json:"temperature,omitempty"`
+	Oxygen              *DiffValueIntDto             `json:"oxygen,omitempty"`
+	Oceans              *DiffValueIntDto             `json:"oceans,omitempty"`
+	PlayerChanges       map[string]*PlayerChangesDto `json:"playerChanges,omitempty"`
+	BoardChanges        *BoardChangesDto             `json:"boardChanges,omitempty"`
 }
 
 // CalculatedOutputDto represents an actual output value that was applied
 type CalculatedOutputDto struct {
-	ResourceType string `json:"resourceType" ts:"string"`
-	Amount       int    `json:"amount" ts:"number"`
-	IsScaled     bool   `json:"isScaled" ts:"boolean"`
+	ResourceType string `json:"resourceType"`
+	Amount       int    `json:"amount"`
+	IsScaled     bool   `json:"isScaled"`
 }
 
 // ComputedBehaviorValueDto holds pre-computed per-condition output values for a behavior.
 // Target uses the format "behaviors::N" where N is the behavior index.
 type ComputedBehaviorValueDto struct {
-	Target  string                `json:"target" ts:"string"`
-	Outputs []CalculatedOutputDto `json:"outputs" ts:"CalculatedOutputDto[]"`
+	Target  string                `json:"target"`
+	Outputs []CalculatedOutputDto `json:"outputs"`
 }
 
 // LogDisplayDataDto contains pre-computed display information for log entries
 type LogDisplayDataDto struct {
-	Behaviors    []CardBehaviorDto `json:"behaviors,omitempty" ts:"CardBehaviorDto[] | undefined"`
-	Tags         []CardTag         `json:"tags,omitempty" ts:"CardTag[] | undefined"`
-	VPConditions []VPConditionDto  `json:"vpConditions,omitempty" ts:"VPConditionDto[] | undefined"`
+	Behaviors    []CardBehaviorDto `json:"behaviors,omitempty"`
+	Tags         []CardTag         `json:"tags,omitempty"`
+	VPConditions []VPConditionDto  `json:"vpConditions,omitempty"`
 }
 
 // StateDiffDto represents the difference between two consecutive game states
 type StateDiffDto struct {
-	SequenceNumber    int64                 `json:"sequenceNumber" ts:"number"`
-	Timestamp         string                `json:"timestamp" ts:"string"`
-	GameID            string                `json:"gameId" ts:"string"`
-	Changes           *GameChangesDto       `json:"changes" ts:"GameChangesDto"`
-	Source            string                `json:"source" ts:"string"`
-	SourceType        string                `json:"sourceType" ts:"string"`
-	PlayerID          string                `json:"playerId" ts:"string"`
-	Description       string                `json:"description" ts:"string"`
-	ChoiceIndex       *int                  `json:"choiceIndex,omitempty" ts:"number | undefined"`
-	CalculatedOutputs []CalculatedOutputDto `json:"calculatedOutputs,omitempty" ts:"CalculatedOutputDto[] | undefined"`
-	DisplayData       *LogDisplayDataDto    `json:"displayData,omitempty" ts:"LogDisplayDataDto | undefined"`
+	SequenceNumber    int64                 `json:"sequenceNumber"`
+	Timestamp         string                `json:"timestamp"`
+	GameID            string                `json:"gameId"`
+	Changes           *GameChangesDto       `json:"changes"`
+	Source            string                `json:"source"`
+	SourceType        string                `json:"sourceType"`
+	PlayerID          string                `json:"playerId"`
+	Description       string                `json:"description"`
+	ChoiceIndex       *int                  `json:"choiceIndex,omitempty"`
+	CalculatedOutputs []CalculatedOutputDto `json:"calculatedOutputs,omitempty"`
+	DisplayData       *LogDisplayDataDto    `json:"displayData,omitempty"`
 }
 
 // DiffLogDto contains the complete history of state changes for a game
 type DiffLogDto struct {
-	GameID          string         `json:"gameId" ts:"string"`
-	Diffs           []StateDiffDto `json:"diffs" ts:"StateDiffDto[]"`
-	CurrentSequence int64          `json:"currentSequence" ts:"number"`
+	GameID          string         `json:"gameId"`
+	Diffs           []StateDiffDto `json:"diffs"`
+	CurrentSequence int64          `json:"currentSequence"`
 }
