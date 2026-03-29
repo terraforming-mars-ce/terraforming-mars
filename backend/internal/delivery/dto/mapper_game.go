@@ -373,10 +373,10 @@ func buildMilestoneRewardDtos(rewards []award.RewardOutput) []AwardRewardDto {
 	if len(rewards) == 0 {
 		return nil
 	}
-	outputs := make([]ResourceConditionDto, len(rewards))
+	outputs := make([]any, len(rewards))
 	for i, r := range rewards {
-		outputs[i] = ResourceConditionDto{
-			Type:   ResourceType(r.Type),
+		outputs[i] = BasicResourceConditionDto{
+			Type:   string(r.Type),
 			Amount: r.Amount,
 			Target: "self-player",
 		}
@@ -446,10 +446,10 @@ func ToAwardsDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegistry aw
 
 		rewardDtos := make([]AwardRewardDto, len(def.Rewards))
 		for ri, r := range def.Rewards {
-			outputs := make([]ResourceConditionDto, len(r.Outputs))
+			outputs := make([]any, len(r.Outputs))
 			for oi, o := range r.Outputs {
-				outputs[oi] = ResourceConditionDto{
-					Type:   ResourceType(o.Type),
+				outputs[oi] = BasicResourceConditionDto{
+					Type:   string(o.Type),
 					Amount: o.Amount,
 					Target: "self-player",
 				}
@@ -636,7 +636,7 @@ func toVPGranterConditionDto(cond shared.VPCondition) VPGranterConditionDto {
 
 // ToTriggeredEffectDto converts a triggered effect to DTO
 func ToTriggeredEffectDto(effect shared.TriggeredEffect) TriggeredEffectDto {
-	outputDtos := make([]ResourceConditionDto, len(effect.Outputs))
+	outputDtos := make([]any, len(effect.Outputs))
 	for i, output := range effect.Outputs {
 		outputDtos[i] = toResourceConditionDto(output)
 	}

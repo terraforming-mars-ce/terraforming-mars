@@ -105,10 +105,11 @@ func toRequirementDto(req gamecards.Requirement) RequirementDto {
 
 func toCardBehaviorDto(behavior shared.CardBehavior) CardBehaviorDto {
 	return CardBehaviorDto{
-		Description:                   behavior.Description,
-		Triggers:                      mapSlice(behavior.Triggers, toTriggerDto),
-		Inputs:                        mapSlice(behavior.Inputs, toResourceConditionDto),
-		Outputs:                       mapSlice(behavior.Outputs, toResourceConditionDto),
+		Description: behavior.Description,
+		Triggers:    mapSlice(behavior.Triggers, toTriggerDto),
+		Inputs:      mapSlice(behavior.Inputs, toResourceConditionDto),
+		Outputs:     mapSlice(behavior.Outputs, toResourceConditionDto),
+
 		Choices:                       toChoiceDtos(behavior.Choices),
 		ChoicePolicy:                  toChoicePolicyDto(behavior.ChoicePolicy),
 		GenerationalEventRequirements: mapSlice(behavior.GenerationalEventRequirements, toGenerationalEventRequirementDto),
@@ -215,28 +216,87 @@ func toSelectorDto(sel shared.Selector) SelectorDto {
 	}
 }
 
-func toResourceConditionDto(rc shared.ResourceCondition) ResourceConditionDto {
-	dto := ResourceConditionDto{
-		Type:              ResourceType(rc.ResourceType),
-		Amount:            rc.Amount,
-		Target:            TargetType(rc.Target),
-		Selectors:         mapSlice(rc.Selectors, toSelectorDto),
-		MaxTrigger:        rc.MaxTrigger,
-		Per:               ptrCast(rc.Per, toPerConditionDto),
-		TileRestrictions:  ptrCast(rc.TileRestrictions, toTileRestrictionsDto),
-		TargetRestriction: ptrCast(rc.TargetRestriction, toTargetRestrictionDto),
-		TileType:          rc.TileType,
+func toResourceConditionDto(bc shared.BehaviorCondition) any {
+	rt := string(bc.GetResourceType())
+	target := TargetType(bc.GetTarget())
+	amount := bc.GetAmount()
+
+	switch c := bc.(type) {
+	case *shared.BasicResourceCondition:
+		dto := BasicResourceConditionDto{
+			Type: rt, Amount: amount, Target: target,
+			Per:               ptrCast(c.Per, toPerConditionDto),
+			TargetRestriction: ptrCast(c.TargetRestriction, toTargetRestrictionDto),
+			MaxTrigger:        c.MaxTrigger,
+		}
+		if c.VariableAmount {
+			dto.VariableAmount = &c.VariableAmount
+		}
+		return dto
+	case *shared.ProductionCondition:
+		dto := ProductionConditionDto{
+			Type: rt, Amount: amount, Target: target,
+			Per: ptrCast(c.Per, toPerConditionDto),
+		}
+		if c.VariableAmount {
+			dto.VariableAmount = &c.VariableAmount
+		}
+		return dto
+	case *shared.TilePlacementCondition:
+		return TilePlacementConditionDto{
+			Type: rt, Amount: amount, Target: target,
+			TileRestrictions: ptrCast(c.TileRestrictions, toTileRestrictionsDto),
+			TileType:         c.TileType,
+		}
+	case *shared.GlobalParameterCondition:
+		return GlobalParameterConditionDto{
+			Type: rt, Amount: amount, Target: target,
+			Per: ptrCast(c.Per, toPerConditionDto),
+		}
+	case *shared.CardOperationCondition:
+		dto := CardOperationConditionDto{
+			Type: rt, Amount: amount, Target: target,
+			Selectors: mapSlice(c.Selectors, toSelectorDto),
+		}
+		if c.VariableAmount {
+			dto.VariableAmount = &c.VariableAmount
+		}
+		return dto
+	case *shared.CardStorageCondition:
+		dto := CardStorageConditionDto{
+			Type: rt, Amount: amount, Target: target,
+			Selectors: mapSlice(c.Selectors, toSelectorDto),
+			Per:       ptrCast(c.Per, toPerConditionDto),
+		}
+		if c.VariableAmount {
+			dto.VariableAmount = &c.VariableAmount
+		}
+		return dto
+	case *shared.EffectCondition:
+		return EffectConditionDto{
+			Type: rt, Amount: amount, Target: target,
+			Selectors: mapSlice(c.Selectors, toSelectorDto),
+		}
+	case *shared.ColonyCondition:
+		return ColonyConditionDto{
+			Type: rt, Amount: amount, Target: target,
+		}
+	case *shared.TileModificationCondition:
+		return TileModificationConditionDto{
+			Type: rt, Amount: amount, Target: target,
+			TileType: c.TileType,
+		}
+	case *shared.MiscCondition:
+		return MiscConditionDto{
+			Type: rt, Amount: amount, Target: target,
+			Per:       ptrCast(c.Per, toPerConditionDto),
+			Selectors: mapSlice(c.Selectors, toSelectorDto),
+		}
+	default:
+		return BasicResourceConditionDto{
+			Type: rt, Amount: amount, Target: target,
+		}
 	}
-	if rc.VariableAmount {
-		dto.VariableAmount = &rc.VariableAmount
-	}
-	if rc.Optional {
-		dto.Optional = &rc.Optional
-	}
-	if len(rc.PaymentAllowed) > 0 {
-		dto.PaymentAllowed = mapSlice(rc.PaymentAllowed, func(rt shared.ResourceType) ResourceType { return ResourceType(rt) })
-	}
-	return dto
 }
 
 func toChoiceDtos(choices []shared.Choice) []ChoiceDto {
