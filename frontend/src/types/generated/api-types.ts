@@ -520,22 +520,146 @@ export interface SelectorDto {
   globalParameters?: string[];
   actions?: string[];
 }
+export type ResourceCondition =
+  | BasicResourceConditionDto
+  | ProductionConditionDto
+  | TilePlacementConditionDto
+  | GlobalParameterConditionDto
+  | CardOperationConditionDto
+  | CardStorageConditionDto
+  | EffectConditionDto
+  | ColonyConditionDto
+  | TileModificationConditionDto
+  | MiscConditionDto;
 /**
- * ResourceConditionDto represents a resource condition for client consumption
+ * BasicResourceConditionDto covers credit, steel, titanium, plant, energy, heat.
  */
-export interface ResourceConditionDto {
-  type: ResourceType;
+export interface BasicResourceConditionDto {
+  type: "credit" | "steel" | "titanium" | "plant" | "energy" | "heat";
+  amount: number /* int */;
+  target: TargetType;
+  per?: PerConditionDto;
+  variableAmount?: boolean;
+  targetRestriction?: TargetRestrictionDto;
+  maxTrigger?: number /* int */;
+}
+/**
+ * ProductionConditionDto covers all production types.
+ */
+export interface ProductionConditionDto {
+  type:
+    | "credit-production"
+    | "steel-production"
+    | "titanium-production"
+    | "plant-production"
+    | "energy-production"
+    | "heat-production"
+    | "any-production";
+  amount: number /* int */;
+  target: TargetType;
+  per?: PerConditionDto;
+  variableAmount?: boolean;
+}
+/**
+ * TilePlacementConditionDto covers tile placements and land claims.
+ */
+export interface TilePlacementConditionDto {
+  type:
+    | "city-placement"
+    | "ocean-placement"
+    | "greenery-placement"
+    | "volcano-placement"
+    | "tile-placement"
+    | "land-claim";
+  amount: number /* int */;
+  target: TargetType;
+  tileRestrictions?: TileRestrictionsDto;
+  tileType?: string;
+}
+/**
+ * GlobalParameterConditionDto covers temperature, oxygen, ocean, venus, tr, global-parameter.
+ */
+export interface GlobalParameterConditionDto {
+  type: "temperature" | "oxygen" | "ocean" | "venus" | "tr" | "global-parameter";
+  amount: number /* int */;
+  target: TargetType;
+  per?: PerConditionDto;
+}
+/**
+ * CardOperationConditionDto covers card-draw, card-take, card-peek, card-buy, card-discard.
+ */
+export interface CardOperationConditionDto {
+  type: "card-draw" | "card-take" | "card-peek" | "card-buy" | "card-discard";
   amount: number /* int */;
   target: TargetType;
   selectors?: SelectorDto[];
-  maxTrigger?: number /* int */;
-  per?: PerConditionDto;
-  tileRestrictions?: TileRestrictionsDto;
-  targetRestriction?: TargetRestrictionDto;
-  tileType?: string;
   variableAmount?: boolean;
-  optional?: boolean;
-  paymentAllowed?: ResourceType[];
+}
+/**
+ * CardStorageConditionDto covers microbe, animal, floater, science, asteroid, fighter, disease, card-resource.
+ */
+export interface CardStorageConditionDto {
+  type:
+    | "microbe"
+    | "animal"
+    | "floater"
+    | "science"
+    | "asteroid"
+    | "fighter"
+    | "disease"
+    | "card-resource";
+  amount: number /* int */;
+  target: TargetType;
+  selectors?: SelectorDto[];
+  per?: PerConditionDto;
+  variableAmount?: boolean;
+}
+/**
+ * EffectConditionDto covers discount, payment-substitute, and other effect types.
+ */
+export interface EffectConditionDto {
+  type:
+    | "discount"
+    | "payment-substitute"
+    | "storage-payment-substitute"
+    | "value-modifier"
+    | "global-parameter-lenience"
+    | "ignore-global-requirements"
+    | "ocean-adjacency-bonus"
+    | "defense"
+    | "action-reuse"
+    | "effect"
+    | "tag";
+  amount: number /* int */;
+  target: TargetType;
+  selectors?: SelectorDto[];
+}
+/**
+ * ColonyConditionDto covers colony-tile, colony-count, colony-bonus, colony-track-step.
+ */
+export interface ColonyConditionDto {
+  type: "colony-tile" | "colony-count" | "colony-bonus" | "colony-track-step";
+  amount: number /* int */;
+  target: TargetType;
+}
+/**
+ * TileModificationConditionDto covers tile-destruction and tile-replacement.
+ */
+export interface TileModificationConditionDto {
+  type: "tile-destruction" | "tile-replacement";
+  amount: number /* int */;
+  target: TargetType;
+  tileType?: string;
+}
+/**
+ * MiscConditionDto covers extra-actions, bonus-tags, world-tree-tile, award-fund, trade.
+ */
+export interface MiscConditionDto {
+  type: "extra-actions" | "bonus-tags" | "world-tree-tile" | "award-fund" | "trade";
+  amount: number /* int */;
+  target: TargetType;
+  per?: PerConditionDto;
+  selectors?: SelectorDto[];
 }
 /**
  * PerConditionDto represents a per condition for client consumption
@@ -553,8 +677,8 @@ export interface PerConditionDto {
  */
 export interface ChoiceDto {
   originalIndex: number /* int */;
-  inputs?: ResourceConditionDto[];
-  outputs?: ResourceConditionDto[];
+  inputs?: ResourceCondition[];
+  outputs?: ResourceCondition[];
   requirements?: CardRequirementsDto;
   available: boolean;
   errors: StateErrorDto[];
@@ -609,8 +733,8 @@ export interface ChoicePolicyDto {
 export interface CardBehaviorDto {
   description?: string;
   triggers?: TriggerDto[];
-  inputs?: ResourceConditionDto[];
-  outputs?: ResourceConditionDto[];
+  inputs?: ResourceCondition[];
+  outputs?: ResourceCondition[];
   choices?: ChoiceDto[];
   choicePolicy?: ChoicePolicyDto;
   generationalEventRequirements?: GenerationalEventRequirementDto[];
@@ -1404,7 +1528,7 @@ export interface AwardDto {
  */
 export interface AwardRewardDto {
   place: number /* int */;
-  outputs: ResourceConditionDto[];
+  outputs: ResourceCondition[];
 }
 /**
  * AwardResultDto represents the placement results for a single funded award
@@ -1536,7 +1660,7 @@ export interface TriggeredEffectDto {
   cardName: string;
   playerId: string;
   sourceType: string;
-  outputs: ResourceConditionDto[];
+  outputs: ResourceCondition[];
   calculatedOutputs?: CalculatedOutputDto[];
   behaviors?: CardBehaviorDto[];
   vpConditions?: VPConditionDto[];

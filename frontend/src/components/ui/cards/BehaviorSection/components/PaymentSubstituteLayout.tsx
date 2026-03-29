@@ -1,15 +1,17 @@
 import React from "react";
 import GameIcon from "../../../display/GameIcon.tsx";
 import Slash from "./Slash.tsx";
+import type { CardBehaviorDto, SelectorDto } from "@/types/generated/api-types";
+import { isEffect, getSelectors } from "@/types/resourceConditions";
 
 interface PaymentSubstituteLayoutProps {
-  behavior: any;
+  behavior: CardBehaviorDto;
 }
 
-const getResourcesFromSelectors = (selectors: any[]): string[] => {
+const getResourcesFromSelectors = (selectors: SelectorDto[]): string[] => {
   const resources: string[] = [];
   const seen = new Set<string>();
-  selectors.forEach((selector: any) => {
+  selectors.forEach((selector: SelectorDto) => {
     if (selector.resources) {
       selector.resources.forEach((r: string) => {
         if (!seen.has(r)) {
@@ -26,14 +28,13 @@ const PaymentSubstituteLayout: React.FC<PaymentSubstituteLayoutProps> = ({ behav
   if (!behavior.outputs || behavior.outputs.length === 0) return null;
 
   const paymentSubOutput = behavior.outputs.find(
-    (output: any) => output.type === "payment-substitute",
+    (output) => isEffect(output) && output.type === "payment-substitute",
   );
   if (!paymentSubOutput) return null;
 
   const amount = paymentSubOutput.amount ?? 1;
-  const affectedResources = paymentSubOutput.selectors
-    ? getResourcesFromSelectors(paymentSubOutput.selectors)
-    : [];
+  const paymentSelectors = getSelectors(paymentSubOutput);
+  const affectedResources = paymentSelectors ? getResourcesFromSelectors(paymentSelectors) : [];
 
   // Calculate ratio display
   // If amount < 1, invert the ratio and show multiplier on left side

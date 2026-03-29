@@ -1,4 +1,11 @@
 import { IconDisplayInfo } from "../types.ts";
+import {
+  type ResourceCondition,
+  isProduction as isProductionType,
+  isCardOperation,
+  getPer,
+  getVariableAmount,
+} from "@/types/resourceConditions.ts";
 
 /**
  * Enhanced resource display analysis that considers space constraints.
@@ -10,22 +17,17 @@ import { IconDisplayInfo } from "../types.ts";
  * @returns Display information including mode and icon count
  */
 export const analyzeResourceDisplayWithConstraints = (
-  resource: any,
+  resource: ResourceCondition & { forceNumberFormat?: boolean },
   availableSpace: number,
   forceCompact: boolean = false,
 ): IconDisplayInfo => {
-  const resourceType = resource.resourceType || resource.type || "unknown";
+  const resourceType = resource.type || "unknown";
   const amount = resource.amount ?? 1;
-  const hasPer = resource.per;
-  const isProduction = resourceType?.includes("-production");
+  const hasPer = getPer(resource);
+  const isProduction = isProductionType(resource);
+  const variableAmount = getVariableAmount(resource);
 
-  // Card resources (card-draw, card-peek, card-take, card-buy, card-discard) always use number mode
-  const isCardResource =
-    resourceType === "card-draw" ||
-    resourceType === "card-peek" ||
-    resourceType === "card-take" ||
-    resourceType === "card-buy" ||
-    resourceType === "card-discard";
+  const isCardResource = isCardOperation(resource);
 
   if (isCardResource) {
     return {
@@ -33,11 +35,11 @@ export const analyzeResourceDisplayWithConstraints = (
       amount,
       displayMode: "number",
       iconCount: 1,
-      variableAmount: !!resource.variableAmount,
+      variableAmount: !!variableAmount,
     };
   }
 
-  if (resource.variableAmount) {
+  if (variableAmount) {
     return {
       resourceType,
       amount,
@@ -78,7 +80,9 @@ export const analyzeResourceDisplayWithConstraints = (
  * @param resources - Array of resources to coordinate
  * @returns Map of resources to their display information
  */
-export const coordinateDisplayModes = (resources: any[]): Map<any, IconDisplayInfo> => {
+export const coordinateDisplayModes = (
+  resources: ResourceCondition[],
+): Map<ResourceCondition, IconDisplayInfo> => {
   // First pass: analyze each resource independently
   const displayInfos = resources.map((r) => ({
     resource: r,
@@ -128,7 +132,7 @@ export interface CardDisplayItem {
 const isAttackTarget = (target: string | undefined): boolean =>
   target === "any-player" || target === "all-opponents" || (target?.startsWith("steal-") ?? false);
 
-export const analyzeCardOutputs = (outputs: any[]): CardDisplayItem[] => {
+export const analyzeCardOutputs = (outputs: ResourceCondition[]): CardDisplayItem[] => {
   // Separate card outputs by target (self vs opponents)
   let selfDraw = 0;
   let selfPeek = 0;
@@ -142,7 +146,7 @@ export const analyzeCardOutputs = (outputs: any[]): CardDisplayItem[] => {
   let attackDiscard = 0;
 
   outputs.forEach((output) => {
-    const type = output.resourceType || output.type;
+    const type = output.type;
     const amount = output.amount ?? 0;
     const attack = isAttackTarget(output.target);
 
