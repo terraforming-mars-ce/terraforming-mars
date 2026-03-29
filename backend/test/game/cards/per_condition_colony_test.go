@@ -35,11 +35,9 @@ func TestPerCondition_FloaterLeasing(t *testing.T) {
 	p.Resources().SetProduction(prod)
 
 	selfPlayer := "self-player"
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCreditProduction,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.ProductionCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceFloater,
 				Amount:       3,
@@ -97,11 +95,9 @@ func TestPerCondition_ColonyCount(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 0)
 
 	// Apply Molecular Printing colony output
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceColonyCount,
 				Amount:       1,
@@ -127,11 +123,9 @@ func TestPerCondition_ColonyCountEmpty(t *testing.T) {
 	// No colonies set up
 	testutil.SetPlayerCredits(ctx, p, 0)
 
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceColonyCount,
 				Amount:       1,

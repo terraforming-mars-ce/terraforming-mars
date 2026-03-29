@@ -117,12 +117,12 @@ func TestCelestic_FirstActionDrawsFloaterCards(t *testing.T) {
 		}
 		for _, b := range card.Behaviors {
 			for _, o := range b.Outputs {
-				if o.ResourceType == shared.ResourceFloater {
+				if o.GetResourceType() == shared.ResourceFloater {
 					hasFloater = true
 				}
 			}
 			for _, i := range b.Inputs {
-				if i.ResourceType == shared.ResourceFloater {
+				if i.GetResourceType() == shared.ResourceFloater {
 					hasFloater = true
 				}
 			}
@@ -254,9 +254,9 @@ func TestMorningStarInc_VenusLenienceRegistered(t *testing.T) {
 	for _, effect := range effects {
 		if effect.CardName == "Morning Star Inc." && effect.BehaviorIndex == 2 {
 			found = true
-			testutil.AssertEqual(t, shared.ResourceGlobalParameterLenience, effect.Behavior.Outputs[0].ResourceType,
+			testutil.AssertEqual(t, shared.ResourceGlobalParameterLenience, effect.Behavior.Outputs[0].GetResourceType(),
 				"Morning Star Inc. effect output should be global parameter lenience")
-			testutil.AssertEqual(t, 2, effect.Behavior.Outputs[0].Amount,
+			testutil.AssertEqual(t, 2, effect.Behavior.Outputs[0].GetAmount(),
 				"Morning Star Inc. venus lenience amount should be 2")
 			break
 		}
@@ -300,7 +300,7 @@ func TestViron_HasActionReuseAction(t *testing.T) {
 	for _, a := range actions {
 		if a.CardID == vironCardID {
 			for _, output := range a.Behavior.Outputs {
-				if output.ResourceType == shared.ResourceActionReuse {
+				if output.GetResourceType() == shared.ResourceActionReuse {
 					hasVironAction = true
 					break
 				}
@@ -331,8 +331,8 @@ func TestViron_ReuseBlueCardAction(t *testing.T) {
 		BehaviorIndex: 0,
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 			},
 		},
 		TimesUsedThisGeneration: 1,
@@ -358,7 +358,7 @@ func TestViron_ReuseBlueCardAction(t *testing.T) {
 	for _, a := range actions {
 		if a.CardID == vironCardID {
 			for _, output := range a.Behavior.Outputs {
-				if output.ResourceType == shared.ResourceActionReuse {
+				if output.GetResourceType() == shared.ResourceActionReuse {
 					testutil.AssertEqual(t, 1, a.TimesUsedThisGeneration, "Viron action should be marked as used")
 				}
 			}
@@ -387,8 +387,8 @@ func TestViron_CannotReuseUnusedAction(t *testing.T) {
 		BehaviorIndex: 0,
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 			},
 		},
 		TimesUsedThisGeneration: 0,
@@ -442,8 +442,8 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 		BehaviorIndex: 0,
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 			},
 		},
 		TimesUsedThisGeneration: 1,
@@ -467,8 +467,8 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 		BehaviorIndex: 0,
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"}},
 			},
 		},
 		TimesUsedThisGeneration: 1,
@@ -503,8 +503,8 @@ func TestViron_ReuseStratopolis_AddFloatersToSelf(t *testing.T) {
 		BehaviorIndex: 1,
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceFloater, Amount: 2, Target: "any-card"},
+			Outputs: []shared.BehaviorCondition{
+				&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 2, Target: "any-card"}},
 			},
 		},
 		TimesUsedThisGeneration: 0,
@@ -532,7 +532,7 @@ func TestViron_ReuseStratopolis_AddFloatersToSelf(t *testing.T) {
 	for _, a := range actions {
 		if a.CardID == vironCardID {
 			for _, output := range a.Behavior.Outputs {
-				if output.ResourceType == shared.ResourceActionReuse {
+				if output.GetResourceType() == shared.ResourceActionReuse {
 					testutil.AssertEqual(t, 1, a.TimesUsedThisGeneration, "Viron action should be marked as used")
 				}
 			}

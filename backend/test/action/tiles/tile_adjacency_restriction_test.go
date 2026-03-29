@@ -33,13 +33,11 @@ func TestUrbanizedArea_CityAdjacentTo2Cities(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCreditProduction, Amount: 2, Target: "self-player"},
-					{ResourceType: shared.ResourceEnergyProduction, Amount: -1, Target: "self-player"},
-					{
-						ResourceType: shared.ResourceCityPlacement,
-						Amount:       1,
-						Target:       "none",
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 2, Target: "self-player"}},
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: -1, Target: "self-player"}},
+					&shared.TilePlacementCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCityPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{
 							AdjacentToType:    "city",
 							MinAdjacentOfType: &minAdj,
@@ -173,12 +171,10 @@ func TestEcologicalZone_GreeneryAdjacentToGreenery(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceAnimal, Amount: 2, Target: "self-card"},
-					{
-						ResourceType: shared.ResourceGreeneryPlacement,
-						Amount:       1,
-						Target:       "none",
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAnimal, Amount: 2, Target: "self-card"}},
+					&shared.TilePlacementCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGreeneryPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{
 							AdjacentToType: "greenery",
 						},
@@ -315,13 +311,11 @@ func makeUrbanizedAreaCard() gamecards.Card {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCreditProduction, Amount: 2, Target: "self-player"},
-					{ResourceType: shared.ResourceEnergyProduction, Amount: -1, Target: "self-player"},
-					{
-						ResourceType: shared.ResourceCityPlacement,
-						Amount:       1,
-						Target:       "none",
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 2, Target: "self-player"}},
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: -1, Target: "self-player"}},
+					&shared.TilePlacementCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCityPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{
 							AdjacentToType:    "city",
 							MinAdjacentOfType: &minAdj,
@@ -422,11 +416,9 @@ func makePlantationCard() gamecards.Card {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{
-						ResourceType: shared.ResourceGreeneryPlacement,
-						Amount:       1,
-						Target:       "none",
+				Outputs: []shared.BehaviorCondition{
+					&shared.TilePlacementCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGreeneryPlacement, Amount: 1, Target: "none"},
 					},
 				},
 			},
@@ -538,11 +530,9 @@ func makeMangroveCard() gamecards.Card {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{
-						ResourceType: shared.ResourceGreeneryPlacement,
-						Amount:       1,
-						Target:       "none",
+				Outputs: []shared.BehaviorCondition{
+					&shared.TilePlacementCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGreeneryPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{
 							OnTileType: "ocean",
 						},

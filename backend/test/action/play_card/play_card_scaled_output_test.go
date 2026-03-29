@@ -32,11 +32,9 @@ func TestMirandaResort_CreditProductionPerEarthTag(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{
-						ResourceType: shared.ResourceCreditProduction,
-						Amount:       1,
-						Target:       "self-player",
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
 						Per: &shared.PerCondition{
 							ResourceType: shared.ResourceType(shared.TagEarth),
 							Amount:       1,
@@ -105,11 +103,9 @@ func TestMirandaResort_ZeroEarthTags(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{
-						ResourceType: shared.ResourceCreditProduction,
-						Amount:       1,
-						Target:       "self-player",
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
 						Per: &shared.PerCondition{
 							ResourceType: shared.ResourceType(shared.TagEarth),
 							Amount:       1,
@@ -170,11 +166,9 @@ func TestTerraformingGanymede_TRPerJovianTag(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{
-						ResourceType: shared.ResourceTR,
-						Amount:       1,
-						Target:       "self-player",
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"},
 						Per: &shared.PerCondition{
 							ResourceType: shared.ResourceType(shared.TagJovian),
 							Amount:       1,
@@ -240,11 +234,9 @@ func TestTerraformingGanymede_OnlyCountsSelfPlayerTags(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{
-						ResourceType: shared.ResourceTR,
-						Amount:       1,
-						Target:       "self-player",
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"},
 						Per: &shared.PerCondition{
 							ResourceType: shared.ResourceType(shared.TagJovian),
 							Amount:       1,
@@ -310,11 +302,11 @@ func TestImportedNitrogen_MultipleAnyCardTargets(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourcePlant, Amount: 4, Target: "self-player"},
-					{ResourceType: shared.ResourceMicrobe, Amount: 3, Target: "any-card"},
-					{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"},
-					{ResourceType: shared.ResourceAnimal, Amount: 2, Target: "any-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlant, Amount: 4, Target: "self-player"}},
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 3, Target: "any-card"}},
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"}},
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAnimal, Amount: 2, Target: "any-card"}},
 				},
 			},
 		},

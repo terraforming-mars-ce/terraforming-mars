@@ -56,16 +56,16 @@ func TestAerialMappers_Action_AddFloater(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "any-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "any-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},
@@ -91,16 +91,16 @@ func TestAerialMappers_Action_SpendFloaterForCardDraw(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "any-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "any-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},
@@ -287,16 +287,16 @@ func TestDeuteriumExport_Action_AddFloater(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},
@@ -322,16 +322,16 @@ func TestDeuteriumExport_Action_SpendFloaterForEnergyProduction(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},
@@ -529,11 +529,11 @@ func TestFloatingHabs_Action_Spend2CreditsForFloater(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceFloater, Amount: 1, Target: "any-card"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "any-card"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -569,19 +569,19 @@ func TestForcedPrecipitation_Action_PayCreditsForFloater(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -610,19 +610,19 @@ func TestForcedPrecipitation_Action_FailsWithoutEnoughFloaters(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -820,19 +820,19 @@ func TestJetStreamMicroscrappers_Action_SpendTitaniumFor2Floaters(t *testing.T) 
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceTitanium, Amount: 1, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTitanium, Amount: 1, Target: "self-player"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 2, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 2, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -870,16 +870,16 @@ func TestLocalShading_Action_AddFloater(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},
@@ -905,16 +905,16 @@ func TestLocalShading_Action_SpendFloaterForCreditProduction(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},
@@ -1264,19 +1264,19 @@ func TestRotatorImpacts_AddFloater(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCredit, Amount: 6, Target: "self-player", PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium}},
+				Inputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 6, Target: "self-player"}, PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -1461,8 +1461,8 @@ func TestStratosphericBirds_ActionAddAnimal(t *testing.T) {
 	p.Resources().AddToStorage(cardID, 0)
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -1584,16 +1584,16 @@ func TestThermophiles_AddMicrobe(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -1624,16 +1624,16 @@ func TestThermophiles_SpendMicrobesForVenus(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -1725,11 +1725,11 @@ func TestVenusMagnetizer_ActionDecraseEnergyForVenus(t *testing.T) {
 	p.PlayedCards().AddCard(cardID, "Venus Magnetizer", "active", []string{"venus"})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -1818,8 +1818,8 @@ func TestVenusianInsects_ActionAddMicrobe(t *testing.T) {
 	p.Resources().AddToStorage(cardID, 0)
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -1973,16 +1973,16 @@ func sulphurEatingBacteriaBehavior() shared.CardBehavior {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card", VariableAmount: true},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}, VariableAmount: true},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCredit, Amount: 3, Target: "self-player", VariableAmount: true},
+				Outputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 3, Target: "self-player"}, VariableAmount: true},
 				},
 			},
 		},
@@ -2133,8 +2133,8 @@ func TestVenusRequirement_BlocksWhenTooLow(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},
@@ -2174,8 +2174,8 @@ func TestVenusRequirement_BlocksWhenTooHigh(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},
@@ -2210,8 +2210,8 @@ func TestVenusIncrease_RaisesGlobalParameter(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -2262,8 +2262,8 @@ func TestVenusStateCalculator_RequirementValidation(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},

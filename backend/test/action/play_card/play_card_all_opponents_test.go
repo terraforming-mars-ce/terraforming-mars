@@ -23,9 +23,9 @@ func createAllOpponentsDrawTestCard() gamecards.Card {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCardDraw, Amount: 2, Target: "self-player"},
-					{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "all-opponents"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 2, Target: "self-player"}},
+					&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "all-opponents"}},
 				},
 			},
 		},

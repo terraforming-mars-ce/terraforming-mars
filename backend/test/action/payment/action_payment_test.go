@@ -29,16 +29,11 @@ func TestWaterImportFromEuropa_PayWithCreditsOnly(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{
-				ResourceType:   shared.ResourceCredit,
-				Amount:         12,
-				Target:         "self-player",
-				PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium},
-			},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 12, Target: "self-player"}, PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -76,16 +71,11 @@ func TestWaterImportFromEuropa_PayWithTitaniumAndCredits(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{
-				ResourceType:   shared.ResourceCredit,
-				Amount:         12,
-				Target:         "self-player",
-				PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium},
-			},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 12, Target: "self-player"}, PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -125,16 +115,11 @@ func TestWaterImportFromEuropa_FailInsufficientPayment(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{
-				ResourceType:   shared.ResourceCredit,
-				Amount:         12,
-				Target:         "self-player",
-				PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium},
-			},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 12, Target: "self-player"}, PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -170,16 +155,11 @@ func TestWaterImportFromEuropa_FailSteelNotAllowed(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{
-				ResourceType:   shared.ResourceCredit,
-				Amount:         12,
-				Target:         "self-player",
-				PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium},
-			},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 12, Target: "self-player"}, PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -214,16 +194,11 @@ func TestWaterImportFromEuropa_NoPaymentFallsBackToCredits(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{
-				ResourceType:   shared.ResourceCredit,
-				Amount:         12,
-				Target:         "self-player",
-				PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium},
-			},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 12, Target: "self-player"}, PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -268,24 +243,19 @@ func TestRotatorImpacts_Choice1_PayWithTitanium(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Inputs: []shared.ResourceCondition{
-					{
-						ResourceType:   shared.ResourceCredit,
-						Amount:         6,
-						Target:         "self-player",
-						PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium},
-					},
+				Inputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 6, Target: "self-player"}, PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceAsteroid, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAsteroid, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceAsteroid, Amount: 1, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAsteroid, Amount: 1, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -329,16 +299,11 @@ func TestWaterImportFromEuropa_TitaniumWithValueModifier(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{
-				ResourceType:   shared.ResourceCredit,
-				Amount:         12,
-				Target:         "self-player",
-				PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium},
-			},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 12, Target: "self-player"}, PaymentAllowed: []shared.ResourceType{shared.ResourceTitanium}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{

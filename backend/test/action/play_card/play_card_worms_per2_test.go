@@ -27,11 +27,9 @@ func makeWormsCard() gamecards.Card {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{
-						ResourceType: shared.ResourcePlantProduction,
-						Amount:       1,
-						Target:       "self-player",
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlantProduction, Amount: 1, Target: "self-player"},
 						Per: &shared.PerCondition{
 							ResourceType: shared.ResourceType(shared.TagMicrobe),
 							Amount:       2,

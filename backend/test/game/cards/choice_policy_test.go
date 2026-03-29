@@ -70,8 +70,8 @@ func TestAutoSelectChoiceIndex_LowestPolicy(t *testing.T) {
 // (auto-select is handled externally, not by filtering).
 func TestFilterChoiceIndicesByPolicy_AutoPlantTags3(t *testing.T) {
 	choices := []shared.Choice{
-		{Outputs: []shared.ResourceCondition{{ResourceType: shared.ResourcePlantProduction, Amount: 1}}},
-		{Outputs: []shared.ResourceCondition{{ResourceType: shared.ResourcePlantProduction, Amount: 4}}},
+		{Outputs: []shared.BehaviorCondition{&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlantProduction, Amount: 1}}}},
+		{Outputs: []shared.BehaviorCondition{&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlantProduction, Amount: 4}}}},
 	}
 	production := shared.Production{}
 

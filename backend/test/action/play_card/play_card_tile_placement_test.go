@@ -29,11 +29,9 @@ func TestMangrove_GreeneryOnOceanTileRestriction(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{
-						ResourceType: shared.ResourceGreeneryPlacement,
-						Amount:       1,
-						Target:       "none",
+				Outputs: []shared.BehaviorCondition{
+					&shared.TilePlacementCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGreeneryPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{
 							OnTileType: "ocean",
 						},
@@ -86,8 +84,8 @@ func TestLandClaim_CreatesLandClaimTileSelection(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceLandClaim, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceLandClaim, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -142,8 +140,8 @@ func TestArtificialLake_OceanPlacement(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -196,8 +194,8 @@ func TestArtificialLake_FailsWithoutTemperatureRequirement(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
 				},
 			},
 		},

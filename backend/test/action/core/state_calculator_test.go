@@ -350,11 +350,11 @@ func TestCalculatePlayerCardActionState_Available(t *testing.T) {
 	// Create test action with input requirements
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 4},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergy, Amount: 4}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceSteel, Amount: 2},
+		Outputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteel, Amount: 2}},
 		},
 	}
 
@@ -389,8 +389,8 @@ func TestCalculatePlayerCardActionState_InsufficientResources(t *testing.T) {
 	// Create test action requiring 4 energy
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 4},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergy, Amount: 4}},
 		},
 	}
 
@@ -695,8 +695,8 @@ func TestCalculateChoiceErrors_NoRequirements(t *testing.T) {
 	g, p, cardRegistry := setupTestEnvironment(t)
 
 	choice := shared.Choice{
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
 		},
 	}
 
@@ -710,8 +710,8 @@ func TestCalculateChoiceErrors_TagRequirementNotMet(t *testing.T) {
 	g, p, cardRegistry := setupTestEnvironment(t)
 
 	choice := shared.Choice{
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCardDraw, Amount: 3, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 3, Target: "self-player"}},
 		},
 		Requirements: &shared.ChoiceRequirements{
 			Items: []shared.ChoiceRequirement{
@@ -741,8 +741,8 @@ func TestCalculateChoiceErrors_TagRequirementMet(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(venusCards)
 
 	choice := shared.Choice{
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCardDraw, Amount: 3, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 3, Target: "self-player"}},
 		},
 		Requirements: &shared.ChoiceRequirements{
 			Items: []shared.ChoiceRequirement{
@@ -853,11 +853,11 @@ func TestCalculatePlayerCardActionState_ProductionInput_Available(t *testing.T) 
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"}},
 		},
 	}
 
@@ -879,11 +879,11 @@ func TestCalculatePlayerCardActionState_ProductionInput_Insufficient(t *testing.
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"}},
 		},
 	}
 

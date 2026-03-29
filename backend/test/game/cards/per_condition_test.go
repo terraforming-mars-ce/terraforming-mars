@@ -35,11 +35,9 @@ func TestPerCondition_CityTileMarsLocation(t *testing.T) {
 
 	// Create output with per: city-tile, location: mars
 	marsLocation := "mars"
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceCityTile,
 				Amount:       1,
@@ -78,11 +76,9 @@ func TestPerCondition_CityTileAnywhereLocation(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 0)
 
 	// Per with no location (anywhere)
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceCityTile,
 				Amount:       1,
@@ -114,11 +110,9 @@ func TestPerCondition_TagSelfPlayer(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 0)
 
 	earthTag := shared.TagEarth
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceType("tag"),
 				Amount:       1,
@@ -157,11 +151,9 @@ func TestPerCondition_TagAnyPlayer(t *testing.T) {
 
 	earthTag := shared.TagEarth
 	anyPlayer := "any-player"
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceType("tag"),
 				Amount:       1,
@@ -194,11 +186,9 @@ func TestPerCondition_CardResourceSelfCard(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 0)
 
 	selfCard := "self-card"
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceFloater,
 				Amount:       1,
@@ -238,11 +228,9 @@ func TestPerCondition_IntegerDivision(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 0)
 
 	// per.Amount = 2, so 5 cities / 2 = multiplier 2
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceCityTile,
 				Amount:       2,
@@ -268,11 +256,9 @@ func TestPerCondition_ZeroMultiplierSkipsOutput(t *testing.T) {
 	// No cities placed
 	testutil.SetPlayerCredits(ctx, p, 10)
 
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       1,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
 			Per: &shared.PerCondition{
 				ResourceType: shared.ResourceCityTile,
 				Amount:       1,
@@ -364,11 +350,9 @@ func TestPerCondition_NilPerProceedsNormally(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 0)
 
 	// Output without per condition
-	outputs := []shared.ResourceCondition{
-		{
-			ResourceType: shared.ResourceCredit,
-			Amount:       5,
-			Target:       "self-player",
+	outputs := []shared.BehaviorCondition{
+		&shared.BasicResourceCondition{
+			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 5, Target: "self-player"},
 		},
 	}
 

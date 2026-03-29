@@ -28,11 +28,11 @@ func TestDevelopmentCenter_SpendEnergyToDrawCard(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 1, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergy, Amount: 1, Target: "self-player"}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -66,11 +66,11 @@ func TestDevelopmentCenter_FailsWithoutEnergy(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 1, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergy, Amount: 1, Target: "self-player"}},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -105,16 +105,16 @@ func TestRegolithEaters_AddMicrobeToSelfCard(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -152,16 +152,16 @@ func TestRegolithEaters_RemoveMicrobesToRaiseOxygen(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -204,16 +204,16 @@ func TestRegolithEaters_CannotRemoveWithInsufficientMicrobes(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -261,16 +261,16 @@ func TestGHGProducingBacteria_AddMicrobe(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceTemperature, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -307,16 +307,16 @@ func TestGHGProducingBacteria_RemoveMicrobesToRaiseTemperature(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceTemperature, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1, Target: "none"}},
 				},
 			},
 		},
@@ -364,18 +364,18 @@ func TestElectroCatapult_SpendPlantForCredits(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"}},
 		},
 		Choices: []shared.Choice{
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},
@@ -419,18 +419,18 @@ func TestElectroCatapult_SpendSteelForCredits(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"}},
 		},
 		Choices: []shared.Choice{
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"}},
 				},
 			},
 		},

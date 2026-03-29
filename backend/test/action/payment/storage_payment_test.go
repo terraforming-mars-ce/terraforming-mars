@@ -32,14 +32,10 @@ func TestStoragePaymentSubstitute_RegisteredOnCardPlay(t *testing.T) {
 			Behaviors: []shared.CardBehavior{
 				{
 					Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-					Outputs: []shared.ResourceCondition{
-						{
-							ResourceType: shared.ResourceStoragePaymentSubstitute,
-							Amount:       3,
-							Selectors: []shared.Selector{
-								{Tags: []shared.CardTag{shared.TagVenus}},
-							},
-						},
+					Outputs: []shared.BehaviorCondition{
+						&shared.EffectCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceStoragePaymentSubstitute, Amount: 3}, Selectors: []shared.Selector{
+							{Tags: []shared.CardTag{shared.TagVenus}},
+						}},
 					},
 				},
 			},
@@ -201,16 +197,16 @@ func TestVariableAmount_StorageInput_SpendMultipleMicrobes(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card", VariableAmount: true},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}, VariableAmount: true},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCredit, Amount: 3, Target: "self-player", VariableAmount: true},
+				Outputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 3, Target: "self-player"}, VariableAmount: true},
 				},
 			},
 		},
@@ -253,16 +249,16 @@ func TestVariableAmount_StorageInput_InsufficientMicrobes(t *testing.T) {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card", VariableAmount: true},
+				Inputs: []shared.BehaviorCondition{
+					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}, VariableAmount: true},
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCredit, Amount: 3, Target: "self-player", VariableAmount: true},
+				Outputs: []shared.BehaviorCondition{
+					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 3, Target: "self-player"}, VariableAmount: true},
 				},
 			},
 		},

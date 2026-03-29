@@ -30,13 +30,11 @@ func TestNaturalPreserve_TilePlacementWithNoAdjacency(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
-					{
-						ResourceType: shared.ResourceTilePlacement,
-						Amount:       1,
-						Target:       "none",
-						TileType:     "natural-preserve",
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"}},
+					&shared.TilePlacementCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTilePlacement, Amount: 1, Target: "none"},
+						TileType:      "natural-preserve",
 						TileRestrictions: &shared.TileRestrictions{
 							Adjacency: "none",
 						},
@@ -153,13 +151,11 @@ func TestNuclearZone_TilePlacementOnNormalLand(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceTemperature, Amount: 2, Target: "none"},
-					{
-						ResourceType: shared.ResourceTilePlacement,
-						Amount:       1,
-						Target:       "none",
-						TileType:     "nuclear-zone",
+				Outputs: []shared.BehaviorCondition{
+					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 2, Target: "none"}},
+					&shared.TilePlacementCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTilePlacement, Amount: 1, Target: "none"},
+						TileType:      "nuclear-zone",
 					},
 				},
 			},
@@ -210,13 +206,11 @@ func TestMoholeArea_TilePlacementOnOceanSpace(t *testing.T) {
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceHeatProduction, Amount: 4, Target: "self-player"},
-					{
-						ResourceType: shared.ResourceTilePlacement,
-						Amount:       1,
-						Target:       "none",
-						TileType:     "mohole",
+				Outputs: []shared.BehaviorCondition{
+					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceHeatProduction, Amount: 4, Target: "self-player"}},
+					&shared.TilePlacementCondition{
+						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTilePlacement, Amount: 1, Target: "none"},
+						TileType:      "mohole",
 						TileRestrictions: &shared.TileRestrictions{
 							OnTileType: "ocean",
 						},
