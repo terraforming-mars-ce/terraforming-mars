@@ -79,7 +79,7 @@ type PendingCardDiscardSelection struct {
 	MaxCards       int
 	Source         string
 	SourceCardID   string
-	PendingOutputs []ResourceCondition
+	PendingOutputs []BehaviorCondition
 }
 
 // PendingBehaviorChoiceSelection represents a pending behavior choice

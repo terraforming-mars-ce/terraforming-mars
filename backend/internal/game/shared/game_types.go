@@ -215,7 +215,7 @@ type TriggeredEffect struct {
 	CardName          string
 	PlayerID          string
 	SourceType        SourceType
-	Outputs           []ResourceCondition
+	Outputs           []BehaviorCondition
 	CalculatedOutputs []CalculatedOutput
 	Behaviors         []CardBehavior
 	VPConditions      []VPConditionForLog

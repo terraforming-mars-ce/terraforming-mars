@@ -60,22 +60,24 @@ const (
 	TemporaryGenerationEnd = "generation-end" // Effect expires at end of generation
 )
 
-// ResourceCondition represents a resource amount (input or output)
-type ResourceCondition struct {
+// resourceConditionJSON is the flat JSON deserialization format for card behaviors.
+// It is only used internally for JSON unmarshaling, then converted to typed conditions
+// via categorizeCondition. All runtime code uses BehaviorCondition and typed category structs.
+type resourceConditionJSON struct {
 	ResourceType               ResourceType       `json:"type"`
 	Amount                     int                `json:"amount"`
 	Target                     string             `json:"target"`
 	Selectors                  []Selector         `json:"selectors,omitempty"`
 	MaxTrigger                 *int               `json:"maxTrigger,omitempty"`
 	Per                        *PerCondition      `json:"per,omitempty"`
-	TileRestrictions           *TileRestrictions  `json:"tileRestrictions,omitempty" ts:"TileRestrictions | undefined"`
-	TileType                   string             `json:"tileType,omitempty" ts:"string | undefined"` // For tile-placement: specifies the tile type to place
-	VariableAmount             bool               `json:"variableAmount,omitempty" ts:"boolean | undefined"`
-	Temporary                  string             `json:"temporary,omitempty" ts:"string | undefined"`              // "next-card" or "generation-end"
-	Optional                   bool               `json:"optional,omitempty" ts:"boolean | undefined"`              // Player can skip this input
-	PaymentAllowed             []ResourceType     `json:"paymentAllowed,omitempty" ts:"ResourceType[] | undefined"` // Alternative resources accepted as payment (e.g., ["titanium"] for "titanium may be used")
-	TargetRestriction          *TargetRestriction `json:"targetRestriction,omitempty" ts:"TargetRestriction | undefined"`
-	AllowDuplicatePlayerColony bool               `json:"allowDuplicatePlayerColony,omitempty" ts:"boolean | undefined"`
+	TileRestrictions           *TileRestrictions  `json:"tileRestrictions,omitempty"`
+	TileType                   string             `json:"tileType,omitempty"`
+	VariableAmount             bool               `json:"variableAmount,omitempty"`
+	Temporary                  string             `json:"temporary,omitempty"`
+	Optional                   bool               `json:"optional,omitempty"`
+	PaymentAllowed             []ResourceType     `json:"paymentAllowed,omitempty"`
+	TargetRestriction          *TargetRestriction `json:"targetRestriction,omitempty"`
+	AllowDuplicatePlayerColony bool               `json:"allowDuplicatePlayerColony,omitempty"`
 }
 
 // TargetRestriction restricts which players can be targeted by an output.
@@ -113,7 +115,7 @@ type ChoiceRequirements struct {
 
 // Choice represents a player choice option
 type Choice struct {
-	Inputs       []ResourceCondition `json:"inputs,omitempty"`
-	Outputs      []ResourceCondition `json:"outputs,omitempty"`
+	Inputs       []BehaviorCondition `json:"inputs,omitempty"`
+	Outputs      []BehaviorCondition `json:"outputs,omitempty"`
 	Requirements *ChoiceRequirements `json:"requirements,omitempty"` // If set, choice is only available when requirements are met
 }
