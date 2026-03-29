@@ -39,28 +39,28 @@ func TestRobinsonIndustries_ActionSucceedsWithSufficientCredits(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 4, "self-player"),
 		},
 		ChoicePolicy: &shared.ChoicePolicy{Type: shared.ChoicePolicyTypeLowest},
 		Choices: []shared.Choice{
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceSteelProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceSteelProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceTitaniumProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourcePlantProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourcePlantProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceEnergyProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceHeatProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceHeatProduction, 1, "self-player"),
 			}},
 		},
 	}
@@ -109,28 +109,28 @@ func TestRobinsonIndustries_OnlyAllowsIncreasingLowestProduction(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 4, "self-player"),
 		},
 		ChoicePolicy: &shared.ChoicePolicy{Type: shared.ChoicePolicyTypeLowest},
 		Choices: []shared.Choice{
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceSteelProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceSteelProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceTitaniumProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourcePlantProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourcePlantProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceEnergyProduction, 1, "self-player"),
 			}},
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceHeatProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceHeatProduction, 1, "self-player"),
 			}},
 		},
 	}
@@ -168,12 +168,12 @@ func TestRobinsonIndustries_ActionFailsWithInsufficientCredits(t *testing.T) {
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 4, "self-player"),
 		},
 		Choices: []shared.Choice{
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 			}},
 		},
 	}
@@ -207,12 +207,12 @@ func TestRobinsonIndustries_StateCalculatorBlocksWhenUnaffordable(t *testing.T) 
 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 4, "self-player"),
 		},
 		Choices: []shared.Choice{
-			{Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"},
+			{Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 			}},
 		},
 	}
@@ -345,9 +345,9 @@ func TestTeractor_CorporationPlays(t *testing.T) {
 			// Verify the behavior contains the expected discount output
 			testutil.AssertEqual(t, 1, len(effect.Behavior.Outputs),
 				"Discount behavior should have 1 output")
-			testutil.AssertEqual(t, shared.ResourceDiscount, effect.Behavior.Outputs[0].ResourceType,
+			testutil.AssertEqual(t, shared.ResourceDiscount, effect.Behavior.Outputs[0].GetResourceType(),
 				"Output should be a discount resource type")
-			testutil.AssertEqual(t, 3, effect.Behavior.Outputs[0].Amount,
+			testutil.AssertEqual(t, 3, effect.Behavior.Outputs[0].GetAmount(),
 				"Discount should be 3 M€")
 			break
 		}

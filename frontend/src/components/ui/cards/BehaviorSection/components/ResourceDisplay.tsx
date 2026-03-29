@@ -4,6 +4,14 @@ import { getIconPath, getTagIconPath } from "@/utils/iconStore.ts";
 import BehaviorIcon from "./BehaviorIcon.tsx";
 import Slash from "./Slash.tsx";
 import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
+import {
+  type ResourceCondition,
+  isProduction as isProductionType,
+  isTilePlacement as isTilePlacementType,
+  getPer,
+  getSelectors,
+  getTileRestrictions,
+} from "@/types/resourceConditions.ts";
 
 interface IconDisplayInfo {
   resourceType: string;
@@ -21,7 +29,7 @@ interface TileScaleInfo {
 interface ResourceDisplayProps {
   displayInfo: IconDisplayInfo;
   isInput?: boolean;
-  resource?: any;
+  resource?: ResourceCondition;
   isGroupedWithOtherNegatives?: boolean;
   context?: "standalone" | "action" | "production" | "default";
   isAffordable?: boolean;
@@ -30,12 +38,14 @@ interface ResourceDisplayProps {
   computedOutputs?: CalculatedOutputDto[];
 }
 
+const isProductionResourceType = (type: string): boolean => type.includes("-production");
+
 const ComputedValueDisplay: React.FC<{
   amount: number;
   resourceType: string;
 }> = ({ amount, resourceType }) => {
   const isCredits = resourceType === "credit" || resourceType === "credit-production";
-  const isProduction = resourceType.includes("-production");
+  const isProduction = isProductionResourceType(resourceType);
   const parenClasses = isProduction
     ? "text-[26px] font-normal text-white/70 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]"
     : "text-[22px] font-bold text-white/70 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]";
@@ -77,8 +87,8 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   const isCredits = resourceType === "credit" || resourceType === "credit-production";
   const isDiscount = resourceType === "discount";
   const isVP = resourceType === "vp";
-  const isProduction = resourceType?.includes("-production");
-  const hasPer = resource?.per;
+  const isProduction = resource ? isProductionType(resource) : false;
+  const hasPer = resource ? getPer(resource) : undefined;
   const isAttack =
     resource?.target === "any-player" ||
     resource?.target === "all-opponents" ||
@@ -344,7 +354,8 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
 
   // Handle global-parameter-lenience with selector-based global params
   if (resourceType === "global-parameter-lenience") {
-    const globalParams: string[] = resource?.selectors?.[0]?.globalParameters ?? [
+    const resourceSelectors = resource ? getSelectors(resource) : undefined;
+    const globalParams: string[] = resourceSelectors?.[0]?.globalParameters ?? [
       "temperature",
       "oxygen",
       "ocean",
@@ -459,26 +470,20 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     iconContext = "production";
   }
 
-  // Check if this is a tile placement with restrictions (show asterisk)
-  const isTilePlacement =
-    resourceType === "city-placement" ||
-    resourceType === "greenery-placement" ||
-    resourceType === "ocean-placement" ||
-    resourceType === "volcano-placement" ||
-    resourceType === "land-claim" ||
-    resourceType === "tile-placement";
+  const isTilePlacement = resource ? isTilePlacementType(resource) : false;
 
+  const resourceTileRestrictions = resource ? getTileRestrictions(resource) : undefined;
   const hasTileRestrictions =
     isTilePlacement &&
-    resource?.tileRestrictions &&
-    (resource.tileRestrictions.adjacency ||
-      resource.tileRestrictions.onTileType ||
-      (resource.tileRestrictions.boardTags?.length ?? 0) > 0);
+    resourceTileRestrictions &&
+    (resourceTileRestrictions.adjacency ||
+      resourceTileRestrictions.onTileType ||
+      (resourceTileRestrictions.boardTags?.length ?? 0) > 0);
 
-  // Check for selector tag badges (e.g., venus badge on animal icon)
+  const allSelectors = resource ? getSelectors(resource) : undefined;
   const selectorTags: string[] = [];
-  if (resource?.selectors) {
-    for (const selector of resource.selectors) {
+  if (allSelectors) {
+    for (const selector of allSelectors) {
       if (selector.tags) {
         for (const tag of selector.tags) {
           if (!selectorTags.includes(tag)) selectorTags.push(tag);

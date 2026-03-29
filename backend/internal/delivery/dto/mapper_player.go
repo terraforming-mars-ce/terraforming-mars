@@ -297,16 +297,17 @@ func convertPlayerEffects(effects []shared.CardEffect, p *player.Player, g *game
 	for i, effect := range effects {
 		var computedValues []ComputedBehaviorValueDto
 		var outputs []CalculatedOutputDto
-		for _, output := range effect.Behavior.Outputs {
-			if output.Per == nil {
+		for _, outputBC := range effect.Behavior.Outputs {
+			per := shared.GetPerCondition(outputBC)
+			if per == nil {
 				continue
 			}
-			count := gamecards.CountPerCondition(output.Per, effect.CardID, p, board, cardRegistry, allPlayers)
-			if output.Per.Amount > 0 {
-				multiplier := count / output.Per.Amount
-				actualAmount := output.Amount * multiplier
+			count := gamecards.CountPerCondition(per, effect.CardID, p, board, cardRegistry, allPlayers)
+			if per.Amount > 0 {
+				multiplier := count / per.Amount
+				actualAmount := outputBC.GetAmount() * multiplier
 				outputs = append(outputs, CalculatedOutputDto{
-					ResourceType: string(output.ResourceType),
+					ResourceType: string(outputBC.GetResourceType()),
 					Amount:       actualAmount,
 					IsScaled:     true,
 				})

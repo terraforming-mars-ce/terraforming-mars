@@ -92,7 +92,7 @@ func GetPassiveBehaviors(card *Card) []shared.CardBehavior {
 // These are different from immediate resource gains - they modify future actions
 func HasPersistentEffects(behavior shared.CardBehavior) bool {
 	for _, output := range behavior.Outputs {
-		switch output.ResourceType {
+		switch output.GetResourceType() {
 		case shared.ResourceDiscount, shared.ResourcePaymentSubstitute, shared.ResourceGlobalParameterLenience, shared.ResourceIgnoreGlobalRequirements, shared.ResourceStoragePaymentSubstitute:
 			return true
 		}
@@ -103,7 +103,7 @@ func HasPersistentEffects(behavior shared.CardBehavior) bool {
 // HasTemporaryOutputs checks if a behavior has any outputs marked as temporary
 func HasTemporaryOutputs(behavior shared.CardBehavior) bool {
 	for _, output := range behavior.Outputs {
-		if output.Temporary != "" {
+		if shared.GetTemporary(output) != "" {
 			return true
 		}
 	}
@@ -119,7 +119,7 @@ func HasChoices(behavior shared.CardBehavior) bool {
 // These require a pending selection before outputs can be applied
 func HasCardDiscardInput(behavior shared.CardBehavior) bool {
 	for _, input := range behavior.Inputs {
-		if input.ResourceType == shared.ResourceCardDiscard {
+		if input.GetResourceType() == shared.ResourceCardDiscard {
 			return true
 		}
 	}
@@ -130,7 +130,7 @@ func HasCardDiscardInput(behavior shared.CardBehavior) bool {
 // These require a pending selection before remaining outputs can be applied
 func HasCardDiscardOutput(behavior shared.CardBehavior) bool {
 	for _, output := range behavior.Outputs {
-		if output.ResourceType == shared.ResourceCardDiscard {
+		if output.GetResourceType() == shared.ResourceCardDiscard {
 			return true
 		}
 	}

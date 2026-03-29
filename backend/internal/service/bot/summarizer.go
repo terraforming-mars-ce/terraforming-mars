@@ -591,25 +591,36 @@ func formatProd(val int) string {
 	return fmt.Sprintf("%d", val)
 }
 
-func formatBehaviorBrief(inputs, outputs []dto.ResourceConditionDto) string {
-	var parts []string
+type conditionSummary interface {
+	GetConditionType() string
+	GetConditionAmount() int
+}
 
-	if len(inputs) > 0 {
-		var items []string
-		for _, i := range inputs {
-			items = append(items, fmt.Sprintf("%d %s", i.Amount, string(i.Type)))
+func extractTypeAmount(item any) (string, int) {
+	if c, ok := item.(conditionSummary); ok {
+		return c.GetConditionType(), c.GetConditionAmount()
+	}
+	return "unknown", 0
+}
+
+func formatBehaviorBrief(inputs, outputs []any) string {
+	formatItems := func(items []any) string {
+		var parts []string
+		for _, item := range items {
+			t, a := extractTypeAmount(item)
+			parts = append(parts, fmt.Sprintf("%d %s", a, t))
 		}
-		parts = append(parts, "Costs: "+strings.Join(items, ", "))
+		return strings.Join(parts, ", ")
+	}
+
+	var result []string
+	if len(inputs) > 0 {
+		result = append(result, "Costs: "+formatItems(inputs))
 	}
 	if len(outputs) > 0 {
-		var items []string
-		for _, o := range outputs {
-			items = append(items, fmt.Sprintf("%d %s", o.Amount, string(o.Type)))
-		}
-		parts = append(parts, "Gives: "+strings.Join(items, ", "))
+		result = append(result, "Gives: "+formatItems(outputs))
 	}
-
-	return strings.Join(parts, " -> ")
+	return strings.Join(result, " -> ")
 }
 
 func findPlayerName(game *dto.GameDto, playerID string) string {

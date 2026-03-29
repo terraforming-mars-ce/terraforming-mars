@@ -93,26 +93,26 @@ func validateBehavior(cardID string, index int, behavior shared.CardBehavior) []
 	}
 
 	for i, input := range behavior.Inputs {
-		if inputErr := validateResourceCondition(cardID, index, "input", i, input); inputErr != nil {
+		if inputErr := validateBehaviorCondition(cardID, index, "input", i, input); inputErr != nil {
 			errors = append(errors, inputErr)
 		}
 	}
 
 	for i, output := range behavior.Outputs {
-		if outputErr := validateResourceCondition(cardID, index, "output", i, output); outputErr != nil {
+		if outputErr := validateBehaviorCondition(cardID, index, "output", i, output); outputErr != nil {
 			errors = append(errors, outputErr)
 		}
 	}
 
 	for i, choice := range behavior.Choices {
 		for k, input := range choice.Inputs {
-			if inputErr := validateResourceCondition(cardID, index, fmt.Sprintf("choice[%d].input", i), k, input); inputErr != nil {
+			if inputErr := validateBehaviorCondition(cardID, index, fmt.Sprintf("choice[%d].input", i), k, input); inputErr != nil {
 				errors = append(errors, inputErr)
 			}
 		}
 
 		for k, output := range choice.Outputs {
-			if outputErr := validateResourceCondition(cardID, index, fmt.Sprintf("choice[%d].output", i), k, output); outputErr != nil {
+			if outputErr := validateBehaviorCondition(cardID, index, fmt.Sprintf("choice[%d].output", i), k, output); outputErr != nil {
 				errors = append(errors, outputErr)
 			}
 		}
@@ -121,18 +121,18 @@ func validateBehavior(cardID string, index int, behavior shared.CardBehavior) []
 	return errors
 }
 
-func validateResourceCondition(cardID string, behaviorIndex int, condType string, index int, cond shared.ResourceCondition) error {
-	if cond.Target == "" {
+func validateBehaviorCondition(cardID string, behaviorIndex int, condType string, index int, cond shared.BehaviorCondition) error {
+	if cond.GetTarget() == "" {
 		return fmt.Errorf("card %s: behavior[%d].%s[%d] has empty target", cardID, behaviorIndex, condType, index)
 	}
 
-	if !isValidResourceType(cond.ResourceType) {
-		return fmt.Errorf("card %s: behavior[%d].%s[%d] has invalid resource type: %s", cardID, behaviorIndex, condType, index, cond.ResourceType)
+	if !isValidResourceType(cond.GetResourceType()) {
+		return fmt.Errorf("card %s: behavior[%d].%s[%d] has invalid resource type: %s", cardID, behaviorIndex, condType, index, cond.GetResourceType())
 	}
 
-	if cond.Per != nil {
-		if !isValidResourceType(cond.Per.ResourceType) {
-			return fmt.Errorf("card %s: behavior[%d].%s[%d].per has invalid resource type: %s", cardID, behaviorIndex, condType, index, cond.Per.ResourceType)
+	if per := shared.GetPerCondition(cond); per != nil {
+		if !isValidResourceType(per.ResourceType) {
+			return fmt.Errorf("card %s: behavior[%d].%s[%d].per has invalid resource type: %s", cardID, behaviorIndex, condType, index, per.ResourceType)
 		}
 	}
 

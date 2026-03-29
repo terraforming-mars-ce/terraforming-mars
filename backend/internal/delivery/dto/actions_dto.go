@@ -25,90 +25,90 @@ const (
 
 // SelectStartingCardAction represents selecting starting cards and corporation
 type SelectStartingCardAction struct {
-	Type          ActionType `json:"type" ts:"ActionType"`
-	CardIDs       []string   `json:"cardIds" ts:"string[]"`
-	CorporationID string     `json:"corporationId" ts:"string"`
+	Type          ActionType `json:"type"`
+	CardIDs       []string   `json:"cardIds"`
+	CorporationID string     `json:"corporationId"`
 }
 
 // StartGameAction represents starting the game (host only)
 type StartGameAction struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // SkipAction represents skipping a player's turn
 type SkipAction struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // PlayCardAction represents playing a card from hand
 type PlayCardAction struct {
-	CardID             string         `json:"cardId" ts:"string"`
-	Payment            CardPaymentDto `json:"payment" ts:"CardPaymentDto"`                            // Required: payment breakdown (credits, steel, titanium)
-	ChoiceIndex        *int           `json:"choiceIndex,omitempty" ts:"number | undefined"`          // Optional: index of choice to play (for cards with choices)
-	CardStorageTargets []string       `json:"cardStorageTargets,omitempty" ts:"string[] | undefined"` // Optional: target card IDs for resource storage (positional, one per any-card output)
+	CardID             string         `json:"cardId"`
+	Payment            CardPaymentDto `json:"payment"`                      // Required: payment breakdown (credits, steel, titanium)
+	ChoiceIndex        *int           `json:"choiceIndex,omitempty"`        // Optional: index of choice to play (for cards with choices)
+	CardStorageTargets []string       `json:"cardStorageTargets,omitempty"` // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 
 // PlayCardActionAction represents playing a card action from player's action list
 type PlayCardActionAction struct {
-	CardID             string   `json:"cardId" ts:"string"`
-	BehaviorIndex      int      `json:"behaviorIndex" ts:"number"`
-	ChoiceIndex        *int     `json:"choiceIndex,omitempty" ts:"number | undefined"`          // Optional: index of choice to play (for actions with choices)
-	CardStorageTargets []string `json:"cardStorageTargets,omitempty" ts:"string[] | undefined"` // Optional: target card IDs for resource storage (positional, one per any-card output)
+	CardID             string   `json:"cardId"`
+	BehaviorIndex      int      `json:"behaviorIndex"`
+	ChoiceIndex        *int     `json:"choiceIndex,omitempty"`        // Optional: index of choice to play (for actions with choices)
+	CardStorageTargets []string `json:"cardStorageTargets,omitempty"` // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 
 // HexPositionDto represents a position on the Mars board
 type HexPositionDto struct {
-	Q int `json:"q" ts:"number"`
-	R int `json:"r" ts:"number"`
-	S int `json:"s" ts:"number"`
+	Q int `json:"q"`
+	R int `json:"r"`
+	S int `json:"s"`
 }
 
 // Standard Project Actions
 
 // SellPatentsAction represents selling patent cards for megacredits (initiates card selection)
 type SellPatentsAction struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // BuildPowerPlantAction represents building a power plant
 type BuildPowerPlantAction struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // LaunchAsteroidAction represents launching an asteroid
 type LaunchAsteroidAction struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // BuildAquiferAction represents building an aquifer
 type BuildAquiferAction struct {
-	Type        ActionType     `json:"type" ts:"ActionType"`
-	HexPosition HexPositionDto `json:"hexPosition" ts:"HexPositionDto"`
+	Type        ActionType     `json:"type"`
+	HexPosition HexPositionDto `json:"hexPosition"`
 }
 
 // PlantGreeneryAction represents planting greenery
 type PlantGreeneryAction struct {
-	Type        ActionType     `json:"type" ts:"ActionType"`
-	HexPosition HexPositionDto `json:"hexPosition" ts:"HexPositionDto"`
+	Type        ActionType     `json:"type"`
+	HexPosition HexPositionDto `json:"hexPosition"`
 }
 
 // BuildCityAction represents building a city
 type BuildCityAction struct {
-	Type        ActionType     `json:"type" ts:"ActionType"`
-	HexPosition HexPositionDto `json:"hexPosition" ts:"HexPositionDto"`
+	Type        ActionType     `json:"type"`
+	HexPosition HexPositionDto `json:"hexPosition"`
 }
 
 // ActionSelectStartingCardRequest contains the action data for select starting card actions
 type ActionSelectStartingCardRequest struct {
-	Type          ActionType `json:"type" ts:"ActionType"`
-	CardIDs       []string   `json:"cardIds" ts:"string[]"`
-	CorporationID string     `json:"corporationId" ts:"string"` // Corporation selected alongside starting cards
+	Type          ActionType `json:"type"`
+	CardIDs       []string   `json:"cardIds"`
+	CorporationID string     `json:"corporationId"` // Corporation selected alongside starting cards
 }
 
 // ActionSelectProductionCardsRequest contains the action data for select production card actions
 type ActionSelectProductionCardsRequest struct {
-	Type    ActionType `json:"type" ts:"ActionType"`
-	CardIDs []string   `json:"cardIds" ts:"string[]"`
+	Type    ActionType `json:"type"`
+	CardIDs []string   `json:"cardIds"`
 }
 
 // GetAction returns the select starting card action
@@ -118,7 +118,7 @@ func (ap *ActionSelectStartingCardRequest) GetAction() *SelectStartingCardAction
 
 // ActionStartGameRequest contains the action data for start game actions
 type ActionStartGameRequest struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // GetAction returns the start game action
@@ -128,7 +128,7 @@ func (ap *ActionStartGameRequest) GetAction() *StartGameAction {
 
 // ActionSkipActionRequest contains the action data for skip action actions
 type ActionSkipActionRequest struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // GetAction returns the skip action action
@@ -138,22 +138,22 @@ func (ap *ActionSkipActionRequest) GetAction() *SkipAction {
 
 // ConfirmDemoSetupRequest contains the player's demo setup configuration
 type ConfirmDemoSetupRequest struct {
-	CorporationID    *string              `json:"corporationId,omitempty" ts:"string | undefined"`
-	CardIDs          []string             `json:"cardIds" ts:"string[]"`
-	Resources        ResourcesDto         `json:"resources" ts:"ResourcesDto"`
-	Production       ProductionDto        `json:"production" ts:"ProductionDto"`
-	TerraformRating  int                  `json:"terraformRating" ts:"number"`
-	GlobalParameters *GlobalParametersDto `json:"globalParameters,omitempty" ts:"GlobalParametersDto | undefined"` // Host only
-	Generation       *int                 `json:"generation,omitempty" ts:"number | undefined"`                    // Host only
+	CorporationID    *string              `json:"corporationId,omitempty"`
+	CardIDs          []string             `json:"cardIds"`
+	Resources        ResourcesDto         `json:"resources"`
+	Production       ProductionDto        `json:"production"`
+	TerraformRating  int                  `json:"terraformRating"`
+	GlobalParameters *GlobalParametersDto `json:"globalParameters,omitempty"` // Host only
+	Generation       *int                 `json:"generation,omitempty"`       // Host only
 }
 
 // ActionPlayCardRequest contains the action data for play card actions
 type ActionPlayCardRequest struct {
-	Type               ActionType     `json:"type" ts:"ActionType"`
-	CardID             string         `json:"cardId" ts:"string"`
-	Payment            CardPaymentDto `json:"payment" ts:"CardPaymentDto"`                            // Required: payment breakdown (credits, steel, titanium)
-	ChoiceIndex        *int           `json:"choiceIndex,omitempty" ts:"number | undefined"`          // Optional: index of choice to play (for cards with choices)
-	CardStorageTargets []string       `json:"cardStorageTargets,omitempty" ts:"string[] | undefined"` // Optional: target card IDs for resource storage (positional, one per any-card output)
+	Type               ActionType     `json:"type"`
+	CardID             string         `json:"cardId"`
+	Payment            CardPaymentDto `json:"payment"`                      // Required: payment breakdown (credits, steel, titanium)
+	ChoiceIndex        *int           `json:"choiceIndex,omitempty"`        // Optional: index of choice to play (for cards with choices)
+	CardStorageTargets []string       `json:"cardStorageTargets,omitempty"` // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 
 // GetAction returns the play card action
@@ -163,11 +163,11 @@ func (ap *ActionPlayCardRequest) GetAction() *PlayCardAction {
 
 // ActionPlayCardActionRequest contains the action data for play card action actions
 type ActionPlayCardActionRequest struct {
-	Type               ActionType `json:"type" ts:"ActionType"`
-	CardID             string     `json:"cardId" ts:"string"`
-	BehaviorIndex      int        `json:"behaviorIndex" ts:"number"`
-	ChoiceIndex        *int       `json:"choiceIndex,omitempty" ts:"number | undefined"`          // Optional: index of choice to play (for actions with choices)
-	CardStorageTargets []string   `json:"cardStorageTargets,omitempty" ts:"string[] | undefined"` // Optional: target card IDs for resource storage (positional, one per any-card output)
+	Type               ActionType `json:"type"`
+	CardID             string     `json:"cardId"`
+	BehaviorIndex      int        `json:"behaviorIndex"`
+	ChoiceIndex        *int       `json:"choiceIndex,omitempty"`        // Optional: index of choice to play (for actions with choices)
+	CardStorageTargets []string   `json:"cardStorageTargets,omitempty"` // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 
 // GetAction returns the play card action action
@@ -179,7 +179,7 @@ func (ap *ActionPlayCardActionRequest) GetAction() *PlayCardActionAction {
 
 // ActionSellPatentsRequest contains the action data for sell patents actions (initiates card selection)
 type ActionSellPatentsRequest struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // GetAction returns the sell patents action
@@ -189,7 +189,7 @@ func (ap *ActionSellPatentsRequest) GetAction() *SellPatentsAction {
 
 // ActionBuildPowerPlantRequest contains the action data for build power plant actions
 type ActionBuildPowerPlantRequest struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // GetAction returns the build power plant action
@@ -199,7 +199,7 @@ func (ap *ActionBuildPowerPlantRequest) GetAction() *BuildPowerPlantAction {
 
 // ActionLaunchAsteroidRequest contains the action data for launch asteroid actions
 type ActionLaunchAsteroidRequest struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // GetAction returns the launch asteroid action
@@ -209,8 +209,8 @@ func (ap *ActionLaunchAsteroidRequest) GetAction() *LaunchAsteroidAction {
 
 // ActionBuildAquiferRequest contains the action data for build aquifer actions
 type ActionBuildAquiferRequest struct {
-	Type        ActionType     `json:"type" ts:"ActionType"`
-	HexPosition HexPositionDto `json:"hexPosition" ts:"HexPositionDto"`
+	Type        ActionType     `json:"type"`
+	HexPosition HexPositionDto `json:"hexPosition"`
 }
 
 // GetAction returns the build aquifer action
@@ -220,8 +220,8 @@ func (ap *ActionBuildAquiferRequest) GetAction() *BuildAquiferAction {
 
 // ActionPlantGreeneryRequest contains the action data for plant greenery actions
 type ActionPlantGreeneryRequest struct {
-	Type        ActionType     `json:"type" ts:"ActionType"`
-	HexPosition HexPositionDto `json:"hexPosition" ts:"HexPositionDto"`
+	Type        ActionType     `json:"type"`
+	HexPosition HexPositionDto `json:"hexPosition"`
 }
 
 // GetAction returns the plant greenery action
@@ -231,8 +231,8 @@ func (ap *ActionPlantGreeneryRequest) GetAction() *PlantGreeneryAction {
 
 // ActionBuildCityRequest contains the action data for build city actions
 type ActionBuildCityRequest struct {
-	Type        ActionType     `json:"type" ts:"ActionType"`
-	HexPosition HexPositionDto `json:"hexPosition" ts:"HexPositionDto"`
+	Type        ActionType     `json:"type"`
+	HexPosition HexPositionDto `json:"hexPosition"`
 }
 
 // GetAction returns the build city action
@@ -242,7 +242,7 @@ func (ap *ActionBuildCityRequest) GetAction() *BuildCityAction {
 
 // ActionConvertPlantsToGreeneryRequest contains the action data for initiating plant conversion
 type ActionConvertPlantsToGreeneryRequest struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // GetAction returns the convert plants to greenery action
@@ -252,7 +252,7 @@ func (ap *ActionConvertPlantsToGreeneryRequest) GetAction() *ConvertPlantsToGree
 
 // ActionConvertHeatToTemperatureRequest contains the action data for converting heat to temperature
 type ActionConvertHeatToTemperatureRequest struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // GetAction returns the convert heat to temperature action
@@ -262,12 +262,12 @@ func (ap *ActionConvertHeatToTemperatureRequest) GetAction() *ConvertHeatToTempe
 
 // ConvertPlantsToGreeneryAction represents converting 8 plants to a greenery tile
 type ConvertPlantsToGreeneryAction struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // ConvertHeatToTemperatureAction represents converting 8 heat to raise temperature
 type ConvertHeatToTemperatureAction struct {
-	Type ActionType `json:"type" ts:"ActionType"`
+	Type ActionType `json:"type"`
 }
 
 // Admin Command Types (Development Mode Only)
@@ -289,61 +289,61 @@ const (
 
 // AdminCommandRequest contains the admin command data
 type AdminCommandRequest struct {
-	CommandType AdminCommandType `json:"commandType" ts:"AdminCommandType"`
-	Payload     interface{}      `json:"payload" ts:"any"`
+	CommandType AdminCommandType `json:"commandType"`
+	Payload     interface{}      `json:"payload"`
 }
 
 // GiveCardAdminCommand represents giving a card to a player
 type GiveCardAdminCommand struct {
-	PlayerID string `json:"playerId" ts:"string"`
-	CardID   string `json:"cardId" ts:"string"`
+	PlayerID string `json:"playerId"`
+	CardID   string `json:"cardId"`
 }
 
 // SetPhaseAdminCommand represents setting the game phase
 type SetPhaseAdminCommand struct {
-	Phase string `json:"phase" ts:"string"`
+	Phase string `json:"phase"`
 }
 
 // SetResourcesAdminCommand represents setting a player's resources
 type SetResourcesAdminCommand struct {
-	PlayerID  string       `json:"playerId" ts:"string"`
-	Resources ResourcesDto `json:"resources" ts:"ResourcesDto"`
+	PlayerID  string       `json:"playerId"`
+	Resources ResourcesDto `json:"resources"`
 }
 
 // SetProductionAdminCommand represents setting a player's production
 type SetProductionAdminCommand struct {
-	PlayerID   string        `json:"playerId" ts:"string"`
-	Production ProductionDto `json:"production" ts:"ProductionDto"`
+	PlayerID   string        `json:"playerId"`
+	Production ProductionDto `json:"production"`
 }
 
 // SetGlobalParamsAdminCommand represents setting global parameters
 type SetGlobalParamsAdminCommand struct {
-	GlobalParameters GlobalParametersDto `json:"globalParameters" ts:"GlobalParametersDto"`
+	GlobalParameters GlobalParametersDto `json:"globalParameters"`
 }
 
 // StartTileSelectionAdminCommand represents starting tile selection for testing
 type StartTileSelectionAdminCommand struct {
-	PlayerID string `json:"playerId" ts:"string"`
-	TileType string `json:"tileType" ts:"string"`
+	PlayerID string `json:"playerId"`
+	TileType string `json:"tileType"`
 }
 
 // SetCorporationAdminCommand represents setting a player's corporation
 type SetCorporationAdminCommand struct {
-	PlayerID      string `json:"playerId" ts:"string"`
-	CorporationID string `json:"corporationId" ts:"string"`
+	PlayerID      string `json:"playerId"`
+	CorporationID string `json:"corporationId"`
 }
 
 // SetTRAdminCommand represents setting a player's terraform rating
 type SetTRAdminCommand struct {
-	PlayerID        string `json:"playerId" ts:"string"`
-	TerraformRating int    `json:"terraformRating" ts:"number"`
+	PlayerID        string `json:"playerId"`
+	TerraformRating int    `json:"terraformRating"`
 }
 
 // CardPaymentDto represents how a player is paying for a card
 type CardPaymentDto struct {
-	Credits            int            `json:"credits" ts:"number"`                                                  // MC spent
-	Steel              int            `json:"steel" ts:"number"`                                                    // Steel resources used (2 MC value each)
-	Titanium           int            `json:"titanium" ts:"number"`                                                 // Titanium resources used (3 MC value each)
-	Substitutes        map[string]int `json:"substitutes,omitempty" ts:"Record<string, number> | undefined"`        // Payment substitutes (e.g., heat for Helion)
-	StorageSubstitutes map[string]int `json:"storageSubstitutes,omitempty" ts:"Record<string, number> | undefined"` // Storage payment substitutes (e.g., floaters from Dirigibles)
+	Credits            int            `json:"credits"`                      // MC spent
+	Steel              int            `json:"steel"`                        // Steel resources used (2 MC value each)
+	Titanium           int            `json:"titanium"`                     // Titanium resources used (3 MC value each)
+	Substitutes        map[string]int `json:"substitutes,omitempty"`        // Payment substitutes (e.g., heat for Helion)
+	StorageSubstitutes map[string]int `json:"storageSubstitutes,omitempty"` // Storage payment substitutes (e.g., floaters from Dirigibles)
 }

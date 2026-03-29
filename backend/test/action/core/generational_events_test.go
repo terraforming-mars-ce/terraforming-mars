@@ -211,8 +211,8 @@ func TestGenerationalEventRequirement_TRRaiseUnavailableWhenNotRaised(t *testing
 	minOne := 1
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs:   []shared.ResourceCondition{{ResourceType: shared.ResourceCredit, Amount: 3}},
-		Outputs:  []shared.ResourceCondition{{ResourceType: shared.ResourceTR, Amount: 1}},
+		Inputs:   []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 3, "")},
+		Outputs:  []shared.BehaviorCondition{shared.NewGlobalParameterCondition(shared.ResourceTR, 1, "")},
 		GenerationalEventRequirements: []shared.GenerationalEventRequirement{
 			{
 				Event: shared.GenerationalEventTRRaise,
@@ -250,8 +250,8 @@ func TestGenerationalEventRequirement_TRRaiseAvailableWhenRaised(t *testing.T) {
 	minOne := 1
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs:   []shared.ResourceCondition{{ResourceType: shared.ResourceCredit, Amount: 3}},
-		Outputs:  []shared.ResourceCondition{{ResourceType: shared.ResourceTR, Amount: 1}},
+		Inputs:   []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 3, "")},
+		Outputs:  []shared.BehaviorCondition{shared.NewGlobalParameterCondition(shared.ResourceTR, 1, "")},
 		GenerationalEventRequirements: []shared.GenerationalEventRequirement{
 			{
 				Event: shared.GenerationalEventTRRaise,
@@ -285,8 +285,8 @@ func TestGenerationalEventRequirement_OceanPlacementMinTwoUnavailableWithOne(t *
 	minTwo := 2
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs:   []shared.ResourceCondition{{ResourceType: shared.ResourceCredit, Amount: 5}},
-		Outputs:  []shared.ResourceCondition{{ResourceType: shared.ResourceTR, Amount: 1}},
+		Inputs:   []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 5, "")},
+		Outputs:  []shared.BehaviorCondition{shared.NewGlobalParameterCondition(shared.ResourceTR, 1, "")},
 		GenerationalEventRequirements: []shared.GenerationalEventRequirement{
 			{
 				Event: shared.GenerationalEventOceanPlacement,

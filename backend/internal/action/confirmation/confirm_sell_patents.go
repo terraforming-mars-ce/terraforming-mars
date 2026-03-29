@@ -145,10 +145,8 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 
 		displayData := &game.LogDisplayData{
 			Behaviors: []shared.CardBehavior{{
-				Outputs: []shared.ResourceCondition{{
-					ResourceType: shared.ResourceCardDraw,
-					Amount:       cardsSold,
-					Target:       "self-player",
+				Outputs: []shared.BehaviorCondition{&shared.CardOperationCondition{
+					ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: cardsSold, Target: "self-player"},
 				}},
 			}},
 		}

@@ -189,8 +189,10 @@ func (a *ExecuteStandardProjectAction) executeSellPatents(
 func hasSellPatentsBehavior(behaviors []shared.CardBehavior) bool {
 	for _, b := range behaviors {
 		for _, input := range b.Inputs {
-			if input.ResourceType == shared.ResourceCardDiscard && input.VariableAmount {
-				return true
+			if input.GetResourceType() == shared.ResourceCardDiscard {
+				if co, ok := input.(*shared.CardOperationCondition); ok && co.VariableAmount {
+					return true
+				}
 			}
 		}
 	}

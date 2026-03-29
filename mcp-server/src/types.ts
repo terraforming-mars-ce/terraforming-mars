@@ -23,7 +23,7 @@ export type {
   HexPositionDto,
   CardPaymentDto,
   CardBehaviorDto,
-  ResourceConditionDto,
+  ResourceCondition,
   ChoiceDto,
   CardRequirementsDto,
   RequirementDto,

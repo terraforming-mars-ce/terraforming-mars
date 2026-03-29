@@ -76,12 +76,12 @@ func cardHasAnyResource(card *Card, resources []string) bool {
 		}
 		for _, b := range card.Behaviors {
 			for _, o := range b.Outputs {
-				if o.ResourceType == rt {
+				if o.GetResourceType() == rt {
 					return true
 				}
 			}
 			for _, i := range b.Inputs {
-				if i.ResourceType == rt {
+				if i.GetResourceType() == rt {
 					return true
 				}
 			}

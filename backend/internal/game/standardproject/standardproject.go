@@ -16,8 +16,8 @@ type StandardProjectDefinition struct {
 func (d *StandardProjectDefinition) CreditCost() int {
 	for _, b := range d.Behaviors {
 		for _, input := range b.Inputs {
-			if input.ResourceType == shared.ResourceCredit {
-				return input.Amount
+			if input.GetResourceType() == shared.ResourceCredit {
+				return input.GetAmount()
 			}
 		}
 	}

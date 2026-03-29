@@ -325,18 +325,18 @@ func TestElectroCatapult_ActionSpendPlantGainCredits(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 7, "self-player"),
 		},
 		Choices: []shared.Choice{
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					shared.NewBasicResourceCondition(shared.ResourcePlant, 1, "self-player"),
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					shared.NewBasicResourceCondition(shared.ResourceSteel, 1, "self-player"),
 				},
 			},
 		},
@@ -370,18 +370,18 @@ func TestElectroCatapult_ActionSpendSteelGainCredits(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 7, "self-player"),
 		},
 		Choices: []shared.Choice{
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					shared.NewBasicResourceCondition(shared.ResourcePlant, 1, "self-player"),
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"},
+				Inputs: []shared.BehaviorCondition{
+					shared.NewBasicResourceCondition(shared.ResourceSteel, 1, "self-player"),
 				},
 			},
 		},
@@ -1076,11 +1076,11 @@ func TestPowerInfrastructure_UseActionSpendAllEnergy(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 1, Target: "self-player", VariableAmount: true},
+		Inputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergy, Amount: 1, Target: "self-player"}, VariableAmount: true},
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player", VariableAmount: true},
+		Outputs: []shared.BehaviorCondition{
+			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"}, VariableAmount: true},
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{

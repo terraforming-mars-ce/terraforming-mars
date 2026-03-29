@@ -663,11 +663,11 @@ func createPassiveCardDiscard(p *player.Player, effect shared.CardEffect, log *z
 	minCards := 0
 	maxCards := 0
 	for _, input := range effect.Behavior.Inputs {
-		if input.ResourceType == shared.ResourceCardDiscard {
-			if !input.Optional {
-				minCards = input.Amount
+		if input.GetResourceType() == shared.ResourceCardDiscard {
+			if !shared.IsOptional(input) {
+				minCards = input.GetAmount()
 			}
-			maxCards = input.Amount
+			maxCards = input.GetAmount()
 			break
 		}
 	}
@@ -744,10 +744,11 @@ func subscribeProductionIncreasedEffect(
 		}
 
 		// Scale outputs by the production increase amount
-		scaledOutputs := make([]shared.ResourceCondition, len(effect.Behavior.Outputs))
+		scaledOutputs := make([]shared.BehaviorCondition, len(effect.Behavior.Outputs))
 		for i, output := range effect.Behavior.Outputs {
-			scaledOutputs[i] = output
-			scaledOutputs[i].Amount = output.Amount * increase
+			scaled := shared.CopyCondition(output)
+			scaled.SetAmount(output.GetAmount() * increase)
+			scaledOutputs[i] = scaled
 		}
 
 		log.Debug("Passive effect triggered",

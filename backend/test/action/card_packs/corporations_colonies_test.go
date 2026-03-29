@@ -283,11 +283,9 @@ func TestPartialResourceTradeDiscount_OnlyAffectsSpecifiedResources(t *testing.T
 		BehaviorIndex: 0,
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
-			Outputs: []shared.ResourceCondition{
-				{
-					ResourceType: shared.ResourceDiscount,
-					Amount:       1,
-					Target:       "self-player",
+			Outputs: []shared.BehaviorCondition{
+				&shared.EffectCondition{
+					ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceDiscount, Amount: 1, Target: "self-player"},
 					Selectors: []shared.Selector{
 						{
 							Actions:   []string{shared.ActionColonyTrade},

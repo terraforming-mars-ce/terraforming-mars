@@ -400,7 +400,7 @@ func TestFrontOfTheLine_CardIsEvent(t *testing.T) {
 	found := false
 	for _, behavior := range card.Behaviors {
 		for _, output := range behavior.Outputs {
-			if output.ResourceType == shared.ResourceExtraActions && output.Amount == 2 {
+			if output.GetResourceType() == shared.ResourceExtraActions && output.GetAmount() == 2 {
 				found = true
 			}
 		}

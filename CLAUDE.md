@@ -62,7 +62,7 @@ make clean        # Clean build artifacts
 
 ## Type Safety Bridge
 
-Go structs with `ts:` tags generate TypeScript interfaces automatically.
+Go structs generate TypeScript interfaces via `tygo`. Use `tstype:` tags to override generated types (e.g., string literal unions for discriminated unions). Note: `ts:` tags are **ignored** by tygo.
 
 ```bash
 make generate     # After any Go type changes

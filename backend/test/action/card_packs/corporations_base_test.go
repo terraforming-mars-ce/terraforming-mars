@@ -100,9 +100,9 @@ func TestEcoline_DiscountEffectRegistered(t *testing.T) {
 	for _, effect := range effects {
 		if effect.CardName == "Ecoline" && effect.BehaviorIndex == 1 {
 			found = true
-			testutil.AssertEqual(t, shared.ResourceDiscount, effect.Behavior.Outputs[0].ResourceType,
+			testutil.AssertEqual(t, shared.ResourceDiscount, effect.Behavior.Outputs[0].GetResourceType(),
 				"Ecoline effect output should be a discount")
-			testutil.AssertEqual(t, 1, effect.Behavior.Outputs[0].Amount,
+			testutil.AssertEqual(t, 1, effect.Behavior.Outputs[0].GetAmount(),
 				"Ecoline discount amount should be 1")
 			break
 		}

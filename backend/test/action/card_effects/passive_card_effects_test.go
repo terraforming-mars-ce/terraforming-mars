@@ -57,8 +57,8 @@ func TestRoverConstruction_GainCreditsOnAnyCityPlacement(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"),
 			},
 		},
 	}
@@ -118,8 +118,8 @@ func TestRoverConstruction_TriggersOnSelfCityToo(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"),
 			},
 		},
 	}
@@ -177,8 +177,8 @@ func TestRoverConstruction_DoesNotTriggerOnGreenery(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"),
 			},
 		},
 	}
@@ -252,8 +252,8 @@ func TestOlympusConference_AddScienceOnScienceTagPlayed(t *testing.T) {
 				},
 			},
 			// For testing: just the add-science output (choice 0)
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceScience, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewCardStorageCondition(shared.ResourceScience, 1, "self-card"),
 			},
 		},
 	}
@@ -314,8 +314,8 @@ func TestOlympusConference_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceScience, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewCardStorageCondition(shared.ResourceScience, 1, "self-card"),
 			},
 		},
 	}
@@ -355,16 +355,16 @@ func olympusConferenceChoiceBehavior() shared.CardBehavior {
 		},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceScience, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					shared.NewCardStorageCondition(shared.ResourceScience, 1, "self-card"),
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceScience, Amount: 1, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					shared.NewCardStorageCondition(shared.ResourceScience, 1, "self-card"),
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+				Outputs: []shared.BehaviorCondition{
+					shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 				},
 			},
 		},
@@ -649,8 +649,8 @@ func TestViralEnhancers_GainPlantOnPlantTagPlayed(t *testing.T) {
 				},
 			},
 			// Simplified: just the "gain 1 plant" choice output for testing
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewBasicResourceCondition(shared.ResourcePlant, 1, "self-player"),
 			},
 		},
 	}
@@ -722,8 +722,8 @@ func TestViralEnhancers_DoesNotTriggerOnBuildingTag(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewBasicResourceCondition(shared.ResourcePlant, 1, "self-player"),
 			},
 		},
 	}
@@ -787,8 +787,8 @@ func TestArcticAlgae_GainPlantsOnAnyOceanPlacement(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourcePlant, Amount: 2, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewBasicResourceCondition(shared.ResourcePlant, 2, "self-player"),
 			},
 		},
 	}
@@ -845,8 +845,8 @@ func TestArcticAlgae_TriggersOnSelfOceanToo(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourcePlant, Amount: 2, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewBasicResourceCondition(shared.ResourcePlant, 2, "self-player"),
 			},
 		},
 	}
@@ -903,8 +903,8 @@ func TestArcticAlgae_DoesNotTriggerOnCityPlacement(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourcePlant, Amount: 2, Target: "self-player"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewBasicResourceCondition(shared.ResourcePlant, 2, "self-player"),
 			},
 		},
 	}
@@ -971,8 +971,8 @@ func TestPets_GainsAnimalWhenOtherPlayerPlacesCity(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
 			},
 		},
 	}
@@ -1033,8 +1033,8 @@ func TestPets_GainsAnimalWhenSelfPlacesCity(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
 			},
 		},
 	}
@@ -1095,8 +1095,8 @@ func TestPets_DoesNotTriggerOnGreeneryPlacement(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
 			},
 		},
 	}
@@ -1157,8 +1157,8 @@ func TestPets_DoesNotTriggerOnOceanPlacement(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
 			},
 		},
 	}
@@ -1219,8 +1219,8 @@ func TestPets_AccumulatesAnimalsFromMultipleCities(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
 			},
 		},
 	}
@@ -1285,8 +1285,8 @@ func TestPets_DoesNotTriggerForWrongGameID(t *testing.T) {
 					},
 				},
 			},
-			Outputs: []shared.ResourceCondition{
-				{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
 			},
 		},
 	}

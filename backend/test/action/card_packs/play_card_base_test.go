@@ -21,16 +21,16 @@ func nitriteReducingBacteriaBehavior() shared.CardBehavior {
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Choices: []shared.Choice{
 			{
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+				Outputs: []shared.BehaviorCondition{
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 				},
 			},
 			{
-				Inputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceMicrobe, Amount: 3, Target: "self-card"},
+				Inputs: []shared.BehaviorCondition{
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 3, "self-card"),
 				},
-				Outputs: []shared.ResourceCondition{
-					{ResourceType: shared.ResourceTR, Amount: 1, Target: "none"},
+				Outputs: []shared.BehaviorCondition{
+					shared.NewGlobalParameterCondition(shared.ResourceTR, 1, "none"),
 				},
 			},
 		},
@@ -291,11 +291,11 @@ func TestSpaceElevator_ActionSpendSteelGainCredits(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceSteel, 1, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 5, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 5, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -328,11 +328,11 @@ func TestEquatorialMagnetizer_DecreaseEnergyProdIncreaseTR(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewProductionCondition(shared.ResourceEnergyProduction, 1, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewGlobalParameterCondition(shared.ResourceTR, 1, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -614,11 +614,11 @@ func TestSecurityFleet_SpendTitaniumAddFighter(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceTitanium, Amount: 1, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceTitanium, 1, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceFighter, Amount: 1, Target: "self-card"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardStorageCondition(shared.ResourceFighter, 1, "self-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -1089,8 +1089,8 @@ func TestTardigrades_AddMicrobe(t *testing.T) {
 	p.Resources().AddToStorage(cardID, 0)
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -1117,8 +1117,8 @@ func TestTardigrades_AccumulateMicrobes(t *testing.T) {
 	p.Resources().AddToStorage(cardID, 3) // Start with 3 microbes
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -1182,8 +1182,8 @@ func TestFish_ActionAddAnimal(t *testing.T) {
 	p.Resources().AddToStorage(cardID, 0)
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -1589,8 +1589,8 @@ func TestSmallAnimals_AddAnimalAction(t *testing.T) {
 	p.Resources().AddToStorage(cardID, 0)
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "self-card"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -1952,11 +1952,11 @@ func TestSpaceMirrors_SpendCreditsForEnergyProduction(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 7, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewProductionCondition(shared.ResourceEnergyProduction, 1, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -2405,11 +2405,11 @@ func TestPhysicsComplex_SpendEnergyForScience(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 6, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 6, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceScience, Amount: 1, Target: "self-card"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardStorageCondition(shared.ResourceScience, 1, "self-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -2442,11 +2442,11 @@ func TestPhysicsComplex_FailsWithoutEnoughEnergy(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 6, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 6, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceScience, Amount: 1, Target: "self-card"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardStorageCondition(shared.ResourceScience, 1, "self-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -2579,12 +2579,12 @@ func TestIronworks_SpendEnergyForSteelAndOxygen(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 4, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 4, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"},
-			{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceSteel, 1, "self-player"),
+			shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -2619,12 +2619,12 @@ func TestIronworks_FailsWithoutEnoughEnergy(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 4, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 4, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"},
-			{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceSteel, 1, "self-player"),
+			shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -2717,12 +2717,12 @@ func TestSteelworks_SpendEnergyForSteelAndOxygen(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 4, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 4, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceSteel, Amount: 2, Target: "self-player"},
-			{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceSteel, 2, "self-player"),
+			shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -2759,12 +2759,12 @@ func TestOreProcessor_SpendEnergyForTitaniumAndOxygen(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 4, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 4, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceTitanium, Amount: 1, Target: "self-player"},
-			{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceTitanium, 1, "self-player"),
+			shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -2799,12 +2799,12 @@ func TestOreProcessor_FailsWithoutEnoughEnergy(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 4, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 4, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceTitanium, Amount: 1, Target: "self-player"},
-			{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceTitanium, 1, "self-player"),
+			shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -3453,11 +3453,11 @@ func TestIndustrialCenter_ActionSpendCreditsGainSteelProduction(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 7, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceSteelProduction, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewProductionCondition(shared.ResourceSteelProduction, 1, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -3742,8 +3742,8 @@ func TestSymbioticFungus_ActionAddMicrobeToAnyCard(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "any-card"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "any-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -4274,11 +4274,11 @@ func TestCaretakerContract_ActionSpendHeatGainTR(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceHeat, Amount: 8, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceHeat, 8, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewGlobalParameterCondition(shared.ResourceTR, 1, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -5363,11 +5363,11 @@ func TestWaterSplittingPlant_SpendEnergyToRaiseOxygen(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 3, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 3, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -5399,11 +5399,11 @@ func TestWaterSplittingPlant_FailsWithoutEnoughEnergy(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceEnergy, Amount: 3, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 3, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -5507,11 +5507,11 @@ func TestUndergroundDetonations_SpendCreditsForHeatProduction(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 10, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 10, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceHeatProduction, Amount: 2, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewProductionCondition(shared.ResourceHeatProduction, 2, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -5543,11 +5543,11 @@ func TestUndergroundDetonations_FailsWithInsufficientCredits(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 10, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 10, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceHeatProduction, Amount: 2, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewProductionCondition(shared.ResourceHeatProduction, 2, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -5891,11 +5891,11 @@ func TestRestrictedArea_SpendCreditsToDrawCard(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -5927,11 +5927,11 @@ func TestRestrictedArea_FailsWithoutEnoughCredits(t *testing.T) {
 	})
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
-		Inputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+		Inputs: []shared.BehaviorCondition{
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"),
 		},
-		Outputs: []shared.ResourceCondition{
-			{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+		Outputs: []shared.BehaviorCondition{
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
