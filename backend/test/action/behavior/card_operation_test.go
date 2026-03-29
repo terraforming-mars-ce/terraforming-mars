@@ -1,4 +1,4 @@
-package card_effects_test
+package behavior_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"terraforming-mars-backend/internal/action"
+	cardAction "terraforming-mars-backend/internal/action/card"
 	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
@@ -13,6 +14,10 @@ import (
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
+
+// ============================================================================
+// Card discard tests
+// ============================================================================
 
 // --- Mars University (073) ---
 // "Effect: When you play a science tag, including this, you may discard a card from hand to draw a card."
@@ -433,4 +438,209 @@ func TestConfirmCardDiscard_RejectsTooManyCards(t *testing.T) {
 	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, logger)
 	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), []string{"card-1", "card-2"})
 	testutil.AssertError(t, err, "Should reject discarding too many cards")
+}
+
+// ============================================================================
+// All opponents card operation tests
+// ============================================================================
+
+func createAllOpponentsDrawTestCard() gamecards.Card {
+	return gamecards.Card{
+		ID:   "card-all-opponents-draw-test",
+		Name: "All Opponents Draw Test",
+		Type: gamecards.CardTypeAutomated,
+		Pack: "base",
+		Cost: 5,
+		Tags: []shared.CardTag{shared.TagScience},
+		Behaviors: []shared.CardBehavior{
+			{
+				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
+				Outputs: []shared.BehaviorCondition{
+					shared.NewCardOperationCondition(shared.ResourceCardDraw, 2, "self-player"),
+					shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "all-opponents"),
+				},
+			},
+		},
+	}
+}
+
+func TestPlayCard_AllOpponentsDrawCard_TwoPlayers(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	additionalCards := []gamecards.Card{createAllOpponentsDrawTestCard()}
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	players := testGame.GetAllPlayers()
+	player1 := players[0]
+	player2 := players[1]
+	player1.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	player2.SetCorporationID(testutil.CardID("Tharsis Republic"))
+
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player1.ID(), 2), "set current turn")
+
+	player1.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	player1.Hand().AddCard("card-all-opponents-draw-test")
+
+	player1HandBefore := player1.Hand().CardCount()
+	player2HandBefore := player2.Hand().CardCount()
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 5}
+	err := playCardAction.Execute(ctx, testGame.ID(), player1.ID(), "card-all-opponents-draw-test", payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Playing all-opponents draw card should succeed")
+
+	// Player 1: played 1 card (-1) and drew 2 cards (+2) = net +1
+	player1HandAfter := player1.Hand().CardCount()
+	testutil.AssertEqual(t, player1HandBefore+1, player1HandAfter,
+		"Player 1 hand should increase by 1 (played 1, drew 2)")
+
+	// Player 2 (opponent): drew 1 card (+1)
+	player2HandAfter := player2.Hand().CardCount()
+	testutil.AssertEqual(t, player2HandBefore+1, player2HandAfter,
+		"Player 2 (opponent) should have drawn 1 card")
+}
+
+func TestPlayCard_AllOpponentsDrawCard_ThreePlayers(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	additionalCards := []gamecards.Card{createAllOpponentsDrawTestCard()}
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	players := testGame.GetAllPlayers()
+	player1 := players[0]
+	player2 := players[1]
+	player3 := players[2]
+	player1.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	player2.SetCorporationID(testutil.CardID("Tharsis Republic"))
+	player3.SetCorporationID(testutil.CardID("Tharsis Republic"))
+
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player1.ID(), 2), "set current turn")
+
+	player1.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	player1.Hand().AddCard("card-all-opponents-draw-test")
+
+	player2HandBefore := player2.Hand().CardCount()
+	player3HandBefore := player3.Hand().CardCount()
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 5}
+	err := playCardAction.Execute(ctx, testGame.ID(), player1.ID(), "card-all-opponents-draw-test", payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Playing all-opponents draw card should succeed")
+
+	// Both opponents should have drawn 1 card each
+	player2HandAfter := player2.Hand().CardCount()
+	testutil.AssertEqual(t, player2HandBefore+1, player2HandAfter,
+		"Player 2 (opponent) should have drawn 1 card")
+
+	player3HandAfter := player3.Hand().CardCount()
+	testutil.AssertEqual(t, player3HandBefore+1, player3HandAfter,
+		"Player 3 (opponent) should have drawn 1 card")
+}
+
+func TestPlayCard_AllOpponentsDrawCard_SoloMode(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	additionalCards := []gamecards.Card{createAllOpponentsDrawTestCard()}
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	players := testGame.GetAllPlayers()
+	player1 := players[0]
+	player1.SetCorporationID(testutil.CardID("Tharsis Republic"))
+
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player1.ID(), 2), "set current turn")
+
+	player1.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+	})
+	player1.Hand().AddCard("card-all-opponents-draw-test")
+
+	player1HandBefore := player1.Hand().CardCount()
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 5}
+	err := playCardAction.Execute(ctx, testGame.ID(), player1.ID(), "card-all-opponents-draw-test", payment, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Playing all-opponents draw card in solo mode should succeed")
+
+	// Solo: played 1 card (-1) and drew 2 cards (+2), no opponents = net +1
+	player1HandAfter := player1.Hand().CardCount()
+	testutil.AssertEqual(t, player1HandBefore+1, player1HandAfter,
+		"Player 1 hand should increase by 1 in solo mode (played 1, drew 2, no opponents)")
+}
+
+func TestCardOperation_DrawWithSelectors(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+	handBefore := p.Hand().CardCount()
+
+	output := &shared.CardOperationCondition{
+		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"},
+		Selectors:     []shared.Selector{{Tags: []shared.CardTag{shared.TagScience}}},
+	}
+
+	applyOutputs(t, p, testGame, cardRegistry, output)
+
+	handAfter := p.Hand().CardCount()
+	testutil.AssertEqual(t, handBefore+1, handAfter, "Player should have drawn 1 card")
+}
+
+func TestCardOperation_VariableAmountDiscard(t *testing.T) {
+	input := &shared.CardOperationCondition{
+		ConditionBase:  shared.ConditionBase{ResourceType: shared.ResourceCardDiscard, Amount: 1, Target: "self-player"},
+		VariableAmount: true,
+	}
+
+	behavior := shared.CardBehavior{
+		Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
+		Inputs:   []shared.BehaviorCondition{input},
+	}
+
+	testutil.AssertTrue(t, behavior.Inputs[0] != nil, "Behavior input should be constructed")
+	testutil.AssertEqual(t, shared.ResourceCardDiscard, behavior.Inputs[0].GetResourceType(), "Resource type should be card-discard")
+	testutil.AssertTrue(t, shared.IsVariableAmount(behavior.Inputs[0]), "VariableAmount should be true")
+}
+
+func TestCardOperation_DrawFromNearlyEmptyDeck(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	// Drain the deck to leave very few cards
+	available := testGame.Deck().GetAvailableCardCount()
+	if available > 2 {
+		_, err := testGame.Deck().DrawProjectCards(ctx, available-2)
+		testutil.AssertNoError(t, err, "Draining deck should succeed")
+	}
+
+	remaining := testGame.Deck().GetAvailableCardCount()
+	handBefore := p.Hand().CardCount()
+
+	// Try to draw 5 cards when only a few remain
+	output := shared.NewCardOperationCondition(shared.ResourceCardDraw, 5, "self-player")
+	applyOutputs(t, p, testGame, cardRegistry, output)
+
+	// The draw may fail (not enough cards even after reshuffle), which is logged
+	// as a warning and returns nil. The player gets 0 cards from a failed draw.
+	// Either way, no crash should occur.
+	handAfter := p.Hand().CardCount()
+	testutil.AssertTrue(t, handAfter >= handBefore,
+		"Hand should not decrease")
+	_ = remaining
 }

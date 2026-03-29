@@ -1,4 +1,4 @@
-package payment_test
+package behavior_test
 
 import (
 	"context"
@@ -281,4 +281,195 @@ func TestVariableAmount_StorageInput_InsufficientMicrobes(t *testing.T) {
 	testutil.AssertError(t, err, "Should fail when trying to spend more microbes than available")
 
 	testutil.AssertEqual(t, 2, p.Resources().GetCardStorage(cardID), "Microbes should not be deducted on failure")
+}
+
+func TestEffect_DiscountWithTagSelector(t *testing.T) {
+	testGame, _, _, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	effect := &shared.EffectCondition{
+		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceDiscount, Amount: 2, Target: "self-player"},
+		Selectors:     []shared.Selector{{Tags: []shared.CardTag{shared.TagSpace}}},
+	}
+	p.Effects().AddEffect(shared.CardEffect{
+		CardID:   "test-discount-card",
+		CardName: "Test Discount Card",
+		Behavior: shared.CardBehavior{Outputs: []shared.BehaviorCondition{effect}},
+	})
+
+	spaceCard := &gamecards.Card{
+		ID:   "test-space-card",
+		Name: "Test Space Card",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 10,
+		Tags: []shared.CardTag{shared.TagSpace},
+	}
+	nonSpaceCard := &gamecards.Card{
+		ID:   "test-non-space-card",
+		Name: "Test Non-Space Card",
+		Type: gamecards.CardTypeAutomated,
+		Cost: 10,
+		Tags: []shared.CardTag{shared.TagBuilding},
+	}
+
+	testCards := []gamecards.Card{*spaceCard, *nonSpaceCard}
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(testCards)
+
+	calc := gamecards.NewRequirementModifierCalculator(cardRegistry)
+	spaceDiscount := calc.CalculateCardDiscounts(p, spaceCard)
+	nonSpaceDiscount := calc.CalculateCardDiscounts(p, nonSpaceCard)
+
+	testutil.AssertEqual(t, 2, spaceDiscount, "Space-tagged card should get 2 credit discount")
+	testutil.AssertEqual(t, 0, nonSpaceDiscount, "Non-space card should get no discount")
+}
+
+func TestEffect_PaymentSubstituteRegistration(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	effect := &shared.EffectCondition{
+		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePaymentSubstitute, Amount: 1, Target: "self-player"},
+		Selectors:     []shared.Selector{{Resources: []string{"heat"}}},
+	}
+
+	applyOutputs(t, p, testGame, cardRegistry, effect)
+
+	subs := p.Resources().PaymentSubstitutes()
+	found := false
+	for _, sub := range subs {
+		if sub.ResourceType == shared.ResourceHeat {
+			found = true
+			break
+		}
+	}
+	testutil.AssertTrue(t, found, "Payment substitutes should contain heat")
+}
+
+func TestEffect_ValueModifierApplication(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	effect := &shared.EffectCondition{
+		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceValueModifier, Amount: 1, Target: "self-player"},
+		Selectors:     []shared.Selector{{Resources: []string{"titanium"}}},
+	}
+
+	applyOutputs(t, p, testGame, cardRegistry, effect)
+
+	modifier := p.Resources().GetValueModifier(shared.ResourceTitanium)
+	testutil.AssertEqual(t, 1, modifier, "Titanium value modifier should be 1")
+}
+
+func TestEffect_GlobalParameterLenience(t *testing.T) {
+	testGame, _, _, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	effect := &shared.EffectCondition{
+		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGlobalParameterLenience, Amount: 2, Target: "self-player"},
+		Selectors:     []shared.Selector{{GlobalParameters: []string{"temperature"}}},
+	}
+	p.Effects().AddEffect(shared.CardEffect{
+		CardID:   "test-lenience-card",
+		CardName: "Test Lenience Card",
+		Behavior: shared.CardBehavior{Outputs: []shared.BehaviorCondition{effect}},
+	})
+
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(nil)
+	calc := gamecards.NewRequirementModifierCalculator(cardRegistry)
+	lenience := calc.CalculateGlobalParameterLenience(p, "temperature")
+
+	testutil.AssertEqual(t, 2, lenience, "Temperature lenience should be 2")
+}
+
+func TestEffect_IgnoreGlobalRequirements(t *testing.T) {
+	testGame, _, _, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	effect := &shared.EffectCondition{
+		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceIgnoreGlobalRequirements, Amount: 1, Target: "self-player"},
+	}
+	p.Effects().AddEffect(shared.CardEffect{
+		CardID:   "test-ignore-card",
+		CardName: "Test Ignore Card",
+		Behavior: shared.CardBehavior{Outputs: []shared.BehaviorCondition{effect}},
+	})
+
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(nil)
+	calc := gamecards.NewRequirementModifierCalculator(cardRegistry)
+	hasIgnore := calc.HasIgnoreGlobalRequirements(p)
+
+	testutil.AssertTrue(t, hasIgnore, "Player should have ignore global requirements")
+}
+
+func TestEffect_TemporaryNextCard(t *testing.T) {
+	testGame, _, _, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	effect := &shared.EffectCondition{
+		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceDiscount, Amount: 2, Target: "self-player"},
+		Selectors:     []shared.Selector{{Tags: []shared.CardTag{shared.TagSpace}}},
+		Temporary:     "next-card",
+	}
+
+	cardEffect := shared.CardEffect{
+		CardID:   "test-temporary-card",
+		CardName: "Test Temporary Card",
+		Behavior: shared.CardBehavior{
+			Outputs: []shared.BehaviorCondition{effect},
+		},
+	}
+	p.Effects().AddEffect(cardEffect)
+
+	effects := p.Effects().List()
+	testutil.AssertTrue(t, len(effects) > 0, "Player should have at least one effect")
+
+	lastEffect := effects[len(effects)-1]
+	testutil.AssertTrue(t, len(lastEffect.Behavior.Outputs) > 0, "Effect behavior should have outputs")
+
+	temporary := shared.GetTemporary(lastEffect.Behavior.Outputs[0])
+	testutil.AssertEqual(t, "next-card", temporary, "Temporary field should be next-card")
+}
+
+func TestEffect_PaymentSubstituteEmptySelectors(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	subsBefore := len(p.Resources().PaymentSubstitutes())
+
+	effect := &shared.EffectCondition{
+		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePaymentSubstitute, Amount: 1, Target: "self-player"},
+		Selectors:     nil,
+	}
+
+	applyOutputs(t, p, testGame, cardRegistry, effect)
+
+	subsAfter := p.Resources().PaymentSubstitutes()
+	testutil.AssertEqual(t, subsBefore, len(subsAfter),
+		"No payment substitute should be registered when selectors are empty")
+}
+
+func TestEffect_ValueModifierEmptySelectors(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	effect := &shared.EffectCondition{
+		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceValueModifier, Amount: 1, Target: "self-player"},
+		Selectors:     []shared.Selector{},
+	}
+
+	applyOutputs(t, p, testGame, cardRegistry, effect)
+
+	// With empty selectors, GetResourcesFromSelectors returns empty, so the loop body never executes
+	steelMod := p.Resources().GetValueModifier(shared.ResourceSteel)
+	titaniumMod := p.Resources().GetValueModifier(shared.ResourceTitanium)
+	testutil.AssertEqual(t, 0, steelMod, "Steel value modifier should be 0 with empty selectors")
+	testutil.AssertEqual(t, 0, titaniumMod, "Titanium value modifier should be 0 with empty selectors")
 }

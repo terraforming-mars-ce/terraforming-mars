@@ -1,4 +1,4 @@
-package payment_test
+package behavior_test
 
 import (
 	"context"
@@ -323,4 +323,162 @@ func TestWaterImportFromEuropa_TitaniumWithValueModifier(t *testing.T) {
 
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 0, resources.Titanium, "Should have 0 titanium after spending 3")
+}
+
+func TestBasicResource_DeferredStealWithAdjacentRestriction(t *testing.T) {
+	testGame, _, cardRegistry, playerID, targetPlayerID := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+	target, _ := testGame.GetPlayer(targetPlayerID)
+	target.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 10})
+
+	stealOutput := &shared.BasicResourceCondition{
+		ConditionBase:     shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 3, Target: "steal-any-player"},
+		TargetRestriction: &shared.TargetRestriction{Adjacent: "self-card"},
+	}
+
+	applier := gamecards.NewBehaviorApplier(p, testGame, "test", testutil.TestLogger()).
+		WithCardRegistry(cardRegistry).
+		WithTargetPlayerID(targetPlayerID)
+	err := applier.ApplyOutputs(context.Background(), []shared.BehaviorCondition{stealOutput})
+	testutil.AssertNoError(t, err, "ApplyOutputs should succeed")
+
+	testutil.AssertTrue(t, applier.DeferredSteal() != nil, "Steal should be deferred, not applied immediately")
+	testutil.AssertEqual(t, 10, target.Resources().Get().Credits, "Target credits should be unchanged")
+}
+
+func TestBasicResource_StealAnyPlayer(t *testing.T) {
+	testGame, _, cardRegistry, playerID, targetPlayerID := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+	target, _ := testGame.GetPlayer(targetPlayerID)
+	target.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 10})
+
+	stealOutput := shared.NewBasicResourceCondition(shared.ResourceCredit, 3, "steal-any-player")
+
+	creditsBefore := p.Resources().Get().Credits
+	applyOutputsWithOptions(t, p, testGame, applyOptions{targetPlayerID: targetPlayerID, cardRegistry: cardRegistry}, stealOutput)
+
+	testutil.AssertEqual(t, creditsBefore+3, p.Resources().Get().Credits, "Self should gain 3 credits")
+	testutil.AssertEqual(t, 7, target.Resources().Get().Credits, "Target should lose 3 credits")
+}
+
+func TestBasicResource_AnyPlayerRemoval(t *testing.T) {
+	testGame, _, cardRegistry, playerID, targetPlayerID := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+	target, _ := testGame.GetPlayer(targetPlayerID)
+	target.Resources().Add(map[shared.ResourceType]int{shared.ResourcePlant: 5})
+
+	removeOutput := shared.NewBasicResourceCondition(shared.ResourcePlant, -8, "any-player")
+
+	plantsBefore := p.Resources().Get().Plants
+	applyOutputsWithOptions(t, p, testGame, applyOptions{targetPlayerID: targetPlayerID, cardRegistry: cardRegistry}, removeOutput)
+
+	testutil.AssertEqual(t, 0, target.Resources().Get().Plants, "Target plants should be clamped to 0")
+	testutil.AssertEqual(t, plantsBefore, p.Resources().Get().Plants, "Self plants should be unchanged")
+}
+
+func TestBasicResource_AllSixTypes(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	outputs := []shared.BehaviorCondition{
+		shared.NewBasicResourceCondition(shared.ResourceCredit, 5, "self-player"),
+		shared.NewBasicResourceCondition(shared.ResourceSteel, 3, "self-player"),
+		shared.NewBasicResourceCondition(shared.ResourceTitanium, 2, "self-player"),
+		shared.NewBasicResourceCondition(shared.ResourcePlant, 4, "self-player"),
+		shared.NewBasicResourceCondition(shared.ResourceEnergy, 1, "self-player"),
+		shared.NewBasicResourceCondition(shared.ResourceHeat, 6, "self-player"),
+	}
+
+	applyOutputs(t, p, testGame, cardRegistry, outputs...)
+
+	assertResources(t, p, map[shared.ResourceType]int{
+		shared.ResourceCredit:   5,
+		shared.ResourceSteel:    3,
+		shared.ResourceTitanium: 2,
+		shared.ResourcePlant:    4,
+		shared.ResourceEnergy:   1,
+		shared.ResourceHeat:     6,
+	})
+}
+
+func TestBasicResource_VariableAmount(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+	// Player starts with 0 credits (default)
+
+	output := &shared.BasicResourceCondition{
+		ConditionBase:  shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
+		VariableAmount: true,
+	}
+
+	applyOutputsWithOptions(t, p, testGame, applyOptions{selectedAmount: 3, cardRegistry: cardRegistry}, output)
+
+	assertResources(t, p, map[shared.ResourceType]int{
+		shared.ResourceCredit: 3,
+	})
+}
+
+func TestBasicResource_StealClampedToAvailable(t *testing.T) {
+	testGame, _, cardRegistry, playerID, targetPlayerID := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+	target, _ := testGame.GetPlayer(targetPlayerID)
+	target.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 2})
+
+	stealOutput := shared.NewBasicResourceCondition(shared.ResourceCredit, 5, "steal-any-player")
+
+	creditsBefore := p.Resources().Get().Credits
+	applyOutputsWithOptions(t, p, testGame, applyOptions{targetPlayerID: targetPlayerID, cardRegistry: cardRegistry}, stealOutput)
+
+	testutil.AssertEqual(t, creditsBefore+2, p.Resources().Get().Credits, "Self should gain only 2 (clamped to target's available)")
+	testutil.AssertEqual(t, 0, target.Resources().Get().Credits, "Target should have 0 credits")
+}
+
+func TestBasicResource_StealSoloModeSkips(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 10})
+
+	stealOutput := shared.NewBasicResourceCondition(shared.ResourceCredit, 3, "steal-any-player")
+
+	applyOutputsWithOptions(t, p, testGame, applyOptions{cardRegistry: cardRegistry}, stealOutput)
+
+	testutil.AssertEqual(t, 10, p.Resources().Get().Credits, "Self credits should be unchanged when no target player")
+}
+
+func TestBasicResource_ZeroAmountOutput(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 5})
+
+	output := shared.NewBasicResourceCondition(shared.ResourceCredit, 0, "self-player")
+	applyOutputs(t, p, testGame, cardRegistry, output)
+
+	assertResources(t, p, map[shared.ResourceType]int{
+		shared.ResourceCredit: 5,
+	})
+}
+
+func TestBasicResource_VariableAmountZero(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+
+	p, _ := testGame.GetPlayer(playerID)
+
+	output := &shared.BasicResourceCondition{
+		ConditionBase:  shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
+		VariableAmount: true,
+	}
+
+	applyOutputsWithOptions(t, p, testGame, applyOptions{selectedAmount: 0, cardRegistry: cardRegistry}, output)
+
+	assertResources(t, p, map[shared.ResourceType]int{
+		shared.ResourceCredit: 0,
+	})
 }
