@@ -34,8 +34,8 @@ func TestUrbanizedArea_CityAdjacentTo2Cities(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 2, Target: "self-player"}},
-					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: -1, Target: "self-player"}},
+					shared.NewProductionCondition(shared.ResourceCreditProduction, 2, "self-player"),
+					shared.NewProductionCondition(shared.ResourceEnergyProduction, -1, "self-player"),
 					&shared.TilePlacementCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCityPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{
@@ -172,7 +172,7 @@ func TestEcologicalZone_GreeneryAdjacentToGreenery(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAnimal, Amount: 2, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceAnimal, 2, "self-card"),
 					&shared.TilePlacementCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGreeneryPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{
@@ -312,8 +312,8 @@ func makeUrbanizedAreaCard() gamecards.Card {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 2, Target: "self-player"}},
-					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: -1, Target: "self-player"}},
+					shared.NewProductionCondition(shared.ResourceCreditProduction, 2, "self-player"),
+					shared.NewProductionCondition(shared.ResourceEnergyProduction, -1, "self-player"),
 					&shared.TilePlacementCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCityPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{

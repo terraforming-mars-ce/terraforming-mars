@@ -28,7 +28,7 @@ func TestCardWarnings_TemperatureOutputWarnsWhenMaxed(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1}},
+					shared.NewGlobalParameterCondition(shared.ResourceTemperature, 1, ""),
 				},
 			},
 		},
@@ -67,7 +67,7 @@ func TestCardWarnings_OxygenOutputWarnsWhenMaxed(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOxygen, Amount: 1}},
+					shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, ""),
 				},
 			},
 		},
@@ -106,7 +106,7 @@ func TestCardWarnings_VenusOutputWarnsWhenMaxed(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1}},
+					shared.NewGlobalParameterCondition(shared.ResourceVenus, 1, ""),
 				},
 			},
 		},
@@ -145,7 +145,7 @@ func TestCardWarnings_NoWarningBelowMax(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1}},
+					shared.NewGlobalParameterCondition(shared.ResourceTemperature, 1, ""),
 				},
 			},
 		},
@@ -177,7 +177,7 @@ func TestCardWarnings_WarningsDoNotPreventAvailability(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1}},
+					shared.NewGlobalParameterCondition(shared.ResourceTemperature, 1, ""),
 				},
 			},
 		},
@@ -212,7 +212,7 @@ func TestCardWarnings_GreeneryTileWarnsWhenOxygenMaxed(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGreeneryTile, Amount: 1}},
+					shared.NewTilePlacementCondition(shared.ResourceGreeneryTile, 1, ""),
 				},
 			},
 		},
@@ -245,7 +245,7 @@ func TestCardActionWarnings_TemperatureOutputWarnsWhenMaxed(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1}},
+			shared.NewGlobalParameterCondition(shared.ResourceTemperature, 1, ""),
 		},
 	}
 
@@ -274,7 +274,7 @@ func TestCardActionWarnings_NoWarningBelowMax(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1}},
+			shared.NewGlobalParameterCondition(shared.ResourceTemperature, 1, ""),
 		},
 	}
 
@@ -298,7 +298,7 @@ func TestCardActionWarnings_ChoiceOutputWarnsWhenMaxed(t *testing.T) {
 		Choices: []shared.Choice{
 			{
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceVenus, Amount: 1}},
+					shared.NewGlobalParameterCondition(shared.ResourceVenus, 1, ""),
 				},
 			},
 		},

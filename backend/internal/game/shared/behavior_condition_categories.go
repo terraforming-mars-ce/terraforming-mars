@@ -11,6 +11,10 @@ type BasicResourceCondition struct {
 	PaymentAllowed    []ResourceType     `json:"paymentAllowed,omitempty"`
 }
 
+func NewBasicResourceCondition(rt ResourceType, amount int, target string) *BasicResourceCondition {
+	return &BasicResourceCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
+}
+
 func (c *BasicResourceCondition) isBehaviorCondition() {}
 func (c *BasicResourceCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
@@ -41,6 +45,10 @@ type ProductionCondition struct {
 	VariableAmount bool          `json:"variableAmount,omitempty"`
 }
 
+func NewProductionCondition(rt ResourceType, amount int, target string) *ProductionCondition {
+	return &ProductionCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
+}
+
 func (c *ProductionCondition) isBehaviorCondition() {}
 func (c *ProductionCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
@@ -57,6 +65,10 @@ type TilePlacementCondition struct {
 	TileRestrictions *TileRestrictions `json:"tileRestrictions,omitempty"`
 	TileType         string            `json:"tileType,omitempty"`
 	Optional         bool              `json:"optional,omitempty"`
+}
+
+func NewTilePlacementCondition(rt ResourceType, amount int, target string) *TilePlacementCondition {
+	return &TilePlacementCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
 }
 
 func (c *TilePlacementCondition) isBehaviorCondition() {}
@@ -89,6 +101,10 @@ type GlobalParameterCondition struct {
 	Per *PerCondition `json:"per,omitempty"`
 }
 
+func NewGlobalParameterCondition(rt ResourceType, amount int, target string) *GlobalParameterCondition {
+	return &GlobalParameterCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
+}
+
 func (c *GlobalParameterCondition) isBehaviorCondition() {}
 func (c *GlobalParameterCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
@@ -106,6 +122,10 @@ type CardOperationCondition struct {
 	Optional       bool           `json:"optional,omitempty"`
 	PaymentAllowed []ResourceType `json:"paymentAllowed,omitempty"`
 	VariableAmount bool           `json:"variableAmount,omitempty"`
+}
+
+func NewCardOperationCondition(rt ResourceType, amount int, target string) *CardOperationCondition {
+	return &CardOperationCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
 }
 
 func (c *CardOperationCondition) isBehaviorCondition() {}
@@ -133,6 +153,10 @@ type CardStorageCondition struct {
 	VariableAmount bool          `json:"variableAmount,omitempty"`
 }
 
+func NewCardStorageCondition(rt ResourceType, amount int, target string) *CardStorageCondition {
+	return &CardStorageCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
+}
+
 func (c *CardStorageCondition) isBehaviorCondition() {}
 func (c *CardStorageCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
@@ -156,6 +180,10 @@ type EffectCondition struct {
 	Temporary string     `json:"temporary,omitempty"`
 }
 
+func NewEffectCondition(rt ResourceType, amount int, target string) *EffectCondition {
+	return &EffectCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
+}
+
 func (c *EffectCondition) isBehaviorCondition() {}
 func (c *EffectCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
@@ -173,6 +201,10 @@ type ColonyCondition struct {
 	AllowDuplicatePlayerColony bool `json:"allowDuplicatePlayerColony,omitempty"`
 }
 
+func NewColonyCondition(rt ResourceType, amount int, target string) *ColonyCondition {
+	return &ColonyCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
+}
+
 func (c *ColonyCondition) isBehaviorCondition() {}
 func (c *ColonyCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
@@ -183,6 +215,10 @@ func (c *ColonyCondition) deepCopyCondition() BehaviorCondition {
 type TileModificationCondition struct {
 	ConditionBase
 	TileType string `json:"tileType,omitempty"`
+}
+
+func NewTileModificationCondition(rt ResourceType, amount int, target string) *TileModificationCondition {
+	return &TileModificationCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
 }
 
 func (c *TileModificationCondition) isBehaviorCondition() {}
@@ -196,6 +232,10 @@ type MiscCondition struct {
 	ConditionBase
 	Per       *PerCondition `json:"per,omitempty"`
 	Selectors []Selector    `json:"selectors,omitempty"`
+}
+
+func NewMiscCondition(rt ResourceType, amount int, target string) *MiscCondition {
+	return &MiscCondition{ConditionBase: ConditionBase{ResourceType: rt, Amount: amount, Target: target}}
 }
 
 func (c *MiscCondition) isBehaviorCondition() {}

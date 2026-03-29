@@ -326,17 +326,17 @@ func TestElectroCatapult_ActionSpendPlantGainCredits(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 7, "self-player"),
 		},
 		Choices: []shared.Choice{
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"}},
+					shared.NewBasicResourceCondition(shared.ResourcePlant, 1, "self-player"),
 				},
 			},
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"}},
+					shared.NewBasicResourceCondition(shared.ResourceSteel, 1, "self-player"),
 				},
 			},
 		},
@@ -371,17 +371,17 @@ func TestElectroCatapult_ActionSpendSteelGainCredits(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 7, "self-player"),
 		},
 		Choices: []shared.Choice{
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"}},
+					shared.NewBasicResourceCondition(shared.ResourcePlant, 1, "self-player"),
 				},
 			},
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"}},
+					shared.NewBasicResourceCondition(shared.ResourceSteel, 1, "self-player"),
 				},
 			},
 		},

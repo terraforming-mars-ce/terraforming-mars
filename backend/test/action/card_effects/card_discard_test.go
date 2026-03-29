@@ -65,7 +65,7 @@ func TestMarsUniversity_CreatesDiscardSelectionOnScienceTag(t *testing.T) {
 				},
 			},
 			Outputs: []shared.BehaviorCondition{
-				&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+				shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 			},
 		},
 	}
@@ -144,7 +144,7 @@ func TestMarsUniversity_SkipsDiscardWhenNoCardsInHand(t *testing.T) {
 				},
 			},
 			Outputs: []shared.BehaviorCondition{
-				&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+				shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 			},
 		},
 	}
@@ -209,7 +209,7 @@ func TestMarsUniversity_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 				},
 			},
 			Outputs: []shared.BehaviorCondition{
-				&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+				shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 			},
 		},
 	}
@@ -265,7 +265,7 @@ func TestConfirmCardDiscard_DiscardAndDraw(t *testing.T) {
 		Source:       "Mars University",
 		SourceCardID: "card-mars-university",
 		PendingOutputs: []shared.BehaviorCondition{
-			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 		},
 	})
 
@@ -317,7 +317,7 @@ func TestConfirmCardDiscard_SkipOptionalDiscard(t *testing.T) {
 		Source:       "Mars University",
 		SourceCardID: "card-mars-university",
 		PendingOutputs: []shared.BehaviorCondition{
-			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 		},
 	})
 
@@ -361,7 +361,7 @@ func TestConfirmCardDiscard_RejectsNonHandCard(t *testing.T) {
 		Source:       "Mars University",
 		SourceCardID: "card-mars-university",
 		PendingOutputs: []shared.BehaviorCondition{
-			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 		},
 	})
 
@@ -425,7 +425,7 @@ func TestConfirmCardDiscard_RejectsTooManyCards(t *testing.T) {
 		Source:       "Mars University",
 		SourceCardID: "card-mars-university",
 		PendingOutputs: []shared.BehaviorCondition{
-			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 		},
 	})
 

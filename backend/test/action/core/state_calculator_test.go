@@ -351,10 +351,10 @@ func TestCalculatePlayerCardActionState_Available(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergy, Amount: 4}},
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 4, ""),
 		},
 		Outputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteel, Amount: 2}},
+			shared.NewBasicResourceCondition(shared.ResourceSteel, 2, ""),
 		},
 	}
 
@@ -390,7 +390,7 @@ func TestCalculatePlayerCardActionState_InsufficientResources(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergy, Amount: 4}},
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 4, ""),
 		},
 	}
 
@@ -696,7 +696,7 @@ func TestCalculateChoiceErrors_NoRequirements(t *testing.T) {
 
 	choice := shared.Choice{
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 		},
 	}
 
@@ -711,7 +711,7 @@ func TestCalculateChoiceErrors_TagRequirementNotMet(t *testing.T) {
 
 	choice := shared.Choice{
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 3, Target: "self-player"}},
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 3, "self-player"),
 		},
 		Requirements: &shared.ChoiceRequirements{
 			Items: []shared.ChoiceRequirement{
@@ -742,7 +742,7 @@ func TestCalculateChoiceErrors_TagRequirementMet(t *testing.T) {
 
 	choice := shared.Choice{
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 3, Target: "self-player"}},
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 3, "self-player"),
 		},
 		Requirements: &shared.ChoiceRequirements{
 			Items: []shared.ChoiceRequirement{
@@ -854,10 +854,10 @@ func TestCalculatePlayerCardActionState_ProductionInput_Available(t *testing.T) 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"}},
+			shared.NewProductionCondition(shared.ResourceEnergyProduction, 1, "self-player"),
 		},
 		Outputs: []shared.BehaviorCondition{
-			&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"}},
+			shared.NewGlobalParameterCondition(shared.ResourceTR, 1, "self-player"),
 		},
 	}
 
@@ -880,10 +880,10 @@ func TestCalculatePlayerCardActionState_ProductionInput_Insufficient(t *testing.
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"}},
+			shared.NewProductionCondition(shared.ResourceEnergyProduction, 1, "self-player"),
 		},
 		Outputs: []shared.BehaviorCondition{
-			&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"}},
+			shared.NewGlobalParameterCondition(shared.ResourceTR, 1, "self-player"),
 		},
 	}
 

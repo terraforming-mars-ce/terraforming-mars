@@ -31,7 +31,7 @@ func TestNaturalPreserve_TilePlacementWithNoAdjacency(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"}},
+					shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 					&shared.TilePlacementCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTilePlacement, Amount: 1, Target: "none"},
 						TileType:      "natural-preserve",
@@ -152,7 +152,7 @@ func TestNuclearZone_TilePlacementOnNormalLand(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 2, Target: "none"}},
+					shared.NewGlobalParameterCondition(shared.ResourceTemperature, 2, "none"),
 					&shared.TilePlacementCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTilePlacement, Amount: 1, Target: "none"},
 						TileType:      "nuclear-zone",
@@ -207,7 +207,7 @@ func TestMoholeArea_TilePlacementOnOceanSpace(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceHeatProduction, Amount: 4, Target: "self-player"}},
+					shared.NewProductionCondition(shared.ResourceHeatProduction, 4, "self-player"),
 					&shared.TilePlacementCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTilePlacement, Amount: 1, Target: "none"},
 						TileType:      "mohole",

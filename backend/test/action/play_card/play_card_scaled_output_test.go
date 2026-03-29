@@ -303,10 +303,10 @@ func TestImportedNitrogen_MultipleAnyCardTargets(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlant, Amount: 4, Target: "self-player"}},
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 3, Target: "any-card"}},
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTR, Amount: 1, Target: "self-player"}},
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAnimal, Amount: 2, Target: "any-card"}},
+					shared.NewBasicResourceCondition(shared.ResourcePlant, 4, "self-player"),
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 3, "any-card"),
+					shared.NewGlobalParameterCondition(shared.ResourceTR, 1, "self-player"),
+					shared.NewCardStorageCondition(shared.ResourceAnimal, 2, "any-card"),
 				},
 			},
 		},

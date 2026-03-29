@@ -40,27 +40,27 @@ func TestRobinsonIndustries_ActionSucceedsWithSufficientCredits(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 4, "self-player"),
 		},
 		ChoicePolicy: &shared.ChoicePolicy{Type: shared.ChoicePolicyTypeLowest},
 		Choices: []shared.Choice{
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteelProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceSteelProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceTitaniumProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlantProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourcePlantProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceEnergyProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceHeatProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceHeatProduction, 1, "self-player"),
 			}},
 		},
 	}
@@ -110,27 +110,27 @@ func TestRobinsonIndustries_OnlyAllowsIncreasingLowestProduction(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 4, "self-player"),
 		},
 		ChoicePolicy: &shared.ChoicePolicy{Type: shared.ChoicePolicyTypeLowest},
 		Choices: []shared.Choice{
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteelProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceSteelProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTitaniumProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceTitaniumProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlantProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourcePlantProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceEnergyProduction, 1, "self-player"),
 			}},
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceHeatProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceHeatProduction, 1, "self-player"),
 			}},
 		},
 	}
@@ -169,11 +169,11 @@ func TestRobinsonIndustries_ActionFailsWithInsufficientCredits(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 4, "self-player"),
 		},
 		Choices: []shared.Choice{
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 			}},
 		},
 	}
@@ -208,11 +208,11 @@ func TestRobinsonIndustries_StateCalculatorBlocksWhenUnaffordable(t *testing.T) 
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 4, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 4, "self-player"),
 		},
 		Choices: []shared.Choice{
 			{Outputs: []shared.BehaviorCondition{
-				&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"}},
+				shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 			}},
 		},
 	}

@@ -29,7 +29,7 @@ func TestCardResource_CEOsFavoriteProject_AddsToAnimalCard(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardResource, Amount: 1, Target: "any-card"}},
+					shared.NewCardStorageCondition(shared.ResourceCardResource, 1, "any-card"),
 				},
 			},
 		},
@@ -90,7 +90,7 @@ func TestCardResource_CEOsFavoriteProject_AddsToMicrobeCard(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardResource, Amount: 1, Target: "any-card"}},
+					shared.NewCardStorageCondition(shared.ResourceCardResource, 1, "any-card"),
 				},
 			},
 		},
@@ -155,7 +155,7 @@ func TestCardResource_CorroderSuits_AddsToVenusCard(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 2, Target: "self-player"}},
+					shared.NewProductionCondition(shared.ResourceCreditProduction, 2, "self-player"),
 					&shared.CardStorageCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardResource, Amount: 1, Target: "any-card"},
 						Selectors:     []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}},
@@ -230,7 +230,7 @@ func TestCardResource_MaxwellBase_ActionAddsToVenusCard(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergyProduction, Amount: -1, Target: "self-player"}},
+					shared.NewProductionCondition(shared.ResourceEnergyProduction, -1, "self-player"),
 				},
 			},
 			{
@@ -309,7 +309,7 @@ func TestCardResource_FailsWithoutTargetCard(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardResource, Amount: 1, Target: "any-card"}},
+					shared.NewCardStorageCondition(shared.ResourceCardResource, 1, "any-card"),
 				},
 			},
 		},
@@ -366,7 +366,7 @@ func TestCardResource_FailsWhenTargetHasNoStorage(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardResource, Amount: 1, Target: "any-card"}},
+					shared.NewCardStorageCondition(shared.ResourceCardResource, 1, "any-card"),
 				},
 			},
 		},
@@ -427,7 +427,7 @@ func TestCardResource_AnyCardTarget_SkipsWhenNoTargetCard(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction, Amount: 1, Target: "self-player"}},
+					shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
 					&shared.CardStorageCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 1, Target: "any-card"},
 						Selectors:     []shared.Selector{{Tags: []shared.CardTag{"venus"}}},

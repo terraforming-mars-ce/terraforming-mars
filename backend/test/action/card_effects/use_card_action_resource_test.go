@@ -29,10 +29,10 @@ func TestDevelopmentCenter_SpendEnergyToDrawCard(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergy, Amount: 1, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 1, "self-player"),
 		},
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -67,10 +67,10 @@ func TestDevelopmentCenter_FailsWithoutEnergy(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Inputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceEnergy, Amount: 1, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceEnergy, 1, "self-player"),
 		},
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+			shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -106,15 +106,15 @@ func TestRegolithEaters_AddMicrobeToSelfCard(t *testing.T) {
 		Choices: []shared.Choice{
 			{
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 				},
 			},
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 2, "self-card"),
 				},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"}},
+					shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 				},
 			},
 		},
@@ -153,15 +153,15 @@ func TestRegolithEaters_RemoveMicrobesToRaiseOxygen(t *testing.T) {
 		Choices: []shared.Choice{
 			{
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 				},
 			},
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 2, "self-card"),
 				},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"}},
+					shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 				},
 			},
 		},
@@ -205,15 +205,15 @@ func TestRegolithEaters_CannotRemoveWithInsufficientMicrobes(t *testing.T) {
 		Choices: []shared.Choice{
 			{
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 				},
 			},
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 2, "self-card"),
 				},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOxygen, Amount: 1, Target: "none"}},
+					shared.NewGlobalParameterCondition(shared.ResourceOxygen, 1, "none"),
 				},
 			},
 		},
@@ -262,15 +262,15 @@ func TestGHGProducingBacteria_AddMicrobe(t *testing.T) {
 		Choices: []shared.Choice{
 			{
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 				},
 			},
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 2, "self-card"),
 				},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1, Target: "none"}},
+					shared.NewGlobalParameterCondition(shared.ResourceTemperature, 1, "none"),
 				},
 			},
 		},
@@ -308,15 +308,15 @@ func TestGHGProducingBacteria_RemoveMicrobesToRaiseTemperature(t *testing.T) {
 		Choices: []shared.Choice{
 			{
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 				},
 			},
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 2, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 2, "self-card"),
 				},
 				Outputs: []shared.BehaviorCondition{
-					&shared.GlobalParameterCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1, Target: "none"}},
+					shared.NewGlobalParameterCondition(shared.ResourceTemperature, 1, "none"),
 				},
 			},
 		},
@@ -365,17 +365,17 @@ func TestElectroCatapult_SpendPlantForCredits(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 7, "self-player"),
 		},
 		Choices: []shared.Choice{
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"}},
+					shared.NewBasicResourceCondition(shared.ResourcePlant, 1, "self-player"),
 				},
 			},
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"}},
+					shared.NewBasicResourceCondition(shared.ResourceSteel, 1, "self-player"),
 				},
 			},
 		},
@@ -420,17 +420,17 @@ func TestElectroCatapult_SpendSteelForCredits(t *testing.T) {
 	behavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 7, Target: "self-player"}},
+			shared.NewBasicResourceCondition(shared.ResourceCredit, 7, "self-player"),
 		},
 		Choices: []shared.Choice{
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePlant, Amount: 1, Target: "self-player"}},
+					shared.NewBasicResourceCondition(shared.ResourcePlant, 1, "self-player"),
 				},
 			},
 			{
 				Inputs: []shared.BehaviorCondition{
-					&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceSteel, Amount: 1, Target: "self-player"}},
+					shared.NewBasicResourceCondition(shared.ResourceSteel, 1, "self-player"),
 				},
 			},
 		},

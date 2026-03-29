@@ -332,7 +332,7 @@ func TestViron_ReuseBlueCardAction(t *testing.T) {
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 			Outputs: []shared.BehaviorCondition{
-				&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+				shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 			},
 		},
 		TimesUsedThisGeneration: 1,
@@ -388,7 +388,7 @@ func TestViron_CannotReuseUnusedAction(t *testing.T) {
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 			Outputs: []shared.BehaviorCondition{
-				&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+				shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 			},
 		},
 		TimesUsedThisGeneration: 0,
@@ -443,7 +443,7 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 			Outputs: []shared.BehaviorCondition{
-				&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+				shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 			},
 		},
 		TimesUsedThisGeneration: 1,
@@ -468,7 +468,7 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 			Outputs: []shared.BehaviorCondition{
-				&shared.BasicResourceCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"}},
+				shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"),
 			},
 		},
 		TimesUsedThisGeneration: 1,
@@ -504,7 +504,7 @@ func TestViron_ReuseStratopolis_AddFloatersToSelf(t *testing.T) {
 		Behavior: shared.CardBehavior{
 			Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 			Outputs: []shared.BehaviorCondition{
-				&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceFloater, Amount: 2, Target: "any-card"}},
+				shared.NewCardStorageCondition(shared.ResourceFloater, 2, "any-card"),
 			},
 		},
 		TimesUsedThisGeneration: 0,

@@ -85,7 +85,7 @@ func TestLandClaim_CreatesLandClaimTileSelection(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceLandClaim, Amount: 1, Target: "none"}},
+					shared.NewTilePlacementCondition(shared.ResourceLandClaim, 1, "none"),
 				},
 			},
 		},
@@ -141,7 +141,7 @@ func TestArtificialLake_OceanPlacement(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
+					shared.NewTilePlacementCondition(shared.ResourceOceanPlacement, 1, "none"),
 				},
 			},
 		},
@@ -195,7 +195,7 @@ func TestArtificialLake_FailsWithoutTemperatureRequirement(t *testing.T) {
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 				Outputs: []shared.BehaviorCondition{
-					&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}},
+					shared.NewTilePlacementCondition(shared.ResourceOceanPlacement, 1, "none"),
 				},
 			},
 		},

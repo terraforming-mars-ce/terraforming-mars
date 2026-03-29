@@ -198,7 +198,7 @@ func TestVariableAmount_StorageInput_SpendMultipleMicrobes(t *testing.T) {
 		Choices: []shared.Choice{
 			{
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 				},
 			},
 			{
@@ -250,7 +250,7 @@ func TestVariableAmount_StorageInput_InsufficientMicrobes(t *testing.T) {
 		Choices: []shared.Choice{
 			{
 				Outputs: []shared.BehaviorCondition{
-					&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "self-card"}},
+					shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "self-card"),
 				},
 			},
 			{

@@ -30,13 +30,13 @@ func createChoiceRequirementsTestCard() gamecards.Card {
 					{
 						// Choice 0: always available, draw 1 card
 						Outputs: []shared.BehaviorCondition{
-							&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 1, Target: "self-player"}},
+							shared.NewCardOperationCondition(shared.ResourceCardDraw, 1, "self-player"),
 						},
 					},
 					{
 						// Choice 1: requires 3+ venus tags, draw 3 cards
 						Outputs: []shared.BehaviorCondition{
-							&shared.CardOperationCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCardDraw, Amount: 3, Target: "self-player"}},
+							shared.NewCardOperationCondition(shared.ResourceCardDraw, 3, "self-player"),
 						},
 						Requirements: &shared.ChoiceRequirements{
 							Items: []shared.ChoiceRequirement{

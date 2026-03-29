@@ -27,7 +27,7 @@ func TestPredatorsStealAnimalFromOtherPlayer(t *testing.T) {
 	predatorsBehavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "steal-from-any-card"}},
+			shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "steal-from-any-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -66,7 +66,7 @@ func TestPredatorsStealFromOwnCard(t *testing.T) {
 	predatorsBehavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "steal-from-any-card"}},
+			shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "steal-from-any-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -101,7 +101,7 @@ func TestPredatorsRejectsWithNoSourceCard(t *testing.T) {
 	predatorsBehavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "steal-from-any-card"}},
+			shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "steal-from-any-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -139,7 +139,7 @@ func TestPredatorsStealFromCardWithZeroAnimals(t *testing.T) {
 	predatorsBehavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceAnimal, Amount: 1, Target: "steal-from-any-card"}},
+			shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "steal-from-any-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -179,7 +179,7 @@ func TestAntsStealMicrobeFromOtherPlayer(t *testing.T) {
 	antsBehavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "steal-from-any-card"}},
+			shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "steal-from-any-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
@@ -214,7 +214,7 @@ func TestAntsRejectsWithNoSourceCard(t *testing.T) {
 	antsBehavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
 		Outputs: []shared.BehaviorCondition{
-			&shared.CardStorageCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceMicrobe, Amount: 1, Target: "steal-from-any-card"}},
+			shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "steal-from-any-card"),
 		},
 	}
 	p.Actions().SetActions([]shared.CardAction{
