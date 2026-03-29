@@ -390,6 +390,69 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     );
   }
 
+  // Colony bonus: colony-tile icon + "Bonus" label + computed values
+  if (resourceType === "colony-bonus") {
+    const hasContext = computedOutputs !== undefined;
+    const bonusOutputs = computedOutputs ?? [];
+    return (
+      <div className="flex items-center gap-[3px]">
+        <BehaviorIcon
+          resourceType="colony-tile"
+          isProduction={false}
+          isAttack={false}
+          context="standalone"
+          isAffordable={true}
+          tileScaleInfo={tileScaleInfo}
+        />
+        <span className="text-[11px] font-bold font-orbitron text-white/80 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] uppercase tracking-wide">
+          Bonus
+        </span>
+        {hasContext && (
+          <span className="flex items-center gap-[2px] opacity-80 ml-0.5">
+            <span className="text-[22px] font-bold leading-none text-white/70 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+              (
+            </span>
+            {bonusOutputs.length > 0 ? (
+              bonusOutputs.map((o, i) => (
+                <span key={i} className="flex items-center gap-[2px]">
+                  {o.resourceType === "credit" ? (
+                    <GameIcon iconType="credit" amount={o.amount} size="small" />
+                  ) : (
+                    <span className="flex items-center gap-[2px]">
+                      {o.amount > 1 && (
+                        <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+                          {o.amount}
+                        </span>
+                      )}
+                      <GameIcon iconType={o.resourceType} size="small" />
+                    </span>
+                  )}
+                </span>
+              ))
+            ) : (
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                className="opacity-70 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))]"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+              </svg>
+            )}
+            <span className="text-[22px] font-bold leading-none text-white/70 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+              )
+            </span>
+          </span>
+        )}
+      </div>
+    );
+  }
+
   // Use the passed context or determine based on production status
   let iconContext = context;
   if (iconContext === "default" && isProduction) {

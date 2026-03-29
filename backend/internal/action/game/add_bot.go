@@ -13,6 +13,7 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	playerPkg "terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
@@ -37,11 +38,12 @@ type BotBroadcaster interface {
 
 // AddBotAction handles adding a bot player to a game lobby
 type AddBotAction struct {
-	gameRepo      game.GameRepository
-	cardRegistry  cards.CardRegistry
-	healthChecker BotHealthChecker
-	broadcaster   BotBroadcaster
-	logger        *zap.Logger
+	gameRepo          game.GameRepository
+	cardRegistry      cards.CardRegistry
+	colonyBonusLookup gamecards.ColonyBonusLookup
+	healthChecker     BotHealthChecker
+	broadcaster       BotBroadcaster
+	logger            *zap.Logger
 }
 
 // AddBotResult contains the result of adding a bot
@@ -57,13 +59,19 @@ func NewAddBotAction(
 	healthChecker BotHealthChecker,
 	broadcaster BotBroadcaster,
 	logger *zap.Logger,
+	colonyBonusLookup ...gamecards.ColonyBonusLookup,
 ) *AddBotAction {
+	var lookup gamecards.ColonyBonusLookup
+	if len(colonyBonusLookup) > 0 {
+		lookup = colonyBonusLookup[0]
+	}
 	return &AddBotAction{
-		gameRepo:      gameRepo,
-		cardRegistry:  cardRegistry,
-		healthChecker: healthChecker,
-		broadcaster:   broadcaster,
-		logger:        logger,
+		gameRepo:          gameRepo,
+		cardRegistry:      cardRegistry,
+		colonyBonusLookup: lookup,
+		healthChecker:     healthChecker,
+		broadcaster:       broadcaster,
+		logger:            logger,
 	}
 }
 
@@ -120,7 +128,7 @@ func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName strin
 		log.Error("Failed to add bot to game", zap.Error(err))
 		return nil, fmt.Errorf("failed to add bot to game: %w", err)
 	}
-	action.SetupPlayerCardStore(botPlayer, g, a.cardRegistry)
+	action.SetupPlayerCardStore(botPlayer, g, a.cardRegistry, a.colonyBonusLookup)
 
 	log.Info("Bot added to game", zap.String("bot_id", botID), zap.String("bot_name", botName))
 

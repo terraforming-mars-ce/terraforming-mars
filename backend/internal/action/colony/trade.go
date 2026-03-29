@@ -79,6 +79,10 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		return err
 	}
 
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
+		return err
+	}
+
 	if !g.HasColonies() {
 		return fmt.Errorf("colonies expansion is not enabled")
 	}
@@ -265,7 +269,7 @@ func setPendingColonyResource(p *player.Player, pending *PendingResource, colony
 		return
 	}
 
-	p.Selection().SetPendingColonyResourceSelection(&shared.PendingColonyResourceSelection{
+	p.Selection().AppendPendingColonyResource(shared.PendingColonyResourceSelection{
 		ResourceType: pending.ResourceType,
 		Amount:       pending.Amount,
 		Source:       colonyName,

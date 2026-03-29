@@ -124,6 +124,7 @@ type PlayerState struct {
 	PendingBehaviorChoiceSelection *shared.PendingBehaviorChoiceSelection
 	PendingStealTargetSelection    *shared.PendingStealTargetSelection
 	PendingColonyResourceSelection *shared.PendingColonyResourceSelection
+	PendingColonyResourceQueue     []shared.PendingColonyResourceSelection
 	PendingAwardFundSelection      *shared.PendingAwardFundSelection
 	PendingColonySelection         *shared.PendingColonySelection
 	PendingFreeTradeSelection      *shared.PendingFreeTradeSelection

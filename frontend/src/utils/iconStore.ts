@@ -75,6 +75,7 @@ export const TILE_ICONS: { [key: string]: string } = {
   "volcano-placement": "/assets/tiles/hazard.png",
   "colony-tile": "/assets/tiles/colony.png",
   "colony-count": "/assets/tiles/colony.png",
+  "colony-bonus": "/assets/tiles/colony.png",
   greenery: "/assets/tiles/greenery_no_O2.png",
   trade: "/assets/tiles/trade.png",
   "colony-track-step": "/assets/tiles/colony.png",

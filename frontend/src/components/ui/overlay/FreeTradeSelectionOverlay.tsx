@@ -62,8 +62,9 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center">
+      <div className="absolute inset-0 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]" />
 
       <div className="relative z-[1] w-[480px] max-h-[80vh] flex flex-col bg-space-black-darker/95 border border-space-blue-500 rounded-lg overflow-hidden shadow-glow-lg">
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">

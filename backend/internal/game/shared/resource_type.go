@@ -36,6 +36,7 @@ const (
 	ResourceVolcanoTile         ResourceType = "volcano-tile"
 	ResourceColonyTile          ResourceType = "colony-tile"
 	ResourceColonyCount         ResourceType = "colony-count"
+	ResourceColonyBonus         ResourceType = "colony-bonus"
 	ResourceNaturalPreserveTile ResourceType = "natural-preserve-tile"
 	ResourceMiningTile          ResourceType = "mining-tile"
 	ResourceNuclearZoneTile     ResourceType = "nuclear-zone-tile"

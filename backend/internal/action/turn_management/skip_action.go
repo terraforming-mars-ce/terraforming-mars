@@ -43,6 +43,10 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 		return err
 	}
 
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
+		return err
+	}
+
 	turnOrder := g.TurnOrder()
 
 	currentTurn := g.CurrentTurn()

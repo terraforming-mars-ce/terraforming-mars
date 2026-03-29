@@ -8,9 +8,15 @@ import (
 
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
+	"terraforming-mars-backend/internal/game/colony"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
+
+// ColonyBonusLookup provides colony definition lookup for colony-bonus output handling.
+type ColonyBonusLookup interface {
+	GetByID(colonyID string) (*colony.ColonyTileDefinition, error)
+}
 
 // BehaviorApplier handles applying card behavior inputs and outputs
 // This is the single source of truth for all input/output application
@@ -28,6 +34,7 @@ type BehaviorApplier struct {
 	actionPayment     *CardPayment          // Optional payment for action inputs with paymentAllowed (e.g., titanium for Water Import From Europa)
 	cardRegistry      CardRegistryInterface // Card registry for tag counting in per conditions (optional)
 	sourceType        shared.SourceType     // Source type for triggered effect classification
+	colonyBonusLookup ColonyBonusLookup
 	deferredSteal     *shared.ResourceCondition
 	logger            *zap.Logger
 }
@@ -119,6 +126,12 @@ func (a *BehaviorApplier) WithSourceType(sourceType shared.SourceType) *Behavior
 	return a
 }
 
+// WithColonyBonusLookup sets the colony definition lookup for colony-bonus outputs
+func (a *BehaviorApplier) WithColonyBonusLookup(lookup ColonyBonusLookup) *BehaviorApplier {
+	a.colonyBonusLookup = lookup
+	return a
+}
+
 // ApplyInputs validates player has required resources and deducts them
 // Returns error if player is nil or insufficient resources
 func (a *BehaviorApplier) ApplyInputs(
@@ -149,7 +162,7 @@ func (a *BehaviorApplier) ApplyInputs(
 		}
 
 		// Storage resource inputs (target: "self-card") deduct from card storage
-		if input.Target == "self-card" && isStorageResourceType(input.ResourceType) {
+		if input.Target == "self-card" && IsStorageResourceType(input.ResourceType) {
 			if a.sourceCardID == "" {
 				return fmt.Errorf("cannot deduct from self-card: no source card ID")
 			}
@@ -239,7 +252,7 @@ func (a *BehaviorApplier) ApplyInputs(
 		}
 
 		// Storage resource inputs (target: "self-card") deduct from card storage
-		if input.Target == "self-card" && isStorageResourceType(input.ResourceType) {
+		if input.Target == "self-card" && IsStorageResourceType(input.ResourceType) {
 			a.player.Resources().AddToStorage(a.sourceCardID, -effectiveAmount)
 			log.Debug("Deducted from card storage",
 				zap.String("card_id", a.sourceCardID),
@@ -440,7 +453,7 @@ func (a *BehaviorApplier) applyActionPayment(
 }
 
 // isStorageResourceType returns true for resource types that are stored on cards
-func isStorageResourceType(rt shared.ResourceType) bool {
+func IsStorageResourceType(rt shared.ResourceType) bool {
 	switch rt {
 	case shared.ResourceMicrobe, shared.ResourceAnimal, shared.ResourceFloater,
 		shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceFighter, shared.ResourceDisease:
@@ -530,6 +543,14 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 
 		if err := a.applyOutput(ctx, modifiedOutput, log); err != nil {
 			return calculatedOutputs, err
+		}
+
+		// Colony-bonus outputs expand into the actual resources gained
+		if output.ResourceType == shared.ResourceColonyBonus {
+			bonusOutputs := a.collectColonyBonusOutputs(log)
+			calculatedOutputs = append(calculatedOutputs, bonusOutputs...)
+			notificationOutputs = append(notificationOutputs, bonusOutputs...)
+			continue
 		}
 
 		// Track for state diff log (existing behavior)
@@ -1562,10 +1583,153 @@ func (a *BehaviorApplier) applyOutput(
 			zap.Int("available_colonies", len(colonyIDs)),
 			zap.Bool("allow_duplicate", output.AllowDuplicatePlayerColony))
 
+	case shared.ResourceColonyBonus:
+		if a.game == nil || a.player == nil {
+			return fmt.Errorf("cannot apply colony bonus: missing game or player context")
+		}
+		if !a.game.HasColonies() {
+			log.Warn("Colony bonus output ignored: colonies expansion not enabled")
+			return nil
+		}
+		if a.colonyBonusLookup == nil {
+			return fmt.Errorf("cannot apply colony bonus: no colony bonus lookup configured")
+		}
+		a.applyColonyBonuses(ctx, log)
+
 	default:
 		log.Warn("Unhandled output type",
 			zap.String("type", string(output.ResourceType)))
 	}
 
 	return nil
+}
+
+// applyColonyBonuses applies all colony bonuses for the player.
+// Card-targeted resources (microbe, animal, floater) are queued for player selection.
+func (a *BehaviorApplier) applyColonyBonuses(_ context.Context, log *zap.Logger) {
+	bonuses := CollectColonyBonuses(a.player.ID(), a.game.ColonyTileStates(), a.colonyBonusLookup)
+
+	pendingByType := map[string]int{}
+	var pendingOrder []string
+
+	for _, b := range bonuses {
+		rt := shared.ResourceType(b.ResourceType)
+		if IsStorageResourceType(rt) {
+			if _, exists := pendingByType[b.ResourceType]; !exists {
+				pendingOrder = append(pendingOrder, b.ResourceType)
+			}
+			pendingByType[b.ResourceType] += b.Amount
+		} else {
+			a.player.Resources().Add(map[shared.ResourceType]int{rt: b.Amount})
+		}
+		log.Debug("Applied colony bonus",
+			zap.String("type", b.ResourceType),
+			zap.Int("amount", b.Amount))
+	}
+
+	for _, rt := range pendingOrder {
+		amount := pendingByType[rt]
+		if !HasEligibleStorageCard(a.player, shared.ResourceType(rt), a.cardRegistry) {
+			log.Debug("No eligible storage card for colony bonus, resources lost",
+				zap.String("resource_type", rt),
+				zap.Int("amount", amount))
+			continue
+		}
+		a.player.Selection().AppendPendingColonyResource(shared.PendingColonyResourceSelection{
+			ResourceType: rt,
+			Amount:       amount,
+			Source:       a.source,
+			Reason:       "colony-bonus",
+		})
+	}
+}
+
+func (a *BehaviorApplier) collectColonyBonusOutputs(_ *zap.Logger) []shared.CalculatedOutput {
+	if a.game == nil || a.player == nil || a.colonyBonusLookup == nil {
+		return nil
+	}
+	return ColonyBonusesToCalculatedOutputs(
+		CollectColonyBonuses(a.player.ID(), a.game.ColonyTileStates(), a.colonyBonusLookup),
+	)
+}
+
+// ColonyBonusEntry represents a single colony bonus resource gain.
+type ColonyBonusEntry struct {
+	ResourceType string
+	Amount       int
+}
+
+// CollectColonyBonuses iterates colony tile states and returns all bonuses for the given player.
+func CollectColonyBonuses(playerID string, tileStates []*colony.TileState, lookup ColonyBonusLookup) []ColonyBonusEntry {
+	if lookup == nil {
+		return nil
+	}
+	var result []ColonyBonusEntry
+	for _, ts := range tileStates {
+		colonyCount := 0
+		for _, ownerID := range ts.PlayerColonies {
+			if ownerID == playerID {
+				colonyCount++
+			}
+		}
+		if colonyCount == 0 {
+			continue
+		}
+		def, err := lookup.GetByID(ts.DefinitionID)
+		if err != nil {
+			continue
+		}
+		for i := 0; i < colonyCount; i++ {
+			for _, bonus := range def.ColonyBonus {
+				if bonus.Amount > 0 {
+					result = append(result, ColonyBonusEntry{ResourceType: bonus.Type, Amount: bonus.Amount})
+				}
+			}
+		}
+	}
+	return result
+}
+
+// ColonyBonusesToCalculatedOutputs aggregates colony bonus entries into calculated outputs by type.
+func ColonyBonusesToCalculatedOutputs(bonuses []ColonyBonusEntry) []shared.CalculatedOutput {
+	if len(bonuses) == 0 {
+		return []shared.CalculatedOutput{}
+	}
+	totals := map[string]int{}
+	var order []string
+	for _, b := range bonuses {
+		if _, exists := totals[b.ResourceType]; !exists {
+			order = append(order, b.ResourceType)
+		}
+		totals[b.ResourceType] += b.Amount
+	}
+	outputs := make([]shared.CalculatedOutput, 0, len(totals))
+	for _, rt := range order {
+		outputs = append(outputs, shared.CalculatedOutput{ResourceType: rt, Amount: totals[rt]})
+	}
+	return outputs
+}
+
+// HasEligibleStorageCard checks if a player has any played card or corporation
+// that can store the given resource type.
+func HasEligibleStorageCard(p *player.Player, resourceType shared.ResourceType, cardRegistry CardRegistryInterface) bool {
+	if cardRegistry == nil {
+		return false
+	}
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		if card.ResourceStorage != nil && card.ResourceStorage.Type == resourceType {
+			return true
+		}
+	}
+	if corpID := p.CorporationID(); corpID != "" {
+		corp, err := cardRegistry.GetByID(corpID)
+		if err == nil && corp.ResourceStorage != nil && corp.ResourceStorage.Type == resourceType {
+			return true
+		}
+	}
+	return false
 }

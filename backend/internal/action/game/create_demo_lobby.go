@@ -11,14 +11,16 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
 // CreateDemoLobbyAction handles creating a demo game lobby where player count is set
 type CreateDemoLobbyAction struct {
-	gameRepo     game.GameRepository
-	cardRegistry cards.CardRegistry
-	logger       *zap.Logger
+	gameRepo          game.GameRepository
+	cardRegistry      cards.CardRegistry
+	colonyBonusLookup gamecards.ColonyBonusLookup
+	logger            *zap.Logger
 }
 
 // DemoLobbySettings contains settings for creating a demo lobby
@@ -39,11 +41,17 @@ func NewCreateDemoLobbyAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
 	logger *zap.Logger,
+	colonyBonusLookup ...gamecards.ColonyBonusLookup,
 ) *CreateDemoLobbyAction {
+	var lookup gamecards.ColonyBonusLookup
+	if len(colonyBonusLookup) > 0 {
+		lookup = colonyBonusLookup[0]
+	}
 	return &CreateDemoLobbyAction{
-		gameRepo:     gameRepo,
-		cardRegistry: cardRegistry,
-		logger:       logger,
+		gameRepo:          gameRepo,
+		cardRegistry:      cardRegistry,
+		colonyBonusLookup: lookup,
+		logger:            logger,
 	}
 }
 
@@ -101,7 +109,7 @@ func (a *CreateDemoLobbyAction) Execute(
 	if err != nil {
 		return nil, fmt.Errorf("failed to add player: %w", err)
 	}
-	action.SetupPlayerCardStore(demoPlayer, newGame, a.cardRegistry)
+	action.SetupPlayerCardStore(demoPlayer, newGame, a.cardRegistry, a.colonyBonusLookup)
 	log.Debug("Human player added", zap.String("player_id", playerID), zap.String("name", settings.PlayerName))
 
 	// Game stays in lobby status - ready for configuration

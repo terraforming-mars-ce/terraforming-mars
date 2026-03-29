@@ -69,6 +69,10 @@ func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID
 		return err
 	}
 
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
+		return err
+	}
+
 	if !g.HasColonies() {
 		return fmt.Errorf("colonies expansion is not enabled")
 	}

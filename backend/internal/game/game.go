@@ -878,6 +878,19 @@ func (g *Game) NextPlayer() *string {
 	return &turnOrder[nextIndex]
 }
 
+// HasAnyPendingSelection returns true if the player has any pending selection
+// (tile placement, card storage, steal target, etc.) that blocks other actions.
+func (g *Game) HasAnyPendingSelection(playerID string) bool {
+	if g.GetPendingTileSelection(playerID) != nil {
+		return true
+	}
+	p, err := g.GetPlayer(playerID)
+	if err != nil {
+		return false
+	}
+	return p.Selection().HasPendingSelection()
+}
+
 func (g *Game) GetPendingTileSelection(playerID string) *shared.PendingTileSelection {
 	var result *shared.PendingTileSelection
 	g.read(func(s *datastore.GameState) {

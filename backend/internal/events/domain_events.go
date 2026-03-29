@@ -282,6 +282,12 @@ type ProjectCompletedEvent struct {
 	Timestamp time.Time
 }
 
+// PlayerSelectionChangedEvent is published when a player's pending selection state changes.
+type PlayerSelectionChangedEvent struct {
+	GameID   string
+	PlayerID string
+}
+
 // GameEndedEvent is published when the game ends (all global parameters maxed)
 type GameEndedEvent struct {
 	GameID    string

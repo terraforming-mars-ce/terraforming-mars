@@ -66,6 +66,10 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 		return err
 	}
 
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
+		return err
+	}
+
 	if !g.HasProjectFunding() {
 		return fmt.Errorf("project funding expansion is not enabled")
 	}

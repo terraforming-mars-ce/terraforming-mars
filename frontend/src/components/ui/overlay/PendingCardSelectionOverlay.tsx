@@ -4,7 +4,8 @@ import GameIcon from "../display/GameIcon.tsx";
 import { PendingCardSelectionDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { useCardSelection } from "../../../hooks/useCardSelection.ts";
 import {
-  OVERLAY_BACKGROUND_CLASS,
+  OVERLAY_BACKDROP_BLUR_CLASS,
+  OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_CONTAINER_CLASS,
   OVERLAY_HEADER_CLASS,
   OVERLAY_TITLE_CLASS,
@@ -115,9 +116,9 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
   const titleInfo = getTitleAndDescription(selection.source);
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
-      {/* Translucent background */}
-      <div className={OVERLAY_BACKGROUND_CLASS} />
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center">
+      <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
+      <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 
       {/* Content container */}
       <div className={OVERLAY_CONTAINER_CLASS}>

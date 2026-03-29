@@ -8,9 +8,18 @@ import (
 	"terraforming-mars-backend/internal/colonies"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/colony"
+	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
+
+func firstColonyResourceFromQueue(p *player.Player) *shared.PendingColonyResourceSelection {
+	queue := p.Selection().GetPendingColonyResourceQueue()
+	if len(queue) == 0 {
+		return nil
+	}
+	return &queue[0]
+}
 
 func setupColonyGame(t *testing.T) (*game.Game, game.GameRepository, colonies.ColonyRegistry, string, string) {
 	t.Helper()
@@ -132,7 +141,7 @@ func TestTrade_CardTargetedResources_CombinedWhenTraderHasColony(t *testing.T) {
 	testutil.AssertNoError(t, err, "Trade with Titan should succeed")
 
 	// Should have a pending selection with combined amount: 4 (trade) + 1 (bonus) = 5
-	selection := p.Selection().GetPendingColonyResourceSelection()
+	selection := firstColonyResourceFromQueue(p)
 	testutil.AssertTrue(t, selection != nil, "Should have pending colony resource selection")
 	testutil.AssertEqual(t, 5, selection.Amount, "Pending floaters should be 4 (trade) + 1 (bonus) = 5")
 	testutil.AssertEqual(t, "floater", selection.ResourceType, "Resource type should be floater")
@@ -157,7 +166,7 @@ func TestTrade_CardTargetedResources_TradeOnlyWithoutColony(t *testing.T) {
 	err := action.Execute(ctx, testGame.ID(), playerID, "titan", colonyAction.TradePaymentEnergy)
 	testutil.AssertNoError(t, err, "Trade with Titan should succeed")
 
-	selection := p.Selection().GetPendingColonyResourceSelection()
+	selection := firstColonyResourceFromQueue(p)
 	testutil.AssertTrue(t, selection != nil, "Should have pending colony resource selection")
 	testutil.AssertEqual(t, 4, selection.Amount, "Pending floaters should be 4 (trade only)")
 	testutil.AssertEqual(t, "trade", selection.Reason, "Reason should be trade for the trader")
@@ -182,7 +191,7 @@ func TestTrade_ColonyBonusReason_SetToColonyTax(t *testing.T) {
 	err := action.Execute(ctx, testGame.ID(), player1, "titan", colonyAction.TradePaymentEnergy)
 	testutil.AssertNoError(t, err, "Trade with Titan should succeed")
 
-	selection := p2.Selection().GetPendingColonyResourceSelection()
+	selection := firstColonyResourceFromQueue(p2)
 	testutil.AssertTrue(t, selection != nil, "Colony owner should have pending colony resource selection")
 	testutil.AssertEqual(t, "colony-tax", selection.Reason, "Reason should be colony-tax for non-trader colony owner")
 }
