@@ -7,6 +7,7 @@ type CreateGameRequest struct {
 	MaxPlayers       int      `json:"maxPlayers" binding:"required,min=1,max=10"`
 	VenusNextEnabled bool     `json:"venusNextEnabled"`
 	DevelopmentMode  bool     `json:"developmentMode"`
+	DemoGame         bool     `json:"demoGame"`
 	CardPacks        []string `json:"cardPacks,omitempty"`
 	ClaudeAPIKey     string   `json:"claudeApiKey,omitempty"`
 }
@@ -55,19 +56,6 @@ type ErrorResponse struct {
 	Error   string `json:"error"`
 	Code    string `json:"code,omitempty"`
 	Details string `json:"details,omitempty"`
-}
-
-// CreateDemoLobbyRequest represents the request body for creating a demo lobby
-type CreateDemoLobbyRequest struct {
-	PlayerCount int      `json:"playerCount"`
-	CardPacks   []string `json:"cardPacks,omitempty"`
-	PlayerName  string   `json:"playerName,omitempty"`
-}
-
-// CreateDemoLobbyResponse represents the response for creating a demo lobby
-type CreateDemoLobbyResponse struct {
-	Game     GameDto `json:"game"`
-	PlayerID string  `json:"playerId"`
 }
 
 // FeedbackRequest represents the request body for submitting feedback

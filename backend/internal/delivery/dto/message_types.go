@@ -34,7 +34,7 @@ const (
 	MessageTypeAddBot                   MessageType = "add-bot"
 	MessageTypeActionStartGame          MessageType = "action.game-management.start-game"
 	MessageTypeActionSkipAction         MessageType = "action.game-management.skip-action"
-	MessageTypeActionConfirmDemoSetup   MessageType = "action.game-management.confirm-demo-setup"
+	MessageTypeActionSelectDemoChoices  MessageType = "action.game-management.select-demo-choices"
 	MessageTypeActionConfirmInitAdvance MessageType = "action.game-management.confirm-init-advance"
 
 	MessageTypeActionClaimMilestone MessageType = "action.milestone.claim-milestone"
