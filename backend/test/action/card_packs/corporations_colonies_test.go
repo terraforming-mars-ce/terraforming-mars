@@ -3,8 +3,11 @@ package card_packs_test
 import (
 	"context"
 	"testing"
+	"time"
 
+	"terraforming-mars-backend/internal/action/admin"
 	"terraforming-mars-backend/internal/action/confirmation"
+	"terraforming-mars-backend/internal/events"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -303,4 +306,80 @@ func TestPartialResourceTradeDiscount_OnlyAffectsSpecifiedResources(t *testing.T
 	testutil.AssertEqual(t, 1, discounts[shared.ResourceTitanium], "Should discount titanium trade cost")
 	testutil.AssertEqual(t, 1, discounts[shared.ResourceCredit], "Should discount credit trade cost")
 	testutil.AssertEqual(t, 0, discounts[shared.ResourceEnergy], "Should NOT discount energy trade cost")
+}
+
+// =============================================================================
+// Poseidon (CC4, corporation, colonies)
+// "Effect: Raise your M€ production 1 step when any colony is placed, including
+//  this. You start with 45 M€. As your first action, place a colony."
+// =============================================================================
+
+func TestPoseidon_StartingResources(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	addColonyTile(testGame, "luna", 1, nil)
+	addColonyTile(testGame, "io", 1, nil)
+	addColonyTile(testGame, "ganymede", 1, nil)
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Poseidon"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	resources := p.Resources().Get()
+	testutil.AssertEqual(t, 45, resources.Credits, "Poseidon should start with 45 credits")
+}
+
+func TestPoseidon_ForcedFirstActionSetup(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	addColonyTile(testGame, "luna", 1, nil)
+	addColonyTile(testGame, "io", 1, nil)
+	addColonyTile(testGame, "ganymede", 1, nil)
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Poseidon"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	forcedAction := testGame.GetForcedFirstAction(playerID)
+	testutil.AssertTrue(t, forcedAction != nil, "Poseidon should create a forced first action")
+	testutil.AssertEqual(t, "colony-placement", forcedAction.ActionType, "Forced first action should be colony-placement")
+	testutil.AssertEqual(t, testutil.CardID("Poseidon"), forcedAction.CorporationID, "Forced first action should reference Poseidon")
+
+	p, _ := testGame.GetPlayer(playerID)
+	colonySelection := p.Selection().GetPendingColonySelection()
+	testutil.AssertTrue(t, colonySelection != nil, "Poseidon should create pending colony selection")
+	testutil.AssertTrue(t, len(colonySelection.AvailableColonyIDs) > 0, "Should have available colonies to choose from")
+}
+
+func TestPoseidon_GainProductionOnColonyPlacement(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	addColonyTile(testGame, "luna", 1, nil)
+	addColonyTile(testGame, "io", 1, nil)
+	addColonyTile(testGame, "ganymede", 1, nil)
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Poseidon"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	creditProductionBefore := p.Resources().Production().Credits
+
+	events.Publish(testGame.EventBus(), events.ColonyBuiltEvent{
+		GameID:   testGame.ID(),
+		PlayerID: playerID,
+		ColonyID: "luna",
+	})
+
+	time.Sleep(50 * time.Millisecond)
+
+	testutil.AssertEqual(t, creditProductionBefore+1, p.Resources().Production().Credits,
+		"Poseidon should gain 1 credit production on colony placement")
 }
