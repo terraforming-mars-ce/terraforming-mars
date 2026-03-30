@@ -1188,6 +1188,7 @@ export const PlayerStatusSelectingProductionCards: PlayerStatus = "selecting-pro
 export const PlayerStatusWaiting: PlayerStatus = "waiting";
 export const PlayerStatusActive: PlayerStatus = "active";
 export const PlayerStatusSelection: PlayerStatus = "selection";
+export const PlayerStatusTile: PlayerStatus = "tile";
 export const PlayerStatusExited: PlayerStatus = "exited";
 /**
  * PlayerDto represents a player in the game for client consumption

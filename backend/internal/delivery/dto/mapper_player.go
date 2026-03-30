@@ -207,8 +207,25 @@ func playerStatus(p *player.Player, g *game.Game) PlayerStatus {
 	if p.HasExited() {
 		return PlayerStatusExited
 	}
-	if g.HasAnyPendingSelection(p.ID()) {
+	if g.GetPendingTileSelection(p.ID()) != nil {
+		return PlayerStatusTile
+	}
+	if p.Selection().HasPendingSelection() {
 		return PlayerStatusSelection
+	}
+	if g.GetSelectCorporationPhase(p.ID()) != nil ||
+		g.GetSelectStartingCardsPhase(p.ID()) != nil ||
+		g.GetSelectPreludeCardsPhase(p.ID()) != nil {
+		return PlayerStatusSelectingStartingCards
+	}
+	pp := g.GetProductionPhase(p.ID())
+	if pp != nil && !pp.SelectionComplete {
+		return PlayerStatusSelectingProductionCards
+	}
+	turn := g.CurrentTurn()
+	if turn != nil && turn.PlayerID() == p.ID() &&
+		g.CurrentPhase() == shared.GamePhaseAction {
+		return PlayerStatusActive
 	}
 	return PlayerStatusWaiting
 }

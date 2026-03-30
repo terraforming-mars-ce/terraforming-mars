@@ -852,6 +852,7 @@ const (
 	PlayerStatusWaiting                  PlayerStatus = "waiting"
 	PlayerStatusActive                   PlayerStatus = "active"
 	PlayerStatusSelection                PlayerStatus = "selection"
+	PlayerStatusTile                     PlayerStatus = "tile"
 	PlayerStatusExited                   PlayerStatus = "exited"
 )
 
