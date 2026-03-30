@@ -75,19 +75,14 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 
 	currentPlayerID := turnOrder[currentIndex]
 
-	// Block if current player has pending tile placements
-	if g.GetPendingTileSelection(currentPlayerID) != nil {
-		return fmt.Errorf("current player has pending tile selection")
+	if g.HasAnyPendingSelection(currentPlayerID) {
+		return fmt.Errorf("current player has pending selection")
 	}
 	if g.GetPendingTileSelectionQueue(currentPlayerID) != nil {
 		return fmt.Errorf("current player has pending tile queue")
 	}
-
-	// Block if current player has pending award fund selection
-	if currentPlayer, err := g.GetPlayer(currentPlayerID); err == nil {
-		if currentPlayer.Selection().GetPendingAwardFundSelection() != nil {
-			return fmt.Errorf("current player has pending award fund selection")
-		}
+	if fa := g.GetForcedFirstAction(currentPlayerID); fa != nil && !fa.Completed {
+		return fmt.Errorf("current player has incomplete forced first action")
 	}
 
 	if err := g.SetInitPhaseWaitingForConfirm(ctx, false); err != nil {

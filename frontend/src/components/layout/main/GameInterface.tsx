@@ -593,7 +593,7 @@ export default function GameInterface() {
         {hasPendingActionSelection && (
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-[backdropFadeIn_0.3s_ease-out]"
-            style={{ zIndex: Z_INDEX.PENDING_ACTION_BACKDROP }}
+            style={{ zIndex: Z_INDEX.SELECTION_BACKDROP }}
           />
         )}
 

@@ -13,6 +13,8 @@ import {
   ResourceTypeHeat,
   ResourceTypeGreeneryTile,
   ResourceTypeTemperature,
+  PlayerStatusTile,
+  PlayerStatusSelection,
 } from "@/types/generated/api-types.ts";
 import ActionsPopover from "../popover/ActionsPopover.tsx";
 import EffectsPopover from "../popover/EffectsPopover.tsx";
@@ -427,7 +429,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   };
 
   const isConversionDisabled =
-    !!currentPlayer?.pendingTileSelection || currentPlayer?.status === "selection";
+    currentPlayer?.status === PlayerStatusTile || currentPlayer?.status === PlayerStatusSelection;
 
   const BAR_HEIGHT = 90;
 
