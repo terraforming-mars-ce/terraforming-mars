@@ -289,18 +289,29 @@ func (p *Player) SetExited(exited bool) {
 	})
 }
 
-func (p *Player) DemoSetupConfirmed() bool {
-	var confirmed bool
+// PendingDemoChoices returns the player's pending demo lobby selections
+func (p *Player) PendingDemoChoices() *shared.PendingDemoChoices {
+	var choices *shared.PendingDemoChoices
 	p.read(func(s *datastore.PlayerState) {
-		confirmed = s.DemoSetupConfirmed
+		choices = s.PendingDemoChoices
 	})
-	return confirmed
+	return choices
 }
 
-func (p *Player) SetDemoSetupConfirmed(confirmed bool) {
+// SetPendingDemoChoices stores the player's demo lobby card selections
+func (p *Player) SetPendingDemoChoices(choices *shared.PendingDemoChoices) {
 	p.update(func(s *datastore.PlayerState) {
-		s.DemoSetupConfirmed = confirmed
+		s.PendingDemoChoices = choices
 	})
+}
+
+// HasPendingDemoChoices returns true if the player has made demo lobby selections
+func (p *Player) HasPendingDemoChoices() bool {
+	var has bool
+	p.read(func(s *datastore.PlayerState) {
+		has = s.PendingDemoChoices != nil
+	})
+	return has
 }
 
 // BonusTags returns the player's bonus tags map (tag type -> count)

@@ -100,7 +100,7 @@ type PlayerState struct {
 	Color              string
 	HasPassed          bool
 	HasExited          bool
-	DemoSetupConfirmed bool
+	PendingDemoChoices *shared.PendingDemoChoices
 
 	HandCardIDs   []string
 	PlayedCardIDs []string

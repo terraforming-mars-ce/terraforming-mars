@@ -21,7 +21,6 @@ const (
 	GamePhaseWaitingForGameStart   GamePhase = "waiting_for_game_start"
 	GamePhaseStartingSelection     GamePhase = "starting_selection"
 	GamePhaseStartGameSelection    GamePhase = "start_game_selection"
-	GamePhaseDemoSetup             GamePhase = "demo_setup"
 	GamePhaseInitApplyCorp         GamePhase = "init_apply_corp"
 	GamePhaseInitApplyPrelude      GamePhase = "init_apply_prelude"
 	GamePhaseAction                GamePhase = "action"
@@ -40,6 +39,7 @@ type GameSettings struct {
 	DevelopmentMode  bool
 	DemoGame         bool
 	CardPacks        []string
+	Generation       *int
 	ClaudeAPIKey     string
 	ClaudeModel      string
 }
@@ -234,6 +234,16 @@ type VPConditionForLog struct {
 	Condition  string
 	MaxTrigger *int
 	Per        *PerCondition
+}
+
+// PendingDemoChoices holds a player's card selections made during the demo lobby phase
+type PendingDemoChoices struct {
+	CorporationID   string
+	PreludeIDs      []string
+	CardIDs         []string
+	Resources       Resources
+	Production      Production
+	TerraformRating int
 }
 
 // DeferredStartingChoices holds choices that are applied after init
