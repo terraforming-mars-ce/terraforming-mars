@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import { globalWebSocketManager } from "../../../../services/globalWebSocketManager.ts";
 import { apiService } from "../../../../services/apiService.ts";
 import {
@@ -199,7 +200,7 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
     background: "rgba(0, 0, 0, 0.98)",
     border: "1px solid rgba(59, 130, 246, 0.5)",
     borderRadius: "4px",
-    zIndex: 99999,
+    zIndex: Z_INDEX.LOADING_OVERLAY,
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.8)",
     overflow: "hidden",
   };
@@ -439,7 +440,7 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
                 position: "fixed",
                 left: previewLeft,
                 top: previewTop,
-                zIndex: 99999,
+                zIndex: Z_INDEX.LOADING_OVERLAY,
                 pointerEvents: "none",
               }}
             >

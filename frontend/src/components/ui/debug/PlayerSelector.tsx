@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface PlayerInfo {
   id: string;
@@ -134,7 +135,7 @@ const PlayerSelector: React.FC<PlayerSelectorProps> = ({ players, selectedIds, o
               border: "1px solid rgba(59, 130, 246, 0.5)",
               borderRadius: "4px",
               marginTop: "2px",
-              zIndex: 9999,
+              zIndex: Z_INDEX.DEBUG_OVERLAY,
               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.8)",
             }}
           >

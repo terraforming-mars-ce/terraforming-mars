@@ -10,6 +10,7 @@ import {
 } from "@/types/generated/api-types.ts";
 import BehaviorSection from "./BehaviorSection";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameIcon from "@/components/ui/display/GameIcon.tsx";
 import CardIcon from "./BehaviorSection/components/CardIcon.tsx";
 import VictoryPointIcon from "@/components/ui/display/VictoryPointIcon.tsx";
@@ -424,8 +425,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         createPortal(
           <div
             ref={contextMenuRef}
-            className="fixed z-[10000] bg-[rgba(15,15,20,0.98)] border border-[rgba(60,60,70,0.7)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.7)] py-1 min-w-[180px]"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
+            className="fixed bg-[rgba(15,15,20,0.98)] border border-[rgba(60,60,70,0.7)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.7)] py-1 min-w-[180px]"
+            style={{ left: contextMenu.x, top: contextMenu.y, zIndex: Z_INDEX.POPOVER }}
           >
             {canConvertToBot && (
               <button
@@ -461,11 +462,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         cardRect &&
         createPortal(
           <div
-            className="fixed z-[9999] pointer-events-none"
+            className="fixed pointer-events-none"
             style={{
               left: `${cardRect.right + 10}px`,
               top: `${cardRect.top + cardRect.height / 2}px`,
               transform: "translateY(-50%)",
+              zIndex: Z_INDEX.DEBUG_OVERLAY,
             }}
           >
             <style>{`

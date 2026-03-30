@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import GameIcon from "../display/GameIcon.tsx";
 import { FormattedDescription } from "../display/FormattedDescription.tsx";
 import { CardRequirementsDto, CardTag, ResourceType } from "@/types/generated/api-types.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface RequirementsBoxProps {
   requirements?: CardRequirementsDto;
@@ -238,7 +239,7 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
         createPortal(
           <div
             className="fixed w-max max-w-44 pt-1 animate-[fadeIn_150ms_ease-in] pointer-events-none"
-            style={{ left: tooltipPos.x, top: tooltipPos.y, zIndex: 99999 }}
+            style={{ left: tooltipPos.x, top: tooltipPos.y, zIndex: Z_INDEX.LOADING_OVERLAY }}
           >
             <div
               className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import GameCard from "../cards/GameCard.tsx";
 import type { PlayedCardNotification as PlayedCardNotificationType } from "@/hooks/usePlayedCardNotification.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 type AnimationPhase = "entering" | "visible" | "exiting";
 
@@ -81,7 +82,7 @@ export default function PlayedCardNotificationOverlay({
       className="fixed top-1/2 pointer-events-auto"
       style={{
         left: "75vw",
-        zIndex: 50,
+        zIndex: Z_INDEX.PLAYER_OVERLAY,
         transform: "translateY(-50%)",
         ...getAnimationStyle(phase),
       }}
