@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import {
   GameDto,
   CardDto,
@@ -342,7 +343,10 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
   ];
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-[fadeIn_0.3s_ease]">
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-[fadeIn_0.3s_ease]"
+      style={{ zIndex: Z_INDEX.STANDARD_MODAL }}
+    >
       <div className={`${OVERLAY_CONTAINER_CLASS} max-w-[1200px] max-h-[90vh]`}>
         {/* Header */}
         <div className={OVERLAY_HEADER_CLASS}>

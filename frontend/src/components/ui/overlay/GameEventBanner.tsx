@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { GameEvent } from "../../../hooks/useGameEvent.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 function renderColoredTitle(title: string, playerName: string, playerColor: string) {
   const idx = title.indexOf(playerName);
@@ -51,7 +52,7 @@ export default function GameEventBanner({ event, onDismiss }: GameEventBannerPro
   return createPortal(
     <div
       className="fixed inset-0 flex items-center justify-center pointer-events-none"
-      style={{ zIndex: 2000 }}
+      style={{ zIndex: Z_INDEX.STANDARD_MODAL }}
     >
       <div key={event.id} className="flex flex-col items-center gap-2" style={animateStyle}>
         <div

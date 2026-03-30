@@ -1,6 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { FormattedDescription } from "./FormattedDescription.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface DecorBoxTooltipProps {
   description: string | null;
@@ -13,7 +14,7 @@ const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({ description, position
   return createPortal(
     <div
       className="fixed w-max max-w-40 -translate-x-1/2 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
-      style={{ left: position.x, top: position.y, zIndex: 99999 }}
+      style={{ left: position.x, top: position.y, zIndex: Z_INDEX.LOADING_OVERLAY }}
     >
       <div
         className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"

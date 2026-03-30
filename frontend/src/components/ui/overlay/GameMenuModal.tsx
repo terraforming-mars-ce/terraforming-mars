@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import BackButton from "../buttons/BackButton.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface GameMenuModalProps {
   title: string;
@@ -88,7 +89,11 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
         />
       )}
 
-      {onBack && <BackButton onClick={onBack} className="fixed top-[30px] left-[30px] z-[10000]" />}
+      {onBack && (
+        <div className="fixed top-[30px] left-[30px]" style={{ zIndex: Z_INDEX.POPOVER }}>
+          <BackButton onClick={onBack} />
+        </div>
+      )}
       <div
         className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] max-w-[90vw] ${animationClass}`}
         style={{ zIndex }}

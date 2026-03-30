@@ -8,6 +8,7 @@ import React, {
   forwardRef,
 } from "react";
 import GameCard from "../cards/GameCard.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import BlurredOverlay from "./BlurredOverlay.tsx";
 import { PlayerCardDto } from "@/types/generated/api-types.ts";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
@@ -535,7 +536,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         <div
           className="card-fan-overlay"
           ref={handRef}
-          style={isExpanded ? { zIndex: 20201 } : undefined}
+          style={isExpanded ? { zIndex: Z_INDEX.TOP_MENU_ALWAYS_ON_TOP } : undefined}
         >
           {cards.map((card) => {
             const index = cardOrder.indexOf(card.id);
@@ -673,7 +674,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
               className={`card-fan-card ${flyingAwayGhost.animating ? "is-flying-away" : "is-flying-away-start"}`}
               style={{
                 transform: `translate(${flyingAwayGhost.x}px, ${flyingAwayGhost.y}px) scale(${flyingAwayGhost.scale})`,
-                zIndex: 3000,
+                zIndex: Z_INDEX.CARD_DETAIL_MODAL,
               }}
             >
               <GameCard

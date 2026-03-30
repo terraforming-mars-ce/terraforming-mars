@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface TreeNodeProps {
   nodeKey: string;
@@ -69,7 +70,7 @@ const ContextMenu: React.FC<{
         background: "rgba(0, 0, 0, 0.98)",
         border: "1px solid rgba(59, 130, 246, 0.5)",
         borderRadius: "4px",
-        zIndex: 99999,
+        zIndex: Z_INDEX.LOADING_OVERLAY,
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.8)",
         minWidth: "140px",
         overflow: "hidden",

@@ -408,7 +408,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
                     rightEdge="slope-left"
                     style={{
                       marginLeft: index === 0 ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
-                      zIndex: 10 - index,
+                      zIndex: Z_INDEX.UI_BASE - index,
                     }}
                     isActive={
                       (item.id === "projects" && showStandardProjectsPopover) ||

@@ -5,6 +5,7 @@ import {
   PendingCardDrawSelectionDto,
   ResourceTypeCredit,
 } from "../../../types/generated/api-types.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import {
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
@@ -182,7 +183,10 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
     isCardDraw || totalSelected <= selection.freeTakeCount + selection.maxBuyCount;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center">
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+    >
       <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
       <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 

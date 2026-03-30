@@ -587,7 +587,10 @@ export default function GameInterface() {
         {game?.settings?.developmentMode && <DevModeChip />}
 
         {shouldShowStartingBackdrop && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] animate-[backdropFadeIn_0.3s_ease-out]" />
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-[backdropFadeIn_0.3s_ease-out]"
+            style={{ zIndex: Z_INDEX.PENDING_ACTION_BACKDROP }}
+          />
         )}
         {hasPendingActionSelection && (
           <div
@@ -876,7 +879,8 @@ export default function GameInterface() {
 
         {showStartingSelection && isStartingSelectionHidden && marsRevealedReady && (
           <GameButton
-            className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] z-[1000] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
+            className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
+            style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
             onClick={() => useUIOverlayStore.getState().setIsStartingSelectionHidden(false)}
           >
             Return to Selection
@@ -890,7 +894,10 @@ export default function GameInterface() {
               onLeaveGame={handleLeaveGame}
               onEndGame={playerId === game.hostPlayerId ? handleEndGame : undefined}
             />
-            <div className="fixed inset-0 z-[1000] flex items-center justify-center">
+            <div
+              className="fixed inset-0 flex items-center justify-center"
+              style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+            >
               <div className="w-[450px] max-w-[90vw] bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] p-8 backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(30,60,150,0.3)] animate-[modalFadeIn_0.3s_ease-out]">
                 <div className="text-center mb-6">
                   <h2 className="font-orbitron text-white text-[24px] m-0 mb-2 text-shadow-glow font-bold tracking-wider">
@@ -1414,7 +1421,8 @@ export default function GameInterface() {
 
         {showProductionPhaseModal && isProductionModalHidden && (
           <GameButton
-            className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] z-[1000] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
+            className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
+            style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
             onClick={() => {
               useUIOverlayStore.getState().setIsProductionModalHidden(false);
               useUIOverlayStore.getState().setOpenProductionToCardSelection(true);

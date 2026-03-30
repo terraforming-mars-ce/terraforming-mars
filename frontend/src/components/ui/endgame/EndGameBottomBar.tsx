@@ -1,5 +1,6 @@
 import { FC, useState, useMemo, useEffect, useRef } from "react";
 import type { GameDto, GameHistoryEntryDto } from "../../../types/generated/api-types";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import { getPhaseDisplayName } from "../../../constants/gameConstants";
 import { useVPCounting } from "../../../contexts/VPCountingContext";
 import GameGraphs from "./GameGraphs.tsx";
@@ -99,7 +100,7 @@ function ParaButton({
         width: w,
         height: h,
         marginLeft: index === 0 ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
-        zIndex: 10 - index,
+        zIndex: Z_INDEX.UI_BASE - index,
       }}
     >
       <svg
@@ -277,7 +278,10 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
 
   if (allScores.length === 0) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-[1000] p-4 flex items-center justify-center">
+      <div
+        className="fixed bottom-0 left-0 right-0 p-4 flex items-center justify-center"
+        style={{ zIndex: Z_INDEX.STANDARD_MODAL }}
+      >
         <div className="text-center">
           <p className="text-red-400 font-orbitron mb-3">No scores available</p>
         </div>
@@ -289,9 +293,10 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
     <>
       {/* Graphs fullscreen overlay */}
       <div
-        className={`fixed inset-0 z-[999] bg-black/70 backdrop-blur-lg flex flex-col items-center justify-center transition-opacity duration-500 ${
+        className={`fixed inset-0 bg-black/70 backdrop-blur-lg flex flex-col items-center justify-center transition-opacity duration-500 ${
           activePanel === "graphs" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
+        style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
         {historyEntries && (
           <div className="w-[90%]" style={{ height: "90vh" }}>
@@ -306,10 +311,10 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
 
       {/* Replay controls overlay — blurred strip at top */}
       <div
-        className={`fixed top-0 left-0 right-0 z-[999] bg-black/50 flex justify-center transition-opacity duration-500 ${
+        className={`fixed top-0 left-0 right-0 bg-black/50 flex justify-center transition-opacity duration-500 ${
           activePanel === "replay" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
-        style={{ paddingTop: 40, paddingBottom: 10 }}
+        style={{ paddingTop: 40, paddingBottom: 10, zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
         <div className="w-[60%]">
           <ReplayControls
@@ -358,9 +363,10 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
 
       {/* Score bottom bar with faded background */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-[1000] transition-opacity duration-500 ${
+        className={`fixed bottom-0 left-0 right-0 transition-opacity duration-500 ${
           activePanel === "score" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
+        style={{ zIndex: Z_INDEX.STANDARD_MODAL }}
       >
         <div className="bg-black/50 backdrop-blur-sm" style={{ paddingTop: 16, paddingBottom: 12 }}>
           {/* Phase tabs */}
