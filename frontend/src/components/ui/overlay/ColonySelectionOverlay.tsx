@@ -43,7 +43,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
   return (
     <div
       className="fixed inset-0 flex items-center justify-center"
-      style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+      style={{ zIndex: Z_INDEX.SELECTION_POPOVER }}
     >
       <div className="absolute inset-0 backdrop-blur-sm" />
       <div className="absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]" />

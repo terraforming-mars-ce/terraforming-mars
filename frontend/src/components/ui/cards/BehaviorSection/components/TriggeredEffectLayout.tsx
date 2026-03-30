@@ -285,6 +285,25 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
     );
   }
 
+  const isColonyPlaced = trigger.condition?.type === "colony-placed";
+
+  if (isColonyPlaced) {
+    const target = trigger.condition?.target || "self-player";
+    const isAnyPlayer = target === "any-player";
+
+    const redGlowClass = isAnyPlayer
+      ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_2px_rgba(244,67,54,0.9))_drop-shadow(0_0_4px_rgba(244,67,54,0.7))]"
+      : "";
+
+    return (
+      <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
+        <div className={`flex items-center justify-center ${redGlowClass}`}>
+          <GameIcon iconType="colony-tile" size="small" />
+        </div>
+      </div>
+    );
+  }
+
   // Handle tile-placed condition with onBonusType (e.g., Mining Rights)
   const isTilePlaced = trigger.condition?.type === "tile-placed";
   if (isTilePlaced && trigger.condition?.onBonusType) {
