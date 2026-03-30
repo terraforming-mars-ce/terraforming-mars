@@ -116,6 +116,7 @@ function historyPlayerToOtherPlayerDto(
     storagePaymentSubstitutes: [],
     vpGranters: [],
     bonusTags: {},
+    demoReady: false,
   };
 }
 
@@ -178,5 +179,6 @@ export function historyPlayerToPlayerDto(
     vpGranters: [],
     bonusTags: {},
     actionCosts: [],
+    demoReady: false,
   };
 }

@@ -136,9 +136,10 @@ func (ap *ActionSkipActionRequest) GetAction() *SkipAction {
 	return &SkipAction{Type: ap.Type}
 }
 
-// ConfirmDemoSetupRequest contains the player's demo setup configuration
-type ConfirmDemoSetupRequest struct {
-	CorporationID    *string              `json:"corporationId,omitempty"`
+// SelectDemoChoicesRequest contains a player's demo lobby card selections
+type SelectDemoChoicesRequest struct {
+	CorporationID    string               `json:"corporationId"`
+	PreludeIDs       []string             `json:"preludeIds"`
 	CardIDs          []string             `json:"cardIds"`
 	Resources        ResourcesDto         `json:"resources"`
 	Production       ProductionDto        `json:"production"`

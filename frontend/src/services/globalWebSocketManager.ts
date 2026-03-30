@@ -3,7 +3,7 @@ import { WebSocketConnection } from "../types/webSocketTypes.ts";
 import type {
   CardPaymentDto,
   ChatMessageDto,
-  ConfirmDemoSetupRequest,
+  SelectDemoChoicesRequest,
   GameDto,
   PlayerDisconnectedPayload,
   FullStatePayload,
@@ -280,9 +280,9 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.selectTile(coordinate);
   }
 
-  async confirmDemoSetup(request: ConfirmDemoSetupRequest): Promise<string> {
+  async selectDemoChoices(request: SelectDemoChoicesRequest): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.confirmDemoSetup(request);
+    return webSocketService.selectDemoChoices(request);
   }
 
   async sendAdminCommand(adminRequest: any): Promise<string> {

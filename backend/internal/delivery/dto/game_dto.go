@@ -7,7 +7,6 @@ const (
 	GamePhaseWaitingForGameStart   GamePhase = "waiting_for_game_start"
 	GamePhaseStartingSelection     GamePhase = "starting_selection"
 	GamePhaseStartGameSelection    GamePhase = "start_game_selection"
-	GamePhaseDemoSetup             GamePhase = "demo_setup"
 	GamePhaseInitApplyCorp         GamePhase = "init_apply_corp"
 	GamePhaseInitApplyPrelude      GamePhase = "init_apply_prelude"
 	GamePhaseAction                GamePhase = "action"
@@ -533,6 +532,20 @@ type GameSettingsDto struct {
 	HasClaudeAPIKey       bool     `json:"hasClaudeApiKey"`
 	ClaudeModel           string   `json:"claudeModel,omitempty"`
 	AvailablePlayerColors []string `json:"availablePlayerColors"`
+	Temperature           *int     `json:"temperature,omitempty"`
+	Oxygen                *int     `json:"oxygen,omitempty"`
+	Oceans                *int     `json:"oceans,omitempty"`
+	Generation            *int     `json:"generation,omitempty"`
+}
+
+// PendingDemoChoicesDto contains a player's demo lobby card selections
+type PendingDemoChoicesDto struct {
+	CorporationID   string        `json:"corporationId"`
+	PreludeIDs      []string      `json:"preludeIds"`
+	CardIDs         []string      `json:"cardIds"`
+	Resources       ResourcesDto  `json:"resources"`
+	Production      ProductionDto `json:"production"`
+	TerraformRating int           `json:"terraformRating"`
 }
 
 // GlobalParameterBonusDto describes a bonus step on a global parameter track
@@ -869,6 +882,9 @@ type PlayerDto struct {
 	Milestones       []PlayerMilestoneDto       `json:"milestones"`       // Milestones with player eligibility state
 	Awards           []PlayerAwardDto           `json:"awards"`           // Awards with player eligibility state
 
+	DemoReady          bool                   `json:"demoReady"`
+	PendingDemoChoices *PendingDemoChoicesDto `json:"pendingDemoChoices,omitempty"`
+
 	SelectCorporationPhase         *SelectCorporationPhaseDto         `json:"selectCorporationPhase"`
 	SelectStartingCardsPhase       *SelectStartingCardsPhaseDto       `json:"selectStartingCardsPhase"`
 	SelectPreludeCardsPhase        *SelectPreludeCardsPhaseDto        `json:"selectPreludeCardsPhase"`
@@ -931,6 +947,8 @@ type OtherPlayerDto struct {
 	IsExited         bool              `json:"isExited"`
 	Effects          []PlayerEffectDto `json:"effects"`
 	Actions          []PlayerActionDto `json:"actions"`
+
+	DemoReady bool `json:"demoReady"`
 
 	SelectCorporationPhase    *SelectCorporationOtherPlayerDto   `json:"selectCorporationPhase"`
 	SelectStartingCardsPhase  *SelectStartingCardsOtherPlayerDto `json:"selectStartingCardsPhase"`

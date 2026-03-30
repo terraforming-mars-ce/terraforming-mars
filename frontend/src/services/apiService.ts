@@ -3,8 +3,6 @@ import {
   FeedbackResponse,
   CreateGameRequest,
   CreateGameResponse,
-  CreateDemoLobbyRequest,
-  CreateDemoLobbyResponse,
   GameDto,
   GameSettingsDto,
   GetGameResponse,
@@ -28,6 +26,7 @@ export class ApiService {
         maxPlayers: settings.maxPlayers,
         venusNextEnabled: settings.venusNextEnabled,
         developmentMode: settings.developmentMode,
+        demoGame: settings.demoGame,
         cardPacks: settings.cardPacks,
         claudeApiKey: claudeApiKey || undefined,
       };
@@ -49,28 +48,6 @@ export class ApiService {
       return gameResponse.game;
     } catch (error) {
       console.error("Failed to create game:", error);
-      throw error;
-    }
-  }
-
-  async createDemoLobby(settings: CreateDemoLobbyRequest): Promise<CreateDemoLobbyResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}/games/demo/lobby`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(settings),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Failed to create demo lobby:", error);
       throw error;
     }
   }

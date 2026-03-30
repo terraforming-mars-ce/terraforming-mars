@@ -14,7 +14,6 @@ import WaitingRoomOverlay from "../../ui/overlay/WaitingRoomOverlay.tsx";
 import PlayerSelectionOverlay from "../../ui/overlay/PlayerSelectionOverlay.tsx";
 import JoinGameOverlay from "../../ui/overlay/JoinGameOverlay.tsx";
 import SpectateGameOverlay from "../../ui/overlay/SpectateGameOverlay.tsx";
-import DemoSetupOverlay from "../../ui/overlay/DemoSetupOverlay.tsx";
 import TabConflictOverlay from "../../ui/overlay/TabConflictOverlay.tsx";
 import StartingCardSelectionOverlay from "../../ui/overlay/StartingCardSelectionOverlay.tsx";
 import PendingCardSelectionOverlay from "../../ui/overlay/PendingCardSelectionOverlay.tsx";
@@ -66,7 +65,6 @@ import { useSpaceBackground } from "@/contexts/SpaceBackgroundContext.tsx";
 import { useNotifications } from "@/contexts/NotificationContext.tsx";
 import {
   GamePhaseComplete,
-  GamePhaseDemoSetup,
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
   GamePhaseStartingSelection,
@@ -746,10 +744,6 @@ export default function GameInterface() {
               />
             )}
           </>
-        )}
-
-        {game?.currentPhase === GamePhaseDemoSetup && game && playerId && (
-          <DemoSetupOverlay game={game} playerId={playerId} />
         )}
 
         {showTabConflict && conflictingTabInfo && (

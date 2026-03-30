@@ -19,20 +19,18 @@ import (
 
 // GameHandler handles HTTP requests for games
 type GameHandler struct {
-	createGameAction      *gameaction.CreateGameAction
-	createDemoLobbyAction *gameaction.CreateDemoLobbyAction
-	getGameAction         *query.GetGameAction
-	getGameLogsAction     *query.GetGameLogsAction
-	getGameHistoryAction  *query.GetGameHistoryAction
-	listGamesAction       *query.ListGamesAction
-	listCardsAction       *query.ListCardsAction
-	cardRegistry          cards.CardRegistry
+	createGameAction     *gameaction.CreateGameAction
+	getGameAction        *query.GetGameAction
+	getGameLogsAction    *query.GetGameLogsAction
+	getGameHistoryAction *query.GetGameHistoryAction
+	listGamesAction      *query.ListGamesAction
+	listCardsAction      *query.ListCardsAction
+	cardRegistry         cards.CardRegistry
 }
 
 // NewGameHandler creates a new game handler
 func NewGameHandler(
 	createGameAction *gameaction.CreateGameAction,
-	createDemoLobbyAction *gameaction.CreateDemoLobbyAction,
 	getGameAction *query.GetGameAction,
 	getGameLogsAction *query.GetGameLogsAction,
 	getGameHistoryAction *query.GetGameHistoryAction,
@@ -41,14 +39,13 @@ func NewGameHandler(
 	cardRegistry cards.CardRegistry,
 ) *GameHandler {
 	return &GameHandler{
-		createGameAction:      createGameAction,
-		createDemoLobbyAction: createDemoLobbyAction,
-		getGameAction:         getGameAction,
-		getGameLogsAction:     getGameLogsAction,
-		getGameHistoryAction:  getGameHistoryAction,
-		listGamesAction:       listGamesAction,
-		listCardsAction:       listCardsAction,
-		cardRegistry:          cardRegistry,
+		createGameAction:     createGameAction,
+		getGameAction:        getGameAction,
+		getGameLogsAction:    getGameLogsAction,
+		getGameHistoryAction: getGameHistoryAction,
+		listGamesAction:      listGamesAction,
+		listCardsAction:      listCardsAction,
+		cardRegistry:         cardRegistry,
 	}
 }
 
@@ -150,6 +147,7 @@ func (h *GameHandler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		MaxPlayers:       req.MaxPlayers,
 		VenusNextEnabled: req.VenusNextEnabled,
 		DevelopmentMode:  req.DevelopmentMode,
+		DemoGame:         req.DemoGame,
 		CardPacks:        req.CardPacks,
 		ClaudeAPIKey:     req.ClaudeAPIKey,
 	}
@@ -271,49 +269,6 @@ func (h *GameHandler) GetGameLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Debug("Game logs retrieved", zap.String("game_id", gameID), zap.Int("count", len(diffs)))
-}
-
-// CreateDemoLobby handles POST /api/v1/games/demo/lobby
-func (h *GameHandler) CreateDemoLobby(w http.ResponseWriter, r *http.Request) {
-	log := logger.Get()
-	ctx := r.Context()
-
-	log.Debug("POST /api/v1/games/demo/lobby")
-
-	var req dto.CreateDemoLobbyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Error("Failed to decode request", zap.Error(err))
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	settings := gameaction.DemoLobbySettings{
-		PlayerCount: req.PlayerCount,
-		CardPacks:   req.CardPacks,
-		PlayerName:  req.PlayerName,
-	}
-
-	result, err := h.createDemoLobbyAction.Execute(ctx, settings)
-	if err != nil {
-		log.Error("Failed to create demo lobby", zap.Error(err))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	response := dto.CreateDemoLobbyResponse{
-		Game:     result.GameDto,
-		PlayerID: result.PlayerID,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Error("Failed to encode response", zap.Error(err))
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	log.Debug("Demo lobby created", zap.String("game_id", result.GameDto.ID))
 }
 
 // GetGameHistory handles GET /api/v1/games/{gameId}/history

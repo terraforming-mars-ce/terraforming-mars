@@ -178,11 +178,10 @@ func main() {
 
 	// Game lifecycle (6)
 	createGameAction := gameAction.NewCreateGameAction(gameRepo, cardRegistry, log)
-	createDemoLobbyAction := gameAction.NewCreateDemoLobbyAction(gameRepo, cardRegistry, log, colonyRegistry)
 	joinGameAction := gameAction.NewJoinGameAction(gameRepo, cardRegistry, log, colonyRegistry)
 	healthChecker := bot.NewHealthChecker(log)
 	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, healthChecker, broadcaster, log, colonyRegistry)
-	confirmDemoSetupAction := gameAction.NewConfirmDemoSetupAction(gameRepo, cardRegistry, awardRegistry, log)
+	selectDemoChoicesAction := gameAction.NewSelectDemoChoicesAction(gameRepo, cardRegistry, log)
 	finalScoringAction := gameAction.NewFinalScoringAction(gameRepo, cardRegistry, awardRegistry, milestoneRegistry, log)
 
 	// Milestones & Awards (2)
@@ -292,7 +291,7 @@ func main() {
 		createGameAction,
 		joinGameAction,
 		addBotAction,
-		confirmDemoSetupAction,
+		selectDemoChoicesAction,
 		// Card actions
 		playCardAction,
 		useCardActionAction,
@@ -367,7 +366,6 @@ func main() {
 
 	apiRouter := httpHandler.SetupRouter(
 		createGameAction,
-		createDemoLobbyAction,
 		getGameAction,
 		getGameLogsAction,
 		getGameHistoryAction,

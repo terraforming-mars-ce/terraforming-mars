@@ -83,6 +83,10 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
 		ClaudeModel:           settings.ClaudeModel,
 		AvailablePlayerColors: shared.PlayerColors,
+		Temperature:           settings.Temperature,
+		Oxygen:                settings.Oxygen,
+		Oceans:                settings.Oceans,
+		Generation:            settings.Generation,
 	}
 
 	globalParams := g.GlobalParameters()

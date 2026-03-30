@@ -101,6 +101,9 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		Milestones:       milestones,       // PlayerMilestoneDto[] with eligibility
 		Awards:           awards,           // PlayerAwardDto[] with eligibility
 
+		DemoReady:          p.HasPendingDemoChoices(),
+		PendingDemoChoices: convertPendingDemoChoices(p.PendingDemoChoices()),
+
 		SelectCorporationPhase:         convertSelectCorporationPhase(g.GetSelectCorporationPhase(p.ID()), cardRegistry),
 		SelectStartingCardsPhase:       convertSelectStartingCardsPhase(g.GetSelectStartingCardsPhase(p.ID()), cardRegistry),
 		SelectPreludeCardsPhase:        convertSelectPreludeCardsPhase(g.GetSelectPreludeCardsPhase(p.ID()), cardRegistry),
@@ -161,6 +164,8 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		Effects:          convertPlayerEffects(p.Effects().List(), p, g, cardRegistry),
 		Actions:          convertPlayerActions(p.Actions().List(), p, g, cardRegistry),
 
+		DemoReady: p.HasPendingDemoChoices(),
+
 		SelectCorporationPhase:    convertSelectCorporationPhaseForOtherPlayer(g.GetSelectCorporationPhase(p.ID())),
 		SelectStartingCardsPhase:  convertSelectStartingCardsPhaseForOtherPlayer(g.GetSelectStartingCardsPhase(p.ID())),
 		SelectPreludeCardsPhase:   convertSelectPreludeCardsPhaseForOtherPlayer(g.GetSelectPreludeCardsPhase(p.ID())),
@@ -170,6 +175,20 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		StoragePaymentSubstitutes: convertStoragePaymentSubstitutes(p.Resources().StoragePaymentSubstitutes()),
 		VPGranters:                toVPGranterDtos(p.VPGranters().GetAll()),
 		BonusTags:                 convertBonusTags(p.BonusTags()),
+	}
+}
+
+func convertPendingDemoChoices(choices *shared.PendingDemoChoices) *PendingDemoChoicesDto {
+	if choices == nil {
+		return nil
+	}
+	return &PendingDemoChoicesDto{
+		CorporationID:   choices.CorporationID,
+		PreludeIDs:      choices.PreludeIDs,
+		CardIDs:         choices.CardIDs,
+		Resources:       toResourcesDto(choices.Resources),
+		Production:      toProductionDto(choices.Production),
+		TerraformRating: choices.TerraformRating,
 	}
 }
 
