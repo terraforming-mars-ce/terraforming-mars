@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import {
   GameDto,
@@ -31,6 +31,8 @@ import GameButton from "../buttons/GameButton.tsx";
 interface DemoSetupOverlayProps {
   game: GameDto;
   playerId: string;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 const TEMP_MIN = -30;
@@ -64,18 +66,11 @@ const Stepper: React.FC<StepperProps> = ({
   icon,
   iconLabel,
 }) => {
-  const [isModified, setIsModified] = useState(
-    defaultValue !== undefined ? value !== defaultValue : true,
-  );
   const [inputValue, setInputValue] = useState(value.toString());
 
-  // Update input value when external value changes
   useEffect(() => {
     setInputValue(value.toString());
-    if (defaultValue !== undefined) {
-      setIsModified(value !== defaultValue);
-    }
-  }, [value, defaultValue]);
+  }, [value]);
 
   const canDecrease = value > min;
   const canIncrease = value < max;
@@ -84,7 +79,6 @@ const Stepper: React.FC<StepperProps> = ({
     if (canDecrease) {
       const newValue = Math.max(min, value - step);
       onChange(newValue);
-      setIsModified(true);
     }
   };
 
@@ -92,7 +86,6 @@ const Stepper: React.FC<StepperProps> = ({
     if (canIncrease) {
       const newValue = Math.min(max, value + step);
       onChange(newValue);
-      setIsModified(true);
     }
   };
 
@@ -106,7 +99,6 @@ const Stepper: React.FC<StepperProps> = ({
     if (!isNaN(num)) {
       const clamped = Math.max(min, Math.min(max, num));
       onChange(clamped);
-      setIsModified(true);
     }
   };
 
@@ -116,12 +108,59 @@ const Stepper: React.FC<StepperProps> = ({
   };
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    // Select all text on focus for easy replacement
     e.target.select();
   };
 
-  // Show grayed style if at default and not yet modified
-  const isAtDefault = defaultValue !== undefined && !isModified;
+  const dragRef = useRef<{ startX: number; startVal: number; dragging: boolean } | null>(null);
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const input = e.currentTarget;
+      dragRef.current = { startX: e.clientX, startVal: value, dragging: false };
+
+      const preventSelect = (ev: Event) => ev.preventDefault();
+      document.addEventListener("selectstart", preventSelect);
+
+      const onMouseMove = (me: MouseEvent) => {
+        if (!dragRef.current) {
+          return;
+        }
+        const dx = me.clientX - dragRef.current.startX;
+        if (!dragRef.current.dragging && Math.abs(dx) < 4) {
+          return;
+        }
+        if (!dragRef.current.dragging) {
+          dragRef.current.dragging = true;
+          document.body.style.cursor = "ew-resize";
+          document.body.style.userSelect = "none";
+          input.blur();
+        }
+        const steps = Math.round(dx / 8) * step;
+        const newVal = Math.max(min, Math.min(max, dragRef.current.startVal + steps));
+        onChange(newVal);
+      };
+
+      const onMouseUp = () => {
+        if (!dragRef.current?.dragging) {
+          input.focus();
+          input.select();
+        }
+        dragRef.current = null;
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        document.removeEventListener("selectstart", preventSelect);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [value, min, max, step, onChange],
+  );
+
+  const isAtDefault = defaultValue !== undefined && value === defaultValue;
 
   return (
     <div className="flex items-center gap-2 bg-black/30 rounded-lg p-2">
@@ -145,9 +184,11 @@ const Stepper: React.FC<StepperProps> = ({
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           onFocus={handleInputFocus}
-          className={`w-10 h-6 text-center font-medium text-sm bg-black/60 border border-white/30 rounded outline-none focus:border-white/60 cursor-text ${
+          onMouseDown={handleMouseDown}
+          className={`w-10 h-6 text-center font-medium text-sm bg-black/60 border border-white/30 rounded outline-none focus:border-white/60 ${
             isAtDefault ? "text-white/40" : "text-white"
           }`}
+          style={{ cursor: "ew-resize" }}
         />
         <button
           onClick={handleIncrease}
@@ -165,7 +206,6 @@ const Stepper: React.FC<StepperProps> = ({
   );
 };
 
-// Resource stepper with icon - uses Stepper internally
 interface ResourceStepperProps {
   icon: string;
   value: number;
@@ -192,50 +232,69 @@ const ResourceStepper: React.FC<ResourceStepperProps> = ({
   );
 };
 
-const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) => {
+type SidebarTab = "cards" | "resources" | "global";
+
+const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isOpen, onClose }) => {
   const isHost = game.hostPlayerId === playerId;
+  const hasPrelude = game.settings.cardPacks?.includes("prelude") || false;
+  const [activeTab, setActiveTab] = useState<SidebarTab>("cards");
 
   // Global parameters (host only)
   const [globalParams, setGlobalParams] = useState<GlobalParametersDto>({
-    temperature: game.globalParameters?.temperature ?? TEMP_MIN,
-    oxygen: game.globalParameters?.oxygen ?? OXYGEN_MIN,
-    oceans: game.globalParameters?.oceans ?? OCEANS_MIN,
-    maxOceans: game.globalParameters?.maxOceans ?? 9,
-    venus: game.globalParameters?.venus ?? 0,
-    bonuses: game.globalParameters?.bonuses ?? [],
+    temperature: game.settings?.temperature ?? TEMP_MIN,
+    oxygen: game.settings?.oxygen ?? OXYGEN_MIN,
+    oceans: game.settings?.oceans ?? OCEANS_MIN,
+    maxOceans: 9,
+    venus: 0,
+    bonuses: [],
   });
-  const [generation, setGeneration] = useState(game.generation ?? 1);
+  const [generation, setGeneration] = useState(game.settings?.generation ?? 1);
 
   // Player setup
   const [availableCorporations, setAvailableCorporations] = useState<CardDto[]>([]);
+  const [availablePreludes, setAvailablePreludes] = useState<CardDto[]>([]);
   const [availableCards, setAvailableCards] = useState<CardDto[]>([]);
-  const [selectedCorporationId, setSelectedCorporationId] = useState<string>("");
-  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
+  const [selectedCorporationId, setSelectedCorporationId] = useState<string>(
+    game.currentPlayer?.pendingDemoChoices?.corporationId || "",
+  );
+  const [selectedPreludeIds, setSelectedPreludeIds] = useState<string[]>(
+    game.currentPlayer?.pendingDemoChoices?.preludeIds || [],
+  );
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>(
+    game.currentPlayer?.pendingDemoChoices?.cardIds || [],
+  );
   const [cardSearchTerm, setCardSearchTerm] = useState("");
   const [corpSearchTerm, setCorpSearchTerm] = useState("");
+  const [preludeSearchTerm, setPreludeSearchTerm] = useState("");
 
   // Resources
-  const [resources, setResources] = useState<ResourcesDto>({
-    credits: 0,
-    steel: 0,
-    titanium: 0,
-    plants: 0,
-    energy: 0,
-    heat: 0,
-  });
+  const [resources, setResources] = useState<ResourcesDto>(
+    game.currentPlayer?.pendingDemoChoices?.resources || {
+      credits: 0,
+      steel: 0,
+      titanium: 0,
+      plants: 0,
+      energy: 0,
+      heat: 0,
+    },
+  );
 
   // Production
-  const [production, setProduction] = useState<ProductionDto>({
-    credits: 0,
-    steel: 0,
-    titanium: 0,
-    plants: 0,
-    energy: 0,
-    heat: 0,
-  });
+  const [production, setProduction] = useState<ProductionDto>(
+    game.currentPlayer?.pendingDemoChoices?.production || {
+      credits: 0,
+      steel: 0,
+      titanium: 0,
+      plants: 0,
+      energy: 0,
+      heat: 0,
+    },
+  );
 
   // Terraform rating
-  const [terraformRating, setTerraformRating] = useState(20);
+  const [terraformRating, setTerraformRating] = useState(
+    game.currentPlayer?.pendingDemoChoices?.terraformRating || 20,
+  );
 
   // Loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -246,27 +305,35 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
       try {
         const response = await apiService.listCards(0, 1000);
         const corps: CardDto[] = [];
+        const prels: CardDto[] = [];
         const projectCards: CardDto[] = [];
         for (const card of response.cards) {
           if (card.type === "corporation") {
             corps.push(card);
-          } else if (card.type !== "prelude") {
+          } else if (card.type === "prelude") {
+            prels.push(card);
+          } else {
             projectCards.push(card);
           }
         }
         setAvailableCorporations(corps);
+        setAvailablePreludes(prels);
         setAvailableCards(projectCards);
       } catch (err) {
         console.error("Failed to load cards:", err);
       }
     };
 
-    void loadCardsData();
-  }, []);
+    if (isOpen) {
+      void loadCardsData();
+    }
+  }, [isOpen]);
 
   // When a corporation is selected, apply its starting resources and production
   useEffect(() => {
-    if (!selectedCorporationId) return;
+    if (!selectedCorporationId) {
+      return;
+    }
 
     const corp = availableCorporations.find((c) => c.id === selectedCorporationId);
     if (corp) {
@@ -299,6 +366,18 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
     );
   };
 
+  const togglePreludeSelection = (preludeId: string) => {
+    setSelectedPreludeIds((prev) => {
+      if (prev.includes(preludeId)) {
+        return prev.filter((id) => id !== preludeId);
+      }
+      if (prev.length >= 2) {
+        return prev;
+      }
+      return [...prev, preludeId];
+    });
+  };
+
   const filteredCards = availableCards.filter(
     (card) =>
       card.name.toLowerCase().includes(cardSearchTerm.toLowerCase()) ||
@@ -311,15 +390,25 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
       corp.id.toLowerCase().includes(corpSearchTerm.toLowerCase()),
   );
 
+  const filteredPreludes = availablePreludes.filter(
+    (prelude) =>
+      prelude.name.toLowerCase().includes(preludeSearchTerm.toLowerCase()) ||
+      prelude.id.toLowerCase().includes(preludeSearchTerm.toLowerCase()),
+  );
+
   const selectedCorporation = availableCorporations.find((c) => c.id === selectedCorporationId);
 
+  const canConfirm =
+    selectedCorporationId !== "" && (!hasPrelude || selectedPreludeIds.length === 2);
+
   const handleConfirm = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || !canConfirm) return;
 
     setIsSubmitting(true);
     try {
-      await globalWebSocketManager.confirmDemoSetup({
-        corporationId: selectedCorporationId || undefined,
+      await globalWebSocketManager.selectDemoChoices({
+        corporationId: selectedCorporationId,
+        preludeIds: selectedPreludeIds,
         cardIds: selectedCardIds,
         resources,
         production,
@@ -327,8 +416,10 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
         globalParameters: isHost ? globalParams : undefined,
         generation: isHost ? generation : undefined,
       });
+      onClose();
     } catch (err) {
-      console.error("Failed to confirm demo setup:", err);
+      console.error("Failed to select demo choices:", err);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -342,12 +433,16 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
     { key: "heat" as const, icon: ResourceTypeHeat },
   ];
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
     <div
       className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-[fadeIn_0.3s_ease]"
       style={{ zIndex: Z_INDEX.STANDARD_MODAL }}
     >
-      <div className={`${OVERLAY_CONTAINER_CLASS} max-w-[1200px] max-h-[90vh]`}>
+      <div className={`${OVERLAY_CONTAINER_CLASS} max-w-[1400px] h-[90vh]`}>
         {/* Header */}
         <div className={OVERLAY_HEADER_CLASS}>
           <h2 className={OVERLAY_TITLE_CLASS}>Demo Game Setup</h2>
@@ -357,13 +452,217 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
           </p>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Column 1: Global Params + Resources */}
-            <div className="space-y-4">
-              {/* Global Parameters (Host only) */}
-              {isHost && (
+        {/* Content: Sidebar + Main */}
+        <div className="flex-1 flex min-h-0">
+          {/* Sidebar */}
+          <div className="w-40 shrink-0 bg-black/30 border-r border-space-blue-600/50 flex flex-col py-2">
+            <button
+              onClick={() => setActiveTab("cards")}
+              className={`text-left px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors cursor-pointer ${
+                activeTab === "cards"
+                  ? "text-white bg-space-blue-600/30 border-r-2 border-space-blue-400"
+                  : "text-white/50 hover:text-white/80 hover:bg-white/5"
+              }`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => setActiveTab("resources")}
+              className={`text-left px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors cursor-pointer ${
+                activeTab === "resources"
+                  ? "text-white bg-space-blue-600/30 border-r-2 border-space-blue-400"
+                  : "text-white/50 hover:text-white/80 hover:bg-white/5"
+              }`}
+            >
+              Resources
+            </button>
+            <button
+              onClick={() => {
+                if (isHost) {
+                  setActiveTab("global");
+                }
+              }}
+              className={`text-left px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors ${
+                !isHost
+                  ? "text-white/20 cursor-default"
+                  : activeTab === "global"
+                    ? "text-white bg-space-blue-600/30 border-r-2 border-space-blue-400 cursor-pointer"
+                    : "text-white/50 hover:text-white/80 hover:bg-white/5 cursor-pointer"
+              }`}
+            >
+              Global
+            </button>
+          </div>
+
+          {/* Main content area */}
+          <div className="flex-1 overflow-y-auto p-4 min-h-0">
+            {/* Cards tab */}
+            {activeTab === "cards" && (
+              <div
+                className="grid grid-cols-1 gap-4 h-full"
+                style={{
+                  gridTemplateColumns: hasPrelude ? "1.1fr 0.7fr 1.15fr" : "1.1fr 1.15fr",
+                }}
+              >
+                {/* Corporation Selection */}
+                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex flex-col min-h-0">
+                  <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
+                    Corporation{" "}
+                    <span className="text-white/50 font-normal normal-case">
+                      ({selectedCorporationId ? "1 selected" : "None"})
+                    </span>
+                  </h3>
+                  <input
+                    type="text"
+                    placeholder="Search corporations..."
+                    value={corpSearchTerm}
+                    onChange={(e) => setCorpSearchTerm(e.target.value)}
+                    className="w-full bg-black/60 border border-space-blue-400/30 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
+                  />
+                  <div className="flex flex-col gap-2 items-center flex-1 min-h-0 overflow-y-auto">
+                    {filteredCorporations.map((corp) => (
+                      <div key={corp.id} className="scale-90">
+                        <CorporationCard
+                          card={corp}
+                          isSelected={selectedCorporationId === corp.id}
+                          onSelect={() =>
+                            setSelectedCorporationId(
+                              selectedCorporationId === corp.id ? "" : corp.id,
+                            )
+                          }
+                          showCheckbox
+                          borderColor={getCorporationBorderColor(corp.name)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Prelude Selection (if enabled) */}
+                {hasPrelude && (
+                  <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex flex-col min-h-0">
+                    <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
+                      Prelude Cards{" "}
+                      <span className="text-white/50 font-normal normal-case">
+                        ({selectedPreludeIds.length}/2 selected)
+                      </span>
+                    </h3>
+                    <input
+                      type="text"
+                      placeholder="Search preludes..."
+                      value={preludeSearchTerm}
+                      onChange={(e) => setPreludeSearchTerm(e.target.value)}
+                      className="w-full bg-black/60 border border-space-blue-400/30 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
+                    />
+                    <div className="flex flex-wrap gap-x-1 gap-y-2 justify-center content-start flex-1 min-h-0 overflow-y-auto">
+                      {filteredPreludes.map((prelude) => (
+                        <div key={prelude.id} className="scale-80">
+                          <GameCard
+                            card={prelude}
+                            isSelected={selectedPreludeIds.includes(prelude.id)}
+                            onSelect={() => togglePreludeSelection(prelude.id)}
+                            animationDelay={0}
+                            showCheckbox
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Starting Cards */}
+                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex flex-col min-h-0">
+                  <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
+                    Starting Cards{" "}
+                    <span className="text-white/50 font-normal normal-case">
+                      ({selectedCardIds.length} selected)
+                    </span>
+                  </h3>
+                  <input
+                    type="text"
+                    placeholder="Search cards..."
+                    value={cardSearchTerm}
+                    onChange={(e) => setCardSearchTerm(e.target.value)}
+                    className="w-full bg-black/60 border border-space-blue-400/30 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
+                  />
+                  <div className="flex flex-wrap gap-x-1 gap-y-2 justify-center content-start flex-1 min-h-0 overflow-y-auto">
+                    {filteredCards.slice(0, 50).map((card) => (
+                      <div key={card.id} className="scale-80">
+                        <GameCard
+                          card={card}
+                          isSelected={selectedCardIds.includes(card.id)}
+                          onSelect={() => toggleCardSelection(card.id)}
+                          animationDelay={0}
+                          showCheckbox
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Resources tab */}
+            {activeTab === "resources" && (
+              <div className="max-w-lg mx-auto space-y-4">
+                {/* Terraform Rating */}
+                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3">
+                  <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs text-center">
+                    Terraform Rating
+                  </h3>
+                  <div className="flex justify-center">
+                    <Stepper
+                      value={terraformRating}
+                      onChange={setTerraformRating}
+                      min={0}
+                      max={100}
+                      defaultValue={20}
+                      icon="tr"
+                    />
+                  </div>
+                </div>
+
+                {/* Resources */}
+                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3">
+                  <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs">
+                    Resources
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {resourceTypes.map(({ key, icon }) => (
+                      <ResourceStepper
+                        key={key}
+                        icon={icon}
+                        value={resources[key]}
+                        onChange={(v) => setResources((p) => ({ ...p, [key]: v }))}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Production */}
+                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3">
+                  <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs">
+                    Production
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {resourceTypes.map(({ key, icon }) => (
+                      <ResourceStepper
+                        key={key}
+                        icon={icon}
+                        value={production[key]}
+                        onChange={(v) => setProduction((p) => ({ ...p, [key]: v }))}
+                        min={key === "credits" ? -5 : 0}
+                        isProduction
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Global tab (host only) */}
+            {activeTab === "global" && isHost && (
+              <div className="max-w-lg mx-auto space-y-4">
                 <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3">
                   <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs text-center">
                     Global Parameters
@@ -404,134 +703,8 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
                     />
                   </div>
                 </div>
-              )}
-
-              {/* Terraform Rating */}
-              <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3">
-                <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs text-center">
-                  Terraform Rating
-                </h3>
-                <div className="flex justify-center">
-                  <Stepper
-                    value={terraformRating}
-                    onChange={setTerraformRating}
-                    min={0}
-                    max={100}
-                    defaultValue={20}
-                    icon="tr"
-                  />
-                </div>
               </div>
-
-              {/* Resources */}
-              <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3">
-                <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs">
-                  Resources
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {resourceTypes.map(({ key, icon }) => (
-                    <ResourceStepper
-                      key={key}
-                      icon={icon}
-                      value={resources[key]}
-                      onChange={(v) => setResources((p) => ({ ...p, [key]: v }))}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Production */}
-              <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3">
-                <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs">
-                  Production
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {resourceTypes.map(({ key, icon }) => (
-                    <ResourceStepper
-                      key={key}
-                      icon={icon}
-                      value={production[key]}
-                      onChange={(v) => setProduction((p) => ({ ...p, [key]: v }))}
-                      min={key === "credits" ? -5 : 0}
-                      isProduction
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Column 2: Corporation Selection */}
-            <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex flex-col max-h-[70vh]">
-              <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
-                Corporation{" "}
-                <span className="text-white/50 font-normal normal-case">
-                  ({selectedCorporationId ? "1 selected" : "Random"})
-                </span>
-              </h3>
-              <input
-                type="text"
-                placeholder="Search corporations..."
-                value={corpSearchTerm}
-                onChange={(e) => setCorpSearchTerm(e.target.value)}
-                className="w-full bg-black/60 border border-space-blue-400/30 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0"
-              />
-              <div className="flex flex-col gap-2 items-center flex-1 min-h-0 overflow-y-auto">
-                {/* Random option */}
-                <button
-                  onClick={() => setSelectedCorporationId("")}
-                  className={`w-[400px] h-[60px] rounded-lg border-2 p-2 transition-all text-center flex items-center justify-center shrink-0 ${
-                    !selectedCorporationId
-                      ? "border-yellow-400 bg-yellow-900/30"
-                      : "border-white/20 bg-black/30 hover:border-yellow-400/50"
-                  }`}
-                >
-                  <span className="text-white/80 text-sm font-medium">Random Corporation</span>
-                </button>
-                {filteredCorporations.map((corp) => (
-                  <div key={corp.id} className="scale-90">
-                    <CorporationCard
-                      card={corp}
-                      isSelected={selectedCorporationId === corp.id}
-                      onSelect={() =>
-                        setSelectedCorporationId(selectedCorporationId === corp.id ? "" : corp.id)
-                      }
-                      showCheckbox
-                      borderColor={getCorporationBorderColor(corp.name)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Column 3: Card Selection */}
-            <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex flex-col max-h-[70vh]">
-              <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
-                Starting Cards{" "}
-                <span className="text-white/50 font-normal normal-case">
-                  ({selectedCardIds.length} selected)
-                </span>
-              </h3>
-              <input
-                type="text"
-                placeholder="Search cards..."
-                value={cardSearchTerm}
-                onChange={(e) => setCardSearchTerm(e.target.value)}
-                className="w-full bg-black/60 border border-space-blue-400/30 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0"
-              />
-              <div className="flex flex-wrap gap-x-1 gap-y-2 justify-center content-start flex-1 min-h-0 overflow-y-auto ">
-                {filteredCards.slice(0, 50).map((card) => (
-                  <div className="scale-80">
-                    <GameCard
-                      card={card}
-                      isSelected={selectedCardIds.includes(card.id)}
-                      onSelect={() => toggleCardSelection(card.id)}
-                      animationDelay={0}
-                      showCheckbox
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -541,20 +714,33 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId }) =
             {selectedCorporationId ? (
               <span>Corporation: {selectedCorporation?.name}</span>
             ) : (
-              <span>Corporation: Random</span>
+              <span>No corporation selected</span>
+            )}
+            {selectedPreludeIds.length > 0 && (
+              <span className="ml-4">Preludes: {selectedPreludeIds.length}</span>
             )}
             {selectedCardIds.length > 0 && (
               <span className="ml-4">Cards: {selectedCardIds.length}</span>
             )}
           </div>
-          <GameButton
-            size="lg"
-            onClick={() => void handleConfirm()}
-            disabled={isSubmitting}
-            className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
-          >
-            {isSubmitting ? "Confirming..." : "Confirm Setup"}
-          </GameButton>
+          <div className="flex gap-3">
+            <GameButton
+              buttonType="secondary"
+              size="md"
+              onClick={onClose}
+              className="whitespace-nowrap"
+            >
+              Cancel
+            </GameButton>
+            <GameButton
+              size="lg"
+              onClick={() => void handleConfirm()}
+              disabled={isSubmitting || !canConfirm}
+              className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
+            >
+              {isSubmitting ? "Confirming..." : "Confirm Setup"}
+            </GameButton>
+          </div>
         </div>
       </div>
     </div>

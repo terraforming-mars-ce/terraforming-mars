@@ -134,10 +134,11 @@ export interface ActionSkipActionRequest {
   type: ActionType;
 }
 /**
- * ConfirmDemoSetupRequest contains the player's demo setup configuration
+ * SelectDemoChoicesRequest contains a player's demo lobby card selections
  */
-export interface ConfirmDemoSetupRequest {
-  corporationId?: string;
+export interface SelectDemoChoicesRequest {
+  corporationId: string;
+  preludeIds: string[];
   cardIds: string[];
   resources: ResourcesDto;
   production: ProductionDto;
@@ -323,7 +324,6 @@ export type GamePhase = string;
 export const GamePhaseWaitingForGameStart: GamePhase = "waiting_for_game_start";
 export const GamePhaseStartingSelection: GamePhase = "starting_selection";
 export const GamePhaseStartGameSelection: GamePhase = "start_game_selection";
-export const GamePhaseDemoSetup: GamePhase = "demo_setup";
 export const GamePhaseInitApplyCorp: GamePhase = "init_apply_corp";
 export const GamePhaseInitApplyPrelude: GamePhase = "init_apply_prelude";
 export const GamePhaseAction: GamePhase = "action";
@@ -859,6 +859,21 @@ export interface GameSettingsDto {
   hasClaudeApiKey: boolean;
   claudeModel?: string;
   availablePlayerColors: string[];
+  temperature?: number /* int */;
+  oxygen?: number /* int */;
+  oceans?: number /* int */;
+  generation?: number /* int */;
+}
+/**
+ * PendingDemoChoicesDto contains a player's demo lobby card selections
+ */
+export interface PendingDemoChoicesDto {
+  corporationId: string;
+  preludeIds: string[];
+  cardIds: string[];
+  resources: ResourcesDto;
+  production: ProductionDto;
+  terraformRating: number /* int */;
 }
 /**
  * GlobalParameterBonusDto describes a bonus step on a global parameter track
@@ -1202,6 +1217,8 @@ export interface PlayerDto {
   standardProjects: PlayerStandardProjectDto[]; // Standard projects with availability state (Player-Scoped Architecture)
   milestones: PlayerMilestoneDto[]; // Milestones with player eligibility state
   awards: PlayerAwardDto[]; // Awards with player eligibility state
+  demoReady: boolean;
+  pendingDemoChoices?: PendingDemoChoicesDto;
   selectCorporationPhase?: SelectCorporationPhaseDto;
   selectStartingCardsPhase?: SelectStartingCardsPhaseDto;
   selectPreludeCardsPhase?: SelectPreludeCardsPhaseDto;
@@ -1267,6 +1284,7 @@ export interface OtherPlayerDto {
   isExited: boolean;
   effects: PlayerEffectDto[];
   actions: PlayerActionDto[];
+  demoReady: boolean;
   selectCorporationPhase?: SelectCorporationOtherPlayerDto;
   selectStartingCardsPhase?: SelectStartingCardsOtherPlayerDto;
   selectPreludeCardsPhase?: SelectPreludeCardsOtherPlayerDto;
@@ -1763,6 +1781,7 @@ export interface CreateGameRequest {
   maxPlayers: number /* int */;
   venusNextEnabled: boolean;
   developmentMode: boolean;
+  demoGame: boolean;
   cardPacks?: string[];
   claudeApiKey?: string;
 }
@@ -1819,21 +1838,6 @@ export interface ErrorResponse {
   error: string;
   code?: string;
   details?: string;
-}
-/**
- * CreateDemoLobbyRequest represents the request body for creating a demo lobby
- */
-export interface CreateDemoLobbyRequest {
-  playerCount: number /* int */;
-  cardPacks?: string[];
-  playerName?: string;
-}
-/**
- * CreateDemoLobbyResponse represents the response for creating a demo lobby
- */
-export interface CreateDemoLobbyResponse {
-  game: GameDto;
-  playerId: string;
 }
 /**
  * FeedbackRequest represents the request body for submitting feedback
@@ -1923,8 +1927,8 @@ export const MessageTypeCreateGame: MessageType = "create-game";
 export const MessageTypeAddBot: MessageType = "add-bot";
 export const MessageTypeActionStartGame: MessageType = "action.game-management.start-game";
 export const MessageTypeActionSkipAction: MessageType = "action.game-management.skip-action";
-export const MessageTypeActionConfirmDemoSetup: MessageType =
-  "action.game-management.confirm-demo-setup";
+export const MessageTypeActionSelectDemoChoices: MessageType =
+  "action.game-management.select-demo-choices";
 export const MessageTypeActionConfirmInitAdvance: MessageType =
   "action.game-management.confirm-init-advance";
 export const MessageTypeActionClaimMilestone: MessageType = "action.milestone.claim-milestone";
