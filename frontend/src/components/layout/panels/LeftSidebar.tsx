@@ -13,7 +13,6 @@ interface LeftSidebarProps {
   turnPlayerId: string;
   currentPhase?: GamePhase;
   hostPlayerId?: string;
-  pendingTilePlayerId?: string;
   triggeredEffects?: TriggeredEffectDto[];
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
   onKickPlayer?: (playerId: string) => void;
@@ -27,7 +26,6 @@ const LeftSidebar = forwardRef<PlayerListHandle, LeftSidebarProps>(function Left
     turnPlayerId,
     currentPhase,
     hostPlayerId,
-    pendingTilePlayerId,
     triggeredEffects = [],
     onPlayerClick,
     onKickPlayer,
@@ -44,7 +42,6 @@ const LeftSidebar = forwardRef<PlayerListHandle, LeftSidebarProps>(function Left
         turnPlayerId={turnPlayerId}
         currentPhase={currentPhase}
         hostPlayerId={hostPlayerId}
-        pendingTilePlayerId={pendingTilePlayerId}
         triggeredEffects={triggeredEffects}
         onPlayerClick={onPlayerClick}
         onKickPlayer={onKickPlayer}

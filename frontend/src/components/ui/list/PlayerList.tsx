@@ -30,7 +30,6 @@ interface PlayerListProps {
   turnPlayerId: string;
   currentPhase?: GamePhase;
   hostPlayerId?: string;
-  pendingTilePlayerId?: string;
   triggeredEffects?: TriggeredEffectDto[];
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
   onKickPlayer?: (playerId: string) => void;
@@ -44,7 +43,6 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
     turnPlayerId,
     currentPhase,
     hostPlayerId,
-    pendingTilePlayerId,
     triggeredEffects = [],
     onPlayerClick,
     onKickPlayer,
@@ -158,7 +156,6 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
           isActionPhase={isActionPhase}
           isHost={currentPlayer?.id === hostPlayerId}
           onSkipAction={handleSkipAction}
-          hasPendingTile={player.id === pendingTilePlayerId}
           triggeredEffects={triggeredEffects}
           onPlayerClick={onPlayerClick}
           onKickPlayer={onKickPlayer}

@@ -269,13 +269,6 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
             }
             currentPhase={gameState?.currentPhase}
             hostPlayerId={gameState?.hostPlayerId}
-            pendingTilePlayerId={
-              gameState?.initPhase?.hasPendingTiles
-                ? gameState.initPhase.currentPlayerId
-                : currentPlayer?.pendingTileSelection
-                  ? currentPlayer.id
-                  : undefined
-            }
             triggeredEffects={triggeredEffects}
             onPlayerClick={onPlayerClick}
             onKickPlayer={handleKickPlayer}
