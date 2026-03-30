@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { PanControls } from "../controls/PanControls.tsx";
@@ -235,7 +236,7 @@ function TravelFade() {
         backgroundColor: "black",
         opacity: 0,
         pointerEvents: "none",
-        zIndex: 10,
+        zIndex: Z_INDEX.UI_BASE,
       }}
     />
   );

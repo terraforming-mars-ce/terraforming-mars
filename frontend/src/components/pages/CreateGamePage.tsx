@@ -8,6 +8,7 @@ import { saveGameSession } from "../../utils/sessionStorage.ts";
 import LoadingOverlay from "../game/view/LoadingOverlay.tsx";
 import InfoTooltip from "../ui/display/InfoTooltip.tsx";
 import BackButton from "../ui/buttons/BackButton.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameButton from "../ui/buttons/GameButton.tsx";
 import { useNotifications } from "../../contexts/NotificationContext.tsx";
 
@@ -201,7 +202,9 @@ const CreateGamePage: React.FC = () => {
       className={`bg-transparent text-white min-h-screen flex items-center justify-center font-sans relative z-10 transition-opacity duration-300 ease-in ${isFadedIn ? "opacity-100" : "opacity-0"}`}
     >
       <div className="relative z-[1] flex items-center justify-center w-full min-h-screen">
-        <BackButton onClick={handleBackToHome} className="fixed top-[30px] left-[30px] z-[100]" />
+        <div className="fixed top-[30px] left-[30px]" style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}>
+          <BackButton onClick={handleBackToHome} />
+        </div>
         <div className="max-w-[600px] w-full px-5 py-10">
           <div className="text-center">
             <h1 className="font-orbitron text-[42px] text-white mb-[60px] text-shadow-glow font-bold tracking-wider">

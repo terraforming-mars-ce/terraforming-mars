@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import GameIcon from "./GameIcon.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 export interface TileTooltipData {
   tileType: string;
@@ -61,7 +62,7 @@ const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
     <div
       ref={containerRef}
       className="fixed w-max max-w-52 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
-      style={{ left: 0, top: 0, zIndex: 99999 }}
+      style={{ left: 0, top: 0, zIndex: Z_INDEX.LOADING_OVERLAY }}
     >
       <div
         className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"

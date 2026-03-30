@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { FormattedDescription } from "../../../display/FormattedDescription.tsx";
 import { ClassifiedBehavior } from "../types.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface BehaviorContainerProps {
   classifiedBehavior: ClassifiedBehavior;
@@ -31,7 +32,7 @@ const DescriptionPortal: React.FC<{
   return createPortal(
     <div
       className="fixed w-[184px] max-md:w-[148px] -translate-x-1/2 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
-      style={{ left: pos.x, top: pos.y, zIndex: 99999 }}
+      style={{ left: pos.x, top: pos.y, zIndex: Z_INDEX.LOADING_OVERLAY }}
     >
       <div
         className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"

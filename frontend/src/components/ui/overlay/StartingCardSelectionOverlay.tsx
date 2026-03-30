@@ -5,6 +5,7 @@ import GameIcon from "../display/GameIcon.tsx";
 import { CardDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 import { useCardSelection } from "../../../hooks/useCardSelection.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import {
   OVERLAY_CONTAINER_CLASS,
   OVERLAY_HEADER_CLASS,
@@ -137,7 +138,10 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
+    <div
+      className="fixed inset-0 flex items-center justify-center animate-[fadeIn_0.3s_ease]"
+      style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+    >
       <div className={OVERLAY_CONTAINER_CLASS}>
         <div className={OVERLAY_HEADER_CLASS}>
           <h2 className={OVERLAY_TITLE_CLASS}>Select Starting Cards</h2>

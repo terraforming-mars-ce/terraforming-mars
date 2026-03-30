@@ -10,6 +10,7 @@ import GameButton from "../buttons/GameButton.tsx";
 import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
 import StorageWarningDialog from "../display/StorageWarningDialog.tsx";
 import { PlayerInfo, getStorageWarning } from "@/utils/colonyUtils.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface FreeTradeSelectionOverlayProps {
   isOpen: boolean;
@@ -62,7 +63,10 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center">
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+    >
       <div className="absolute inset-0 backdrop-blur-sm" />
       <div className="absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]" />
 

@@ -1,5 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface StorageWarningDialogProps {
   message: string;
@@ -14,7 +15,8 @@ const StorageWarningDialog: React.FC<StorageWarningDialogProps> = ({
 }) => {
   return createPortal(
     <div
-      className="fixed inset-0 z-[10010] flex items-center justify-center animate-[fadeIn_0.2s_ease]"
+      className="fixed inset-0 flex items-center justify-center animate-[fadeIn_0.2s_ease]"
+      style={{ zIndex: Z_INDEX.SELECTION_POPOVER }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="absolute inset-0 bg-black/50" onClick={onCancel} />

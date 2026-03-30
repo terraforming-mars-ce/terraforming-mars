@@ -1,5 +1,6 @@
 import { FC } from "react";
 import type { FinalScoreDto } from "../../../types/generated/api-types";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameIcon from "../display/GameIcon";
 
 interface CardVPHoverModalProps {
@@ -15,7 +16,10 @@ const CardVPHoverModal: FC<CardVPHoverModalProps> = ({ playerScore }) => {
 
   if (cardsWithVP.length === 0) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center z-[900] pointer-events-none">
+      <div
+        className="fixed inset-0 flex items-center justify-center pointer-events-none"
+        style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
+      >
         <div className="bg-space-black/95 backdrop-blur-lg border-2 border-purple-500/50 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
           <div className="flex items-center gap-2 mb-4">
             <GameIcon iconType="card" size="medium" />
@@ -30,7 +34,10 @@ const CardVPHoverModal: FC<CardVPHoverModalProps> = ({ playerScore }) => {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-[900] pointer-events-none">
+    <div
+      className="fixed inset-0 flex items-center justify-center pointer-events-none"
+      style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
+    >
       <div className="bg-space-black/95 backdrop-blur-lg border-2 border-purple-500/50 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl max-h-[70vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">

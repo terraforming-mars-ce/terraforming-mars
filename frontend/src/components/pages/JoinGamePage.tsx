@@ -4,6 +4,7 @@ import { apiService } from "../../services/apiService";
 import { GameDto } from "../../types/generated/api-types.ts";
 import GameButton from "../ui/buttons/GameButton.tsx";
 import BackButton from "../ui/buttons/BackButton.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import EnterCodePopover from "../ui/popover/EnterCodePopover.tsx";
 import SpectatePopover from "../ui/popover/SpectatePopover.tsx";
 import JoinGamePopover from "../ui/popover/JoinGamePopover.tsx";
@@ -90,7 +91,9 @@ const JoinGamePage: React.FC = () => {
       className={`transition-opacity duration-300 ease-in ${isFadedIn ? "opacity-100" : "opacity-0"}`}
     >
       <div className="relative z-[1] flex items-start justify-center w-full min-h-screen pt-[15vh]">
-        <BackButton onClick={handleBackToHome} className="fixed top-[30px] left-[30px] z-[100]" />
+        <div className="fixed top-[30px] left-[30px]" style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}>
+          <BackButton onClick={handleBackToHome} />
+        </div>
         <div className="max-w-[600px] w-full px-5 py-10">
           <div className="text-center">
             <h1 className="font-orbitron text-[42px] text-white mb-8 text-shadow-glow font-bold tracking-wider">
