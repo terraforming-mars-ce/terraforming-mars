@@ -131,13 +131,11 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 		log.Debug("Set initial turn", zap.String("first_player_id", firstPlayerID))
 	}
 
-	// 9. BUSINESS LOGIC: Demo games go to DemoSetup phase, normal games to CorporationSelection
+	// 9. BUSINESS LOGIC: Demo games use pre-selected choices, normal games distribute cards
 	if g.Settings().DemoGame {
-		if err := g.UpdatePhase(ctx, shared.GamePhaseDemoSetup); err != nil {
-			log.Error("Failed to update game phase", zap.Error(err))
-			return fmt.Errorf("failed to update game phase: %w", err)
+		if err := a.startDemoGame(ctx, g, players, log); err != nil {
+			return err
 		}
-		log.Debug("Demo game entering setup phase")
 	} else {
 		if err := g.UpdatePhase(ctx, shared.GamePhaseStartingSelection); err != nil {
 			log.Error("Failed to update game phase", zap.Error(err))
@@ -246,6 +244,85 @@ func (a *StartGameAction) initializeProjectFunding(g *game.Game, log *zap.Logger
 	g.SetProjectFundingStates(states)
 
 	log.Debug("Project funding initialized", zap.Int("project_count", len(states)))
+}
+
+func (a *StartGameAction) startDemoGame(ctx context.Context, g *game.Game, players []*playerPkg.Player, log *zap.Logger) error {
+	settings := g.Settings()
+	deck := g.Deck()
+	turnOrder := g.TurnOrder()
+
+	// Validate all human players have made selections; auto-assign bots
+	for _, p := range players {
+		if p.IsBot() {
+			if !p.HasPendingDemoChoices() {
+				// Auto-assign random corporation for bots
+				corpIDs, err := deck.DrawCorporations(ctx, 1)
+				if err != nil {
+					return fmt.Errorf("failed to draw corporation for bot %s: %w", p.ID(), err)
+				}
+				p.SetPendingDemoChoices(&shared.PendingDemoChoices{
+					CorporationID: corpIDs[0],
+				})
+			}
+		} else if !p.HasPendingDemoChoices() {
+			return fmt.Errorf("player %s has not selected cards", p.Name())
+		}
+	}
+
+	// Convert PendingDemoChoices to DeferredStartingChoices for each player
+	for _, p := range players {
+		choices := p.PendingDemoChoices()
+		if err := g.SetDeferredStartingChoices(ctx, p.ID(), &shared.DeferredStartingChoices{
+			CorporationID: choices.CorporationID,
+			PreludeIDs:    choices.PreludeIDs,
+			CardIDs:       choices.CardIDs,
+		}); err != nil {
+			return fmt.Errorf("failed to set deferred choices for player %s: %w", p.ID(), err)
+		}
+		p.SetCorporationID(choices.CorporationID)
+	}
+
+	// Apply global parameter overrides from settings
+	gp := g.GlobalParameters()
+	if settings.Temperature != nil {
+		if err := gp.SetTemperature(ctx, *settings.Temperature); err != nil {
+			return fmt.Errorf("failed to set temperature: %w", err)
+		}
+	}
+	if settings.Oxygen != nil {
+		if err := gp.SetOxygen(ctx, *settings.Oxygen); err != nil {
+			return fmt.Errorf("failed to set oxygen: %w", err)
+		}
+	}
+	if settings.Oceans != nil {
+		if err := gp.SetOceans(ctx, *settings.Oceans); err != nil {
+			return fmt.Errorf("failed to set oceans: %w", err)
+		}
+	}
+	if settings.Generation != nil {
+		if err := g.SetGeneration(ctx, *settings.Generation); err != nil {
+			return fmt.Errorf("failed to set generation: %w", err)
+		}
+	}
+
+	// Transition to InitApplyCorp phase (same as normal flow)
+	if err := g.UpdatePhase(ctx, shared.GamePhaseInitApplyCorp); err != nil {
+		return fmt.Errorf("failed to update game phase: %w", err)
+	}
+
+	firstPlayerID := findFirstActivePlayer(g, turnOrder)
+	if firstPlayerID != "" {
+		firstIndex := findPlayerIndex(turnOrder, firstPlayerID)
+		if err := g.SetInitPhasePlayerIndex(ctx, firstIndex); err != nil {
+			return fmt.Errorf("failed to set init phase player index: %w", err)
+		}
+		if err := g.SetInitPhaseWaitingForConfirm(ctx, true); err != nil {
+			return fmt.Errorf("failed to set waiting for confirm: %w", err)
+		}
+	}
+
+	log.Debug("Demo game entering init_apply_corp phase")
+	return nil
 }
 
 func (a *StartGameAction) distributeCorporations(ctx context.Context, g *game.Game, players []*playerPkg.Player) error {
