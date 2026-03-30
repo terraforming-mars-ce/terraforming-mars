@@ -70,7 +70,6 @@ export {
   GamePhaseWaitingForGameStart,
   GamePhaseStartingSelection,
   GamePhaseStartGameSelection,
-  GamePhaseDemoSetup,
   GamePhaseAction,
   GamePhaseProductionAndCardDraw,
   GamePhaseComplete,

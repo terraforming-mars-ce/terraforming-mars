@@ -28,7 +28,7 @@ export {
   MessageTypeActionTileSelected,
   MessageTypeActionClaimMilestone,
   MessageTypeActionFundAward,
-  MessageTypeActionConfirmDemoSetup,
+  MessageTypeActionSelectDemoChoices,
   MessageTypeRequestLogs,
   MessageTypePlayerTakeover,
   MessageTypeKickPlayer,
