@@ -313,7 +313,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     gameState?.currentPhase === GamePhaseInitApplyCorp ||
     gameState?.currentPhase === GamePhaseInitApplyPrelude;
 
-  const hasColonies = (gameState?.colonyTiles?.length ?? 0) > 0;
+  const hasColonies = (gameState?.colonies?.length ?? 0) > 0;
   const hasProjectFunding = (gameState?.projectFunding?.length ?? 0) > 0;
 
   const hasEligibleMilestones = useMemo(() => {

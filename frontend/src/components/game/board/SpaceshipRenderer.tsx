@@ -6,7 +6,7 @@ import { useModels } from "../../../hooks/useModels";
 import { useTextures } from "../../../hooks/useTextures";
 import { usePrimitiveInstances } from "./PrimitiveManager";
 import { SPHERE_RADIUS, VENUS_POSITION, VENUS_RADIUS, easeOutCubic } from "./boardConstants";
-import { GameDto, ColonyTileDto } from "../../../types/generated/api-types";
+import { GameDto, ColonyDto } from "../../../types/generated/api-types";
 import { addSphereProjectionWithSoftEdges } from "./GreeneryRenderer";
 import ExhaustEffect from "./effects/ExhaustEffect";
 import EngineTrail from "./effects/EngineTrail";
@@ -488,11 +488,11 @@ export default function SpaceshipRenderer({
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (!gameState?.colonyTiles || shipsRef.current.length === 0) {
+    if (!gameState?.colonies || shipsRef.current.length === 0) {
       return;
     }
 
-    const colonies = gameState.colonyTiles;
+    const colonies = gameState.colonies;
     const prevState = prevTradeStateRef.current;
     const isFirstLoad = !initializedRef.current;
 
@@ -520,7 +520,7 @@ export default function SpaceshipRenderer({
       setTransforms(matrices);
     } else {
       const anyPrevTraded = Array.from(prevState.values()).some((v) => v);
-      const allNowUntraded = colonies.every((c: ColonyTileDto) => !c.tradedThisGen);
+      const allNowUntraded = colonies.every((c: ColonyDto) => !c.tradedThisGen);
 
       if (anyPrevTraded && allNowUntraded) {
         for (let i = 0; i < shipsRef.current.length; i++) {
@@ -564,7 +564,7 @@ export default function SpaceshipRenderer({
       newState.set(colony.id, colony.tradedThisGen);
     }
     prevTradeStateRef.current = newState;
-  }, [gameState?.colonyTiles, parkedMatrices, setTransforms]);
+  }, [gameState?.colonies, parkedMatrices, setTransforms]);
 
   useFrame((state) => {
     if (animateEntrance && !entranceDoneRef.current) {

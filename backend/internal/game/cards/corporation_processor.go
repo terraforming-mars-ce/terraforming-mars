@@ -425,7 +425,7 @@ func (p *CorporationProcessor) createForcedAction(
 		log.Debug("Applied card-draw forced action",
 			zap.Int("amount", outputBC.GetAmount()))
 
-	case shared.ResourceColonyTile:
+	case shared.ResourceColony:
 		action := &shared.ForcedFirstAction{
 			ActionType:    "colony-placement",
 			CorporationID: card.ID,
@@ -449,7 +449,7 @@ func (p *CorporationProcessor) createForcedAction(
 			if err != nil {
 				return fmt.Errorf("failed to get player for colony placement: %w", err)
 			}
-			colonyIDs := g.GetPlaceableColonyIDs(pl.ID(), allowDuplicate)
+			colonyIDs := g.Colonies().GetPlaceableIDs(pl.ID(), allowDuplicate)
 			if len(colonyIDs) > 0 {
 				pl.Selection().SetPendingColonySelection(&shared.PendingColonySelection{
 					AvailableColonyIDs:         colonyIDs,

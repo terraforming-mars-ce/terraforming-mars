@@ -204,16 +204,16 @@ func (a *StartGameAction) initializeColonies(g *game.Game, playerIDs []string, r
 	selected := allColonies[:numToSelect]
 
 	// Initialize tile states
-	states := make([]*colony.TileState, len(selected))
+	states := make([]*colony.ColonyState, len(selected))
 	for i, def := range selected {
-		states[i] = &colony.TileState{
+		states[i] = &colony.ColonyState{
 			DefinitionID:   def.ID,
 			MarkerPosition: 1,
 			PlayerColonies: []string{},
 			TradedThisGen:  false,
 		}
 	}
-	g.SetColonyTileStates(states)
+	g.Colonies().SetStates(states)
 	g.InitializeTradeFleets(playerIDs)
 
 	log.Debug("Colony tiles initialized",

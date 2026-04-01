@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { PendingColonySelectionDto, ColonyTileDto } from "@/types/generated/api-types.ts";
+import { PendingColonySelectionDto, ColonyDto } from "@/types/generated/api-types.ts";
 import ColonySteps from "../popover/ColonySteps.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
@@ -9,7 +9,7 @@ import { Z_INDEX } from "@/constants/zIndex.ts";
 interface ColonySelectionOverlayProps {
   isOpen: boolean;
   pendingSelection: PendingColonySelectionDto;
-  colonyTiles: ColonyTileDto[];
+  colonies: ColonyDto[];
   allPlayers: PlayerInfo[];
   onConfirm: (colonyId: string) => void;
 }
@@ -17,7 +17,7 @@ interface ColonySelectionOverlayProps {
 const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
   isOpen,
   pendingSelection,
-  colonyTiles,
+  colonies,
   allPlayers,
   onConfirm,
 }) => {
@@ -57,7 +57,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {colonyTiles.map((colony) => {
+          {colonies.map((colony) => {
             const selectable = selectableIds.has(colony.id);
             const isSelected = selectedColonyId === colony.id;
             const nextSlotIndex = colony.playerColonies.length;

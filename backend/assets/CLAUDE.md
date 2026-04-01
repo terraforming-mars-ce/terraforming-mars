@@ -57,7 +57,7 @@ Each output `type` belongs to a category that determines which fields are valid:
 | Card Operation | `card-draw`, `card-take`, `card-peek`, `card-buy`, `card-discard` | `selectors`, `variableAmount` |
 | Card Storage | `microbe`, `animal`, `floater`, `science`, `asteroid`, `fighter`, `disease`, `card-resource` | `selectors`, `per`, `variableAmount` |
 | Effect | `discount`, `payment-substitute`, `value-modifier`, `defense`, `global-parameter-lenience`, `ignore-global-requirements`, `ocean-adjacency-bonus`, `action-reuse`, `effect`, `tag` | `selectors`, `temporary` |
-| Colony | `colony-tile`, `colony-count`, `colony-bonus`, `colony-track-step` | `allowDuplicatePlayerColony` |
+| Colony | `colony`, `colony-count`, `colony-bonus`, `colony-track-step` | `allowDuplicatePlayerColony` |
 | Tile Modification | `tile-destruction`, `tile-replacement` | `tileType` |
 | Misc | `extra-actions`, `bonus-tags`, `world-tree-tile`, `award-fund`, `trade` | `per`, `selectors` |
 

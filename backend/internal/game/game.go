@@ -3,7 +3,6 @@ package game
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -12,7 +11,7 @@ import (
 
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/colony"
+	"terraforming-mars-backend/internal/game/colonies"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/deck"
 	"terraforming-mars-backend/internal/game/global_parameters"
@@ -136,6 +135,10 @@ func (ctx *gameVPRecalculationContext) CountAdjacentTilesForCard(cardID string, 
 	return count
 }
 
+func (ctx *gameVPRecalculationContext) CountAllColonies() int {
+	return ctx.game.Colonies().CountAllColonies()
+}
+
 type Game struct {
 	mu               sync.RWMutex
 	ds               *datastore.DataStore
@@ -143,6 +146,7 @@ type Game struct {
 	globalParameters *global_parameters.GlobalParameters
 	currentTurn      *Turn
 	board            *board.Board
+	colonies         *colonies.Colonies
 	deck             *deck.Deck
 	players          map[string]*player.Player
 	eventBus         *events.EventBusImpl
@@ -238,6 +242,7 @@ func NewGame(
 		id:               id,
 		globalParameters: global_parameters.NewGlobalParameters(ds, id, eventBus),
 		board:            board.NewBoardWithTiles(&state.Tiles, id, board.GenerateMarsBoard(settings.VenusNextEnabled), eventBus),
+		colonies:         colonies.NewColonies(ds, id, eventBus),
 		players:          make(map[string]*player.Player),
 		eventBus:         eventBus,
 		milestones:       NewMilestones(ds, id, eventBus),
@@ -345,6 +350,10 @@ func (g *Game) GlobalParameters() *global_parameters.GlobalParameters {
 
 func (g *Game) Board() *board.Board {
 	return g.board
+}
+
+func (g *Game) Colonies() *colonies.Colonies {
+	return g.colonies
 }
 
 func (g *Game) Deck() *deck.Deck {
@@ -2163,102 +2172,10 @@ func (g *Game) HasColonies() bool {
 	return g.Settings().HasColonies()
 }
 
-func (g *Game) ColonyTileStates() []*colony.TileState {
-	var result []*colony.TileState
-	g.read(func(s *datastore.GameState) { result = s.ColonyTileStates })
-	return result
-}
-
-// GetAvailableColonyIDs returns the definition IDs of all colony tiles in the game.
-func (g *Game) GetAvailableColonyIDs() []string {
-	tiles := g.ColonyTileStates()
-	ids := make([]string, 0, len(tiles))
-	for _, ts := range tiles {
-		ids = append(ids, ts.DefinitionID)
-	}
-	return ids
-}
-
-// GetPlaceableColonyIDs returns colony IDs where the player can actually place a colony
-// (not full and player doesn't already have a colony there, unless allowDuplicate is true).
-func (g *Game) GetPlaceableColonyIDs(playerID string, allowDuplicate bool) []string {
-	const maxColoniesPerTile = 3
-	tiles := g.ColonyTileStates()
-	ids := make([]string, 0, len(tiles))
-	for _, ts := range tiles {
-		if len(ts.PlayerColonies) >= maxColoniesPerTile {
-			continue
-		}
-		if !allowDuplicate && slices.Contains(ts.PlayerColonies, playerID) {
-			continue
-		}
-		ids = append(ids, ts.DefinitionID)
-	}
-	return ids
-}
-
-// GetTradeableColonyIDs returns colony IDs that haven't been traded this generation.
-func (g *Game) GetTradeableColonyIDs() []string {
-	tiles := g.ColonyTileStates()
-	ids := make([]string, 0, len(tiles))
-	for _, ts := range tiles {
-		if !ts.TradedThisGen {
-			ids = append(ids, ts.DefinitionID)
-		}
-	}
-	return ids
-}
-
-func (g *Game) SetColonyTileStates(states []*colony.TileState) {
-	g.update(func(s *datastore.GameState) {
-		s.ColonyTileStates = states
-		s.UpdatedAt = time.Now()
-	})
-}
-
-func (g *Game) GetColonyTileState(colonyID string) *colony.TileState {
-	var result *colony.TileState
-	g.read(func(s *datastore.GameState) {
-		for _, state := range s.ColonyTileStates {
-			if state.DefinitionID == colonyID {
-				result = state
-				return
-			}
-		}
-	})
-	return result
-}
-
-// CountAllColonies returns the total number of colonies placed across all colony tiles.
+// CountAllColonies delegates to the Colonies component.
+// This allows Game to satisfy the BoardContext interface for VP calculation.
 func (g *Game) CountAllColonies() int {
-	var total int
-	g.read(func(s *datastore.GameState) {
-		for _, state := range s.ColonyTileStates {
-			total += len(state.PlayerColonies)
-		}
-	})
-	return total
-}
-
-func (g *Game) GetTradeFleetAvailable(playerID string) bool {
-	var v bool
-	g.read(func(s *datastore.GameState) {
-		if s.TradeFleets == nil {
-			return
-		}
-		v = s.TradeFleets[playerID]
-	})
-	return v
-}
-
-func (g *Game) SetTradeFleetAvailable(playerID string, available bool) {
-	g.update(func(s *datastore.GameState) {
-		if s.TradeFleets == nil {
-			s.TradeFleets = make(map[string]bool)
-		}
-		s.TradeFleets[playerID] = available
-		s.UpdatedAt = time.Now()
-	})
+	return g.colonies.CountAllColonies()
 }
 
 func (g *Game) InitializeTradeFleets(playerIDs []string) {

@@ -92,11 +92,11 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		return err
 	}
 
-	if !g.GetTradeFleetAvailable(playerID) {
+	if !g.Colonies().GetTradeFleetAvailable(playerID) {
 		return fmt.Errorf("trade fleet is not available")
 	}
 
-	tileState := g.GetColonyTileState(colonyID)
+	tileState := g.Colonies().GetState(colonyID)
 	if tileState == nil {
 		return fmt.Errorf("colony tile not found: %s", colonyID)
 	}
@@ -240,7 +240,7 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 	tileState.TradedThisGen = true
 	tileState.TraderID = playerID
 
-	g.SetTradeFleetAvailable(playerID, false)
+	g.Colonies().SetTradeFleetAvailable(playerID, false)
 
 	events.Publish(g.EventBus(), events.ColonyTradedEvent{
 		GameID:    g.ID(),

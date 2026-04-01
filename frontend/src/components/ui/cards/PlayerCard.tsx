@@ -45,7 +45,7 @@ const resourceTypeToIconType: Record<string, string> = {
   "greenery-placement": "greenery-placement",
   "city-placement": "city-placement",
   "card-draw": "card-draw",
-  "colony-tile": "colony-tile",
+  colony: "colony",
 };
 
 const cardResourceTypes: Record<string, "peek" | "take" | "buy" | "discard" | "none"> = {

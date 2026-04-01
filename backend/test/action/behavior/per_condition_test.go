@@ -419,7 +419,7 @@ func TestPerCondition_ColonyCount(t *testing.T) {
 	log := testutil.TestLogger()
 
 	// Set up colony states with some colonies placed
-	g.SetColonyTileStates([]*colony.TileState{
+	g.Colonies().SetStates([]*colony.ColonyState{
 		{
 			DefinitionID:   "ganymede",
 			MarkerPosition: 1,
@@ -438,7 +438,7 @@ func TestPerCondition_ColonyCount(t *testing.T) {
 	})
 
 	// Verify CountAllColonies returns 3 (2 on ganymede + 1 on titan + 0 on europa)
-	totalColonies := g.CountAllColonies()
+	totalColonies := g.Colonies().CountAllColonies()
 	testutil.AssertEqual(t, 3, totalColonies, "should count 3 total colonies")
 
 	// Set starting credits to 0

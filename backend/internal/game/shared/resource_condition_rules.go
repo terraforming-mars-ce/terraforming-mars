@@ -179,7 +179,7 @@ var outputFieldProfiles = map[ResourceType]FieldProfile{
 	ResourceOceanSpace:          emptyProfile,
 
 	// Colony
-	ResourceColonyTile:  colonyTileOutputProfile,
+	ResourceColony:      colonyTileOutputProfile,
 	ResourceColonyCount: targetOnlyOutputProfile,
 	ResourceColonyBonus: targetOnlyOutputProfile,
 
@@ -273,7 +273,7 @@ var AllResourceTypes = []ResourceType{
 	ResourceCardDraw, ResourceCardTake, ResourceCardPeek, ResourceCardBuy, ResourceCardDiscard,
 	ResourceCityPlacement, ResourceOceanPlacement, ResourceGreeneryPlacement, ResourceVolcanoPlacement, ResourceTilePlacement,
 	ResourceCityTile, ResourceOceanTile, ResourceGreeneryTile, ResourceVolcanoTile,
-	ResourceColonyTile, ResourceColonyCount, ResourceColonyBonus,
+	ResourceColony, ResourceColonyCount, ResourceColonyBonus,
 	ResourceNaturalPreserveTile, ResourceMiningTile, ResourceNuclearZoneTile, ResourceEcologicalZoneTile, ResourceMoholeTile, ResourceRestrictedTile,
 	ResourceLandTile, ResourceNonOceanTile, ResourceOceanSpace,
 	ResourceTemperature, ResourceOxygen, ResourceOcean, ResourceVenus, ResourceTR, ResourceGlobalParameter,

@@ -99,7 +99,7 @@ const (
 	ResourceTypeCityTile     ResourceType = "city-tile"
 	ResourceTypeOceanTile    ResourceType = "ocean-tile"
 	ResourceTypeGreeneryTile ResourceType = "greenery-tile"
-	ResourceTypeColonyTile   ResourceType = "colony-tile"
+	ResourceTypeColony       ResourceType = "colony"
 
 	ResourceTypeTemperature ResourceType = "temperature"
 	ResourceTypeOxygen      ResourceType = "oxygen"
@@ -316,9 +316,9 @@ type EffectConditionDto struct {
 func (d EffectConditionDto) GetConditionType() string { return d.Type }
 func (d EffectConditionDto) GetConditionAmount() int  { return d.Amount }
 
-// ColonyConditionDto covers colony-tile, colony-count, colony-bonus, colony-track-step.
+// ColonyConditionDto covers colony, colony-count, colony-bonus, colony-track-step.
 type ColonyConditionDto struct {
-	Type   string     `json:"type" tstype:"'colony-tile' | 'colony-count' | 'colony-bonus' | 'colony-track-step'"`
+	Type   string     `json:"type" tstype:"'colony' | 'colony-count' | 'colony-bonus' | 'colony-track-step'"`
 	Amount int        `json:"amount"`
 	Target TargetType `json:"target"`
 }
@@ -828,7 +828,7 @@ type PendingAwardFundSelectionDto struct {
 	Source          string   `json:"source"`
 }
 
-// PendingColonySelectionDto represents a pending colony tile selection from a card effect
+// PendingColonySelectionDto represents a pending colony selection from a card effect
 type PendingColonySelectionDto struct {
 	AvailableColonyIDs         []string `json:"availableColonyIds"`
 	AllowDuplicatePlayerColony bool     `json:"allowDuplicatePlayerColony"`
@@ -989,7 +989,7 @@ type GameDto struct {
 	Spectators          []SpectatorDto         `json:"spectators"`
 	ChatMessages        []ChatMessageDto       `json:"chatMessages"`
 	IsSpectator         bool                   `json:"isSpectator"`
-	ColonyTiles         []ColonyTileDto        `json:"colonyTiles,omitempty"`
+	Colonies            []ColonyDto            `json:"colonies,omitempty"`
 	TradeFleetAvailable bool                   `json:"tradeFleetAvailable"`
 	TradeFleets         map[string]bool        `json:"tradeFleets,omitempty"`
 	ProjectFunding      []ProjectFundingDto    `json:"projectFunding,omitempty"`
@@ -1033,8 +1033,8 @@ type InitPhaseDto struct {
 
 // Colony-related DTOs
 
-// ColonyTileDto represents a colony tile in the game
-type ColonyTileDto struct {
+// ColonyDto represents a colony in the game
+type ColonyDto struct {
 	ID             string            `json:"id"`
 	Name           string            `json:"name"`
 	Location       string            `json:"location"`

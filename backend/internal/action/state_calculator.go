@@ -792,7 +792,7 @@ func validateColonyBonusStorageTargets(
 		return nil
 	}
 
-	bonuses := gamecards.CollectColonyBonuses(p.ID(), g.ColonyTileStates(), colonyBonusLookup)
+	bonuses := gamecards.CollectColonyBonuses(p.ID(), g.Colonies().States(), colonyBonusLookup)
 
 	hasReward := false
 	for _, b := range bonuses {
@@ -2027,6 +2027,6 @@ func computeColonyBonusValues(
 		return []shared.CalculatedOutput{}
 	}
 	return gamecards.ColonyBonusesToCalculatedOutputs(
-		gamecards.CollectColonyBonuses(p.ID(), g.ColonyTileStates(), colonyBonusLookup),
+		gamecards.CollectColonyBonuses(p.ID(), g.Colonies().States(), colonyBonusLookup),
 	)
 }

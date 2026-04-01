@@ -13052,7 +13052,7 @@
             "target": "none"
           },
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13124,7 +13124,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13486,7 +13486,7 @@
             "target": "self-player"
           },
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13519,7 +13519,7 @@
             "target": "self-player"
           },
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13650,7 +13650,7 @@
             "target": "self-player"
           },
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13857,7 +13857,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player",
             "allowDuplicatePlayerColony": true
@@ -14069,7 +14069,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player",
             "allowDuplicatePlayerColony": true
@@ -14084,7 +14084,7 @@
         "condition": "per",
         "maxTrigger": -1,
         "per": {
-          "type": "colony-tile",
+          "type": "colony",
           "amount": 2,
           "location": "anywhere"
         },
@@ -14456,7 +14456,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -14803,7 +14803,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }

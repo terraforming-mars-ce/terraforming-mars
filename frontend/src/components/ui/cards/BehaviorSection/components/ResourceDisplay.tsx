@@ -401,14 +401,14 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     );
   }
 
-  // Colony bonus: colony-tile icon + "Bonus" label + computed values
+  // Colony bonus: colony icon + "Bonus" label + computed values
   if (resourceType === "colony-bonus") {
     const hasContext = computedOutputs !== undefined;
     const bonusOutputs = computedOutputs ?? [];
     return (
       <div className="flex items-center gap-[3px]">
         <BehaviorIcon
-          resourceType="colony-tile"
+          resourceType="colony"
           isProduction={false}
           isAttack={false}
           context="standalone"

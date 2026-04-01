@@ -1312,7 +1312,7 @@ export default function GameInterface() {
           <ColonySelectionOverlay
             isOpen={showColonyPlacementSelection}
             pendingSelection={game.currentPlayer.pendingColonySelection}
-            colonyTiles={game.colonyTiles ?? []}
+            colonies={game.colonies ?? []}
             allPlayers={colonyAllPlayers}
             onConfirm={(colonyId) => void globalWebSocketManager.confirmColonyPlacement(colonyId)}
           />
@@ -1322,7 +1322,7 @@ export default function GameInterface() {
           <FreeTradeSelectionOverlay
             isOpen={showFreeTradeSelection}
             pendingSelection={game.currentPlayer.pendingFreeTradeSelection}
-            colonyTiles={game.colonyTiles ?? []}
+            colonies={game.colonies ?? []}
             viewingPlayerId={game.viewingPlayerId ?? ""}
             tradeFleetAvailable={game.tradeFleetAvailable}
             allPlayers={colonyAllPlayers}

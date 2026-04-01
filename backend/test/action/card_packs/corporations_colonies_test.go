@@ -319,9 +319,9 @@ func TestPoseidon_StartingResources(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	addColonyTile(testGame, "luna", 1, nil)
-	addColonyTile(testGame, "io", 1, nil)
-	addColonyTile(testGame, "ganymede", 1, nil)
+	addColony(testGame, "luna", 1, nil)
+	addColony(testGame, "io", 1, nil)
+	addColony(testGame, "ganymede", 1, nil)
 
 	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Poseidon"))
@@ -337,9 +337,9 @@ func TestPoseidon_ForcedFirstActionSetup(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	addColonyTile(testGame, "luna", 1, nil)
-	addColonyTile(testGame, "io", 1, nil)
-	addColonyTile(testGame, "ganymede", 1, nil)
+	addColony(testGame, "luna", 1, nil)
+	addColony(testGame, "io", 1, nil)
+	addColony(testGame, "ganymede", 1, nil)
 
 	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Poseidon"))
@@ -361,9 +361,9 @@ func TestPoseidon_GainProductionOnColonyPlacement(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	addColonyTile(testGame, "luna", 1, nil)
-	addColonyTile(testGame, "io", 1, nil)
-	addColonyTile(testGame, "ganymede", 1, nil)
+	addColony(testGame, "luna", 1, nil)
+	addColony(testGame, "io", 1, nil)
+	addColony(testGame, "ganymede", 1, nil)
 
 	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Poseidon"))

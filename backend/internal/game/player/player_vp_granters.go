@@ -18,6 +18,7 @@ type VPRecalculationContext interface {
 	CountAllTilesOfType(tileType shared.ResourceType) int
 	CountPlayerTilesOfType(playerID string, tileType shared.ResourceType) int
 	CountAdjacentTilesForCard(cardID string, tileType shared.ResourceType) int
+	CountAllColonies() int
 }
 
 // VPGranters manages VP-granting cards.
@@ -182,8 +183,10 @@ func countPerCondition(per *shared.PerCondition, cardID string, playerID string,
 			return ctx.CountPlayerTilesOfType(playerID, shared.ResourceGreeneryTile)
 		}
 		return ctx.CountAllTilesOfType(per.ResourceType)
-	case shared.ResourceOceanTile, shared.ResourceColonyTile:
+	case shared.ResourceOceanTile:
 		return ctx.CountAllTilesOfType(per.ResourceType)
+	case shared.ResourceColony:
+		return ctx.CountAllColonies()
 	default:
 		return ctx.CountPlayerTagsByType(playerID, shared.CardTag(per.ResourceType))
 	}

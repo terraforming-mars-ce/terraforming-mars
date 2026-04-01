@@ -403,7 +403,7 @@ export const ResourceTypeGreeneryPlacement: ResourceType = "greenery-placement";
 export const ResourceTypeCityTile: ResourceType = "city-tile";
 export const ResourceTypeOceanTile: ResourceType = "ocean-tile";
 export const ResourceTypeGreeneryTile: ResourceType = "greenery-tile";
-export const ResourceTypeColonyTile: ResourceType = "colony-tile";
+export const ResourceTypeColony: ResourceType = "colony";
 export const ResourceTypeTemperature: ResourceType = "temperature";
 export const ResourceTypeOxygen: ResourceType = "oxygen";
 export const ResourceTypeVenus: ResourceType = "venus";
@@ -635,10 +635,10 @@ export interface EffectConditionDto {
   selectors?: SelectorDto[];
 }
 /**
- * ColonyConditionDto covers colony-tile, colony-count, colony-bonus, colony-track-step.
+ * ColonyConditionDto covers colony, colony-count, colony-bonus, colony-track-step.
  */
 export interface ColonyConditionDto {
-  type: "colony-tile" | "colony-count" | "colony-bonus" | "colony-track-step";
+  type: "colony" | "colony-count" | "colony-bonus" | "colony-track-step";
   amount: number /* int */;
   target: TargetType;
 }
@@ -1163,7 +1163,7 @@ export interface PendingAwardFundSelectionDto {
   source: string;
 }
 /**
- * PendingColonySelectionDto represents a pending colony tile selection from a card effect
+ * PendingColonySelectionDto represents a pending colony selection from a card effect
  */
 export interface PendingColonySelectionDto {
   availableColonyIds: string[];
@@ -1325,7 +1325,7 @@ export interface GameDto {
   spectators: SpectatorDto[];
   chatMessages: ChatMessageDto[];
   isSpectator: boolean;
-  colonyTiles?: ColonyTileDto[];
+  colonies?: ColonyDto[];
   tradeFleetAvailable: boolean;
   tradeFleets?: { [key: string]: boolean };
   projectFunding?: ProjectFundingDto[];
@@ -1371,9 +1371,9 @@ export interface InitPhaseDto {
   hasPendingTiles: boolean;
 }
 /**
- * ColonyTileDto represents a colony tile in the game
+ * ColonyDto represents a colony in the game
  */
-export interface ColonyTileDto {
+export interface ColonyDto {
   id: string;
   name: string;
   location: string;

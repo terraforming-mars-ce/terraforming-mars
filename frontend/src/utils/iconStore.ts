@@ -73,7 +73,7 @@ export const TILE_ICONS: { [key: string]: string } = {
   "city-placed": "/assets/tiles/city.png", // For triggered effects
   "volcano-tile": "/assets/tiles/hazard.png",
   "volcano-placement": "/assets/tiles/hazard.png",
-  "colony-tile": "/assets/tiles/colony.png",
+  colony: "/assets/tiles/colony.png",
   "colony-count": "/assets/tiles/colony.png",
   "colony-bonus": "/assets/tiles/colony.png",
   greenery: "/assets/tiles/greenery_no_O2.png",

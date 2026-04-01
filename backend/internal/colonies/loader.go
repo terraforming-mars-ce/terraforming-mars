@@ -9,13 +9,13 @@ import (
 )
 
 // LoadColoniesFromJSON loads colony tile definitions from a JSON file
-func LoadColoniesFromJSON(filepath string) ([]colony.ColonyTileDefinition, error) {
+func LoadColoniesFromJSON(filepath string) ([]colony.ColonyDefinition, error) {
 	data, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read colony file: %w", err)
 	}
 
-	var colonies []colony.ColonyTileDefinition
+	var colonies []colony.ColonyDefinition
 	if err := json.Unmarshal(data, &colonies); err != nil {
 		return nil, fmt.Errorf("failed to parse colony JSON: %w", err)
 	}

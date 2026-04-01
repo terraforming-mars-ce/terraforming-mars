@@ -82,7 +82,7 @@ func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID
 		return err
 	}
 
-	tileState := g.GetColonyTileState(colonyID)
+	tileState := g.Colonies().GetState(colonyID)
 	if tileState == nil {
 		return fmt.Errorf("colony tile not found: %s", colonyID)
 	}
@@ -120,7 +120,7 @@ func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID
 
 	// Apply placement reward
 	calculatedOutputs := []shared.CalculatedOutput{
-		{ResourceType: "colony-tile", Amount: 1},
+		{ResourceType: "colony", Amount: 1},
 	}
 	if slotIndex < len(definition.Colonies) {
 		slot := definition.Colonies[slotIndex]
@@ -171,8 +171,8 @@ func PlaceColonyOnTile(
 	ctx context.Context,
 	g *game.Game,
 	player *gameplayer.Player,
-	definition *gamecolony.ColonyTileDefinition,
-	tileState *gamecolony.TileState,
+	definition *gamecolony.ColonyDefinition,
+	tileState *gamecolony.ColonyState,
 	cardRegistry cards.CardRegistry,
 	source string,
 	log *zap.Logger,
@@ -181,7 +181,7 @@ func PlaceColonyOnTile(
 	tileState.PlayerColonies = append(tileState.PlayerColonies, player.ID())
 
 	calculatedOutputs := []shared.CalculatedOutput{
-		{ResourceType: "colony-tile", Amount: 1},
+		{ResourceType: "colony", Amount: 1},
 	}
 	if slotIndex < len(definition.Colonies) {
 		slot := definition.Colonies[slotIndex]
