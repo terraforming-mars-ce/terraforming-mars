@@ -6,6 +6,7 @@ import (
 
 	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/colony"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
@@ -22,7 +23,7 @@ func TestFixedVPCard(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil, // no milestones
 		nil, // no awards
 		g.GetAllPlayers(),
@@ -59,7 +60,7 @@ func TestPerStorageVPCard(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -117,7 +118,7 @@ func TestPerOceanTileVPCard(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -154,7 +155,7 @@ func TestGreeneryVP(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -198,7 +199,7 @@ func TestCityVP(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -229,7 +230,7 @@ func TestMultipleVPCards(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -267,7 +268,7 @@ func TestTotalVPSumsAllCategories(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		milestones,
 		nil,
 		g.GetAllPlayers(),
@@ -309,7 +310,7 @@ func TestNegativeFixedVPCard(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -345,7 +346,7 @@ func TestNegativeVPReducesTotalScore(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -375,7 +376,7 @@ func TestPetsVP_ZeroAnimals(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -399,7 +400,7 @@ func TestPetsVP_OneAnimal(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -423,7 +424,7 @@ func TestPetsVP_TwoAnimals(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -447,7 +448,7 @@ func TestPetsVP_FiveAnimals(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -472,7 +473,7 @@ func TestNoVPCards(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -483,5 +484,76 @@ func TestNoVPCards(t *testing.T) {
 
 	if breakdown.CardVP != 0 {
 		t.Fatalf("expected CardVP=0 for non-VP card, got %d", breakdown.CardVP)
+	}
+}
+
+// TestPerColonyVPCard verifies per-colony VP calculation.
+// Space Port Colony: 1 VP per 2 colonies in play.
+func TestPerColonyVPCard(t *testing.T) {
+	g, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(playerID)
+	players := g.GetAllPlayers()
+
+	cardID := testutil.CardID("Space Port Colony")
+	p.PlayedCards().AddCard(cardID, "Space Port Colony", "automated", []string{"space"})
+
+	// Set up 3 colonies across 2 colony tiles
+	g.Colonies().SetStates([]*colony.ColonyState{
+		{
+			DefinitionID:   "ganymede",
+			MarkerPosition: 1,
+			PlayerColonies: []string{playerID, players[1].ID()},
+		},
+		{
+			DefinitionID:   "titan",
+			MarkerPosition: 1,
+			PlayerColonies: []string{playerID},
+		},
+	})
+
+	breakdown := gamecards.CalculatePlayerVP(
+		p,
+		g,
+		nil,
+		nil,
+		g.GetAllPlayers(),
+		cardRegistry,
+		nil,
+		nil,
+	)
+
+	// 3 colonies / 2 = 1 VP (integer division)
+	if breakdown.CardVP != 1 {
+		t.Fatalf("expected CardVP=1 for Space Port Colony with 3 colonies, got %d", breakdown.CardVP)
+	}
+
+	// Add more colonies to verify scaling
+	g.Colonies().SetStates([]*colony.ColonyState{
+		{
+			DefinitionID:   "ganymede",
+			MarkerPosition: 1,
+			PlayerColonies: []string{playerID, players[1].ID()},
+		},
+		{
+			DefinitionID:   "titan",
+			MarkerPosition: 1,
+			PlayerColonies: []string{playerID, players[1].ID()},
+		},
+	})
+
+	breakdown = gamecards.CalculatePlayerVP(
+		p,
+		g,
+		nil,
+		nil,
+		g.GetAllPlayers(),
+		cardRegistry,
+		nil,
+		nil,
+	)
+
+	// 4 colonies / 2 = 2 VP
+	if breakdown.CardVP != 2 {
+		t.Fatalf("expected CardVP=2 for Space Port Colony with 4 colonies, got %d", breakdown.CardVP)
 	}
 }
