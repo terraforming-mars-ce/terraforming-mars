@@ -1,0 +1,69 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  pages: write
+  id-token: write
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Run tests with coverage
+        working-directory: backend
+        run: go test -coverprofile=coverage.out -coverpkg=./internal/... ./test/...
+
+      - name: Generate HTML report
+        working-directory: backend
+        run: go tool cover -html=coverage.out -o coverage.html
+
+      - name: Extract coverage percentage
+        working-directory: backend
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: ${COVERAGE}%"
+          mkdir -p pages
+          cp coverage.html pages/index.html
+
+          # Color based on coverage
+          if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+            COLOR="brightgreen"
+          elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+            COLOR="green"
+          elif (( $(echo "$COVERAGE >= 40" | bc -l) )); then
+            COLOR="yellow"
+          else
+            COLOR="red"
+          fi
+
+          cat > pages/coverage.json <<EOF
+          {
+            "schemaVersion": 1,
+            "label": "coverage",
+            "message": "${COVERAGE}%",
+            "color": "${COLOR}"
+          }
+          EOF
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: backend/pages
+
+  deploy:
+    needs: coverage
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
