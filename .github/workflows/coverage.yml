@@ -46,13 +46,8 @@ jobs:
           fi
 
           cat > pages/coverage.json <<EOF
-          {
-            "schemaVersion": 1,
-            "label": "coverage",
-            "message": "${COVERAGE}%",
-            "color": "${COLOR}"
-          }
-          EOF
+{"schemaVersion":1,"label":"coverage","message":"${COVERAGE}%","color":"${COLOR}"}
+EOF
 
       - uses: actions/upload-pages-artifact@v3
         with:
