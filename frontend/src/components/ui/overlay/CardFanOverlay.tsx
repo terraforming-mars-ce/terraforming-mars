@@ -536,7 +536,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         <div
           className="card-fan-overlay"
           ref={handRef}
-          style={isExpanded ? { zIndex: Z_INDEX.TOP_MENU_ALWAYS_ON_TOP } : undefined}
+          style={isExpanded ? { zIndex: Z_INDEX.EXPANDED_CARD_FAN } : undefined}
         >
           {cards.map((card) => {
             const index = cardOrder.indexOf(card.id);
