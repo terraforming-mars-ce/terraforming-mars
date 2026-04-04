@@ -595,6 +595,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
         anchorRef={hamburgerButtonRef}
         gameId={gameId}
         isHost={currentPlayer?.id === gameState.hostPlayerId}
+        developmentMode={gameState.settings.developmentMode}
         onLeaveGame={onLeaveGame}
         onEndGame={currentPlayer?.id === gameState.hostPlayerId ? onEndGame : undefined}
       />

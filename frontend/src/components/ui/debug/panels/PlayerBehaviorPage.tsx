@@ -17,8 +17,8 @@ import CorporationCard from "../../cards/CorporationCard.tsx";
 
 interface PlayerBehaviorPageProps {
   gameState: GameDto;
-  selectedPlayerIds: string[];
-  onPlayerChange: (ids: string[]) => void;
+  selectedPlayerId: string;
+  onPlayerChange: (id: string) => void;
 }
 
 const buttonStyle = {
@@ -36,11 +36,11 @@ const buttonStyle = {
 
 const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
   gameState,
-  selectedPlayerIds,
+  selectedPlayerId,
   onPlayerChange,
 }) => {
   const allPlayers = [gameState.currentPlayer, ...gameState.otherPlayers];
-  const playerId = selectedPlayerIds[0];
+  const playerId = selectedPlayerId;
 
   const [allCards, setAllCards] = useState<CardDto[]>([]);
   const [cardsLoading, setCardsLoading] = useState(false);
@@ -167,13 +167,11 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
   };
 
   const handleGiveCard = async () => {
-    if (selectedPlayerIds.length === 0 || !cardId) {
+    if (!selectedPlayerId || !cardId) {
       return;
     }
-    for (const pid of selectedPlayerIds) {
-      const command: GiveCardAdminCommand = { playerId: pid, cardId };
-      await sendCommand(AdminCommandTypeGiveCard, command);
-    }
+    const command: GiveCardAdminCommand = { playerId: selectedPlayerId, cardId };
+    await sendCommand(AdminCommandTypeGiveCard, command);
     setCardId("");
     setCardQuery("");
   };
@@ -216,7 +214,7 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
 
   return (
     <div>
-      <PlayerSelector players={players} selectedIds={selectedPlayerIds} onChange={onPlayerChange} />
+      <PlayerSelector players={players} selectedId={selectedPlayerId} onChange={onPlayerChange} />
 
       <div style={{ marginTop: "12px" }}>
         <label
