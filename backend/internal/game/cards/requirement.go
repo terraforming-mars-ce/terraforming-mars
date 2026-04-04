@@ -18,6 +18,7 @@ const (
 	RequirementProduction  RequirementType = "production"
 	RequirementTR          RequirementType = "tr"
 	RequirementResource    RequirementType = "resource"
+	RequirementColony      RequirementType = "colony"
 )
 
 // CardRequirements wraps a list of requirements with a human-readable description

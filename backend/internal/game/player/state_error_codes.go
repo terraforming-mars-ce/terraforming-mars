@@ -27,6 +27,8 @@ const (
 	ErrorCodeInsufficientTags       StateErrorCode = "insufficient-tags"
 	ErrorCodeTooManyTags            StateErrorCode = "too-many-tags"
 	ErrorCodeInsufficientProduction StateErrorCode = "insufficient-production"
+	ErrorCodeColoniesTooFew         StateErrorCode = "colonies-too-few"
+	ErrorCodeColoniesTooMany        StateErrorCode = "colonies-too-many"
 
 	ErrorCodeNoOceanTiles         StateErrorCode = "no-ocean-tiles"
 	ErrorCodeNoCityPlacements     StateErrorCode = "no-city-placements"

@@ -1258,6 +1258,23 @@ func checkRequirement(
 		// TODO: Implement tile-based requirements when Board tile counting is ready
 		// For now, skip these validations (same as PlayCardAction line 310-312)
 
+	case gamecards.RequirementColony:
+		colonyCount := g.Colonies().CountPlayerColonies(p.ID())
+		if req.Min != nil && colonyCount < *req.Min {
+			return &player.StateError{
+				Code:     player.ErrorCodeColoniesTooFew,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Not enough colonies",
+			}
+		}
+		if req.Max != nil && colonyCount > *req.Max {
+			return &player.StateError{
+				Code:     player.ErrorCodeColoniesTooMany,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Too many colonies",
+			}
+		}
+
 	case gamecards.RequirementVenus:
 		lenience := calculator.CalculateGlobalParameterLenience(p, "venus")
 		venus := g.GlobalParameters().Venus()

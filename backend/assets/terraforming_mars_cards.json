@@ -13636,6 +13636,15 @@
     "tags": [
       "space"
     ],
+    "requirements": {
+      "description": "Requires that you have no more than 1 colony.",
+      "items": [
+        {
+          "type": "colony",
+          "max": 1
+        }
+      ]
+    },
     "behaviors": [
       {
         "triggers": [
@@ -14022,6 +14031,15 @@
       "building",
       "city"
     ],
+    "requirements": {
+      "description": "Requires 1 colony.",
+      "items": [
+        {
+          "type": "colony",
+          "min": 1
+        }
+      ]
+    },
     "behaviors": [
       {
         "triggers": [
@@ -14060,6 +14078,15 @@
     "tags": [
       "space"
     ],
+    "requirements": {
+      "description": "Requires a colony.",
+      "items": [
+        {
+          "type": "colony",
+          "min": 1
+        }
+      ]
+    },
     "behaviors": [
       {
         "triggers": [
