@@ -104,6 +104,21 @@ func (c *Colonies) GetTradeableIDs() []string {
 	return ids
 }
 
+// CountPlayerColonies counts how many colonies a specific player has across all colony tiles.
+func (c *Colonies) CountPlayerColonies(playerID string) int {
+	var total int
+	c.read(func(s *datastore.GameState) {
+		for _, state := range s.ColonyStates {
+			for _, id := range state.PlayerColonies {
+				if id == playerID {
+					total++
+				}
+			}
+		}
+	})
+	return total
+}
+
 func (c *Colonies) CountAllColonies() int {
 	var total int
 	c.read(func(s *datastore.GameState) {
