@@ -4,9 +4,9 @@ Two containers, a reverse proxy in front. That's it.
 
 ## Containers
 
-**Backend** (`ghcr.io/rackaracka123/terraforming-mars-backend`) -- Go server on port 3001. Handles game logic, WebSocket connections, and the bug report API.
+**Backend** (`ghcr.io/terraforming-mars-ce/terraforming-mars-backend`) -- Go server on port 3001. Handles game logic, WebSocket connections, and the bug report API.
 
-**Frontend** (`ghcr.io/rackaracka123/terraforming-mars-frontend`) -- Nginx serving the React app on port 3000. Static files with a runtime config injected at startup.
+**Frontend** (`ghcr.io/terraforming-mars-ce/terraforming-mars-frontend`) -- Nginx serving the React app on port 3000. Static files with a runtime config injected at startup.
 
 Both images are built from the repo root. See `backend/Dockerfile` and `frontend/Dockerfile`.
 
@@ -43,7 +43,7 @@ All optional. Without these, the game runs normally but the in-game bug report b
 | `GITHUB_APP_ID` | No | _(unset)_ | GitHub App ID for creating bug report issues |
 | `GITHUB_INSTALLATION_ID` | No | _(unset)_ | GitHub App installation ID. Without this, bug reporting is disabled entirely |
 | `GITHUB_PRIVATE_KEY_PATH` | No | `./private-key.pem` | Path to the GitHub App private key file. Must be readable inside the container |
-| `GITHUB_REPO_OWNER` | No | `rackaracka123` | GitHub repo owner where issues get created |
+| `GITHUB_REPO_OWNER` | No | `terraforming-mars-ce` | GitHub repo owner where issues get created |
 | `GITHUB_REPO_NAME` | No | `terraforming-mars` | GitHub repo name where issues get created |
 | `TM_REPO_PATH` | No | _(unset)_ | Path to source code for Claude analysis. The Docker image already sets this to `/repo`, so you only need to set it when running locally (e.g. `TM_REPO_PATH=./` from the repo root) |
 | `CLAUDE_CODE_OAUTH_TOKEN` | No | _(unset)_ | OAuth token for Claude Code CLI. Without this (and without a mounted `~/.claude` directory), Claude analysis is skipped. Bug reports still get created -- they just won't have AI-generated code analysis |
