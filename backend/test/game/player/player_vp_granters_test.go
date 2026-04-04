@@ -12,12 +12,13 @@ import (
 )
 
 type mockVPRecalculationContext struct {
-	cardStorage          map[string]map[string]int
-	tagCounts            map[string]map[shared.CardTag]int
-	tileCounts           map[shared.ResourceType]int
-	playerTileCounts     map[string]map[shared.ResourceType]int
-	adjacentTilesForCard map[string]map[shared.ResourceType]int
-	colonyCount          int
+	cardStorage             map[string]map[string]int
+	tagCounts               map[string]map[shared.CardTag]int
+	tileCounts              map[shared.ResourceType]int
+	playerTileCounts        map[string]map[shared.ResourceType]int
+	adjacentTilesForCard    map[string]map[shared.ResourceType]int
+	adjacentTilesToTileType int
+	colonyCount             int
 }
 
 func newMockVPRecalculationContext() *mockVPRecalculationContext {
@@ -60,6 +61,10 @@ func (m *mockVPRecalculationContext) CountAdjacentTilesForCard(cardID string, ti
 		return cardTiles[tileType]
 	}
 	return 0
+}
+
+func (m *mockVPRecalculationContext) CountAdjacentTilesToTileType(_ string, _, _ shared.ResourceType) int {
+	return m.adjacentTilesToTileType
 }
 
 func (m *mockVPRecalculationContext) CountAllColonies() int {
@@ -951,6 +956,74 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 			testutil.AssertEqual(t, 1, len(granters), "Should have exactly 1 VP granter")
 			testutil.AssertEqual(t, tt.expectedVP, granters[0].ComputedValue, "ComputedValue should match expected VP")
 			testutil.AssertEqual(t, tt.expectedVP, p.VPGranters().TotalComputedVP(), "TotalComputedVP should match expected VP")
+		})
+	}
+}
+
+func TestPerAdjacentToTileTypeVPGranter(t *testing.T) {
+	worldTreeTileType := shared.ResourceWorldTreeTile
+
+	tests := []struct {
+		name               string
+		adjacentGreeneries int
+		totalGreeneries    int
+		expectedVP         int
+	}{
+		{
+			name:               "World Tree: 0 adjacent greeneries, 5 total = 0 VP",
+			adjacentGreeneries: 0,
+			totalGreeneries:    5,
+			expectedVP:         0,
+		},
+		{
+			name:               "World Tree: 3 adjacent greeneries, 9 total = 3 VP (not 9)",
+			adjacentGreeneries: 3,
+			totalGreeneries:    9,
+			expectedVP:         3,
+		},
+		{
+			name:               "World Tree: 2 adjacent greeneries, 2 total = 2 VP",
+			adjacentGreeneries: 2,
+			totalGreeneries:    2,
+			expectedVP:         2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			broadcaster := testutil.NewMockBroadcaster()
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			players := testGame.GetAllPlayers()
+			p := players[0]
+
+			worldTreeID := testutil.CardID("The World Tree")
+			granter := shared.VPGranter{
+				CardID:   worldTreeID,
+				CardName: "The World Tree",
+				VPConditions: []shared.VPCondition{
+					{
+						Amount:    1,
+						Condition: shared.VPConditionPer,
+						Per: &shared.PerCondition{
+							ResourceType:       shared.ResourceGreeneryTile,
+							Amount:             1,
+							AdjacentToTileType: &worldTreeTileType,
+						},
+					},
+				},
+			}
+
+			p.VPGranters().Add(granter)
+
+			ctx := newMockVPRecalculationContext()
+			ctx.tileCounts[shared.ResourceGreeneryTile] = tt.totalGreeneries
+			ctx.adjacentTilesToTileType = tt.adjacentGreeneries
+			p.VPGranters().RecalculateAll(ctx)
+
+			granters := p.VPGranters().GetAll()
+			testutil.AssertEqual(t, 1, len(granters), "Should have exactly 1 VP granter")
+			testutil.AssertEqual(t, tt.expectedVP, granters[0].ComputedValue, "World Tree VP should count only adjacent greeneries")
+			testutil.AssertEqual(t, tt.expectedVP, p.VPGranters().TotalComputedVP(), "TotalComputedVP should match")
 		})
 	}
 }

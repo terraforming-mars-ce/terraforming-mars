@@ -128,6 +128,46 @@ func (ctx *gameVPRecalculationContext) CountAdjacentTilesForCard(cardID string, 
 	return count
 }
 
+func (ctx *gameVPRecalculationContext) CountAdjacentTilesToTileType(playerID string, countType, adjacentToType shared.ResourceType) int {
+	tiles := ctx.game.board.Tiles()
+
+	tilesByCoord := make(map[shared.HexPosition]*board.Tile, len(tiles))
+	for i := range tiles {
+		tilesByCoord[tiles[i].Coordinates] = &tiles[i]
+	}
+
+	counted := make(map[shared.HexPosition]bool)
+
+	for _, tile := range tiles {
+		if tile.OwnerID == nil || *tile.OwnerID != playerID {
+			continue
+		}
+		if tile.OccupiedBy == nil || tile.OccupiedBy.Type != adjacentToType {
+			continue
+		}
+
+		for _, neighborCoord := range tile.Coordinates.GetNeighbors() {
+			neighborTile, exists := tilesByCoord[neighborCoord]
+			if !exists || neighborTile.OccupiedBy == nil || counted[neighborCoord] {
+				continue
+			}
+
+			var matches bool
+			if countType == shared.ResourceGreeneryTile {
+				matches = neighborTile.OccupiedBy.Type == shared.ResourceGreeneryTile || neighborTile.OccupiedBy.Type == shared.ResourceWorldTreeTile
+			} else {
+				matches = neighborTile.OccupiedBy.Type == countType
+			}
+
+			if matches {
+				counted[neighborCoord] = true
+			}
+		}
+	}
+
+	return len(counted)
+}
+
 func (ctx *gameVPRecalculationContext) CountAllColonies() int {
 	return ctx.game.Colonies().CountAllColonies()
 }
