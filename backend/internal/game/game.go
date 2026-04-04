@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -104,13 +105,8 @@ func (ctx *gameVPRecalculationContext) CountAdjacentTilesForCard(cardID string, 
 		if tiles[i].OccupiedBy == nil {
 			continue
 		}
-		for _, tag := range tiles[i].OccupiedBy.Tags {
-			if tag == sourceTag {
-				sourceTile = &tiles[i]
-				break
-			}
-		}
-		if sourceTile != nil {
+		if slices.Contains(tiles[i].OccupiedBy.Tags, sourceTag) {
+			sourceTile = &tiles[i]
 			break
 		}
 	}
@@ -125,11 +121,8 @@ func (ctx *gameVPRecalculationContext) CountAdjacentTilesForCard(cardID string, 
 		if tile.OccupiedBy == nil || tile.OccupiedBy.Type != tileType {
 			continue
 		}
-		for _, neighbor := range neighbors {
-			if tile.Coordinates == neighbor {
-				count++
-				break
-			}
+		if slices.Contains(neighbors, tile.Coordinates) {
+			count++
 		}
 	}
 	return count
@@ -640,14 +633,7 @@ func (g *Game) NextSpectatorColor() string {
 // IsPlayerColorAvailable returns true if the given color is in the palette and
 // not taken by another player (excluding the specified player).
 func (g *Game) IsPlayerColorAvailable(color string, excludePlayerID string) bool {
-	validColor := false
-	for _, c := range shared.PlayerColors {
-		if c == color {
-			validColor = true
-			break
-		}
-	}
-	if !validColor {
+	if !slices.Contains(shared.PlayerColors, color) {
 		return false
 	}
 
@@ -1333,14 +1319,9 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 
 	// Helper to check if tile has any of the required board tags
 	tileHasRequiredTag := func(tile board.Tile, requiredTags []string) bool {
-		for _, reqTag := range requiredTags {
-			for _, tileTag := range tile.Tags {
-				if tileTag == reqTag {
-					return true
-				}
-			}
-		}
-		return false
+		return slices.ContainsFunc(requiredTags, func(reqTag string) bool {
+			return slices.Contains(tile.Tags, reqTag)
+		})
 	}
 
 	// Helper to check if tile has any tags (is a reserved area)
@@ -1435,10 +1416,8 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 	// Helper to check if a tile has one of the specified bonus types
 	hasBonusOfType := func(tile board.Tile, bonusTypes []string) bool {
 		for _, bonus := range tile.Bonuses {
-			for _, bonusType := range bonusTypes {
-				if string(bonus.Type) == bonusType {
-					return true
-				}
+			if slices.Contains(bonusTypes, string(bonus.Type)) {
+				return true
 			}
 		}
 		return false
@@ -1857,6 +1836,10 @@ func (g *Game) subscribeToVPEvents() {
 	})
 
 	events.Subscribe(g.eventBus, func(e events.TilePlacedEvent) {
+		g.recalculateAllPlayersVP()
+	})
+
+	events.Subscribe(g.eventBus, func(e events.ColonyBuiltEvent) {
 		g.recalculateAllPlayersVP()
 	})
 
