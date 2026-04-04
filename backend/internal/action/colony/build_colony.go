@@ -118,6 +118,10 @@ func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID
 	slotIndex := len(tileState.PlayerColonies)
 	tileState.PlayerColonies = append(tileState.PlayerColonies, playerID)
 
+	if tileState.MarkerPosition < len(tileState.PlayerColonies) {
+		tileState.MarkerPosition = len(tileState.PlayerColonies)
+	}
+
 	// Apply placement reward
 	calculatedOutputs := []shared.CalculatedOutput{
 		{ResourceType: "colony", Amount: 1},
@@ -179,6 +183,10 @@ func PlaceColonyOnTile(
 ) error {
 	slotIndex := len(tileState.PlayerColonies)
 	tileState.PlayerColonies = append(tileState.PlayerColonies, player.ID())
+
+	if tileState.MarkerPosition < len(tileState.PlayerColonies) {
+		tileState.MarkerPosition = len(tileState.PlayerColonies)
+	}
 
 	calculatedOutputs := []shared.CalculatedOutput{
 		{ResourceType: "colony", Amount: 1},

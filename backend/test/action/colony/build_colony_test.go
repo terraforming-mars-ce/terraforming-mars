@@ -168,3 +168,63 @@ func TestBuildColony_PlacesPlayerOnTile(t *testing.T) {
 	testutil.AssertEqual(t, 1, len(tileState.PlayerColonies), "Should have 1 colony")
 	testutil.AssertEqual(t, playerID, tileState.PlayerColonies[0], "Colony should belong to player")
 }
+
+func TestBuildColony_BumpsMarkerToMinimum(t *testing.T) {
+	testGame, repo, colonyRegistry, playerID, _ := setupColonyGame(t)
+	ctx := context.Background()
+	stateRepo := game.NewInMemoryGameStateRepository()
+	logger := testutil.TestLogger()
+
+	// Marker at 1, no colonies yet — building first colony should keep marker at 1
+	setupColony(testGame, "luna", 1, nil)
+
+	p, _ := testGame.GetPlayer(playerID)
+	testutil.SetPlayerCredits(ctx, p, 50)
+
+	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	testutil.AssertNoError(t, err, "Build colony should succeed")
+
+	tileState := testGame.Colonies().GetState("luna")
+	testutil.AssertEqual(t, 1, tileState.MarkerPosition, "Marker should be at least 1 (number of colonies)")
+}
+
+func TestBuildColony_BumpsMarkerWhenMultipleColoniesBuilt(t *testing.T) {
+	testGame, repo, colonyRegistry, playerID, _ := setupColonyGame(t)
+	ctx := context.Background()
+	stateRepo := game.NewInMemoryGameStateRepository()
+	logger := testutil.TestLogger()
+
+	// 2 existing colonies, marker stuck at 1 (bug scenario)
+	setupColony(testGame, "luna", 1, []string{"other-1", "other-2"})
+
+	p, _ := testGame.GetPlayer(playerID)
+	testutil.SetPlayerCredits(ctx, p, 50)
+
+	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	testutil.AssertNoError(t, err, "Build colony should succeed")
+
+	tileState := testGame.Colonies().GetState("luna")
+	testutil.AssertEqual(t, 3, tileState.MarkerPosition, "Marker should jump to 3 (number of colonies)")
+}
+
+func TestBuildColony_DoesNotLowerMarker(t *testing.T) {
+	testGame, repo, colonyRegistry, playerID, _ := setupColonyGame(t)
+	ctx := context.Background()
+	stateRepo := game.NewInMemoryGameStateRepository()
+	logger := testutil.TestLogger()
+
+	// Marker already at 5, no colonies — building should not lower it
+	setupColony(testGame, "luna", 5, nil)
+
+	p, _ := testGame.GetPlayer(playerID)
+	testutil.SetPlayerCredits(ctx, p, 50)
+
+	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	testutil.AssertNoError(t, err, "Build colony should succeed")
+
+	tileState := testGame.Colonies().GetState("luna")
+	testutil.AssertEqual(t, 5, tileState.MarkerPosition, "Marker should stay at 5 (not lowered)")
+}
