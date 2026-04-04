@@ -18,6 +18,7 @@ type VPRecalculationContext interface {
 	CountAllTilesOfType(tileType shared.ResourceType) int
 	CountPlayerTilesOfType(playerID string, tileType shared.ResourceType) int
 	CountAdjacentTilesForCard(cardID string, tileType shared.ResourceType) int
+	CountAdjacentTilesToTileType(playerID string, countType, adjacentToType shared.ResourceType) int
 	CountAllColonies() int
 }
 
@@ -166,6 +167,10 @@ func countPerCondition(per *shared.PerCondition, cardID string, playerID string,
 
 	if per.AdjacentToSelfTile {
 		return ctx.CountAdjacentTilesForCard(cardID, per.ResourceType)
+	}
+
+	if per.AdjacentToTileType != nil {
+		return ctx.CountAdjacentTilesToTileType(playerID, per.ResourceType, *per.AdjacentToTileType)
 	}
 
 	if per.Tag != nil {
