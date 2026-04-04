@@ -202,7 +202,7 @@ func buildLabels(tags []string) []string {
 func loadConfig() Config {
 	cfg := Config{
 		GitHubPrivateKeyPath: "./private-key.pem",
-		GitHubRepoOwner:      "rackaracka123",
+		GitHubRepoOwner:      "terraforming-mars-ce",
 		GitHubRepoName:       "terraforming-mars",
 	}
 

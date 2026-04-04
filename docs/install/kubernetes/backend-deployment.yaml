@@ -29,7 +29,7 @@ spec:
                 path: private-key.pem
       containers:
         - name: terraforming-mars-backend
-          image: ghcr.io/rackaracka123/terraforming-mars-backend:latest
+          image: ghcr.io/terraforming-mars-ce/terraforming-mars-backend:latest
           ports:
             - containerPort: 3001
               name: http

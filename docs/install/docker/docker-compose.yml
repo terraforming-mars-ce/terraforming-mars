@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/rackaracka123/terraforming-mars-backend:latest
+    image: ghcr.io/terraforming-mars-ce/terraforming-mars-backend:latest
     container_name: tm-backend
     restart: unless-stopped
     ports:
@@ -20,7 +20,7 @@ services:
       - ${GITHUB_PRIVATE_KEY_FILE:-/dev/null}:/etc/secrets/github/private-key.pem:ro
 
   frontend:
-    image: ghcr.io/rackaracka123/terraforming-mars-frontend:latest
+    image: ghcr.io/terraforming-mars-ce/terraforming-mars-frontend:latest
     container_name: tm-frontend
     restart: unless-stopped
     ports:
