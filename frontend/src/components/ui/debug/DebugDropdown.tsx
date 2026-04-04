@@ -30,7 +30,7 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [activeItem, setActiveItem] = useState<ActiveItem>("game-state");
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
 
   const { position, isDragging, handleMouseDown } = useWindowDrag({
     windowId: WINDOW_ID,
@@ -45,8 +45,8 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
   const allPlayers = gameState ? [gameState.currentPlayer, ...gameState.otherPlayers] : [];
 
   useEffect(() => {
-    if (allPlayers.length > 0 && selectedPlayerIds.length === 0) {
-      setSelectedPlayerIds([allPlayers[0].id]);
+    if (allPlayers.length > 0 && !selectedPlayerId) {
+      setSelectedPlayerId(allPlayers[0].id);
     }
   }, [allPlayers.length]);
 
@@ -82,8 +82,8 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
 
     const playerProps = {
       gameState,
-      selectedPlayerIds,
-      onPlayerChange: setSelectedPlayerIds,
+      selectedPlayerId,
+      onPlayerChange: setSelectedPlayerId,
     };
 
     switch (activeItem) {

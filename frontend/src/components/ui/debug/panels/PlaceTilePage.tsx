@@ -11,8 +11,8 @@ import { TILE_ICONS } from "../../../../utils/iconStore.ts";
 
 interface PlaceTilePageProps {
   gameState: GameDto;
-  selectedPlayerIds: string[];
-  onPlayerChange: (ids: string[]) => void;
+  selectedPlayerId: string;
+  onPlayerChange: (id: string) => void;
 }
 
 const ICON_MAP: Record<string, string | undefined> = {
@@ -85,11 +85,11 @@ const TILE_GROUPS: {
 
 const PlaceTilePage: React.FC<PlaceTilePageProps> = ({
   gameState,
-  selectedPlayerIds,
+  selectedPlayerId,
   onPlayerChange,
 }) => {
   const allPlayers = [gameState.currentPlayer, ...gameState.otherPlayers];
-  const playerId = selectedPlayerIds[0];
+  const playerId = selectedPlayerId;
 
   const sendCommand = async (commandType: string, payload: any) => {
     const req: AdminCommandRequest = { commandType: commandType as any, payload };
@@ -112,7 +112,7 @@ const PlaceTilePage: React.FC<PlaceTilePageProps> = ({
 
   return (
     <div>
-      <PlayerSelector players={players} selectedIds={selectedPlayerIds} onChange={onPlayerChange} />
+      <PlayerSelector players={players} selectedId={selectedPlayerId} onChange={onPlayerChange} />
 
       <div style={{ marginTop: "12px" }}>
         {TILE_GROUPS.map((group, idx) => (
