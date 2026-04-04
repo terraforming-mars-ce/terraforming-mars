@@ -1,8 +1,9 @@
-name: Coverage
+name: Coverage Report
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   pages: write
@@ -45,9 +46,7 @@ jobs:
             COLOR="red"
           fi
 
-          cat > pages/coverage.json <<EOF
-{"schemaVersion":1,"label":"coverage","message":"${COVERAGE}%","color":"${COLOR}"}
-EOF
+          echo "{\"schemaVersion\":1,\"label\":\"coverage\",\"message\":\"${COVERAGE}%\",\"color\":\"${COLOR}\"}" > pages/coverage.json
 
       - uses: actions/upload-pages-artifact@v3
         with:
