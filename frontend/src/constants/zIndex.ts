@@ -60,6 +60,7 @@ export const Z_INDEX = {
 
   // Always-on-top UI (above debug windows)
   TOP_MENU_ALWAYS_ON_TOP: 20100,
+  EXPANDED_CARD_FAN: 20201,
 
   // Critical Layer (9000-9999)
   SYSTEM_NOTIFICATIONS: 9000,
