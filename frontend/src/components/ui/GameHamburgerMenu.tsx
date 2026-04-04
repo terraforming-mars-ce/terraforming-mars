@@ -9,6 +9,7 @@ import {
   FeedbackIcon,
   LeaveIcon,
   EndGameIcon,
+  BugIcon,
 } from "./menuIcons.tsx";
 import SoundToggleButton from "./buttons/SoundToggleButton.tsx";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
@@ -20,6 +21,7 @@ interface GameHamburgerMenuProps {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
   gameId?: string;
   isHost: boolean;
+  developmentMode?: boolean;
   onLeaveGame?: () => void;
   onEndGame?: () => void;
 }
@@ -30,6 +32,7 @@ const GameHamburgerMenu: React.FC<GameHamburgerMenuProps> = ({
   anchorRef,
   gameId,
   isHost,
+  developmentMode,
   onLeaveGame,
   onEndGame,
 }) => {
@@ -129,6 +132,21 @@ const GameHamburgerMenu: React.FC<GameHamburgerMenuProps> = ({
           }}
           onMouseEnter={menuItemHover.onMouseEnter}
         />
+        {developmentMode && (
+          <>
+            <MenuPopoverDivider />
+            <MenuPopoverItem
+              icon={<BugIcon />}
+              label="Admin Tools"
+              onClick={() => {
+                menuItemHover.onClick?.();
+                onClose();
+                window.dispatchEvent(new CustomEvent("toggle-debug-dropdown"));
+              }}
+              onMouseEnter={menuItemHover.onMouseEnter}
+            />
+          </>
+        )}
         <MenuPopoverDivider />
         <MenuPopoverItem
           icon={<LeaveIcon />}
