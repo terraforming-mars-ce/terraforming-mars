@@ -53,7 +53,7 @@ func TestWorldTreeVP_AdjacentGreeneries(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -118,7 +118,7 @@ func TestWorldTreeVP_AdjacentWorldTreeCountsAsForest(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -160,7 +160,7 @@ func TestWorldTreeVP_NoAdjacentForests(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),
@@ -210,7 +210,7 @@ func TestWorldTreeVP_DeduplicatesSharedNeighbors(t *testing.T) {
 
 	breakdown := gamecards.CalculatePlayerVP(
 		p,
-		g.Board(),
+		g,
 		nil,
 		nil,
 		g.GetAllPlayers(),

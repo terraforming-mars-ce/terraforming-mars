@@ -71,7 +71,7 @@ type GameState struct {
 
 	NextGenTurnOrderFrozen bool
 
-	ColonyTileStates     []*colony.TileState
+	ColonyStates         []*colony.ColonyState
 	TradeFleets          map[string]bool
 	ProjectFundingStates []*projectfunding.ProjectState
 

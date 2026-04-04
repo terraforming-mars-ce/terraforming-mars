@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   PendingFreeTradeSelectionDto,
-  ColonyTileDto,
+  ColonyDto,
   ColonyOutputDto,
   CardDto,
 } from "@/types/generated/api-types.ts";
@@ -15,7 +15,7 @@ import { Z_INDEX } from "@/constants/zIndex.ts";
 interface FreeTradeSelectionOverlayProps {
   isOpen: boolean;
   pendingSelection: PendingFreeTradeSelectionDto;
-  colonyTiles: ColonyTileDto[];
+  colonies: ColonyDto[];
   viewingPlayerId: string;
   tradeFleetAvailable: boolean;
   allPlayers: PlayerInfo[];
@@ -27,7 +27,7 @@ interface FreeTradeSelectionOverlayProps {
 const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
   isOpen,
   pendingSelection,
-  colonyTiles,
+  colonies,
   viewingPlayerId,
   tradeFleetAvailable,
   allPlayers,
@@ -46,7 +46,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
     [pendingSelection],
   );
 
-  const isColonyTradeable = (colony: ColonyTileDto): boolean => {
+  const isColonyTradeable = (colony: ColonyDto): boolean => {
     return tradeableIds.has(colony.id) && !colony.tradedThisGen && tradeFleetAvailable;
   };
 
@@ -97,7 +97,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {colonyTiles.map((colony) => {
+          {colonies.map((colony) => {
             const tradeable = isColonyTradeable(colony);
             const isSelected = selectedColonyId === colony.id;
             const markerOutput = colony.steps[colony.markerPosition]?.outputs ?? [];
@@ -186,7 +186,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
               if (!selectedColonyId) {
                 return;
               }
-              const colony = colonyTiles.find((c) => c.id === selectedColonyId);
+              const colony = colonies.find((c) => c.id === selectedColonyId);
               if (colony) {
                 const tradeOutputs = colony.steps[colony.markerPosition]?.outputs ?? [];
                 const warning = getStorageWarning(tradeOutputs, playedCards, corporation);

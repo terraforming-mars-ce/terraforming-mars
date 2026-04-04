@@ -84,7 +84,7 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 	for i, p := range allPlayers {
 		breakdown := gamecards.CalculatePlayerVP(
 			p,
-			g.Board(),
+			g,
 			claimedMilestones,
 			fundedAwards,
 			allPlayers,

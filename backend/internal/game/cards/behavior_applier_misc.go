@@ -11,7 +11,7 @@ import (
 
 func (a *BehaviorApplier) applyColonyOutput(ctx context.Context, o *shared.ColonyCondition, amount int, log *zap.Logger) error {
 	switch o.ResourceType {
-	case shared.ResourceColonyTile:
+	case shared.ResourceColony:
 		if a.game == nil || a.player == nil {
 			return fmt.Errorf("cannot apply colony tile: missing game or player context")
 		}
@@ -19,7 +19,7 @@ func (a *BehaviorApplier) applyColonyOutput(ctx context.Context, o *shared.Colon
 			log.Warn("Colony tile output ignored: colonies expansion not enabled")
 			return nil
 		}
-		colonyIDs := a.game.GetPlaceableColonyIDs(a.player.ID(), o.AllowDuplicatePlayerColony)
+		colonyIDs := a.game.Colonies().GetPlaceableIDs(a.player.ID(), o.AllowDuplicatePlayerColony)
 		if len(colonyIDs) == 0 {
 			log.Warn("No colony tiles available for placement")
 			return nil
@@ -98,11 +98,11 @@ func (a *BehaviorApplier) applyMiscOutput(ctx context.Context, o *shared.MiscCon
 			log.Warn("Free trade output ignored: colonies expansion not enabled")
 			return nil
 		}
-		if !a.game.GetTradeFleetAvailable(a.player.ID()) {
+		if !a.game.Colonies().GetTradeFleetAvailable(a.player.ID()) {
 			log.Warn("Free trade output ignored: no trade fleet available")
 			return nil
 		}
-		tradeableColonyIDs := a.game.GetTradeableColonyIDs()
+		tradeableColonyIDs := a.game.Colonies().GetTradeableIDs()
 		if len(tradeableColonyIDs) == 0 {
 			log.Warn("Free trade output ignored: no colonies available for trading")
 			return nil

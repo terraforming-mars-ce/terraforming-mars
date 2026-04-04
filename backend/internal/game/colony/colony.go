@@ -2,8 +2,8 @@ package colony
 
 import "terraforming-mars-backend/internal/game/shared"
 
-// ColonyTileDefinition is the static template loaded from JSON
-type ColonyTileDefinition struct {
+// ColonyDefinition is the static template loaded from JSON.
+type ColonyDefinition struct {
 	ID          string       `json:"id"`
 	Name        string       `json:"name"`
 	Location    string       `json:"location"`
@@ -29,8 +29,8 @@ type ColonySlot struct {
 	Reward []Output `json:"reward"`
 }
 
-// TileState is the runtime mutable state per colony tile in a game
-type TileState struct {
+// ColonyState is the runtime mutable state per colony in a game.
+type ColonyState struct {
 	DefinitionID   string
 	MarkerPosition int
 	PlayerColonies []string // PlayerIDs with colonies (max len(Colonies) from definition)

@@ -17,6 +17,7 @@ type mockVPRecalculationContext struct {
 	tileCounts           map[shared.ResourceType]int
 	playerTileCounts     map[string]map[shared.ResourceType]int
 	adjacentTilesForCard map[string]map[shared.ResourceType]int
+	colonyCount          int
 }
 
 func newMockVPRecalculationContext() *mockVPRecalculationContext {
@@ -59,6 +60,10 @@ func (m *mockVPRecalculationContext) CountAdjacentTilesForCard(cardID string, ti
 		return cardTiles[tileType]
 	}
 	return 0
+}
+
+func (m *mockVPRecalculationContext) CountAllColonies() int {
+	return m.colonyCount
 }
 
 func (m *mockVPRecalculationContext) setCardStorage(playerID string, cardID string, count int) {
@@ -223,6 +228,7 @@ func TestPerTileVPConditions(t *testing.T) {
 		perAmount  int
 		tileCount  int
 		expectedVP int
+		isColony   bool
 	}{
 		{
 			name:       "Immigration Shuttles: 1 VP per 3 city tiles, 6 cities = 2 VP",
@@ -235,14 +241,15 @@ func TestPerTileVPConditions(t *testing.T) {
 			expectedVP: 2,
 		},
 		{
-			name:       "Space Port Colony: 1 VP per 2 colony tiles, 4 colonies = 2 VP",
+			name:       "Space Port Colony: 1 VP per 2 colonies, 4 colonies = 2 VP",
 			cardID:     testutil.CardID("Space Port Colony"),
 			cardName:   "Space Port Colony",
-			tileType:   shared.ResourceColonyTile,
+			tileType:   shared.ResourceColony,
 			vpAmount:   1,
 			perAmount:  2,
 			tileCount:  4,
 			expectedVP: 2,
+			isColony:   true,
 		},
 	}
 
@@ -271,7 +278,11 @@ func TestPerTileVPConditions(t *testing.T) {
 			p.VPGranters().Add(granter)
 
 			ctx := newMockVPRecalculationContext()
-			ctx.tileCounts[tt.tileType] = tt.tileCount
+			if tt.isColony {
+				ctx.colonyCount = tt.tileCount
+			} else {
+				ctx.tileCounts[tt.tileType] = tt.tileCount
+			}
 			p.VPGranters().RecalculateAll(ctx)
 
 			granters := p.VPGranters().GetAll()

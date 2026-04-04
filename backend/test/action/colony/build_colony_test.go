@@ -15,7 +15,7 @@ func TestBuildColony_DeductsCredits(t *testing.T) {
 	stateRepo := game.NewInMemoryGameStateRepository()
 	logger := testutil.TestLogger()
 
-	setupColonyTile(testGame, "luna", 1, nil)
+	setupColony(testGame, "luna", 1, nil)
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 50)
@@ -34,7 +34,7 @@ func TestBuildColony_GivesPlacementReward(t *testing.T) {
 	logger := testutil.TestLogger()
 
 	// Luna first colony reward is 2 credits
-	setupColonyTile(testGame, "luna", 1, nil)
+	setupColony(testGame, "luna", 1, nil)
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 50)
@@ -58,7 +58,7 @@ func TestBuildColony_CardTargetedReward_CreatesPendingSelection(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	// Titan first colony reward is 3 floaters
-	setupColonyTile(testGame, "titan", 1, nil)
+	setupColony(testGame, "titan", 1, nil)
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 50)
@@ -85,7 +85,7 @@ func TestBuildColony_FullColony_Fails(t *testing.T) {
 	logger := testutil.TestLogger()
 
 	// Luna has 3 slots, all taken
-	setupColonyTile(testGame, "luna", 3, []string{"other-1", "other-2", "other-3"})
+	setupColony(testGame, "luna", 3, []string{"other-1", "other-2", "other-3"})
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 50)
@@ -102,7 +102,7 @@ func TestBuildColony_DuplicateColony_Fails(t *testing.T) {
 	logger := testutil.TestLogger()
 
 	// Player already has a colony here
-	setupColonyTile(testGame, "luna", 1, []string{playerID})
+	setupColony(testGame, "luna", 1, []string{playerID})
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 50)
@@ -118,7 +118,7 @@ func TestBuildColony_InsufficientCredits_Fails(t *testing.T) {
 	stateRepo := game.NewInMemoryGameStateRepository()
 	logger := testutil.TestLogger()
 
-	setupColonyTile(testGame, "luna", 1, nil)
+	setupColony(testGame, "luna", 1, nil)
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 10)
@@ -135,7 +135,7 @@ func TestBuildColony_OceanPlacementReward_CreatesTileSelection(t *testing.T) {
 	logger := testutil.TestLogger()
 
 	// Europa colony reward is ocean-placement
-	setupColonyTile(testGame, "europa", 1, nil)
+	setupColony(testGame, "europa", 1, nil)
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 50)
@@ -155,7 +155,7 @@ func TestBuildColony_PlacesPlayerOnTile(t *testing.T) {
 	stateRepo := game.NewInMemoryGameStateRepository()
 	logger := testutil.TestLogger()
 
-	setupColonyTile(testGame, "luna", 1, nil)
+	setupColony(testGame, "luna", 1, nil)
 
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 50)
@@ -164,7 +164,7 @@ func TestBuildColony_PlacesPlayerOnTile(t *testing.T) {
 	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
-	tileState := testGame.GetColonyTileState("luna")
+	tileState := testGame.Colonies().GetState("luna")
 	testutil.AssertEqual(t, 1, len(tileState.PlayerColonies), "Should have 1 colony")
 	testutil.AssertEqual(t, playerID, tileState.PlayerColonies[0], "Colony should belong to player")
 }

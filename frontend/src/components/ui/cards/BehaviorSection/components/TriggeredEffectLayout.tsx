@@ -298,7 +298,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
         <div className={`flex items-center justify-center ${redGlowClass}`}>
-          <GameIcon iconType="colony-tile" size="small" />
+          <GameIcon iconType="colony" size="small" />
         </div>
       </div>
     );

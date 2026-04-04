@@ -20,12 +20,12 @@ func TestColony_PlacementCreatesPendingSelection(t *testing.T) {
 	testGame.UpdateSettings(context.Background(), settings)
 
 	// Set up colony tiles on the game
-	testGame.SetColonyTileStates([]*colony.TileState{
+	testGame.Colonies().SetStates([]*colony.ColonyState{
 		{DefinitionID: "luna", MarkerPosition: 1, PlayerColonies: nil},
 		{DefinitionID: "europa", MarkerPosition: 1, PlayerColonies: nil},
 	})
 
-	output := shared.NewColonyCondition(shared.ResourceColonyTile, 1, "none")
+	output := shared.NewColonyCondition(shared.ResourceColony, 1, "none")
 	applyOutputs(t, p, testGame, cardRegistry, output)
 
 	selection := p.Selection().GetPendingColonySelection()
@@ -44,13 +44,13 @@ func TestColony_AllowDuplicatePlayerColony(t *testing.T) {
 	testGame.UpdateSettings(context.Background(), settings)
 
 	// Player already has a colony on luna
-	testGame.SetColonyTileStates([]*colony.TileState{
+	testGame.Colonies().SetStates([]*colony.ColonyState{
 		{DefinitionID: "luna", MarkerPosition: 1, PlayerColonies: []string{playerID}},
 		{DefinitionID: "europa", MarkerPosition: 1, PlayerColonies: nil},
 	})
 
 	output := &shared.ColonyCondition{
-		ConditionBase:              shared.ConditionBase{ResourceType: shared.ResourceColonyTile, Amount: 1, Target: "none"},
+		ConditionBase:              shared.ConditionBase{ResourceType: shared.ResourceColony, Amount: 1, Target: "none"},
 		AllowDuplicatePlayerColony: true,
 	}
 	applyOutputs(t, p, testGame, cardRegistry, output)
@@ -80,12 +80,12 @@ func TestColony_PlacementNoColoniesAvailable(t *testing.T) {
 	testGame.UpdateSettings(context.Background(), settings)
 
 	// Set up all colony tiles as fully colonized (3 colonies each = max)
-	testGame.SetColonyTileStates([]*colony.TileState{
+	testGame.Colonies().SetStates([]*colony.ColonyState{
 		{DefinitionID: "luna", MarkerPosition: 1, PlayerColonies: []string{playerID, otherPlayerID, playerID}},
 		{DefinitionID: "europa", MarkerPosition: 1, PlayerColonies: []string{playerID, otherPlayerID, otherPlayerID}},
 	})
 
-	output := shared.NewColonyCondition(shared.ResourceColonyTile, 1, "none")
+	output := shared.NewColonyCondition(shared.ResourceColony, 1, "none")
 	applyOutputs(t, p, testGame, cardRegistry, output)
 
 	// No colonies available, so no pending selection should be created

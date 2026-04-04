@@ -223,11 +223,11 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 	result.IsLastRound = g.GlobalParameters().IsMaxed()
 
 	if g.HasColonies() && registries.ColonyRegistry != nil {
-		result.ColonyTiles = toColonyTileDtos(g, registries.ColonyRegistry, cardRegistry, playerID)
-		result.TradeFleetAvailable = g.GetTradeFleetAvailable(playerID)
+		result.Colonies = toColonyDtos(g, registries.ColonyRegistry, cardRegistry, playerID)
+		result.TradeFleetAvailable = g.Colonies().GetTradeFleetAvailable(playerID)
 		fleets := make(map[string]bool)
 		for _, p := range players {
-			fleets[p.ID()] = g.GetTradeFleetAvailable(p.ID())
+			fleets[p.ID()] = g.Colonies().GetTradeFleetAvailable(p.ID())
 		}
 		result.TradeFleets = fleets
 	}
@@ -705,8 +705,8 @@ func buildGlobalParameterBonuses(venusEnabled bool) []GlobalParameterBonusDto {
 	return bonuses
 }
 
-func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, cardRegistry cards.CardRegistry, playerID string) []ColonyTileDto {
-	tileStates := g.ColonyTileStates()
+func toColonyDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, cardRegistry cards.CardRegistry, playerID string) []ColonyDto {
+	tileStates := g.Colonies().States()
 	if len(tileStates) == 0 {
 		return nil
 	}
@@ -717,7 +717,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 		tradeStepBonus = colonyAction.CountTradeStepBonus(playerObj, cardRegistry)
 	}
 
-	dtos := make([]ColonyTileDto, 0, len(tileStates))
+	dtos := make([]ColonyDto, 0, len(tileStates))
 	for _, state := range tileStates {
 		def, err := colonyRegistry.GetByID(state.DefinitionID)
 		if err != nil {
@@ -762,7 +762,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 				Message: "This colony has already been traded this generation",
 			})
 		}
-		if !g.GetTradeFleetAvailable(playerID) {
+		if !g.Colonies().GetTradeFleetAvailable(playerID) {
 			tradeAvailable = false
 			tradeErrors = append(tradeErrors, StateErrorDto{
 				Code:    StateErrorCode("fleet-unavailable"),
@@ -810,7 +810,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 			}
 		}
 
-		dtos = append(dtos, ColonyTileDto{
+		dtos = append(dtos, ColonyDto{
 			ID:             def.ID,
 			Name:           def.Name,
 			Location:       def.Location,

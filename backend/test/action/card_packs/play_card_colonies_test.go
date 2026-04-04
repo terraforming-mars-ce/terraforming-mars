@@ -33,14 +33,14 @@ func setupColoniesGame(t *testing.T) (*game.Game, game.GameRepository, colonies.
 	return testGame, repo, colonyRegistry, player1, player2
 }
 
-func addColonyTile(g *game.Game, colonyID string, markerPosition int, playerColonies []string) {
-	states := g.ColonyTileStates()
-	states = append(states, &colony.TileState{
+func addColony(g *game.Game, colonyID string, markerPosition int, playerColonies []string) {
+	states := g.Colonies().States()
+	states = append(states, &colony.ColonyState{
 		DefinitionID:   colonyID,
 		MarkerPosition: markerPosition,
 		PlayerColonies: playerColonies,
 	})
-	g.SetColonyTileStates(states)
+	g.Colonies().SetStates(states)
 }
 
 // =============================================================================
@@ -120,8 +120,8 @@ func TestTitanFloatingLaunchPad_ManualAction_SpendFloaterForFreeTrade(t *testing
 	p.Resources().AddToStorage(card.ID, 2)
 
 	// Set up colony tiles and trade fleet for free trade
-	addColonyTile(testGame, "luna", 3, nil)
-	testGame.SetTradeFleetAvailable(playerID, true)
+	addColony(testGame, "luna", 3, nil)
+	testGame.Colonies().SetTradeFleetAvailable(playerID, true)
 
 	// Register manual action
 	p.Actions().SetActions([]shared.CardAction{
@@ -195,8 +195,8 @@ func TestProductiveOutpost_NoColonies(t *testing.T) {
 	card := testutil.GetCardByName("Productive Outpost")
 
 	// Set up colony tiles but player has no colonies
-	addColonyTile(testGame, "luna", 3, nil)
-	addColonyTile(testGame, "io", 2, nil)
+	addColony(testGame, "luna", 3, nil)
+	addColony(testGame, "io", 2, nil)
 
 	creditsBefore := p.Resources().Get().Credits
 	p.Hand().AddCard(card.ID)
@@ -220,7 +220,7 @@ func TestProductiveOutpost_SingleColony_Luna(t *testing.T) {
 	card := testutil.GetCardByName("Productive Outpost")
 
 	// Player has a colony on Luna (bonus: 2 credits)
-	addColonyTile(testGame, "luna", 3, []string{playerID})
+	addColony(testGame, "luna", 3, []string{playerID})
 
 	testutil.SetPlayerCredits(ctx, p, 0)
 	p.Hand().AddCard(card.ID)
@@ -244,8 +244,8 @@ func TestProductiveOutpost_MultipleColonies(t *testing.T) {
 	card := testutil.GetCardByName("Productive Outpost")
 
 	// Player has colonies on Luna (bonus: 2 credits) and Io (bonus: 2 heat)
-	addColonyTile(testGame, "luna", 3, []string{playerID})
-	addColonyTile(testGame, "io", 2, []string{playerID})
+	addColony(testGame, "luna", 3, []string{playerID})
+	addColony(testGame, "io", 2, []string{playerID})
 
 	testutil.SetPlayerCredits(ctx, p, 0)
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceHeat: 0})
@@ -271,8 +271,8 @@ func TestProductiveOutpost_OnlyOwnColonies(t *testing.T) {
 	card := testutil.GetCardByName("Productive Outpost")
 
 	// Player has colony on Luna, other player has colony on Io
-	addColonyTile(testGame, "luna", 3, []string{playerID})
-	addColonyTile(testGame, "io", 2, []string{otherPlayerID})
+	addColony(testGame, "luna", 3, []string{playerID})
+	addColony(testGame, "io", 2, []string{otherPlayerID})
 
 	testutil.SetPlayerCredits(ctx, p, 0)
 	p.Hand().AddCard(card.ID)
@@ -297,9 +297,9 @@ func TestProductiveOutpost_MultipleColoniesOnDifferentTiles(t *testing.T) {
 	card := testutil.GetCardByName("Productive Outpost")
 
 	// Player has colonies on Luna (2 credits), Ceres (2 steel), and Ganymede (1 plant)
-	addColonyTile(testGame, "luna", 3, []string{playerID})
-	addColonyTile(testGame, "ceres", 2, []string{playerID})
-	addColonyTile(testGame, "ganymede", 1, []string{playerID})
+	addColony(testGame, "luna", 3, []string{playerID})
+	addColony(testGame, "ceres", 2, []string{playerID})
+	addColony(testGame, "ganymede", 1, []string{playerID})
 
 	testutil.SetPlayerCredits(ctx, p, 0)
 	p.Hand().AddCard(card.ID)

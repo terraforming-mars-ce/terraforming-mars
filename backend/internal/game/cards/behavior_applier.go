@@ -15,7 +15,7 @@ import (
 
 // ColonyBonusLookup provides colony definition lookup for colony-bonus output handling.
 type ColonyBonusLookup interface {
-	GetByID(colonyID string) (*colony.ColonyTileDefinition, error)
+	GetByID(colonyID string) (*colony.ColonyDefinition, error)
 }
 
 // BehaviorApplier handles applying card behavior inputs and outputs
@@ -526,7 +526,7 @@ func (a *BehaviorApplier) resolveCardResourceType() string {
 
 func (a *BehaviorApplier) countPerCondition(per *shared.PerCondition) int {
 	if per != nil && per.ResourceType == shared.ResourceColonyCount && a.game != nil {
-		return a.game.CountAllColonies()
+		return a.game.Colonies().CountAllColonies()
 	}
 	var b *board.Board
 	var allPlayers []*player.Player
@@ -816,7 +816,7 @@ func (a *BehaviorApplier) applyOutput(
 // applyColonyBonuses applies all colony bonuses for the player.
 // Card-targeted resources (microbe, animal, floater) are queued for player selection.
 func (a *BehaviorApplier) applyColonyBonuses(_ context.Context, log *zap.Logger) {
-	bonuses := CollectColonyBonuses(a.player.ID(), a.game.ColonyTileStates(), a.colonyBonusLookup)
+	bonuses := CollectColonyBonuses(a.player.ID(), a.game.Colonies().States(), a.colonyBonusLookup)
 
 	pendingByType := map[string]int{}
 	var pendingOrder []string
@@ -858,7 +858,7 @@ func (a *BehaviorApplier) collectColonyBonusOutputs(_ *zap.Logger) []shared.Calc
 		return nil
 	}
 	return ColonyBonusesToCalculatedOutputs(
-		CollectColonyBonuses(a.player.ID(), a.game.ColonyTileStates(), a.colonyBonusLookup),
+		CollectColonyBonuses(a.player.ID(), a.game.Colonies().States(), a.colonyBonusLookup),
 	)
 }
 
@@ -869,7 +869,7 @@ type ColonyBonusEntry struct {
 }
 
 // CollectColonyBonuses iterates colony tile states and returns all bonuses for the given player.
-func CollectColonyBonuses(playerID string, tileStates []*colony.TileState, lookup ColonyBonusLookup) []ColonyBonusEntry {
+func CollectColonyBonuses(playerID string, tileStates []*colony.ColonyState, lookup ColonyBonusLookup) []ColonyBonusEntry {
 	if lookup == nil {
 		return nil
 	}

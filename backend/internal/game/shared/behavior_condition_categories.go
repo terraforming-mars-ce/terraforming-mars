@@ -195,7 +195,7 @@ func (c *EffectCondition) deepCopyCondition() BehaviorCondition {
 	return &cp
 }
 
-// ColonyCondition covers colony-tile, colony-count, colony-bonus, colony-track-step.
+// ColonyCondition covers colony, colony-count, colony-bonus, colony-track-step.
 type ColonyCondition struct {
 	ConditionBase
 	AllowDuplicatePlayerColony bool `json:"allowDuplicatePlayerColony,omitempty"`
@@ -275,7 +275,7 @@ func classifyResourceType(rt ResourceType) string {
 		ResourceValueModifier, ResourceGlobalParameterLenience, ResourceIgnoreGlobalRequirements,
 		ResourceOceanAdjacencyBonus, ResourceDefense, ResourceActionReuse, ResourceEffect, ResourceTag:
 		return "effect"
-	case ResourceColonyTile, ResourceColonyCount, ResourceColonyBonus, ResourceColonyTrackStep:
+	case ResourceColony, ResourceColonyCount, ResourceColonyBonus, ResourceColonyTrackStep:
 		return "colony"
 	case ResourceTileDestruction, ResourceTileReplacement:
 		return "tile-modification"

@@ -12,7 +12,7 @@ import (
 
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/colony"
+	"terraforming-mars-backend/internal/game/colonies"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/deck"
 	"terraforming-mars-backend/internal/game/global_parameters"
@@ -105,13 +105,8 @@ func (ctx *gameVPRecalculationContext) CountAdjacentTilesForCard(cardID string, 
 		if tiles[i].OccupiedBy == nil {
 			continue
 		}
-		for _, tag := range tiles[i].OccupiedBy.Tags {
-			if tag == sourceTag {
-				sourceTile = &tiles[i]
-				break
-			}
-		}
-		if sourceTile != nil {
+		if slices.Contains(tiles[i].OccupiedBy.Tags, sourceTag) {
+			sourceTile = &tiles[i]
 			break
 		}
 	}
@@ -126,14 +121,15 @@ func (ctx *gameVPRecalculationContext) CountAdjacentTilesForCard(cardID string, 
 		if tile.OccupiedBy == nil || tile.OccupiedBy.Type != tileType {
 			continue
 		}
-		for _, neighbor := range neighbors {
-			if tile.Coordinates == neighbor {
-				count++
-				break
-			}
+		if slices.Contains(neighbors, tile.Coordinates) {
+			count++
 		}
 	}
 	return count
+}
+
+func (ctx *gameVPRecalculationContext) CountAllColonies() int {
+	return ctx.game.Colonies().CountAllColonies()
 }
 
 type Game struct {
@@ -143,6 +139,7 @@ type Game struct {
 	globalParameters *global_parameters.GlobalParameters
 	currentTurn      *Turn
 	board            *board.Board
+	colonies         *colonies.Colonies
 	deck             *deck.Deck
 	players          map[string]*player.Player
 	eventBus         *events.EventBusImpl
@@ -238,6 +235,7 @@ func NewGame(
 		id:               id,
 		globalParameters: global_parameters.NewGlobalParameters(ds, id, eventBus),
 		board:            board.NewBoardWithTiles(&state.Tiles, id, board.GenerateMarsBoard(settings.VenusNextEnabled), eventBus),
+		colonies:         colonies.NewColonies(ds, id, eventBus),
 		players:          make(map[string]*player.Player),
 		eventBus:         eventBus,
 		milestones:       NewMilestones(ds, id, eventBus),
@@ -345,6 +343,10 @@ func (g *Game) GlobalParameters() *global_parameters.GlobalParameters {
 
 func (g *Game) Board() *board.Board {
 	return g.board
+}
+
+func (g *Game) Colonies() *colonies.Colonies {
+	return g.colonies
 }
 
 func (g *Game) Deck() *deck.Deck {
@@ -631,14 +633,7 @@ func (g *Game) NextSpectatorColor() string {
 // IsPlayerColorAvailable returns true if the given color is in the palette and
 // not taken by another player (excluding the specified player).
 func (g *Game) IsPlayerColorAvailable(color string, excludePlayerID string) bool {
-	validColor := false
-	for _, c := range shared.PlayerColors {
-		if c == color {
-			validColor = true
-			break
-		}
-	}
-	if !validColor {
+	if !slices.Contains(shared.PlayerColors, color) {
 		return false
 	}
 
@@ -1324,14 +1319,9 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 
 	// Helper to check if tile has any of the required board tags
 	tileHasRequiredTag := func(tile board.Tile, requiredTags []string) bool {
-		for _, reqTag := range requiredTags {
-			for _, tileTag := range tile.Tags {
-				if tileTag == reqTag {
-					return true
-				}
-			}
-		}
-		return false
+		return slices.ContainsFunc(requiredTags, func(reqTag string) bool {
+			return slices.Contains(tile.Tags, reqTag)
+		})
 	}
 
 	// Helper to check if tile has any tags (is a reserved area)
@@ -1426,10 +1416,8 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 	// Helper to check if a tile has one of the specified bonus types
 	hasBonusOfType := func(tile board.Tile, bonusTypes []string) bool {
 		for _, bonus := range tile.Bonuses {
-			for _, bonusType := range bonusTypes {
-				if string(bonus.Type) == bonusType {
-					return true
-				}
+			if slices.Contains(bonusTypes, string(bonus.Type)) {
+				return true
 			}
 		}
 		return false
@@ -1851,6 +1839,10 @@ func (g *Game) subscribeToVPEvents() {
 		g.recalculateAllPlayersVP()
 	})
 
+	events.Subscribe(g.eventBus, func(e events.ColonyBuiltEvent) {
+		g.recalculateAllPlayersVP()
+	})
+
 }
 
 func (g *Game) subscribeToGenerationalEvents() {
@@ -2163,102 +2155,10 @@ func (g *Game) HasColonies() bool {
 	return g.Settings().HasColonies()
 }
 
-func (g *Game) ColonyTileStates() []*colony.TileState {
-	var result []*colony.TileState
-	g.read(func(s *datastore.GameState) { result = s.ColonyTileStates })
-	return result
-}
-
-// GetAvailableColonyIDs returns the definition IDs of all colony tiles in the game.
-func (g *Game) GetAvailableColonyIDs() []string {
-	tiles := g.ColonyTileStates()
-	ids := make([]string, 0, len(tiles))
-	for _, ts := range tiles {
-		ids = append(ids, ts.DefinitionID)
-	}
-	return ids
-}
-
-// GetPlaceableColonyIDs returns colony IDs where the player can actually place a colony
-// (not full and player doesn't already have a colony there, unless allowDuplicate is true).
-func (g *Game) GetPlaceableColonyIDs(playerID string, allowDuplicate bool) []string {
-	const maxColoniesPerTile = 3
-	tiles := g.ColonyTileStates()
-	ids := make([]string, 0, len(tiles))
-	for _, ts := range tiles {
-		if len(ts.PlayerColonies) >= maxColoniesPerTile {
-			continue
-		}
-		if !allowDuplicate && slices.Contains(ts.PlayerColonies, playerID) {
-			continue
-		}
-		ids = append(ids, ts.DefinitionID)
-	}
-	return ids
-}
-
-// GetTradeableColonyIDs returns colony IDs that haven't been traded this generation.
-func (g *Game) GetTradeableColonyIDs() []string {
-	tiles := g.ColonyTileStates()
-	ids := make([]string, 0, len(tiles))
-	for _, ts := range tiles {
-		if !ts.TradedThisGen {
-			ids = append(ids, ts.DefinitionID)
-		}
-	}
-	return ids
-}
-
-func (g *Game) SetColonyTileStates(states []*colony.TileState) {
-	g.update(func(s *datastore.GameState) {
-		s.ColonyTileStates = states
-		s.UpdatedAt = time.Now()
-	})
-}
-
-func (g *Game) GetColonyTileState(colonyID string) *colony.TileState {
-	var result *colony.TileState
-	g.read(func(s *datastore.GameState) {
-		for _, state := range s.ColonyTileStates {
-			if state.DefinitionID == colonyID {
-				result = state
-				return
-			}
-		}
-	})
-	return result
-}
-
-// CountAllColonies returns the total number of colonies placed across all colony tiles.
+// CountAllColonies delegates to the Colonies component.
+// This allows Game to satisfy the BoardContext interface for VP calculation.
 func (g *Game) CountAllColonies() int {
-	var total int
-	g.read(func(s *datastore.GameState) {
-		for _, state := range s.ColonyTileStates {
-			total += len(state.PlayerColonies)
-		}
-	})
-	return total
-}
-
-func (g *Game) GetTradeFleetAvailable(playerID string) bool {
-	var v bool
-	g.read(func(s *datastore.GameState) {
-		if s.TradeFleets == nil {
-			return
-		}
-		v = s.TradeFleets[playerID]
-	})
-	return v
-}
-
-func (g *Game) SetTradeFleetAvailable(playerID string, available bool) {
-	g.update(func(s *datastore.GameState) {
-		if s.TradeFleets == nil {
-			s.TradeFleets = make(map[string]bool)
-		}
-		s.TradeFleets[playerID] = available
-		s.UpdatedAt = time.Now()
-	})
+	return g.colonies.CountAllColonies()
 }
 
 func (g *Game) InitializeTradeFleets(playerIDs []string) {

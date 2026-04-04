@@ -101,7 +101,7 @@ const effectTypes: Set<string> = new Set([
   "tag",
 ]);
 const colonyTypes: Set<string> = new Set([
-  "colony-tile",
+  "colony",
   "colony-count",
   "colony-bonus",
   "colony-track-step",

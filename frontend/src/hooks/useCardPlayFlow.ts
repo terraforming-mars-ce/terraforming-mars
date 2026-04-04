@@ -400,7 +400,7 @@ export function useCardPlayFlow() {
               store.setActionPendingChoice(null);
               return;
             }
-            const tradeableColonies = (g?.colonyTiles ?? []).filter((c) => !c.tradedThisGen);
+            const tradeableColonies = (g?.colonies ?? []).filter((c) => !c.tradedThisGen);
             if (tradeableColonies.length === 0) {
               store.setPendingFreeTradeWarning("No colonies available for trading");
               store.setShowFreeTradeWarning(true);
