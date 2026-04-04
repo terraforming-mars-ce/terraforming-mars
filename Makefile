@@ -88,14 +88,6 @@ test-coverage:
 	fi
 	@echo "✅ Test coverage completed"
 
-# Quick test commands for development
-test-quick:
-	@echo "⚡ Running quick test suite..."
-	@cd backend && go test ./test/service/... && echo "✅ Service tests passed" || echo "❌ Service tests failed"
-	@cd backend && go test ./test/delivery/websocket/hub_test.go && echo "✅ Hub tests passed" || echo "❌ Hub tests failed"
-	@cd backend && go test ./test/delivery/websocket/message_test.go && echo "✅ Message tests passed" || echo "❌ Message tests failed"
-	@cd backend && go test ./test/delivery/websocket/client_test.go && echo "✅ Client tests passed" || echo "❌ Client tests failed"
-
 # Code quality commands
 lint: lint-backend lint-frontend typecheck
 
@@ -210,4 +202,4 @@ bot-run:
 # Watch for changes (requires entr: apt install entr)
 test-watch:
 	@echo "👀 Watching for Go file changes and running tests..."
-	cd backend && find . -name "*.go" | entr -c make test-quick
+	cd backend && find . -name "*.go" | entr -c make test
