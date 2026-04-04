@@ -5,7 +5,6 @@ import CardsPlayedModal from "../../ui/modals/CardsPlayedModal.tsx";
 import ProductionPhaseModal from "../../ui/modals/ProductionPhaseModal.tsx";
 import PaymentSelectionPopover from "../../ui/popover/PaymentSelectionPopover.tsx";
 import DebugDropdown from "../../ui/debug/DebugDropdown.tsx";
-import DevModeChip from "../../ui/debug/DevModeChip.tsx";
 import PerformanceWindow from "../../ui/debug/PerformanceWindow.tsx";
 import FeedbackWindow from "../../ui/debug/FeedbackWindow.tsx";
 
@@ -582,8 +581,6 @@ export default function GameInterface() {
           phases: vpCounting.phases,
         }}
       >
-        {game?.settings?.developmentMode && <DevModeChip />}
-
         {shouldShowStartingBackdrop && (
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-[backdropFadeIn_0.3s_ease-out]"
