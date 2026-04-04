@@ -140,7 +140,6 @@ air                       # Hot reload with Air
 make test                 # Run all backend tests
 make test-verbose         # Detailed test output
 make test-coverage        # Generate coverage report
-make test-quick           # Fast iteration tests
 
 # From backend/
 go test ./test/...        # All tests

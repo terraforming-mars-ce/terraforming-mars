@@ -23,7 +23,6 @@ make dev-setup   # Set up environment (go mod tidy + bun install)
 make test         # Run all backend tests
 make test-verbose # Verbose test output
 make test-coverage# Generate coverage report
-make test-quick   # Fast test suite for iteration
 ```
 
 ### Code Quality
