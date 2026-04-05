@@ -426,21 +426,18 @@ func countPlayerTilesOnRows(playerID string, b *board.Board, minRow int) int {
 
 func maxSingleProduction(p *player.Player) int {
 	prod := p.Resources().Production()
-	best := prod.Credits
-	if prod.Steel > best {
-		best = prod.Steel
-	}
-	if prod.Titanium > best {
-		best = prod.Titanium
-	}
-	if prod.Plants > best {
-		best = prod.Plants
-	}
-	if prod.Energy > best {
-		best = prod.Energy
-	}
-	if prod.Heat > best {
-		best = prod.Heat
+	best := 0
+	for _, rt := range []shared.ResourceType{
+		shared.ResourceCreditProduction,
+		shared.ResourceSteelProduction,
+		shared.ResourceTitaniumProduction,
+		shared.ResourcePlantProduction,
+		shared.ResourceEnergyProduction,
+		shared.ResourceHeatProduction,
+	} {
+		if v := prod.GetAmount(rt); v > best {
+			best = v
+		}
 	}
 	return best
 }

@@ -57,6 +57,18 @@ const (
 	PackProjectFunding = "project-funding"
 )
 
+// EnabledPacks returns a set of all enabled pack names for filtering.
+func (s GameSettings) EnabledPacks() map[string]bool {
+	packs := make(map[string]bool, len(s.CardPacks)+1)
+	for _, pack := range s.CardPacks {
+		packs[pack] = true
+	}
+	if s.VenusNextEnabled {
+		packs[PackVenus] = true
+	}
+	return packs
+}
+
 // HasPrelude returns true if the prelude card pack is enabled
 func (s GameSettings) HasPrelude() bool {
 	return slices.Contains(s.CardPacks, PackPrelude)

@@ -277,7 +277,7 @@ func (a *StartGameAction) initializeMilestonesAndAwards(g *game.Game, rng *rand.
 }
 
 func (a *StartGameAction) getEligibleMilestoneIDs(settings shared.GameSettings) []string {
-	enabledPacks := buildEnabledPacks(settings)
+	enabledPacks := settings.EnabledPacks()
 	var eligible []string
 	for _, def := range a.milestoneRegistry.GetAll() {
 		if def.Pack != "" && !enabledPacks[def.Pack] {
@@ -289,7 +289,7 @@ func (a *StartGameAction) getEligibleMilestoneIDs(settings shared.GameSettings) 
 }
 
 func (a *StartGameAction) getEligibleAwardIDs(settings shared.GameSettings) []string {
-	enabledPacks := buildEnabledPacks(settings)
+	enabledPacks := settings.EnabledPacks()
 	var eligible []string
 	for _, def := range a.awardRegistry.GetAll() {
 		if def.Pack != "" && !enabledPacks[def.Pack] {
@@ -298,17 +298,6 @@ func (a *StartGameAction) getEligibleAwardIDs(settings shared.GameSettings) []st
 		eligible = append(eligible, def.ID)
 	}
 	return eligible
-}
-
-func buildEnabledPacks(settings shared.GameSettings) map[string]bool {
-	enabledPacks := make(map[string]bool, len(settings.CardPacks))
-	for _, pack := range settings.CardPacks {
-		enabledPacks[pack] = true
-	}
-	if settings.VenusNextEnabled {
-		enabledPacks[shared.PackVenus] = true
-	}
-	return enabledPacks
 }
 
 func (a *StartGameAction) initializeProjectFunding(g *game.Game, log *zap.Logger) {

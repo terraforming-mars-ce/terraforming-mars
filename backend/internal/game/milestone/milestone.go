@@ -17,6 +17,11 @@ type MilestoneDefinition struct {
 	Style       shared.Style         `json:"style"`
 }
 
+const (
+	RequirementKindCountable         = "countable"
+	RequirementKindAllProductionsMin = "all-productions-min"
+)
+
 // MilestoneRequirement is a discriminated union for milestone requirements.
 // The Kind field selects which sub-field is active.
 type MilestoneRequirement struct {
@@ -51,7 +56,7 @@ func (d *MilestoneDefinition) GetRewardVP() int {
 // GetRequired returns the threshold value for the milestone requirement
 func (d *MilestoneDefinition) GetRequired() int {
 	switch d.Requirement.Kind {
-	case "countable":
+	case RequirementKindCountable:
 		if d.Requirement.Countable != nil {
 			if d.Requirement.Countable.Min != nil {
 				return *d.Requirement.Countable.Min
@@ -60,8 +65,7 @@ func (d *MilestoneDefinition) GetRequired() int {
 				return *d.Requirement.Countable.Max
 			}
 		}
-	case "all-productions-min":
-		// Required = 6 (all 6 productions must meet the min)
+	case RequirementKindAllProductionsMin:
 		return 6
 	}
 	return 0

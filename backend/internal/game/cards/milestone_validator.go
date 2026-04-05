@@ -11,12 +11,12 @@ import (
 func CalculateMilestoneProgress(def *milestone.MilestoneDefinition, p *player.Player, b *board.Board, cardRegistry CardRegistryInterface) int {
 	req := def.Requirement
 	switch req.Kind {
-	case "countable":
+	case milestone.RequirementKindCountable:
 		if req.Countable == nil {
 			return 0
 		}
 		return CountPerCondition(&req.Countable.PerCondition, "", p, b, cardRegistry, nil)
-	case "all-productions-min":
+	case milestone.RequirementKindAllProductionsMin:
 		if req.AllProductionsMin == nil {
 			return 0
 		}
@@ -30,7 +30,7 @@ func CalculateMilestoneProgress(def *milestone.MilestoneDefinition, p *player.Pl
 func CanClaimMilestone(def *milestone.MilestoneDefinition, p *player.Player, b *board.Board, cardRegistry CardRegistryInterface) bool {
 	req := def.Requirement
 	switch req.Kind {
-	case "countable":
+	case milestone.RequirementKindCountable:
 		if req.Countable == nil {
 			return false
 		}
@@ -42,7 +42,7 @@ func CanClaimMilestone(def *milestone.MilestoneDefinition, p *player.Player, b *
 			return false
 		}
 		return true
-	case "all-productions-min":
+	case milestone.RequirementKindAllProductionsMin:
 		if req.AllProductionsMin == nil {
 			return false
 		}
