@@ -47,8 +47,11 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 		return err
 	}
 
-	if err := baseaction.ValidateGamePhase(g, shared.GamePhaseAction, log); err != nil {
-		return err
+	phase := g.CurrentPhase()
+	if phase != shared.GamePhaseAction && phase != shared.GamePhaseFinalPhase {
+		log.Error("Game not in valid phase for greenery conversion",
+			zap.String("actual", string(phase)))
+		return fmt.Errorf("game not in action or final phase")
 	}
 
 	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
