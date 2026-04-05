@@ -207,6 +207,21 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
     );
   }
 
+  // Handle tag-played without selectors (any tag): show wild-tag icon
+  const isTagPlayed = trigger.condition?.type === "tag-played";
+  if (isTagPlayed && !hasSelectors) {
+    return (
+      <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
+        <GameIcon iconType="wild-tag" size="small" />
+        {trigger.condition?.unique && (
+          <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+            *
+          </span>
+        )}
+      </div>
+    );
+  }
+
   // Handle selectors first (new system with AND within selector, OR between selectors)
   if (hasSelectors) {
     const target = trigger.condition?.target || "self-player";
@@ -224,6 +239,11 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
             {renderSelector(selector, selectorIndex, triggerIndex, redGlowClass)}
           </React.Fragment>
         ))}
+        {trigger.condition?.unique && (
+          <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+            *
+          </span>
+        )}
       </div>
     );
   }

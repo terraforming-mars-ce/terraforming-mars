@@ -715,34 +715,7 @@ export const corporationLogos: Record<string, React.ReactNode> = {
       </div>
     </div>
   ),
-  "aridor-colony": (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "4px",
-      }}
-    >
-      <div className="aridor">ARIDOR</div>
-      <span
-        style={{
-          background: "#444",
-          color: "#eee",
-          padding: "4px",
-          paddingLeft: "8px",
-          paddingRight: "8px",
-          borderRadius: "20px",
-          fontWeight: "normal",
-          boxShadow: "0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(0, 0, 0, 0.3)",
-          border: "1px solid #eee",
-        }}
-      >
-        COLONY
-      </span>
-    </div>
-  ),
+  aridor: <div className="aridor">ARIDOR</div>,
   arklight: (
     <div
       style={{

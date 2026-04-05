@@ -31,7 +31,7 @@ export const corporationBorderColors: Record<string, string> = {
   vitor: "#ff4500", // orangered
 
   // Colonies corporations
-  "aridor-colony": "#ffcc00", // gold on red
+  aridor: "#cc3333", // red background
   arklight: "#000089", // deep blue
   polyphemos: "#cc3333", // red
   poseidon: "#4169e1", // royal blue
