@@ -42,7 +42,7 @@ func TestConvertHeatAction_Success(t *testing.T) {
 	initialTemp := testGame.GlobalParameters().Temperature()
 
 	// Execute
-	err := convertAction.Execute(context.Background(), testGame.ID(), playerID)
+	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, nil)
 
 	// Assert
 	testutil.AssertNoError(t, err, "Failed to convert heat")
@@ -74,7 +74,7 @@ func TestConvertHeatAction_InsufficientHeat(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	// Execute
-	err := convertAction.Execute(context.Background(), testGame.ID(), playerID)
+	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, nil)
 
 	// Assert
 	testutil.AssertError(t, err, "Should fail with insufficient heat")
@@ -89,7 +89,7 @@ func TestConvertHeatAction_GameNotFound(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	// Execute
-	err := convertAction.Execute(context.Background(), "non-existent", "player-id")
+	err := convertAction.Execute(context.Background(), "non-existent", "player-id", nil)
 
 	// Assert
 	testutil.AssertError(t, err, "Should fail when game not found")
@@ -103,7 +103,7 @@ func TestConvertHeatAction_PlayerNotFound(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	// Execute
-	err := convertAction.Execute(context.Background(), testGame.ID(), "non-existent-player")
+	err := convertAction.Execute(context.Background(), testGame.ID(), "non-existent-player", nil)
 
 	// Assert
 	testutil.AssertError(t, err, "Should fail when player not found")
@@ -126,7 +126,7 @@ func TestConvertHeatAction_TemperatureMaxed(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	// Execute - should fail or not increase temperature
-	err := convertAction.Execute(context.Background(), testGame.ID(), playerID)
+	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, nil)
 
 	if err == nil {
 		// If no error, verify temperature didn't exceed max

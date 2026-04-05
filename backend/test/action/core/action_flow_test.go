@@ -90,7 +90,7 @@ func TestZeroActionsBlocksConvertHeat(t *testing.T) {
 
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
-	err = convertAction.Execute(context.Background(), testGame.ID(), playerID)
+	err = convertAction.Execute(context.Background(), testGame.ID(), playerID, nil)
 	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
 }
 

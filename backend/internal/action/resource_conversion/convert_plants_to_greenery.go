@@ -38,7 +38,7 @@ func NewConvertPlantsToGreeneryAction(
 }
 
 // Execute performs the convert plants to greenery action
-func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID string, playerID string) error {
+func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID string, playerID string, storageSubstitutes map[string]int) error {
 	log := a.InitLogger(gameID, playerID).With(zap.String("action", "convert_plants_to_greenery"))
 	log.Debug("Converting plants to greenery")
 
@@ -83,21 +83,34 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 		zap.Int("discount", plantDiscount),
 		zap.Int("final_cost", requiredPlants))
 
+	storageValue, err := ValidateAndDeductStorageSubstitutes(player, storageSubstitutes, shared.ResourcePlant, log)
+	if err != nil {
+		return fmt.Errorf("storage substitute error: %w", err)
+	}
+
+	remainingCost := requiredPlants - storageValue
+	if remainingCost < 0 {
+		remainingCost = 0
+	}
+
 	resources := player.Resources().Get()
-	if resources.Plants < requiredPlants {
+	if resources.Plants < remainingCost {
 		log.Warn("Player cannot afford plants conversion",
 			zap.Int("required", requiredPlants),
-			zap.Int("available", resources.Plants))
-		return fmt.Errorf("insufficient plants: need %d, have %d", requiredPlants, resources.Plants)
+			zap.Int("storage_value", storageValue),
+			zap.Int("remaining_cost", remainingCost),
+			zap.Int("available_plants", resources.Plants))
+		return fmt.Errorf("insufficient plants: need %d (after %d from storage), have %d", remainingCost, storageValue, resources.Plants)
 	}
 
 	player.Resources().Add(map[shared.ResourceType]int{
-		shared.ResourcePlant: -requiredPlants,
+		shared.ResourcePlant: -remainingCost,
 	})
 
 	resources = player.Resources().Get()
 	log.Debug("Deducted plants",
-		zap.Int("plants_spent", requiredPlants),
+		zap.Int("plants_spent", remainingCost),
+		zap.Int("storage_value", storageValue),
 		zap.Int("remaining_plants", resources.Plants))
 
 	queue := &shared.PendingTileSelectionQueue{
