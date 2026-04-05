@@ -7,8 +7,9 @@ import { GameDto } from "../../../types/generated/api-types.ts";
 import { useMarsRotation } from "../../../contexts/MarsRotationContext.tsx";
 import { useTextures } from "../../../hooks/useTextures.ts";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
+import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext.tsx";
 import { SPHERE_RADIUS } from "./boardConstants.ts";
-import { getMarsOrbitalPosition } from "./solarSystemConfig.ts";
+import { getMarsOrbitalPosition, setOrbitSpeedMultiplier } from "./solarSystemConfig.ts";
 
 interface MarsSphereProps {
   gameState?: GameDto;
@@ -25,12 +26,14 @@ export default function MarsSphere({
 }: MarsSphereProps) {
   const { marsGroupRef } = useMarsRotation();
   const { activePlanet, setActivePlanet } = usePlanetFocus();
+  const { settings: world3DSettings } = useWorld3DSettings();
   const worldCenterRef = useRef(new THREE.Vector3());
   const groupInverseMatrixRef = useRef(new THREE.Matrix4());
 
   const { mars: diffuseMap } = useTextures();
 
   useFrame((state) => {
+    setOrbitSpeedMultiplier(world3DSettings.orbitSpeedMultiplier);
     if (marsGroupRef.current) {
       const pos = getMarsOrbitalPosition(state.clock.elapsedTime);
       marsGroupRef.current.position.set(pos[0], pos[1], pos[2]);

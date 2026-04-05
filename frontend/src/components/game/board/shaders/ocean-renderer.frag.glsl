@@ -2,12 +2,11 @@ precision highp float;
 precision highp sampler2D;
 
 in vec2 vFlatPos;
-in vec4 vWorldPos;
+in vec3 vLocalPos;
 in vec3 vNormal;
 in vec3 vLocalNormal;
 in vec3 vTangent;
 in vec3 vBitangent;
-in vec3 vViewNormal;
 
 out vec4 fragColor;
 
@@ -227,8 +226,8 @@ void main() {
   // --- Lighting ---
   vec3 oceanDiffuseLight = vec3(0.0);
   vec3 oceanSpecularLight = vec3(0.0);
-  vec3 worldToEye = eye - vWorldPos.xyz;
-  vec3 eyeDirection = normalize(worldToEye);
+  vec3 toEye = eye - vLocalPos;
+  vec3 eyeDirection = normalize(toEye);
 
   oceanSunLight(surfaceNormal, eyeDirection, 100.0, 2.0 * sunIntensity, 0.5 * sunIntensity, oceanDiffuseLight, oceanSpecularLight);
 
@@ -266,7 +265,7 @@ void main() {
   vec3 waterCol = deepWaterColor;
   waterCol = mix(waterCol, shallowWaterColor, shallowMask * uShallowStrength);
 
-  float fres = pow(1.0 - clamp(vViewNormal.z, 0.0, 1.0), 3.0);
+  float fres = pow(1.0 - clamp(dot(vLocalNormal, eyeDirection), 0.0, 1.0), 3.0);
   waterCol += fres * 0.06;
 
   waterCol = mix(waterCol, vec3(envBrightness), foamMask * uFoamStrength);

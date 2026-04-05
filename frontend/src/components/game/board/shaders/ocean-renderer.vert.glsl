@@ -6,12 +6,11 @@ uniform float uZOffset;
 uniform float uProjectionScale;
 
 out vec2 vFlatPos;
-out vec4 vWorldPos;
+out vec3 vLocalPos;
 out vec3 vNormal;
 out vec3 vLocalNormal;
 out vec3 vTangent;
 out vec3 vBitangent;
-out vec3 vViewNormal;
 
 void main() {
   vFlatPos = position.xy;
@@ -42,18 +41,17 @@ void main() {
   vec3 localNormal = normalize(localSpherePos);
   vec3 worldNormal = normalize(mat3(modelMatrix) * localNormal);
 
-  vWorldPos = worldPos;
-  vNormal = worldNormal;
+  vLocalPos = localSpherePos;
   vLocalNormal = localNormal;
 
   vec3 localUp = abs(localNormal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
   vec3 localTangent = normalize(cross(localUp, localNormal));
   vec3 localBitangent = cross(localNormal, localTangent);
 
-  vTangent = normalize(mat3(modelMatrix) * localTangent);
-  vBitangent = normalize(mat3(modelMatrix) * localBitangent);
-
-  vViewNormal = normalize(normalMatrix * localNormal);
+  // Pass local-space tangent frame — lighting is done in local space
+  vNormal = localNormal;
+  vTangent = localTangent;
+  vBitangent = localBitangent;
 
   gl_Position = projectionMatrix * viewMatrix * vec4(projectedPos, 1.0);
 }

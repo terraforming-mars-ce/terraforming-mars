@@ -24,6 +24,7 @@ interface OceanRendererProps {
   newOceanKeys: Set<string>;
   hoveredOceanHexKey: string | null;
   sphereCenter: THREE.Vector3;
+  groupInverseMatrix?: THREE.Matrix4;
 }
 
 export default function OceanRenderer({
@@ -31,6 +32,7 @@ export default function OceanRenderer({
   newOceanKeys,
   hoveredOceanHexKey,
   sphereCenter,
+  groupInverseMatrix,
 }: OceanRendererProps) {
   const { camera } = useThree();
   const { settings: world3DSettings } = useWorld3DSettings();
@@ -140,7 +142,8 @@ export default function OceanRenderer({
     const oceanData = oceanDataRef.current;
 
     material.uniforms.time.value = state.clock.elapsedTime * 0.3;
-    material.uniforms.eye.value.copy(camera.position);
+
+    // sunDirection is an artistic parameter — use directly as local-space direction
     material.uniforms.sunDirection.value
       .set(
         world3DSettings.sunDirectionX,
@@ -148,6 +151,13 @@ export default function OceanRenderer({
         world3DSettings.sunDirectionZ,
       )
       .normalize();
+
+    // eye position must be in local space to match local-space normals
+    if (groupInverseMatrix) {
+      material.uniforms.eye.value.copy(camera.position.clone().applyMatrix4(groupInverseMatrix));
+    } else {
+      material.uniforms.eye.value.copy(camera.position);
+    }
     material.uniforms.sunIntensity.value = world3DSettings.sunIntensity;
     material.uniforms.sunColor.value.set(
       world3DSettings.sunColor.r,

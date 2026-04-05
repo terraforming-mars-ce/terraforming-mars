@@ -81,6 +81,35 @@ const World3DSunPage: React.FC = () => {
         />
       </div>
 
+      <div style={{ marginBottom: "16px" }}>
+        <label
+          style={{
+            color: "#3b82f6",
+            fontSize: "11px",
+            fontWeight: "bold",
+            display: "block",
+            textAlign: "left",
+            marginBottom: "8px",
+          }}
+        >
+          Orbit Speed
+        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <input
+            type="range"
+            min="0"
+            max="50"
+            step="0.5"
+            value={settings.orbitSpeedMultiplier}
+            onChange={(e) => updateSettings({ orbitSpeedMultiplier: parseFloat(e.target.value) })}
+            style={{ flex: 1, accentColor: "#3b82f6" }}
+          />
+          <span style={{ color: "#fff", fontSize: "11px", width: "45px", textAlign: "right" }}>
+            {settings.orbitSpeedMultiplier.toFixed(1)}x
+          </span>
+        </div>
+      </div>
+
       <button
         onClick={resetSettings}
         style={{

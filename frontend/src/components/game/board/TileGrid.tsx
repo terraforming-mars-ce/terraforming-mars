@@ -613,6 +613,7 @@ export default function TileGrid({
         newOceanKeys={newOceanKeys}
         hoveredOceanHexKey={hoveredOceanHexKey}
         sphereCenter={sphereCenter}
+        groupInverseMatrix={groupInverseMatrix}
       />
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
