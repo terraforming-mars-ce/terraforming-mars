@@ -5,13 +5,218 @@ import (
 	"testing"
 	"time"
 
+	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/action/admin"
 	"terraforming-mars-backend/internal/action/confirmation"
+	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
 )
+
+// =============================================================================
+// Aridor (CC1, corporation, colonies)
+// "Effect: Increase your M€ production 1 step when you get a new type of tag
+//  in play (event cards do not count). You start with 40 M€."
+// =============================================================================
+
+func newAridorEffect() shared.CardEffect {
+	return shared.CardEffect{
+		CardID:        "CC1",
+		CardName:      "Aridor",
+		BehaviorIndex: 1,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: shared.TriggerTypeAuto,
+					Condition: &shared.ResourceTriggerCondition{
+						Type:   "tag-played",
+						Unique: true,
+					},
+				},
+			},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewProductionCondition(shared.ResourceCreditProduction, 1, "self-player"),
+			},
+		},
+	}
+}
+
+func TestAridor_NewTagTriggersProductionIncrease(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	scienceCard := gamecards.Card{
+		ID:   "test-science",
+		Name: "Test Science Card",
+		Type: gamecards.CardTypeAutomated,
+		Tags: []shared.CardTag{shared.TagScience},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{scienceCard})
+
+	p := testGame.GetAllPlayers()[0]
+	p.SetCorporationID("CC1")
+	testutil.StartTestGame(t, testGame)
+
+	effect := newAridorEffect()
+	p.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, p, effect, logger, cardRegistry)
+
+	productionBefore := p.Resources().Production().Credits
+
+	// Play a card with a new tag type
+	p.PlayedCards().AddCard(scienceCard.ID, scienceCard.Name, string(scienceCard.Type), []string{string(shared.TagScience)})
+
+	time.Sleep(50 * time.Millisecond)
+
+	testutil.AssertEqual(t, productionBefore+1, p.Resources().Production().Credits,
+		"Aridor should gain 1 credit production when a new tag type is played")
+}
+
+func TestAridor_DuplicateTagDoesNotTrigger(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	scienceCard1 := gamecards.Card{
+		ID:   "test-science-1",
+		Name: "Test Science Card 1",
+		Type: gamecards.CardTypeAutomated,
+		Tags: []shared.CardTag{shared.TagScience},
+	}
+	scienceCard2 := gamecards.Card{
+		ID:   "test-science-2",
+		Name: "Test Science Card 2",
+		Type: gamecards.CardTypeAutomated,
+		Tags: []shared.CardTag{shared.TagScience},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{scienceCard1, scienceCard2})
+
+	p := testGame.GetAllPlayers()[0]
+	p.SetCorporationID("CC1")
+	testutil.StartTestGame(t, testGame)
+
+	// Play first science card (no effect yet, just establishing the tag)
+	p.PlayedCards().AddCard(scienceCard1.ID, scienceCard1.Name, string(scienceCard1.Type), []string{string(shared.TagScience)})
+
+	effect := newAridorEffect()
+	p.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, p, effect, logger, cardRegistry)
+
+	productionBefore := p.Resources().Production().Credits
+
+	// Play second science card — tag is not new
+	p.PlayedCards().AddCard(scienceCard2.ID, scienceCard2.Name, string(scienceCard2.Type), []string{string(shared.TagScience)})
+
+	time.Sleep(50 * time.Millisecond)
+
+	testutil.AssertEqual(t, productionBefore, p.Resources().Production().Credits,
+		"Aridor should NOT gain production when duplicate tag type is played")
+}
+
+func TestAridor_MultipleNewTagsOnOneCard(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	multiTagCard := gamecards.Card{
+		ID:   "test-multi-tag",
+		Name: "Test Multi Tag Card",
+		Type: gamecards.CardTypeAutomated,
+		Tags: []shared.CardTag{shared.TagScience, shared.TagSpace},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{multiTagCard})
+
+	p := testGame.GetAllPlayers()[0]
+	p.SetCorporationID("CC1")
+	testutil.StartTestGame(t, testGame)
+
+	effect := newAridorEffect()
+	p.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, p, effect, logger, cardRegistry)
+
+	productionBefore := p.Resources().Production().Credits
+
+	// Play a card with two new tag types
+	p.PlayedCards().AddCard(multiTagCard.ID, multiTagCard.Name, string(multiTagCard.Type),
+		[]string{string(shared.TagScience), string(shared.TagSpace)})
+
+	time.Sleep(50 * time.Millisecond)
+
+	testutil.AssertEqual(t, productionBefore+2, p.Resources().Production().Credits,
+		"Aridor should gain 2 credit production for 2 new tag types on one card")
+}
+
+func TestAridor_EventCardDoesNotTrigger(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	eventCard := gamecards.Card{
+		ID:   "test-event",
+		Name: "Test Event Card",
+		Type: gamecards.CardTypeEvent,
+		Tags: []shared.CardTag{shared.TagScience},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{eventCard})
+
+	p := testGame.GetAllPlayers()[0]
+	p.SetCorporationID("CC1")
+	testutil.StartTestGame(t, testGame)
+
+	effect := newAridorEffect()
+	p.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, p, effect, logger, cardRegistry)
+
+	productionBefore := p.Resources().Production().Credits
+
+	// Play an event card with a new tag — should NOT trigger
+	p.PlayedCards().AddCard(eventCard.ID, eventCard.Name, string(eventCard.Type), []string{string(shared.TagScience)})
+
+	time.Sleep(50 * time.Millisecond)
+
+	testutil.AssertEqual(t, productionBefore, p.Resources().Production().Credits,
+		"Aridor should NOT gain production from event card tags")
+}
+
+func TestAridor_WildTagDoesNotTrigger(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	wildCard := gamecards.Card{
+		ID:   "test-wild",
+		Name: "Test Wild Card",
+		Type: gamecards.CardTypeAutomated,
+		Tags: []shared.CardTag{shared.TagWild},
+	}
+	cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{wildCard})
+
+	p := testGame.GetAllPlayers()[0]
+	p.SetCorporationID("CC1")
+	testutil.StartTestGame(t, testGame)
+
+	effect := newAridorEffect()
+	p.Effects().AddEffect(effect)
+	action.SubscribePassiveEffectToEvents(ctx, testGame, p, effect, logger, cardRegistry)
+
+	productionBefore := p.Resources().Production().Credits
+
+	// Play a card with a wild tag — should NOT trigger
+	p.PlayedCards().AddCard(wildCard.ID, wildCard.Name, string(wildCard.Type), []string{string(shared.TagWild)})
+
+	time.Sleep(50 * time.Millisecond)
+
+	testutil.AssertEqual(t, productionBefore, p.Resources().Production().Credits,
+		"Aridor should NOT gain production from wild tags")
+}
 
 // =============================================================================
 // Polyphemos (CC3, corporation, colonies)
