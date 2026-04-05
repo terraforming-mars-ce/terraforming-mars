@@ -37,6 +37,7 @@ import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 import GameButton from "../../ui/buttons/GameButton.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
+import CardBrowserOverlay from "../../ui/overlay/CardBrowserOverlay.tsx";
 import MainMenuHamburger from "../../ui/buttons/MainMenuHamburger.tsx";
 import SpaceBackground from "../../3d/SpaceBackground.tsx";
 import EndGameBottomBar from "../../ui/endgame/EndGameBottomBar.tsx";
@@ -150,6 +151,7 @@ export default function GameInterface() {
   const showColonyResourceSelection = useUIOverlayStore((s) => s.showColonyResourceSelection);
   const showColonyPlacementSelection = useUIOverlayStore((s) => s.showColonyPlacementSelection);
   const showFreeTradeSelection = useUIOverlayStore((s) => s.showFreeTradeSelection);
+  const showCardBrowser = useUIOverlayStore((s) => s.showCardBrowser);
 
   const showBehaviorChoiceSelection = useCardPlayFlowStore((s) => s.showBehaviorChoiceSelection);
   const cardPendingChoice = useCardPlayFlowStore((s) => s.cardPendingChoice);
@@ -672,6 +674,11 @@ export default function GameInterface() {
           isVisible={showCardsPlayedModal}
           onClose={() => useUIOverlayStore.getState().setShowCardsPlayedModal(false)}
           cards={(spectatePlayer?.playedCards ?? currentPlayer?.playedCards) || []}
+        />
+
+        <CardBrowserOverlay
+          isVisible={showCardBrowser}
+          onClose={() => useUIOverlayStore.getState().setShowCardBrowser(false)}
         />
 
         <ProductionPhaseModal

@@ -10,10 +10,12 @@ import {
   LeaveIcon,
   EndGameIcon,
   BugIcon,
+  CardsIcon,
 } from "./menuIcons.tsx";
 import SoundToggleButton from "./buttons/SoundToggleButton.tsx";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
+import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 
 interface GameHamburgerMenuProps {
   isOpen: boolean;
@@ -104,6 +106,17 @@ const GameHamburgerMenu: React.FC<GameHamburgerMenuProps> = ({
         />
         <MenuPopoverDivider />
         <SoundToggleButton />
+        <MenuPopoverDivider />
+        <MenuPopoverItem
+          icon={<CardsIcon />}
+          label="Cards"
+          onClick={() => {
+            menuItemHover.onClick?.();
+            onClose();
+            useUIOverlayStore.getState().setShowCardBrowser(true);
+          }}
+          onMouseEnter={menuItemHover.onMouseEnter}
+        />
         <MenuPopoverDivider />
         <MenuPopoverItem
           icon={isFullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}
