@@ -12,6 +12,7 @@ import {
 } from "@/types/generated/api-types.ts";
 import DecorBoxTooltip from "../display/DecorBoxTooltip.tsx";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
+import { CARD_TYPE_COLORS } from "@/utils/cardTypeColors.ts";
 
 interface GameCardProps {
   card: CardDto | PlayerCardDto;
@@ -111,13 +112,7 @@ const GameCard: React.FC<GameCardProps> = ({
   const cardImagePath = `/assets/cards/${card.id}.webp`;
 
   // Card type accent colors (used for left stripe and selected checkbox)
-  const accentColors = {
-    automated: "#4caf50",
-    active: "#2196f3",
-    event: "#f44336",
-    corporation: "#ffc107",
-    prelude: "#e91e63",
-  };
+  const accentColors = CARD_TYPE_COLORS;
 
   const titleStyles = {
     automated:

@@ -150,8 +150,10 @@ export default function CelestialBody({ config, gameState, onHexClick }: Celesti
   const hasTiles =
     config.coordOffset.q !== 0 || config.coordOffset.r !== 0 || config.coordOffset.s !== 0;
 
-  const hitSize = config.radius * 4;
-  const hitGeometry = useMemo(() => new THREE.BoxGeometry(hitSize, hitSize, hitSize), [hitSize]);
+  const hitGeometry = useMemo(
+    () => new THREE.SphereGeometry(config.radius * 1.2, 32, 16),
+    [config.radius],
+  );
 
   return (
     <group ref={groupRef}>

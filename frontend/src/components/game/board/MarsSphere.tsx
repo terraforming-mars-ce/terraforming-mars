@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import TileGrid from "./TileGrid.tsx";
 
@@ -27,6 +27,7 @@ export default function MarsSphere({
   const { marsGroupRef } = useMarsRotation();
   const { activePlanet, setActivePlanet } = usePlanetFocus();
   const { settings: world3DSettings } = useWorld3DSettings();
+  const { gl } = useThree();
   const worldCenterRef = useRef(new THREE.Vector3());
   const groupInverseMatrixRef = useRef(new THREE.Matrix4());
 
@@ -72,9 +73,23 @@ export default function MarsSphere({
       <mesh
         geometry={sphereGeometry}
         material={marsMaterial}
+        onPointerEnter={(e) => {
+          if (activePlanet !== "mars") {
+            if (e.intersections[0]?.object !== e.object) {
+              return;
+            }
+            gl.domElement.style.cursor = "pointer";
+          }
+        }}
+        onPointerLeave={() => {
+          if (activePlanet !== "mars") {
+            gl.domElement.style.cursor = "default";
+          }
+        }}
         onClick={(e) => {
           if (activePlanet !== "mars") {
             e.stopPropagation();
+            gl.domElement.style.cursor = "default";
             setActivePlanet("mars");
           }
         }}
