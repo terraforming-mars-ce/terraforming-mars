@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { SkeletonUtils } from "three-stdlib";
 import {
-  addOceanProjection,
+  createOceanRendererMaterial,
   createVolcanoMaterial,
   createNuclearZoneMaterial,
   createWorldTreeMaterial,
@@ -137,16 +137,12 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
 
   const oceanWarmupMaterial = useMemo(() => {
     waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping;
-    const mat = new THREE.MeshStandardMaterial({
-      transparent: true,
-      side: THREE.DoubleSide,
-      premultipliedAlpha: true,
-    });
-    addOceanProjection(mat, waterNormals, sandTexture, new THREE.Vector3(), 0.008, {
-      uSeedOffset: new THREE.Vector2(50, 50),
-    });
-    mat.needsUpdate = true;
-    return mat;
+    const emptyData = new Float32Array(4);
+    const emptyTex = new THREE.DataTexture(emptyData, 1, 1, THREE.RGBAFormat, THREE.FloatType);
+    emptyTex.minFilter = THREE.NearestFilter;
+    emptyTex.magFilter = THREE.NearestFilter;
+    emptyTex.needsUpdate = true;
+    return createOceanRendererMaterial(waterNormals, sandTexture, new THREE.Vector3(), emptyTex);
   }, [waterNormals, sandTexture]);
 
   const oceanGeometry = useMemo(() => new THREE.CircleGeometry(0.3, 32), []);
