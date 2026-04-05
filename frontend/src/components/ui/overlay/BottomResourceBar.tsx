@@ -394,11 +394,26 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const requiredPlants = calculatePlantsForGreenery(displayPlayer?.effects);
   const requiredHeat = calculateHeatForTemperature(displayPlayer?.effects);
 
+  const storageHeatValue =
+    displayPlayer?.storagePaymentSubstitutes
+      ?.filter((sub) => sub.targetResource === "heat")
+      .reduce(
+        (acc, sub) => acc + (displayPlayer.resourceStorage?.[sub.cardId] ?? 0) * sub.conversionRate,
+        0,
+      ) ?? 0;
+  const storagePlantValue =
+    displayPlayer?.storagePaymentSubstitutes
+      ?.filter((sub) => sub.targetResource === "plant")
+      .reduce(
+        (acc, sub) => acc + (displayPlayer.resourceStorage?.[sub.cardId] ?? 0) * sub.conversionRate,
+        0,
+      ) ?? 0;
+
   const canConvertPlants =
-    !isSpectating && (displayPlayer?.resources.plants ?? 0) >= requiredPlants;
+    !isSpectating && (displayPlayer?.resources.plants ?? 0) + storagePlantValue >= requiredPlants;
   const canConvertHeat =
     !isSpectating &&
-    (displayPlayer?.resources.heat ?? 0) >= requiredHeat &&
+    (displayPlayer?.resources.heat ?? 0) + storageHeatValue >= requiredHeat &&
     (gameState?.globalParameters?.temperature ?? -30) < 8;
 
   const handleOpenCardsModal = () => {

@@ -247,15 +247,17 @@ export class WebSocketService {
     return this.send(MessageTypeActionStandardProject, { projectId });
   }
 
-  convertPlantsToGreenery(): string {
+  convertPlantsToGreenery(storageSubstitutes?: Record<string, number>): string {
     return this.send(MessageTypeActionConvertPlantsToGreenery, {
       type: "convert-plants-to-greenery",
+      ...(storageSubstitutes && { storageSubstitutes }),
     });
   }
 
-  convertHeatToTemperature(): string {
+  convertHeatToTemperature(storageSubstitutes?: Record<string, number>): string {
     return this.send(MessageTypeActionConvertHeatToTemperature, {
       type: "convert-heat-to-temperature",
+      ...(storageSubstitutes && { storageSubstitutes }),
     });
   }
 

@@ -13,8 +13,8 @@ export interface WebSocketConnection {
   standardProject(projectId: string): Promise<string>;
 
   // Resource conversion actions
-  convertPlantsToGreenery(): Promise<string>;
-  convertHeatToTemperature(): Promise<string>;
+  convertPlantsToGreenery(storageSubstitutes?: Record<string, number>): Promise<string>;
+  convertHeatToTemperature(storageSubstitutes?: Record<string, number>): Promise<string>;
 
   // Game management actions
   startGame(): Promise<string>;

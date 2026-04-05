@@ -6,6 +6,10 @@ import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import { shouldShowPaymentModal, createDefaultPayment } from "@/utils/paymentUtils.ts";
 import { StandardProject } from "@/types/cards.tsx";
 import {
+  calculateHeatForTemperature,
+  calculatePlantsForGreenery,
+} from "@/utils/resourceConversionUtils.ts";
+import {
   getAllAnyCardStorageSelections,
   needsCardStorageSelection,
   needsTargetPlayerSelection,
@@ -650,7 +654,22 @@ export function useCardPlayFlow() {
   const handlePaymentConfirm = useCallback(
     async (payment: CardPaymentDto) => {
       const store = useCardPlayFlowStore.getState();
-      const { pendingCardPayment } = store;
+      const { pendingCardPayment, pendingGenericPayment } = store;
+
+      if (pendingGenericPayment) {
+        store.setShowPaymentSelection(false);
+        store.setPendingGenericPayment(null);
+        const subs =
+          payment.storageSubstitutes && Object.keys(payment.storageSubstitutes).length > 0
+            ? payment.storageSubstitutes
+            : undefined;
+        if (pendingGenericPayment.baseResource === "heat") {
+          void globalWebSocketManager.convertHeatToTemperature(subs);
+        } else {
+          void globalWebSocketManager.convertPlantsToGreenery(subs);
+        }
+        return;
+      }
 
       if (!pendingCardPayment) {
         return;
@@ -684,6 +703,7 @@ export function useCardPlayFlow() {
     const store = useCardPlayFlowStore.getState();
     store.setShowPaymentSelection(false);
     store.setPendingCardPayment(null);
+    store.setPendingGenericPayment(null);
   }, []);
 
   const handleCardStorageSelect = useCallback(
@@ -1149,10 +1169,53 @@ export function useCardPlayFlow() {
       return;
     }
 
+    const requiredPlants = calculatePlantsForGreenery(cp?.effects);
+    const hasPlantStorageSubs = cp?.storagePaymentSubstitutes?.some(
+      (sub) => sub.targetResource === "plant" && (cp.resourceStorage?.[sub.cardId] ?? 0) > 0,
+    );
+
+    if (hasPlantStorageSubs && cp) {
+      const store = useCardPlayFlowStore.getState();
+      store.setPendingGenericPayment({
+        name: "Convert Plants to Greenery",
+        cost: requiredPlants,
+        substitutes: [],
+        baseResource: "plant",
+        storageSubstitutes: cp.storagePaymentSubstitutes.filter(
+          (sub) => sub.targetResource === "plant",
+        ),
+        resourceStorage: cp.resourceStorage,
+      });
+      store.setShowPaymentSelection(true);
+      return;
+    }
+
     void globalWebSocketManager.convertPlantsToGreenery();
   }, []);
 
   const handleConvertHeatToTemperature = useCallback(() => {
+    const cp = useGameStore.getState().currentPlayer;
+    const requiredHeat = calculateHeatForTemperature(cp?.effects);
+    const hasHeatStorageSubs = cp?.storagePaymentSubstitutes?.some(
+      (sub) => sub.targetResource === "heat" && (cp.resourceStorage?.[sub.cardId] ?? 0) > 0,
+    );
+
+    if (hasHeatStorageSubs && cp) {
+      const store = useCardPlayFlowStore.getState();
+      store.setPendingGenericPayment({
+        name: "Convert Heat to Temperature",
+        cost: requiredHeat,
+        substitutes: [],
+        baseResource: "heat",
+        storageSubstitutes: cp.storagePaymentSubstitutes.filter(
+          (sub) => sub.targetResource === "heat",
+        ),
+        resourceStorage: cp.resourceStorage,
+      });
+      store.setShowPaymentSelection(true);
+      return;
+    }
+
     void globalWebSocketManager.convertHeatToTemperature();
   }, []);
 
