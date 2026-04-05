@@ -424,13 +424,8 @@ func countAdjacentTilesOfTypeForCard(b *board.Board, cardID string, countType sh
 	return count
 }
 
-// isForestTile returns true if the tile type counts as a forest (greenery or world-tree)
-func isForestTile(tileType shared.ResourceType) bool {
-	return tileType == shared.ResourceGreeneryTile || tileType == shared.ResourceWorldTreeTile
-}
-
 // countAdjacentTilesOfType counts unique tiles matching countType that are adjacent
-// to tiles of adjacentToType owned by playerID. Uses isForestTile for greenery matching.
+// to tiles of adjacentToType owned by playerID. Uses shared.IsForestTile for greenery matching.
 func countAdjacentTilesOfType(playerID string, b *board.Board, countType shared.ResourceType, adjacentToType shared.ResourceType) int {
 	tiles := b.Tiles()
 	counted := make(map[shared.HexPosition]bool)
@@ -451,7 +446,7 @@ func countAdjacentTilesOfType(playerID string, b *board.Board, countType shared.
 
 			var matches bool
 			if countType == shared.ResourceGreeneryTile {
-				matches = isForestTile(neighborTile.OccupiedBy.Type)
+				matches = shared.IsForestTile(neighborTile.OccupiedBy.Type)
 			} else {
 				matches = neighborTile.OccupiedBy.Type == countType
 			}
