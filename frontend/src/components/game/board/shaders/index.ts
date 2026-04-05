@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { SPHERE_RADIUS } from "../boardConstants";
-import oceanVertexRaw from "./ocean.vert.glsl?raw";
-import oceanFragmentRaw from "./ocean.frag.glsl?raw";
+import oceanRendererVertexRaw from "./ocean-renderer.vert.glsl?raw";
+import oceanRendererFragmentRaw from "./ocean-renderer.frag.glsl?raw";
 import sphereProjectionVertexRaw from "./sphere-projection.vert.glsl?raw";
 import oceanBorderFragmentRaw from "./ocean-border.frag.glsl?raw";
 import hoverGlowFragmentRaw from "./hover-glow.frag.glsl?raw";
@@ -46,6 +46,8 @@ export const worldTreeFragment = stripVersion(worldTreeFragmentRaw);
 export const moholeVertex = stripVersion(moholeVertexRaw);
 export const moholeFragment = stripVersion(moholeFragmentRaw);
 export const moholeMaskFragment = stripVersion(moholeMaskFragmentRaw);
+export const oceanRendererVertex = stripVersion(oceanRendererVertexRaw);
+export const oceanRendererFragment = stripVersion(oceanRendererFragmentRaw);
 
 export function splitSnippet(raw: string): { header: string; body: string } {
   const marker = "//#pragma body\n";
@@ -54,90 +56,6 @@ export function splitSnippet(raw: string): { header: string; body: string } {
   return {
     header: raw.slice(0, idx).trim(),
     body: raw.slice(idx + marker.length).trim(),
-  };
-}
-
-export { default as oceanVertexSnippet } from "./ocean.vert.glsl?raw";
-export { default as oceanFragmentSnippet } from "./ocean.frag.glsl?raw";
-
-export interface OceanUniformOverrides {
-  uSphereCenter?: THREE.Vector3;
-  uRadius?: number;
-  uAspect?: number;
-  uRotation?: number;
-  uEdgeScale?: number;
-  uSeedOffset?: THREE.Vector2;
-}
-
-export function addOceanProjection(
-  material: THREE.Material,
-  waterNormals: THREE.Texture,
-  sandTexture: THREE.Texture,
-  sphereCenter: THREE.Vector3,
-  zOffset: number,
-  overrides?: OceanUniformOverrides,
-): void {
-  const vertSnippet = splitSnippet(oceanVertexRaw);
-  const fragSnippet = splitSnippet(oceanFragmentRaw);
-
-  material.onBeforeCompile = (shader) => {
-    (material as any).__shader = shader;
-
-    // Vertex uniforms
-    shader.uniforms.uSphereRadius = { value: SPHERE_RADIUS };
-    shader.uniforms.uZOffset = { value: zOffset };
-    shader.uniforms.uSphereCenter = { value: sphereCenter };
-
-    // Fragment uniforms
-    shader.uniforms.time = { value: 0.0 };
-    shader.uniforms.oceanSize = { value: 250.0 };
-    shader.uniforms.oceanAlpha = { value: 1.0 };
-    shader.uniforms.rf0 = { value: 0.1 };
-    shader.uniforms.sunIntensity = { value: 1.0 };
-    shader.uniforms.normalSampler = { value: waterNormals };
-    shader.uniforms.sunColor = { value: new THREE.Vector3(1.0, 1.0, 1.0) };
-    shader.uniforms.sunDirection = { value: new THREE.Vector3(0.9, 0.0, 0.8).normalize() };
-    shader.uniforms.eye = { value: new THREE.Vector3() };
-    shader.uniforms.waterColor = { value: new THREE.Vector3(0.01, 0.03, 0.03) };
-    shader.uniforms.uRadius = { value: overrides?.uRadius ?? 0.5 };
-    shader.uniforms.uAspect = { value: overrides?.uAspect ?? 1.0 };
-    shader.uniforms.uRotation = { value: overrides?.uRotation ?? 0 };
-    shader.uniforms.uEdgeBand = { value: 0.08 };
-    shader.uniforms.uEdgeStrength = { value: 0.11 };
-    shader.uniforms.uEdgeScale = { value: overrides?.uEdgeScale ?? 3.5 };
-    shader.uniforms.uWarpScale = { value: 2.0 };
-    shader.uniforms.uWarpAmount = { value: 0.07 };
-    shader.uniforms.uSandWidth = { value: 0.8 };
-    shader.uniforms.uGrainScale = { value: 18.0 };
-    shader.uniforms.sandSampler = { value: sandTexture };
-    shader.uniforms.uSandTexScale = { value: 3.0 };
-    shader.uniforms.uShallowWidth = { value: 0.22 };
-    shader.uniforms.uShallowStrength = { value: 0.55 };
-    shader.uniforms.uEdgeSoftness = { value: 0.03 };
-    shader.uniforms.uSeedOffset = { value: overrides?.uSeedOffset ?? new THREE.Vector2(0, 0) };
-    shader.uniforms.uFoamWidth = { value: 0.08 };
-    shader.uniforms.uFoamStrength = { value: 0.7 };
-    shader.uniforms.uFoamScale = { value: 8.0 };
-    shader.uniforms.uFoamSpeed = { value: 0.08 };
-    shader.uniforms.uFoamCutoff = { value: 0.52 };
-    shader.uniforms.uFoamPulseSpeed = { value: 0.9 };
-    shader.uniforms.uFoamPulseAmount = { value: 0.5 };
-
-    // Vertex: inject sphere projection
-    shader.vertexShader =
-      vertSnippet.header +
-      "\n" +
-      shader.vertexShader.replace("#include <begin_vertex>", vertSnippet.body).replace(
-        "#include <project_vertex>",
-        `vec4 mvPosition = viewMatrix * vec4(projectedPos, 1.0);
-           gl_Position = projectionMatrix * mvPosition;`,
-      );
-
-    // Fragment: inject ocean color computation
-    shader.fragmentShader =
-      fragSnippet.header +
-      "\n" +
-      shader.fragmentShader.replace("#include <opaque_fragment>", fragSnippet.body);
   };
 }
 
@@ -283,4 +201,68 @@ export function createMoholeMaskMaterial(
   mat.stencilZFail = THREE.KeepStencilOp;
 
   return mat;
+}
+
+export function createOceanRendererMaterial(
+  waterNormals: THREE.Texture,
+  sandTexture: THREE.Texture,
+  sphereCenter: THREE.Vector3,
+  oceanDataTexture: THREE.DataTexture,
+): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    vertexShader: oceanRendererVertex,
+    fragmentShader: oceanRendererFragment,
+    uniforms: {
+      uSphereRadius: { value: SPHERE_RADIUS },
+      uSphereCenter: { value: sphereCenter.clone() },
+      uZOffset: { value: 0.008 },
+      uProjectionScale: { value: 0.4 },
+
+      uOceanData: { value: oceanDataTexture },
+      uPointCount: { value: 0 },
+      uEdgeCount: { value: 0 },
+      uCapsuleRadius: { value: 0.17 },
+
+      time: { value: 0.0 },
+      oceanSize: { value: 600.0 },
+      rf0: { value: 0.1 },
+      sunIntensity: { value: 1.0 },
+      normalSampler: { value: waterNormals },
+      sunColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) },
+      sunDirection: { value: new THREE.Vector3(0.9, 0.0, 0.8).normalize() },
+      eye: { value: new THREE.Vector3() },
+      waterColor: { value: new THREE.Vector3(0.01, 0.03, 0.03) },
+
+      uEdgeBand: { value: 0.04 },
+      uEdgeStrength: { value: 0.015 },
+      uEdgeScale: { value: 20.0 },
+      uWarpScale: { value: 4.0 },
+      uWarpAmount: { value: 0.042 },
+
+      uSandWidth: { value: 0.04 },
+      uGrainScale: { value: 60.0 },
+      sandSampler: { value: sandTexture },
+      uSandTexScale: { value: 10.0 },
+
+      uShallowWidth: { value: 0.03 },
+      uShallowStrength: { value: 0.55 },
+
+      uEdgeSoftness: { value: 0.008 },
+
+      uFoamWidth: { value: 0.015 },
+      uFoamStrength: { value: 0.7 },
+      uFoamScale: { value: 25.0 },
+      uFoamSpeed: { value: 0.08 },
+      uFoamCutoff: { value: 0.52 },
+      uFoamPulseSpeed: { value: 0.9 },
+      uFoamPulseAmount: { value: 0.5 },
+
+      uHoverCenter: { value: new THREE.Vector2(0, 0) },
+      uHoverActive: { value: 0.0 },
+    },
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
 }

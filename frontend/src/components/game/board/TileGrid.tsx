@@ -7,6 +7,7 @@ import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import { useSoundEffects } from "../../../hooks/useSoundEffects";
 import { useHoverSound } from "../../../hooks/useHoverSound";
 import GreeneryRenderer from "./GreeneryRenderer";
+import OceanRenderer from "./OceanRenderer";
 import PrimitiveRenderer from "./PrimitiveManager";
 import BirdRenderer from "./BirdRenderer";
 import SpaceshipRenderer from "./SpaceshipRenderer";
@@ -385,6 +386,43 @@ export default function TileGrid({
       }));
   }, [projectedHexGrid]);
 
+  // Collect ocean tiles for the OceanRenderer
+  const oceanTiles = useMemo(() => {
+    return projectedHexGrid
+      .filter((tile) => {
+        const tileData = getTileData(tile);
+        return tileData.type === "ocean";
+      })
+      .map((tile) => ({
+        coordinate: tile.coordinate,
+      }));
+  }, [projectedHexGrid]);
+
+  // Detect newly placed ocean tiles
+  const knownOceanRef = useRef<Set<string>>(new Set());
+  const oceanInitializedRef = useRef(false);
+  const newOceanKeys = useMemo(() => {
+    const currentKeys = new Set<string>();
+    for (const tile of oceanTiles) {
+      currentKeys.add(`${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`);
+    }
+
+    if (!oceanInitializedRef.current) {
+      knownOceanRef.current = currentKeys;
+      oceanInitializedRef.current = true;
+      return new Set<string>();
+    }
+
+    const added = new Set<string>();
+    for (const key of currentKeys) {
+      if (!knownOceanRef.current.has(key)) {
+        added.add(key);
+      }
+    }
+    knownOceanRef.current = currentKeys;
+    return added;
+  }, [oceanTiles]);
+
   // Detect newly placed greenery tiles
   const knownGreeneryRef = useRef<Set<string>>(new Set());
   const greeneryInitializedRef = useRef(false);
@@ -522,6 +560,16 @@ export default function TileGrid({
     [findNearestHex, availableHexes, onHexClick, hoverSound],
   );
 
+  const oceanKeySet = useMemo(() => {
+    const set = new Set<string>();
+    for (const tile of oceanTiles) {
+      set.add(HexGrid2D.coordinateToKey(tile.coordinate));
+    }
+    return set;
+  }, [oceanTiles]);
+
+  const hoveredOceanHexKey = hoveredHexKey && oceanKeySet.has(hoveredHexKey) ? hoveredHexKey : null;
+
   return (
     <>
       {/* Single invisible sphere for all pointer interaction */}
@@ -559,6 +607,14 @@ export default function TileGrid({
           groupInverseMatrix={groupInverseMatrix}
         />
       )}
+      {/* Single OceanRenderer handles ALL ocean tile water rendering */}
+      <OceanRenderer
+        oceanTiles={oceanTiles}
+        newOceanKeys={newOceanKeys}
+        hoveredOceanHexKey={hoveredOceanHexKey}
+        sphereCenter={sphereCenter}
+        groupInverseMatrix={groupInverseMatrix}
+      />
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
         const tileData = getTileData(tile);

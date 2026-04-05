@@ -8,9 +8,9 @@ React Three Fiber components that render the hexagonal game board on a 3D Mars s
 MarsSphere          -> Textured sphere + rotation context
 +-- TileGrid        -> Generates projected hex positions, detects new tiles
 |   +-- Tile        -> Base hex tile (chrome border, hover, highlights, VP text)
-|   |   +-- OceanTile     -> Water shader + sand border for ocean spaces
 |   |   +-- BuildingTile  -> City model (city.glb) with rise emergence
 |   |   +-- VolcanoTile   -> Procedural volcano (custom GLSL shaders + smoke)
+|   +-- OceanRenderer     -> Single-pass merged ocean rendering (capsule SDF, DataTexture)
 |   +-- GreeneryRenderer  -> InstancedMesh vegetation (trees, bushes, clover, rocks)
 +-- GpuWarmup       -> Invisible warmup meshes to prevent first-render stalls
 ```
@@ -20,7 +20,7 @@ MarsSphere          -> Textured sphere + rotation context
 Each hex can be one of: `empty`, `ocean`, `greenery`, `city`, `special`, `volcano`.
 
 - **Tile** (`Tile.tsx`) — Base component for every hex. Renders the chrome border, hover/available glow, owner color, VP text. Delegates to child components based on type.
-- **OceanTile** — Custom GLSL water shader with animated normals, sand border, foam. Child of Tile.
+- **OceanRenderer** (`OceanRenderer.tsx`) — Single-pass ocean renderer that merges adjacent ocean tiles into unified water bodies. Uses a capsule SDF (point + line segment union) computed from a DataTexture (`oceanDataTexture.ts`) encoding ocean centers and edges between adjacent oceans. Custom GLSL shaders (`ocean-renderer.vert.glsl`, `ocean-renderer.frag.glsl`) with GLSL 300 es. Animated normals, sand border, foam, shallow water, fresnel. Hover glow integrated. Sibling of Tile in TileGrid (not a child).
 - **BuildingTile** — Loads `city.glb` model, rise-from-ground animation with shake.
 - **VolcanoTile** — Procedural volcano cone with crater, lava flows, and smoke particles. Uses custom vertex/fragment shaders (`volcano.vert.glsl`, `volcano.frag.glsl`). Height field is generated on both GPU (shaders) and CPU (flow map computation in `volcanoFlowMap.ts`). Smoke effect in `effects/VolcanoSmoke.tsx`.
 - **GreeneryRenderer** — Handles ALL vegetation (trees, bushes, clover, rocks) for both greenery tiles AND volcano tiles using InstancedMesh.
@@ -97,7 +97,7 @@ No direct `useGLTF`, `useTexture`, or `useLoader(TextureLoader)` calls in board 
 
 All GLSL shaders live in `.glsl` files imported via Vite `?raw`. The `shaders/index.ts` barrel exports all shaders plus a `splitSnippet()` utility for `onBeforeCompile` snippets (header/body separated by `//#pragma body`).
 
-- **Complete shaders**: ocean water (vert+frag), sphere projection (shared vert), ocean border, hover/available/endgame glow, tile border (vert+frag), volcano (vert+frag)
+- **Complete shaders**: ocean-renderer (vert+frag, GLSL 300 es), sphere projection (shared vert), ocean border, hover/available/endgame glow, tile border (vert+frag), volcano (vert+frag)
 - **onBeforeCompile snippets**: tile surface projection, greenery ground (vert+frag with hex SDF soft edges)
 - Z-offsets use `uZOffset` uniform (not baked into shader strings)
 
@@ -106,7 +106,7 @@ All GLSL shaders live in `.glsl` files imported via Vite `?raw`. The `shaders/in
 - **DustEffect** — Smoke particle cloud using billboard planes with a smoke texture. Used by BuildingTile for city placement.
 - **VolcanoSmoke** — Sprite-based smoke particles emitted from crater. Uses `renderOrder = 100` to render above tile geometry.
 
-Ocean emergence animation lives directly in OceanTile's useFrame (animates `uRadius`, `alpha`, and `uSandWidth` uniforms).
+Ocean emergence animation lives in OceanRenderer's useFrame (animates per-point emergence in the DataTexture).
 
 ## External Exports
 

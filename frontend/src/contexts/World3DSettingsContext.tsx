@@ -18,6 +18,7 @@ export interface World3DSettings {
   sunColor: { r: number; g: number; b: number };
   waterColor: { r: number; g: number; b: number };
   reflectance: number;
+  orbitSpeedMultiplier: number;
   freeCameraEnabled: boolean;
   showCameraFrustum: boolean;
   skyboxId: SkyboxId;
@@ -47,6 +48,7 @@ const defaultSettings: World3DSettings = {
   sunColor: { r: 1.0, g: 0.86, b: 0.72 },
   waterColor: { r: 0.05, g: 0.09, b: 0.1 },
   reflectance: 0.1,
+  orbitSpeedMultiplier: 1.0,
   freeCameraEnabled: false,
   showCameraFrustum: false,
   skyboxId: "starmap-2020-8k" as SkyboxId,

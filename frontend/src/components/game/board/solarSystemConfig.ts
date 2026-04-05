@@ -38,7 +38,7 @@ export function getPlanetOrbitalAngle(
   config: { orbitAngle: number; orbitPeriod: number },
   elapsedTime: number,
 ): number {
-  return config.orbitAngle + (elapsedTime / config.orbitPeriod) * 360;
+  return config.orbitAngle + ((elapsedTime * orbitSpeedMultiplier) / config.orbitPeriod) * 360;
 }
 
 export function getPlanetOrbitalPosition(
@@ -187,8 +187,13 @@ export const MARS_ORBIT_RADIUS = 250;
 export const MARS_ORBIT_ANGLE = 270;
 export const MARS_ORBIT_PERIOD = 960;
 
+let orbitSpeedMultiplier = 1.0;
+export function setOrbitSpeedMultiplier(value: number) {
+  orbitSpeedMultiplier = value;
+}
+
 export function getMarsOrbitalAngle(elapsedTime: number): number {
-  return MARS_ORBIT_ANGLE + (elapsedTime / MARS_ORBIT_PERIOD) * 360;
+  return MARS_ORBIT_ANGLE + ((elapsedTime * orbitSpeedMultiplier) / MARS_ORBIT_PERIOD) * 360;
 }
 
 export function getMarsOrbitalPosition(elapsedTime: number): [number, number, number] {
