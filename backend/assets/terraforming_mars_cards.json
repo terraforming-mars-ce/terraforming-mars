@@ -14669,6 +14669,26 @@
       {
         "triggers": [
           {
+            "type": "auto-corporation-start"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "credit",
+            "amount": 45,
+            "target": "self-player"
+          },
+          {
+            "type": "credit-production",
+            "amount": 2,
+            "target": "self-player"
+          }
+        ],
+        "description": "Gain 45 M€ and increase your M€ production 2 steps"
+      },
+      {
+        "triggers": [
+          {
             "type": "auto-corporation-start",
             "condition": {
               "type": "card-played",
@@ -14696,26 +14716,6 @@
           }
         ],
         "description": "Add 1 animal to this card when you play an animal or plant tag, including this."
-      },
-      {
-        "triggers": [
-          {
-            "type": "auto"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "credit",
-            "amount": 45,
-            "target": "self-player"
-          },
-          {
-            "type": "credit-production",
-            "amount": 2,
-            "target": "self-player"
-          }
-        ],
-        "description": "Gain 45 M€ and increase your M€ production 2 steps"
       }
     ],
     "resourceStorage": {
