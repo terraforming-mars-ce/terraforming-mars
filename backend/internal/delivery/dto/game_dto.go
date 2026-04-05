@@ -594,11 +594,12 @@ type PaymentSubstituteDto struct {
 	ConversionRate int          `json:"conversionRate"`
 }
 
-// StoragePaymentSubstituteDto represents card storage resources that can be used as M€ payment
+// StoragePaymentSubstituteDto represents card storage resources that can be used as payment
 type StoragePaymentSubstituteDto struct {
 	CardID         string        `json:"cardId"`
 	ResourceType   ResourceType  `json:"resourceType"`
 	ConversionRate int           `json:"conversionRate"`
+	TargetResource ResourceType  `json:"targetResource"`
 	Selectors      []SelectorDto `json:"selectors"`
 }
 

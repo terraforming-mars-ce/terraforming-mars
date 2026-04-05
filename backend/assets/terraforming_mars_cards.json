@@ -14892,12 +14892,18 @@
         ],
         "outputs": [
           {
-            "type": "floater",
-            "amount": 1,
-            "target": "self-card"
+            "type": "storage-payment-substitute",
+            "amount": 2,
+            "selectors": [
+              {
+                "resources": [
+                  "heat"
+                ]
+              }
+            ]
           }
         ],
-        "description": "Floaters on this card may be used as 2 heat each"
+        "description": "Floaters on this card may be used as 2 heat each."
       },
       {
         "triggers": [

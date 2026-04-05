@@ -210,24 +210,28 @@ export interface ActionBuildCityRequest {
  */
 export interface ActionConvertPlantsToGreeneryRequest {
   type: ActionType;
+  storageSubstitutes?: { [key: string]: number /* int */ };
 }
 /**
  * ActionConvertHeatToTemperatureRequest contains the action data for converting heat to temperature
  */
 export interface ActionConvertHeatToTemperatureRequest {
   type: ActionType;
+  storageSubstitutes?: { [key: string]: number /* int */ };
 }
 /**
  * ConvertPlantsToGreeneryAction represents converting 8 plants to a greenery tile
  */
 export interface ConvertPlantsToGreeneryAction {
   type: ActionType;
+  storageSubstitutes?: { [key: string]: number /* int */ };
 }
 /**
  * ConvertHeatToTemperatureAction represents converting 8 heat to raise temperature
  */
 export interface ConvertHeatToTemperatureAction {
   type: ActionType;
+  storageSubstitutes?: { [key: string]: number /* int */ };
 }
 /**
  * AdminCommandType represents different types of admin commands
@@ -927,12 +931,13 @@ export interface PaymentSubstituteDto {
   conversionRate: number /* int */;
 }
 /**
- * StoragePaymentSubstituteDto represents card storage resources that can be used as M€ payment
+ * StoragePaymentSubstituteDto represents card storage resources that can be used as payment
  */
 export interface StoragePaymentSubstituteDto {
   cardId: string;
   resourceType: ResourceType;
   conversionRate: number /* int */;
+  targetResource: ResourceType;
   selectors: SelectorDto[];
 }
 /**
