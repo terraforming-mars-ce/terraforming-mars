@@ -29,8 +29,7 @@ func SubscribePassiveEffectToEvents(
 		cr = cardRegistry[0]
 	}
 	for _, trigger := range effect.Behavior.Triggers {
-		// Only handle auto triggers with conditions (passive effects)
-		if trigger.Type != "auto" || trigger.Condition == nil {
+		if trigger.Condition == nil || (trigger.Type != string(gamecards.ResourceTriggerAuto) && trigger.Type != string(gamecards.ResourceTriggerAutoCorporationStart)) {
 			continue
 		}
 
