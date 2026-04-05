@@ -16,6 +16,8 @@ interface CardBrowserProps {
   title?: string;
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
   filterCardIds?: string[];
+  initialSearchQuery?: string;
+  onSearchQueryChange?: (query: string) => void;
 }
 
 const CardBrowser: React.FC<CardBrowserProps> = ({
@@ -24,6 +26,8 @@ const CardBrowser: React.FC<CardBrowserProps> = ({
   title = "Terraforming Mars Cards",
   scrollContainerRef,
   filterCardIds,
+  initialSearchQuery = "",
+  onSearchQueryChange,
 }) => {
   const isOverlay = !!scrollContainerRef;
 
@@ -31,7 +35,7 @@ const CardBrowser: React.FC<CardBrowserProps> = ({
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [isScrolled, setIsScrolled] = useState(false);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 100 });
   const [sortBy, setSortBy] = useState<
@@ -605,7 +609,10 @@ const CardBrowser: React.FC<CardBrowserProps> = ({
                 type="text"
                 placeholder="Search cards (ID, name, tags)..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  onSearchQueryChange?.(e.target.value);
+                }}
                 className="search-input"
               />
             </div>
