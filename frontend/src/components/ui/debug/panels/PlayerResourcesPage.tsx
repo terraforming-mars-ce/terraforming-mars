@@ -207,7 +207,7 @@ const PlayerResourcesPage: React.FC<PlayerResourcesPageProps> = ({
       setProductionForm(empty);
       setTRValue("");
     }
-  }, [playerId]);
+  }, [playerId, gameState]);
 
   const sendCommand = async (commandType: string, payload: any) => {
     const req: AdminCommandRequest = { commandType: commandType as any, payload };
