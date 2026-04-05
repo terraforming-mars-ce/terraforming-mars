@@ -1761,6 +1761,21 @@ func (g *Game) AddTriggeredEffect(effect shared.TriggeredEffect) {
 	})
 }
 
+// AddOrMergeTriggeredEffect adds a triggered effect, merging calculated outputs into the last
+// effect if it has the same CardName, PlayerID, and SourceType.
+func (g *Game) AddOrMergeTriggeredEffect(effect shared.TriggeredEffect) {
+	g.update(func(s *datastore.GameState) {
+		if len(s.TriggeredEffects) > 0 {
+			last := &s.TriggeredEffects[len(s.TriggeredEffects)-1]
+			if last.CardName == effect.CardName && last.PlayerID == effect.PlayerID && last.SourceType == effect.SourceType {
+				last.CalculatedOutputs = append(last.CalculatedOutputs, effect.CalculatedOutputs...)
+				return
+			}
+		}
+		s.TriggeredEffects = append(s.TriggeredEffects, effect)
+	})
+}
+
 func (g *Game) AppendToLastTriggeredEffect(playerID string, outputs []shared.CalculatedOutput) {
 	g.update(func(s *datastore.GameState) {
 		for i := len(s.TriggeredEffects) - 1; i >= 0; i-- {

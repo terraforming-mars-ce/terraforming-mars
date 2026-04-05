@@ -392,6 +392,7 @@ type ResourceTriggerConditionDto struct {
 	RequiredOriginalCost   *MinMaxValueDto                 `json:"requiredOriginalCost,omitempty"`
 	RequiredResourceChange map[ResourceType]MinMaxValueDto `json:"requiredResourceChange,omitempty"`
 	OnBonusType            []string                        `json:"onBonusType,omitempty"`
+	Unique                 bool                            `json:"unique,omitempty"`
 }
 
 // ChoicePolicySelectDto describes an auto-selection rule for a choice policy

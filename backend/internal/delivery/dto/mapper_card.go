@@ -172,6 +172,7 @@ func toResourceTriggerConditionDto(cond shared.ResourceTriggerCondition) Resourc
 		Target:               ptrCast(cond.Target, func(t string) TargetType { return TargetType(t) }),
 		RequiredOriginalCost: ptrCast(cond.RequiredOriginalCost, toMinMaxValueDto),
 		OnBonusType:          cond.OnBonusType,
+		Unique:               cond.Unique,
 	}
 }
 

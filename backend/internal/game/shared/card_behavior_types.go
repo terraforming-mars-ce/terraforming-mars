@@ -41,6 +41,7 @@ type ResourceTriggerCondition struct {
 	Target               *string        `json:"target,omitempty"`
 	RequiredOriginalCost *MinMaxValue   `json:"requiredOriginalCost,omitempty"`
 	OnBonusType          []string       `json:"onBonusType,omitempty"`
+	Unique               bool           `json:"unique,omitempty"`
 }
 
 // TileRestrictions represents restrictions for tile placement
