@@ -66,6 +66,22 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 		return err
 	}
 
+	// Validate award is in the selected set for this game
+	selectedAwards := g.SelectedAwards()
+	if len(selectedAwards) > 0 {
+		found := false
+		for _, id := range selectedAwards {
+			if id == awardType {
+				found = true
+				break
+			}
+		}
+		if !found {
+			log.Warn("Award not available in this game", zap.String("award", awardType))
+			return fmt.Errorf("award %s is not available in this game", awardType)
+		}
+	}
+
 	awardState := g.Awards()
 	at := shared.AwardType(awardType)
 	if awardState.IsFunded(at) {

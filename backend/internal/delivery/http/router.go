@@ -5,8 +5,10 @@ import (
 
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/action/query"
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
+	"terraforming-mars-backend/internal/milestones"
 	"terraforming-mars-backend/internal/service/bugreport"
 
 	"github.com/gorilla/mux"
@@ -24,9 +26,11 @@ func SetupRouter(
 	listCardsAction *query.ListCardsAction,
 	getPlayerAction *query.GetPlayerAction,
 	cardRegistry cards.CardRegistry,
+	milestoneRegistry milestones.MilestoneRegistry,
+	awardRegistry awards.AwardRegistry,
 	bugReportService *bugreport.Service,
 ) *mux.Router {
-	gameHandler := NewGameHandler(createGameAction, createDemoLobbyAction, getGameAction, getGameLogsAction, getGameHistoryAction, listGamesAction, listCardsAction, cardRegistry)
+	gameHandler := NewGameHandler(createGameAction, createDemoLobbyAction, getGameAction, getGameLogsAction, getGameHistoryAction, listGamesAction, listCardsAction, cardRegistry, milestoneRegistry, awardRegistry)
 	playerHandler := NewPlayerHandler(getPlayerAction, getGameAction, cardRegistry)
 	healthHandler := NewHealthHandler()
 	bugReportHandler := NewBugReportHandler(bugReportService)
@@ -54,6 +58,7 @@ func SetupRouter(
 	playerRoutes.HandleFunc("/{playerId}", playerHandler.GetPlayer).Methods(http.MethodGet)
 
 	api.HandleFunc("/cards", gameHandler.ListCards).Methods(http.MethodGet)
+	api.HandleFunc("/milestones-awards", gameHandler.ListMilestonesAndAwards).Methods(http.MethodGet)
 
 	api.HandleFunc("/bugs", bugReportHandler.SubmitBugReport).Methods(http.MethodPost)
 	api.HandleFunc("/bugs/status", bugReportHandler.GetStatus).Methods(http.MethodGet)

@@ -8,12 +8,14 @@ import (
 
 	"go.uber.org/zap"
 
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/colonies"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/colony"
 	playerPkg "terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/projectfunding"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/milestones"
 	pfRegistry "terraforming-mars-backend/internal/projectfunding"
 )
 
@@ -28,6 +30,8 @@ type StartGameAction struct {
 	gameRepo               game.GameRepository
 	colonyRegistry         colonies.ColonyRegistry
 	projectFundingRegistry pfRegistry.ProjectFundingRegistry
+	milestoneRegistry      milestones.MilestoneRegistry
+	awardRegistry          awards.AwardRegistry
 	botStarter             BotStarter
 	logger                 *zap.Logger
 }
@@ -37,6 +41,8 @@ func NewStartGameAction(
 	gameRepo game.GameRepository,
 	colonyRegistry colonies.ColonyRegistry,
 	projectFundingRegistry pfRegistry.ProjectFundingRegistry,
+	milestoneRegistry milestones.MilestoneRegistry,
+	awardRegistry awards.AwardRegistry,
 	botStarter BotStarter,
 	logger *zap.Logger,
 ) *StartGameAction {
@@ -44,6 +50,8 @@ func NewStartGameAction(
 		gameRepo:               gameRepo,
 		colonyRegistry:         colonyRegistry,
 		projectFundingRegistry: projectFundingRegistry,
+		milestoneRegistry:      milestoneRegistry,
+		awardRegistry:          awardRegistry,
 		botStarter:             botStarter,
 		logger:                 logger,
 	}
@@ -107,6 +115,9 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 	if g.Settings().HasProjectFunding() {
 		a.initializeProjectFunding(g, log)
 	}
+
+	// 5d. BUSINESS LOGIC: Select random milestones and awards
+	a.initializeMilestonesAndAwards(g, rng, log)
 
 	// 6. BUSINESS LOGIC: Ensure deck is initialized
 	deck := g.Deck()
@@ -221,6 +232,83 @@ func (a *StartGameAction) initializeColonies(g *game.Game, playerIDs []string, r
 	log.Debug("Colony tiles initialized",
 		zap.Int("colony_count", len(states)),
 		zap.Int("player_count", len(playerIDs)))
+}
+
+const (
+	maxSelectedMilestones = 5
+	maxSelectedAwards     = 5
+)
+
+func (a *StartGameAction) initializeMilestonesAndAwards(g *game.Game, rng *rand.Rand, log *zap.Logger) {
+	settings := g.Settings()
+
+	// Use pre-selected milestones/awards from settings if provided
+	if len(settings.SelectedMilestones) > 0 {
+		g.SetSelectedMilestones(settings.SelectedMilestones)
+		log.Debug("Using pre-selected milestones", zap.Strings("selected", settings.SelectedMilestones))
+	} else if a.milestoneRegistry != nil {
+		eligible := a.getEligibleMilestoneIDs(settings)
+		rng.Shuffle(len(eligible), func(i, j int) {
+			eligible[i], eligible[j] = eligible[j], eligible[i]
+		})
+		count := maxSelectedMilestones
+		if count > len(eligible) {
+			count = len(eligible)
+		}
+		g.SetSelectedMilestones(eligible[:count])
+		log.Debug("Milestones randomly selected", zap.Int("count", count), zap.Strings("selected", eligible[:count]))
+	}
+
+	if len(settings.SelectedAwards) > 0 {
+		g.SetSelectedAwards(settings.SelectedAwards)
+		log.Debug("Using pre-selected awards", zap.Strings("selected", settings.SelectedAwards))
+	} else if a.awardRegistry != nil {
+		eligible := a.getEligibleAwardIDs(settings)
+		rng.Shuffle(len(eligible), func(i, j int) {
+			eligible[i], eligible[j] = eligible[j], eligible[i]
+		})
+		count := maxSelectedAwards
+		if count > len(eligible) {
+			count = len(eligible)
+		}
+		g.SetSelectedAwards(eligible[:count])
+		log.Debug("Awards randomly selected", zap.Int("count", count), zap.Strings("selected", eligible[:count]))
+	}
+}
+
+func (a *StartGameAction) getEligibleMilestoneIDs(settings shared.GameSettings) []string {
+	enabledPacks := buildEnabledPacks(settings)
+	var eligible []string
+	for _, def := range a.milestoneRegistry.GetAll() {
+		if def.Pack != "" && !enabledPacks[def.Pack] {
+			continue
+		}
+		eligible = append(eligible, def.ID)
+	}
+	return eligible
+}
+
+func (a *StartGameAction) getEligibleAwardIDs(settings shared.GameSettings) []string {
+	enabledPacks := buildEnabledPacks(settings)
+	var eligible []string
+	for _, def := range a.awardRegistry.GetAll() {
+		if def.Pack != "" && !enabledPacks[def.Pack] {
+			continue
+		}
+		eligible = append(eligible, def.ID)
+	}
+	return eligible
+}
+
+func buildEnabledPacks(settings shared.GameSettings) map[string]bool {
+	enabledPacks := make(map[string]bool, len(settings.CardPacks))
+	for _, pack := range settings.CardPacks {
+		enabledPacks[pack] = true
+	}
+	if settings.VenusNextEnabled {
+		enabledPacks[shared.PackVenus] = true
+	}
+	return enabledPacks
 }
 
 func (a *StartGameAction) initializeProjectFunding(g *game.Game, log *zap.Logger) {

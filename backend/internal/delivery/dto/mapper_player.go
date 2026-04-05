@@ -5,7 +5,9 @@ import (
 	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/award"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/milestone"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/milestones"
@@ -865,22 +867,41 @@ func mapPlayerMilestones(p *player.Player, g *game.Game, cardRegistry cards.Card
 		return nil
 	}
 	allDefs := milestoneRegistry.GetAll()
-	settings := g.Settings()
-	enabledPacks := make(map[string]bool, len(settings.CardPacks))
-	for _, pack := range settings.CardPacks {
-		enabledPacks[pack] = true
-	}
-	if settings.VenusNextEnabled {
-		enabledPacks[shared.PackVenus] = true
+
+	// Filter by selected milestones if set, otherwise fall back to pack filtering
+	selectedMilestones := g.SelectedMilestones()
+	var filteredDefs []milestone.MilestoneDefinition
+	if len(selectedMilestones) > 0 {
+		selectedSet := make(map[string]bool, len(selectedMilestones))
+		for _, id := range selectedMilestones {
+			selectedSet[id] = true
+		}
+		for _, def := range allDefs {
+			if selectedSet[def.ID] {
+				filteredDefs = append(filteredDefs, def)
+			}
+		}
+	} else {
+		settings := g.Settings()
+		enabledPacks := make(map[string]bool, len(settings.CardPacks))
+		for _, pack := range settings.CardPacks {
+			enabledPacks[pack] = true
+		}
+		if settings.VenusNextEnabled {
+			enabledPacks[shared.PackVenus] = true
+		}
+		for _, def := range allDefs {
+			if def.Pack != "" && !enabledPacks[def.Pack] {
+				continue
+			}
+			filteredDefs = append(filteredDefs, def)
+		}
 	}
 
-	result := make([]PlayerMilestoneDto, 0, len(allDefs))
+	result := make([]PlayerMilestoneDto, 0, len(filteredDefs))
 	gameMilestones := g.Milestones()
 
-	for _, def := range allDefs {
-		if def.Pack != "" && !enabledPacks[def.Pack] {
-			continue
-		}
+	for _, def := range filteredDefs {
 		milestoneType := shared.MilestoneType(def.ID)
 		state := action.CalculateMilestoneState(milestoneType, p, g, cardRegistry, milestoneRegistry)
 
@@ -948,23 +969,42 @@ func mapPlayerAwards(p *player.Player, g *game.Game, awardRegistry awards.AwardR
 		return nil
 	}
 	allDefs := awardRegistry.GetAll()
-	settings := g.Settings()
-	enabledPacks := make(map[string]bool, len(settings.CardPacks))
-	for _, pack := range settings.CardPacks {
-		enabledPacks[pack] = true
-	}
-	if settings.VenusNextEnabled {
-		enabledPacks[shared.PackVenus] = true
+
+	// Filter by selected awards if set, otherwise fall back to pack filtering
+	selectedAwards := g.SelectedAwards()
+	var filteredDefs []award.AwardDefinition
+	if len(selectedAwards) > 0 {
+		selectedSet := make(map[string]bool, len(selectedAwards))
+		for _, id := range selectedAwards {
+			selectedSet[id] = true
+		}
+		for _, def := range allDefs {
+			if selectedSet[def.ID] {
+				filteredDefs = append(filteredDefs, def)
+			}
+		}
+	} else {
+		settings := g.Settings()
+		enabledPacks := make(map[string]bool, len(settings.CardPacks))
+		for _, pack := range settings.CardPacks {
+			enabledPacks[pack] = true
+		}
+		if settings.VenusNextEnabled {
+			enabledPacks[shared.PackVenus] = true
+		}
+		for _, def := range allDefs {
+			if def.Pack != "" && !enabledPacks[def.Pack] {
+				continue
+			}
+			filteredDefs = append(filteredDefs, def)
+		}
 	}
 
-	result := make([]PlayerAwardDto, 0, len(allDefs))
+	result := make([]PlayerAwardDto, 0, len(filteredDefs))
 	gameAwards := g.Awards()
 	fundedCount := gameAwards.FundedCount()
 
-	for _, def := range allDefs {
-		if def.Pack != "" && !enabledPacks[def.Pack] {
-			continue
-		}
+	for _, def := range filteredDefs {
 		awardType := shared.AwardType(def.ID)
 		state := action.CalculateAwardState(awardType, p, g, awardRegistry)
 

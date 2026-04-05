@@ -239,6 +239,16 @@ func (a *ConfirmDemoSetupAction) Execute(
 		log.Debug("Set generation", zap.Int("generation", *request.Generation))
 	}
 
+	if isHost && len(request.SelectedMilestones) > 0 {
+		g.SetSelectedMilestones(request.SelectedMilestones)
+		log.Debug("Set selected milestones", zap.Strings("milestones", request.SelectedMilestones))
+	}
+
+	if isHost && len(request.SelectedAwards) > 0 {
+		g.SetSelectedAwards(request.SelectedAwards)
+		log.Debug("Set selected awards", zap.Strings("awards", request.SelectedAwards))
+	}
+
 	// 10. Mark player as having confirmed demo setup
 	p.SetDemoSetupConfirmed(true)
 	log.Info("Player confirmed demo setup")

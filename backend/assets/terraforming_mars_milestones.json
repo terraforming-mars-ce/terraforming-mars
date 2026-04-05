@@ -15,26 +15,26 @@
   {
     "id": "mayor",
     "name": "Mayor",
-    "description": "Own at least 3 city tiles",
+    "description": "Own at least 4 city tiles",
     "pack": "base-game",
     "claimCost": 8,
     "reward": [{ "type": "vp", "amount": 5 }],
     "requirement": {
       "kind": "countable",
-      "countable": { "type": "city-tile", "target": "self-player", "min": 3 }
+      "countable": { "type": "city-tile", "target": "self-player", "min": 4 }
     },
     "style": { "color": "#9E9E9E", "icon": "city-tile" }
   },
   {
     "id": "gardener",
     "name": "Gardener",
-    "description": "Own at least 3 greenery tiles",
+    "description": "Own at least 4 greenery tiles",
     "pack": "base-game",
     "claimCost": 8,
     "reward": [{ "type": "vp", "amount": 5 }],
     "requirement": {
       "kind": "countable",
-      "countable": { "type": "greenery-tile", "target": "self-player", "min": 3 }
+      "countable": { "type": "greenery-tile", "target": "self-player", "min": 4 }
     },
     "style": { "color": "#4CAF50", "icon": "greenery-tile" }
   },
@@ -54,13 +54,13 @@
   {
     "id": "planner",
     "name": "Planner",
-    "description": "Have at least 16 cards in hand",
+    "description": "Have at least 12 cards in hand",
     "pack": "base-game",
     "claimCost": 8,
     "reward": [{ "type": "vp", "amount": 5 }],
     "requirement": {
       "kind": "countable",
-      "countable": { "type": "card-count", "min": 16 }
+      "countable": { "type": "card-count", "min": 12 }
     },
     "style": { "color": "#2196F3", "icon": "card-draw" }
   },
@@ -76,5 +76,135 @@
       "countable": { "type": "floater", "target": "self-player", "min": 7 }
     },
     "style": { "color": "#FFD700", "icon": "floater" }
+  },
+  {
+    "id": "diversifier",
+    "name": "Diversifier",
+    "description": "Have at least 8 different tags in play",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "distinct-tag-count", "min": 8 }
+    },
+    "style": { "color": "#9C27B0", "icon": "tag" }
+  },
+  {
+    "id": "tactician",
+    "name": "Tactician",
+    "description": "Have at least 5 cards in play with requirements",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "cards-with-requirements", "min": 5 }
+    },
+    "style": { "color": "#F44336", "icon": "requirement-badge" }
+  },
+  {
+    "id": "polar-explorer",
+    "name": "Polar Explorer",
+    "description": "Have at least 3 tiles on the two bottom rows",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "tiles-on-rows", "target": "self-player", "minRow": 3, "min": 3 }
+    },
+    "style": { "color": "#00BCD4", "icon": "tile" }
+  },
+  {
+    "id": "energizer",
+    "name": "Energizer",
+    "description": "Have at least 6 energy production",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "energy-production", "min": 6 }
+    },
+    "style": { "color": "#FF9800", "icon": "energy" }
+  },
+  {
+    "id": "rim-settler",
+    "name": "Rim Settler",
+    "description": "Have at least 3 jovian tags in play",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "tag", "tag": "jovian", "min": 3 }
+    },
+    "style": { "color": "#673AB7", "icon": "jovian-tag" }
+  },
+  {
+    "id": "generalist",
+    "name": "Generalist",
+    "description": "Have increased all 6 productions at least 1 step",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "all-productions-min",
+      "allProductionsMin": { "min": 1 }
+    },
+    "style": { "color": "#607D8B", "icon": "production-all" }
+  },
+  {
+    "id": "specialist",
+    "name": "Specialist",
+    "description": "Have at least 10 production of any resource",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "max-single-production", "min": 10 }
+    },
+    "style": { "color": "#E91E63", "icon": "production-threshold" }
+  },
+  {
+    "id": "ecologist",
+    "name": "Ecologist",
+    "description": "Have at least 4 bio tags (plant, microbe, or animal) in play",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "tag", "tags": ["plant", "microbe", "animal"], "min": 4 }
+    },
+    "style": { "color": "#8BC34A", "icon": "plant-tag" }
+  },
+  {
+    "id": "tycoon",
+    "name": "Tycoon",
+    "description": "Have at least 15 automated and event cards played",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "played-card-type-count", "cardTypeFilter": "automated+event", "min": 15 }
+    },
+    "style": { "color": "#FF5722", "icon": "green-card-plus-event" }
+  },
+  {
+    "id": "legend",
+    "name": "Legend",
+    "description": "Have at least 5 event cards played",
+    "pack": "base-game",
+    "claimCost": 8,
+    "reward": [{ "type": "vp", "amount": 5 }],
+    "requirement": {
+      "kind": "countable",
+      "countable": { "type": "played-card-type-count", "cardTypeFilter": "event", "min": 5 }
+    },
+    "style": { "color": "#D32F2F", "icon": "event-tag" }
   }
 ]

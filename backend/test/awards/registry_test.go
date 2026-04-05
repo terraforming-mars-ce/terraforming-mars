@@ -17,10 +17,10 @@ func jsonPath() string {
 func TestLoadAwardsFromJSON(t *testing.T) {
 	defs, err := awards.LoadAwardsFromJSON(jsonPath())
 	testutil.AssertNoError(t, err, "Should load awards from JSON")
-	testutil.AssertEqual(t, 6, len(defs), "Should have exactly 6 awards")
+	testutil.AssertEqual(t, 16, len(defs), "Should have exactly 16 awards")
 
 	testutil.AssertEqual(t, "landlord", defs[0].ID, "First award should be landlord")
-	testutil.AssertEqual(t, "venuphile", defs[5].ID, "Last award should be venuphile")
+	testutil.AssertEqual(t, "venuphile", defs[5].ID, "Sixth award should be venuphile")
 
 	for _, def := range defs {
 		testutil.AssertTrue(t, def.Name != "", "Award name should not be empty for "+def.ID)
@@ -50,7 +50,7 @@ func TestRegistryGetAllOrder(t *testing.T) {
 	registry := awards.NewInMemoryAwardRegistry(defs)
 
 	all := registry.GetAll()
-	testutil.AssertEqual(t, 6, len(all), "GetAll should return 6 awards")
+	testutil.AssertEqual(t, 16, len(all), "GetAll should return 16 awards")
 
 	expectedOrder := []string{"landlord", "banker", "scientist", "thermalist", "miner", "venuphile"}
 	for i, id := range expectedOrder {

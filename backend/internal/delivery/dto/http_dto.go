@@ -4,11 +4,13 @@ import "encoding/json"
 
 // CreateGameRequest represents the request body for creating a game
 type CreateGameRequest struct {
-	MaxPlayers       int      `json:"maxPlayers" binding:"required,min=1,max=10" ts:"number"`
-	VenusNextEnabled bool     `json:"venusNextEnabled" ts:"boolean"`
-	DevelopmentMode  bool     `json:"developmentMode" ts:"boolean"`
-	CardPacks        []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
-	ClaudeAPIKey     string   `json:"claudeApiKey,omitempty" ts:"string | undefined"`
+	MaxPlayers         int      `json:"maxPlayers" binding:"required,min=1,max=10" ts:"number"`
+	VenusNextEnabled   bool     `json:"venusNextEnabled" ts:"boolean"`
+	DevelopmentMode    bool     `json:"developmentMode" ts:"boolean"`
+	CardPacks          []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
+	ClaudeAPIKey       string   `json:"claudeApiKey,omitempty" ts:"string | undefined"`
+	SelectedMilestones []string `json:"selectedMilestones,omitempty" ts:"string[] | undefined"`
+	SelectedAwards     []string `json:"selectedAwards,omitempty" ts:"string[] | undefined"`
 }
 
 // CreateGameResponse represents the response for creating a game
@@ -68,6 +70,19 @@ type CreateDemoLobbyRequest struct {
 type CreateDemoLobbyResponse struct {
 	Game     GameDto `json:"game" ts:"GameDto"`
 	PlayerID string  `json:"playerId" ts:"string"`
+}
+
+// MilestoneAwardItemDto represents a single milestone or award for selection
+type MilestoneAwardItemDto struct {
+	ID          string `json:"id" ts:"string"`
+	Name        string `json:"name" ts:"string"`
+	Description string `json:"description" ts:"string"`
+}
+
+// ListMilestonesAwardsResponse represents the response for listing milestones and awards
+type ListMilestonesAwardsResponse struct {
+	Milestones []MilestoneAwardItemDto `json:"milestones" ts:"MilestoneAwardItemDto[]"`
+	Awards     []MilestoneAwardItemDto `json:"awards" ts:"MilestoneAwardItemDto[]"`
 }
 
 // FeedbackRequest represents the request body for submitting feedback

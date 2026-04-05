@@ -4,6 +4,7 @@ import (
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/milestone"
 	"terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // CalculateMilestoneProgress returns the current progress for a player towards a milestone
@@ -15,6 +16,11 @@ func CalculateMilestoneProgress(def *milestone.MilestoneDefinition, p *player.Pl
 			return 0
 		}
 		return CountPerCondition(&req.Countable.PerCondition, "", p, b, cardRegistry, nil)
+	case "all-productions-min":
+		if req.AllProductionsMin == nil {
+			return 0
+		}
+		return countProductionsAtOrAbove(p, req.AllProductionsMin.Min)
 	default:
 		return 0
 	}
@@ -36,7 +42,31 @@ func CanClaimMilestone(def *milestone.MilestoneDefinition, p *player.Player, b *
 			return false
 		}
 		return true
+	case "all-productions-min":
+		if req.AllProductionsMin == nil {
+			return false
+		}
+		return countProductionsAtOrAbove(p, req.AllProductionsMin.Min) == 6
 	default:
 		return false
 	}
+}
+
+func countProductionsAtOrAbove(p *player.Player, min int) int {
+	prod := p.Resources().Production()
+	count := 0
+	productions := []shared.ResourceType{
+		shared.ResourceCreditProduction,
+		shared.ResourceSteelProduction,
+		shared.ResourceTitaniumProduction,
+		shared.ResourcePlantProduction,
+		shared.ResourceEnergyProduction,
+		shared.ResourceHeatProduction,
+	}
+	for _, rt := range productions {
+		if prod.GetAmount(rt) >= min {
+			count++
+		}
+	}
+	return count
 }

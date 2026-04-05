@@ -46,8 +46,10 @@ type GameState struct {
 	TurnOrder   []string
 	Players     map[string]*PlayerState
 
-	ClaimedMilestones []shared.ClaimedMilestone
-	FundedAwards      []shared.FundedAward
+	ClaimedMilestones  []shared.ClaimedMilestone
+	FundedAwards       []shared.FundedAward
+	SelectedMilestones []string
+	SelectedAwards     []string
 
 	FinalScores []shared.FinalScore
 	WinnerID    string

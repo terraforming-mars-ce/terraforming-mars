@@ -89,6 +89,15 @@ const (
 	ResourceAwardFund ResourceType = "award-fund"
 	ResourceFreeTrade ResourceType = "trade"
 	ResourceCardCount ResourceType = "card-count"
+
+	ResourceDistinctTagCount      ResourceType = "distinct-tag-count"
+	ResourceCardsWithRequirements ResourceType = "cards-with-requirements"
+	ResourceTilesOnRows           ResourceType = "tiles-on-rows"
+	ResourceMaxSingleProduction   ResourceType = "max-single-production"
+	ResourcePlayedCardTypeCount   ResourceType = "played-card-type-count"
+	ResourceCardsWithMinCost      ResourceType = "cards-with-min-cost"
+	ResourceTilesAdjacentToOcean  ResourceType = "tiles-adjacent-to-ocean"
+	ResourceTotalCardStorage      ResourceType = "total-card-storage"
 )
 
 // ActionType constants for action-level selectors (discounts targeting specific game actions)

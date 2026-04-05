@@ -67,6 +67,22 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 		return err
 	}
 
+	// Validate milestone is in the selected set for this game
+	selectedMilestones := g.SelectedMilestones()
+	if len(selectedMilestones) > 0 {
+		found := false
+		for _, id := range selectedMilestones {
+			if id == milestoneType {
+				found = true
+				break
+			}
+		}
+		if !found {
+			log.Warn("Milestone not available in this game", zap.String("milestone", milestoneType))
+			return fmt.Errorf("milestone %s is not available in this game", milestoneType)
+		}
+	}
+
 	ms := g.Milestones()
 	mt := shared.MilestoneType(milestoneType)
 	if ms.IsClaimed(mt) {

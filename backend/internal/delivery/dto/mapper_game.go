@@ -309,21 +309,35 @@ func ToMilestonesDto(g *game.Game, cardRegistry cards.CardRegistry, milestoneReg
 	b := g.Board()
 
 	allDefs := milestoneRegistry.GetAll()
-	settings := g.Settings()
-	enabledPacks := make(map[string]bool, len(settings.CardPacks))
-	for _, pack := range settings.CardPacks {
-		enabledPacks[pack] = true
-	}
-	if settings.VenusNextEnabled {
-		enabledPacks[shared.PackVenus] = true
-	}
 
-	filteredDefs := make([]milestone.MilestoneDefinition, 0, len(allDefs))
-	for _, def := range allDefs {
-		if def.Pack != "" && !enabledPacks[def.Pack] {
-			continue
+	// Filter by selected milestones if set, otherwise fall back to pack filtering
+	selectedMilestones := g.SelectedMilestones()
+	var filteredDefs []milestone.MilestoneDefinition
+	if len(selectedMilestones) > 0 {
+		selectedSet := make(map[string]bool, len(selectedMilestones))
+		for _, id := range selectedMilestones {
+			selectedSet[id] = true
 		}
-		filteredDefs = append(filteredDefs, def)
+		for _, def := range allDefs {
+			if selectedSet[def.ID] {
+				filteredDefs = append(filteredDefs, def)
+			}
+		}
+	} else {
+		settings := g.Settings()
+		enabledPacks := make(map[string]bool, len(settings.CardPacks))
+		for _, pack := range settings.CardPacks {
+			enabledPacks[pack] = true
+		}
+		if settings.VenusNextEnabled {
+			enabledPacks[shared.PackVenus] = true
+		}
+		for _, def := range allDefs {
+			if def.Pack != "" && !enabledPacks[def.Pack] {
+				continue
+			}
+			filteredDefs = append(filteredDefs, def)
+		}
 	}
 
 	dtos := make([]MilestoneDto, len(filteredDefs))
@@ -399,21 +413,35 @@ func ToAwardsDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegistry aw
 	b := g.Board()
 
 	allDefs := awardRegistry.GetAll()
-	settings := g.Settings()
-	enabledPacks := make(map[string]bool, len(settings.CardPacks))
-	for _, pack := range settings.CardPacks {
-		enabledPacks[pack] = true
-	}
-	if settings.VenusNextEnabled {
-		enabledPacks[shared.PackVenus] = true
-	}
 
-	filteredDefs := make([]award.AwardDefinition, 0, len(allDefs))
-	for _, def := range allDefs {
-		if def.Pack != "" && !enabledPacks[def.Pack] {
-			continue
+	// Filter by selected awards if set, otherwise fall back to pack filtering
+	selectedAwards := g.SelectedAwards()
+	var filteredDefs []award.AwardDefinition
+	if len(selectedAwards) > 0 {
+		selectedSet := make(map[string]bool, len(selectedAwards))
+		for _, id := range selectedAwards {
+			selectedSet[id] = true
 		}
-		filteredDefs = append(filteredDefs, def)
+		for _, def := range allDefs {
+			if selectedSet[def.ID] {
+				filteredDefs = append(filteredDefs, def)
+			}
+		}
+	} else {
+		settings := g.Settings()
+		enabledPacks := make(map[string]bool, len(settings.CardPacks))
+		for _, pack := range settings.CardPacks {
+			enabledPacks[pack] = true
+		}
+		if settings.VenusNextEnabled {
+			enabledPacks[shared.PackVenus] = true
+		}
+		for _, def := range allDefs {
+			if def.Pack != "" && !enabledPacks[def.Pack] {
+				continue
+			}
+			filteredDefs = append(filteredDefs, def)
+		}
 	}
 
 	dtos := make([]AwardDto, len(filteredDefs))

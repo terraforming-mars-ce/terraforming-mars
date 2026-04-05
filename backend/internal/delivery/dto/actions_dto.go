@@ -138,13 +138,15 @@ func (ap *ActionSkipActionRequest) GetAction() *SkipAction {
 
 // ConfirmDemoSetupRequest contains the player's demo setup configuration
 type ConfirmDemoSetupRequest struct {
-	CorporationID    *string              `json:"corporationId,omitempty" ts:"string | undefined"`
-	CardIDs          []string             `json:"cardIds" ts:"string[]"`
-	Resources        ResourcesDto         `json:"resources" ts:"ResourcesDto"`
-	Production       ProductionDto        `json:"production" ts:"ProductionDto"`
-	TerraformRating  int                  `json:"terraformRating" ts:"number"`
-	GlobalParameters *GlobalParametersDto `json:"globalParameters,omitempty" ts:"GlobalParametersDto | undefined"` // Host only
-	Generation       *int                 `json:"generation,omitempty" ts:"number | undefined"`                    // Host only
+	CorporationID      *string              `json:"corporationId,omitempty" ts:"string | undefined"`
+	CardIDs            []string             `json:"cardIds" ts:"string[]"`
+	Resources          ResourcesDto         `json:"resources" ts:"ResourcesDto"`
+	Production         ProductionDto        `json:"production" ts:"ProductionDto"`
+	TerraformRating    int                  `json:"terraformRating" ts:"number"`
+	GlobalParameters   *GlobalParametersDto `json:"globalParameters,omitempty" ts:"GlobalParametersDto | undefined"` // Host only
+	Generation         *int                 `json:"generation,omitempty" ts:"number | undefined"`                    // Host only
+	SelectedMilestones []string             `json:"selectedMilestones,omitempty" ts:"string[] | undefined"`          // Host only
+	SelectedAwards     []string             `json:"selectedAwards,omitempty" ts:"string[] | undefined"`              // Host only
 }
 
 // ActionPlayCardRequest contains the action data for play card actions

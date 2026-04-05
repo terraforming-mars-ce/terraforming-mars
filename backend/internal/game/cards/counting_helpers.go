@@ -202,6 +202,15 @@ func CountPerCondition(
 		return countAdjacentTilesOfType(p.ID(), b, per.ResourceType, *per.AdjacentToTileType)
 	}
 
+	// Multi-tag counting (e.g., Ecologist: plant + microbe + animal)
+	if len(per.Tags) > 0 && cardRegistry != nil {
+		count := 0
+		for _, tag := range per.Tags {
+			count += CountPlayerTagsByType(p, cardRegistry, tag)
+		}
+		return count
+	}
+
 	// Tag counting
 	if per.Tag != nil && cardRegistry != nil {
 		if per.Target != nil && *per.Target == "any-player" && allPlayers != nil {
@@ -265,6 +274,46 @@ func CountPerCondition(
 		return p.Resources().Get().GetAmount(per.ResourceType)
 	}
 
+	// Distinct tag count (Diversifier: 8 different tags)
+	if per.ResourceType == shared.ResourceDistinctTagCount && cardRegistry != nil {
+		return countDistinctTags(p, cardRegistry)
+	}
+
+	// Cards with requirements (Tactician: 5 cards with requirements)
+	if per.ResourceType == shared.ResourceCardsWithRequirements && cardRegistry != nil {
+		return countCardsWithRequirements(p, cardRegistry)
+	}
+
+	// Tiles on specific rows (Polar Explorer, Desert Settler)
+	if per.ResourceType == shared.ResourceTilesOnRows && b != nil && per.MinRow != nil {
+		return countPlayerTilesOnRows(p.ID(), b, *per.MinRow)
+	}
+
+	// Max single production (Specialist: 10 of any single production)
+	if per.ResourceType == shared.ResourceMaxSingleProduction {
+		return maxSingleProduction(p)
+	}
+
+	// Played card type count (Tycoon, Legend, Magnate)
+	if per.ResourceType == shared.ResourcePlayedCardTypeCount && cardRegistry != nil && per.CardTypeFilter != nil {
+		return countPlayedCardsByType(p, cardRegistry, *per.CardTypeFilter)
+	}
+
+	// Cards with minimum cost (Celebrity: cards costing >= 20)
+	if per.ResourceType == shared.ResourceCardsWithMinCost && cardRegistry != nil && per.MinCost != nil {
+		return countCardsWithMinCost(p, cardRegistry, *per.MinCost)
+	}
+
+	// Tiles adjacent to ocean (Estate Dealer)
+	if per.ResourceType == shared.ResourceTilesAdjacentToOcean && b != nil {
+		return countPlayerTilesAdjacentToOcean(p.ID(), b)
+	}
+
+	// Total card storage (Excentric: most resources on cards)
+	if per.ResourceType == shared.ResourceTotalCardStorage {
+		return countTotalCardStorage(p)
+	}
+
 	// Fallback: try to count as a tag type
 	if cardRegistry != nil {
 		return CountPlayerTagsByType(p, cardRegistry, shared.CardTag(per.ResourceType))
@@ -312,6 +361,163 @@ func CountPlayerCardStorageByType(p *player.Player, cardRegistry CardRegistryInt
 			continue
 		}
 		total += p.Resources().GetCardStorage(cardID)
+	}
+	return total
+}
+
+func countDistinctTags(p *player.Player, cardRegistry CardRegistryInterface) int {
+	tagSet := make(map[shared.CardTag]bool)
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		if card.Type == CardTypeEvent {
+			continue
+		}
+		for _, tag := range card.Tags {
+			if tag == shared.TagWild {
+				continue
+			}
+			tagSet[tag] = true
+		}
+	}
+	if corpID := p.CorporationID(); corpID != "" {
+		if corp, err := cardRegistry.GetByID(corpID); err == nil {
+			for _, tag := range corp.Tags {
+				if tag != shared.TagWild {
+					tagSet[tag] = true
+				}
+			}
+		}
+	}
+	return len(tagSet)
+}
+
+func countCardsWithRequirements(p *player.Player, cardRegistry CardRegistryInterface) int {
+	count := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		if card.Requirements != nil && len(card.Requirements.Items) > 0 {
+			count++
+		}
+	}
+	return count
+}
+
+func countPlayerTilesOnRows(playerID string, b *board.Board, minRow int) int {
+	count := 0
+	for _, tile := range b.Tiles() {
+		if tile.OwnerID == nil || *tile.OwnerID != playerID {
+			continue
+		}
+		if tile.OccupiedBy == nil {
+			continue
+		}
+		if tile.Coordinates.R >= minRow {
+			count++
+		}
+	}
+	return count
+}
+
+func maxSingleProduction(p *player.Player) int {
+	prod := p.Resources().Production()
+	best := prod.Credits
+	if prod.Steel > best {
+		best = prod.Steel
+	}
+	if prod.Titanium > best {
+		best = prod.Titanium
+	}
+	if prod.Plants > best {
+		best = prod.Plants
+	}
+	if prod.Energy > best {
+		best = prod.Energy
+	}
+	if prod.Heat > best {
+		best = prod.Heat
+	}
+	return best
+}
+
+func countPlayedCardsByType(p *player.Player, cardRegistry CardRegistryInterface, filter string) int {
+	count := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		switch filter {
+		case "automated":
+			if card.Type == CardTypeAutomated {
+				count++
+			}
+		case "event":
+			if card.Type == CardTypeEvent {
+				count++
+			}
+		case "automated+event":
+			if card.Type == CardTypeAutomated || card.Type == CardTypeEvent {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func countCardsWithMinCost(p *player.Player, cardRegistry CardRegistryInterface, minCost int) int {
+	count := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		if card.Cost >= minCost {
+			count++
+		}
+	}
+	return count
+}
+
+func countPlayerTilesAdjacentToOcean(playerID string, b *board.Board) int {
+	tiles := b.Tiles()
+	oceanPositions := make(map[shared.HexPosition]bool)
+	for _, tile := range tiles {
+		if tile.OccupiedBy != nil && tile.OccupiedBy.Type == shared.ResourceOceanTile {
+			oceanPositions[tile.Coordinates] = true
+		}
+	}
+
+	count := 0
+	for _, tile := range tiles {
+		if tile.OwnerID == nil || *tile.OwnerID != playerID {
+			continue
+		}
+		if tile.OccupiedBy == nil || tile.OccupiedBy.Type == shared.ResourceOceanTile {
+			continue
+		}
+		for _, neighbor := range tile.Coordinates.GetNeighbors() {
+			if oceanPositions[neighbor] {
+				count++
+				break
+			}
+		}
+	}
+	return count
+}
+
+func countTotalCardStorage(p *player.Player) int {
+	total := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		stored := p.Resources().GetCardStorage(cardID)
+		if stored > 0 {
+			total += stored
+		}
 	}
 	return total
 }

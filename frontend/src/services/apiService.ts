@@ -12,6 +12,7 @@ import {
   GameHistoryEntryDto,
   ListGamesResponse,
   ListCardsResponse,
+  ListMilestonesAwardsResponse,
 } from "../types/generated/api-types.ts";
 import { config } from "../config";
 
@@ -167,6 +168,21 @@ export class ApiService {
       return data.entries || [];
     } catch (error) {
       console.error("Failed to get game history:", error);
+      throw error;
+    }
+  }
+
+  async listMilestonesAndAwards(): Promise<ListMilestonesAwardsResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/milestones-awards`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Failed to list milestones and awards:", error);
       throw error;
     }
   }

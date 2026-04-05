@@ -144,6 +144,8 @@ export interface ConfirmDemoSetupRequest {
   terraformRating: number /* int */;
   globalParameters?: GlobalParametersDto; // Host only
   generation?: number /* int */; // Host only
+  selectedMilestones?: string[]; // Host only
+  selectedAwards?: string[]; // Host only
 }
 /**
  * ActionPlayCardRequest contains the action data for play card actions
@@ -1639,6 +1641,8 @@ export interface CreateGameRequest {
   developmentMode: boolean;
   cardPacks?: string[];
   claudeApiKey?: string;
+  selectedMilestones?: string[];
+  selectedAwards?: string[];
 }
 /**
  * CreateGameResponse represents the response for creating a game
@@ -1708,6 +1712,21 @@ export interface CreateDemoLobbyRequest {
 export interface CreateDemoLobbyResponse {
   game: GameDto;
   playerId: string;
+}
+/**
+ * MilestoneAwardItemDto represents a single milestone or award for selection
+ */
+export interface MilestoneAwardItemDto {
+  id: string;
+  name: string;
+  description: string;
+}
+/**
+ * ListMilestonesAwardsResponse represents the response for listing milestones and awards
+ */
+export interface ListMilestonesAwardsResponse {
+  milestones: MilestoneAwardItemDto[];
+  awards: MilestoneAwardItemDto[];
 }
 /**
  * FeedbackRequest represents the request body for submitting feedback
