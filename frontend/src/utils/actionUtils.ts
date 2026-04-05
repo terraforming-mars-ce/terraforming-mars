@@ -1,8 +1,14 @@
-import { GameDto, GameStatusActive, GamePhaseAction } from "@/types/generated/api-types.ts";
+import {
+  GameDto,
+  GamePhase,
+  GameStatusActive,
+  GamePhaseAction,
+  GamePhaseFinalPhase,
+} from "@/types/generated/api-types.ts";
 
-/**
- * Utility functions for handling player actions and available actions logic
- */
+export const isPlayerActionPhase = (phase?: GamePhase): boolean => {
+  return phase === GamePhaseAction || phase === GamePhaseFinalPhase;
+};
 
 /**
  * Checks if a player has actions available
@@ -26,7 +32,7 @@ export const canPerformActions = (gameState?: GameDto): boolean => {
   }
 
   const isGameActive = gameState.status === GameStatusActive;
-  const isActionPhase = gameState.currentPhase === GamePhaseAction;
+  const isActionPhase = isPlayerActionPhase(gameState.currentPhase);
   const isCurrentPlayerTurn = gameState.currentTurn === gameState.viewingPlayerId;
   const hasActions = hasActionsAvailable(gameState.currentPlayer.availableActions);
   const hasPendingTilePlacement = !!gameState.currentPlayer.pendingTileSelection;

@@ -412,6 +412,8 @@ func buildTurnPrompt(game *dto.GameDto, statePath, commandPath, historyPath stri
 		case dto.GamePhaseAction:
 			remaining := game.CurrentPlayer.AvailableActions
 			actionsNote = fmt.Sprintf("\nYou have %d action(s) remaining this turn. Send at most %d action command(s), then STOP.", remaining, remaining)
+		case dto.GamePhaseFinalPhase:
+			phaseNote = "\nYou are in the FINAL PHASE. You may only convert plants to greenery tiles, or pass. Send exactly 1 command."
 		}
 	}
 

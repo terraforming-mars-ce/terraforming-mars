@@ -328,6 +328,7 @@ export const GamePhaseInitApplyCorp: GamePhase = "init_apply_corp";
 export const GamePhaseInitApplyPrelude: GamePhase = "init_apply_prelude";
 export const GamePhaseAction: GamePhase = "action";
 export const GamePhaseProductionAndCardDraw: GamePhase = "production_and_card_draw";
+export const GamePhaseFinalPhase: GamePhase = "final_phase";
 export const GamePhaseComplete: GamePhase = "complete";
 /**
  * GameStatus represents the current status of the game
