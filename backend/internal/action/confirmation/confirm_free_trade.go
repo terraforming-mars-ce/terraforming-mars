@@ -63,7 +63,7 @@ func (a *ConfirmFreeTradeAction) Execute(ctx context.Context, gameID string, pla
 		return fmt.Errorf("colony %s is not in the available list", colonyID)
 	}
 
-	tileState := g.GetColonyTileState(colonyID)
+	tileState := g.Colonies().GetState(colonyID)
 	if tileState == nil {
 		return fmt.Errorf("colony tile not found: %s", colonyID)
 	}
@@ -72,7 +72,7 @@ func (a *ConfirmFreeTradeAction) Execute(ctx context.Context, gameID string, pla
 		return fmt.Errorf("colony tile already traded this generation")
 	}
 
-	if !g.GetTradeFleetAvailable(playerID) {
+	if !g.Colonies().GetTradeFleetAvailable(playerID) {
 		return fmt.Errorf("trade fleet is not available")
 	}
 
@@ -137,7 +137,7 @@ func (a *ConfirmFreeTradeAction) Execute(ctx context.Context, gameID string, pla
 	tileState.TradedThisGen = true
 	tileState.TraderID = playerID
 
-	g.SetTradeFleetAvailable(playerID, false)
+	g.Colonies().SetTradeFleetAvailable(playerID, false)
 
 	events.Publish(g.EventBus(), events.ColonyTradedEvent{
 		GameID:    g.ID(),

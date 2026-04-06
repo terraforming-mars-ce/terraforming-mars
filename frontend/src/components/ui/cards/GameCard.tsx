@@ -4,8 +4,15 @@ import CardDecorBar from "../display/CardDecorBar.tsx";
 import BehaviorSection from "./BehaviorSection";
 import RequirementsBox from "./RequirementsBox.tsx";
 import { getTagIconPath } from "@/utils/iconStore.ts";
-import { CardDto, PlayerCardDto, ResourceTypeCredit } from "@/types/generated/api-types.ts";
+import {
+  CardDto,
+  PlayerCardDto,
+  ResourceTypeCredit,
+  TagWild,
+} from "@/types/generated/api-types.ts";
+import DecorBoxTooltip from "../display/DecorBoxTooltip.tsx";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
+import { CARD_TYPE_COLORS } from "@/utils/cardTypeColors.ts";
 
 interface GameCardProps {
   card: CardDto | PlayerCardDto;
@@ -21,6 +28,45 @@ function isPlayerCardDto(card: CardDto | PlayerCardDto): card is PlayerCardDto {
 }
 
 const CARD_CLIP_PATH = "polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%)";
+
+const TagIcon: React.FC<{ tagIcon: string; tag: string; isWild: boolean }> = ({
+  tagIcon,
+  tag,
+  isWild,
+}) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+
+  const handleMouseEnter = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
+    }
+  };
+
+  return (
+    <div
+      ref={isWild ? ref : undefined}
+      className="flex items-center justify-center shrink-0 [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.7))]"
+      onMouseEnter={isWild ? handleMouseEnter : undefined}
+      onMouseLeave={isWild ? () => setTooltipPos(null) : undefined}
+    >
+      <img
+        src={tagIcon}
+        alt={tag}
+        className="w-8 h-8 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
+      />
+      {isWild && (
+        <DecorBoxTooltip
+          description="A wild tag counts as any tag"
+          position={tooltipPos}
+          placement="above"
+          cornerSize={10}
+        />
+      )}
+    </div>
+  );
+};
 
 const GameCard: React.FC<GameCardProps> = ({
   card,
@@ -66,13 +112,7 @@ const GameCard: React.FC<GameCardProps> = ({
   const cardImagePath = `/assets/cards/${card.id}.webp`;
 
   // Card type accent colors (used for left stripe and selected checkbox)
-  const accentColors = {
-    automated: "#4caf50",
-    active: "#2196f3",
-    event: "#f44336",
-    corporation: "#ffc107",
-    prelude: "#e91e63",
-  };
+  const accentColors = CARD_TYPE_COLORS;
 
   const titleStyles = {
     automated:
@@ -195,18 +235,8 @@ const GameCard: React.FC<GameCardProps> = ({
             card.tags.slice(0, card.type === "event" ? 2 : 3).map((tag, index) => {
               const tagIcon = getTagIconPath(tag.toLowerCase());
               if (!tagIcon) return null;
-              return (
-                <div
-                  key={index}
-                  className="flex items-center justify-center shrink-0 [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.7))]"
-                >
-                  <img
-                    src={tagIcon}
-                    alt={tag}
-                    className="w-8 h-8 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-                  />
-                </div>
-              );
+              const isWild = tag.toLowerCase() === TagWild;
+              return <TagIcon key={index} tagIcon={tagIcon} tag={tag} isWild={isWild} />;
             })}
           {card.type === "event" && (
             <div className="flex items-center justify-center shrink-0 [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.7))]">

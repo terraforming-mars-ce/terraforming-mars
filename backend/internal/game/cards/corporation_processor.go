@@ -227,7 +227,7 @@ func (p *CorporationProcessor) GetManualActions(card *Card) []shared.CardAction 
 // hasCardDrawOutputs returns true if the behavior has card-peek or card-take outputs
 func (p *CorporationProcessor) hasCardDrawOutputs(behavior shared.CardBehavior) bool {
 	for _, output := range behavior.Outputs {
-		switch output.ResourceType {
+		switch output.GetResourceType() {
 		case shared.ResourceCardPeek, shared.ResourceCardTake, shared.ResourceCardBuy:
 			return true
 		}
@@ -281,7 +281,7 @@ func (p *CorporationProcessor) applyCardDrawForcedAction(
 // Tile queues are created when transitioning to action phase to avoid conflicts with prelude tile placements.
 func (p *CorporationProcessor) createForcedAction(
 	ctx context.Context,
-	output shared.ResourceCondition,
+	outputBC shared.BehaviorCondition,
 	card *Card,
 	g *game.Game,
 	playerID string,
@@ -289,7 +289,7 @@ func (p *CorporationProcessor) createForcedAction(
 ) error {
 	inStartingSelection := g.CurrentPhase() == shared.GamePhaseStartingSelection
 
-	switch output.ResourceType {
+	switch outputBC.GetResourceType() {
 	case shared.ResourceCityPlacement:
 		action := &shared.ForcedFirstAction{
 			ActionType:    "city-placement",
@@ -419,13 +419,13 @@ func (p *CorporationProcessor) createForcedAction(
 			WithSourceCardID(card.ID).
 			WithCardRegistry(p.cardRegistry)
 
-		if err := applier.ApplyOutputs(ctx, []shared.ResourceCondition{output}); err != nil {
+		if err := applier.ApplyOutputs(ctx, []shared.BehaviorCondition{outputBC}); err != nil {
 			return fmt.Errorf("failed to apply card-draw output: %w", err)
 		}
 		log.Debug("Applied card-draw forced action",
-			zap.Int("amount", output.Amount))
+			zap.Int("amount", outputBC.GetAmount()))
 
-	case shared.ResourceColonyTile:
+	case shared.ResourceColony:
 		action := &shared.ForcedFirstAction{
 			ActionType:    "colony-placement",
 			CorporationID: card.ID,
@@ -439,17 +439,22 @@ func (p *CorporationProcessor) createForcedAction(
 		log.Debug("Set forced colony placement action",
 			zap.String("description", action.Description))
 
+		allowDuplicate := false
+		if cc, ok := outputBC.(*shared.ColonyCondition); ok {
+			allowDuplicate = cc.AllowDuplicatePlayerColony
+		}
+
 		if !inStartingSelection {
 			pl, err := g.GetPlayer(playerID)
 			if err != nil {
 				return fmt.Errorf("failed to get player for colony placement: %w", err)
 			}
-			colonyIDs := g.GetPlaceableColonyIDs(pl.ID(), output.AllowDuplicatePlayerColony)
+			colonyIDs := g.Colonies().GetPlaceableIDs(pl.ID(), allowDuplicate)
 			if len(colonyIDs) > 0 {
 				pl.Selection().SetPendingColonySelection(&shared.PendingColonySelection{
 					AvailableColonyIDs:         colonyIDs,
-					AllowDuplicatePlayerColony: output.AllowDuplicatePlayerColony,
-					Source:                     "corporation-starting-action",
+					AllowDuplicatePlayerColony: allowDuplicate,
+					Source:                     "Build Colony",
 					SourceCardID:               card.ID,
 				})
 				log.Debug("Set pending colony selection for forced action",
@@ -463,7 +468,7 @@ func (p *CorporationProcessor) createForcedAction(
 
 	default:
 		log.Warn("Unhandled forced action type",
-			zap.String("type", string(output.ResourceType)))
+			zap.String("type", string(outputBC.GetResourceType())))
 	}
 
 	return nil

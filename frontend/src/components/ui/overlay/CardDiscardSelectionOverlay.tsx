@@ -4,8 +4,10 @@ import {
   PendingCardDiscardSelectionDto,
   PlayerCardDto,
 } from "../../../types/generated/api-types.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import {
-  OVERLAY_BACKGROUND_CLASS,
+  OVERLAY_BACKDROP_BLUR_CLASS,
+  OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_CONTAINER_CLASS,
   OVERLAY_HEADER_CLASS,
   OVERLAY_TITLE_CLASS,
@@ -80,8 +82,12 @@ const CardDiscardSelectionOverlay: React.FC<CardDiscardSelectionOverlayProps> = 
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
-      <div className={OVERLAY_BACKGROUND_CLASS} />
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+    >
+      <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
+      <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 
       <div className={OVERLAY_CONTAINER_CLASS}>
         <div className={OVERLAY_HEADER_CLASS}>

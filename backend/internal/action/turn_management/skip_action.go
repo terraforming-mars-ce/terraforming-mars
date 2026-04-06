@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/game"
 	playerPkg "terraforming-mars-backend/internal/game/player"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // SkipActionAction handles the business logic for skipping/passing player turns
@@ -40,6 +41,10 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 	}
 
 	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
+		return err
+	}
+
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
 		return err
 	}
 
@@ -132,6 +137,17 @@ func (a *SkipActionAction) Execute(ctx context.Context, gameID string, playerID 
 			if !p.HasExited() {
 				activePlayers = append(activePlayers, p)
 			}
+		}
+
+		if g.CurrentPhase() == shared.GamePhaseFinalPhase {
+			log.Debug("All players finished final phase - triggering final scoring",
+				zap.String("game_id", gameID))
+			if err := a.finalScoringAction.Execute(ctx, gameID); err != nil {
+				log.Error("Failed to execute final scoring", zap.Error(err))
+				return fmt.Errorf("failed to execute final scoring: %w", err)
+			}
+			log.Info("Game ended after final phase")
+			return nil
 		}
 
 		if g.GlobalParameters().IsMaxed() {

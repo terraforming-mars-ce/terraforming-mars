@@ -140,7 +140,6 @@ air                       # Hot reload with Air
 make test                 # Run all backend tests
 make test-verbose         # Detailed test output
 make test-coverage        # Generate coverage report
-make test-quick           # Fast iteration tests
 
 # From backend/
 go test ./test/...        # All tests
@@ -309,34 +308,27 @@ Client → WebSocket Connection → Hub.HandleMessage()
 
 ### Go to TypeScript
 
-All domain types with `ts:` tags generate TypeScript interfaces:
+DTO structs in `internal/delivery/dto/` generate TypeScript interfaces via `tygo generate`.
 
-```go
-// backend/internal/game/player/player.go
-type Player struct {
-    ID           string    `json:"id" ts:"string"`
-    Credits      int       `json:"credits" ts:"number"`
-    Corporation  *Corporation `json:"corporation" ts:"Corporation | null"`
-}
-```
+**Tag behavior:**
+- `json:"fieldName"` — controls the TypeScript field name
+- `json:"...,omitempty"` — makes the field optional (`?`)
+- `tstype:"'a' | 'b'"` — overrides the generated TypeScript type (used for discriminated unions)
+- `//tygo:emit <code>` — emits literal TypeScript before a struct (used for union type aliases)
+- `ts:"..."` — **ignored by tygo**, do not use
 
-Generates:
+### Behavior Condition System
 
-```typescript
-// frontend/src/types/generated/api-types.ts
-export interface Player {
-    id: string;
-    credits: number;
-    corporation: Corporation | null;
-}
-```
+Card behaviors use a discriminated union pattern. See `internal/game/shared/CLAUDE.md` for the full type system.
+
+The DTO layer maps typed Go conditions to category-specific DTO structs (`BasicResourceConditionDto`, `EffectConditionDto`, etc.) which generate a TypeScript discriminated union (`ResourceCondition`) with per-category literal types on the `type` field.
 
 ### Keeping Types in Sync
 
 1. Modify Go structs in `internal/game/` or subpackages
-2. Run `make generate` from project root
-3. Check corresponding DTOs in `internal/delivery/dto/`
-4. Update DTO mappers in `internal/delivery/dto/mapper.go` if needed
+2. Update corresponding DTOs in `internal/delivery/dto/`
+3. Update DTO mappers in `internal/delivery/dto/mapper_*.go`
+4. Run `make generate` from project root
 5. Frontend automatically gets updated types
 
 ## Important Notes

@@ -118,7 +118,7 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
       return null;
     }
     return behaviors.find((behavior) =>
-      behavior.triggers?.some((t) => t.type === "auto-corporation-start"),
+      behavior.triggers?.some((t) => t.type === "auto-corporation-start" && !t.condition),
     );
   };
 
@@ -196,7 +196,7 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
         (t) => t.type === "auto-corporation-first-action",
       );
       if (isAutoCorporationStart) {
-        return false;
+        return behavior.triggers?.some((t) => t.condition !== undefined) ?? false;
       }
       if (isAutoCorporationFirstAction) {
         return false;

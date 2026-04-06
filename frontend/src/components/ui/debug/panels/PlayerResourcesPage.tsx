@@ -15,8 +15,8 @@ import GameIcon, { GameIconType } from "../../display/GameIcon.tsx";
 
 interface PlayerResourcesPageProps {
   gameState: GameDto;
-  selectedPlayerIds: string[];
-  onPlayerChange: (ids: string[]) => void;
+  selectedPlayerId: string;
+  onPlayerChange: (id: string) => void;
 }
 
 const RESOURCE_FIELDS = ["credit", "steel", "titanium", "plant", "energy", "heat"] as const;
@@ -149,11 +149,11 @@ const DraggableInput: React.FC<{
 
 const PlayerResourcesPage: React.FC<PlayerResourcesPageProps> = ({
   gameState,
-  selectedPlayerIds,
+  selectedPlayerId,
   onPlayerChange,
 }) => {
   const allPlayers = [gameState.currentPlayer, ...gameState.otherPlayers];
-  const playerId = selectedPlayerIds[0];
+  const playerId = selectedPlayerId;
 
   const [resourcesForm, setResourcesForm] = useState<ResourceForm>({
     credit: "",
@@ -207,7 +207,7 @@ const PlayerResourcesPage: React.FC<PlayerResourcesPageProps> = ({
       setProductionForm(empty);
       setTRValue("");
     }
-  }, [playerId]);
+  }, [playerId, gameState]);
 
   const sendCommand = async (commandType: string, payload: any) => {
     const req: AdminCommandRequest = { commandType: commandType as any, payload };
@@ -361,7 +361,7 @@ const PlayerResourcesPage: React.FC<PlayerResourcesPageProps> = ({
 
   return (
     <div>
-      <PlayerSelector players={players} selectedIds={selectedPlayerIds} onChange={onPlayerChange} />
+      <PlayerSelector players={players} selectedId={selectedPlayerId} onChange={onPlayerChange} />
 
       <div style={{ borderTop: "1px solid #333", paddingTop: "12px" }}>
         {renderResourceGrid(

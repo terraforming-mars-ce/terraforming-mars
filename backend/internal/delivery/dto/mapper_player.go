@@ -86,7 +86,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		Resources:        toResourcesDto(resources),
 		Production:       toProductionDto(production),
 		TerraformRating:  resourcesComponent.TerraformRating(),
-		Status:           playerStatus(p),
+		Status:           playerStatus(p, g),
 		Corporation:      corporation,
 		Cards:            handCards, // PlayerCardDto[] with state
 		PlayedCards:      playedCards,
@@ -101,6 +101,9 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		Milestones:       milestones,       // PlayerMilestoneDto[] with eligibility
 		Awards:           awards,           // PlayerAwardDto[] with eligibility
 
+		DemoReady:          p.HasPendingDemoChoices(),
+		PendingDemoChoices: convertPendingDemoChoices(p.PendingDemoChoices()),
+
 		SelectCorporationPhase:         convertSelectCorporationPhase(g.GetSelectCorporationPhase(p.ID()), cardRegistry),
 		SelectStartingCardsPhase:       convertSelectStartingCardsPhase(g.GetSelectStartingCardsPhase(p.ID()), cardRegistry),
 		SelectPreludeCardsPhase:        convertSelectPreludeCardsPhase(g.GetSelectPreludeCardsPhase(p.ID()), cardRegistry),
@@ -112,7 +115,7 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry
 		PendingCardDiscardSelection:    convertPendingCardDiscardSelection(p.Selection().GetPendingCardDiscardSelection()),
 		PendingBehaviorChoiceSelection: convertPendingBehaviorChoiceSelection(p.Selection().GetPendingBehaviorChoiceSelection(), p, g, cardRegistry),
 		PendingStealTargetSelection:    convertPendingStealTargetSelection(p.Selection().GetPendingStealTargetSelection()),
-		PendingColonyResourceSelection: convertPendingColonyResourceSelection(p.Selection().GetPendingColonyResourceSelection()),
+		PendingColonyResourceSelection: convertPendingColonyResourceFromQueue(p.Selection().GetPendingColonyResourceQueue()),
 		PendingAwardFundSelection:      convertPendingAwardFundSelection(p.Selection().GetPendingAwardFundSelection()),
 		PendingColonySelection:         convertPendingColonySelection(p.Selection().GetPendingColonySelection()),
 		PendingFreeTradeSelection:      convertPendingFreeTradeSelection(p.Selection().GetPendingFreeTradeSelection()),
@@ -149,7 +152,7 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		Resources:        toResourcesDto(resources),
 		Production:       toProductionDto(production),
 		TerraformRating:  resourcesComponent.TerraformRating(),
-		Status:           playerStatus(p),
+		Status:           playerStatus(p, g),
 		Corporation:      corporation,
 		HandCardCount:    handCardCount,
 		PlayedCards:      playedCards,
@@ -161,6 +164,8 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		Effects:          convertPlayerEffects(p.Effects().List(), p, g, cardRegistry),
 		Actions:          convertPlayerActions(p.Actions().List(), p, g, cardRegistry),
 
+		DemoReady: p.HasPendingDemoChoices(),
+
 		SelectCorporationPhase:    convertSelectCorporationPhaseForOtherPlayer(g.GetSelectCorporationPhase(p.ID())),
 		SelectStartingCardsPhase:  convertSelectStartingCardsPhaseForOtherPlayer(g.GetSelectStartingCardsPhase(p.ID())),
 		SelectPreludeCardsPhase:   convertSelectPreludeCardsPhaseForOtherPlayer(g.GetSelectPreludeCardsPhase(p.ID())),
@@ -170,6 +175,20 @@ func ToOtherPlayerDto(p *player.Player, g *game.Game, cardRegistry cards.CardReg
 		StoragePaymentSubstitutes: convertStoragePaymentSubstitutes(p.Resources().StoragePaymentSubstitutes()),
 		VPGranters:                toVPGranterDtos(p.VPGranters().GetAll()),
 		BonusTags:                 convertBonusTags(p.BonusTags()),
+	}
+}
+
+func convertPendingDemoChoices(choices *shared.PendingDemoChoices) *PendingDemoChoicesDto {
+	if choices == nil {
+		return nil
+	}
+	return &PendingDemoChoicesDto{
+		CorporationID:   choices.CorporationID,
+		PreludeIDs:      choices.PreludeIDs,
+		CardIDs:         choices.CardIDs,
+		Resources:       toResourcesDto(choices.Resources),
+		Production:      toProductionDto(choices.Production),
+		TerraformRating: choices.TerraformRating,
 	}
 }
 
@@ -184,9 +203,29 @@ func convertBonusTags(tags map[shared.CardTag]int) map[string]int {
 	return result
 }
 
-func playerStatus(p *player.Player) PlayerStatus {
+func playerStatus(p *player.Player, g *game.Game) PlayerStatus {
 	if p.HasExited() {
 		return PlayerStatusExited
+	}
+	if g.GetPendingTileSelection(p.ID()) != nil {
+		return PlayerStatusTile
+	}
+	if p.Selection().HasPendingSelection() {
+		return PlayerStatusSelection
+	}
+	if g.GetSelectCorporationPhase(p.ID()) != nil ||
+		g.GetSelectStartingCardsPhase(p.ID()) != nil ||
+		g.GetSelectPreludeCardsPhase(p.ID()) != nil {
+		return PlayerStatusSelectingStartingCards
+	}
+	pp := g.GetProductionPhase(p.ID())
+	if pp != nil && !pp.SelectionComplete {
+		return PlayerStatusSelectingProductionCards
+	}
+	turn := g.CurrentTurn()
+	if turn != nil && turn.PlayerID() == p.ID() &&
+		g.CurrentPhase() == shared.GamePhaseAction {
+		return PlayerStatusActive
 	}
 	return PlayerStatusWaiting
 }
@@ -294,16 +333,17 @@ func convertPlayerEffects(effects []shared.CardEffect, p *player.Player, g *game
 	for i, effect := range effects {
 		var computedValues []ComputedBehaviorValueDto
 		var outputs []CalculatedOutputDto
-		for _, output := range effect.Behavior.Outputs {
-			if output.Per == nil {
+		for _, outputBC := range effect.Behavior.Outputs {
+			per := shared.GetPerCondition(outputBC)
+			if per == nil {
 				continue
 			}
-			count := gamecards.CountPerCondition(output.Per, effect.CardID, p, board, cardRegistry, allPlayers)
-			if output.Per.Amount > 0 {
-				multiplier := count / output.Per.Amount
-				actualAmount := output.Amount * multiplier
+			count := gamecards.CountPerCondition(per, effect.CardID, p, board, cardRegistry, allPlayers)
+			if per.Amount > 0 {
+				multiplier := count / per.Amount
+				actualAmount := outputBC.GetAmount() * multiplier
 				outputs = append(outputs, CalculatedOutputDto{
-					ResourceType: string(output.ResourceType),
+					ResourceType: string(outputBC.GetResourceType()),
 					Amount:       actualAmount,
 					IsScaled:     true,
 				})
@@ -530,11 +570,11 @@ func convertPendingStealTargetSelection(selection *shared.PendingStealTargetSele
 	}
 }
 
-func convertPendingColonyResourceSelection(selection *shared.PendingColonyResourceSelection) *PendingColonyResourceSelectionDto {
-	if selection == nil {
+func convertPendingColonyResourceFromQueue(queue []shared.PendingColonyResourceSelection) *PendingColonyResourceSelectionDto {
+	if len(queue) == 0 {
 		return nil
 	}
-
+	selection := queue[0]
 	return &PendingColonyResourceSelectionDto{
 		ResourceType: selection.ResourceType,
 		Amount:       selection.Amount,

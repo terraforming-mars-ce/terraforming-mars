@@ -244,8 +244,10 @@ func CountPerCondition(
 				return CountPlayerTiles(p.ID(), b, &rt)
 			}
 			return CountAllTilesOfType(b, shared.ResourceGreeneryTile)
-		case shared.ResourceColonyTile:
-			return CountAllTilesOfType(b, shared.ResourceColonyTile)
+		case shared.ResourceColony:
+			// Colonies are not board tiles; callers must handle colony counting
+			// via game.Colonies().CountAllColonies() before reaching here.
+			return 0
 		}
 	}
 

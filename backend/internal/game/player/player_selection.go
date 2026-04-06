@@ -30,6 +30,12 @@ func (s *Selection) update(fn func(st *datastore.PlayerState)) {
 	if err := s.ds.UpdatePlayer(s.gameID, s.playerID, fn); err != nil {
 		logger.Get().Warn("Failed to update player state", zap.String("game_id", s.gameID), zap.String("player_id", s.playerID), zap.Error(err))
 	}
+	if s.eventBus != nil {
+		events.Publish(s.eventBus, events.PlayerSelectionChangedEvent{
+			GameID:   s.gameID,
+			PlayerID: s.playerID,
+		})
+	}
 }
 
 func (s *Selection) read(fn func(st *datastore.PlayerState)) {
@@ -164,6 +170,41 @@ func (s *Selection) SetPendingColonyResourceSelection(selection *shared.PendingC
 	})
 }
 
+func (s *Selection) GetPendingColonyResourceQueue() []shared.PendingColonyResourceSelection {
+	var queue []shared.PendingColonyResourceSelection
+	s.read(func(st *datastore.PlayerState) {
+		queue = st.PendingColonyResourceQueue
+	})
+	return queue
+}
+
+func (s *Selection) AppendPendingColonyResource(selection shared.PendingColonyResourceSelection) {
+	s.update(func(st *datastore.PlayerState) {
+		st.PendingColonyResourceQueue = append(st.PendingColonyResourceQueue, selection)
+	})
+}
+
+func (s *Selection) PopPendingColonyResource() *shared.PendingColonyResourceSelection {
+	// Check first without triggering event
+	var hasItems bool
+	s.read(func(st *datastore.PlayerState) {
+		hasItems = len(st.PendingColonyResourceQueue) > 0
+	})
+	if !hasItems {
+		return nil
+	}
+	var result *shared.PendingColonyResourceSelection
+	s.update(func(st *datastore.PlayerState) {
+		if len(st.PendingColonyResourceQueue) == 0 {
+			return
+		}
+		first := st.PendingColonyResourceQueue[0]
+		result = &first
+		st.PendingColonyResourceQueue = st.PendingColonyResourceQueue[1:]
+	})
+	return result
+}
+
 func (s *Selection) GetPendingAwardFundSelection() *shared.PendingAwardFundSelection {
 	var sel *shared.PendingAwardFundSelection
 	s.read(func(st *datastore.PlayerState) {
@@ -204,4 +245,22 @@ func (s *Selection) SetPendingFreeTradeSelection(selection *shared.PendingFreeTr
 	s.update(func(st *datastore.PlayerState) {
 		st.PendingFreeTradeSelection = selection
 	})
+}
+
+// HasPendingSelection returns true if the player has any pending action selection.
+// Does not include setup-phase selections (corporation, starting cards, prelude, production).
+func (s *Selection) HasPendingSelection() bool {
+	var has bool
+	s.read(func(st *datastore.PlayerState) {
+		has = st.PendingCardSelection != nil ||
+			st.PendingCardDrawSelection != nil ||
+			st.PendingCardDiscardSelection != nil ||
+			st.PendingBehaviorChoiceSelection != nil ||
+			st.PendingStealTargetSelection != nil ||
+			len(st.PendingColonyResourceQueue) > 0 ||
+			st.PendingAwardFundSelection != nil ||
+			st.PendingColonySelection != nil ||
+			st.PendingFreeTradeSelection != nil
+	})
+	return has
 }

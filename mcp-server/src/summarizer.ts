@@ -19,6 +19,7 @@ import type {
   PendingBehaviorChoiceSelectionDto,
   ForcedFirstActionDto,
   CardBehaviorDto,
+  ResourceCondition,
 } from "./types.js";
 import { GameState } from "./state.js";
 
@@ -480,8 +481,8 @@ function formatProd(val: number): string {
 }
 
 function formatBehaviorBrief(
-  inputs?: import("./types.js").ResourceConditionDto[],
-  outputs?: import("./types.js").ResourceConditionDto[],
+  inputs?: ResourceCondition[],
+  outputs?: ResourceCondition[],
 ): string {
   const parts: string[] = [];
 

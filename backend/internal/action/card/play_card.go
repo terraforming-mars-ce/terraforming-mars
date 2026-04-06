@@ -22,6 +22,7 @@ import (
 // moving card to played cards, applying immediate effects, and deducting payment
 type PlayCardAction struct {
 	baseaction.BaseAction
+	colonyBonusLookup gamecards.ColonyBonusLookup
 }
 
 // NewPlayCardAction creates a new play card action
@@ -30,9 +31,15 @@ func NewPlayCardAction(
 	cardRegistry cards.CardRegistry,
 	stateRepo game.GameStateRepository,
 	logger *zap.Logger,
+	colonyBonusLookup ...gamecards.ColonyBonusLookup,
 ) *PlayCardAction {
+	var lookup gamecards.ColonyBonusLookup
+	if len(colonyBonusLookup) > 0 {
+		lookup = colonyBonusLookup[0]
+	}
 	return &PlayCardAction{
-		BaseAction: baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),
+		BaseAction:        baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),
+		colonyBonusLookup: lookup,
 	}
 }
 
@@ -86,6 +93,10 @@ func (a *PlayCardAction) Execute(
 	}
 
 	if err := baseaction.ValidateActionsRemaining(g, playerID, log); err != nil {
+		return err
+	}
+
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
 		return err
 	}
 
@@ -499,6 +510,9 @@ func (a *PlayCardAction) applyCardBehaviors(
 				WithSourceCardID(card.ID).
 				WithCardRegistry(a.CardRegistry()).
 				WithSourceType(shared.SourceTypeCardPlay)
+			if a.colonyBonusLookup != nil {
+				applier = applier.WithColonyBonusLookup(a.colonyBonusLookup)
+			}
 			if len(cardStorageTargets) > 0 {
 				applier = applier.WithTargetCardIDs(cardStorageTargets)
 			}
@@ -520,8 +534,8 @@ func (a *PlayCardAction) applyCardBehaviors(
 				callback := &shared.TileCompletionCallback{
 					Type: "adjacent-steal",
 					Data: map[string]interface{}{
-						"resourceType": string(deferred.ResourceType),
-						"amount":       deferred.Amount,
+						"resourceType": string(deferred.GetResourceType()),
+						"amount":       deferred.GetAmount(),
 						"sourceCardID": card.ID,
 						"source":       card.Name,
 					},
@@ -657,8 +671,8 @@ func (a *PlayCardAction) applyCardBehaviors(
 func (a *PlayCardAction) createPendingCardDiscard(
 	p *player.Player,
 	card *gamecards.Card,
-	inputs []shared.ResourceCondition,
-	outputs []shared.ResourceCondition,
+	inputs []shared.BehaviorCondition,
+	outputs []shared.BehaviorCondition,
 	log *zap.Logger,
 ) {
 	minCards := 0
@@ -666,10 +680,10 @@ func (a *PlayCardAction) createPendingCardDiscard(
 	isOptional := false
 
 	for _, input := range inputs {
-		if input.ResourceType == shared.ResourceCardDiscard {
-			maxCards += input.Amount
-			if !input.Optional {
-				minCards += input.Amount
+		if input.GetResourceType() == shared.ResourceCardDiscard {
+			maxCards += input.GetAmount()
+			if !shared.IsOptional(input) {
+				minCards += input.GetAmount()
 			} else {
 				isOptional = true
 			}
@@ -705,17 +719,17 @@ func (a *PlayCardAction) createPendingCardDiscard(
 func (a *PlayCardAction) createPendingCardDiscardFromOutputs(
 	p *player.Player,
 	card *gamecards.Card,
-	outputs []shared.ResourceCondition,
+	outputs []shared.BehaviorCondition,
 	log *zap.Logger,
 ) {
 	minCards := 0
 	maxCards := 0
-	var pendingOutputs []shared.ResourceCondition
+	var pendingOutputs []shared.BehaviorCondition
 
 	for _, output := range outputs {
-		if output.ResourceType == shared.ResourceCardDiscard {
-			minCards += output.Amount
-			maxCards += output.Amount
+		if output.GetResourceType() == shared.ResourceCardDiscard {
+			minCards += output.GetAmount()
+			maxCards += output.GetAmount()
 		} else {
 			pendingOutputs = append(pendingOutputs, output)
 		}
@@ -832,7 +846,7 @@ func collectTemporaryEffectCardIDs(p *player.Player, temporaryType string) []str
 	var cardIDs []string
 	for _, effect := range p.Effects().List() {
 		for _, output := range effect.Behavior.Outputs {
-			if output.Temporary == temporaryType {
+			if shared.GetTemporary(output) == temporaryType {
 				cardIDs = append(cardIDs, effect.CardID)
 				break
 			}
@@ -960,15 +974,15 @@ func validateProductionOutputs(card *gamecards.Card, p *player.Player) error {
 		if !gamecards.HasAutoTrigger(behavior) {
 			continue
 		}
-		for _, output := range behavior.Outputs {
-			if output.VariableAmount || output.Amount >= 0 {
+		for _, outputBC := range behavior.Outputs {
+			if shared.IsVariableAmount(outputBC) || outputBC.GetAmount() >= 0 {
 				continue
 			}
-			if output.Target != "self-player" {
+			if outputBC.GetTarget() != "self-player" {
 				continue
 			}
 			var current, minProd int
-			switch output.ResourceType {
+			switch outputBC.GetResourceType() {
 			case shared.ResourceCreditProduction:
 				current, minProd = production.Credits, shared.MinCreditProduction
 			case shared.ResourceSteelProduction:
@@ -984,8 +998,8 @@ func validateProductionOutputs(card *gamecards.Card, p *player.Player) error {
 			default:
 				continue
 			}
-			if current+output.Amount < minProd {
-				return fmt.Errorf("insufficient %s: have %d, need at least %d to decrease by %d", output.ResourceType, current, -output.Amount, -output.Amount)
+			if current+outputBC.GetAmount() < minProd {
+				return fmt.Errorf("insufficient %s: have %d, need at least %d to decrease by %d", outputBC.GetResourceType(), current, -outputBC.GetAmount(), -outputBC.GetAmount())
 			}
 		}
 	}
@@ -1003,15 +1017,15 @@ func validateNegativeResourceOutputs(card *gamecards.Card, p *player.Player) err
 		if !gamecards.HasAutoTrigger(behavior) {
 			continue
 		}
-		for _, output := range behavior.Outputs {
-			if output.VariableAmount || output.Amount >= 0 {
+		for _, outputBC := range behavior.Outputs {
+			if shared.IsVariableAmount(outputBC) || outputBC.GetAmount() >= 0 {
 				continue
 			}
-			if output.Target != "self-player" {
+			if outputBC.GetTarget() != "self-player" {
 				continue
 			}
 			var available int
-			switch output.ResourceType {
+			switch outputBC.GetResourceType() {
 			case shared.ResourceCredit:
 				available = resources.Credits
 			case shared.ResourceSteel:
@@ -1027,9 +1041,9 @@ func validateNegativeResourceOutputs(card *gamecards.Card, p *player.Player) err
 			default:
 				continue
 			}
-			required := -output.Amount
+			required := -outputBC.GetAmount()
 			if available < required {
-				return fmt.Errorf("not enough %s: have %d, need %d", output.ResourceType, available, required)
+				return fmt.Errorf("not enough %s: have %d, need %d", outputBC.GetResourceType(), available, required)
 			}
 		}
 	}

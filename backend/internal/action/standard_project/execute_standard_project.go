@@ -70,6 +70,10 @@ func (a *ExecuteStandardProjectAction) Execute(
 		return err
 	}
 
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
+		return err
+	}
+
 	player, err := a.GetPlayerFromGame(g, playerID, log)
 	if err != nil {
 		return err
@@ -185,8 +189,10 @@ func (a *ExecuteStandardProjectAction) executeSellPatents(
 func hasSellPatentsBehavior(behaviors []shared.CardBehavior) bool {
 	for _, b := range behaviors {
 		for _, input := range b.Inputs {
-			if input.ResourceType == shared.ResourceCardDiscard && input.VariableAmount {
-				return true
+			if input.GetResourceType() == shared.ResourceCardDiscard {
+				if co, ok := input.(*shared.CardOperationCondition); ok && co.VariableAmount {
+					return true
+				}
 			}
 		}
 	}

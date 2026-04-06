@@ -7,8 +7,8 @@ PI_COMPOSE_DIR="${PI_COMPOSE_DIR:-/home/mhm/terraforming-mars}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-BACKEND_IMAGE="ghcr.io/rackaracka123/terraforming-mars-backend:latest"
-FRONTEND_IMAGE="ghcr.io/rackaracka123/terraforming-mars-frontend:latest"
+BACKEND_IMAGE="ghcr.io/terraforming-mars-ce/terraforming-mars-backend:latest"
+FRONTEND_IMAGE="ghcr.io/terraforming-mars-ce/terraforming-mars-frontend:latest"
 
 GIT_DESCRIBE=$(git -C "$PROJECT_ROOT" describe --tags --always)
 if echo "$GIT_DESCRIBE" | grep -q '-'; then

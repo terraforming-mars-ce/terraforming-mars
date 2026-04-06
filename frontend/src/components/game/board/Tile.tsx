@@ -3,7 +3,6 @@ import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { HexTile2D } from "../../../utils/hex-grid-2d";
-import OceanTile from "./OceanTile";
 import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
@@ -17,6 +16,7 @@ import {
   hoverGlowFragment,
   availableGlowFragment,
   vpHighlightFragment,
+  oceanBorderFragment,
   tileBorderVertex,
   tileBorderFragment,
   tileSurfaceVertexSnippet,
@@ -431,7 +431,25 @@ function Tile({
     });
   }, [sphereRadius, sphereCenter]);
 
+  const oceanBorderMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      vertexShader: sphereProjectionVertex,
+      fragmentShader: oceanBorderFragment,
+      uniforms: {
+        time: { value: 0.0 },
+        uSphereRadius: { value: sphereRadius },
+        uZOffset: { value: CHROME_Z_BASE + 0.004 },
+        uSphereCenter: { value: sphereCenter },
+      },
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+  }, [sphereRadius, sphereCenter]);
+
   useFrame((state) => {
+    oceanBorderMaterial.uniforms.time.value = state.clock.elapsedTime;
+
     // Update colors for hover state (avoids recreating materials)
     if (hovered) {
       hexTileMaterial.color.set("#ffff88");
@@ -501,6 +519,7 @@ function Tile({
           availableGlowMaterial,
           volcanicTintMaterial,
           vpHighlightMaterial,
+          oceanBorderMaterial,
         ]);
         const extras: THREE.Material[] = [];
         tileGroupRef.current.traverse((child) => {
@@ -719,13 +738,10 @@ function Tile({
         <mesh geometry={borderGeometry} material={borderMaterial} renderOrder={20} />
       )}
 
-      {/* Ocean rendering (water shader, ocean space indicator) */}
-      <OceanTile
-        overlayGeometry={overlayGeometry}
-        isOceanSpace={tileData.isOceanSpace}
-        tileType={tileType}
-        sphereCenter={sphereCenter}
-      />
+      {/* Ocean space border indicator (for empty ocean-reserved tiles) */}
+      {tileType === "empty" && _isOceanSpace && (
+        <mesh geometry={overlayGeometry} material={oceanBorderMaterial} renderOrder={21} />
+      )}
 
       {/* Volcanic space indicator - red tint for unoccupied volcanic tiles */}
       {tileType === "empty" && isVolcanic && (

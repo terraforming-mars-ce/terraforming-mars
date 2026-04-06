@@ -1,13 +1,15 @@
 import GameIcon from "../../../display/GameIcon.tsx";
+import type { CardBehaviorDto, SelectorDto } from "@/types/generated/api-types";
+import { isEffect, getSelectors } from "@/types/resourceConditions";
 
 interface DefenseLayoutProps {
-  behavior: any;
+  behavior: CardBehaviorDto;
 }
 
-const getResourcesFromSelectors = (selectors: any[]): string[] => {
+const getResourcesFromSelectors = (selectors: SelectorDto[]): string[] => {
   const resources: string[] = [];
   const seen = new Set<string>();
-  selectors.forEach((selector: any) => {
+  selectors.forEach((selector: SelectorDto) => {
     if (selector.resources) {
       selector.resources.forEach((r: string) => {
         if (!seen.has(r)) {
@@ -23,10 +25,12 @@ const getResourcesFromSelectors = (selectors: any[]): string[] => {
 const DefenseLayout: React.FC<DefenseLayoutProps> = ({ behavior }) => {
   if (!behavior.outputs || behavior.outputs.length === 0) return null;
 
-  const defenseOutput = behavior.outputs.find((output: any) => output.type === "defense");
+  const defenseOutput = behavior.outputs.find(
+    (output) => isEffect(output) && output.type === "defense",
+  );
   if (!defenseOutput) return null;
 
-  const selectors: any[] = defenseOutput.selectors || [];
+  const selectors: SelectorDto[] = getSelectors(defenseOutput) || [];
   const affectedResources = getResourcesFromSelectors(selectors);
 
   if (affectedResources.length === 0) return null;

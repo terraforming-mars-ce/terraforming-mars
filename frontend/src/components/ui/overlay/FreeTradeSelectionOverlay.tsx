@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   PendingFreeTradeSelectionDto,
-  ColonyTileDto,
+  ColonyDto,
   ColonyOutputDto,
   CardDto,
 } from "@/types/generated/api-types.ts";
@@ -10,11 +10,12 @@ import GameButton from "../buttons/GameButton.tsx";
 import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
 import StorageWarningDialog from "../display/StorageWarningDialog.tsx";
 import { PlayerInfo, getStorageWarning } from "@/utils/colonyUtils.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface FreeTradeSelectionOverlayProps {
   isOpen: boolean;
   pendingSelection: PendingFreeTradeSelectionDto;
-  colonyTiles: ColonyTileDto[];
+  colonies: ColonyDto[];
   viewingPlayerId: string;
   tradeFleetAvailable: boolean;
   allPlayers: PlayerInfo[];
@@ -26,7 +27,7 @@ interface FreeTradeSelectionOverlayProps {
 const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
   isOpen,
   pendingSelection,
-  colonyTiles,
+  colonies,
   viewingPlayerId,
   tradeFleetAvailable,
   allPlayers,
@@ -45,7 +46,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
     [pendingSelection],
   );
 
-  const isColonyTradeable = (colony: ColonyTileDto): boolean => {
+  const isColonyTradeable = (colony: ColonyDto): boolean => {
     return tradeableIds.has(colony.id) && !colony.tradedThisGen && tradeFleetAvailable;
   };
 
@@ -62,8 +63,12 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: Z_INDEX.SELECTION_POPOVER }}
+    >
+      <div className="absolute inset-0 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]" />
 
       <div className="relative z-[1] w-[480px] max-h-[80vh] flex flex-col bg-space-black-darker/95 border border-space-blue-500 rounded-lg overflow-hidden shadow-glow-lg">
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
@@ -92,7 +97,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {colonyTiles.map((colony) => {
+          {colonies.map((colony) => {
             const tradeable = isColonyTradeable(colony);
             const isSelected = selectedColonyId === colony.id;
             const markerOutput = colony.steps[colony.markerPosition]?.outputs ?? [];
@@ -181,7 +186,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
               if (!selectedColonyId) {
                 return;
               }
-              const colony = colonyTiles.find((c) => c.id === selectedColonyId);
+              const colony = colonies.find((c) => c.id === selectedColonyId);
               if (colony) {
                 const tradeOutputs = colony.steps[colony.markerPosition]?.outputs ?? [];
                 const warning = getStorageWarning(tradeOutputs, playedCards, corporation);

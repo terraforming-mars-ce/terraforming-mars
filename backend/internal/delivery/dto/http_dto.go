@@ -4,18 +4,19 @@ import "encoding/json"
 
 // CreateGameRequest represents the request body for creating a game
 type CreateGameRequest struct {
-	MaxPlayers         int      `json:"maxPlayers" binding:"required,min=1,max=10" ts:"number"`
-	VenusNextEnabled   bool     `json:"venusNextEnabled" ts:"boolean"`
-	DevelopmentMode    bool     `json:"developmentMode" ts:"boolean"`
-	CardPacks          []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
-	ClaudeAPIKey       string   `json:"claudeApiKey,omitempty" ts:"string | undefined"`
-	SelectedMilestones []string `json:"selectedMilestones,omitempty" ts:"string[] | undefined"`
-	SelectedAwards     []string `json:"selectedAwards,omitempty" ts:"string[] | undefined"`
+	MaxPlayers         int      `json:"maxPlayers" binding:"required,min=1,max=10"`
+	VenusNextEnabled   bool     `json:"venusNextEnabled"`
+	DevelopmentMode    bool     `json:"developmentMode"`
+	DemoGame           bool     `json:"demoGame"`
+	CardPacks          []string `json:"cardPacks,omitempty"`
+	ClaudeAPIKey       string   `json:"claudeApiKey,omitempty"`
+	SelectedMilestones []string `json:"selectedMilestones,omitempty"`
+	SelectedAwards     []string `json:"selectedAwards,omitempty"`
 }
 
 // CreateGameResponse represents the response for creating a game
 type CreateGameResponse struct {
-	Game GameDto `json:"game" ts:"GameDto"`
+	Game GameDto `json:"game"`
 }
 
 // JoinGameRequest represents the request body for joining a game
@@ -25,51 +26,38 @@ type JoinGameRequest struct {
 
 // JoinGameResponse represents the response for joining a game
 type JoinGameResponse struct {
-	Game     GameDto `json:"game" ts:"GameDto"`
-	PlayerID string  `json:"playerId" ts:"string"`
+	Game     GameDto `json:"game"`
+	PlayerID string  `json:"playerId"`
 }
 
 // GetGameResponse represents the response for getting a game
 type GetGameResponse struct {
-	Game GameDto `json:"game" ts:"GameDto"`
+	Game GameDto `json:"game"`
 }
 
 // ListGamesResponse represents the response for listing games
 type ListGamesResponse struct {
-	Games []GameDto `json:"games" ts:"GameDto[]"`
+	Games []GameDto `json:"games"`
 }
 
 // GetPlayerResponse represents the response for getting a player
 type GetPlayerResponse struct {
-	Player PlayerDto `json:"player" ts:"PlayerDto"`
+	Player PlayerDto `json:"player"`
 }
 
 // ListCardsResponse represents the response for listing cards with pagination
 type ListCardsResponse struct {
-	Cards      []CardDto `json:"cards" ts:"CardDto[]"`
-	TotalCount int       `json:"totalCount" ts:"number"`
-	Offset     int       `json:"offset" ts:"number"`
-	Limit      int       `json:"limit" ts:"number"`
+	Cards      []CardDto `json:"cards"`
+	TotalCount int       `json:"totalCount"`
+	Offset     int       `json:"offset"`
+	Limit      int       `json:"limit"`
 }
 
 // ErrorResponse represents an error response
 type ErrorResponse struct {
-	Error   string `json:"error" ts:"string"`
-	Code    string `json:"code,omitempty" ts:"string"`
-	Details string `json:"details,omitempty" ts:"string"`
-}
-
-// CreateDemoLobbyRequest represents the request body for creating a demo lobby
-type CreateDemoLobbyRequest struct {
-	PlayerCount int      `json:"playerCount" ts:"number"`
-	CardPacks   []string `json:"cardPacks,omitempty" ts:"string[] | undefined"`
-	PlayerName  string   `json:"playerName,omitempty" ts:"string | undefined"`
-}
-
-// CreateDemoLobbyResponse represents the response for creating a demo lobby
-type CreateDemoLobbyResponse struct {
-	Game     GameDto `json:"game" ts:"GameDto"`
-	PlayerID string  `json:"playerId" ts:"string"`
+	Error   string `json:"error"`
+	Code    string `json:"code,omitempty"`
+	Details string `json:"details,omitempty"`
 }
 
 // MilestoneAwardItemDto represents a single milestone or award for selection
@@ -87,28 +75,28 @@ type ListMilestonesAwardsResponse struct {
 
 // FeedbackRequest represents the request body for submitting feedback
 type FeedbackRequest struct {
-	Title       string          `json:"title" ts:"string"`
-	Description string          `json:"description" ts:"string"`
-	Tags        []string        `json:"tags" ts:"string[]"`
-	Author      string          `json:"author,omitempty" ts:"string | undefined"`
-	GameState   json.RawMessage `json:"gameState,omitempty" ts:"GameDto | undefined"`
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	Tags        []string        `json:"tags"`
+	Author      string          `json:"author,omitempty"`
+	GameState   json.RawMessage `json:"gameState,omitempty"`
 }
 
 // FeedbackDto represents a feedback submission's current state
 type FeedbackDto struct {
-	ID            string `json:"id" ts:"string"`
-	Status        string `json:"status" ts:"string"`
-	StatusMessage string `json:"statusMessage" ts:"string"`
-	IssueURL      string `json:"issueUrl,omitempty" ts:"string | undefined"`
+	ID            string `json:"id"`
+	Status        string `json:"status"`
+	StatusMessage string `json:"statusMessage"`
+	IssueURL      string `json:"issueUrl,omitempty"`
 }
 
 // FeedbackResponse represents the response for feedback operations
 type FeedbackResponse struct {
-	Report FeedbackDto `json:"report" ts:"FeedbackDto"`
+	Report FeedbackDto `json:"report"`
 }
 
 // FeedbackStatusResponse represents the response for feedback service availability
 type FeedbackStatusResponse struct {
-	Available bool   `json:"available" ts:"boolean"`
-	Reason    string `json:"reason,omitempty" ts:"string | undefined"`
+	Available bool   `json:"available"`
+	Reason    string `json:"reason,omitempty"`
 }

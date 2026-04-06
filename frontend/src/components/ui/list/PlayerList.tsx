@@ -6,6 +6,7 @@ import {
   TriggeredEffectDto,
 } from "@/types/generated/api-types.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
+import { isPlayerActionPhase } from "@/utils/actionUtils.ts";
 import PlayerCard from "../cards/PlayerCard.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import { GameFlowPopover, GameFlowTitle, GameFlowFooter } from "../popover/GameFlowPopover.tsx";
@@ -30,7 +31,6 @@ interface PlayerListProps {
   turnPlayerId: string;
   currentPhase?: GamePhase;
   hostPlayerId?: string;
-  pendingTilePlayerId?: string;
   triggeredEffects?: TriggeredEffectDto[];
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
   onKickPlayer?: (playerId: string) => void;
@@ -44,7 +44,6 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
     turnPlayerId,
     currentPhase,
     hostPlayerId,
-    pendingTilePlayerId,
     triggeredEffects = [],
     onPlayerClick,
     onKickPlayer,
@@ -52,7 +51,7 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
   },
   ref,
 ) {
-  const isActionPhase = currentPhase === "action";
+  const isActionPhase = isPlayerActionPhase(currentPhase);
 
   const { minNameWidth, minCardWidth } = useMemo(() => {
     if (players.length === 0) {
@@ -158,7 +157,6 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
           isActionPhase={isActionPhase}
           isHost={currentPlayer?.id === hostPlayerId}
           onSkipAction={handleSkipAction}
-          hasPendingTile={player.id === pendingTilePlayerId}
           triggeredEffects={triggeredEffects}
           onPlayerClick={onPlayerClick}
           onKickPlayer={onKickPlayer}

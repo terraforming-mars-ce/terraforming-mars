@@ -4,6 +4,7 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/logger"
 
@@ -13,9 +14,14 @@ import (
 // SetupPlayerCardStore wires event-driven state calculation for a player's hand cards.
 // Subscribes to game events so that EntityState for each hand card is automatically
 // computed and kept in sync. Must be called once per player after creation.
-func SetupPlayerCardStore(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) {
+func SetupPlayerCardStore(p *player.Player, g *game.Game, cardRegistry cards.CardRegistry, colonyBonusLookup ...gamecards.ColonyBonusLookup) {
 	eventBus := g.EventBus()
 	store := p.CardStateStore()
+
+	var lookup gamecards.ColonyBonusLookup
+	if len(colonyBonusLookup) > 0 {
+		lookup = colonyBonusLookup[0]
+	}
 
 	recalculate := func(cardID string) player.EntityState {
 		card, err := cardRegistry.GetByID(cardID)
@@ -24,7 +30,7 @@ func SetupPlayerCardStore(p *player.Player, g *game.Game, cardRegistry cards.Car
 				zap.String("card_id", cardID), zap.Error(err))
 			return player.EntityState{}
 		}
-		return CalculatePlayerCardState(card, p, g, cardRegistry)
+		return CalculatePlayerCardState(card, p, g, cardRegistry, lookup)
 	}
 
 	recalculateAll := func() {
@@ -42,7 +48,7 @@ func SetupPlayerCardStore(p *player.Player, g *game.Game, cardRegistry cards.Car
 				zap.String("card_id", e.CardID), zap.Error(err))
 			return
 		}
-		state := CalculatePlayerCardState(card, p, g, cardRegistry)
+		state := CalculatePlayerCardState(card, p, g, cardRegistry, lookup)
 		store.SetState(e.CardID, state)
 	})
 
@@ -111,6 +117,18 @@ func SetupPlayerCardStore(p *player.Player, g *game.Game, cardRegistry cards.Car
 
 	events.Subscribe(eventBus, func(e events.TilePlacedEvent) {
 		if e.GameID == g.ID() {
+			recalculateAll()
+		}
+	})
+
+	events.Subscribe(eventBus, func(e events.ColonyBuiltEvent) {
+		if e.GameID == g.ID() {
+			recalculateAll()
+		}
+	})
+
+	events.Subscribe(eventBus, func(e events.PlayerSelectionChangedEvent) {
+		if e.PlayerID == p.ID() {
 			recalculateAll()
 		}
 	})

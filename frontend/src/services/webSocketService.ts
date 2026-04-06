@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getWebSocketUrl } from "../config";
 import {
   CardPaymentDto,
-  ConfirmDemoSetupRequest,
+  SelectDemoChoicesRequest,
   ErrorPayload,
   FullStatePayload,
   GameUpdatedPayload,
@@ -28,7 +28,7 @@ import {
   MessageTypeActionTileSelected,
   MessageTypeActionConvertPlantsToGreenery,
   MessageTypeActionConvertHeatToTemperature,
-  MessageTypeActionConfirmDemoSetup,
+  MessageTypeActionSelectDemoChoices,
   MessageTypeActionClaimMilestone,
   MessageTypeActionFundAward,
   MessageTypeAddBot,
@@ -345,8 +345,8 @@ export class WebSocketService {
     return this.send(MessageTypeActionTileSelected, { hex });
   }
 
-  confirmDemoSetup(request: ConfirmDemoSetupRequest): string {
-    return this.send(MessageTypeActionConfirmDemoSetup, request);
+  selectDemoChoices(request: SelectDemoChoicesRequest): string {
+    return this.send(MessageTypeActionSelectDemoChoices, request);
   }
 
   claimMilestone(milestoneType: string): string {

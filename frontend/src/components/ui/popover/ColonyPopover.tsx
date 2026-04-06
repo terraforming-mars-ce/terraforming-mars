@@ -3,7 +3,7 @@ import {
   GameDto,
   GameStatusActive,
   GamePhaseAction,
-  ColonyTileDto,
+  ColonyDto,
   ColonyOutputDto,
   ResourceTypeCredit,
   ResourceTypeEnergy,
@@ -70,7 +70,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
   const canAct =
     isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
 
-  const colonyTiles = gameState?.colonyTiles ?? [];
+  const colonies = gameState?.colonies ?? [];
 
   const allPlayers: PlayerInfo[] = useMemo(() => {
     if (!gameState) return [];
@@ -98,7 +98,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
 
   const handleTrade = (colonyId: string) => {
     if (!canAct) return;
-    const colony = colonyTiles.find((c) => c.id === colonyId);
+    const colony = colonies.find((c) => c.id === colonyId);
     if (colony) {
       const tradeOutputs = colony.steps[colony.markerPosition]?.outputs ?? [];
       const warning = getStorageWarning(
@@ -122,7 +122,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
 
   const handleBuild = (colonyId: string) => {
     if (!canAct) return;
-    const colony = colonyTiles.find((c) => c.id === colonyId);
+    const colony = colonies.find((c) => c.id === colonyId);
     if (colony) {
       const slotIndex = colony.playerColonies.length;
       const reward = colony.colonies[slotIndex]?.reward ?? [];
@@ -230,8 +230,8 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
         )}
 
         <div className="p-2 space-y-2">
-          {colonyTiles.map((colony) => (
-            <ColonyTileCard
+          {colonies.map((colony) => (
+            <ColonyCard
               key={colony.id}
               colony={colony}
               mode={mode}
@@ -263,8 +263,8 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
   );
 };
 
-interface ColonyTileCardProps {
-  colony: ColonyTileDto;
+interface ColonyCardProps {
+  colony: ColonyDto;
   mode: ColonyMode;
   canAct: boolean;
   viewingPlayerId: string;
@@ -276,7 +276,7 @@ interface ColonyTileCardProps {
   onBuild: (colonyId: string) => void;
 }
 
-const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
+const ColonyCard: React.FC<ColonyCardProps> = ({
   colony,
   mode,
   canAct,
@@ -423,7 +423,7 @@ const ColonyTileCard: React.FC<ColonyTileCardProps> = ({
         >
           <GameIcon iconType={ResourceTypeCredit} amount={17} size="small" />
           <span className="text-white/30 text-sm">→</span>
-          <GameIcon iconType="colony-tile" size="small" />
+          <GameIcon iconType="colony" size="small" />
           <CostDisplay outputs={buildReward} />
         </div>
       </div>

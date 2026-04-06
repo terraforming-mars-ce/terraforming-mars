@@ -8,6 +8,7 @@ import React, {
   forwardRef,
 } from "react";
 import GameCard from "../cards/GameCard.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import BlurredOverlay from "./BlurredOverlay.tsx";
 import { PlayerCardDto } from "@/types/generated/api-types.ts";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
@@ -535,7 +536,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         <div
           className="card-fan-overlay"
           ref={handRef}
-          style={isExpanded ? { zIndex: 20201 } : undefined}
+          style={isExpanded ? { zIndex: Z_INDEX.EXPANDED_CARD_FAN } : undefined}
         >
           {cards.map((card) => {
             const index = cardOrder.indexOf(card.id);
@@ -597,10 +598,10 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                 }
               }
 
+              const hasErrors = !card.available && card.errors.length > 0;
+              const hasWarnings = (card.warnings?.length ?? 0) > 0;
               showErrors =
-                !card.available &&
-                card.errors.length > 0 &&
-                (isHighlighted || (isDraggedCard && isDragRaised));
+                (hasErrors || hasWarnings) && (isHighlighted || (isDraggedCard && isDragRaised));
             }
 
             const staggerDelay = isTransitioning
@@ -647,24 +648,23 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                   onSelect={() => {}}
                   animationDelay={-1}
                 />
-                {!isExpanded && !card.available && card.errors.length > 0 && (
-                  <div className={`card-fan-error-panel ${showErrors ? "is-visible" : ""}`}>
-                    {card.errors.map((err, i) => (
-                      <div key={i} className="card-fan-error-item">
-                        {err.message}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {!isExpanded && card.available && card.warnings && card.warnings.length > 0 && (
-                  <div className={`card-fan-warning-panel ${showErrors ? "is-visible" : ""}`}>
-                    {card.warnings.map((warn, i) => (
-                      <div key={i} className="card-fan-warning-item">
-                        {warn.message}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {!isExpanded &&
+                  (!card.available || (card.warnings && card.warnings.length > 0)) && (
+                    <div className={`card-fan-error-panel ${showErrors ? "is-visible" : ""}`}>
+                      {!card.available &&
+                        card.errors.map((err, i) => (
+                          <div key={i} className="card-fan-error-item">
+                            {err.message}
+                          </div>
+                        ))}
+                      {card.warnings &&
+                        card.warnings.map((warn, i) => (
+                          <div key={i} className="card-fan-warning-item">
+                            {warn.message}
+                          </div>
+                        ))}
+                    </div>
+                  )}
               </div>
             );
           })}
@@ -674,7 +674,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
               className={`card-fan-card ${flyingAwayGhost.animating ? "is-flying-away" : "is-flying-away-start"}`}
               style={{
                 transform: `translate(${flyingAwayGhost.x}px, ${flyingAwayGhost.y}px) scale(${flyingAwayGhost.scale})`,
-                zIndex: 3000,
+                zIndex: Z_INDEX.CARD_DETAIL_MODAL,
               }}
             >
               <GameCard
@@ -781,26 +781,6 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
           line-height: 1.4;
           padding: 8px 10px;
           white-space: normal;
-        }
-
-        .card-fan-warning-panel {
-          position: absolute;
-          left: 100%;
-          top: 0;
-          margin-left: 10px;
-          width: 180px;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          pointer-events: none;
-          opacity: 0;
-          transform: translateX(-6px);
-          transition: opacity 200ms ease, transform 200ms ease;
-        }
-
-        .card-fan-warning-panel.is-visible {
-          opacity: 1;
-          transform: translateX(0);
         }
 
         .card-fan-warning-item {

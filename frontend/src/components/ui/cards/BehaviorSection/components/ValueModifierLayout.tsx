@@ -1,15 +1,17 @@
 import React from "react";
 import GameIcon from "../../../display/GameIcon.tsx";
 import Slash from "./Slash.tsx";
+import type { CardBehaviorDto, SelectorDto } from "@/types/generated/api-types";
+import { isEffect, getSelectors } from "@/types/resourceConditions";
 
 interface ValueModifierLayoutProps {
-  behavior: any;
+  behavior: CardBehaviorDto;
 }
 
-const getResourcesFromSelectors = (selectors: any[]): string[] => {
+const getResourcesFromSelectors = (selectors: SelectorDto[]): string[] => {
   const resources: string[] = [];
   const seen = new Set<string>();
-  selectors.forEach((selector: any) => {
+  selectors.forEach((selector: SelectorDto) => {
     if (selector.resources) {
       selector.resources.forEach((r: string) => {
         if (!seen.has(r)) {
@@ -26,12 +28,12 @@ const ValueModifierLayout: React.FC<ValueModifierLayoutProps> = ({ behavior }) =
   if (!behavior.outputs || behavior.outputs.length === 0) return null;
 
   const valueModifierOutput = behavior.outputs.find(
-    (output: any) => output.type === "value-modifier",
+    (output) => isEffect(output) && output.type === "value-modifier",
   );
   if (!valueModifierOutput) return null;
 
   const amount = valueModifierOutput.amount ?? 1;
-  const selectors: any[] = valueModifierOutput.selectors || [];
+  const selectors: SelectorDto[] = getSelectors(valueModifierOutput) || [];
   const affectedResources = getResourcesFromSelectors(selectors);
 
   if (affectedResources.length === 0) return null;

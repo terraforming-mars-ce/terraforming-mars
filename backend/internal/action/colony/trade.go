@@ -79,6 +79,10 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		return err
 	}
 
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
+		return err
+	}
+
 	if !g.HasColonies() {
 		return fmt.Errorf("colonies expansion is not enabled")
 	}
@@ -88,11 +92,11 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		return err
 	}
 
-	if !g.GetTradeFleetAvailable(playerID) {
+	if !g.Colonies().GetTradeFleetAvailable(playerID) {
 		return fmt.Errorf("trade fleet is not available")
 	}
 
-	tileState := g.GetColonyTileState(colonyID)
+	tileState := g.Colonies().GetState(colonyID)
 	if tileState == nil {
 		return fmt.Errorf("colony tile not found: %s", colonyID)
 	}
@@ -236,7 +240,7 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 	tileState.TradedThisGen = true
 	tileState.TraderID = playerID
 
-	g.SetTradeFleetAvailable(playerID, false)
+	g.Colonies().SetTradeFleetAvailable(playerID, false)
 
 	events.Publish(g.EventBus(), events.ColonyTradedEvent{
 		GameID:    g.ID(),
@@ -265,7 +269,7 @@ func setPendingColonyResource(p *player.Player, pending *PendingResource, colony
 		return
 	}
 
-	p.Selection().SetPendingColonyResourceSelection(&shared.PendingColonyResourceSelection{
+	p.Selection().AppendPendingColonyResource(shared.PendingColonyResourceSelection{
 		ResourceType: pending.ResourceType,
 		Amount:       pending.Amount,
 		Source:       colonyName,
@@ -348,8 +352,8 @@ func countTradeStepBonusFromBehaviors(behaviors []shared.CardBehavior) int {
 				trigger.Condition != nil &&
 				trigger.Condition.Type == "before-colony-trade" {
 				for _, output := range behavior.Outputs {
-					if output.ResourceType == "colony-track-step" {
-						bonus += output.Amount
+					if output.GetResourceType() == "colony-track-step" {
+						bonus += output.GetAmount()
 					}
 				}
 			}

@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import TileGrid from "./TileGrid.tsx";
 
@@ -7,8 +7,9 @@ import { GameDto } from "../../../types/generated/api-types.ts";
 import { useMarsRotation } from "../../../contexts/MarsRotationContext.tsx";
 import { useTextures } from "../../../hooks/useTextures.ts";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
+import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext.tsx";
 import { SPHERE_RADIUS } from "./boardConstants.ts";
-import { getMarsOrbitalPosition } from "./solarSystemConfig.ts";
+import { getMarsOrbitalPosition, setOrbitSpeedMultiplier } from "./solarSystemConfig.ts";
 
 interface MarsSphereProps {
   gameState?: GameDto;
@@ -25,12 +26,15 @@ export default function MarsSphere({
 }: MarsSphereProps) {
   const { marsGroupRef } = useMarsRotation();
   const { activePlanet, setActivePlanet } = usePlanetFocus();
+  const { settings: world3DSettings } = useWorld3DSettings();
+  const { gl } = useThree();
   const worldCenterRef = useRef(new THREE.Vector3());
   const groupInverseMatrixRef = useRef(new THREE.Matrix4());
 
   const { mars: diffuseMap } = useTextures();
 
   useFrame((state) => {
+    setOrbitSpeedMultiplier(world3DSettings.orbitSpeedMultiplier);
     if (marsGroupRef.current) {
       const pos = getMarsOrbitalPosition(state.clock.elapsedTime);
       marsGroupRef.current.position.set(pos[0], pos[1], pos[2]);
@@ -69,9 +73,23 @@ export default function MarsSphere({
       <mesh
         geometry={sphereGeometry}
         material={marsMaterial}
+        onPointerEnter={(e) => {
+          if (activePlanet !== "mars") {
+            if (e.intersections[0]?.object !== e.object) {
+              return;
+            }
+            gl.domElement.style.cursor = "pointer";
+          }
+        }}
+        onPointerLeave={() => {
+          if (activePlanet !== "mars") {
+            gl.domElement.style.cursor = "default";
+          }
+        }}
         onClick={(e) => {
           if (activePlanet !== "mars") {
             e.stopPropagation();
+            gl.domElement.style.cursor = "default";
             setActivePlanet("mars");
           }
         }}

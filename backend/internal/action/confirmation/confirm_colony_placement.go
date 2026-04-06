@@ -60,7 +60,7 @@ func (a *ConfirmColonyPlacementAction) Execute(ctx context.Context, gameID strin
 		return fmt.Errorf("colony %s is not available for selection", colonyID)
 	}
 
-	tileState := g.GetColonyTileState(colonyID)
+	tileState := g.Colonies().GetState(colonyID)
 	if tileState == nil {
 		return fmt.Errorf("colony tile not found: %s", colonyID)
 	}

@@ -23,6 +23,7 @@ func CalculatePlayerCardState(
 	p *player.Player,
 	g *game.Game,
 	cardRegistry cards.CardRegistry,
+	colonyBonusLookup ...gamecards.ColonyBonusLookup,
 ) player.EntityState {
 	var errors []player.StateError
 	var warnings []player.StateWarning
@@ -30,7 +31,7 @@ func CalculatePlayerCardState(
 
 	errors = append(errors, validatePhase(g)...)
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	costMap, discounts := calculateEffectiveCost(card, p, cardRegistry)
 	if len(discounts) > 0 {
@@ -55,7 +56,12 @@ func CalculatePlayerCardState(
 		}
 	}
 
-	computedValues := computeBehaviorValues(card.Behaviors, "", p, g, cardRegistry)
+	var lookup gamecards.ColonyBonusLookup
+	if len(colonyBonusLookup) > 0 {
+		lookup = colonyBonusLookup[0]
+	}
+	warnings = append(warnings, validateColonyBonusStorageTargets(card, p, g, cardRegistry, lookup)...)
+	computedValues := computeBehaviorValues(card.Behaviors, "", p, g, cardRegistry, lookup)
 
 	return player.EntityState{
 		Errors:         errors,
@@ -123,6 +129,8 @@ func CalculatePlayerCardActionState(
 ) player.EntityState {
 	var errors []player.StateError
 
+	errors = append(errors, validatePhase(g)...)
+
 	currentTurn := g.CurrentTurn()
 	if currentTurn != nil && currentTurn.PlayerID() != p.ID() {
 		errors = append(errors, player.StateError{
@@ -133,33 +141,38 @@ func CalculatePlayerCardActionState(
 	}
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	resources := p.Resources().Get()
-	for _, input := range behavior.Inputs {
+	for _, inputBC := range behavior.Inputs {
 		// Skip variable-amount inputs — the player selects how much to spend (can be 0)
-		if input.VariableAmount {
+		if shared.IsVariableAmount(inputBC) {
 			continue
 		}
 
+		rt := inputBC.GetResourceType()
+		amt := inputBC.GetAmount()
+		target := inputBC.GetTarget()
+
 		// Storage resource inputs (target: "self-card") check card storage instead of player resources
-		if input.Target == "self-card" && isStorageResourceType(input.ResourceType) {
+		if target == "self-card" && gamecards.IsStorageResourceType(rt) {
 			storage := p.Resources().GetCardStorage(cardID)
-			if storage < input.Amount {
+			if storage < amt {
 				errors = append(errors, player.StateError{
 					Code:     player.ErrorCodeInsufficientResources,
 					Category: player.ErrorCategoryInput,
-					Message:  fmt.Sprintf("Not enough %s on card", input.ResourceType),
+					Message:  fmt.Sprintf("Not enough %s on card", rt),
 				})
 			}
 			continue
 		}
 
 		// Credit inputs with paymentAllowed consider alternative resources (e.g., titanium)
-		if input.ResourceType == shared.ResourceCredit && len(input.PaymentAllowed) > 0 {
+		paymentAllowed := shared.GetPaymentAllowed(inputBC)
+		if rt == shared.ResourceCredit && len(paymentAllowed) > 0 {
 			effectiveCredits := resources.Credits
 			substitutes := p.Resources().PaymentSubstitutes()
-			for _, allowed := range input.PaymentAllowed {
+			for _, allowed := range paymentAllowed {
 				for _, sub := range substitutes {
 					if sub.ResourceType == allowed {
 						available := resources.GetAmount(allowed)
@@ -167,41 +180,41 @@ func CalculatePlayerCardActionState(
 					}
 				}
 			}
-			if effectiveCredits < input.Amount {
+			if effectiveCredits < amt {
 				errors = append(errors, player.StateError{
 					Code:     player.ErrorCodeInsufficientResources,
 					Category: player.ErrorCategoryInput,
-					Message:  fmt.Sprintf("Not enough %s", input.ResourceType),
+					Message:  fmt.Sprintf("Not enough %s", rt),
 				})
 			}
 			continue
 		}
 
 		// Production inputs check player production instead of basic resources
-		if shared.IsProductionResourceType(input.ResourceType) {
-			available := p.Resources().Production().GetAmount(input.ResourceType)
-			if available < input.Amount {
+		if shared.IsProductionResourceType(rt) {
+			available := p.Resources().Production().GetAmount(rt)
+			if available < amt {
 				errors = append(errors, player.StateError{
 					Code:     player.ErrorCodeInsufficientResources,
 					Category: player.ErrorCategoryInput,
-					Message:  fmt.Sprintf("Not enough %s", input.ResourceType),
+					Message:  fmt.Sprintf("Not enough %s", rt),
 				})
 			}
 			continue
 		}
 
-		available := resources.GetAmount(input.ResourceType)
-		if available < input.Amount {
+		available := resources.GetAmount(rt)
+		if available < amt {
 			errors = append(errors, player.StateError{
 				Code:     player.ErrorCodeInsufficientResources,
 				Category: player.ErrorCategoryInput,
-				Message:  fmt.Sprintf("Not enough %s", input.ResourceType),
+				Message:  fmt.Sprintf("Not enough %s", rt),
 			})
 		}
 	}
 
-	for _, output := range behavior.Outputs {
-		if output.Target == "steal-from-any-card" {
+	for _, outputBC := range behavior.Outputs {
+		if outputBC.GetTarget() == "steal-from-any-card" {
 			totalAvailable := 0
 			var reg cards.CardRegistry
 			if len(cardRegistry) > 0 {
@@ -221,18 +234,18 @@ func CalculatePlayerCardActionState(
 						if err != nil || registryCard.ResourceStorage == nil {
 							continue
 						}
-						if registryCard.ResourceStorage.Type != output.ResourceType {
+						if registryCard.ResourceStorage.Type != outputBC.GetResourceType() {
 							continue
 						}
 					}
 					totalAvailable += storage
 				}
 			}
-			if totalAvailable < output.Amount {
+			if totalAvailable < outputBC.GetAmount() {
 				errors = append(errors, player.StateError{
 					Code:     player.ErrorCodeInsufficientResources,
 					Category: player.ErrorCategoryInput,
-					Message:  fmt.Sprintf("No %s available on any card", output.ResourceType),
+					Message:  fmt.Sprintf("No %s available on any card", outputBC.GetResourceType()),
 				})
 			}
 		}
@@ -254,7 +267,7 @@ func CalculatePlayerCardActionState(
 	if len(cardRegistry) > 0 {
 		reg = cardRegistry[0]
 	}
-	computedValues := computeBehaviorValues([]shared.CardBehavior{behavior}, cardID, p, g, reg)
+	computedValues := computeBehaviorValues([]shared.CardBehavior{behavior}, cardID, p, g, reg, nil)
 
 	return player.EntityState{
 		Errors:         errors,
@@ -277,8 +290,16 @@ func CalculatePlayerStandardProjectState(
 	var warnings []player.StateWarning
 	metadata := make(map[string]interface{})
 
+	if g.CurrentPhase() == shared.GamePhaseFinalPhase && projectType != shared.StandardProjectConvertPlantsToGreenery {
+		errors = append(errors, player.StateError{
+			Code:     player.ErrorCodeWrongPhase,
+			Category: player.ErrorCategoryPhase,
+			Message:  "Only greenery conversion allowed in final phase",
+		})
+	}
+
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	baseCosts := getStandardProjectBaseCosts(projectType)
 	if baseCosts == nil {
@@ -445,27 +466,13 @@ func validatePhase(g *game.Game) []player.StateError {
 	return nil
 }
 
-// validateNoActiveTileSelection checks if player has an active tile selection pending.
-func validateNoActiveTileSelection(p *player.Player, g *game.Game) []player.StateError {
-	if g.GetPendingTileSelection(p.ID()) != nil {
+// validateNoPendingSelection checks if player has any pending selection that blocks actions.
+func validateNoPendingSelection(p *player.Player, g *game.Game) []player.StateError {
+	if g.HasAnyPendingSelection(p.ID()) {
 		return []player.StateError{{
 			Code:     player.ErrorCodeActiveTileSelection,
 			Category: player.ErrorCategoryPhase,
-			Message:  "Active tile selection",
-		}}
-	}
-	if p.Selection().GetPendingStealTargetSelection() != nil {
-		return []player.StateError{{
-			Code:     player.ErrorCodeActiveTileSelection,
-			Category: player.ErrorCategoryPhase,
-			Message:  "Pending steal target selection",
-		}}
-	}
-	if p.Selection().GetPendingAwardFundSelection() != nil {
-		return []player.StateError{{
-			Code:     player.ErrorCodeActiveTileSelection,
-			Category: player.ErrorCategoryPhase,
-			Message:  "Pending award fund selection",
+			Message:  "Pending selection",
 		}}
 	}
 	return nil
@@ -507,7 +514,7 @@ func validateActionReuseAvailability(
 ) []player.StateError {
 	hasActionReuse := false
 	for _, output := range behavior.Outputs {
-		if output.ResourceType == shared.ResourceActionReuse {
+		if output.GetResourceType() == shared.ResourceActionReuse {
 			hasActionReuse = true
 			break
 		}
@@ -591,19 +598,19 @@ func validateProductionOutputs(
 		}
 
 		// Check outputs for negative production
-		for _, output := range behavior.Outputs {
+		for _, outputBC := range behavior.Outputs {
 			// Skip variable-amount outputs — the player controls the amount
-			if output.VariableAmount {
+			if shared.IsVariableAmount(outputBC) {
 				continue
 			}
 			// Only check production resource types with negative amounts
-			if output.Amount >= 0 {
+			if outputBC.GetAmount() >= 0 {
 				continue
 			}
 
 			// Map production resource types to base resource types for checking
 			var baseResourceType shared.ResourceType
-			switch output.ResourceType {
+			switch outputBC.GetResourceType() {
 			case shared.ResourceCreditProduction:
 				baseResourceType = shared.ResourceCredit
 			case shared.ResourceSteelProduction:
@@ -623,7 +630,7 @@ func validateProductionOutputs(
 
 			// Check if player has enough production
 			currentProduction := production.GetAmount(baseResourceType)
-			resultingProduction := currentProduction + output.Amount // output.Amount is negative
+			resultingProduction := currentProduction + outputBC.GetAmount()
 
 			// MC production can go to -5, others cannot go below 0
 			var minProduction int
@@ -683,23 +690,23 @@ func validateNegativeResourceOutputs(
 	var errors []player.StateError
 	resources := p.Resources().Get()
 
-	for _, output := range behavior.Outputs {
-		if output.VariableAmount || output.Amount >= 0 {
+	for _, outputBC := range behavior.Outputs {
+		if shared.IsVariableAmount(outputBC) || outputBC.GetAmount() >= 0 {
 			continue
 		}
-		if output.Target != "" && output.Target != "self-player" {
+		if outputBC.GetTarget() != "" && outputBC.GetTarget() != "self-player" {
 			continue
 		}
-		if !isBasicPlayerResource(output.ResourceType) {
+		if !isBasicPlayerResource(outputBC.GetResourceType()) {
 			continue
 		}
-		available := resources.GetAmount(output.ResourceType)
-		required := -output.Amount
+		available := resources.GetAmount(outputBC.GetResourceType())
+		required := -outputBC.GetAmount()
 		if available < required {
 			errors = append(errors, player.StateError{
 				Code:     player.ErrorCodeInsufficientResources,
 				Category: player.ErrorCategoryInput,
-				Message:  fmt.Sprintf("Not enough %s", output.ResourceType),
+				Message:  fmt.Sprintf("Not enough %s", outputBC.GetResourceType()),
 			})
 		}
 	}
@@ -728,10 +735,12 @@ func validateCardResourceOutputs(
 			allOutputs = append(allOutputs, choice.Outputs...)
 		}
 
-		for _, output := range allOutputs {
-			if output.ResourceType != shared.ResourceCardResource || output.Target != "any-card" {
+		for _, outputBC := range allOutputs {
+			if outputBC.GetResourceType() != shared.ResourceCardResource || outputBC.GetTarget() != "any-card" {
 				continue
 			}
+
+			selectors := shared.GetSelectors(outputBC)
 
 			// Check if player has any played card with resource storage matching selectors
 			hasValidTarget := false
@@ -744,7 +753,7 @@ func validateCardResourceOutputs(
 					continue
 				}
 				// If selectors specified, card must match
-				if len(output.Selectors) > 0 && !gamecards.MatchesAnySelector(playedCard, output.Selectors) {
+				if len(selectors) > 0 && !gamecards.MatchesAnySelector(playedCard, selectors) {
 					continue
 				}
 				hasValidTarget = true
@@ -764,6 +773,69 @@ func validateCardResourceOutputs(
 	return nil
 }
 
+// validateColonyBonusStorageTargets warns when colony bonuses include card-targeted resources
+// but the player has no valid card to store them on.
+func validateColonyBonusStorageTargets(
+	card *gamecards.Card,
+	p *player.Player,
+	g *game.Game,
+	cardRegistry cards.CardRegistry,
+	colonyBonusLookup gamecards.ColonyBonusLookup,
+) []player.StateWarning {
+	if colonyBonusLookup == nil || g == nil || !g.HasColonies() {
+		return nil
+	}
+
+	hasColonyBonusOutput := false
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+		for _, output := range behavior.Outputs {
+			if output.GetResourceType() == shared.ResourceColonyBonus {
+				hasColonyBonusOutput = true
+				break
+			}
+		}
+	}
+	if !hasColonyBonusOutput {
+		return nil
+	}
+
+	bonuses := gamecards.CollectColonyBonuses(p.ID(), g.Colonies().States(), colonyBonusLookup)
+
+	hasReward := false
+	for _, b := range bonuses {
+		if b.Amount > 0 {
+			hasReward = true
+			break
+		}
+	}
+	if !hasReward {
+		return []player.StateWarning{{
+			Code:    "no-colony-bonus-reward",
+			Message: "No reward",
+		}}
+	}
+
+	var warnings []player.StateWarning
+	seen := map[string]bool{}
+	for _, b := range bonuses {
+		rt := shared.ResourceType(b.ResourceType)
+		if !gamecards.IsStorageResourceType(rt) || seen[b.ResourceType] {
+			continue
+		}
+		seen[b.ResourceType] = true
+		if !gamecards.HasEligibleStorageCard(p, rt, cardRegistry) {
+			warnings = append(warnings, player.StateWarning{
+				Code:    "no-storage-for-colony-bonus",
+				Message: fmt.Sprintf("No %s storage", b.ResourceType),
+			})
+		}
+	}
+	return warnings
+}
+
 // validateCardDiscardOutputs checks that the player has enough cards in hand to satisfy
 // card-discard outputs when playing a card.
 func validateCardDiscardOutputs(
@@ -781,15 +853,15 @@ func validateCardDiscardOutputs(
 		}
 
 		for _, output := range behavior.Outputs {
-			if output.ResourceType == shared.ResourceCardDiscard && output.Target == "self-player" {
-				totalDiscard += output.Amount
+			if output.GetResourceType() == shared.ResourceCardDiscard && output.GetTarget() == "self-player" {
+				totalDiscard += output.GetAmount()
 			}
 		}
 
 		for _, choice := range behavior.Choices {
 			for _, output := range choice.Outputs {
-				if output.ResourceType == shared.ResourceCardDiscard && output.Target == "self-player" {
-					totalDiscard += output.Amount
+				if output.GetResourceType() == shared.ResourceCardDiscard && output.GetTarget() == "self-player" {
+					totalDiscard += output.GetAmount()
 				}
 			}
 		}
@@ -830,10 +902,10 @@ func ValidateTileOutputs(
 			continue
 		}
 
-		for _, output := range behavior.Outputs {
-			switch output.ResourceType {
+		for _, outputBC := range behavior.Outputs {
+			switch outputBC.GetResourceType() {
 			case shared.ResourceCityPlacement:
-				cityPlacements := g.CountAvailableHexesForTile("city", p.ID(), output.TileRestrictions)
+				cityPlacements := g.CountAvailableHexesForTile("city", p.ID(), shared.GetTileRestrictions(outputBC))
 				if cityPlacements == 0 {
 					errors = append(errors, player.StateError{
 						Code:     player.ErrorCodeNoCityPlacements,
@@ -843,7 +915,7 @@ func ValidateTileOutputs(
 				}
 
 			case shared.ResourceGreeneryPlacement:
-				greeneryPlacements := g.CountAvailableHexesForTile("greenery", p.ID(), output.TileRestrictions)
+				greeneryPlacements := g.CountAvailableHexesForTile("greenery", p.ID(), shared.GetTileRestrictions(outputBC))
 				if greeneryPlacements == 0 {
 					errors = append(errors, player.StateError{
 						Code:     player.ErrorCodeNoGreeneryPlacements,
@@ -873,7 +945,10 @@ func ValidateTileOutputs(
 				}
 
 			case shared.ResourceTileReplacement:
-				tileType := output.TileType
+				var tileType string
+				if tc, ok := outputBC.(*shared.TileModificationCondition); ok {
+					tileType = tc.TileType
+				}
 				if tileType == "" {
 					continue
 				}
@@ -886,11 +961,16 @@ func ValidateTileOutputs(
 					})
 				}
 			case shared.ResourceTilePlacement:
-				tileType := output.TileType
+				var tileType string
+				var tileRestrictions *shared.TileRestrictions
+				if tc, ok := outputBC.(*shared.TilePlacementCondition); ok {
+					tileType = tc.TileType
+					tileRestrictions = tc.TileRestrictions
+				}
 				if tileType == "" {
 					continue
 				}
-				tilePlacements := g.CountAvailableHexesForTile(tileType, p.ID(), output.TileRestrictions)
+				tilePlacements := g.CountAvailableHexesForTile(tileType, p.ID(), tileRestrictions)
 				if tilePlacements == 0 {
 					errors = append(errors, player.StateError{
 						Code:     player.ErrorCodeNoTilePlacements,
@@ -969,8 +1049,8 @@ func validateBehaviorTileOutputs(
 	var errors []player.StateError
 
 	// Check outputs for tile placements
-	for _, output := range behavior.Outputs {
-		switch output.ResourceType {
+	for _, outputBC := range behavior.Outputs {
+		switch outputBC.GetResourceType() {
 		case shared.ResourceCityPlacement:
 			cityPlacements := g.CountAvailableHexesForTile("city", p.ID(), nil)
 			if cityPlacements == 0 {
@@ -999,21 +1079,18 @@ func validateBehaviorTileOutputs(
 				})
 			}
 		case shared.ResourceTilePlacement:
-			tileType := output.TileType
-			if tileType == "" {
-				continue
-			}
-			var tileRestrictions *shared.TileRestrictions
-			if output.TileRestrictions != nil {
-				tileRestrictions = output.TileRestrictions
-			}
-			tilePlacements := g.CountAvailableHexesForTile(tileType, p.ID(), tileRestrictions)
-			if tilePlacements == 0 {
-				errors = append(errors, player.StateError{
-					Code:     player.ErrorCodeNoTilePlacements,
-					Category: player.ErrorCategoryAvailability,
-					Message:  "No valid tile placements",
-				})
+			if tc, ok := outputBC.(*shared.TilePlacementCondition); ok {
+				if tc.TileType == "" {
+					continue
+				}
+				tilePlacements := g.CountAvailableHexesForTile(tc.TileType, p.ID(), tc.TileRestrictions)
+				if tilePlacements == 0 {
+					errors = append(errors, player.StateError{
+						Code:     player.ErrorCodeNoTilePlacements,
+						Category: player.ErrorCategoryAvailability,
+						Message:  "No valid tile placements",
+					})
+				}
 			}
 		}
 	}
@@ -1190,6 +1267,23 @@ func checkRequirement(
 	case gamecards.RequirementCities, gamecards.RequirementGreeneries:
 		// TODO: Implement tile-based requirements when Board tile counting is ready
 		// For now, skip these validations (same as PlayCardAction line 310-312)
+
+	case gamecards.RequirementColony:
+		colonyCount := g.Colonies().CountPlayerColonies(p.ID())
+		if req.Min != nil && colonyCount < *req.Min {
+			return &player.StateError{
+				Code:     player.ErrorCodeColoniesTooFew,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Not enough colonies",
+			}
+		}
+		if req.Max != nil && colonyCount > *req.Max {
+			return &player.StateError{
+				Code:     player.ErrorCodeColoniesTooMany,
+				Category: player.ErrorCategoryRequirement,
+				Message:  "Too many colonies",
+			}
+		}
 
 	case gamecards.RequirementVenus:
 		lenience := calculator.CalculateGlobalParameterLenience(p, "venus")
@@ -1430,7 +1524,7 @@ func isProducibleResource(resourceType shared.ResourceType) bool {
 
 // validateGlobalParamWarnings checks behavior outputs for global parameter raises
 // that would have no effect because the parameter is already at maximum.
-func validateGlobalParamWarnings(outputs []shared.ResourceCondition, g *game.Game) []player.StateWarning {
+func validateGlobalParamWarnings(outputs []shared.BehaviorCondition, g *game.Game) []player.StateWarning {
 	var warnings []player.StateWarning
 	seen := make(map[player.StateWarningCode]bool)
 
@@ -1442,10 +1536,10 @@ func validateGlobalParamWarnings(outputs []shared.ResourceCondition, g *game.Gam
 	}
 
 	for _, output := range outputs {
-		if output.Amount <= 0 && !output.VariableAmount {
+		if output.GetAmount() <= 0 && !shared.IsVariableAmount(output) {
 			continue
 		}
-		switch output.ResourceType {
+		switch output.GetResourceType() {
 		case shared.ResourceTemperature:
 			if g.GlobalParameters().Temperature() >= global_parameters.MaxTemperature {
 				addWarning(player.WarningCodeGlobalParamMaxed, "Temperature already at maximum")
@@ -1465,7 +1559,7 @@ func validateGlobalParamWarnings(outputs []shared.ResourceCondition, g *game.Gam
 		}
 
 		// Greenery tiles raise oxygen
-		if output.ResourceType == shared.ResourceGreeneryTile {
+		if output.GetResourceType() == shared.ResourceGreeneryTile {
 			if g.GlobalParameters().Oxygen() >= global_parameters.MaxOxygen {
 				addWarning(player.WarningCodeNoTRGain, "Oxygen already at maximum")
 			}
@@ -1576,7 +1670,7 @@ func CalculateMilestoneState(
 	ms := g.Milestones()
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	if ms.IsClaimed(milestoneType) {
 		errors = append(errors, player.StateError{
@@ -1655,7 +1749,7 @@ func CalculateAwardState(
 	gameAwards := g.Awards()
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
-	errors = append(errors, validateNoActiveTileSelection(p, g)...)
+	errors = append(errors, validateNoPendingSelection(p, g)...)
 
 	if gameAwards.IsFunded(awardType) {
 		errors = append(errors, player.StateError{
@@ -1694,16 +1788,6 @@ func CalculateAwardState(
 	}
 }
 
-// isStorageResourceType returns true for resource types that are stored on cards
-func isStorageResourceType(rt shared.ResourceType) bool {
-	switch rt {
-	case shared.ResourceMicrobe, shared.ResourceAnimal, shared.ResourceFloater,
-		shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceFighter, shared.ResourceDisease:
-		return true
-	}
-	return false
-}
-
 // CalculateChoiceErrors validates a single choice's requirements against the player/game state.
 // Returns a list of errors explaining why the choice is unavailable (empty if available).
 func CalculateChoiceErrors(choice shared.Choice, p *player.Player, g *game.Game, cardRegistry cards.CardRegistry) []player.StateError {
@@ -1718,36 +1802,36 @@ func CalculateChoiceErrors(choice shared.Choice, p *player.Player, g *game.Game,
 	}
 
 	resources := p.Resources().Get()
-	for _, output := range choice.Outputs {
-		if output.VariableAmount || output.Amount >= 0 {
+	for _, outputBC := range choice.Outputs {
+		if shared.IsVariableAmount(outputBC) || outputBC.GetAmount() >= 0 {
 			continue
 		}
-		if !isBasicPlayerResource(output.ResourceType) {
+		if !isBasicPlayerResource(outputBC.GetResourceType()) {
 			continue
 		}
-		available := resources.GetAmount(output.ResourceType)
-		if available < -output.Amount {
+		available := resources.GetAmount(outputBC.GetResourceType())
+		if available < -outputBC.GetAmount() {
 			errors = append(errors, player.StateError{
 				Code:     player.ErrorCodeInsufficientResources,
 				Category: player.ErrorCategoryInput,
-				Message:  fmt.Sprintf("Not enough %s", output.ResourceType),
+				Message:  fmt.Sprintf("Not enough %s", outputBC.GetResourceType()),
 			})
 		}
 	}
 
-	for _, input := range choice.Inputs {
-		if input.VariableAmount || input.Amount <= 0 {
+	for _, inputBC := range choice.Inputs {
+		if shared.IsVariableAmount(inputBC) || inputBC.GetAmount() <= 0 {
 			continue
 		}
-		if !isBasicPlayerResource(input.ResourceType) {
+		if !isBasicPlayerResource(inputBC.GetResourceType()) {
 			continue
 		}
-		available := resources.GetAmount(input.ResourceType)
-		if available < input.Amount {
+		available := resources.GetAmount(inputBC.GetResourceType())
+		if available < inputBC.GetAmount() {
 			errors = append(errors, player.StateError{
 				Code:     player.ErrorCodeInsufficientResources,
 				Category: player.ErrorCategoryInput,
-				Message:  fmt.Sprintf("Not enough %s", input.ResourceType),
+				Message:  fmt.Sprintf("Not enough %s", inputBC.GetResourceType()),
 			})
 		}
 	}
@@ -1898,6 +1982,7 @@ func computeBehaviorValues(
 	p *player.Player,
 	g *game.Game,
 	cardRegistry cards.CardRegistry,
+	colonyBonusLookup gamecards.ColonyBonusLookup,
 ) []player.ComputedBehaviorValue {
 	var result []player.ComputedBehaviorValue
 
@@ -1906,39 +1991,50 @@ func computeBehaviorValues(
 
 	for i, behavior := range behaviors {
 		var outputs []shared.CalculatedOutput
-		for _, output := range behavior.Outputs {
-			if output.Per == nil {
+		for _, outputBC := range behavior.Outputs {
+			if outputBC.GetResourceType() == shared.ResourceColonyBonus {
+				bonusOutputs := computeColonyBonusValues(p, g, colonyBonusLookup)
+				if outputs == nil {
+					outputs = bonusOutputs
+				} else {
+					outputs = append(outputs, bonusOutputs...)
+				}
 				continue
 			}
-			count := gamecards.CountPerCondition(output.Per, sourceCardID, p, board, cardRegistry, allPlayers)
-			if output.Per.Amount > 0 {
-				multiplier := count / output.Per.Amount
-				actualAmount := output.Amount * multiplier
+			per := shared.GetPerCondition(outputBC)
+			if per == nil {
+				continue
+			}
+			count := gamecards.CountPerCondition(per, sourceCardID, p, board, cardRegistry, allPlayers)
+			if per.Amount > 0 {
+				multiplier := count / per.Amount
+				actualAmount := outputBC.GetAmount() * multiplier
 				outputs = append(outputs, shared.CalculatedOutput{
-					ResourceType: string(output.ResourceType),
+					ResourceType: string(outputBC.GetResourceType()),
 					Amount:       actualAmount,
 					IsScaled:     true,
 				})
 			}
 		}
 		for _, choice := range behavior.Choices {
-			for _, output := range choice.Outputs {
-				if output.Per == nil {
+			for _, outputBC := range choice.Outputs {
+				per := shared.GetPerCondition(outputBC)
+				if per == nil {
 					continue
 				}
-				count := gamecards.CountPerCondition(output.Per, sourceCardID, p, board, cardRegistry, allPlayers)
-				if output.Per.Amount > 0 {
-					multiplier := count / output.Per.Amount
-					actualAmount := output.Amount * multiplier
+				count := gamecards.CountPerCondition(per, sourceCardID, p, board, cardRegistry, allPlayers)
+				if per.Amount > 0 {
+					multiplier := count / per.Amount
+					actualAmount := outputBC.GetAmount() * multiplier
 					outputs = append(outputs, shared.CalculatedOutput{
-						ResourceType: string(output.ResourceType),
+						ResourceType: string(outputBC.GetResourceType()),
 						Amount:       actualAmount,
 						IsScaled:     true,
 					})
 				}
 			}
 		}
-		if len(outputs) > 0 {
+		if outputs != nil {
 			result = append(result, player.ComputedBehaviorValue{
 				Target:  fmt.Sprintf("behaviors::%d", i),
 				Outputs: outputs,
@@ -1947,4 +2043,17 @@ func computeBehaviorValues(
 	}
 
 	return result
+}
+
+func computeColonyBonusValues(
+	p *player.Player,
+	g *game.Game,
+	colonyBonusLookup gamecards.ColonyBonusLookup,
+) []shared.CalculatedOutput {
+	if p == nil || g == nil || colonyBonusLookup == nil || !g.HasColonies() {
+		return []shared.CalculatedOutput{}
+	}
+	return gamecards.ColonyBonusesToCalculatedOutputs(
+		gamecards.CollectColonyBonuses(p.ID(), g.Colonies().States(), colonyBonusLookup),
+	)
 }

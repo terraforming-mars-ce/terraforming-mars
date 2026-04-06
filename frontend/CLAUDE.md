@@ -67,6 +67,26 @@ frontend/
   const result = hasA ? a : hasB ? b : fallback;
   ```
 
+### Z-Index Policy
+
+**CRITICAL**: NEVER hardcode z-index values. Always use the centralized `Z_INDEX` constants from `@/constants/zIndex.ts`.
+
+```tsx
+// ✅ CORRECT
+import { Z_INDEX } from "@/constants/zIndex.ts";
+
+<div style={{ zIndex: Z_INDEX.STANDARD_MODAL }}>...</div>
+
+// ❌ WRONG — hardcoded Tailwind z-index
+<div className="z-[1000]">...</div>
+<div className="z-50">...</div>
+
+// ❌ WRONG — hardcoded inline z-index
+<div style={{ zIndex: 99999 }}>...</div>
+```
+
+The `Z_INDEX` constants define layering groups (base, UI, navigation, overlay, modal, critical). Use `getZIndex(level, offset)` when you need a small offset from a defined level. Add new constants to `zIndex.ts` if no existing one fits — never invent magic numbers inline.
+
 ### Cursor Policy
 
 **CRITICAL**: Only use these three cursor types:

@@ -156,9 +156,9 @@ func TestThorGate_CombinedDiscount(t *testing.T) {
 	testutil.AssertEqual(t, 1, len(discountBehavior.Outputs), "Behavior should have 1 output")
 
 	output := discountBehavior.Outputs[0]
-	testutil.AssertEqual(t, shared.ResourceDiscount, output.ResourceType, "Output should be discount type")
-	testutil.AssertEqual(t, 3, output.Amount, "Discount amount should be 3")
-	testutil.AssertEqual(t, 2, len(output.Selectors), "Should have 2 selectors (one for power tag, one for power-plant SP)")
+	testutil.AssertEqual(t, shared.ResourceDiscount, output.GetResourceType(), "Output should be discount type")
+	testutil.AssertEqual(t, 3, output.GetAmount(), "Discount amount should be 3")
+	testutil.AssertEqual(t, 2, len(shared.GetSelectors(output)), "Should have 2 selectors (one for power tag, one for power-plant SP)")
 
 	// Register the effect
 	p.Effects().AddEffect(shared.CardEffect{
@@ -199,15 +199,11 @@ func TestDiscountORLogic(t *testing.T) {
 	// Create a custom discount effect that targets space tag OR event card type (OR logic between selectors)
 	customBehavior := shared.CardBehavior{
 		Triggers: []shared.Trigger{{Type: "auto"}},
-		Outputs: []shared.ResourceCondition{
-			{
-				ResourceType: shared.ResourceDiscount,
-				Amount:       5,
-				Selectors: []shared.Selector{
-					{Tags: []shared.CardTag{shared.TagSpace}},
-					{CardTypes: []string{"event"}},
-				},
-			},
+		Outputs: []shared.BehaviorCondition{
+			&shared.EffectCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceDiscount, Amount: 5}, Selectors: []shared.Selector{
+				{Tags: []shared.CardTag{shared.TagSpace}},
+				{CardTypes: []string{"event"}},
+			}},
 		},
 	}
 

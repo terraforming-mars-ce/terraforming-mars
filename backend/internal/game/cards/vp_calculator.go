@@ -10,6 +10,13 @@ import (
 	"terraforming-mars-backend/internal/milestones"
 )
 
+// BoardContext provides board and colony data for VP calculation.
+// *game.Game satisfies this interface.
+type BoardContext interface {
+	Board() *board.Board
+	CountAllColonies() int
+}
+
 // CardVPConditionDetail represents the detailed calculation of a single VP condition
 type CardVPConditionDetail struct {
 	ConditionType  string `json:"conditionType"`  // "fixed", "per", "once"
@@ -80,7 +87,7 @@ type FundedAwardInfo struct {
 // CalculatePlayerVP computes the total VP for a player with detailed breakdown
 func CalculatePlayerVP(
 	p *player.Player,
-	b *board.Board,
+	bc BoardContext,
 	claimedMilestones []ClaimedMilestoneInfo,
 	fundedAwards []FundedAwardInfo,
 	allPlayers []*player.Player,
@@ -88,13 +95,14 @@ func CalculatePlayerVP(
 	awardRegistry awards.AwardRegistry,
 	milestoneRegistry milestones.MilestoneRegistry,
 ) VPBreakdown {
+	b := bc.Board()
 	breakdown := VPBreakdown{}
 
 	// 1. Terraform Rating
 	breakdown.TerraformRating = p.Resources().TerraformRating()
 
 	// 2. Card VP (with detailed breakdown)
-	cardVPDetails := calculateCardVPDetailed(p, b, cardRegistry)
+	cardVPDetails := calculateCardVPDetailed(p, bc, cardRegistry)
 	breakdown.CardVPDetails = cardVPDetails
 	breakdown.CardVP = 0
 	for _, detail := range cardVPDetails {
@@ -134,7 +142,7 @@ func CalculatePlayerVP(
 }
 
 // calculateCardVPDetailed calculates VP from all played cards with detailed breakdown
-func calculateCardVPDetailed(p *player.Player, b *board.Board, cardRegistry CardRegistryInterface) []CardVPDetail {
+func calculateCardVPDetailed(p *player.Player, bc BoardContext, cardRegistry CardRegistryInterface) []CardVPDetail {
 	var details []CardVPDetail
 	playedCardIDs := p.PlayedCards().Cards()
 
@@ -155,7 +163,7 @@ func calculateCardVPDetailed(p *player.Player, b *board.Board, cardRegistry Card
 		}
 
 		for _, vpCond := range card.VPConditions {
-			condDetail := evaluateVPConditionDetailed(vpCond, p, b, card, cardRegistry)
+			condDetail := evaluateVPConditionDetailed(vpCond, p, bc, card, cardRegistry)
 			detail.Conditions = append(detail.Conditions, condDetail)
 			detail.TotalVP += condDetail.TotalVP
 		}
@@ -172,7 +180,7 @@ func calculateCardVPDetailed(p *player.Player, b *board.Board, cardRegistry Card
 func evaluateVPConditionDetailed(
 	vpCond VictoryPointCondition,
 	p *player.Player,
-	b *board.Board,
+	bc BoardContext,
 	card *Card,
 	cardRegistry CardRegistryInterface,
 ) CardVPConditionDetail {
@@ -193,7 +201,12 @@ func evaluateVPConditionDetailed(
 			return detail
 		}
 
-		count := CountPerCondition(vpCond.Per, card.ID, p, b, cardRegistry, nil)
+		var count int
+		if vpCond.Per.ResourceType == shared.ResourceColony {
+			count = bc.CountAllColonies()
+		} else {
+			count = CountPerCondition(vpCond.Per, card.ID, p, bc.Board(), cardRegistry, nil)
+		}
 		detail.Count = count
 
 		if vpCond.Per.Amount > 0 {
@@ -241,6 +254,8 @@ func getPerConditionTypeName(per *shared.PerCondition) string {
 		return "city tiles"
 	case shared.ResourceGreeneryTile:
 		return "greenery tiles"
+	case shared.ResourceColony:
+		return "colonies"
 	default:
 		return string(per.ResourceType)
 	}
@@ -409,13 +424,8 @@ func countAdjacentTilesOfTypeForCard(b *board.Board, cardID string, countType sh
 	return count
 }
 
-// isForestTile returns true if the tile type counts as a forest (greenery or world-tree)
-func isForestTile(tileType shared.ResourceType) bool {
-	return tileType == shared.ResourceGreeneryTile || tileType == shared.ResourceWorldTreeTile
-}
-
 // countAdjacentTilesOfType counts unique tiles matching countType that are adjacent
-// to tiles of adjacentToType owned by playerID. Uses isForestTile for greenery matching.
+// to tiles of adjacentToType owned by playerID. Uses shared.IsForestTile for greenery matching.
 func countAdjacentTilesOfType(playerID string, b *board.Board, countType shared.ResourceType, adjacentToType shared.ResourceType) int {
 	tiles := b.Tiles()
 	counted := make(map[shared.HexPosition]bool)
@@ -436,7 +446,7 @@ func countAdjacentTilesOfType(playerID string, b *board.Board, countType shared.
 
 			var matches bool
 			if countType == shared.ResourceGreeneryTile {
-				matches = isForestTile(neighborTile.OccupiedBy.Type)
+				matches = shared.IsForestTile(neighborTile.OccupiedBy.Type)
 			} else {
 				matches = neighborTile.OccupiedBy.Type == countType
 			}

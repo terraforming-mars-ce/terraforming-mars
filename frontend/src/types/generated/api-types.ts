@@ -134,10 +134,11 @@ export interface ActionSkipActionRequest {
   type: ActionType;
 }
 /**
- * ConfirmDemoSetupRequest contains the player's demo setup configuration
+ * SelectDemoChoicesRequest contains a player's demo lobby card selections
  */
-export interface ConfirmDemoSetupRequest {
-  corporationId?: string;
+export interface SelectDemoChoicesRequest {
+  corporationId: string;
+  preludeIds: string[];
   cardIds: string[];
   resources: ResourcesDto;
   production: ProductionDto;
@@ -325,11 +326,11 @@ export type GamePhase = string;
 export const GamePhaseWaitingForGameStart: GamePhase = "waiting_for_game_start";
 export const GamePhaseStartingSelection: GamePhase = "starting_selection";
 export const GamePhaseStartGameSelection: GamePhase = "start_game_selection";
-export const GamePhaseDemoSetup: GamePhase = "demo_setup";
 export const GamePhaseInitApplyCorp: GamePhase = "init_apply_corp";
 export const GamePhaseInitApplyPrelude: GamePhase = "init_apply_prelude";
 export const GamePhaseAction: GamePhase = "action";
 export const GamePhaseProductionAndCardDraw: GamePhase = "production_and_card_draw";
+export const GamePhaseFinalPhase: GamePhase = "final_phase";
 export const GamePhaseComplete: GamePhase = "complete";
 /**
  * GameStatus represents the current status of the game
@@ -405,7 +406,7 @@ export const ResourceTypeGreeneryPlacement: ResourceType = "greenery-placement";
 export const ResourceTypeCityTile: ResourceType = "city-tile";
 export const ResourceTypeOceanTile: ResourceType = "ocean-tile";
 export const ResourceTypeGreeneryTile: ResourceType = "greenery-tile";
-export const ResourceTypeColonyTile: ResourceType = "colony-tile";
+export const ResourceTypeColony: ResourceType = "colony";
 export const ResourceTypeTemperature: ResourceType = "temperature";
 export const ResourceTypeOxygen: ResourceType = "oxygen";
 export const ResourceTypeVenus: ResourceType = "venus";
@@ -522,22 +523,146 @@ export interface SelectorDto {
   globalParameters?: string[];
   actions?: string[];
 }
+export type ResourceCondition =
+  | BasicResourceConditionDto
+  | ProductionConditionDto
+  | TilePlacementConditionDto
+  | GlobalParameterConditionDto
+  | CardOperationConditionDto
+  | CardStorageConditionDto
+  | EffectConditionDto
+  | ColonyConditionDto
+  | TileModificationConditionDto
+  | MiscConditionDto;
 /**
- * ResourceConditionDto represents a resource condition for client consumption
+ * BasicResourceConditionDto covers credit, steel, titanium, plant, energy, heat.
  */
-export interface ResourceConditionDto {
-  type: ResourceType;
+export interface BasicResourceConditionDto {
+  type: "credit" | "steel" | "titanium" | "plant" | "energy" | "heat";
+  amount: number /* int */;
+  target: TargetType;
+  per?: PerConditionDto;
+  variableAmount?: boolean;
+  targetRestriction?: TargetRestrictionDto;
+  maxTrigger?: number /* int */;
+}
+/**
+ * ProductionConditionDto covers all production types.
+ */
+export interface ProductionConditionDto {
+  type:
+    | "credit-production"
+    | "steel-production"
+    | "titanium-production"
+    | "plant-production"
+    | "energy-production"
+    | "heat-production"
+    | "any-production";
+  amount: number /* int */;
+  target: TargetType;
+  per?: PerConditionDto;
+  variableAmount?: boolean;
+}
+/**
+ * TilePlacementConditionDto covers tile placements and land claims.
+ */
+export interface TilePlacementConditionDto {
+  type:
+    | "city-placement"
+    | "ocean-placement"
+    | "greenery-placement"
+    | "volcano-placement"
+    | "tile-placement"
+    | "land-claim";
+  amount: number /* int */;
+  target: TargetType;
+  tileRestrictions?: TileRestrictionsDto;
+  tileType?: string;
+}
+/**
+ * GlobalParameterConditionDto covers temperature, oxygen, ocean, venus, tr, global-parameter.
+ */
+export interface GlobalParameterConditionDto {
+  type: "temperature" | "oxygen" | "ocean" | "venus" | "tr" | "global-parameter";
+  amount: number /* int */;
+  target: TargetType;
+  per?: PerConditionDto;
+}
+/**
+ * CardOperationConditionDto covers card-draw, card-take, card-peek, card-buy, card-discard.
+ */
+export interface CardOperationConditionDto {
+  type: "card-draw" | "card-take" | "card-peek" | "card-buy" | "card-discard";
   amount: number /* int */;
   target: TargetType;
   selectors?: SelectorDto[];
-  maxTrigger?: number /* int */;
-  per?: PerConditionDto;
-  tileRestrictions?: TileRestrictionsDto;
-  targetRestriction?: TargetRestrictionDto;
-  tileType?: string;
   variableAmount?: boolean;
-  optional?: boolean;
-  paymentAllowed?: ResourceType[];
+}
+/**
+ * CardStorageConditionDto covers microbe, animal, floater, science, asteroid, fighter, disease, card-resource.
+ */
+export interface CardStorageConditionDto {
+  type:
+    | "microbe"
+    | "animal"
+    | "floater"
+    | "science"
+    | "asteroid"
+    | "fighter"
+    | "disease"
+    | "card-resource";
+  amount: number /* int */;
+  target: TargetType;
+  selectors?: SelectorDto[];
+  per?: PerConditionDto;
+  variableAmount?: boolean;
+}
+/**
+ * EffectConditionDto covers discount, payment-substitute, and other effect types.
+ */
+export interface EffectConditionDto {
+  type:
+    | "discount"
+    | "payment-substitute"
+    | "storage-payment-substitute"
+    | "value-modifier"
+    | "global-parameter-lenience"
+    | "ignore-global-requirements"
+    | "ocean-adjacency-bonus"
+    | "defense"
+    | "action-reuse"
+    | "effect"
+    | "tag";
+  amount: number /* int */;
+  target: TargetType;
+  selectors?: SelectorDto[];
+}
+/**
+ * ColonyConditionDto covers colony, colony-count, colony-bonus, colony-track-step.
+ */
+export interface ColonyConditionDto {
+  type: "colony" | "colony-count" | "colony-bonus" | "colony-track-step";
+  amount: number /* int */;
+  target: TargetType;
+}
+/**
+ * TileModificationConditionDto covers tile-destruction and tile-replacement.
+ */
+export interface TileModificationConditionDto {
+  type: "tile-destruction" | "tile-replacement";
+  amount: number /* int */;
+  target: TargetType;
+  tileType?: string;
+}
+/**
+ * MiscConditionDto covers extra-actions, bonus-tags, world-tree-tile, award-fund, trade.
+ */
+export interface MiscConditionDto {
+  type: "extra-actions" | "bonus-tags" | "world-tree-tile" | "award-fund" | "trade";
+  amount: number /* int */;
+  target: TargetType;
+  per?: PerConditionDto;
+  selectors?: SelectorDto[];
 }
 /**
  * PerConditionDto represents a per condition for client consumption
@@ -555,8 +680,8 @@ export interface PerConditionDto {
  */
 export interface ChoiceDto {
   originalIndex: number /* int */;
-  inputs?: ResourceConditionDto[];
-  outputs?: ResourceConditionDto[];
+  inputs?: ResourceCondition[];
+  outputs?: ResourceCondition[];
   requirements?: CardRequirementsDto;
   available: boolean;
   errors: StateErrorDto[];
@@ -587,6 +712,7 @@ export interface ResourceTriggerConditionDto {
   requiredOriginalCost?: MinMaxValueDto;
   requiredResourceChange?: { [key: ResourceType]: MinMaxValueDto };
   onBonusType?: string[];
+  unique?: boolean;
 }
 /**
  * ChoicePolicySelectDto describes an auto-selection rule for a choice policy
@@ -611,8 +737,8 @@ export interface ChoicePolicyDto {
 export interface CardBehaviorDto {
   description?: string;
   triggers?: TriggerDto[];
-  inputs?: ResourceConditionDto[];
-  outputs?: ResourceConditionDto[];
+  inputs?: ResourceCondition[];
+  outputs?: ResourceCondition[];
   choices?: ChoiceDto[];
   choicePolicy?: ChoicePolicyDto;
   generationalEventRequirements?: GenerationalEventRequirementDto[];
@@ -737,6 +863,21 @@ export interface GameSettingsDto {
   hasClaudeApiKey: boolean;
   claudeModel?: string;
   availablePlayerColors: string[];
+  temperature?: number /* int */;
+  oxygen?: number /* int */;
+  oceans?: number /* int */;
+  generation?: number /* int */;
+}
+/**
+ * PendingDemoChoicesDto contains a player's demo lobby card selections
+ */
+export interface PendingDemoChoicesDto {
+  corporationId: string;
+  preludeIds: string[];
+  cardIds: string[];
+  resources: ResourcesDto;
+  production: ProductionDto;
+  terraformRating: number /* int */;
 }
 /**
  * GlobalParameterBonusDto describes a bonus step on a global parameter track
@@ -1007,6 +1148,7 @@ export type ColonyResourceReason = string;
 export const ColonyResourceReasonTrade: ColonyResourceReason = "trade";
 export const ColonyResourceReasonColonyTax: ColonyResourceReason = "colony-tax";
 export const ColonyResourceReasonBuild: ColonyResourceReason = "build";
+export const ColonyResourceReasonColonyBonus: ColonyResourceReason = "colony-bonus";
 /**
  * PendingColonyResourceSelectionDto represents a pending card storage selection for colony resources
  */
@@ -1025,7 +1167,7 @@ export interface PendingAwardFundSelectionDto {
   source: string;
 }
 /**
- * PendingColonySelectionDto represents a pending colony tile selection from a card effect
+ * PendingColonySelectionDto represents a pending colony selection from a card effect
  */
 export interface PendingColonySelectionDto {
   availableColonyIds: string[];
@@ -1049,6 +1191,8 @@ export const PlayerStatusSelectingStartingCards: PlayerStatus = "selecting-start
 export const PlayerStatusSelectingProductionCards: PlayerStatus = "selecting-production-cards";
 export const PlayerStatusWaiting: PlayerStatus = "waiting";
 export const PlayerStatusActive: PlayerStatus = "active";
+export const PlayerStatusSelection: PlayerStatus = "selection";
+export const PlayerStatusTile: PlayerStatus = "tile";
 export const PlayerStatusExited: PlayerStatus = "exited";
 /**
  * PlayerDto represents a player in the game for client consumption
@@ -1078,6 +1222,8 @@ export interface PlayerDto {
   standardProjects: PlayerStandardProjectDto[]; // Standard projects with availability state (Player-Scoped Architecture)
   milestones: PlayerMilestoneDto[]; // Milestones with player eligibility state
   awards: PlayerAwardDto[]; // Awards with player eligibility state
+  demoReady: boolean;
+  pendingDemoChoices?: PendingDemoChoicesDto;
   selectCorporationPhase?: SelectCorporationPhaseDto;
   selectStartingCardsPhase?: SelectStartingCardsPhaseDto;
   selectPreludeCardsPhase?: SelectPreludeCardsPhaseDto;
@@ -1143,6 +1289,7 @@ export interface OtherPlayerDto {
   isExited: boolean;
   effects: PlayerEffectDto[];
   actions: PlayerActionDto[];
+  demoReady: boolean;
   selectCorporationPhase?: SelectCorporationOtherPlayerDto;
   selectStartingCardsPhase?: SelectStartingCardsOtherPlayerDto;
   selectPreludeCardsPhase?: SelectPreludeCardsOtherPlayerDto;
@@ -1182,7 +1329,7 @@ export interface GameDto {
   spectators: SpectatorDto[];
   chatMessages: ChatMessageDto[];
   isSpectator: boolean;
-  colonyTiles?: ColonyTileDto[];
+  colonies?: ColonyDto[];
   tradeFleetAvailable: boolean;
   tradeFleets?: { [key: string]: boolean };
   projectFunding?: ProjectFundingDto[];
@@ -1228,9 +1375,9 @@ export interface InitPhaseDto {
   hasPendingTiles: boolean;
 }
 /**
- * ColonyTileDto represents a colony tile in the game
+ * ColonyDto represents a colony in the game
  */
-export interface ColonyTileDto {
+export interface ColonyDto {
   id: string;
   name: string;
   location: string;
@@ -1404,7 +1551,7 @@ export interface AwardDto {
  */
 export interface AwardRewardDto {
   place: number /* int */;
-  outputs: ResourceConditionDto[];
+  outputs: ResourceCondition[];
 }
 /**
  * AwardResultDto represents the placement results for a single funded award
@@ -1536,7 +1683,7 @@ export interface TriggeredEffectDto {
   cardName: string;
   playerId: string;
   sourceType: string;
-  outputs: ResourceConditionDto[];
+  outputs: ResourceCondition[];
   calculatedOutputs?: CalculatedOutputDto[];
   behaviors?: CardBehaviorDto[];
   vpConditions?: VPConditionDto[];
@@ -1607,6 +1754,7 @@ export interface GameHistoryPlayerDto {
   handCardIds: string[];
   corporationId: string;
   resourceStorage: { [key: string]: number /* int */ };
+  totalVP: number /* int */;
 }
 /**
  * ClaimedMilestoneDto represents a claimed milestone in history.
@@ -1639,6 +1787,7 @@ export interface CreateGameRequest {
   maxPlayers: number /* int */;
   venusNextEnabled: boolean;
   developmentMode: boolean;
+  demoGame: boolean;
   cardPacks?: string[];
   claudeApiKey?: string;
   selectedMilestones?: string[];
@@ -1697,21 +1846,6 @@ export interface ErrorResponse {
   error: string;
   code?: string;
   details?: string;
-}
-/**
- * CreateDemoLobbyRequest represents the request body for creating a demo lobby
- */
-export interface CreateDemoLobbyRequest {
-  playerCount: number /* int */;
-  cardPacks?: string[];
-  playerName?: string;
-}
-/**
- * CreateDemoLobbyResponse represents the response for creating a demo lobby
- */
-export interface CreateDemoLobbyResponse {
-  game: GameDto;
-  playerId: string;
 }
 /**
  * MilestoneAwardItemDto represents a single milestone or award for selection
@@ -1816,8 +1950,8 @@ export const MessageTypeCreateGame: MessageType = "create-game";
 export const MessageTypeAddBot: MessageType = "add-bot";
 export const MessageTypeActionStartGame: MessageType = "action.game-management.start-game";
 export const MessageTypeActionSkipAction: MessageType = "action.game-management.skip-action";
-export const MessageTypeActionConfirmDemoSetup: MessageType =
-  "action.game-management.confirm-demo-setup";
+export const MessageTypeActionSelectDemoChoices: MessageType =
+  "action.game-management.select-demo-choices";
 export const MessageTypeActionConfirmInitAdvance: MessageType =
   "action.game-management.confirm-init-advance";
 export const MessageTypeActionClaimMilestone: MessageType = "action.milestone.claim-milestone";

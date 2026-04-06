@@ -1,4 +1,5 @@
 import { FC, ReactNode } from "react";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 type TooltipSize = "small" | "medium";
 
@@ -35,7 +36,8 @@ const InfoTooltip: FC<InfoTooltipProps> = ({ children, size = "medium" }) => {
         <span className="font-serif italic">i</span>
       </span>
       <div
-        className={`invisible opacity-0 bg-space-black/[0.98] text-white text-left rounded-lg p-3 absolute z-[1000] bottom-[125%] right-0 leading-normal border border-space-blue-400 shadow-glow transition-all duration-300 group-hover:visible group-hover:opacity-100 after:content-[''] after:absolute after:top-full after:right-3 after:border-8 after:border-solid after:border-t-space-black/[0.98] after:border-r-transparent after:border-b-transparent after:border-l-transparent ${config.tooltip}`}
+        className={`invisible opacity-0 bg-space-black/[0.98] text-white text-left rounded-lg p-3 absolute bottom-[125%] right-0 leading-normal border border-space-blue-400 shadow-glow transition-all duration-300 group-hover:visible group-hover:opacity-100 after:content-[''] after:absolute after:top-full after:right-3 after:border-8 after:border-solid after:border-t-space-black/[0.98] after:border-r-transparent after:border-b-transparent after:border-l-transparent ${config.tooltip}`}
+        style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
         {children}
       </div>

@@ -1,5 +1,6 @@
 import { FC } from "react";
 import type { VPPhase } from "../../../contexts/VPCountingContext";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 const ANGLE_INDENT = 14;
 const TAB_WIDTH = 110;
@@ -66,7 +67,7 @@ const PhaseTab: FC<PhaseTabProps> = ({ phase, index, currentPhaseIndex, glow }) 
         width: w,
         height: h,
         marginLeft: index === 0 ? 0 : -ANGLE_INDENT + TAB_SPACING,
-        zIndex: 10 - index,
+        zIndex: Z_INDEX.UI_BASE - index,
         opacity: isCurrent ? 1 : 0.4,
         transition: "opacity 300ms ease-out",
       }}

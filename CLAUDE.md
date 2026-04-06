@@ -23,7 +23,6 @@ make dev-setup   # Set up environment (go mod tidy + bun install)
 make test         # Run all backend tests
 make test-verbose # Verbose test output
 make test-coverage# Generate coverage report
-make test-quick   # Fast test suite for iteration
 ```
 
 ### Code Quality
@@ -62,7 +61,7 @@ make clean        # Clean build artifacts
 
 ## Type Safety Bridge
 
-Go structs with `ts:` tags generate TypeScript interfaces automatically.
+Go structs generate TypeScript interfaces via `tygo`. Use `tstype:` tags to override generated types (e.g., string literal unions for discriminated unions). Note: `ts:` tags are **ignored** by tygo.
 
 ```bash
 make generate     # After any Go type changes

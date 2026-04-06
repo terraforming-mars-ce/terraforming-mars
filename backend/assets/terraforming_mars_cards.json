@@ -894,6 +894,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -1121,6 +1122,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -3174,6 +3176,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -3606,6 +3609,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -4173,6 +4177,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -4606,6 +4611,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["earth"],
                 "resources": ["credit"]
               }
@@ -6513,6 +6519,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -7163,6 +7170,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -8420,6 +8428,7 @@
             "temporary": "next-card",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -11485,6 +11494,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["venus"],
                 "resources": ["credit"]
               }
@@ -12436,6 +12446,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["earth"],
                 "resources": ["credit"]
               }
@@ -13041,7 +13052,7 @@
             "target": "none"
           },
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13113,7 +13124,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13475,7 +13486,7 @@
             "target": "self-player"
           },
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13508,7 +13519,7 @@
             "target": "self-player"
           },
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13625,6 +13636,15 @@
     "tags": [
       "space"
     ],
+    "requirements": {
+      "description": "Requires that you have no more than 1 colony.",
+      "items": [
+        {
+          "type": "colony",
+          "max": 1
+        }
+      ]
+    },
     "behaviors": [
       {
         "triggers": [
@@ -13639,7 +13659,7 @@
             "target": "self-player"
           },
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -13661,7 +13681,24 @@
     "type": "automated",
     "cost": 0,
     "description": "Gain all your colony bonuses",
-    "pack": "colonies"
+    "pack": "colonies",
+    "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "colony-bonus",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "Gain all your colony bonuses."
+      }
+    ]
   },
   {
     "id": "C31",
@@ -13829,7 +13866,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player",
             "allowDuplicatePlayerColony": true
@@ -13919,6 +13956,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -13993,6 +14031,15 @@
       "building",
       "city"
     ],
+    "requirements": {
+      "description": "Requires 1 colony.",
+      "items": [
+        {
+          "type": "colony",
+          "min": 1
+        }
+      ]
+    },
     "behaviors": [
       {
         "triggers": [
@@ -14031,6 +14078,15 @@
     "tags": [
       "space"
     ],
+    "requirements": {
+      "description": "Requires a colony.",
+      "items": [
+        {
+          "type": "colony",
+          "min": 1
+        }
+      ]
+    },
     "behaviors": [
       {
         "triggers": [
@@ -14040,7 +14096,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player",
             "allowDuplicatePlayerColony": true
@@ -14055,7 +14111,7 @@
         "condition": "per",
         "maxTrigger": -1,
         "per": {
-          "type": "colony-tile",
+          "type": "colony",
           "amount": 2,
           "location": "anywhere"
         },
@@ -14427,7 +14483,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -14522,6 +14578,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["space"],
                 "resources": ["credit"]
               }
@@ -14565,7 +14622,11 @@
       {
         "triggers": [
           {
-            "type": "auto"
+            "type": "auto",
+            "condition": {
+              "type": "tag-played",
+              "unique": true
+            }
           }
         ],
         "outputs": [
@@ -14576,6 +14637,21 @@
           }
         ],
         "description": "Increase your M€ production 1 step when you get a new type of tag in play (event cards do not count)"
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto-corporation-first-action"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "colony",
+            "amount": 1,
+            "target": "self-player"
+          }
+        ],
+        "description": "As your first action, put an additional colony of your choice into play."
       }
     ]
   },
@@ -14590,6 +14666,26 @@
       "animal"
     ],
     "behaviors": [
+      {
+        "triggers": [
+          {
+            "type": "auto-corporation-start"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "credit",
+            "amount": 45,
+            "target": "self-player"
+          },
+          {
+            "type": "credit-production",
+            "amount": 2,
+            "target": "self-player"
+          }
+        ],
+        "description": "Gain 45 M€ and increase your M€ production 2 steps"
+      },
       {
         "triggers": [
           {
@@ -14620,26 +14716,6 @@
           }
         ],
         "description": "Add 1 animal to this card when you play an animal or plant tag, including this."
-      },
-      {
-        "triggers": [
-          {
-            "type": "auto"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "credit",
-            "amount": 45,
-            "target": "self-player"
-          },
-          {
-            "type": "credit-production",
-            "amount": 2,
-            "target": "self-player"
-          }
-        ],
-        "description": "Gain 45 M€ and increase your M€ production 2 steps"
       }
     ],
     "resourceStorage": {
@@ -14773,7 +14849,7 @@
         ],
         "outputs": [
           {
-            "type": "colony-tile",
+            "type": "colony",
             "amount": 1,
             "target": "self-player"
           }
@@ -16326,6 +16402,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["building"],
                 "resources": ["credit"]
               }
@@ -16538,6 +16615,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "tags": ["science"],
                 "resources": ["credit"]
               }
@@ -17289,6 +17367,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]
@@ -18550,6 +18629,7 @@
             "target": "self-player",
             "selectors": [
               {
+                "actions": ["card-playing"],
                 "resources": ["credit"]
               }
             ]

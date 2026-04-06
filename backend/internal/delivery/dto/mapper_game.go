@@ -83,6 +83,10 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
 		ClaudeModel:           settings.ClaudeModel,
 		AvailablePlayerColors: shared.PlayerColors,
+		Temperature:           settings.Temperature,
+		Oxygen:                settings.Oxygen,
+		Oceans:                settings.Oceans,
+		Generation:            settings.Generation,
 	}
 
 	globalParams := g.GlobalParameters()
@@ -219,11 +223,11 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 	result.IsLastRound = g.GlobalParameters().IsMaxed()
 
 	if g.HasColonies() && registries.ColonyRegistry != nil {
-		result.ColonyTiles = toColonyTileDtos(g, registries.ColonyRegistry, cardRegistry, playerID)
-		result.TradeFleetAvailable = g.GetTradeFleetAvailable(playerID)
+		result.Colonies = toColonyDtos(g, registries.ColonyRegistry, cardRegistry, playerID)
+		result.TradeFleetAvailable = g.Colonies().GetTradeFleetAvailable(playerID)
 		fleets := make(map[string]bool)
 		for _, p := range players {
-			fleets[p.ID()] = g.GetTradeFleetAvailable(p.ID())
+			fleets[p.ID()] = g.Colonies().GetTradeFleetAvailable(p.ID())
 		}
 		result.TradeFleets = fleets
 	}
@@ -407,10 +411,10 @@ func buildMilestoneRewardDtos(rewards []award.RewardOutput) []AwardRewardDto {
 	if len(rewards) == 0 {
 		return nil
 	}
-	outputs := make([]ResourceConditionDto, len(rewards))
+	outputs := make([]any, len(rewards))
 	for i, r := range rewards {
-		outputs[i] = ResourceConditionDto{
-			Type:   ResourceType(r.Type),
+		outputs[i] = BasicResourceConditionDto{
+			Type:   string(r.Type),
 			Amount: r.Amount,
 			Target: "self-player",
 		}
@@ -464,10 +468,10 @@ func ToAwardsDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegistry aw
 
 		rewardDtos := make([]AwardRewardDto, len(def.Rewards))
 		for ri, r := range def.Rewards {
-			outputs := make([]ResourceConditionDto, len(r.Outputs))
+			outputs := make([]any, len(r.Outputs))
 			for oi, o := range r.Outputs {
-				outputs[oi] = ResourceConditionDto{
-					Type:   ResourceType(o.Type),
+				outputs[oi] = BasicResourceConditionDto{
+					Type:   string(o.Type),
 					Amount: o.Amount,
 					Target: "self-player",
 				}
@@ -654,7 +658,7 @@ func toVPGranterConditionDto(cond shared.VPCondition) VPGranterConditionDto {
 
 // ToTriggeredEffectDto converts a triggered effect to DTO
 func ToTriggeredEffectDto(effect shared.TriggeredEffect) TriggeredEffectDto {
-	outputDtos := make([]ResourceConditionDto, len(effect.Outputs))
+	outputDtos := make([]any, len(effect.Outputs))
 	for i, output := range effect.Outputs {
 		outputDtos[i] = toResourceConditionDto(output)
 	}
@@ -719,8 +723,8 @@ func buildGlobalParameterBonuses(venusEnabled bool) []GlobalParameterBonusDto {
 	return bonuses
 }
 
-func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, cardRegistry cards.CardRegistry, playerID string) []ColonyTileDto {
-	tileStates := g.ColonyTileStates()
+func toColonyDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, cardRegistry cards.CardRegistry, playerID string) []ColonyDto {
+	tileStates := g.Colonies().States()
 	if len(tileStates) == 0 {
 		return nil
 	}
@@ -731,7 +735,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 		tradeStepBonus = colonyAction.CountTradeStepBonus(playerObj, cardRegistry)
 	}
 
-	dtos := make([]ColonyTileDto, 0, len(tileStates))
+	dtos := make([]ColonyDto, 0, len(tileStates))
 	for _, state := range tileStates {
 		def, err := colonyRegistry.GetByID(state.DefinitionID)
 		if err != nil {
@@ -776,7 +780,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 				Message: "This colony has already been traded this generation",
 			})
 		}
-		if !g.GetTradeFleetAvailable(playerID) {
+		if !g.Colonies().GetTradeFleetAvailable(playerID) {
 			tradeAvailable = false
 			tradeErrors = append(tradeErrors, StateErrorDto{
 				Code:    StateErrorCode("fleet-unavailable"),
@@ -824,7 +828,7 @@ func toColonyTileDtos(g *game.Game, colonyRegistry colonies.ColonyRegistry, card
 			}
 		}
 
-		dtos = append(dtos, ColonyTileDto{
+		dtos = append(dtos, ColonyDto{
 			ID:             def.ID,
 			Name:           def.Name,
 			Location:       def.Location,

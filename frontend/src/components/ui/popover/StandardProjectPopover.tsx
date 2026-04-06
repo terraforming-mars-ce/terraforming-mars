@@ -2,12 +2,11 @@ import React from "react";
 import {
   GameDto,
   GameStatusActive,
-  GamePhaseAction,
   PlayerStandardProjectDto,
 } from "@/types/generated/api-types.ts";
 import { StandardProject } from "@/types/cards.tsx";
 import GameIcon from "../display/GameIcon.tsx";
-import { canPerformActions } from "@/utils/actionUtils.ts";
+import { canPerformActions, isPlayerActionPhase } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { FormattedDescription } from "../display/FormattedDescription";
 import BehaviorSection from "../cards/BehaviorSection/BehaviorSection.tsx";
@@ -28,7 +27,7 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
   anchorRef,
 }) => {
   const isGameActive = gameState?.status === GameStatusActive;
-  const isActionPhase = gameState?.currentPhase === GamePhaseAction;
+  const isActionPhase = isPlayerActionPhase(gameState?.currentPhase);
   const isCurrentPlayerTurn = gameState?.currentTurn === gameState?.viewingPlayerId;
   const canExecuteProjects =
     isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);

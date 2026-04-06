@@ -37,16 +37,18 @@ func (c *RequirementModifierCalculator) Calculate(p *player.Player) []shared.Req
 	handCardIDs := p.Hand().Cards()
 
 	for _, effect := range effects {
-		for _, output := range effect.Behavior.Outputs {
-			if output.ResourceType != shared.ResourceDiscount {
+		for _, outputBC := range effect.Behavior.Outputs {
+			if outputBC.GetResourceType() != shared.ResourceDiscount {
 				continue
 			}
 
+			selectors := shared.GetSelectors(outputBC)
+
 			// Check selectors for discount targeting
-			if len(output.Selectors) > 0 {
-				hasCardSelectors := HasCardSelectorsExcludingResources(output.Selectors)
-				hasStandardProjectSelectors := HasStandardProjectSelectors(output.Selectors)
-				hasActionSelectors := HasActionSelectors(output.Selectors)
+			if len(selectors) > 0 {
+				hasCardSelectors := HasCardSelectorsExcludingResources(selectors)
+				hasStandardProjectSelectors := HasStandardProjectSelectors(selectors)
+				hasActionSelectors := HasActionSelectors(selectors)
 
 				// Skip action-only selectors (e.g., card-buying, colony-trade)
 				if hasActionSelectors && !hasCardSelectors && !hasStandardProjectSelectors {
@@ -55,12 +57,12 @@ func (c *RequirementModifierCalculator) Calculate(p *player.Player) []shared.Req
 
 				// Case 1: Standard project discount
 				if hasStandardProjectSelectors {
-					for _, selector := range output.Selectors {
+					for _, selector := range selectors {
 						for _, project := range selector.StandardProjects {
 							projectCopy := project
-							affectedResources := c.convertAffectedResources(GetResourcesFromSelectors(output.Selectors))
+							affectedResources := c.convertAffectedResources(GetResourcesFromSelectors(selectors))
 							modifier := shared.RequirementModifier{
-								Amount:                output.Amount,
+								Amount:                outputBC.GetAmount(),
 								AffectedResources:     affectedResources,
 								StandardProjectTarget: &projectCopy,
 							}
@@ -77,10 +79,10 @@ func (c *RequirementModifierCalculator) Calculate(p *player.Player) []shared.Req
 							continue
 						}
 
-						if MatchesAnySelectorExcludingResources(card, output.Selectors) {
+						if MatchesAnySelectorExcludingResources(card, selectors) {
 							cardIDCopy := cardID
 							modifier := shared.RequirementModifier{
-								Amount:            output.Amount,
+								Amount:            outputBC.GetAmount(),
 								AffectedResources: []shared.ResourceType{shared.ResourceCredit},
 								CardTarget:        &cardIDCopy,
 							}
@@ -95,7 +97,7 @@ func (c *RequirementModifierCalculator) Calculate(p *player.Player) []shared.Req
 			for _, cardID := range handCardIDs {
 				cardIDCopy := cardID
 				modifier := shared.RequirementModifier{
-					Amount:            output.Amount,
+					Amount:            outputBC.GetAmount(),
 					AffectedResources: []shared.ResourceType{shared.ResourceCredit},
 					CardTarget:        &cardIDCopy,
 				}
@@ -166,18 +168,20 @@ func (c *RequirementModifierCalculator) CalculateCardDiscounts(p *player.Player,
 	effects := p.Effects().List()
 
 	for _, effect := range effects {
-		for _, output := range effect.Behavior.Outputs {
-			if output.ResourceType != shared.ResourceDiscount {
+		for _, outputBC := range effect.Behavior.Outputs {
+			if outputBC.GetResourceType() != shared.ResourceDiscount {
 				continue
 			}
 
-			// Check selectors first (new system with AND logic within selector, OR between selectors)
-			if len(output.Selectors) > 0 {
-				hasCardSelectors := HasCardSelectorsExcludingResources(output.Selectors)
-				hasOnlyStandardProjectSelectors := HasStandardProjectSelectors(output.Selectors) && !hasCardSelectors
+			selectors := shared.GetSelectors(outputBC)
 
-				// Skip action-only selectors (e.g., card-buying, colony-trade)
-				if HasActionSelectors(output.Selectors) && !hasCardSelectors {
+			// Check selectors first (new system with AND logic within selector, OR between selectors)
+			if len(selectors) > 0 {
+				hasCardSelectors := HasCardSelectorsExcludingResources(selectors)
+				hasOnlyStandardProjectSelectors := HasStandardProjectSelectors(selectors) && !hasCardSelectors
+
+				// Skip non-card-playing action selectors (e.g., card-buying, colony-trade)
+				if HasActionSelectors(selectors) && !hasCardSelectors && !hasAction(selectors, shared.ActionCardPlaying) {
 					continue
 				}
 
@@ -186,18 +190,18 @@ func (c *RequirementModifierCalculator) CalculateCardDiscounts(p *player.Player,
 				}
 
 				if hasCardSelectors {
-					if MatchesAnySelectorExcludingResources(card, output.Selectors) {
-						totalDiscount += output.Amount
+					if MatchesAnySelectorExcludingResources(card, selectors) {
+						totalDiscount += outputBC.GetAmount()
 					}
 					continue
 				}
 
-				totalDiscount += output.Amount
+				totalDiscount += outputBC.GetAmount()
 				continue
 			}
 
 			// Global discount (no selectors - applies to all cards)
-			totalDiscount += output.Amount
+			totalDiscount += outputBC.GetAmount()
 		}
 	}
 
@@ -214,16 +218,17 @@ func (c *RequirementModifierCalculator) CalculateGlobalParameterLenience(p *play
 
 	totalLenience := 0
 	for _, effect := range p.Effects().List() {
-		for _, output := range effect.Behavior.Outputs {
-			if output.ResourceType != shared.ResourceGlobalParameterLenience {
+		for _, outputBC := range effect.Behavior.Outputs {
+			if outputBC.GetResourceType() != shared.ResourceGlobalParameterLenience {
 				continue
 			}
-			if len(output.Selectors) > 0 {
-				if matchesGlobalParameterSelector(output.Selectors, paramType) {
-					totalLenience += output.Amount
+			selectors := shared.GetSelectors(outputBC)
+			if len(selectors) > 0 {
+				if matchesGlobalParameterSelector(selectors, paramType) {
+					totalLenience += outputBC.GetAmount()
 				}
 			} else {
-				totalLenience += output.Amount
+				totalLenience += outputBC.GetAmount()
 			}
 		}
 	}
@@ -239,7 +244,7 @@ func (c *RequirementModifierCalculator) HasIgnoreGlobalRequirements(p *player.Pl
 	}
 	for _, effect := range p.Effects().List() {
 		for _, output := range effect.Behavior.Outputs {
-			if output.ResourceType == shared.ResourceIgnoreGlobalRequirements {
+			if output.GetResourceType() == shared.ResourceIgnoreGlobalRequirements {
 				return true
 			}
 		}
@@ -270,15 +275,16 @@ func (c *RequirementModifierCalculator) CalculateActionDiscounts(
 	}
 
 	for _, effect := range p.Effects().List() {
-		for _, output := range effect.Behavior.Outputs {
-			if output.ResourceType != shared.ResourceDiscount {
+		for _, outputBC := range effect.Behavior.Outputs {
+			if outputBC.GetResourceType() != shared.ResourceDiscount {
 				continue
 			}
 
-			if len(output.Selectors) > 0 && MatchesAnyActionSelector(actionType, output.Selectors) {
-				affectedResources := c.convertAffectedResources(GetResourcesFromSelectors(output.Selectors))
+			selectors := shared.GetSelectors(outputBC)
+			if len(selectors) > 0 && MatchesAnyActionSelector(actionType, selectors) {
+				affectedResources := c.convertAffectedResources(GetResourcesFromSelectors(selectors))
 				for _, rt := range affectedResources {
-					discounts[rt] += output.Amount
+					discounts[rt] += outputBC.GetAmount()
 				}
 			}
 		}
@@ -292,12 +298,12 @@ func (c *RequirementModifierCalculator) CalculateActionDiscounts(
 func CalculateActionDiscountsFromCard(card *Card, actionType string) int {
 	totalDiscount := 0
 	for _, behavior := range card.Behaviors {
-		for _, output := range behavior.Outputs {
-			if output.ResourceType != shared.ResourceDiscount {
+		for _, outputBC := range behavior.Outputs {
+			if outputBC.GetResourceType() != shared.ResourceDiscount {
 				continue
 			}
-			if MatchesAnyActionSelector(actionType, output.Selectors) {
-				totalDiscount += output.Amount
+			if MatchesAnyActionSelector(actionType, shared.GetSelectors(outputBC)) {
+				totalDiscount += outputBC.GetAmount()
 			}
 		}
 	}
@@ -320,17 +326,19 @@ func (c *RequirementModifierCalculator) CalculateStandardProjectDiscounts(
 	effects := p.Effects().List()
 
 	for _, effect := range effects {
-		for _, output := range effect.Behavior.Outputs {
-			if output.ResourceType != shared.ResourceDiscount {
+		for _, outputBC := range effect.Behavior.Outputs {
+			if outputBC.GetResourceType() != shared.ResourceDiscount {
 				continue
 			}
 
+			selectors := shared.GetSelectors(outputBC)
+
 			// Check selectors for standard project discount
-			if len(output.Selectors) > 0 {
-				if MatchesAnyStandardProjectSelector(projectType, output.Selectors) {
-					affectedResources := c.convertAffectedResources(GetResourcesFromSelectors(output.Selectors))
+			if len(selectors) > 0 {
+				if MatchesAnyStandardProjectSelector(projectType, selectors) {
+					affectedResources := c.convertAffectedResources(GetResourcesFromSelectors(selectors))
 					for _, resourceType := range affectedResources {
-						discounts[resourceType] += output.Amount
+						discounts[resourceType] += outputBC.GetAmount()
 					}
 				}
 			}
@@ -338,4 +346,13 @@ func (c *RequirementModifierCalculator) CalculateStandardProjectDiscounts(
 	}
 
 	return discounts
+}
+
+func hasAction(selectors []shared.Selector, actionType string) bool {
+	for _, sel := range selectors {
+		if slices.Contains(sel.Actions, actionType) {
+			return true
+		}
+	}
+	return false
 }

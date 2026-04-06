@@ -34,8 +34,9 @@ const (
 	ResourceOceanTile           ResourceType = "ocean-tile"
 	ResourceGreeneryTile        ResourceType = "greenery-tile"
 	ResourceVolcanoTile         ResourceType = "volcano-tile"
-	ResourceColonyTile          ResourceType = "colony-tile"
+	ResourceColony              ResourceType = "colony"
 	ResourceColonyCount         ResourceType = "colony-count"
+	ResourceColonyBonus         ResourceType = "colony-bonus"
 	ResourceNaturalPreserveTile ResourceType = "natural-preserve-tile"
 	ResourceMiningTile          ResourceType = "mining-tile"
 	ResourceNuclearZoneTile     ResourceType = "nuclear-zone-tile"
@@ -86,9 +87,10 @@ const (
 
 	ResourceWorldTreeTile ResourceType = "world-tree-tile"
 
-	ResourceAwardFund ResourceType = "award-fund"
-	ResourceFreeTrade ResourceType = "trade"
-	ResourceCardCount ResourceType = "card-count"
+	ResourceAwardFund       ResourceType = "award-fund"
+	ResourceFreeTrade       ResourceType = "trade"
+	ResourceCardCount       ResourceType = "card-count"
+	ResourceColonyTrackStep ResourceType = "colony-track-step"
 
 	ResourceDistinctTagCount      ResourceType = "distinct-tag-count"
 	ResourceCardsWithRequirements ResourceType = "cards-with-requirements"
@@ -100,8 +102,14 @@ const (
 	ResourceTotalCardStorage      ResourceType = "total-card-storage"
 )
 
+// IsForestTile returns true if the tile type counts as a forest (greenery or world-tree).
+func IsForestTile(tileType ResourceType) bool {
+	return tileType == ResourceGreeneryTile || tileType == ResourceWorldTreeTile
+}
+
 // ActionType constants for action-level selectors (discounts targeting specific game actions)
 const (
 	ActionCardBuying  = "card-buying"
+	ActionCardPlaying = "card-playing"
 	ActionColonyTrade = "colony-trade"
 )

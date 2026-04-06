@@ -13,6 +13,8 @@ import {
   ResourceTypeHeat,
   ResourceTypeGreeneryTile,
   ResourceTypeTemperature,
+  PlayerStatusTile,
+  PlayerStatusSelection,
 } from "@/types/generated/api-types.ts";
 import ActionsPopover from "../popover/ActionsPopover.tsx";
 import EffectsPopover from "../popover/EffectsPopover.tsx";
@@ -29,6 +31,7 @@ import {
   calculateHeatForTemperature,
 } from "@/utils/resourceConversionUtils.ts";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface AngledPanelProps {
   side: "left" | "right";
@@ -425,8 +428,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     setShowVPPopover(!showVPPopover);
   };
 
-  const isTilePlacementActive = !!currentPlayer?.pendingTileSelection;
-  const isConversionDisabled = isTilePlacementActive;
+  const isConversionDisabled =
+    currentPlayer?.status === PlayerStatusTile || currentPlayer?.status === PlayerStatusSelection;
 
   const BAR_HEIGHT = 90;
 
@@ -435,7 +438,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const contentScale = panelWidth / MAX_PANEL_WIDTH;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[1200] flex justify-between pointer-events-none">
+    <div
+      className="fixed bottom-0 left-0 right-0 flex justify-between pointer-events-none"
+      style={{ zIndex: Z_INDEX.BOTTOM_RESOURCE_BAR }}
+    >
       {/* Spectating banner */}
       {isSpectating && (
         <>

@@ -1,5 +1,9 @@
 import { CardBehaviorDto } from "@/types/generated/api-types.ts";
+import { type ResourceCondition, isProduction } from "@/types/resourceConditions.ts";
 import { ClassifiedBehavior } from "../types.ts";
+
+const outputHasType = (outputs: ResourceCondition[] | undefined, type: string): boolean =>
+  outputs?.some((o) => o.type === type) ?? false;
 
 export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehavior[] => {
   return behaviors.flatMap((behavior, originalIndex): ClassifiedBehavior | ClassifiedBehavior[] => {
@@ -7,28 +11,18 @@ export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehav
     const triggerType = hasTrigger ? behavior.triggers?.[0]?.type : null;
     const hasCondition = behavior.triggers?.[0]?.condition !== undefined;
     const hasInputs = behavior.inputs && behavior.inputs.length > 0;
-    const hasProduction =
-      behavior.outputs &&
-      behavior.outputs.some((output: any) => output.type?.includes("production"));
+    const hasProduction = behavior.outputs?.some((o) => isProduction(o)) ?? false;
 
-    const hasDiscount =
-      behavior.outputs && behavior.outputs.some((output: any) => output.type === "discount");
-
-    const hasPaymentSubstitute =
-      behavior.outputs &&
-      behavior.outputs.some((output: any) => output.type === "payment-substitute");
-
-    const hasValueModifier =
-      behavior.outputs && behavior.outputs.some((output: any) => output.type === "value-modifier");
-
-    const hasDefense =
-      behavior.outputs && behavior.outputs.some((output: any) => output.type === "defense");
+    const hasDiscount = outputHasType(behavior.outputs, "discount");
+    const hasPaymentSubstitute = outputHasType(behavior.outputs, "payment-substitute");
+    const hasValueModifier = outputHasType(behavior.outputs, "value-modifier");
+    const hasDefense = outputHasType(behavior.outputs, "defense");
 
     const { description } = behavior;
 
     if (hasDiscount) {
-      const discountOutputs = behavior.outputs?.filter((o: any) => o.type === "discount") ?? [];
-      const otherOutputs = behavior.outputs?.filter((o: any) => o.type !== "discount") ?? [];
+      const discountOutputs = behavior.outputs?.filter((o) => o.type === "discount") ?? [];
+      const otherOutputs = behavior.outputs?.filter((o) => o.type !== "discount") ?? [];
 
       if (otherOutputs.length > 0) {
         const discountBehavior = { ...behavior, outputs: discountOutputs };
@@ -63,7 +57,7 @@ export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehav
       return { behavior, type: "manual-action", description, originalIndex };
     }
 
-    if (triggerType === "auto" && hasCondition) {
+    if ((triggerType === "auto" || triggerType === "auto-corporation-start") && hasCondition) {
       return { behavior, type: "triggered-effect", description, originalIndex };
     }
 

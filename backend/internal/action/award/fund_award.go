@@ -62,6 +62,10 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 		return err
 	}
 
+	if err := baseaction.ValidateNoPendingSelections(g, playerID, log); err != nil {
+		return err
+	}
+
 	player, err := a.GetPlayerFromGame(g, playerID, log)
 	if err != nil {
 		return err

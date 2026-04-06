@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from "react";
-import { PendingColonySelectionDto, ColonyTileDto } from "@/types/generated/api-types.ts";
+import { PendingColonySelectionDto, ColonyDto } from "@/types/generated/api-types.ts";
 import ColonySteps from "../popover/ColonySteps.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
 import { PlayerInfo } from "@/utils/colonyUtils.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface ColonySelectionOverlayProps {
   isOpen: boolean;
   pendingSelection: PendingColonySelectionDto;
-  colonyTiles: ColonyTileDto[];
+  colonies: ColonyDto[];
   allPlayers: PlayerInfo[];
   onConfirm: (colonyId: string) => void;
 }
@@ -16,7 +17,7 @@ interface ColonySelectionOverlayProps {
 const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
   isOpen,
   pendingSelection,
-  colonyTiles,
+  colonies,
   allPlayers,
   onConfirm,
 }) => {
@@ -40,8 +41,12 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: Z_INDEX.SELECTION_POPOVER }}
+    >
+      <div className="absolute inset-0 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]" />
 
       <div className="relative z-[1] w-[480px] max-h-[80vh] flex flex-col bg-space-black-darker/95 border border-space-blue-500 rounded-lg overflow-hidden shadow-glow-lg">
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
@@ -52,7 +57,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {colonyTiles.map((colony) => {
+          {colonies.map((colony) => {
             const selectable = selectableIds.has(colony.id);
             const isSelected = selectedColonyId === colony.id;
             const nextSlotIndex = colony.playerColonies.length;

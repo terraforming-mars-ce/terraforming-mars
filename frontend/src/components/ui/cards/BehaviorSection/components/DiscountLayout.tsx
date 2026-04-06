@@ -1,9 +1,11 @@
 import React from "react";
 import GameIcon from "../../../display/GameIcon.tsx";
 import Slash from "./Slash.tsx";
+import type { CardBehaviorDto, SelectorDto } from "@/types/generated/api-types";
+import { isEffect, getSelectors } from "@/types/resourceConditions";
 
 interface DiscountLayoutProps {
-  behavior: any;
+  behavior: CardBehaviorDto;
 }
 
 const getStandardProjectIcon = (project: string): string | null => {
@@ -20,6 +22,7 @@ const getStandardProjectIcon = (project: string): string | null => {
 
 const getActionIcon = (action: string): string | null => {
   const mapping: { [key: string]: string } = {
+    "card-playing": "card-draw",
     "card-buying": "card-buy",
     "colony-trade": "trade",
   };
@@ -98,7 +101,7 @@ const DiscountRow: React.FC<{
   );
 };
 
-const renderSelectorIcons = (selector: any): React.ReactNode => {
+const renderSelectorIcons = (selector: SelectorDto): React.ReactNode => {
   const elements: React.ReactNode[] = [];
 
   if (selector.tags && selector.tags.length > 0) {
@@ -156,13 +159,15 @@ const renderSelectorIcons = (selector: any): React.ReactNode => {
 const DiscountLayout: React.FC<DiscountLayoutProps> = ({ behavior }) => {
   if (!behavior.outputs || behavior.outputs.length === 0) return null;
 
-  const discountOutput = behavior.outputs.find((output: any) => output.type === "discount");
+  const discountOutput = behavior.outputs.find(
+    (output) => isEffect(output) && output.type === "discount",
+  );
   if (!discountOutput) return null;
 
   const rawAmount = discountOutput.amount ?? 0;
   const isNegativeDiscount = rawAmount < 0;
   const amount = Math.abs(rawAmount);
-  const selectors: any[] = discountOutput.selectors || [];
+  const selectors: SelectorDto[] = getSelectors(discountOutput) || [];
 
   // Extract affected resource types from selectors
   const affectedResources: string[] = [];
@@ -179,7 +184,7 @@ const DiscountLayout: React.FC<DiscountLayoutProps> = ({ behavior }) => {
 
   // If we have selectors, render them with OR separators between selectors
   if (selectors.length > 0) {
-    const selectorIcons = selectors.map((selector: any, selectorIndex: number) => (
+    const selectorIcons = selectors.map((selector: SelectorDto, selectorIndex: number) => (
       <React.Fragment key={`selector-${selectorIndex}`}>
         {selectorIndex > 0 && <Slash />}
         <div className="flex gap-[2px] items-center">{renderSelectorIcons(selector)}</div>

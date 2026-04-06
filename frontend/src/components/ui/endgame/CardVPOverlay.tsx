@@ -1,6 +1,7 @@
 import { FC, useEffect, useState } from "react";
 import GameIcon from "../display/GameIcon";
 import { CardVPDetailDto } from "@/types/generated/api-types";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface CardVPOverlayProps {
   /** Per-card VP details */
@@ -47,7 +48,10 @@ const CardVPOverlay: FC<CardVPOverlayProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-[900] pointer-events-none">
+    <div
+      className="fixed inset-0 flex items-center justify-center pointer-events-none"
+      style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
+    >
       <div
         className={`
           bg-space-black/95 backdrop-blur-lg border-2 border-purple-500/50 rounded-xl

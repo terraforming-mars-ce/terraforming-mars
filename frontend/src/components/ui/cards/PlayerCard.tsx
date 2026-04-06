@@ -7,9 +7,13 @@ import {
   CalculatedOutputDto,
   CardBehaviorDto,
   VPConditionDto,
+  PlayerStatusTile,
+  PlayerStatusSelection,
+  PlayerStatusSelectingProductionCards,
 } from "@/types/generated/api-types.ts";
 import BehaviorSection from "./BehaviorSection";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameIcon from "@/components/ui/display/GameIcon.tsx";
 import CardIcon from "./BehaviorSection/components/CardIcon.tsx";
 import VictoryPointIcon from "@/components/ui/display/VictoryPointIcon.tsx";
@@ -41,7 +45,7 @@ const resourceTypeToIconType: Record<string, string> = {
   "greenery-placement": "greenery-placement",
   "city-placement": "city-placement",
   "card-draw": "card-draw",
-  "colony-tile": "colony-tile",
+  colony: "colony",
 };
 
 const cardResourceTypes: Record<string, "peek" | "take" | "buy" | "discard" | "none"> = {
@@ -106,7 +110,6 @@ interface PlayerCardProps {
   isActionPhase: boolean;
   isHost?: boolean;
   onSkipAction?: () => void;
-  hasPendingTile?: boolean;
   triggeredEffects?: TriggeredEffectDto[];
   onPlayerClick?: (player: PlayerDto | OtherPlayerDto) => void;
   onKickPlayer?: (playerId: string) => void;
@@ -123,7 +126,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   isActionPhase,
   isHost = false,
   onSkipAction,
-  hasPendingTile = false,
   triggeredEffects = [],
   onPlayerClick,
   onKickPlayer,
@@ -131,12 +133,14 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   minNameWidth,
   minCardWidth,
 }) => {
+  const hasPendingTile = player.status === PlayerStatusTile;
+  const hasSelection = player.status === PlayerStatusSelection;
+  const isInProduction = player.status === PlayerStatusSelectingProductionCards;
+  const isBlocked = hasPendingTile || hasSelection;
   const hoverSound = useHoverSound(hasPendingTile);
   const isPassed = player.passed;
   const isDisconnected = !player.isConnected;
   const isExited = player.isExited;
-  const isInProduction =
-    player.productionPhase != null && !player.productionPhase.selectionComplete;
   const hasUnlimitedActions = player.availableActions === -1;
   const actionsRemaining = player.availableActions;
 
@@ -358,6 +362,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 TILE
               </span>
             )}
+            {hasSelection && (
+              <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(60,140,180,0.6)] text-[rgb(140,220,255)] border border-[rgba(60,140,180,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+                SELECTION
+              </span>
+            )}
             {isInProduction && (
               <span className="px-1.5 py-0.5 text-[8px] font-bold font-orbitron uppercase tracking-[0.5px] bg-[rgba(180,120,40,0.6)] text-[rgb(255,200,120)] border border-[rgba(180,120,40,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] flex items-center gap-1">
                 PRODUCTION
@@ -399,18 +408,18 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         {isCurrentPlayer && isCurrentTurn && isActionPhase ? (
           <button
             className={`py-1.5 px-3 text-[9px] font-bold font-orbitron uppercase tracking-[0.5px] transition-all duration-200 shrink-0 ml-2 ${
-              hasPendingTile
+              isBlocked
                 ? "bg-[rgba(40,40,45,0.9)] text-[rgb(100,100,110)] border border-[rgba(60,60,70,0.5)] cursor-default"
                 : "bg-[rgba(50,100,160,0.95)] text-white border border-[rgba(80,140,200,0.8)] cursor-pointer hover:bg-[rgba(60,120,180,1)] hover:border-[rgba(100,160,220,0.9)]"
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              if (hasPendingTile) return;
+              if (isBlocked) return;
               hoverSound.onClick?.();
               onSkipAction?.();
             }}
             onMouseEnter={hoverSound.onMouseEnter}
-            disabled={hasPendingTile}
+            disabled={isBlocked}
           >
             {buttonText}
           </button>
@@ -424,8 +433,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         createPortal(
           <div
             ref={contextMenuRef}
-            className="fixed z-[10000] bg-[rgba(15,15,20,0.98)] border border-[rgba(60,60,70,0.7)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.7)] py-1 min-w-[180px]"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
+            className="fixed bg-[rgba(15,15,20,0.98)] border border-[rgba(60,60,70,0.7)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.7)] py-1 min-w-[180px]"
+            style={{ left: contextMenu.x, top: contextMenu.y, zIndex: Z_INDEX.POPOVER }}
           >
             {canConvertToBot && (
               <button
@@ -461,11 +470,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         cardRect &&
         createPortal(
           <div
-            className="fixed z-[9999] pointer-events-none"
+            className="fixed pointer-events-none"
             style={{
               left: `${cardRect.right + 10}px`,
               top: `${cardRect.top + cardRect.height / 2}px`,
               transform: "translateY(-50%)",
+              zIndex: Z_INDEX.DEBUG_OVERLAY,
             }}
           >
             <style>{`

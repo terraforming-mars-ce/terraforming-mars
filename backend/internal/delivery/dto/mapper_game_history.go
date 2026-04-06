@@ -1,7 +1,9 @@
 package dto
 
 import (
+	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // ToGameHistoryEntryDtos converts a slice of history entries to DTOs.
@@ -42,6 +44,12 @@ func toGameHistoryEntryDto(entry *datastore.GameStateHistoryEntry) GameHistoryEn
 
 	players := make(map[string]GameHistoryPlayerDto, len(s.Players))
 	for id, p := range s.Players {
+		cardVP := computeHistoryCardVP(p)
+		greeneryVP := computeHistoryGreeneryVP(s.Tiles, id)
+		cityVP := computeHistoryCityVP(s.Tiles, id)
+		milestoneVP := computeHistoryMilestoneVP(s.ClaimedMilestones, id)
+		totalVP := p.TerraformRating + cardVP + greeneryVP + cityVP + milestoneVP
+
 		players[id] = GameHistoryPlayerDto{
 			ID:              p.ID,
 			Name:            p.Name,
@@ -59,6 +67,7 @@ func toGameHistoryEntryDto(entry *datastore.GameStateHistoryEntry) GameHistoryEn
 			HandCardIDs:     p.HandCardIDs,
 			CorporationID:   p.CorporationID,
 			ResourceStorage: p.ResourceStorage,
+			TotalVP:         totalVP,
 		}
 	}
 
@@ -100,4 +109,50 @@ func toGameHistoryEntryDto(entry *datastore.GameStateHistoryEntry) GameHistoryEn
 			CardPacks:        s.Settings.CardPacks,
 		},
 	}
+}
+
+func computeHistoryCardVP(p *datastore.PlayerState) int {
+	vp := 0
+	for _, g := range p.VPGranters {
+		vp += g.ComputedValue
+	}
+	return vp
+}
+
+func computeHistoryGreeneryVP(tiles []board.Tile, playerID string) int {
+	vp := 0
+	for _, t := range tiles {
+		if t.OccupiedBy != nil && shared.IsForestTile(t.OccupiedBy.Type) && t.OwnerID != nil && *t.OwnerID == playerID {
+			vp++
+		}
+	}
+	return vp
+}
+
+func computeHistoryCityVP(tiles []board.Tile, playerID string) int {
+	vp := 0
+	for _, t := range tiles {
+		if t.OccupiedBy == nil || t.OccupiedBy.Type != shared.ResourceCityTile || t.OwnerID == nil || *t.OwnerID != playerID {
+			continue
+		}
+		for _, neighbor := range t.Coordinates.GetNeighbors() {
+			for _, n := range tiles {
+				if n.Coordinates == neighbor && n.OccupiedBy != nil && shared.IsForestTile(n.OccupiedBy.Type) {
+					vp++
+					break
+				}
+			}
+		}
+	}
+	return vp
+}
+
+func computeHistoryMilestoneVP(milestones []shared.ClaimedMilestone, playerID string) int {
+	vp := 0
+	for _, m := range milestones {
+		if m.PlayerID == playerID {
+			vp += 5
+		}
+	}
+	return vp
 }

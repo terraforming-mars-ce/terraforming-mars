@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { ColonyStepDto, ColonyOutputDto } from "@/types/generated/api-types.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameIcon from "../display/GameIcon.tsx";
 
 interface ColonyStepsProps {
@@ -88,7 +89,7 @@ const ColonySlotTooltip: React.FC<{
   return createPortal(
     <div
       className="fixed pointer-events-none animate-[fadeIn_150ms_ease-in]"
-      style={{ left: data.x + 12, top: data.y + 12, zIndex: 99999 }}
+      style={{ left: data.x + 12, top: data.y + 12, zIndex: Z_INDEX.LOADING_OVERLAY }}
     >
       <div className="bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.5)] rounded-sm flex items-center gap-1.5">
         {data.color && (

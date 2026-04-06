@@ -18,7 +18,6 @@ import (
 // Includes both query (GET) and mutation (POST) endpoints
 func SetupRouter(
 	createGameAction *gameaction.CreateGameAction,
-	createDemoLobbyAction *gameaction.CreateDemoLobbyAction,
 	getGameAction *query.GetGameAction,
 	getGameLogsAction *query.GetGameLogsAction,
 	getGameHistoryAction *query.GetGameHistoryAction,
@@ -30,7 +29,7 @@ func SetupRouter(
 	awardRegistry awards.AwardRegistry,
 	bugReportService *bugreport.Service,
 ) *mux.Router {
-	gameHandler := NewGameHandler(createGameAction, createDemoLobbyAction, getGameAction, getGameLogsAction, getGameHistoryAction, listGamesAction, listCardsAction, cardRegistry, milestoneRegistry, awardRegistry)
+	gameHandler := NewGameHandler(createGameAction, getGameAction, getGameLogsAction, getGameHistoryAction, listGamesAction, listCardsAction, cardRegistry, milestoneRegistry, awardRegistry)
 	playerHandler := NewPlayerHandler(getPlayerAction, getGameAction, cardRegistry)
 	healthHandler := NewHealthHandler()
 	bugReportHandler := NewBugReportHandler(bugReportService)
@@ -49,7 +48,6 @@ func SetupRouter(
 	gameRoutes := api.PathPrefix("/games").Subrouter()
 	gameRoutes.HandleFunc("", gameHandler.CreateGame).Methods(http.MethodPost)
 	gameRoutes.HandleFunc("", gameHandler.ListGames).Methods(http.MethodGet)
-	gameRoutes.HandleFunc("/demo/lobby", gameHandler.CreateDemoLobby).Methods(http.MethodPost)
 	gameRoutes.HandleFunc("/{gameId}", gameHandler.GetGame).Methods(http.MethodGet)
 	gameRoutes.HandleFunc("/{gameId}/logs", gameHandler.GetGameLogs).Methods(http.MethodGet)
 	gameRoutes.HandleFunc("/{gameId}/history", gameHandler.GetGameHistory).Methods(http.MethodGet)

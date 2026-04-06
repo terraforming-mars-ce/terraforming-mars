@@ -10,19 +10,15 @@ import (
 var standardProjectDisplayData = map[string]*game.LogDisplayData{
 	"Convert Heat": {
 		Behaviors: []shared.CardBehavior{{
-			Outputs: []shared.ResourceCondition{{
-				ResourceType: shared.ResourceTemperature,
-				Amount:       1,
-				Target:       "global",
+			Outputs: []shared.BehaviorCondition{&shared.GlobalParameterCondition{
+				ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTemperature, Amount: 1, Target: "global"},
 			}},
 		}},
 	},
 	"Convert Plants": {
 		Behaviors: []shared.CardBehavior{{
-			Outputs: []shared.ResourceCondition{{
-				ResourceType: shared.ResourceGreeneryPlacement,
-				Amount:       1,
-				Target:       "global",
+			Outputs: []shared.BehaviorCondition{&shared.TilePlacementCondition{
+				ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGreeneryPlacement, Amount: 1, Target: "global"},
 			}},
 		}},
 	},

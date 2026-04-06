@@ -73,7 +73,7 @@ type GameState struct {
 
 	NextGenTurnOrderFrozen bool
 
-	ColonyTileStates     []*colony.TileState
+	ColonyStates         []*colony.ColonyState
 	TradeFleets          map[string]bool
 	ProjectFundingStates []*projectfunding.ProjectState
 
@@ -102,7 +102,7 @@ type PlayerState struct {
 	Color              string
 	HasPassed          bool
 	HasExited          bool
-	DemoSetupConfirmed bool
+	PendingDemoChoices *shared.PendingDemoChoices
 
 	HandCardIDs   []string
 	PlayedCardIDs []string
@@ -126,6 +126,7 @@ type PlayerState struct {
 	PendingBehaviorChoiceSelection *shared.PendingBehaviorChoiceSelection
 	PendingStealTargetSelection    *shared.PendingStealTargetSelection
 	PendingColonyResourceSelection *shared.PendingColonyResourceSelection
+	PendingColonyResourceQueue     []shared.PendingColonyResourceSelection
 	PendingAwardFundSelection      *shared.PendingAwardFundSelection
 	PendingColonySelection         *shared.PendingColonySelection
 	PendingFreeTradeSelection      *shared.PendingFreeTradeSelection

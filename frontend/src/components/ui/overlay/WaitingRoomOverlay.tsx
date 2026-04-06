@@ -5,6 +5,7 @@ import { globalWebSocketManager } from "../../../services/globalWebSocketManager
 import CopyLinkButton from "../buttons/CopyLinkButton.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import GameMenuModal from "./GameMenuModal.tsx";
+import DemoSetupOverlay from "./DemoSetupOverlay.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../display/BotChips.tsx";
 import MainMenuHamburger from "../buttons/MainMenuHamburger.tsx";
 
@@ -77,6 +78,9 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   const botDropdownRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
 
+  const isDemoGame = game.settings.demoGame;
+  const [showDemoSetup, setShowDemoSetup] = useState(false);
+
   const handleStartGame = () => {
     if (!isHost) return;
     void globalWebSocketManager.startGame();
@@ -93,6 +97,22 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
     });
     return bots.every((b) => b.botStatus === "ready");
   }, [hasCurrentPlayer, game.currentPlayer, game.otherPlayers]);
+
+  const allDemoPlayersReady = React.useMemo(() => {
+    if (!isDemoGame) {
+      return true;
+    }
+    const humans: { demoReady?: boolean }[] = [];
+    if (hasCurrentPlayer && game.currentPlayer?.playerType !== "bot") {
+      humans.push(game.currentPlayer!);
+    }
+    game.otherPlayers?.forEach((p) => {
+      if (p.playerType !== "bot") {
+        humans.push(p);
+      }
+    });
+    return humans.every((h) => h.demoReady);
+  }, [isDemoGame, hasCurrentPlayer, game.currentPlayer, game.otherPlayers]);
 
   const allPlayers = React.useMemo(() => {
     const players: { id: string; name: string; playerType: string }[] = [];
@@ -326,6 +346,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                 botStatus: (player.botStatus as string) || undefined,
                 botDifficulty: (player.botDifficulty as string) || undefined,
                 botSpeed: (player.botSpeed as string) || undefined,
+                demoReady: (player as PlayerDto | OtherPlayerDto).demoReady || false,
                 isLeaving: false,
               }));
 
@@ -339,6 +360,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                     botStatus: undefined,
                     botDifficulty: undefined,
                     botSpeed: undefined,
+                    demoReady: false,
                     isLeaving: true,
                   });
                 }
@@ -417,6 +439,18 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                           <BotSpeedChip speed={player.botSpeed} />
                         </>
                       )}
+                      {isDemoGame &&
+                        player.playerType !== "bot" &&
+                        !player.isLeaving &&
+                        (player.demoReady ? (
+                          <span className="bg-green-700/60 text-green-300 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                            Ready
+                          </span>
+                        ) : (
+                          <span className="bg-red-900/40 text-red-300/70 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                            Not Ready
+                          </span>
+                        ))}
                       {isHost && player.id !== playerId && !player.isLeaving && (
                         <button
                           onClick={() => void globalWebSocketManager.kickPlayer(player.id)}
@@ -572,13 +606,29 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
           </div>
         </div>
 
+        {/* Demo Game: Configure button */}
+        {isDemoGame && (
+          <div className="text-center">
+            <GameButton
+              buttonType="secondary"
+              size="md"
+              onClick={() => setShowDemoSetup(true)}
+              className="w-full"
+            >
+              DEMO CONFIG
+            </GameButton>
+          </div>
+        )}
+
+        {isDemoGame && <div className="h-2" />}
+
         {/* Start Game Button (Host only) */}
         {isHost && (
           <div className="text-center">
             <GameButton
               size="lg"
               onClick={handleStartGame}
-              disabled={playerCount < 1 || !allBotsReady}
+              disabled={playerCount < 1 || !allBotsReady || !allDemoPlayersReady}
               className="w-full"
             >
               START GAME
@@ -590,6 +640,16 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
           <p className="text-white/50 text-sm text-center">Waiting for host to start the game...</p>
         )}
       </GameMenuModal>
+
+      {/* Demo Setup Overlay */}
+      {isDemoGame && showDemoSetup && game && playerId && (
+        <DemoSetupOverlay
+          game={game}
+          playerId={playerId}
+          isOpen={true}
+          onClose={() => setShowDemoSetup(false)}
+        />
+      )}
     </>
   );
 };

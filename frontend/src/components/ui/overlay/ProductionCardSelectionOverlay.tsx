@@ -3,9 +3,11 @@ import GameCard from "../cards/GameCard.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { CardDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { useCardSelection } from "../../../hooks/useCardSelection.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import {
   OVERLAY_CONTAINER_CLASS,
-  OVERLAY_BACKGROUND_CLASS,
+  OVERLAY_BACKDROP_BLUR_CLASS,
+  OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_HEADER_CLASS,
   OVERLAY_TITLE_CLASS,
   OVERLAY_DESCRIPTION_CLASS,
@@ -60,9 +62,12 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
   if (!isOpen || cards.length === 0) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-[fadeIn_0.3s_ease]">
-      {/* Translucent background */}
-      <div className={OVERLAY_BACKGROUND_CLASS} />
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+    >
+      <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
+      <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 
       {/* Content container */}
       <div className={OVERLAY_CONTAINER_CLASS}>

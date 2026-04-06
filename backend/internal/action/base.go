@@ -158,10 +158,7 @@ func AutoAdvanceTurnIfNeeded(g *game.Game, playerID string, log *zap.Logger) {
 	if currentTurn.ActionsRemaining() != 0 {
 		return
 	}
-	if g.GetPendingTileSelection(playerID) != nil {
-		return
-	}
-	if p, err := g.GetPlayer(playerID); err == nil && p.Selection().GetPendingStealTargetSelection() != nil {
+	if g.HasAnyPendingSelection(playerID) {
 		return
 	}
 

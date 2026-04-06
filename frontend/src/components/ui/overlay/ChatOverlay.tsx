@@ -135,7 +135,10 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
   return (
     <>
       {isDragging && (
-        <div className="fixed inset-0" style={{ zIndex: 99999, cursor: "grabbing" }} />
+        <div
+          className="fixed inset-0"
+          style={{ zIndex: Z_INDEX.LOADING_OVERLAY, cursor: "grabbing" }}
+        />
       )}
       <div
         ref={containerRef}

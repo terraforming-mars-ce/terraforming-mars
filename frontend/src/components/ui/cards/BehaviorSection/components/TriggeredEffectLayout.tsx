@@ -8,8 +8,10 @@ import {
   CalculatedOutputDto,
   CardBehaviorDto,
   SelectorDto,
+  TriggerDto,
   MinMaxValueDto,
 } from "@/types/generated/api-types.ts";
+import { type ResourceCondition, getTileRestrictions } from "@/types/resourceConditions.ts";
 
 interface IconDisplayInfo {
   resourceType: string;
@@ -30,12 +32,12 @@ interface TileScaleInfo {
 }
 
 interface TriggeredEffectLayoutProps {
-  behavior: any;
+  behavior: CardBehaviorDto;
   mergedBehaviors?: CardBehaviorDto[];
   layoutPlan: LayoutPlan;
-  isResourceAffordable: (resource: any, isInput: boolean) => boolean;
+  isResourceAffordable: (resource: ResourceCondition, isInput: boolean) => boolean;
   analyzeResourceDisplayWithConstraints: (
-    resource: any,
+    resource: ResourceCondition,
     availableSpace: number,
     forceCompact: boolean,
   ) => IconDisplayInfo;
@@ -60,7 +62,7 @@ const getRequiredOriginalCost = (
 
 // Render a single selector (AND logic: tags together, then card type)
 const renderSelector = (
-  selector: any,
+  selector: SelectorDto,
   selectorIndex: number,
   triggerIndex: number,
   redGlowClass: string,
@@ -130,7 +132,7 @@ const renderSelector = (
 };
 
 // Render a single trigger icon based on its condition type
-const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode => {
+const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.ReactNode => {
   // Check if trigger has selectors (new system)
   const hasSelectors = trigger.condition?.selectors && trigger.condition.selectors.length > 0;
 
@@ -146,7 +148,7 @@ const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode 
       "sell-patents",
     ];
     const selectors = trigger.condition?.selectors || [];
-    const specifiedProjects = selectors.flatMap((s: any) => s.standardProjects || []);
+    const specifiedProjects = selectors.flatMap((s: SelectorDto) => s.standardProjects || []);
     const isSubset =
       specifiedProjects.length > 0 && specifiedProjects.length < ALL_STANDARD_PROJECTS.length;
 
@@ -205,6 +207,21 @@ const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode 
     );
   }
 
+  // Handle tag-played without selectors (any tag): show wild-tag icon
+  const isTagPlayed = trigger.condition?.type === "tag-played";
+  if (isTagPlayed && !hasSelectors) {
+    return (
+      <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
+        <GameIcon iconType="wild-tag" size="small" />
+        {trigger.condition?.unique && (
+          <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+            *
+          </span>
+        )}
+      </div>
+    );
+  }
+
   // Handle selectors first (new system with AND within selector, OR between selectors)
   if (hasSelectors) {
     const target = trigger.condition?.target || "self-player";
@@ -216,12 +233,17 @@ const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode 
 
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center">
-        {trigger.condition.selectors.map((selector: any, selectorIndex: number) => (
+        {trigger.condition!.selectors!.map((selector, selectorIndex: number) => (
           <React.Fragment key={`${triggerIndex}-${selectorIndex}`}>
             {selectorIndex > 0 && <Slash />}
             {renderSelector(selector, selectorIndex, triggerIndex, redGlowClass)}
           </React.Fragment>
         ))}
+        {trigger.condition?.unique && (
+          <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+            *
+          </span>
+        )}
       </div>
     );
   }
@@ -278,6 +300,25 @@ const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode 
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
         <div className={`flex items-center justify-center ${redGlowClass}`}>
           <GameIcon iconType="ocean-tile" size="small" />
+        </div>
+      </div>
+    );
+  }
+
+  const isColonyPlaced = trigger.condition?.type === "colony-placed";
+
+  if (isColonyPlaced) {
+    const target = trigger.condition?.target || "self-player";
+    const isAnyPlayer = target === "any-player";
+
+    const redGlowClass = isAnyPlayer
+      ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_2px_rgba(244,67,54,0.9))_drop-shadow(0_0_4px_rgba(244,67,54,0.7))]"
+      : "";
+
+    return (
+      <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
+        <div className={`flex items-center justify-center ${redGlowClass}`}>
+          <GameIcon iconType="colony" size="small" />
         </div>
       </div>
     );
@@ -375,18 +416,18 @@ const renderTriggerIcon = (trigger: any, triggerIndex: number): React.ReactNode 
       key={triggerIndex}
       className="text-xs font-semibold text-[#e0e0e0] capitalize [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-[11px]"
     >
-      {trigger.description || trigger.type || "trigger"}
+      {trigger.type || "trigger"}
     </span>
   );
 };
 
 // Render a single behavior row (trigger : outputs)
 const renderBehaviorRow = (
-  behavior: any,
+  behavior: CardBehaviorDto,
   rowIndex: number,
-  isResourceAffordable: (resource: any, isInput: boolean) => boolean,
+  isResourceAffordable: (resource: ResourceCondition, isInput: boolean) => boolean,
   analyzeResourceDisplayWithConstraints: (
-    resource: any,
+    resource: ResourceCondition,
     availableSpace: number,
     forceCompact: boolean,
   ) => IconDisplayInfo,
@@ -395,7 +436,7 @@ const renderBehaviorRow = (
 ): React.ReactNode => {
   // Check if this is a global-parameter-lenience effect (special case)
   const isGlobalParameterLenience =
-    behavior.outputs?.some((output: any) => output.type === "global-parameter-lenience") ?? false;
+    behavior.outputs?.some((output) => output.type === "global-parameter-lenience") ?? false;
 
   const hasTriggers =
     !isGlobalParameterLenience && behavior.triggers && behavior.triggers.length > 0;
@@ -418,7 +459,7 @@ const renderBehaviorRow = (
                 {(() => {
                   // Check if any trigger has requiredOriginalCost (from selectors or condition level)
                   const triggersWithCost = behavior.triggers.filter(
-                    (trigger: any) =>
+                    (trigger) =>
                       getRequiredOriginalCost(
                         trigger.condition?.selectors,
                         trigger.condition?.requiredOriginalCost,
@@ -430,7 +471,7 @@ const renderBehaviorRow = (
                     // Get unique cost requirements
                     const uniqueCosts: string[] = Array.from(
                       new Set(
-                        triggersWithCost.map((trigger: any) => {
+                        triggersWithCost.map((trigger) => {
                           const costReq = getRequiredOriginalCost(
                             trigger.condition?.selectors,
                             trigger.condition?.requiredOriginalCost,
@@ -468,7 +509,7 @@ const renderBehaviorRow = (
                   }
 
                   // Otherwise, render other trigger types normally
-                  return behavior.triggers.map((trigger: any, triggerIndex: number) =>
+                  return behavior.triggers.map((trigger, triggerIndex: number) =>
                     renderTriggerIcon(trigger, triggerIndex),
                   );
                 })()}
@@ -481,8 +522,8 @@ const renderBehaviorRow = (
 
           {/* Outputs in same row if they fit */}
           {behavior.outputs &&
-            behavior.outputs.map((output: any, index: number) => {
-              const resourceType = output.type || output.resourceType;
+            behavior.outputs.map((output, index: number) => {
+              const resourceType = output.type;
               const cardOutputTypes = [
                 "card-draw",
                 "card-peek",
@@ -533,7 +574,7 @@ const renderBehaviorRow = (
               );
             })}
 
-          {behavior.generationalEventRequirements?.length > 0 && (
+          {(behavior.generationalEventRequirements?.length ?? 0) > 0 && (
             <span className="text-white font-bold text-sm ml-1">*</span>
           )}
         </div>
@@ -546,9 +587,9 @@ const renderBehaviorRow = (
         (() => {
           const cardOutputTypes = ["card-draw", "card-peek", "card-take", "card-buy"];
           const isSimpleChoices = behavior.choices.every(
-            (c: any) =>
+            (c) =>
               (!c.inputs || c.inputs.length === 0) &&
-              c.outputs?.every((o: any) => !cardOutputTypes.includes(o.type)),
+              c.outputs?.every((o) => !cardOutputTypes.includes(o.type)),
           );
 
           if (isSimpleChoices) {
@@ -557,7 +598,7 @@ const renderBehaviorRow = (
               <>
                 <div className="flex gap-[3px] items-center justify-center">
                   <div className="flex gap-[3px] items-center">
-                    {behavior.triggers.map((trigger: any, triggerIndex: number) =>
+                    {behavior.triggers!.map((trigger, triggerIndex: number) =>
                       renderTriggerIcon(trigger, triggerIndex),
                     )}
                   </div>
@@ -566,10 +607,10 @@ const renderBehaviorRow = (
                   </span>
                 </div>
                 <div className="flex gap-[3px] items-center justify-center">
-                  {behavior.choices.map((choice: any, idx: number) => (
+                  {behavior.choices.map((choice, idx: number) => (
                     <React.Fragment key={`choice-${rowIndex}-${idx}`}>
                       {idx > 0 && <Slash />}
-                      {choice.outputs?.map((output: any, outputIndex: number) => {
+                      {choice.outputs?.map((output, outputIndex: number) => {
                         const displayInfo = analyzeResourceDisplayWithConstraints(output, 6, false);
                         return (
                           <ResourceDisplay
@@ -592,20 +633,20 @@ const renderBehaviorRow = (
           }
 
           // Complex choices (has inputs or card outputs): each choice on its own row
-          return behavior.choices.map((choice: any, idx: number) => (
+          return behavior.choices.map((choice, idx: number) => (
             <div
               key={`choice-row-${rowIndex}-${idx}`}
               className="flex gap-[3px] items-center justify-center"
             >
               <div className="flex gap-[3px] items-center">
-                {behavior.triggers.map((trigger: any, triggerIndex: number) =>
+                {behavior.triggers!.map((trigger, triggerIndex: number) =>
                   renderTriggerIcon(trigger, triggerIndex),
                 )}
               </div>
               <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
                 :
               </span>
-              {choice.inputs?.map((input: any, inputIndex: number) => {
+              {choice.inputs?.map((input, inputIndex: number) => {
                 const displayInfo = analyzeResourceDisplayWithConstraints(input, 6, false);
                 return (
                   <ResourceDisplay
@@ -620,13 +661,13 @@ const renderBehaviorRow = (
                   />
                 );
               })}
-              {choice.inputs?.length > 0 && choice.outputs?.length > 0 && (
+              {(choice.inputs?.length ?? 0) > 0 && (choice.outputs?.length ?? 0) > 0 && (
                 <span className="text-white text-sm font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
                   →
                 </span>
               )}
-              {choice.outputs?.map((output: any, outputIndex: number) => {
-                const resourceType = output.type || output.resourceType;
+              {choice.outputs?.map((output, outputIndex: number) => {
+                const resourceType = output.type;
                 const isCardResource = cardOutputTypes.includes(resourceType);
 
                 if (isCardResource) {
@@ -670,7 +711,7 @@ const renderBehaviorRow = (
                   />
                 );
               })}
-              {idx < behavior.choices.length - 1 && <OrChip />}
+              {idx < behavior.choices!.length - 1 && <OrChip />}
             </div>
           ));
         })()}
@@ -678,10 +719,10 @@ const renderBehaviorRow = (
       {/* Non-triggered choices: keep existing single-row layout */}
       {behavior.choices && behavior.choices.length > 0 && !hasTriggers && (
         <div className="flex gap-[6px] items-center justify-center">
-          {behavior.choices.map((choice: any, idx: number) => (
+          {behavior.choices.map((choice, idx: number) => (
             <React.Fragment key={`choice-${rowIndex}-${idx}`}>
               {idx > 0 && <Slash />}
-              {choice.inputs?.map((input: any, inputIndex: number) => {
+              {choice.inputs?.map((input, inputIndex: number) => {
                 const displayInfo = analyzeResourceDisplayWithConstraints(input, 6, false);
                 return (
                   <ResourceDisplay
@@ -696,12 +737,12 @@ const renderBehaviorRow = (
                   />
                 );
               })}
-              {choice.inputs?.length > 0 && choice.outputs?.length > 0 && (
+              {(choice.inputs?.length ?? 0) > 0 && (choice.outputs?.length ?? 0) > 0 && (
                 <span className="text-white text-sm font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
                   →
                 </span>
               )}
-              {choice.outputs?.map((output: any, outputIndex: number) => {
+              {choice.outputs?.map((output, outputIndex: number) => {
                 const displayInfo = analyzeResourceDisplayWithConstraints(output, 6, false);
                 return (
                   <ResourceDisplay
@@ -724,9 +765,9 @@ const renderBehaviorRow = (
   );
 };
 
-const isTilePlacementWithBonusProductionPattern = (allBehaviors: any[]): boolean => {
+const isTilePlacementWithBonusProductionPattern = (allBehaviors: CardBehaviorDto[]): boolean => {
   const hasTilePlacement = allBehaviors.some((b) =>
-    b.outputs?.some((o: any) => o.type === "tile-placement"),
+    b.outputs?.some((o) => o.type === "tile-placement"),
   );
   const hasTilePlacedTrigger = allBehaviors.some(
     (b) => b.triggers?.[0]?.condition?.type === "tile-placed",
@@ -743,7 +784,7 @@ const ALL_PRODUCTION_TYPES = new Set([
   "heat-production",
 ]);
 
-const isAllStandardResourceProductionPattern = (allBehaviors: any[]): boolean => {
+const isAllStandardResourceProductionPattern = (allBehaviors: CardBehaviorDto[]): boolean => {
   if (allBehaviors.length < 6) {
     return false;
   }
@@ -808,10 +849,11 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
   // Compact rendering for tile-placement + conditional production pattern (Mining Area/Rights)
   if (isTilePlacementWithBonusProductionPattern(allBehaviors)) {
     const tileBehavior = allBehaviors.find((b) =>
-      b.outputs?.some((o: any) => o.type === "tile-placement"),
+      b.outputs?.some((o) => o.type === "tile-placement"),
     );
-    const tileOutput = tileBehavior?.outputs?.find((o: any) => o.type === "tile-placement");
-    const hasBonusRestriction = tileOutput?.tileRestrictions?.onBonusType?.length > 0;
+    const tileOutput = tileBehavior?.outputs?.find((o) => o.type === "tile-placement");
+    const tileRestrictions = tileOutput ? getTileRestrictions(tileOutput) : undefined;
+    const hasBonusRestriction = (tileRestrictions?.onBonusType?.length ?? 0) > 0;
     const triggeredBehaviors = allBehaviors.filter(
       (b) => b.triggers?.[0]?.condition?.type === "tile-placed",
     );

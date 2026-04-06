@@ -1,5 +1,7 @@
 package shared
 
+import "encoding/json"
+
 // ChoicePolicyType identifies the kind of choice policy.
 type ChoicePolicyType string
 
@@ -27,8 +29,8 @@ type ChoicePolicy struct {
 type CardBehavior struct {
 	Description                   string                         `json:"description,omitempty" ts:"string | undefined"`
 	Triggers                      []Trigger                      `json:"triggers,omitempty"`
-	Inputs                        []ResourceCondition            `json:"inputs,omitempty"`
-	Outputs                       []ResourceCondition            `json:"outputs,omitempty"`
+	Inputs                        []BehaviorCondition            `json:"inputs,omitempty"`
+	Outputs                       []BehaviorCondition            `json:"outputs,omitempty"`
 	Choices                       []Choice                       `json:"choices,omitempty"`
 	ChoicePolicy                  *ChoicePolicy                  `json:"choicePolicy,omitempty"`
 	GenerationalEventRequirements []GenerationalEventRequirement `json:"generationalEventRequirements,omitempty" ts:"GenerationalEventRequirement[] | undefined"`
@@ -75,16 +77,16 @@ func (cb CardBehavior) DeepCopy() CardBehavior {
 	}
 
 	if cb.Inputs != nil {
-		result.Inputs = make([]ResourceCondition, len(cb.Inputs))
+		result.Inputs = make([]BehaviorCondition, len(cb.Inputs))
 		for i, input := range cb.Inputs {
-			result.Inputs[i] = deepCopyResourceCondition(input)
+			result.Inputs[i] = input.deepCopyCondition()
 		}
 	}
 
 	if cb.Outputs != nil {
-		result.Outputs = make([]ResourceCondition, len(cb.Outputs))
+		result.Outputs = make([]BehaviorCondition, len(cb.Outputs))
 		for i, output := range cb.Outputs {
-			result.Outputs[i] = deepCopyResourceCondition(output)
+			result.Outputs[i] = output.deepCopyCondition()
 		}
 	}
 
@@ -94,16 +96,16 @@ func (cb CardBehavior) DeepCopy() CardBehavior {
 			choiceCopy := Choice{}
 
 			if choice.Inputs != nil {
-				choiceCopy.Inputs = make([]ResourceCondition, len(choice.Inputs))
+				choiceCopy.Inputs = make([]BehaviorCondition, len(choice.Inputs))
 				for j, input := range choice.Inputs {
-					choiceCopy.Inputs[j] = deepCopyResourceCondition(input)
+					choiceCopy.Inputs[j] = input.deepCopyCondition()
 				}
 			}
 
 			if choice.Outputs != nil {
-				choiceCopy.Outputs = make([]ResourceCondition, len(choice.Outputs))
+				choiceCopy.Outputs = make([]BehaviorCondition, len(choice.Outputs))
 				for j, output := range choice.Outputs {
-					choiceCopy.Outputs[j] = deepCopyResourceCondition(output)
+					choiceCopy.Outputs[j] = output.deepCopyCondition()
 				}
 			}
 
@@ -130,13 +132,13 @@ func (cb CardBehavior) DeepCopy() CardBehavior {
 // ExtractInputsOutputs extracts the combined inputs and outputs for a behavior,
 // optionally incorporating a selected choice. Returns base + choice inputs/outputs.
 // If choiceIndex is nil or out of range, only base inputs/outputs are returned.
-func (cb CardBehavior) ExtractInputsOutputs(choiceIndex *int) (inputs []ResourceCondition, outputs []ResourceCondition) {
+func (cb CardBehavior) ExtractInputsOutputs(choiceIndex *int) (inputs []BehaviorCondition, outputs []BehaviorCondition) {
 	if len(cb.Inputs) > 0 {
-		inputs = make([]ResourceCondition, len(cb.Inputs))
+		inputs = make([]BehaviorCondition, len(cb.Inputs))
 		copy(inputs, cb.Inputs)
 	}
 	if len(cb.Outputs) > 0 {
-		outputs = make([]ResourceCondition, len(cb.Outputs))
+		outputs = make([]BehaviorCondition, len(cb.Outputs))
 		copy(outputs, cb.Outputs)
 	}
 
@@ -242,7 +244,8 @@ func filterLowestProductionChoices(choices []Choice, production Production) []in
 	var valid []int
 	for i, choice := range choices {
 		for _, output := range choice.Outputs {
-			if IsProductionResourceType(output.ResourceType) && production.GetAmount(output.ResourceType) == minValue {
+			rt := output.GetResourceType()
+			if IsProductionResourceType(rt) && production.GetAmount(rt) == minValue {
 				valid = append(valid, i)
 				break
 			}
@@ -262,19 +265,59 @@ func IsProductionResourceType(rt ResourceType) bool {
 	}
 }
 
-func deepCopyResourceCondition(rc ResourceCondition) ResourceCondition {
-	result := rc
-
-	if rc.Selectors != nil {
-		result.Selectors = make([]Selector, len(rc.Selectors))
-		copy(result.Selectors, rc.Selectors)
+// UnmarshalJSON implements custom JSON unmarshaling for CardBehavior.
+// This is needed because []BehaviorCondition (interface slices) cannot be
+// directly unmarshaled. We unmarshal into []resourceConditionJSON first, then
+// convert to []BehaviorCondition with pointer elements.
+func (cb *CardBehavior) UnmarshalJSON(data []byte) error {
+	type cardBehaviorJSON struct {
+		Description                   string                         `json:"description,omitempty"`
+		Triggers                      []Trigger                      `json:"triggers,omitempty"`
+		Inputs                        []resourceConditionJSON        `json:"inputs,omitempty"`
+		Outputs                       []resourceConditionJSON        `json:"outputs,omitempty"`
+		Choices                       []choiceJSON                   `json:"choices,omitempty"`
+		ChoicePolicy                  *ChoicePolicy                  `json:"choicePolicy,omitempty"`
+		GenerationalEventRequirements []GenerationalEventRequirement `json:"generationalEventRequirements,omitempty"`
+		Group                         string                         `json:"group,omitempty"`
 	}
-
-	if rc.Per != nil {
-		perCopy := *rc.Per
-		result.Per = &perCopy
+	var raw cardBehaviorJSON
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
 	}
+	cb.Description = raw.Description
+	cb.Triggers = raw.Triggers
+	cb.ChoicePolicy = raw.ChoicePolicy
+	cb.GenerationalEventRequirements = raw.GenerationalEventRequirements
+	cb.Group = raw.Group
+	cb.Inputs = resourceConditionsToInterface(raw.Inputs)
+	cb.Outputs = resourceConditionsToInterface(raw.Outputs)
+	cb.Choices = make([]Choice, len(raw.Choices))
+	for i, c := range raw.Choices {
+		cb.Choices[i] = Choice{
+			Inputs:       resourceConditionsToInterface(c.Inputs),
+			Outputs:      resourceConditionsToInterface(c.Outputs),
+			Requirements: c.Requirements,
+		}
+	}
+	return nil
+}
 
+// choiceJSON is the JSON deserialization format for Choice (uses flat resourceConditionJSON).
+type choiceJSON struct {
+	Inputs       []resourceConditionJSON `json:"inputs,omitempty"`
+	Outputs      []resourceConditionJSON `json:"outputs,omitempty"`
+	Requirements *ChoiceRequirements     `json:"requirements,omitempty"`
+}
+
+// resourceConditionsToInterface converts a flat []resourceConditionJSON to []BehaviorCondition.
+func resourceConditionsToInterface(rcs []resourceConditionJSON) []BehaviorCondition {
+	if len(rcs) == 0 {
+		return nil
+	}
+	result := make([]BehaviorCondition, len(rcs))
+	for i := range rcs {
+		result[i] = categorizeCondition(rcs[i])
+	}
 	return result
 }
 

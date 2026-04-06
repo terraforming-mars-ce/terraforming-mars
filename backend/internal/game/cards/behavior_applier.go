@@ -8,9 +8,15 @@ import (
 
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/board"
+	"terraforming-mars-backend/internal/game/colony"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
+
+// ColonyBonusLookup provides colony definition lookup for colony-bonus output handling.
+type ColonyBonusLookup interface {
+	GetByID(colonyID string) (*colony.ColonyDefinition, error)
+}
 
 // BehaviorApplier handles applying card behavior inputs and outputs
 // This is the single source of truth for all input/output application
@@ -28,12 +34,13 @@ type BehaviorApplier struct {
 	actionPayment     *CardPayment          // Optional payment for action inputs with paymentAllowed (e.g., titanium for Water Import From Europa)
 	cardRegistry      CardRegistryInterface // Card registry for tag counting in per conditions (optional)
 	sourceType        shared.SourceType     // Source type for triggered effect classification
-	deferredSteal     *shared.ResourceCondition
+	colonyBonusLookup ColonyBonusLookup
+	deferredSteal     shared.BehaviorCondition
 	logger            *zap.Logger
 }
 
 // DeferredSteal returns the deferred steal output, if any (for post-tile-placement processing)
-func (a *BehaviorApplier) DeferredSteal() *shared.ResourceCondition {
+func (a *BehaviorApplier) DeferredSteal() shared.BehaviorCondition {
 	return a.deferredSteal
 }
 
@@ -119,11 +126,17 @@ func (a *BehaviorApplier) WithSourceType(sourceType shared.SourceType) *Behavior
 	return a
 }
 
+// WithColonyBonusLookup sets the colony definition lookup for colony-bonus outputs
+func (a *BehaviorApplier) WithColonyBonusLookup(lookup ColonyBonusLookup) *BehaviorApplier {
+	a.colonyBonusLookup = lookup
+	return a
+}
+
 // ApplyInputs validates player has required resources and deducts them
 // Returns error if player is nil or insufficient resources
 func (a *BehaviorApplier) ApplyInputs(
 	ctx context.Context,
-	inputs []shared.ResourceCondition,
+	inputs []shared.BehaviorCondition,
 ) error {
 	if len(inputs) == 0 {
 		return nil
@@ -142,96 +155,45 @@ func (a *BehaviorApplier) ApplyInputs(
 
 	resources := a.player.Resources().Get()
 
+	// Pass 1: Validate all inputs before deducting anything
 	for _, input := range inputs {
-		effectiveAmount := input.Amount
-		if input.VariableAmount {
-			effectiveAmount = input.Amount * a.selectedAmount
+		rt := input.GetResourceType()
+		effectiveAmount := input.GetAmount()
+		if shared.IsVariableAmount(input) {
+			effectiveAmount = input.GetAmount() * a.selectedAmount
 		}
 
 		// Storage resource inputs (target: "self-card") deduct from card storage
-		if input.Target == "self-card" && isStorageResourceType(input.ResourceType) {
+		if input.GetTarget() == "self-card" && IsStorageResourceType(rt) {
 			if a.sourceCardID == "" {
 				return fmt.Errorf("cannot deduct from self-card: no source card ID")
 			}
 			storage := a.player.Resources().GetCardStorage(a.sourceCardID)
 			if storage < effectiveAmount {
-				return fmt.Errorf("insufficient %s on card: need %d, have %d", input.ResourceType, effectiveAmount, storage)
+				return fmt.Errorf("insufficient %s on card: need %d, have %d", rt, effectiveAmount, storage)
 			}
 			continue
 		}
 
 		// Credit inputs with paymentAllowed use CardPayment-style validation
-		if input.ResourceType == shared.ResourceCredit && len(input.PaymentAllowed) > 0 {
-			if err := a.validateActionPayment(effectiveAmount, input.PaymentAllowed, log); err != nil {
+		if paymentAllowed := shared.GetPaymentAllowed(input); rt == shared.ResourceCredit && len(paymentAllowed) > 0 {
+			if err := a.validateActionPayment(effectiveAmount, paymentAllowed, log); err != nil {
 				return err
 			}
 			continue
 		}
 
-		switch input.ResourceType {
-		case shared.ResourceCredit:
-			if resources.Credits < effectiveAmount {
-				return fmt.Errorf("insufficient credits: need %d, have %d", effectiveAmount, resources.Credits)
-			}
-		case shared.ResourceSteel:
-			if resources.Steel < effectiveAmount {
-				return fmt.Errorf("insufficient steel: need %d, have %d", effectiveAmount, resources.Steel)
-			}
-		case shared.ResourceTitanium:
-			if resources.Titanium < effectiveAmount {
-				return fmt.Errorf("insufficient titanium: need %d, have %d", effectiveAmount, resources.Titanium)
-			}
-		case shared.ResourcePlant:
-			if resources.Plants < effectiveAmount {
-				return fmt.Errorf("insufficient plants: need %d, have %d", effectiveAmount, resources.Plants)
-			}
-		case shared.ResourceEnergy:
-			if resources.Energy < effectiveAmount {
-				return fmt.Errorf("insufficient energy: need %d, have %d", effectiveAmount, resources.Energy)
-			}
-		case shared.ResourceHeat:
-			if resources.Heat < effectiveAmount {
-				return fmt.Errorf("insufficient heat: need %d, have %d", effectiveAmount, resources.Heat)
-			}
-		case shared.ResourceEnergyProduction:
-			production := a.player.Resources().Production()
-			if production.Energy < effectiveAmount {
-				return fmt.Errorf("insufficient energy production: need %d, have %d", effectiveAmount, production.Energy)
-			}
-		case shared.ResourceCreditProduction:
-			production := a.player.Resources().Production()
-			if production.Credits < effectiveAmount {
-				return fmt.Errorf("insufficient credit production: need %d, have %d", effectiveAmount, production.Credits)
-			}
-		case shared.ResourceSteelProduction:
-			production := a.player.Resources().Production()
-			if production.Steel < effectiveAmount {
-				return fmt.Errorf("insufficient steel production: need %d, have %d", effectiveAmount, production.Steel)
-			}
-		case shared.ResourceTitaniumProduction:
-			production := a.player.Resources().Production()
-			if production.Titanium < effectiveAmount {
-				return fmt.Errorf("insufficient titanium production: need %d, have %d", effectiveAmount, production.Titanium)
-			}
-		case shared.ResourcePlantProduction:
-			production := a.player.Resources().Production()
-			if production.Plants < effectiveAmount {
-				return fmt.Errorf("insufficient plant production: need %d, have %d", effectiveAmount, production.Plants)
-			}
-		case shared.ResourceHeatProduction:
-			production := a.player.Resources().Production()
-			if production.Heat < effectiveAmount {
-				return fmt.Errorf("insufficient heat production: need %d, have %d", effectiveAmount, production.Heat)
-			}
-		default:
-			log.Warn("Unhandled input type", zap.String("type", string(input.ResourceType)))
+		if err := a.validateInputAmount(rt, effectiveAmount, resources); err != nil {
+			return err
 		}
 	}
 
+	// Pass 2: Deduct resources
 	for _, input := range inputs {
-		effectiveAmount := input.Amount
-		if input.VariableAmount {
-			effectiveAmount = input.Amount * a.selectedAmount
+		rt := input.GetResourceType()
+		effectiveAmount := input.GetAmount()
+		if shared.IsVariableAmount(input) {
+			effectiveAmount = input.GetAmount() * a.selectedAmount
 		}
 
 		if effectiveAmount == 0 {
@@ -239,96 +201,69 @@ func (a *BehaviorApplier) ApplyInputs(
 		}
 
 		// Storage resource inputs (target: "self-card") deduct from card storage
-		if input.Target == "self-card" && isStorageResourceType(input.ResourceType) {
+		if input.GetTarget() == "self-card" && IsStorageResourceType(rt) {
 			a.player.Resources().AddToStorage(a.sourceCardID, -effectiveAmount)
 			log.Debug("Deducted from card storage",
 				zap.String("card_id", a.sourceCardID),
-				zap.String("resource_type", string(input.ResourceType)),
+				zap.String("resource_type", string(rt)),
 				zap.Int("amount", effectiveAmount))
 			continue
 		}
 
 		// Credit inputs with paymentAllowed use CardPayment-style deduction
-		if input.ResourceType == shared.ResourceCredit && len(input.PaymentAllowed) > 0 {
+		if paymentAllowed := shared.GetPaymentAllowed(input); rt == shared.ResourceCredit && len(paymentAllowed) > 0 {
 			a.applyActionPayment(effectiveAmount, log)
 			continue
 		}
 
-		switch input.ResourceType {
-		case shared.ResourceCredit:
-			a.player.Resources().Add(map[shared.ResourceType]int{
-				shared.ResourceCredit: -effectiveAmount,
-			})
-			log.Debug("Deducted credits", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourceSteel:
-			a.player.Resources().Add(map[shared.ResourceType]int{
-				shared.ResourceSteel: -effectiveAmount,
-			})
-			log.Debug("Deducted steel", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourceTitanium:
-			a.player.Resources().Add(map[shared.ResourceType]int{
-				shared.ResourceTitanium: -effectiveAmount,
-			})
-			log.Debug("Deducted titanium", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourcePlant:
-			a.player.Resources().Add(map[shared.ResourceType]int{
-				shared.ResourcePlant: -effectiveAmount,
-			})
-			log.Debug("Deducted plants", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourceEnergy:
-			a.player.Resources().Add(map[shared.ResourceType]int{
-				shared.ResourceEnergy: -effectiveAmount,
-			})
-			log.Debug("Deducted energy", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourceHeat:
-			a.player.Resources().Add(map[shared.ResourceType]int{
-				shared.ResourceHeat: -effectiveAmount,
-			})
-			log.Debug("Deducted heat", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourceEnergyProduction:
-			a.player.Resources().AddProduction(map[shared.ResourceType]int{
-				shared.ResourceEnergyProduction: -effectiveAmount,
-			})
-			log.Debug("Deducted energy production", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourceCreditProduction:
-			a.player.Resources().AddProduction(map[shared.ResourceType]int{
-				shared.ResourceCreditProduction: -effectiveAmount,
-			})
-			log.Debug("Deducted credit production", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourceSteelProduction:
-			a.player.Resources().AddProduction(map[shared.ResourceType]int{
-				shared.ResourceSteelProduction: -effectiveAmount,
-			})
-			log.Debug("Deducted steel production", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourceTitaniumProduction:
-			a.player.Resources().AddProduction(map[shared.ResourceType]int{
-				shared.ResourceTitaniumProduction: -effectiveAmount,
-			})
-			log.Debug("Deducted titanium production", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourcePlantProduction:
-			a.player.Resources().AddProduction(map[shared.ResourceType]int{
-				shared.ResourcePlantProduction: -effectiveAmount,
-			})
-			log.Debug("Deducted plant production", zap.Int("amount", effectiveAmount))
-
-		case shared.ResourceHeatProduction:
-			a.player.Resources().AddProduction(map[shared.ResourceType]int{
-				shared.ResourceHeatProduction: -effectiveAmount,
-			})
-			log.Debug("Deducted heat production", zap.Int("amount", effectiveAmount))
+		if shared.IsProductionResourceType(rt) {
+			a.player.Resources().AddProduction(map[shared.ResourceType]int{rt: -effectiveAmount})
+			log.Debug("Deducted production", zap.String("type", string(rt)), zap.Int("amount", effectiveAmount))
+		} else {
+			a.player.Resources().Add(map[shared.ResourceType]int{rt: -effectiveAmount})
+			log.Debug("Deducted resource", zap.String("type", string(rt)), zap.Int("amount", effectiveAmount))
 		}
 	}
 
+	return nil
+}
+
+// validateInputAmount checks the player has enough of the given resource type.
+func (a *BehaviorApplier) validateInputAmount(rt shared.ResourceType, amount int, resources shared.Resources) error {
+	switch rt {
+	case shared.ResourceCredit:
+		if resources.Credits < amount {
+			return fmt.Errorf("insufficient credits: need %d, have %d", amount, resources.Credits)
+		}
+	case shared.ResourceSteel:
+		if resources.Steel < amount {
+			return fmt.Errorf("insufficient steel: need %d, have %d", amount, resources.Steel)
+		}
+	case shared.ResourceTitanium:
+		if resources.Titanium < amount {
+			return fmt.Errorf("insufficient titanium: need %d, have %d", amount, resources.Titanium)
+		}
+	case shared.ResourcePlant:
+		if resources.Plants < amount {
+			return fmt.Errorf("insufficient plants: need %d, have %d", amount, resources.Plants)
+		}
+	case shared.ResourceEnergy:
+		if resources.Energy < amount {
+			return fmt.Errorf("insufficient energy: need %d, have %d", amount, resources.Energy)
+		}
+	case shared.ResourceHeat:
+		if resources.Heat < amount {
+			return fmt.Errorf("insufficient heat: need %d, have %d", amount, resources.Heat)
+		}
+	default:
+		if shared.IsProductionResourceType(rt) {
+			production := a.player.Resources().Production()
+			available := production.GetAmount(rt)
+			if available < amount {
+				return fmt.Errorf("insufficient %s: need %d, have %d", rt, amount, available)
+			}
+		}
+	}
 	return nil
 }
 
@@ -440,7 +375,7 @@ func (a *BehaviorApplier) applyActionPayment(
 }
 
 // isStorageResourceType returns true for resource types that are stored on cards
-func isStorageResourceType(rt shared.ResourceType) bool {
+func IsStorageResourceType(rt shared.ResourceType) bool {
 	switch rt {
 	case shared.ResourceMicrobe, shared.ResourceAnimal, shared.ResourceFloater,
 		shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceFighter, shared.ResourceDisease:
@@ -466,7 +401,7 @@ func isEffectOutputType(rt shared.ResourceType) bool {
 // Returns error if required context (player/game) is missing for the operation
 func (a *BehaviorApplier) ApplyOutputs(
 	ctx context.Context,
-	outputs []shared.ResourceCondition,
+	outputs []shared.BehaviorCondition,
 ) error {
 	_, err := a.ApplyOutputsAndGetCalculated(ctx, outputs)
 	return err
@@ -476,7 +411,7 @@ func (a *BehaviorApplier) ApplyOutputs(
 // This is useful for logging scaled outputs (e.g., "+1 MC per 2 plant tags" becomes "+3 MC")
 func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 	ctx context.Context,
-	outputs []shared.ResourceCondition,
+	outputs []shared.BehaviorCondition,
 ) ([]shared.CalculatedOutput, error) {
 	if len(outputs) == 0 {
 		return nil, nil
@@ -493,49 +428,55 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 	var notificationOutputs []shared.CalculatedOutput
 
 	for _, output := range outputs {
+		rt := output.GetResourceType()
+		baseAmount := output.GetAmount()
+
 		// Calculate the actual amount if this output has a Per condition
-		actualAmount := output.Amount
+		actualAmount := baseAmount
 		isScaled := false
 
-		if output.Per != nil && a.player != nil && a.game != nil {
-			// Calculate scaled amount based on Per condition
-			count := a.countPerCondition(output.Per)
-			if output.Per.Amount > 0 {
-				multiplier := count / output.Per.Amount
-				actualAmount = output.Amount * multiplier
+		if per := shared.GetPerCondition(output); per != nil && a.player != nil && a.game != nil {
+			count := a.countPerCondition(per)
+			if per.Amount > 0 {
+				multiplier := count / per.Amount
+				actualAmount = baseAmount * multiplier
 				isScaled = true
 				log.Debug("Calculated scaled output",
-					zap.String("resource_type", string(output.ResourceType)),
-					zap.Int("base_amount", output.Amount),
+					zap.String("resource_type", string(rt)),
+					zap.Int("base_amount", baseAmount),
 					zap.Int("count", count),
-					zap.Int("per_amount", output.Per.Amount),
+					zap.Int("per_amount", per.Amount),
 					zap.Int("calculated_amount", actualAmount))
 			}
 		}
 
 		// Apply variable amount multiplier (player-selected amount)
-		if output.VariableAmount {
-			actualAmount = output.Amount * a.selectedAmount
+		if shared.IsVariableAmount(output) {
+			actualAmount = baseAmount * a.selectedAmount
 			isScaled = true
 			log.Debug("Applied variable amount",
-				zap.String("resource_type", string(output.ResourceType)),
-				zap.Int("base_amount", output.Amount),
+				zap.String("resource_type", string(rt)),
+				zap.Int("base_amount", baseAmount),
 				zap.Int("selected_amount", a.selectedAmount),
 				zap.Int("calculated_amount", actualAmount))
 		}
 
-		// Create a modified output with the calculated amount
-		modifiedOutput := output
-		modifiedOutput.Amount = actualAmount
-
-		if err := a.applyOutput(ctx, modifiedOutput, log); err != nil {
+		if err := a.applyOutput(ctx, output, actualAmount, log); err != nil {
 			return calculatedOutputs, err
+		}
+
+		// Colony-bonus outputs expand into the actual resources gained
+		if rt == shared.ResourceColonyBonus {
+			bonusOutputs := a.collectColonyBonusOutputs(log)
+			calculatedOutputs = append(calculatedOutputs, bonusOutputs...)
+			notificationOutputs = append(notificationOutputs, bonusOutputs...)
+			continue
 		}
 
 		// Track for state diff log (existing behavior)
 		if isScaled || actualAmount != 0 {
 			calculatedOutputs = append(calculatedOutputs, shared.CalculatedOutput{
-				ResourceType: string(output.ResourceType),
+				ResourceType: string(rt),
 				Amount:       actualAmount,
 				IsScaled:     isScaled,
 			})
@@ -544,8 +485,8 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 		// Track non-zero resource outputs for triggered effect notifications
 		// Skip effect-type outputs (discount, payment-substitute, etc.) since they get
 		// their own "Effect:" notification via SourceTypeEffectAdded
-		if actualAmount != 0 && !isEffectOutputType(output.ResourceType) {
-			resourceType := string(output.ResourceType)
+		if actualAmount != 0 && !isEffectOutputType(rt) {
+			resourceType := string(rt)
 			if resourceType == string(shared.ResourceCardResource) {
 				resourceType = a.resolveCardResourceType()
 			}
@@ -558,13 +499,18 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 	}
 
 	if a.game != nil && a.player != nil && len(outputs) > 0 {
-		a.game.AddTriggeredEffect(shared.TriggeredEffect{
+		effect := shared.TriggeredEffect{
 			CardName:          a.source,
 			PlayerID:          a.player.ID(),
 			SourceType:        a.sourceType,
 			Outputs:           outputs,
 			CalculatedOutputs: notificationOutputs,
-		})
+		}
+		if a.sourceType == shared.SourceTypePassiveEffect {
+			a.game.AddOrMergeTriggeredEffect(effect)
+		} else {
+			a.game.AddTriggeredEffect(effect)
+		}
 	}
 
 	return calculatedOutputs, nil
@@ -585,7 +531,7 @@ func (a *BehaviorApplier) resolveCardResourceType() string {
 
 func (a *BehaviorApplier) countPerCondition(per *shared.PerCondition) int {
 	if per != nil && per.ResourceType == shared.ResourceColonyCount && a.game != nil {
-		return a.game.CountAllColonies()
+		return a.game.Colonies().CountAllColonies()
 	}
 	var b *board.Board
 	var allPlayers []*player.Player
@@ -600,7 +546,7 @@ func (a *BehaviorApplier) countPerCondition(per *shared.PerCondition) int {
 // Returns true if a pending selection was created (caller should defer action consumption)
 func (a *BehaviorApplier) ApplyCardDrawOutputs(
 	ctx context.Context,
-	outputs []shared.ResourceCondition,
+	outputs []shared.BehaviorCondition,
 ) (bool, error) {
 	log := a.logger.With(
 		zap.String("source", a.source),
@@ -611,15 +557,15 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 	var peekAmount, takeAmount, buyAmount int
 	var isPrelude bool
 	for _, output := range outputs {
-		switch output.ResourceType {
+		switch output.GetResourceType() {
 		case shared.ResourceCardPeek:
-			peekAmount += output.Amount
+			peekAmount += output.GetAmount()
 		case shared.ResourceCardTake:
-			takeAmount += output.Amount
+			takeAmount += output.GetAmount()
 		case shared.ResourceCardBuy:
-			buyAmount += output.Amount
+			buyAmount += output.GetAmount()
 		}
-		if hasPreludeCardType(output.Selectors) {
+		if co, ok := output.(*shared.CardOperationCondition); ok && hasPreludeCardType(co.Selectors) {
 			isPrelude = true
 		}
 	}
@@ -838,734 +784,166 @@ func (a *BehaviorApplier) applyAnyPlayerProduction(
 	return nil
 }
 
-// applyOutput applies a single output
+// applyOutput dispatches a single output to the appropriate category handler.
+// The amount parameter is the pre-calculated value (accounting for Per and VariableAmount).
 func (a *BehaviorApplier) applyOutput(
 	ctx context.Context,
-	output shared.ResourceCondition,
+	output shared.BehaviorCondition,
+	amount int,
 	log *zap.Logger,
 ) error {
-	switch output.ResourceType {
-	case shared.ResourceCredit:
-		if output.Target == "steal-any-player" && output.TargetRestriction != nil && output.TargetRestriction.Adjacent == "self-card" {
-			a.deferredSteal = &output
-			log.Debug("Deferred adjacent steal for post-tile-placement",
-				zap.Int("amount", output.Amount))
-			return nil
-		}
-		if output.Target == "steal-any-player" {
-			return a.stealAnyPlayerResource(shared.ResourceCredit, output.Amount, log)
-		}
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerResource(shared.ResourceCredit, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply credits: no player context")
-		}
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceCredit: output.Amount,
-		})
-		log.Debug("Added credits", zap.Int("amount", output.Amount))
-
-	case shared.ResourceSteel:
-		if output.Target == "steal-any-player" {
-			return a.stealAnyPlayerResource(shared.ResourceSteel, output.Amount, log)
-		}
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerResource(shared.ResourceSteel, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply steel: no player context")
-		}
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceSteel: output.Amount,
-		})
-		log.Debug("Added steel", zap.Int("amount", output.Amount))
-
-	case shared.ResourceTitanium:
-		if output.Target == "steal-any-player" {
-			return a.stealAnyPlayerResource(shared.ResourceTitanium, output.Amount, log)
-		}
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerResource(shared.ResourceTitanium, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply titanium: no player context")
-		}
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceTitanium: output.Amount,
-		})
-		log.Debug("Added titanium", zap.Int("amount", output.Amount))
-
-	case shared.ResourcePlant:
-		if output.Target == "steal-any-player" {
-			return a.stealAnyPlayerResource(shared.ResourcePlant, output.Amount, log)
-		}
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerResource(shared.ResourcePlant, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply plants: no player context")
-		}
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourcePlant: output.Amount,
-		})
-		log.Debug("Added plants", zap.Int("amount", output.Amount))
-
-	case shared.ResourceEnergy:
-		if output.Target == "steal-any-player" {
-			return a.stealAnyPlayerResource(shared.ResourceEnergy, output.Amount, log)
-		}
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerResource(shared.ResourceEnergy, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply energy: no player context")
-		}
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceEnergy: output.Amount,
-		})
-		log.Debug("Added energy", zap.Int("amount", output.Amount))
-
-	case shared.ResourceHeat:
-		if output.Target == "steal-any-player" {
-			return a.stealAnyPlayerResource(shared.ResourceHeat, output.Amount, log)
-		}
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerResource(shared.ResourceHeat, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply heat: no player context")
-		}
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceHeat: output.Amount,
-		})
-		log.Debug("Added heat", zap.Int("amount", output.Amount))
-
-	case shared.ResourceCreditProduction:
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerProduction(shared.ResourceCreditProduction, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply credits production: no player context")
-		}
-		a.player.Resources().AddProduction(map[shared.ResourceType]int{
-			shared.ResourceCreditProduction: output.Amount,
-		})
-		log.Debug("Added credits production", zap.Int("amount", output.Amount))
-
-	case shared.ResourceSteelProduction:
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerProduction(shared.ResourceSteelProduction, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply steel production: no player context")
-		}
-		a.player.Resources().AddProduction(map[shared.ResourceType]int{
-			shared.ResourceSteelProduction: output.Amount,
-		})
-		log.Debug("Added steel production", zap.Int("amount", output.Amount))
-
-	case shared.ResourceTitaniumProduction:
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerProduction(shared.ResourceTitaniumProduction, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply titanium production: no player context")
-		}
-		a.player.Resources().AddProduction(map[shared.ResourceType]int{
-			shared.ResourceTitaniumProduction: output.Amount,
-		})
-		log.Debug("Added titanium production", zap.Int("amount", output.Amount))
-
-	case shared.ResourcePlantProduction:
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerProduction(shared.ResourcePlantProduction, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply plants production: no player context")
-		}
-		a.player.Resources().AddProduction(map[shared.ResourceType]int{
-			shared.ResourcePlantProduction: output.Amount,
-		})
-		log.Debug("Added plants production", zap.Int("amount", output.Amount))
-
-	case shared.ResourceEnergyProduction:
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerProduction(shared.ResourceEnergyProduction, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply energy production: no player context")
-		}
-		a.player.Resources().AddProduction(map[shared.ResourceType]int{
-			shared.ResourceEnergyProduction: output.Amount,
-		})
-		log.Debug("Added energy production", zap.Int("amount", output.Amount))
-
-	case shared.ResourceHeatProduction:
-		if output.Target == "any-player" {
-			return a.applyAnyPlayerProduction(shared.ResourceHeatProduction, output.Amount, log)
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply heat production: no player context")
-		}
-		a.player.Resources().AddProduction(map[shared.ResourceType]int{
-			shared.ResourceHeatProduction: output.Amount,
-		})
-		log.Debug("Added heat production", zap.Int("amount", output.Amount))
-
-	case shared.ResourceTR:
-		if a.player == nil {
-			return fmt.Errorf("cannot apply terraform rating: no player context")
-		}
-		a.player.Resources().UpdateTerraformRating(output.Amount)
-		log.Debug("Added terraform rating", zap.Int("amount", output.Amount))
-
-	case shared.ResourceOxygen:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply oxygen: no game context")
-		}
-		actualSteps, err := a.game.GlobalParameters().IncreaseOxygen(ctx, output.Amount, a.player.ID())
-		if err != nil {
-			return fmt.Errorf("failed to increase oxygen: %w", err)
-		}
-		if actualSteps > 0 && a.player != nil {
-			a.player.Resources().UpdateTerraformRating(actualSteps)
-		}
-		log.Debug("Increased oxygen", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
-
-	case shared.ResourceTemperature:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply temperature: no game context")
-		}
-		actualSteps, err := a.game.GlobalParameters().IncreaseTemperature(ctx, output.Amount, a.player.ID())
-		if err != nil {
-			return fmt.Errorf("failed to increase temperature: %w", err)
-		}
-		if actualSteps > 0 && a.player != nil {
-			a.player.Resources().UpdateTerraformRating(actualSteps)
-		}
-		log.Debug("Increased temperature", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
-
-	case shared.ResourceVenus:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply venus: no game context")
-		}
-		actualSteps, err := a.game.GlobalParameters().IncreaseVenus(ctx, output.Amount, a.player.ID())
-		if err != nil {
-			return fmt.Errorf("failed to increase venus: %w", err)
-		}
-		if actualSteps > 0 && a.player != nil {
-			a.player.Resources().UpdateTerraformRating(actualSteps)
-		}
-		log.Debug("Increased venus", zap.Int("steps", actualSteps), zap.Int("tr_gained", actualSteps))
-
-	case shared.ResourceLandClaim:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply land claim: no game context")
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply land claim: no player context")
-		}
-
-		// Build array of land-claim tile types to append (for multiple placements)
-		tileTypes := make([]string, output.Amount)
-		for i := 0; i < output.Amount; i++ {
-			tileTypes[i] = "land-claim"
-		}
-
-		// Atomically append to queue (thread-safe)
-		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, nil); err != nil {
-			return fmt.Errorf("failed to append land claim to pending tile selection queue: %w", err)
-		}
-
-		log.Debug("Added land claim tile selection to queue",
-			zap.Int("count", output.Amount))
-
-	case shared.ResourceTilePlacement:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply tile placement: no game context")
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply tile placement: no player context")
-		}
-
-		tileType := output.TileType
-		if tileType == "" {
-			return fmt.Errorf("tile-placement output missing tileType field")
-		}
-
-		// Build array of tile types to append (for multiple placements)
-		tileTypes := make([]string, output.Amount)
-		for i := 0; i < output.Amount; i++ {
-			tileTypes[i] = tileType
-		}
-
-		// Convert tile restrictions to shared type if present
-		var tileRestrictions *shared.TileRestrictions
-		if output.TileRestrictions != nil {
-			tileRestrictions = &shared.TileRestrictions{
-				BoardTags:         output.TileRestrictions.BoardTags,
-				Adjacency:         output.TileRestrictions.Adjacency,
-				OnTileType:        output.TileRestrictions.OnTileType,
-				AdjacentToType:    output.TileRestrictions.AdjacentToType,
-				MinAdjacentOfType: output.TileRestrictions.MinAdjacentOfType,
-				AdjacentToOwned:   output.TileRestrictions.AdjacentToOwned,
-				OnBonusType:       output.TileRestrictions.OnBonusType,
-			}
-		}
-
-		// Atomically append to queue (thread-safe)
-		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, tileRestrictions); err != nil {
-			return fmt.Errorf("failed to append to pending tile selection queue: %w", err)
-		}
-
-		log.Debug("Added special tile placements to queue",
-			zap.String("tile_type", tileType),
-			zap.Int("count", output.Amount),
-			zap.Any("tile_restrictions", tileRestrictions))
-
-	case shared.ResourceCityPlacement, shared.ResourceGreeneryPlacement, shared.ResourceOceanPlacement, shared.ResourceVolcanoPlacement:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply tile placement: no game context")
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply tile placement: no player context")
-		}
-
-		// Map resource type to tile type string
-		var tileType string
-		switch output.ResourceType {
-		case shared.ResourceCityPlacement:
-			tileType = "city"
-		case shared.ResourceGreeneryPlacement:
-			tileType = "greenery"
-		case shared.ResourceOceanPlacement:
-			tileType = "ocean"
-		case shared.ResourceVolcanoPlacement:
-			tileType = "volcano"
-		}
-
-		// Build array of tile types to append (for multiple placements)
-		tileTypes := make([]string, output.Amount)
-		for i := 0; i < output.Amount; i++ {
-			tileTypes[i] = tileType
-		}
-
-		// Convert tile restrictions to shared type if present
-		var tileRestrictions *shared.TileRestrictions
-		if output.TileRestrictions != nil {
-			tileRestrictions = &shared.TileRestrictions{
-				BoardTags:         output.TileRestrictions.BoardTags,
-				Adjacency:         output.TileRestrictions.Adjacency,
-				OnTileType:        output.TileRestrictions.OnTileType,
-				AdjacentToType:    output.TileRestrictions.AdjacentToType,
-				MinAdjacentOfType: output.TileRestrictions.MinAdjacentOfType,
-				AdjacentToOwned:   output.TileRestrictions.AdjacentToOwned,
-				OnBonusType:       output.TileRestrictions.OnBonusType,
-			}
-		}
-
-		// For greenery placements, enforce adjacency to owned tiles (TM rules)
-		// unless the card explicitly overrides placement (e.g., Mangrove with onTileType: "ocean")
-		if output.ResourceType == shared.ResourceGreeneryPlacement {
-			if tileRestrictions == nil {
-				tileRestrictions = &shared.TileRestrictions{
-					AdjacentToOwned: true,
-				}
-			} else if tileRestrictions.OnTileType == "" {
-				tileRestrictions.AdjacentToOwned = true
-			}
-		}
-
-		// Atomically append to queue (thread-safe)
-		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, tileRestrictions); err != nil {
-			return fmt.Errorf("failed to append to pending tile selection queue: %w", err)
-		}
-
-		log.Debug("Added tile placements to queue",
-			zap.String("tile_type", tileType),
-			zap.Int("count", output.Amount),
-			zap.Any("tile_restrictions", tileRestrictions))
-
-	case shared.ResourcePaymentSubstitute:
-		if a.player == nil {
-			return fmt.Errorf("cannot apply payment substitute: no player context")
-		}
-		// Extract resource type from selectors (e.g., "heat" for Helion)
-		resources := GetResourcesFromSelectors(output.Selectors)
-		if len(resources) > 0 {
-			resourceType := shared.ResourceType(resources[0])
-			a.player.Resources().AddPaymentSubstitute(resourceType, output.Amount)
-			log.Debug("Added payment substitute",
-				zap.String("resource_type", string(resourceType)),
-				zap.Int("conversion_rate", output.Amount))
-		} else {
-			log.Warn("payment-substitute output missing selectors with resources")
-		}
-
-	case shared.ResourceDiscount:
-		// Discounts are registered as effects and handled by RequirementModifierCalculator
-		// The effect registration happens when the card is played (auto effects are added to player.Effects)
-		// The calculator then computes the actual modifiers from all effects
-		log.Debug("Discount effect registered",
-			zap.Int("amount", output.Amount),
-			zap.Any("selectors", output.Selectors))
-
-	case shared.ResourceGlobalParameterLenience:
-		// Lenience is registered as an effect and handled by RequirementModifierCalculator
-		// during requirement validation. It widens the min/max window for global parameter checks.
-		log.Debug("Global parameter lenience effect registered",
-			zap.Int("amount", output.Amount),
-			zap.String("temporary", output.Temporary))
-
-	case shared.ResourceIgnoreGlobalRequirements:
-		// Registered as an effect and checked by RequirementModifierCalculator.
-		// When active, all global parameter requirements are bypassed for the next card played.
-		log.Debug("Ignore global requirements effect registered",
-			zap.String("temporary", output.Temporary))
-
-	case shared.ResourceValueModifier:
-		if a.player == nil {
-			return fmt.Errorf("cannot apply value modifier: no player context")
-		}
-		// Apply value modifier to each affected resource (e.g., titanium +1, steel +1)
-		for _, resourceStr := range GetResourcesFromSelectors(output.Selectors) {
-			resourceType := shared.ResourceType(resourceStr)
-			a.player.Resources().AddValueModifier(resourceType, output.Amount)
-			log.Debug("Added resource value modifier",
-				zap.String("resource_type", string(resourceType)),
-				zap.Int("modifier_amount", output.Amount))
-		}
-
-	case shared.ResourceStoragePaymentSubstitute:
-		if a.player == nil {
-			return fmt.Errorf("cannot apply storage payment substitute: no player context")
-		}
-		if a.sourceCardID == "" {
-			log.Warn("storage-payment-substitute output missing source card ID")
-			return nil
-		}
-		a.player.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
-			CardID:         a.sourceCardID,
-			ResourceType:   shared.ResourceFloater, // Default; could be extended via selectors
-			ConversionRate: output.Amount,
-			Selectors:      output.Selectors,
-		})
-		log.Debug("Added storage payment substitute",
-			zap.String("card_id", a.sourceCardID),
-			zap.Int("conversion_rate", output.Amount),
-			zap.Any("selectors", output.Selectors))
-
-	case shared.ResourceCardResource:
-		// Generic "card-resource" — add resources of whatever type the target card stores
-		if a.player == nil {
-			return fmt.Errorf("cannot apply card-resource: no player context")
-		}
-		targetID := a.nextTargetCardID()
-		if targetID == "" {
-			log.Warn("No target card specified for card-resource output")
-			return fmt.Errorf("no target card specified for card-resource output")
-		}
-		if a.cardRegistry == nil {
-			return fmt.Errorf("cannot apply card-resource: no card registry")
-		}
-		targetCard, err := a.cardRegistry.GetByID(targetID)
-		if err != nil {
-			return fmt.Errorf("target card not found in registry: %w", err)
-		}
-		if targetCard.ResourceStorage == nil {
-			return fmt.Errorf("target card %s has no resource storage", targetID)
-		}
-		a.player.Resources().AddToStorage(targetID, output.Amount)
-		log.Debug("Added card-resource to target card storage",
-			zap.String("card_id", targetID),
-			zap.String("storage_type", string(targetCard.ResourceStorage.Type)),
-			zap.Int("amount", output.Amount))
-
-	case shared.ResourceAnimal, shared.ResourceMicrobe, shared.ResourceFloater,
-		shared.ResourceFighter, shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceDisease:
-		if a.player == nil {
-			return fmt.Errorf("cannot apply card resource: no player context")
-		}
-
-		target := output.Target
-		switch target {
-		case "self-card":
-			if a.sourceCardID == "" {
-				log.Warn("Cannot place resource on self-card: no source card ID",
-					zap.String("resource_type", string(output.ResourceType)))
-				return nil
-			}
-			a.player.Resources().AddToStorage(a.sourceCardID, output.Amount)
-			log.Debug("Added resource to card storage",
-				zap.String("card_id", a.sourceCardID),
-				zap.String("resource_type", string(output.ResourceType)),
-				zap.Int("amount", output.Amount))
-
-		case "steal-from-any-card":
-			if a.stealSourceCardID == "" {
-				return fmt.Errorf("steal-from-any-card requires a source card ID")
-			}
-			if a.game == nil {
-				return fmt.Errorf("cannot steal from card: no game context")
-			}
-			stolenAmount := 0
-			for _, p := range a.game.GetAllPlayers() {
-				storage := p.Resources().GetCardStorage(a.stealSourceCardID)
-				if storage > 0 {
-					stolenAmount = min(output.Amount, storage)
-					p.Resources().AddToStorage(a.stealSourceCardID, -stolenAmount)
-					log.Debug("Stole resource from card",
-						zap.String("source_card_id", a.stealSourceCardID),
-						zap.String("owner_player_id", p.ID()),
-						zap.String("resource_type", string(output.ResourceType)),
-						zap.Int("amount", stolenAmount))
-					break
-				}
-			}
-			if stolenAmount > 0 && a.sourceCardID != "" {
-				a.player.Resources().AddToStorage(a.sourceCardID, stolenAmount)
-				log.Debug("Added stolen resource to self card",
-					zap.String("card_id", a.sourceCardID),
-					zap.String("resource_type", string(output.ResourceType)),
-					zap.Int("amount", stolenAmount))
-			}
-
-		case "any-card":
-			targetID := a.nextTargetCardID()
-			if targetID == "" {
-				log.Warn("No target card for any-card resource placement — resources lost",
-					zap.String("resource_type", string(output.ResourceType)),
-					zap.Int("amount", output.Amount))
-				return nil
-			}
-			if a.cardRegistry != nil {
-				targetCard, err := a.cardRegistry.GetByID(targetID)
-				if err != nil {
-					return fmt.Errorf("target card %s not found in registry: %w", targetID, err)
-				}
-				if targetCard.ResourceStorage == nil {
-					return fmt.Errorf("target card %s has no resource storage", targetID)
-				}
-				if targetCard.ResourceStorage.Type != output.ResourceType {
-					return fmt.Errorf("target card %s stores %s, cannot add %s", targetID, targetCard.ResourceStorage.Type, output.ResourceType)
-				}
-			}
-			a.player.Resources().AddToStorage(targetID, output.Amount)
-			log.Debug("Added resource to target card storage",
-				zap.String("card_id", targetID),
-				zap.String("resource_type", string(output.ResourceType)),
-				zap.Int("amount", output.Amount))
-
-		default:
-			// Default to self-card if target is empty and sourceCardID is set
-			if a.sourceCardID != "" {
-				a.player.Resources().AddToStorage(a.sourceCardID, output.Amount)
-				log.Debug("Added resource to card storage (default to self)",
-					zap.String("card_id", a.sourceCardID),
-					zap.String("resource_type", string(output.ResourceType)),
-					zap.Int("amount", output.Amount))
-			} else {
-				log.Warn("Unhandled target for card resource",
-					zap.String("target", target),
-					zap.String("resource_type", string(output.ResourceType)))
-			}
-		}
-
-	case shared.ResourceCardDraw:
-		if a.game == nil || a.player == nil {
-			return fmt.Errorf("cannot apply card-draw: missing game or player context")
-		}
-
-		if output.Target == "all-opponents" {
-			for _, opponent := range a.game.GetAllPlayers() {
-				if opponent.ID() == a.player.ID() {
-					continue
-				}
-				drawnCards, err := a.game.Deck().DrawProjectCards(ctx, output.Amount)
-				if err != nil {
-					log.Warn("Failed to draw cards for opponent",
-						zap.String("opponent_id", opponent.ID()),
-						zap.Error(err))
-					continue
-				}
-				for _, cardID := range drawnCards {
-					opponent.Hand().AddCard(cardID)
-				}
-				log.Debug("Opponent drew cards",
-					zap.String("opponent_id", opponent.ID()),
-					zap.Int("amount", len(drawnCards)))
-			}
-		} else if HasCardSelectors(output.Selectors) && a.cardRegistry != nil {
-			matcher := func(cardID string) bool {
-				card, err := a.cardRegistry.GetByID(cardID)
-				if err != nil || card == nil {
-					return false
-				}
-				return MatchesAnySelector(card, output.Selectors)
-			}
-			matched, discarded, err := a.game.Deck().DrawProjectCardsUntilMatching(ctx, output.Amount, matcher)
-			if err != nil {
-				log.Warn("Failed to draw matching cards", zap.Error(err))
-				return nil
-			}
-			for _, cardID := range matched {
-				a.player.Hand().AddCard(cardID)
-			}
-			if len(discarded) > 0 {
-				_ = a.game.Deck().Discard(ctx, discarded)
-			}
-			log.Debug("Drew matching cards (draw-until)",
-				zap.Int("matched", len(matched)),
-				zap.Int("discarded", len(discarded)))
-		} else {
-			drawnCards, err := a.game.Deck().DrawProjectCards(ctx, output.Amount)
-			if err != nil {
-				log.Warn("Failed to draw cards", zap.Error(err))
-				return nil
-			}
-			for _, cardID := range drawnCards {
-				a.player.Hand().AddCard(cardID)
-			}
-			log.Debug("Drew cards and added to hand",
-				zap.Int("amount", len(drawnCards)))
-		}
-
-	case shared.ResourceCardDiscard:
-		log.Debug("Skipping card-discard output (handled at action layer)")
-
-	case shared.ResourceCardPeek, shared.ResourceCardTake, shared.ResourceCardBuy:
-		// Handled by ApplyCardDrawOutputs - skip here
-		log.Debug("Skipping card draw output (handled by ApplyCardDrawOutputs)",
-			zap.String("type", string(output.ResourceType)),
-			zap.Int("amount", output.Amount))
-
-	case shared.ResourceExtraActions:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply extra actions: no game context")
-		}
-		currentTurn := a.game.CurrentTurn()
-		if currentTurn != nil {
-			currentTurn.AddExtraActions(output.Amount)
-		}
-		log.Debug("Granted extra actions", zap.Int("amount", output.Amount))
-
-	case shared.ResourceBonusTags:
-		if a.player == nil {
-			return fmt.Errorf("cannot apply bonus tags: no player context")
-		}
-		if output.Per != nil && output.Per.Tag != nil {
-			tagToCount := *output.Per.Tag
-			tagToGrant := shared.CardTag(output.ResourceType)
-			if len(output.Selectors) > 0 && len(output.Selectors[0].Tags) > 0 {
-				tagToGrant = output.Selectors[0].Tags[0]
-			}
-			var tagCount int
-			if a.cardRegistry != nil {
-				tagCount = CountPlayerTagsByType(a.player, a.cardRegistry, tagToCount)
-			}
-			bonusCount := tagCount * output.Amount
-			if bonusCount > 0 {
-				a.player.AddBonusTags(tagToGrant, bonusCount)
-			}
-			log.Debug("Added bonus tags",
-				zap.String("tag_type", string(tagToGrant)),
-				zap.Int("count", bonusCount),
-				zap.String("per_tag", string(tagToCount)),
-				zap.Int("tag_count", tagCount))
-		}
-
-	case shared.ResourceTileDestruction:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply tile destruction: no game context")
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply tile destruction: no player context")
-		}
-		tileTypes := make([]string, output.Amount)
-		for i := 0; i < output.Amount; i++ {
-			tileTypes[i] = "tile-destruction"
-		}
-		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, nil); err != nil {
-			return fmt.Errorf("failed to append tile destruction to pending tile selection queue: %w", err)
-		}
-		log.Debug("Added tile destruction selection to queue")
-
-	case shared.ResourceTileReplacement:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply tile replacement: no game context")
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply tile replacement: no player context")
-		}
-		tileTypes := make([]string, output.Amount)
-		for i := 0; i < output.Amount; i++ {
-			tileTypes[i] = "tile-replacement:" + output.TileType
-		}
-		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, nil); err != nil {
-			return fmt.Errorf("failed to append tile replacement to pending tile selection queue: %w", err)
-		}
-		log.Debug("Added tile replacement selection to queue",
-			zap.String("replacement_tile", output.TileType))
-
-	case shared.ResourceActionReuse:
-		log.Debug("Skipping action-reuse output (handled at action layer)")
-
-	case shared.ResourceFreeTrade:
-		if a.game == nil || a.player == nil {
-			return fmt.Errorf("cannot apply free trade: missing game or player context")
-		}
-		if !a.game.HasColonies() {
-			log.Warn("Free trade output ignored: colonies expansion not enabled")
-			return nil
-		}
-		if !a.game.GetTradeFleetAvailable(a.player.ID()) {
-			log.Warn("Free trade output ignored: no trade fleet available")
-			return nil
-		}
-		tradeableColonyIDs := a.game.GetTradeableColonyIDs()
-		if len(tradeableColonyIDs) == 0 {
-			log.Warn("Free trade output ignored: no colonies available for trading")
-			return nil
-		}
-		a.player.Selection().SetPendingFreeTradeSelection(&shared.PendingFreeTradeSelection{
-			AvailableColonyIDs: tradeableColonyIDs,
-			Source:             a.source,
-			SourceCardID:       a.sourceCardID,
-		})
-		log.Debug("Set pending free trade selection",
-			zap.Int("available_colonies", len(tradeableColonyIDs)))
-
-	case shared.ResourceColonyTile:
-		if a.game == nil {
-			return fmt.Errorf("cannot apply colony tile: no game context")
-		}
-		if a.player == nil {
-			return fmt.Errorf("cannot apply colony tile: no player context")
-		}
-		if !a.game.HasColonies() {
-			log.Warn("Colony tile output ignored: colonies expansion not enabled")
-			return nil
-		}
-		colonyIDs := a.game.GetPlaceableColonyIDs(a.player.ID(), output.AllowDuplicatePlayerColony)
-		if len(colonyIDs) == 0 {
-			log.Warn("No colony tiles available for placement")
-			return nil
-		}
-		a.player.Selection().SetPendingColonySelection(&shared.PendingColonySelection{
-			AvailableColonyIDs:         colonyIDs,
-			AllowDuplicatePlayerColony: output.AllowDuplicatePlayerColony,
-			Source:                     a.source,
-			SourceCardID:               a.sourceCardID,
-		})
-		log.Debug("Set pending colony selection",
-			zap.Int("available_colonies", len(colonyIDs)),
-			zap.Bool("allow_duplicate", output.AllowDuplicatePlayerColony))
-
+	switch o := output.(type) {
+	case *shared.BasicResourceCondition:
+		return a.applyBasicResourceOutput(ctx, o, amount, log)
+	case *shared.ProductionCondition:
+		return a.applyProductionOutput(ctx, o, amount, log)
+	case *shared.GlobalParameterCondition:
+		return a.applyGlobalParameterOutput(ctx, o, amount, log)
+	case *shared.TilePlacementCondition:
+		return a.applyTilePlacementOutput(ctx, o, amount, log)
+	case *shared.EffectCondition:
+		return a.applyEffectOutput(ctx, o, amount, log)
+	case *shared.CardStorageCondition:
+		return a.applyCardStorageOutput(ctx, o, amount, log)
+	case *shared.CardOperationCondition:
+		return a.applyCardOperationOutput(ctx, o, amount, log)
+	case *shared.ColonyCondition:
+		return a.applyColonyOutput(ctx, o, amount, log)
+	case *shared.TileModificationCondition:
+		return a.applyTileModificationOutput(ctx, o, amount, log)
+	case *shared.MiscCondition:
+		return a.applyMiscOutput(ctx, o, amount, log)
 	default:
-		log.Warn("Unhandled output type",
-			zap.String("type", string(output.ResourceType)))
+		return fmt.Errorf("unknown output condition type: %T", output)
+	}
+}
+
+// applyColonyBonuses applies all colony bonuses for the player.
+// Card-targeted resources (microbe, animal, floater) are queued for player selection.
+func (a *BehaviorApplier) applyColonyBonuses(_ context.Context, log *zap.Logger) {
+	bonuses := CollectColonyBonuses(a.player.ID(), a.game.Colonies().States(), a.colonyBonusLookup)
+
+	pendingByType := map[string]int{}
+	var pendingOrder []string
+
+	for _, b := range bonuses {
+		rt := shared.ResourceType(b.ResourceType)
+		if IsStorageResourceType(rt) {
+			if _, exists := pendingByType[b.ResourceType]; !exists {
+				pendingOrder = append(pendingOrder, b.ResourceType)
+			}
+			pendingByType[b.ResourceType] += b.Amount
+		} else {
+			a.player.Resources().Add(map[shared.ResourceType]int{rt: b.Amount})
+		}
+		log.Debug("Applied colony bonus",
+			zap.String("type", b.ResourceType),
+			zap.Int("amount", b.Amount))
 	}
 
-	return nil
+	for _, rt := range pendingOrder {
+		amount := pendingByType[rt]
+		if !HasEligibleStorageCard(a.player, shared.ResourceType(rt), a.cardRegistry) {
+			log.Debug("No eligible storage card for colony bonus, resources lost",
+				zap.String("resource_type", rt),
+				zap.Int("amount", amount))
+			continue
+		}
+		a.player.Selection().AppendPendingColonyResource(shared.PendingColonyResourceSelection{
+			ResourceType: rt,
+			Amount:       amount,
+			Source:       a.source,
+			Reason:       "colony-bonus",
+		})
+	}
+}
+
+func (a *BehaviorApplier) collectColonyBonusOutputs(_ *zap.Logger) []shared.CalculatedOutput {
+	if a.game == nil || a.player == nil || a.colonyBonusLookup == nil {
+		return nil
+	}
+	return ColonyBonusesToCalculatedOutputs(
+		CollectColonyBonuses(a.player.ID(), a.game.Colonies().States(), a.colonyBonusLookup),
+	)
+}
+
+// ColonyBonusEntry represents a single colony bonus resource gain.
+type ColonyBonusEntry struct {
+	ResourceType string
+	Amount       int
+}
+
+// CollectColonyBonuses iterates colony tile states and returns all bonuses for the given player.
+func CollectColonyBonuses(playerID string, tileStates []*colony.ColonyState, lookup ColonyBonusLookup) []ColonyBonusEntry {
+	if lookup == nil {
+		return nil
+	}
+	var result []ColonyBonusEntry
+	for _, ts := range tileStates {
+		colonyCount := 0
+		for _, ownerID := range ts.PlayerColonies {
+			if ownerID == playerID {
+				colonyCount++
+			}
+		}
+		if colonyCount == 0 {
+			continue
+		}
+		def, err := lookup.GetByID(ts.DefinitionID)
+		if err != nil {
+			continue
+		}
+		for i := 0; i < colonyCount; i++ {
+			for _, bonus := range def.ColonyBonus {
+				if bonus.Amount > 0 {
+					result = append(result, ColonyBonusEntry{ResourceType: bonus.Type, Amount: bonus.Amount})
+				}
+			}
+		}
+	}
+	return result
+}
+
+// ColonyBonusesToCalculatedOutputs aggregates colony bonus entries into calculated outputs by type.
+func ColonyBonusesToCalculatedOutputs(bonuses []ColonyBonusEntry) []shared.CalculatedOutput {
+	if len(bonuses) == 0 {
+		return []shared.CalculatedOutput{}
+	}
+	totals := map[string]int{}
+	var order []string
+	for _, b := range bonuses {
+		if _, exists := totals[b.ResourceType]; !exists {
+			order = append(order, b.ResourceType)
+		}
+		totals[b.ResourceType] += b.Amount
+	}
+	outputs := make([]shared.CalculatedOutput, 0, len(totals))
+	for _, rt := range order {
+		outputs = append(outputs, shared.CalculatedOutput{ResourceType: rt, Amount: totals[rt]})
+	}
+	return outputs
+}
+
+// HasEligibleStorageCard checks if a player has any played card or corporation
+// that can store the given resource type.
+func HasEligibleStorageCard(p *player.Player, resourceType shared.ResourceType, cardRegistry CardRegistryInterface) bool {
+	if cardRegistry == nil {
+		return false
+	}
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		if card.ResourceStorage != nil && card.ResourceStorage.Type == resourceType {
+			return true
+		}
+	}
+	if corpID := p.CorporationID(); corpID != "" {
+		corp, err := cardRegistry.GetByID(corpID)
+		if err == nil && corp.ResourceStorage != nil && corp.ResourceStorage.Type == resourceType {
+			return true
+		}
+	}
+	return false
 }

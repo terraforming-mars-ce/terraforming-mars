@@ -268,8 +268,8 @@ func getCorpStartingCredits(cardRegistry cards.CardRegistry, corporationID strin
 		for _, trigger := range behavior.Triggers {
 			if trigger.Type == string(gamecards.ResourceTriggerAutoCorporationStart) {
 				for _, output := range behavior.Outputs {
-					if output.ResourceType == shared.ResourceCredit {
-						credits += output.Amount
+					if output.GetResourceType() == shared.ResourceCredit {
+						credits += output.GetAmount()
 					}
 				}
 			}
@@ -406,17 +406,30 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 		return fmt.Errorf("failed to setup forced first action: %w", err)
 	}
 
-	// Purchase project cards now that starting credits are applied
-	costPerCard := getCardBuyCost(cardRegistry, choices.CorporationID)
-	cost := len(choices.CardIDs) * costPerCard
-	if cost > 0 {
-		p.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceCredit: -cost,
-		})
+	// Purchase project cards now that starting credits are applied (skip cost in demo mode)
+	if !g.Settings().DemoGame {
+		costPerCard := getCardBuyCost(cardRegistry, choices.CorporationID)
+		cost := len(choices.CardIDs) * costPerCard
+		if cost > 0 {
+			p.Resources().Add(map[shared.ResourceType]int{
+				shared.ResourceCredit: -cost,
+			})
+		}
 	}
 	if len(choices.CardIDs) > 0 {
 		for _, cardID := range choices.CardIDs {
 			p.Hand().AddCard(cardID)
+		}
+	}
+
+	// In demo mode, override resources/production/TR with player's chosen values
+	// This runs after corp effects so the player's overrides are authoritative
+	if g.Settings().DemoGame {
+		demoChoices := p.PendingDemoChoices()
+		if demoChoices != nil {
+			p.Resources().Set(demoChoices.Resources)
+			p.Resources().SetProduction(demoChoices.Production)
+			p.Resources().SetTerraformRating(demoChoices.TerraformRating)
 		}
 	}
 
