@@ -6,6 +6,7 @@ import {
   TriggeredEffectDto,
 } from "@/types/generated/api-types.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
+import { isPlayerActionPhase } from "@/utils/actionUtils.ts";
 import PlayerCard from "../cards/PlayerCard.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import { GameFlowPopover, GameFlowTitle, GameFlowFooter } from "../popover/GameFlowPopover.tsx";
@@ -50,7 +51,7 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
   },
   ref,
 ) {
-  const isActionPhase = currentPhase === "action";
+  const isActionPhase = isPlayerActionPhase(currentPhase);
 
   const { minNameWidth, minCardWidth } = useMemo(() => {
     if (players.length === 0) {

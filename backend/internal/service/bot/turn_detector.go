@@ -12,8 +12,8 @@ func IsMyTurn(game *dto.GameDto, myPlayerID string) bool {
 
 	p := &game.CurrentPlayer
 
-	// Action phase and it's our turn
-	if game.CurrentPhase == dto.GamePhaseAction && game.CurrentTurn != nil && *game.CurrentTurn == myPlayerID {
+	// Action phase (or final phase) and it's our turn
+	if (game.CurrentPhase == dto.GamePhaseAction || game.CurrentPhase == dto.GamePhaseFinalPhase) && game.CurrentTurn != nil && *game.CurrentTurn == myPlayerID {
 		return true
 	}
 

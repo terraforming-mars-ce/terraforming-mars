@@ -25,6 +25,7 @@ const (
 	GamePhaseInitApplyPrelude      GamePhase = "init_apply_prelude"
 	GamePhaseAction                GamePhase = "action"
 	GamePhaseProductionAndCardDraw GamePhase = "production_and_card_draw"
+	GamePhaseFinalPhase            GamePhase = "final_phase"
 	GamePhaseComplete              GamePhase = "complete"
 )
 

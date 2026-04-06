@@ -129,6 +129,8 @@ func CalculatePlayerCardActionState(
 ) player.EntityState {
 	var errors []player.StateError
 
+	errors = append(errors, validatePhase(g)...)
+
 	currentTurn := g.CurrentTurn()
 	if currentTurn != nil && currentTurn.PlayerID() != p.ID() {
 		errors = append(errors, player.StateError{
@@ -287,6 +289,14 @@ func CalculatePlayerStandardProjectState(
 	var errors []player.StateError
 	var warnings []player.StateWarning
 	metadata := make(map[string]interface{})
+
+	if g.CurrentPhase() == shared.GamePhaseFinalPhase && projectType != shared.StandardProjectConvertPlantsToGreenery {
+		errors = append(errors, player.StateError{
+			Code:     player.ErrorCodeWrongPhase,
+			Category: player.ErrorCategoryPhase,
+			Message:  "Only greenery conversion allowed in final phase",
+		})
+	}
 
 	errors = append(errors, validateActionsRemaining(p, g)...)
 	errors = append(errors, validateNoPendingSelection(p, g)...)

@@ -5,11 +5,13 @@ import (
 	"fmt"
 	baseaction "terraforming-mars-backend/internal/action"
 	gameaction "terraforming-mars-backend/internal/action/game"
+	"terraforming-mars-backend/internal/action/resource_conversion"
 
 	"go.uber.org/zap"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
+	playerPkg "terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -147,12 +149,48 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		}
 
 		if g.GlobalParameters().IsMaxed() {
-			log.Debug("All global parameters maxed after final production - triggering final scoring")
-			if err := a.finalScoringAction.Execute(ctx, gameID); err != nil {
-				log.Error("Failed to execute final scoring", zap.Error(err))
-				return fmt.Errorf("failed to execute final scoring: %w", err)
+			log.Debug("All global parameters maxed after final production - entering final phase")
+
+			if err := g.UpdatePhase(ctx, shared.GamePhaseFinalPhase); err != nil {
+				log.Error("Failed to transition to final phase", zap.Error(err))
+				return fmt.Errorf("failed to transition to final phase: %w", err)
 			}
-			log.Info("Game ended, final scores calculated")
+
+			autoPassPlayersForFinalPhase(allPlayers, a.CardRegistry(), log)
+
+			turnOrder := g.TurnOrder()
+			firstPlayerID := ""
+			activeCount := 0
+			for _, id := range turnOrder {
+				p, _ := g.GetPlayer(id)
+				if p != nil && !p.HasPassed() && !p.HasExited() {
+					activeCount++
+					if firstPlayerID == "" {
+						firstPlayerID = id
+					}
+				}
+			}
+
+			if activeCount == 0 {
+				log.Debug("All players auto-passed in final phase - triggering final scoring")
+				if err := a.finalScoringAction.Execute(ctx, gameID); err != nil {
+					log.Error("Failed to execute final scoring", zap.Error(err))
+					return fmt.Errorf("failed to execute final scoring: %w", err)
+				}
+				log.Info("Game ended, final scores calculated")
+				return nil
+			}
+
+			availableActions := 2
+			if activeCount == 1 {
+				availableActions = -1
+			}
+			if err := g.SetCurrentTurn(ctx, firstPlayerID, availableActions); err != nil {
+				log.Error("Failed to set current turn for final phase", zap.Error(err))
+				return fmt.Errorf("failed to set current turn: %w", err)
+			}
+
+			log.Info("Final phase started")
 			return nil
 		}
 
@@ -198,4 +236,35 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 
 	log.Info("Production cards selected")
 	return nil
+}
+
+// autoPassPlayersForFinalPhase marks players as passed if they cannot perform
+// any final phase actions. Currently checks if a player can afford at least
+// one greenery conversion (plants → greenery).
+func autoPassPlayersForFinalPhase(
+	players []*playerPkg.Player,
+	cardRegistry cards.CardRegistry,
+	log *zap.Logger,
+) {
+	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
+
+	for _, p := range players {
+		if p.HasExited() {
+			continue
+		}
+		if !canAffordGreenery(p, calculator) {
+			p.SetPassed(true)
+			log.Debug("Auto-passed player in final phase (no available actions)",
+				zap.String("player_id", p.ID()))
+		}
+	}
+}
+
+// canAffordGreenery checks whether a player has enough plants to convert to greenery,
+// accounting for card discounts (e.g., Ecoline).
+func canAffordGreenery(p *playerPkg.Player, calculator *gamecards.RequirementModifierCalculator) bool {
+	discounts := calculator.CalculateStandardProjectDiscounts(p, shared.StandardProjectConvertPlantsToGreenery)
+	plantDiscount := discounts[shared.ResourcePlant]
+	requiredPlants := max(resource_conversion.BasePlantsForGreenery-plantDiscount, 1)
+	return p.Resources().Get().Plants >= requiredPlants
 }
