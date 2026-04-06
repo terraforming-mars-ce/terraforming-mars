@@ -53,14 +53,27 @@ func (a *BehaviorApplier) applyEffectOutput(ctx context.Context, o *shared.Effec
 			log.Warn("storage-payment-substitute output missing source card ID")
 			return nil
 		}
+		storageResourceType := shared.ResourceFloater
+		if a.cardRegistry != nil {
+			if sourceCard, err := a.cardRegistry.GetByID(a.sourceCardID); err == nil && sourceCard.ResourceStorage != nil {
+				storageResourceType = sourceCard.ResourceStorage.Type
+			}
+		}
+		targetResource := shared.ResourceCredit
+		resources := GetResourcesFromSelectors(o.Selectors)
+		if len(resources) > 0 {
+			targetResource = shared.ResourceType(resources[0])
+		}
 		a.player.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
 			CardID:         a.sourceCardID,
-			ResourceType:   shared.ResourceFloater,
+			ResourceType:   storageResourceType,
 			ConversionRate: amount,
+			TargetResource: targetResource,
 			Selectors:      o.Selectors,
 		})
 		log.Debug("Added storage payment substitute",
-			zap.String("card_id", a.sourceCardID), zap.Int("conversion_rate", amount), zap.Any("selectors", o.Selectors))
+			zap.String("card_id", a.sourceCardID), zap.String("resource_type", string(storageResourceType)),
+			zap.String("target_resource", string(targetResource)), zap.Int("conversion_rate", amount))
 
 	case shared.ResourceOceanAdjacencyBonus:
 		log.Debug("Ocean adjacency bonus effect registered", zap.Int("amount", amount))

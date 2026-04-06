@@ -42,7 +42,7 @@ func TestConvertHeat_RejectsDuringProductionPhase(t *testing.T) {
 	testutil.SetPlayerHeat(context.Background(), player, 8)
 
 	action := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
-	err := action.Execute(context.Background(), testGame.ID(), playerID)
+	err := action.Execute(context.Background(), testGame.ID(), playerID, nil)
 
 	testutil.AssertError(t, err, "Convert heat should be rejected during production phase")
 }
@@ -58,7 +58,7 @@ func TestConvertPlantsToGreenery_RejectsDuringProductionPhase(t *testing.T) {
 	player.Resources().Set(resources)
 
 	action := resconvAction.NewConvertPlantsToGreeneryAction(repo, cardRegistry, nil, logger)
-	err := action.Execute(context.Background(), testGame.ID(), playerID)
+	err := action.Execute(context.Background(), testGame.ID(), playerID, nil)
 
 	testutil.AssertError(t, err, "Convert plants should be rejected during production phase")
 }

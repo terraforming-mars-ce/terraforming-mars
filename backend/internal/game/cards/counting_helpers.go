@@ -304,7 +304,7 @@ func isCardStorageType(rt shared.ResourceType) bool {
 	return false
 }
 
-// CountPlayerCardStorageByType sums card storage across all played cards
+// CountPlayerCardStorageByType sums card storage across all played cards and corporation
 // where the card's storage type matches the given type.
 func CountPlayerCardStorageByType(p *player.Player, cardRegistry CardRegistryInterface, storageType shared.ResourceType) int {
 	total := 0
@@ -315,5 +315,12 @@ func CountPlayerCardStorageByType(p *player.Player, cardRegistry CardRegistryInt
 		}
 		total += p.Resources().GetCardStorage(cardID)
 	}
+
+	if corpID := p.CorporationID(); corpID != "" {
+		if corp, err := cardRegistry.GetByID(corpID); err == nil && corp.ResourceStorage != nil && corp.ResourceStorage.Type == storageType {
+			total += p.Resources().GetCardStorage(corpID)
+		}
+	}
+
 	return total
 }

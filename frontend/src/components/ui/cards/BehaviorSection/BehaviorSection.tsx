@@ -13,6 +13,7 @@ import TriggeredEffectLayout from "./components/TriggeredEffectLayout.tsx";
 import ImmediateResourceLayout from "./components/ImmediateResourceLayout.tsx";
 import DiscountLayout from "./components/DiscountLayout.tsx";
 import PaymentSubstituteLayout from "./components/PaymentSubstituteLayout.tsx";
+import StoragePaymentSubstituteLayout from "./components/StoragePaymentSubstituteLayout.tsx";
 import ValueModifierLayout from "./components/ValueModifierLayout.tsx";
 import DefenseLayout from "./components/DefenseLayout.tsx";
 import BehaviorIcon from "./components/BehaviorIcon.tsx";
@@ -162,6 +163,10 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
 
       case "payment-substitute":
         content = <PaymentSubstituteLayout behavior={behavior} />;
+        break;
+
+      case "storage-payment-substitute":
+        content = <StoragePaymentSubstituteLayout behavior={behavior} />;
         break;
 
       case "value-modifier":

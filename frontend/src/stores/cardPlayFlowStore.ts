@@ -5,6 +5,7 @@ import type {
   PlayerCardDto,
   ResourceType,
 } from "@/types/generated/api-types.ts";
+import type { GenericPaymentConfig } from "@/components/ui/popover/PaymentSelectionPopover.tsx";
 
 export interface CardStoragePending {
   cardId: string;
@@ -136,6 +137,9 @@ interface CardPlayFlowState {
   showFreeTradeWarning: boolean;
   pendingFreeTradeWarning: string | null;
 
+  // Resource conversion payment flow
+  pendingGenericPayment: GenericPaymentConfig | null;
+
   // Behavior choice flow (passive triggered)
   showBehaviorChoiceSelection: boolean;
   showBehaviorChoiceStorage: boolean;
@@ -165,6 +169,8 @@ interface CardPlayFlowState {
   setPendingActionReuse: (pending: { cardId: string; behaviorIndex: number } | null) => void;
   setShowFreeTradeWarning: (show: boolean) => void;
   setPendingFreeTradeWarning: (warning: string | null) => void;
+  setPendingGenericPayment: (pending: GenericPaymentConfig | null) => void;
+
   setShowBehaviorChoiceSelection: (show: boolean) => void;
   setShowBehaviorChoiceStorage: (show: boolean) => void;
   setPendingBehaviorChoiceStorage: (pending: BehaviorChoiceStoragePending | null) => void;
@@ -203,6 +209,10 @@ const actionFlowInitial = {
   pendingFreeTradeWarning: null,
 };
 
+const conversionInitial = {
+  pendingGenericPayment: null as GenericPaymentConfig | null,
+};
+
 const behaviorChoiceInitial = {
   showBehaviorChoiceSelection: false,
   showBehaviorChoiceStorage: false,
@@ -212,6 +222,7 @@ const behaviorChoiceInitial = {
 const allInitial = {
   ...cardPlayFlowInitial,
   ...actionFlowInitial,
+  ...conversionInitial,
   ...behaviorChoiceInitial,
 };
 
@@ -241,6 +252,8 @@ export const useCardPlayFlowStore = create<CardPlayFlowState>((set) => ({
   setPendingActionReuse: (pending) => set({ pendingActionReuse: pending }),
   setShowFreeTradeWarning: (show) => set({ showFreeTradeWarning: show }),
   setPendingFreeTradeWarning: (warning) => set({ pendingFreeTradeWarning: warning }),
+  setPendingGenericPayment: (pending) => set({ pendingGenericPayment: pending }),
+
   setShowBehaviorChoiceSelection: (show) => set({ showBehaviorChoiceSelection: show }),
   setShowBehaviorChoiceStorage: (show) => set({ showBehaviorChoiceStorage: show }),
   setPendingBehaviorChoiceStorage: (pending) => set({ pendingBehaviorChoiceStorage: pending }),

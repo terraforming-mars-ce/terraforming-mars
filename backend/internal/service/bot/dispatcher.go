@@ -135,9 +135,9 @@ func (d *CommandDispatcher) Dispatch(ctx context.Context, gameID, playerID strin
 	case "action.standard-project.build-city":
 		return d.executeStandardProject.Execute(ctx, gameID, playerID, "city")
 	case "action.resource-conversion.convert-heat-to-temperature":
-		return d.convertHeat.Execute(ctx, gameID, playerID)
+		return d.convertHeat.Execute(ctx, gameID, playerID, nil)
 	case "action.resource-conversion.convert-plants-to-greenery":
-		return d.convertPlants.Execute(ctx, gameID, playerID)
+		return d.convertPlants.Execute(ctx, gameID, playerID, nil)
 	case "action.game-management.confirm-init-advance":
 		return d.confirmInitAdvance.Execute(ctx, gameID, playerID)
 	case "action.milestone.claim-milestone":

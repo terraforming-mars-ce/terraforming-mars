@@ -8,6 +8,7 @@ import (
 	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/action/admin"
 	"terraforming-mars-backend/internal/action/confirmation"
+	resconvaction "terraforming-mars-backend/internal/action/resource_conversion"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/events"
 	gamecards "terraforming-mars-backend/internal/game/cards"
@@ -693,4 +694,188 @@ func TestPoseidon_GainProductionOnColonyPlacement(t *testing.T) {
 
 	testutil.AssertEqual(t, creditProductionBefore+1, p.Resources().Production().Credits,
 		"Poseidon should gain 1 credit production on colony placement")
+}
+
+// =============================================================================
+// Stormcraft Incorporated (CC5, corporation, colonies)
+// "Action: Add 1 floater to **any** card. / Effect: Floaters on this card may
+//  be used as 2 heat each. You start with 48 M€."
+// =============================================================================
+
+func TestStormcraft_StartingResources(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Stormcraft Incorporated"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	resources := p.Resources().Get()
+
+	testutil.AssertEqual(t, 48, resources.Credits, "Stormcraft should start with 48 credits")
+}
+
+func TestStormcraft_StoragePaymentSubstituteRegistered(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Stormcraft Incorporated"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	subs := p.Resources().StoragePaymentSubstitutes()
+
+	testutil.AssertEqual(t, 1, len(subs), "Should have 1 storage payment substitute")
+	testutil.AssertEqual(t, string(shared.ResourceHeat), string(subs[0].TargetResource),
+		"Storage substitute should target heat")
+	testutil.AssertEqual(t, 2, subs[0].ConversionRate,
+		"Conversion rate should be 2 heat per floater")
+	testutil.AssertEqual(t, string(shared.ResourceFloater), string(subs[0].ResourceType),
+		"Storage resource type should be floater")
+}
+
+func TestStormcraft_ConvertHeatWithFloatersOnly(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Stormcraft Incorporated"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	stormcraftID := testutil.CardID("Stormcraft Incorporated")
+
+	// Give player 4 floaters on Stormcraft (= 8 heat), 0 actual heat
+	p.Resources().AddToStorage(stormcraftID, 4)
+	testutil.SetPlayerHeat(ctx, p, 0)
+
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
+
+	convertAction := resconvaction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
+	initialTemp := testGame.GlobalParameters().Temperature()
+
+	err = convertAction.Execute(ctx, testGame.ID(), playerID, map[string]int{stormcraftID: 4})
+	testutil.AssertNoError(t, err, "Should succeed with 4 floaters (= 8 heat)")
+
+	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(stormcraftID),
+		"All 4 floaters should be spent")
+	testutil.AssertEqual(t, initialTemp+2, testGame.GlobalParameters().Temperature(),
+		"Temperature should increase by 2")
+}
+
+func TestStormcraft_ConvertHeatWithMixedPayment(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Stormcraft Incorporated"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	stormcraftID := testutil.CardID("Stormcraft Incorporated")
+
+	// 2 floaters (= 4 heat) + 4 actual heat = 8 total
+	p.Resources().AddToStorage(stormcraftID, 2)
+	testutil.SetPlayerHeat(ctx, p, 4)
+
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
+
+	convertAction := resconvaction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
+
+	err = convertAction.Execute(ctx, testGame.ID(), playerID, map[string]int{stormcraftID: 2})
+	testutil.AssertNoError(t, err, "Should succeed with 2 floaters + 4 heat")
+
+	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(stormcraftID),
+		"Both floaters should be spent")
+	testutil.AssertEqual(t, 0, p.Resources().Get().Heat,
+		"All heat should be spent")
+}
+
+func TestStormcraft_ConvertHeatInsufficientResources(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Stormcraft Incorporated"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	stormcraftID := testutil.CardID("Stormcraft Incorporated")
+
+	// 1 floater (= 2 heat) + 3 actual heat = 5 total (need 8)
+	p.Resources().AddToStorage(stormcraftID, 1)
+	testutil.SetPlayerHeat(ctx, p, 3)
+
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
+
+	convertAction := resconvaction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
+
+	err = convertAction.Execute(ctx, testGame.ID(), playerID, map[string]int{stormcraftID: 1})
+	testutil.AssertError(t, err, "Should fail with only 5 heat equivalent (need 8)")
+}
+
+func TestStormcraft_StateCalculatorShowsAffordableWithFloaters(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+
+	p, _ := testGame.GetPlayer(playerID)
+	p.SetCorporationID(testutil.CardID("Stormcraft Incorporated"))
+
+	stormcraftID := testutil.CardID("Stormcraft Incorporated")
+
+	// Register the storage payment substitute manually
+	p.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
+		CardID:         stormcraftID,
+		ResourceType:   shared.ResourceFloater,
+		ConversionRate: 2,
+		TargetResource: shared.ResourceHeat,
+	})
+
+	// 2 floaters (= 4 heat) + 4 actual heat = 8 total
+	p.Resources().AddToStorage(stormcraftID, 2)
+	testutil.SetPlayerHeat(ctx, p, 4)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
+
+	state := action.CalculatePlayerStandardProjectState(
+		shared.StandardProjectConvertHeatToTemperature, p, testGame, cardRegistry,
+	)
+
+	testutil.AssertEqual(t, 0, len(state.Errors),
+		"Convert heat should be affordable with 4 heat + 2 floaters (= 8 heat total)")
+}
+
+func TestStormcraft_StateCalculatorShowsUnaffordableWithoutEnoughFloaters(t *testing.T) {
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+
+	p, _ := testGame.GetPlayer(playerID)
+	p.SetCorporationID(testutil.CardID("Stormcraft Incorporated"))
+
+	stormcraftID := testutil.CardID("Stormcraft Incorporated")
+
+	p.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
+		CardID:         stormcraftID,
+		ResourceType:   shared.ResourceFloater,
+		ConversionRate: 2,
+		TargetResource: shared.ResourceHeat,
+	})
+
+	// 1 floater (= 2 heat) + 3 actual heat = 5 total (need 8)
+	p.Resources().AddToStorage(stormcraftID, 1)
+	testutil.SetPlayerHeat(ctx, p, 3)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
+
+	state := action.CalculatePlayerStandardProjectState(
+		shared.StandardProjectConvertHeatToTemperature, p, testGame, cardRegistry,
+	)
+
+	testutil.AssertTrue(t, len(state.Errors) > 0,
+		"Convert heat should be unaffordable with only 5 heat equivalent")
 }

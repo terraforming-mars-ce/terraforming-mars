@@ -18,6 +18,9 @@ export interface GenericPaymentConfig {
   name: string;
   cost: number;
   substitutes: Array<{ resourceType: string; conversionRate: number }>;
+  baseResource?: string;
+  storageSubstitutes?: StoragePaymentSubstituteDto[];
+  resourceStorage?: { [key: string]: number };
 }
 
 interface PaymentSelectionPopoverProps {
@@ -70,14 +73,22 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
       3);
 
   const applicableStorageSubstitutes = useMemo(() => {
-    if (isGenericMode || !storagePaymentSubstitutes || !resourceStorage) {
+    if (isGenericMode) {
+      const genSubs = genericPayment?.storageSubstitutes;
+      const genStorage = genericPayment?.resourceStorage;
+      if (!genSubs || !genStorage) {
+        return [];
+      }
+      return genSubs.filter((sub) => (genStorage[sub.cardId] ?? 0) > 0);
+    }
+    if (!storagePaymentSubstitutes || !resourceStorage) {
       return [];
     }
     return storagePaymentSubstitutes.filter((sub) => {
       const available = resourceStorage[sub.cardId] ?? 0;
       return available > 0 && cardMatchesStorageSubstitute(card!, sub);
     });
-  }, [isGenericMode, storagePaymentSubstitutes, resourceStorage, card]);
+  }, [isGenericMode, genericPayment, storagePaymentSubstitutes, resourceStorage, card]);
 
   useEffect(() => {
     if (isVisible) {
@@ -163,8 +174,15 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
       )
     : 0;
 
+  const baseResource = genericPayment?.baseResource ?? "credit";
+  const baseResourceMap: Record<string, number> = {
+    heat: playerResources.heat,
+    plant: playerResources.plants,
+  };
+  const baseResourceAvailable = baseResourceMap[baseResource] ?? playerResources.credits;
+
   const isOverpaying = finalCost < 0;
-  const cannotAfford = finalCost > playerResources.credits;
+  const cannotAfford = finalCost > baseResourceAvailable;
   const canConfirm = !cannotAfford;
 
   const handleConfirm = useCallback(() => {
@@ -357,7 +375,9 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
                     <div className="flex flex-col">
                       <span className="text-white capitalize">{resourceType}</span>
                       <span className="text-xs text-gray-400">
-                        {substitute.conversionRate} MC each ({available} available)
+                        {substitute.conversionRate}{" "}
+                        {baseResource === "credit" ? "MC" : baseResource} each ({available}{" "}
+                        available)
                       </span>
                     </div>
                   </div>
@@ -385,7 +405,10 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
             })}
 
         {applicableStorageSubstitutes.map((substitute) => {
-          const available = resourceStorage?.[substitute.cardId] ?? 0;
+          const effectiveStorage = isGenericMode
+            ? genericPayment?.resourceStorage
+            : resourceStorage;
+          const available = effectiveStorage?.[substitute.cardId] ?? 0;
           if (available === 0) {
             return null;
           }
@@ -433,7 +456,8 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
                 <div className="flex flex-col">
                   <span className="text-white capitalize">{substitute.resourceType}</span>
                   <span className="text-xs text-gray-400">
-                    {substitute.conversionRate} MC each ({available} available)
+                    {substitute.conversionRate} {baseResource === "credit" ? "MC" : baseResource}{" "}
+                    each ({available} available)
                   </span>
                 </div>
               </div>
@@ -474,12 +498,14 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
         <div className="rounded-md border border-space-blue-500/30 bg-space-black/30 p-4">
           <div className="flex items-center justify-between">
             <span className="text-gray-400">
-              {isGenericMode ? "Credits needed:" : "Card cost:"}
+              {isGenericMode
+                ? `${baseResource === "credit" ? "Credits" : baseResource.charAt(0).toUpperCase() + baseResource.slice(1)} needed:`
+                : "Card cost:"}
             </span>
             <div
               className={`flex items-center gap-2 ${finalCost < 0 ? "opacity-90" : cannotAfford ? "opacity-90" : ""}`}
             >
-              <GameIcon iconType="credit" amount={finalCost} size="medium" />
+              <GameIcon iconType={baseResource} amount={finalCost} size="medium" />
             </div>
           </div>
           <div
@@ -505,7 +531,8 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
                 cannotAfford ? "opacity-100" : "opacity-0"
               }`}
             >
-              Can't afford: Need {Math.max(finalCost - playerResources.credits, 0)} more MC
+              Can't afford: Need {Math.max(finalCost - baseResourceAvailable, 0)} more{" "}
+              {baseResource === "credit" ? "MC" : baseResource}
             </div>
           </div>
         </div>
@@ -517,7 +544,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
         </GameButton>
         <GameButton
           buttonType="primary"
-          variant="success"
+          variant="info"
           size="sm"
           onClick={handleConfirm}
           disabled={!canConfirm}

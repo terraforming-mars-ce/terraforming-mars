@@ -168,6 +168,7 @@ export default function GameInterface() {
   const pendingCardStorage = useCardPlayFlowStore((s) => s.pendingCardStorage);
   const showCardStorageSelection = useCardPlayFlowStore((s) => s.showCardStorageSelection);
   const pendingCardPayment = useCardPlayFlowStore((s) => s.pendingCardPayment);
+  const pendingGenericPayment = useCardPlayFlowStore((s) => s.pendingGenericPayment);
   const showPaymentSelection = useCardPlayFlowStore((s) => s.showPaymentSelection);
   const pendingActionStorage = useCardPlayFlowStore((s) => s.pendingActionStorage);
   const showActionStorageSelection = useCardPlayFlowStore((s) => s.showActionStorageSelection);
@@ -1193,6 +1194,16 @@ export default function GameInterface() {
             playerPaymentSubstitutes={currentPlayer.paymentSubstitutes}
             storagePaymentSubstitutes={currentPlayer.storagePaymentSubstitutes}
             resourceStorage={currentPlayer.resourceStorage}
+            onConfirm={flow.handlePaymentConfirm}
+            onCancel={flow.handlePaymentCancel}
+            isVisible={showPaymentSelection}
+          />
+        )}
+
+        {pendingGenericPayment && currentPlayer && (
+          <PaymentSelectionPopover
+            playerResources={currentPlayer.resources}
+            genericPayment={pendingGenericPayment}
             onConfirm={flow.handlePaymentConfirm}
             onCancel={flow.handlePaymentCancel}
             isVisible={showPaymentSelection}

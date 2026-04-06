@@ -2,6 +2,7 @@ package resource_conversion
 
 import (
 	"context"
+	"encoding/json"
 
 	resconvaction "terraforming-mars-backend/internal/action/resource_conversion"
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -42,7 +43,13 @@ func (h *ConvertPlantsHandler) HandleMessage(ctx context.Context, connection *co
 		return
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID)
+	var req dto.ActionConvertPlantsToGreeneryRequest
+	if message.Payload != nil {
+		payloadBytes, _ := json.Marshal(message.Payload)
+		_ = json.Unmarshal(payloadBytes, &req)
+	}
+
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, req.StorageSubstitutes)
 	if err != nil {
 		log.Error("Failed to execute convert plants action", zap.Error(err))
 		h.sendError(connection, err.Error())

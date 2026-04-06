@@ -184,7 +184,7 @@ func TestFinalPhase_ConvertPlantsWorks(t *testing.T) {
 	testutil.AssertEqual(t, shared.GamePhaseFinalPhase, g.CurrentPhase(), "Should be in final phase")
 
 	// P1 converts plants to greenery
-	err = convertAction.Execute(ctx, g.ID(), p1ID)
+	err = convertAction.Execute(ctx, g.ID(), p1ID, nil)
 	testutil.AssertNoError(t, err, "P1 convert plants to greenery")
 
 	// P1 should now have 8 plants remaining (16 - 8)

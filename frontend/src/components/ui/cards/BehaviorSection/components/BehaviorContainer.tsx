@@ -105,6 +105,8 @@ const BehaviorContainer: React.FC<BehaviorContainerProps> = ({
       "triggered-effect": "bg-white/[0.08] border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
       discount: "bg-white/[0.08] border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
       "payment-substitute": "bg-white/[0.08] border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
+      "storage-payment-substitute":
+        "bg-white/[0.08] border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
       "value-modifier": "bg-white/[0.08] border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
       defense: "bg-white/[0.08] border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
       "immediate-production":
@@ -117,6 +119,7 @@ const BehaviorContainer: React.FC<BehaviorContainerProps> = ({
       type === "triggered-effect" ||
       type === "discount" ||
       type === "payment-substitute" ||
+      type === "storage-payment-substitute" ||
       type === "value-modifier" ||
       type === "defense"
         ? "w-fit"

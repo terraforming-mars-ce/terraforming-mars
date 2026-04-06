@@ -337,7 +337,11 @@ func CalculatePlayerStandardProjectState(
 		metadata["discounts"] = discounts
 	}
 
-	errors = append(errors, validateAffordabilityMap(p, effectiveCosts)...)
+	storageSubstituteValue := calculateStorageSubstituteValueForProject(p, projectType)
+	if storageSubstituteValue > 0 {
+		metadata["storageSubstituteValue"] = storageSubstituteValue
+	}
+	errors = append(errors, validateAffordabilityMapWithExtraResources(p, effectiveCosts, storageSubstituteValue, projectType)...)
 
 	switch projectType {
 	case shared.StandardProjectSellPatents:
@@ -1401,6 +1405,60 @@ func validateAffordabilityMap(p *player.Player, costMap map[string]int) []player
 		}
 	}
 	return errors
+}
+
+// calculateStorageSubstituteValueForProject returns the total extra resource value available
+// from storage payment substitutes for resource conversion standard projects.
+func calculateStorageSubstituteValueForProject(p *player.Player, projectType shared.StandardProject) int {
+	var targetResource shared.ResourceType
+	switch projectType {
+	case shared.StandardProjectConvertHeatToTemperature:
+		targetResource = shared.ResourceHeat
+	case shared.StandardProjectConvertPlantsToGreenery:
+		targetResource = shared.ResourcePlant
+	default:
+		return 0
+	}
+
+	totalValue := 0
+	for _, sub := range p.Resources().StoragePaymentSubstitutes() {
+		if sub.TargetResource == targetResource {
+			totalValue += p.Resources().GetCardStorage(sub.CardID) * sub.ConversionRate
+		}
+	}
+	return totalValue
+}
+
+// validateAffordabilityMapWithExtraResources checks affordability considering extra resources
+// from storage substitutes for resource conversion projects.
+func validateAffordabilityMapWithExtraResources(p *player.Player, costMap map[string]int, extraValue int, projectType shared.StandardProject) []player.StateError {
+	if extraValue == 0 {
+		return validateAffordabilityMap(p, costMap)
+	}
+
+	var targetResourceType string
+	switch projectType {
+	case shared.StandardProjectConvertHeatToTemperature:
+		targetResourceType = string(shared.ResourceHeat)
+	case shared.StandardProjectConvertPlantsToGreenery:
+		targetResourceType = string(shared.ResourcePlant)
+	default:
+		return validateAffordabilityMap(p, costMap)
+	}
+
+	adjustedCosts := make(map[string]int)
+	for k, v := range costMap {
+		if k == targetResourceType {
+			adjusted := v - extraValue
+			if adjusted < 0 {
+				adjusted = 0
+			}
+			adjustedCosts[k] = adjusted
+		} else {
+			adjustedCosts[k] = v
+		}
+	}
+	return validateAffordabilityMap(p, adjustedCosts)
 }
 
 // validateAffordabilityWithSubstitutes checks if player can afford a multi-resource cost,

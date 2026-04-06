@@ -182,14 +182,14 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.standardProject(projectId);
   }
 
-  async convertPlantsToGreenery(): Promise<string> {
+  async convertPlantsToGreenery(storageSubstitutes?: Record<string, number>): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.convertPlantsToGreenery();
+    return webSocketService.convertPlantsToGreenery(storageSubstitutes);
   }
 
-  async convertHeatToTemperature(): Promise<string> {
+  async convertHeatToTemperature(storageSubstitutes?: Record<string, number>): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.convertHeatToTemperature();
+    return webSocketService.convertHeatToTemperature(storageSubstitutes);
   }
 
   async startGame(): Promise<string> {

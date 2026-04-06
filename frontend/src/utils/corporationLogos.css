@@ -83,6 +83,7 @@
 
 .stormcraft2 {
   display: inline-block;
+  color: white;
   line-height: 50px;
   width: 85px;
   text-align: center;
@@ -99,6 +100,7 @@
 }
 
 .stormcraft4 {
+  color: white;
   transform: scaleX(1.7);
   font-family: Prototype;
   letter-spacing: 2px;

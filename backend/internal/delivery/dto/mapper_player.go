@@ -467,6 +467,7 @@ func convertStoragePaymentSubstitutes(substitutes []shared.StoragePaymentSubstit
 			CardID:         sub.CardID,
 			ResourceType:   ResourceType(sub.ResourceType),
 			ConversionRate: sub.ConversionRate,
+			TargetResource: ResourceType(sub.TargetResource),
 			Selectors:      mapSlice(sub.Selectors, toSelectorDto),
 		}
 	}

@@ -44,6 +44,7 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 	ctx context.Context,
 	gameID string,
 	playerID string,
+	storageSubstitutes map[string]int,
 ) error {
 	log := a.InitLogger(gameID, playerID)
 	log.Debug("Converting heat to temperature")
@@ -86,19 +87,32 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 		zap.Int("discount", heatDiscount),
 		zap.Int("final_cost", requiredHeat))
 
-	resources := player.Resources().Get()
-	if resources.Heat < requiredHeat {
-		log.Warn("Player cannot afford heat conversion",
-			zap.Int("required", requiredHeat),
-			zap.Int("available", resources.Heat))
-		return fmt.Errorf("insufficient heat: need %d, have %d", requiredHeat, resources.Heat)
+	storageValue, err := ValidateAndDeductStorageSubstitutes(player, storageSubstitutes, shared.ResourceHeat, log)
+	if err != nil {
+		return fmt.Errorf("storage substitute error: %w", err)
 	}
 
-	resources.Heat -= requiredHeat
+	remainingCost := requiredHeat - storageValue
+	if remainingCost < 0 {
+		remainingCost = 0
+	}
+
+	resources := player.Resources().Get()
+	if resources.Heat < remainingCost {
+		log.Warn("Player cannot afford heat conversion",
+			zap.Int("required", requiredHeat),
+			zap.Int("storage_value", storageValue),
+			zap.Int("remaining_cost", remainingCost),
+			zap.Int("available_heat", resources.Heat))
+		return fmt.Errorf("insufficient heat: need %d (after %d from storage), have %d", remainingCost, storageValue, resources.Heat)
+	}
+
+	resources.Heat -= remainingCost
 	player.Resources().Set(resources)
 
 	log.Debug("Deducted heat",
-		zap.Int("heat_spent", requiredHeat),
+		zap.Int("heat_spent", remainingCost),
+		zap.Int("storage_value", storageValue),
 		zap.Int("remaining_heat", resources.Heat))
 
 	var stepsRaised int
