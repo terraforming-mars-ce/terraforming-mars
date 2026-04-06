@@ -61,56 +61,6 @@ function countAllTiles(entry: GameHistoryEntryDto, tileType: string): number {
   return entry.board.tiles.filter((t) => t.occupiedBy?.type === tileType).length;
 }
 
-function countCityVP(entry: GameHistoryEntryDto, playerId: string): number {
-  let vp = 0;
-  for (const tile of entry.board.tiles) {
-    if (tile.occupiedBy?.type === "city-tile" && tile.ownerId === playerId) {
-      vp += countAdjacentGreeneries(
-        entry,
-        tile.coordinates.q,
-        tile.coordinates.r,
-        tile.coordinates.s,
-      );
-    }
-  }
-  return vp;
-}
-
-function countAdjacentGreeneries(
-  entry: GameHistoryEntryDto,
-  q: number,
-  r: number,
-  s: number,
-): number {
-  const directions = [
-    [1, -1, 0],
-    [1, 0, -1],
-    [0, 1, -1],
-    [-1, 1, 0],
-    [-1, 0, 1],
-    [0, -1, 1],
-  ];
-  let count = 0;
-  for (const [dq, dr, ds] of directions) {
-    const neighbor = entry.board.tiles.find(
-      (t) => t.coordinates.q === q + dq && t.coordinates.r === r + dr && t.coordinates.s === s + ds,
-    );
-    if (neighbor?.occupiedBy?.type === "greenery-tile") {
-      count++;
-    }
-  }
-  return count;
-}
-
-function computeTotalVP(entry: GameHistoryEntryDto, playerId: string): number {
-  const player = entry.players[playerId];
-  if (!player) return 0;
-  const greenery = countPlayerTiles(entry, playerId, "greenery-tile");
-  const city = countCityVP(entry, playerId);
-  const milestones = entry.milestones.filter((m) => m.playerId === playerId).length * 5;
-  return player.terraformRating + greenery + city + milestones;
-}
-
 function totalResources(entry: GameHistoryEntryDto, playerId: string): number {
   const p = entry.players[playerId];
   if (!p) return 0;
@@ -396,7 +346,7 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
     const getValueFn = (m: GraphMode): ((e: GameHistoryEntryDto, pid: string) => number) => {
       switch (m) {
         case "vp":
-          return (e, pid) => computeTotalVP(e, pid);
+          return (e, pid) => e.players[pid]?.totalVP ?? 0;
         case "tr":
           return (e, pid) => e.players[pid]?.terraformRating ?? 0;
         case "greeneries":

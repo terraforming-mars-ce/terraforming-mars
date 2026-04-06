@@ -93,6 +93,11 @@ const (
 	ResourceColonyTrackStep ResourceType = "colony-track-step"
 )
 
+// IsForestTile returns true if the tile type counts as a forest (greenery or world-tree).
+func IsForestTile(tileType ResourceType) bool {
+	return tileType == ResourceGreeneryTile || tileType == ResourceWorldTreeTile
+}
+
 // ActionType constants for action-level selectors (discounts targeting specific game actions)
 const (
 	ActionCardBuying  = "card-buying"

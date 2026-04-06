@@ -38,6 +38,7 @@ type GameHistoryPlayerDto struct {
 	HandCardIDs     []string       `json:"handCardIds"`
 	CorporationID   string         `json:"corporationId"`
 	ResourceStorage map[string]int `json:"resourceStorage"`
+	TotalVP         int            `json:"totalVP"`
 }
 
 // ClaimedMilestoneDto represents a claimed milestone in history.

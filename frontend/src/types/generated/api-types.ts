@@ -1750,6 +1750,7 @@ export interface GameHistoryPlayerDto {
   handCardIds: string[];
   corporationId: string;
   resourceStorage: { [key: string]: number /* int */ };
+  totalVP: number /* int */;
 }
 /**
  * ClaimedMilestoneDto represents a claimed milestone in history.
