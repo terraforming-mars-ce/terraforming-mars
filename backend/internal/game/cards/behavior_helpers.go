@@ -27,7 +27,7 @@ func HasManualTrigger(behavior shared.CardBehavior) bool {
 // HasConditionalTrigger checks if a behavior has an auto trigger with a condition (passive effect)
 func HasConditionalTrigger(behavior shared.CardBehavior) bool {
 	for _, trigger := range behavior.Triggers {
-		if trigger.Type == string(ResourceTriggerAuto) && trigger.Condition != nil {
+		if (trigger.Type == string(ResourceTriggerAuto) || trigger.Type == string(ResourceTriggerAutoCorporationStart)) && trigger.Condition != nil {
 			return true
 		}
 	}

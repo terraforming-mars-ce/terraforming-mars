@@ -219,6 +219,112 @@ func TestAridor_WildTagDoesNotTrigger(t *testing.T) {
 }
 
 // =============================================================================
+// Arklight (CC2, corporation, colonies)
+// "Effect: Add 1 animal to this card when you play an animal or plant tag,
+//  including this. You start with 45 M€. Increase your M€ production 2 steps.
+//  1 VP per 2 animals on this card."
+// =============================================================================
+
+func newArklightEffect() shared.CardEffect {
+	selfPlayer := "self-player"
+	return shared.CardEffect{
+		CardID:        "CC2",
+		CardName:      "Arklight",
+		BehaviorIndex: 1,
+		Behavior: shared.CardBehavior{
+			Triggers: []shared.Trigger{
+				{
+					Type: "auto-corporation-start",
+					Condition: &shared.ResourceTriggerCondition{
+						Type: "card-played",
+						Selectors: []shared.Selector{
+							{Tags: []shared.CardTag{shared.TagPlant}},
+							{Tags: []shared.CardTag{shared.TagAnimal}},
+						},
+						Target: &selfPlayer,
+					},
+				},
+			},
+			Outputs: []shared.BehaviorCondition{
+				shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
+			},
+		},
+	}
+}
+
+func TestArklight_PassiveEffectByTag(t *testing.T) {
+	tests := []struct {
+		name         string
+		tag          shared.CardTag
+		expectedGain int
+		description  string
+	}{
+		{"animal tag triggers animal gain", shared.TagAnimal, 1, "Arklight should gain 1 animal when an animal tag is played"},
+		{"plant tag triggers animal gain", shared.TagPlant, 1, "Arklight should gain 1 animal when a plant tag is played"},
+		{"unrelated tag does not trigger", shared.TagScience, 0, "Arklight should NOT gain an animal when an unrelated tag is played"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			broadcaster := testutil.NewMockBroadcaster()
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			logger := testutil.TestLogger()
+			ctx := context.Background()
+
+			testCard := gamecards.Card{
+				ID:   "test-" + string(tt.tag),
+				Name: "Test " + string(tt.tag) + " Card",
+				Type: gamecards.CardTypeAutomated,
+				Tags: []shared.CardTag{tt.tag},
+			}
+			cardRegistry := cards.NewInMemoryCardRegistry([]gamecards.Card{testCard})
+
+			p := testGame.GetAllPlayers()[0]
+			p.SetCorporationID("CC2")
+			p.Resources().AddToStorage("CC2", 0)
+			testutil.StartTestGame(t, testGame)
+
+			effect := newArklightEffect()
+			p.Effects().AddEffect(effect)
+			action.SubscribePassiveEffectToEvents(ctx, testGame, p, effect, logger, cardRegistry)
+
+			storageBefore := p.Resources().GetCardStorage("CC2")
+
+			events.Publish(testGame.EventBus(), events.CardPlayedEvent{
+				GameID:   testGame.ID(),
+				PlayerID: p.ID(),
+				CardID:   testCard.ID,
+				CardName: testCard.Name,
+				CardType: string(testCard.Type),
+			})
+
+			time.Sleep(50 * time.Millisecond)
+
+			testutil.AssertEqual(t, storageBefore+tt.expectedGain, p.Resources().GetCardStorage("CC2"), tt.description)
+		})
+	}
+}
+
+func TestArklight_StartingResources(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
+	err := setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Arklight"))
+	testutil.AssertNoError(t, err, "SetCorporation should succeed")
+
+	p, _ := testGame.GetPlayer(playerID)
+	resources := p.Resources().Get()
+	production := p.Resources().Production()
+
+	testutil.AssertEqual(t, 45, resources.Credits, "Arklight should start with 45 credits")
+	testutil.AssertEqual(t, 2, production.Credits, "Arklight should start with +2 credit production")
+	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(testutil.CardID("Arklight")),
+		"Arklight should start with 1 animal (from 'including this')")
+}
+
+// =============================================================================
 // Polyphemos (CC3, corporation, colonies)
 // "Effect: Pay 5 M€ instead of 3 M€ when buying cards, including the starting hand.
 //  You start with 50 M€. Increase your M€ production 5 steps. Gain 5 titanium."

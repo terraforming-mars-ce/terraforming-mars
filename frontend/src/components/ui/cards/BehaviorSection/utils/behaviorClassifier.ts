@@ -57,7 +57,7 @@ export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehav
       return { behavior, type: "manual-action", description, originalIndex };
     }
 
-    if (triggerType === "auto" && hasCondition) {
+    if ((triggerType === "auto" || triggerType === "auto-corporation-start") && hasCondition) {
       return { behavior, type: "triggered-effect", description, originalIndex };
     }
 
