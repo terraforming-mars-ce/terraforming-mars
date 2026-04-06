@@ -17,11 +17,25 @@ type MilestoneDefinition struct {
 	Style       shared.Style         `json:"style"`
 }
 
+const (
+	RequirementKindCountable = "countable"
+	RequirementKindState     = "state"
+
+	StateTypeAllProduction = "all-production"
+)
+
 // MilestoneRequirement is a discriminated union for milestone requirements.
 // The Kind field selects which sub-field is active.
 type MilestoneRequirement struct {
 	Kind      string                `json:"kind"`
 	Countable *CountableRequirement `json:"countable,omitempty"`
+	State     *StateRequirement     `json:"state,omitempty"`
+}
+
+// StateRequirement defines a state-based requirement (e.g., all productions at minimum).
+type StateRequirement struct {
+	Type string `json:"type"`
+	Min  int    `json:"min"`
 }
 
 // CountableRequirement defines a countable threshold requirement.
@@ -44,13 +58,18 @@ func (d *MilestoneDefinition) GetRewardVP() int {
 
 // GetRequired returns the threshold value for the milestone requirement
 func (d *MilestoneDefinition) GetRequired() int {
-	if d.Requirement.Kind == "countable" && d.Requirement.Countable != nil {
-		if d.Requirement.Countable.Min != nil {
-			return *d.Requirement.Countable.Min
+	switch d.Requirement.Kind {
+	case RequirementKindCountable:
+		if d.Requirement.Countable != nil {
+			if d.Requirement.Countable.Min != nil {
+				return *d.Requirement.Countable.Min
+			}
+			if d.Requirement.Countable.Max != nil {
+				return *d.Requirement.Countable.Max
+			}
 		}
-		if d.Requirement.Countable.Max != nil {
-			return *d.Requirement.Countable.Max
-		}
+	case RequirementKindState:
+		return 6
 	}
 	return 0
 }

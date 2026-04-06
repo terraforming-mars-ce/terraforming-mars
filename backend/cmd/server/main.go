@@ -243,7 +243,7 @@ func main() {
 	botController := bot.NewBotController(gameRepo, stateRepo, cardRegistry, commandDispatcher, broadcaster, log)
 	broadcaster.SetBotNotifier(botController)
 
-	startGameAction := turnAction.NewStartGameAction(gameRepo, colonyRegistry, pfRegistry, botController, log)
+	startGameAction := turnAction.NewStartGameAction(gameRepo, colonyRegistry, pfRegistry, milestoneRegistry, awardRegistry, botController, log)
 
 	// Game management (convert to bot)
 	convertToBotAction := gameAction.NewConvertToBotAction(gameRepo, botController, log)
@@ -373,6 +373,8 @@ func main() {
 		listCardsAction,
 		getPlayerAction,
 		cardRegistry,
+		milestoneRegistry,
+		awardRegistry,
 		bugReportService,
 	)
 

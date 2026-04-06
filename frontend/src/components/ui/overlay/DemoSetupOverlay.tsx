@@ -6,6 +6,7 @@ import {
   ResourcesDto,
   ProductionDto,
   GlobalParametersDto,
+  MilestoneAwardItemDto,
   ResourceTypeCredit,
   ResourceTypeSteel,
   ResourceTypeTitanium,
@@ -296,10 +297,27 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
     game.currentPlayer?.pendingDemoChoices?.terraformRating || 20,
   );
 
+  // Milestones & Awards
+  const [allMilestones, setAllMilestones] = useState<MilestoneAwardItemDto[]>([]);
+  const [allAwards, setAllAwards] = useState<MilestoneAwardItemDto[]>([]);
+  const [selectedMilestones, setSelectedMilestones] = useState<string[]>([]);
+  const [selectedAwards, setSelectedAwards] = useState<string[]>([]);
+
   // Loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load corporations and cards on mount
+  // Load corporations, cards, and milestones/awards on mount
+  useEffect(() => {
+    if (isHost) {
+      apiService.listMilestonesAndAwards().then((data) => {
+        setAllMilestones(data.milestones);
+        setAllAwards(data.awards);
+        setSelectedMilestones(data.milestones.map((m) => m.id));
+        setSelectedAwards(data.awards.map((a) => a.id));
+      });
+    }
+  }, [isHost]);
+
   useEffect(() => {
     const loadCardsData = async () => {
       try {
@@ -415,6 +433,8 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
         terraformRating,
         globalParameters: isHost ? globalParams : undefined,
         generation: isHost ? generation : undefined,
+        selectedMilestones: isHost ? selectedMilestones : undefined,
+        selectedAwards: isHost ? selectedAwards : undefined,
       });
       onClose();
     } catch (err) {
@@ -703,6 +723,70 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
                     />
                   </div>
                 </div>
+
+                {allMilestones.length > 0 && (
+                  <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3">
+                    <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs text-center">
+                      Milestones & Awards
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <h4 className="text-white/60 text-[10px] font-semibold mb-1.5 uppercase tracking-wider">
+                          Milestones
+                        </h4>
+                        <div className="flex flex-col gap-0.5">
+                          {allMilestones.map((m) => (
+                            <label
+                              key={m.id}
+                              className="flex items-center gap-1.5 cursor-pointer py-0.5 px-1 rounded hover:bg-white/5"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedMilestones.includes(m.id)}
+                                onChange={() =>
+                                  setSelectedMilestones((prev) =>
+                                    prev.includes(m.id)
+                                      ? prev.filter((id) => id !== m.id)
+                                      : [...prev, m.id],
+                                  )
+                                }
+                                className="w-3 h-3 accent-space-blue-solid cursor-pointer m-0"
+                              />
+                              <span className="text-white text-[11px] leading-none">{m.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-white/60 text-[10px] font-semibold mb-1.5 uppercase tracking-wider">
+                          Awards
+                        </h4>
+                        <div className="flex flex-col gap-0.5">
+                          {allAwards.map((a) => (
+                            <label
+                              key={a.id}
+                              className="flex items-center gap-1.5 cursor-pointer py-0.5 px-1 rounded hover:bg-white/5"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedAwards.includes(a.id)}
+                                onChange={() =>
+                                  setSelectedAwards((prev) =>
+                                    prev.includes(a.id)
+                                      ? prev.filter((id) => id !== a.id)
+                                      : [...prev, a.id],
+                                  )
+                                }
+                                className="w-3 h-3 accent-space-blue-solid cursor-pointer m-0"
+                              />
+                              <span className="text-white text-[11px] leading-none">{a.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

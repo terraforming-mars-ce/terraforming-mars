@@ -8,10 +8,12 @@ import (
 
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/action/query"
+	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
+	"terraforming-mars-backend/internal/milestones"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
@@ -26,6 +28,8 @@ type GameHandler struct {
 	listGamesAction      *query.ListGamesAction
 	listCardsAction      *query.ListCardsAction
 	cardRegistry         cards.CardRegistry
+	milestoneRegistry    milestones.MilestoneRegistry
+	awardRegistry        awards.AwardRegistry
 }
 
 // NewGameHandler creates a new game handler
@@ -37,6 +41,8 @@ func NewGameHandler(
 	listGamesAction *query.ListGamesAction,
 	listCardsAction *query.ListCardsAction,
 	cardRegistry cards.CardRegistry,
+	milestoneRegistry milestones.MilestoneRegistry,
+	awardRegistry awards.AwardRegistry,
 ) *GameHandler {
 	return &GameHandler{
 		createGameAction:     createGameAction,
@@ -46,6 +52,8 @@ func NewGameHandler(
 		listGamesAction:      listGamesAction,
 		listCardsAction:      listCardsAction,
 		cardRegistry:         cardRegistry,
+		milestoneRegistry:    milestoneRegistry,
+		awardRegistry:        awardRegistry,
 	}
 }
 
@@ -144,12 +152,14 @@ func (h *GameHandler) CreateGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	settings := shared.GameSettings{
-		MaxPlayers:       req.MaxPlayers,
-		VenusNextEnabled: req.VenusNextEnabled,
-		DevelopmentMode:  req.DevelopmentMode,
-		DemoGame:         req.DemoGame,
-		CardPacks:        req.CardPacks,
-		ClaudeAPIKey:     req.ClaudeAPIKey,
+		MaxPlayers:         req.MaxPlayers,
+		VenusNextEnabled:   req.VenusNextEnabled,
+		DevelopmentMode:    req.DevelopmentMode,
+		DemoGame:           req.DemoGame,
+		CardPacks:          req.CardPacks,
+		ClaudeAPIKey:       req.ClaudeAPIKey,
+		SelectedMilestones: req.SelectedMilestones,
+		SelectedAwards:     req.SelectedAwards,
 	}
 
 	// Execute create game action
@@ -318,4 +328,39 @@ func (h *GameHandler) GetGameHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Debug("Game history retrieved", zap.String("game_id", gameID), zap.Int("count", len(entries)))
+}
+
+// ListMilestonesAndAwards handles GET /api/v1/milestones-awards
+func (h *GameHandler) ListMilestonesAndAwards(w http.ResponseWriter, r *http.Request) {
+	var milestoneDtos []dto.MilestoneAwardItemDto
+	if h.milestoneRegistry != nil {
+		for _, def := range h.milestoneRegistry.GetAll() {
+			milestoneDtos = append(milestoneDtos, dto.MilestoneAwardItemDto{
+				ID:          def.ID,
+				Name:        def.Name,
+				Description: def.Description,
+			})
+		}
+	}
+
+	var awardDtos []dto.MilestoneAwardItemDto
+	if h.awardRegistry != nil {
+		for _, def := range h.awardRegistry.GetAll() {
+			awardDtos = append(awardDtos, dto.MilestoneAwardItemDto{
+				ID:          def.ID,
+				Name:        def.Name,
+				Description: def.Description,
+			})
+		}
+	}
+
+	response := dto.ListMilestonesAwardsResponse{
+		Milestones: milestoneDtos,
+		Awards:     awardDtos,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }

@@ -248,6 +248,8 @@ func NewGame(
 		Players:                    make(map[string]*datastore.PlayerState),
 		ClaimedMilestones:          []shared.ClaimedMilestone{},
 		FundedAwards:               []shared.FundedAward{},
+		SelectedMilestones:         []string{},
+		SelectedAwards:             []string{},
 		Spectators:                 make(map[string]*shared.SpectatorState),
 		ChatMessages:               []shared.ChatMessage{},
 		PendingTileSelections:      make(map[string]*shared.PendingTileSelection),
@@ -415,6 +417,42 @@ func (g *Game) Milestones() *Milestones {
 
 func (g *Game) Awards() *Awards {
 	return g.awards
+}
+
+// SelectedMilestones returns the milestone IDs selected for this game.
+func (g *Game) SelectedMilestones() []string {
+	var result []string
+	g.read(func(s *datastore.GameState) {
+		result = make([]string, len(s.SelectedMilestones))
+		copy(result, s.SelectedMilestones)
+	})
+	return result
+}
+
+// SelectedAwards returns the award IDs selected for this game.
+func (g *Game) SelectedAwards() []string {
+	var result []string
+	g.read(func(s *datastore.GameState) {
+		result = make([]string, len(s.SelectedAwards))
+		copy(result, s.SelectedAwards)
+	})
+	return result
+}
+
+// SetSelectedMilestones sets the milestone IDs available for this game.
+func (g *Game) SetSelectedMilestones(milestoneIDs []string) {
+	g.update(func(s *datastore.GameState) {
+		s.SelectedMilestones = make([]string, len(milestoneIDs))
+		copy(s.SelectedMilestones, milestoneIDs)
+	})
+}
+
+// SetSelectedAwards sets the award IDs available for this game.
+func (g *Game) SetSelectedAwards(awardIDs []string) {
+	g.update(func(s *datastore.GameState) {
+		s.SelectedAwards = make([]string, len(awardIDs))
+		copy(s.SelectedAwards, awardIDs)
+	})
 }
 
 func (g *Game) GetFinalScores() []shared.FinalScore {

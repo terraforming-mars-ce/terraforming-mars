@@ -3,6 +3,7 @@ package award
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"go.uber.org/zap"
 
@@ -68,6 +69,12 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 	player, err := a.GetPlayerFromGame(g, playerID, log)
 	if err != nil {
 		return err
+	}
+
+	// Validate award is in the selected set for this game
+	if selected := g.SelectedAwards(); len(selected) > 0 && !slices.Contains(selected, awardType) {
+		log.Warn("Award not available in this game", zap.String("award", awardType))
+		return fmt.Errorf("award %s is not available in this game", awardType)
 	}
 
 	awardState := g.Awards()

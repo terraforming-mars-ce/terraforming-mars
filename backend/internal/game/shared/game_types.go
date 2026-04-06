@@ -31,18 +31,20 @@ const (
 
 // GameSettings contains configurable game parameters
 type GameSettings struct {
-	MaxPlayers       int
-	Temperature      *int
-	Oxygen           *int
-	Oceans           *int
-	Venus            *int
-	VenusNextEnabled bool
-	DevelopmentMode  bool
-	DemoGame         bool
-	CardPacks        []string
-	Generation       *int
-	ClaudeAPIKey     string
-	ClaudeModel      string
+	MaxPlayers         int
+	Temperature        *int
+	Oxygen             *int
+	Oceans             *int
+	Venus              *int
+	VenusNextEnabled   bool
+	DevelopmentMode    bool
+	DemoGame           bool
+	CardPacks          []string
+	Generation         *int
+	ClaudeAPIKey       string
+	ClaudeModel        string
+	SelectedMilestones []string
+	SelectedAwards     []string
 }
 
 // Card pack constants
@@ -55,6 +57,18 @@ const (
 	PackColonies       = "colonies"
 	PackProjectFunding = "project-funding"
 )
+
+// EnabledPacks returns a set of all enabled pack names for filtering.
+func (s GameSettings) EnabledPacks() map[string]bool {
+	packs := make(map[string]bool, len(s.CardPacks)+1)
+	for _, pack := range s.CardPacks {
+		packs[pack] = true
+	}
+	if s.VenusNextEnabled {
+		packs[PackVenus] = true
+	}
+	return packs
+}
 
 // HasPrelude returns true if the prelude card pack is enabled
 func (s GameSettings) HasPrelude() bool {

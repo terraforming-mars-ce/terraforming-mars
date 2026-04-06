@@ -3,6 +3,7 @@ package milestone
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"go.uber.org/zap"
 
@@ -69,6 +70,12 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 	player, err := a.GetPlayerFromGame(g, playerID, log)
 	if err != nil {
 		return err
+	}
+
+	// Validate milestone is in the selected set for this game
+	if selected := g.SelectedMilestones(); len(selected) > 0 && !slices.Contains(selected, milestoneType) {
+		log.Warn("Milestone not available in this game", zap.String("milestone", milestoneType))
+		return fmt.Errorf("milestone %s is not available in this game", milestoneType)
 	}
 
 	ms := g.Milestones()

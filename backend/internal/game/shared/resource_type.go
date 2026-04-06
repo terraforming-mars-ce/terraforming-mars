@@ -91,6 +91,12 @@ const (
 	ResourceFreeTrade       ResourceType = "trade"
 	ResourceCardCount       ResourceType = "card-count"
 	ResourceColonyTrackStep ResourceType = "colony-track-step"
+
+	ResourceDistinctTagCount      ResourceType = "distinct-tag-count"
+	ResourceCardsWithRequirements ResourceType = "cards-with-requirements"
+	ResourceMaxSingleProduction   ResourceType = "max-single-production"
+	ResourcePlayedCardTypeCount   ResourceType = "played-card-type-count"
+	ResourceTotalCardStorage      ResourceType = "total-card-storage"
 )
 
 // IsForestTile returns true if the tile type counts as a forest (greenery or world-tree).

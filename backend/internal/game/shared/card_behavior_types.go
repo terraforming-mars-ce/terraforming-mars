@@ -94,8 +94,12 @@ type PerCondition struct {
 	Location           *string       `json:"location,omitempty"`
 	Target             *string       `json:"target,omitempty"`
 	Tag                *CardTag      `json:"tag,omitempty"`
+	Tags               []CardTag     `json:"tags,omitempty"`
 	AdjacentToTileType *ResourceType `json:"adjacentToTileType,omitempty"`
 	AdjacentToSelfTile bool          `json:"adjacentToSelfTile,omitempty"`
+	MinRow             *int          `json:"minRow,omitempty"`
+	CardTypeFilter     *string       `json:"cardTypeFilter,omitempty"`
+	MinCost            *int          `json:"minCost,omitempty"`
 }
 
 // ChoiceRequirement represents a requirement that gates whether a choice is available to a player.

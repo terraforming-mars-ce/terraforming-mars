@@ -49,11 +49,12 @@ func TestClaimMilestone_Gardener_LogsCorrectName(t *testing.T) {
 	p, _ := testGame.GetPlayer(playerID)
 	testutil.SetPlayerCredits(ctx, p, 100)
 
-	// Place 3 greenery tiles to meet Gardener requirement
+	// Place 4 greenery tiles to meet Gardener requirement
 	positions := []shared.HexPosition{
 		{Q: 0, R: 0, S: 0},
 		{Q: 1, R: -1, S: 0},
 		{Q: 2, R: -2, S: 0},
+		{Q: -1, R: 1, S: 0},
 	}
 	for _, pos := range positions {
 		err := testGame.Board().UpdateTileOccupancy(ctx, pos, board.TileOccupant{

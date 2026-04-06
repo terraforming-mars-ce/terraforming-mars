@@ -905,23 +905,12 @@ func mapPlayerMilestones(p *player.Player, g *game.Game, cardRegistry cards.Card
 	if milestoneRegistry == nil {
 		return nil
 	}
-	allDefs := milestoneRegistry.GetAll()
-	settings := g.Settings()
-	enabledPacks := make(map[string]bool, len(settings.CardPacks))
-	for _, pack := range settings.CardPacks {
-		enabledPacks[pack] = true
-	}
-	if settings.VenusNextEnabled {
-		enabledPacks[shared.PackVenus] = true
-	}
+	filteredDefs := filterMilestones(milestoneRegistry.GetAll(), g.SelectedMilestones(), g.Settings())
 
-	result := make([]PlayerMilestoneDto, 0, len(allDefs))
+	result := make([]PlayerMilestoneDto, 0, len(filteredDefs))
 	gameMilestones := g.Milestones()
 
-	for _, def := range allDefs {
-		if def.Pack != "" && !enabledPacks[def.Pack] {
-			continue
-		}
+	for _, def := range filteredDefs {
 		milestoneType := shared.MilestoneType(def.ID)
 		state := action.CalculateMilestoneState(milestoneType, p, g, cardRegistry, milestoneRegistry)
 
@@ -988,24 +977,13 @@ func mapPlayerAwards(p *player.Player, g *game.Game, awardRegistry awards.AwardR
 	if awardRegistry == nil {
 		return nil
 	}
-	allDefs := awardRegistry.GetAll()
-	settings := g.Settings()
-	enabledPacks := make(map[string]bool, len(settings.CardPacks))
-	for _, pack := range settings.CardPacks {
-		enabledPacks[pack] = true
-	}
-	if settings.VenusNextEnabled {
-		enabledPacks[shared.PackVenus] = true
-	}
+	filteredDefs := filterAwards(awardRegistry.GetAll(), g.SelectedAwards(), g.Settings())
 
-	result := make([]PlayerAwardDto, 0, len(allDefs))
+	result := make([]PlayerAwardDto, 0, len(filteredDefs))
 	gameAwards := g.Awards()
 	fundedCount := gameAwards.FundedCount()
 
-	for _, def := range allDefs {
-		if def.Pack != "" && !enabledPacks[def.Pack] {
-			continue
-		}
+	for _, def := range filteredDefs {
 		awardType := shared.AwardType(def.ID)
 		state := action.CalculateAwardState(awardType, p, g, awardRegistry)
 

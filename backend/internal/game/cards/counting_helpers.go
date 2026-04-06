@@ -198,8 +198,18 @@ func CountPerCondition(
 	}
 
 	// Adjacent to tile type (e.g., World Tree: 1 VP per adjacent forest)
-	if per.AdjacentToTileType != nil && b != nil {
+	// Skip for land-tile — handled in the tile counting switch with dedicated logic
+	if per.AdjacentToTileType != nil && b != nil && per.ResourceType != shared.ResourceNonOceanTile {
 		return countAdjacentTilesOfType(p.ID(), b, per.ResourceType, *per.AdjacentToTileType)
+	}
+
+	// Multi-tag counting (e.g., Ecologist: plant + microbe + animal)
+	if len(per.Tags) > 0 && cardRegistry != nil {
+		count := 0
+		for _, tag := range per.Tags {
+			count += CountPlayerTagsByType(p, cardRegistry, tag)
+		}
+		return count
 	}
 
 	// Tag counting
@@ -219,6 +229,12 @@ func CountPerCondition(
 		case shared.ResourceOceanTile:
 			return CountAllTilesOfType(b, shared.ResourceOceanTile)
 		case shared.ResourceNonOceanTile:
+			if per.MinRow != nil && per.Target != nil && *per.Target == "self-player" {
+				return countPlayerTilesOnRows(p.ID(), b, *per.MinRow)
+			}
+			if per.AdjacentToTileType != nil && per.Target != nil && *per.Target == "self-player" {
+				return countPlayerTilesAdjacentToOcean(p.ID(), b)
+			}
 			if per.Target != nil && *per.Target == "self-player" {
 				return CountPlayerNonOceanTiles(p.ID(), b)
 			}
@@ -265,6 +281,36 @@ func CountPerCondition(
 	// Resource counting (e.g., heat, steel, titanium)
 	if isBasicResourceType(per.ResourceType) {
 		return p.Resources().Get().GetAmount(per.ResourceType)
+	}
+
+	// Distinct tag count (Diversifier: 8 different tags)
+	if per.ResourceType == shared.ResourceDistinctTagCount && cardRegistry != nil {
+		return countDistinctTags(p, cardRegistry)
+	}
+
+	// Cards with requirements (Tactician: 5 cards with requirements)
+	if per.ResourceType == shared.ResourceCardsWithRequirements && cardRegistry != nil {
+		return countCardsWithRequirements(p, cardRegistry)
+	}
+
+	// Max single production (Specialist: 10 of any single production)
+	if per.ResourceType == shared.ResourceMaxSingleProduction {
+		return maxSingleProduction(p)
+	}
+
+	// Played card type count (Tycoon, Legend, Magnate, Celebrity)
+	if per.ResourceType == shared.ResourcePlayedCardTypeCount && cardRegistry != nil {
+		if per.MinCost != nil {
+			return countCardsWithMinCost(p, cardRegistry, *per.MinCost)
+		}
+		if per.CardTypeFilter != nil {
+			return countPlayedCardsByType(p, cardRegistry, *per.CardTypeFilter)
+		}
+	}
+
+	// Total card storage (Excentric: most resources on cards)
+	if per.ResourceType == shared.ResourceTotalCardStorage {
+		return countTotalCardStorage(p)
 	}
 
 	// Fallback: try to count as a tag type
@@ -322,5 +368,159 @@ func CountPlayerCardStorageByType(p *player.Player, cardRegistry CardRegistryInt
 		}
 	}
 
+	return total
+}
+
+func countDistinctTags(p *player.Player, cardRegistry CardRegistryInterface) int {
+	tagSet := make(map[shared.CardTag]bool)
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		if card.Type == CardTypeEvent {
+			continue
+		}
+		for _, tag := range card.Tags {
+			if tag == shared.TagWild {
+				continue
+			}
+			tagSet[tag] = true
+		}
+	}
+	if corpID := p.CorporationID(); corpID != "" {
+		if corp, err := cardRegistry.GetByID(corpID); err == nil {
+			for _, tag := range corp.Tags {
+				if tag != shared.TagWild {
+					tagSet[tag] = true
+				}
+			}
+		}
+	}
+	return len(tagSet)
+}
+
+func countCardsWithRequirements(p *player.Player, cardRegistry CardRegistryInterface) int {
+	count := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		if card.Requirements != nil && len(card.Requirements.Items) > 0 {
+			count++
+		}
+	}
+	return count
+}
+
+func countPlayerTilesOnRows(playerID string, b *board.Board, minRow int) int {
+	count := 0
+	for _, tile := range b.Tiles() {
+		if tile.OwnerID == nil || *tile.OwnerID != playerID {
+			continue
+		}
+		if tile.OccupiedBy == nil {
+			continue
+		}
+		if tile.Coordinates.R >= minRow {
+			count++
+		}
+	}
+	return count
+}
+
+func maxSingleProduction(p *player.Player) int {
+	prod := p.Resources().Production()
+	best := 0
+	for _, rt := range []shared.ResourceType{
+		shared.ResourceCreditProduction,
+		shared.ResourceSteelProduction,
+		shared.ResourceTitaniumProduction,
+		shared.ResourcePlantProduction,
+		shared.ResourceEnergyProduction,
+		shared.ResourceHeatProduction,
+	} {
+		if v := prod.GetAmount(rt); v > best {
+			best = v
+		}
+	}
+	return best
+}
+
+func countPlayedCardsByType(p *player.Player, cardRegistry CardRegistryInterface, filter string) int {
+	count := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		switch filter {
+		case "automated":
+			if card.Type == CardTypeAutomated {
+				count++
+			}
+		case "event":
+			if card.Type == CardTypeEvent {
+				count++
+			}
+		case "automated+event":
+			if card.Type == CardTypeAutomated || card.Type == CardTypeEvent {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func countCardsWithMinCost(p *player.Player, cardRegistry CardRegistryInterface, minCost int) int {
+	count := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		card, err := cardRegistry.GetByID(cardID)
+		if err != nil {
+			continue
+		}
+		if card.Cost >= minCost {
+			count++
+		}
+	}
+	return count
+}
+
+func countPlayerTilesAdjacentToOcean(playerID string, b *board.Board) int {
+	tiles := b.Tiles()
+	oceanPositions := make(map[shared.HexPosition]bool)
+	for _, tile := range tiles {
+		if tile.OccupiedBy != nil && tile.OccupiedBy.Type == shared.ResourceOceanTile {
+			oceanPositions[tile.Coordinates] = true
+		}
+	}
+
+	count := 0
+	for _, tile := range tiles {
+		if tile.OwnerID == nil || *tile.OwnerID != playerID {
+			continue
+		}
+		if tile.OccupiedBy == nil || tile.OccupiedBy.Type == shared.ResourceOceanTile {
+			continue
+		}
+		for _, neighbor := range tile.Coordinates.GetNeighbors() {
+			if oceanPositions[neighbor] {
+				count++
+				break
+			}
+		}
+	}
+	return count
+}
+
+func countTotalCardStorage(p *player.Player) int {
+	total := 0
+	for _, cardID := range p.PlayedCards().Cards() {
+		stored := p.Resources().GetCardStorage(cardID)
+		if stored > 0 {
+			total += stored
+		}
+	}
 	return total
 }

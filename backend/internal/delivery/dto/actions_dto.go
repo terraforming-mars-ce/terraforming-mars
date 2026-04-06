@@ -138,14 +138,16 @@ func (ap *ActionSkipActionRequest) GetAction() *SkipAction {
 
 // SelectDemoChoicesRequest contains a player's demo lobby card selections
 type SelectDemoChoicesRequest struct {
-	CorporationID    string               `json:"corporationId"`
-	PreludeIDs       []string             `json:"preludeIds"`
-	CardIDs          []string             `json:"cardIds"`
-	Resources        ResourcesDto         `json:"resources"`
-	Production       ProductionDto        `json:"production"`
-	TerraformRating  int                  `json:"terraformRating"`
-	GlobalParameters *GlobalParametersDto `json:"globalParameters,omitempty"` // Host only
-	Generation       *int                 `json:"generation,omitempty"`       // Host only
+	CorporationID      string               `json:"corporationId"`
+	PreludeIDs         []string             `json:"preludeIds"`
+	CardIDs            []string             `json:"cardIds"`
+	Resources          ResourcesDto         `json:"resources"`
+	Production         ProductionDto        `json:"production"`
+	TerraformRating    int                  `json:"terraformRating"`
+	GlobalParameters   *GlobalParametersDto `json:"globalParameters,omitempty"`   // Host only
+	Generation         *int                 `json:"generation,omitempty"`         // Host only
+	SelectedMilestones []string             `json:"selectedMilestones,omitempty"` // Host only
+	SelectedAwards     []string             `json:"selectedAwards,omitempty"`     // Host only
 }
 
 // ActionPlayCardRequest contains the action data for play card actions

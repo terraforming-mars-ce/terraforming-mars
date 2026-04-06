@@ -113,5 +113,196 @@
       { "type": "tag", "tag": "venus" }
     ],
     "style": { "color": "#FFD700", "icon": "venus" }
+  },
+  {
+    "id": "cultivator",
+    "name": "Cultivator",
+    "description": "Most greenery tiles",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "greenery-tile", "target": "self-player" }
+    ],
+    "style": { "color": "#4CAF50", "icon": "greenery-tile" }
+  },
+  {
+    "id": "magnate",
+    "name": "Magnate",
+    "description": "Most automated cards played",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "played-card-type-count", "cardTypeFilter": "automated" }
+    ],
+    "style": { "color": "#4CAF50", "icon": "card-draw" }
+  },
+  {
+    "id": "space-baron",
+    "name": "Space Baron",
+    "description": "Most space tags in play",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "tag", "tag": "space" }
+    ],
+    "style": { "color": "#1A237E", "icon": "space-tag" }
+  },
+  {
+    "id": "excentric",
+    "name": "Excentric",
+    "description": "Most resources on cards",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "total-card-storage" }
+    ],
+    "style": { "color": "#E91E63", "icon": "card-resource" }
+  },
+  {
+    "id": "contractor",
+    "name": "Contractor",
+    "description": "Most building tags in play",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "tag", "tag": "building" }
+    ],
+    "style": { "color": "#795548", "icon": "building-tag" }
+  },
+  {
+    "id": "celebrity",
+    "name": "Celebrity",
+    "description": "Most cards in play with cost of at least 20 MC",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "played-card-type-count", "minCost": 20 }
+    ],
+    "style": { "color": "#FFD700", "icon": "credit" }
+  },
+  {
+    "id": "industrialist",
+    "name": "Industrialist",
+    "description": "Most steel and energy resources",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "steel", "target": "self-player" },
+      { "type": "energy", "target": "self-player" }
+    ],
+    "style": { "color": "#616161", "icon": "steel" }
+  },
+  {
+    "id": "desert-settler",
+    "name": "Desert Settler",
+    "description": "Most tiles on the four bottom rows",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "land-tile", "target": "self-player", "minRow": 1 }
+    ],
+    "style": { "color": "#FF9800", "icon": "tile" }
+  },
+  {
+    "id": "estate-dealer",
+    "name": "Estate Dealer",
+    "description": "Most tiles adjacent to ocean tiles",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "land-tile", "target": "self-player", "adjacentToTileType": "ocean-tile" }
+    ],
+    "style": { "color": "#0288D1", "icon": "ocean-tile" }
+  },
+  {
+    "id": "benefactor",
+    "name": "Benefactor",
+    "description": "Highest terraform rating",
+    "pack": "base-game",
+    "costs": [
+      { "awardsBought": 0, "cost": 8 },
+      { "awardsBought": 1, "cost": 14 },
+      { "awardsBought": 2, "cost": 20 }
+    ],
+    "rewards": [
+      { "place": 1, "outputs": [{ "type": "vp", "amount": 5 }] },
+      { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
+    ],
+    "quantifier": [
+      { "type": "tr" }
+    ],
+    "style": { "color": "#FFD700", "icon": "tr" }
   }
 ]

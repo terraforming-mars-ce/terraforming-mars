@@ -174,7 +174,52 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
                 <div className="flex items-center gap-2 mb-2">
                   {globalData?.style?.icon && (
                     <div className="opacity-70 flex items-center">
-                      <GameIcon iconType={globalData.style.icon} size="small" />
+                      {globalData.style.icon === "production-all" ? (
+                        <div className="inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+                          <span className="text-[10px] font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+                            ALL
+                          </span>
+                        </div>
+                      ) : globalData.style.icon === "requirement-badge" ? (
+                        <div
+                          className="relative px-2 py-0.5 border border-[rgba(60,60,70,0.7)]"
+                          style={{
+                            clipPath:
+                              "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%)",
+                            background:
+                              "linear-gradient(-45deg, #5a2a10 25%, #2d1508 25%, #2d1508 50%, #5a2a10 50%, #5a2a10 75%, #2d1508 75%)",
+                            backgroundSize: "12px 12px",
+                          }}
+                        >
+                          <div
+                            className="absolute inset-0 bg-black/40 pointer-events-none"
+                            style={{
+                              clipPath:
+                                "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%)",
+                            }}
+                          />
+                          <span className="relative text-[9px] font-orbitron font-bold text-white/50">
+                            REQ
+                          </span>
+                        </div>
+                      ) : globalData.style.icon === "green-card-plus-event" ? (
+                        <div className="flex items-center gap-0.5">
+                          <div className="relative">
+                            <GameIcon iconType="card-draw" size="small" />
+                            <div className="absolute inset-0 rounded bg-green-500/30 pointer-events-none" />
+                          </div>
+                          <span className="text-white/60 text-[10px] font-bold">+</span>
+                          <GameIcon iconType="event" size="small" />
+                        </div>
+                      ) : globalData.style.icon === "production-threshold" ? (
+                        <div className="inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+                          <span className="text-[10px] font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+                            &ge;{milestone.required}
+                          </span>
+                        </div>
+                      ) : (
+                        <GameIcon iconType={globalData.style.icon} size="small" />
+                      )}
                     </div>
                   )}
                   <h3 className="text-white text-sm font-bold font-orbitron m-0">
