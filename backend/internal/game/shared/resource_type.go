@@ -94,11 +94,8 @@ const (
 
 	ResourceDistinctTagCount      ResourceType = "distinct-tag-count"
 	ResourceCardsWithRequirements ResourceType = "cards-with-requirements"
-	ResourceTilesOnRows           ResourceType = "tiles-on-rows"
 	ResourceMaxSingleProduction   ResourceType = "max-single-production"
 	ResourcePlayedCardTypeCount   ResourceType = "played-card-type-count"
-	ResourceCardsWithMinCost      ResourceType = "cards-with-min-cost"
-	ResourceTilesAdjacentToOcean  ResourceType = "tiles-adjacent-to-ocean"
 	ResourceTotalCardStorage      ResourceType = "total-card-storage"
 )
 

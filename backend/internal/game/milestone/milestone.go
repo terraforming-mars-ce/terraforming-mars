@@ -18,21 +18,22 @@ type MilestoneDefinition struct {
 }
 
 const (
-	RequirementKindCountable         = "countable"
-	RequirementKindAllProductionsMin = "all-productions-min"
+	RequirementKindCountable = "countable"
+	RequirementKindState     = "state"
 )
 
 // MilestoneRequirement is a discriminated union for milestone requirements.
 // The Kind field selects which sub-field is active.
 type MilestoneRequirement struct {
-	Kind              string                        `json:"kind"`
-	Countable         *CountableRequirement         `json:"countable,omitempty"`
-	AllProductionsMin *AllProductionsMinRequirement `json:"allProductionsMin,omitempty"`
+	Kind      string                `json:"kind"`
+	Countable *CountableRequirement `json:"countable,omitempty"`
+	State     *StateRequirement     `json:"state,omitempty"`
 }
 
-// AllProductionsMinRequirement requires all 6 production types to be at or above a minimum.
-type AllProductionsMinRequirement struct {
-	Min int `json:"min"`
+// StateRequirement defines a state-based requirement (e.g., all productions at minimum).
+type StateRequirement struct {
+	Type string `json:"type"`
+	Min  int    `json:"min"`
 }
 
 // CountableRequirement defines a countable threshold requirement.
@@ -65,7 +66,7 @@ func (d *MilestoneDefinition) GetRequired() int {
 				return *d.Requirement.Countable.Max
 			}
 		}
-	case RequirementKindAllProductionsMin:
+	case RequirementKindState:
 		return 6
 	}
 	return 0

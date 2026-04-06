@@ -224,7 +224,7 @@
       { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
     ],
     "quantifier": [
-      { "type": "cards-with-min-cost", "minCost": 20 }
+      { "type": "played-card-type-count", "minCost": 20 }
     ],
     "style": { "color": "#FFD700", "icon": "credit" }
   },
@@ -263,7 +263,7 @@
       { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
     ],
     "quantifier": [
-      { "type": "tiles-on-rows", "target": "self-player", "minRow": 1 }
+      { "type": "land-tile", "target": "self-player", "minRow": 1 }
     ],
     "style": { "color": "#FF9800", "icon": "tile" }
   },
@@ -282,7 +282,7 @@
       { "place": 2, "outputs": [{ "type": "vp", "amount": 2 }] }
     ],
     "quantifier": [
-      { "type": "tiles-adjacent-to-ocean", "target": "self-player" }
+      { "type": "land-tile", "target": "self-player", "adjacentToTileType": "ocean-tile" }
     ],
     "style": { "color": "#0288D1", "icon": "ocean-tile" }
   },

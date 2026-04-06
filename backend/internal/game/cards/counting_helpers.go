@@ -228,6 +228,12 @@ func CountPerCondition(
 		case shared.ResourceOceanTile:
 			return CountAllTilesOfType(b, shared.ResourceOceanTile)
 		case shared.ResourceNonOceanTile:
+			if per.MinRow != nil && per.Target != nil && *per.Target == "self-player" {
+				return countPlayerTilesOnRows(p.ID(), b, *per.MinRow)
+			}
+			if per.AdjacentToTileType != nil && per.Target != nil && *per.Target == "self-player" {
+				return countPlayerTilesAdjacentToOcean(p.ID(), b)
+			}
 			if per.Target != nil && *per.Target == "self-player" {
 				return CountPlayerNonOceanTiles(p.ID(), b)
 			}
@@ -286,29 +292,19 @@ func CountPerCondition(
 		return countCardsWithRequirements(p, cardRegistry)
 	}
 
-	// Tiles on specific rows (Polar Explorer, Desert Settler)
-	if per.ResourceType == shared.ResourceTilesOnRows && b != nil && per.MinRow != nil {
-		return countPlayerTilesOnRows(p.ID(), b, *per.MinRow)
-	}
-
 	// Max single production (Specialist: 10 of any single production)
 	if per.ResourceType == shared.ResourceMaxSingleProduction {
 		return maxSingleProduction(p)
 	}
 
-	// Played card type count (Tycoon, Legend, Magnate)
-	if per.ResourceType == shared.ResourcePlayedCardTypeCount && cardRegistry != nil && per.CardTypeFilter != nil {
-		return countPlayedCardsByType(p, cardRegistry, *per.CardTypeFilter)
-	}
-
-	// Cards with minimum cost (Celebrity: cards costing >= 20)
-	if per.ResourceType == shared.ResourceCardsWithMinCost && cardRegistry != nil && per.MinCost != nil {
-		return countCardsWithMinCost(p, cardRegistry, *per.MinCost)
-	}
-
-	// Tiles adjacent to ocean (Estate Dealer)
-	if per.ResourceType == shared.ResourceTilesAdjacentToOcean && b != nil {
-		return countPlayerTilesAdjacentToOcean(p.ID(), b)
+	// Played card type count (Tycoon, Legend, Magnate, Celebrity)
+	if per.ResourceType == shared.ResourcePlayedCardTypeCount && cardRegistry != nil {
+		if per.MinCost != nil {
+			return countCardsWithMinCost(p, cardRegistry, *per.MinCost)
+		}
+		if per.CardTypeFilter != nil {
+			return countPlayedCardsByType(p, cardRegistry, *per.CardTypeFilter)
+		}
 	}
 
 	// Total card storage (Excentric: most resources on cards)

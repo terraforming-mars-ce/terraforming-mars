@@ -16,11 +16,11 @@ func CalculateMilestoneProgress(def *milestone.MilestoneDefinition, p *player.Pl
 			return 0
 		}
 		return CountPerCondition(&req.Countable.PerCondition, "", p, b, cardRegistry, nil)
-	case milestone.RequirementKindAllProductionsMin:
-		if req.AllProductionsMin == nil {
+	case milestone.RequirementKindState:
+		if req.State == nil {
 			return 0
 		}
-		return countProductionsAtOrAbove(p, req.AllProductionsMin.Min)
+		return countProductionsAtOrAbove(p, req.State.Min)
 	default:
 		return 0
 	}
@@ -42,11 +42,11 @@ func CanClaimMilestone(def *milestone.MilestoneDefinition, p *player.Player, b *
 			return false
 		}
 		return true
-	case milestone.RequirementKindAllProductionsMin:
-		if req.AllProductionsMin == nil {
+	case milestone.RequirementKindState:
+		if req.State == nil {
 			return false
 		}
-		return countProductionsAtOrAbove(p, req.AllProductionsMin.Min) == 6
+		return countProductionsAtOrAbove(p, req.State.Min) == 6
 	default:
 		return false
 	}

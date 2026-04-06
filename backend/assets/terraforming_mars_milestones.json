@@ -112,7 +112,7 @@
     "reward": [{ "type": "vp", "amount": 5 }],
     "requirement": {
       "kind": "countable",
-      "countable": { "type": "tiles-on-rows", "target": "self-player", "minRow": 3, "min": 3 }
+      "countable": { "type": "land-tile", "target": "self-player", "minRow": 3, "min": 3 }
     },
     "style": { "color": "#00BCD4", "icon": "tile" }
   },
@@ -150,8 +150,8 @@
     "claimCost": 8,
     "reward": [{ "type": "vp", "amount": 5 }],
     "requirement": {
-      "kind": "all-productions-min",
-      "allProductionsMin": { "min": 1 }
+      "kind": "state",
+      "state": { "type": "all-production", "min": 1 }
     },
     "style": { "color": "#607D8B", "icon": "production-all" }
   },
