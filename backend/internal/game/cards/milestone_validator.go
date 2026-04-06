@@ -20,7 +20,11 @@ func CalculateMilestoneProgress(def *milestone.MilestoneDefinition, p *player.Pl
 		if req.State == nil {
 			return 0
 		}
-		return countProductionsAtOrAbove(p, req.State.Min)
+		switch req.State.Type {
+		case milestone.StateTypeAllProduction:
+			return countProductionsAtOrAbove(p, req.State.Min)
+		}
+		return 0
 	default:
 		return 0
 	}
@@ -46,7 +50,11 @@ func CanClaimMilestone(def *milestone.MilestoneDefinition, p *player.Player, b *
 		if req.State == nil {
 			return false
 		}
-		return countProductionsAtOrAbove(p, req.State.Min) == 6
+		switch req.State.Type {
+		case milestone.StateTypeAllProduction:
+			return countProductionsAtOrAbove(p, req.State.Min) == 6
+		}
+		return false
 	default:
 		return false
 	}

@@ -20,6 +20,8 @@ type MilestoneDefinition struct {
 const (
 	RequirementKindCountable = "countable"
 	RequirementKindState     = "state"
+
+	StateTypeAllProduction = "all-production"
 )
 
 // MilestoneRequirement is a discriminated union for milestone requirements.

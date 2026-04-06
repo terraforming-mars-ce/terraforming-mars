@@ -198,7 +198,8 @@ func CountPerCondition(
 	}
 
 	// Adjacent to tile type (e.g., World Tree: 1 VP per adjacent forest)
-	if per.AdjacentToTileType != nil && b != nil {
+	// Skip for land-tile — handled in the tile counting switch with dedicated logic
+	if per.AdjacentToTileType != nil && b != nil && per.ResourceType != shared.ResourceNonOceanTile {
 		return countAdjacentTilesOfType(p.ID(), b, per.ResourceType, *per.AdjacentToTileType)
 	}
 
