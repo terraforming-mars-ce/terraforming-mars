@@ -330,6 +330,17 @@ func subscribeTagPlayedEffect(
 			}
 		}
 
+		if trigger.Condition.Unique && cr != nil {
+			tag := shared.CardTag(event.Tag)
+			if tag == shared.TagWild {
+				return
+			}
+			count := gamecards.CountPlayerTagsByType(p, cr, tag)
+			if count != 1 {
+				return
+			}
+		}
+
 		log.Debug("Passive effect triggered (tag played)",
 			zap.String("card_name", effect.CardName),
 			zap.String("effect_owner", p.ID()),

@@ -499,13 +499,18 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 	}
 
 	if a.game != nil && a.player != nil && len(outputs) > 0 {
-		a.game.AddTriggeredEffect(shared.TriggeredEffect{
+		effect := shared.TriggeredEffect{
 			CardName:          a.source,
 			PlayerID:          a.player.ID(),
 			SourceType:        a.sourceType,
 			Outputs:           outputs,
 			CalculatedOutputs: notificationOutputs,
-		})
+		}
+		if a.sourceType == shared.SourceTypePassiveEffect {
+			a.game.AddOrMergeTriggeredEffect(effect)
+		} else {
+			a.game.AddTriggeredEffect(effect)
+		}
 	}
 
 	return calculatedOutputs, nil

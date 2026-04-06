@@ -454,7 +454,7 @@ func (p *CorporationProcessor) createForcedAction(
 				pl.Selection().SetPendingColonySelection(&shared.PendingColonySelection{
 					AvailableColonyIDs:         colonyIDs,
 					AllowDuplicatePlayerColony: allowDuplicate,
-					Source:                     "corporation-starting-action",
+					Source:                     "Build Colony",
 					SourceCardID:               card.ID,
 				})
 				log.Debug("Set pending colony selection for forced action",

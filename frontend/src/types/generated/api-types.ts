@@ -710,6 +710,7 @@ export interface ResourceTriggerConditionDto {
   requiredOriginalCost?: MinMaxValueDto;
   requiredResourceChange?: { [key: ResourceType]: MinMaxValueDto };
   onBonusType?: string[];
+  unique?: boolean;
 }
 /**
  * ChoicePolicySelectDto describes an auto-selection rule for a choice policy
