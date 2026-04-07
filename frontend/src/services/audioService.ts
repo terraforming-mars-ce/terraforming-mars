@@ -72,6 +72,7 @@ class AudioService {
       { key: "award-funded", path: "/sounds/award-funded.mp3", volumeMultiplier: 1.0 },
       { key: "game-start", path: "/sounds/game-start.mp3", volumeMultiplier: 1.0 },
       { key: "travel", path: "/sounds/travel.mp3", volumeMultiplier: 0.8 },
+      { key: "production-score", path: "/sounds/production-score.mp3", volumeMultiplier: 1.0 },
     ];
 
     audioFiles.forEach(({ key, path, volumeMultiplier }) => {
@@ -111,6 +112,27 @@ class AudioService {
       await audioClone.play();
     } catch (error) {
       console.warn(`Failed to play sound ${soundKey}:`, error);
+    }
+  }
+
+  public playSoundWithHandle(soundKey: string): HTMLAudioElement | null {
+    if (!this.isEnabled) {
+      return null;
+    }
+
+    const audio = this.audioCache.get(soundKey);
+    if (!audio) {
+      return null;
+    }
+
+    try {
+      const audioClone = audio.cloneNode() as HTMLAudioElement;
+      const multiplier = this.volumeMultipliers.get(soundKey) ?? 1.0;
+      audioClone.volume = this.volume * multiplier;
+      void audioClone.play();
+      return audioClone;
+    } catch {
+      return null;
     }
   }
 
@@ -168,6 +190,10 @@ class AudioService {
 
   public async playTravelSound(): Promise<void> {
     return this.playSound("travel");
+  }
+
+  public async playProductionScoreSound(): Promise<void> {
+    return this.playSound("production-score");
   }
 
   private createAmbientAudio(): HTMLAudioElement {
