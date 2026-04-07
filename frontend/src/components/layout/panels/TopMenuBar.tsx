@@ -387,7 +387,7 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     <>
       <div
         className="bg-transparent relative pointer-events-none"
-        style={{ zIndex: Z_INDEX.TOP_MENU_ALWAYS_ON_TOP }}
+        style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}
       >
         <div className="flex justify-between items-center px-2 h-[60px] max-lg:h-[50px] max-md:flex-wrap">
           <div
