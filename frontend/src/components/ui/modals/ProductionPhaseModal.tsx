@@ -5,12 +5,27 @@ import {
   OtherPlayerDto,
   PlayerDto,
   ResourceType,
+  ResourcesDto,
+  ProductionDto,
+  ResourceTypeCredit,
+  ResourceTypeSteel,
+  ResourceTypeTitanium,
+  ResourceTypePlant,
+  ResourceTypeEnergy,
+  ResourceTypeHeat,
 } from "@/types/generated/api-types.ts";
-import { RESOURCE_COLORS, RESOURCE_NAMES } from "@/utils/resourceColors.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import ProductionCardSelectionOverlay from "@/components/ui/overlay/ProductionCardSelectionOverlay.tsx";
 import GameIcon from "@/components/ui/display/GameIcon.tsx";
-import { GameModal, GameModalContent } from "../GameModal";
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
+import { audioService } from "@/services/audioService.ts";
+import {
+  OVERLAY_BACKDROP_BLUR_CLASS,
+  OVERLAY_BACKDROP_TINT_CLASS,
+  OVERLAY_HEADER_CLASS,
+  OVERLAY_TITLE_CLASS,
+} from "@/components/ui/overlay/overlayStyles.ts";
 
 interface ProductionPhaseModalProps {
   isOpen: boolean;
@@ -20,6 +35,77 @@ interface ProductionPhaseModalProps {
   openDirectlyToCardSelection?: boolean;
 }
 
+type AnimationPhase = "initial" | "energyTransfer" | "productionTransfer" | "final";
+
+const RESOURCE_KEYS: { key: ResourceType; resField: keyof ResourcesDto }[] = [
+  { key: "credit", resField: "credits" },
+  { key: "steel", resField: "steel" },
+  { key: "titanium", resField: "titanium" },
+  { key: "plant", resField: "plants" },
+  { key: "energy", resField: "energy" },
+  { key: "heat", resField: "heat" },
+];
+
+const RESOURCE_ICON_TYPES: Record<string, string> = {
+  credit: ResourceTypeCredit,
+  steel: ResourceTypeSteel,
+  titanium: ResourceTypeTitanium,
+  plant: ResourceTypePlant,
+  energy: ResourceTypeEnergy,
+  heat: ResourceTypeHeat,
+};
+
+const ENERGY_INDEX = RESOURCE_KEYS.findIndex(({ key }) => key === "energy");
+
+const PHASE_INITIAL_DELAY = 1000;
+const COUNTER_DURATION = 1500;
+const PHASE_FADE_BUFFER = 200;
+const PHASE_PAUSE_BETWEEN = 500;
+
+function useCounterAnimation(
+  startValue: number,
+  endValue: number,
+  active: boolean,
+  durationMs: number = COUNTER_DURATION,
+): { value: number; done: boolean } {
+  const [displayValue, setDisplayValue] = useState(startValue);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!active) {
+      setDisplayValue(startValue);
+      setDone(false);
+      return;
+    }
+
+    const delta = endValue - startValue;
+    if (delta === 0) {
+      setDisplayValue(endValue);
+      setDone(true);
+      return;
+    }
+
+    setDone(false);
+    const steps = Math.abs(delta);
+    const interval = durationMs / steps;
+    const direction = delta > 0 ? 1 : -1;
+    let current = startValue;
+
+    const timer = setInterval(() => {
+      current += direction;
+      setDisplayValue(current);
+      if (current === endValue) {
+        clearInterval(timer);
+        setDone(true);
+      }
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [startValue, endValue, active, durationMs]);
+
+  return { value: displayValue, done };
+}
+
 const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   isOpen,
   gameState,
@@ -27,22 +113,48 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   onHide,
   openDirectlyToCardSelection = false,
 }) => {
+  const soundHandlesRef = useRef<HTMLAudioElement[]>([]);
   const [hasSubmittedCardSelection, setHasSubmittedCardSelection] = useState(false);
   const persistedSelectionRef = useRef<string[]>([]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [animationStep, setAnimationStep] = useState<"energyConversion" | "production">(
-    "energyConversion",
-  );
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [resourceAnimationState, setResourceAnimationState] = useState<
-    "initial" | "fadeInResources" | "showProduction" | "fadeOut" | "fadeIn"
-  >("initial");
-  const [energyAnimationState, setEnergyAnimationState] = useState<
-    "initial" | "fadeOut" | "fadeIn"
-  >("initial");
+  const [animationPhase, setAnimationPhase] = useState<AnimationPhase>("final");
   const [showCardSelection, setShowCardSelection] = useState(false);
   const prevSelectionCompleteRef = useRef<boolean | undefined>(undefined);
   const prevIsOpenRef = useRef(false);
+  const animationPlayedRef = useRef(false);
+  const animationTimersRef = useRef<NodeJS.Timeout[]>([]);
+
+  const stopAllSounds = useCallback(() => {
+    for (const handle of soundHandlesRef.current) {
+      handle.pause();
+      handle.currentTime = 0;
+    }
+    soundHandlesRef.current = [];
+  }, []);
+
+  const playScoreSound = useCallback(() => {
+    const handle = audioService.playSoundWithHandle("production-score");
+    if (handle) {
+      soundHandlesRef.current.push(handle);
+    }
+  }, []);
+
+  const clearAnimationTimers = useCallback(() => {
+    for (const t of animationTimersRef.current) {
+      clearTimeout(t);
+    }
+    animationTimersRef.current = [];
+    stopAllSounds();
+  }, [stopAllSounds]);
+
+  // Clean up sounds on unmount
+  useEffect(() => {
+    return () => {
+      for (const handle of soundHandlesRef.current) {
+        handle.pause();
+      }
+    };
+  }, []);
 
   const handleCardSelection = useCallback(
     async (selectedCardIds: string[]) => {
@@ -61,12 +173,16 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   const isLastRound = gameState?.isLastRound ?? false;
 
   const handleNextClick = useCallback(() => {
+    clearAnimationTimers();
+    animationPlayedRef.current = true;
+    setAnimationPhase("final");
+
     if (isLastRound) {
       void handleCardSelection([]);
     } else {
       setShowCardSelection(true);
     }
-  }, [isLastRound, handleCardSelection]);
+  }, [isLastRound, handleCardSelection, clearAnimationTimers]);
 
   const handleReturnFromCardSelection = useCallback(() => {
     if (onHide) {
@@ -87,6 +203,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
       setHasSubmittedCardSelection(false);
       setShowCardSelection(openDirectlyToCardSelection);
       persistedSelectionRef.current = [];
+      animationPlayedRef.current = false;
     }
 
     prevSelectionCompleteRef.current = selectionComplete;
@@ -115,25 +232,14 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
 
     const playersData = playersWithProduction.map((player) => {
       const productionPhase = player.productionPhase as ProductionPhaseDto;
-      if ("cards" in player) {
-        const currentPlayer = player as PlayerDto;
-        return {
-          playerId: currentPlayer.id,
-          playerName: currentPlayer.name,
-          production: currentPlayer.production,
-          terraformRating: currentPlayer.terraformRating,
-          ...productionPhase,
-        };
-      } else {
-        const otherPlayer = player as OtherPlayerDto;
-        return {
-          playerId: otherPlayer.id,
-          playerName: otherPlayer.name,
-          production: otherPlayer.production,
-          terraformRating: otherPlayer.terraformRating,
-          ...productionPhase,
-        };
-      }
+      return {
+        playerId: player.id,
+        playerName: player.name,
+        playerColor: player.color,
+        production: player.production,
+        terraformRating: player.terraformRating,
+        ...productionPhase,
+      };
     });
 
     return {
@@ -142,115 +248,89 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
     };
   }, [gameState]);
 
-  const resourceNames = RESOURCE_NAMES;
-
   useEffect(() => {
-    if (modalProductionData && modalProductionData.playersData.length > 0) {
-      const currentPlayerData = modalProductionData.playersData[currentPlayerIndex];
-      const hasEnergyToConvert = currentPlayerData.energyConverted > 0;
-
-      if (hasEnergyToConvert) {
-        setAnimationStep("energyConversion");
-      } else {
-        setAnimationStep("production");
-      }
+    if (!isOpen || !modalProductionData || animationPlayedRef.current) {
+      return;
     }
-  }, [modalProductionData, currentPlayerIndex]);
 
-  useEffect(() => {
-    if (!isAnimating) return;
+    const currentPlayerData = modalProductionData.playersData[0];
+    const hasEnergyToConvert = currentPlayerData && currentPlayerData.energyConverted > 0;
 
-    const timer = setTimeout(
-      () => {
-        if (animationStep === "energyConversion") {
-          setAnimationStep("production");
-        } else {
-          setIsAnimating(false);
-        }
-      },
-      animationStep === "energyConversion" ? 4500 : 4000,
-    );
+    setAnimationPhase("initial");
 
-    return () => clearTimeout(timer);
-  }, [currentPlayerIndex, animationStep, isAnimating]);
+    const timers: NodeJS.Timeout[] = [];
+
+    const energyPhaseDuration = COUNTER_DURATION + PHASE_FADE_BUFFER;
+    const productionPhaseDuration = COUNTER_DURATION + PHASE_FADE_BUFFER;
+
+    const t1 = setTimeout(() => {
+      if (hasEnergyToConvert) {
+        setAnimationPhase("energyTransfer");
+        playScoreSound();
+      } else {
+        setAnimationPhase("productionTransfer");
+        playScoreSound();
+      }
+    }, PHASE_INITIAL_DELAY);
+    timers.push(t1);
+
+    const stopAfterPhase1 = setTimeout(() => {
+      stopAllSounds();
+    }, PHASE_INITIAL_DELAY + COUNTER_DURATION);
+    timers.push(stopAfterPhase1);
+
+    const t2Delay = hasEnergyToConvert
+      ? PHASE_INITIAL_DELAY + energyPhaseDuration + PHASE_PAUSE_BETWEEN
+      : PHASE_INITIAL_DELAY;
+
+    if (hasEnergyToConvert) {
+      const t2 = setTimeout(() => {
+        setAnimationPhase("productionTransfer");
+        playScoreSound();
+      }, t2Delay);
+      timers.push(t2);
+
+      const stopAfterPhase2 = setTimeout(() => {
+        stopAllSounds();
+      }, t2Delay + COUNTER_DURATION);
+      timers.push(stopAfterPhase2);
+    }
+
+    const t3 = setTimeout(() => {
+      setAnimationPhase("final");
+      animationPlayedRef.current = true;
+    }, t2Delay + productionPhaseDuration);
+    timers.push(t3);
+
+    animationTimersRef.current = timers;
+
+    return () => {
+      for (const t of timers) {
+        clearTimeout(t);
+      }
+    };
+  }, [isOpen, modalProductionData, playScoreSound, stopAllSounds]);
 
   const handlePlayerSelect = (playerIndex: number) => {
-    if (playerIndex !== currentPlayerIndex && modalProductionData) {
-      setCurrentPlayerIndex(playerIndex);
-
-      const playerData = modalProductionData.playersData[playerIndex];
-      const hasEnergyToConvert = playerData.energyConverted > 0;
-
-      if (hasEnergyToConvert) {
-        setAnimationStep("energyConversion");
-      } else {
-        setAnimationStep("production");
-      }
-
-      setIsAnimating(true);
-      setResourceAnimationState("initial");
-      setEnergyAnimationState("initial");
+    if (playerIndex === currentPlayerIndex) {
+      return;
     }
+
+    if (!animationPlayedRef.current) {
+      clearAnimationTimers();
+      animationPlayedRef.current = true;
+      setAnimationPhase("final");
+    }
+
+    setCurrentPlayerIndex(playerIndex);
   };
 
   useEffect(() => {
-    if (!isAnimating || animationStep !== "energyConversion") return;
-
-    let timeoutId: NodeJS.Timeout;
-
-    if (energyAnimationState === "initial") {
-      timeoutId = setTimeout(() => {
-        setEnergyAnimationState("fadeOut");
-      }, 2000);
-    } else if (energyAnimationState === "fadeOut") {
-      timeoutId = setTimeout(() => {
-        setEnergyAnimationState("fadeIn");
-      }, 400);
+    if (!isOpen) {
+      return;
     }
-
-    return () => clearTimeout(timeoutId);
-  }, [energyAnimationState, animationStep, isAnimating]);
-
-  useEffect(() => {
-    if (!isOpen) return;
     setCurrentPlayerIndex(0);
-    setAnimationStep("energyConversion");
-    setIsAnimating(true);
-    setResourceAnimationState("initial");
-    setEnergyAnimationState("initial");
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!isAnimating || animationStep !== "production") return;
-
-    let timeoutId: NodeJS.Timeout;
-
-    if (resourceAnimationState === "initial") {
-      timeoutId = setTimeout(() => {
-        setResourceAnimationState("fadeInResources");
-      }, 500);
-    } else if (resourceAnimationState === "fadeInResources") {
-      timeoutId = setTimeout(() => {
-        setResourceAnimationState("showProduction");
-      }, 500);
-    } else if (resourceAnimationState === "showProduction") {
-      timeoutId = setTimeout(() => {
-        setResourceAnimationState("fadeOut");
-      }, 1500);
-    } else if (resourceAnimationState === "fadeOut") {
-      timeoutId = setTimeout(() => {
-        setResourceAnimationState("fadeIn");
-      }, 400);
-    }
-
-    return () => clearTimeout(timeoutId);
-  }, [resourceAnimationState, animationStep, isAnimating]);
-
-  useEffect(() => {
-    if (animationStep === "production") {
-      setResourceAnimationState("initial");
-    }
-  }, [currentPlayerIndex, animationStep]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -267,331 +347,95 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
     return () => {};
   }, [isOpen, hasSubmittedCardSelection, showCardSelection, handleNextClick]);
 
-  if (!isOpen) return null;
-  if (!modalProductionData) return null;
+  if (!isOpen) {
+    return null;
+  }
+  if (!modalProductionData) {
+    return null;
+  }
 
   const currentPlayerData = modalProductionData.playersData[currentPlayerIndex];
-  if (!currentPlayerData) return null;
+  if (!currentPlayerData) {
+    return null;
+  }
 
-  const renderResourceAnimation = (
-    resourceType: ResourceType,
-    beforeAmount: number,
-    afterAmount: number,
-  ) => {
-    let displayBeforeAmount = beforeAmount;
-    let displayAfterAmount = afterAmount;
-    let change = afterAmount - beforeAmount;
-    let shouldAnimate;
-
-    if (animationStep === "energyConversion") {
-      if (resourceType === "energy") {
-        displayBeforeAmount = currentPlayerData.beforeResources.energy;
-        displayAfterAmount = 0;
-        change = -currentPlayerData.beforeResources.energy;
-        shouldAnimate = true;
-      } else if (resourceType === "heat") {
-        displayBeforeAmount = currentPlayerData.beforeResources.heat;
-        displayAfterAmount =
-          currentPlayerData.beforeResources.heat + currentPlayerData.energyConverted;
-        change = currentPlayerData.energyConverted;
-        shouldAnimate = true;
-      } else {
-        shouldAnimate = false;
-      }
-    } else {
-      if (resourceType === "energy") {
-        displayBeforeAmount = 0;
-        displayAfterAmount = currentPlayerData.production.energy;
-        change = currentPlayerData.production.energy;
-        shouldAnimate =
-          change !== 0 &&
-          resourceAnimationState !== "initial" &&
-          resourceAnimationState !== "fadeInResources" &&
-          resourceAnimationState !== "showProduction";
-      } else if (resourceType === "heat") {
-        displayBeforeAmount =
-          currentPlayerData.beforeResources.heat + currentPlayerData.energyConverted;
-        displayAfterAmount = currentPlayerData.afterResources.heat;
-        change = displayAfterAmount - displayBeforeAmount;
-        shouldAnimate =
-          change !== 0 &&
-          resourceAnimationState !== "initial" &&
-          resourceAnimationState !== "fadeInResources" &&
-          resourceAnimationState !== "showProduction";
-      } else {
-        shouldAnimate =
-          change !== 0 &&
-          resourceAnimationState !== "initial" &&
-          resourceAnimationState !== "fadeInResources" &&
-          resourceAnimationState !== "showProduction";
-      }
-    }
-
-    const getAnimationStateClass = () => {
-      switch (resourceAnimationState) {
-        case "initial":
-          return "";
-        case "fadeOut":
-          return "[&_.beforeAmount]:animate-[fadeOutAnimation_0.4s_ease-out_forwards] [&_.changeIndicator]:animate-[fadeOutAnimation_0.4s_ease-out_forwards]";
-        case "fadeIn":
-          return "[&_.finalValue]:text-white [&_.finalValue]:[text-shadow:0_1px_3px_rgba(0,0,0,0.8)] [&_.finalValue]:animate-[fadeInAnimation_0.3s_ease-out_forwards]";
-        default:
-          return "";
-      }
-    };
-
-    const renderAmounts = () => {
-      if (
-        animationStep === "production" &&
-        (resourceAnimationState === "initial" || resourceAnimationState === "fadeInResources")
-      ) {
-        return (
-          <div className="flex items-center justify-center gap-2 mb-2 text-base font-bold relative min-h-[24px]">
-            <div
-              className={`beforeAmount text-white/70 ${displayBeforeAmount < 0 ? "!text-red-500 [text-shadow:0_1px_3px_rgba(0,0,0,0.8),0_0_8px_#ef4444]" : ""}`}
-            >
-              {displayBeforeAmount}
-            </div>
-          </div>
-        );
-      }
-
-      if (
-        animationStep === "production" &&
-        resourceAnimationState === "showProduction" &&
-        change !== 0
-      ) {
-        return (
-          <div className="flex items-center justify-center gap-2 mb-2 text-base font-bold relative min-h-[24px]">
-            <div
-              className={`beforeAmount text-white/70 ${displayBeforeAmount < 0 ? "!text-red-500 [text-shadow:0_1px_3px_rgba(0,0,0,0.8),0_0_8px_#ef4444]" : ""}`}
-            >
-              {displayBeforeAmount}
-            </div>
-            <div
-              className={`changeIndicator text-sm font-bold text-green-400 [text-shadow:0_0_10px_#4ade80] animate-[fadeInUp_0.5s_ease-out_0.5s_both] ${change < 0 ? "!text-red-500 ![text-shadow:0_0_10px_#ef4444]" : ""}`}
-            >
-              {change > 0 ? `+${change}` : change}
-            </div>
-          </div>
-        );
-      }
-
-      if (animationStep === "energyConversion" && shouldAnimate) {
-        if (energyAnimationState === "fadeIn") {
-          return (
-            <div className="flex items-center justify-center gap-2 mb-2 text-base font-bold relative min-h-[24px] [&_.finalValue]:text-white [&_.finalValue]:[text-shadow:0_1px_3px_rgba(0,0,0,0.8)] [&_.finalValue]:animate-[fadeInAnimation_0.3s_ease-out_forwards]">
-              <div
-                className={`finalValue text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] ${displayAfterAmount < 0 ? "!text-red-500 ![text-shadow:0_1px_3px_rgba(0,0,0,0.8),0_0_8px_#ef4444]" : ""}`}
-              >
-                {displayAfterAmount}
-              </div>
-            </div>
-          );
-        } else if (energyAnimationState === "fadeOut") {
-          return (
-            <div className="flex items-center justify-center gap-2 mb-2 text-base font-bold relative min-h-[24px] [&_.beforeAmount]:animate-[fadeOutAnimation_0.4s_ease-out_forwards] [&_.changeIndicator]:animate-[fadeOutAnimation_0.4s_ease-out_forwards]">
-              <div
-                className={`beforeAmount text-white/70 ${displayBeforeAmount < 0 ? "!text-red-500 [text-shadow:0_1px_3px_rgba(0,0,0,0.8),0_0_8px_#ef4444]" : ""}`}
-              >
-                {displayBeforeAmount}
-              </div>
-              <div
-                className={`changeIndicator text-sm font-bold text-green-400 [text-shadow:0_0_10px_#4ade80] ${change < 0 ? "!text-red-500 ![text-shadow:0_0_10px_#ef4444]" : ""}`}
-              >
-                {change > 0 ? `+${change}` : change}
-              </div>
-            </div>
-          );
-        } else {
-          return (
-            <div className="flex items-center justify-center gap-2 mb-2 text-base font-bold relative min-h-[24px]">
-              <div
-                className={`beforeAmount text-white/70 ${displayBeforeAmount < 0 ? "!text-red-500 [text-shadow:0_1px_3px_rgba(0,0,0,0.8),0_0_8px_#ef4444]" : ""}`}
-              >
-                {displayBeforeAmount}
-              </div>
-              <div
-                className={`changeIndicator text-sm font-bold text-green-400 [text-shadow:0_0_10px_#4ade80] ${change < 0 ? "!text-red-500 ![text-shadow:0_0_10px_#ef4444]" : ""}`}
-              >
-                {change > 0 ? `+${change}` : change}
-              </div>
-            </div>
-          );
-        }
-      }
-
-      if (!shouldAnimate) {
-        return (
-          <div className="flex items-center justify-center gap-2 mb-2 text-base font-bold relative min-h-[24px]">
-            <div
-              className={`beforeAmount text-white/70 ${displayBeforeAmount < 0 ? "!text-red-500 [text-shadow:0_1px_3px_rgba(0,0,0,0.8),0_0_8px_#ef4444]" : ""}`}
-            >
-              {displayBeforeAmount}
-            </div>
-          </div>
-        );
-      }
-
-      if (resourceAnimationState === "fadeIn") {
-        return (
-          <div
-            className={`flex items-center justify-center gap-2 mb-2 text-base font-bold relative min-h-[24px] ${getAnimationStateClass()}`}
-          >
-            <div
-              className={`finalValue text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] ${displayAfterAmount < 0 ? "!text-red-500 ![text-shadow:0_1px_3px_rgba(0,0,0,0.8),0_0_8px_#ef4444]" : ""}`}
-            >
-              {displayAfterAmount}
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <div
-          className={`flex items-center justify-center gap-2 mb-2 text-base font-bold relative min-h-[24px] ${getAnimationStateClass()}`}
-        >
-          <div className="beforeAmount text-white/70">{displayBeforeAmount}</div>
-          <div
-            className={`changeIndicator text-sm font-bold text-green-400 [text-shadow:0_0_10px_#4ade80] ${change < 0 ? "!text-red-500 ![text-shadow:0_0_10px_#ef4444]" : ""}`}
-          >
-            {change > 0 ? `+${change}` : change}
-          </div>
-        </div>
-      );
-    };
-
-    return (
-      <div
-        key={resourceType}
-        className={`bg-[linear-gradient(135deg,rgba(0,0,0,0.4)_0%,rgba(0,0,0,0.2)_100%)] border-2 border-[var(--resource-color,rgba(255,255,255,0.2))] rounded-xl p-5 text-center transition-all duration-300 relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:bottom-0 before:bg-[var(--resource-color,transparent)] before:opacity-10 before:pointer-events-none ${shouldAnimate ? "!border-[var(--resource-color,#00d4ff)] scale-[1.02]" : ""} ${
-          (animationStep === "energyConversion" && !shouldAnimate) ||
-          (animationStep === "production" &&
-            resourceAnimationState === "initial" &&
-            !shouldAnimate &&
-            resourceType !== "energy" &&
-            resourceType !== "heat")
-            ? "opacity-30"
-            : ""
-        } ${
-          animationStep === "energyConversion" &&
-          resourceType === "energy" &&
-          energyAnimationState === "initial"
-            ? "[&_.resourceIcon_img]:animate-[energyShake_0.1s_ease-in-out_infinite_alternate,energyGlow_2s_ease-in-out_infinite_alternate] [&_.resourceIcon_img]:[filter:drop-shadow(0_0_15px_#ef4444)_drop-shadow(0_0_30px_#ef4444)]"
-            : ""
-        }`}
-        style={
-          {
-            "--resource-color": RESOURCE_COLORS[resourceType],
-          } as React.CSSProperties
-        }
-      >
-        <div className="resourceIcon mb-3 flex justify-center">
-          <GameIcon iconType={resourceType} size="medium" />
-        </div>
-        {renderAmounts()}
-        <div className="text-xs text-white/80 uppercase font-semibold tracking-[0.5px]">
-          {resourceNames[resourceType]}
-        </div>
-      </div>
-    );
-  };
-
-  const renderProductionPhase = () => {
-    return (
-      <div className="w-full">
-        <div className="grid grid-cols-3 gap-5 mb-5">
-          {renderResourceAnimation(
-            "credit" as ResourceType,
-            currentPlayerData.beforeResources.credits,
-            currentPlayerData.afterResources.credits,
-          )}
-          {renderResourceAnimation(
-            "steel" as ResourceType,
-            currentPlayerData.beforeResources.steel,
-            currentPlayerData.afterResources.steel,
-          )}
-          {renderResourceAnimation(
-            "titanium" as ResourceType,
-            currentPlayerData.beforeResources.titanium,
-            currentPlayerData.afterResources.titanium,
-          )}
-          {renderResourceAnimation(
-            "plant" as ResourceType,
-            currentPlayerData.beforeResources.plants,
-            currentPlayerData.afterResources.plants,
-          )}
-          {renderResourceAnimation(
-            "energy" as ResourceType,
-            currentPlayerData.beforeResources.energy,
-            currentPlayerData.afterResources.energy,
-          )}
-          {renderResourceAnimation(
-            "heat" as ResourceType,
-            currentPlayerData.beforeResources.heat,
-            currentPlayerData.afterResources.heat,
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const nextButton =
-    !hasSubmittedCardSelection && !showCardSelection ? (
-      <button
-        className="ml-5 flex-shrink-0 bg-[linear-gradient(135deg,rgba(30,60,150,0.8)_0%,rgba(20,40,120,0.9)_100%)] border-2 border-space-blue-400 rounded-full text-white text-[32px] font-bold w-[60px] h-[60px] cursor-pointer transition-all duration-300 text-shadow-dark shadow-[0_4px_15px_rgba(0,0,0,0.4)] flex items-center justify-center p-0 hover:bg-[linear-gradient(135deg,rgba(40,70,160,0.9)_0%,rgba(30,50,130,1)_100%)] hover:border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-95 active:shadow-[0_2px_10px_rgba(0,0,0,0.3)]"
-        onClick={handleNextClick}
-      >
-        →
-      </button>
-    ) : null;
+  const effectivePhase: AnimationPhase = currentPlayerIndex === 0 ? animationPhase : "final";
 
   return (
     <>
-      <GameModal
-        isVisible={isOpen && !showCardSelection}
-        onClose={() => {}}
-        theme="production"
-        size="medium"
-        preventClose
-        closeOnBackdrop={false}
-        closeOnEscape={false}
-        className="!max-w-[800px] !min-w-[600px]"
-        outerContent={nextButton}
-      >
-        <div className="text-center py-[30px] px-[30px] pb-5 bg-black/40 border-b border-[var(--modal-accent)]/60 relative">
-          <h2 className="text-[28px] font-orbitron text-white font-bold text-shadow-glow tracking-wider m-0 mb-2">
-            Production
-          </h2>
-          <div className="text-base text-[var(--modal-accent)] font-semibold text-shadow-dark">
-            Generation {modalProductionData.generation}
+      {isOpen && !showCardSelection && (
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+        >
+          <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
+          <div className={OVERLAY_BACKDROP_TINT_CLASS} />
+
+          <div className="relative z-[1]">
+            <div className="max-w-[1050px] min-w-[850px] flex flex-col bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_60px_rgba(30,60,150,0.5)]">
+              <div className={OVERLAY_HEADER_CLASS}>
+                <h2 className={`${OVERLAY_TITLE_CLASS} text-center`}>Production</h2>
+                <p className="mt-2 mb-0 text-base text-white/60 text-center">
+                  Generation {modalProductionData.generation}
+                </p>
+              </div>
+
+              {modalProductionData.playersData.length > 1 && (
+                <div className="flex justify-center gap-3 px-8 py-4">
+                  {modalProductionData.playersData.map((player, index) => (
+                    <GameButton
+                      key={player.playerId}
+                      buttonType="secondary"
+                      size="sm"
+                      className={
+                        index === currentPlayerIndex
+                          ? "!bg-space-blue-400/20 !border-space-blue-400 !text-white shadow-[0_0_15px_rgba(30,60,150,0.4)]"
+                          : "!opacity-60"
+                      }
+                      onClick={() => handlePlayerSelect(index)}
+                    >
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0"
+                        style={{ backgroundColor: player.playerColor }}
+                      />
+                      {player.playerName}
+                    </GameButton>
+                  ))}
+                </div>
+              )}
+
+              <div className="px-8 pt-2 pb-14">
+                <ResourceGrid playerData={currentPlayerData} animationPhase={effectivePhase} />
+              </div>
+            </div>
+
+            {!hasSubmittedCardSelection && !showCardSelection && (
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-5">
+                <GameButton
+                  buttonType="secondary"
+                  size="lg"
+                  onClick={handleNextClick}
+                  className="whitespace-nowrap"
+                >
+                  Buy cards
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    className="inline-block ml-2"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="m15.06 5.283l5.657 5.657a1.5 1.5 0 0 1 0 2.12l-5.656 5.658a1.5 1.5 0 0 1-2.122-2.122l3.096-3.096H4.5a1.5 1.5 0 0 1 0-3h11.535L12.94 7.404a1.5 1.5 0 0 1 2.122-2.121Z"
+                    />
+                  </svg>
+                </GameButton>
+              </div>
+            )}
           </div>
         </div>
-
-        {modalProductionData.playersData.length > 1 && (
-          <div className="flex justify-center gap-3 p-5 border-b border-[var(--modal-accent)]/30">
-            {modalProductionData.playersData.map((player, index) => (
-              <button
-                key={player.playerId}
-                className={`bg-space-black-darker/60 border-2 border-[var(--modal-accent)]/40 rounded-lg text-white/80 text-sm font-semibold py-2 px-4 cursor-pointer transition-all duration-300 text-shadow-dark hover:border-[var(--modal-accent)]/60 hover:text-white/90 hover:-translate-y-px ${
-                  index === currentPlayerIndex
-                    ? "!bg-[var(--modal-accent)]/20 !border-[var(--modal-accent)] !text-white shadow-[0_0_15px_rgba(var(--modal-accent-rgb),0.4)]"
-                    : ""
-                }`}
-                onClick={() => handlePlayerSelect(index)}
-              >
-                {player.playerName}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <GameModalContent padding="large">
-          <div className="min-h-[300px] flex items-center justify-center">
-            {renderProductionPhase()}
-          </div>
-        </GameModalContent>
-      </GameModal>
+      )}
 
       {showCardSelection && (
         <ProductionCardSelectionOverlay
@@ -611,6 +455,258 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
         />
       )}
     </>
+  );
+};
+
+interface ResourceGridProps {
+  playerData: {
+    beforeResources: ResourcesDto;
+    afterResources: ResourcesDto;
+    production: ProductionDto;
+    energyConverted: number;
+    creditsIncome: number;
+    terraformRating: number;
+  };
+  animationPhase: AnimationPhase;
+}
+
+const ResourceGrid: React.FC<ResourceGridProps> = ({ playerData, animationPhase }) => {
+  const { beforeResources, afterResources, production, energyConverted } = playerData;
+
+  const isEnergyPhaseActive = animationPhase === "energyTransfer";
+  const hasEnergy = beforeResources.energy > 0;
+  const shouldAnimateEnergyTransfer = isEnergyPhaseActive && hasEnergy && energyConverted > 0;
+
+  const energyDrainCounter = useCounterAnimation(
+    beforeResources.energy,
+    0,
+    shouldAnimateEnergyTransfer,
+  );
+  const energyTransferDone = energyDrainCounter.done;
+
+  const getResourceValues = (resField: keyof ResourcesDto, key: ResourceType) => {
+    const beforeVal = beforeResources[resField];
+
+    let afterEnergyVal: number;
+    if (key === "energy") {
+      afterEnergyVal = 0;
+    } else if (key === "heat") {
+      afterEnergyVal = beforeResources.heat + energyConverted;
+    } else {
+      afterEnergyVal = beforeVal;
+    }
+
+    const afterProdVal = afterResources[resField];
+
+    return { beforeVal, afterEnergyVal, afterProdVal };
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-2 py-4 scale-125 my-4">
+      <div className="flex items-start justify-center gap-3 relative">
+        {RESOURCE_KEYS.map(({ key, resField }, index) => {
+          const { beforeVal, afterEnergyVal, afterProdVal } = getResourceValues(resField, key);
+          const prodVal = production[resField];
+
+          const startForEnergy = beforeVal;
+          const endForEnergy = afterEnergyVal;
+
+          const startForProduction =
+            key === "energy" ? 0 : key === "heat" ? afterEnergyVal : beforeVal;
+          const endForProduction = afterProdVal;
+
+          return (
+            <React.Fragment key={key}>
+              <div className="relative">
+                <ResourceColumn
+                  resourceKey={key}
+                  productionValue={prodVal}
+                  startForEnergy={startForEnergy}
+                  endForEnergy={endForEnergy}
+                  startForProduction={startForProduction}
+                  endForProduction={endForProduction}
+                  animationPhase={animationPhase}
+                  energyConverted={energyConverted}
+                  terraformRating={key === "credit" ? playerData.terraformRating : undefined}
+                />
+                {key === "energy" && (
+                  <EnergyToHeatArrows active={shouldAnimateEnergyTransfer && !energyTransferDone} />
+                )}
+              </div>
+              {index < RESOURCE_KEYS.length - 1 && (
+                <div
+                  className={`w-[1px] h-[90px] self-center mt-2 transition-opacity duration-300 ${index === ENERGY_INDEX && shouldAnimateEnergyTransfer && !energyTransferDone ? "opacity-0" : ""}`}
+                  style={{
+                    background: "linear-gradient(transparent, rgba(60,60,70,0.8), transparent)",
+                  }}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+interface ResourceColumnProps {
+  resourceKey: ResourceType;
+  productionValue: number;
+  startForEnergy: number;
+  endForEnergy: number;
+  startForProduction: number;
+  endForProduction: number;
+  animationPhase: AnimationPhase;
+  energyConverted: number;
+  terraformRating?: number;
+}
+
+const ResourceColumn: React.FC<ResourceColumnProps> = ({
+  resourceKey,
+  productionValue,
+  startForEnergy,
+  endForEnergy,
+  startForProduction,
+  endForProduction,
+  animationPhase,
+  energyConverted,
+  terraformRating,
+}) => {
+  const isEnergyPhaseActive = animationPhase === "energyTransfer";
+  const isProductionPhaseActive = animationPhase === "productionTransfer";
+
+  const isEnergyResource = resourceKey === "energy" || resourceKey === "heat";
+  const shouldAnimateEnergy = isEnergyPhaseActive && isEnergyResource && energyConverted > 0;
+  const shouldAnimateProduction =
+    isProductionPhaseActive && endForProduction - startForProduction !== 0;
+
+  const energyCounter = useCounterAnimation(startForEnergy, endForEnergy, shouldAnimateEnergy);
+
+  const productionCounter = useCounterAnimation(
+    startForProduction,
+    endForProduction,
+    shouldAnimateProduction,
+  );
+
+  const getDisplayedResourceValue = (): number => {
+    if (animationPhase === "initial") {
+      return startForEnergy;
+    }
+    if (animationPhase === "energyTransfer") {
+      if (shouldAnimateEnergy) {
+        return energyCounter.value;
+      }
+      return startForEnergy;
+    }
+    if (animationPhase === "productionTransfer") {
+      if (shouldAnimateProduction) {
+        return productionCounter.value;
+      }
+      return startForProduction;
+    }
+    return endForProduction;
+  };
+
+  const displayedValue = getDisplayedResourceValue();
+
+  const isDimmedDuringEnergy = isEnergyPhaseActive && !isEnergyResource;
+
+  const hasProdDelta = endForProduction - startForProduction !== 0;
+  const showDownArrows = isProductionPhaseActive && hasProdDelta && !productionCounter.done;
+
+  const prodBadgeLift =
+    animationPhase === "productionTransfer" && hasProdDelta && !productionCounter.done
+      ? "-translate-y-2"
+      : "";
+
+  return (
+    <div
+      className={`flex flex-col items-center gap-0 px-3 py-2 min-w-[70px] transition-opacity duration-300 ${
+        isDimmedDuringEnergy ? "opacity-30" : "opacity-100"
+      }`}
+    >
+      <div className="relative">
+        {resourceKey === "credit" && terraformRating !== undefined && (
+          <div
+            className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-0.5 inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(80,80,120,0.5)_0%,rgba(60,60,100,0.45)_100%)] border border-[rgba(100,100,160,0.6)] py-0.5 w-[36px] transition-transform duration-500 ease-in-out ${prodBadgeLift}`}
+          >
+            <span className="text-[10px] font-bold font-orbitron text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none tabular-nums">
+              {terraformRating}
+            </span>
+          </div>
+        )}
+        <div
+          className={`inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.5)_0%,rgba(139,89,42,0.45)_100%)] border border-[rgba(160,110,60,0.6)] px-3 py-0.5 w-[36px] transition-transform duration-500 ease-in-out ${prodBadgeLift}`}
+        >
+          <span className="text-[11px] font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none tabular-nums">
+            {productionValue}
+          </span>
+        </div>
+      </div>
+
+      <div
+        className={`h-[20px] flex items-center justify-center overflow-hidden transition-transform duration-500 ease-in-out ${showDownArrows ? "-translate-y-1" : ""}`}
+      >
+        {showDownArrows && <VerticalArrows />}
+      </div>
+
+      <div className="flex flex-col items-center gap-0.5">
+        {resourceKey === "credit" ? (
+          <div className="flex items-center gap-1 w-[60px] justify-center scale-110">
+            <GameIcon iconType={ResourceTypeCredit} amount={displayedValue} size="small" />
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 w-[60px] justify-center scale-[0.85]">
+            <GameIcon iconType={RESOURCE_ICON_TYPES[resourceKey]} size="small" />
+            <span className="text-sm font-bold font-orbitron text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] tabular-nums min-w-[32px] text-left">
+              {displayedValue}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const VerticalArrows: React.FC = () => {
+  return (
+    <div className="flex flex-col items-center leading-none overflow-hidden h-[20px] w-[16px] relative">
+      <span className="text-[10px] text-white/80 font-bold absolute left-1/2 -translate-x-1/2 top-0 animate-[slideDown_0.6s_linear_infinite]">
+        ▼
+      </span>
+      <span className="text-[10px] text-white/50 font-bold absolute left-1/2 -translate-x-1/2 top-0 animate-[slideDown_0.6s_linear_0.2s_infinite]">
+        ▼
+      </span>
+      <span className="text-[10px] text-white/30 font-bold absolute left-1/2 -translate-x-1/2 top-0 animate-[slideDown_0.6s_linear_0.4s_infinite]">
+        ▼
+      </span>
+    </div>
+  );
+};
+
+interface EnergyToHeatArrowsProps {
+  active: boolean;
+}
+
+const EnergyToHeatArrows: React.FC<EnergyToHeatArrowsProps> = ({ active }) => {
+  return (
+    <div
+      className={`absolute right-0 translate-x-[100%] bottom-[13px] w-[30px] overflow-hidden transition-opacity duration-500 pointer-events-none ${
+        active ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      <div className="relative h-[16px] w-[30px] overflow-hidden">
+        <span className="text-[10px] text-white/80 font-bold absolute top-1/2 -translate-y-1/2 left-0 animate-[slideRight_0.6s_linear_infinite]">
+          ▶
+        </span>
+        <span className="text-[10px] text-white/50 font-bold absolute top-1/2 -translate-y-1/2 left-0 animate-[slideRight_0.6s_linear_0.2s_infinite]">
+          ▶
+        </span>
+        <span className="text-[10px] text-white/30 font-bold absolute top-1/2 -translate-y-1/2 left-0 animate-[slideRight_0.6s_linear_0.4s_infinite]">
+          ▶
+        </span>
+      </div>
+    </div>
   );
 };
 

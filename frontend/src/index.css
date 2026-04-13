@@ -414,14 +414,37 @@ code {
   }
 }
 
-@keyframes fadeOutAnimation {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
+@keyframes slideDown {
+  0% {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(-12px);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes slideRight {
+  0% {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(24px);
   }
 }
 
@@ -444,35 +467,6 @@ code {
   to {
     opacity: 0;
     transform: translateY(-50%) translateX(30px);
-  }
-}
-
-@keyframes fadeInAnimation {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes energyShake {
-  0% {
-    transform: translateX(-0.5px) rotate(-0.2deg);
-  }
-  100% {
-    transform: translateX(0.5px) rotate(0.2deg);
-  }
-}
-
-@keyframes energyGlow {
-  0% {
-    filter: drop-shadow(0 0 10px #ef4444) drop-shadow(0 0 20px #ef4444);
-  }
-  100% {
-    filter: drop-shadow(0 0 20px #ef4444) drop-shadow(0 0 40px #ef4444);
   }
 }
 
