@@ -383,13 +383,15 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
               {modalProductionData.playersData.length > 1 && (
                 <div className="flex justify-center gap-3 px-8 py-4">
                   {modalProductionData.playersData.map((player, index) => (
-                    <button
+                    <GameButton
                       key={player.playerId}
-                      className={`bg-space-black-darker/60 border-2 border-space-blue-400/40 rounded-lg text-white/80 text-sm font-semibold py-2 px-4 cursor-pointer transition-all duration-300 text-shadow-dark hover:border-space-blue-400/60 hover:text-white/90 hover:-translate-y-px ${
+                      buttonType="secondary"
+                      size="sm"
+                      className={
                         index === currentPlayerIndex
                           ? "!bg-space-blue-400/20 !border-space-blue-400 !text-white shadow-[0_0_15px_rgba(30,60,150,0.4)]"
-                          : ""
-                      }`}
+                          : "!opacity-60"
+                      }
                       onClick={() => handlePlayerSelect(index)}
                     >
                       <span
@@ -397,7 +399,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
                         style={{ backgroundColor: player.playerColor }}
                       />
                       {player.playerName}
-                    </button>
+                    </GameButton>
                   ))}
                 </div>
               )}
@@ -642,7 +644,9 @@ const ResourceColumn: React.FC<ResourceColumnProps> = ({
         </div>
       </div>
 
-      <div className="h-[20px] flex items-center justify-center overflow-hidden">
+      <div
+        className={`h-[20px] flex items-center justify-center overflow-hidden transition-transform duration-500 ease-in-out ${showDownArrows ? "-translate-y-1" : ""}`}
+      >
         {showDownArrows && <VerticalArrows />}
       </div>
 
