@@ -178,6 +178,11 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 		if currentInitPlayerID != "" {
 			hasPendingTiles = g.GetPendingTileSelection(currentInitPlayerID) != nil ||
 				g.GetPendingTileSelectionQueue(currentInitPlayerID) != nil
+			if !hasPendingTiles {
+				if initPlayer, err := g.GetPlayer(currentInitPlayerID); err == nil {
+					hasPendingTiles = initPlayer.Selection().GetPendingColonySelection() != nil
+				}
+			}
 		}
 
 		initPhaseDto = &InitPhaseDto{
