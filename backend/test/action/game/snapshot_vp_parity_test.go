@@ -3,6 +3,7 @@ package game_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/game/datastore"
@@ -45,6 +46,9 @@ func TestSnapshotEnricher_ParityWithFinalScoring(t *testing.T) {
 	expected := gameaction.ComputePlayerVPBreakdowns(g, cardRegistry, awardRegistry, milestoneRegistry)
 	testutil.AssertTrue(t, expected != nil, "ComputePlayerVPBreakdowns should produce a result")
 
+	// Enrichment runs asynchronously, so wait for the goroutine before reading.
+	repo.DataStore().WaitForPendingEnrichments()
+
 	history, err := repo.DataStore().GetGameHistory(g.ID())
 	testutil.AssertNoError(t, err, "GetGameHistory")
 	testutil.AssertTrue(t, len(history) > 0, "History should have at least one entry")
@@ -64,4 +68,41 @@ func TestSnapshotEnricher_ParityWithFinalScoring(t *testing.T) {
 	winnerVP := expected[playerIDs[0]].AwardVP
 	loserVP := expected[playerIDs[1]].AwardVP
 	testutil.AssertTrue(t, winnerVP > loserVP, "Player with more heat should outscore on Thermalist")
+}
+
+// TestSnapshotEnricher_NoDeadlockUnderGameLock asserts that the enricher does
+// not deadlock when invoked from inside a state mutation that holds the live
+// game's lock. AddPlayer holds g.mu.Lock() across an internal g.update() call;
+// if the enricher ran inline in appendHistory it would try to RLock the same
+// mutex via g.GetAllPlayers() and deadlock.
+func TestSnapshotEnricher_NoDeadlockUnderGameLock(t *testing.T) {
+	g, repo, cardRegistry, _ := testutil.SetupMultiPlayerGame(t, 2)
+	ctx := context.Background()
+	awardRegistry := testutil.CreateTestAwardRegistry()
+	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
+
+	repo.DataStore().SetSnapshotEnricher(func(state *datastore.GameState) map[string]shared.VPBreakdown {
+		live, err := repo.Get(ctx, state.ID)
+		if err != nil || live == nil {
+			return nil
+		}
+		return gameaction.ComputePlayerVPBreakdowns(live, cardRegistry, awardRegistry, milestoneRegistry)
+	})
+
+	// AddNewPlayer holds g.mu.Lock() during its internal g.update() — the case
+	// that triggered the deadlock in production.
+	done := make(chan error, 1)
+	go func() {
+		_, err := g.AddNewPlayer(ctx, "p3", "Third Player")
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		testutil.AssertNoError(t, err, "AddNewPlayer should not error")
+	case <-time.After(2 * time.Second):
+		t.Fatal("AddNewPlayer deadlocked — the enricher likely ran inline and hit g.mu")
+	}
+
+	repo.DataStore().WaitForPendingEnrichments()
 }

@@ -22,6 +22,7 @@ type DataStore struct {
 	historySeqMu    sync.Mutex
 	historySequence map[string]int64 // per-game sequence counter
 	enricher        SnapshotEnricher
+	enricherWG      sync.WaitGroup
 }
 
 func NewDataStore() (*DataStore, error) {
@@ -39,6 +40,13 @@ func NewDataStore() (*DataStore, error) {
 // Pass nil to disable enrichment.
 func (ds *DataStore) SetSnapshotEnricher(fn SnapshotEnricher) {
 	ds.enricher = fn
+}
+
+// WaitForPendingEnrichments blocks until all in-flight enrichment goroutines
+// have completed. Tests can use this to read history entries that include
+// VPBreakdowns deterministically.
+func (ds *DataStore) WaitForPendingEnrichments() {
+	ds.enricherWG.Wait()
 }
 
 func (ds *DataStore) GetGame(gameID string) (*GameState, error) {
@@ -114,21 +122,63 @@ func (ds *DataStore) appendHistory(state *GameState) {
 	seq := ds.historySequence[state.ID]
 	ds.historySeqMu.Unlock()
 
-	var vpBreakdowns map[string]shared.VPBreakdown
-	if ds.enricher != nil {
-		vpBreakdowns = ds.enricher(state)
-	}
-
 	entry := &GameStateHistoryEntry{
-		GameID:       state.ID,
-		Sequence:     seq,
-		Timestamp:    time.Now(),
-		State:        copied,
-		VPBreakdowns: vpBreakdowns,
+		GameID:    state.ID,
+		Sequence:  seq,
+		Timestamp: time.Now(),
+		State:     copied,
 	}
 
 	htxn := ds.db.Txn(true)
 	_ = htxn.Insert("game_history", entry)
+	htxn.Commit()
+
+	// Enrichment runs asynchronously: callers of UpdateGame frequently hold
+	// game-level locks (e.g. game.mu), and the enricher reads live game state
+	// via *Game accessors that need the same lock — running it inline would
+	// deadlock. The history entry is updated in place once enrichment completes.
+	if ds.enricher != nil {
+		ds.enricherWG.Add(1)
+		go ds.enrichEntry(state.ID, seq)
+	}
+}
+
+func (ds *DataStore) enrichEntry(gameID string, seq int64) {
+	defer ds.enricherWG.Done()
+
+	snapshot, err := ds.GetGame(gameID)
+	if err != nil || snapshot == nil {
+		return
+	}
+	breakdowns := ds.enricher(snapshot)
+	if breakdowns == nil {
+		return
+	}
+
+	entryID := fmt.Sprintf("%s:%012d", gameID, seq)
+
+	htxn := ds.db.Txn(true)
+	defer htxn.Abort()
+
+	raw, err := htxn.First("game_history", "id", entryID)
+	if err != nil || raw == nil {
+		return
+	}
+	original, ok := raw.(*GameStateHistoryEntry)
+	if !ok {
+		return
+	}
+
+	updated := &GameStateHistoryEntry{
+		GameID:       original.GameID,
+		Sequence:     original.Sequence,
+		Timestamp:    original.Timestamp,
+		State:        original.State,
+		VPBreakdowns: breakdowns,
+	}
+	if err := htxn.Insert("game_history", updated); err != nil {
+		return
+	}
 	htxn.Commit()
 }
 
