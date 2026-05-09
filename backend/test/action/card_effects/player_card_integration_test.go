@@ -9,6 +9,7 @@ import (
 	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/player"
@@ -27,7 +28,7 @@ func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
 	ds, _ := datastore.NewDataStore()
-	g := game.NewGame(ds, "test-game", "player1", settings)
+	g := game.NewGame(ds, "test-game", "player1", settings, board.GenerateMarsBoard(false))
 
 	// Add player
 	ctx := context.Background()
@@ -126,7 +127,7 @@ func TestPlayerCard_ResourceChangeEventUpdate(t *testing.T) {
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
 	ds, _ := datastore.NewDataStore()
-	g := game.NewGame(ds, "test-game", "player1", settings)
+	g := game.NewGame(ds, "test-game", "player1", settings, board.GenerateMarsBoard(false))
 
 	// Add player
 	ctx := context.Background()
@@ -216,7 +217,7 @@ func TestPlayerCard_PhaseChangeEventUpdate(t *testing.T) {
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
 	ds, _ := datastore.NewDataStore()
-	g := game.NewGame(ds, "test-game", "player1", settings)
+	g := game.NewGame(ds, "test-game", "player1", settings, board.GenerateMarsBoard(false))
 
 	// Add player
 	ctx := context.Background()
@@ -306,7 +307,7 @@ func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
 	ds, _ := datastore.NewDataStore()
-	g := game.NewGame(ds, "test-game", "player1", settings)
+	g := game.NewGame(ds, "test-game", "player1", settings, board.GenerateMarsBoard(false))
 
 	// Add player
 	ctx := context.Background()
@@ -402,7 +403,7 @@ func TestPlayerCard_MultipleCardsIndependentState(t *testing.T) {
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
 	ds, _ := datastore.NewDataStore()
-	g := game.NewGame(ds, "test-game", "player1", settings)
+	g := game.NewGame(ds, "test-game", "player1", settings, board.GenerateMarsBoard(false))
 
 	// Add player
 	ctx := context.Background()

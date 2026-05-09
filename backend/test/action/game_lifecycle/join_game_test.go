@@ -6,6 +6,7 @@ import (
 
 	gameAction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -123,7 +124,7 @@ func TestJoinGameAction_MaxPlayersReached(t *testing.T) {
 	}
 
 	ds, _ := datastore.NewDataStore()
-	testGame := game.NewGame(ds, "test-game", "", settings)
+	testGame := game.NewGame(ds, "test-game", "", settings, board.GenerateMarsBoard(false))
 	testutil.AssertNoError(t, repo.Create(context.Background(), testGame), "create game in repo")
 
 	// Add 2 players

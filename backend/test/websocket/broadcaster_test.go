@@ -8,6 +8,7 @@ import (
 
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -304,7 +305,7 @@ func TestBroadcaster_GameStateChanges(t *testing.T) {
 
 	ds, err := datastore.NewDataStore()
 	testutil.AssertNoError(t, err, "create datastore")
-	testGame := game.NewGame(ds, "test-game", "", settings)
+	testGame := game.NewGame(ds, "test-game", "", settings, board.GenerateMarsBoard(false))
 	ctx := context.Background()
 
 	// Trigger state change

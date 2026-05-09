@@ -15,10 +15,12 @@ import (
 	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
+	"terraforming-mars-backend/internal/maps"
 	"terraforming-mars-backend/internal/milestones"
 )
 
@@ -131,7 +133,7 @@ func CreateTestGameWithPlayers(t *testing.T, numPlayers int, broadcaster *MockBr
 		CardPacks:  []string{"base-game"},
 	}
 
-	testGame := game.NewGame(repo.DataStore(), "test-game-id", "", settings)
+	testGame := game.NewGame(repo.DataStore(), "test-game-id", "", settings, board.GenerateMarsBoard(false))
 	allCards := cardRegistry.GetAll()
 
 	// Separate cards by type
@@ -196,7 +198,7 @@ func CreateTestGameWithVenus(t *testing.T, numPlayers int, broadcaster *MockBroa
 		VenusNextEnabled: true,
 	}
 
-	testGame := game.NewGame(repo.DataStore(), "test-game-id", "", settings)
+	testGame := game.NewGame(repo.DataStore(), "test-game-id", "", settings, board.GenerateMarsBoard(settings.VenusNextEnabled))
 	allCards := cardRegistry.GetAll()
 
 	projectCards := make([]string, 0)
@@ -301,3 +303,14 @@ func TagPtr(v shared.CardTag) *shared.CardTag { return &v }
 
 // ResourceTypePtr returns a pointer to the given ResourceType value.
 func ResourceTypePtr(v shared.ResourceType) *shared.ResourceType { return &v }
+
+// CreateTestMapRegistry returns a MapRegistry loaded from the JSON database.
+func CreateTestMapRegistry() *maps.MapRegistry {
+	_, currentFile, _, _ := runtime.Caller(0)
+	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "terraforming_mars_maps.json")
+	registry, err := maps.LoadMapsFromJSON(jsonPath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load map DB for tests: %v", err))
+	}
+	return registry
+}

@@ -8,6 +8,7 @@ import (
 	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -25,7 +26,7 @@ func setupGenerationalEventsTestEnvironment(t *testing.T) (*game.Game, *player.P
 		DevelopmentMode: true,
 	}
 	ds, _ := datastore.NewDataStore()
-	g := game.NewGame(ds, "test-game", "player1", settings)
+	g := game.NewGame(ds, "test-game", "player1", settings, board.GenerateMarsBoard(false))
 
 	ctx := context.Background()
 	p, err := g.AddNewPlayer(ctx, "player1", "Test Player")
