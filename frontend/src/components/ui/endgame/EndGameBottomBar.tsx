@@ -6,6 +6,7 @@ import { useVPCounting } from "../../../contexts/VPCountingContext";
 import GameGraphs from "./GameGraphs.tsx";
 import ReplayControls from "./ReplayControls.tsx";
 import VPPhaseTabsOverlay from "./VPPhaseTabsOverlay.tsx";
+import BackButton from "../buttons/BackButton.tsx";
 
 const ANGLE_INDENT = 14;
 const BUTTON_HEIGHT = 32;
@@ -158,6 +159,7 @@ interface EndGameBottomBarProps {
   playerId: string;
   historyEntries?: GameHistoryEntryDto[];
   activePanel: "score" | "graphs" | "replay";
+  onPanelChange?: (panel: "score" | "graphs" | "replay") => void;
   isReplayActive?: boolean;
   replayIndex?: number;
   replayTotal?: number;
@@ -178,6 +180,7 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
   playerId,
   historyEntries,
   activePanel,
+  onPanelChange,
   isReplayActive,
   replayIndex,
   replayTotal,
@@ -193,6 +196,19 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
   onReplaySpectatePlayerChange,
 }) => {
   const { state: vpState, controls: vpControls } = useVPCounting();
+
+  useEffect(() => {
+    if (activePanel !== "graphs" || !onPanelChange) {
+      return;
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onPanelChange("score");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activePanel, onPanelChange]);
 
   const allScores = game.finalScores ?? [];
   const sortedScores = [...allScores].sort((a, b) => b.vpBreakdown.totalVP - a.vpBreakdown.totalVP);
@@ -298,6 +314,11 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
         }`}
         style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
+        {onPanelChange && (
+          <div className="absolute top-4 left-4 z-10">
+            <BackButton onClick={() => onPanelChange("score")}>Back to Score</BackButton>
+          </div>
+        )}
         {historyEntries && (
           <div className="w-[90%]" style={{ height: "90vh" }}>
             <GameGraphs
