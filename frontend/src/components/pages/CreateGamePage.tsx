@@ -58,12 +58,14 @@ const CreateGamePage: React.FC = () => {
       // Step 1: Create game
       const gameSettings: GameSettingsDto = {
         maxPlayers: maxPlayers,
+        mapId: "tharsis",
         venusNextEnabled: venusNextEnabled,
         developmentMode: developmentMode,
         cardPacks: selectedPacks,
         demoGame: demoGame,
         hasClaudeApiKey: !!claudeApiKey.trim(),
         availablePlayerColors: [],
+        availableMaps: [],
       };
 
       const game = await apiService.createGame(gameSettings, claudeApiKey.trim() || undefined);
