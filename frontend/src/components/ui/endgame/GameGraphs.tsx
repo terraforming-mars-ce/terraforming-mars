@@ -12,9 +12,9 @@ import type { GameHistoryEntryDto } from "../../../types/generated/api-types";
 import { useHoverSound } from "../../../hooks/useHoverSound";
 
 type GraphMode =
+  | "score"
   | "terraforming"
   | "global-params"
-  | "vp"
   | "tr"
   | "greeneries"
   | "cities"
@@ -29,9 +29,9 @@ type GraphMode =
   | "resource-value";
 
 const GRAPH_MODE_LABELS: Record<GraphMode, string> = {
+  score: "Score",
   "global-params": "Global Parameters",
   terraforming: "Terraforming",
-  vp: "VP",
   tr: "TR",
   greeneries: "Greeneries",
   cities: "Cities",
@@ -87,6 +87,13 @@ const GLOBAL_PARAM_LINES: { key: string; color: string; label: string }[] = [
   { key: "venus", color: "#f59e0b", label: "Venus" },
 ];
 
+const GLOBAL_PARAM_RAW_FIELDS: Record<string, { rawKey: string; unit: string }> = {
+  Temperature: { rawKey: "temperatureRaw", unit: "°C" },
+  Oxygen: { rawKey: "oxygenRaw", unit: "%" },
+  Oceans: { rawKey: "oceansRaw", unit: "" },
+  Venus: { rawKey: "venusRaw", unit: "%" },
+};
+
 const TOOLTIP_STYLE: React.CSSProperties = {
   backgroundColor: "rgba(10,10,15,0.95)",
   border: "1px solid rgba(255,255,255,0.2)",
@@ -98,9 +105,10 @@ interface CustomTooltipProps {
   active?: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: Array<{ name: string; value: number; color: string; payload?: any }>;
+  formatValue?: (entry: { name: string; value: number; payload?: unknown }) => string;
 }
 
-const CustomTooltip: FC<CustomTooltipProps> = ({ active, payload }) => {
+const CustomTooltip: FC<CustomTooltipProps> = ({ active, payload, formatValue }) => {
   if (!active || !payload?.length) {
     return null;
   }
@@ -122,12 +130,27 @@ const CustomTooltip: FC<CustomTooltipProps> = ({ active, payload }) => {
       {payload.map((entry, i) => (
         <div key={i} className="flex items-center gap-2 text-sm" style={{ minWidth: 100 }}>
           <span style={{ color: entry.color }}>{entry.name}</span>
-          <span className="ml-auto text-white tabular-nums">{entry.value}</span>
+          <span className="ml-auto text-white tabular-nums">
+            {formatValue ? formatValue(entry) : entry.value}
+          </span>
         </div>
       ))}
     </div>
   );
 };
+
+function formatGlobalParamValue(entry: { name: string; value: number; payload?: unknown }): string {
+  const meta = GLOBAL_PARAM_RAW_FIELDS[entry.name];
+  const pct = `${Math.round(entry.value)}%`;
+  if (!meta || !entry.payload || typeof entry.payload !== "object") {
+    return pct;
+  }
+  const raw = (entry.payload as Record<string, unknown>)[meta.rawKey];
+  if (typeof raw !== "number") {
+    return pct;
+  }
+  return `${pct} (${raw}${meta.unit})`;
+}
 
 const TICK_STYLE = { fill: "rgba(255,255,255,0.8)", fontSize: 13 };
 
@@ -197,7 +220,7 @@ function GraphModeDropdown({
 type XAxisMode = "action" | "time";
 
 const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames }) => {
-  const [mode, setMode] = useState<GraphMode>("global-params");
+  const [mode, setMode] = useState<GraphMode>("score");
   const [xAxisMode, setXAxisMode] = useState<XAxisMode>("action");
   const hoverSound = useHoverSound();
 
@@ -334,10 +357,14 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
         idx: i,
         generation: e.generation,
         offsetMs: addOffsetMs(e),
-        temperature: e.temperature,
-        oxygen: e.oxygen,
-        oceans: e.oceans,
-        venus: e.venus,
+        temperature: ((e.temperature + 30) / 38) * 100,
+        oxygen: (e.oxygen / 14) * 100,
+        oceans: (e.oceans / 9) * 100,
+        venus: (e.venus / 30) * 100,
+        temperatureRaw: e.temperature,
+        oxygenRaw: e.oxygen,
+        oceansRaw: e.oceans,
+        venusRaw: e.venus,
       })),
     [sampledEntries, startTime],
   );
@@ -345,7 +372,7 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
   const multiPlayerData = useMemo(() => {
     const getValueFn = (m: GraphMode): ((e: GameHistoryEntryDto, pid: string) => number) => {
       switch (m) {
-        case "vp":
+        case "score":
           return (e, pid) => e.players[pid]?.totalVP ?? 0;
         case "tr":
           return (e, pid) => e.players[pid]?.terraformRating ?? 0;
@@ -487,8 +514,19 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
                   domain={[0, sampledEntries.length - 1]}
                 />
               )}
-              <YAxis {...Y_AXIS_PROPS} />
-              <Tooltip content={<CustomTooltip />} isAnimationActive={false} />
+              {mode === "global-params" ? (
+                <YAxis {...Y_AXIS_PROPS} domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
+              ) : (
+                <YAxis {...Y_AXIS_PROPS} />
+              )}
+              <Tooltip
+                content={
+                  <CustomTooltip
+                    formatValue={mode === "global-params" ? formatGlobalParamValue : undefined}
+                  />
+                }
+                isAnimationActive={false}
+              />
               {fixedLinesConfig.map(({ key, color, label }) => (
                 <Line
                   key={key}

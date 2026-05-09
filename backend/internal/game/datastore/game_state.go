@@ -82,10 +82,11 @@ type GameState struct {
 
 // GameStateHistoryEntry stores a full GameState snapshot at a point in time.
 type GameStateHistoryEntry struct {
-	GameID    string
-	Sequence  int64
-	Timestamp time.Time
-	State     *GameState
+	GameID       string
+	Sequence     int64
+	Timestamp    time.Time
+	State        *GameState
+	VPBreakdowns map[string]shared.VPBreakdown
 }
 
 // PlayerState holds a single player's data.

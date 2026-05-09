@@ -11,11 +11,17 @@ import (
 	"terraforming-mars-backend/internal/game/shared"
 )
 
+// SnapshotEnricher computes per-player VP breakdowns for a snapshot, using the live
+// game state at the moment the snapshot is recorded. The map is stored on the history
+// entry so the history mapper doesn't need to reimplement scoring logic.
+type SnapshotEnricher func(state *GameState) map[string]shared.VPBreakdown
+
 // DataStore is the single source of truth for all game data.
 type DataStore struct {
 	db              *memdb.MemDB
 	historySeqMu    sync.Mutex
 	historySequence map[string]int64 // per-game sequence counter
+	enricher        SnapshotEnricher
 }
 
 func NewDataStore() (*DataStore, error) {
@@ -27,6 +33,12 @@ func NewDataStore() (*DataStore, error) {
 		db:              db,
 		historySequence: make(map[string]int64),
 	}, nil
+}
+
+// SetSnapshotEnricher registers a callback invoked for each history append.
+// Pass nil to disable enrichment.
+func (ds *DataStore) SetSnapshotEnricher(fn SnapshotEnricher) {
+	ds.enricher = fn
 }
 
 func (ds *DataStore) GetGame(gameID string) (*GameState, error) {
@@ -102,11 +114,17 @@ func (ds *DataStore) appendHistory(state *GameState) {
 	seq := ds.historySequence[state.ID]
 	ds.historySeqMu.Unlock()
 
+	var vpBreakdowns map[string]shared.VPBreakdown
+	if ds.enricher != nil {
+		vpBreakdowns = ds.enricher(state)
+	}
+
 	entry := &GameStateHistoryEntry{
-		GameID:    state.ID,
-		Sequence:  seq,
-		Timestamp: time.Now(),
-		State:     copied,
+		GameID:       state.ID,
+		Sequence:     seq,
+		Timestamp:    time.Now(),
+		State:        copied,
+		VPBreakdowns: vpBreakdowns,
 	}
 
 	htxn := ds.db.Txn(true)
