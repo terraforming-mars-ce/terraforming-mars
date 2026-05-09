@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/google/uuid"
@@ -10,12 +11,14 @@ import (
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/maps"
 )
 
 // CreateGameAction handles the business logic for creating new games
 type CreateGameAction struct {
 	gameRepo     game.GameRepository
 	cardRegistry cards.CardRegistry
+	mapRegistry  *maps.MapRegistry
 	logger       *zap.Logger
 }
 
@@ -23,11 +26,13 @@ type CreateGameAction struct {
 func NewCreateGameAction(
 	gameRepo game.GameRepository,
 	cardRegistry cards.CardRegistry,
+	mapRegistry *maps.MapRegistry,
 	logger *zap.Logger,
 ) *CreateGameAction {
 	return &CreateGameAction{
 		gameRepo:     gameRepo,
 		cardRegistry: cardRegistry,
+		mapRegistry:  mapRegistry,
 		logger:       logger,
 	}
 }
@@ -50,6 +55,9 @@ func (a *CreateGameAction) Execute(
 	if settings.MaxPlayers == 0 {
 		settings.MaxPlayers = game.DefaultMaxPlayers
 	}
+	if settings.MapID == "" {
+		settings.MapID = maps.DefaultMapID()
+	}
 	if len(settings.CardPacks) == 0 {
 		settings.CardPacks = shared.DefaultCardPacks()
 	}
@@ -57,11 +65,15 @@ func (a *CreateGameAction) Execute(
 		settings.CardPacks = append(settings.CardPacks, shared.PackVenus)
 	}
 
-	// 3. Create game entity
-	// Note: hostPlayerID is empty initially, will be set when first player joins
-	// Board is automatically created by NewGame
-	// EventBus is created per-game for synchronous event handling
-	newGame := game.NewGame(a.gameRepo.DataStore(), gameID, "", settings)
+	// 3. Generate board tiles from selected map
+	mapDef, ok := a.mapRegistry.GetMap(settings.MapID)
+	if !ok {
+		return nil, fmt.Errorf("unknown map: %s", settings.MapID)
+	}
+	initialTiles := maps.GenerateBoardFromMap(mapDef, settings.VenusNextEnabled)
+
+	// 4. Create game entity
+	newGame := game.NewGame(a.gameRepo.DataStore(), gameID, "", settings, initialTiles)
 
 	// 4. Initialize deck with cards from selected packs
 	projectCardIDs, corpIDs, preludeIDs := cards.GetCardIDsByPacks(a.cardRegistry, settings.CardPacks)

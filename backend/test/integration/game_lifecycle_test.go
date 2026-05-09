@@ -21,7 +21,7 @@ func TestGameLifecycle_CreateJoinStartPlay(t *testing.T) {
 	ctx := context.Background()
 
 	// Create actions
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, nil, nil, logger)
 
@@ -92,7 +92,7 @@ func TestGameLifecycle_MultipleGames(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Create 3 games
@@ -135,7 +135,7 @@ func TestGameLifecycle_PlayerReconnection(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Create game
@@ -167,7 +167,7 @@ func TestGameLifecycle_SoloMode(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, nil, nil, logger)
 
@@ -203,7 +203,7 @@ func TestGameLifecycle_GameStateConsistency(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 	joinAction := gameAction.NewJoinGameAction(repo, cardRegistry, logger)
 
 	// Create game
