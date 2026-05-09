@@ -71,6 +71,7 @@ const (
 	MessageTypeEndGame        MessageType = "end-game"
 	MessageTypeGameEnded      MessageType = "game-ended"
 
+	MessageTypeUpdateGameMap         MessageType = "update-game-map"
 	MessageTypeSetPlayerColor        MessageType = "set-player-color"
 	MessageTypeSpectatorConnect      MessageType = "spectator-connect"
 	MessageTypeSpectatorConnected    MessageType = "spectator-connected"
