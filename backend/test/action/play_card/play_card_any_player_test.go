@@ -93,6 +93,92 @@ func TestPlayCardAction_AsteroidSoloMode_SkipsTargetPlayer(t *testing.T) {
 	testutil.AssertEqual(t, 2, resources.Titanium, "Player should have gained 2 titanium")
 }
 
+func TestPlayCardAction_AsteroidEmptyTargetID_SkipsAnyPlayer(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	cardRegistry := testutil.CreateTestCardRegistry()
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	asteroidID := testutil.CardID("Asteroid")
+	corpID := testutil.CardID("Tharsis Republic")
+
+	players := testGame.GetAllPlayers()
+	attacker := players[0]
+	target := players[1]
+	attacker.SetCorporationID(corpID)
+	target.SetCorporationID(corpID)
+
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
+
+	attacker.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+		shared.ResourcePlant:  4,
+	})
+	attacker.Hand().AddCard(asteroidID)
+
+	target.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourcePlant: 5,
+	})
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 14}
+	emptyTargetID := ""
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &emptyTargetID, nil)
+	testutil.AssertNoError(t, err, "Failed to play Asteroid with empty target ID")
+
+	// Empty target ID should skip the any-player effect; nobody loses plants
+	testutil.AssertEqual(t, 5, target.Resources().Get().Plants, "Target plants should be unchanged when target ID is empty")
+	testutil.AssertEqual(t, 4, attacker.Resources().Get().Plants, "Attacker plants should be unchanged when target ID is empty")
+
+	// Other outputs (e.g., +2 titanium) should still apply
+	testutil.AssertEqual(t, 2, attacker.Resources().Get().Titanium, "Attacker should have gained 2 titanium")
+}
+
+func TestPlayCardAction_HiredRaidersEmptyTargetID_SkipsSteal(t *testing.T) {
+	broadcaster := testutil.NewMockBroadcaster()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	cardRegistry := testutil.CreateTestCardRegistry()
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+
+	hiredRaidersID := testutil.CardID("Hired Raiders")
+	corpID := testutil.CardID("Tharsis Republic")
+
+	players := testGame.GetAllPlayers()
+	attacker := players[0]
+	target := players[1]
+	attacker.SetCorporationID(corpID)
+	target.SetCorporationID(corpID)
+
+	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
+	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, attacker.ID(), 2), "set current turn")
+
+	attacker.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceCredit: 100,
+		shared.ResourceSteel:  2,
+	})
+	attacker.Hand().AddCard(hiredRaidersID)
+
+	target.Resources().Add(map[shared.ResourceType]int{
+		shared.ResourceSteel: 5,
+	})
+
+	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
+	payment := cardAction.PaymentRequest{Credits: 1}
+	choiceIndex := 0
+	emptyTargetID := ""
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), hiredRaidersID, payment, &choiceIndex, nil, &emptyTargetID, nil)
+	testutil.AssertNoError(t, err, "Failed to play Hired Raiders with empty target ID")
+
+	// Empty target ID should skip the steal effect on both sides
+	testutil.AssertEqual(t, 5, target.Resources().Get().Steel, "Target steel should be unchanged when target ID is empty")
+	testutil.AssertEqual(t, 2, attacker.Resources().Get().Steel, "Attacker should not gain steel when target ID is empty")
+}
+
 func TestPlayCardAction_AsteroidPartialRemoval(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
