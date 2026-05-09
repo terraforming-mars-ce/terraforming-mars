@@ -32,6 +32,7 @@ const (
 // GameSettings contains configurable game parameters
 type GameSettings struct {
 	MaxPlayers         int
+	MapID              string
 	Temperature        *int
 	Oxygen             *int
 	Oceans             *int
