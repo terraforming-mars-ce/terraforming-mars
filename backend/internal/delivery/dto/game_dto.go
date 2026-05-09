@@ -526,18 +526,38 @@ type ProductionPhaseOtherPlayerDto struct {
 
 // GameSettingsDto contains configurable game parameters
 type GameSettingsDto struct {
-	MaxPlayers            int      `json:"maxPlayers"`
-	VenusNextEnabled      bool     `json:"venusNextEnabled"`
-	DevelopmentMode       bool     `json:"developmentMode"`
-	DemoGame              bool     `json:"demoGame"`
-	CardPacks             []string `json:"cardPacks,omitempty"`
-	HasClaudeAPIKey       bool     `json:"hasClaudeApiKey"`
-	ClaudeModel           string   `json:"claudeModel,omitempty"`
-	AvailablePlayerColors []string `json:"availablePlayerColors"`
-	Temperature           *int     `json:"temperature,omitempty"`
-	Oxygen                *int     `json:"oxygen,omitempty"`
-	Oceans                *int     `json:"oceans,omitempty"`
-	Generation            *int     `json:"generation,omitempty"`
+	MaxPlayers            int          `json:"maxPlayers"`
+	MapID                 string       `json:"mapId"`
+	VenusNextEnabled      bool         `json:"venusNextEnabled"`
+	DevelopmentMode       bool         `json:"developmentMode"`
+	DemoGame              bool         `json:"demoGame"`
+	CardPacks             []string     `json:"cardPacks,omitempty"`
+	HasClaudeAPIKey       bool         `json:"hasClaudeApiKey"`
+	ClaudeModel           string       `json:"claudeModel,omitempty"`
+	AvailablePlayerColors []string     `json:"availablePlayerColors"`
+	AvailableMaps         []MapInfoDto `json:"availableMaps"`
+	Temperature           *int         `json:"temperature,omitempty"`
+	Oxygen                *int         `json:"oxygen,omitempty"`
+	Oceans                *int         `json:"oceans,omitempty"`
+	Generation            *int         `json:"generation,omitempty"`
+}
+
+// MapInfoDto contains basic map info for the frontend
+type MapInfoDto struct {
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Tiles       []MapPreviewTile `json:"tiles"`
+}
+
+// MapPreviewTile contains minimal tile data for map preview
+type MapPreviewTile struct {
+	Q        int      `json:"q"`
+	R        int      `json:"r"`
+	S        int      `json:"s"`
+	Type     string   `json:"type"`
+	Volcanic bool     `json:"volcanic,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
 }
 
 // PendingDemoChoicesDto contains a player's demo lobby card selections
