@@ -1,0 +1,862 @@
+[
+  {
+    "id": "tharsis",
+    "name": "Tharsis",
+    "description": "The original map with four volcanic sites and the Noctis City region.",
+    "rows": [
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "ocean"}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "steel", "amount": 1}], "displayName": "Tharsis Tholus"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "card-draw", "amount": 2}]}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "card-draw", "amount": 1}], "displayName": "Ascraeus Mons"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "plant", "amount": 1}, {"type": "titanium", "amount": 1}], "displayName": "Pavonis Mons"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "plant", "amount": 2}], "displayName": "Arsia Mons"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}], "tags": ["noctis-city"], "displayName": "Noctis City"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "titanium", "amount": 2}]}
+      ]
+    ]
+  },
+  {
+    "id": "hellas",
+    "name": "Hellas",
+    "description": "The southern polar region around the great Hellas basin. Heat bonuses near the pole, plants along the equator.",
+    "rows": [
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "card-draw", "amount": 1}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "heat", "amount": 3}]},
+        {"type": "ocean"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "ocean"},
+        {"type": "ocean", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "titanium", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "ocean-placement", "amount": 1}, {"type": "credit", "amount": -6}]},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land"}
+      ]
+    ]
+  },
+  {
+    "id": "elysium",
+    "name": "Elysium",
+    "description": "Western lowlands with wide ocean channels and four volcanic sites including Olympus Mons.",
+    "rows": [
+      [
+        {"type": "ocean"},
+        {"type": "ocean", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "ocean"},
+        {"type": "ocean"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "titanium", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean"},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "card-draw", "amount": 3}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "steel", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 3}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "plant", "amount": 1}, {"type": "titanium", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]}
+      ]
+    ]
+  },
+  {
+    "id": "arabia-terra",
+    "name": "Arabia Terra",
+    "description": "Cratered highlands with cove tiles serving as dual land/ocean spaces. Rich in data and science bonuses.",
+    "rows": [
+      [
+        {"type": "ocean"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "card-draw", "amount": 2}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "microbe", "amount": 2}, {"type": "card-draw", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "steel", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "data", "amount": 2}, {"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "cove", "volcanic": true, "bonuses": [{"type": "steel", "amount": 1}, {"type": "titanium", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "cove", "bonuses": [{"type": "energy-production", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "science", "amount": 1}, {"type": "card-draw", "amount": 1}, {"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "cove", "bonuses": [{"type": "plant", "amount": 1}, {"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "cove", "bonuses": [{"type": "plant", "amount": 1}, {"type": "titanium", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "cove", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 2}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "steel", "amount": 1}, {"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "card-draw", "amount": 1}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "steel", "amount": 1}]}
+      ]
+    ]
+  },
+  {
+    "id": "amazonis",
+    "name": "Amazonis Planitia",
+    "description": "Flat lava plains west of Olympus Mons with wild resource bonuses and a restricted central zone.",
+    "rows": [
+      [
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 3}]},
+        {"type": "land", "bonuses": [{"type": "microbe", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "animal", "amount": 1}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "microbe", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "card-draw", "amount": 2}]},
+        {"type": "ocean"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "heat", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "animal", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "microbe", "amount": 1}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "steel", "amount": 1}, {"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "empty"},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 2}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "microbe", "amount": 1}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "heat", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "animal", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]}
+      ]
+    ]
+  },
+  {
+    "id": "terra-cimmeria",
+    "name": "Terra Cimmeria",
+    "description": "Densely cratered southern highlands rich in steel and titanium, with four volcanic zones.",
+    "rows": [
+      [
+        {"type": "ocean"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "titanium", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "steel", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "energy", "amount": 3}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "energy", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "energy", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "energy", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "card-draw", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "card-draw", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]}
+      ]
+    ]
+  },
+  {
+    "id": "vastitas-borealis",
+    "name": "Vastitas Borealis",
+    "description": "Northern polar lowlands of an ancient ocean. Frozen CO2 can raise temperature at a cost.",
+    "rows": [
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "titanium", "amount": 2}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}, {"type": "card-draw", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "steel", "amount": 1}, {"type": "titanium", "amount": 1}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "steel", "amount": 1}, {"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "ocean"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "temperature", "amount": 1}, {"type": "credit", "amount": -3}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "titanium", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}, {"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "ocean"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "plant", "amount": 1}]}
+      ]
+    ]
+  },
+  {
+    "id": "utopia-planitia",
+    "name": "Utopia Planitia",
+    "description": "The largest impact crater in the Solar System. Mineral-rich soil provides plant and energy bonuses.",
+    "rows": [
+      [
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "energy", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "energy", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "energy", "amount": 2}, {"type": "card-draw", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 3}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 2}, {"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 2}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}, {"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "ocean"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "titanium", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "ocean"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 2}]},
+        {"type": "ocean"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ]
+    ]
+  },
+  {
+    "id": "vastitas-borealis-nova",
+    "name": "Vastitas Borealis Nova",
+    "description": "Updated northern polar map with delegate bonuses and revised temperature mechanics.",
+    "rows": [
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "card-draw", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "steel", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "credit", "amount": 1}]}
+      ],
+      [
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "temperature", "amount": 1}, {"type": "credit", "amount": -3}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 2}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "heat", "amount": 2}, {"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 2}]}
+      ],
+      [
+        {"type": "land", "volcanic": true, "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "ocean"},
+        {"type": "ocean", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "credit", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]}
+      ]
+    ]
+  },
+  {
+    "id": "hollandia",
+    "name": "Hollandia",
+    "description": "Tournament map with an Asteroid Deflection Zone that protects plants from destruction.",
+    "rows": [
+      [
+        {"type": "ocean", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "deflection-zone", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}]},
+        {"type": "deflection-zone"},
+        {"type": "deflection-zone"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "deflection-zone", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "deflection-zone"},
+        {"type": "deflection-zone", "bonuses": [{"type": "card-draw", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 3}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean"},
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "deflection-zone", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "deflection-zone"},
+        {"type": "deflection-zone", "bonuses": [{"type": "steel", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "deflection-zone"},
+        {"type": "deflection-zone", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "deflection-zone"}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "steel", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}, {"type": "steel", "amount": 1}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "ocean", "bonuses": [{"type": "titanium", "amount": 2}]}
+      ],
+      [
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 3}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "ocean"},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "heat", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "titanium", "amount": 1}, {"type": "plant", "amount": 1}]},
+        {"type": "ocean", "bonuses": [{"type": "plant", "amount": 1}]}
+      ],
+      [
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 2}]},
+        {"type": "land", "bonuses": [{"type": "plant", "amount": 2}]},
+        {"type": "land"},
+        {"type": "land"},
+        {"type": "land", "bonuses": [{"type": "card-draw", "amount": 1}]}
+      ]
+    ]
+  }
+]
