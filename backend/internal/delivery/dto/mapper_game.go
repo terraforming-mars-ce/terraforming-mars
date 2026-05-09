@@ -871,6 +871,8 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 		playerCredits = playerObj.Resources().Get().Credits
 	}
 
+	playerCount := len(g.GetAllPlayers())
+
 	dtos := make([]ProjectFundingDto, 0, len(states))
 	for _, state := range states {
 		def, err := registry.GetByID(state.DefinitionID)
@@ -878,9 +880,12 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 			continue
 		}
 
+		scaledSeats := pfDomain.ScaledSeats(def.Seats, playerCount)
+		scaledTiers := pfDomain.ScaledRewardTiers(def.RewardTiers, playerCount)
+
 		// Build seat DTOs
-		seats := make([]ProjectSeatDto, len(def.Seats))
-		for i, seatDef := range def.Seats {
+		seats := make([]ProjectSeatDto, len(scaledSeats))
+		for i, seatDef := range scaledSeats {
 			subs := make([]ProjectPaymentSubDto, len(seatDef.PaymentSubstitutes))
 			for j, sub := range seatDef.PaymentSubstitutes {
 				subs[j] = ProjectPaymentSubDto{
@@ -922,9 +927,9 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 		nextSeatIndex := len(state.SeatOwners)
 		nextSeatCost := 0
 		var nextSeatSubs []ProjectPaymentSubDto
-		if nextSeatIndex < len(def.Seats) {
-			nextSeatCost = def.Seats[nextSeatIndex].Cost
-			for _, sub := range def.Seats[nextSeatIndex].PaymentSubstitutes {
+		if nextSeatIndex < len(scaledSeats) {
+			nextSeatCost = scaledSeats[nextSeatIndex].Cost
+			for _, sub := range scaledSeats[nextSeatIndex].PaymentSubstitutes {
 				nextSeatSubs = append(nextSeatSubs, ProjectPaymentSubDto{
 					ResourceType:   sub.ResourceType,
 					ConversionRate: sub.ConversionRate,
@@ -944,7 +949,7 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 				Code:    StateErrorCode("project-completed"),
 				Message: "This project is already completed",
 			})
-		} else if nextSeatIndex >= len(def.Seats) {
+		} else if nextSeatIndex >= len(scaledSeats) {
 			canBuy = false
 			buyErrors = append(buyErrors, StateErrorDto{
 				Code:    StateErrorCode("all-seats-filled"),
@@ -968,7 +973,7 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 
 		var currentPlayerTier *ProjectRewardTierDto
 		if currentPlayerSeats > 0 {
-			tier := pfDomain.FindBestTier(def.RewardTiers, currentPlayerSeats)
+			tier := pfDomain.FindBestTier(scaledTiers, currentPlayerSeats)
 			if tier != nil {
 				rewards := make([]ColonyOutputDto, len(tier.Rewards))
 				for j, r := range tier.Rewards {
@@ -982,8 +987,8 @@ func toProjectFundingDtos(g *game.Game, registry pfRegistry.ProjectFundingRegist
 		}
 
 		// Reward tiers
-		rewardTiers := make([]ProjectRewardTierDto, len(def.RewardTiers))
-		for i, tier := range def.RewardTiers {
+		rewardTiers := make([]ProjectRewardTierDto, len(scaledTiers))
+		for i, tier := range scaledTiers {
 			rewards := make([]ColonyOutputDto, len(tier.Rewards))
 			for j, r := range tier.Rewards {
 				rewards[j] = ColonyOutputDto{Type: r.Type, Amount: r.Amount}
