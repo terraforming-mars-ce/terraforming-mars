@@ -361,6 +361,11 @@ class GlobalWebSocketManager implements WebSocketConnection {
     webSocketService.requestLogs();
   }
 
+  async updateGameMap(mapId: string): Promise<void> {
+    await this.ensureConnected();
+    webSocketService.updateGameMap(mapId);
+  }
+
   async setPlayerColor(color: string, targetPlayerId?: string): Promise<void> {
     await this.ensureConnected();
     webSocketService.setPlayerColor(color, targetPlayerId);
