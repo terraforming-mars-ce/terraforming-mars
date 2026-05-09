@@ -235,9 +235,10 @@ func TestFundSeat_Completion_SetsIsCompleted(t *testing.T) {
 	testGame, repo, pfRegistry, player1, _ := setupProjectFundingGame(t)
 	ctx := context.Background()
 
-	// Fill all seats except the last one
 	def, _ := pfRegistry.GetByID("pf_orbital_station")
-	owners := make([]string, len(def.Seats)-1)
+	scaledSeats := pf.ScaledSeats(def.Seats, len(testGame.GetAllPlayers()))
+
+	owners := make([]string, len(scaledSeats)-1)
 	for i := range owners {
 		owners[i] = "other_player"
 	}
@@ -246,7 +247,7 @@ func TestFundSeat_Completion_SetsIsCompleted(t *testing.T) {
 	p1, _ := testGame.GetPlayer(player1)
 	testutil.SetPlayerCredits(ctx, p1, 500)
 
-	lastSeatCost := def.Seats[len(def.Seats)-1].Cost
+	lastSeatCost := scaledSeats[len(scaledSeats)-1].Cost
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: lastSeatCost})
@@ -260,9 +261,10 @@ func TestFundSeat_Completion_AllPlayersGetCompletionEffect(t *testing.T) {
 	testGame, repo, pfRegistry, player1, player2 := setupProjectFundingGame(t)
 	ctx := context.Background()
 
-	// pf_orbital_station completion effect: card-draw (5 cards for each player)
 	def, _ := pfRegistry.GetByID("pf_orbital_station")
-	owners := make([]string, len(def.Seats)-1)
+	scaledSeats := pf.ScaledSeats(def.Seats, len(testGame.GetAllPlayers()))
+
+	owners := make([]string, len(scaledSeats)-1)
 	for i := range owners {
 		owners[i] = player1
 	}
@@ -273,7 +275,7 @@ func TestFundSeat_Completion_AllPlayersGetCompletionEffect(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p1, 500)
 
 	p2HandBefore := len(p2.Hand().Cards())
-	lastSeatCost := def.Seats[len(def.Seats)-1].Cost
+	lastSeatCost := scaledSeats[len(scaledSeats)-1].Cost
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: lastSeatCost})
@@ -309,8 +311,9 @@ func TestFundSeat_Completion_TerraformingHub_TR(t *testing.T) {
 
 	// pf_terraforming_hub: completion gives +2 TR to all players
 	def, _ := pfRegistry.GetByID("pf_terraforming_hub")
-	// Alternate seat owners between player1 and player2
-	owners := make([]string, len(def.Seats)-1)
+	scaledSeats := pf.ScaledSeats(def.Seats, len(testGame.GetAllPlayers()))
+
+	owners := make([]string, len(scaledSeats)-1)
 	for i := range owners {
 		if i%2 == 0 {
 			owners[i] = player1
@@ -326,7 +329,7 @@ func TestFundSeat_Completion_TerraformingHub_TR(t *testing.T) {
 
 	p1TRBefore := p1.Resources().TerraformRating()
 	p2TRBefore := p2.Resources().TerraformRating()
-	lastSeatCost := def.Seats[len(def.Seats)-1].Cost
+	lastSeatCost := scaledSeats[len(scaledSeats)-1].Cost
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_terraforming_hub", pfAction.FundSeatPayment{Credits: lastSeatCost})
@@ -342,7 +345,9 @@ func TestFundSeat_Completion_ProductionChoice_SetForAllPlayers(t *testing.T) {
 
 	// pf_solar_forge: completion gives each player production choice
 	def, _ := pfRegistry.GetByID("pf_solar_forge")
-	owners := make([]string, len(def.Seats)-1)
+	scaledSeats := pf.ScaledSeats(def.Seats, len(testGame.GetAllPlayers()))
+
+	owners := make([]string, len(scaledSeats)-1)
 	for i := range owners {
 		owners[i] = player1
 	}
@@ -352,7 +357,7 @@ func TestFundSeat_Completion_ProductionChoice_SetForAllPlayers(t *testing.T) {
 	p2, _ := testGame.GetPlayer(player2)
 	testutil.SetPlayerCredits(ctx, p1, 500)
 
-	lastSeatCost := def.Seats[len(def.Seats)-1].Cost
+	lastSeatCost := scaledSeats[len(scaledSeats)-1].Cost
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_solar_forge", pfAction.FundSeatPayment{Credits: lastSeatCost})
@@ -373,7 +378,9 @@ func TestFundSeat_Completion_MassCardDraw(t *testing.T) {
 
 	// pf_orbital_station: completion deals 3 cards to each player
 	def, _ := pfRegistry.GetByID("pf_orbital_station")
-	owners := make([]string, len(def.Seats)-1)
+	scaledSeats := pf.ScaledSeats(def.Seats, len(testGame.GetAllPlayers()))
+
+	owners := make([]string, len(scaledSeats)-1)
 	for i := range owners {
 		owners[i] = player1
 	}
@@ -385,7 +392,7 @@ func TestFundSeat_Completion_MassCardDraw(t *testing.T) {
 
 	p1HandBefore := len(p1.Hand().Cards())
 	p2HandBefore := len(p2.Hand().Cards())
-	lastSeatCost := def.Seats[len(def.Seats)-1].Cost
+	lastSeatCost := scaledSeats[len(scaledSeats)-1].Cost
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: lastSeatCost})
@@ -396,4 +403,153 @@ func TestFundSeat_Completion_MassCardDraw(t *testing.T) {
 
 	testutil.AssertEqual(t, p1HandBefore+3, p1HandAfter, "P1 should receive 3 cards")
 	testutil.AssertEqual(t, p2HandBefore+3, p2HandAfter, "P2 should receive 3 cards")
+}
+
+// --- Player-Count Scaling Tests ---
+
+func setupProjectFundingGameN(t *testing.T, numPlayers int) (*game.Game, game.GameRepository, pfLoader.ProjectFundingRegistry, []string) {
+	t.Helper()
+	testGame, repo, _, players := testutil.SetupMultiPlayerGame(t, numPlayers)
+
+	pfDefs, err := pfLoader.LoadProjectsFromJSON("../../../assets/terraforming_mars_project_funding.json")
+	if err != nil {
+		t.Fatalf("Failed to load project funding: %v", err)
+	}
+	pfRegistry := pfLoader.NewInMemoryProjectFundingRegistry(pfDefs)
+
+	settings := testGame.Settings()
+	settings.CardPacks = append(settings.CardPacks, shared.PackProjectFunding)
+	testGame.UpdateSettings(context.Background(), settings)
+
+	return testGame, repo, pfRegistry, players
+}
+
+func TestFundSeat_ScaledCost_TwoPlayers_DeductsScaledAmount(t *testing.T) {
+	testGame, repo, pfRegistry, players := setupProjectFundingGameN(t, 2)
+	ctx := context.Background()
+	player1 := players[0]
+
+	setupProjectState(testGame, "pf_orbital_station", nil)
+
+	def, _ := pfRegistry.GetByID("pf_orbital_station")
+	scaledCost := pf.ScaledSeatCost(def.Seats[0].Cost, 2) // 6 * 2 / 4 = 3
+
+	p1, _ := testGame.GetPlayer(player1)
+	testutil.SetPlayerCredits(ctx, p1, 100)
+
+	action := newAction(repo, pfRegistry)
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: scaledCost})
+	testutil.AssertNoError(t, err, "Paying exactly the scaled cost should succeed")
+	testutil.AssertEqual(t, 100-scaledCost, testutil.GetPlayerCredits(p1), "Should deduct only the scaled cost")
+}
+
+func TestFundSeat_ScaledCost_FivePlayers_RequiresMore(t *testing.T) {
+	testGame, repo, pfRegistry, players := setupProjectFundingGameN(t, 5)
+	ctx := context.Background()
+	player1 := players[0]
+
+	setupProjectState(testGame, "pf_orbital_station", nil)
+
+	def, _ := pfRegistry.GetByID("pf_orbital_station")
+	baseCost := def.Seats[0].Cost                // 6
+	scaledCost := pf.ScaledSeatCost(baseCost, 5) // 6 * 5 / 4 = 7
+	testutil.AssertTrue(t, scaledCost > baseCost, "5-player scaled cost should exceed JSON base")
+
+	p1, _ := testGame.GetPlayer(player1)
+	testutil.SetPlayerCredits(ctx, p1, baseCost) // exactly the JSON base, not enough
+
+	action := newAction(repo, pfRegistry)
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: scaledCost})
+	testutil.AssertError(t, err, "Player with only base-cost credits should fail in a 5-player game")
+
+	testutil.SetPlayerCredits(ctx, p1, scaledCost)
+	err = action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: scaledCost})
+	testutil.AssertNoError(t, err, "With scaled-cost credits the seat should be affordable")
+}
+
+func TestFundSeat_ScaledSeatCount_TwoPlayers_TruncatesProject(t *testing.T) {
+	testGame, repo, pfRegistry, players := setupProjectFundingGameN(t, 2)
+	ctx := context.Background()
+	player1 := players[0]
+
+	def, _ := pfRegistry.GetByID("pf_orbital_station")
+	scaledCount := pf.ScaledSeatCount(len(def.Seats), 2) // 6 * 2 / 4 = 3
+	testutil.AssertTrue(t, scaledCount < len(def.Seats), "2-player game should have fewer seats than JSON")
+
+	owners := make([]string, scaledCount)
+	for i := range owners {
+		owners[i] = "other_player"
+	}
+	setupProjectState(testGame, "pf_orbital_station", owners)
+
+	p1, _ := testGame.GetPlayer(player1)
+	testutil.SetPlayerCredits(ctx, p1, 500)
+
+	action := newAction(repo, pfRegistry)
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 50})
+	testutil.AssertError(t, err, "Funding past the scaled seat count should fail with all-seats-filled")
+}
+
+func TestFundSeat_ScaledSeatCount_FivePlayers_ExtendsProject(t *testing.T) {
+	testGame, repo, pfRegistry, players := setupProjectFundingGameN(t, 5)
+	ctx := context.Background()
+	player1 := players[0]
+
+	def, _ := pfRegistry.GetByID("pf_orbital_station")
+	scaledCount := pf.ScaledSeatCount(len(def.Seats), 5) // 6 * 5 / 4 = 8 (rounded)
+	testutil.AssertTrue(t, scaledCount > len(def.Seats), "5-player game should have more seats than JSON")
+
+	// Pre-fill exactly len(def.Seats) seats; the action should still succeed
+	// because ScaledSeats grows by repeating the last entry.
+	owners := make([]string, len(def.Seats))
+	for i := range owners {
+		owners[i] = "other_player"
+	}
+	setupProjectState(testGame, "pf_orbital_station", owners)
+
+	p1, _ := testGame.GetPlayer(player1)
+	testutil.SetPlayerCredits(ctx, p1, 500)
+
+	action := newAction(repo, pfRegistry)
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 50})
+	testutil.AssertNoError(t, err, "5-player game allows extra seats beyond JSON count")
+
+	state := testGame.GetProjectFundingState("pf_orbital_station")
+	testutil.AssertEqual(t, len(def.Seats)+1, len(state.SeatOwners), "Extra seat should be recorded")
+}
+
+func TestFundSeat_ScaledTiers_TwoPlayers_LowerThresholds(t *testing.T) {
+	testGame, repo, pfRegistry, players := setupProjectFundingGameN(t, 2)
+	ctx := context.Background()
+	player1 := players[0]
+
+	// pf_orbital_station tier-1 reward (baseline at 2 seats) gives 5 credits + 2 titanium.
+	// At 2 players the threshold scales to 1 seat owned, so a single-seat funder qualifies.
+	def, _ := pfRegistry.GetByID("pf_orbital_station")
+	scaledSeats := pf.ScaledSeats(def.Seats, 2)
+
+	owners := make([]string, len(scaledSeats)-1)
+	for i := range owners {
+		owners[i] = "other_player"
+	}
+	setupProjectState(testGame, "pf_orbital_station", owners)
+
+	p1, _ := testGame.GetPlayer(player1)
+	testutil.SetPlayerCredits(ctx, p1, 500)
+
+	creditsBefore := testutil.GetPlayerCredits(p1)
+	titaniumBefore := p1.Resources().Get().Titanium
+	lastSeatCost := scaledSeats[len(scaledSeats)-1].Cost
+
+	action := newAction(repo, pfRegistry)
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: lastSeatCost})
+	testutil.AssertNoError(t, err, "Funding the last seat should succeed")
+
+	// Player1 owns 1 seat. With baseline tiers (min 2) they'd get nothing.
+	// With scaled tiers (threshold 1) they should get the first tier's rewards.
+	expectedCredits := creditsBefore - lastSeatCost + 5
+	testutil.AssertEqual(t, expectedCredits, testutil.GetPlayerCredits(p1),
+		"Single-seat funder should receive scaled tier-1 credit reward")
+	testutil.AssertEqual(t, titaniumBefore+2, p1.Resources().Get().Titanium,
+		"Single-seat funder should receive scaled tier-1 titanium reward")
 }

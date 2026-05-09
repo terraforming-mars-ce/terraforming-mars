@@ -93,12 +93,14 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 		return fmt.Errorf("project definition not found: %w", err)
 	}
 
+	scaledSeats := pf.ScaledSeats(definition.Seats, len(g.GetAllPlayers()))
+
 	seatIndex := len(projectState.SeatOwners)
-	if seatIndex >= len(definition.Seats) {
+	if seatIndex >= len(scaledSeats) {
 		return fmt.Errorf("all seats are filled for project: %s", projectID)
 	}
 
-	seat := definition.Seats[seatIndex]
+	seat := scaledSeats[seatIndex]
 	cost := seat.Cost
 
 	if payment.Credits < 0 || payment.Steel < 0 || payment.Titanium < 0 {
@@ -190,7 +192,7 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 	a.ConsumePlayerAction(g, log)
 
 	// Check for completion
-	if len(projectState.SeatOwners) >= len(definition.Seats) {
+	if len(projectState.SeatOwners) >= len(scaledSeats) {
 		a.completeProject(ctx, g, projectState, definition, log)
 	}
 
@@ -205,6 +207,7 @@ func (a *FundSeatAction) completeProject(ctx context.Context, g *game.Game, stat
 	state.IsCompleted = true
 
 	allPlayers := g.GetAllPlayers()
+	scaledTiers := pf.ScaledRewardTiers(def.RewardTiers, len(allPlayers))
 
 	// Count seats per player
 	seatCounts := map[string]int{}
@@ -214,7 +217,7 @@ func (a *FundSeatAction) completeProject(ctx context.Context, g *game.Game, stat
 
 	// Apply tier rewards to each funder
 	for playerID, count := range seatCounts {
-		tier := pf.FindBestTier(def.RewardTiers, count)
+		tier := pf.FindBestTier(scaledTiers, count)
 		if tier == nil {
 			continue
 		}
