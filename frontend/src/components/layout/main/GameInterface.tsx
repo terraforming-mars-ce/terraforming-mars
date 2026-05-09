@@ -1248,6 +1248,7 @@ export default function GameInterface() {
                 production: p.production,
               })),
             ]}
+            currentPlayerId={currentPlayer?.id}
             onPlayerSelect={flow.handleTargetPlayerSelect}
             onCancel={flow.handleTargetPlayerCancel}
             isVisible={showTargetPlayerSelection}
@@ -1277,6 +1278,7 @@ export default function GameInterface() {
                 production: p.production,
               })),
             ]}
+            currentPlayerId={currentPlayer?.id}
             onPlayerSelect={flow.handleActionTargetPlayerSelect}
             onCancel={flow.handleActionTargetPlayerCancel}
             isVisible={showActionTargetPlayerSelection}

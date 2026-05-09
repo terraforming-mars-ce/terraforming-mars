@@ -21,6 +21,7 @@ interface TargetPlayerSelectionPopoverProps {
   amount: number;
   isSteal?: boolean;
   players: TargetPlayer[];
+  currentPlayerId?: string;
   onPlayerSelect: (playerId: string) => void;
   onCancel: () => void;
   isVisible: boolean;
@@ -63,6 +64,7 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
   amount,
   isSteal,
   players,
+  currentPlayerId,
   onPlayerSelect,
   onCancel,
   isVisible,
@@ -74,9 +76,17 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
     (player) => getPlayerResourceAmount(player, resourceType) > 0,
   );
   const hasNoTargets = eligiblePlayers.length === 0;
+  const eligibleOthers = currentPlayerId
+    ? eligiblePlayers.filter((p) => p.id !== currentPlayerId)
+    : eligiblePlayers;
+  const onlySelfEligible = !hasNoTargets && eligibleOthers.length === 0;
   const canDismiss = !mandatory || hasNoTargets;
 
   const handleContinueAnyway = () => {
+    onPlayerSelect("");
+  };
+
+  const handleSkip = () => {
     onPlayerSelect("");
   };
 
@@ -159,9 +169,16 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
               </GameButton>
             </>
           ) : (
-            <GameButton buttonType="secondary" variant="info" size="sm" onClick={onCancel}>
-              Cancel
-            </GameButton>
+            <>
+              {onlySelfEligible && (
+                <GameButton buttonType="primary" variant="warn" size="sm" onClick={handleSkip}>
+                  Skip
+                </GameButton>
+              )}
+              <GameButton buttonType="secondary" variant="info" size="sm" onClick={onCancel}>
+                Cancel
+              </GameButton>
+            </>
           )}
         </GameFlowFooter>
       )}
