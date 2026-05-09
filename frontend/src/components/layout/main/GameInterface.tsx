@@ -1071,6 +1071,7 @@ export default function GameInterface() {
                 playerId={playerId}
                 historyEntries={historyEntries}
                 activePanel={endgamePanel}
+                onPanelChange={handleEndgamePanelChange}
                 isReplayActive={replay.isActive}
                 replayIndex={replay.currentIndex}
                 replayTotal={replay.totalStates}

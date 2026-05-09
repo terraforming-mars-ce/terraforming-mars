@@ -158,6 +158,7 @@ interface EndGameBottomBarProps {
   playerId: string;
   historyEntries?: GameHistoryEntryDto[];
   activePanel: "score" | "graphs" | "replay";
+  onPanelChange?: (panel: "score" | "graphs" | "replay") => void;
   isReplayActive?: boolean;
   replayIndex?: number;
   replayTotal?: number;
@@ -178,6 +179,7 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
   playerId,
   historyEntries,
   activePanel,
+  onPanelChange,
   isReplayActive,
   replayIndex,
   replayTotal,
@@ -193,6 +195,19 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
   onReplaySpectatePlayerChange,
 }) => {
   const { state: vpState, controls: vpControls } = useVPCounting();
+
+  useEffect(() => {
+    if (activePanel !== "graphs" || !onPanelChange) {
+      return;
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onPanelChange("score");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activePanel, onPanelChange]);
 
   const allScores = game.finalScores ?? [];
   const sortedScores = [...allScores].sort((a, b) => b.vpBreakdown.totalVP - a.vpBreakdown.totalVP);
@@ -291,15 +306,15 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
 
   return (
     <>
-      {/* Graphs fullscreen overlay */}
+      {/* Graphs overlay — sits below the top menu bar so SCORE/GRAPHS/REPLAY stay visible */}
       <div
-        className={`fixed inset-0 bg-black/70 backdrop-blur-lg flex flex-col items-center justify-center transition-opacity duration-500 ${
+        className={`fixed top-[60px] max-lg:top-[50px] left-0 right-0 bottom-0 bg-black/70 backdrop-blur-lg flex items-center justify-center transition-opacity duration-500 ${
           activePanel === "graphs" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
         {historyEntries && (
-          <div className="w-[90%]" style={{ height: "90vh" }}>
+          <div className="w-[90%] h-full py-4">
             <GameGraphs
               entries={historyEntries}
               playerColors={playerColors}
@@ -309,12 +324,12 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
         )}
       </div>
 
-      {/* Replay controls overlay — blurred strip at top */}
+      {/* Replay controls overlay — blurred strip below the top menu bar */}
       <div
-        className={`fixed top-0 left-0 right-0 bg-black/50 flex justify-center transition-opacity duration-500 ${
+        className={`fixed top-[60px] max-lg:top-[50px] left-0 right-0 bg-black/50 flex justify-center transition-opacity duration-500 ${
           activePanel === "replay" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
-        style={{ paddingTop: 40, paddingBottom: 10, zIndex: Z_INDEX.MENU_DROPDOWN }}
+        style={{ paddingTop: 10, paddingBottom: 10, zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
         <div className="w-[60%]">
           <ReplayControls
