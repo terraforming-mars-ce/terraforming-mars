@@ -46,6 +46,16 @@ const RESOURCE_ICON_PATHS = {
   plant: "/assets/resources/plant.png",
   megacredit: "/assets/resources/megacredit.png",
   card: "/assets/resources/card.png",
+  heat: "/assets/resources/heat.png",
+  power: "/assets/resources/power.png",
+  microbe: "/assets/resources/microbe.png",
+  animal: "/assets/resources/animal.png",
+  science: "/assets/resources/science.png",
+  data: "/assets/resources/data.png",
+  director: "/assets/resources/director.png",
+  temperature: "/assets/global-parameters/temperature.png",
+  ocean: "/assets/tiles/ocean.png",
+  wild: "/assets/resources/wild.png",
 } as const;
 
 type ResourceIconName = keyof typeof RESOURCE_ICON_PATHS;
@@ -58,6 +68,17 @@ const BONUS_TYPE_TO_ICON: Record<string, ResourceIconName> = {
   cards: "card",
   "card-draw": "card",
   credit: "megacredit",
+  heat: "heat",
+  energy: "power",
+  "energy-production": "power",
+  microbe: "microbe",
+  animal: "animal",
+  science: "science",
+  data: "data",
+  delegate: "director",
+  temperature: "temperature",
+  ocean: "ocean",
+  "ocean-placement": "ocean",
 };
 
 // Module-level preloads
@@ -100,6 +121,16 @@ useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.titanium);
 useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.plant);
 useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.megacredit);
 useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.card);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.heat);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.power);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.microbe);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.animal);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.science);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.data);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.director);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.temperature);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.ocean);
+useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.wild);
 
 interface TextureAssets {
   mars: THREE.Texture;
@@ -182,6 +213,16 @@ export function useTextures(): TextureAssets {
   const plantIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.plant);
   const megacreditIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.megacredit);
   const cardIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.card);
+  const heatIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.heat);
+  const powerIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.power);
+  const microbeIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.microbe);
+  const animalIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.animal);
+  const scienceIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.science);
+  const dataIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.data);
+  const directorIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.director);
+  const temperatureIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.temperature);
+  const oceanIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.ocean);
+  const wildIcon = useLoader(THREE.TextureLoader, RESOURCE_ICON_PATHS.wild);
 
   // Configure textures (idempotent — drei caches texture objects by path)
   useMemo(() => {
@@ -276,15 +317,41 @@ export function useTextures(): TextureAssets {
       plant: plantIcon,
       megacredit: megacreditIcon,
       card: cardIcon,
+      heat: heatIcon,
+      power: powerIcon,
+      microbe: microbeIcon,
+      animal: animalIcon,
+      science: scienceIcon,
+      data: dataIcon,
+      director: directorIcon,
+      temperature: temperatureIcon,
+      ocean: oceanIcon,
+      wild: wildIcon,
     }),
-    [steelIcon, titaniumIcon, plantIcon, megacreditIcon, cardIcon],
+    [
+      steelIcon,
+      titaniumIcon,
+      plantIcon,
+      megacreditIcon,
+      cardIcon,
+      heatIcon,
+      powerIcon,
+      microbeIcon,
+      animalIcon,
+      scienceIcon,
+      dataIcon,
+      directorIcon,
+      temperatureIcon,
+      oceanIcon,
+      wildIcon,
+    ],
   );
 
   const getResourceIcon = useMemo(
     () =>
       (bonusType: string): THREE.Texture => {
         const iconName = BONUS_TYPE_TO_ICON[bonusType];
-        return iconName ? resourceIcons[iconName] : resourceIcons.megacredit;
+        return iconName ? resourceIcons[iconName] : resourceIcons.wild;
       },
     [resourceIcons],
   );

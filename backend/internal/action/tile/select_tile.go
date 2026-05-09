@@ -292,6 +292,15 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return result, nil
 	}
 
+	if preTile, err := g.Board().GetTile(*coords); err == nil {
+		for _, bonus := range preTile.Bonuses {
+			if err := baseaction.CanAffordResourceDeduction(p, bonus.Type, bonus.Amount); err != nil {
+				log.Debug("Tile placement blocked by unaffordable bonus", zap.Error(err))
+				return nil, fmt.Errorf("cannot place tile here: %w", err)
+			}
+		}
+	}
+
 	occupantTags := []string{}
 	if pendingTileSelection.SourceCardID != "" {
 		occupantTags = append(occupantTags, "source:"+pendingTileSelection.SourceCardID)
@@ -310,6 +319,8 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		zap.String("tile_type", tileType),
 		zap.String("position", selectedHex))
 
+	var queuedTilePlacements []string
+
 	placedTile, err := g.Board().GetTile(*coords)
 	if err != nil {
 		log.Warn("Failed to get placed tile for bonus check", zap.Error(err))
@@ -320,13 +331,65 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 
 		for _, bonus := range placedTile.Bonuses {
 			switch bonus.Type {
-			case shared.ResourceSteel, shared.ResourceTitanium, shared.ResourcePlant, shared.ResourceCredit:
+			case shared.ResourceSteel, shared.ResourceTitanium, shared.ResourcePlant,
+				shared.ResourceCredit, shared.ResourceEnergy, shared.ResourceHeat:
 				p.Resources().Add(map[shared.ResourceType]int{
 					bonus.Type: bonus.Amount,
 				})
 				log.Debug("Awarded resource bonus",
 					zap.String("resource", string(bonus.Type)),
 					zap.Int("amount", bonus.Amount))
+
+				resourceBonuses[string(bonus.Type)] = bonus.Amount
+
+			case shared.ResourceEnergyProduction, shared.ResourceHeatProduction,
+				shared.ResourcePlantProduction, shared.ResourceSteelProduction,
+				shared.ResourceTitaniumProduction, shared.ResourceCreditProduction:
+				p.Resources().AddProduction(map[shared.ResourceType]int{
+					bonus.Type: bonus.Amount,
+				})
+				log.Debug("Awarded production bonus",
+					zap.String("production", string(bonus.Type)),
+					zap.Int("amount", bonus.Amount))
+
+				resourceBonuses[string(bonus.Type)] = bonus.Amount
+
+			case shared.ResourceTemperature:
+				stepsRaised, err := g.GlobalParameters().IncreaseTemperature(ctx, bonus.Amount, playerID)
+				if err != nil {
+					log.Warn("Failed to raise temperature for bonus", zap.Error(err))
+					continue
+				}
+				if stepsRaised > 0 {
+					p.Resources().UpdateTerraformRating(stepsRaised)
+				}
+				log.Debug("Awarded temperature bonus",
+					zap.Int("requested_steps", bonus.Amount),
+					zap.Int("actual_steps", stepsRaised))
+
+				resourceBonuses[string(bonus.Type)] = stepsRaised
+
+			case shared.ResourceOxygen:
+				stepsRaised, err := g.GlobalParameters().IncreaseOxygen(ctx, bonus.Amount, playerID)
+				if err != nil {
+					log.Warn("Failed to raise oxygen for bonus", zap.Error(err))
+					continue
+				}
+				if stepsRaised > 0 {
+					p.Resources().UpdateTerraformRating(stepsRaised)
+				}
+				log.Debug("Awarded oxygen bonus",
+					zap.Int("requested_steps", bonus.Amount),
+					zap.Int("actual_steps", stepsRaised))
+
+				resourceBonuses[string(bonus.Type)] = stepsRaised
+
+			case shared.ResourceOceanPlacement:
+				for i := 0; i < bonus.Amount; i++ {
+					queuedTilePlacements = append(queuedTilePlacements, "ocean")
+				}
+				log.Debug("Queued ocean placement bonus",
+					zap.Int("count", bonus.Amount))
 
 				resourceBonuses[string(bonus.Type)] = bonus.Amount
 
@@ -356,7 +419,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 					zap.Strings("card_ids", cardIDs))
 
 			default:
-				log.Warn(" Unhandled tile bonus type",
+				log.Warn("Unhandled tile bonus type",
 					zap.String("type", string(bonus.Type)),
 					zap.Int("amount", bonus.Amount))
 			}
@@ -465,6 +528,12 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 
 	if err := g.SetPendingTileSelection(ctx, playerID, nil); err != nil {
 		return nil, fmt.Errorf("failed to clear pending tile selection: %w", err)
+	}
+
+	if len(queuedTilePlacements) > 0 {
+		if err := g.AppendToPendingTileSelectionQueue(ctx, playerID, queuedTilePlacements, "tile-bonus", "", nil); err != nil {
+			return nil, fmt.Errorf("failed to queue tile placement from bonus: %w", err)
+		}
 	}
 
 	if err := g.ProcessNextTile(ctx, playerID); err != nil {

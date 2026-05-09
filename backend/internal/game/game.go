@@ -200,13 +200,14 @@ func (g *Game) read(fn func(s *datastore.GameState)) {
 	}
 }
 
-// NewGame creates a new game with the given settings.
+// NewGame creates a new game with the given settings and initial board tiles.
 // The DataStore is used as the single point of entry for all state reads/writes.
 func NewGame(
 	ds *datastore.DataStore,
 	id string,
 	hostPlayerID string,
 	settings shared.GameSettings,
+	initialTiles []board.Tile,
 ) *Game {
 	now := time.Now()
 
@@ -276,7 +277,7 @@ func NewGame(
 		ds:               ds,
 		id:               id,
 		globalParameters: global_parameters.NewGlobalParameters(ds, id, eventBus),
-		board:            board.NewBoardWithTiles(&state.Tiles, id, board.GenerateMarsBoard(settings.VenusNextEnabled), eventBus),
+		board:            board.NewBoardWithTiles(&state.Tiles, id, initialTiles, eventBus),
 		colonies:         colonies.NewColonies(ds, id, eventBus),
 		players:          make(map[string]*player.Player),
 		eventBus:         eventBus,
@@ -323,6 +324,16 @@ func (g *Game) Settings() shared.GameSettings {
 func (g *Game) UpdateSettings(ctx context.Context, settings shared.GameSettings) {
 	g.update(func(s *datastore.GameState) {
 		s.Settings = settings
+		s.UpdatedAt = time.Now()
+	})
+}
+
+// ReplaceBoard replaces the board tiles (used when changing maps in lobby)
+func (g *Game) ReplaceBoard(ctx context.Context, newTiles []board.Tile) {
+	g.update(func(s *datastore.GameState) {
+		tilesCopy := make([]board.Tile, len(newTiles))
+		copy(tilesCopy, newTiles)
+		s.Tiles = tilesCopy
 		s.UpdatedAt = time.Now()
 	})
 }

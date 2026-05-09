@@ -35,6 +35,7 @@ type Broadcaster struct {
 	standardProjectRegistry standardprojects.StandardProjectRegistry
 	awardRegistry           awards.AwardRegistry
 	milestoneRegistry       milestones.MilestoneRegistry
+	availableMaps           []dto.MapInfoDto
 	botNotifier             BotNotifier
 	logger                  *zap.Logger
 	lastBroadcastedSeq      map[string]int64 // gameID -> last broadcasted log sequence
@@ -52,6 +53,7 @@ func NewBroadcaster(
 	stdProjReg standardprojects.StandardProjectRegistry,
 	awardReg awards.AwardRegistry,
 	msReg milestones.MilestoneRegistry,
+	availableMaps []dto.MapInfoDto,
 ) *Broadcaster {
 	broadcaster := &Broadcaster{
 		gameRepo:                gameRepo,
@@ -63,6 +65,7 @@ func NewBroadcaster(
 		standardProjectRegistry: stdProjReg,
 		awardRegistry:           awardReg,
 		milestoneRegistry:       msReg,
+		availableMaps:           availableMaps,
 		logger:                  logger.Get(),
 		lastBroadcastedSeq:      make(map[string]int64),
 	}
@@ -207,6 +210,7 @@ func (b *Broadcaster) sendToPlayer(ctx context.Context, game *game.Game, playerI
 		StandardProjectRegistry: b.standardProjectRegistry,
 		AwardRegistry:           b.awardRegistry,
 		MilestoneRegistry:       b.milestoneRegistry,
+		AvailableMaps:           b.availableMaps,
 	})
 
 	message := dto.WebSocketMessage{

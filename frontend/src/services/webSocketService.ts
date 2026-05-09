@@ -52,6 +52,7 @@ import {
   MessageTypeChatUpdate,
   MessageTypeKickSpectator,
   MessageTypeSpectatorKicked,
+  MessageTypeUpdateGameMap,
   MessageTypeActionColonyTrade,
   MessageTypeActionColonyBuild,
   MessageTypeActionProjectFundingSeat,
@@ -434,6 +435,10 @@ export class WebSocketService {
 
   requestLogs(): void {
     this.send(MessageTypeRequestLogs, {});
+  }
+
+  updateGameMap(mapId: string): void {
+    this.send(MessageTypeUpdateGameMap, { mapId });
   }
 
   setPlayerColor(color: string, targetPlayerId?: string): void {

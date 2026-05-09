@@ -27,6 +27,7 @@ import (
 	"terraforming-mars-backend/internal/awards"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/colonies"
+	"terraforming-mars-backend/internal/delivery/dto"
 	httpHandler "terraforming-mars-backend/internal/delivery/http"
 	wsHandler "terraforming-mars-backend/internal/delivery/websocket"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
@@ -34,6 +35,7 @@ import (
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
+	"terraforming-mars-backend/internal/maps"
 	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
 	msLoader "terraforming-mars-backend/internal/milestones"
 	pfLoader "terraforming-mars-backend/internal/projectfunding"
@@ -148,6 +150,16 @@ func main() {
 	milestoneRegistry := msLoader.NewInMemoryMilestoneRegistry(milestoneData)
 	log.Debug("Milestone registry initialized", zap.Int("milestone_count", len(milestoneData)))
 
+	// ========== Initialize Map Registry ==========
+	mapPath := filepath.Join(wd, "assets", "terraforming_mars_maps.json")
+	log.Debug("Loading maps from", zap.String("path", mapPath))
+
+	mapRegistry, err := maps.LoadMapsFromJSON(mapPath)
+	if err != nil {
+		log.Fatal("Failed to load maps", zap.Error(err))
+	}
+	log.Debug("Map registry initialized", zap.Int("map_count", len(mapRegistry.ListMaps())))
+
 	// ========== Initialize Game Repository (Single Source of Truth) ==========
 	ds, err := datastore.NewDataStore()
 	if err != nil {
@@ -183,13 +195,41 @@ func main() {
 	log.Debug("WebSocket hub initialized")
 
 	// ========== Initialize Game State Broadcaster (Automatic Broadcasting) ==========
-	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry, pfRegistry, stdProjRegistry, awardRegistry, milestoneRegistry)
+	availableMaps := make([]dto.MapInfoDto, 0)
+	for _, m := range mapRegistry.ListMaps() {
+		mapDef, _ := mapRegistry.GetMap(m.ID)
+		tiles := maps.GenerateBoardFromMap(mapDef, false)
+		previewTiles := make([]dto.MapPreviewTile, 0)
+		for _, t := range tiles {
+			if t.Location != "mars" || string(t.Type) == "empty" {
+				continue
+			}
+			volcanic := false
+			for _, tag := range t.Tags {
+				if tag == "volcanic" {
+					volcanic = true
+					break
+				}
+			}
+			previewTiles = append(previewTiles, dto.MapPreviewTile{
+				Q:        t.Coordinates.Q,
+				R:        t.Coordinates.R,
+				S:        t.Coordinates.S,
+				Type:     string(t.Type),
+				Volcanic: volcanic,
+				Tags:     t.Tags,
+			})
+		}
+		availableMaps = append(availableMaps, dto.MapInfoDto{ID: m.ID, Name: m.Name, Description: mapDef.Description, Tiles: previewTiles})
+	}
+	broadcaster := wsHandler.NewBroadcaster(gameRepo, stateRepo, hub, cardRegistry, colonyRegistry, pfRegistry, stdProjRegistry, awardRegistry, milestoneRegistry, availableMaps)
 	log.Debug("Game state broadcaster initialized (provides automatic broadcasting for all games)")
 
 	// ========== Initialize Game Actions ==========
 
 	// Game lifecycle (6)
-	createGameAction := gameAction.NewCreateGameAction(gameRepo, cardRegistry, log)
+	createGameAction := gameAction.NewCreateGameAction(gameRepo, cardRegistry, mapRegistry, log)
+	updateGameMapAction := gameAction.NewUpdateGameMapAction(gameRepo, mapRegistry, log)
 	joinGameAction := gameAction.NewJoinGameAction(gameRepo, cardRegistry, log, colonyRegistry)
 	healthChecker := bot.NewHealthChecker(log)
 	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, healthChecker, broadcaster, log, colonyRegistry)
@@ -304,6 +344,7 @@ func main() {
 		joinGameAction,
 		addBotAction,
 		selectDemoChoicesAction,
+		updateGameMapAction,
 		// Card actions
 		playCardAction,
 		useCardActionAction,

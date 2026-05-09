@@ -16,7 +16,7 @@ func TestCreateGameAction_Success(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 
 	// Execute
 	settings := shared.GameSettings{
@@ -44,7 +44,7 @@ func TestCreateGameAction_DefaultSettings(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 
 	// Execute with empty settings
 	settings := shared.GameSettings{}
@@ -62,7 +62,7 @@ func TestCreateGameAction_DeckInitialization(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 
 	// Execute
 	settings := shared.GameSettings{
@@ -88,7 +88,7 @@ func TestCreateGameAction_MultipleCardPacks(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 
 	// Execute with multiple packs
 	settings := shared.GameSettings{
@@ -109,7 +109,7 @@ func TestCreateGameAction_BoardInitialization(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
-	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, logger)
+	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 
 	// Execute
 	settings := shared.GameSettings{

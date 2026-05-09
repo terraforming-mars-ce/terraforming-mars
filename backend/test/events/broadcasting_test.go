@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -21,7 +22,7 @@ func TestBroadcasting_AutomaticOnStateChange(t *testing.T) {
 	}
 
 	// Create game without broadcaster
-	testGame := game.NewGame(ds, "test-game", "", settings)
+	testGame := game.NewGame(ds, "test-game", "", settings, board.GenerateMarsBoard(false))
 
 	// Add a player
 	ctx := context.Background()
@@ -42,7 +43,7 @@ func TestBroadcasting_MultipleStateChanges(t *testing.T) {
 		CardPacks:  []string{"base"},
 	}
 
-	testGame := game.NewGame(ds, "test-game", "", settings)
+	testGame := game.NewGame(ds, "test-game", "", settings, board.GenerateMarsBoard(false))
 	ctx := context.Background()
 
 	// Add multiple players
@@ -68,7 +69,7 @@ func TestBroadcasting_CorrectGameID(t *testing.T) {
 		CardPacks:  []string{"base"},
 	}
 
-	testGame := game.NewGame(ds, gameID, "", settings)
+	testGame := game.NewGame(ds, gameID, "", settings, board.GenerateMarsBoard(false))
 	ctx := context.Background()
 
 	// Add player and verify game ID
@@ -127,8 +128,8 @@ func TestBroadcasting_PerGameIsolation(t *testing.T) {
 		CardPacks:  []string{"base"},
 	}
 
-	game1 := game.NewGame(ds, "game-1", "", settings)
-	game2 := game.NewGame(ds, "game-2", "", settings)
+	game1 := game.NewGame(ds, "game-1", "", settings, board.GenerateMarsBoard(false))
+	game2 := game.NewGame(ds, "game-2", "", settings, board.GenerateMarsBoard(false))
 
 	ctx := context.Background()
 
@@ -165,7 +166,7 @@ func TestBroadcasting_WithoutBroadcaster(t *testing.T) {
 	}
 
 	// Create game without broadcaster
-	testGame := game.NewGame(ds, "test-game", "", settings)
+	testGame := game.NewGame(ds, "test-game", "", settings, board.GenerateMarsBoard(false))
 	ctx := context.Background()
 
 	// Perform operations

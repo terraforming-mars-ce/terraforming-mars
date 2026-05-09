@@ -177,11 +177,12 @@ export default function TileGrid({
     setTooltipData(null);
   }, []);
 
-  // Convert hex coordinates to 2D pixel position (same as backend logic)
+  // Convert hex coordinates to 2D pixel position (same as backend logic).
+  // y is negated so JSON row 0 (r = -radius, "north") maps to sphere +Y.
   const hexToPixel = (coord: { q: number; r: number; s: number }) => {
-    const size = 0.3; // Same as HEX_SIZE in HexGrid2D
+    const size = 0.3;
     const x = size * Math.sqrt(3) * (coord.q + coord.r / 2);
-    const y = ((size * 3) / 2) * coord.r;
+    const y = -((size * 3) / 2) * coord.r;
     return { x, y };
   };
 
@@ -201,7 +202,7 @@ export default function TileGrid({
     // Use backend tiles if available (filter to Mars-only)
     if (gameState?.board?.tiles) {
       return gameState.board.tiles
-        .filter((tile: TileDto) => tile.location === "mars")
+        .filter((tile: TileDto) => tile.location === "mars" && tile.type !== "empty")
         .map((tile: TileDto): ProjectedTile => {
           // Convert hex coordinate to 2D position for projection
           const position2D = hexToPixel(tile.coordinates);

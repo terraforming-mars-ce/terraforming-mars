@@ -7,6 +7,7 @@ import (
 	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/cards"
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/board"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/player"
@@ -28,7 +29,7 @@ func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, cards.CardR
 		DevelopmentMode: true,
 	}
 	ds, _ := datastore.NewDataStore()
-	g := game.NewGame(ds, "test-game", "player1", settings)
+	g := game.NewGame(ds, "test-game", "player1", settings, board.GenerateMarsBoard(false))
 
 	// Create and add test player
 	ctx := context.Background()
