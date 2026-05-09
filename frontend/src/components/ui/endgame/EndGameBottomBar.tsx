@@ -309,23 +309,25 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
     <>
       {/* Graphs fullscreen overlay */}
       <div
-        className={`fixed inset-0 bg-black/70 backdrop-blur-lg flex flex-col items-center justify-center transition-opacity duration-500 ${
+        className={`fixed inset-0 bg-black/70 backdrop-blur-lg flex flex-col transition-opacity duration-500 ${
           activePanel === "graphs" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
         {onPanelChange && (
-          <div className="absolute top-4 left-4 z-10">
+          <div className="flex-shrink-0 px-4 pt-4">
             <BackButton onClick={() => onPanelChange("score")}>Back to Score</BackButton>
           </div>
         )}
         {historyEntries && (
-          <div className="w-[90%]" style={{ height: "90vh" }}>
-            <GameGraphs
-              entries={historyEntries}
-              playerColors={playerColors}
-              playerNames={playerNames}
-            />
+          <div className="flex-1 flex items-center justify-center min-h-0 px-[5%] pb-4">
+            <div className="w-full h-full">
+              <GameGraphs
+                entries={historyEntries}
+                playerColors={playerColors}
+                playerNames={playerNames}
+              />
+            </div>
           </div>
         )}
       </div>
