@@ -19,7 +19,7 @@ const HEX_SIZE = 0.3;
 
 export function hexToPixel(coord: HexCoordinate): { x: number; y: number } {
   const x = HEX_SIZE * Math.sqrt(3) * (coord.q + coord.r / 2);
-  const y = ((HEX_SIZE * 3) / 2) * coord.r;
+  const y = -((HEX_SIZE * 3) / 2) * coord.r;
   return { x, y };
 }
 
