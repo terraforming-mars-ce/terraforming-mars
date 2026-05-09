@@ -667,6 +667,22 @@ func isBasicPlayerResource(rt shared.ResourceType) bool {
 	return false
 }
 
+// CanAffordResourceDeduction returns nil if the player has enough of resourceType
+// to absorb a negative amount. Returns nil unconditionally for positive amounts
+// or non-basic resource types. Used to gate any action whose bonus/output would
+// push a basic resource below zero.
+func CanAffordResourceDeduction(p *player.Player, resourceType shared.ResourceType, amount int) error {
+	if amount >= 0 || !isBasicPlayerResource(resourceType) {
+		return nil
+	}
+	available := p.Resources().Get().GetAmount(resourceType)
+	required := -amount
+	if available < required {
+		return fmt.Errorf("not enough %s: have %d, need %d", resourceType, available, required)
+	}
+	return nil
+}
+
 // validateNegativeResourceOutputsForCard checks all auto-trigger behaviors on a card
 // for negative resource outputs (e.g., "spend 5 heat" modeled as heat: -5).
 func validateNegativeResourceOutputsForCard(
@@ -692,21 +708,15 @@ func validateNegativeResourceOutputs(
 	p *player.Player,
 ) []player.StateError {
 	var errors []player.StateError
-	resources := p.Resources().Get()
 
 	for _, outputBC := range behavior.Outputs {
-		if shared.IsVariableAmount(outputBC) || outputBC.GetAmount() >= 0 {
+		if shared.IsVariableAmount(outputBC) {
 			continue
 		}
 		if outputBC.GetTarget() != "" && outputBC.GetTarget() != "self-player" {
 			continue
 		}
-		if !isBasicPlayerResource(outputBC.GetResourceType()) {
-			continue
-		}
-		available := resources.GetAmount(outputBC.GetResourceType())
-		required := -outputBC.GetAmount()
-		if available < required {
+		if err := CanAffordResourceDeduction(p, outputBC.GetResourceType(), outputBC.GetAmount()); err != nil {
 			errors = append(errors, player.StateError{
 				Code:     player.ErrorCodeInsufficientResources,
 				Category: player.ErrorCategoryInput,
