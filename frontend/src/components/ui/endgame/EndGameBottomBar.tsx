@@ -6,7 +6,6 @@ import { useVPCounting } from "../../../contexts/VPCountingContext";
 import GameGraphs from "./GameGraphs.tsx";
 import ReplayControls from "./ReplayControls.tsx";
 import VPPhaseTabsOverlay from "./VPPhaseTabsOverlay.tsx";
-import BackButton from "../buttons/BackButton.tsx";
 
 const ANGLE_INDENT = 14;
 const BUTTON_HEIGHT = 32;
@@ -307,27 +306,20 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
 
   return (
     <>
-      {/* Graphs fullscreen overlay */}
+      {/* Graphs overlay — sits below the top menu bar so SCORE/GRAPHS/REPLAY stay visible */}
       <div
-        className={`fixed inset-0 bg-black/70 backdrop-blur-lg flex flex-col transition-opacity duration-500 ${
+        className={`fixed top-[60px] max-lg:top-[50px] left-0 right-0 bottom-0 bg-black/70 backdrop-blur-lg flex items-center justify-center transition-opacity duration-500 ${
           activePanel === "graphs" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
-        {onPanelChange && (
-          <div className="flex-shrink-0 px-4 pt-4">
-            <BackButton onClick={() => onPanelChange("score")}>Back to Score</BackButton>
-          </div>
-        )}
         {historyEntries && (
-          <div className="flex-1 flex items-center justify-center min-h-0 px-[5%] pb-4">
-            <div className="w-full h-full">
-              <GameGraphs
-                entries={historyEntries}
-                playerColors={playerColors}
-                playerNames={playerNames}
-              />
-            </div>
+          <div className="w-[90%] h-full py-4">
+            <GameGraphs
+              entries={historyEntries}
+              playerColors={playerColors}
+              playerNames={playerNames}
+            />
           </div>
         )}
       </div>
