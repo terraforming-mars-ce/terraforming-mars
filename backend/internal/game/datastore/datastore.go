@@ -11,11 +11,18 @@ import (
 	"terraforming-mars-backend/internal/game/shared"
 )
 
+// SnapshotEnricher computes per-player VP breakdowns for a snapshot, using the live
+// game state at the moment the snapshot is recorded. The map is stored on the history
+// entry so the history mapper doesn't need to reimplement scoring logic.
+type SnapshotEnricher func(state *GameState) map[string]shared.VPBreakdown
+
 // DataStore is the single source of truth for all game data.
 type DataStore struct {
 	db              *memdb.MemDB
 	historySeqMu    sync.Mutex
 	historySequence map[string]int64 // per-game sequence counter
+	enricher        SnapshotEnricher
+	enricherWG      sync.WaitGroup
 }
 
 func NewDataStore() (*DataStore, error) {
@@ -27,6 +34,19 @@ func NewDataStore() (*DataStore, error) {
 		db:              db,
 		historySequence: make(map[string]int64),
 	}, nil
+}
+
+// SetSnapshotEnricher registers a callback invoked for each history append.
+// Pass nil to disable enrichment.
+func (ds *DataStore) SetSnapshotEnricher(fn SnapshotEnricher) {
+	ds.enricher = fn
+}
+
+// WaitForPendingEnrichments blocks until all in-flight enrichment goroutines
+// have completed. Tests can use this to read history entries that include
+// VPBreakdowns deterministically.
+func (ds *DataStore) WaitForPendingEnrichments() {
+	ds.enricherWG.Wait()
 }
 
 func (ds *DataStore) GetGame(gameID string) (*GameState, error) {
@@ -111,6 +131,54 @@ func (ds *DataStore) appendHistory(state *GameState) {
 
 	htxn := ds.db.Txn(true)
 	_ = htxn.Insert("game_history", entry)
+	htxn.Commit()
+
+	// Enrichment runs asynchronously: callers of UpdateGame frequently hold
+	// game-level locks (e.g. game.mu), and the enricher reads live game state
+	// via *Game accessors that need the same lock — running it inline would
+	// deadlock. The history entry is updated in place once enrichment completes.
+	if ds.enricher != nil {
+		ds.enricherWG.Add(1)
+		go ds.enrichEntry(state.ID, seq)
+	}
+}
+
+func (ds *DataStore) enrichEntry(gameID string, seq int64) {
+	defer ds.enricherWG.Done()
+
+	snapshot, err := ds.GetGame(gameID)
+	if err != nil || snapshot == nil {
+		return
+	}
+	breakdowns := ds.enricher(snapshot)
+	if breakdowns == nil {
+		return
+	}
+
+	entryID := fmt.Sprintf("%s:%012d", gameID, seq)
+
+	htxn := ds.db.Txn(true)
+	defer htxn.Abort()
+
+	raw, err := htxn.First("game_history", "id", entryID)
+	if err != nil || raw == nil {
+		return
+	}
+	original, ok := raw.(*GameStateHistoryEntry)
+	if !ok {
+		return
+	}
+
+	updated := &GameStateHistoryEntry{
+		GameID:       original.GameID,
+		Sequence:     original.Sequence,
+		Timestamp:    original.Timestamp,
+		State:        original.State,
+		VPBreakdowns: breakdowns,
+	}
+	if err := htxn.Insert("game_history", updated); err != nil {
+		return
+	}
 	htxn.Commit()
 }
 

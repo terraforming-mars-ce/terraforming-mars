@@ -46,7 +46,7 @@ func NewFinalScoringAction(
 type PlayerScore struct {
 	PlayerID   string
 	PlayerName string
-	Breakdown  gamecards.VPBreakdown
+	Breakdown  shared.VPBreakdown
 	Credits    int // For tiebreaker
 }
 
@@ -75,23 +75,13 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 		return nil
 	}
 
-	// 4. Prepare milestone and award data for VP calculation
-	claimedMilestones := convertToClaimedMilestoneInfo(g.Milestones().ClaimedMilestones())
-	fundedAwards := convertToFundedAwardInfo(g.Awards().FundedAwards())
+	// 4. Compute VP breakdowns via the shared single-source-of-truth helper.
+	breakdowns := ComputePlayerVPBreakdowns(g, a.cardRegistry, a.awardRegistry, a.milestoneRegistry)
 
-	// 5. Calculate VP for each player
+	// 5. Build PlayerScore entries for sorting.
 	scores := make([]PlayerScore, len(allPlayers))
 	for i, p := range allPlayers {
-		breakdown := gamecards.CalculatePlayerVP(
-			p,
-			g,
-			claimedMilestones,
-			fundedAwards,
-			allPlayers,
-			a.cardRegistry,
-			a.awardRegistry,
-			a.milestoneRegistry,
-		)
+		breakdown := breakdowns[p.ID()]
 		scores[i] = PlayerScore{
 			PlayerID:   p.ID(),
 			PlayerName: p.Name(),
@@ -137,27 +127,16 @@ func (a *FinalScoringAction) Execute(ctx context.Context, gameID string) error {
 		zap.Bool("is_tie", isTie),
 	)
 
-	// 8. Convert to shared.FinalScore and store in game
+	// 8. Build shared.FinalScore entries and store in game.
 	finalScores := make([]shared.FinalScore, len(scores))
 	for i, s := range scores {
 		finalScores[i] = shared.FinalScore{
 			PlayerID:   s.PlayerID,
 			PlayerName: s.PlayerName,
-			Breakdown: shared.VPBreakdown{
-				TerraformRating:   s.Breakdown.TerraformRating,
-				CardVP:            s.Breakdown.CardVP,
-				CardVPDetails:     convertCardVPDetails(s.Breakdown.CardVPDetails),
-				MilestoneVP:       s.Breakdown.MilestoneVP,
-				AwardVP:           s.Breakdown.AwardVP,
-				GreeneryVP:        s.Breakdown.GreeneryVP,
-				GreeneryVPDetails: convertGreeneryVPDetails(s.Breakdown.GreeneryVPDetails),
-				CityVP:            s.Breakdown.CityVP,
-				CityVPDetails:     convertCityVPDetails(s.Breakdown.CityVPDetails),
-				TotalVP:           s.Breakdown.TotalVP,
-			},
-			Credits:   s.Credits,
-			Placement: i + 1, // 1-indexed placement
-			IsWinner:  s.PlayerID == winnerID,
+			Breakdown:  s.Breakdown,
+			Credits:    s.Credits,
+			Placement:  i + 1, // 1-indexed placement
+			IsWinner:   s.PlayerID == winnerID,
 		}
 	}
 	err = g.SetFinalScores(ctx, finalScores, winnerID, isTie)

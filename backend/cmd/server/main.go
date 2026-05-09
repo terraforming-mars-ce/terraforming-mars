@@ -32,6 +32,7 @@ import (
 	"terraforming-mars-backend/internal/delivery/websocket/core"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/datastore"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
 	msLoader "terraforming-mars-backend/internal/milestones"
@@ -155,6 +156,17 @@ func main() {
 	rm := datastore.NewRuntimeManager()
 	gameRepo := game.NewMemDBGameRepository(ds, rm)
 	log.Debug("Game repository initialized")
+
+	// Per-snapshot VP enrichment. Uses the same ComputePlayerVPBreakdowns helper as
+	// FinalScoringAction so the projected score on each history entry matches the
+	// scoreboard formula exactly.
+	ds.SetSnapshotEnricher(func(state *datastore.GameState) map[string]shared.VPBreakdown {
+		g, err := gameRepo.Get(context.Background(), state.ID)
+		if err != nil || g == nil {
+			return nil
+		}
+		return gameAction.ComputePlayerVPBreakdowns(g, cardRegistry, awardRegistry, milestoneRegistry)
+	})
 
 	// ========== Initialize Game State Repository (Diff Logging) ==========
 	stateRepo := game.NewInMemoryGameStateRepository()
