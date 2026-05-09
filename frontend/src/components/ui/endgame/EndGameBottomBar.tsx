@@ -332,12 +332,12 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
         )}
       </div>
 
-      {/* Replay controls overlay — blurred strip at top */}
+      {/* Replay controls overlay — blurred strip below the top menu bar */}
       <div
-        className={`fixed top-0 left-0 right-0 bg-black/50 flex justify-center transition-opacity duration-500 ${
+        className={`fixed top-[60px] max-lg:top-[50px] left-0 right-0 bg-black/50 flex justify-center transition-opacity duration-500 ${
           activePanel === "replay" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
-        style={{ paddingTop: 40, paddingBottom: 10, zIndex: Z_INDEX.MENU_DROPDOWN }}
+        style={{ paddingTop: 10, paddingBottom: 10, zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
         <div className="w-[60%]">
           <ReplayControls
