@@ -40,6 +40,61 @@ frontend/
 - **Unidirectional flow**: Server → WebSocket → React state → UI
 - **localStorage**: Game/player ID persistence for reconnection
 
+#### Zustand stores
+
+- `gameStore` — server game data (`game`, `currentPlayer`, `chatMessages`, etc.). No phase fields; this is pure domain data.
+- `appPhaseStore` — **the single source of truth for "what screen is the user on"**. See "App Phase State Machine" below.
+- `uiOverlayStore` — booleans for in-game overlays (modals, selection popovers).
+- `cardPlayFlowStore` — state for the card-play interaction flow.
+- `spectateStore` — current spectated player.
+
+#### App Phase State Machine
+
+**`useAppPhaseStore`** (`src/stores/appPhaseStore.ts`) holds a discriminated-union `AppPhase` that names every screen the user can be on. **Never derive "what screen is this" from a combination of booleans across stores** — always read `phase.kind` from `useAppPhaseStore`.
+
+```ts
+type AppPhase =
+  | { kind: "menu"; route: "landing" | "create" | "join" | "cards" | "reconnecting" }
+  | { kind: "checking" | "connecting" | "selecting" | "joining" | "spectating"; gameId: string }
+  | { kind: "lobby" | "loading" | "fadeOutLobby" | "marsRevealed" | "animateUI" | "playing" | "completed"; gameId: string };
+```
+
+The legal transitions form a state machine driven from two places only:
+
+- `App.jsx` — sets `{ kind: "menu", route }` from `location.pathname` on menu routes.
+- `useGameInitialization` — sets `checking → connecting → selecting/joining/spectating` while bootstrapping the game from URL / route state / saved session.
+- `useGameTransitions` — drives every other transition based on server-side `gameStatus` / `gamePhase` and the `isSkyboxReady` / `isGpuReady` flags.
+
+**No other code writes the phase.** Components read `phase.kind` and selector helpers (`showsSpaceBackground`, `showsMenuChrome`, `isInGameWorld`, `gameIdOf`).
+
+Selector helpers live next to the type in `appPhaseStore.ts`, so adding a phase forces you to update every projection (TypeScript exhaustiveness).
+
+#### State machine constraints (do not break)
+
+1. **Phase writes are one-way.** Components must NOT call `setPhase`; only `useGameInitialization` and `useGameTransitions` may. If you need to drive a transition, add it to `useGameTransitions` as a `useEffect` keyed on the relevant inputs.
+2. **Reset world-ready flags between games.** `isSkyboxReady`, `isGpuReady`, `marsRevealedReady` are cleared in `setInitPhase("checking", ...)`. If you add new ready-flags, reset them there too — sticky flags across games cause the next game to skip the loading transition entirely.
+3. **Animation timers are explicit.** The `loading → fadeOutLobby → marsRevealed → animateUI → playing` chain is driven by fixed timers (1000 / 1500 / 2500 ms) anchored to phase entry. Cleaning them up on phase-kind change is mandatory (each effect's `return () => clearTimeout(...)` is load-bearing — a stale timer firing after a phase change will skip states).
+4. **Never gate visibility on "x ≠ idle" or composite booleans.** Use `phase.kind === "playing"`, `isInGameWorld(phase)`, etc. The discriminated union gives you exhaustiveness; ad-hoc booleans don't.
+
+#### Persistent 3D background
+
+`<SpaceBackground>` is mounted **exactly once** at the App root (`AppWithBackground` in `src/App.jsx`) and never unmounts. Visibility is controlled by an opacity wrapper driven by `showsSpaceBackground(phase)` with a 1500ms transition (matches the `fadeOutLobby` animation). This avoids the R3F `<Canvas>` tear-down / rebuild + skybox-reload on every route change. Two consequences:
+
+- The outer wrapper of `GameLayout` MUST stay transparent. The black background of the in-game world goes on the **inner** content div, gated by `phase.kind !== "lobby"`. Adding `bg-*` to the outer `GameLayout` div hides `<SpaceBackground>` during the lobby — don't.
+- The skybox cache (`SkyboxCache.ts`) is a singleton; once loaded it stays in GPU memory across phases. `MainContentDisplay`'s separate `<SkyboxLoader>` gets it instantly from the cache when the in-game canvas mounts.
+
+#### LoadingOverlay (useSpinDelay semantics)
+
+`LoadingOverlay` (`src/components/game/view/LoadingOverlay.tsx`) follows the `useSpinDelay` pattern:
+
+- `showDelayMs` (default 500ms) — wait before showing the spinner; if the load completes before, skip the spinner entirely (no flash on fast loads).
+- `minDurationMs` (default 200ms) — once shown, stay visible at least this long (no jank on medium loads).
+
+Two call sites override the defaults for guaranteed-visible feedback:
+
+- App-level menu overlay: `showDelayMs={0}` + `minDurationMs={500}` — cold app boot always shows the spinner.
+- In-game overlay: `showDelayMs={0}` + `minDurationMs={200}` — every `loading` phase entry shows the spinner.
+
 ## Key Development Patterns
 
 ### Code Style
@@ -209,7 +264,11 @@ Use Playwright MCP tools for live debugging:
 
 ### State Management Rules
 
-**CRITICAL**: No timeouts or arbitrary delays for state synchronization. Use proper WebSocket event handling.
+**CRITICAL**: No timeouts or arbitrary delays for **server state synchronization**. Game data must come from the backend via WebSocket — never fake it with a `setTimeout` waiting for a response.
+
+This does NOT forbid timers in the **app-phase state machine**. The lobby → game-world transition (`loading → fadeOutLobby → marsRevealed → animateUI → playing`) is intentionally driven by fixed-duration timers anchored to phase entry, because those are animation durations, not server-state waits. See "App Phase State Machine" above.
+
+Rule of thumb: a timer that controls how long something is *displayed* is fine; a timer that *replaces* a server event is a bug.
 
 ### Design Principles
 
