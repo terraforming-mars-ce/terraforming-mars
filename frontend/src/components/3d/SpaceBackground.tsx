@@ -1,4 +1,4 @@
-import { Suspense, useState, useRef } from "react";
+import { Suspense, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import SkyboxLoader from "../game/view/SkyboxLoader.tsx";
 import * as THREE from "three";

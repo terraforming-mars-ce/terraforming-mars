@@ -17,6 +17,7 @@ import { skyboxCache } from "./services/SkyboxCache.ts";
 import MainMenuHamburger from "./components/ui/buttons/MainMenuHamburger.tsx";
 import SpaceBackground from "./components/3d/SpaceBackground.tsx";
 import LoadingOverlay from "./components/game/view/LoadingOverlay.tsx";
+import { useAppPhaseStore, showsSpaceBackground, showsMenuChrome } from "./stores/appPhaseStore.ts";
 import FeedbackWindow from "./components/ui/debug/FeedbackWindow.tsx";
 import { WindowManagerProvider } from "./components/ui/debug/WindowManager.tsx";
 import { APP_VERSION } from "./config.ts";
@@ -25,26 +26,20 @@ import "./App.css";
 function App() {
   const [isWebSocketReady, setIsWebSocketReady] = useState(false);
 
-  // Initialize WebSocket connection once on app startup
   useEffect(() => {
     const initializeWebSocket = async () => {
       try {
-        // console.log("Initializing global WebSocket connection...");
         await globalWebSocketManager.initialize();
-        // console.log("Global WebSocket connection ready");
         setIsWebSocketReady(true);
       } catch (error) {
         console.error("Failed to initialize WebSocket:", error);
-        // Continue running app even if WebSocket fails initially
-        // It will retry connection when needed
-        setIsWebSocketReady(true); // Allow app to continue
+        setIsWebSocketReady(true);
       }
     };
 
     void initializeWebSocket();
-  }, []); // Empty dependency array - runs once on app mount
+  }, []);
 
-  // Show loading while WebSocket is initializing
   if (!isWebSocketReady) {
     return (
       <div
@@ -81,38 +76,84 @@ function App() {
   );
 }
 
+function routeForPathname(pathname) {
+  if (pathname === "/create") {
+    return "create";
+  }
+  if (pathname === "/join") {
+    return "join";
+  }
+  if (pathname === "/cards") {
+    return "cards";
+  }
+  if (pathname === "/reconnecting") {
+    return "reconnecting";
+  }
+  return "landing";
+}
+
 function AppWithBackground() {
   const location = useLocation();
   const { isLoaded, error } = useSpaceBackground();
   const [overlayVisible, setOverlayVisible] = useState(() => !skyboxCache.isReady());
-  const showSpaceBackground = ["/", "/create", "/join"].includes(location.pathname);
+  const phase = useAppPhaseStore((s) => s.phase);
+  const setPhase = useAppPhaseStore((s) => s.setPhase);
+
+  const inMenuRoute = ["/", "/create", "/join", "/cards", "/reconnecting"].includes(
+    location.pathname,
+  );
+  const showSpaceBackgroundLayer = showsSpaceBackground(phase);
+  const showMenuChrome = showsMenuChrome(phase);
+
+  useEffect(() => {
+    if (!inMenuRoute) {
+      return;
+    }
+    const route = routeForPathname(location.pathname);
+    if (phase.kind !== "menu" || phase.route !== route) {
+      setPhase({ kind: "menu", route });
+    }
+  }, [inMenuRoute, location.pathname, phase, setPhase]);
 
   const skyboxReady = isLoaded || !!error;
 
   useEffect(() => {
-    if (!showSpaceBackground) {
+    if (!inMenuRoute) {
       setOverlayVisible(false);
     } else if (!skyboxCache.isReady()) {
       setOverlayVisible(true);
     }
-  }, [showSpaceBackground]);
+  }, [inMenuRoute]);
 
   useEffect(() => {
-    if (showSpaceBackground && isLoaded) {
+    if (showSpaceBackgroundLayer && isLoaded) {
       audioService.playAmbient();
-    } else if (!showSpaceBackground && location.pathname !== "/game") {
+    } else if (!showSpaceBackgroundLayer && location.pathname !== "/game") {
       audioService.stopAmbient();
     }
-  }, [showSpaceBackground, isLoaded, location.pathname]);
+  }, [showSpaceBackgroundLayer, isLoaded, location.pathname]);
 
   return (
     <>
-      {showSpaceBackground && <SpaceBackground animationSpeed={0.5} overlayOpacity={0.3} />}
-      {showSpaceBackground && overlayVisible && (
-        <LoadingOverlay isLoaded={skyboxReady} onTransitionEnd={() => setOverlayVisible(false)} />
+      <div
+        style={{
+          opacity: showSpaceBackgroundLayer ? 1 : 0,
+          transition: "opacity 1500ms ease-out",
+          pointerEvents: showSpaceBackgroundLayer ? "auto" : "none",
+        }}
+      >
+        <SpaceBackground animationSpeed={0.5} overlayOpacity={0.3} />
+      </div>
+      {inMenuRoute && overlayVisible && (
+        <LoadingOverlay
+          isLoaded={skyboxReady}
+          onTransitionEnd={() => setOverlayVisible(false)}
+          showDelayMs={0}
+          minDurationMs={500}
+        />
       )}
-      {showSpaceBackground && !overlayVisible && <MainMenuHamburger />}
-      {showSpaceBackground && !overlayVisible && <MenuFooter />}
+      {showMenuChrome && !overlayVisible && <MainMenuHamburger />}
+      {showMenuChrome && !overlayVisible && <MenuFooter />}
       <Routes>
         <Route path="/" element={<GameLandingPage />} />
         <Route path="/create" element={<CreateGamePage />} />
