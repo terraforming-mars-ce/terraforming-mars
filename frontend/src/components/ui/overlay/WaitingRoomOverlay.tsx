@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { GameDto, OtherPlayerDto, PlayerDto } from "../../../types/generated/api-types.ts";
 import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
@@ -7,10 +6,10 @@ import CopyLinkButton from "../buttons/CopyLinkButton.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import GameMenuModal from "./GameMenuModal.tsx";
 import DemoSetupOverlay from "./DemoSetupOverlay.tsx";
+import LobbySettingsOverlay from "./LobbySettingsOverlay.tsx";
+import LobbyMapInfoPanel from "../lobby/LobbyMapInfoPanel.tsx";
 import { BotDifficultyChip, BotSpeedChip } from "../display/BotChips.tsx";
 import MainMenuHamburger from "../buttons/MainMenuHamburger.tsx";
-import MapPreview from "../lobby/MapPreview.tsx";
-import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface WaitingRoomOverlayProps {
   game: GameDto;
@@ -64,53 +63,6 @@ const ColorPicker: React.FC<{
   </div>
 );
 
-const MapDropdownPortal: React.FC<{
-  anchorEl: HTMLElement;
-  maps: { id: string; name: string; description: string }[];
-  selectedMapId: string;
-  onSelect: (id: string) => void;
-  onHover: (id: string | null) => void;
-}> = ({ anchorEl, maps, selectedMapId, onSelect, onHover }) => {
-  const rect = anchorEl.getBoundingClientRect();
-
-  return (
-    <div
-      id="map-dropdown-portal"
-      className="fixed bg-black/95 border border-white/20 rounded-lg overflow-hidden shadow-lg max-h-[300px] overflow-y-auto backdrop-blur-sm"
-      style={{
-        zIndex: Z_INDEX.POPOVER,
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-      }}
-    >
-      {maps.map((m) => (
-        <button
-          key={m.id}
-          onClick={() => onSelect(m.id)}
-          onMouseEnter={() => onHover(m.id)}
-          onMouseLeave={() => onHover(null)}
-          className={`w-full flex flex-col gap-0.5 px-3 py-2.5 text-left transition-colors border-b border-white/10 last:border-b-0 ${
-            m.id === selectedMapId
-              ? "text-white bg-space-blue-800/60"
-              : "text-white/80 hover:bg-white/10"
-          }`}
-        >
-          <div className="flex items-center justify-between w-full">
-            <span className="text-sm font-medium">{m.name}</span>
-            {m.id === selectedMapId && (
-              <span className="bg-space-blue-900 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                Selected
-              </span>
-            )}
-          </div>
-          <span className="text-[11px] text-white/40 leading-tight">{m.description}</span>
-        </button>
-      ))}
-    </div>
-  );
-};
-
 const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   game,
   playerId,
@@ -125,14 +77,12 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   const [pendingLeave, setPendingLeave] = useState(false);
   const [showBotDropdown, setShowBotDropdown] = useState(false);
   const [colorPickerForPlayer, setColorPickerForPlayer] = useState<string | null>(null);
-  const [showMapDropdown, setShowMapDropdown] = useState(false);
-  const [hoveredMapId, setHoveredMapId] = useState<string | null>(null);
   const botDropdownRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
-  const mapDropdownRef = useRef<HTMLDivElement>(null);
 
   const isDemoGame = game.settings.demoGame;
   const [showDemoSetup, setShowDemoSetup] = useState(false);
+  const [showLobbySettings, setShowLobbySettings] = useState(false);
 
   const handleStartGame = () => {
     if (!isHost) return;
@@ -282,7 +232,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   };
 
   useEffect(() => {
-    if (!showBotDropdown && !colorPickerForPlayer && !showMapDropdown) return;
+    if (!showBotDropdown && !colorPickerForPlayer) return;
     const handleClick = (e: MouseEvent) => {
       if (
         showBotDropdown &&
@@ -298,41 +248,20 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
       ) {
         setColorPickerForPlayer(null);
       }
-      if (showMapDropdown && mapDropdownRef.current) {
-        const portalEl = document.getElementById("map-dropdown-portal");
-        const inButton = mapDropdownRef.current.contains(e.target as Node);
-        const inPortal = portalEl?.contains(e.target as Node);
-        if (!inButton && !inPortal) {
-          setShowMapDropdown(false);
-          setHoveredMapId(null);
-        }
-      }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showBotDropdown, colorPickerForPlayer, showMapDropdown]);
+  }, [showBotDropdown, colorPickerForPlayer]);
 
   const handleAddBot = (difficulty: string, speed: string) => {
     setShowBotDropdown(false);
     void globalWebSocketManager.addBot(undefined, difficulty, speed);
   };
 
-  const handleMapSelect = (mapId: string) => {
-    if (!isHost) return;
-    setShowMapDropdown(false);
-    setHoveredMapId(null);
-    void globalWebSocketManager.updateGameMap(mapId);
-  };
-
-  const availableMaps = game.settings.availableMaps || [];
-  const currentMapName =
-    availableMaps.find((m) => m.id === game.settings.mapId)?.name ||
-    game.settings.mapId ||
-    "Tharsis";
-
   return (
     <>
       <MainMenuHamburger gameId={game.id} onLeaveGame={openLeaveConfirm} />
+      <LobbyMapInfoPanel game={game} playerId={playerId} />
 
       {/* Leave Confirmation Modal */}
       {showLeaveConfirm && (
@@ -386,6 +315,31 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
         </GameButton>
+
+        {/* Settings Button - positioned at top-right of modal content (host only) */}
+        {isHost && (
+          <GameButton
+            buttonType="textonly"
+            size="sm"
+            onClick={() => setShowLobbySettings(true)}
+            className="absolute top-8 right-8 !p-2.5 hover:text-space-blue-300"
+            aria-label="Lobby settings"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </GameButton>
+        )}
 
         <style>{`
           @keyframes playerSlideIn {
@@ -681,42 +635,6 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
           </div>
         </div>
 
-        {/* Map Selector */}
-        {availableMaps.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-white text-sm font-semibold mb-2 uppercase tracking-wide">Map</h3>
-            <div ref={mapDropdownRef}>
-              <button
-                onClick={() => {
-                  if (isHost) {
-                    setShowMapDropdown((prev) => !prev);
-                  }
-                }}
-                className={`w-full flex items-center justify-between py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50 text-white text-sm font-medium transition-colors ${
-                  isHost ? "cursor-pointer hover:border-space-blue-400" : "cursor-default"
-                }`}
-              >
-                <span>{currentMapName}</span>
-                {isHost && (
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={`transition-transform ${showMapDropdown ? "rotate-180" : ""}`}
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Demo Game: Configure button */}
         {isDemoGame && (
           <div className="text-center">
@@ -752,41 +670,15 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
         )}
       </GameMenuModal>
 
-      {/* Map Dropdown Options (portal - outside modal to avoid overflow) */}
-      {showMapDropdown &&
-        isHost &&
-        mapDropdownRef.current &&
-        createPortal(
-          <MapDropdownPortal
-            anchorEl={mapDropdownRef.current}
-            maps={availableMaps}
-            selectedMapId={game.settings.mapId}
-            onSelect={handleMapSelect}
-            onHover={setHoveredMapId}
-          />,
-          document.body,
-        )}
-
-      {/* Map Preview Popover (portal) */}
-      {hoveredMapId &&
-        showMapDropdown &&
-        mapDropdownRef.current &&
-        createPortal(
-          <div
-            className="fixed bg-space-black-darker/95 border border-space-blue-400/50 rounded-xl p-4 backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
-            style={{
-              zIndex: Z_INDEX.POPOVER,
-              top: mapDropdownRef.current.getBoundingClientRect().bottom - 200,
-              left: mapDropdownRef.current.getBoundingClientRect().right + 12,
-            }}
-          >
-            <p className="text-white/70 text-xs font-semibold uppercase tracking-wide mb-2 text-center">
-              {availableMaps.find((m) => m.id === hoveredMapId)?.name}
-            </p>
-            <MapPreview tiles={availableMaps.find((m) => m.id === hoveredMapId)?.tiles || []} />
-          </div>,
-          document.body,
-        )}
+      {/* Lobby Settings Overlay (host only) */}
+      {isHost && showLobbySettings && (
+        <LobbySettingsOverlay
+          game={game}
+          playerId={playerId}
+          isOpen={true}
+          onClose={() => setShowLobbySettings(false)}
+        />
+      )}
 
       {/* Demo Setup Overlay */}
       {isDemoGame && showDemoSetup && game && playerId && (
