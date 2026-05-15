@@ -7,14 +7,6 @@ import type {
   TriggeredEffectDto,
 } from "@/types/generated/api-types.ts";
 
-export type LoadingPhase =
-  | "checking"
-  | "selecting"
-  | "joining"
-  | "spectating"
-  | "connecting"
-  | "ready";
-
 interface GameStoreState {
   game: GameDto | null;
   gameRef: GameDto | null;
@@ -24,7 +16,6 @@ interface GameStoreState {
   isSpectator: boolean;
   isReconnecting: boolean;
   reconnectionStep: "game" | "environment" | null;
-  loadingPhase: LoadingPhase;
   gameForSelection: GameDto | null;
   changedPaths: Set<string>;
   triggeredEffects: TriggeredEffectDto[];
@@ -41,7 +32,6 @@ interface GameStoreState {
   setIsSpectator: (spectator: boolean) => void;
   setIsReconnecting: (reconnecting: boolean) => void;
   setReconnectionStep: (step: "game" | "environment" | null) => void;
-  setLoadingPhase: (phase: LoadingPhase) => void;
   setGameForSelection: (game: GameDto | null) => void;
   setChangedPaths: (paths: Set<string>) => void;
   setTriggeredEffects: (effects: TriggeredEffectDto[]) => void;
@@ -62,7 +52,6 @@ const initialState = {
   isSpectator: false,
   isReconnecting: false,
   reconnectionStep: null,
-  loadingPhase: "checking" as LoadingPhase,
   gameForSelection: null,
   changedPaths: new Set<string>(),
   triggeredEffects: [] as TriggeredEffectDto[],
@@ -83,7 +72,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setIsSpectator: (isSpectator) => set({ isSpectator }),
   setIsReconnecting: (isReconnecting) => set({ isReconnecting }),
   setReconnectionStep: (reconnectionStep) => set({ reconnectionStep }),
-  setLoadingPhase: (loadingPhase) => set({ loadingPhase }),
   setGameForSelection: (gameForSelection) => set({ gameForSelection }),
   setChangedPaths: (changedPaths) => set({ changedPaths }),
   setTriggeredEffects: (triggeredEffects) => set({ triggeredEffects }),
