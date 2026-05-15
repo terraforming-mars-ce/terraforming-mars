@@ -157,9 +157,9 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   }, []);
 
   const handleCardSelection = useCallback(
-    async (selectedCardIds: string[]) => {
+    async (selectedCardIds: string[], options?: { randomBuy?: boolean }) => {
       try {
-        await globalWebSocketManager.confirmProductionCards(selectedCardIds);
+        await globalWebSocketManager.confirmProductionCards(selectedCardIds, options);
         setHasSubmittedCardSelection(true);
         setShowCardSelection(false);
       } catch (error) {
@@ -446,6 +446,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
             gameState?.currentPlayer?.actionCosts?.find((a) => a.actionType === "card-buying")
               ?.costs[0]?.effectiveCost ?? 3
           }
+          allowRandomBuy={gameState?.settings.allowRandomBuy ?? false}
           onSelectCards={handleCardSelection}
           onReturn={handleReturnFromCardSelection}
           initialSelectedCardIds={persistedSelectionRef.current}

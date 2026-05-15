@@ -26,7 +26,8 @@ interface ProductionCardSelectionOverlayProps {
   cards: CardDto[];
   playerCredits: number;
   costPerCard: number;
-  onSelectCards: (selectedCardIds: string[]) => void;
+  allowRandomBuy?: boolean;
+  onSelectCards: (selectedCardIds: string[], options?: { randomBuy?: boolean }) => void;
   onReturn: () => void;
   initialSelectedCardIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
@@ -37,6 +38,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
   cards,
   playerCredits,
   costPerCard,
+  allowRandomBuy = false,
   onSelectCards,
   onReturn,
   initialSelectedCardIds,
@@ -138,6 +140,36 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
               <GameButton buttonType="textonly" size="md" onClick={onReturn}>
                 Hide
               </GameButton>
+              {allowRandomBuy && selectedCardIds.length === 0 && (
+                <GameButton
+                  buttonType="secondary"
+                  size="lg"
+                  onClick={() => onSelectCards([], { randomBuy: true })}
+                  disabled={playerCredits < costPerCard}
+                  className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8" cy="8" r="1" fill="currentColor" />
+                      <circle cx="16" cy="8" r="1" fill="currentColor" />
+                      <circle cx="8" cy="16" r="1" fill="currentColor" />
+                      <circle cx="16" cy="16" r="1" fill="currentColor" />
+                      <circle cx="12" cy="12" r="1" fill="currentColor" />
+                    </svg>
+                    Buy 1 Random
+                  </span>
+                </GameButton>
+              )}
               <GameButton
                 size="lg"
                 onClick={() => handleConfirm(onSelectCards)}
