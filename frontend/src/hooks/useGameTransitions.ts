@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
-import { useTransitionStore } from "@/stores/transitionStore.ts";
+import { useAppPhaseStore, gameIdOf } from "@/stores/appPhaseStore.ts";
 import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import {
@@ -12,6 +12,7 @@ import {
   GamePhaseProductionAndCardDraw,
   GamePhaseStartingSelection,
   GameStatusActive,
+  GameStatusCompleted,
   GameStatusLobby,
 } from "@/types/generated/api-types.ts";
 
@@ -22,6 +23,7 @@ export function useGameTransitions(
 ): void {
   const gamePhase = useGameStore((s) => s.game?.currentPhase);
   const gameStatus = useGameStore((s) => s.game?.status);
+  const gameId = useGameStore((s) => s.game?.id);
   const isConnected = useGameStore((s) => s.isConnected);
   const corpData = useGameStore((s) => s.currentPlayer?.corporation);
   const productionPhase = useGameStore((s) => s.currentPlayer?.productionPhase);
@@ -48,9 +50,9 @@ export function useGameTransitions(
   const hostPlayerId = useGameStore((s) => s.game?.hostPlayerId);
   const currentPlayerId = useGameStore((s) => s.currentPlayer?.id);
 
-  const transitionPhase = useTransitionStore((s) => s.transitionPhase);
-  const isSkyboxReady = useTransitionStore((s) => s.isSkyboxReady);
-  const isGpuReady = useTransitionStore((s) => s.isGpuReady);
+  const phase = useAppPhaseStore((s) => s.phase);
+  const isSkyboxReady = useAppPhaseStore((s) => s.isSkyboxReady);
+  const isGpuReady = useAppPhaseStore((s) => s.isGpuReady);
 
   const isLobbyPhase = gameStatus === GameStatusLobby;
 
@@ -63,6 +65,7 @@ export function useGameTransitions(
 
   const wasInLobby = useRef(false);
   const isInitialMount = useRef(true);
+  const loadingEnteredAt = useRef<number | null>(null);
 
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
@@ -263,78 +266,164 @@ export function useGameTransitions(
 
   useEffect(() => {
     if (isLobbyPhase) {
-      const { setLobbyMounted } = useTransitionStore.getState();
-      setLobbyMounted(true);
+      useAppPhaseStore.getState().setLobbyMounted(true);
     }
   }, [isLobbyPhase]);
 
   useEffect(() => {
-    const { setTransitionPhase, setOverlayVisible } = useTransitionStore.getState();
+    const { setPhase } = useAppPhaseStore.getState();
+    const activeGameId = gameId ?? gameIdOf(phase);
+    if (!activeGameId) {
+      return;
+    }
 
     if (isLobbyPhase) {
-      setTransitionPhase("lobby");
+      if (phase.kind !== "lobby") {
+        setPhase({ kind: "lobby", gameId: activeGameId });
+      }
       wasInLobby.current = true;
       return;
     }
 
-    if (!wasInLobby.current || transitionPhase !== "lobby") {
+    if (!wasInLobby.current || phase.kind !== "lobby") {
       return;
     }
 
-    setTransitionPhase("loading");
-    setOverlayVisible(true);
-  }, [isLobbyPhase, transitionPhase]);
+    setPhase({ kind: "loading", gameId: activeGameId });
+  }, [isLobbyPhase, gameId, phase]);
 
   useEffect(() => {
-    const { setTransitionPhase } = useTransitionStore.getState();
+    if (phase.kind !== "loading") {
+      loadingEnteredAt.current = null;
+      return;
+    }
+    if (loadingEnteredAt.current === null) {
+      loadingEnteredAt.current = Date.now();
+    }
+    if (!isSkyboxReady || !isGpuReady) {
+      return;
+    }
+    const activeGameId = phase.gameId;
+    const elapsed = Date.now() - loadingEnteredAt.current;
+    const remaining = Math.max(0, 1000 - elapsed);
+    const advance = () => {
+      useAppPhaseStore.getState().setPhase({ kind: "fadeOutLobby", gameId: activeGameId });
+    };
+    if (remaining === 0) {
+      advance();
+      return;
+    }
+    const timer = window.setTimeout(advance, remaining);
+    return () => window.clearTimeout(timer);
+  }, [phase, isSkyboxReady, isGpuReady]);
 
-    if (transitionPhase === "fadeOutLobby") {
-      const timer = setTimeout(() => setTransitionPhase("marsRevealed"), 1500);
+  useEffect(() => {
+    const { setPhase } = useAppPhaseStore.getState();
+    if (phase.kind === "fadeOutLobby") {
+      const timer = setTimeout(
+        () => setPhase({ kind: "marsRevealed", gameId: phase.gameId }),
+        1500,
+      );
       return () => clearTimeout(timer);
     }
-    if (transitionPhase === "animateUI") {
-      const timer = setTimeout(() => setTransitionPhase("complete"), 2500);
+    if (phase.kind === "animateUI") {
+      const timer = setTimeout(() => setPhase({ kind: "playing", gameId: phase.gameId }), 2500);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [transitionPhase]);
+  }, [phase]);
 
   useEffect(() => {
-    if (transitionPhase === "marsRevealed" && !isStartingSelectionPhase) {
-      const { setTransitionPhase } = useTransitionStore.getState();
-      setTransitionPhase("animateUI");
+    if (phase.kind === "marsRevealed" && !isStartingSelectionPhase) {
+      useAppPhaseStore.getState().setPhase({ kind: "animateUI", gameId: phase.gameId });
     }
-  }, [transitionPhase, isStartingSelectionPhase]);
+  }, [phase, isStartingSelectionPhase]);
 
   useEffect(() => {
-    const { setMarsRevealedReady } = useTransitionStore.getState();
+    const { setMarsRevealedReady } = useAppPhaseStore.getState();
 
-    if (transitionPhase === "marsRevealed") {
+    if (phase.kind === "marsRevealed") {
       const timer = setTimeout(() => setMarsRevealedReady(true), 2000);
       return () => clearTimeout(timer);
     }
     setMarsRevealedReady(false);
     return undefined;
-  }, [transitionPhase]);
+  }, [phase]);
 
   useEffect(() => {
-    if (transitionPhase === "fadeOutLobby") {
+    if (phase.kind === "fadeOutLobby") {
       void playGameStartSound();
     }
-  }, [transitionPhase, playGameStartSound]);
+  }, [phase, playGameStartSound]);
 
   useEffect(() => {
+    const activeGameId = gameId ?? gameIdOf(phase);
+    if (!activeGameId) {
+      return;
+    }
     if (
       isStartingSelectionPhase &&
-      transitionPhase === "idle" &&
+      (phase.kind === "checking" ||
+        phase.kind === "connecting" ||
+        phase.kind === "selecting" ||
+        phase.kind === "joining" ||
+        phase.kind === "spectating") &&
       !wasInLobby.current &&
       isSkyboxReady &&
       isGpuReady
     ) {
-      const { setTransitionPhase } = useTransitionStore.getState();
-      setTransitionPhase("marsRevealed");
+      useAppPhaseStore.getState().setPhase({ kind: "marsRevealed", gameId: activeGameId });
     }
-  }, [isStartingSelectionPhase, transitionPhase, isSkyboxReady, isGpuReady]);
+  }, [isStartingSelectionPhase, phase, isSkyboxReady, isGpuReady, gameId]);
+
+  useEffect(() => {
+    if (gameStatus !== GameStatusActive) {
+      return;
+    }
+    if (isLobbyPhase || isStartingSelectionPhase) {
+      return;
+    }
+    if (!isSkyboxReady || !isGpuReady) {
+      return;
+    }
+    if (wasInLobby.current) {
+      return;
+    }
+    const activeGameId = gameId ?? gameIdOf(phase);
+    if (!activeGameId) {
+      return;
+    }
+    if (
+      phase.kind === "checking" ||
+      phase.kind === "connecting" ||
+      phase.kind === "selecting" ||
+      phase.kind === "joining" ||
+      phase.kind === "spectating"
+    ) {
+      useAppPhaseStore.getState().setPhase({ kind: "playing", gameId: activeGameId });
+    }
+  }, [
+    gameStatus,
+    isLobbyPhase,
+    isStartingSelectionPhase,
+    isSkyboxReady,
+    isGpuReady,
+    gameId,
+    phase,
+  ]);
+
+  useEffect(() => {
+    if (gameStatus !== GameStatusCompleted) {
+      return;
+    }
+    const activeGameId = gameId ?? gameIdOf(phase);
+    if (!activeGameId) {
+      return;
+    }
+    if (phase.kind !== "completed") {
+      useAppPhaseStore.getState().setPhase({ kind: "completed", gameId: activeGameId });
+    }
+  }, [gameStatus, gameId, phase]);
 
   useEffect(() => {
     if (!isInitApplyPhase || !initPhase?.waitingForConfirm) {
@@ -344,7 +433,7 @@ export function useGameTransitions(
       return;
     }
 
-    const animationDone = transitionPhase === "complete" || transitionPhase === "idle";
+    const animationDone = phase.kind === "playing" || phase.kind === "completed";
     if (!animationDone) {
       return;
     }
@@ -370,7 +459,7 @@ export function useGameTransitions(
     initPhase?.hasPendingTiles,
     hostPlayerId,
     currentPlayerId,
-    transitionPhase,
+    phase,
     notificationQueueDoneAt,
   ]);
 }
