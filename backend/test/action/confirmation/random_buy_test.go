@@ -1,0 +1,99 @@
+package confirmation_test
+
+import (
+	"context"
+	"testing"
+
+	confirmAction "terraforming-mars-backend/internal/action/confirmation"
+	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/test/testutil"
+)
+
+func TestConfirmProductionCards_RandomBuy_DisabledRejects(t *testing.T) {
+	g, repo, cardRegistry, p1ID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+	logger := testutil.TestLogger()
+
+	settings := g.Settings()
+	settings.AllowRandomBuy = false
+	g.UpdateSettings(ctx, settings)
+
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw), "update phase")
+	drawn, err := g.Deck().DrawProjectCards(ctx, 4)
+	testutil.AssertNoError(t, err, "draw cards")
+	testutil.AssertNoError(t, g.SetProductionPhase(ctx, p1ID, &shared.ProductionPhase{
+		AvailableCards:    drawn,
+		SelectionComplete: false,
+	}), "set production phase")
+
+	p1, _ := g.GetPlayer(p1ID)
+	p1.Resources().Set(shared.Resources{Credits: 10})
+
+	action := confirmAction.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
+	err = action.Execute(ctx, g.ID(), p1ID, []string{}, true)
+	testutil.AssertError(t, err, "randomBuy should reject when setting is off")
+}
+
+func TestConfirmProductionCards_RandomBuy_BuysOneCardForThreeCredits(t *testing.T) {
+	g, repo, cardRegistry, p1ID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+	logger := testutil.TestLogger()
+
+	settings := g.Settings()
+	settings.AllowRandomBuy = true
+	g.UpdateSettings(ctx, settings)
+
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw), "update phase")
+	drawn, err := g.Deck().DrawProjectCards(ctx, 4)
+	testutil.AssertNoError(t, err, "draw cards")
+	testutil.AssertNoError(t, g.SetProductionPhase(ctx, p1ID, &shared.ProductionPhase{
+		AvailableCards:    drawn,
+		SelectionComplete: false,
+	}), "set production phase")
+
+	p1, _ := g.GetPlayer(p1ID)
+	p1.Resources().Set(shared.Resources{Credits: 10})
+	handBefore := len(p1.Hand().Cards())
+
+	action := confirmAction.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
+	err = action.Execute(ctx, g.ID(), p1ID, []string{}, true)
+	testutil.AssertNoError(t, err, "randomBuy should succeed when setting is on")
+
+	testutil.AssertEqual(t, handBefore+1, len(p1.Hand().Cards()), "hand should grow by exactly one card")
+	testutil.AssertEqual(t, 7, p1.Resources().Get().Credits, "should pay 3 credits for one random buy")
+
+	pickedID := p1.Hand().Cards()[len(p1.Hand().Cards())-1]
+	found := false
+	for _, id := range drawn {
+		if id == pickedID {
+			found = true
+			break
+		}
+	}
+	testutil.AssertTrue(t, found, "picked card should come from the available pool")
+}
+
+func TestConfirmProductionCards_RandomBuy_RejectsWithSelection(t *testing.T) {
+	g, repo, cardRegistry, p1ID, _ := testutil.SetupTwoPlayerGame(t)
+	ctx := context.Background()
+	logger := testutil.TestLogger()
+
+	settings := g.Settings()
+	settings.AllowRandomBuy = true
+	g.UpdateSettings(ctx, settings)
+
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw), "update phase")
+	drawn, err := g.Deck().DrawProjectCards(ctx, 4)
+	testutil.AssertNoError(t, err, "draw cards")
+	testutil.AssertNoError(t, g.SetProductionPhase(ctx, p1ID, &shared.ProductionPhase{
+		AvailableCards:    drawn,
+		SelectionComplete: false,
+	}), "set production phase")
+
+	p1, _ := g.GetPlayer(p1ID)
+	p1.Resources().Set(shared.Resources{Credits: 10})
+
+	action := confirmAction.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
+	err = action.Execute(ctx, g.ID(), p1ID, []string{drawn[0]}, true)
+	testutil.AssertError(t, err, "randomBuy with non-empty selection should reject")
+}
