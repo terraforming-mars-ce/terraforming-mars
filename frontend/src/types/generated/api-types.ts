@@ -864,6 +864,7 @@ export interface GameSettingsDto {
   venusNextEnabled: boolean;
   developmentMode: boolean;
   demoGame: boolean;
+  allowRandomBuy: boolean;
   cardPacks?: string[];
   hasClaudeApiKey: boolean;
   claudeModel?: string;
@@ -1808,17 +1809,27 @@ export interface GetGameHistoryResponse {
 // source: http_dto.go
 
 /**
- * CreateGameRequest represents the request body for creating a game
+ * CreateGameRequest represents the request body for creating a game.
+ * All fields are optional — defaults are applied server-side and settings are
+ * edited from the lobby via UpdateGameSettingsRequest.
  */
 export interface CreateGameRequest {
-  maxPlayers: number /* int */;
-  venusNextEnabled: boolean;
-  developmentMode: boolean;
-  demoGame: boolean;
+  playerName?: string;
+}
+/**
+ * UpdateGameSettingsRequest represents a partial settings update sent from the
+ * lobby. Pointer fields distinguish "leave alone" from "set to zero value".
+ */
+export interface UpdateGameSettingsRequest {
+  maxPlayers?: number /* int */;
+  mapId?: string;
+  venusNextEnabled?: boolean;
+  developmentMode?: boolean;
+  demoGame?: boolean;
+  allowRandomBuy?: boolean;
   cardPacks?: string[];
   claudeApiKey?: string;
-  selectedMilestones?: string[];
-  selectedAwards?: string[];
+  claudeModel?: string;
 }
 /**
  * CreateGameResponse represents the response for creating a game
@@ -2014,7 +2025,7 @@ export const MessageTypePlayerKicked: MessageType = "player-kicked";
 export const MessageTypeConvertToBot: MessageType = "convert-to-bot";
 export const MessageTypeEndGame: MessageType = "end-game";
 export const MessageTypeGameEnded: MessageType = "game-ended";
-export const MessageTypeUpdateGameMap: MessageType = "update-game-map";
+export const MessageTypeUpdateGameSettings: MessageType = "update-game-settings";
 export const MessageTypeSetPlayerColor: MessageType = "set-player-color";
 export const MessageTypeSpectatorConnect: MessageType = "spectator-connect";
 export const MessageTypeSpectatorConnected: MessageType = "spectator-connected";
