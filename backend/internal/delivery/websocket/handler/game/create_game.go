@@ -6,7 +6,6 @@ import (
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 
@@ -44,42 +43,9 @@ func (h *CreateGameHandler) HandleMessage(ctx context.Context, connection *core.
 
 	log.Debug("Processing create game request")
 
-	settings := shared.GameSettings{
-		MaxPlayers: game.DefaultMaxPlayers,
-		CardPacks:  shared.DefaultCardPacks(),
-	}
-
-	if payloadMap, ok := message.Payload.(map[string]interface{}); ok {
-		if maxPlayers, ok := payloadMap["maxPlayers"].(float64); ok {
-			settings.MaxPlayers = int(maxPlayers)
-		}
-		if venusNextEnabled, ok := payloadMap["venusNextEnabled"].(bool); ok {
-			settings.VenusNextEnabled = venusNextEnabled
-		}
-		if cardPacks, ok := payloadMap["cardPacks"].([]interface{}); ok {
-			packs := make([]string, len(cardPacks))
-			for i, pack := range cardPacks {
-				if packStr, ok := pack.(string); ok {
-					packs[i] = packStr
-				}
-			}
-			if len(packs) > 0 {
-				settings.CardPacks = packs
-			}
-		}
-		if claudeAPIKey, ok := payloadMap["claudeApiKey"].(string); ok {
-			settings.ClaudeAPIKey = claudeAPIKey
-		}
-		if claudeModel, ok := payloadMap["claudeModel"].(string); ok {
-			settings.ClaudeModel = claudeModel
-		}
-	}
-
-	log.Debug("Parsed create game settings",
-		zap.Int("max_players", settings.MaxPlayers),
-		zap.Strings("card_packs", settings.CardPacks))
-
-	game, err := h.createGameAction.Execute(ctx, settings)
+	// Settings start with sensible defaults; the create-game action fills in
+	// the rest and hosts edit them from the lobby via UpdateGameSettingsAction.
+	game, err := h.createGameAction.Execute(ctx, shared.GameSettings{DevelopmentMode: true})
 	if err != nil {
 		log.Error("Failed to execute create game action", zap.Error(err))
 		h.sendError(connection, err.Error())
