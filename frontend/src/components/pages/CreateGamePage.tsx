@@ -2,37 +2,25 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiService } from "../../services/apiService";
 import { globalWebSocketManager } from "../../services/globalWebSocketManager";
-import { GameSettingsDto } from "../../types/generated/api-types.ts";
 import { skyboxCache } from "../../services/SkyboxCache.ts";
 import LoadingOverlay from "../game/view/LoadingOverlay.tsx";
-import InfoTooltip from "../ui/display/InfoTooltip.tsx";
 import BackButton from "../ui/buttons/BackButton.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
-import GameButton from "../ui/buttons/GameButton.tsx";
 import { useNotifications } from "../../contexts/NotificationContext.tsx";
 
 const CreateGamePage: React.FC = () => {
   const navigate = useNavigate();
   const { showNotification } = useNotifications();
   const [playerName, setPlayerName] = useState("");
-  const [developmentMode, setDevelopmentMode] = useState(true);
-  const [maxPlayers, setMaxPlayers] = useState(4);
-  const [venusNextEnabled, setVenusEnabled] = useState(false);
-  const [selectedPacks, setSelectedPacks] = useState<string[]>(["base-game"]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState<"game" | "environment" | null>(null);
   const [skyboxReady, setSkyboxReady] = useState(false);
   const [isFadedIn, setIsFadedIn] = useState(false);
-  const [showMore, setShowMore] = useState(false);
-  const [demoGame, setDemoGame] = useState(false);
-  const [claudeApiKey, setClaudeApiKey] = useState("");
 
-  // Check if skybox is already loaded on component mount
   useEffect(() => {
     if (skyboxCache.isReady()) {
       setSkyboxReady(true);
     }
-    // Trigger fade in animation
     setTimeout(() => {
       setIsFadedIn(true);
     }, 10);
@@ -55,34 +43,17 @@ const CreateGamePage: React.FC = () => {
     setLoadingStep("game");
 
     try {
-      // Step 1: Create game
-      const gameSettings: GameSettingsDto = {
-        maxPlayers: maxPlayers,
-        mapId: "tharsis",
-        venusNextEnabled: venusNextEnabled,
-        developmentMode: developmentMode,
-        cardPacks: selectedPacks,
-        demoGame: demoGame,
-        hasClaudeApiKey: !!claudeApiKey.trim(),
-        availablePlayerColors: [],
-        availableMaps: [],
-      };
+      const game = await apiService.createGame();
 
-      const game = await apiService.createGame(gameSettings, claudeApiKey.trim() || undefined);
-
-      // Step 2: Load 3D environment if not already loaded
       if (!skyboxReady) {
         setLoadingStep("environment");
         await skyboxCache.preload();
       }
 
-      // Step 3: Ensure WebSocket is connected BEFORE setting up listener
       setLoadingStep("game");
       await globalWebSocketManager.initialize();
 
-      // Step 4: Set up one-time listener for game-updated event
       const handleGameUpdated = (gameData: any) => {
-        // Extract player info from game data
         const allPlayers = [gameData.currentPlayer, ...(gameData.otherPlayers || [])].filter(
           Boolean,
         );
@@ -90,7 +61,6 @@ const CreateGamePage: React.FC = () => {
         const connectedPlayer = allPlayers.find((p: any) => p.name === playerName.trim());
 
         if (connectedPlayer) {
-          // Store game data
           const storedData = {
             gameId: gameData.id,
             playerId: connectedPlayer.id,
@@ -99,7 +69,6 @@ const CreateGamePage: React.FC = () => {
           };
           localStorage.setItem("terraforming-mars-game", JSON.stringify(storedData));
 
-          // Navigate to the main game interface with the complete game state
           navigate("/game", {
             state: {
               game: gameData,
@@ -108,15 +77,12 @@ const CreateGamePage: React.FC = () => {
             },
           });
 
-          // Clean up listener
           globalWebSocketManager.off("game-updated", handleGameUpdated);
         }
       };
 
-      // Register listener BEFORE sending connect message
       globalWebSocketManager.on("game-updated", handleGameUpdated);
 
-      // Step 5: Connect player to the game via WebSocket (non-blocking)
       globalWebSocketManager.playerConnect(playerName.trim(), game.id);
     } catch (err) {
       showNotification({
@@ -141,19 +107,6 @@ const CreateGamePage: React.FC = () => {
 
   const handleBackToHome = () => {
     navigate("/");
-  };
-
-  const handlePackToggle = (pack: string) => {
-    setSelectedPacks((prev) => {
-      if (prev.includes(pack)) {
-        if (prev.length === 1) {
-          return prev;
-        }
-        return prev.filter((p) => p !== pack);
-      } else {
-        return [...prev, pack];
-      }
-    });
   };
 
   const getLoadingMessage = () => {
@@ -212,241 +165,6 @@ const CreateGamePage: React.FC = () => {
                     <polyline points="9 6 15 12 9 18" />
                   </svg>
                 </button>
-              </div>
-
-              <div className="flex items-center justify-center gap-6 mt-3">
-                <GameButton buttonType="textonly" size="sm" onClick={() => setShowMore(!showMore)}>
-                  Settings
-                </GameButton>
-              </div>
-
-              <div
-                className={`absolute left-0 right-0 top-full mt-1 z-10 bg-space-black-darker/95 border border-white/20 rounded-xl p-4 transition-all duration-300 ${showMore ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"}`}
-              >
-                <div className="mb-4">
-                  <h3 className="text-white text-sm font-semibold mb-3 text-center">Settings</h3>
-                  <label className="flex items-center gap-3 py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                    <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2">
-                      Max Players
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={maxPlayers}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (val >= 1 && val <= 10) setMaxPlayers(val);
-                      }}
-                      disabled={isLoading}
-                      className="w-16 bg-black/50 border border-white/20 rounded-lg py-1 px-2 text-white text-sm text-center outline-none focus:border-white/60 transition-colors disabled:opacity-60 disabled:cursor-default"
-                    />
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                    <input
-                      type="checkbox"
-                      checked={developmentMode}
-                      onChange={(e) => setDevelopmentMode(e.target.checked)}
-                      disabled={isLoading}
-                      className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
-                    />
-                    <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2">
-                      Development Mode
-                      <InfoTooltip size="medium">
-                        Enable admin commands for debugging and testing. Allows you to give cards to
-                        players, modify resources/production, change game phases, and adjust global
-                        parameters through the debug panel.
-                      </InfoTooltip>
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                    <input
-                      type="checkbox"
-                      checked={demoGame}
-                      onChange={(e) => setDemoGame(e.target.checked)}
-                      disabled={isLoading}
-                      className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
-                    />
-                    <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2">
-                      Demo Game
-                      <InfoTooltip size="medium">
-                        Players configure their corporation, starting cards, resources, and
-                        production in the lobby before starting. Useful for testing specific setups.
-                      </InfoTooltip>
-                    </span>
-                  </label>
-                </div>
-
-                <div>
-                  <h3 className="text-white text-sm font-semibold mb-3 text-center">Card Packs</h3>
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                      <input
-                        type="checkbox"
-                        checked={selectedPacks.includes("base-game")}
-                        onChange={() => handlePackToggle("base-game")}
-                        disabled={
-                          isLoading ||
-                          (selectedPacks.includes("base-game") && selectedPacks.length === 1)
-                        }
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
-                      />
-                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
-                        Base Game
-                        <span className="text-white/50 text-xs">(22 cards)</span>
-                        <InfoTooltip size="small">
-                          Includes tested cards with comprehensive test coverage. All cards have
-                          verified implementations.
-                        </InfoTooltip>
-                      </span>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                      <input
-                        type="checkbox"
-                        checked={selectedPacks.includes("prelude")}
-                        onChange={() => handlePackToggle("prelude")}
-                        disabled={
-                          isLoading ||
-                          (selectedPacks.includes("prelude") && selectedPacks.length === 1)
-                        }
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
-                      />
-                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
-                        Prelude
-                        <span className="text-white/50 text-xs">(35 cards)</span>
-                        <InfoTooltip size="small">
-                          Each player receives 4 prelude cards and keeps 2 for free. These give an
-                          early boost with resources, production, or other effects.
-                        </InfoTooltip>
-                      </span>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                      <input
-                        type="checkbox"
-                        checked={venusNextEnabled}
-                        onChange={(e) => setVenusEnabled(e.target.checked)}
-                        disabled={isLoading}
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
-                      />
-                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
-                        Venus Next
-                        <InfoTooltip size="small">
-                          Adds the Venus globe with tile placements and the Venus global parameter
-                          track. Venus Next expansion cards are automatically included.
-                        </InfoTooltip>
-                      </span>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                      <input
-                        type="checkbox"
-                        checked={selectedPacks.includes("colonies")}
-                        onChange={() => handlePackToggle("colonies")}
-                        disabled={isLoading}
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
-                      />
-                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
-                        Colonies
-                        <span className="text-[10px] font-orbitron font-bold text-yellow-400/80 uppercase tracking-wider">
-                          WIP
-                        </span>
-                        <InfoTooltip size="small">
-                          Adds colony tiles that players can trade with and build on. Trade costs 3
-                          energy, building costs 17 MC. Work in progress — some colony interactions
-                          and card effects are not yet implemented.
-                        </InfoTooltip>
-                      </span>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                      <input
-                        type="checkbox"
-                        checked={selectedPacks.includes("project-funding")}
-                        onChange={() => handlePackToggle("project-funding")}
-                        disabled={isLoading}
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
-                      />
-                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
-                        Project Funding
-                        <span className="text-[10px] font-orbitron font-bold text-yellow-400/80 uppercase tracking-wider">
-                          WIP
-                        </span>
-                        <InfoTooltip size="small">
-                          Adds themed projects that players invest in by purchasing seats. Early
-                          seats are cheap, late seats are expensive. When all seats are filled,
-                          funders get tier-based rewards and all players get a completion effect.
-                        </InfoTooltip>
-                      </span>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                      <input
-                        type="checkbox"
-                        checked={selectedPacks.includes("experimental")}
-                        onChange={() => handlePackToggle("experimental")}
-                        disabled={
-                          isLoading ||
-                          (selectedPacks.includes("experimental") && selectedPacks.length === 1)
-                        }
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
-                      />
-                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
-                        Experimental
-                        <span className="text-white/50 text-xs">(4 cards)</span>
-                        <InfoTooltip size="small">
-                          Experimental cards with new mechanics: extra actions, bonus tags, special
-                          tiles, and tile destruction.
-                        </InfoTooltip>
-                      </span>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer py-2 px-2 rounded hover:bg-white/5 transition-all duration-200">
-                      <input
-                        type="checkbox"
-                        checked={selectedPacks.includes("future")}
-                        onChange={() => handlePackToggle("future")}
-                        disabled={
-                          isLoading ||
-                          (selectedPacks.includes("future") && selectedPacks.length === 1)
-                        }
-                        className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0 disabled:opacity-60 disabled:cursor-default"
-                      />
-                      <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2 flex-1">
-                        Future Content
-                        <span className="text-white/50 text-xs">(431 cards)</span>
-                        <InfoTooltip size="small">
-                          Includes complex and untested cards for future implementation. May have
-                          incomplete effects or bugs.
-                        </InfoTooltip>
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-white/10">
-                  <h3 className="text-white text-sm font-semibold mb-3 text-center">AI Bot</h3>
-                  <label className="flex flex-col gap-2 py-2 px-2 rounded">
-                    <span className="text-white text-sm font-medium leading-none m-0 flex items-center gap-2">
-                      Claude token
-                      <InfoTooltip size="small">
-                        Provide your own Claude token to enable AI bot players. The token is sent
-                        with the game settings and used server-side for Claude invocations.
-                      </InfoTooltip>
-                    </span>
-                    <input
-                      type="password"
-                      value={claudeApiKey}
-                      onChange={(e) => setClaudeApiKey(e.target.value)}
-                      placeholder="sk-ant-..."
-                      disabled={isLoading}
-                      spellCheck={false}
-                      autoComplete="off"
-                      className="w-full bg-black/50 border border-white/20 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-white/60 transition-colors disabled:opacity-60 disabled:cursor-default placeholder:text-white/30"
-                    />
-                  </label>
-                </div>
               </div>
             </form>
           </div>
