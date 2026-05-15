@@ -3,7 +3,6 @@ package confirmation
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	baseaction "terraforming-mars-backend/internal/action"
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/action/resource_conversion"
@@ -36,8 +35,8 @@ func NewConfirmProductionCardsAction(
 }
 
 // Execute performs the confirm production cards action.
-// When randomBuy is true and the selection is empty, a single random card from
-// the player's available pool is bought (subject to the AllowRandomBuy setting).
+// When randomBuy is true and the selection is empty, a single fresh card is
+// drawn from the deck and bought (subject to the AllowRandomBuy setting).
 func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID string, playerID string, selectedCardIDs []string, randomBuy bool) error {
 	log := a.InitLogger(gameID, playerID).With(
 		zap.String("action", "confirm_production_cards"),
@@ -76,11 +75,6 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		return fmt.Errorf("production selection already complete")
 	}
 
-	availableSet := make(map[string]bool)
-	for _, id := range productionPhase.AvailableCards {
-		availableSet[id] = true
-	}
-
 	if randomBuy {
 		if !g.Settings().AllowRandomBuy {
 			return fmt.Errorf("random buy is not enabled for this game")
@@ -88,18 +82,23 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		if len(selectedCardIDs) > 0 {
 			return fmt.Errorf("random buy requires an empty selection")
 		}
-		if len(productionPhase.AvailableCards) == 0 {
-			return fmt.Errorf("no cards available to random-buy")
+		drawn, err := g.Deck().DrawProjectCards(ctx, 1)
+		if err != nil || len(drawn) == 0 {
+			log.Error("Failed to draw random card from deck", zap.Error(err))
+			return fmt.Errorf("failed to draw random card: %w", err)
 		}
-		pick := productionPhase.AvailableCards[rand.Intn(len(productionPhase.AvailableCards))]
-		selectedCardIDs = []string{pick}
-		log.Debug("Random buy picked card", zap.String("card_id", pick))
-	}
-
-	for _, cardID := range selectedCardIDs {
-		if !availableSet[cardID] {
-			log.Error("Selected card not available", zap.String("card_id", cardID))
-			return fmt.Errorf("card %s not available for selection", cardID)
+		selectedCardIDs = drawn
+		log.Debug("Random buy drew card from deck", zap.String("card_id", drawn[0]))
+	} else {
+		availableSet := make(map[string]bool)
+		for _, id := range productionPhase.AvailableCards {
+			availableSet[id] = true
+		}
+		for _, cardID := range selectedCardIDs {
+			if !availableSet[cardID] {
+				log.Error("Selected card not available", zap.String("card_id", cardID))
+				return fmt.Errorf("card %s not available for selection", cardID)
+			}
 		}
 	}
 

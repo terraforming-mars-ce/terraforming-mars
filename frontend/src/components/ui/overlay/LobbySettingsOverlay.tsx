@@ -206,7 +206,7 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                     label="Allow Random Buy"
                     checked={settings.allowRandomBuy}
                     onChange={(v) => dispatch({ allowRandomBuy: v })}
-                    tooltip="When selecting 0 cards to buy at the end of a generation, players can choose to buy a single random card instead. See issue #412."
+                    tooltip="When selecting 0 cards to buy at the end of a generation, players can choose to buy a single random card instead."
                   />
                 </div>
               </div>
