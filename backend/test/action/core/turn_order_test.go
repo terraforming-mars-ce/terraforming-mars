@@ -38,10 +38,10 @@ func TestTurnOrderPreservedAfterProductionCardSelection(t *testing.T) {
 	// Both players confirm production cards (select none)
 	confirmAction := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
 
-	err = confirmAction.Execute(ctx, testGame.ID(), player1ID, []string{})
+	err = confirmAction.Execute(ctx, testGame.ID(), player1ID, []string{}, false)
 	testutil.AssertNoError(t, err, "Player 1 confirm production cards should succeed")
 
-	err = confirmAction.Execute(ctx, testGame.ID(), player2ID, []string{})
+	err = confirmAction.Execute(ctx, testGame.ID(), player2ID, []string{}, false)
 	testutil.AssertNoError(t, err, "Player 2 confirm production cards should succeed")
 
 	// After all confirm, game transitions back to action phase
@@ -95,7 +95,7 @@ func TestTurnOrderRotatesCorrectlyWithFourPlayers(t *testing.T) {
 
 		// All players confirm production cards
 		for _, id := range playerIDs {
-			err := confirmAction.Execute(ctx, testGame.ID(), id, []string{})
+			err := confirmAction.Execute(ctx, testGame.ID(), id, []string{}, false)
 			testutil.AssertNoError(t, err, "Player confirm should succeed in generation %d")
 		}
 
@@ -135,7 +135,7 @@ func TestTurnOrderRotatesCorrectlyWithThreePlayers(t *testing.T) {
 
 		// All players confirm production cards
 		for _, id := range playerIDs {
-			err := confirmAction.Execute(ctx, testGame.ID(), id, []string{})
+			err := confirmAction.Execute(ctx, testGame.ID(), id, []string{}, false)
 			testutil.AssertNoError(t, err, "Player confirm should succeed in generation %d")
 		}
 

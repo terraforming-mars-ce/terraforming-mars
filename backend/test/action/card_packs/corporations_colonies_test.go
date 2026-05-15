@@ -442,7 +442,7 @@ func TestPolyphemos_ProductionPhaseCardBuyCost(t *testing.T) {
 
 	// Buying 2 cards should succeed (2 * 5 = 10 MC)
 	action := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
-	err = action.Execute(ctx, testGame.ID(), playerID, drawnCards[:2])
+	err = action.Execute(ctx, testGame.ID(), playerID, drawnCards[:2], false)
 	testutil.AssertNoError(t, err, "buying 2 cards at 5 MC each should succeed with 10 credits")
 
 	resources := p.Resources().Get()
@@ -487,7 +487,7 @@ func TestPolyphemos_ProductionPhaseCardBuyCost_InsufficientCredits(t *testing.T)
 
 	// Buying 2 cards should fail (2 * 5 = 10 MC, only have 9)
 	action := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
-	err = action.Execute(ctx, testGame.ID(), playerID, drawnCards[:2])
+	err = action.Execute(ctx, testGame.ID(), playerID, drawnCards[:2], false)
 	testutil.AssertError(t, err, "buying 2 cards at 5 MC each should fail with only 9 credits")
 }
 
