@@ -52,7 +52,8 @@ import {
   MessageTypeChatUpdate,
   MessageTypeKickSpectator,
   MessageTypeSpectatorKicked,
-  MessageTypeUpdateGameMap,
+  MessageTypeUpdateGameSettings,
+  UpdateGameSettingsRequest,
   MessageTypeActionColonyTrade,
   MessageTypeActionColonyBuild,
   MessageTypeActionProjectFundingSeat,
@@ -332,8 +333,11 @@ export class WebSocketService {
     });
   }
 
-  confirmProductionCards(cardIds: string[]): string {
-    return this.send(MessageTypeActionConfirmProductionCards, { cardIds });
+  confirmProductionCards(cardIds: string[], options?: { randomBuy?: boolean }): string {
+    return this.send(MessageTypeActionConfirmProductionCards, {
+      cardIds,
+      randomBuy: options?.randomBuy ?? false,
+    });
   }
 
   confirmCardDraw(cardsToTake: string[], cardsToBuy: string[]): string {
@@ -437,8 +441,8 @@ export class WebSocketService {
     this.send(MessageTypeRequestLogs, {});
   }
 
-  updateGameMap(mapId: string): void {
-    this.send(MessageTypeUpdateGameMap, { mapId });
+  updateGameSettings(patch: UpdateGameSettingsRequest): void {
+    this.send(MessageTypeUpdateGameSettings, patch);
   }
 
   setPlayerColor(color: string, targetPlayerId?: string): void {
