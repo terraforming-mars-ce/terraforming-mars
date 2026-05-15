@@ -229,7 +229,7 @@ func main() {
 
 	// Game lifecycle (6)
 	createGameAction := gameAction.NewCreateGameAction(gameRepo, cardRegistry, mapRegistry, log)
-	updateGameMapAction := gameAction.NewUpdateGameMapAction(gameRepo, mapRegistry, log)
+	updateGameSettingsAction := gameAction.NewUpdateGameSettingsAction(gameRepo, cardRegistry, mapRegistry, log)
 	joinGameAction := gameAction.NewJoinGameAction(gameRepo, cardRegistry, log, colonyRegistry)
 	healthChecker := bot.NewHealthChecker(log)
 	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, healthChecker, broadcaster, log, colonyRegistry)
@@ -344,7 +344,7 @@ func main() {
 		joinGameAction,
 		addBotAction,
 		selectDemoChoicesAction,
-		updateGameMapAction,
+		updateGameSettingsAction,
 		// Card actions
 		playCardAction,
 		useCardActionAction,

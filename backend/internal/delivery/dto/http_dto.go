@@ -2,16 +2,25 @@ package dto
 
 import "encoding/json"
 
-// CreateGameRequest represents the request body for creating a game
+// CreateGameRequest represents the request body for creating a game.
+// All fields are optional — defaults are applied server-side and settings are
+// edited from the lobby via UpdateGameSettingsRequest.
 type CreateGameRequest struct {
-	MaxPlayers         int      `json:"maxPlayers" binding:"required,min=1,max=10"`
-	VenusNextEnabled   bool     `json:"venusNextEnabled"`
-	DevelopmentMode    bool     `json:"developmentMode"`
-	DemoGame           bool     `json:"demoGame"`
-	CardPacks          []string `json:"cardPacks,omitempty"`
-	ClaudeAPIKey       string   `json:"claudeApiKey,omitempty"`
-	SelectedMilestones []string `json:"selectedMilestones,omitempty"`
-	SelectedAwards     []string `json:"selectedAwards,omitempty"`
+	PlayerName string `json:"playerName,omitempty"`
+}
+
+// UpdateGameSettingsRequest represents a partial settings update sent from the
+// lobby. Pointer fields distinguish "leave alone" from "set to zero value".
+type UpdateGameSettingsRequest struct {
+	MaxPlayers       *int      `json:"maxPlayers,omitempty"`
+	MapID            *string   `json:"mapId,omitempty"`
+	VenusNextEnabled *bool     `json:"venusNextEnabled,omitempty"`
+	DevelopmentMode  *bool     `json:"developmentMode,omitempty"`
+	DemoGame         *bool     `json:"demoGame,omitempty"`
+	AllowRandomBuy   *bool     `json:"allowRandomBuy,omitempty"`
+	CardPacks        *[]string `json:"cardPacks,omitempty"`
+	ClaudeAPIKey     *string   `json:"claudeApiKey,omitempty"`
+	ClaudeModel      *string   `json:"claudeModel,omitempty"`
 }
 
 // CreateGameResponse represents the response for creating a game
