@@ -77,6 +77,10 @@ See `backend/CLAUDE.md` for Go type tagging and `frontend/CLAUDE.md` for consumi
 - State flow: All changes originate from Go backend via WebSocket
 - No client-side game logic (prevents desync)
 
+### Frontend App-Phase State Machine
+
+The frontend tracks "what screen the user is on" in a single discriminated-union `AppPhase` (`frontend/src/stores/appPhaseStore.ts`) rather than composing multiple boolean / enum flags across stores. Only `useGameInitialization` (bootstrapping) and `useGameTransitions` (lifecycle) write to it; components read `phase.kind` and selector helpers. See `frontend/CLAUDE.md` § "App Phase State Machine" for the legal transitions, the persistent `<SpaceBackground>` invariant, and the rules around resetting world-ready flags between games.
+
 ### Test Creation
 - Always write tests for new backend features
 - Test files go in `backend/test/` directory
@@ -99,7 +103,7 @@ An MCP server at `mcp-server/` lets Claude Code play the game via WebSocket. Run
 - NEVER create files unless absolutely necessary
 - ALWAYS prefer editing existing files over creating new ones
 - NEVER proactively create documentation files (only when explicitly requested)
-- No need to be backwards compatible
+- **No backwards compatibility, ever.** Always break APIs forward — never keep deprecated fields, message types, shims, or compatibility branches. Move only forward. If a name, route, or message type changes, delete the old one outright
 - Write tests for new backend features
 - **NEVER use deprecated code or comments** - Remove deprecated fields, functions, and comments entirely
 - **NEVER push directly to main** - Always create a separate feature branch and open a pull request
