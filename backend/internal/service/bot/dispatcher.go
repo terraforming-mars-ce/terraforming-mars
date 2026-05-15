@@ -246,7 +246,7 @@ func (d *CommandDispatcher) dispatchConfirmProductionCards(ctx context.Context, 
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse confirm-production-cards payload: %w", err)
 	}
-	return d.confirmProductionCards.Execute(ctx, gameID, playerID, p.CardIDs)
+	return d.confirmProductionCards.Execute(ctx, gameID, playerID, p.CardIDs, false)
 }
 
 func (d *CommandDispatcher) dispatchConfirmCardDraw(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {

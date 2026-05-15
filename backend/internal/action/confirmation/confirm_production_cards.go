@@ -3,6 +3,7 @@ package confirmation
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	baseaction "terraforming-mars-backend/internal/action"
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/action/resource_conversion"
@@ -34,11 +35,14 @@ func NewConfirmProductionCardsAction(
 	}
 }
 
-// Execute performs the confirm production cards action
-func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID string, playerID string, selectedCardIDs []string) error {
+// Execute performs the confirm production cards action.
+// When randomBuy is true and the selection is empty, a single random card from
+// the player's available pool is bought (subject to the AllowRandomBuy setting).
+func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID string, playerID string, selectedCardIDs []string, randomBuy bool) error {
 	log := a.InitLogger(gameID, playerID).With(
 		zap.String("action", "confirm_production_cards"),
 		zap.Strings("selected_card_ids", selectedCardIDs),
+		zap.Bool("random_buy", randomBuy),
 	)
 	log.Debug("Player confirming production card selection")
 
@@ -75,6 +79,21 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 	availableSet := make(map[string]bool)
 	for _, id := range productionPhase.AvailableCards {
 		availableSet[id] = true
+	}
+
+	if randomBuy {
+		if !g.Settings().AllowRandomBuy {
+			return fmt.Errorf("random buy is not enabled for this game")
+		}
+		if len(selectedCardIDs) > 0 {
+			return fmt.Errorf("random buy requires an empty selection")
+		}
+		if len(productionPhase.AvailableCards) == 0 {
+			return fmt.Errorf("no cards available to random-buy")
+		}
+		pick := productionPhase.AvailableCards[rand.Intn(len(productionPhase.AvailableCards))]
+		selectedCardIDs = []string{pick}
+		log.Debug("Random buy picked card", zap.String("card_id", pick))
 	}
 
 	for _, cardID := range selectedCardIDs {

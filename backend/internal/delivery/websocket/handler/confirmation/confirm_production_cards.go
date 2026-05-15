@@ -59,10 +59,13 @@ func (h *ConfirmProductionCardsHandler) HandleMessage(ctx context.Context, conne
 		}
 	}
 
-	log.Debug("Parsed confirm production cards request",
-		zap.Strings("selected_card_ids", selectedCardIDs))
+	randomBuy, _ := payloadMap["randomBuy"].(bool)
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, selectedCardIDs)
+	log.Debug("Parsed confirm production cards request",
+		zap.Strings("selected_card_ids", selectedCardIDs),
+		zap.Bool("random_buy", randomBuy))
+
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, selectedCardIDs, randomBuy)
 	if err != nil {
 		log.Error("Failed to execute confirm production cards action", zap.Error(err))
 		h.sendError(connection, err.Error())
