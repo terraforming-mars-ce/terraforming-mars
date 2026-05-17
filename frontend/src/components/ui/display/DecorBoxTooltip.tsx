@@ -9,6 +9,7 @@ interface DecorBoxTooltipProps {
   position: { x: number; y: number } | null;
   placement?: "below" | "above";
   cornerSize?: number;
+  maxWidth?: number | string;
 }
 
 const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({
@@ -17,6 +18,7 @@ const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({
   position,
   placement = "below",
   cornerSize = 14,
+  maxWidth,
 }) => {
   if ((!description && !children) || !position) return null;
 
@@ -25,12 +27,13 @@ const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({
 
   return createPortal(
     <div
-      className={`fixed w-max max-w-40 ${paddingClass} pointer-events-none animate-[fadeIn_150ms_ease-in]`}
+      className={`fixed w-max ${maxWidth === undefined ? "max-w-40" : ""} ${paddingClass} pointer-events-none animate-[fadeIn_150ms_ease-in]`}
       style={{
         left: position.x,
         top: position.y,
         transform: `translate(-50%, ${translateY})`,
         zIndex: Z_INDEX.LOADING_OVERLAY,
+        maxWidth,
       }}
     >
       <div
