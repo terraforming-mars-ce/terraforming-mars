@@ -79,9 +79,7 @@ const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
 
   const handleMouseEnter = () => {
     setIsHovered(true);
-    if (isClickable) {
-      hoverSound.onMouseEnter?.();
-    }
+    hoverSound.onMouseEnter?.();
   };
 
   const cursorClass = isClickable ? "cursor-pointer" : "cursor-default";
