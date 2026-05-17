@@ -151,19 +151,9 @@ func (h *GameHandler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings := shared.GameSettings{
-		MaxPlayers:         req.MaxPlayers,
-		VenusNextEnabled:   req.VenusNextEnabled,
-		DevelopmentMode:    req.DevelopmentMode,
-		DemoGame:           req.DemoGame,
-		CardPacks:          req.CardPacks,
-		ClaudeAPIKey:       req.ClaudeAPIKey,
-		SelectedMilestones: req.SelectedMilestones,
-		SelectedAwards:     req.SelectedAwards,
-	}
-
-	// Execute create game action
-	game, err := h.createGameAction.Execute(ctx, settings)
+	// Settings start with sensible defaults; the create-game action fills in
+	// the rest and hosts edit them from the lobby via UpdateGameSettingsAction.
+	game, err := h.createGameAction.Execute(ctx, shared.GameSettings{DevelopmentMode: true})
 	if err != nil {
 		log.Error("Failed to create game", zap.Error(err))
 		http.Error(w, "Failed to create game", http.StatusInternalServerError)

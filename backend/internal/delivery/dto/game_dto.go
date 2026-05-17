@@ -531,6 +531,7 @@ type GameSettingsDto struct {
 	VenusNextEnabled      bool         `json:"venusNextEnabled"`
 	DevelopmentMode       bool         `json:"developmentMode"`
 	DemoGame              bool         `json:"demoGame"`
+	AllowRandomBuy        bool         `json:"allowRandomBuy"`
 	CardPacks             []string     `json:"cardPacks,omitempty"`
 	HasClaudeAPIKey       bool         `json:"hasClaudeApiKey"`
 	ClaudeModel           string       `json:"claudeModel,omitempty"`

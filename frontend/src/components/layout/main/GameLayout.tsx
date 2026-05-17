@@ -25,6 +25,7 @@ import {
   TriggeredEffectDto,
 } from "../../../types/generated/api-types.ts";
 import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
+import { useAppPhaseStore } from "@/stores/appPhaseStore.ts";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import GameButton from "../../ui/buttons/GameButton.tsx";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
@@ -37,15 +38,6 @@ export function SolarSystemFade({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export type TransitionPhase =
-  | "idle"
-  | "lobby"
-  | "loading"
-  | "fadeOutLobby"
-  | "marsRevealed"
-  | "animateUI"
-  | "complete";
-
 interface GameLayoutProps {
   gameState: GameDto;
   currentPlayer: PlayerDto | null;
@@ -54,7 +46,6 @@ interface GameLayoutProps {
   showCorporation?: boolean;
   initTurnPlayerId?: string | null;
   showStartingSelection?: boolean;
-  transitionPhase?: TransitionPhase;
   animateHexEntrance?: boolean;
   startDark?: boolean;
   tilesHidden?: boolean;
@@ -96,7 +87,6 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
     showCorporation = true,
     initTurnPlayerId = null,
     showStartingSelection = false,
-    transitionPhase = "idle",
     animateHexEntrance = false,
     startDark = false,
     tilesHidden = false,
@@ -185,14 +175,15 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
     }
   };
 
+  const phase = useAppPhaseStore((s) => s.phase);
   const showUI =
-    transitionPhase === "animateUI" || transitionPhase === "complete" || transitionPhase === "idle";
-  const isAnimatingIn = transitionPhase === "animateUI";
+    phase.kind === "animateUI" || phase.kind === "playing" || phase.kind === "completed";
+  const isAnimatingIn = phase.kind === "animateUI";
   const uiAnimationClass = isAnimatingIn ? "animate-[uiFadeIn_1200ms_ease-out_both]" : "";
   const endgameFadeClass = endgameFadeUI ? "opacity-0 pointer-events-none" : "opacity-100";
 
   return (
-    <div className="relative w-screen h-screen bg-[#000000] text-white overflow-hidden">
+    <div className="relative w-screen h-screen text-white overflow-hidden">
       {/* CSS animations for transition */}
       <style>{`
         @keyframes uiFadeIn {
@@ -201,9 +192,10 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
         }
       `}</style>
 
-      {/* Game content takes full screen - hidden during lobby (SpaceBackground shown instead) */}
-      {transitionPhase !== "lobby" && (
-        <div className="absolute inset-0">
+      {/* Game world canvas: mounted while it should be visible; covers SpaceBackground.
+          Skipped during "lobby" so the persistent SpaceBackground at App level shows through. */}
+      {phase.kind !== "lobby" && (
+        <div className="absolute inset-0 bg-[#000000]">
           <MainContentDisplay
             gameState={gameState}
             animateHexEntrance={animateHexEntrance}

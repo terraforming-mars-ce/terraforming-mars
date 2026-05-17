@@ -8,6 +8,7 @@ import type {
   PlayerDisconnectedPayload,
   FullStatePayload,
   StateDiffDto,
+  UpdateGameSettingsRequest,
 } from "../types/generated/api-types.ts";
 
 class GlobalWebSocketManager implements WebSocketConnection {
@@ -265,9 +266,12 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.selectCards(cardIds);
   }
 
-  async confirmProductionCards(cardIds: string[]): Promise<string> {
+  async confirmProductionCards(
+    cardIds: string[],
+    options?: { randomBuy?: boolean },
+  ): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.confirmProductionCards(cardIds);
+    return webSocketService.confirmProductionCards(cardIds, options);
   }
 
   async confirmCardDraw(cardsToTake: string[], cardsToBuy: string[]): Promise<string> {
@@ -361,9 +365,9 @@ class GlobalWebSocketManager implements WebSocketConnection {
     webSocketService.requestLogs();
   }
 
-  async updateGameMap(mapId: string): Promise<void> {
+  async updateGameSettings(patch: UpdateGameSettingsRequest): Promise<void> {
     await this.ensureConnected();
-    webSocketService.updateGameMap(mapId);
+    webSocketService.updateGameSettings(patch);
   }
 
   async setPlayerColor(color: string, targetPlayerId?: string): Promise<void> {

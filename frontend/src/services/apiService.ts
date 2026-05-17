@@ -1,10 +1,8 @@
 import {
   FeedbackDto,
   FeedbackResponse,
-  CreateGameRequest,
   CreateGameResponse,
   GameDto,
-  GameSettingsDto,
   GetGameResponse,
   GetGameHistoryResponse,
   GameHistoryEntryDto,
@@ -21,23 +19,14 @@ export class ApiService {
     this.baseUrl = baseUrl;
   }
 
-  async createGame(settings: GameSettingsDto, claudeApiKey?: string): Promise<GameDto> {
+  async createGame(): Promise<GameDto> {
     try {
-      const request: CreateGameRequest = {
-        maxPlayers: settings.maxPlayers,
-        venusNextEnabled: settings.venusNextEnabled,
-        developmentMode: settings.developmentMode,
-        demoGame: settings.demoGame,
-        cardPacks: settings.cardPacks,
-        claudeApiKey: claudeApiKey || undefined,
-      };
-
       const response = await fetch(`${this.baseUrl}/games`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {

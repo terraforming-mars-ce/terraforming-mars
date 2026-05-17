@@ -2,11 +2,28 @@ import { useCallback, useEffect } from "react";
 import type { Location, NavigateFunction } from "react-router-dom";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
+import { useAppPhaseStore } from "@/stores/appPhaseStore.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import { apiService } from "@/services/apiService.ts";
 import { getTabManager } from "@/utils/tabManager.ts";
 import { clearGameSession, getGameSession, saveGameSession } from "@/utils/sessionStorage.ts";
 import type { GameDto } from "@/types/generated/api-types.ts";
+
+function setInitPhase(
+  kind: "checking" | "connecting" | "selecting" | "joining" | "spectating",
+  gameId: string,
+) {
+  if (kind === "checking") {
+    useAppPhaseStore.setState({
+      phase: { kind, gameId },
+      isSkyboxReady: false,
+      isGpuReady: false,
+      marsRevealedReady: false,
+    });
+    return;
+  }
+  useAppPhaseStore.getState().setPhase({ kind, gameId });
+}
 
 interface UseGameInitializationParams {
   navigate: NavigateFunction;
@@ -68,7 +85,7 @@ export function useGameInitialization({
       return;
     }
 
-    useGameStore.getState().setLoadingPhase("connecting");
+    setInitPhase("connecting", gameForSelection.id);
 
     const tabManager = getTabManager();
     const canClaim = await tabManager.claimTab(gameForSelection.id, playerName);
@@ -93,8 +110,6 @@ export function useGameInitialization({
     globalWebSocketManager.setCurrentPlayerId(selectedPlayerId);
 
     await globalWebSocketManager.playerTakeover(selectedPlayerId, gameForSelection.id);
-
-    useGameStore.getState().setLoadingPhase("ready");
   }, []);
 
   const handlePlayerSelectionCancel = useCallback(() => {
@@ -104,7 +119,6 @@ export function useGameInitialization({
   const handleSpectatorConnected = useCallback(() => {
     const store = useGameStore.getState();
     store.setIsSpectator(true);
-    store.setLoadingPhase("ready");
     store.setIsConnected(true);
   }, []);
 
@@ -113,7 +127,6 @@ export function useGameInitialization({
 
     const initializeGame = async () => {
       const {
-        setLoadingPhase,
         setIsSpectator,
         setIsConnected,
         setGame,
@@ -121,8 +134,6 @@ export function useGameInitialization({
         setPlayerId,
         setGameForSelection,
       } = useGameStore.getState();
-
-      setLoadingPhase("checking");
 
       const routeState = location.state as {
         game?: GameDto;
@@ -139,6 +150,8 @@ export function useGameInitialization({
         navigate("/", { replace: true });
         return;
       }
+
+      setInitPhase("checking", gameId);
 
       let fetchedGame: GameDto | null = null;
       try {
@@ -170,7 +183,6 @@ export function useGameInitialization({
       if (cachedForThisGame && savedSession.isSpectator) {
         setIsSpectator(true);
         setIsConnected(true);
-        setLoadingPhase("ready");
         await globalWebSocketManager.spectatorConnect(savedSession.playerName, gameId);
         return;
       }
@@ -184,7 +196,7 @@ export function useGameInitialization({
 
         if (cachedPlayer) {
           if (!cachedPlayer.isConnected) {
-            setLoadingPhase("connecting");
+            setInitPhase("connecting", fetchedGame.id);
 
             const tabManager = getTabManager();
             const canClaim = await tabManager.claimTab(fetchedGame.id, savedSession.playerName);
@@ -208,8 +220,6 @@ export function useGameInitialization({
             if (aborted) {
               return;
             }
-
-            setLoadingPhase("ready");
             return;
           }
         }
@@ -253,8 +263,6 @@ export function useGameInitialization({
           routeState.game.id,
           routeState.playerId,
         );
-
-        setLoadingPhase("ready");
         return;
       }
 
@@ -265,7 +273,6 @@ export function useGameInitialization({
       if (routeState?.spectatorName) {
         setIsSpectator(true);
         setIsConnected(true);
-        setLoadingPhase("ready");
         saveGameSession({
           gameId,
           playerId: "",
@@ -281,18 +288,18 @@ export function useGameInitialization({
 
       if (linkType === "spectate") {
         setGameForSelection(fetchedGame);
-        setLoadingPhase("spectating");
+        setInitPhase("spectating", fetchedGame.id);
         return;
       }
 
       if (linkType === "join") {
         setGameForSelection(fetchedGame);
-        setLoadingPhase("joining");
+        setInitPhase("joining", fetchedGame.id);
         return;
       }
 
       setGameForSelection(fetchedGame);
-      setLoadingPhase("selecting");
+      setInitPhase("selecting", fetchedGame.id);
     };
 
     void initializeGame();

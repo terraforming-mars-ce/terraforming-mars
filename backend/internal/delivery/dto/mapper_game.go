@@ -81,6 +81,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry cards.CardRegistry, playerID strin
 		VenusNextEnabled:      settings.VenusNextEnabled,
 		DevelopmentMode:       settings.DevelopmentMode,
 		DemoGame:              settings.DemoGame,
+		AllowRandomBuy:        settings.AllowRandomBuy,
 		CardPacks:             settings.CardPacks,
 		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
 		ClaudeModel:           settings.ClaudeModel,

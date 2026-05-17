@@ -39,7 +39,6 @@ import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import CardBrowserOverlay from "../../ui/overlay/CardBrowserOverlay.tsx";
 import MainMenuHamburger from "../../ui/buttons/MainMenuHamburger.tsx";
-import SpaceBackground from "../../3d/SpaceBackground.tsx";
 import EndGameBottomBar from "../../ui/endgame/EndGameBottomBar.tsx";
 import { VPCountingProvider } from "../../../contexts/VPCountingContext.tsx";
 import { useVPCountingAnimation } from "@/hooks/useVPCountingAnimation.ts";
@@ -79,7 +78,7 @@ import { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore.ts";
-import { useTransitionStore } from "@/stores/transitionStore.ts";
+import { useAppPhaseStore } from "@/stores/appPhaseStore.ts";
 import { useSpectateStore } from "@/stores/spectateStore.ts";
 import { useCardPlayFlow } from "@/hooks/useCardPlayFlow.ts";
 import { useWebSocketConnection } from "@/hooks/useWebSocketConnection.ts";
@@ -120,7 +119,6 @@ export default function GameInterface() {
   const isSpectator = useGameStore((s) => s.isSpectator);
   const isReconnecting = useGameStore((s) => s.isReconnecting);
   const reconnectionStep = useGameStore((s) => s.reconnectionStep);
-  const loadingPhase = useGameStore((s) => s.loadingPhase);
   const gameForSelection = useGameStore((s) => s.gameForSelection);
   const changedPaths = useGameStore((s) => s.changedPaths);
   const triggeredEffects = useGameStore((s) => s.triggeredEffects);
@@ -183,12 +181,11 @@ export default function GameInterface() {
   const pendingVariableAmount = useCardPlayFlowStore((s) => s.pendingVariableAmount);
   const showAmountSelection = useCardPlayFlowStore((s) => s.showAmountSelection);
 
-  const transitionPhase = useTransitionStore((s) => s.transitionPhase);
-  const isSkyboxReady = useTransitionStore((s) => s.isSkyboxReady);
-  const isGpuReady = useTransitionStore((s) => s.isGpuReady);
-  const marsRevealedReady = useTransitionStore((s) => s.marsRevealedReady);
-  const overlayVisible = useTransitionStore((s) => s.overlayVisible);
-  const lobbyMounted = useTransitionStore((s) => s.lobbyMounted);
+  const phase = useAppPhaseStore((s) => s.phase);
+  const isSkyboxReady = useAppPhaseStore((s) => s.isSkyboxReady);
+  const isGpuReady = useAppPhaseStore((s) => s.isGpuReady);
+  const marsRevealedReady = useAppPhaseStore((s) => s.marsRevealedReady);
+  const lobbyMounted = useAppPhaseStore((s) => s.lobbyMounted);
 
   const spectatePlayerId = useSpectateStore((s) => s.spectatePlayerId);
   const replaySpectatePlayerId = useSpectateStore((s) => s.replaySpectatePlayerId);
@@ -437,20 +434,16 @@ export default function GameInterface() {
 
   // --- Loading message ---
   const loadingMessage = (() => {
-    if (
-      loadingPhase === "selecting" ||
-      loadingPhase === "joining" ||
-      loadingPhase === "spectating"
-    ) {
+    if (phase.kind === "selecting" || phase.kind === "joining" || phase.kind === "spectating") {
       if (!isSpaceBgLoaded) {
         return "Loading";
       }
       return "Loading game";
     }
-    if (loadingPhase === "checking") {
+    if (phase.kind === "checking") {
       return "Loading game";
     }
-    if (loadingPhase === "connecting") {
+    if (phase.kind === "connecting") {
       return "Connecting";
     }
     if (isReconnecting && reconnectionStep) {
@@ -481,32 +474,31 @@ export default function GameInterface() {
   })();
 
   // --- Loading state ---
-  const isFullyLoaded =
-    (loadingPhase === "selecting" && isSpaceBgLoaded) ||
-    (loadingPhase === "joining" && isSpaceBgLoaded) ||
-    (loadingPhase === "spectating" && isSpaceBgLoaded) ||
-    (isConnected &&
-      !!game &&
-      !isReconnecting &&
-      (isSkyboxReady || transitionPhase === "lobby") &&
-      (isGpuReady || transitionPhase === "lobby"));
+  const isFullyLoaded = (() => {
+    if (phase.kind === "menu") {
+      return true;
+    }
+    if (phase.kind === "checking" || phase.kind === "connecting") {
+      return false;
+    }
+    if (phase.kind === "selecting" || phase.kind === "joining" || phase.kind === "spectating") {
+      return isSpaceBgLoaded;
+    }
+    if (phase.kind === "lobby") {
+      return isConnected && !!game && !isReconnecting;
+    }
+    return isConnected && !!game && !isReconnecting && isSkyboxReady && isGpuReady;
+  })();
 
   const handleSkyboxReady = useCallback(() => {
-    useTransitionStore.getState().setSkyboxReady(true);
+    useAppPhaseStore.getState().setSkyboxReady(true);
   }, []);
 
   const handleGpuReady = useCallback(() => {
-    useTransitionStore.getState().setGpuReady(true);
+    useAppPhaseStore.getState().setGpuReady(true);
   }, []);
 
-  const handleLoadingTransitionEnd = useCallback(() => {
-    const ts = useTransitionStore.getState();
-    if (ts.transitionPhase === "loading") {
-      ts.setTransitionPhase("fadeOutLobby");
-    } else {
-      ts.setOverlayVisible(false);
-    }
-  }, []);
+  const handleLoadingTransitionEnd = useCallback(() => {}, []);
 
   // --- Backdrop ---
   const hasPendingActionSelection =
@@ -518,7 +510,7 @@ export default function GameInterface() {
   const shouldShowStartingBackdrop =
     (showStartingSelection &&
       !isStartingSelectionHidden &&
-      (marsRevealedReady || transitionPhase === "idle")) ||
+      (marsRevealedReady || phase.kind === "playing")) ||
     showWaitingForPlayers;
 
   // --- Card fan visibility ---
@@ -560,13 +552,13 @@ export default function GameInterface() {
     if (spectatePlayerId) {
       return "opacity-0 pointer-events-none";
     }
-    if (transitionPhase === "animateUI") {
+    if (phase.kind === "animateUI") {
       return "animate-[uiFadeIn_1200ms_ease-out_both]";
     }
     if (
-      transitionPhase === "loading" ||
-      transitionPhase === "fadeOutLobby" ||
-      transitionPhase === "marsRevealed"
+      phase.kind === "loading" ||
+      phase.kind === "fadeOutLobby" ||
+      phase.kind === "marsRevealed"
     ) {
       return "opacity-0";
     }
@@ -617,9 +609,9 @@ export default function GameInterface() {
       `}</style>
 
         {game &&
-          loadingPhase !== "selecting" &&
-          loadingPhase !== "joining" &&
-          loadingPhase !== "spectating" && (
+          phase.kind !== "selecting" &&
+          phase.kind !== "joining" &&
+          phase.kind !== "spectating" && (
             <GameLayout
               ref={playerListRef}
               gameState={replayGameState ?? game}
@@ -629,17 +621,15 @@ export default function GameInterface() {
               showCorporation={!!replayViewAsPlayer || showCorp}
               initTurnPlayerId={displayedInitPlayerId}
               showStartingSelection={showStartingSelection}
-              transitionPhase={transitionPhase}
               animateHexEntrance={
-                transitionPhase === "marsRevealed" ||
-                transitionPhase === "animateUI" ||
-                transitionPhase === "complete"
+                phase.kind === "marsRevealed" ||
+                phase.kind === "animateUI" ||
+                phase.kind === "playing" ||
+                phase.kind === "completed"
               }
-              startDark={transitionPhase === "loading" || transitionPhase === "lobby"}
+              startDark={phase.kind === "loading" || phase.kind === "lobby"}
               tilesHidden={
-                transitionPhase === "loading" ||
-                transitionPhase === "lobby" ||
-                transitionPhase === "fadeOutLobby"
+                phase.kind === "loading" || phase.kind === "lobby" || phase.kind === "fadeOutLobby"
               }
               changedPaths={changedPaths}
               triggeredEffects={triggeredEffects}
@@ -717,28 +707,13 @@ export default function GameInterface() {
           />
         </WindowManagerProvider>
 
-        {(transitionPhase === "lobby" ||
-          transitionPhase === "loading" ||
-          transitionPhase === "fadeOutLobby" ||
-          loadingPhase === "selecting" ||
-          loadingPhase === "joining" ||
-          loadingPhase === "spectating") && (
-          <div
-            className={
-              transitionPhase === "fadeOutLobby" ? "animate-[fadeOut_1500ms_ease-out_forwards]" : ""
-            }
-          >
-            <SpaceBackground animationSpeed={0.5} overlayOpacity={0.3} />
-          </div>
-        )}
-
         {lobbyMounted && game && (playerId || isSpectator) && (
           <>
             <WaitingRoomOverlay
               game={game}
               playerId={playerId ?? "spectator"}
               visible={isLobbyPhase}
-              onExited={() => useTransitionStore.getState().setLobbyMounted(false)}
+              onExited={() => useAppPhaseStore.getState().setLobbyMounted(false)}
             />
             {isLobbyPhase && (
               <ChatOverlay
@@ -759,7 +734,7 @@ export default function GameInterface() {
           />
         )}
 
-        {loadingPhase === "selecting" && gameForSelection && (
+        {phase.kind === "selecting" && gameForSelection && (
           <PlayerSelectionOverlay
             game={gameForSelection}
             onSelectPlayer={(pid, playerName) => void init.handlePlayerSelected(pid, playerName)}
@@ -768,11 +743,11 @@ export default function GameInterface() {
           />
         )}
 
-        {loadingPhase === "joining" && gameForSelection && (
+        {phase.kind === "joining" && gameForSelection && (
           <JoinGameOverlay game={gameForSelection} onCancel={init.handlePlayerSelectionCancel} />
         )}
 
-        {loadingPhase === "spectating" && gameForSelection && (
+        {phase.kind === "spectating" && gameForSelection && (
           <SpectateGameOverlay
             game={gameForSelection}
             onCancel={init.handlePlayerSelectionCancel}
@@ -863,7 +838,7 @@ export default function GameInterface() {
           isOpen={
             showStartingSelection &&
             !isStartingSelectionHidden &&
-            (marsRevealedReady || transitionPhase === "idle")
+            (marsRevealedReady || phase.kind === "playing")
           }
           availableCorporations={
             game?.currentPlayer?.selectCorporationPhase?.availableCorporations || []
@@ -1449,14 +1424,14 @@ export default function GameInterface() {
           onDismiss={dismissGameEvent}
         />
 
-        {overlayVisible && (
-          <LoadingOverlay
-            isLoaded={isFullyLoaded}
-            message={loadingMessage}
-            subtitle={loadingSubtitle}
-            onTransitionEnd={handleLoadingTransitionEnd}
-          />
-        )}
+        <LoadingOverlay
+          isLoaded={isFullyLoaded}
+          message={loadingMessage}
+          subtitle={loadingSubtitle}
+          onTransitionEnd={handleLoadingTransitionEnd}
+          showDelayMs={0}
+          minDurationMs={200}
+        />
       </VPCountingProvider>
     </PlanetFocusProvider>
   );

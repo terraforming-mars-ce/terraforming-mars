@@ -34,11 +34,14 @@ func NewConfirmProductionCardsAction(
 	}
 }
 
-// Execute performs the confirm production cards action
-func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID string, playerID string, selectedCardIDs []string) error {
+// Execute performs the confirm production cards action.
+// When randomBuy is true and the selection is empty, a single fresh card is
+// drawn from the deck and bought (subject to the AllowRandomBuy setting).
+func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID string, playerID string, selectedCardIDs []string, randomBuy bool) error {
 	log := a.InitLogger(gameID, playerID).With(
 		zap.String("action", "confirm_production_cards"),
 		zap.Strings("selected_card_ids", selectedCardIDs),
+		zap.Bool("random_buy", randomBuy),
 	)
 	log.Debug("Player confirming production card selection")
 
@@ -72,15 +75,30 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		return fmt.Errorf("production selection already complete")
 	}
 
-	availableSet := make(map[string]bool)
-	for _, id := range productionPhase.AvailableCards {
-		availableSet[id] = true
-	}
-
-	for _, cardID := range selectedCardIDs {
-		if !availableSet[cardID] {
-			log.Error("Selected card not available", zap.String("card_id", cardID))
-			return fmt.Errorf("card %s not available for selection", cardID)
+	if randomBuy {
+		if !g.Settings().AllowRandomBuy {
+			return fmt.Errorf("random buy is not enabled for this game")
+		}
+		if len(selectedCardIDs) > 0 {
+			return fmt.Errorf("random buy requires an empty selection")
+		}
+		drawn, err := g.Deck().DrawProjectCards(ctx, 1)
+		if err != nil || len(drawn) == 0 {
+			log.Error("Failed to draw random card from deck", zap.Error(err))
+			return fmt.Errorf("failed to draw random card: %w", err)
+		}
+		selectedCardIDs = drawn
+		log.Debug("Random buy drew card from deck", zap.String("card_id", drawn[0]))
+	} else {
+		availableSet := make(map[string]bool)
+		for _, id := range productionPhase.AvailableCards {
+			availableSet[id] = true
+		}
+		for _, cardID := range selectedCardIDs {
+			if !availableSet[cardID] {
+				log.Error("Selected card not available", zap.String("card_id", cardID))
+				return fmt.Errorf("card %s not available for selection", cardID)
+			}
 		}
 	}
 
