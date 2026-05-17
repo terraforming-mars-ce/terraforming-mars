@@ -12,6 +12,7 @@ import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { FormattedDescription } from "../display/FormattedDescription";
 import BehaviorSection from "../cards/BehaviorSection/BehaviorSection.tsx";
+import AwardScoreboard from "../display/AwardScoreboard.tsx";
 
 interface AwardPopoverProps {
   isVisible: boolean;
@@ -55,15 +56,6 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
           available: false,
           errors: [] as import("@/types/generated/api-types.ts").StateErrorDto[],
         }));
-
-  const longestNameLength = useMemo(() => {
-    if (!gameState) return 0;
-    const players = [
-      gameState.currentPlayer?.name ?? "",
-      ...gameState.otherPlayers.map((p) => p.name),
-    ];
-    return players.reduce((max, name) => Math.max(max, name.length), 0);
-  }, [gameState]);
 
   const allPlayers: PlayerInfo[] = useMemo(() => {
     if (!gameState) return [];
@@ -112,10 +104,6 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
           const globalData = globalAwards.find((a) => a.type === award.type);
           const styleColor = globalData?.style?.color ?? "#f39c12";
           const playerProgress = globalData?.playerProgress ?? {};
-
-          const sortedPlayers = [...allPlayers].sort(
-            (a, b) => (playerProgress[b.id] ?? 0) - (playerProgress[a.id] ?? 0),
-          );
 
           const getState = () => {
             if (isFunded) return "claimed" as const;
@@ -208,28 +196,7 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
                     </p>
                   </div>
 
-                  <div
-                    className="flex-shrink-0 grid grid-cols-[auto_auto] gap-x-3 gap-y-1"
-                    style={{ minWidth: `${longestNameLength + 5}ch` }}
-                  >
-                    {sortedPlayers.map((player) => {
-                      const score = playerProgress[player.id] ?? 0;
-                      return (
-                        <React.Fragment key={player.id}>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span
-                              className="w-2 h-2 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: player.color }}
-                            />
-                            <span className="text-white/80">{player.name}</span>
-                          </div>
-                          <span className="text-sm font-orbitron font-semibold text-white/50">
-                            {score}
-                          </span>
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
+                  <AwardScoreboard players={allPlayers} playerProgress={playerProgress} />
                 </div>
               </div>
             </GamePopoverItem>
