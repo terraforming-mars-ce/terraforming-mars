@@ -22,9 +22,9 @@ import ProjectFundingPopover from "../../ui/popover/ProjectFundingPopover.tsx";
 import { GamePopover } from "../../ui/GamePopover";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
 import { HamburgerIcon, EyeIcon } from "../../ui/menuIcons.tsx";
+import ParallelogramButton, { ANGLE_INDENT, BUTTON_SPACING } from "./ParallelogramButton.tsx";
+import MilestoneAwardStatusStrip from "./MilestoneAwardStatusStrip.tsx";
 
-const ANGLE_INDENT = 20;
-const BUTTON_SPACING = 6;
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
 const HAMBURGER_WIDTH = 65;
 const HAMBURGER_COLOR = "#ffffff";
@@ -46,121 +46,6 @@ const MilestoneAlertIndicator: React.FC<{ visible: boolean; top: number }> = ({ 
     </span>
   </div>
 );
-
-type EdgeStyle = "slope-left" | "slope-right" | "flat";
-
-interface ParallelogramButtonProps {
-  width: number;
-  height: number;
-  color: string;
-  children: React.ReactNode;
-  onClick: () => void;
-  buttonRef: React.RefObject<HTMLButtonElement | null>;
-  isActive?: boolean;
-  leftEdge?: EdgeStyle;
-  rightEdge?: EdgeStyle;
-  className?: string;
-  style?: React.CSSProperties;
-}
-
-const ParallelogramButton: React.FC<ParallelogramButtonProps> = ({
-  width,
-  height,
-  color,
-  children,
-  onClick,
-  buttonRef,
-  isActive = false,
-  leftEdge: left = "flat",
-  rightEdge: right = "flat",
-  className = "",
-  style: extraStyle,
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const hoverSound = useHoverSound();
-  const active = isHovered || isActive;
-
-  const ai = ANGLE_INDENT;
-  const w = width;
-  const h = height;
-
-  // slope-left (\): top indented, bottom at edge
-  // slope-right (/): top at edge, bottom indented
-  const tl = left === "slope-left" ? ai : 0;
-  const bl = left === "slope-right" ? ai : 0;
-  const tr = right === "slope-left" ? w - ai : w;
-  const br = right === "slope-right" ? w - ai : w;
-
-  const fillPoints = `${tl},0 ${tr},0 ${br},${h} ${bl},${h}`;
-
-  const edges: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
-  if (left === "slope-left") {
-    edges.push({ x1: ai, y1: 0, x2: 0, y2: h });
-  } else if (left === "slope-right") {
-    edges.push({ x1: 0, y1: 0, x2: ai, y2: h });
-  }
-  if (right === "slope-left") {
-    edges.push({ x1: w - ai, y1: 0, x2: w, y2: h });
-  } else if (right === "slope-right") {
-    edges.push({ x1: w, y1: 0, x2: w - ai, y2: h });
-  }
-
-  return (
-    <button
-      ref={buttonRef}
-      onClick={() => {
-        hoverSound.onClick?.();
-        onClick();
-      }}
-      onMouseEnter={() => {
-        setIsHovered(true);
-        hoverSound.onMouseEnter?.();
-      }}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`relative pointer-events-auto cursor-pointer outline-none ${className}`}
-      style={{ width, height, ...extraStyle }}
-    >
-      <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio="none"
-      >
-        <polygon
-          points={fillPoints}
-          fill={active ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
-        />
-        <line
-          x1={tl}
-          y1={0}
-          x2={tr}
-          y2={0}
-          stroke={active ? color : BORDER_COLOR}
-          strokeWidth="3"
-        />
-        {edges.map((e, i) => (
-          <line
-            key={i}
-            x1={e.x1}
-            y1={e.y1}
-            x2={e.x2}
-            y2={e.y2}
-            stroke={BORDER_COLOR}
-            strokeWidth="2"
-          />
-        ))}
-      </svg>
-      <div className="relative z-10 h-full flex items-center justify-center px-4">
-        <span
-          className={`font-orbitron font-bold text-sm uppercase tracking-wider transition-colors duration-200 ${
-            active ? "text-white" : "text-white/80"
-          }`}
-        >
-          {children}
-        </span>
-      </div>
-    </button>
-  );
-};
 
 const ENDGAME_ACCENT = "#3b82f6";
 
@@ -486,6 +371,17 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
             </div>
           </div>
         </div>
+
+        {!isInitPhase && !isEndgame && (
+          <div
+            className={`absolute left-1/2 top-0 h-[60px] max-lg:h-[50px] flex items-center origin-top transition-opacity duration-500 ease-in-out ${
+              activePlanet === "solar-system" ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+            style={{ transform: `translateX(-50%) scale(${topBarScale})` }}
+          >
+            <MilestoneAwardStatusStrip />
+          </div>
+        )}
 
         <TravelPopover
           isVisible={showTravelPopover}
