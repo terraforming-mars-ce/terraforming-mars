@@ -1,3 +1,4 @@
+import { assetUrl } from "@/assets";
 import { getSoundSettings } from "../utils/soundStorage.ts";
 
 interface AudioFileEntry {
@@ -19,11 +20,11 @@ class AudioService {
   private ambientRequested = false;
   private ambientGain = 1;
   private ambientTracks: string[] = [
-    "/sounds/stars.mp3",
-    "/sounds/sands.mp3",
-    "/sounds/ethereum.mp3",
-    "/sounds/dreams.mp3",
-    "/sounds/settlers.mp3",
+    assetUrl("audio/music/stars"),
+    assetUrl("audio/music/sands"),
+    assetUrl("audio/music/ethereum"),
+    assetUrl("audio/music/dreams"),
+    assetUrl("audio/music/settlers"),
   ];
   private playOrder: number[] = [];
   private playPosition: number = 0;
@@ -63,25 +64,45 @@ class AudioService {
 
   private preloadAudioFiles() {
     const audioFiles: AudioFileEntry[] = [
-      { key: "production", path: "/sounds/production.mp3", volumeMultiplier: 1.0 },
+      { key: "production", path: assetUrl("audio/effects/production"), volumeMultiplier: 1.0 },
       {
         key: "temperature-increase",
-        path: "/sounds/temperature-increase.mp3",
+        path: assetUrl("audio/effects/temperature-increase"),
         volumeMultiplier: 1.0,
       },
-      { key: "water-placement", path: "/sounds/water-placement.mp3", volumeMultiplier: 1.0 },
-      { key: "oxygen-increase", path: "/sounds/oxygen-increase.mp3", volumeMultiplier: 1.0 },
-      { key: "venus-increase", path: "/sounds/venus-increase.mp3", volumeMultiplier: 1.0 },
-      { key: "button-hover", path: "/sounds/button-hover.mp3", volumeMultiplier: 0.4 },
-      { key: "button-click", path: "/sounds/button-click.mp3", volumeMultiplier: 0.4 },
-      { key: "card-hover", path: "/sounds/card-hover.mp3", volumeMultiplier: 0.2 },
-      { key: "construction", path: "/sounds/construction.mp3", volumeMultiplier: 1.0 },
-      { key: "asteroid-impact", path: "/sounds/asteroid-impact.mp3", volumeMultiplier: 1.0 },
-      { key: "your-turn", path: "/sounds/your-turn.mp3", volumeMultiplier: 1.0 },
-      { key: "award-funded", path: "/sounds/award-funded.mp3", volumeMultiplier: 1.0 },
-      { key: "game-start", path: "/sounds/game-start.mp3", volumeMultiplier: 1.0 },
-      { key: "travel", path: "/sounds/travel.mp3", volumeMultiplier: 0.8 },
-      { key: "production-score", path: "/sounds/production-score.mp3", volumeMultiplier: 1.0 },
+      {
+        key: "water-placement",
+        path: assetUrl("audio/effects/water-placement"),
+        volumeMultiplier: 1.0,
+      },
+      {
+        key: "oxygen-increase",
+        path: assetUrl("audio/effects/oxygen-increase"),
+        volumeMultiplier: 1.0,
+      },
+      {
+        key: "venus-increase",
+        path: assetUrl("audio/effects/venus-increase"),
+        volumeMultiplier: 1.0,
+      },
+      { key: "button-hover", path: assetUrl("audio/effects/button-hover"), volumeMultiplier: 0.4 },
+      { key: "button-click", path: assetUrl("audio/effects/button-click"), volumeMultiplier: 0.4 },
+      { key: "card-hover", path: assetUrl("audio/effects/card-hover"), volumeMultiplier: 0.2 },
+      { key: "construction", path: assetUrl("audio/effects/construction"), volumeMultiplier: 1.0 },
+      {
+        key: "asteroid-impact",
+        path: assetUrl("audio/effects/asteroid-impact"),
+        volumeMultiplier: 1.0,
+      },
+      { key: "your-turn", path: assetUrl("audio/effects/your-turn"), volumeMultiplier: 1.0 },
+      { key: "award-funded", path: assetUrl("audio/effects/award-funded"), volumeMultiplier: 1.0 },
+      { key: "game-start", path: assetUrl("audio/effects/game-start"), volumeMultiplier: 1.0 },
+      { key: "travel", path: assetUrl("audio/effects/travel"), volumeMultiplier: 0.8 },
+      {
+        key: "production-score",
+        path: assetUrl("audio/effects/production-score"),
+        volumeMultiplier: 1.0,
+      },
     ];
 
     audioFiles.forEach(({ key, path, volumeMultiplier }) => {
