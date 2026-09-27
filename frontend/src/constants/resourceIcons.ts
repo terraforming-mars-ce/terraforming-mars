@@ -9,15 +9,15 @@ export const RESOURCE_ICONS = {
   plant: "/assets/resources/plant.png",
   energy: "/assets/resources/power.png",
   heat: "/assets/resources/heat.png",
-  oxygen: "/assets/resources/oxygen.png",
-  ocean: "/assets/resources/ocean.png",
+  oxygen: "/assets/global-parameters/oxygen.png",
+  ocean: "/assets/tiles/ocean.png",
   tr: "/assets/resources/tr.png",
 } as const;
 
 export const GLOBAL_PARAM_ICONS = {
-  temperature: "/assets/resources/heat.png",
-  oxygen: "/assets/resources/oxygen.png",
-  ocean: "/assets/resources/ocean.png",
+  temperature: "/assets/global-parameters/temperature.png",
+  oxygen: "/assets/global-parameters/oxygen.png",
+  ocean: "/assets/tiles/ocean.png",
 } as const;
 
 export const MISC_ICONS = {
