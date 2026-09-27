@@ -1,10 +1,11 @@
+import { assetUrl } from "@/assets";
 import { createContext, useContext, useState, useRef, ReactNode } from "react";
 
 export const SKYBOX_OPTIONS = [
   {
     id: "starmap-2020-8k",
     label: "NASA Starmap 2020",
-    path: "/assets/backgrounds/starmap_2020_8k.exr",
+    path: assetUrl("textures/skyboxes/starmap"),
   },
 ] as const;
 
