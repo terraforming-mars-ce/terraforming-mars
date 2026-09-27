@@ -1,3 +1,10 @@
 *.exr filter=lfs diff=lfs merge=lfs -text
 *.glb filter=lfs diff=lfs merge=lfs -text
 *.mp3 filter=lfs diff=lfs merge=lfs -text
+
+assets/original/**/*.png filter=lfs diff=lfs merge=lfs -text
+assets/original/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+assets/original/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
+assets/original/**/*.webp filter=lfs diff=lfs merge=lfs -text
+assets/original/**/*.ttf filter=lfs diff=lfs merge=lfs -text
+assets/original/**/*.ico filter=lfs diff=lfs merge=lfs -text

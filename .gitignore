@@ -93,3 +93,15 @@ __pycache__/
 
 # tmp
 tmp/
+# Reproducible asset outputs
+/frontend/public/assets/
+/frontend/src/assets/generated/
+/frontend/.cache/
+/output/imagegen/
+/output/asset-preview/
+/frontend/public/android-chrome-192x192.png
+/frontend/public/android-chrome-512x512.png
+/frontend/public/apple-touch-icon.png
+/frontend/public/favicon-16x16.png
+/frontend/public/favicon-32x32.png
+/frontend/public/favicon.ico
