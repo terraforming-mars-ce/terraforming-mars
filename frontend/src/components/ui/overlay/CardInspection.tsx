@@ -43,9 +43,10 @@ export default function CardInspection({
   }));
   const [panelHeight, setPanelHeight] = useState(0);
   const [contentLayout, setContentLayout] = useState({ descriptionHeight: 200, scrollBody: false });
+  const desktopScale = Math.min(1.15, Math.max(0.7, viewport.height / 1320));
   const right = Math.max(96, viewport.width * 0.12);
   const topInset = 96;
-  const panelWidth = 372; // 360px card plus room for its edge decoration.
+  const panelWidth = 372 * desktopScale;
   const panelLeft = viewport.width - right - panelWidth;
   const chatOverlaps =
     chatBounds && chatBounds.right > panelLeft && chatBounds.left < viewport.width - right;
@@ -53,7 +54,8 @@ export default function CardInspection({
     ? Math.min(chatBounds.top - 16, viewport.height - 106)
     : viewport.height - 106;
   const desktopHeight = desktopBottom - topInset;
-  const sheet = viewport.width < 1024 || desktopHeight < 540;
+  const sheet = viewport.width < 1024 || desktopHeight < 540 * desktopScale;
+  const scale = sheet ? 1 : desktopScale;
   const top = Math.max(
     topInset,
     Math.min((viewport.height - panelHeight) / 2, desktopBottom - panelHeight),
@@ -61,6 +63,7 @@ export default function CardInspection({
   const maxHeight = sheet
     ? Math.max(100, Math.min(viewport.height * 0.7, viewport.height - 122))
     : desktopHeight;
+  const contentMaxHeight = maxHeight / scale;
 
   useEffect(() => {
     const resize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
@@ -96,13 +99,13 @@ export default function CardInspection({
     const measure = () => {
       // Reserve body padding, description padding, and its optional panning control.
       const fixedHeight = sections.reduce((sum, element) => sum + element.offsetHeight, 0) + 64;
-      const available = maxHeight - fixedHeight;
+      const available = contentMaxHeight - fixedHeight;
       const body = panel.querySelector<HTMLElement>(".game-card-body");
       const minimumHeight = body ? parseFloat(getComputedStyle(body).minHeight) : 0;
       const requirementsHeight = sections[0]?.offsetHeight ?? 0;
       const next = {
         descriptionHeight: Math.min(240, Math.max(0, available)),
-        scrollBody: available < 84 || minimumHeight + requirementsHeight + 4 > maxHeight,
+        scrollBody: available < 84 || minimumHeight + requirementsHeight + 4 > contentMaxHeight,
       };
       setContentLayout((previous) =>
         previous.descriptionHeight === next.descriptionHeight &&
@@ -115,7 +118,7 @@ export default function CardInspection({
     sections.forEach((element) => observer.observe(element));
     measure();
     return () => observer.disconnect();
-  }, [maxHeight, card.id]);
+  }, [contentMaxHeight, card.id]);
 
   useLayoutEffect(() => {
     let frame = 0;
@@ -279,14 +282,21 @@ export default function CardInspection({
         transform: sheet ? "translateX(-50%)" : undefined,
       }}
     >
-      <div ref={motionRef} style={{ visibility: motionReady ? "visible" : "hidden" }}>
+      <div
+        ref={motionRef}
+        style={{
+          visibility: motionReady ? "visible" : "hidden",
+          zoom: scale,
+          width: sheet ? undefined : 372,
+        }}
+      >
         <div
           className={
             contentLayout.scrollBody
               ? "overflow-y-auto overscroll-contain [scrollbar-width:thin] px-1.5 pb-1"
               : "px-1.5 pb-1"
           }
-          style={{ maxHeight }}
+          style={{ maxHeight: contentMaxHeight }}
         >
           <GameCard
             card={card}
