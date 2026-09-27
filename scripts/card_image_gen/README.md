@@ -153,7 +153,7 @@ pip install -r scripts/card_image_gen/requirements.txt
 python -m scripts.card_image_gen.generate_cards --card 042
 ```
 
-Images are saved as 960x720 WebP files to `frontend/public/assets/cards/{id}.webp`.
+Generated PNG masters are saved to `assets/original/cards/{id}.png` and registered in `assets/catalog.json`. The shared exporter creates the runtime WebP variants. Node 24+, Bun, frontend dependencies, and Git LFS sources are required.
 
 ## How It Works
 
