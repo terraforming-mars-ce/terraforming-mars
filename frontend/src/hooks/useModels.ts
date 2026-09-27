@@ -1,16 +1,17 @@
+import { assetUrl } from "@/assets";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 const MODEL_PATHS = {
-  trees: "/assets/models/trees.glb",
-  rock: "/assets/models/rock.glb",
-  city: "/assets/models/city.glb",
-  flowers: "/assets/models/flowers.glb",
-  bird: "/assets/models/bird.glb",
-  fence: "/assets/models/fence.glb",
-  spaceship: "/assets/models/spaceship.glb",
-  satellite: "/assets/models/satellite.glb",
-  phobos: "/assets/models/phobos.glb",
+  trees: assetUrl("models/trees"),
+  rock: assetUrl("models/rock"),
+  city: assetUrl("models/city"),
+  flowers: assetUrl("models/flowers"),
+  bird: assetUrl("models/bird"),
+  fence: assetUrl("models/fence"),
+  spaceship: assetUrl("models/spaceship"),
+  satellite: assetUrl("models/satellite"),
+  phobos: assetUrl("models/phobos"),
 } as const;
 
 useGLTF.preload(MODEL_PATHS.trees);

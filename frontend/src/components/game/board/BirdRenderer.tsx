@@ -1,3 +1,4 @@
+import { assetUrl } from "@/assets";
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -52,7 +53,7 @@ function loadNoiseTexture(): Promise<void> {
       noiseData = { pixels: imageData.data, width: img.width, height: img.height };
       resolve();
     };
-    img.src = "/assets/textures/noise_mid.png";
+    img.src = assetUrl("textures/terrain/noise-mid");
   });
   return noiseLoadPromise;
 }
