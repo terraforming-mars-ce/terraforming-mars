@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { assetWatcher } from "./scripts/assets/vite.ts";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), assetWatcher()],
   server: {
     port: 3000,
     open: true,
