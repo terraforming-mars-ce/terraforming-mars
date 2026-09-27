@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState, type RefObject } from "react";
+import { useCardDragStore } from "@/stores/cardDragStore.ts";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import Tile from "./Tile";
@@ -225,6 +226,15 @@ export default function CelestialTileGrid({
 
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
   const hoveredHexKeyRef = useRef<string | null>(null);
+  const isDraggingCard = useCardDragStore((s) => s.isDraggingCard);
+
+  useEffect(() => {
+    if (isDraggingCard) {
+      hoveredHexKeyRef.current = null;
+      setHoveredHexKey(null);
+      handleTileHoverLeave();
+    }
+  }, [isDraggingCard, handleTileHoverLeave]);
 
   const handleSpherePointerMove = useCallback(
     (
@@ -234,6 +244,9 @@ export default function CelestialTileGrid({
         object: THREE.Object3D;
       },
     ) => {
+      if (useCardDragStore.getState().isDraggingCard) {
+        return;
+      }
       const localPoint = event.object.worldToLocal(event.point.clone());
       const key = findNearestHex(localPoint);
       if (key !== hoveredHexKeyRef.current) {
@@ -285,6 +298,9 @@ export default function CelestialTileGrid({
       },
     ) => {
       event.stopPropagation();
+      if (useCardDragStore.getState().isDraggingCard) {
+        return;
+      }
       const localPoint = event.object.worldToLocal(event.point.clone());
       const key = findNearestHex(localPoint);
       if (key) {
@@ -337,7 +353,7 @@ export default function CelestialTileGrid({
             onHoverInfo={handleTileHoverInfo}
             onHoverMove={handleTileHoverMove}
             onHoverLeave={handleTileHoverLeave}
-            isHovered={hoveredHexKey === hexKey}
+            isHovered={!isDraggingCard && hoveredHexKey === hexKey}
           />
         );
       })}

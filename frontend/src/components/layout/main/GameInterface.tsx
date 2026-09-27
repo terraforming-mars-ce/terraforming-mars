@@ -1086,6 +1086,15 @@ export default function GameInterface() {
                 <CardFanOverlay
                   ref={cardFanRef}
                   cards={replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? []}
+                  pendingPlayCardId={
+                    cardPendingChoice?.id ??
+                    pendingCardStorage?.cardId ??
+                    pendingCardPayment?.card.id ??
+                    pendingTargetPlayer?.cardId ??
+                    (pendingVariableAmount?.type === "play-card"
+                      ? pendingVariableAmount.cardId
+                      : null)
+                  }
                   hideWhenModalOpen={hideCardFanForModals}
                   onInspectCard={inspectCard}
                   inspectedCardIds={inspectedCards.map(({ card }) => card.id)}

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import { useCardDragStore } from "../../../stores/cardDragStore";
@@ -459,7 +458,6 @@ export default function TileGrid({
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
   const hoveredHexKeyRef = useRef<string | null>(null);
   const hoverSound = useHoverSound();
-  const sphereRef = useRef<THREE.Mesh>(null);
   const interactionSphereGeometry = useMemo(
     () => new THREE.SphereGeometry(SPHERE_RADIUS + 0.02, 64, 64),
     [],
@@ -482,46 +480,15 @@ export default function TileGrid({
     [projectedHexGrid],
   );
 
-  // --- Drag-to-place hex highlight (issue #570) ---
-  const isDraggingTileCard = useCardDragStore((s) => s.isDraggingTileCard);
-  const dragPointer = useCardDragStore((s) => s.pointer);
-  const [dragTargetHexKey, setDragTargetHexKey] = useState<string | null>(null);
-  const dragTargetHexKeyRef = useRef<string | null>(null);
-  const { camera, gl } = useThree();
-  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const isDraggingCard = useCardDragStore((s) => s.isDraggingCard);
 
-  const setDragTargetHexKeyIfChanged = useCallback((key: string | null) => {
-    if (dragTargetHexKeyRef.current === key) {
-      return;
+  useEffect(() => {
+    if (isDraggingCard) {
+      hoveredHexKeyRef.current = null;
+      setHoveredHexKey(null);
+      handleTileHoverLeave();
     }
-    dragTargetHexKeyRef.current = key;
-    setDragTargetHexKey(key);
-  }, []);
-
-  useFrame(() => {
-    if (!isDraggingTileCard || !sphereRef.current || !dragPointer) {
-      if (dragTargetHexKeyRef.current !== null) {
-        setDragTargetHexKeyIfChanged(null);
-      }
-      return;
-    }
-
-    const rect = gl.domElement.getBoundingClientRect();
-    const ndc = new THREE.Vector2(
-      ((dragPointer.x - rect.left) / rect.width) * 2 - 1,
-      -((dragPointer.y - rect.top) / rect.height) * 2 + 1,
-    );
-    raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObject(sphereRef.current, false);
-    if (hits.length === 0) {
-      setDragTargetHexKeyIfChanged(null);
-      return;
-    }
-
-    const localPoint = sphereRef.current.worldToLocal(hits[0].point.clone());
-    const key = findNearestHex(localPoint);
-    setDragTargetHexKeyIfChanged(key);
-  });
+  }, [isDraggingCard, handleTileHoverLeave]);
 
   const handleSpherePointerMove = useCallback(
     (
@@ -531,7 +498,7 @@ export default function TileGrid({
         object: THREE.Object3D;
       },
     ) => {
-      if (panState.isPanning) {
+      if (panState.isPanning || useCardDragStore.getState().isDraggingCard) {
         if (hoveredHexKeyRef.current) {
           hoveredHexKeyRef.current = null;
           setHoveredHexKey(null);
@@ -591,7 +558,9 @@ export default function TileGrid({
 
   const handleSphereClick = useCallback(
     (event: THREE.Event & { point: THREE.Vector3; object: THREE.Object3D }) => {
-      if (panState.isPanning || panState.hasDragged) return;
+      if (panState.isPanning || panState.hasDragged || useCardDragStore.getState().isDraggingCard) {
+        return;
+      }
       const localPoint = event.object.worldToLocal(event.point.clone());
       const key = findNearestHex(localPoint);
       if (key) {
@@ -613,14 +582,14 @@ export default function TileGrid({
     return set;
   }, [oceanTiles]);
 
-  const hoveredOceanHexKey = hoveredHexKey && oceanKeySet.has(hoveredHexKey) ? hoveredHexKey : null;
+  const hoveredOceanHexKey =
+    !isDraggingCard && hoveredHexKey && oceanKeySet.has(hoveredHexKey) ? hoveredHexKey : null;
 
   return (
     <>
       {/* Single invisible sphere for all pointer interaction */}
       {activePlanet === "mars" && (
         <mesh
-          ref={sphereRef}
           geometry={interactionSphereGeometry}
           onPointerMove={handleSpherePointerMove}
           onPointerLeave={handleSpherePointerLeave}
@@ -666,10 +635,7 @@ export default function TileGrid({
         const tileData = getTileData(tile);
         const isAvailable = availableHexes.includes(hexKey);
 
-        let isHovered = hoveredHexKey === hexKey;
-        if (isDraggingTileCard) {
-          isHovered = dragTargetHexKey === hexKey;
-        }
+        const isHovered = !isDraggingCard && hoveredHexKey === hexKey;
 
         const isPrimaryHighlight = vpCountingState.highlightedTiles.has(hexKey);
         const isSecondaryHighlight = vpCountingState.secondaryHighlightedTiles.has(hexKey);
