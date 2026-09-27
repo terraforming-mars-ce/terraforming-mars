@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -310,9 +311,9 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
                 );
               })()}
           </div>
-          <button onClick={() => void handleGiveCard()} style={buttonStyle}>
+          <GameButton emphasis="quiet" onClick={() => void handleGiveCard()} style={buttonStyle}>
             Give
-          </button>
+          </GameButton>
         </div>
       </div>
 
@@ -410,9 +411,13 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
                 );
               })()}
           </div>
-          <button onClick={() => void handleSetCorporation()} style={buttonStyle}>
+          <GameButton
+            emphasis="quiet"
+            onClick={() => void handleSetCorporation()}
+            style={buttonStyle}
+          >
             Set
-          </button>
+          </GameButton>
         </div>
       </div>
       {hoveredCard &&

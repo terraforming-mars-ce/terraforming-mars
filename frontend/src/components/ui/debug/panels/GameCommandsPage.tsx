@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useState, useEffect } from "react";
 import { globalWebSocketManager } from "../../../../services/globalWebSocketManager.ts";
 import {
@@ -227,22 +228,27 @@ const GameCommandsPage: React.FC<GameCommandsPageProps> = ({ gameState }) => {
       </div>
 
       <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
-        <button onClick={setAllMin} style={smallButtonStyle}>
+        <GameButton emphasis="quiet" onClick={setAllMin} style={smallButtonStyle}>
           Min All
-        </button>
-        <button onClick={setAllMax} style={smallButtonStyle}>
+        </GameButton>
+        <GameButton emphasis="quiet" onClick={setAllMax} style={smallButtonStyle}>
           Max All
-        </button>
+        </GameButton>
         <div style={{ flex: 1 }} />
-        <button
+        <GameButton
+          emphasis="quiet"
           onClick={() => setForm({ temperature: "-30", oxygen: "0", oceans: "0", venus: "0" })}
           style={secondaryButtonStyle}
         >
           Defaults
-        </button>
-        <button onClick={() => void handleSetGlobalParams()} style={buttonStyle}>
+        </GameButton>
+        <GameButton
+          emphasis="quiet"
+          onClick={() => void handleSetGlobalParams()}
+          style={buttonStyle}
+        >
           Set
-        </button>
+        </GameButton>
       </div>
 
       <div style={{ borderTop: "1px solid #333", paddingTop: "12px", marginTop: "4px" }}>
@@ -293,9 +299,9 @@ const GameCommandsPage: React.FC<GameCommandsPageProps> = ({ gameState }) => {
               </option>
             ))}
           </select>
-          <button onClick={() => void handleSetPhase()} style={buttonStyle}>
+          <GameButton emphasis="quiet" onClick={() => void handleSetPhase()} style={buttonStyle}>
             Set
-          </button>
+          </GameButton>
         </div>
       </div>
     </div>

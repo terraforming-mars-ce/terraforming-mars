@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { globalWebSocketManager } from "../../../../services/globalWebSocketManager.ts";
 import {
@@ -128,7 +129,8 @@ const PlaceTilePage: React.FC<PlaceTilePageProps> = ({
                 {group.tiles.map((tile) => {
                   const iconSrc = ICON_MAP[tile.type];
                   return (
-                    <button
+                    <GameButton
+                      emphasis="quiet"
                       key={tile.type}
                       onClick={() => void handleTileSelection(tile.type)}
                       style={secondaryButtonStyle}
@@ -143,7 +145,7 @@ const PlaceTilePage: React.FC<PlaceTilePageProps> = ({
                         />
                       ) : null}
                       {tile.label}
-                    </button>
+                    </GameButton>
                   );
                 })}
               </div>

@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useRef, useEffect, useCallback } from "react";
 import { useWorld3DSettings } from "../../../../contexts/World3DSettingsContext";
 import { ColorSwatch } from "../HSVColorPicker.tsx";
@@ -383,7 +384,8 @@ const World3DPanel: React.FC = () => {
         />
       </div>
 
-      <button
+      <GameButton
+        emphasis="quiet"
         onClick={resetSettings}
         style={{
           padding: "8px 16px",
@@ -397,7 +399,7 @@ const World3DPanel: React.FC = () => {
         }}
       >
         Reset to Defaults
-      </button>
+      </GameButton>
     </div>
   );
 };
