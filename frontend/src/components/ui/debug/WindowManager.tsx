@@ -167,7 +167,7 @@ export function useWindowDrag({
   useEffect(() => {
     if (!isDragging) return;
     document.body.style.userSelect = "none";
-    document.body.style.cursor = "grabbing";
+    document.body.style.cursor = "default";
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
     return () => {

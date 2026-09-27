@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect } from "react";
+import FloatingWindow from "./FloatingWindow.tsx";
+import React, { useState, useEffect } from "react";
 import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
 import { GameDto } from "../../../types/generated/api-types.ts";
 import SidebarNav, { type ActiveItem } from "./SidebarNav.tsx";
@@ -28,11 +29,10 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
   gameState,
   changedPaths = new Set(),
 }) => {
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const [activeItem, setActiveItem] = useState<ActiveItem>("game-state");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
 
-  const { position, isDragging, handleMouseDown } = useWindowDrag({
+  const { position, handleMouseDown } = useWindowDrag({
     windowId: WINDOW_ID,
     width: WINDOW_WIDTH,
     height: () => window.innerHeight * 0.7,
@@ -101,70 +101,18 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
   };
 
   return (
-    <div
-      ref={dropdownRef}
-      className="debug-dropdown"
-      data-overlay-layer
+    <FloatingWindow
+      title="Admin Tools"
+      onClose={onClose}
       onMouseDown={handleMouseDown}
       style={{
-        position: "fixed",
-        top: `${position.y}px`,
-        left: `${position.x}px`,
-        width: `${WINDOW_WIDTH}px`,
+        top: position.y,
+        left: position.x,
+        width: WINDOW_WIDTH,
         maxHeight: "70vh",
-        background: "rgb(0, 0, 0)",
-        border: "2px solid #3b82f6",
-        borderRadius: "8px",
         zIndex: getZIndex(WINDOW_ID),
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: "0 4px 20px rgba(59, 130, 246, 0.3)",
-        cursor: isDragging ? "default" : "default",
-        transition: isDragging ? "none" : "top 0.2s ease-out, left 0.2s ease-out",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "12px 16px",
-          borderBottom: "1px solid #333",
-          userSelect: "none",
-          cursor: "default",
-        }}
-      >
-        <h3
-          className="font-orbitron"
-          style={{
-            margin: 0,
-            color: "#3b82f6",
-            fontSize: "16px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <span style={{ opacity: 0.7, fontSize: "12px" }}>&#x22ee;&#x22ee;</span>
-          Admin Tools
-        </h3>
-        <button
-          onClick={onClose}
-          onMouseDown={(e) => e.stopPropagation()}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#abb2bf",
-            fontSize: "20px",
-            cursor: "pointer",
-            padding: "0 4px",
-          }}
-        >
-          ×
-        </button>
-      </div>
-
       <div
         style={{
           display: "flex",
@@ -193,7 +141,7 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
           {renderContent()}
         </div>
       </div>
-    </div>
+    </FloatingWindow>
   );
 };
 
