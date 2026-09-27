@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useRef, useState, useEffect } from "react";
 import {
   PlayerDto,
@@ -544,8 +545,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                       filter: `drop-shadow(0 0 8px ${corpColor}50)`,
                     }}
                   >
-                    <div className="flex items-center justify-center min-h-[50px] [&>*]:scale-65 [&>*]:origin-center">
-                      {getCorporationLogo(displayCorporation.name.toLowerCase())}
+                    <div className="flex items-center justify-center min-h-[50px]">
+                      {getCorporationLogo(displayCorporation.name, "w-[100px] h-[64px]")}
                     </div>
                   </div>
 
@@ -556,7 +557,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                         isCorpExpanded ? "opacity-100 scale-100" : "opacity-0 scale-90"
                       }`}
                     >
-                      <button
+                      <GameButton
+                        emphasis="quiet"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleCorpClose();
@@ -564,7 +566,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                         className="absolute top-4 right-4 text-white/70 hover:text-white text-xl leading-none transition-colors z-10 cursor-pointer"
                       >
                         ×
-                      </button>
+                      </GameButton>
                       <CorporationCard
                         card={displayCorporation}
                         isSelected={false}
@@ -611,7 +613,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                               : "opacity-0 scale-90 pointer-events-none"
                           }`}
                         >
-                          <button
+                          <GameButton
+                            emphasis="quiet"
                             disabled={isConversionDisabled || !showConversionButton}
                             className={`flex items-center justify-center gap-0.5 px-1.5 py-0.5 border transition-all duration-200 ${
                               isConversionDisabled || !showConversionButton
@@ -621,18 +624,12 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                             onClick={(e) => {
                               e.stopPropagation();
                               if (isConversionDisabled || !showConversionButton) return;
-                              hoverSound.onClick?.();
                               if (resource.id === "plant") {
                                 void onConvertPlantsToGreenery?.();
                               } else if (resource.id === "heat") {
                                 void onConvertHeatToTemperature?.();
                               }
                             }}
-                            onMouseEnter={
-                              isConversionDisabled || !showConversionButton
-                                ? undefined
-                                : hoverSound.onMouseEnter
-                            }
                           >
                             <span className="text-[10px] font-bold text-white/90">+</span>
                             <GameIcon
@@ -643,7 +640,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                               }
                               size="small"
                             />
-                          </button>
+                          </GameButton>
                         </div>
                       )}
 
@@ -714,20 +711,32 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             }}
           >
             {/* Actions Button */}
-            <button
+            <GameButton
+              emphasis="quiet"
               ref={actionsButtonRef}
               className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
               onClick={() => {
-                hoverSound.onClick?.();
                 handleOpenActionsPopover();
               }}
-              onMouseEnter={hoverSound.onMouseEnter}
             >
-              <div className="font-bold flex items-center gap-[2px] h-[24px] w-[24px] justify-center text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
-                <span className="text-[7px] leading-none translate-y-[1px]">●</span>
-                <span className="text-[7px] leading-none translate-y-[1px]">●</span>
-                <span className="text-[18px] leading-none">→</span>
-              </div>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="shrink-0 text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200"
+              >
+                <circle cx="3" cy="12" r="1.25" fill="currentColor" />
+                <circle cx="8" cy="12" r="1.25" fill="currentColor" />
+                <path
+                  d="M12 12h10m-4-4 4 4-4 4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
               <div
                 className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none ${
                   hasPathChanged("currentPlayer.actions")
@@ -740,17 +749,16 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
                 Actions
               </div>
-            </button>
+            </GameButton>
 
             {/* Effects Button */}
-            <button
+            <GameButton
+              emphasis="quiet"
               ref={effectsButtonRef}
               className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
               onClick={() => {
-                hoverSound.onClick?.();
                 handleOpenEffectsPopover();
               }}
-              onMouseEnter={hoverSound.onMouseEnter}
             >
               <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
                 <div className="absolute w-[20px] h-[20px] rounded-full border-2 border-current" />
@@ -771,17 +779,16 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
                 Effects
               </div>
-            </button>
+            </GameButton>
 
             {/* Tags Button */}
-            <button
+            <GameButton
+              emphasis="quiet"
               ref={tagsButtonRef}
               className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
               onClick={() => {
-                hoverSound.onClick?.();
                 handleOpenTagsPopover();
               }}
-              onMouseEnter={hoverSound.onMouseEnter}
             >
               <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
                 <div className="absolute w-[20px] h-[20px] rounded-full border-2 border-current" />
@@ -803,17 +810,16 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
                 Tags
               </div>
-            </button>
+            </GameButton>
 
             {/* Storages Button */}
-            <button
+            <GameButton
+              emphasis="quiet"
               ref={storagesButtonRef}
               className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
               onClick={() => {
-                hoverSound.onClick?.();
                 handleOpenStoragesPopover();
               }}
-              onMouseEnter={hoverSound.onMouseEnter}
             >
               <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
                 <div className="absolute w-[20px] h-[20px] border-2 border-current" />
@@ -835,16 +841,15 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
                 Storages
               </div>
-            </button>
+            </GameButton>
 
             {/* Played Cards Button */}
-            <button
+            <GameButton
+              emphasis="quiet"
               className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
               onClick={() => {
-                hoverSound.onClick?.();
                 handleOpenCardsModal();
               }}
-              onMouseEnter={hoverSound.onMouseEnter}
             >
               <div className="text-lg font-bold flex items-center justify-center h-[24px] w-[24px] text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
                 ↓
@@ -861,17 +866,16 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
                 Played
               </div>
-            </button>
+            </GameButton>
 
             {/* VP Button */}
-            <button
+            <GameButton
+              emphasis="quiet"
               ref={vpButtonRef}
               className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
               onClick={() => {
-                hoverSound.onClick?.();
                 handleOpenVPPopover();
               }}
-              onMouseEnter={hoverSound.onMouseEnter}
             >
               <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
                 <span className="text-xl absolute">○</span>
@@ -890,18 +894,17 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
                 VP
               </div>
-            </button>
+            </GameButton>
 
             {/* Log Button */}
             {gameId && (
-              <button
+              <GameButton
+                emphasis="quiet"
                 ref={logButtonRef}
                 className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
                 onClick={() => {
-                  hoverSound.onClick?.();
                   setShowLogPopover(!showLogPopover);
                 }}
-                onMouseEnter={hoverSound.onMouseEnter}
               >
                 <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-base text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
                   ☰
@@ -912,7 +915,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                 <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
                   Log
                 </div>
-              </button>
+              </GameButton>
             )}
           </div>
         ) : (
@@ -921,14 +924,13 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             style={{ paddingRight: ANGLE_INDENT + 16 }}
           >
             {gameId && (
-              <button
+              <GameButton
+                emphasis="quiet"
                 ref={logButtonRef}
                 className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
                 onClick={() => {
-                  hoverSound.onClick?.();
                   setShowLogPopover(!showLogPopover);
                 }}
-                onMouseEnter={hoverSound.onMouseEnter}
               >
                 <div className="font-bold flex items-center justify-center h-[24px] w-[24px] relative text-base text-[rgb(140,140,150)] group-hover:text-[rgb(100,160,220)] transition-colors duration-200">
                   ☰
@@ -939,7 +941,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                 <div className="text-[8px] font-medium font-orbitron text-white/70 uppercase tracking-[0.5px]">
                   Log
                 </div>
-              </button>
+              </GameButton>
             )}
           </div>
         )}
