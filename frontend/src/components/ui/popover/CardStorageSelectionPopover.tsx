@@ -159,14 +159,13 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
               <div
                 key={card.id}
                 className="
-                  bg-black/30
-                  border-2 border-space-blue-500/40
-                  rounded-[10px] px-3.5 py-3
+                  game-panel game-panel-clipped game-choice
+                    px-3.5 py-3
                   mb-2 cursor-pointer
                   transition-all duration-[250ms] ease-out
-                  hover:border-space-blue-500/80
-                  hover:bg-black/50
-                  hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]
+                  hover:brightness-125
+
+
                   animate-choiceSlideIn
                   flex items-center justify-between gap-3
                 "
@@ -191,19 +190,19 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
           {hasNoStorage ? (
             <>
               <GameButton
-                buttonType="primary"
-                variant="warn"
+                emphasis="primary"
+                tone="warn"
                 size="sm"
                 onClick={handleContinueWithoutStorage}
               >
                 Continue Anyway
               </GameButton>
-              <GameButton buttonType="secondary" variant="info" size="sm" onClick={onCancel}>
+              <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
                 Cancel
               </GameButton>
             </>
           ) : (
-            <GameButton buttonType="secondary" variant="info" size="sm" onClick={onCancel}>
+            <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
               Cancel
             </GameButton>
           )}

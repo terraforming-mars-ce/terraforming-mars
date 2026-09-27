@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import CorporationCard from "../cards/CorporationCard.tsx";
 import GameCard from "../cards/GameCard.tsx";
 import GameIcon from "../display/GameIcon.tsx";
@@ -101,13 +101,6 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
     minCards: 0,
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedCorporationId(null);
-      setSelectedPreludeIds([]);
-    }
-  }, [isOpen]);
-
   const handlePreludeSelect = useCallback(
     (cardId: string) => {
       setSelectedPreludeIds((prev) => {
@@ -128,14 +121,18 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
   const allValid = !!selectedCorporationId && preludesValid && isValidCardSelection;
 
   const handleConfirm = () => {
-    if (!selectedCorporationId) return;
+    if (!selectedCorporationId) {
+      return;
+    }
 
     handleCardConfirm((cardIds) => {
       onConfirm(selectedCorporationId, selectedPreludeIds, cardIds);
     });
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div
@@ -253,7 +250,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
 
           <div className="flex items-center gap-4 max-[768px]:w-full max-[768px]:flex-col max-[768px]:gap-3">
             {onHide && (
-              <GameButton buttonType="secondary" size="lg" onClick={onHide}>
+              <GameButton emphasis="secondary" size="lg" onClick={onHide}>
                 Hide
               </GameButton>
             )}

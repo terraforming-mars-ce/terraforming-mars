@@ -82,7 +82,7 @@ export const isInGameWorld = (p: AppPhase): boolean =>
   p.kind === "completed";
 
 export const showsSpaceBackground = (p: AppPhase): boolean =>
-  p.kind === "menu" ||
+  (p.kind === "menu" && p.route !== "cards") ||
   p.kind === "checking" ||
   p.kind === "connecting" ||
   p.kind === "selecting" ||

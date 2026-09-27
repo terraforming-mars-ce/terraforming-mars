@@ -3,13 +3,14 @@ import { createPortal } from "react-dom";
 import GameIcon from "../display/GameIcon.tsx";
 import { FormattedDescription } from "../display/FormattedDescription.tsx";
 import { CardRequirementsDto, CardTag, ResourceType } from "@/types/generated/api-types.ts";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
 
 interface RequirementsBoxProps {
   requirements?: CardRequirementsDto;
+  inFlow?: boolean;
 }
 
-const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
+const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements, inFlow = false }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
@@ -19,6 +20,19 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
       const rect = badgeRef.current.getBoundingClientRect();
       setTooltipPos({ x: rect.left, y: rect.bottom });
     }
+  }, [isHovered]);
+
+  useEffect(() => {
+    if (!isHovered) {
+      return;
+    }
+    const dismiss = () => setIsHovered(false);
+    window.addEventListener("scroll", dismiss, true);
+    window.addEventListener("resize", dismiss);
+    return () => {
+      window.removeEventListener("scroll", dismiss, true);
+      window.removeEventListener("resize", dismiss);
+    };
   }, [isHovered]);
 
   if (!requirements || !requirements.items || requirements.items.length === 0) {
@@ -198,12 +212,20 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
     );
   };
 
+  let layer = getZIndex("GAME_BOARD_BACKGROUND", -1);
+  if (inFlow) {
+    layer = Z_INDEX.GAME_BOARD_BASE;
+  }
+  if (isHovered) {
+    layer = Z_INDEX.CARD_HOVER;
+  }
   const groupedRequirements = groupRequirements(items);
 
   return (
     <>
       <div
-        className={`absolute bottom-full left-[10%] w-fit min-w-[60px] max-w-[80%] ${isHovered ? "z-[50]" : "z-[-10]"}`}
+        className={`${inFlow ? "relative ml-[10%]" : "absolute bottom-full left-[10%]"} w-fit min-w-[60px] max-w-[80%]`}
+        style={{ zIndex: layer }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -215,7 +237,7 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements }) => {
             background:
               "linear-gradient(-45deg, #5a2a10 25%, #2d1508 25%, #2d1508 50%, #5a2a10 50%, #5a2a10 75%, #2d1508 75%)",
             backgroundSize: "20px 20px",
-            animation: "stripeMove 4s linear infinite",
+            animation: inFlow ? undefined : "stripeMove 4s linear infinite",
           }}
         >
           <div

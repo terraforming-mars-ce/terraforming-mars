@@ -1,180 +1,177 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiService } from "../../services/apiService";
-import { globalWebSocketManager } from "../../services/globalWebSocketManager";
-import { skyboxCache } from "../../services/SkyboxCache.ts";
-import LoadingOverlay from "../game/view/LoadingOverlay.tsx";
-import BackButton from "../ui/buttons/BackButton.tsx";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { apiService } from "@/services/apiService";
+import type { GameDto, GameOptionsDto, GameSetupDto } from "@/types/generated/api-types";
+import { useJoinGame } from "@/hooks/useJoinGame";
 import { MAX_PLAYER_NAME_LENGTH } from "@/constants/gameConstants";
-import { useNotifications } from "../../contexts/NotificationContext.tsx";
+import { Z_INDEX } from "@/constants/zIndex";
+import BackButton from "../ui/buttons/BackButton";
+import GameButton from "../ui/buttons/GameButton";
+import GameSetupControls from "../ui/lobby/GameSetupControls";
 
-const CreateGamePage: React.FC = () => {
+export default function CreateGamePage() {
   const navigate = useNavigate();
-  const { showNotification } = useNotifications();
-  const [playerName, setPlayerName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState<"game" | "environment" | null>(null);
-  const [skyboxReady, setSkyboxReady] = useState(false);
-  const [isFadedIn, setIsFadedIn] = useState(false);
-
+  const [options, setOptions] = useState<GameOptionsDto | null>(null);
+  const [setup, setSetup] = useState<GameSetupDto | null>(null);
+  const [created, setCreated] = useState<GameDto | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const submitting = useRef(false);
+  const mounted = useRef(true);
+  const { playerName, setPlayerName, isLoading, handleJoin } = useJoinGame({ game: created });
   useEffect(() => {
-    if (skyboxCache.isReady()) {
-      setSkyboxReady(true);
-    }
-    setTimeout(() => {
-      setIsFadedIn(true);
-    }, 10);
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
   }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!playerName.trim()) {
-      showNotification({ message: "Please enter your name", type: "error" });
-      return;
-    }
-
-    if (playerName.trim().length < 2) {
-      showNotification({ message: "Name must be at least 2 characters long", type: "error" });
-      return;
-    }
-
-    setIsLoading(true);
-    setLoadingStep("game");
-
-    try {
-      const game = await apiService.createGame();
-
-      if (!skyboxReady) {
-        setLoadingStep("environment");
-        await skyboxCache.preload();
-      }
-
-      setLoadingStep("game");
-      await globalWebSocketManager.initialize();
-
-      const handleGameUpdated = (gameData: any) => {
-        const allPlayers = [gameData.currentPlayer, ...(gameData.otherPlayers || [])].filter(
-          Boolean,
-        );
-
-        const connectedPlayer = allPlayers.find((p: any) => p.name === playerName.trim());
-
-        if (connectedPlayer) {
-          const storedData = {
-            gameId: gameData.id,
-            playerId: connectedPlayer.id,
-            playerName: playerName.trim(),
-            createdAt: new Date().toISOString(),
-          };
-          localStorage.setItem("terraforming-mars-game", JSON.stringify(storedData));
-
-          navigate("/game", {
-            state: {
-              game: gameData,
-              playerId: connectedPlayer.id,
-              playerName: playerName.trim(),
-            },
-          });
-
-          globalWebSocketManager.off("game-updated", handleGameUpdated);
+  useEffect(() => {
+    const controller = new AbortController();
+    setError("");
+    void apiService
+      .getGameOptions(controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setOptions(data);
+          setSetup(data.defaults);
         }
-      };
-
-      globalWebSocketManager.on("game-updated", handleGameUpdated);
-
-      globalWebSocketManager.playerConnect(playerName.trim(), game.id);
-    } catch (err) {
-      showNotification({
-        message: err instanceof Error ? err.message : "Failed to create game",
-        type: "error",
+      })
+      .catch((err: Error) => {
+        if (!controller.signal.aborted) {
+          setError(err.message);
+        }
       });
+    return () => controller.abort();
+  }, [attempt]);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!setup || submitting.current || playerName.trim().length < 2) {
+      return;
+    }
+    submitting.current = true;
+    setCreating(true);
+    setError("");
+    try {
+      const game = created ?? (await apiService.createGame(setup));
+      if (!mounted.current) {
+        return;
+      }
+      setCreated(game);
+      await handleJoin(game);
+    } catch (err) {
+      if (mounted.current) {
+        setError(err instanceof Error ? err.message : "Could not create game");
+      }
     } finally {
-      setIsLoading(false);
-      setLoadingStep(null);
+      submitting.current = false;
+      if (mounted.current) {
+        setCreating(false);
+      }
     }
   };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPlayerName(e.target.value);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      void handleSubmit(e as React.FormEvent);
-    }
-  };
-
-  const handleBackToHome = () => {
-    navigate("/");
-  };
-
-  const getLoadingMessage = () => {
-    if (loadingStep === "game") return "Creating game...";
-    if (loadingStep === "environment") return "Loading...";
-    return "Loading...";
-  };
-
+  const busy = creating || isLoading;
   return (
-    <div
-      className={`bg-transparent text-white min-h-screen flex items-center justify-center font-sans relative z-10 transition-opacity duration-300 ease-in ${isFadedIn ? "opacity-100" : "opacity-0"}`}
-    >
-      <div className="relative z-[1] flex items-center justify-center w-full min-h-screen">
-        <div className="fixed top-[30px] left-[30px]" style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}>
-          <BackButton onClick={handleBackToHome} />
-        </div>
-        <div className="max-w-[600px] w-full px-5 py-10">
-          <div className="text-center">
-            <h1 className="font-orbitron text-[42px] text-white mb-[60px] text-shadow-glow font-bold tracking-wider">
-              Create a new game
-            </h1>
-
-            <form onSubmit={handleSubmit} className="relative max-w-[400px] mx-auto">
-              <div className="relative flex items-center bg-space-black-darker/95 border border-white/20 rounded-xl p-0 transition-all duration-200 backdrop-blur-space focus-within:border-white/60 focus-within:shadow-[0_0_20px_rgba(255,255,255,0.1)] overflow-hidden">
-                <input
-                  type="text"
-                  value={playerName}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Enter your name"
-                  disabled={isLoading}
-                  spellCheck={false}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  className="flex-1 bg-transparent border-none py-5 px-6 text-white text-lg outline-none placeholder:text-white/50 disabled:opacity-60"
-                  autoFocus
-                  maxLength={MAX_PLAYER_NAME_LENGTH}
-                />
-
-                <button
-                  type="submit"
-                  disabled={isLoading || !playerName.trim()}
-                  className="bg-transparent border-none py-4 px-5 cursor-pointer flex items-center justify-center transition-all duration-200 disabled:cursor-default disabled:opacity-60 group"
-                >
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-white/70 transition-all duration-200 group-hover:text-white group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
-                  >
-                    <polyline points="9 6 15 12 9 18" />
-                  </svg>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+    <>
+      <div className="fixed top-[30px] left-[30px]" style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}>
+        <BackButton onClick={() => navigate("/")} />
       </div>
-
-      {isLoading && <LoadingOverlay isLoaded={false} message={getLoadingMessage()} />}
-    </div>
+      <main
+        className="menu-shell menu-enter text-white text-left relative"
+        style={{ zIndex: Z_INDEX.UI_BASE }}
+      >
+        <h1 className="menu-title">Create game</h1>
+        {error && (
+          <p role="alert" className="text-red-300 mb-5">
+            {error}
+          </p>
+        )}
+        {!options || !setup ? (
+          <div>
+            {error ? (
+              <GameButton emphasis="secondary" onClick={() => setAttempt((value) => value + 1)}>
+                Retry
+              </GameButton>
+            ) : (
+              <p className="text-white/60">Loading options…</p>
+            )}
+          </div>
+        ) : (
+          <form
+            onSubmit={(event) => void submit(event)}
+            className="game-panel p-6 sm:p-10 menu-grid"
+          >
+            <div className="flex flex-col gap-8 min-w-0">
+              <label className="flex flex-col gap-3 text-sm text-white/70">
+                Your name
+                <input
+                  className="game-input text-lg"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  disabled={busy || !!created}
+                  autoFocus
+                  required
+                  minLength={2}
+                  maxLength={MAX_PLAYER_NAME_LENGTH}
+                  autoComplete="nickname"
+                />
+              </label>
+              <details className="text-sm">
+                <summary className="cursor-pointer font-orbitron text-white/70">
+                  Game options
+                </summary>
+                <fieldset disabled={busy || !!created} className="flex flex-col gap-5 mt-6">
+                  <label className="flex items-center justify-between gap-4">
+                    Players
+                    <input
+                      className="game-input w-20"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={setup.maxPlayers}
+                      onChange={(e) => setSetup({ ...setup, maxPlayers: Number(e.target.value) })}
+                    />
+                  </label>
+                  {(
+                    [
+                      ["developmentMode", "Development mode"],
+                      ["demoGame", "Demo game"],
+                      ["allowRandomBuy", "Random buy"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="flex items-center justify-between gap-4">
+                      {label}
+                      <input
+                        type="checkbox"
+                        checked={setup[key]}
+                        onChange={(e) => setSetup({ ...setup, [key]: e.target.checked })}
+                        className="game-checkbox"
+                      />
+                    </label>
+                  ))}
+                </fieldset>
+              </details>
+              <GameButton
+                type="submit"
+                size="lg"
+                loading={busy}
+                disabled={playerName.trim().length < 2}
+                className="mt-auto self-start"
+              >
+                {created ? "Join lobby" : "Create lobby"}
+              </GameButton>
+            </div>
+            <GameSetupControls
+              maps={options.availableMaps}
+              mapId={setup.mapId}
+              cardPacks={setup.cardPacks}
+              venusNextEnabled={setup.venusNextEnabled}
+              disabled={busy || !!created}
+              onChange={(patch) => setSetup({ ...setup, ...patch })}
+            />
+          </form>
+        )}
+      </main>
+    </>
   );
-};
-
-export default CreateGamePage;
+}

@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useState } from "react";
 import { GameDto, OtherPlayerDto, PlayerDto } from "../../../types/generated/api-types.ts";
 import { getCorporationLogo } from "../../../utils/corporationLogos.tsx";
@@ -62,11 +63,12 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
             const canSelect = !isConnected && !isExited;
 
             return (
-              <button
+              <GameButton
+                emphasis="quiet"
                 key={player.id}
                 onClick={() => canSelect && onSelectPlayer(player.id, player.name)}
                 disabled={!canSelect}
-                className={`flex justify-between items-center py-3 px-4 bg-black/40 rounded-lg border transition-all text-left w-full ${
+                className={`flex justify-between items-center py-3 px-4 bg-black/40 rounded-none border transition-all text-left w-full ${
                   canSelect
                     ? "border-space-blue-600/50 hover:border-space-blue-400 hover:bg-black/60 cursor-pointer"
                     : "border-white/10 opacity-50 cursor-default"
@@ -75,13 +77,7 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
                 <div className="flex items-center gap-3">
                   {player.corporation && (
                     <div className="w-[80px] h-6 flex-shrink-0 flex items-center justify-start overflow-hidden">
-                      <div className="origin-left scale-[0.2]">
-                        {getCorporationLogo(
-                          player.corporation.name.toLowerCase() as Parameters<
-                            typeof getCorporationLogo
-                          >[0],
-                        )}
-                      </div>
+                      {getCorporationLogo(player.corporation.name, "w-20 h-6")}
                     </div>
                   )}
                   <span className="text-white text-sm font-medium">{player.name}</span>
@@ -99,7 +95,7 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
                     CONNECTED
                   </span>
                 )}
-              </button>
+              </GameButton>
             );
           })}
         </div>
@@ -125,15 +121,16 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
           autoComplete="off"
           autoCorrect="off"
           maxLength={50}
-          className="flex-1 bg-black/50 border border-white/20 rounded-lg py-3 px-4 text-white text-base outline-none placeholder:text-white/50 focus:border-white/60 focus:shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all duration-200 disabled:opacity-60"
+          className="flex-1 bg-black/50 border border-white/20 rounded-none py-3 px-4 text-white text-base outline-none placeholder:text-white/50 focus:border-white/60 focus:shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all duration-200 disabled:opacity-60"
         />
-        <button
+        <GameButton
+          emphasis="quiet"
           onClick={() => void handleSpectate()}
           disabled={isConnecting || !spectatorName.trim()}
-          className="font-orbitron bg-white/10 border border-white/20 rounded-lg py-3 px-6 text-white text-sm font-medium hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-default"
+          className="font-orbitron bg-white/10 border border-white/20 rounded-none py-3 px-6 text-white text-sm font-medium hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-default"
         >
           {isConnecting ? "Joining..." : "Spectate"}
-        </button>
+        </GameButton>
       </div>
     </GameMenuModal>
   );

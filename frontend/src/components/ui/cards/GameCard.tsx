@@ -20,6 +20,7 @@ interface GameCardProps {
   onSelect: (cardId: string) => void;
   animationDelay?: number;
   showCheckbox?: boolean;
+  catalog?: boolean;
 }
 
 // Type guard to check if card is a PlayerCardDto (has state information)
@@ -74,6 +75,7 @@ const GameCard: React.FC<GameCardProps> = ({
   onSelect,
   animationDelay = 0,
   showCheckbox = false,
+  catalog = false,
 }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -153,10 +155,21 @@ const GameCard: React.FC<GameCardProps> = ({
       ? checkboxColors[cardType]
       : { bg: "bg-[#4a90e2]", border: "border-[#4a90e2]" };
 
+  let mobileTitleStyles = "max-md:text-sm";
+  if (card.name.length > 19) {
+    mobileTitleStyles = "max-md:text-[9px]";
+  } else if (card.name.length > 14) {
+    mobileTitleStyles = "max-md:text-[11px]";
+  }
+  mobileTitleStyles += " max-md:h-[36px] max-md:pl-2";
+  mobileTitleStyles += hasTags ? " max-md:pr-[25px]" : " max-md:pr-2";
+
   return (
     <div
-      className={`relative w-[200px] min-h-[280px] p-4 transition-all duration-200 z-[1] max-md:w-[160px] max-md:min-h-[240px] max-md:p-3 group select-none ${animationDelay >= 0 ? "opacity-0 translate-y-5 animate-[fadeInUp_0.5s_ease_forwards]" : ""} ${!isAvailable ? "grayscale-[0.6] brightness-[0.65] saturate-[0.2]" : ""}`}
-      style={animationDelay >= 0 ? { animationDelay: `${animationDelay}ms` } : undefined}
+      className={`relative min-h-[280px] p-4 transition-colors duration-200 z-[1] group select-none ${catalog ? "w-full" : "w-[200px] max-md:w-[160px] max-md:min-h-[240px] max-md:p-3"} ${!catalog && animationDelay >= 0 ? "opacity-0 translate-y-5 animate-[fadeInUp_0.5s_ease_forwards]" : ""} ${!isAvailable ? "grayscale-[0.6] brightness-[0.65] saturate-[0.2]" : ""}`}
+      style={
+        !catalog && animationDelay >= 0 ? { animationDelay: `${animationDelay}ms` } : undefined
+      }
       onClick={handleClick}
     >
       {/* Inner card body with clip-path for angled top-right corner */}
@@ -226,7 +239,7 @@ const GameCard: React.FC<GameCardProps> = ({
       )}
 
       {/* Requirements box */}
-      <RequirementsBox requirements={card.requirements} />
+      {!catalog && <RequirementsBox requirements={card.requirements} />}
 
       {/* Tags as vertical stack on right side */}
       {hasTags && (
@@ -247,10 +260,13 @@ const GameCard: React.FC<GameCardProps> = ({
       )}
 
       {/* Image area */}
-      <div className="absolute top-5 left-4 right-4 h-[35%] bg-white/5 rounded border border-dashed border-white/20 z-[1] overflow-hidden max-md:top-4 max-md:left-3 max-md:right-3">
+      <div
+        className={`absolute top-5 left-4 right-4 h-[35%] bg-white/5 rounded border border-dashed border-white/20 z-[1] overflow-hidden ${catalog ? "" : "max-md:top-4 max-md:left-3 max-md:right-3"}`}
+      >
         {!imageError && (
           <img
             src={cardImagePath}
+            decoding="async"
             alt={card.name}
             className={`w-full h-full object-cover rounded border border-[rgba(60,60,70,0.7)] opacity-0 transition-opacity duration-300 ${imageLoaded ? "opacity-100" : ""}`}
             onLoad={handleImageLoad}
@@ -266,7 +282,7 @@ const GameCard: React.FC<GameCardProps> = ({
       <div className={"absolute top-[38%] left-0 right-2 z-[4] max-md:px-0.5"}>
         <div className="relative w-full">
           <h3
-            className={`${card.name.length > 19 ? "text-[11px]" : card.name.length > 14 ? "text-[13px]" : "text-base"} font-orbitron font-semibold text-white leading-[1.2] text-left flex items-center justify-start w-full h-[44px] rounded-none p-1 pl-3 ${hasTags ? "pr-[30px]" : "pr-3"} shadow-[0_3px_6px_rgba(0,0,0,0.4)] my-0 mx-auto ${card.name.length > 19 ? "max-md:text-[9px]" : card.name.length > 14 ? "max-md:text-[11px]" : "max-md:text-sm"} max-md:h-[36px] max-md:pl-2 ${hasTags ? "max-md:pr-[25px]" : "max-md:pr-2"} ${cardType && titleStyles[cardType] ? titleStyles[cardType] : ""}`}
+            className={`${card.name.length > 19 ? "text-[11px]" : card.name.length > 14 ? "text-[13px]" : "text-base"} font-orbitron font-semibold text-white leading-[1.2] text-left flex items-center justify-start w-full h-[44px] rounded-none p-1 pl-3 ${hasTags ? "pr-[30px]" : "pr-3"} shadow-[0_3px_6px_rgba(0,0,0,0.4)] my-0 mx-auto ${catalog ? "" : mobileTitleStyles} ${cardType && titleStyles[cardType] ? titleStyles[cardType] : ""}`}
             style={{
               clipPath:
                 "polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%)",

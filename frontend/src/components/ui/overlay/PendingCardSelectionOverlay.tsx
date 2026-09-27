@@ -135,7 +135,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
             </div>
             {!isSellPatents && (
               <GameButton
-                buttonType="secondary"
+                emphasis="secondary"
                 size="sm"
                 onClick={() => setShowPlayability((prev) => !prev)}
               >
@@ -243,7 +243,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
             </div>
             <div className="flex gap-3 items-center">
               {(onCancel || selection.minCards === 0) && (
-                <GameButton buttonType="textonly" size="md" onClick={handleCancel}>
+                <GameButton emphasis="quiet" size="md" onClick={handleCancel}>
                   Cancel
                 </GameButton>
               )}

@@ -1,4 +1,6 @@
 import {
+  GameOptionsDto,
+  GameSetupDto,
   FeedbackDto,
   FeedbackResponse,
   CreateGameResponse,
@@ -19,14 +21,22 @@ export class ApiService {
     this.baseUrl = baseUrl;
   }
 
-  async createGame(): Promise<GameDto> {
+  async getGameOptions(signal?: AbortSignal): Promise<GameOptionsDto> {
+    const response = await fetch(`${this.baseUrl}/game-options`, { signal });
+    if (!response.ok) {
+      throw new Error("Could not load game options");
+    }
+    return response.json();
+  }
+
+  async createGame(settings: GameSetupDto): Promise<GameDto> {
     try {
       const response = await fetch(`${this.baseUrl}/games`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ settings }),
       });
 
       if (!response.ok) {

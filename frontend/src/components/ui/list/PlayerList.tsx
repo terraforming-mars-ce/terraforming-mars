@@ -177,10 +177,10 @@ const PlayerList = forwardRef<PlayerListHandle, PlayerListProps>(function Player
           <div className="text-white/60 text-xs text-shadow-glow mt-1">{passWarningReason}</div>
         </GameFlowTitle>
         <GameFlowFooter className="gap-3">
-          <GameButton buttonType="secondary" size="sm" onClick={dismissPassConfirmation}>
+          <GameButton emphasis="secondary" size="sm" onClick={dismissPassConfirmation}>
             Cancel
           </GameButton>
-          <GameButton variant="warn" size="sm" onClick={() => void handleConfirmPass()}>
+          <GameButton tone="warn" size="sm" onClick={() => void handleConfirmPass()}>
             Pass Anyway
           </GameButton>
         </GameFlowFooter>

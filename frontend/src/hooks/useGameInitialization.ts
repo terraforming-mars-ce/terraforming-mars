@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useLayoutEffect } from "react";
 import type { Location, NavigateFunction } from "react-router-dom";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
@@ -122,7 +122,7 @@ export function useGameInitialization({
     store.setIsConnected(true);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let aborted = false;
 
     const initializeGame = async () => {

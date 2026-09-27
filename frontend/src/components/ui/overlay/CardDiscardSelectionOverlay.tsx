@@ -139,7 +139,7 @@ const CardDiscardSelectionOverlay: React.FC<CardDiscardSelectionOverlayProps> = 
 
           <div className="flex gap-3 items-center">
             {isOptional && (
-              <GameButton buttonType="textonly" size="md" onClick={handleSkip}>
+              <GameButton emphasis="quiet" size="md" onClick={handleSkip}>
                 {showConfirmation && selectedCardIds.length === 0 ? "Confirm Skip" : "Skip"}
               </GameButton>
             )}

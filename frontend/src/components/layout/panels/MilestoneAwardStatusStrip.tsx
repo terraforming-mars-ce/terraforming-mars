@@ -5,7 +5,7 @@ import GameIcon from "../../ui/display/GameIcon.tsx";
 import DecorBoxTooltip from "../../ui/display/DecorBoxTooltip.tsx";
 import AwardScoreboard from "../../ui/display/AwardScoreboard.tsx";
 import { FormattedDescription } from "../../ui/display/FormattedDescription.tsx";
-import ParallelogramButton, { ANGLE_INDENT, BUTTON_SPACING } from "./ParallelogramButton.tsx";
+import GameButton, { ANGLE_INDENT, BUTTON_SPACING } from "../../ui/buttons/GameButton.tsx";
 
 const SLOTS_PER_SIDE = 3;
 const CHIP_WIDTH = 84;
@@ -152,7 +152,7 @@ const MilestoneAwardStatusStrip: React.FC = () => {
     return (
       <div
         key={`${kind}-${slot}`}
-        className={`relative ${wrapperClass}`}
+        className={`relative flex items-center ${wrapperClass}`}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
         style={{
@@ -160,16 +160,18 @@ const MilestoneAwardStatusStrip: React.FC = () => {
           zIndex,
         }}
       >
-        <ParallelogramButton
-          buttonRef={ref}
+        <GameButton
+          shape="toolbar"
+          emphasis="secondary"
+          ref={ref}
           width={isInnermost ? INNER_CHIP_WIDTH : CHIP_WIDTH}
           height={CHIP_HEIGHT}
-          color={chipColor}
+          accent={chipColor}
           leftEdge={leftEdge}
           rightEdge={rightEdge}
         >
           {iconType ? <GameIcon iconType={iconType} size="small" /> : null}
-        </ParallelogramButton>
+        </GameButton>
       </div>
     );
   };

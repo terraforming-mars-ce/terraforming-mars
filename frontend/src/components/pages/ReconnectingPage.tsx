@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { globalWebSocketManager } from "../../services/globalWebSocketManager.ts";
@@ -117,12 +118,13 @@ const ReconnectingPage: React.FC = () => {
               <p className="text-base text-white/90 m-0 max-w-[400px] leading-[1.5] max-[768px]:text-sm">
                 {error}
               </p>
-              <button
-                className="bg-space-blue-600 border-2 border-space-blue-900 rounded-xl py-4 px-8 text-lg font-bold text-white cursor-pointer transition-all duration-300 shadow-glow mt-4 hover:bg-space-blue-900 hover:-translate-y-0.5 hover:shadow-glow-lg max-[768px]:py-3.5 max-[768px]:px-7 max-[768px]:text-base max-[480px]:py-3 max-[480px]:px-6 max-[480px]:text-sm font-orbitron"
+              <GameButton
+                emphasis="quiet"
+                className="bg-space-blue-600 border-2 border-space-blue-900 rounded-none py-4 px-8 text-lg font-bold text-white cursor-pointer transition-all duration-300 shadow-glow mt-4 hover:bg-space-blue-900 hover:-translate-y-0.5 hover:shadow-glow-lg max-[768px]:py-3.5 max-[768px]:px-7 max-[768px]:text-base max-[480px]:py-3 max-[480px]:px-6 max-[480px]:text-sm font-orbitron"
                 onClick={handleReturnToMenu}
               >
                 Return to Main Menu
-              </button>
+              </GameButton>
             </div>
           ) : null}
         </div>

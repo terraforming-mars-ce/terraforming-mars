@@ -7,10 +7,11 @@
  * - Navigation layer (100-199): Menu bars, sidebars
  * - Overlay layer (200-999): Tooltips, dropdowns, cards
  * - Modal layer (1000-8999): Standard modals, popups
- * - Critical layer (9000-9999): System-critical overlays
+ * - App layer (35000+): App-wide views, confirmations and critical overlays
  */
 
 export const Z_INDEX = {
+  CONTROL_DECORATION: -1,
   // Base Layer (0-9)
   GAME_BOARD_BACKGROUND: 0,
   GAME_BOARD_BASE: 1,
@@ -21,6 +22,7 @@ export const Z_INDEX = {
   // UI Layer (10-99)
   UI_BASE: 10,
   COST_DISPLAY: 20,
+  TILE_PLACEMENT_PROMPT: 50,
   PLAYER_OVERLAY: 90,
 
   // Navigation Layer (100-199)
@@ -44,7 +46,6 @@ export const Z_INDEX = {
   MENU_DROPDOWN: 1000,
   STANDARD_MODAL: 2000,
   CARD_DETAIL_MODAL: 3000,
-  CONFIRMATION_MODAL: 4000,
   CORPORATION_SELECTION: 5000,
   PENDING_ACTION_BACKDROP: 4500,
 
@@ -66,10 +67,13 @@ export const Z_INDEX = {
   TOP_MENU_ALWAYS_ON_TOP: 20100,
   EXPANDED_CARD_FAN: 20201,
 
-  // Critical Layer (9000-9999)
-  SYSTEM_NOTIFICATIONS: 9000,
-  ERROR_OVERLAYS: 9500,
   DEBUG_OVERLAY: 9999,
+
+  // App-wide layers stay above all gameplay selections, including immediate flows.
+  APP_OVERLAY: 35000,
+  CONFIRMATION_MODAL: 40000,
+  SYSTEM_NOTIFICATIONS: 41000,
+  ERROR_OVERLAYS: 42000,
 } as const;
 
 // Type for z-index values

@@ -168,17 +168,18 @@ const Stepper: React.FC<StepperProps> = ({
       {icon && <GameIcon iconType={icon} size="small" />}
       {iconLabel && <span className="text-white/60 text-xs font-medium w-6">{iconLabel}</span>}
       <div className="flex items-center gap-1">
-        <button
+        <GameButton
+          emphasis="quiet"
           onClick={handleDecrease}
           disabled={!canDecrease}
-          className={`w-6 h-6 text-sm rounded transition-all ${
+          className={`w-6 h-6 text-sm rounded-none transition-all ${
             canDecrease
               ? "bg-black/40 text-white hover:bg-black/60 cursor-pointer"
               : "bg-black/30 text-white/30"
           }`}
         >
           -
-        </button>
+        </GameButton>
         <input
           type="text"
           value={inputValue}
@@ -191,17 +192,18 @@ const Stepper: React.FC<StepperProps> = ({
           }`}
           style={{ cursor: "ew-resize" }}
         />
-        <button
+        <GameButton
+          emphasis="quiet"
           onClick={handleIncrease}
           disabled={!canIncrease}
-          className={`w-6 h-6 text-sm rounded transition-all ${
+          className={`w-6 h-6 text-sm rounded-none transition-all ${
             canIncrease
               ? "bg-black/40 text-white hover:bg-black/60 cursor-pointer"
               : "bg-black/30 text-white/30"
           }`}
         >
           +
-        </button>
+        </GameButton>
       </div>
     </div>
   );
@@ -476,7 +478,8 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
         <div className="flex-1 flex min-h-0">
           {/* Sidebar */}
           <div className="w-40 shrink-0 bg-black/30 border-r border-space-blue-600/50 flex flex-col py-2">
-            <button
+            <GameButton
+              emphasis="quiet"
               onClick={() => setActiveTab("cards")}
               className={`text-left px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors cursor-pointer ${
                 activeTab === "cards"
@@ -485,8 +488,9 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
               }`}
             >
               Cards
-            </button>
-            <button
+            </GameButton>
+            <GameButton
+              emphasis="quiet"
               onClick={() => setActiveTab("resources")}
               className={`text-left px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors cursor-pointer ${
                 activeTab === "resources"
@@ -495,8 +499,9 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
               }`}
             >
               Resources
-            </button>
-            <button
+            </GameButton>
+            <GameButton
+              emphasis="quiet"
               onClick={() => {
                 if (isHost) {
                   setActiveTab("global");
@@ -511,7 +516,7 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
               }`}
             >
               Global
-            </button>
+            </GameButton>
           </div>
 
           {/* Main content area */}
@@ -537,7 +542,7 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
                     placeholder="Search corporations..."
                     value={corpSearchTerm}
                     onChange={(e) => setCorpSearchTerm(e.target.value)}
-                    className="w-full bg-black/60 border border-space-blue-400/30 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
+                    className="w-full bg-black/60 border border-space-blue-400/30 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
                   />
                   <div className="flex flex-col gap-2 items-center flex-1 min-h-0 overflow-y-auto">
                     {filteredCorporations.map((corp) => (
@@ -572,7 +577,7 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
                       placeholder="Search preludes..."
                       value={preludeSearchTerm}
                       onChange={(e) => setPreludeSearchTerm(e.target.value)}
-                      className="w-full bg-black/60 border border-space-blue-400/30 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
+                      className="w-full bg-black/60 border border-space-blue-400/30 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
                     />
                     <div className="flex flex-wrap gap-x-1 gap-y-2 justify-center content-start flex-1 min-h-0 overflow-y-auto">
                       {filteredPreludes.map((prelude) => (
@@ -603,7 +608,7 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
                     placeholder="Search cards..."
                     value={cardSearchTerm}
                     onChange={(e) => setCardSearchTerm(e.target.value)}
-                    className="w-full bg-black/60 border border-space-blue-400/30 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
+                    className="w-full bg-black/60 border border-space-blue-400/30 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
                   />
                   <div className="flex flex-wrap gap-x-1 gap-y-2 justify-center content-start flex-1 min-h-0 overflow-y-auto">
                     {filteredCards.slice(0, 50).map((card) => (
@@ -809,7 +814,7 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
           </div>
           <div className="flex gap-3">
             <GameButton
-              buttonType="secondary"
+              emphasis="secondary"
               size="md"
               onClick={onClose}
               className="whitespace-nowrap"

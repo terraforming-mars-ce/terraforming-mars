@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { GameDto } from "@/types/generated/api-types";
 import { useJoinGame } from "@/hooks/useJoinGame";
@@ -19,50 +20,65 @@ const JoinGameOverlay: React.FC<JoinGameOverlayProps> = ({
   onCancel,
   visible,
   onExited,
-  title = "Game Found",
+  title = "Join game",
   subtitle,
 }) => {
-  const { playerName, setPlayerName, isLoading, handleJoin, handleKeyDown, loadingMessage } =
-    useJoinGame({ game });
+  const {
+    playerName,
+    setPlayerName,
+    isLoading,
+    handleJoin,
+    handleKeyDown,
+    loadingMessage,
+    errorMessage,
+  } = useJoinGame({ game });
 
   return (
     <>
       <GameMenuModal
         title={title}
         subtitle={subtitle}
-        onBack={onCancel}
         visible={visible}
         onExited={onExited}
         showBackdrop={true}
         onClose={onCancel}
-        showCloseButton={true}
       >
-        <div className="flex flex-row gap-3 items-center px-2">
+        <div className="flex flex-col gap-5">
           <input
             type="text"
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Enter your name"
+            aria-label="Your name"
             disabled={isLoading}
             spellCheck={false}
             autoComplete="off"
             autoCorrect="off"
             maxLength={MAX_PLAYER_NAME_LENGTH}
             autoFocus
-            className="flex-1 bg-black/50 border border-white/20 rounded-lg py-3 px-4 text-white text-base outline-none placeholder:text-white/50 focus:border-white/60 focus:shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all duration-200 disabled:opacity-60"
+            className="game-input w-full disabled:opacity-60"
           />
-          <button
-            onClick={() => void handleJoin()}
-            disabled={isLoading || !playerName.trim()}
-            className="font-orbitron bg-space-blue-600 border border-space-blue-500 rounded-lg py-3 px-6 text-white text-sm font-medium hover:bg-space-blue-500 transition-colors disabled:opacity-50 disabled:cursor-default"
-          >
-            {isLoading ? "Joining..." : "Join"}
-          </button>
+          {errorMessage && (
+            <p role="alert" className="text-sm text-red-300 text-left">
+              {errorMessage}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <GameButton emphasis="secondary" onClick={onCancel} disabled={isLoading}>
+              Return
+            </GameButton>
+            <GameButton
+              onClick={() => void handleJoin()}
+              disabled={isLoading || !playerName.trim()}
+            >
+              {isLoading ? "Joining..." : "Join"}
+            </GameButton>
+          </div>
         </div>
       </GameMenuModal>
 
-      {isLoading && <LoadingOverlay isLoaded={false} message={loadingMessage} />}
+      {isLoading && <LoadingOverlay isLoaded={false} showDelayMs={0} message={loadingMessage} />}
     </>
   );
 };

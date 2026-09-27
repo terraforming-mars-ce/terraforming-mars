@@ -1,10 +1,8 @@
 import React, { useState } from "react";
-import { CARD_PACKS, VENUS_PACK } from "@/constants/cardPacks.ts";
 import type { GameDto, UpdateGameSettingsRequest } from "@/types/generated/api-types.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import GameButton from "../buttons/GameButton.tsx";
 import InfoTooltip from "../display/InfoTooltip.tsx";
-import LobbyPickerDropdown, { type LobbyPickerItem } from "../lobby/LobbyPickerDropdown.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import {
   OVERLAY_CONTAINER_CLASS,
@@ -20,7 +18,7 @@ interface LobbySettingsOverlayProps {
   onClose: () => void;
 }
 
-type Tab = "general" | "cardPacks" | "ai";
+type Tab = "general" | "ai";
 
 const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
   game,
@@ -38,37 +36,10 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
   }
 
   const settings = game.settings;
-  const availableMaps = settings.availableMaps || [];
-  const currentMapName =
-    availableMaps.find((m) => m.id === settings.mapId)?.name || settings.mapId || "Tharsis";
   const playerCount = (game.currentPlayer?.id ? 1 : 0) + (game.otherPlayers?.length || 0);
-
-  const mapItems: LobbyPickerItem[] = availableMaps.map((m) => ({
-    id: m.id,
-    name: m.name,
-    description: m.description,
-  }));
 
   const dispatch = (patch: UpdateGameSettingsRequest) => {
     void globalWebSocketManager.updateGameSettings(patch);
-  };
-
-  const toggleVenus = () => {
-    dispatch({ venusNextEnabled: !settings.venusNextEnabled });
-  };
-
-  const togglePack = (packId: string) => {
-    const current = settings.cardPacks || [];
-    const next = current.includes(packId)
-      ? current.filter((p) => p !== packId)
-      : [...current, packId];
-    dispatch({ cardPacks: next });
-  };
-
-  const handleMapSelect = (mapId: string) => {
-    if (mapId !== settings.mapId) {
-      dispatch({ mapId });
-    }
   };
 
   const handleSubmitToken = () => {
@@ -117,53 +88,25 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
 
         <div className="flex-1 flex min-h-0">
           <div className="w-44 shrink-0 bg-black/30 border-r border-space-blue-600/50 flex flex-col py-2">
-            <button onClick={() => setActiveTab("general")} className={tabClass("general")}>
+            <GameButton
+              emphasis="quiet"
+              onClick={() => setActiveTab("general")}
+              className={tabClass("general")}
+            >
               General
-            </button>
-            <button onClick={() => setActiveTab("cardPacks")} className={tabClass("cardPacks")}>
-              Card Packs
-            </button>
-            <button onClick={() => setActiveTab("ai")} className={tabClass("ai")}>
+            </GameButton>
+            <GameButton
+              emphasis="quiet"
+              onClick={() => setActiveTab("ai")}
+              className={tabClass("ai")}
+            >
               AI
-            </button>
+            </GameButton>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 min-h-0">
             {activeTab === "general" && (
               <div className="max-w-xl mx-auto space-y-4">
-                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-4">
-                  <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs">
-                    Map
-                  </h3>
-                  <LobbyPickerDropdown
-                    items={mapItems}
-                    selectedId={settings.mapId}
-                    onSelect={handleMapSelect}
-                    trigger={({ open, toggle }) => (
-                      <button
-                        type="button"
-                        onClick={toggle}
-                        className="w-full flex items-center justify-between py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50 text-white text-sm font-medium transition-colors cursor-pointer hover:border-space-blue-400"
-                      >
-                        <span>{currentMapName}</span>
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className={`transition-transform ${open ? "rotate-180" : ""}`}
-                        >
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </button>
-                    )}
-                  />
-                </div>
-
                 <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-4">
                   <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs">
                     Lobby
@@ -181,7 +124,7 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                       max={10}
                       value={settings.maxPlayers}
                       onChange={(e) => handleMaxPlayersChange(parseInt(e.target.value, 10) || 0)}
-                      className="w-16 bg-black/50 border border-white/20 rounded-lg py-1 px-2 text-white text-sm text-center outline-none focus:border-white/60 transition-colors"
+                      className="game-input w-16 !py-1 !px-2 text-sm text-center"
                     />
                   </label>
                 </div>
@@ -212,35 +155,6 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
               </div>
             )}
 
-            {activeTab === "cardPacks" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl mx-auto">
-                {CARD_PACKS.map((pack) => {
-                  const isSelected = (settings.cardPacks || []).includes(pack.id);
-                  const isLocked = !!pack.lockedOn;
-                  return (
-                    <PackBox
-                      key={pack.id}
-                      label={pack.label}
-                      description={pack.description}
-                      cardCount={pack.cardCount}
-                      wip={pack.wip}
-                      selected={isSelected || isLocked}
-                      locked={isLocked}
-                      onToggle={() => togglePack(pack.id)}
-                    />
-                  );
-                })}
-                <PackBox
-                  key={VENUS_PACK.id}
-                  label={VENUS_PACK.label}
-                  cardCount={VENUS_PACK.cardCount}
-                  description={VENUS_PACK.description}
-                  selected={settings.venusNextEnabled}
-                  onToggle={toggleVenus}
-                />
-              </div>
-            )}
-
             {activeTab === "ai" && (
               <div className="max-w-xl mx-auto space-y-4">
                 <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-4">
@@ -260,10 +174,10 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                       placeholder="sk-ant-..."
                       spellCheck={false}
                       autoComplete="off"
-                      className="flex-1 bg-black/50 border border-white/20 rounded-lg py-2 px-3 text-white text-sm outline-none focus:border-white/60 placeholder:text-white/30"
+                      className="flex-1 bg-black/50 border border-white/20 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-white/60 placeholder:text-white/30"
                     />
                     <GameButton
-                      buttonType="primary"
+                      emphasis="primary"
                       size="sm"
                       onClick={handleSubmitToken}
                       disabled={!claudeToken.trim() || tokenStatus === "saving"}
@@ -272,8 +186,8 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                     </GameButton>
                     {settings.hasClaudeApiKey && (
                       <GameButton
-                        buttonType="secondary"
-                        variant="error"
+                        emphasis="secondary"
+                        tone="error"
                         size="sm"
                         onClick={handleClearToken}
                       >
@@ -294,7 +208,7 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
 
         <div className={OVERLAY_FOOTER_CLASS}>
           <div className="text-white/60 text-sm">All changes save automatically.</div>
-          <GameButton buttonType="primary" size="md" onClick={onClose}>
+          <GameButton emphasis="primary" size="md" onClick={onClose}>
             Close
           </GameButton>
         </div>
@@ -316,7 +230,7 @@ const ToggleRow: React.FC<ToggleRowProps> = ({ label, checked, onChange, tooltip
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      className="w-[18px] h-[18px] accent-space-blue-solid cursor-pointer m-0"
+      className="game-checkbox m-0"
     />
     <span className="text-white text-sm font-medium leading-none flex items-center gap-2">
       {label}
@@ -324,67 +238,5 @@ const ToggleRow: React.FC<ToggleRowProps> = ({ label, checked, onChange, tooltip
     </span>
   </label>
 );
-
-interface PackBoxProps {
-  label: string;
-  description: string;
-  cardCount?: string;
-  wip?: boolean;
-  selected: boolean;
-  locked?: boolean;
-  onToggle: () => void;
-}
-
-const PackBox: React.FC<PackBoxProps> = ({
-  label,
-  description,
-  cardCount,
-  wip,
-  selected,
-  locked,
-  onToggle,
-}) => {
-  const interactive = !locked;
-  const containerClass = selected
-    ? "border-space-blue-400 bg-space-blue-900/30 shadow-[0_0_24px_rgba(96,165,250,0.25)]"
-    : "border-space-blue-600/50 bg-black/40 shadow-none";
-  const titleClass = selected ? "text-white" : "text-white/60";
-  const descClass = selected ? "text-white/80" : "text-white/50";
-  const metaClass = selected ? "text-white/60" : "text-white/35";
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        if (interactive) {
-          onToggle();
-        }
-      }}
-      disabled={!interactive}
-      className={`text-left rounded-xl p-4 border transition-[background-color,border-color,box-shadow,color] duration-300 ease-out ${containerClass} ${
-        interactive ? "cursor-pointer hover:border-space-blue-400" : "cursor-default"
-      }`}
-    >
-      <span
-        className={`font-orbitron ${titleClass} text-base font-semibold tracking-wide flex items-center gap-2 mb-2 transition-colors duration-300 ease-out`}
-      >
-        {label}
-        {wip ? (
-          <span className="text-[10px] font-orbitron font-bold text-yellow-400/80 uppercase tracking-wider">
-            WIP
-          </span>
-        ) : null}
-      </span>
-      <div className={`${descClass} text-xs leading-snug transition-colors duration-300 ease-out`}>
-        {description}
-      </div>
-      <div
-        className={`mt-2 flex gap-3 text-[11px] ${metaClass} transition-colors duration-300 ease-out`}
-      >
-        {cardCount ? <span>{cardCount}</span> : null}
-        {locked ? <span>Required</span> : null}
-      </div>
-    </button>
-  );
-};
 
 export default LobbySettingsOverlay;
