@@ -1,3 +1,4 @@
+import CloseButton from "@/components/ui/buttons/CloseButton.tsx";
 import React from "react";
 import { GameModalHeaderProps } from "./types";
 
@@ -22,14 +23,7 @@ const GameModalHeader: React.FC<GameModalHeaderProps> = ({
       <div className="flex justify-center">{controls}</div>
 
       <div className="flex gap-5 items-center justify-end max-md:flex-col max-md:gap-2.5">
-        {showCloseButton && onClose && (
-          <button
-            className="text-white/70 hover:text-white text-xl leading-none transition-colors cursor-pointer"
-            onClick={onClose}
-          >
-            ×
-          </button>
-        )}
+        {showCloseButton && onClose && <CloseButton onClick={onClose} label="Close dialog" />}
       </div>
     </div>
   );
