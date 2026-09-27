@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { globalWebSocketManager } from "../../../../services/globalWebSocketManager.ts";
 import {
@@ -349,12 +350,12 @@ const PlayerResourcesPage: React.FC<PlayerResourcesPageProps> = ({
         })}
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-        <button onClick={() => setForm(zeroForm)} style={secondaryButtonStyle}>
+        <GameButton emphasis="quiet" onClick={() => setForm(zeroForm)} style={secondaryButtonStyle}>
           Defaults
-        </button>
-        <button onClick={() => void onSubmit()} style={buttonStyle}>
+        </GameButton>
+        <GameButton emphasis="quiet" onClick={() => void onSubmit()} style={buttonStyle}>
           Set
-        </button>
+        </GameButton>
       </div>
     </div>
   );
@@ -424,12 +425,16 @@ const PlayerResourcesPage: React.FC<PlayerResourcesPageProps> = ({
             />
             <span style={{ color: "#666", fontSize: "10px" }}>(1-70)</span>
             <div style={{ flex: 1 }} />
-            <button onClick={() => setTRValue("20")} style={secondaryButtonStyle}>
+            <GameButton
+              emphasis="quiet"
+              onClick={() => setTRValue("20")}
+              style={secondaryButtonStyle}
+            >
               Defaults
-            </button>
-            <button onClick={() => void handleSetTR()} style={buttonStyle}>
+            </GameButton>
+            <GameButton emphasis="quiet" onClick={() => void handleSetTR()} style={buttonStyle}>
               Set
-            </button>
+            </GameButton>
           </div>
         </div>
       </div>

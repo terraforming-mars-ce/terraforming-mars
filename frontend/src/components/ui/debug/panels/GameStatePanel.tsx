@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useState } from "react";
 import TreeNode from "../TreeNode.tsx";
 import { GameDto } from "../../../../types/generated/api-types.ts";
@@ -84,7 +85,8 @@ const GameStatePanel: React.FC<GameStatePanelProps> = ({ gameState, changedPaths
             fontSize: "13px",
           }}
         />
-        <button
+        <GameButton
+          emphasis="quiet"
           onClick={() => {
             const newExpandAll = !expandAll;
             setExpandAll(newExpandAll);
@@ -102,8 +104,9 @@ const GameStatePanel: React.FC<GameStatePanelProps> = ({ gameState, changedPaths
           }}
         >
           {expandAll ? "Collapse" : "Expand"} All
-        </button>
-        <button
+        </GameButton>
+        <GameButton
+          emphasis="quiet"
           onClick={handleCopyAll}
           onMouseDown={(e) => e.stopPropagation()}
           style={{
@@ -117,7 +120,7 @@ const GameStatePanel: React.FC<GameStatePanelProps> = ({ gameState, changedPaths
           }}
         >
           Copy JSON
-        </button>
+        </GameButton>
       </div>
 
       <div
