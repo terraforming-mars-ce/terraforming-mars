@@ -43,4 +43,11 @@ export function getGameSession(): StoredGameData | null {
  */
 export function saveGameSession(data: StoredGameData): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem("terraforming-mars-player-name", data.playerName);
+}
+
+export function getRememberedPlayerName(): string {
+  return (
+    localStorage.getItem("terraforming-mars-player-name") ?? getGameSession()?.playerName ?? ""
+  );
 }
