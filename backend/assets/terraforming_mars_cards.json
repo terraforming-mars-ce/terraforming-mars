@@ -160,7 +160,7 @@
     "name": "Search For Life",
     "type": "active",
     "cost": 3,
-    "description": "Action: Spend 1 M€ to reveal and discard the top card of the draw deck. If that card has a microbe tag, add a science resource here. 3 VPs if you have one or more science resources here.",
+    "description": "**Action:** Spend 1 M€ to reveal and discard the top card of the draw deck. If that card has a microbe tag, add a science resource here. 3 VPs if you have one or more science resources here.",
     "pack": "base-game",
     "tags": [
       "science"
@@ -222,7 +222,7 @@
     "name": "Inventors' Guild",
     "type": "active",
     "cost": 9,
-    "description": "Action: look at the top card and either buy it or discard it",
+    "description": "**Action:** look at the top card and either buy it or discard it",
     "pack": "corporate-era",
     "tags": [
       "science"
@@ -255,7 +255,7 @@
     "name": "Martian Rails",
     "type": "active",
     "cost": 13,
-    "description": "Action: Spend 1 energy to gain 1 M€ for each city **on mars**.",
+    "description": "**Action:** Spend 1 energy to gain 1 M€ for each city **on mars**.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -471,7 +471,7 @@
     "name": "Water Import From Europa",
     "type": "active",
     "cost": 25,
-    "description": "Action: Pay 12 M€ to place an ocean. **titanium may be used** as if playing a space card. 1 VP per Jovian tag you have.",
+    "description": "**Action:** Pay 12 M€ to place an ocean. **titanium may be used** as if playing a space card. 1 VP per Jovian tag you have.",
     "pack": "base-game",
     "tags": [
       "jovian",
@@ -524,7 +524,7 @@
     "name": "Space Elevator",
     "type": "active",
     "cost": 27,
-    "description": "Action: Spend 1 steel to gain 5 M€ Increase your titanium production 1 step.",
+    "description": "**Action:** Spend 1 steel to gain 5 M€ Increase your titanium production 1 step.",
     "pack": "corporate-era",
     "tags": [
       "building",
@@ -582,7 +582,7 @@
     "name": "Development Center",
     "type": "active",
     "cost": 11,
-    "description": "Action: Spend 1 energy to draw a card.",
+    "description": "**Action:** Spend 1 energy to draw a card.",
     "pack": "corporate-era",
     "tags": [
       "building",
@@ -618,7 +618,7 @@
     "name": "Equatorial Magnetizer",
     "type": "active",
     "cost": 11,
-    "description": "Action: Decrease your energy production 1 step to raise your TR 1 step.",
+    "description": "**Action:** Decrease your energy production 1 step to raise your TR 1 step.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -1047,7 +1047,7 @@
     "name": "Predators",
     "type": "active",
     "cost": 14,
-    "description": "Action: Move 1 animal **from any card** to this card. 1 VP per animal on this card.",
+    "description": "**Action:** Move 1 animal **from any card** to this card. 1 VP per animal on this card.",
     "pack": "base-game",
     "tags": [
       "animal"
@@ -1103,7 +1103,7 @@
     "name": "Space Station",
     "type": "active",
     "cost": 10,
-    "description": "Effect: Pay 2 M€ less for space cards",
+    "description": "**Effect:** Pay 2 M€ less for space cards",
     "pack": "corporate-era",
     "tags": [
       "space"
@@ -1229,7 +1229,7 @@
     "name": "Security Fleet",
     "type": "active",
     "cost": 12,
-    "description": "Action: Spend 1 titanium to add 1 fighter resource to this card. 1 VP per fighter resource on this card.",
+    "description": "**Action:** Spend 1 titanium to add 1 fighter resource to this card. 1 VP per fighter resource on this card.",
     "pack": "corporate-era",
     "tags": [
       "space"
@@ -1370,7 +1370,7 @@
     "name": "Optimal Aerobraking",
     "type": "active",
     "cost": 7,
-    "description": "Effect: Gain 3 M€ and 3 heat when you place a space event.",
+    "description": "**Effect:** Gain 3 M€ and 3 heat when you place a space event.",
     "pack": "base-game",
     "tags": [
       "space"
@@ -1456,7 +1456,7 @@
     "name": "Regolith Eaters",
     "type": "active",
     "cost": 13,
-    "description": "Action: Add 1 microbe to this card, or remove 2 microbes from this card to raise oxygen 1 step.",
+    "description": "**Action:** Add 1 microbe to this card, or remove 2 microbes from this card to raise oxygen 1 step.",
     "pack": "base-game",
     "tags": [
       "microbe",
@@ -1510,7 +1510,7 @@
     "name": "GHG Producing Bacteria",
     "type": "active",
     "cost": 8,
-    "description": "Action: Add 1 microbe to this card, or remove 2 microbes to raise temperature 1 step.",
+    "description": "**Action:** Add 1 microbe to this card, or remove 2 microbes to raise temperature 1 step.",
     "pack": "base-game",
     "tags": [
       "microbe",
@@ -1573,7 +1573,7 @@
     "name": "Ants",
     "type": "active",
     "cost": 9,
-    "description": "Action: Move 1 microbe **from any card** to this card. 1 VP per 2 microbes on this card.",
+    "description": "**Action:** Move 1 microbe **from any card** to this card. 1 VP per 2 microbes on this card.",
     "pack": "base-game",
     "tags": [
       "microbe"
@@ -1719,7 +1719,7 @@
     "name": "Rover Construction",
     "type": "active",
     "cost": 8,
-    "description": "Effect: Gain 2 M€ when any city is built.",
+    "description": "**Effect:** Gain 2 M€ when any city is built.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -2151,7 +2151,7 @@
     "name": "Tardigrades",
     "type": "active",
     "cost": 4,
-    "description": "Action: Add 1 microbe to this card. 1 VP per 4 microbes on this card.",
+    "description": "**Action:** Add 1 microbe to this card. 1 VP per 4 microbes on this card.",
     "pack": "corporate-era",
     "tags": [
       "microbe"
@@ -2282,7 +2282,7 @@
     "name": "Fish",
     "type": "active",
     "cost": 9,
-    "description": "Action: Add 1 animal to this card. Decrease any plant production 1 step. 1 VP per animal on this card.",
+    "description": "**Action:** Add 1 animal to this card. Decrease any plant production 1 step. 1 VP per animal on this card.",
     "pack": "base-game",
     "tags": [
       "animal"
@@ -2394,7 +2394,7 @@
     "name": "Small Animals",
     "type": "active",
     "cost": 6,
-    "description": "Action: Add 1 animal to this card. Decrease any plant production 1 step. 1 VP per 2 animals on this card.",
+    "description": "**Action:** Add 1 animal to this card. Decrease any plant production 1 step. 1 VP per 2 animals on this card.",
     "pack": "base-game",
     "tags": [
       "animal"
@@ -3078,7 +3078,7 @@
     "name": "Electro Catapult",
     "type": "active",
     "cost": 17,
-    "description": "Action: Spend 1 plant or 1 steel to gain 7 M€. Oxygen must be 8% or less. Decrease your energy production 1 step.",
+    "description": "**Action:** Spend 1 plant or 1 steel to gain 7 M€. Oxygen must be 8% or less. Decrease your energy production 1 step.",
     "pack": "corporate-era",
     "tags": [
       "building"
@@ -3157,7 +3157,7 @@
     "name": "Earth Catapult",
     "type": "active",
     "cost": 23,
-    "description": "Effect: Pay 2 M€ less for cards.",
+    "description": "**Effect:** Pay 2 M€ less for cards.",
     "pack": "corporate-era",
     "tags": [
       "earth"
@@ -3198,7 +3198,7 @@
     "name": "Advanced Alloys",
     "type": "active",
     "cost": 9,
-    "description": "Effect: Each titanium you have is worth 1 M€ extra. Each steel you have is worth 1 M€ extra.",
+    "description": "**Effect:** Each titanium you have is worth 1 M€ extra. Each steel you have is worth 1 M€ extra.",
     "pack": "corporate-era",
     "tags": [
       "science"
@@ -3245,7 +3245,7 @@
     "name": "Birds",
     "type": "active",
     "cost": 10,
-    "description": "Action: Add an animal to this card. Requires 13% oxygen. Decrease any plant production 2 steps. 1 VP per animal on this card.",
+    "description": "**Action:** Add an animal to this card. Requires 13% oxygen. Decrease any plant production 2 steps. 1 VP per animal on this card.",
     "pack": "base-game",
     "tags": [
       "animal"
@@ -3316,7 +3316,7 @@
     "name": "Mars University",
     "type": "active",
     "cost": 8,
-    "description": "Effect: You may discard a card to draw a card when you play a science tag, including this.",
+    "description": "**Effect:** You may discard a card to draw a card when you play a science tag, including this.",
     "pack": "corporate-era",
     "tags": [
       "building",
@@ -3370,7 +3370,7 @@
     "name": "Viral Enhancers",
     "type": "active",
     "cost": 9,
-    "description": "Effect: Gain 1 plant or add 1 resource **to that card** when you play a plant, microbe, or an animal tag, including this.",
+    "description": "**Effect:** Gain 1 plant or add 1 resource **to that card** when you play a plant, microbe, or an animal tag, including this.",
     "pack": "corporate-era",
     "tags": [
       "microbe",
@@ -3480,7 +3480,7 @@
     "name": "Space Mirrors",
     "type": "active",
     "cost": 3,
-    "description": "Action: Spend 7 M€ to increase your energy production 1 step.",
+    "description": "**Action:** Spend 7 M€ to increase your energy production 1 step.",
     "pack": "base-game",
     "tags": [
       "power",
@@ -3579,7 +3579,7 @@
     "name": "Quantum Extractor",
     "type": "active",
     "cost": 13,
-    "description": "Effect: Pay 2 M€ less for space cards. Requires 4 science tags. Increase your energy production 4 steps.",
+    "description": "**Effect:** Pay 2 M€ less for space cards. Requires 4 science tags. Increase your energy production 4 steps.",
     "pack": "corporate-era",
     "tags": [
       "power",
@@ -4147,7 +4147,7 @@
     "name": "Mass Converter",
     "type": "active",
     "cost": 8,
-    "description": "Effect: Pay 2 M€ less for space cards Requires 5 science tags. Increase your energy production 6 steps.",
+    "description": "**Effect:** Pay 2 M€ less for space cards Requires 5 science tags. Increase your energy production 6 steps.",
     "pack": "corporate-era",
     "tags": [
       "power",
@@ -4198,7 +4198,7 @@
     "name": "Physics Complex",
     "type": "active",
     "cost": 12,
-    "description": "Action: Spend 6 energy to add a science resource to this card. 2 VP per science resource on this card.",
+    "description": "**Action:** Spend 6 energy to add a science resource to this card. 2 VP per science resource on this card.",
     "pack": "corporate-era",
     "tags": [
       "building",
@@ -4437,7 +4437,7 @@
     "name": "Ironworks",
     "type": "active",
     "cost": 11,
-    "description": "Action: Spend 4 energy to gain 1 steel and raise oxygen 1 step.",
+    "description": "**Action:** Spend 4 energy to gain 1 steel and raise oxygen 1 step.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -4512,7 +4512,7 @@
     "name": "Steelworks",
     "type": "active",
     "cost": 15,
-    "description": "Action: Spend 4 energy to gain 2 steel and raise oxygen 1 step.",
+    "description": "**Action:** Spend 4 energy to gain 2 steel and raise oxygen 1 step.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -4552,7 +4552,7 @@
     "name": "Ore Processor",
     "type": "active",
     "cost": 13,
-    "description": "Action: Spend 4 energy to gain 1 titanium and raise oxygen 1 step.",
+    "description": "**Action:** Spend 4 energy to gain 1 titanium and raise oxygen 1 step.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -4592,7 +4592,7 @@
     "name": "Earth Office",
     "type": "active",
     "cost": 1,
-    "description": "Effect: Pay 3 M€ less for Earth tag cards.",
+    "description": "**Effect:** Pay 3 M€ less for Earth tag cards.",
     "pack": "corporate-era",
     "tags": [
       "earth"
@@ -4750,7 +4750,7 @@
     "name": "Media Group",
     "type": "active",
     "cost": 6,
-    "description": "Effect: After you play an event card, you gain 3 M€.",
+    "description": "**Effect:** After you play an event card, you gain 3 M€.",
     "pack": "corporate-era",
     "tags": [
       "earth"
@@ -4789,7 +4789,7 @@
     "name": "Business Network",
     "type": "active",
     "cost": 4,
-    "description": "Action: **look at the top card and either buy it or discard it** Decrease your M€ production 1 step.",
+    "description": "**Action:** **look at the top card and either buy it or discard it** Decrease your M€ production 1 step.",
     "pack": "corporate-era",
     "tags": [
       "earth"
@@ -5292,7 +5292,7 @@
     "name": "Industrial Center",
     "type": "active",
     "cost": 4,
-    "description": "Action: Spend 7 M€ to increase your steel production 1 step. Build an Industrial Center **adjacent to a city**.",
+    "description": "**Action:** Spend 7 M€ to increase your steel production 1 step. Build an Industrial Center **adjacent to a city**.",
     "pack": "corporate-era",
     "tags": [
       "building"
@@ -5465,7 +5465,7 @@
     "name": "Ecological Zone",
     "type": "active",
     "cost": 12,
-    "description": "Effect: Add an animal to this card when you play an animal or a plant tag (including these 2). Requires that you have a greenery. Build an Ecological Zone **adjacent to any greenery**. 1 VP per 2 animals on this card.",
+    "description": "**Effect:** Add an animal to this card when you play an animal or a plant tag (including these 2). Requires that you have a greenery. Build an Ecological Zone **adjacent to any greenery**. 1 VP per 2 animals on this card.",
     "pack": "base-game",
     "tags": [
       "animal",
@@ -5652,7 +5652,7 @@
     "name": "Decomposers",
     "type": "active",
     "cost": 5,
-    "description": "Effect: Add a microbe to this card when you play an animal, plant, or microbe tag, including this. Requires 3% oxygen. 1 VP per 3 microbes on this card.",
+    "description": "**Effect:** Add a microbe to this card when you play an animal, plant, or microbe tag, including this. Requires 3% oxygen. 1 VP per 3 microbes on this card.",
     "pack": "base-game",
     "tags": [
       "microbe"
@@ -5769,7 +5769,7 @@
     "name": "Symbiotic Fungus",
     "type": "active",
     "cost": 4,
-    "description": "Action: Add a microbe to **another** card. Requires -14°C or warmer.",
+    "description": "**Action:** Add a microbe to **another** card. Requires -14°C or warmer.",
     "pack": "base-game",
     "tags": [
       "microbe"
@@ -5806,7 +5806,7 @@
     "name": "Extreme-Cold Fungus",
     "type": "active",
     "cost": 13,
-    "description": "Action: Gain 1 plant or add 2 microbes to **another** card. It must be -10°C or colder.",
+    "description": "**Action:** Gain 1 plant or add 2 microbes to **another** card. It must be -10°C or colder.",
     "pack": "base-game",
     "tags": [
       "microbe"
@@ -6341,7 +6341,7 @@
     "name": "Herbivores",
     "type": "active",
     "cost": 12,
-    "description": "Effect: Add an animal to this card when you plant a greenery. Requires 8% oxygen. Add 1 animal to this card. Decrease any plant production 1 step. 1 VP per 2 animals on this card.",
+    "description": "**Effect:** Add an animal to this card when you plant a greenery. Requires 8% oxygen. Add 1 animal to this card. Decrease any plant production 1 step. 1 VP per 2 animals on this card.",
     "pack": "base-game",
     "tags": [
       "animal"
@@ -6490,7 +6490,7 @@
     "name": "Anti-Gravity Technology",
     "type": "active",
     "cost": 14,
-    "description": "Effect: Pay 2 M€ less for cards. Requires 7 science tags.",
+    "description": "**Effect:** Pay 2 M€ less for cards. Requires 7 science tags.",
     "pack": "corporate-era",
     "tags": [
       "science"
@@ -6606,7 +6606,7 @@
     "name": "Adaptation Technology",
     "type": "active",
     "cost": 12,
-    "description": "Effect: Your global requirements are +2 or -2 steps.",
+    "description": "**Effect:** Your global requirements are +2 or -2 steps.",
     "pack": "base-game",
     "tags": [
       "science"
@@ -6654,7 +6654,7 @@
     "name": "Caretaker Contract",
     "type": "active",
     "cost": 3,
-    "description": "Action: Spend 8 heat to raise your TR 1 step. Requires 0°C or warmer.",
+    "description": "**Action:** Spend 8 heat to raise your TR 1 step. Requires 0°C or warmer.",
     "pack": "corporate-era",
     "requirements": {
       "description": "Requires 0°C or warmer.",
@@ -6733,7 +6733,7 @@
     "name": "Standard Technology",
     "type": "active",
     "cost": 6,
-    "description": "Effect: After you pay for a standard project, except selling patents, you gain 3 M€.",
+    "description": "**Effect:** After you pay for a standard project, except selling patents, you gain 3 M€.",
     "pack": "corporate-era",
     "tags": [
       "science"
@@ -6776,7 +6776,7 @@
     "name": "Nitrite Reducing Bacteria",
     "type": "active",
     "cost": 11,
-    "description": "Action: Add 1 microbe to this card, or remove 3 microbes to increase your TR 1 step. Add 3 microbes to this card.",
+    "description": "**Action:** Add 1 microbe to this card, or remove 3 microbes to increase your TR 1 step. Add 3 microbes to this card.",
     "pack": "base-game",
     "tags": [
       "microbe"
@@ -7132,7 +7132,7 @@
     "name": "Shuttles",
     "type": "active",
     "cost": 10,
-    "description": "Effect: Pay 2 M€ less for space cards Requires 5% oxygen. Decrease your energy production 1 step and increase your M€ production 2 steps.",
+    "description": "**Effect:** Pay 2 M€ less for space cards Requires 5% oxygen. Decrease your energy production 1 step and increase your M€ production 2 steps.",
     "pack": "base-game",
     "tags": [
       "space"
@@ -7397,7 +7397,7 @@
     "name": "Pets",
     "type": "active",
     "cost": 10,
-    "description": "Effect: Add an animal to this card when any city is built. **animals may not be removed from this card** Add 1 animal to this card. 1 VP per 2 animals here.",
+    "description": "**Effect:** Add an animal to this card when any city is built. **animals may not be removed from this card** Add 1 animal to this card. 1 VP per 2 animals here.",
     "pack": "base-game",
     "tags": [
       "animal",
@@ -7477,7 +7477,7 @@
     "name": "Protected Habitats",
     "type": "active",
     "cost": 5,
-    "description": "Effect: **opponents may not remove your** (Plant) (Animal) (Microbe)",
+    "description": "**Effect:** **opponents may not remove your** (Plant) (Animal) (Microbe)",
     "pack": "corporate-era",
     "behaviors": [
       {
@@ -7641,7 +7641,7 @@
     "name": "Water Splitting Plant",
     "type": "active",
     "cost": 12,
-    "description": "Action: Spend 3 energy to raise oxygen 1 step. Requires 2 oceans.",
+    "description": "**Action:** Spend 3 energy to raise oxygen 1 step. Requires 2 oceans.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -7934,7 +7934,7 @@
     "name": "Livestock",
     "type": "active",
     "cost": 13,
-    "description": "Action: Add 1 animal to this card. Requires 9% oxygen. Decrease your plant production 1 step and increase your M€ production 2 steps. 1 VP per animal on this card.",
+    "description": "**Action:** Add 1 animal to this card. Requires 9% oxygen. Decrease your plant production 1 step and increase your M€ production 2 steps. 1 VP per animal on this card.",
     "pack": "base-game",
     "tags": [
       "animal"
@@ -8010,7 +8010,7 @@
     "name": "Olympus Conference",
     "type": "active",
     "cost": 10,
-    "description": "Effect: Add a science resource to this card, or remove one to draw a card, when you play a science tag, including this.",
+    "description": "**Effect:** Add a science resource to this card, or remove one to draw a card, when you play a science tag, including this.",
     "pack": "corporate-era",
     "tags": [
       "building",
@@ -8114,7 +8114,7 @@
     "name": "Aquifer Pumping",
     "type": "active",
     "cost": 18,
-    "description": "Action: Spend 8 M€ to place an ocean. **steel may be used** as if you were playing a building card.",
+    "description": "**Action:** Spend 8 M€ to place an ocean. **steel may be used** as if you were playing a building card.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -8372,7 +8372,7 @@
     "name": "Power Infrastructure",
     "type": "active",
     "cost": 4,
-    "description": "Action: Spend any number of energy to gain that amount of M€.",
+    "description": "**Action:** Spend any number of energy to gain that amount of M€.",
     "pack": "corporate-era",
     "tags": [
       "building",
@@ -8570,7 +8570,7 @@
     "name": "Restricted Area",
     "type": "active",
     "cost": 11,
-    "description": "Action: Spend 2 M€ to draw a card. Build a Restricted Area.",
+    "description": "**Action:** Spend 2 M€ to draw a card. Build a Restricted Area.",
     "pack": "corporate-era",
     "tags": [
       "science"
@@ -8621,7 +8621,7 @@
     "name": "Immigrant City",
     "type": "active",
     "cost": 13,
-    "description": "Effect: Increase your M€ production 1 step when any city is built, including this. Decrease your energy production 1 step and decrease your M€ production 2 steps. Build a city.",
+    "description": "**Effect:** Increase your M€ production 1 step when any city is built, including this. Decrease your energy production 1 step and decrease your M€ production 2 steps. Build a city.",
     "pack": "base-game",
     "tags": [
       "building",
@@ -8720,7 +8720,7 @@
     "name": "Underground Detonations",
     "type": "active",
     "cost": 6,
-    "description": "Action: Spend 10 M€ to increase your heat production 2 steps.",
+    "description": "**Action:** Spend 10 M€ to increase your heat production 2 steps.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -8927,7 +8927,7 @@
     "name": "AI Central",
     "type": "active",
     "cost": 21,
-    "description": "Action: Draw 2 cards. Requires 3 science tags to play. Decrease your energy production 1 step.",
+    "description": "**Action:** Draw 2 cards. Requires 3 science tags to play. Decrease your energy production 1 step.",
     "pack": "corporate-era",
     "tags": [
       "building",
@@ -9021,7 +9021,7 @@
     "name": "Self-Replicating Robots",
     "type": "active",
     "cost": 7,
-    "description": "Action: Reveal and place a **space** or **building** card here from hand, and place 2 resources on it, or double the resources on a card here. / Effect: Cards here may be played as if from hand with its cost reduced by the number of resources on it. Requires 2 science tags.",
+    "description": "**Action:** Reveal and place a **space** or **building** card here from hand, and place 2 resources on it, or double the resources on a card here. / **Effect:** Cards here may be played as if from hand with its cost reduced by the number of resources on it. Requires 2 science tags.",
     "pack": "promo",
     "requirements": {
       "description": "Requires 2 science tags.",
@@ -9118,7 +9118,7 @@
     "name": "Penguins",
     "type": "active",
     "cost": 7,
-    "description": "Action: Add 1 animal to this card. Requires 8 oceans. 1 VP per animal on this card.",
+    "description": "**Action:** Add 1 animal to this card. Requires 8 oceans. 1 VP per animal on this card.",
     "pack": "promo",
     "tags": [
       "animal"
@@ -9174,7 +9174,7 @@
     "name": "Aerial Mappers",
     "type": "active",
     "cost": 11,
-    "description": "Action: Add 1 floater to **any** card, or spend 1 floater here to draw a card.",
+    "description": "**Action:** Add 1 floater to **any** card, or spend 1 floater here to draw a card.",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -9567,7 +9567,7 @@
     "name": "Deuterium Export",
     "type": "active",
     "cost": 11,
-    "description": "Action: Add 1 floater to this card, or spend 1 floater here to increase your energy production 1 step.",
+    "description": "**Action:** Add 1 floater to this card, or spend 1 floater here to increase your energy production 1 step.",
     "pack": "venus-next",
     "tags": [
       "power",
@@ -9622,7 +9622,7 @@
     "name": "Dirigibles",
     "type": "active",
     "cost": 11,
-    "description": "Action: Add 1 floater to **any** card. / Effect: Floaters here may be used as payment when playing a Venus tag, worth 3 M€ each.",
+    "description": "**Action:** Add 1 floater to **any** card. / **Effect:** Floaters here may be used as payment when playing a Venus tag, worth 3 M€ each.",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -9676,7 +9676,7 @@
     "name": "Extractor Balloons",
     "type": "active",
     "cost": 21,
-    "description": "Action: Add 1 floater to this card, or remove 2 floaters here to raise Venus 1 step. Add 3 floaters to this card.",
+    "description": "**Action:** Add 1 floater to this card, or remove 2 floaters here to raise Venus 1 step. Add 3 floaters to this card.",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -9744,7 +9744,7 @@
     "name": "Extremophiles",
     "type": "active",
     "cost": 3,
-    "description": "Action: Add 1 microbe to **any** card. Requires 2 science tags. 1 VP per 3 microbes on this card.",
+    "description": "**Action:** Add 1 microbe to **any** card. Requires 2 science tags. 1 VP per 3 microbes on this card.",
     "pack": "venus-next",
     "tags": [
       "microbe",
@@ -9802,7 +9802,7 @@
     "name": "Floating Habs",
     "type": "active",
     "cost": 5,
-    "description": "Action: Spend 2 M€ to add 1 floater to **any** card. Requires 2 science tags. 1 VP per 2 floaters on this card.",
+    "description": "**Action:** Spend 2 M€ to add 1 floater to **any** card. Requires 2 science tags. 1 VP per 2 floaters on this card.",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -9866,7 +9866,7 @@
     "name": "Forced Precipitation",
     "type": "active",
     "cost": 8,
-    "description": "Action: Spend 2 M€ to add a floater to this card, or spend 2 floaters here to raise Venus 1 step.",
+    "description": "**Action:** Spend 2 M€ to add a floater to this card, or spend 2 floaters here to raise Venus 1 step.",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -10273,7 +10273,7 @@
     "name": "Jet Stream Microscrappers",
     "type": "active",
     "cost": 12,
-    "description": "Action: Spend 1 titanium to add 2 floaters to this card, or remove 2 floaters here to raise Venus 1 step.",
+    "description": "**Action:** Spend 1 titanium to add 2 floaters to this card, or remove 2 floaters here to raise Venus 1 step.",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -10333,7 +10333,7 @@
     "name": "Local Shading",
     "type": "active",
     "cost": 4,
-    "description": "Action: Add 1 floater to this card, or spend 1 floater here to raise your M€ production 1 step.",
+    "description": "**Action:** Add 1 floater to this card, or spend 1 floater here to raise your M€ production 1 step.",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -10475,7 +10475,7 @@
     "name": "Maxwell Base",
     "type": "active",
     "cost": 18,
-    "description": "Action: Add 1 resource to **another venus card**. Requires Venus 12%. Decrease your energy production 1 step. Build Ganymede Colony.",
+    "description": "**Action:** Add 1 resource to **another venus card**. Requires Venus 12%. Decrease your energy production 1 step. Build Ganymede Colony.",
     "pack": "venus-next",
     "tags": [
       "city",
@@ -10719,7 +10719,7 @@
     "name": "Rotator Impacts",
     "type": "active",
     "cost": 6,
-    "description": "Action: Spend 6 M€ to add an asteroid resource to this card (**titanium may be used**), or spend a resource from this card to raise Venus 1 step. Venus must be 14% or lower.",
+    "description": "**Action:** Spend 6 M€ to add an asteroid resource to this card (**titanium may be used**), or spend a resource from this card to raise Venus 1 step. Venus must be 14% or lower.",
     "pack": "venus-next",
     "tags": [
       "space"
@@ -10955,7 +10955,7 @@
     "name": "Stratopolis",
     "type": "active",
     "cost": 22,
-    "description": "Action: Add 2 floaters to **any venus card**. Requires 2 science tags. Increase your M€ production 2 steps. Build Stratopolis. 1 VP per 3 floaters on this card.",
+    "description": "**Action:** Add 2 floaters to **any venus card**. Requires 2 science tags. Increase your M€ production 2 steps. Build Stratopolis. 1 VP per 3 floaters on this card.",
     "pack": "venus-next",
     "tags": [
       "city",
@@ -11045,7 +11045,7 @@
     "name": "Stratospheric Birds",
     "type": "active",
     "cost": 12,
-    "description": "Action: Add 1 animal to this card. Requires Venus 12%, and that you spend 1 floater **from any card**. 1 VP per animal on this card.",
+    "description": "**Action:** Add 1 animal to this card. Requires Venus 12%, and that you spend 1 floater **from any card**. 1 VP per animal on this card.",
     "pack": "venus-next",
     "tags": [
       "animal",
@@ -11153,7 +11153,7 @@
     "name": "Sulphur-Eating Bacteria",
     "type": "active",
     "cost": 6,
-    "description": "Action: Add 1 microbe to this card, or spend any number of microbes here to gain triple that amount of M€. Requires Venus 6%.",
+    "description": "**Action:** Add 1 microbe to this card, or spend any number of microbes here to gain triple that amount of M€. Requires Venus 6%.",
     "pack": "venus-next",
     "tags": [
       "microbe",
@@ -11255,7 +11255,7 @@
     "name": "Thermophiles",
     "type": "active",
     "cost": 9,
-    "description": "Action: Add 1 microbe to **any venus card**, or spend 2 microbes here to raise Venus 1 step. Requires Venus 6%.",
+    "description": "**Action:** Add 1 microbe to **any venus card**, or spend 2 microbes here to raise Venus 1 step. Requires Venus 6%.",
     "pack": "venus-next",
     "tags": [
       "microbe",
@@ -11391,7 +11391,7 @@
     "name": "Venus Magnetizer",
     "type": "active",
     "cost": 7,
-    "description": "Action: Decrease your energy production 1 step to raise Venus 1 step. Requires Venus 10%",
+    "description": "**Action:** Decrease your energy production 1 step to raise Venus 1 step. Requires Venus 10%",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -11474,7 +11474,7 @@
     "name": "Venus Waystation",
     "type": "active",
     "cost": 9,
-    "description": "Effect: Pay 2 M€ less for Venus cards.",
+    "description": "**Effect:** Pay 2 M€ less for Venus cards.",
     "pack": "venus-next",
     "tags": [
       "space",
@@ -11517,7 +11517,7 @@
     "name": "Venusian Animals",
     "type": "active",
     "cost": 15,
-    "description": "Effect: Add 1 animal to this card when you play a science tag, including this. Requires Venus 18%. 1 VP per animal on this card.",
+    "description": "**Effect:** Add 1 animal to this card when you play a science tag, including this. Requires Venus 18%. 1 VP per animal on this card.",
     "pack": "venus-next",
     "tags": [
       "animal",
@@ -11586,7 +11586,7 @@
     "name": "Venusian Insects",
     "type": "active",
     "cost": 5,
-    "description": "Action: Add 1 microbe to this card. Requires Venus 12%. 1 VP per 2 microbes on this card.",
+    "description": "**Action:** Add 1 microbe to this card. Requires Venus 12%. 1 VP per 2 microbes on this card.",
     "pack": "venus-next",
     "tags": [
       "microbe",
@@ -11722,7 +11722,7 @@
     "name": "CrediCor",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: After you pay for a card or standard project with a basic cost of 20 M€ or more, you gain 4 M€. You start with 57 M€.",
+    "description": "**Effect:** After you pay for a card or standard project with a basic cost of 20 M€ or more, you gain 4 M€. You start with 57 M€.",
     "pack": "base-game",
     "behaviors": [
       {
@@ -11787,7 +11787,7 @@
     "name": "Ecoline",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Use 7 plants, instead of 8, to plant a greenery. You start with 2 plant production, 3 plants, and 36 M€.",
+    "description": "**Effect:** Use 7 plants, instead of 8, to plant a greenery. You start with 2 plant production, 3 plants, and 36 M€.",
     "pack": "base-game",
     "tags": [
       "plant"
@@ -11850,7 +11850,7 @@
     "name": "Helion",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: You can use heat as M€. You start with 3 heat production and 42 M€.",
+    "description": "**Effect:** You can use heat as M€. You start with 3 heat production and 42 M€.",
     "pack": "base-game",
     "tags": [
       "space"
@@ -11905,7 +11905,7 @@
     "name": "Interplanetary Cinematics",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Gain 2 M€ when you play an event. You start with 20 steel and 30 M€.",
+    "description": "**Effect:** Gain 2 M€ when you play an event. You start with 20 steel and 30 M€.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -11963,7 +11963,7 @@
     "name": "Inventrix",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Your temperature, oxygen, and ocean requirements are +2 or -2 steps. As your first action, draw 3 cards. Start with 45 M€.",
+    "description": "**Effect:** Your temperature, oxygen, and ocean requirements are +2 or -2 steps. As your first action, draw 3 cards. Start with 45 M€.",
     "pack": "base-game",
     "tags": [
       "science"
@@ -12033,7 +12033,7 @@
     "name": "Mining Guild",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Increase your steel production 1 step when you place a tile on a steel or titanium bonus area. You start with 30 M€, 5 steel, and 1 steel production.",
+    "description": "**Effect:** Increase your steel production 1 step when you place a tile on a steel or titanium bonus area. You start with 30 M€, 5 steel, and 1 steel production.",
     "pack": "base-game",
     "tags": [
       "building",
@@ -12099,7 +12099,7 @@
     "name": "PhoboLog",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Each titanium is worth +1 M€. You start with 10 titanium and 23 M€.",
+    "description": "**Effect:** Each titanium is worth +1 M€. You start with 10 titanium and 23 M€.",
     "pack": "base-game",
     "tags": [
       "space"
@@ -12154,7 +12154,7 @@
     "name": "Tharsis Republic",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Increase your M€ production 1 step when any city is built **on mars**. Gain 3 M€ when you place a city. You start with 40 M€. As your first action, build a city.",
+    "description": "**Effect:** Increase your M€ production 1 step when any city is built **on mars**. Gain 3 M€ when you place a city. You start with 40 M€. As your first action, build a city.",
     "pack": "base-game",
     "tags": [
       "building"
@@ -12237,7 +12237,7 @@
     "name": "ThorGate",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Pay 3 M€ less for power cards **and the power plant standard project**. You start with 1 energy production and 48 M€.",
+    "description": "**Effect:** Pay 3 M€ less for power cards **and the power plant standard project**. You start with 1 energy production and 48 M€.",
     "pack": "base-game",
     "tags": [
       "power"
@@ -12295,7 +12295,7 @@
     "name": "United Nations Mars Initiative",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: If your TR was raised this generation, you may pay 3 M€ to raise it 1 step more. You start with 40 M€.",
+    "description": "**Action:** If your TR was raised this generation, you may pay 3 M€ to raise it 1 step more. You start with 40 M€.",
     "pack": "base-game",
     "tags": [
       "earth"
@@ -12353,7 +12353,7 @@
     "name": "Saturn Systems",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Increase your M€ production 1 step when any Jovian tag is played, including this. You start with 1 titanium production and 42 M€.",
+    "description": "**Effect:** Increase your M€ production 1 step when any Jovian tag is played, including this. You start with 1 titanium production and 42 M€.",
     "pack": "corporate-era",
     "tags": [
       "jovian"
@@ -12412,7 +12412,7 @@
     "name": "Teractor",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Pay 3 M€ less for Earth cards. You start with 60 M€.",
+    "description": "**Effect:** Pay 3 M€ less for Earth cards. You start with 60 M€.",
     "pack": "corporate-era",
     "tags": [
       "earth"
@@ -12539,7 +12539,7 @@
     "name": "Atmo Collectors",
     "type": "active",
     "cost": 15,
-    "description": "Action: Add 1 floater to this card, or spend 1 floater here to gain 2 titanium, or 3 energy, or 4 heat. Add 2 floaters to **any** card.",
+    "description": "**Action:** Add 1 floater to this card, or spend 1 floater here to gain 2 titanium, or 3 energy, or 4 heat. Add 2 floaters to **any** card.",
     "pack": "colonies",
     "behaviors": [
       {
@@ -12718,7 +12718,7 @@
     "name": "Cryo-Sleep",
     "type": "active",
     "cost": 10,
-    "description": "Effect: Pay 1 less resource when trading.",
+    "description": "**Effect:** Pay 1 less resource when trading.",
     "pack": "colonies",
     "tags": [
       "science"
@@ -12913,7 +12913,7 @@
     "name": "Floater Technology",
     "type": "active",
     "cost": 7,
-    "description": "Action: Add 1 floater to **another** card.",
+    "description": "**Action:** Add 1 floater to **another** card.",
     "pack": "colonies",
     "tags": [
       "science"
@@ -13138,7 +13138,7 @@
     "name": "Jovian Lanterns",
     "type": "active",
     "cost": 20,
-    "description": "Action: Spend 1 titanium to add 2 floaters here. Requires 1 Jovian tag. Raise your TR 1 step. Add 2 floaters to **any** card. 1 VP per 2 floaters here.",
+    "description": "**Action:** Spend 1 titanium to add 2 floaters here. Requires 1 Jovian tag. Raise your TR 1 step. Add 2 floaters to **any** card. 1 VP per 2 floaters here.",
     "pack": "colonies",
     "tags": [
       "jovian"
@@ -13222,7 +13222,7 @@
     "name": "Jupiter Floating Station",
     "type": "active",
     "cost": 9,
-    "description": "Action: Add 1 floater to a **jovian card**, or gain 1 M€ for every floater here (**max** 4). Requires 3 science tags.",
+    "description": "**Action:** Add 1 floater to a **jovian card**, or gain 1 M€ for every floater here (**max** 4). Requires 3 science tags.",
     "pack": "colonies",
     "tags": [
       "jovian"
@@ -13426,7 +13426,7 @@
     "name": "Martian Zoo",
     "type": "active",
     "cost": 12,
-    "description": "Effect: Place an animal here when you play an Earth tag. / Action: Gain 1 M€ per animal here. Requires 2 cities in play.",
+    "description": "**Effect:** Place an animal here when you play an Earth tag. / **Action:** Gain 1 M€ per animal here. Requires 2 cities in play.",
     "pack": "colonies",
     "tags": [
       "animal",
@@ -13446,7 +13446,7 @@
             "target": "self-card"
           }
         ],
-        "description": "Place an animal here when you play an Earth tag. / Action: Gain 1 M€ per animal here. Requires 2 cities in play."
+        "description": "Place an animal here when you play an Earth tag. / **Action:** Gain 1 M€ per animal here. Requires 2 cities in play."
       }
     ],
     "resourceStorage": {
@@ -13730,7 +13730,7 @@
     "name": "Red Spot Observatory",
     "type": "active",
     "cost": 17,
-    "description": "Action: Add 1 floater to this card, or spend 1 floater here to draw a card. Requires 3 science tags. Draw 2 cards.",
+    "description": "**Action:** Add 1 floater to this card, or spend 1 floater here to draw a card. Requires 3 science tags. Draw 2 cards.",
     "pack": "colonies",
     "tags": [
       "jovian",
@@ -13816,7 +13816,7 @@
     "name": "Refugee Camps",
     "type": "active",
     "cost": 10,
-    "description": "Action: Decrease your M€ production 1 step to add a camp resource to this card. 1 VP per camp resource on this card.",
+    "description": "**Action:** Decrease your M€ production 1 step to add a camp resource to this card. 1 VP per camp resource on this card.",
     "pack": "colonies",
     "tags": [
       "earth"
@@ -13886,7 +13886,7 @@
     "name": "Rim Freighters",
     "type": "active",
     "cost": 4,
-    "description": "Effect: Pay 1 less resource when trading.",
+    "description": "**Effect:** Pay 1 less resource when trading.",
     "pack": "colonies",
     "tags": [
       "space"
@@ -13926,7 +13926,7 @@
     "name": "Sky Docks",
     "type": "active",
     "cost": 18,
-    "description": "Effect: Pay 1 M€ less for all cards. Requires 2 Earth tags. Gain 1 Trade Fleet.",
+    "description": "**Effect:** Pay 1 M€ less for all cards. Requires 2 Earth tags. Gain 1 Trade Fleet.",
     "pack": "colonies",
     "tags": [
       "earth",
@@ -14124,7 +14124,7 @@
     "name": "Spin-Off Department",
     "type": "active",
     "cost": 10,
-    "description": "Effect: Draw a card **when playing a card with a basic cost of** 20 **m or more**. Increase your M€ production 2 steps.",
+    "description": "**Effect:** Draw a card **when playing a card with a basic cost of** 20 **m or more**. Increase your M€ production 2 steps.",
     "pack": "colonies",
     "tags": [
       "building"
@@ -14152,7 +14152,7 @@
     "name": "Sub-Zero Salt Fish",
     "type": "active",
     "cost": 5,
-    "description": "Action: Add 1 animal to this card. Requires -6°C or warmer. Decrease any plant production 1 step. 1 VP per 2 animals on this card.",
+    "description": "**Action:** Add 1 animal to this card. Requires -6°C or warmer. Decrease any plant production 1 step. 1 VP per 2 animals on this card.",
     "pack": "colonies",
     "tags": [
       "animal"
@@ -14223,7 +14223,7 @@
     "name": "Titan Air-Scrapping",
     "type": "active",
     "cost": 21,
-    "description": "Action: Spend 1 titanium to add 2 floaters to this card, or spend 2 floaters here to raise your TR 1 step.",
+    "description": "**Action:** Spend 1 titanium to add 2 floaters to this card, or spend 2 floaters here to raise your TR 1 step.",
     "pack": "colonies",
     "tags": [
       "jovian"
@@ -14290,7 +14290,7 @@
     "name": "Titan Floating Launch-Pad",
     "type": "active",
     "cost": 18,
-    "description": "Action: Add 1 floater to **any jovian card**, or spend 1 floater here to trade for free. Add 2 floaters to **any jovian card**.",
+    "description": "**Action:** Add 1 floater to **any jovian card**, or spend 1 floater here to trade for free. Add 2 floaters to **any jovian card**.",
     "pack": "colonies",
     "tags": [
       "jovian"
@@ -14379,7 +14379,7 @@
     "name": "Titan Shuttles",
     "type": "active",
     "cost": 23,
-    "description": "Action: Add 2 floaters to **any jovian card**, or spend any number of floaters here to gain the same number of titanium.",
+    "description": "**Action:** Add 2 floaters to **any jovian card**, or spend any number of floaters here to gain the same number of titanium.",
     "pack": "colonies",
     "tags": [
       "jovian",
@@ -14440,7 +14440,7 @@
     "name": "Trade Envoys",
     "type": "active",
     "cost": 6,
-    "description": "Effect: You may first increase that colony track 1 step when trading.",
+    "description": "**Effect:** You may first increase that colony track 1 step when trading.",
     "pack": "colonies",
     "behaviors": [
       {
@@ -14469,7 +14469,7 @@
     "name": "Trading Colony",
     "type": "active",
     "cost": 18,
-    "description": "Effect: You may first increase that colony track 1 step when trading. Place a colony.",
+    "description": "**Effect:** You may first increase that colony track 1 step when trading. Place a colony.",
     "pack": "colonies",
     "tags": [
       "space"
@@ -14601,7 +14601,7 @@
     "name": "Aridor",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Increase your M€ production 1 step when you get a new type of tag in play (event cards do not count). You start with 40 M€. As your first action, put an additional colony of your choice into play.",
+    "description": "**Effect:** Increase your M€ production 1 step when you get a new type of tag in play (event cards do not count). You start with 40 M€. As your first action, put an additional colony of your choice into play.",
     "pack": "colonies",
     "behaviors": [
       {
@@ -14660,7 +14660,7 @@
     "name": "Arklight",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Add 1 animal to this card when you play an animal or plant tag, including this. You start with 45 M€. Increase your M€ production 2 steps. 1 VP per 2 animals on this card.",
+    "description": "**Effect:** Add 1 animal to this card when you play an animal or plant tag, including this. You start with 45 M€. Increase your M€ production 2 steps. 1 VP per 2 animals on this card.",
     "pack": "colonies",
     "tags": [
       "animal"
@@ -14743,7 +14743,7 @@
     "name": "Polyphemos",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Pay 5 M€ instead of 3 M€ when buying cards, including the starting hand. You start with 50 M€. Increase your M€ production 5 steps. Gain 5 titanium.",
+    "description": "**Effect:** Pay 5 M€ instead of 3 M€ when buying cards, including the starting hand. You start with 50 M€. Increase your M€ production 5 steps. Gain 5 titanium.",
     "pack": "colonies",
     "behaviors": [
       {
@@ -14803,7 +14803,7 @@
     "name": "Poseidon",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Raise your M€ production 1 step when any colony is placed, including this. You start with 45 M€. As your first action, place a colony.",
+    "description": "**Effect:** Raise your M€ production 1 step when any colony is placed, including this. You start with 45 M€. As your first action, place a colony.",
     "pack": "colonies",
     "behaviors": [
       {
@@ -14863,7 +14863,7 @@
     "name": "Stormcraft Incorporated",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: Add 1 floater to **any** card. / Effect: Floaters on this card may be used as 2 heat each. You start with 48 M€.",
+    "description": "**Action:** Add 1 floater to **any** card. / **Effect:** Floaters on this card may be used as 2 heat each. You start with 48 M€.",
     "pack": "colonies",
     "tags": [
       "jovian"
@@ -16227,7 +16227,7 @@
     "name": "Psychrophiles",
     "type": "active",
     "cost": 2,
-    "description": "Action: Add a microbe to this card. / Effect: Microbes here may be used as 2 M€ each when paying for a plant card. Requires temperature -20°C or colder.",
+    "description": "**Action:** Add a microbe to this card. / **Effect:** Microbes here may be used as 2 M€ each when paying for a plant card. Requires temperature -20°C or colder.",
     "pack": "prelude",
     "tags": [
       "microbe"
@@ -16369,7 +16369,7 @@
     "name": "Cheung Shing Mars",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Pay 2 M€ less for building cards. You start with 44 M€ and 3 M€ production.",
+    "description": "**Effect:** Pay 2 M€ less for building cards. You start with 44 M€ and 3 M€ production.",
     "pack": "prelude",
     "tags": [
       "building"
@@ -16424,7 +16424,7 @@
     "name": "Point Luna",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Draw a card when you play an Earth tag, including this. You start with 38 M€ and 1 titanium production.",
+    "description": "**Effect:** Draw a card when you play an Earth tag, including this. You start with 38 M€ and 1 titanium production.",
     "pack": "prelude",
     "tags": [
       "earth",
@@ -16488,7 +16488,7 @@
     "name": "Robinson Industries",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: Spend 4 M€ to increase (one of) your **lowest production** 1 step. You start with 47 M€.",
+    "description": "**Action:** Spend 4 M€ to increase (one of) your **lowest production** 1 step. You start with 47 M€.",
     "pack": "prelude",
     "behaviors": [
       {
@@ -16587,7 +16587,7 @@
     "name": "Valley Trust",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Pay 2 M€ less for science cards. You start with 37 M€. As your first action, draw 3 Prelude cards, and play one of them. Discard the other two.",
+    "description": "**Effect:** Pay 2 M€ less for science cards. You start with 37 M€. As your first action, draw 3 Prelude cards, and play one of them. Discard the other two.",
     "pack": "prelude",
     "tags": [
       "earth"
@@ -16671,7 +16671,7 @@
     "name": "Vitor",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Gain 3 M€ when you play a card with a **non-negative** VP icon, including this. You start with 45 M€. As your first action, fund an award for free.",
+    "description": "**Effect:** Gain 3 M€ when you play a card with a **non-negative** VP icon, including this. You start with 45 M€. As your first action, fund an award for free.",
     "pack": "prelude",
     "tags": [
       "earth"
@@ -16859,7 +16859,7 @@
     "name": "Event Analysts",
     "type": "active",
     "cost": 5,
-    "description": "Effect: You have influence +1. Requires that Scientists are ruling or that you have 2 delegates there.",
+    "description": "**Effect:** You have influence +1. Requires that Scientists are ruling or that you have 2 delegates there.",
     "pack": "turmoil",
     "tags": [
       "science"
@@ -16877,7 +16877,7 @@
     "name": "GMO Contract",
     "type": "active",
     "cost": 3,
-    "description": "Effect: Gain 2 M€ when you play a plant, animal, or microbe tag, including this. Requires that Greens are ruling or that you have 2 delegates there.",
+    "description": "**Effect:** Gain 2 M€ when you play a plant, animal, or microbe tag, including this. Requires that Greens are ruling or that you have 2 delegates there.",
     "pack": "turmoil",
     "tags": [
       "microbe",
@@ -16927,7 +16927,7 @@
     "name": "Martian Media Center",
     "type": "active",
     "cost": 7,
-    "description": "Action: Pay 3 M€ to add a delegate to any party. Requires that Mars First is ruling or that you have 2 delegates there. Increase your M€ production 2 steps.",
+    "description": "**Action:** Pay 3 M€ to add a delegate to any party. Requires that Mars First is ruling or that you have 2 delegates there. Increase your M€ production 2 steps.",
     "pack": "turmoil",
     "tags": [
       "building"
@@ -17197,7 +17197,7 @@
     "name": "Lakefront Resorts",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Increase your M€ production 1 step when any ocean is placed. / Your bonus for placing adjacent to oceans is 3 M€ instead of 2 M€. You start with 54 M€.",
+    "description": "**Effect:** Increase your M€ production 1 step when any ocean is placed. / Your bonus for placing adjacent to oceans is 3 M€ instead of 2 M€. You start with 54 M€.",
     "pack": "turmoil",
     "tags": [
       "building"
@@ -17265,7 +17265,7 @@
     "name": "Pristar",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: During production phase, if you did not get TR so far this generation, add 1 preservation resource here and gain 6 M€. You start with 53 M€. Decrease your TR 2 steps. 1 VP per preservation resource here.",
+    "description": "**Effect:** During production phase, if you did not get TR so far this generation, add 1 preservation resource here and gain 6 M€. You start with 53 M€. Decrease your TR 2 steps. 1 VP per preservation resource here.",
     "pack": "turmoil",
     "behaviors": [
       {
@@ -17310,7 +17310,7 @@
     "name": "Septem Tribus",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: Gain 2 M€ for **each party where you have at least** 1 **delegate**. You start with 36 M€. When you perform an action, the wild tag counts as any tag of your choice.",
+    "description": "**Action:** Gain 2 M€ for **each party where you have at least** 1 **delegate**. You start with 36 M€. When you perform an action, the wild tag counts as any tag of your choice.",
     "pack": "turmoil",
     "tags": [
       "wild"
@@ -17338,7 +17338,7 @@
     "name": "TerraLabs Research",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Cards cost 1 M€, including your starting hand. You start with 14 M€. Decrease your TR 1 step.",
+    "description": "**Effect:** Cards cost 1 M€, including your starting hand. You start with 14 M€. Decrease your TR 1 step.",
     "pack": "turmoil",
     "tags": [
       "earth",
@@ -17388,7 +17388,7 @@
     "name": "Utopia Invest",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: Decrease any production to gain 4 resources of that kind. You start with 40 M€. Increase your steel and titanium production 1 step each.",
+    "description": "**Action:** Decrease any production to gain 4 resources of that kind. You start with 40 M€. Increase your steel and titanium production 1 step each.",
     "pack": "turmoil",
     "tags": [
       "building"
@@ -17520,7 +17520,7 @@
     "name": "Aphrodite",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Gain 2 M€ whenever Venus is terraformed 1 step. You start with 47 M€ and 1 plant production.",
+    "description": "**Effect:** Gain 2 M€ whenever Venus is terraformed 1 step. You start with 47 M€ and 1 plant production.",
     "pack": "venus-next",
     "tags": [
       "plant",
@@ -17580,7 +17580,7 @@
     "name": "Celestic",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: Add a floater to **any** card. You start with 42 M€. As your first action, search the deck for 2 floater cards. 1 VP per 3 floaters on this card.",
+    "description": "**Action:** Add a floater to **any** card. You start with 42 M€. As your first action, search the deck for 2 floater cards. 1 VP per 3 floaters on this card.",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -17664,7 +17664,7 @@
     "name": "Manutech",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Gain that resource when you gain production. You start with 1 steel production and 35 M€.",
+    "description": "**Effect:** Gain that resource when you gain production. You start with 1 steel production and 35 M€.",
     "pack": "venus-next",
     "tags": [
       "building"
@@ -17824,7 +17824,7 @@
     "name": "Morning Star Inc.",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Your Venus requirements are +/- 2 steps. You start with 50 M€. As your first action, search the deck for 3 Venus cards.",
+    "description": "**Effect:** Your Venus requirements are +/- 2 steps. You start with 50 M€. As your first action, search the deck for 3 Venus cards.",
     "pack": "venus-next",
     "tags": [
       "venus"
@@ -17899,7 +17899,7 @@
     "name": "Viron",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: Use a blue card action that has already been used this generation. You start with 48 M€.",
+    "description": "**Action:** Use a blue card action that has already been used this generation. You start with 48 M€.",
     "pack": "venus-next",
     "tags": [
       "microbe"
@@ -17998,7 +17998,7 @@
     "name": "Energy Market",
     "type": "active",
     "cost": 3,
-    "description": "Action: Spend 2X M€ to gain X energy, or decrease energy production 1 step to gain 8 M€.",
+    "description": "**Action:** Spend 2X M€ to gain X energy, or decrease energy production 1 step to gain 8 M€.",
     "pack": "turmoil",
     "tags": [
       "power"
@@ -18038,7 +18038,7 @@
     "name": "Hi-Tech Lab",
     "type": "active",
     "cost": 17,
-    "description": "Action: Spend any amount of energy to draw the same number of cards. Take 1 into hand and discard the rest.",
+    "description": "**Action:** Spend any amount of energy to draw the same number of cards. Take 1 into hand and discard the rest.",
     "pack": "turmoil",
     "tags": [
       "building",
@@ -18110,7 +18110,7 @@
     "name": "Mercurian Alloys",
     "type": "active",
     "cost": 3,
-    "description": "Effect: Each titanium is worth +1 M€. Requires 2 science tags.",
+    "description": "**Effect:** Each titanium is worth +1 M€. Requires 2 science tags.",
     "pack": "turmoil",
     "tags": [
       "space"
@@ -18155,7 +18155,7 @@
     "name": "Orbital Cleanup",
     "type": "active",
     "cost": 14,
-    "description": "Action: Gain 1 M€ per science tag you have. Decrease your M€ production 2 steps.",
+    "description": "**Action:** Gain 1 M€ per science tag you have. Decrease your M€ production 2 steps.",
     "pack": "turmoil",
     "tags": [
       "earth",
@@ -18238,7 +18238,7 @@
     "name": "Rego Plastics",
     "type": "active",
     "cost": 10,
-    "description": "Effect: Each steel is worth +1 M€.",
+    "description": "**Effect:** Each steel is worth +1 M€.",
     "pack": "turmoil",
     "tags": [
       "building"
@@ -18280,7 +18280,7 @@
     "name": "Saturn Surfing",
     "type": "active",
     "cost": 13,
-    "description": "Action: Spend 1 floater from here to gain 1 M€ for each floater here, **including the paid floater** (max 5). Add 1 floater here for every Earth tag you have, including this.",
+    "description": "**Action:** Spend 1 floater from here to gain 1 M€ for each floater here, **including the paid floater** (max 5). Add 1 floater here for every Earth tag you have, including this.",
     "pack": "turmoil",
     "tags": [
       "earth",
@@ -18366,7 +18366,7 @@
     "name": "Advertising",
     "type": "active",
     "cost": 4,
-    "description": "Effect: Increase your M€ production 1 step when you play a card with a basic cost of 20 M€ or more.",
+    "description": "**Effect:** Increase your M€ production 1 step when you play a card with a basic cost of 20 M€ or more.",
     "pack": "promo",
     "tags": [
       "earth"
@@ -18394,7 +18394,7 @@
     "name": "Asteroid Deflection System",
     "type": "active",
     "cost": 13,
-    "description": "Action: **reveal and discard** the top card of the deck. If it has a space tag, add an asteroid here. / **opponents may not remove your plants** Decrease energy production 1 step. 1 VP per asteroid on this card.",
+    "description": "**Action:** **reveal and discard** the top card of the deck. If it has a space tag, add an asteroid here. / **opponents may not remove your plants** Decrease energy production 1 step. 1 VP per asteroid on this card.",
     "pack": "promo",
     "tags": [
       "building",
@@ -18466,7 +18466,7 @@
     "name": "Asteroid Hollowing",
     "type": "active",
     "cost": 16,
-    "description": "Action: Spend 1 titanium to add 1 asteroid resource here and increase M€ production 1 step. 1 VP per 2 asteroids on this card.",
+    "description": "**Action:** Spend 1 titanium to add 1 asteroid resource here and increase M€ production 1 step. 1 VP per 2 asteroids on this card.",
     "pack": "promo",
     "tags": [
       "space"
@@ -18511,7 +18511,7 @@
     "name": "Comet Aiming",
     "type": "active",
     "cost": 17,
-    "description": "Action: Spend 1 titanium to add 1 asteroid resource to **any card** or remove 1 asteroid here to place an ocean.",
+    "description": "**Action:** Spend 1 titanium to add 1 asteroid resource to **any card** or remove 1 asteroid here to place an ocean.",
     "pack": "promo",
     "tags": [
       "space"
@@ -18657,7 +18657,7 @@
     "name": "Directed Impactors",
     "type": "active",
     "cost": 8,
-    "description": "Action: Spend 6 M€ to add 1 asteroid to **any card** (titanium may be used to pay for this), or remove 1 asteroid here to raise temperature 1 step.",
+    "description": "**Action:** Spend 6 M€ to add 1 asteroid to **any card** (titanium may be used to pay for this), or remove 1 asteroid here to raise temperature 1 step.",
     "pack": "promo",
     "tags": [
       "space"
@@ -18895,7 +18895,7 @@
     "name": "Meat Industry",
     "type": "active",
     "cost": 5,
-    "description": "Effect: Gain 2 M€ when you gain an animal to **any card**.",
+    "description": "**Effect:** Gain 2 M€ when you gain an animal to **any card**.",
     "pack": "promo",
     "tags": [
       "building"
@@ -18923,7 +18923,7 @@
     "name": "Meltworks",
     "type": "active",
     "cost": 4,
-    "description": "Action: Spend 5 heat to gain 3 steel.",
+    "description": "**Action:** Spend 5 heat to gain 3 steel.",
     "pack": "promo",
     "tags": [
       "building"
@@ -18958,7 +18958,7 @@
     "name": "Mohole Lake",
     "type": "active",
     "cost": 31,
-    "description": "Action: Add a microbe or animal to **another** card. Place an ocean. Raise temperature 1 step. Gain 3 plants.",
+    "description": "**Action:** Add a microbe or animal to **another** card. Place an ocean. Raise temperature 1 step. Gain 3 plants.",
     "pack": "promo",
     "tags": [
       "building"
@@ -19057,7 +19057,7 @@
     "name": "Sub-Crust Measurements",
     "type": "active",
     "cost": 20,
-    "description": "Action: Draw a card. Requires 2 science tags.",
+    "description": "**Action:** Draw a card. Requires 2 science tags.",
     "pack": "promo",
     "tags": [
       "building",
@@ -19104,7 +19104,7 @@
     "name": "Topsoil Contract",
     "type": "active",
     "cost": 8,
-    "description": "Effect: Gain 1 M€ when you gain a microbe to **any card**. Gain 3 plants.",
+    "description": "**Effect:** Gain 1 M€ when you gain a microbe to **any card**. Gain 3 plants.",
     "pack": "promo",
     "tags": [
       "earth",
@@ -19259,7 +19259,7 @@
     "name": "Asteroid Rights",
     "type": "active",
     "cost": 10,
-    "description": "Action: Spend 1 M€ to add 1 asteroid to **any** card, OR spend 1 asteroid here to raise your M€ production 1 step or gain 2 titanium. Gain 2 asteroids to this card.",
+    "description": "**Action:** Spend 1 M€ to add 1 asteroid to **any** card, OR spend 1 asteroid here to raise your M€ production 1 step or gain 2 titanium. Gain 2 asteroids to this card.",
     "pack": "promo",
     "tags": [
       "earth",
@@ -19392,7 +19392,7 @@
     "name": "Bio Printing Facility",
     "type": "active",
     "cost": 7,
-    "description": "Action: Spend 2 energy to gain 2 plants OR to add 1 animal to **another** card.",
+    "description": "**Action:** Spend 2 energy to gain 2 plants OR to add 1 animal to **another** card.",
     "pack": "promo",
     "tags": [
       "building"
@@ -19729,7 +19729,7 @@
     "name": "Arcadian Communities",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: place a community (player marker) on a non-reserved area adjacent to one of your tiles or marked areas. / Effect: marked areas are reserved for you. When you place a tile there, gain 3 M€. You start with 40 M€ and 10 steel. As your first action, place a community (player marker) on a non-reserved area.",
+    "description": "**Action:** place a community (player marker) on a non-reserved area adjacent to one of your tiles or marked areas. / **Effect:** marked areas are reserved for you. When you place a tile there, gain 3 M€. You start with 40 M€ and 10 steel. As your first action, place a community (player marker) on a non-reserved area.",
     "pack": "promo",
     "behaviors": [
       {
@@ -19774,7 +19774,7 @@
     "name": "Recyclon",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Gain 1 microbe to this card, or remove 2 microbes here and raise your plant production 1 step when you play a building tag, including this. You start with 38 M€ and 1 steel production.",
+    "description": "**Effect:** Gain 1 microbe to this card, or remove 2 microbes here and raise your plant production 1 step when you play a building tag, including this. You start with 38 M€ and 1 steel production.",
     "pack": "promo",
     "tags": [
       "building",
@@ -19846,7 +19846,7 @@
     "name": "Splice Tactical Genomics",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: **That player** gains 2 M€, or adds a microbe to **that** card, and you gain 2 M€ when a microbe tag is played, including this. You start with 44 M€. As your first action, search the deck for a microbe card.",
+    "description": "**Effect:** **That player** gains 2 M€, or adds a microbe to **that** card, and you gain 2 M€ when a microbe tag is played, including this. You start with 44 M€. As your first action, search the deck for a microbe card.",
     "pack": "promo",
     "tags": [
       "microbe"
@@ -19904,7 +19904,7 @@
     "name": "Factorum",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: Increase your energy production 1 step **if you have no energy resources**, or spend 3 M€ to draw a building card. You start with 37 M€. Increase your steel production 1 step.",
+    "description": "**Action:** Increase your energy production 1 step **if you have no energy resources**, or spend 3 M€ to draw a building card. You start with 37 M€. Increase your steel production 1 step.",
     "pack": "turmoil",
     "tags": [
       "building",
@@ -19973,7 +19973,7 @@
     "name": "Mons Insurance",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Pay 3 M€ to a player that lost resources or production caused by another player. You start with 48 M€. Increase your M€ production 4 steps. All opponents decrease their M€ production 2 steps. This does not trigger the effect below.",
+    "description": "**Effect:** Pay 3 M€ to a player that lost resources or production caused by another player. You start with 48 M€. Increase your M€ production 4 steps. All opponents decrease their M€ production 2 steps. This does not trigger the effect below.",
     "pack": "turmoil",
     "behaviors": [
       {
@@ -20023,7 +20023,7 @@
     "name": "Philares",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Each new adjacency between your tile and an opponent's tile gives you a standard resource of your choice (regardless of who just placed a tile). You start with 47 M€. As your first action, plant a greenery and raise oxygen 1 step.",
+    "description": "**Effect:** Each new adjacency between your tile and an opponent's tile gives you a standard resource of your choice (regardless of who just placed a tile). You start with 47 M€. As your first action, plant a greenery and raise oxygen 1 step.",
     "pack": "turmoil",
     "tags": [
       "building"
@@ -20130,7 +20130,7 @@
     "name": "AstroDrill",
     "type": "corporation",
     "cost": 0,
-    "description": "Action: Either add 1 asteroid to **any card** or gain any standard resource, OR spend 1 asteroid here to gain 3 titanium. You start with 35 M€, and 3 asteroid resources here.",
+    "description": "**Action:** Either add 1 asteroid to **any card** or gain any standard resource, OR spend 1 asteroid here to gain 3 titanium. You start with 35 M€, and 3 asteroid resources here.",
     "pack": "promo",
     "tags": [
       "space"
@@ -20255,7 +20255,7 @@
     "name": "Pharmacy Union",
     "type": "corporation",
     "cost": 0,
-    "description": "Effect: Add a disease here and lose 4 M€ when **any** microbe tag is played, including these 2. Remove 1 disease from here and raise your TR 1 step when you play a science tag, OR, if there are no diseases here, you may raise your TR 3 steps and place this card in your event pile. It now counts as a played event. You start with 54 M€. Draw a science card.",
+    "description": "**Effect:** Add a disease here and lose 4 M€ when **any** microbe tag is played, including these 2. Remove 1 disease from here and raise your TR 1 step when you play a science tag, OR, if there are no diseases here, you may raise your TR 3 steps and place this card in your event pile. It now counts as a played event. You start with 54 M€. Draw a science card.",
     "pack": "promo",
     "tags": [
       "microbe",
