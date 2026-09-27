@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -12,7 +13,6 @@ import {
   PlayerStatusSelectingProductionCards,
 } from "@/types/generated/api-types.ts";
 import BehaviorSection from "./BehaviorSection";
-import { useHoverSound } from "@/hooks/useHoverSound.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameIcon from "@/components/ui/display/GameIcon.tsx";
 import CardIcon from "./BehaviorSection/components/CardIcon.tsx";
@@ -137,7 +137,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   const hasSelection = player.status === PlayerStatusSelection;
   const isInProduction = player.status === PlayerStatusSelectingProductionCards;
   const isBlocked = hasPendingTile || hasSelection;
-  const hoverSound = useHoverSound(hasPendingTile);
   const isPassed = player.passed;
   const isDisconnected = !player.isConnected;
   const isExited = player.isExited;
@@ -415,8 +414,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         </div>
         {/* PASS/SKIP button */}
         {isCurrentPlayer && isCurrentTurn && isActionPhase ? (
-          <button
-            className={`py-1.5 px-3 text-[9px] font-bold font-orbitron uppercase tracking-[0.5px] transition-all duration-200 shrink-0 ml-2 ${
+          <GameButton
+            emphasis="quiet"
+            className={`min-h-0 py-1.5 px-3 text-[9px] font-bold font-orbitron uppercase tracking-[0.5px] transition-all duration-200 shrink-0 ml-2 ${
               isBlocked
                 ? "bg-[rgba(40,40,45,0.9)] text-[rgb(100,100,110)] border border-[rgba(60,60,70,0.5)] cursor-default"
                 : "bg-[rgba(50,100,160,0.95)] text-white border border-[rgba(80,140,200,0.8)] cursor-pointer hover:bg-[rgba(60,120,180,1)] hover:border-[rgba(100,160,220,0.9)]"
@@ -428,14 +428,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               if (isBlocked) return;
-              hoverSound.onClick?.();
               onSkipAction?.();
             }}
-            onMouseEnter={hoverSound.onMouseEnter}
             disabled={isBlocked}
           >
             {buttonText}
-          </button>
+          </GameButton>
         ) : (
           <div className="py-1.5 px-3 text-[9px] font-orbitron shrink-0 ml-2 invisible">PASS</div>
         )}
@@ -450,7 +448,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             style={{ left: contextMenu.x, top: contextMenu.y, zIndex: Z_INDEX.POPOVER }}
           >
             {canConvertToBot && (
-              <button
+              <GameButton
+                emphasis="quiet"
                 className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-white/10 transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -459,11 +458,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 }}
               >
                 Convert to bot
-              </button>
+              </GameButton>
             )}
             {canConvertToBot && canKick && <div className="border-t border-[#333]" />}
             {canKick && (
-              <button
+              <GameButton
+                emphasis="quiet"
                 className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-white/10 transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -472,7 +472,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 }}
               >
                 Kick player
-              </button>
+              </GameButton>
             )}
           </div>,
           document.body,
