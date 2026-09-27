@@ -13,14 +13,14 @@ CLIP_L_MODEL = "clip_l.safetensors"
 T5XXL_MODEL = "t5xxl_fp8_e4m3fn.safetensors"
 
 # Project paths
-PROJECT_ROOT = Path("/home/mafs/Documents/Repositories/terraforming-mars")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CARD_JSON_PATH = PROJECT_ROOT / "backend" / "assets" / "terraforming_mars_cards.json"
-OUTPUT_DIR = PROJECT_ROOT / "frontend" / "public" / "assets" / "cards"
+OUTPUT_DIR = PROJECT_ROOT / "assets" / "original" / "cards"
+CATALOG_PATH = PROJECT_ROOT / "assets" / "catalog.json"
 
 # Image specifications
 IMAGE_WIDTH = 960
 IMAGE_HEIGHT = 720
-WEBP_QUALITY = 90
 
 # Flux Schnell generation parameters
 STEPS = 4
