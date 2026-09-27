@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import { FC, useState, useMemo, useEffect, useRef } from "react";
 import type { GameDto, GameHistoryEntryDto } from "../../../types/generated/api-types";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -10,7 +11,6 @@ import VPPhaseTabsOverlay from "./VPPhaseTabsOverlay.tsx";
 const ANGLE_INDENT = 14;
 const BUTTON_HEIGHT = 32;
 const BUTTON_SPACING = 4;
-const BORDER_COLOR = "rgba(60,60,70,0.7)";
 
 interface ParaButtonConfig {
   id: string;
@@ -22,7 +22,7 @@ interface ParaButtonConfig {
   onClick: () => void;
 }
 
-function ParallelogramButtonGroup({
+function GameButtonGroup({
   buttons,
   direction = "right",
 }: {
@@ -57,99 +57,34 @@ function ParaButton({
   total: number;
   direction: "right" | "left" | "open";
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const w = config.width;
-  const h = BUTTON_HEIGHT;
-
   const isFlat =
-    direction === "open" ? false : direction === "right" ? index === 0 : index === total - 1;
-
-  let fillPoints: string;
-  let accentLine: { x1: number; y1: number; x2: number; y2: number };
-  let angledEdge: { x1: number; y1: number; x2: number; y2: number } | null;
-  let secondAngledEdge: { x1: number; y1: number; x2: number; y2: number } | null = null;
-
-  if (direction === "left") {
-    fillPoints = isFlat
-      ? `${ANGLE_INDENT},0 ${w},0 ${w},${h} 0,${h}`
-      : `${ANGLE_INDENT},0 ${w},0 ${w - ANGLE_INDENT},${h} 0,${h}`;
-    accentLine = { x1: ANGLE_INDENT, y1: 0, x2: w, y2: 0 };
-    angledEdge = { x1: ANGLE_INDENT, y1: 0, x2: 0, y2: h };
-    secondAngledEdge = isFlat ? null : { x1: w, y1: 0, x2: w - ANGLE_INDENT, y2: h };
-  } else {
-    fillPoints = isFlat
-      ? `0,0 ${w - ANGLE_INDENT},0 ${w},${h} 0,${h}`
-      : `0,0 ${w - ANGLE_INDENT},0 ${w},${h} ${ANGLE_INDENT},${h}`;
-    accentLine = { x1: isFlat ? 0 : 0, y1: 0, x2: w - ANGLE_INDENT, y2: 0 };
-    angledEdge = { x1: w - ANGLE_INDENT, y1: 0, x2: w, y2: h };
-    secondAngledEdge = isFlat ? null : { x1: 0, y1: 0, x2: ANGLE_INDENT, y2: h };
-  }
-
-  const showAccent = isHovered || config.isActive;
-  const topStrokeColor = showAccent ? config.accentColor : BORDER_COLOR;
-  const topStrokeWidth = showAccent ? 3 : 1;
-
+    direction !== "open" && (direction === "right" ? index === 0 : index === total - 1);
+  const defaultLeftEdge = isFlat ? "flat" : "slope-right";
+  const leftEdge = direction === "left" ? "slope-left" : defaultLeftEdge;
+  const defaultRightEdge = direction === "left" ? "slope-right" : "slope-left";
+  const rightEdge = direction === "left" && isFlat ? "flat" : defaultRightEdge;
   return (
-    <button
+    <GameButton
+      shape="toolbar"
+      emphasis="secondary"
+      size="xs"
+      width={config.width}
+      height={BUTTON_HEIGHT}
+      accent={config.accentColor}
+      selected={config.isActive}
       onClick={config.onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="relative cursor-pointer"
-      style={{
-        width: w,
-        height: h,
-        marginLeft: index === 0 ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
-        zIndex: Z_INDEX.UI_BASE - index,
-      }}
+      leftEdge={leftEdge}
+      rightEdge={rightEdge}
+      style={
+        {
+          "--button-angle": `${ANGLE_INDENT}px`,
+          marginLeft: index === 0 ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
+          zIndex: Z_INDEX.UI_BASE - index,
+        } as React.CSSProperties
+      }
     >
-      <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio="none"
-      >
-        <polygon
-          points={fillPoints}
-          fill={isHovered ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
-        />
-        <line
-          x1={accentLine.x1}
-          y1={accentLine.y1}
-          x2={accentLine.x2}
-          y2={accentLine.y2}
-          stroke={topStrokeColor}
-          strokeWidth={topStrokeWidth}
-        />
-        <line
-          x1={angledEdge.x1}
-          y1={angledEdge.y1}
-          x2={angledEdge.x2}
-          y2={angledEdge.y2}
-          stroke={BORDER_COLOR}
-          strokeWidth="1"
-        />
-        {secondAngledEdge && (
-          <line
-            x1={secondAngledEdge.x1}
-            y1={secondAngledEdge.y1}
-            x2={secondAngledEdge.x2}
-            y2={secondAngledEdge.y2}
-            stroke={BORDER_COLOR}
-            strokeWidth="1"
-          />
-        )}
-      </svg>
-      <div
-        className="absolute inset-0 flex items-center justify-center font-orbitron text-xs tracking-wider"
-        style={{
-          color: isHovered ? "#ffffff" : "rgba(255,255,255,0.8)",
-          paddingLeft: ANGLE_INDENT / 2,
-          paddingRight: ANGLE_INDENT / 2,
-        }}
-      >
-        {config.label}
-      </div>
-    </button>
+      {config.label}
+    </GameButton>
   );
 }
 
@@ -417,7 +352,7 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
           {actionButtons.some((b) => b.visible !== false) && (
             <div className="relative flex items-center px-4 pb-1 pt-1">
               <div className="ml-auto">
-                <ParallelogramButtonGroup buttons={actionButtons} direction="left" />
+                <GameButtonGroup buttons={actionButtons} direction="left" />
               </div>
             </div>
           )}
