@@ -44,7 +44,7 @@ const PlayerOverlay: React.FC<PlayerOverlayProps> = ({ players, currentPlayer })
               <div className="flex items-center gap-3 relative">
                 <div className="flex-shrink-0">
                   {player.corporation &&
-                    getCorporationLogo(player.corporation.name, "w-16 h-8 rounded-md")}
+                    getCorporationLogo(player.corporation.name, "w-16 h-8 rounded-md", "64px")}
                 </div>
 
                 <div className="flex flex-col items-start flex-1">

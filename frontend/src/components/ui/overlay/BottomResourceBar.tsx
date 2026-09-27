@@ -546,7 +546,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                     }}
                   >
                     <div className="flex items-center justify-center min-h-[50px]">
-                      {getCorporationLogo(displayCorporation.name, "w-[100px] h-[64px]")}
+                      {getCorporationLogo(displayCorporation.name, "w-[100px] h-[64px]", "100px")}
                     </div>
                   </div>
 
