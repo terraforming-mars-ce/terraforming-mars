@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useState, useCallback } from "react";
 import {
   CardPaymentDto,
@@ -150,8 +151,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
         </div>
 
         {canAct && !project.isCompleted && (
-          <button
-            className={`px-3 py-1 rounded text-xs font-semibold font-orbitron transition-all cursor-pointer ${
+          <GameButton
+            emphasis="quiet"
+            className={`px-3 py-1 rounded-none text-xs font-semibold font-orbitron transition-all cursor-pointer ${
               canBuy ? "bg-white/15 hover:bg-white/25 text-white" : "bg-gray-600/30 text-gray-500"
             }`}
             onClick={(e) => {
@@ -163,7 +165,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
             disabled={!canBuy}
           >
             Buy Seat
-          </button>
+          </GameButton>
         )}
       </div>
 

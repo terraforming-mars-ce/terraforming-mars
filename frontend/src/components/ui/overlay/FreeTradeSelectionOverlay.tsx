@@ -70,7 +70,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
       <div className="absolute inset-0 backdrop-blur-sm" />
       <div className="absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]" />
 
-      <div className="relative z-[1] w-[480px] max-h-[80vh] flex flex-col bg-space-black-darker/95 border border-space-blue-500 rounded-lg overflow-hidden shadow-glow-lg">
+      <div className="relative z-[1] w-[480px] max-h-[80vh] flex flex-col game-panel game-panel-clipped game-window overflow-hidden">
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
           <h2 className="font-orbitron text-base font-bold text-white tracking-wider m-0">
             Free Trade
@@ -122,10 +122,11 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
             }
 
             return (
-              <button
+              <GameButton
+                emphasis="quiet"
                 key={colony.id}
                 type="button"
-                className={`w-full text-left px-3 py-2.5 rounded border transition-all ${
+                className={`w-full text-left px-3 py-2.5 rounded-none border transition-all ${
                   !tradeable
                     ? "border-white/5 bg-white/[0.01] opacity-40 cursor-default"
                     : isSelected
@@ -174,7 +175,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
                   <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
                   <ColonyOutputDisplay outputs={colony.colonyBonus} />
                 </div>
-              </button>
+              </GameButton>
             );
           })}
         </div>
