@@ -1,38 +1,10 @@
-# Scripts
+# Asset tools
 
-TypeScript ESModule scripts for various development tasks.
+Approved masters live in `assets/original/`, with export settings in the root asset catalog and profiles. Install frontend dependencies with Bun and fetch source media with `git lfs pull`. The image exporter runs under Node 24+; Bun remains the package manager and test runner.
 
-## Image Converter
+- `make assets`: incrementally generate hashed runtime files and the shared registry.
+- `make assets-check`: validate source coverage, card identities, and generated files.
+- `make assets-test`: run exporter tests.
+- `make assets-preview`: generate `output/asset-preview/index.html` for local review.
 
-Converts PNG images to WebP format with 4:3 aspect ratio and 720p resolution.
-
-### Usage
-
-```bash
-npm run convert <input-folder> <output-folder>
-```
-
-### Example
-
-```bash
-npm run convert ./my-png-images-folder ./converted-images
-```
-
-### Features
-
-- Converts all PNG files in a directory to WebP format
-- Crops images to 4:3 aspect ratio
-- Scales to 960x720 resolution (720p)
-- Uses ui.toast.com API for image processing
-- Outputs with 85% quality for optimal file size
-
-### Requirements
-
-- Node.js 18+
-- Internet connection for ui.toast.com API
-
-### Installation
-
-```bash
-npm install
-```
+`make frontend`, `make run`, production builds, and direct frontend start/build/typecheck scripts prepare assets automatically. Vite watches originals and settings during development. Generated output is ignored; edit sources and export settings instead. CI and Docker generate assets before building the application.
