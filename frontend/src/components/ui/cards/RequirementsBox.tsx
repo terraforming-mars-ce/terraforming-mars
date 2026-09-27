@@ -231,13 +231,12 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements, inFlow 
       >
         <div
           ref={badgeRef}
-          className="relative shadow-[0_3px_8px_rgba(0,0,0,0.4)] backdrop-blur-[2px] pl-2 pr-6 py-0.5 border border-b-0 border-[rgba(60,60,70,0.7)] max-md:min-w-[50px] max-md:px-2 max-md:py-1"
+          className="relative shadow-[0_3px_8px_rgba(0,0,0,0.4)] backdrop-blur-[2px] pl-2 pr-6 py-0.5 border border-b-0 border-[rgba(60,60,70,0.7)] motion-safe:animate-[stripeMove_4s_linear_infinite] max-md:min-w-[50px] max-md:px-2 max-md:py-1"
           style={{
             clipPath: "polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)",
             background:
               "linear-gradient(-45deg, #5a2a10 25%, #2d1508 25%, #2d1508 50%, #5a2a10 50%, #5a2a10 75%, #2d1508 75%)",
             backgroundSize: "20px 20px",
-            animation: inFlow ? undefined : "stripeMove 4s linear infinite",
           }}
         >
           <div
