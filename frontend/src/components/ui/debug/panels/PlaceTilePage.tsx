@@ -1,3 +1,4 @@
+import { assetUrl } from "@/assets";
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { globalWebSocketManager } from "../../../../services/globalWebSocketManager.ts";
@@ -28,7 +29,7 @@ const ICON_MAP: Record<string, string | undefined> = {
   "nuclear-zone": TILE_ICONS["tile-placement"],
   mining: TILE_ICONS["tile-placement"],
   restricted: TILE_ICONS["tile-placement"],
-  colony: "/assets/tiles/colony.png",
+  colony: assetUrl("icons/placements/colony", 128),
 };
 
 const secondaryButtonStyle = {
