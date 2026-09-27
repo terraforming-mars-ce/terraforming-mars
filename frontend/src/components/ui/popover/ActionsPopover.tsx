@@ -34,6 +34,7 @@ const ActionsPopover: React.FC<ActionsPopoverProps> = ({
 
   return (
     <GamePopover
+      className="game-popover-list"
       isVisible={isVisible}
       onClose={onClose}
       position={{ type: "anchor", anchorRef, placement: "above" }}
@@ -51,7 +52,7 @@ const ActionsPopover: React.FC<ActionsPopoverProps> = ({
           <span className="font-orbitron text-sm text-white/50">No actions</span>
         </div>
       ) : (
-        <div className="p-2 flex flex-col gap-2">
+        <div className="popover-list popover-list-headed p-2 flex flex-col gap-2">
           {actions.map((action, index) => {
             const isAvailable = action.available;
             const isActionPlayable = canPlayActions && isAvailable;
@@ -70,9 +71,8 @@ const ActionsPopover: React.FC<ActionsPopoverProps> = ({
                     ? { message: action.errors[0].message, count: action.errors.length }
                     : undefined
                 }
-                hoverEffect="glow"
                 animationDelay={index * 0.05}
-                className={`${!isActionPlayable && isAvailable ? "cursor-default" : ""} ${isPlayed ? "grayscale saturate-0" : ""}`}
+                className={`popover-list-item ${!isActionPlayable && isAvailable ? "cursor-default" : ""} ${isPlayed ? "grayscale saturate-0" : ""}`}
               >
                 <div className="flex flex-col gap-2 flex-1">
                   <div className="text-white/70 text-[11px] font-medium uppercase tracking-[0.5px] [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-[1.2] opacity-80 flex items-center gap-2 max-[768px]:text-[10px]">

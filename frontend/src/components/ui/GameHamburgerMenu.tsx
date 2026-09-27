@@ -79,6 +79,7 @@ const GameHamburgerMenu: React.FC<GameHamburgerMenuProps> = ({
 
   return (
     <GamePopover
+      className="game-popover-list"
       isVisible={isOpen}
       onClose={onClose}
       position={{

@@ -94,8 +94,9 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
       width={500}
       maxHeight="80vh"
       animation="slideDown"
+      className="game-popover-list"
     >
-      <div className="p-2 flex flex-col gap-2">
+      <div className="popover-list p-2 flex flex-col gap-2">
         {awards.map((award) => {
           const isFunded = award.isFunded;
           const isAvailable = award.available && !isFunded;
@@ -114,6 +115,7 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
           return (
             <GamePopoverItem
               key={award.type}
+              className="popover-list-item"
               state={getState()}
               onClick={isExecutable ? () => handleFundAward(award.type) : undefined}
               error={
@@ -127,7 +129,7 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
                 isFunded
                   ? {
                       borderColor: styleColor + "BB",
-                      background: "rgba(255,255,255,0.06)",
+                      background: "#141415",
                     }
                   : undefined
               }

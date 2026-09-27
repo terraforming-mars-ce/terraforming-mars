@@ -70,7 +70,6 @@ const ActionReusePopover: React.FC<ActionReusePopoverProps> = ({
                     ? { message: reuseErrors[0].message, count: reuseErrors.length }
                     : undefined
                 }
-                hoverEffect="glow"
                 animationDelay={index * 0.05}
               >
                 <div className="flex flex-col gap-2 flex-1">

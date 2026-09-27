@@ -1,3 +1,4 @@
+import CloseButton from "@/components/ui/buttons/CloseButton.tsx";
 import React, { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { GamePopoverProps } from "./types";
@@ -101,7 +102,7 @@ const GamePopover: React.FC<GamePopoverProps> = ({
   return createPortal(
     <div
       ref={popoverRef}
-      className={`fixed bg-space-black-darker/95 border-2 border-[var(--popover-accent)] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8),0_0_20px_rgba(var(--popover-accent-rgb),0.5)] backdrop-blur-space ${animationClass} flex flex-col overflow-hidden isolate pointer-events-auto max-[768px]:w-[280px] ${className}`}
+      className={`fixed game-panel game-panel-clipped ${animationClass} flex flex-col overflow-hidden isolate pointer-events-auto max-[768px]:w-[280px] ${className}`}
       style={{
         ...themeStyles,
         ...computedPosition,
@@ -133,14 +134,7 @@ const GamePopover: React.FC<GamePopoverProps> = ({
           {header.centerContent}
           <div className="flex items-center gap-2">
             {header.rightContent}
-            {header.showCloseButton && (
-              <button
-                className="text-white/70 hover:text-white text-xl leading-none transition-colors"
-                onClick={onClose}
-              >
-                ×
-              </button>
-            )}
+            {header.showCloseButton && <CloseButton onClick={onClose} />}
           </div>
         </div>
       )}
