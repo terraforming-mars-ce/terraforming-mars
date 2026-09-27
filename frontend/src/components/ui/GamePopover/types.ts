@@ -86,7 +86,6 @@ export interface GamePopoverItemProps {
   warning?: PopoverItemWarning;
   info?: PopoverItemInfo;
   statusBadge?: string; // "played", "claimed", "funded"
-  hoverEffect?: "translate-x" | "glow" | "background" | "none";
   animationDelay?: number;
   children: React.ReactNode;
   className?: string;

@@ -52,8 +52,9 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
       width={500}
       maxHeight="80vh"
       animation="slideDown"
+      className="game-popover-list"
     >
-      <div className="p-2 flex flex-col gap-2">
+      <div className="popover-list p-2 flex flex-col gap-2">
         {playerProjects.map((project) => {
           const isExecutable = canExecuteProjects && project.available;
           const styleColor = project.style?.color ?? "#6b7280";
@@ -61,6 +62,7 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
           return (
             <GamePopoverItem
               key={project.projectType}
+              className="popover-list-item"
               state={project.available ? "available" : "disabled"}
               onClick={isExecutable ? () => handleProjectClick(project) : undefined}
               borderColor={styleColor}
