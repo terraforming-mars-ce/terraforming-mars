@@ -1,5 +1,6 @@
 /* Tailwind CSS directives */
 @import "tailwindcss";
+@import "./assets/generated/fonts.css";
 
 /* Tailwind v4 Theme Configuration */
 @theme {
@@ -32,64 +33,6 @@
 
   /* Custom Letter Spacing */
   --letter-spacing-wider-2xl: 0.2em;
-}
-
-/* Orbitron Font Family */
-@font-face {
-  font-family: "Orbitron";
-  src: url("/fonts/Orbitron/Orbitron-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Orbitron";
-  src: url("/fonts/Orbitron/Orbitron-Medium.ttf") format("truetype");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Orbitron";
-  src: url("/fonts/Orbitron/Orbitron-SemiBold.ttf") format("truetype");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Orbitron";
-  src: url("/fonts/Orbitron/Orbitron-Bold.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Orbitron";
-  src: url("/fonts/Orbitron/Orbitron-ExtraBold.ttf") format("truetype");
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Orbitron";
-  src: url("/fonts/Orbitron/Orbitron-Black.ttf") format("truetype");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Prototype Font Family (used for resource icons) */
-@font-face {
-  font-family: "Prototype";
-  src: url("/assets/Prototype.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
 }
 
 html,
@@ -1334,5 +1277,210 @@ code {
       0 calc(100% - max(0px, var(--list-cut-bottom) - 0.6px))
     );
     transition: background-color 120ms;
+  }
+}
+
+@layer components {
+  :root {
+    --card-width: 200px;
+    --card-inspection-width: 360px;
+    --card-height: 280px;
+    --card-art-height: 98px;
+    --card-title-height: 44px;
+    --card-title-size: 13px;
+  }
+
+  .card-size {
+    width: var(--card-width);
+    max-width: 100%;
+    flex-shrink: 0;
+  }
+
+  .game-card {
+    width: 100%;
+    min-width: 0;
+    color: white;
+  }
+
+  .game-card-requirements {
+    min-height: 36px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .game-card-body {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    min-height: var(--card-height);
+    padding-bottom: 16px;
+  }
+
+  .game-card-frame {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    border: 1px solid rgba(60, 60, 70, 0.7);
+    clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%);
+  }
+
+  .game-card-frame::after {
+    content: "";
+    position: absolute;
+    top: 28px;
+    right: 0;
+    width: 40px;
+    border-top: 1px solid rgba(60, 60, 70, 0.7);
+    transform: rotate(45deg);
+    transform-origin: top right;
+  }
+
+  .game-card-stripe {
+    position: absolute;
+    left: -5px;
+    top: 2.5%;
+    bottom: 2.5%;
+    width: 5px;
+    background: var(--card-accent);
+    clip-path: polygon(0 4px, 100% 0, 100% 100%, 0 calc(100% - 4px));
+    pointer-events: none;
+  }
+
+  .game-card-heading {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .game-card-artwork {
+    height: var(--card-art-height);
+    margin: 20px 16px 0;
+    overflow: hidden;
+    background: rgb(255 255 255 / 0.05);
+    border: 1px solid rgba(60, 60, 70, 0.7);
+    border-radius: 3px;
+  }
+
+  .game-card-title {
+    position: relative;
+    min-height: var(--card-title-height);
+    margin: -12px 8px 0 0;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(60, 60, 70, 0.7);
+    background: color-mix(in srgb, var(--card-accent) 9%, #05080c);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+    font-size: var(--card-title-size);
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+
+  .game-card[data-presentation="compact"] .game-card-title span {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .game-card-tags {
+    position: absolute;
+    right: 0;
+    bottom: calc(var(--card-title-height) - 4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .game-card-behaviors {
+    min-height: 0;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px 0;
+    min-width: 0;
+  }
+
+  .game-card-description {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    padding: 12px 16px 0;
+    font-size: 16px;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    color: rgb(255 255 255 / 0.9);
+    text-align: left;
+  }
+
+  .game-card[data-presentation="inspection"] {
+    --card-badge-scale: 1.8;
+    --card-height: 504px;
+    --card-art-height: 176px;
+    --card-title-height: 64px;
+    --card-title-size: 22px;
+    --behavior-icon-size: 36px;
+    --behavior-icon-small-size: 36px;
+  }
+
+  .game-card[data-presentation="inspection"] .game-card-cost > div,
+  .game-card[data-presentation="inspection"] .game-card-tags > *,
+  .game-card[data-presentation="inspection"] .game-card-requirements > * {
+    zoom: var(--card-badge-scale);
+  }
+
+  .game-card[data-presentation="inspection"] .game-card-tags {
+    gap: calc(4px * var(--card-badge-scale));
+  }
+
+  .game-card[data-presentation="inspection"] .game-card-behaviors {
+    flex: 0 0 auto;
+    padding-top: 16px;
+  }
+
+  .game-card[data-presentation="inspection"] .game-card-requirements:empty {
+    min-height: 0;
+  }
+
+  .game-card[data-presentation="compact"] .game-card-body {
+    height: var(--card-height);
+  }
+
+  .game-card[data-presentation="compact"] .game-card-behaviors > div {
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .game-card-behaviors > div > div {
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 767px) {
+    :root {
+      --card-width: 160px;
+      --card-height: 240px;
+      --card-art-height: 84px;
+      --card-title-height: 36px;
+      --card-title-size: 11px;
+    }
+  }
+}
+
+@layer components {
+  [data-card-flight] > .game-card {
+    visibility: hidden;
+  }
+  .card-inspection-flight *,
+  .card-inspection-flight *::before,
+  .card-inspection-flight *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

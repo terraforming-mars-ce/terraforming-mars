@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 import { ChatMessageDto } from "@/types/generated/api-types.ts";
 import { Z_INDEX } from "@/constants/zIndex";
 
@@ -11,6 +11,7 @@ interface ChatOverlayProps {
   embedded?: boolean;
   isEndgame?: boolean;
   playerColorMap?: Map<string, string>;
+  onBoundsChange?: (bounds: DOMRectReadOnly | null) => void;
 }
 
 const CHAT_WIDTH = 416;
@@ -22,6 +23,7 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
   embedded,
   isEndgame,
   playerColorMap,
+  onBoundsChange,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -33,6 +35,24 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const snapBottom = BAR_HEIGHT;
+
+  useLayoutEffect(() => {
+    const element = containerRef.current;
+    if (!element || embedded || !onBoundsChange) {
+      return;
+    }
+    const measure = () => onBoundsChange(element.getBoundingClientRect());
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    window.addEventListener("resize", measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [embedded, onBoundsChange, position, snapX, isSnapped, isEndgame]);
+
+  useEffect(() => () => onBoundsChange?.(null), [onBoundsChange]);
 
   useEffect(() => {
     messagesEndRef.current?.parentElement?.scrollTo({

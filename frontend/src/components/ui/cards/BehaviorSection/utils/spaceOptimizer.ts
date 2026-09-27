@@ -9,7 +9,10 @@ import { createLayoutPlan } from "./layoutCalculator.ts";
  * @param classifiedBehaviors - Array of behaviors to analyze
  * @returns Layout plan including row estimates and overflow requirements
  */
-export const analyzeCardLayout = (classifiedBehaviors: ClassifiedBehavior[]): CardLayoutPlan => {
+export const analyzeCardLayout = (
+  classifiedBehaviors: ClassifiedBehavior[],
+  maxRows = MAX_CARD_ROWS,
+): CardLayoutPlan => {
   const behaviorPlans = classifiedBehaviors.map((classifiedBehavior, index) => {
     const { behavior, type } = classifiedBehavior;
     const layoutPlan = createLayoutPlan(behavior, type);
@@ -30,13 +33,13 @@ export const analyzeCardLayout = (classifiedBehaviors: ClassifiedBehavior[]): Ca
   });
 
   const totalEstimatedRows = behaviorPlans.reduce((sum, plan) => sum + plan.estimatedRows, 0);
-  const needsOverflowHandling = totalEstimatedRows > MAX_CARD_ROWS;
+  const needsOverflowHandling = totalEstimatedRows > maxRows;
 
   return {
     behaviors: behaviorPlans,
     totalEstimatedRows,
     needsOverflowHandling,
-    maxRows: MAX_CARD_ROWS,
+    maxRows,
   };
 };
 
@@ -61,7 +64,7 @@ export const optimizeBehaviorsForSpace = (
 
   // Strategy: Convert more resources to NxIcon format to save space
   const optimizedBehaviors = classifiedBehaviors.map((classifiedBehavior) => {
-    const { behavior, type } = classifiedBehavior;
+    const { behavior } = classifiedBehavior;
 
     // Create optimized behavior with more aggressive number formatting
     const optimizedBehavior = {
@@ -78,7 +81,7 @@ export const optimizeBehaviorsForSpace = (
       })),
     };
 
-    return { behavior: optimizedBehavior, type };
+    return { ...classifiedBehavior, behavior: optimizedBehavior };
   });
 
   return optimizedBehaviors;

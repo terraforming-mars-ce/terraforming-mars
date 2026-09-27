@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import GameLayout, { SolarSystemFade } from "./GameLayout.tsx";
 import CardsPlayedModal from "../../ui/modals/CardsPlayedModal.tsx";
@@ -31,6 +31,7 @@ import {
 import CorporationOverlay from "../../ui/overlay/CorporationOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
+import { useCardInspection, type CardInspectionDrag } from "@/hooks/useCardInspection.ts";
 import { useGameEvent } from "@/hooks/useGameEvent.ts";
 import { usePlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
@@ -548,6 +549,66 @@ export default function GameInterface() {
     isPreGamePhase ||
     !!currentPlayer?.pendingTileSelection;
 
+  const { inspections, inspectCard, closeInspection, finishInspection, clearInspection } =
+    useCardInspection();
+  const dragInspectionCard = useCallback(
+    (cardId: string, drag: CardInspectionDrag, detail: HTMLElement) => {
+      cardFanRef.current?.startInspectionDrag(cardId, drag, detail);
+    },
+    [],
+  );
+  const inspectionBlocked =
+    hideCardFanForModals ||
+    hasPendingActionSelection ||
+    (showProductionPhaseModal && !isProductionModalHidden) ||
+    showChoiceSelection ||
+    showActionChoiceSelection ||
+    showActionReuseSelection ||
+    showBehaviorChoiceStorage ||
+    showCardStorageSelection ||
+    showPaymentSelection ||
+    showActionStorageSelection ||
+    showTargetPlayerSelection ||
+    showActionTargetPlayerSelection ||
+    showCardResourceSelection ||
+    showAmountSelection ||
+    showFreeTradeWarning ||
+    showTabConflict ||
+    showCardsPlayedModal ||
+    showCardBrowser ||
+    showLeaveGameConfirm ||
+    showCloseGameConfirm ||
+    showEndGameConfirm ||
+    spectatePlayerId !== null;
+  const inspectionHand = replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? [];
+  const inspectedCards = inspectionBlocked
+    ? []
+    : inspections.flatMap((inspection) => {
+        const card = inspectionHand.find((candidate) => candidate.id === inspection.cardId);
+        return card ? [{ card, inspection }] : [];
+      });
+  useEffect(() => {
+    clearInspection();
+  }, [
+    game?.id,
+    currentPlayer?.id,
+    replay.isActive,
+    replayViewAsPlayer?.id,
+    spectatePlayerId,
+    clearInspection,
+  ]);
+  useEffect(() => {
+    if (inspectionBlocked) {
+      clearInspection();
+      return;
+    }
+    for (const inspection of inspections) {
+      if (!inspectionHand.some((card) => card.id === inspection.cardId)) {
+        finishInspection(inspection);
+      }
+    }
+  }, [inspectionBlocked, inspectionHand, inspections, clearInspection, finishInspection]);
+
   const cardFanTransitionClass = (() => {
     if (spectatePlayerId) {
       return "opacity-0 pointer-events-none";
@@ -614,6 +675,10 @@ export default function GameInterface() {
           phase.kind !== "spectating" && (
             <GameLayout
               ref={playerListRef}
+              inspectedCards={inspectedCards}
+              onInspectionReturned={finishInspection}
+              onCloseInspection={closeInspection}
+              onInspectionDrag={dragInspectionCard}
               gameState={replayGameState ?? game}
               currentPlayer={replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer)}
               playedCards={replayViewAsPlayer?.playedCards ?? currentPlayer?.playedCards ?? []}
@@ -1022,7 +1087,9 @@ export default function GameInterface() {
                   ref={cardFanRef}
                   cards={replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? []}
                   hideWhenModalOpen={hideCardFanForModals}
-                  onCardSelect={(_cardId) => {}}
+                  onInspectCard={inspectCard}
+                  inspectedCardIds={inspectedCards.map(({ card }) => card.id)}
+                  onDismissInspection={clearInspection}
                   onPlayCard={spectatePlayerId ? undefined : flow.handlePlayCard}
                 />
               </div>

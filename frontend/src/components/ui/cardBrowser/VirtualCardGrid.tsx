@@ -6,7 +6,6 @@ import type { CardDto } from "@/types/generated/api-types.ts";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 import GameCard from "../cards/GameCard.tsx";
 import CorporationCard from "../cards/CorporationCard.tsx";
-import RequirementsBox from "../cards/RequirementsBox.tsx";
 import type { CardFamily } from "./cardCatalog.ts";
 
 const noop = () => {};
@@ -31,14 +30,9 @@ const CatalogCard = memo(function CatalogCard({
       tabIndex={tabIndex}
       data-card-id={card.id}
       className="mx-auto w-full pb-3 cursor-pointer rounded-sm outline-none motion-reduce:[&_*]:animate-none motion-reduce:[&_*]:transition-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-4 focus-visible:ring-offset-black"
-      style={{ maxWidth: corporation ? 400 : 200 }}
+      style={{ maxWidth: corporation ? 400 : "var(--card-width)" }}
       onClick={() => onSelect(card.id)}
     >
-      {!corporation && (
-        <div className="flex min-h-9 flex-col justify-end">
-          <RequirementsBox requirements={card.requirements} inFlow />
-        </div>
-      )}
       {corporation ? (
         <CorporationCard
           card={card}
@@ -49,7 +43,7 @@ const CatalogCard = memo(function CatalogCard({
           borderColor={getCorporationBorderColor(card.name)}
         />
       ) : (
-        <GameCard card={card} isSelected={selected} onSelect={noop} catalog showCheckbox />
+        <GameCard card={card} isSelected={selected} showCheckbox />
       )}
     </div>
   );
@@ -70,11 +64,11 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
 }: VirtualCardGridProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
+  const [{ width, projectCardWidth }, setDimensions] = useState({ width: 0, projectCardWidth: 0 });
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const pendingFocus = useRef<string | null>(null);
   const anchorId = useRef<string | null>(null);
-  const cardWidth = family === "corporation" ? 400 : 200;
+  const cardWidth = family === "corporation" ? 400 : projectCardWidth;
   const columns = Math.max(1, Math.floor((width + 24) / (cardWidth + 24)));
   const rows = useMemo(() => {
     const result: CardDto[][] = [];
@@ -119,9 +113,26 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
     if (!content) {
       return;
     }
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    const measure = () => {
+      const dimensions = {
+        width: content.clientWidth,
+        projectCardWidth: parseFloat(getComputedStyle(content).getPropertyValue("--card-width")),
+      };
+      setDimensions((previous) =>
+        previous.width === dimensions.width &&
+        previous.projectCardWidth === dimensions.projectCardWidth
+          ? previous
+          : dimensions,
+      );
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(content);
-    return () => observer.disconnect();
+    window.addEventListener("resize", measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, []);
 
   useLayoutEffect(() => {

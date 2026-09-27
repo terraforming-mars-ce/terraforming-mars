@@ -29,6 +29,9 @@ import { globalWebSocketManager } from "../../../services/globalWebSocketManager
 import { useAppPhaseStore } from "@/stores/appPhaseStore.ts";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import GameButton from "../../ui/buttons/GameButton.tsx";
+import type { CardInspectionSession, CardInspectionDrag } from "@/hooks/useCardInspection.ts";
+import CardInspection from "../../ui/overlay/CardInspection.tsx";
+import type { PlayerCardDto } from "@/types/generated/api-types.ts";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 
 export function SolarSystemFade({ children }: { children: React.ReactNode }) {
@@ -41,6 +44,10 @@ export function SolarSystemFade({ children }: { children: React.ReactNode }) {
 
 interface GameLayoutProps {
   gameState: GameDto;
+  inspectedCards: { card: PlayerCardDto; inspection: CardInspectionSession }[];
+  onInspectionReturned: (inspection: CardInspectionSession) => void;
+  onCloseInspection: (restoreFocus?: boolean) => void;
+  onInspectionDrag: (cardId: string, drag: CardInspectionDrag, detail: HTMLElement) => void;
   currentPlayer: PlayerDto | null;
   playedCards?: CardDto[];
   corporationCard?: CardDto | null;
@@ -81,6 +88,10 @@ interface GameLayoutProps {
 const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLayout(
   {
     gameState,
+    inspectedCards,
+    onInspectionReturned,
+    onCloseInspection,
+    onInspectionDrag,
     currentPlayer,
     playedCards = [],
     corporationCard = null,
@@ -119,6 +130,8 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
   },
   ref,
 ) {
+  const [chatBounds, setChatBounds] = useState<DOMRectReadOnly | null>(null);
+
   // Create a map of all players (current + others) for easy lookup
   const playerMap = new Map<string, PlayerDto | OtherPlayerDto>();
   if (gameState?.currentPlayer) {
@@ -233,6 +246,7 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
         <SolarSystemFade>
           <div className={uiAnimationClass}>
             <ChatOverlay
+              onBoundsChange={setChatBounds}
               messages={chatMessages}
               onSendMessage={onSendChatMessage}
               isEndgame={endgameFadeUI}
@@ -241,6 +255,20 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
           </div>
         </SolarSystemFade>
       )}
+
+      {showUI &&
+        inspectedCards.map(({ card, inspection }) => (
+          <SolarSystemFade key={card.id}>
+            <CardInspection
+              card={card}
+              inspection={inspection}
+              onReturned={onInspectionReturned}
+              chatBounds={chatBounds}
+              onClose={onCloseInspection}
+              onDragStart={onInspectionDrag}
+            />
+          </SolarSystemFade>
+        ))}
 
       {/* Player list — stays visible in solar system view */}
       {showUI && (
@@ -282,14 +310,17 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
 
             <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
 
-            {playedCardNotification && onPlayedCardTogglePin && onPlayedCardAdvance && (
-              <PlayedCardNotificationOverlay
-                notification={playedCardNotification}
-                isPinned={isPlayedCardPinned ?? false}
-                onTogglePin={onPlayedCardTogglePin}
-                onAdvance={onPlayedCardAdvance}
-              />
-            )}
+            {inspectedCards.length === 0 &&
+              playedCardNotification &&
+              onPlayedCardTogglePin &&
+              onPlayedCardAdvance && (
+                <PlayedCardNotificationOverlay
+                  notification={playedCardNotification}
+                  isPinned={isPlayedCardPinned ?? false}
+                  onTogglePin={onPlayedCardTogglePin}
+                  onAdvance={onPlayedCardAdvance}
+                />
+              )}
           </div>
         </SolarSystemFade>
       )}
