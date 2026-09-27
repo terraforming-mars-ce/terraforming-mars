@@ -1,6 +1,7 @@
 import React from "react";
 import { GamePopoverItemProps } from "./types";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   state,
@@ -18,10 +19,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   const { playButtonHoverSound, playButtonClickSound } = useSoundEffects();
   const isClickable = state === "available" && onClick;
   const hasError = error && state === "disabled";
-  let contentLayout = "";
-  if (!borderColor) {
-    contentLayout = hasError ? "flex flex-col items-stretch gap-2" : "flex items-center gap-3";
-  }
+  const contentLayout = borderColor ? "" : "flex items-center gap-3";
   let surfaceOpacity = 0.2;
   let borderOpacity = 0.3;
   if (state === "disabled") {
@@ -94,12 +92,13 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
       }
     >
       {hasError && (
-        <div className={`flex justify-end ${borderColor ? "mb-2" : ""}`}>
-          <span className="popover-status popover-status-error relative">
-            {error.message}
-            {error.count && error.count > 1 && ` (+${error.count - 1})`}
-          </span>
-        </div>
+        <span
+          className="popover-status popover-status-error absolute top-2 right-2 pointer-events-none"
+          style={{ zIndex: Z_INDEX.UI_BASE }}
+        >
+          {error.message}
+          {error.count && error.count > 1 && ` (+${error.count - 1})`}
+        </span>
       )}
 
       {warning && state === "available" && (
@@ -115,7 +114,10 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
       )}
 
       {statusBadge && (
-        <span className="absolute top-2 right-2 text-[10px] text-[var(--popover-accent)] bg-[rgba(var(--popover-accent-rgb),0.3)] px-1.5 py-0.5 rounded border border-[rgba(var(--popover-accent-rgb),0.5)]">
+        <span
+          className="popover-status absolute top-2 right-2 pointer-events-none"
+          style={{ zIndex: Z_INDEX.UI_BASE }}
+        >
           {statusBadge}
         </span>
       )}
