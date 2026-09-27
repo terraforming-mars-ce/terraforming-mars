@@ -94,7 +94,7 @@ export const SPECIAL_ICONS: { [key: string]: string } = {
   "card-peek": "/assets/resources/card.png",
   "card-discard": "/assets/resources/card.png",
   "card-buy": "/assets/resources/card.png",
-  card: "/assets/misc/corpCard.png",
+  card: "/assets/resources/card.png",
   tag: "/assets/tags/wild.png",
   discount: "/assets/resources/megacredit.png",
   milestone: "/assets/misc/checkmark.png",
