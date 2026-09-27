@@ -11,7 +11,7 @@ export const MODAL_THEMES = {
   cardsPlayed: { accent: "#9664ff" },
   production: { accent: "#4a90d9" },
   corporation: { accent: "#6496ff" },
-  default: { accent: "#6496ff" },
+  default: { accent: "#344974" },
 } as const;
 
 export type ModalThemeName = keyof typeof MODAL_THEMES;
@@ -30,7 +30,6 @@ export interface GameModalProps {
   lockScroll?: boolean;
   preventClose?: boolean;
   onPreventedClose?: () => void;
-  glow?: boolean;
   outerContent?: React.ReactNode;
   children: React.ReactNode;
   className?: string;

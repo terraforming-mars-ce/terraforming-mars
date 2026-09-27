@@ -1,4 +1,6 @@
-import React from "react";
+import { Z_INDEX } from "@/constants/zIndex.ts";
+import React, { useRef } from "react";
+import { createPortal } from "react-dom";
 import { GameModalProps, ModalSize } from "./types";
 import { getThemeStyles } from "./themes";
 import { useModal } from "./useModal";
@@ -16,18 +18,19 @@ const GameModal: React.FC<GameModalProps> = ({
   theme,
   size = "large",
   animation = "slideIn",
-  zIndex = 3000,
+  zIndex = Z_INDEX.STANDARD_MODAL,
   closeOnBackdrop = true,
   closeOnEscape = true,
   lockScroll = true,
   preventClose = false,
   onPreventedClose,
-  glow = true,
   outerContent,
   children,
   className = "",
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
   useModal({
+    modalRef,
     isVisible,
     onClose,
     closeOnEscape,
@@ -48,29 +51,33 @@ const GameModal: React.FC<GameModalProps> = ({
     }
   };
 
-  const animationClass =
-    animation === "slideIn"
-      ? "animate-[modalSlideIn_0.25s_ease-out]"
-      : animation === "fadeIn"
-        ? "animate-[modalFadeIn_0.3s_ease-out]"
-        : "";
+  let animationClass = "";
+  if (animation === "slideIn") {
+    animationClass = "animate-[modalSlideIn_0.25s_ease-out]";
+  } else if (animation === "fadeIn") {
+    animationClass = "menu-enter";
+  }
 
   const modalBox = (
     <div
-      className={`relative w-full ${sizeClasses[size]} max-h-[90vh] bg-space-black-darker/95 border-2 border-[var(--modal-accent)] rounded-[20px] overflow-hidden ${glow ? "shadow-[0_10px_40px_rgba(0,0,0,0.8),0_0_15px_rgba(var(--modal-accent-rgb),0.5)]" : "shadow-[0_10px_40px_rgba(0,0,0,0.8)]"} backdrop-blur-space ${animationClass} flex flex-col ${className}`}
+      ref={modalRef}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      className={`relative text-white w-full ${sizeClasses[size]} max-h-[90vh] game-panel game-panel-clipped overflow-hidden ${animationClass} flex flex-col ${className}`}
       style={themeStyles}
     >
       {children}
     </div>
   );
 
-  return (
+  return createPortal(
     <div
       className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center p-5"
       style={{ zIndex }}
     >
       <div
-        className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 cursor-default animate-[modalFadeIn_0.3s_ease-out]"
+        className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 cursor-default animate-[fadeIn_0.3s_ease-out]"
         onClick={handleBackdropClick}
       />
 
@@ -82,7 +89,8 @@ const GameModal: React.FC<GameModalProps> = ({
       ) : (
         modalBox
       )}
-    </div>
+    </div>,
+    document.body,
   );
 };
 
