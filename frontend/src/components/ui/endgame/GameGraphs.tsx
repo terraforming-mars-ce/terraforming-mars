@@ -1,4 +1,6 @@
-import { FC, useState, useMemo, useRef, useEffect } from "react";
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
+import { FC, useState, useMemo, useId } from "react";
+import GameSelect from "../GameSelect.tsx";
 import {
   ResponsiveContainer,
   LineChart,
@@ -9,7 +11,6 @@ import {
   Tooltip,
 } from "recharts";
 import type { GameHistoryEntryDto } from "../../../types/generated/api-types";
-import { useHoverSound } from "../../../hooks/useHoverSound";
 
 type GraphMode =
   | "score"
@@ -161,68 +162,12 @@ const Y_AXIS_PROPS = {
   domain: ["auto" as const, "auto" as const],
 };
 
-function GraphModeDropdown({
-  mode,
-  onModeChange,
-  onMouseEnter,
-}: {
-  mode: GraphMode;
-  onModeChange: (mode: GraphMode) => void;
-  onMouseEnter?: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative" onMouseEnter={onMouseEnter}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="bg-black text-white text-[11px] px-3 py-1 border border-white/20 rounded font-orbitron font-bold cursor-pointer flex items-center gap-2"
-      >
-        {GRAPH_MODE_LABELS[mode]}
-        <span className="text-[9px] text-white/50">▼</span>
-      </button>
-      {open && (
-        <div className="absolute top-full right-0 mt-1 bg-black border border-white/20 rounded overflow-hidden z-20 min-w-[140px]">
-          {Object.entries(GRAPH_MODE_LABELS).map(([value, label]) => (
-            <button
-              key={value}
-              onClick={() => {
-                onModeChange(value as GraphMode);
-                setOpen(false);
-              }}
-              className={`block w-full text-left px-3 py-1.5 text-[11px] font-orbitron font-bold cursor-pointer ${
-                mode === value
-                  ? "bg-white/20 text-white"
-                  : "text-white/60 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 type XAxisMode = "action" | "time";
 
 const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames }) => {
   const [mode, setMode] = useState<GraphMode>("score");
   const [xAxisMode, setXAxisMode] = useState<XAxisMode>("action");
-  const hoverSound = useHoverSound();
+  const graphModeId = useId();
 
   const playerIds = useMemo(() => Object.keys(playerNames), [playerNames]);
 
@@ -446,12 +391,11 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
     <div className="h-full relative">
       <div className="absolute top-6 right-8 z-10 flex items-center gap-3">
         <div className="flex rounded overflow-hidden border border-white/20">
-          <button
+          <GameButton
+            emphasis="quiet"
             onClick={() => {
-              hoverSound.onClick?.();
               setXAxisMode("action");
             }}
-            onMouseEnter={hoverSound.onMouseEnter}
             className={`px-3 py-1 text-[11px] font-orbitron font-bold cursor-pointer ${
               xAxisMode === "action"
                 ? "bg-white/20 text-white"
@@ -459,13 +403,12 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
             }`}
           >
             Action
-          </button>
-          <button
+          </GameButton>
+          <GameButton
+            emphasis="quiet"
             onClick={() => {
-              hoverSound.onClick?.();
               setXAxisMode("time");
             }}
-            onMouseEnter={hoverSound.onMouseEnter}
             className={`px-3 py-1 text-[11px] font-orbitron font-bold cursor-pointer ${
               xAxisMode === "time"
                 ? "bg-white/20 text-white"
@@ -473,15 +416,14 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
             }`}
           >
             Time
-          </button>
+          </GameButton>
         </div>
-        <GraphModeDropdown
-          mode={mode}
-          onModeChange={(m) => {
-            hoverSound.onClick?.();
-            setMode(m);
-          }}
-          onMouseEnter={hoverSound.onMouseEnter}
+        <GameSelect
+          id={graphModeId}
+          label="Graph metric"
+          value={mode}
+          options={Object.entries(GRAPH_MODE_LABELS).map(([id, name]) => ({ id, name }))}
+          onChange={(value) => setMode(value as GraphMode)}
         />
       </div>
 

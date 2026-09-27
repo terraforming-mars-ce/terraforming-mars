@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import { FC, ReactNode, useState, useMemo } from "react";
 
 interface GenerationMarker {
@@ -158,23 +159,25 @@ const ReplayControls: FC<ReplayControlsProps> = ({
         {/* Speed selector — absolutely positioned right of label */}
         <div className="absolute flex items-center gap-1" style={{ left: "35%" }}>
           {SPEED_OPTIONS.map((opt) => (
-            <button
+            <GameButton
+              emphasis="quiet"
               key={opt.value}
               onClick={() => onSpeedChange(opt.value)}
-              className={`px-1.5 py-0.5 text-xs rounded transition-colors cursor-pointer ${
+              className={`px-1.5 py-0.5 text-xs rounded-none transition-colors cursor-pointer ${
                 playbackSpeed === opt.value
                   ? "bg-white/20 text-white"
                   : "text-white/40 hover:text-white/70"
               }`}
             >
               {opt.label}
-            </button>
+            </GameButton>
           ))}
         </div>
 
         {/* Centered playback controls */}
         <div className="flex items-center gap-1">
-          <button
+          <GameButton
+            emphasis="quiet"
             onClick={onStepBackward}
             disabled={currentIndex === 0}
             className="p-2 text-white/60 hover:text-white disabled:text-white/20 transition-colors cursor-pointer disabled:cursor-default"
@@ -182,9 +185,10 @@ const ReplayControls: FC<ReplayControlsProps> = ({
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
             </svg>
-          </button>
+          </GameButton>
 
-          <button
+          <GameButton
+            emphasis="quiet"
             onClick={isPlaying ? onPause : onPlay}
             className="p-2 text-white/80 hover:text-white transition-colors cursor-pointer"
           >
@@ -197,9 +201,10 @@ const ReplayControls: FC<ReplayControlsProps> = ({
                 <path d="M8 5v14l11-7z" />
               </svg>
             )}
-          </button>
+          </GameButton>
 
-          <button
+          <GameButton
+            emphasis="quiet"
             onClick={onStepForward}
             disabled={currentIndex >= totalStates - 1}
             className="p-2 text-white/60 hover:text-white disabled:text-white/20 transition-colors cursor-pointer disabled:cursor-default"
@@ -207,7 +212,7 @@ const ReplayControls: FC<ReplayControlsProps> = ({
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
             </svg>
-          </button>
+          </GameButton>
         </div>
 
         {/* Right slot — absolutely positioned right */}
