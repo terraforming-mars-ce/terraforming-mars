@@ -5,14 +5,14 @@
  */
 
 export const OVERLAY_CONTAINER_CLASS =
-  "relative z-[1] w-[90%] max-w-[1400px] max-h-[90vh] flex flex-col bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] overflow-hidden backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_60px_rgba(30,60,150,0.5)] max-[768px]:w-full max-[768px]:h-screen max-[768px]:max-h-screen max-[768px]:rounded-none";
+  "relative z-[1] w-[90%] max-w-[1400px] max-h-[90vh] flex flex-col game-panel game-panel-clipped game-window overflow-hidden max-[768px]:w-full max-[768px]:h-screen max-[768px]:max-h-screen max-[768px]:rounded-none";
 
 export const OVERLAY_BACKDROP_BLUR_CLASS = "absolute inset-0 backdrop-blur-sm";
 export const OVERLAY_BACKDROP_TINT_CLASS =
   "absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]";
 
 export const OVERLAY_HEADER_CLASS =
-  "py-6 px-8 bg-black/40 border-b border-space-blue-600 max-[768px]:p-5";
+  "py-6 px-8 bg-black/40 border-b border-white/15 max-[768px]:p-5";
 
 export const OVERLAY_TITLE_CLASS =
   "m-0 font-orbitron text-[28px] font-bold text-white text-shadow-glow tracking-wider max-[768px]:text-2xl";
@@ -25,7 +25,7 @@ export const OVERLAY_CARDS_CONTAINER_CLASS =
 export const OVERLAY_CARDS_INNER_CLASS = "flex gap-6 mx-auto py-5 max-[768px]:gap-4";
 
 export const OVERLAY_FOOTER_CLASS =
-  "py-6 px-8 bg-black/40 border-t border-space-blue-600 flex justify-between items-center max-[768px]:p-5 max-[768px]:flex-col max-[768px]:gap-5";
+  "py-6 px-8 bg-black/40 border-t border-white/15 flex justify-between items-center max-[768px]:p-5 max-[768px]:flex-col max-[768px]:gap-5";
 
 export const OVERLAY_FOOTER_LEFT_CLASS =
   "flex gap-8 items-center max-[768px]:w-full max-[768px]:justify-between";

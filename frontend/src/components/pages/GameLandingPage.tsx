@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import GameButton from "../ui/buttons/GameButton.tsx";
 import { apiService } from "../../services/apiService";
 import { globalWebSocketManager } from "../../services/globalWebSocketManager.ts";
-import { useSpaceBackground } from "../../contexts/SpaceBackgroundContext.tsx";
 import { useNotifications } from "../../contexts/NotificationContext.tsx";
 import { GameDto } from "../../types/generated/api-types.ts";
 import { getCorporationLogo } from "../../utils/corporationLogos.tsx";
@@ -17,7 +16,6 @@ const GameLandingPage: React.FC = () => {
   const { showNotification } = useNotifications();
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [isFadedIn, setIsFadedIn] = useState(false);
-  const { preloadSkybox } = useSpaceBackground();
   const [savedGameData, setSavedGameData] = useState<{
     game: GameDto;
     playerId: string;
@@ -31,9 +29,6 @@ const GameLandingPage: React.FC = () => {
   useEffect(() => {
     const checkExistingGame = async () => {
       try {
-        // Preload skybox in parallel with game check
-        void preloadSkybox();
-
         // Check localStorage for existing game
         const savedGameDataString = localStorage.getItem("terraforming-mars-game");
         if (savedGameDataString) {
@@ -61,7 +56,7 @@ const GameLandingPage: React.FC = () => {
     };
 
     void checkExistingGame();
-  }, [preloadSkybox]);
+  }, []);
 
   useEffect(() => {
     setTimeout(() => {
@@ -163,45 +158,46 @@ const GameLandingPage: React.FC = () => {
     <div
       className={`min-h-screen text-white font-sans transition-opacity duration-300 ease-out relative z-10 ${isFadingOut || !isFadedIn ? "opacity-0" : "opacity-100"}`}
     >
-      <div className="relative z-[1] w-full min-h-screen flex flex-col items-center justify-center">
-        <div className="text-center px-5 py-5">
-          <h1 className="font-orbitron text-[56px] text-white mb-[60px] text-shadow-glow-strong font-bold tracking-wider-2xl text-center mx-auto leading-tight">
+      <div className="menu-shell relative items-start">
+        <div className="text-left py-5 max-w-[520px]">
+          <h1 className="font-orbitron text-[clamp(2rem,4vw,4.5rem)] text-white mb-10 text-shadow-glow-strong font-bold tracking-wider-2xl text-left leading-tight">
             TERRAFORMING
             <br />
             MARS
           </h1>
 
-          <div className="flex gap-5 justify-center">
+          <div className="flex flex-wrap gap-4">
             <GameButton
               as="link"
               to="/create"
               size="lg"
-              linkOnClick={handleCreateGame}
-              className="px-10 py-5"
+              onClick={handleCreateGame}
+              className="!px-8"
             >
-              New Game
+              New game
             </GameButton>
 
             <GameButton
               as="link"
               to="/join"
+              emphasis="secondary"
               size="lg"
-              linkOnClick={handleJoinGame}
-              className="px-10 py-5"
+              onClick={handleJoinGame}
+              className="!px-8"
             >
-              Browse
+              Browse games
             </GameButton>
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center gap-5">
+        <div className="mt-10 flex flex-col items-start gap-5 max-w-full">
           {savedGameData && (
             <div
               ref={reconnectCardRef}
               onTransitionEnd={handleDismissTransitionEnd}
               className={`transition-all duration-300 ${isDismissing ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}
             >
-              <div className="relative w-[500px] bg-space-black-darker/90 border-2 border-space-blue-500 rounded-xl p-8 backdrop-blur-space">
+              <div className="relative w-[500px] max-w-full game-panel p-6">
                 <button
                   onClick={handleDismiss}
                   className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/10"

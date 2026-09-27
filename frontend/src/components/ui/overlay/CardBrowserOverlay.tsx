@@ -1,4 +1,5 @@
-import React, { useRef } from "react";
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import CardBrowser from "../CardBrowser.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 
@@ -7,22 +8,70 @@ interface CardBrowserOverlayProps {
   onClose: () => void;
 }
 
-const CardBrowserOverlay: React.FC<CardBrowserOverlayProps> = ({ isVisible, onClose }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+export default function CardBrowserOverlay({ isVisible, onClose }: CardBrowserOverlayProps) {
+  const panel = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  }, [onClose]);
+  useEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+    const previous = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      Array.from(
+        panel.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input, select, summary, [tabindex="0"]',
+        ) ?? [],
+      ).filter(
+        (element) =>
+          element.getClientRects().length > 0 &&
+          !element.closest("[inert]") &&
+          getComputedStyle(element).visibility !== "hidden",
+      );
+    focusable()[0]?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        event.preventDefault();
+        event.stopPropagation();
+        close.current();
+      } else if (event.key === "Tab") {
+        const elements = focusable();
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    panel.current?.addEventListener("keydown", handleKey);
+    const element = panel.current;
+    return () => {
+      element?.removeEventListener("keydown", handleKey);
+      previous?.focus();
+    };
+  }, [isVisible]);
 
   if (!isVisible) {
     return null;
   }
-
-  return (
+  return createPortal(
     <div
-      ref={scrollRef}
-      className="fixed inset-0 overflow-y-auto bg-black"
-      style={{ zIndex: Z_INDEX.STANDARD_MODAL }}
+      ref={panel}
+      data-overlay-layer
+      role="dialog"
+      aria-modal="true"
+      aria-label="Card browser"
+      className="fixed inset-0 overflow-hidden bg-black"
+      style={{ zIndex: Z_INDEX.APP_OVERLAY }}
     >
-      <CardBrowser onBack={onClose} backLabel="Back to Game" scrollContainerRef={scrollRef} />
-    </div>
+      <CardBrowser onBack={onClose} backLabel="Back to Game" />
+    </div>,
+    document.body,
   );
-};
-
-export default CardBrowserOverlay;
+}

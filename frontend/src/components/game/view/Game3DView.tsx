@@ -1,4 +1,6 @@
 import { Suspense, useEffect, useMemo, useState, useRef, useCallback } from "react";
+import CanvasClock from "../../3d/CanvasClock.tsx";
+import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -64,7 +66,7 @@ function CentralSunLight({ startDark = false }: { startDark?: boolean }) {
       intensityMultiplier = 0;
     } else {
       const elapsed = state.clock.elapsedTime - sunriseStartTime.current;
-      const t = Math.min(elapsed / 1.5, 1);
+      const t = Math.min(elapsed / 2.5, 1);
       intensityMultiplier = 1 - (1 - t) * (1 - t);
     }
 
@@ -349,6 +351,8 @@ export default function Game3DView({
     }
   };
 
+  const browserOpen = useUIOverlayStore((state) => state.showCardBrowser);
+
   const pendingTileSelection = gameState.currentPlayer?.pendingTileSelection;
 
   return (
@@ -364,9 +368,8 @@ export default function Game3DView({
     >
       {showUI && pendingTileSelection && (
         <div
-          className={`absolute top-[66px] left-1/2 transform -translate-x-1/2 z-50
-                       bg-space-black/90 backdrop-blur-space border border-space-blue-500
-                       rounded-lg px-6 py-3 shadow-glow-lg ${uiAnimationClass}`}
+          className={`absolute top-[66px] left-1/2 -translate-x-1/2 game-panel game-panel-clipped game-window px-6 py-3 ${uiAnimationClass}`}
+          style={{ zIndex: Z_INDEX.TILE_PLACEMENT_PROMPT }}
         >
           <div className="flex items-center gap-2">
             <span className="font-orbitron text-lg text-white tracking-wider-2xl">Place</span>
@@ -379,6 +382,7 @@ export default function Game3DView({
       <TravelFade />
 
       <Canvas
+        frameloop={browserOpen ? "never" : "always"}
         camera={{
           position: cameraConfig.position,
           fov: cameraConfig.fov,
@@ -397,6 +401,7 @@ export default function Game3DView({
         dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
         shadows={{ type: THREE.PCFSoftShadowMap }}
       >
+        <CanvasClock />
         <MarsRotationProvider>
           <Suspense fallback={null}>
             <SkyboxLoader onReady={onSkyboxReady} />

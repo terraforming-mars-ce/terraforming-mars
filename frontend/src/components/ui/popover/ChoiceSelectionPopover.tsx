@@ -143,24 +143,20 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
               key={index}
               className={`
                 relative
-                bg-black/30
-                border-2 border-space-blue-500/40
-                rounded-[10px] px-3.5 py-3
+                game-panel game-panel-clipped game-choice
+                px-3.5 py-3
                 mb-2
                 transition-all duration-[250ms] ease-out
                 animate-choiceSlideIn
                 ${
-                  isSelectable
-                    ? "cursor-pointer hover:border-space-blue-500/80 hover:bg-black/50 hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]"
-                    : "cursor-default opacity-60"
+                  isSelectable ? "cursor-pointer hover:brightness-125" : "cursor-default opacity-60"
                 }
               `}
               style={{ animationDelay: `${delay}s` }}
               onClick={() => isSelectable && handleChoiceClick(index)}
             >
               {hasBackendErrors && (
-                <div className="absolute top-2 right-2 z-[4] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(231,76,60,0.8)] shadow-[0_2px_8px_rgba(231,76,60,0.4)] flex items-center gap-1">
-                  <span>⚠</span>
+                <div className="popover-status popover-status-error absolute top-2 right-2">
                   <span className="max-w-[140px] truncate">{choice.errors[0].message}</span>
                 </div>
               )}
@@ -194,7 +190,7 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
       </GameFlowBody>
 
       <GameFlowFooter>
-        <GameButton buttonType="secondary" variant="info" size="sm" onClick={onCancel}>
+        <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
           Cancel
         </GameButton>
       </GameFlowFooter>

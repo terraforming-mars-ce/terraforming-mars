@@ -15,6 +15,7 @@ import {
   ResourceTypeHeat,
 } from "../../../types/generated/api-types.ts";
 import { getCorporationLogo } from "@/utils/corporationLogos.tsx";
+import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 import { getTagIconPath } from "@/utils/iconStore.ts";
 import { FormattedDescription } from "../display/FormattedDescription";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
@@ -26,11 +27,39 @@ interface CorporationCardProps {
   showCheckbox?: boolean;
   borderColor?: string;
   disableInteraction?: boolean;
+  catalog?: boolean;
 }
 
 const CARD_CLIP_PATH = "polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%)";
 
-const ACCENT_COLOR = "#ffc107";
+const behaviorCache = new WeakMap<CardBehaviorDto[], CardBehaviorDto[]>();
+
+function filterBehaviors(behaviors: CardBehaviorDto[] | undefined) {
+  if (!behaviors || behaviors.length === 0) {
+    return [];
+  }
+  const cached = behaviorCache.get(behaviors);
+  if (cached) {
+    return cached;
+  }
+  const filtered = behaviors.filter((behavior) => {
+    const isAutoCorporationStart = behavior.triggers?.some(
+      (t) => t.type === "auto-corporation-start",
+    );
+    const isAutoCorporationFirstAction = behavior.triggers?.some(
+      (t) => t.type === "auto-corporation-first-action",
+    );
+    if (isAutoCorporationStart) {
+      return behavior.triggers?.some((t) => t.condition !== undefined) ?? false;
+    }
+    if (isAutoCorporationFirstAction) {
+      return false;
+    }
+    return true;
+  });
+  behaviorCache.set(behaviors, filtered);
+  return filtered;
+}
 
 const CorporationCard: React.FC<CorporationCardProps> = ({
   card,
@@ -39,6 +68,7 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
   showCheckbox = false,
   borderColor,
   disableInteraction = false,
+  catalog = false,
 }) => {
   const [startingDescription, setStartingDescription] = useState<string | null>(null);
   const [startingTooltipPos, setStartingTooltipPos] = useState<{
@@ -65,7 +95,7 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
     }
   }, [startingDescription]);
 
-  const effectiveBorderColor = borderColor || ACCENT_COLOR;
+  const effectiveBorderColor = borderColor || getCorporationBorderColor(card.name);
 
   const handleClick = useCallback(() => {
     pendingSoundRef.current = true;
@@ -184,27 +214,6 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
     return <GameIcon iconType={output.type} amount={output.amount} size="large" />;
   };
 
-  const filterBehaviors = (behaviors: CardBehaviorDto[] | undefined) => {
-    if (!behaviors || behaviors.length === 0) {
-      return [];
-    }
-    return behaviors.filter((behavior) => {
-      const isAutoCorporationStart = behavior.triggers?.some(
-        (t) => t.type === "auto-corporation-start",
-      );
-      const isAutoCorporationFirstAction = behavior.triggers?.some(
-        (t) => t.type === "auto-corporation-first-action",
-      );
-      if (isAutoCorporationStart) {
-        return behavior.triggers?.some((t) => t.condition !== undefined) ?? false;
-      }
-      if (isAutoCorporationFirstAction) {
-        return false;
-      }
-      return true;
-    });
-  };
-
   const startingResources =
     card.startingResources || getStartingResourcesFromBehaviors(card.behaviors);
   const startingProduction =
@@ -224,7 +233,7 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
 
   return (
     <div
-      className={`relative w-[400px] min-h-[380px] p-4 transition-all duration-200 z-[1] group select-none ${disableInteraction ? "" : "cursor-pointer"}`}
+      className={`relative ${catalog ? "w-full" : "w-[400px]"} min-h-[380px] p-4 transition-colors duration-200 z-[1] group select-none ${disableInteraction ? "" : "cursor-pointer"}`}
       onClick={disableInteraction ? undefined : handleClick}
     >
       {/* Inner card body with clip-path */}
@@ -281,10 +290,8 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
       )}
 
       {/* Corporation logo area */}
-      <div className="relative z-[1] mb-1 p-4 bg-black/30 rounded-lg flex justify-center items-center min-h-[110px] [&>*]:box-content [&>*]:[filter:drop-shadow(0_2px_4px_rgba(0,0,0,0.3))] [&>*]:rounded-[4px] [&>*>*]:rounded-[4px]">
-        <div className="transform scale-[1.3] origin-center">
-          {getCorporationLogo(card.name.toLowerCase())}
-        </div>
+      <div className="relative z-[1] mb-1 px-[34px] py-[22px] flex justify-center items-center h-[152px]">
+        {getCorporationLogo(card.name, "w-full max-w-[240px] md:max-w-[264px] h-[108px]")}
       </div>
 
       {/* Tags on right side */}

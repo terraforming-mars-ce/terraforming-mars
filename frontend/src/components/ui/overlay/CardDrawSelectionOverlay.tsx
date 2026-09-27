@@ -203,7 +203,7 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
             </div>
             {!isCardDraw && (
               <GameButton
-                buttonType="secondary"
+                emphasis="secondary"
                 size="sm"
                 onClick={() => setShowPlayability((prev) => !prev)}
               >

@@ -1,176 +1,152 @@
 import React, { forwardRef } from "react";
-import { Link } from "react-router-dom";
-import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
+import { Link, type LinkProps } from "react-router-dom";
+import { useHoverSound } from "@/hooks/useHoverSound.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
-type ButtonType = "textonly" | "primary" | "secondary";
-type ButtonVariant = "info" | "success" | "warn" | "error";
-type ButtonSize = "xs" | "sm" | "md" | "lg";
+export const ANGLE_INDENT = 20;
+export const BUTTON_SPACING = 6;
+export type EdgeStyle = "slope-left" | "slope-right" | "flat";
+type Emphasis = "primary" | "secondary" | "quiet";
+type Tone = "info" | "success" | "warn" | "error";
 
-const variantColors: Record<
-  ButtonVariant,
-  { bg: string; bgHover: string; border: string; borderHover: string; text: string }
-> = {
-  info: {
-    bg: "bg-space-blue-600",
-    bgHover: "hover:bg-space-blue-500",
-    border: "border-space-blue-500",
-    borderHover: "hover:border-space-blue-400",
-    text: "text-space-blue-400",
-  },
-  success: {
-    bg: "bg-green-600",
-    bgHover: "hover:bg-green-500",
-    border: "border-green-500",
-    borderHover: "hover:border-green-400",
-    text: "text-green-400",
-  },
-  warn: {
-    bg: "bg-yellow-700",
-    bgHover: "hover:bg-yellow-600",
-    border: "border-yellow-600",
-    borderHover: "hover:border-yellow-500",
-    text: "text-yellow-400",
-  },
-  error: {
-    bg: "bg-red-700",
-    bgHover: "hover:bg-red-600",
-    border: "border-red-600",
-    borderHover: "hover:border-red-500",
-    text: "text-red-400",
-  },
-};
-
-function getTypeStyles(buttonType: ButtonType, variant: ButtonVariant): string {
-  const c = variantColors[variant];
-
-  switch (buttonType) {
-    case "textonly":
-      return [
-        "bg-transparent border-none rounded-lg",
-        "text-white/70",
-        "transition-all duration-200 cursor-pointer",
-        `hover:${c.text.replace("text-", "text-")} hover:brightness-125`,
-        "disabled:opacity-50 disabled:cursor-default disabled:hover:brightness-100",
-      ].join(" ");
-    case "primary":
-      return [
-        `${c.bg} border-2 border-transparent rounded-lg`,
-        "font-orbitron font-semibold text-white",
-        "transition-all duration-200 cursor-pointer",
-        "hover:opacity-85",
-        "disabled:opacity-50 disabled:cursor-default disabled:hover:opacity-50",
-      ].join(" ");
-    case "secondary":
-      return [
-        `bg-space-black-darker/90 border-2 ${c.border} rounded-lg`,
-        "font-orbitron font-semibold text-white",
-        "transition-all duration-200 backdrop-blur-space cursor-pointer",
-        `${c.borderHover} hover:shadow-[0_0_12px_rgba(255,255,255,0.15)]`,
-        "disabled:opacity-50 disabled:cursor-default disabled:hover:shadow-none",
-      ].join(" ");
-  }
+interface Appearance {
+  emphasis?: Emphasis;
+  tone?: Tone;
+  size?: "xs" | "sm" | "md" | "lg";
+  shape?: "cut" | "toolbar";
+  selected?: boolean;
+  loading?: boolean;
+  accent?: string;
+  width?: number;
+  height?: number;
+  leftEdge?: EdgeStyle;
+  rightEdge?: EdgeStyle;
 }
 
-const sizeStyles: Record<ButtonSize, string> = {
-  xs: "py-0.5 px-2 text-xs",
-  sm: "py-1.5 px-3 text-sm",
-  md: "py-2 px-4 text-sm",
-  lg: "py-3 px-6 text-lg",
+type ButtonProps = Appearance &
+  Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "title"> & {
+    as?: "button";
+  };
+type NavigationProps = Appearance &
+  Omit<LinkProps, "title"> & {
+    as: "link";
+    disabled?: boolean;
+  };
+export type GameButtonProps = ButtonProps | NavigationProps;
+
+const tones: Record<Tone, string> = {
+  info: "#142c58",
+  success: "#4caa72",
+  warn: "#b78a36",
+  error: "#b94f56",
 };
 
-interface GameButtonProps {
-  buttonType?: ButtonType;
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  children: React.ReactNode;
-  className?: string;
-  disabled?: boolean;
-  onClick?: (e: React.MouseEvent) => void;
-  type?: "button" | "submit";
-  title?: string;
-  as?: "button" | "link";
-  to?: string;
-  linkOnClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
-  style?: React.CSSProperties;
-  onMouseEnter?: (e: React.MouseEvent<HTMLButtonElement>) => void;
-  onMouseLeave?: (e: React.MouseEvent<HTMLButtonElement>) => void;
-  "aria-label"?: string;
+export function buttonGeometry(left: EdgeStyle, right: EdgeStyle): string {
+  const tl = left === "slope-left" ? "var(--button-angle)" : "0px";
+  const bl = left === "slope-right" ? "var(--button-angle)" : "0px";
+  const tr = right === "slope-left" ? "calc(100% - var(--button-angle))" : "100%";
+  const br = right === "slope-right" ? "calc(100% - var(--button-angle))" : "100%";
+  return `polygon(${tl} 0, ${tr} 0, ${br} 100%, ${bl} 100%)`;
 }
 
-const GameButton = forwardRef<HTMLButtonElement, GameButtonProps>(
-  (
-    {
-      buttonType = "primary",
-      variant = "info",
+const GameButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, GameButtonProps>(
+  (props, ref) => {
+    const {
+      emphasis = "primary",
+      tone = "info",
       size = "md",
-      children,
+      shape = "cut",
+      selected = false,
+      loading = false,
+      accent,
+      width,
+      height,
+      leftEdge = "flat",
+      rightEdge = "flat",
       className = "",
-      disabled,
-      onClick,
-      type = "button",
-      title,
-      as = "button",
-      to,
-      linkOnClick,
       style,
-      onMouseEnter,
-      onMouseLeave,
-      "aria-label": ariaLabel,
-    },
-    ref,
-  ) => {
-    const { playButtonHoverSound, playButtonClickSound } = useSoundEffects();
-    const classes = `${getTypeStyles(buttonType, variant)} ${sizeStyles[size]} ${className}`.trim();
-
-    const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
-      if (!disabled) {
-        void playButtonHoverSound();
-      }
-      onMouseEnter?.(e as React.MouseEvent<HTMLButtonElement>);
+      children,
+      disabled,
+      ...rest
+    } = props;
+    const inactive = disabled || loading;
+    const sound = useHoverSound(inactive);
+    const surfaceStyle = {
+      "--control-accent": accent ?? tones[tone],
+      ...(shape === "toolbar" ? { "--control-shape": buttonGeometry(leftEdge, rightEdge) } : {}),
+      width,
+      height,
+      ...style,
+    } as React.CSSProperties;
+    const shared = {
+      className: `game-button ${className}`,
+      style: surfaceStyle,
+      "data-emphasis": emphasis,
+      "data-size": size,
+      "data-shape": shape,
+      "data-selected": selected || undefined,
+      "aria-busy": loading || undefined,
     };
-
-    const handleClick = (e: React.MouseEvent) => {
-      if (!disabled) {
-        void playButtonClickSound();
-      }
-      onClick?.(e);
-    };
-
-    const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-      void playButtonClickSound();
-      linkOnClick?.(e);
-    };
-
-    if (as === "link" && to) {
+    const content = (
+      <>
+        {emphasis !== "quiet" && <span className="game-button-frame" aria-hidden="true" />}
+        <span className="game-button-label" style={{ zIndex: Z_INDEX.GAME_BOARD_BASE }}>
+          {children}
+        </span>
+      </>
+    );
+    if (rest.as === "link") {
+      const { as: _, onClick, onMouseEnter, ...link } = rest;
       return (
         <Link
-          to={to}
-          onClick={handleLinkClick}
-          className={`${classes} no-underline inline-block`}
-          onMouseEnter={handleMouseEnter}
+          {...link}
+          {...shared}
+          ref={ref as React.Ref<HTMLAnchorElement>}
+          aria-disabled={inactive || undefined}
+          tabIndex={inactive ? -1 : link.tabIndex}
+          onClick={(event) => {
+            if (inactive) {
+              event.preventDefault();
+              return;
+            }
+            sound.onClick?.();
+            onClick?.(event);
+          }}
+          onMouseEnter={(event) => {
+            sound.onMouseEnter?.();
+            onMouseEnter?.(event);
+          }}
         >
-          {children}
+          {content}
         </Link>
       );
     }
-
+    const { as: _, onClick, onMouseEnter, type = "button", ...button } = rest;
     return (
       <button
-        ref={ref}
+        {...button}
+        {...shared}
+        ref={ref as React.Ref<HTMLButtonElement>}
         type={type}
-        onClick={handleClick}
-        disabled={disabled}
-        className={classes}
-        title={title}
-        style={style}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={onMouseLeave}
-        aria-label={ariaLabel}
+        disabled={inactive}
+        onClick={(event) => {
+          if (!inactive) {
+            sound.onClick?.();
+            onClick?.(event);
+          }
+        }}
+        onMouseEnter={(event) => {
+          sound.onMouseEnter?.();
+          onMouseEnter?.(event);
+        }}
       >
-        {children}
+        {content}
       </button>
     );
   },
 );
 
-export default GameButton;
+export default GameButton as {
+  (props: ButtonProps & React.RefAttributes<HTMLButtonElement>): React.ReactElement;
+  (props: NavigationProps & React.RefAttributes<HTMLAnchorElement>): React.ReactElement;
+};

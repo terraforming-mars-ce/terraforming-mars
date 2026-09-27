@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
 
@@ -60,18 +61,20 @@ const TabConflictOverlay: React.FC<TabConflictOverlayProps> = ({
           </div>
 
           <div className="flex gap-4 justify-center max-[768px]:flex-col max-[768px]:gap-3">
-            <button
-              className="bg-[rgba(108,117,125,0.8)] border-2 border-[rgba(108,117,125,0.5)] rounded-xl py-3 px-6 text-base font-bold text-white cursor-pointer transition-all duration-300 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] hover:bg-[rgba(108,117,125,1)] hover:border-[rgba(108,117,125,0.8)] hover:-translate-y-px max-[768px]:w-full max-[768px]:py-[14px] max-[768px]:px-5 max-[768px]:text-sm"
+            <GameButton
+              emphasis="quiet"
+              className="bg-[rgba(108,117,125,0.8)] border-2 border-[rgba(108,117,125,0.5)] rounded-none py-3 px-6 text-base font-bold text-white cursor-pointer transition-all duration-300 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] hover:bg-[rgba(108,117,125,1)] hover:border-[rgba(108,117,125,0.8)] hover:-translate-y-px max-[768px]:w-full max-[768px]:py-[14px] max-[768px]:px-5 max-[768px]:text-sm"
               onClick={onCancel}
             >
               Cancel
-            </button>
-            <button
-              className="bg-[linear-gradient(135deg,#dc3545_0%,#e55564_100%)] border-2 border-[rgba(220,53,69,0.5)] rounded-xl py-3 px-6 text-base font-bold text-white cursor-pointer transition-all duration-300 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] shadow-[0_4px_20px_rgba(220,53,69,0.3)] hover:bg-[linear-gradient(135deg,#c82333_0%,#dc3545_100%)] hover:border-[rgba(220,53,69,0.8)] hover:-translate-y-px hover:shadow-[0_6px_25px_rgba(220,53,69,0.4)] max-[768px]:w-full max-[768px]:py-[14px] max-[768px]:px-5 max-[768px]:text-sm"
+            </GameButton>
+            <GameButton
+              emphasis="quiet"
+              className="bg-[linear-gradient(135deg,#dc3545_0%,#e55564_100%)] border-2 border-[rgba(220,53,69,0.5)] rounded-none py-3 px-6 text-base font-bold text-white cursor-pointer transition-all duration-300 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] shadow-[0_4px_20px_rgba(220,53,69,0.3)] hover:bg-[linear-gradient(135deg,#c82333_0%,#dc3545_100%)] hover:border-[rgba(220,53,69,0.8)] hover:-translate-y-px hover:shadow-[0_6px_25px_rgba(220,53,69,0.4)] max-[768px]:w-full max-[768px]:py-[14px] max-[768px]:px-5 max-[768px]:text-sm"
               onClick={onTakeOver}
             >
               Continue Here
-            </button>
+            </GameButton>
           </div>
         </div>
       </div>

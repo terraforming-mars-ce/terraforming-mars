@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { APP_VERSION } from "@/config.ts";
 
@@ -18,14 +19,15 @@ export const MenuPopoverItem: React.FC<MenuPopoverItemProps> = ({
 }) => {
   const textColor = variant === "danger" ? "text-red-400" : "text-white";
   return (
-    <button
+    <GameButton
+      emphasis="quiet"
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      className={`w-full flex items-center gap-3 px-4 py-3 ${textColor} text-sm hover:bg-white/10 transition-colors text-left`}
+      className={`w-full flex items-center justify-start gap-3 px-4 py-3 ${textColor} text-sm hover:bg-white/10 transition-colors text-left`}
     >
-      {icon}
-      {label}
-    </button>
+      <span className="inline-flex w-5 shrink-0 items-center justify-center">{icon}</span>
+      <span>{label}</span>
+    </GameButton>
   );
 };
 

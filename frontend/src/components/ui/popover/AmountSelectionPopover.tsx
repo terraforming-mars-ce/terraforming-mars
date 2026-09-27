@@ -46,13 +46,14 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
         </div>
 
         <div className="flex items-center gap-4">
-          <button
-            className="w-9 h-9 rounded-lg bg-space-blue-600/50 border border-space-blue-500/60 text-white text-lg font-bold cursor-pointer transition-all duration-200 hover:bg-space-blue-500/60 disabled:opacity-30 disabled:cursor-default"
+          <GameButton
+            emphasis="quiet"
+            className="w-9 h-9 rounded-none bg-space-blue-600/50 border border-space-blue-500/60 text-white text-lg font-bold cursor-pointer transition-all duration-200 hover:bg-space-blue-500/60 disabled:opacity-30 disabled:cursor-default"
             onClick={() => setAmount((a) => Math.max(0, a - 1))}
             disabled={amount <= 0}
           >
             -
-          </button>
+          </GameButton>
 
           <div className="min-w-[60px] text-center">
             <span className="text-white text-3xl font-orbitron font-bold text-shadow-glow">
@@ -61,13 +62,14 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
             <span className="text-white/40 text-sm ml-1">/ {maxAmount}</span>
           </div>
 
-          <button
-            className="w-9 h-9 rounded-lg bg-space-blue-600/50 border border-space-blue-500/60 text-white text-lg font-bold cursor-pointer transition-all duration-200 hover:bg-space-blue-500/60 disabled:opacity-30 disabled:cursor-default"
+          <GameButton
+            emphasis="quiet"
+            className="w-9 h-9 rounded-none bg-space-blue-600/50 border border-space-blue-500/60 text-white text-lg font-bold cursor-pointer transition-all duration-200 hover:bg-space-blue-500/60 disabled:opacity-30 disabled:cursor-default"
             onClick={() => setAmount((a) => Math.min(maxAmount, a + 1))}
             disabled={amount >= maxAmount}
           >
             +
-          </button>
+          </GameButton>
         </div>
 
         {maxAmount > 1 && (
@@ -83,10 +85,10 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
       </div>
 
       <GameFlowFooter className="gap-3">
-        <GameButton buttonType="secondary" variant="info" size="sm" onClick={onCancel}>
+        <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
           Cancel
         </GameButton>
-        <GameButton buttonType="primary" variant="success" size="sm" onClick={handleConfirm}>
+        <GameButton emphasis="primary" tone="success" size="sm" onClick={handleConfirm}>
           Confirm
         </GameButton>
       </GameFlowFooter>

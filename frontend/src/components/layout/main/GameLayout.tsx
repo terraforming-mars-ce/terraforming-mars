@@ -1,3 +1,4 @@
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useState, useCallback, forwardRef } from "react";
 import LeftSidebar from "../panels/LeftSidebar.tsx";
 import type { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
@@ -65,7 +66,6 @@ interface GameLayoutProps {
   isGameSpectator?: boolean;
   chatMessages?: ChatMessageDto[];
   onSendChatMessage?: (message: string) => void;
-  isLobbyPhase?: boolean;
   playerColorMap?: Map<string, string>;
   endgameFadeUI?: boolean;
   isEndgame?: boolean;
@@ -106,7 +106,6 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
     isGameSpectator = false,
     chatMessages,
     onSendChatMessage,
-    isLobbyPhase = false,
     playerColorMap,
     endgameFadeUI = false,
     isEndgame = false,
@@ -236,7 +235,6 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
             <ChatOverlay
               messages={chatMessages}
               onSendMessage={onSendChatMessage}
-              isLobby={isLobbyPhase}
               isEndgame={endgameFadeUI}
               playerColorMap={playerColorMap}
             />
@@ -326,17 +324,17 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
           title="Kick player?"
           showBackdrop={true}
           onClose={() => setPendingAction(null)}
-          zIndex={10000}
+          zIndex={Z_INDEX.CONFIRMATION_MODAL}
         >
           <p className="text-white/80 text-center mb-6">
             <span className="font-bold text-white">{pendingAction.playerName}</span> will be removed
             from the game and cannot rejoin.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameButton buttonType="secondary" onClick={() => setPendingAction(null)}>
+            <GameButton emphasis="secondary" onClick={() => setPendingAction(null)}>
               Cancel
             </GameButton>
-            <GameButton variant="error" onClick={() => void handleConfirmAction()}>
+            <GameButton tone="error" onClick={() => void handleConfirmAction()}>
               Kick
             </GameButton>
           </div>
@@ -348,17 +346,17 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
           title="Convert to bot?"
           showBackdrop={true}
           onClose={() => setPendingAction(null)}
-          zIndex={10000}
+          zIndex={Z_INDEX.CONFIRMATION_MODAL}
         >
           <p className="text-white/80 text-center mb-6">
             <span className="font-bold text-white">{pendingAction.playerName}</span> will be
             replaced by a bot. This cannot be undone.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameButton buttonType="secondary" onClick={() => setPendingAction(null)}>
+            <GameButton emphasis="secondary" onClick={() => setPendingAction(null)}>
               Cancel
             </GameButton>
-            <GameButton variant="error" onClick={() => void handleConfirmAction()}>
+            <GameButton tone="error" onClick={() => void handleConfirmAction()}>
               Convert
             </GameButton>
           </div>

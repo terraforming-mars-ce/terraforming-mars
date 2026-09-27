@@ -89,7 +89,7 @@ const CardsPlayedModal: React.FC<CardsPlayedModalProps> = ({ isVisible, onClose,
       placeholder="Search cards..."
       spellCheck={false}
       autoComplete="off"
-      className="bg-black/50 border border-[var(--modal-accent)]/40 rounded-md text-white py-1.5 px-3 text-sm w-[200px] placeholder:text-white/40 outline-none focus:border-[var(--modal-accent)]/70"
+      className="bg-black/50 border border-[var(--modal-accent)]/40 rounded-none text-white py-1.5 px-3 text-sm w-[200px] placeholder:text-white/40 outline-none focus:border-[var(--modal-accent)]/70"
     />
   );
 

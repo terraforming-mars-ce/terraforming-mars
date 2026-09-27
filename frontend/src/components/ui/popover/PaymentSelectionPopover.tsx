@@ -248,7 +248,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {canUseSteel && playerResources.steel > 0 && (
-          <div className="flex items-center justify-between rounded-md bg-black/30 border-2 border-space-blue-500/40 p-4">
+          <div className="flex items-center justify-between game-panel game-panel-clipped game-choice p-4">
             <div className="flex items-center gap-3">
               <GameIcon iconType="steel" size="medium" />
               <div className="flex flex-col">
@@ -259,27 +259,29 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button
+              <GameButton
+                emphasis="quiet"
                 onClick={decrementSteel}
                 disabled={steel === 0}
-                className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
               >
                 −
-              </button>
+              </GameButton>
               <span className="w-12 text-center text-lg text-white font-semibold">{steel}</span>
-              <button
+              <GameButton
+                emphasis="quiet"
                 onClick={incrementSteel}
                 disabled={steel >= maxSteelUnits}
-                className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
               >
                 +
-              </button>
+              </GameButton>
             </div>
           </div>
         )}
 
         {canUseTitanium && playerResources.titanium > 0 && (
-          <div className="flex items-center justify-between rounded-md bg-black/30 border-2 border-space-blue-500/40 p-4">
+          <div className="flex items-center justify-between game-panel game-panel-clipped game-choice p-4">
             <div className="flex items-center gap-3">
               <GameIcon iconType="titanium" size="medium" />
               <div className="flex flex-col">
@@ -290,21 +292,23 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button
+              <GameButton
+                emphasis="quiet"
                 onClick={decrementTitanium}
                 disabled={titanium === 0}
-                className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
               >
                 −
-              </button>
+              </GameButton>
               <span className="w-12 text-center text-lg text-white font-semibold">{titanium}</span>
-              <button
+              <GameButton
+                emphasis="quiet"
                 onClick={incrementTitanium}
                 disabled={titanium >= maxTitaniumUnits}
-                className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
               >
                 +
-              </button>
+              </GameButton>
             </div>
           </div>
         )}
@@ -368,7 +372,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
               return (
                 <div
                   key={resourceType}
-                  className="flex items-center justify-between rounded-md bg-black/30 border-2 border-space-blue-500/40 p-4"
+                  className="flex items-center justify-between game-panel game-panel-clipped game-choice p-4"
                 >
                   <div className="flex items-center gap-3">
                     <GameIcon iconType={resourceType} size="medium" />
@@ -382,23 +386,25 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button
+                    <GameButton
+                      emphasis="quiet"
                       onClick={decrementSubstitute}
                       disabled={currentAmount === 0}
-                      className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                      className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
                     >
                       −
-                    </button>
+                    </GameButton>
                     <span className="w-12 text-center text-lg text-white font-semibold">
                       {currentAmount}
                     </span>
-                    <button
+                    <GameButton
+                      emphasis="quiet"
                       onClick={incrementSubstitute}
                       disabled={currentAmount >= maxUnits}
-                      className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                      className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
                     >
                       +
-                    </button>
+                    </GameButton>
                   </div>
                 </div>
               );
@@ -449,7 +455,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
           return (
             <div
               key={`storage-${substitute.cardId}`}
-              className="flex items-center justify-between rounded-md bg-black/30 border-2 border-space-blue-500/40 p-4"
+              className="flex items-center justify-between game-panel game-panel-clipped game-choice p-4"
             >
               <div className="flex items-center gap-3">
                 <GameIcon iconType={substitute.resourceType} size="medium" />
@@ -462,23 +468,25 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <button
+                <GameButton
+                  emphasis="quiet"
                   onClick={decrementStorage}
                   disabled={currentAmount === 0}
-                  className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                  className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
                 >
                   −
-                </button>
+                </GameButton>
                 <span className="w-12 text-center text-lg text-white font-semibold">
                   {currentAmount}
                 </span>
-                <button
+                <GameButton
+                  emphasis="quiet"
                   onClick={incrementStorage}
                   disabled={currentAmount >= maxUnits}
-                  className="h-8 w-8 rounded border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
+                  className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
                 >
                   +
-                </button>
+                </GameButton>
               </div>
             </div>
           );
@@ -539,12 +547,12 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
       </div>
 
       <GameFlowFooter className="justify-end gap-3">
-        <GameButton buttonType="secondary" variant="info" size="sm" onClick={onCancel}>
+        <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
           Cancel
         </GameButton>
         <GameButton
-          buttonType="primary"
-          variant="info"
+          emphasis="primary"
+          tone="info"
           size="sm"
           onClick={handleConfirm}
           disabled={!canConfirm}

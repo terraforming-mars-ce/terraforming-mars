@@ -15,12 +15,9 @@ const SpaceBackgroundContext = createContext<SpaceBackgroundContextType | undefi
  * Ensures skybox stays loaded in memory across route changes
  */
 export function SpaceBackgroundProvider({ children }: { children: React.ReactNode }) {
-  const [loadingState, setLoadingState] = useState<SkyboxLoadingState>({
-    isLoading: false,
-    isLoaded: false,
-    error: null,
-    texture: null,
-  });
+  const [loadingState, setLoadingState] = useState<SkyboxLoadingState>(() =>
+    skyboxCache.getState(),
+  );
 
   useEffect(() => {
     const unsubscribe = skyboxCache.subscribe((state) => {

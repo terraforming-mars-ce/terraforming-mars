@@ -16,7 +16,7 @@ const BackButton: React.FC<BackButtonProps> = ({
 }) => {
   return (
     <GameButton
-      buttonType="secondary"
+      emphasis="secondary"
       size={size}
       onClick={onClick}
       className={`flex items-center gap-2 ${className}`}

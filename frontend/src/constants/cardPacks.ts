@@ -12,8 +12,7 @@ export const CARD_PACKS: CardPackInfo[] = [
     id: "base-game",
     label: "Base Game",
     cardCount: "147 cards",
-    description:
-      "Includes tested cards with comprehensive test coverage. All cards have verified implementations.",
+    description: "The core corporations and projects. Always included.",
     lockedOn: true,
   },
   {

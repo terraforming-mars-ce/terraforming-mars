@@ -6,7 +6,7 @@ interface CopyLinkButtonProps {
   defaultText: string;
   copiedText?: string;
   className?: string;
-  buttonType?: "primary" | "secondary" | "textonly";
+  emphasis?: "primary" | "secondary" | "quiet";
   size?: "sm" | "md" | "lg";
   icon?: React.ReactNode;
   onCopySuccess?: () => void;
@@ -18,7 +18,7 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({
   defaultText,
   copiedText = "Copied!",
   className = "",
-  buttonType = "secondary",
+  emphasis = "secondary",
   size = "md",
   icon,
   onCopySuccess,
@@ -44,7 +44,7 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({
 
   return (
     <GameButton
-      buttonType={buttonType}
+      emphasis={emphasis}
       size={size}
       onClick={handleCopy}
       disabled={isCopied}
