@@ -211,7 +211,7 @@ export default function CardInspection({
       ref={panelRef}
       role="region"
       aria-label={`Inspect ${card.name}`}
-      className="fixed outline-none"
+      className="fixed outline-none cursor-default select-none"
       tabIndex={-1}
       onDragStart={(event) => event.preventDefault()}
       onPointerDown={(event) => {
@@ -219,7 +219,7 @@ export default function CardInspection({
           event.button !== 0 ||
           inspection.closing ||
           !motionReady ||
-          (event.target as Element).closest("button, a, input, .game-card-description")
+          (event.target as Element).closest("button, a, input, select, textarea")
         ) {
           return;
         }

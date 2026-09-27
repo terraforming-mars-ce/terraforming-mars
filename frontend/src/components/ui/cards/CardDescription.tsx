@@ -104,8 +104,8 @@ export default function CardDescription({ text, maxHeight, autoPan }: CardDescri
         tabIndex={overflow ? 0 : undefined}
         className={
           autoPan
-            ? "overflow-y-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-blue-400"
-            : ""
+            ? "touch-none overflow-y-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-blue-400"
+            : "touch-none"
         }
         style={{ maxHeight: autoPan ? maxHeight : undefined }}
         onWheel={stop}

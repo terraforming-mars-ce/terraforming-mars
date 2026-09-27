@@ -48,11 +48,14 @@ const CULL_RADIUS = VISIBLE_RADIUS + 1;
 const SELECTED_LIFT = -180;
 const SELECTED_SCALE = 1.12;
 
-const THROW_DISTANCE_THRESHOLD = 120;
-const THROW_Y_THRESHOLD = -80;
+const PLAY_ZONE_BOTTOM_RATIO = 0.7;
 const DRAG_THRESHOLD = 14;
 const DRAG_RAISE_THRESHOLD = -60;
 const WHEEL_SCALE = 0.005;
+
+function isInCardPlayZone(y: number, viewportHeight: number): boolean {
+  return y < viewportHeight * PLAY_ZONE_BOTTOM_RATIO;
+}
 
 interface CardTransform {
   x: number;
@@ -118,6 +121,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
     const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
     const [isInThrowZone, setIsInThrowZone] = useState(false);
+    const [isInspectionDragFlying, setIsInspectionDragFlying] = useState(false);
     const [returningCard, setReturningCard] = useState<string | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
@@ -135,6 +139,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
     const cardsRef = useRef(cards);
     const dragIntentRef = useRef(false);
     const capturedCardRef = useRef<HTMLDivElement | null>(null);
+    const capturedPointerIdRef = useRef<number | null>(null);
     const lastPointerXRef = useRef(0);
     const draggingTileCardRef = useRef(false);
 
@@ -242,25 +247,33 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         inspectionDragFlight.current?.dispose();
         source.setPointerCapture(drag.pointerId);
         capturedCardRef.current = source;
+        capturedPointerIdRef.current = drag.pointerId;
         dragIntentRef.current = true;
         lastPointerXRef.current = drag.clientX;
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const start = { x: drag.clientX, y: bounds.bottom };
         flushSync(() => {
+          setIsInspectionDragFlying(!reducedMotion);
           setHighlightedCard(null);
           setDraggedCard(cardId);
           setDragPosition({ x: drag.clientX, y: drag.clientY });
-          setDragStartPosition({ x: drag.clientX, y: bounds.bottom });
+          setDragStartPosition(start);
           setDragOffset({
             x: (0.5 - drag.grabX) * body.offsetWidth * fanScale,
             y: (1 - drag.grabY) * body.offsetHeight * fanScale,
           });
-          setIsInThrowZone(drag.clientY < bounds.bottom + THROW_Y_THRESHOLD);
+          setIsInThrowZone(isInCardPlayZone(drag.clientY, windowHeight));
         });
-        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        if (!reducedMotion) {
           inspectionDragFlight.current = createCardInspectionFlight(source, detail, () => {
             inspectionDragFlight.current?.dispose();
             inspectionDragFlight.current = null;
+            setIsInspectionDragFlying(false);
           });
           inspectionDragFlight.current?.play(true, 1.8);
+          if (!inspectionDragFlight.current) {
+            setIsInspectionDragFlying(false);
+          }
         }
         const card = cardsRef.current.find((candidate) => candidate.id === cardId);
         if (card && isTilePlacementCard(card)) {
@@ -269,7 +282,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         }
         onDismissInspection();
       },
-      [fanScale, onDismissInspection, startTileCardDrag],
+      [fanScale, onDismissInspection, startTileCardDrag, windowHeight],
     );
 
     useImperativeHandle(
@@ -439,6 +452,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
       const cardEl = e.currentTarget;
       cardEl.setPointerCapture(e.pointerId);
       capturedCardRef.current = cardEl;
+      capturedPointerIdRef.current = e.pointerId;
 
       dragIntentRef.current = false;
 
@@ -526,9 +540,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
 
         tryReorder(e.clientX, e.clientY);
 
-        const throwDist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        const isUpward = deltaY < THROW_Y_THRESHOLD;
-        setIsInThrowZone(throwDist > THROW_DISTANCE_THRESHOLD && isUpward);
+        setIsInThrowZone(isInCardPlayZone(e.clientY, windowHeight));
       },
       [
         draggedCard,
@@ -537,6 +549,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         startTileCardDrag,
         updatePointer,
         onDismissInspection,
+        windowHeight,
       ],
     );
 
@@ -546,10 +559,13 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         if (!cardId) return;
         inspectionDragFlight.current?.dispose();
         inspectionDragFlight.current = null;
+        setIsInspectionDragFlying(false);
 
         if (capturedCardRef.current) {
-          capturedCardRef.current.releasePointerCapture(e.pointerId);
+          const captured = capturedCardRef.current;
           capturedCardRef.current = null;
+          capturedPointerIdRef.current = null;
+          captured.releasePointerCapture(e.pointerId);
         }
 
         const wasDrag = dragIntentRef.current;
@@ -574,11 +590,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         }
 
         // Drag ended — check throw
-        const deltaX = e.clientX - dragStartPosition.x;
-        const deltaY = e.clientY - dragStartPosition.y;
-        const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        const isUpward = deltaY < THROW_Y_THRESHOLD;
-        const isThrow = dist > THROW_DISTANCE_THRESHOLD && isUpward;
+        const isThrow = isInCardPlayZone(e.clientY, windowHeight);
 
         if (isThrow && onPlayCard) {
           const cardData = cardsRef.current.find((c) => c.id === cardId);
@@ -633,7 +645,6 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
       },
       [
         draggedCard,
-        dragStartPosition,
         dragOffset,
         fanScale,
         highlightedCard,
@@ -641,6 +652,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         onInspectCard,
         playCardHoverSound,
         endTileCardDrag,
+        windowHeight,
       ],
     );
 
@@ -654,22 +666,52 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
       };
     }, [endTileCardDrag]);
 
-    const cancelGesture = (event: React.PointerEvent<HTMLDivElement>) => {
+    const cancelGesture = useCallback(() => {
       inspectionDragFlight.current?.dispose();
       inspectionDragFlight.current = null;
       dragIntentRef.current = false;
+      const captured = capturedCardRef.current;
+      const pointerId = capturedPointerIdRef.current;
+      capturedCardRef.current = null;
+      capturedPointerIdRef.current = null;
+      if (pointerId !== null && captured?.hasPointerCapture(pointerId)) {
+        captured.releasePointerCapture(pointerId);
+      }
       if (draggingTileCardRef.current) {
         draggingTileCardRef.current = false;
         endTileCardDrag();
       }
-      const captured = capturedCardRef.current;
-      capturedCardRef.current = null;
-      if (captured?.hasPointerCapture(event.pointerId)) {
-        captured.releasePointerCapture(event.pointerId);
-      }
       setDraggedCard(null);
       setIsInThrowZone(false);
-    };
+      setIsInspectionDragFlying(false);
+    }, [endTileCardDrag]);
+
+    useEffect(() => {
+      if (hideWhenModalOpen || (draggedCard && !cards.some((card) => card.id === draggedCard))) {
+        cancelGesture();
+      }
+    }, [hideWhenModalOpen, draggedCard, cards, cancelGesture]);
+
+    useEffect(() => {
+      const cancelPointer = (event: PointerEvent) => {
+        if (event.pointerId === capturedPointerIdRef.current) {
+          cancelGesture();
+        }
+      };
+      document.addEventListener("pointercancel", cancelPointer, true);
+      return () => document.removeEventListener("pointercancel", cancelPointer, true);
+    }, [cancelGesture]);
+
+    const isDraggingCard = draggedCard !== null && dragIntentRef.current;
+    useEffect(() => {
+      if (!isDraggingCard || hideWhenModalOpen || isExpanded) {
+        return;
+      }
+      document.documentElement.dataset.cardDragging = "true";
+      return () => {
+        delete document.documentElement.dataset.cardDragging;
+      };
+    }, [isDraggingCard, hideWhenModalOpen, isExpanded]);
 
     // --- Click outside to deselect ---
     useEffect(() => {
@@ -740,6 +782,13 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
 
             const edgeOpacity = isExpanded || isDraggedCard || absD <= activeVisibleRadius ? 1 : 0;
             const isDragging = isDraggedCard && dragIntentRef.current;
+            const isArmed =
+              !isExpanded &&
+              isDragging &&
+              !isInspectionDragFlying &&
+              isInThrowZone &&
+              card.available === true &&
+              !!onPlayCard;
             const isReturning = returningCard === card.id;
             const isHighlighted = highlightedCard === card.id;
 
@@ -804,9 +853,6 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
               !isExpanded && isDragging && !isReturning ? "is-dragging" : "",
               !isExpanded && !isDraggedCard && draggedCard ? "is-reordering" : "",
               !isExpanded && isReturning ? "is-returning" : "",
-              !isExpanded && isDraggedCard && isInThrowZone && card.available
-                ? "is-throw-zone"
-                : "",
               isExpanded ? "is-expanded" : "",
             ]
               .filter(Boolean)
@@ -842,9 +888,9 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                 onPointerMove={isExpanded ? undefined : handlePointerMove}
                 onPointerUp={isExpanded ? undefined : handlePointerUp}
                 onPointerCancel={cancelGesture}
-                onLostPointerCapture={(event) => {
+                onLostPointerCapture={() => {
                   if (capturedCardRef.current) {
-                    cancelGesture(event);
+                    cancelGesture();
                   }
                 }}
                 onClick={isExpanded ? () => handleCollapse(card.id) : undefined}
@@ -856,6 +902,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                 ) : (
                   <GameCard
                     card={card}
+                    moduleState={isArmed ? "armed" : "idle"}
                     isSelected={
                       !isExpanded &&
                       (isHighlighted || (isDraggedCard && isInThrowZone && card.available === true))
@@ -891,7 +938,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                 zIndex: Z_INDEX.CARD_FAN_DRAGGED,
               }}
             >
-              <GameCard card={flyingAwayGhost.card} isSelected={true} />
+              <GameCard card={flyingAwayGhost.card} isSelected={true} moduleState="releasing" />
             </div>
           )}
 
@@ -987,7 +1034,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
 
         .card-fan-card.is-dragging {
           transition: none;
-          cursor: pointer;
+          cursor: grabbing;
         }
 
         .card-fan-card.is-reordering {
@@ -998,10 +1045,6 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
           transition: transform 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
                       filter 180ms ease,
                       opacity 180ms ease;
-        }
-
-        .card-fan-card.is-throw-zone {
-          filter: brightness(1.15);
         }
 
         .card-fan-card.is-flying-away-start {

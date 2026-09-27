@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BehaviorSectionProps, ClassifiedBehavior, BehaviorPresentation } from "./types.ts";
 import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
 import { classifyBehaviors } from "./utils/behaviorClassifier.ts";
@@ -67,6 +67,10 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   presentation = "compact",
 }) => {
   const [hoveredBehaviorIndex, setHoveredBehaviorIndex] = useState<number | null>(null);
+  const tooltipsEnabled = presentation === "compact";
+  useEffect(() => {
+    setHoveredBehaviorIndex(null);
+  }, [presentation]);
   const handleBehaviorHover = useCallback((index: number | null) => {
     setHoveredBehaviorIndex(index);
   }, []);
@@ -211,8 +215,8 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
         classifiedBehavior={classifiedBehavior}
         index={index}
         description={classifiedBehavior.description}
-        isHovered={hoveredBehaviorIndex === index}
-        onHover={handleBehaviorHover}
+        isHovered={tooltipsEnabled && hoveredBehaviorIndex === index}
+        onHover={tooltipsEnabled ? handleBehaviorHover : undefined}
         noContainer={noContainer}
       >
         {content}

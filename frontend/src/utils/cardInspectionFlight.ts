@@ -19,6 +19,7 @@ export interface CardInspectionFlight {
 
 function snapshot(card: HTMLElement, width: number, height: number) {
   const clone = card.cloneNode(true) as HTMLElement;
+  clone.dataset.moduleState = "idle";
   // A snapshot has no React onLoad handler to reveal newly mounted artwork.
   clone.querySelectorAll<HTMLElement>(".game-card-artwork img").forEach((image) => {
     image.style.opacity = "1";
