@@ -77,7 +77,7 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
                 <div className="flex items-center gap-3">
                   {player.corporation && (
                     <div className="w-[80px] h-6 flex-shrink-0 flex items-center justify-start overflow-hidden">
-                      {getCorporationLogo(player.corporation.name, "w-20 h-6")}
+                      {getCorporationLogo(player.corporation.name, "w-20 h-6", "80px")}
                     </div>
                   )}
                   <span className="text-white text-sm font-medium">{player.name}</span>
