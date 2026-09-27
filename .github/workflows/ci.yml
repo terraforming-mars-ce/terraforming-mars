@@ -25,6 +25,11 @@ jobs:
           cache: true
           cache-dependency-path: backend/go.sum
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
@@ -67,6 +72,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
@@ -83,6 +93,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -102,6 +119,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -109,6 +133,9 @@ jobs:
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: bun install --frozen-lockfile
+
+      - name: Validate asset pipeline
+        run: make assets-test assets-check
 
       - name: Build frontend for production
         run: make build-frontend
