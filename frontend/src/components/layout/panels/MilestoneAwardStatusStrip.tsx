@@ -5,6 +5,7 @@ import GameIcon from "../../ui/display/GameIcon.tsx";
 import DecorBoxTooltip from "../../ui/display/DecorBoxTooltip.tsx";
 import AwardScoreboard from "../../ui/display/AwardScoreboard.tsx";
 import { FormattedDescription } from "../../ui/display/FormattedDescription.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameButton, { ANGLE_INDENT, BUTTON_SPACING } from "../../ui/buttons/GameButton.tsx";
 
 const SLOTS_PER_SIDE = 3;
@@ -28,7 +29,7 @@ const useSlotRefs = () => {
   const ref0 = useRef<HTMLButtonElement>(null);
   const ref1 = useRef<HTMLButtonElement>(null);
   const ref2 = useRef<HTMLButtonElement>(null);
-  return [ref0, ref1, ref2] as const;
+  return useMemo(() => [ref0, ref1, ref2] as const, [ref0, ref1, ref2]);
 };
 
 const MilestoneAwardStatusStrip: React.FC = () => {
@@ -145,9 +146,9 @@ const MilestoneAwardStatusStrip: React.FC = () => {
       });
     };
 
-    const wrapperClass = isFilled ? "" : "pointer-events-none opacity-30";
+    const wrapperClass = isFilled ? "" : "pointer-events-none";
     const iconType = filled?.style?.icon;
-    const zIndex = isMilestone ? slot + 1 : SLOTS_PER_SIDE - slot;
+    const slotLayer = isMilestone ? slot + 1 : SLOTS_PER_SIDE - slot;
 
     return (
       <div
@@ -157,11 +158,18 @@ const MilestoneAwardStatusStrip: React.FC = () => {
         onMouseLeave={handleLeave}
         style={{
           marginLeft,
-          zIndex,
+          zIndex: Z_INDEX.UI_BASE + slotLayer,
         }}
       >
         <GameButton
           shape="toolbar"
+          surface="console"
+          className="hud-status-slot"
+          data-occupied={isFilled || undefined}
+          tabIndex={isFilled ? 0 : -1}
+          aria-label={filled?.name}
+          onFocus={handleEnter}
+          onBlur={handleLeave}
           emphasis="secondary"
           ref={ref}
           width={isInnermost ? INNER_CHIP_WIDTH : CHIP_WIDTH}

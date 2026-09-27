@@ -100,14 +100,9 @@ export default function GameCard({
         }
       >
         <CardChassis showConnector={!showCheckbox} />
-        <div
-          className="game-card-stripe"
-          style={{
-            filter: isSelected
-              ? `drop-shadow(0 0 6px ${accent}) drop-shadow(0 0 12px ${accent}80)`
-              : undefined,
-          }}
-        />
+        <div className="game-card-stripe" aria-hidden="true">
+          <span />
+        </div>
         <div className="game-card-heading">
           <CircuitTrace position="art" />
           <div className="game-card-artwork">

@@ -25,9 +25,7 @@ import GameButton, { ANGLE_INDENT, BUTTON_SPACING } from "../../ui/buttons/GameB
 import MilestoneAwardStatusStrip from "./MilestoneAwardStatusStrip.tsx";
 
 const HAMBURGER_WIDTH = 65;
-const HAMBURGER_COLOR = "#ffffff";
 const TRAVEL_WIDTH = 140;
-const TRAVEL_COLOR = "#7eb8da";
 
 const MilestoneAlertIndicator: React.FC<{ visible: boolean; top: number }> = ({ visible, top }) => (
   <div
@@ -45,8 +43,6 @@ const MilestoneAlertIndicator: React.FC<{ visible: boolean; top: number }> = ({ 
   </div>
 );
 
-const ENDGAME_ACCENT = "#3b82f6";
-
 function EndgameTabButton({
   label,
   width,
@@ -63,13 +59,14 @@ function EndgameTabButton({
   return (
     <GameButton
       shape="toolbar"
+      surface="console"
       emphasis="secondary"
       selected={isActive}
+      aria-pressed={isActive}
       width={width}
       height={height}
       leftEdge="slope-left"
       rightEdge="slope-right"
-      accent={ENDGAME_ACCENT}
       onClick={onClick}
       style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
     >
@@ -160,12 +157,14 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     );
   }, [gameState]);
 
-  const menuItems: { id: string; label: string; color: string }[] = [
-    { id: "projects", label: "STANDARD PROJECTS", color: "#4a90e2" },
-    { id: "milestones", label: "MILESTONES", color: "#ff6b35" },
-    { id: "awards", label: "AWARDS", color: "#f39c12" },
-    ...(hasColonies ? [{ id: "colonies", label: "COLONIES", color: "#7c6fc4" }] : []),
-    ...(hasProjectFunding ? [{ id: "funding", label: "FUNDING", color: "#10b981" }] : []),
+  const menuItems: { id: string; label: string; isOpen: boolean }[] = [
+    { id: "projects", label: "STANDARD PROJECTS", isOpen: showStandardProjectsPopover },
+    { id: "milestones", label: "MILESTONES", isOpen: showMilestonePopover },
+    { id: "awards", label: "AWARDS", isOpen: showAwardPopover },
+    ...(hasColonies ? [{ id: "colonies", label: "COLONIES", isOpen: showColonyPopover }] : []),
+    ...(hasProjectFunding
+      ? [{ id: "funding", label: "FUNDING", isOpen: showProjectFundingPopover }]
+      : []),
   ];
 
   const handleTabClick = (tabId: string) => {
@@ -232,10 +231,10 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
                 <div key={item.id} className="relative">
                   <GameButton
                     shape="toolbar"
+                    surface="console"
                     emphasis="secondary"
                     width={buttonWidths[index]}
                     height={buttonHeight}
-                    accent={item.color}
                     onClick={() => handleTabClick(item.id)}
                     ref={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
                     leftEdge={index === 0 ? "flat" : "slope-right"}
@@ -244,13 +243,8 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
                       marginLeft: index === 0 ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
                       zIndex: Z_INDEX.UI_BASE - index,
                     }}
-                    selected={
-                      (item.id === "projects" && showStandardProjectsPopover) ||
-                      (item.id === "milestones" && showMilestonePopover) ||
-                      (item.id === "awards" && showAwardPopover) ||
-                      (item.id === "colonies" && showColonyPopover) ||
-                      (item.id === "funding" && showProjectFundingPopover)
-                    }
+                    selected={item.isOpen}
+                    aria-expanded={item.isOpen}
                   >
                     {item.label}
                   </GameButton>
@@ -291,13 +285,15 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               {spectators.length > 0 && (
                 <GameButton
                   shape="toolbar"
+                  surface="console"
                   emphasis="secondary"
                   width={EYE_WIDTH}
                   height={buttonHeight}
-                  accent="#7eb8da"
                   onClick={() => setSpectatorsOpen(!spectatorsOpen)}
                   ref={eyeButtonRef}
                   selected={spectatorsOpen}
+                  aria-expanded={spectatorsOpen}
+                  aria-label="Spectators"
                   leftEdge="slope-left"
                   rightEdge="slope-right"
                   style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
@@ -307,13 +303,14 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
               )}
               <GameButton
                 shape="toolbar"
+                surface="console"
                 emphasis="secondary"
                 width={TRAVEL_WIDTH}
                 height={buttonHeight}
-                accent={TRAVEL_COLOR}
                 onClick={() => setShowTravelPopover((prev) => !prev)}
                 ref={travelButtonRef}
                 selected={showTravelPopover}
+                aria-expanded={showTravelPopover}
                 leftEdge="slope-left"
                 rightEdge="slope-right"
                 style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
@@ -429,15 +426,16 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
       >
         <GameButton
           shape="toolbar"
+          surface="console"
           emphasis="secondary"
           className="pointer-events-auto"
           aria-label="Menu"
           width={HAMBURGER_WIDTH}
           height={buttonHeight}
-          accent={HAMBURGER_COLOR}
           onClick={() => setMenuOpen(!menuOpen)}
           ref={hamburgerButtonRef}
           selected={menuOpen}
+          aria-expanded={menuOpen}
           leftEdge="slope-left"
           rightEdge="flat"
         >

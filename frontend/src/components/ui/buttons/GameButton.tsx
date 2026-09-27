@@ -14,6 +14,7 @@ interface Appearance {
   tone?: Tone;
   size?: "xs" | "sm" | "md" | "lg";
   shape?: "cut" | "toolbar";
+  surface?: "console";
   selected?: boolean;
   loading?: boolean;
   accent?: string;
@@ -49,6 +50,37 @@ export function buttonGeometry(left: EdgeStyle, right: EdgeStyle): string {
   return `polygon(${tl} 0, ${tr} 0, ${br} 100%, ${bl} 100%)`;
 }
 
+function buttonEdgeLight(edge: EdgeStyle, side: "left" | "right"): string {
+  let start = "0px";
+  let end = "0px";
+  if (edge === "slope-left") {
+    start = "var(--button-angle) * 0.65";
+    end = "var(--button-angle) * 0.35";
+  } else if (edge === "slope-right") {
+    start = "var(--button-angle) * 0.35";
+    end = "var(--button-angle) * 0.65";
+  }
+  const x = (inset: string, offset: number) => {
+    if (side === "left") {
+      return `calc(${inset} + ${offset}px)`;
+    }
+    return `calc(100% - (${inset}) - ${offset}px)`;
+  };
+  return `polygon(${x(start, 1)} 35%, ${x(start, 2)} 35%, ${x(end, 2)} 65%, ${x(end, 1)} 65%)`;
+}
+
+function buttonCornerLight(corner: "top-right" | "bottom-left"): string {
+  const point = (fraction: number, inset: number) => {
+    const x = `var(--control-cut) * ${fraction}`;
+    const y = `var(--control-cut) * ${1 - fraction}`;
+    if (corner === "top-right") {
+      return `calc(100% - (${x}) - ${inset}px) calc(${y} + 1px)`;
+    }
+    return `calc(${x} + ${inset}px) calc(100% - (${y}) - 1px)`;
+  };
+  return `polygon(${point(0.75, 1)}, ${point(0.75, 2)}, ${point(0.25, 2)}, ${point(0.25, 1)})`;
+}
+
 const GameButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, GameButtonProps>(
   (props, ref) => {
     const {
@@ -56,6 +88,7 @@ const GameButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, GameButtonP
       tone = "info",
       size = "md",
       shape = "cut",
+      surface,
       selected = false,
       loading = false,
       accent,
@@ -71,8 +104,9 @@ const GameButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, GameButtonP
     } = props;
     const inactive = disabled || loading;
     const sound = useHoverSound(inactive);
+    const defaultAccent = surface === "console" ? "var(--hud-accent)" : tones[tone];
     const surfaceStyle = {
-      "--control-accent": accent ?? tones[tone],
+      "--control-accent": accent ?? defaultAccent,
       ...(shape === "toolbar" ? { "--control-shape": buttonGeometry(leftEdge, rightEdge) } : {}),
       width,
       height,
@@ -84,12 +118,45 @@ const GameButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, GameButtonP
       "data-emphasis": emphasis,
       "data-size": size,
       "data-shape": shape,
+      "data-surface": surface,
       "data-selected": selected || undefined,
       "aria-busy": loading || undefined,
     };
     const content = (
       <>
-        {emphasis !== "quiet" && <span className="game-button-frame" aria-hidden="true" />}
+        {(emphasis !== "quiet" || surface === "console") && (
+          <span className="game-button-frame" aria-hidden="true" />
+        )}
+        {surface === "console" && (
+          <span className="hud-control-lights" aria-hidden="true">
+            <span className="hud-control-trace" />
+            <span className="hud-control-availability" />
+          </span>
+        )}
+        {surface === "console" && (
+          <>
+            <span
+              className="hud-control-edge"
+              style={{
+                clipPath:
+                  shape === "toolbar"
+                    ? buttonEdgeLight(leftEdge, "left")
+                    : buttonCornerLight("bottom-left"),
+              }}
+              aria-hidden="true"
+            />
+            <span
+              className="hud-control-edge"
+              style={{
+                clipPath:
+                  shape === "toolbar"
+                    ? buttonEdgeLight(rightEdge, "right")
+                    : buttonCornerLight("top-right"),
+              }}
+              aria-hidden="true"
+            />
+          </>
+        )}
         <span className="game-button-label" style={{ zIndex: Z_INDEX.GAME_BOARD_BASE }}>
           {children}
         </span>

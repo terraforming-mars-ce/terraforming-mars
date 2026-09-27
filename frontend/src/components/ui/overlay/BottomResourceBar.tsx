@@ -16,6 +16,8 @@ import {
   ResourceTypeTemperature,
   PlayerStatusTile,
   PlayerStatusSelection,
+  GameStatusActive,
+  ResourceType,
 } from "@/types/generated/api-types.ts";
 import ActionsPopover from "../popover/ActionsPopover.tsx";
 import EffectsPopover from "../popover/EffectsPopover.tsx";
@@ -31,125 +33,105 @@ import {
   calculatePlantsForGreenery,
   calculateHeatForTemperature,
 } from "@/utils/resourceConversionUtils.ts";
-import { useHoverSound } from "@/hooks/useHoverSound.ts";
+import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
+import { canPerformActions } from "@/utils/actionUtils.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface AngledPanelProps {
   side: "left" | "right";
-  corpColor?: string;
   width: number;
   height: number;
   children: React.ReactNode;
-  showGradient?: boolean;
 }
 
 const ANGLE_INDENT = 42;
+const BORDER_COLOR = "#46505970";
 
-const BORDER_COLOR = "rgba(60,60,70,0.7)";
-
-const AngledPanel: React.FC<AngledPanelProps> = ({
-  side,
-  corpColor,
-  width,
-  height,
-  children,
-  showGradient = true,
-}) => {
-  const fillPoints =
-    side === "left"
-      ? `0,0 ${width - ANGLE_INDENT},0 ${width},${height} 0,${height}`
-      : `${ANGLE_INDENT},0 ${width},0 ${width},${height} 0,${height}`;
-
-  const topEdge =
-    side === "left"
-      ? { x1: 0, y1: 0, x2: width - ANGLE_INDENT, y2: 0 }
-      : { x1: ANGLE_INDENT, y1: 0, x2: width, y2: 0 };
-
-  const angledEdge =
-    side === "left"
-      ? { x1: width - ANGLE_INDENT, y1: 0, x2: width, y2: height }
-      : { x1: 0, y1: height, x2: ANGLE_INDENT, y2: 0 };
-
-  const corpGradientId = `corpGradient-${side}`;
-  const whiteBaseId = `whiteBase-${side}`;
-  const whiteGlowId = `whiteGlow-${side}`;
+const AngledPanel: React.FC<AngledPanelProps> = ({ side, width, height, children }) => {
+  const shadingId = React.useId();
+  const left = side === "left";
+  const outline = left
+    ? `M 0 1 H ${width - ANGLE_INDENT} L ${width - 1} ${height} H 0 Z`
+    : `M 1 ${height} L ${ANGLE_INDENT} 1 H ${width} V ${height} Z`;
 
   return (
-    <div className="relative pointer-events-auto z-[2]" style={{ width, height }}>
+    <div
+      className="hud-console relative pointer-events-auto"
+      style={{ width, height, zIndex: Z_INDEX.GAME_BOARD_TILES }}
+    >
       <svg
-        className="absolute inset-0 w-full h-full"
+        className="hud-console-housing"
         viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
       >
         <defs>
-          {side === "left" && (
-            <>
-              <linearGradient id={whiteBaseId} x1="0%" y1="0%" x2="30%" y2="0%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.12" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id={corpGradientId} x1="0%" y1="0%" x2="30%" y2="0%">
-                <stop offset="0%" stopColor={corpColor} stopOpacity="0.17" />
-                <stop offset="100%" stopColor={corpColor} stopOpacity="0" />
-              </linearGradient>
-            </>
-          )}
-          {side === "right" && (
-            <linearGradient id={whiteGlowId} x1="70%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-              <stop offset="100%" stopColor="#ffffff" stopOpacity="0.17" />
-            </linearGradient>
-          )}
+          <linearGradient id={shadingId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="var(--hud-recess)" />
+            <stop offset="0.12" stopColor="var(--hud-housing)" />
+            <stop offset="0.85" stopColor="var(--hud-housing)" />
+            <stop offset="1" stopColor="var(--hud-recess)" />
+          </linearGradient>
         </defs>
-        <polygon points={fillPoints} fill="rgb(0,0,0)" />
-        {side === "left" && (
-          <>
-            <polygon
-              points={fillPoints}
-              fill={`url(#${whiteBaseId})`}
-              style={{
-                opacity: showGradient ? 0 : 1,
-                transition: "opacity 800ms ease-in",
-              }}
-            />
-            <polygon
-              points={fillPoints}
-              fill={`url(#${corpGradientId})`}
-              style={{
-                opacity: showGradient ? 1 : 0,
-                transition: "opacity 800ms ease-in",
-              }}
-            />
-          </>
-        )}
-        {side === "right" && <polygon points={fillPoints} fill={`url(#${whiteGlowId})`} />}
-        <line
-          x1={topEdge.x1}
-          y1={topEdge.y1}
-          x2={topEdge.x2}
-          y2={topEdge.y2}
-          stroke={BORDER_COLOR}
-          strokeWidth="4"
-        />
-        <line
-          x1={angledEdge.x1}
-          y1={angledEdge.y1}
-          x2={angledEdge.x2}
-          y2={angledEdge.y2}
-          stroke={BORDER_COLOR}
-          strokeWidth="3"
-        />
+        <path d={outline} className="hud-console-shell" fill={`url(#${shadingId})`} />
       </svg>
-      <div className="relative z-10 h-full">{children}</div>
+      <div className="relative h-full" style={{ zIndex: Z_INDEX.GAME_BOARD_BASE }}>
+        {children}
+      </div>
     </div>
   );
 };
 
 interface ResourceData {
-  id: string;
+  field: keyof PlayerDto["resources"];
+  id: ResourceType;
   name: string;
   current: number;
   production: number;
+}
+
+function ResourceBay({
+  resource,
+  identity,
+  pulseEnabled,
+  children,
+}: {
+  resource: ResourceData;
+  identity: string;
+  pulseEnabled: boolean;
+  children: React.ReactNode;
+}) {
+  const pulseRef = useRef<HTMLSpanElement>(null);
+  const previous = useRef({ identity, current: resource.current, production: resource.production });
+
+  useEffect(() => {
+    const prior = previous.current;
+    previous.current = { identity, current: resource.current, production: resource.production };
+    if (
+      !pulseEnabled ||
+      prior.identity !== identity ||
+      (prior.current === resource.current && prior.production === resource.production) ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
+    const animation = pulseRef.current?.animate(
+      [{ opacity: 0 }, { opacity: 0.7, offset: 0.25 }, { opacity: 0 }],
+      { duration: 400, easing: "ease-out" },
+    );
+    return () => animation?.cancel();
+  }, [identity, pulseEnabled, resource.current, resource.production]);
+
+  return (
+    <div
+      className="hud-resource-bay flex flex-col items-center gap-0.5 px-2 py-1.5 relative"
+      data-resource={resource.field}
+    >
+      <span ref={pulseRef} className="hud-resource-pulse" aria-hidden="true" />
+      {children}
+    </div>
+  );
 }
 
 export interface BottomResourceBarCallbacks {
@@ -212,7 +194,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   const [showVPPopover, setShowVPPopover] = useState(false);
   const [isCorpExpanded, setIsCorpExpanded] = useState(false);
   const [showCorpExpanded, setShowCorpExpanded] = useState(false);
-  const hoverSound = useHoverSound();
+  const showCardsPlayedModal = useUIOverlayStore((state) => state.showCardsPlayedModal);
   const actionsButtonRef = useRef<HTMLButtonElement>(null);
   const effectsButtonRef = useRef<HTMLButtonElement>(null);
   const tagsButtonRef = useRef<HTMLButtonElement>(null);
@@ -265,18 +247,6 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
   const hasPathChanged = (path: string): boolean => {
     return changedPaths.has(path);
-  };
-
-  const getResourceType = (resourceId: string): string => {
-    const resourceTypeMap: Record<string, string> = {
-      credits: ResourceTypeCredit,
-      steel: ResourceTypeSteel,
-      titanium: ResourceTypeTitanium,
-      plants: ResourceTypePlant,
-      energy: ResourceTypeEnergy,
-      heat: ResourceTypeHeat,
-    };
-    return resourceTypeMap[resourceId] || resourceId;
   };
 
   const tagCounts = React.useMemo(() => {
@@ -353,37 +323,43 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
   const playerResources: ResourceData[] = [
     {
-      id: "credit",
+      field: "credits",
+      id: ResourceTypeCredit,
       name: "Credits",
       current: displayPlayer.resources.credits,
       production: displayPlayer.production.credits,
     },
     {
-      id: "steel",
+      field: "steel",
+      id: ResourceTypeSteel,
       name: "Steel",
       current: displayPlayer.resources.steel,
       production: displayPlayer.production.steel,
     },
     {
-      id: "titanium",
+      field: "titanium",
+      id: ResourceTypeTitanium,
       name: "Titanium",
       current: displayPlayer.resources.titanium,
       production: displayPlayer.production.titanium,
     },
     {
-      id: "plant",
+      field: "plants",
+      id: ResourceTypePlant,
       name: "Plants",
       current: displayPlayer.resources.plants,
       production: displayPlayer.production.plants,
     },
     {
-      id: "energy",
+      field: "energy",
+      id: ResourceTypeEnergy,
       name: "Energy",
       current: displayPlayer.resources.energy,
       production: displayPlayer.production.energy,
     },
     {
-      id: "heat",
+      field: "heat",
+      id: ResourceTypeHeat,
       name: "Heat",
       current: displayPlayer.resources.heat,
       production: displayPlayer.production.heat,
@@ -509,13 +485,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       )}
 
       {/* LEFT PANEL: Corporation + Resources */}
-      <AngledPanel
-        side="left"
-        corpColor={hideContents ? undefined : corpColor}
-        width={LEFT_PANEL_WIDTH}
-        height={BAR_HEIGHT}
-        showGradient={!hideContents && showCorporation}
-      >
+      <AngledPanel side="left" width={LEFT_PANEL_WIDTH} height={BAR_HEIGHT}>
         {!hideContents && (
           <div
             className="flex items-center h-full origin-left"
@@ -534,21 +504,20 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               {displayCorporation && (
                 <>
                   {/* Corporation Logo Button */}
-                  <div
-                    className="cursor-pointer p-2 transition-all duration-200 hover:brightness-110"
-                    onClick={(e) => {
-                      hoverSound.onClick?.();
-                      handleCorpToggle(e);
-                    }}
-                    onMouseEnter={hoverSound.onMouseEnter}
-                    style={{
-                      filter: `drop-shadow(0 0 8px ${corpColor}50)`,
-                    }}
+                  <GameButton
+                    surface="console"
+                    emphasis="quiet"
+                    className="hud-corporation-bay p-2"
+                    accent={corpColor}
+                    selected={isCorpExpanded}
+                    aria-expanded={isCorpExpanded}
+                    aria-label={`Inspect ${displayCorporation.name}`}
+                    onClick={handleCorpToggle}
                   >
                     <div className="flex items-center justify-center min-h-[50px]">
                       {getCorporationLogo(displayCorporation.name, "w-[100px] h-[64px]", "100px")}
                     </div>
-                  </div>
+                  </GameButton>
 
                   {/* Expanded Corporation Card */}
                   {showCorpExpanded && (
@@ -591,11 +560,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             />
 
             {/* Resources Section */}
-            <div className="flex items-center justify-evenly flex-1">
+            <div className="hud-resource-bank flex items-center justify-evenly flex-1">
               {playerResources.map((resource, index) => {
-                const resourceChanged = hasPathChanged(`currentPlayer.resources.${resource.id}`);
-                const productionChanged = hasPathChanged(`currentPlayer.production.${resource.id}`);
-
                 const showConversionButton =
                   (resource.id === "plant" && canConvertPlants) ||
                   (resource.id === "heat" && canConvertHeat);
@@ -603,7 +569,13 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                 return (
                   <React.Fragment key={resource.id}>
                     {/* Resource Item */}
-                    <div className="flex flex-col items-center gap-0.5 px-2 py-1.5 relative">
+                    <ResourceBay
+                      resource={resource}
+                      identity={`${gameId ?? gameState?.id}:${displayPlayer.id}`}
+                      pulseEnabled={
+                        !isSpectating && !isGameSpectator && gameState?.status === GameStatusActive
+                      }
+                    >
                       {/* Conversion button - positioned absolutely above production box */}
                       {(resource.id === "plant" || resource.id === "heat") && (
                         <div
@@ -646,11 +618,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
                       {/* Production badge */}
                       <div className="inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.5)_0%,rgba(139,89,42,0.45)_100%)] border border-[rgba(160,110,60,0.6)] px-3 py-0.5 w-[32px] mb-1">
-                        <span
-                          className={`text-[10px] font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none tabular-nums ${
-                            productionChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
-                          }`}
-                        >
+                        <span className="text-[10px] font-bold font-orbitron text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] leading-none tabular-nums">
                           {resource.production}
                         </span>
                       </div>
@@ -666,17 +634,13 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                         </div>
                       ) : (
                         <div className="flex items-center gap-1 w-[48px] justify-center scale-[0.85]">
-                          <GameIcon iconType={getResourceType(resource.id)} size="small" />
-                          <span
-                            className={`text-sm font-bold font-orbitron text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] tabular-nums w-[24px] text-left ${
-                              resourceChanged ? "[animation:valueUpdateShine_0.8s_ease-in-out]" : ""
-                            }`}
-                          >
+                          <GameIcon iconType={resource.id} size="small" />
+                          <span className="text-sm font-bold font-orbitron text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] tabular-nums w-[24px] text-left">
                             {resource.current}
                           </span>
                         </div>
                       )}
-                    </div>
+                    </ResourceBay>
 
                     {/* Divider between resources */}
                     {index < playerResources.length - 1 && (
@@ -696,12 +660,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
       </AngledPanel>
 
       {/* RIGHT PANEL: Action Buttons */}
-      <AngledPanel
-        side="right"
-        corpColor={hideContents ? undefined : corpColor}
-        width={RIGHT_PANEL_WIDTH}
-        height={BAR_HEIGHT}
-      >
+      <AngledPanel side="right" width={RIGHT_PANEL_WIDTH} height={BAR_HEIGHT}>
         {!hideContents ? (
           <div
             className="flex items-center h-full justify-evenly"
@@ -714,7 +673,17 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             <GameButton
               emphasis="quiet"
               ref={actionsButtonRef}
-              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              selected={showActionsPopover}
+              data-available={
+                (!isSpectating &&
+                  !isGameSpectator &&
+                  canPerformActions(gameState) &&
+                  displayPlayer.actions?.some((action) => action.available)) ||
+                undefined
+              }
+              aria-expanded={showActionsPopover}
+              surface="console"
+              className="hud-stat-control group flex flex-col items-center gap-1.5 p-1.5 w-[52px]"
               onClick={() => {
                 handleOpenActionsPopover();
               }}
@@ -755,7 +724,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             <GameButton
               emphasis="quiet"
               ref={effectsButtonRef}
-              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              selected={showEffectsPopover}
+              aria-expanded={showEffectsPopover}
+              surface="console"
+              className="hud-stat-control group flex flex-col items-center gap-1.5 p-1.5 w-[52px]"
               onClick={() => {
                 handleOpenEffectsPopover();
               }}
@@ -785,7 +757,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             <GameButton
               emphasis="quiet"
               ref={tagsButtonRef}
-              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              selected={showTagsPopover}
+              aria-expanded={showTagsPopover}
+              surface="console"
+              className="hud-stat-control group flex flex-col items-center gap-1.5 p-1.5 w-[52px]"
               onClick={() => {
                 handleOpenTagsPopover();
               }}
@@ -816,7 +791,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             <GameButton
               emphasis="quiet"
               ref={storagesButtonRef}
-              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              selected={showStoragesPopover}
+              aria-expanded={showStoragesPopover}
+              surface="console"
+              className="hud-stat-control group flex flex-col items-center gap-1.5 p-1.5 w-[52px]"
               onClick={() => {
                 handleOpenStoragesPopover();
               }}
@@ -846,7 +824,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             {/* Played Cards Button */}
             <GameButton
               emphasis="quiet"
-              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              selected={showCardsPlayedModal}
+              aria-expanded={showCardsPlayedModal}
+              surface="console"
+              className="hud-stat-control group flex flex-col items-center gap-1.5 p-1.5 w-[52px]"
               onClick={() => {
                 handleOpenCardsModal();
               }}
@@ -872,7 +853,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             <GameButton
               emphasis="quiet"
               ref={vpButtonRef}
-              className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+              selected={showVPPopover}
+              aria-expanded={showVPPopover}
+              surface="console"
+              className="hud-stat-control group flex flex-col items-center gap-1.5 p-1.5 w-[52px]"
               onClick={() => {
                 handleOpenVPPopover();
               }}
@@ -901,7 +885,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               <GameButton
                 emphasis="quiet"
                 ref={logButtonRef}
-                className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+                selected={showLogPopover}
+                aria-expanded={showLogPopover}
+                surface="console"
+                className="hud-stat-control group flex flex-col items-center gap-1.5 p-1.5 w-[52px]"
                 onClick={() => {
                   setShowLogPopover(!showLogPopover);
                 }}
@@ -927,7 +914,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
               <GameButton
                 emphasis="quiet"
                 ref={logButtonRef}
-                className="group flex flex-col items-center gap-1.5 p-1.5 cursor-pointer transition-all duration-200 w-[52px] hover:bg-white/5"
+                selected={showLogPopover}
+                aria-expanded={showLogPopover}
+                surface="console"
+                className="hud-stat-control group flex flex-col items-center gap-1.5 p-1.5 w-[52px]"
                 onClick={() => {
                   setShowLogPopover(!showLogPopover);
                 }}

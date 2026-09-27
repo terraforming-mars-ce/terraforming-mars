@@ -1297,6 +1297,7 @@ code {
   }
 
   .game-card {
+    --module-accent-delay: 340ms;
     width: 100%;
     min-width: 0;
     color: white;
@@ -1311,14 +1312,13 @@ code {
   }
 
   .game-card-requirements > div {
-    box-shadow:
-      inset 0 -2px 0 #46505940,
-      0 2px 3px #0009;
+    translate: 0 1px;
   }
 
   .game-card-body,
   .corporation-card {
     --module-surface: #07090b;
+    --module-cut: 28px;
   }
 
   .game-card-body {
@@ -1347,18 +1347,24 @@ code {
       inset 2px 2px 0 #46505940,
       inset -2px -5px 0 #030507,
       inset 0 -6px 0 #46505935;
-    clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%);
+    clip-path: polygon(
+      0 0,
+      calc(100% - var(--module-cut)) 0,
+      100% var(--module-cut),
+      100% 100%,
+      0 100%
+    );
   }
 
   .game-card-frame::after {
     content: "";
     position: absolute;
-    top: 28px;
-    right: 0;
-    width: 40px;
-    border-top: 2px solid #46505980;
-    transform: rotate(45deg);
-    transform-origin: top right;
+    top: -1px;
+    right: -1px;
+    width: var(--module-cut);
+    height: var(--module-cut);
+    background: #46505980;
+    clip-path: polygon(0 0, 100% 100%, calc(100% - 2px) 100%, 0 2px);
   }
 
   .game-card-stripe {
@@ -1367,9 +1373,29 @@ code {
     top: 2.5%;
     bottom: 2.5%;
     width: 5px;
+    pointer-events: none;
+  }
+
+  .corporation-card {
+    --module-accent-delay: 420ms;
+  }
+
+  .game-card-stripe::before,
+  .game-card-stripe > span::before {
+    content: "";
+    position: absolute;
+    inset: 0;
     background: linear-gradient(90deg, #ffffff0c, transparent 60%), var(--card-accent);
     clip-path: polygon(0 4px, 100% 0, 100% 100%, 0 calc(100% - 4px));
-    pointer-events: none;
+  }
+
+  .game-card-stripe > span {
+    position: absolute;
+    inset: 0;
+    filter: drop-shadow(0 0 6px var(--card-accent))
+      drop-shadow(0 0 12px color-mix(in srgb, var(--card-accent) 50%, transparent));
+    opacity: 0;
+    transition: opacity 180ms ease-out;
   }
 
   .game-card-heading {
@@ -1528,6 +1554,17 @@ code {
       0 1px 0 #46505920;
     z-index: var(--module-decoration-layer);
     pointer-events: none;
+  }
+
+  .corporation-card-logo {
+    --logo-cut: calc(var(--module-cut) - 16px);
+    clip-path: polygon(
+      0 0,
+      calc(100% - var(--logo-cut)) 0,
+      100% var(--logo-cut),
+      100% 100%,
+      0 100%
+    );
   }
 
   .corporation-card-logo::before {
@@ -1784,6 +1821,12 @@ code {
     [data-module-state="armed"],
     [data-module-state="releasing"]
   ) {
+    .game-card-stripe > span {
+      opacity: 1;
+      transition-duration: 250ms;
+      transition-delay: var(--module-accent-delay);
+    }
+
     .game-card-circuit > span {
       opacity: 0.8;
       transform: none;
@@ -1827,6 +1870,10 @@ code {
     animation: moduleReleasePulse 200ms ease-out 110ms both;
   }
 
+  .game-card[data-module-state="releasing"] .game-card-stripe > span {
+    transition-delay: 0ms;
+  }
+
   @keyframes modulePanelConnected {
     0%,
     100% {
@@ -1855,6 +1902,7 @@ code {
   }
 
   @media (prefers-reduced-motion: reduce) {
+    :is(.game-card, .corporation-card) .game-card-stripe > span,
     :is(.game-card, .corporation-card) .game-card-circuit > span,
     :is(.game-card, .corporation-card) .game-card-catch,
     :is(.game-card, .corporation-card) .game-card-connector,
@@ -1898,5 +1946,238 @@ code {
   .card-inspection-flight *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+@layer components {
+  :root {
+    --hud-housing: #07090b;
+    --hud-recess: #030507;
+    --hud-metal: #465059;
+    --hud-accent: #8fb8ca;
+  }
+
+  .hud-console-housing {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .hud-console-shell {
+    stroke: #46505970;
+    stroke-width: 1;
+  }
+
+  .game-button[data-surface="console"] {
+    --hud-light-inset: 8px;
+    color: #cdd3db;
+    background: transparent;
+  }
+
+  .game-button[data-surface="console"][data-shape="toolbar"] {
+    --hud-light-inset: calc(var(--button-angle) + 4px);
+  }
+
+  .game-button[data-surface="console"] .game-button-frame,
+  .game-button[data-surface="console"]:not(:disabled):hover .game-button-frame {
+    background: linear-gradient(180deg, #46505990, #46505940 35%, #030507 85%, #46505950);
+  }
+
+  .game-button[data-surface="console"] .game-button-frame::before,
+  .game-button[data-surface="console"]:not(:disabled):hover .game-button-frame::before {
+    inset: 2px 1px 3px;
+    background: linear-gradient(180deg, #46505912, transparent 35%), var(--hud-recess);
+    box-shadow:
+      inset 0 1px 0 #46505935,
+      inset 0 -2px 0 #0009;
+    transition: background 140ms ease-out;
+  }
+
+  .game-button[data-surface="console"]:not(:disabled):not([aria-disabled="true"]):is(
+      :hover,
+      :focus-visible,
+      [data-selected="true"]
+    )
+    .game-button-frame::before {
+    background:
+      linear-gradient(180deg, #46505918, transparent 55%),
+      color-mix(in srgb, var(--control-accent) 6%, var(--hud-recess));
+  }
+
+  .hud-control-lights {
+    position: absolute;
+    inset: 5px var(--hud-light-inset);
+    pointer-events: none;
+  }
+
+  .hud-control-trace {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--control-accent);
+    box-shadow: 0 0 3px color-mix(in srgb, var(--control-accent) 40%, transparent);
+    transform: scaleX(0);
+    transform-origin: left;
+    opacity: 0;
+    transition:
+      transform 140ms ease-out,
+      opacity 140ms ease-out;
+  }
+
+  .game-button[data-surface="console"]:not(:disabled):not([aria-disabled="true"]):is(
+      :hover,
+      :focus-visible,
+      [data-selected="true"]
+    )
+    .hud-control-trace {
+    transform: scaleX(1);
+    opacity: 0.65;
+    transition-duration: 180ms;
+  }
+
+  .hud-control-lights::before,
+  .hud-control-lights::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 4px;
+    height: 3px;
+    border-top: 1px solid var(--control-accent);
+    opacity: 0;
+    transition: opacity 140ms ease-out;
+  }
+
+  .hud-control-lights::before {
+    left: 0;
+    border-left: 1px solid var(--control-accent);
+  }
+
+  .hud-control-lights::after {
+    right: 0;
+    border-right: 1px solid var(--control-accent);
+  }
+
+  .game-button[data-surface="console"][data-selected="true"] .hud-control-lights::before,
+  .game-button[data-surface="console"][data-selected="true"] .hud-control-lights::after {
+    opacity: 0.75;
+    transition-delay: 100ms;
+  }
+
+  .game-button[data-surface="console"]:not(.hud-stat-control) .hud-control-lights::before,
+  .game-button[data-surface="console"]:not(.hud-stat-control) .hud-control-lights::after {
+    display: none;
+  }
+
+  .hud-control-edge {
+    position: absolute;
+    inset: 0;
+    background: var(--control-accent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 140ms ease-out;
+  }
+
+  .game-button[data-selected="true"] .hud-control-edge {
+    opacity: 0.75;
+    transition-delay: 100ms;
+  }
+
+  .hud-control-availability {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 4px;
+    height: 2px;
+    transform: translateX(-50%);
+    background: var(--control-accent);
+    opacity: 0;
+  }
+
+  .game-button[data-surface="console"][data-available="true"] .hud-control-availability {
+    opacity: 0.45;
+  }
+
+  .hud-status-slot[data-occupied="true"] .hud-control-availability {
+    width: 16px;
+    opacity: 0.7;
+  }
+
+  .hud-status-slot:not([data-occupied="true"]) .game-button-frame {
+    opacity: 0.5;
+  }
+
+  .hud-stat-control .game-button-frame,
+  .hud-stat-control .hud-control-edge {
+    display: none;
+  }
+
+  .hud-stat-control .game-button-label > :first-child {
+    transition: color 140ms ease-out;
+  }
+
+  .hud-stat-control:is(:hover, :focus-visible, [data-selected="true"])
+    .game-button-label
+    > :first-child {
+    color: var(--hud-accent);
+  }
+
+  .hud-corporation-bay {
+    --control-cut: 10px;
+  }
+
+  .hud-corporation-bay .hud-control-availability {
+    top: auto;
+    bottom: 0;
+    width: 14px;
+    opacity: 0.4;
+  }
+
+  .hud-resource-bank {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .hud-resource-bank::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 3px;
+    border-bottom: 1px solid #46505930;
+    pointer-events: none;
+  }
+
+  .hud-resource-bay {
+    background: var(--hud-recess);
+    border: 1px solid #46505930;
+    box-shadow:
+      inset 0 2px 3px #000c,
+      0 1px 0 #46505928;
+  }
+
+  .hud-resource-pulse {
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--hud-accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hud-resource-pulse {
+      visibility: hidden;
+    }
+
+    .game-button[data-surface="console"] *,
+    .game-button[data-surface="console"] *::before,
+    .game-button[data-surface="console"] *::after {
+      transition: none !important;
+      animation: none !important;
+    }
   }
 }

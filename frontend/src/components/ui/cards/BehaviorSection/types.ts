@@ -8,6 +8,7 @@ export type BehaviorPresentation = "compact" | "inspection";
 
 export interface BehaviorSectionProps {
   presentation?: BehaviorPresentation;
+  showTooltips?: boolean;
   behaviors?: CardBehaviorDto[];
   computedValues?: ComputedBehaviorValueDto[];
   playerResources?: ResourcesDto;

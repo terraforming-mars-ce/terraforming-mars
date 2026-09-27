@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import GameIcon from "../display/GameIcon.tsx";
 import CardDecorBar from "../display/CardDecorBar.tsx";
-import DecorBoxTooltip from "../display/DecorBoxTooltip.tsx";
 import BehaviorSection from "./BehaviorSection";
 
 import {
@@ -70,12 +69,6 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
   disableInteraction = false,
   catalog = false,
 }) => {
-  const [startingDescription, setStartingDescription] = useState<string | null>(null);
-  const [startingTooltipPos, setStartingTooltipPos] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const startingRef = useRef<HTMLDivElement>(null);
   const { playCardHoverSound } = useSoundEffects();
   const pendingSoundRef = useRef(false);
 
@@ -85,15 +78,6 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
       void playCardHoverSound();
     }
   }, [isSelected, playCardHoverSound]);
-
-  useEffect(() => {
-    if (startingDescription && startingRef.current) {
-      const rect = startingRef.current.getBoundingClientRect();
-      setStartingTooltipPos({ x: rect.left + rect.width / 2, y: rect.bottom });
-    } else {
-      setStartingTooltipPos(null);
-    }
-  }, [startingDescription]);
 
   const effectiveBorderColor = borderColor || getCorporationBorderColor(card.name);
 
@@ -219,17 +203,12 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
   const startingProduction =
     card.startingProduction || getStartingProductionFromBehaviors(card.behaviors);
   const firstAction = getAutoCorporationFirstAction(card.behaviors);
-  const startBehavior = getAutoCorporationStart(card.behaviors);
   const filteredBehaviors = filterBehaviors(card.behaviors);
   const hasStartingSection = startingResources || startingProduction || firstAction;
   const hasBehaviors = filteredBehaviors.length > 0;
   const hasTags = card.tags && card.tags.length > 0;
   const hasVpOrStorage =
     (card.vpConditions && card.vpConditions.length > 0) || card.resourceStorage;
-
-  const startingHoverText = [startBehavior?.description, firstAction?.description]
-    .filter(Boolean)
-    .join(" ");
 
   return (
     <div
@@ -248,14 +227,9 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
       <CardChassis showConnector={!showCheckbox} />
 
       {/* Left accent stripe */}
-      <div
-        className="game-card-stripe transition-[filter] duration-300"
-        style={{
-          filter: isSelected
-            ? `drop-shadow(0 0 6px ${effectiveBorderColor}) drop-shadow(0 0 12px ${effectiveBorderColor}80)`
-            : "none",
-        }}
-      />
+      <div className="game-card-stripe" aria-hidden="true">
+        <span />
+      </div>
 
       {/* VP + Resource Storage - bottom right */}
       {hasVpOrStorage && (
@@ -304,16 +278,7 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
       <div className="relative mt-2">
         {/* Section 1: Starting resources/production */}
         {hasStartingSection && (
-          <div
-            className="corporation-card-resources flex flex-wrap gap-2 justify-center items-center py-2"
-            ref={startingRef}
-            onMouseEnter={() => {
-              if (startingHoverText) {
-                setStartingDescription(startingHoverText);
-              }
-            }}
-            onMouseLeave={() => setStartingDescription(null)}
-          >
+          <div className="corporation-card-resources flex flex-wrap gap-2 justify-center items-center py-2">
             <CardPanelCircuit />
             {startingResources &&
               Object.entries(startingResources).map(([type, amount]) =>
@@ -336,7 +301,6 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
                 {renderAutoCorporationFirstAction(firstAction)}
               </div>
             )}
-            <DecorBoxTooltip description={startingDescription} position={startingTooltipPos} />
           </div>
         )}
 
@@ -355,7 +319,7 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
           <div className="corporation-card-behaviors py-2">
             <CardPanelCircuit />
             <div className="relative [&>div]:static [&>div]:!bottom-auto [&>div]:!left-auto [&>div]:!right-auto">
-              <BehaviorSection behaviors={filteredBehaviors} />
+              <BehaviorSection behaviors={filteredBehaviors} showTooltips={false} />
             </div>
           </div>
         )}

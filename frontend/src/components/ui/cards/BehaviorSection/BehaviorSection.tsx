@@ -65,12 +65,13 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   hideActionChip = false,
   noContainer = false,
   presentation = "compact",
+  showTooltips = true,
 }) => {
   const [hoveredBehaviorIndex, setHoveredBehaviorIndex] = useState<number | null>(null);
-  const tooltipsEnabled = presentation === "compact";
+  const tooltipsEnabled = showTooltips && presentation === "compact";
   useEffect(() => {
     setHoveredBehaviorIndex(null);
-  }, [presentation]);
+  }, [tooltipsEnabled]);
   const handleBehaviorHover = useCallback((index: number | null) => {
     setHoveredBehaviorIndex(index);
   }, []);
@@ -230,7 +231,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
     : "flex flex-col gap-[3px] items-center w-full max-md:gap-px";
 
   return (
-    <div className={containerClass}>
+    <div className={`behavior-section ${containerClass}`}>
       {optimizedBehaviors.map((classifiedBehavior, index) =>
         renderBehavior(classifiedBehavior, index),
       )}
