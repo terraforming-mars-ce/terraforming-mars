@@ -13,7 +13,7 @@ import {
   CardTypeCorporation,
 } from "../../../../types/generated/api-types.ts";
 import PlayerSelector from "../PlayerSelector.tsx";
-import GameCard from "../../cards/GameCard.tsx";
+import CardChoice from "../../cards/CardChoice.tsx";
 import CorporationCard from "../../cards/CorporationCard.tsx";
 
 interface PlayerBehaviorPageProps {
@@ -458,7 +458,7 @@ const PlayerBehaviorPage: React.FC<PlayerBehaviorPageProps> = ({
                   />
                 </div>
               ) : (
-                <GameCard
+                <CardChoice
                   card={hoveredCard}
                   isSelected={false}
                   onSelect={() => {}}

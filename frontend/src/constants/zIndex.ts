@@ -41,6 +41,8 @@ export const Z_INDEX = {
 
   // Decorative scroll hint above the per-card index band, below highlighted(2000)/dragged(3000)
   CARD_FAN_SCROLL_HINT: 1500,
+  CARD_FAN_HIGHLIGHTED: 2000,
+  CARD_FAN_DRAGGED: 3000,
 
   // Modal Layer (1000-8999)
   MENU_DROPDOWN: 1000,

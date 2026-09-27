@@ -31,7 +31,9 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
 
   const icon = getIconPath(resourceType);
 
-  if (!icon) return null;
+  if (!icon) {
+    return null;
+  }
 
   const isScaledTile = tileScaleInfo.scale > 1 && cleanType === tileScaleInfo.tileType;
 
@@ -39,20 +41,20 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
   if (isScaledTile) {
     if (tileScaleInfo.scale === 2) {
       iconClass =
-        "w-[52px] h-[52px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[44px] max-md:h-[44px]";
+        "w-[calc(var(--behavior-icon-size,26px)*2)] h-[calc(var(--behavior-icon-size,26px)*2)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*2)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*2)]";
     } else if (tileScaleInfo.scale === 1.5) {
       iconClass =
-        "w-[39px] h-[39px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[33px] max-md:h-[33px]";
+        "w-[calc(var(--behavior-icon-size,26px)*1.5)] h-[calc(var(--behavior-icon-size,26px)*1.5)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.5)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.5)]";
     } else if (tileScaleInfo.scale === 1.25) {
       iconClass =
-        "w-[33px] h-[33px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[28px] max-md:h-[28px]";
+        "w-[calc(var(--behavior-icon-size,26px)*1.25)] h-[calc(var(--behavior-icon-size,26px)*1.25)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.25)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.25)]";
     } else {
       iconClass =
-        "w-[26px] h-[26px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[22px] max-md:h-[22px]";
+        "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
     }
   } else {
     iconClass =
-      "w-[26px] h-[26px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[22px] max-md:h-[22px]";
+      "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
   }
 
   const isTag = isTagIcon(cleanType);
@@ -77,20 +79,20 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
     cleanType === "volcano-tile";
   const isStandaloneCard = cleanType === "card-draw" || cleanType === "card";
   const shouldUseStandaloneSize =
-    context === "standalone" && (isStandaloneTile || isStandaloneCard);
+    context === "standalone" && (isPlacement || isStandaloneTile || isStandaloneCard);
 
   if (!isScaledTile) {
     if (isAttack) {
       iconClass =
-        "w-[26px] h-[26px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite] max-md:w-[22px] max-md:h-[22px]";
+        "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
     } else if (shouldUseStandaloneSize) {
       const cardGlow = isStandaloneCard
         ? "_drop-shadow(0_0_1px_rgba(255,248,220,0.6))_drop-shadow(0_0_2px_rgba(255,248,220,0.4))"
         : "";
-      iconClass = `w-9 h-9 object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.7))${cardGlow}] max-md:w-8 max-md:h-8`;
+      iconClass = `w-[calc(var(--behavior-icon-size,26px)*1.4)] h-[calc(var(--behavior-icon-size,26px)*1.4)] object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.7))${cardGlow}] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.4)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.4)]`;
     } else if (isPlacement) {
       iconClass =
-        "w-[30px] h-[30px] object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] max-md:w-[26px] max-md:h-[26px]";
+        "w-[calc(var(--behavior-icon-size,26px)*1.15)] h-[calc(var(--behavior-icon-size,26px)*1.15)] object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.15)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.15)]";
     } else if (isTR) {
       iconClass =
         "w-8 h-8 object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] max-md:w-7 max-md:h-7";
@@ -99,7 +101,7 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
         "w-[30px] h-[30px] object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))_drop-shadow(0_0_1px_rgba(255,248,220,0.6))_drop-shadow(0_0_2px_rgba(255,248,220,0.4))] max-md:w-[26px] max-md:h-[26px]";
     } else if (isTag) {
       iconClass =
-        "w-[26px] h-[26px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[22px] max-md:h-[22px]";
+        "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
     }
   }
 

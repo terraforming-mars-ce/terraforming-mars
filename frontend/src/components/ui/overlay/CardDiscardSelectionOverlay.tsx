@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import GameCard from "../cards/GameCard.tsx";
+import CardChoice from "../cards/CardChoice.tsx";
 import {
   PendingCardDiscardSelectionDto,
   PlayerCardDto,
@@ -108,7 +108,7 @@ const CardDiscardSelectionOverlay: React.FC<CardDiscardSelectionOverlayProps> = 
               const isSelected = selectedCardIds.includes(card.id);
               return (
                 <div key={card.id} className="relative">
-                  <GameCard
+                  <CardChoice
                     card={card}
                     isSelected={isSelected}
                     onSelect={handleCardSelect}

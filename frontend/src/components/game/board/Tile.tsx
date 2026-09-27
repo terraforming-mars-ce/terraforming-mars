@@ -1,3 +1,4 @@
+import { assetUrl } from "@/assets";
 import { useRef, useState, useMemo, useEffect, memo, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
@@ -851,7 +852,7 @@ function Tile({
           {displayName && (
             <Text
               fontSize={0.045}
-              font="/assets/Prototype.ttf"
+              font={assetUrl("fonts/prototype")}
               color="white"
               outlineWidth={0.004}
               outlineColor="black"
@@ -947,7 +948,7 @@ function BonusIcon({ texture, position, isCredits, creditAmount }: BonusIconProp
         <Text
           position={[0, 0, 0.002]}
           fontSize={0.025}
-          font="/assets/Prototype.ttf"
+          font={assetUrl("fonts/prototype")}
           color="black"
           anchorX="center"
           anchorY="middle"

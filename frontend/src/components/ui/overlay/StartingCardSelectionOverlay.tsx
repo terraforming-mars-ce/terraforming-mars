@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from "react";
 import CorporationCard from "../cards/CorporationCard.tsx";
-import GameCard from "../cards/GameCard.tsx";
+import CardChoice from "../cards/CardChoice.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { CardDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
@@ -182,7 +182,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
                 </h3>
                 <div className="flex gap-6 justify-center flex-wrap max-[768px]:gap-4">
                   {availablePreludes.map((card, index) => (
-                    <GameCard
+                    <CardChoice
                       key={card.id}
                       card={card}
                       isSelected={selectedPreludeIds.includes(card.id)}
@@ -212,7 +212,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
                 const isSelected = selectedCardIds.includes(card.id);
 
                 return (
-                  <GameCard
+                  <CardChoice
                     key={card.id}
                     card={card}
                     isSelected={isSelected}

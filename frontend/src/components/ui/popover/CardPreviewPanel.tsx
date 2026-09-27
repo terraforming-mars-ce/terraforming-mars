@@ -35,7 +35,9 @@ const CardPreviewPanel: React.FC<CardPreviewPanelProps> = ({ card }) => {
             />
           </div>
         ) : (
-          <GameCard card={card} isSelected={false} onSelect={noop} showCheckbox={false} />
+          <div className="card-size">
+            <GameCard card={card} />
+          </div>
         ))}
     </div>
   );

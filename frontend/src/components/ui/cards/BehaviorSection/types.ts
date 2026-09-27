@@ -4,7 +4,10 @@ import {
   ResourcesDto,
 } from "@/types/generated/api-types.ts";
 
+export type BehaviorPresentation = "compact" | "inspection";
+
 export interface BehaviorSectionProps {
+  presentation?: BehaviorPresentation;
   behaviors?: CardBehaviorDto[];
   computedValues?: ComputedBehaviorValueDto[];
   playerResources?: ResourcesDto;

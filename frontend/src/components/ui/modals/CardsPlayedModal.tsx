@@ -116,8 +116,8 @@ const CardsPlayedModal: React.FC<CardsPlayedModalProps> = ({ isVisible, onClose,
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(215px,1fr))] gap-x-0 gap-y-[50px] justify-items-center pt-[30px]">
             {filteredCards.map((card) => (
-              <div key={card.id} className="w-full max-w-[240px]">
-                <GameCard card={card} isSelected={false} onSelect={() => {}} animationDelay={-1} />
+              <div key={card.id} className="card-size">
+                <GameCard card={card} isSelected={false} />
               </div>
             ))}
           </div>

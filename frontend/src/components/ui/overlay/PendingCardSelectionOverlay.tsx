@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import GameCard from "../cards/GameCard.tsx";
+import CardChoice from "../cards/CardChoice.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { PendingCardSelectionDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { useCardSelection } from "../../../hooks/useCardSelection.ts";
@@ -155,7 +155,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
 
               return (
                 <div key={card.id} className="relative">
-                  <GameCard
+                  <CardChoice
                     card={card}
                     isSelected={isSelected}
                     onSelect={handleCardSelect}
