@@ -27,7 +27,7 @@ jobs:
             lfs: false
           - name: frontend
             suffix: -frontend
-            context: ./frontend
+            context: .
             file: ./frontend/Dockerfile
             lfs: true
     steps:

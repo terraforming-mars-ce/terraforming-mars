@@ -1,0 +1,10 @@
+**/node_modules
+**/build
+**/dist
+**/.cache
+.git
+output
+frontend/src/assets/generated
+frontend/public/assets
+**/.env
+**/.env.*
