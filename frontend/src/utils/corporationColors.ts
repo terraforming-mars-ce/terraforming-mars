@@ -1,56 +1,55 @@
-// Corporation brand colors for card border styling
-// These are derived from each corporation's logo/branding
+// Accents from the approved corporation logos, shared by cards and the resource bar.
 
 export const corporationBorderColors: Record<string, string> = {
   // Base game corporations
-  credicor: "#800080", // purple
-  ecoline: "#00b400", // green
-  helion: "#e6e600", // yellow
-  "mining-guild": "#c9380e", // orange-red
-  "interplanetary-cinematics": "#cc3333", // red
-  inventrix: "#6bb5c7", // cyan
-  phobolog: "#6b3fa0", // purple
-  "tharsis-republic": "#ff5f00", // orange
-  thorgate: "#808080", // grey
-  "united-nations-mars-initiative": "#027dc3", // blue
+  credicor: "#bda4e6",
+  ecoline: "#8ce329",
+  helion: "#ffb500",
+  "mining-guild": "#c79555",
+  "interplanetary-cinematics": "#ef5c52",
+  inventrix: "#00cbea",
+  phobolog: "#9266ff",
+  "tharsis-republic": "#c45e3f",
+  thorgate: "#00aeef",
+  "united-nations-mars-initiative": "#79b7ec",
 
   // Corporate Era corporations
-  teractor: "#ff4500", // orangered
-  "saturn-systems": "#6b3fa0", // purple
-  aphrodite: "#ff8c00", // orange
-  celestic: "#17b9ec", // cyan-blue
-  manutech: "#e63900", // red-orange
-  "morning-star-inc": "#ffffff", // white
-  viron: "#808080", // grey
+  teractor: "#d6ed66",
+  "saturn-systems": "#e76b4a",
+  aphrodite: "#efb5b5",
+  celestic: "#8faeff",
+  manutech: "#ec8c43",
+  "morning-star-inc": "#ffa91c",
+  viron: "#4be1b2",
 
   // Prelude corporations
-  "cheung-shing-mars": "#ff0000", // red
-  "point-luna": "#ffffff", // white
-  "robinson-industries": "#cccccc", // silver/grey
-  "valley-trust": "#027dc3", // blue
-  vitor: "#ff4500", // orangered
+  "cheung-shing-mars": "#dd4e2d",
+  "point-luna": "#43c8c6",
+  "robinson-industries": "#edaa4d",
+  "valley-trust": "#8fd2ab",
+  vitor: "#cda950",
 
   // Colonies corporations
-  aridor: "#cc3333", // red background
-  arklight: "#000089", // deep blue
-  polyphemos: "#cc3333", // red
-  poseidon: "#4169e1", // royal blue
-  "stormcraft-incorporated": "#ff8c00", // orange
-  "lakefront-resorts": "#ffffff", // white
-  pristar: "#ff5d21", // orange
-  "septem-tribus": "#ffffff", // white
-  "terralabs-research": "#ffffff", // white
-  "utopia-invest": "#00aa00", // green
-  factorum: "#ff8c00", // orange
-  "mons-insurance": "#8b4513", // brown
-  philares: "#ff5858", // red
-  "arcadian-communities": "#eeeeee", // light grey
-  recyclon: "#ff0000", // red
-  "splice-tactical-genomics": "#ff0000", // red
+  aridor: "#f3ad18",
+  arklight: "#8fdddd",
+  polyphemos: "#984bff",
+  poseidon: "#22c8d0",
+  "stormcraft-incorporated": "#96c6e5",
+  "lakefront-resorts": "#94cdd0",
+  pristar: "#98b686",
+  "septem-tribus": "#cc6848",
+  "terralabs-research": "#2fc9ef",
+  "utopia-invest": "#b59aef",
+  factorum: "#cf7047",
+  "mons-insurance": "#9fceee",
+  philares: "#2fc4c9",
+  "arcadian-communities": "#a3b988",
+  recyclon: "#a9ed2c",
+  "splice-tactical-genomics": "#cd5596",
 
   // Turmoil corporations
-  astrodrill: "#ffcc00", // yellow/gold
-  "pharmacy-union": "#ffffff", // white
+  astrodrill: "#ffb60b",
+  "pharmacy-union": "#56d2bf",
   ecotec: "#00aa00", // green
 
   // Promo corporations
