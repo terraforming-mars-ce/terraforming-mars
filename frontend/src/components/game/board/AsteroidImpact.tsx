@@ -1,3 +1,4 @@
+import { assetUrl } from "@/assets";
 import { Suspense, useRef, useMemo, useEffect, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -8,7 +9,7 @@ import { SPHERE_RADIUS, easeOutCubic } from "./boardConstants";
 import { useAsteroidEventStore } from "../../../stores/asteroidEventStore";
 import { useSoundEffects } from "../../../hooks/useSoundEffects";
 
-const ASTEROID_MODEL_PATH = "/assets/models/asteroid.glb";
+const ASTEROID_MODEL_PATH = assetUrl("models/asteroid");
 const ASTEROID_SCALE = 0.15;
 const FLIGHT_DURATION = 1.8;
 const IMPACT_DUST_DURATION = 3000;

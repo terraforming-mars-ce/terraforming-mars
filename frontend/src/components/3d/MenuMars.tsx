@@ -1,3 +1,4 @@
+import { assetUrl } from "@/assets";
 import { Component, Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture } from "@react-three/drei";
@@ -37,7 +38,7 @@ const atmosphereFragment = `
 `;
 
 function Planet({ reduced }: { reduced: boolean }) {
-  const texture = useTexture("/assets/textures/mars_8k.jpg");
+  const texture = useTexture(assetUrl("textures/planets/mars/surface"));
   const sphere = useRef<THREE.Mesh>(null);
   useEffect(() => {
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -68,7 +69,7 @@ function Planet({ reduced }: { reduced: boolean }) {
 }
 
 function Phobos({ reduced }: { reduced: boolean }) {
-  const { scene } = useGLTF("/assets/models/phobos.glb");
+  const { scene } = useGLTF(assetUrl("models/phobos"));
   const moon = useMemo(() => {
     const clone = scene.clone(true);
     const bounds = new THREE.Box3().setFromObject(clone);
