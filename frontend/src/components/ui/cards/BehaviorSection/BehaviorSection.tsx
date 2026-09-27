@@ -18,6 +18,32 @@ import ValueModifierLayout from "./components/ValueModifierLayout.tsx";
 import DefenseLayout from "./components/DefenseLayout.tsx";
 import BehaviorIcon from "./components/BehaviorIcon.tsx";
 
+function buildBehaviorLayout(behaviors: NonNullable<BehaviorSectionProps["behaviors"]>) {
+  const classified = classifyBehaviors(behaviors);
+  const merged = mergeTriggeredEffects(mergeAutoProductionBehaviors(classified));
+  const layout = analyzeCardLayout(merged);
+  return {
+    tileScaleInfo: detectTilePlacementScale(merged),
+    cardLayoutPlan: layout,
+    optimizedBehaviors: optimizeBehaviorsForSpace(merged, layout),
+  };
+}
+
+const emptyBehaviors: NonNullable<BehaviorSectionProps["behaviors"]> = [];
+const layoutCache = new WeakMap<
+  NonNullable<BehaviorSectionProps["behaviors"]>,
+  ReturnType<typeof buildBehaviorLayout>
+>();
+
+function getBehaviorLayout(behaviors = emptyBehaviors) {
+  let layout = layoutCache.get(behaviors);
+  if (!layout) {
+    layout = buildBehaviorLayout(behaviors);
+    layoutCache.set(behaviors, layout);
+  }
+  return layout;
+}
+
 const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   behaviors,
   computedValues,
@@ -46,25 +72,11 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
     return map;
   }, [computedValues]);
 
+  const { tileScaleInfo, cardLayoutPlan, optimizedBehaviors } = getBehaviorLayout(behaviors);
+
   if (!behaviors || behaviors.length === 0) {
     return null;
   }
-
-  // Classify behaviors
-  const classifiedBehaviors = classifyBehaviors(behaviors);
-
-  // Merge auto production behaviors if needed
-  const mergedAutoProduction = mergeAutoProductionBehaviors(classifiedBehaviors);
-
-  // Merge triggered effects with same condition type (e.g., city-placed)
-  const mergedBehaviors = mergeTriggeredEffects(mergedAutoProduction);
-
-  // Detect tile placement scaling
-  const tileScaleInfo = detectTilePlacementScale(mergedBehaviors);
-
-  // Analyze card layout and optimize for space if needed
-  const cardLayoutPlan = analyzeCardLayout(mergedBehaviors);
-  const optimizedBehaviors = optimizeBehaviorsForSpace(mergedBehaviors, cardLayoutPlan);
 
   // Helper function to check if a resource is affordable (bound to current context)
   const checkResourceAffordable = (resource: any, isInput: boolean = true): boolean => {
