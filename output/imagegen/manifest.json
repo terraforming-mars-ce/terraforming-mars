@@ -1,0 +1,579 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "source": "corporations/aphrodite-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/aphrodite.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/arcadian-communities-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/arcadian-communities.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "refinements/aridor-corp.png",
+      "runtime": "frontend/public/assets/corporations/aridor.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "refinements/arklight-corp.png",
+      "runtime": "frontend/public/assets/corporations/arklight.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/astrodrill-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/astrodrill.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/celestic-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/celestic.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/cheung-shing-mars-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/cheung-shing-mars.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/credicor-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/credicor.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/ecoline-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/ecoline.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/factorum-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/factorum.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/helion-brand-v3.png",
+      "runtime": "frontend/public/assets/corporations/helion.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/interplanetary-cinematics-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/interplanetary-cinematics.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/inventrix-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/inventrix.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/lakefront-resorts-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/lakefront-resorts.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/manutech-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/manutech.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "refinements/mining-guild-corp.png",
+      "runtime": "frontend/public/assets/corporations/mining-guild.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/mons-insurance-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/mons-insurance.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/morning-star-inc-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/morning-star-inc.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "refinements/pharmacy-union-corp.png",
+      "runtime": "frontend/public/assets/corporations/pharmacy-union.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/philares-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/philares.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/phobolog-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/phobolog.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "refinements/point-luna-corp.png",
+      "runtime": "frontend/public/assets/corporations/point-luna.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/polyphemos-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/polyphemos.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/poseidon-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/poseidon.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "refinements/pristar-corp.png",
+      "runtime": "frontend/public/assets/corporations/pristar.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/recyclon-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/recyclon.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/robinson-industries-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/robinson-industries.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/saturn-systems-brand-v3.png",
+      "runtime": "frontend/public/assets/corporations/saturn-systems.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/septem-tribus-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/septem-tribus.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/splice-tactical-genomics-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/splice-tactical-genomics.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/stormcraft-incorporated-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/stormcraft-incorporated.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/teractor-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/teractor.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/terralabs-research-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/terralabs-research.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "refinements/tharsis-republic-corp.png",
+      "runtime": "frontend/public/assets/corporations/tharsis-republic.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/thorgate-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/thorgate.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "refinements/unmi-corp.png",
+      "runtime": "frontend/public/assets/corporations/unmi.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/utopia-invest-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/utopia-invest.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/valley-trust-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/valley-trust.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/viron-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/viron.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "corporations/vitor-brand-v1.png",
+      "runtime": "frontend/public/assets/corporations/vitor.webp",
+      "resize": "768x768>",
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "source": "refinements/oxygen.png",
+      "runtime": "frontend/public/assets/global-parameters/oxygen.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "temperature-proposal-v2.png",
+      "runtime": "frontend/public/assets/global-parameters/temperature.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/venus-global.png",
+      "runtime": "frontend/public/assets/global-parameters/venus.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "influence-resource-proposal.png",
+      "runtime": "frontend/public/assets/misc/influence.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/animal-resource.png",
+      "runtime": "frontend/public/assets/resources/animal.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "asteroid-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/asteroid.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "camp-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/camp.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "card-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/card.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "data-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/data.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "director-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/director.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "disease-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/disease.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "fighter-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/fighter.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/floater.png",
+      "runtime": "frontend/public/assets/resources/floater.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/heat.png",
+      "runtime": "frontend/public/assets/resources/heat.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/megacredit.png",
+      "runtime": "frontend/public/assets/resources/megacredit.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/microbe-resource.png",
+      "runtime": "frontend/public/assets/resources/microbe.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/plant-resource.png",
+      "runtime": "frontend/public/assets/resources/plant.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "power-proposal.png",
+      "runtime": "frontend/public/assets/resources/power.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "preservation-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/preservation.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "science-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/science.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "specialized-robot-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/specialized-robot.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "steel-proposal.png",
+      "runtime": "frontend/public/assets/resources/steel.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "titanium-proposal.png",
+      "runtime": "frontend/public/assets/resources/titanium.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/tr.png",
+      "runtime": "frontend/public/assets/resources/tr.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "wild-resource-proposal.png",
+      "runtime": "frontend/public/assets/resources/wild.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/animal-tag.png",
+      "runtime": "frontend/public/assets/tags/animal.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/building-tag.png",
+      "runtime": "frontend/public/assets/tags/building.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/city-tag.png",
+      "runtime": "frontend/public/assets/tags/city.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/clone-tag.png",
+      "runtime": "frontend/public/assets/tags/clone.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/crime-tag.png",
+      "runtime": "frontend/public/assets/tags/crime.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "tags/earth-ce-v3.png",
+      "runtime": "frontend/public/assets/tags/earth.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/event-tag.png",
+      "runtime": "frontend/public/assets/tags/event.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/jovian-tag.png",
+      "runtime": "frontend/public/assets/tags/jovian.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "tags/mars-ce-v3.png",
+      "runtime": "frontend/public/assets/tags/mars.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/microbe-tag.png",
+      "runtime": "frontend/public/assets/tags/microbe.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "tags/moon-ce-v3.png",
+      "runtime": "frontend/public/assets/tags/moon.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/plant-tag.png",
+      "runtime": "frontend/public/assets/tags/plant.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/power-tag.png",
+      "runtime": "frontend/public/assets/tags/power.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/science-tag.png",
+      "runtime": "frontend/public/assets/tags/science.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/space-tag.png",
+      "runtime": "frontend/public/assets/tags/space.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/venus-tag.png",
+      "runtime": "frontend/public/assets/tags/venus.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "refinements/wild-tag.png",
+      "runtime": "frontend/public/assets/tags/wild.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "city-placement-proposal.png",
+      "runtime": "frontend/public/assets/tiles/city.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "colony-placement-proposal.png",
+      "runtime": "frontend/public/assets/tiles/colony.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "greenery-placement-proposal.png",
+      "runtime": "frontend/public/assets/tiles/greenery_no_O2.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "volcano-placement-proposal.png",
+      "runtime": "frontend/public/assets/tiles/hazard.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "ocean-placement-proposal.png",
+      "runtime": "frontend/public/assets/tiles/ocean.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "special-placement-proposal.png",
+      "runtime": "frontend/public/assets/tiles/special.png",
+      "resize": "256x256>",
+      "format": "png"
+    },
+    {
+      "source": "trade-placement-proposal.png",
+      "runtime": "frontend/public/assets/tiles/trade.png",
+      "resize": "256x256>",
+      "format": "png"
+    }
+  ]
+}
