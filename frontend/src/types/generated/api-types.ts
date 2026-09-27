@@ -1816,12 +1816,29 @@ export interface GetGameHistoryResponse {
 // source: http_dto.go
 
 /**
- * CreateGameRequest represents the request body for creating a game.
- * All fields are optional — defaults are applied server-side and settings are
- * edited from the lobby via UpdateGameSettingsRequest.
+ * GameSetupDto contains settings selected before creating a lobby.
+ */
+export interface GameSetupDto {
+  maxPlayers: number /* int */;
+  mapId: string;
+  cardPacks: string[];
+  venusNextEnabled: boolean;
+  developmentMode: boolean;
+  demoGame: boolean;
+  allowRandomBuy: boolean;
+}
+/**
+ * GameOptionsDto provides authoritative defaults and map previews for setup.
+ */
+export interface GameOptionsDto {
+  defaults: GameSetupDto;
+  availableMaps: MapInfoDto[];
+}
+/**
+ * CreateGameRequest selects initial settings; omission uses server defaults.
  */
 export interface CreateGameRequest {
-  playerName?: string;
+  settings?: GameSetupDto;
 }
 /**
  * UpdateGameSettingsRequest represents a partial settings update sent from the

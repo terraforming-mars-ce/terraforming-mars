@@ -106,3 +106,47 @@ func getFirst5(ids []string) []string {
 	}
 	return ids[:5]
 }
+
+// GameOptions contains domain settings and boards available when creating a game.
+type GameOptions struct {
+	Defaults      shared.GameSettings
+	AvailableMaps []*board.MapDefinition
+}
+
+// Options returns the defaults and boards used by game creation.
+func (a *CreateGameAction) Options() GameOptions {
+	availableMaps := make([]*board.MapDefinition, 0)
+	for _, info := range a.mapRegistry.ListMaps() {
+		definition, _ := a.mapRegistry.GetMap(info.ID)
+		availableMaps = append(availableMaps, definition)
+	}
+	return GameOptions{Defaults: shared.GameSettings{
+		MaxPlayers: game.DefaultMaxPlayers, MapID: board.DefaultMapID(),
+		CardPacks: shared.DefaultCardPacks(), DevelopmentMode: true,
+	}, AvailableMaps: availableMaps}
+}
+
+// ExecuteSetup validates the complete setup before registering a game.
+func (a *CreateGameAction) ExecuteSetup(ctx context.Context, setup *shared.GameSettings) (*game.Game, error) {
+	settings := a.Options().Defaults
+	if setup != nil {
+		settings = *setup
+	}
+	if err := validateSetup(settings, a.mapRegistry); err != nil {
+		return nil, err
+	}
+	return a.Execute(ctx, settings)
+}
+
+func validateSetup(settings shared.GameSettings, registry *board.MapRegistry) error {
+	if settings.MaxPlayers < 1 || settings.MaxPlayers > 10 {
+		return fmt.Errorf("max players must be between 1 and 10")
+	}
+	if _, ok := registry.GetMap(settings.MapID); !ok {
+		return fmt.Errorf("unknown map: %s", settings.MapID)
+	}
+	if !slices.Contains(settings.CardPacks, shared.PackBaseGame) {
+		return fmt.Errorf("base game pack cannot be disabled")
+	}
+	return nil
+}
