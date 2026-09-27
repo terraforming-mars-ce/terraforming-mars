@@ -1,21 +1,24 @@
-FROM oven/bun:latest AS builder
-WORKDIR /build
+FROM oven/bun:1.3.5 AS bun
+FROM node:24-bookworm-slim AS builder
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+WORKDIR /build/frontend
 
 ARG BUILD_VERSION="Local Build"
 ENV VITE_APP_VERSION=${BUILD_VERSION}
 
-COPY package.json bun.lock ./
+COPY frontend/package.json frontend/bun.lock ./
 RUN bun install --frozen-lockfile
-COPY . .
+COPY frontend/ ./
+COPY assets/ /build/assets/
 
 RUN bun run build
 
 FROM nginx:alpine
 WORKDIR /app
 
-COPY --from=builder /build/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY --from=builder /build/frontend/build /usr/share/nginx/html
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN chmod +x /docker-entrypoint.sh && \
     addgroup -g 1000 appuser && \

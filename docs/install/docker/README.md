@@ -6,7 +6,8 @@ Both Dockerfiles expect to be built from the repo root.
 
 ```bash
 docker build -f backend/Dockerfile -t tm-backend .
-docker build -f frontend/Dockerfile -t tm-frontend frontend/
+git lfs pull
+docker build -f frontend/Dockerfile -t tm-frontend .
 ```
 
 ## Running the game
