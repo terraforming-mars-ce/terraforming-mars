@@ -1,5 +1,5 @@
 import { cardImage } from "@/assets";
-import { useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import GameIcon from "../display/GameIcon.tsx";
 import CardDecorBar from "../display/CardDecorBar.tsx";
 import BehaviorSection from "./BehaviorSection";
@@ -21,6 +21,7 @@ export interface GameCardProps {
   isSelected?: boolean;
   showCheckbox?: boolean;
   presentation?: "compact" | "inspection";
+  moduleState?: "idle" | "armed" | "releasing";
   description?: ReactNode;
 }
 
@@ -68,6 +69,7 @@ export default function GameCard({
   isSelected = false,
   showCheckbox = false,
   presentation = "compact",
+  moduleState = showCheckbox && isSelected ? "armed" : "idle",
   description,
 }: GameCardProps) {
   const hasState = "available" in card && "effectiveCost" in card;
@@ -78,15 +80,26 @@ export default function GameCard({
   const artwork = cardImage(card.id);
 
   return (
-    <div className="game-card" data-presentation={presentation} data-card-name={card.name}>
+    <div
+      className="game-card"
+      data-presentation={presentation}
+      data-module-state={moduleState}
+      data-card-name={card.name}
+      onDragStart={(event) => event.preventDefault()}
+    >
       <div className="game-card-requirements">
         <RequirementsBox requirements={card.requirements} inFlow />
       </div>
       <div
         className={`game-card-body group ${presentation === "compact" && hasState && !card.available ? "grayscale-[0.6] brightness-[0.65] saturate-[0.2]" : ""}`}
-        style={{ "--card-accent": accent } as React.CSSProperties}
+        style={
+          {
+            "--card-accent": accent,
+            "--module-decoration-layer": Z_INDEX.CONTROL_DECORATION,
+          } as React.CSSProperties
+        }
       >
-        <div className="game-card-frame" style={{ zIndex: Z_INDEX.CONTROL_DECORATION }} />
+        <CardChassis showConnector={!showCheckbox} />
         <div
           className="game-card-stripe"
           style={{
@@ -96,6 +109,7 @@ export default function GameCard({
           }}
         />
         <div className="game-card-heading">
+          <CircuitTrace position="art" />
           <div className="game-card-artwork">
             <CardArtwork key={card.id} artwork={artwork} name={card.name} />
           </div>
@@ -123,6 +137,7 @@ export default function GameCard({
           <h3 className="game-card-title font-orbitron" data-card-type={card.type}>
             <span>{card.name}</span>
           </h3>
+          <CircuitTrace position="title" />
           {hasTags && (
             <div className="game-card-tags" style={{ zIndex: Z_INDEX.GAME_BOARD_EFFECTS }}>
               {card.tags?.slice(0, card.type === "event" ? 2 : 3).map((tag, index) => {
@@ -147,6 +162,7 @@ export default function GameCard({
           <CardDecorBar vpConditions={card.vpConditions} resourceStorage={card.resourceStorage} />
         </div>
         <div className="game-card-behaviors">
+          <CardPanelCircuit />
           <BehaviorSection
             behaviors={card.behaviors}
             computedValues={hasState ? card.computedValues : undefined}
@@ -182,6 +198,76 @@ export default function GameCard({
         )}
       </div>
     </div>
+  );
+}
+
+export function CardChassis({ showConnector }: { showConnector: boolean }) {
+  return (
+    <div
+      className="game-card-chassis"
+      aria-hidden="true"
+      style={{ zIndex: Z_INDEX.CONTROL_DECORATION }}
+    >
+      <div className="game-card-frame" />
+      <CircuitTrace position="feed" />
+      <CircuitTrace position="spine" />
+      <span className="game-card-catch game-card-catch--left" />
+      <span className="game-card-catch game-card-catch--right" />
+      {showConnector && <span className="game-card-connector" />}
+    </div>
+  );
+}
+
+export function CardPanelCircuit() {
+  const panelRef = useRef<HTMLSpanElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) {
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setSize((previous) =>
+        previous.width === width && previous.height === height ? previous : { width, height },
+      );
+    });
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, []);
+  const right = size.width - 0.5;
+  const bottom = size.height - 0.5;
+  const paths = [`M 0.5 ${bottom} V 0.5 H ${right}`, `M 0.5 ${bottom} H ${right} V 0.5`];
+  return (
+    <span ref={panelRef} className="card-panel-circuit" aria-hidden="true">
+      {size.width > 0 && size.height > 0 && (
+        <svg
+          viewBox={`0 0 ${size.width} ${size.height}`}
+          preserveAspectRatio="none"
+          focusable="false"
+        >
+          <g className="card-panel-trails">
+            {paths.map((d, index) => (
+              <path key={index} d={d} pathLength="1" />
+            ))}
+          </g>
+          <g className="card-panel-tips">
+            {paths.map((d, index) => (
+              <path key={index} d={d} pathLength="1" />
+            ))}
+          </g>
+        </svg>
+      )}
+      <span className="card-panel-junction" />
+    </span>
+  );
+}
+
+function CircuitTrace({ position }: { position: "feed" | "spine" | "art" | "title" }) {
+  return (
+    <span className={`game-card-circuit game-card-circuit--${position}`} aria-hidden="true">
+      <span />
+    </span>
   );
 }
 

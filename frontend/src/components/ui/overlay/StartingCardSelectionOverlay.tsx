@@ -155,7 +155,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
               <h3 className="text-white/60 text-sm font-orbitron font-bold uppercase tracking-widest mb-4">
                 Corporation
               </h3>
-              <div className="flex gap-4 justify-center flex-wrap">
+              <div className="flex gap-8 justify-center flex-wrap">
                 {availableCorporations.map((corp) => (
                   <div key={corp.id} className="w-[400px] max-[768px]:w-full">
                     <CorporationCard
