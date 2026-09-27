@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"terraforming-mars-backend/internal/cards"
+	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/maps"
@@ -102,4 +103,42 @@ func getFirst5(ids []string) []string {
 		return ids
 	}
 	return ids[:5]
+}
+
+// Options returns the same defaults used by request-based game creation.
+func (a *CreateGameAction) Options() dto.GameOptionsDto {
+	return dto.GameOptionsDto{Defaults: dto.GameSetupDto{
+		MaxPlayers: game.DefaultMaxPlayers, MapID: maps.DefaultMapID(),
+		CardPacks: shared.DefaultCardPacks(), DevelopmentMode: true,
+	}, AvailableMaps: dto.MapPreviews(a.mapRegistry)}
+}
+
+// ExecuteRequest validates the complete setup before registering a game.
+func (a *CreateGameAction) ExecuteRequest(ctx context.Context, req dto.CreateGameRequest) (*game.Game, error) {
+	setup := a.Options().Defaults
+	if req.Settings != nil {
+		setup = *req.Settings
+	}
+	settings := shared.GameSettings{
+		MaxPlayers: setup.MaxPlayers, MapID: setup.MapID, CardPacks: setup.CardPacks,
+		VenusNextEnabled: setup.VenusNextEnabled, DevelopmentMode: setup.DevelopmentMode,
+		DemoGame: setup.DemoGame, AllowRandomBuy: setup.AllowRandomBuy,
+	}
+	if err := validateSetup(settings, a.mapRegistry); err != nil {
+		return nil, err
+	}
+	return a.Execute(ctx, settings)
+}
+
+func validateSetup(settings shared.GameSettings, registry *maps.MapRegistry) error {
+	if settings.MaxPlayers < 1 || settings.MaxPlayers > 10 {
+		return fmt.Errorf("max players must be between 1 and 10")
+	}
+	if _, ok := registry.GetMap(settings.MapID); !ok {
+		return fmt.Errorf("unknown map: %s", settings.MapID)
+	}
+	if !slices.Contains(settings.CardPacks, shared.PackBaseGame) {
+		return fmt.Errorf("base game pack cannot be disabled")
+	}
+	return nil
 }

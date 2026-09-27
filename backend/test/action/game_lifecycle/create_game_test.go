@@ -2,6 +2,8 @@ package game_lifecycle_test
 
 import (
 	"context"
+	"slices"
+	"terraforming-mars-backend/internal/delivery/dto"
 	"testing"
 
 	gameAction "terraforming-mars-backend/internal/action/game"
@@ -124,4 +126,66 @@ func TestCreateGameAction_BoardInitialization(t *testing.T) {
 
 	board := createdGame.Board()
 	testutil.AssertTrue(t, board != nil, "Board should be initialized")
+}
+
+func TestCreateGameRequestOptions(t *testing.T) {
+	repo := testutil.NewTestGameRepository(t)
+	registry := testutil.CreateTestCardRegistry()
+	action := gameAction.NewCreateGameAction(repo, registry, testutil.CreateTestMapRegistry(), testutil.TestLogger())
+	options := action.Options()
+	if len(options.AvailableMaps) == 0 || len(options.AvailableMaps[0].Tiles) == 0 {
+		t.Fatal("setup must include map previews")
+	}
+	created, err := action.ExecuteRequest(context.Background(), dto.CreateGameRequest{})
+	testutil.AssertNoError(t, err, "create with defaults")
+	testutil.AssertEqual(t, options.Defaults.MapID, created.Settings().MapID, "map defaults match")
+	testutil.AssertEqual(t, options.Defaults.MaxPlayers, created.Settings().MaxPlayers, "player defaults match")
+	testutil.AssertEqual(t, options.Defaults.DevelopmentMode, created.Settings().DevelopmentMode, "development default matches")
+	if !slices.Equal(options.Defaults.CardPacks, created.Settings().CardPacks) {
+		t.Fatal("pack defaults differ")
+	}
+
+	setup := options.Defaults
+	setup.MapID = options.AvailableMaps[len(options.AvailableMaps)-1].ID
+	setup.MaxPlayers = 3
+	setup.CardPacks = []string{shared.PackBaseGame}
+	setup.VenusNextEnabled = true
+	setup.DevelopmentMode = false
+	customized, err := action.ExecuteRequest(context.Background(), dto.CreateGameRequest{Settings: &setup})
+	testutil.AssertNoError(t, err, "create configured game")
+	testutil.AssertEqual(t, setup.MapID, customized.Settings().MapID, "chosen map retained")
+	testutil.AssertEqual(t, 3, customized.Settings().MaxPlayers, "chosen player count retained")
+	testutil.AssertFalse(t, customized.Settings().DevelopmentMode, "explicit false retained")
+	testutil.AssertTrue(t, customized.Settings().VenusNextEnabled, "venus enabled")
+	testutil.AssertFalse(t, customized.Settings().HasPrelude(), "prelude can be omitted")
+}
+
+func TestCreateGameRequestRejectsInvalidSetup(t *testing.T) {
+	tests := []struct {
+		name   string
+		change func(*dto.GameSetupDto)
+	}{
+		{"map", func(s *dto.GameSetupDto) { s.MapID = "unknown" }},
+		{"zero players", func(s *dto.GameSetupDto) { s.MaxPlayers = 0 }},
+		{"too many players", func(s *dto.GameSetupDto) { s.MaxPlayers = 11 }},
+		{"empty packs", func(s *dto.GameSetupDto) { s.CardPacks = []string{} }},
+		{"missing base", func(s *dto.GameSetupDto) { s.CardPacks = []string{shared.PackPrelude} }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := testutil.NewTestGameRepository(t)
+			action := gameAction.NewCreateGameAction(repo, testutil.CreateTestCardRegistry(), testutil.CreateTestMapRegistry(), testutil.TestLogger())
+			setup := action.Options().Defaults
+			tt.change(&setup)
+			created, err := action.ExecuteRequest(context.Background(), dto.CreateGameRequest{Settings: &setup})
+			if err == nil || created != nil {
+				t.Fatal("invalid setup created a game")
+			}
+			games, err := repo.List(context.Background(), nil)
+			testutil.AssertNoError(t, err, "list games")
+			if len(games) != 0 {
+				t.Fatal("invalid setup registered a game")
+			}
+		})
+	}
 }

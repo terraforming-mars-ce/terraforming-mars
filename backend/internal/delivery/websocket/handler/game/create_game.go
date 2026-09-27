@@ -2,11 +2,11 @@ package game
 
 import (
 	"context"
+	"encoding/json"
 
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 
 	"go.uber.org/zap"
@@ -43,9 +43,17 @@ func (h *CreateGameHandler) HandleMessage(ctx context.Context, connection *core.
 
 	log.Debug("Processing create game request")
 
-	// Settings start with sensible defaults; the create-game action fills in
-	// the rest and hosts edit them from the lobby via UpdateGameSettingsAction.
-	game, err := h.createGameAction.Execute(ctx, shared.GameSettings{DevelopmentMode: true})
+	var req dto.CreateGameRequest
+	payload, err := json.Marshal(message.Payload)
+	if err != nil {
+		h.sendError(connection, "Invalid game settings")
+		return
+	}
+	if err := json.Unmarshal(payload, &req); err != nil {
+		h.sendError(connection, "Invalid game settings")
+		return
+	}
+	game, err := h.createGameAction.ExecuteRequest(ctx, req)
 	if err != nil {
 		log.Error("Failed to execute create game action", zap.Error(err))
 		h.sendError(connection, err.Error())

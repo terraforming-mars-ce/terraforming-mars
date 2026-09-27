@@ -151,12 +151,11 @@ func (h *GameHandler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Settings start with sensible defaults; the create-game action fills in
-	// the rest and hosts edit them from the lobby via UpdateGameSettingsAction.
-	game, err := h.createGameAction.Execute(ctx, shared.GameSettings{DevelopmentMode: true})
+	game, err := h.createGameAction.ExecuteRequest(ctx, req)
 	if err != nil {
-		log.Error("Failed to create game", zap.Error(err))
-		http.Error(w, "Failed to create game", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -352,5 +351,13 @@ func (h *GameHandler) ListMilestonesAndAwards(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// GameOptions handles GET /api/v1/game-options.
+func (h *GameHandler) GameOptions(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(h.createGameAction.Options()); err != nil {
+		logger.Get().Error("Failed to encode game options", zap.Error(err))
 	}
 }
