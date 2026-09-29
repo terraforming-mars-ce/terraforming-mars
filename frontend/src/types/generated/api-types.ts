@@ -2301,6 +2301,7 @@ export interface ProductionPhaseStartedPayload {
  */
 export interface LogUpdatePayload {
   logs: StateDiffDto[];
+  isHistory: boolean;
 }
 /**
  * ConfirmStartingCardSelectionMessage represents confirm starting card selection message

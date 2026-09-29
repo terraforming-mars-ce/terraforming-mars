@@ -255,7 +255,8 @@ func (b *Broadcaster) SendInitialLogs(gameID string, playerID string) {
 		Type:   dto.MessageTypeLogUpdate,
 		GameID: gameID,
 		Payload: dto.LogUpdatePayload{
-			Logs: logDtos,
+			Logs:      logDtos,
+			IsHistory: true,
 		},
 	}
 
@@ -364,7 +365,8 @@ func (b *Broadcaster) SendInitialLogsToSpectator(gameID string, spectatorID stri
 		Type:   dto.MessageTypeLogUpdate,
 		GameID: gameID,
 		Payload: dto.LogUpdatePayload{
-			Logs: logDtos,
+			Logs:      logDtos,
+			IsHistory: true,
 		},
 	}
 
