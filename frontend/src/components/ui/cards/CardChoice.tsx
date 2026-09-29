@@ -5,9 +5,15 @@ import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 interface CardChoiceProps extends Omit<GameCardProps, "presentation" | "description"> {
   onSelect: (cardId: string) => void;
   animationDelay?: number;
+  disabled?: boolean;
 }
 
-export default function CardChoice({ onSelect, animationDelay = 0, ...props }: CardChoiceProps) {
+export default function CardChoice({
+  onSelect,
+  animationDelay = 0,
+  disabled = false,
+  ...props
+}: CardChoiceProps) {
   const { playCardHoverSound } = useSoundEffects();
   const pendingSound = useRef(false);
   useEffect(() => {
@@ -17,6 +23,9 @@ export default function CardChoice({ onSelect, animationDelay = 0, ...props }: C
     }
   }, [props.isSelected, playCardHoverSound]);
   const activate = () => {
+    if (disabled) {
+      return;
+    }
     pendingSound.current = true;
     onSelect(props.card.id);
   };
@@ -24,9 +33,10 @@ export default function CardChoice({ onSelect, animationDelay = 0, ...props }: C
     <div
       role="checkbox"
       aria-checked={props.isSelected ?? false}
+      aria-disabled={disabled}
       aria-label={props.card.name}
-      tabIndex={0}
-      className={`card-size cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${animationDelay >= 0 ? "motion-safe:animate-[fadeInUp_0.5s_ease_both]" : ""}`}
+      tabIndex={disabled ? -1 : 0}
+      className={`card-size select-none outline-none focus-visible:ring-2 focus-visible:ring-blue-400 transition-[filter] duration-200 ${disabled ? "cursor-default grayscale brightness-50" : "cursor-pointer"} ${animationDelay >= 0 ? "motion-safe:animate-[fadeInUp_0.5s_ease_both]" : ""}`}
       style={animationDelay >= 0 ? { animationDelay: `${animationDelay}ms` } : undefined}
       onClick={activate}
       onKeyDown={(event) => {

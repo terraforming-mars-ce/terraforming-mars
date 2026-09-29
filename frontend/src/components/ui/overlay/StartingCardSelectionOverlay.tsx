@@ -186,6 +186,10 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
                       key={card.id}
                       card={card}
                       isSelected={selectedPreludeIds.includes(card.id)}
+                      disabled={
+                        selectedPreludeIds.length >= maxSelectablePreludes &&
+                        !selectedPreludeIds.includes(card.id)
+                      }
                       onSelect={handlePreludeSelect}
                       animationDelay={index * 100}
                       showCheckbox={true}
