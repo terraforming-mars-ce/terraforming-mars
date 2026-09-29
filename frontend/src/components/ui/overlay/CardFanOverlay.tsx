@@ -889,6 +889,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
               <div
                 key={card.id}
                 data-card-id={card.id}
+                data-interactive={isInteractive}
                 role="button"
                 tabIndex={isInteractive ? 0 : -1}
                 aria-label={`Inspect ${card.name}`}
@@ -912,7 +913,6 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                   zIndex: finalZ,
                   opacity: edgeOpacity,
                   visibility: isHidden ? "hidden" : undefined,
-                  pointerEvents: isInteractive ? undefined : "none",
                   transitionDelay: staggerDelay,
                 }}
                 onPointerDown={isExpanded ? undefined : (e) => handlePointerDown(card.id, e)}
@@ -1041,13 +1041,18 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
           translate: -50% 0;
           cursor: pointer;
           transform-origin: bottom center;
-          pointer-events: auto;
+          pointer-events: none;
           user-select: none;
           touch-action: none;
           transition: transform 180ms ease, filter 180ms ease, opacity 180ms ease;
         }
 
         .card-fan-card:focus-visible { outline: 2px solid #60a5fa; }
+
+        .card-fan-card[data-interactive="true"] .game-card-body,
+        .card-fan-card[data-interactive="true"] .game-card-requirements > div > div {
+          pointer-events: auto;
+        }
 
         .card-fan-card.is-mode-transition {
           transition: transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
