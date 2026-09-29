@@ -796,6 +796,7 @@ export interface VPConditionDto {
  * CardDto represents a card for client consumption
  */
 export interface CardDto {
+  style?: CardStyleDto;
   id: string;
   name: string;
   type: CardType;
@@ -1529,6 +1530,7 @@ export interface TileBonusDto {
  * TileOccupantDto represents what currently occupies a tile
  */
 export interface TileOccupantDto {
+  visual?: TileVisualDto;
   type: string;
   tags: string[];
 }
@@ -1745,6 +1747,39 @@ export interface GenerationalEventRequirementDto {
   event: GenerationalEvent;
   count?: MinMaxValueDto;
   target?: TargetType;
+}
+/**
+ * CityStyleRequestDto contains optional visual requests, independent of placement rules.
+ */
+export interface CityStyleRequestDto {
+  plan?: "clustered" | "radial" | "grid" | "courtyard";
+  density?: "sparse" | "balanced" | "dense";
+  heights?: "low" | "mixed" | "tall";
+  ground?: "level" | "recessed";
+  exposure?: "surface" | "mostly-buried";
+  perimeter?: "open" | "low-wall" | "high-wall";
+  cover?: "none" | "dome" | "flat-glass";
+  landmark?: "none" | "hall" | "observatory";
+  connections?: "paths" | "skybridges" | "enclosed";
+  landscaping?: "sparse" | "parks" | "lush";
+  lighting?: "normal" | "bright";
+  perimeterRoad?: "none" | "ring";
+  entranceMin?: number /* int */;
+  entranceMax?: number /* int */;
+  details?: string[];
+}
+/**
+ * CardStyleDto contains card tile appearance requests.
+ */
+export interface CardStyleDto {
+  tile?: CityStyleRequestDto;
+}
+/**
+ * TileVisualDto is the stable visual input shared by every viewer.
+ */
+export interface TileVisualDto {
+  seed: number /* uint32 */;
+  city?: CityStyleRequestDto;
 }
 
 //////////
@@ -1966,11 +2001,11 @@ export interface FeedbackStatusResponse {
  * Registries bundles optional expansion registries for DTO mapping
  */
 export interface Registries {
-  ColonyRegistry: any /* colonies.ColonyRegistry */;
-  ProjectFundingRegistry: any /* pfRegistry.ProjectFundingRegistry */;
-  StandardProjectRegistry: any /* standardprojects.StandardProjectRegistry */;
-  AwardRegistry: any /* awards.AwardRegistry */;
-  MilestoneRegistry: any /* milestones.MilestoneRegistry */;
+  ColonyRegistry: any /* colony.ColonyRegistry */;
+  ProjectFundingRegistry: any /* pfDomain.ProjectFundingRegistry */;
+  StandardProjectRegistry: any /* standardproject.StandardProjectRegistry */;
+  AwardRegistry: any /* award.AwardRegistry */;
+  MilestoneRegistry: any /* milestone.MilestoneRegistry */;
   AvailableMaps: MapInfoDto[];
 }
 

@@ -463,6 +463,7 @@ type VPConditionDto struct {
 
 // CardDto represents a card for client consumption
 type CardDto struct {
+	Style           *CardStyleDto        `json:"style,omitempty"`
 	ID              string               `json:"id"`
 	Name            string               `json:"name"`
 	Type            CardType             `json:"type"`
@@ -1173,8 +1174,9 @@ type TileBonusDto struct {
 
 // TileOccupantDto represents what currently occupies a tile
 type TileOccupantDto struct {
-	Type string   `json:"type"`
-	Tags []string `json:"tags"`
+	Visual *TileVisualDto `json:"visual,omitempty"`
+	Type   string         `json:"type"`
+	Tags   []string       `json:"tags"`
 }
 
 // TileDto represents a single hexagonal tile on the game board
@@ -1372,4 +1374,34 @@ type GenerationalEventRequirementDto struct {
 	Event  GenerationalEvent `json:"event"`
 	Count  *MinMaxValueDto   `json:"count,omitempty"`
 	Target *TargetType       `json:"target,omitempty"`
+}
+
+// CityStyleRequestDto contains optional visual requests, independent of placement rules.
+type CityStyleRequestDto struct {
+	Plan          string   `json:"plan,omitempty" tstype:"'clustered' | 'radial' | 'grid' | 'courtyard'"`
+	Density       string   `json:"density,omitempty" tstype:"'sparse' | 'balanced' | 'dense'"`
+	Heights       string   `json:"heights,omitempty" tstype:"'low' | 'mixed' | 'tall'"`
+	Ground        string   `json:"ground,omitempty" tstype:"'level' | 'recessed'"`
+	Exposure      string   `json:"exposure,omitempty" tstype:"'surface' | 'mostly-buried'"`
+	Perimeter     string   `json:"perimeter,omitempty" tstype:"'open' | 'low-wall' | 'high-wall'"`
+	Cover         string   `json:"cover,omitempty" tstype:"'none' | 'dome' | 'flat-glass'"`
+	Landmark      string   `json:"landmark,omitempty" tstype:"'none' | 'hall' | 'observatory'"`
+	Connections   string   `json:"connections,omitempty" tstype:"'paths' | 'skybridges' | 'enclosed'"`
+	Landscaping   string   `json:"landscaping,omitempty" tstype:"'sparse' | 'parks' | 'lush'"`
+	Lighting      string   `json:"lighting,omitempty" tstype:"'normal' | 'bright'"`
+	PerimeterRoad string   `json:"perimeterRoad,omitempty" tstype:"'none' | 'ring'"`
+	EntranceMin   int      `json:"entranceMin,omitempty"`
+	EntranceMax   int      `json:"entranceMax,omitempty"`
+	Details       []string `json:"details,omitempty"`
+}
+
+// CardStyleDto contains card tile appearance requests.
+type CardStyleDto struct {
+	Tile *CityStyleRequestDto `json:"tile,omitempty"`
+}
+
+// TileVisualDto is the stable visual input shared by every viewer.
+type TileVisualDto struct {
+	Seed uint32               `json:"seed"`
+	City *CityStyleRequestDto `json:"city,omitempty"`
 }

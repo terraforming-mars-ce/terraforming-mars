@@ -120,8 +120,9 @@ func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID s
 		}
 		if tile.OccupiedBy != nil {
 			occupant := &TileOccupantDto{
-				Type: string(tile.OccupiedBy.Type),
-				Tags: tile.OccupiedBy.Tags,
+				Type:   string(tile.OccupiedBy.Type),
+				Tags:   tile.OccupiedBy.Tags,
+				Visual: toTileVisualDto(tile.OccupiedBy.Visual),
 			}
 			tileDtos[i].OccupiedBy = occupant
 		}
