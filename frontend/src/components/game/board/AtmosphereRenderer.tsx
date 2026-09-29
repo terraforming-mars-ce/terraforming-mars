@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode, type RefObject } from "react";
+import { useLayoutEffect, useMemo, type ReactNode, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import {
@@ -6,7 +6,12 @@ import {
   AtmospheresContext,
   type AtmosphereBody,
 } from "../../../contexts/PlanetAtmosphereContext";
-import { addPlanetHaze, createPlanetHazeUniforms, MAX_ATMOSPHERES } from "./shaders";
+import {
+  addPlanetHaze,
+  createPlanetHazeUniforms,
+  receivesPlanetHaze,
+  MAX_ATMOSPHERES,
+} from "./shaders";
 
 interface AtmosphereRendererProps {
   sunLight: RefObject<THREE.PointLight | null>;
@@ -41,7 +46,7 @@ function EnabledAtmosphereRenderer({
     [],
   );
 
-  useEffect(
+  useLayoutEffect(
     () => () => {
       materials.forEach((restore) => restore());
       materials.clear();
@@ -98,24 +103,17 @@ function EnabledAtmosphereRenderer({
       }
       const meshMaterials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of meshMaterials) {
-        if (materials.has(material) || material.userData.planetHaze === false) {
+        if (materials.has(material) || !receivesPlanetHaze(material)) {
           continue;
         }
-        if (
-          material instanceof THREE.MeshStandardMaterial ||
-          (material instanceof THREE.ShaderMaterial &&
-            material.depthWrite &&
-            !(material instanceof THREE.RawShaderMaterial))
-        ) {
-          const restore = addPlanetHaze(material, uniforms);
-          const release = () => {
-            material.removeEventListener("dispose", release);
-            materials.delete(material);
-            restore();
-          };
-          material.addEventListener("dispose", release);
-          materials.set(material, release);
-        }
+        const restore = addPlanetHaze(material, uniforms);
+        const release = () => {
+          material.removeEventListener("dispose", release);
+          materials.delete(material);
+          restore();
+        };
+        material.addEventListener("dispose", release);
+        materials.set(material, release);
       }
     });
     const autoUpdate = scene.matrixWorldAutoUpdate;
