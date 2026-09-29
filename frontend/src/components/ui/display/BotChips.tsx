@@ -1,5 +1,10 @@
 import React from "react";
 
+export const PlayerChip: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className = "",
+}) => <span className={`player-chip ${className}`}>{children}</span>;
+
 const difficultyConfig: Record<string, { label: string; color: string }> = {
   hard: { label: "Hard", color: "bg-amber-600/80" },
   extreme: { label: "Actual Bot", color: "bg-red-700/80" },
@@ -28,9 +33,7 @@ export const BotDifficultyChip: React.FC<BotDifficultyChipProps> = ({
   const color = failed ? "bg-red-700/80" : loading ? "bg-purple-700/80" : config.color;
 
   return (
-    <span
-      className={`${color} text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase flex items-center gap-1`}
-    >
+    <PlayerChip className={`${color} text-white`}>
       {config.label}
       {showStatusIcon && loading && (
         <svg
@@ -60,7 +63,7 @@ export const BotDifficultyChip: React.FC<BotDifficultyChipProps> = ({
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       )}
-    </span>
+    </PlayerChip>
   );
 };
 
@@ -71,11 +74,5 @@ interface BotSpeedChipProps {
 export const BotSpeedChip: React.FC<BotSpeedChipProps> = ({ speed = "fast" }) => {
   const config = speedConfig[speed] || speedConfig.fast;
 
-  return (
-    <span
-      className={`${config.color} text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase`}
-    >
-      {config.label}
-    </span>
-  );
+  return <PlayerChip className={`${config.color} text-white`}>{config.label}</PlayerChip>;
 };

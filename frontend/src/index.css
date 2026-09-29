@@ -923,6 +923,29 @@ code {
 }
 
 @layer components {
+  .player-chip-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .player-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    gap: 4px;
+    min-height: 20px;
+    padding: 2px 6px;
+    border-radius: 0;
+    font-family: var(--font-orbitron);
+    font-size: 9px;
+    line-height: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
   .game-checkbox {
     appearance: none;
     width: 18px;
