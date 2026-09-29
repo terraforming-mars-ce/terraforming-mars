@@ -92,9 +92,9 @@ const ProjectFundingPopover: React.FC<ProjectFundingPopoverProps> = ({
         width={560}
         maxHeight="80vh"
         animation="slideDown"
-        className="!bg-space-black-darker"
+        className="game-popover-list !bg-space-black-darker"
       >
-        <div className="p-2 space-y-2">
+        <div className="popover-list p-2 space-y-2">
           {projects.map((project) => (
             <ProjectCard
               key={project.id}
@@ -136,6 +136,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
     <GamePopoverItem
       state={dimmed ? "disabled" : "available"}
       borderColor={project.isCompleted ? "#10b981" : project.style.color}
+      className="popover-list-item"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
