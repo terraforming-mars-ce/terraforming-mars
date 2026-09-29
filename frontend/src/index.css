@@ -1297,7 +1297,7 @@ code {
   }
 
   .game-card {
-    --module-accent-delay: 340ms;
+    --module-accent-delay: 170ms;
     width: 100%;
     min-width: 0;
     color: white;
@@ -1377,7 +1377,7 @@ code {
   }
 
   .corporation-card {
-    --module-accent-delay: 420ms;
+    --module-accent-delay: 210ms;
   }
 
   .game-card-stripe::before,
@@ -1395,7 +1395,7 @@ code {
     filter: drop-shadow(0 0 6px var(--card-accent))
       drop-shadow(0 0 12px color-mix(in srgb, var(--card-accent) 50%, transparent));
     opacity: 0;
-    transition: opacity 180ms ease-out;
+    transition: opacity 90ms ease-out;
   }
 
   .game-card-heading {
@@ -1586,15 +1586,15 @@ code {
     transform: scaleX(0);
     transform-origin: left;
     transition:
-      transform 200ms linear,
-      opacity 200ms linear;
+      transform 100ms linear,
+      opacity 100ms linear;
   }
 
   .corporation-card[data-module-state="armed"] {
     .corporation-card-logo::after {
       opacity: 0.65;
       transform: none;
-      transition-delay: 280ms;
+      transition-delay: 140ms;
     }
   }
 
@@ -1662,13 +1662,13 @@ code {
     transform: scaleX(0);
     transform-origin: left;
     transition:
-      transform 140ms ease-out var(--circuit-drain-delay),
-      opacity 140ms ease-out var(--circuit-drain-delay);
+      transform 70ms ease-out var(--circuit-drain-delay),
+      opacity 70ms ease-out var(--circuit-drain-delay);
   }
 
   .game-card-circuit--feed {
-    --circuit-delay: 120ms;
-    --circuit-drain-delay: 80ms;
+    --circuit-delay: 60ms;
+    --circuit-drain-delay: 40ms;
     left: 12px;
     right: 50%;
     bottom: 8px;
@@ -1679,9 +1679,9 @@ code {
   }
 
   .game-card-circuit--spine {
-    --circuit-delay: 200ms;
-    --circuit-drain-delay: 40ms;
-    --circuit-release-delay: 30ms;
+    --circuit-delay: 100ms;
+    --circuit-drain-delay: 20ms;
+    --circuit-release-delay: 15ms;
     left: 7px;
     top: 24px;
     bottom: 13px;
@@ -1713,24 +1713,24 @@ code {
   }
 
   .game-card-circuit--art {
-    --circuit-delay: 280ms;
-    --circuit-release-delay: 90ms;
+    --circuit-delay: 140ms;
+    --circuit-release-delay: 45ms;
     top: 24px;
     left: 7px;
     width: 9px;
   }
 
   .game-card-circuit--title {
-    --circuit-delay: 240ms;
-    --circuit-release-delay: 60ms;
+    --circuit-delay: 120ms;
+    --circuit-release-delay: 30ms;
     left: 7px;
     bottom: 0;
     width: 24px;
   }
 
   .card-panel-circuit {
-    --panel-charge-delay: 340ms;
-    --panel-charge-duration: 250ms;
+    --panel-charge-delay: 170ms;
+    --panel-charge-duration: 125ms;
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -1741,7 +1741,7 @@ code {
   }
 
   .corporation-card-behaviors > .card-panel-circuit {
-    --panel-charge-delay: 420ms;
+    --panel-charge-delay: 210ms;
   }
 
   .card-panel-circuit > svg {
@@ -1759,7 +1759,7 @@ code {
     stroke-opacity: 0.6;
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
-    transition: stroke-dashoffset 200ms linear;
+    transition: stroke-dashoffset 100ms linear;
   }
 
   .card-panel-tips path {
@@ -1768,7 +1768,7 @@ code {
     stroke-dasharray: 0.025 1;
     stroke-dashoffset: 0.025;
     filter: drop-shadow(0 0 2px var(--card-accent));
-    transition: stroke-dashoffset 200ms linear;
+    transition: stroke-dashoffset 100ms linear;
   }
 
   .card-panel-junction {
@@ -1823,7 +1823,7 @@ code {
   ) {
     .game-card-stripe > span {
       opacity: 1;
-      transition-duration: 250ms;
+      transition-duration: 125ms;
       transition-delay: var(--module-accent-delay);
     }
 
@@ -1862,12 +1862,12 @@ code {
   }
 
   :is(.game-card, .corporation-card)[data-module-state="armed"] .card-panel-junction {
-    animation: modulePanelConnected 140ms ease-out
+    animation: modulePanelConnected 70ms ease-out
       calc(var(--panel-charge-delay) + var(--panel-charge-duration)) both;
   }
 
   .game-card[data-module-state="releasing"] .card-panel-trails {
-    animation: moduleReleasePulse 200ms ease-out 110ms both;
+    animation: moduleReleasePulse 100ms ease-out 55ms both;
   }
 
   .game-card[data-module-state="releasing"] .game-card-stripe > span {
@@ -1887,7 +1887,7 @@ code {
   }
 
   .game-card[data-module-state="releasing"] .game-card-circuit > span {
-    animation: moduleReleasePulse 200ms ease-out var(--circuit-release-delay) both;
+    animation: moduleReleasePulse 100ms ease-out var(--circuit-release-delay) both;
   }
 
   @keyframes moduleReleasePulse {
