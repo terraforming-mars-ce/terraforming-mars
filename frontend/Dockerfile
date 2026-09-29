@@ -1,5 +1,5 @@
-FROM oven/bun:1.3.5 AS bun
-FROM node:24-bookworm-slim AS builder
+FROM oven/bun:1.4.2 AS bun
+FROM node:26.10.0-bookworm-slim AS builder
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /build/frontend
 
