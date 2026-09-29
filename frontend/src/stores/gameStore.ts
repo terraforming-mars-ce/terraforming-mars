@@ -21,7 +21,6 @@ interface GameStoreState {
   triggeredEffects: TriggeredEffectDto[];
   chatMessages: ChatMessageDto[];
   corporationData: CardDto | null;
-  showCorp: boolean;
   displayedInitPlayerId: string | null;
 
   setGame: (game: GameDto | null) => void;
@@ -38,7 +37,6 @@ interface GameStoreState {
   setChatMessages: (msgs: ChatMessageDto[]) => void;
   addChatMessage: (msg: ChatMessageDto) => void;
   setCorporationData: (card: CardDto | null) => void;
-  setShowCorp: (show: boolean) => void;
   setDisplayedInitPlayerId: (id: string | null) => void;
   reset: () => void;
 }
@@ -57,7 +55,6 @@ const initialState = {
   triggeredEffects: [] as TriggeredEffectDto[],
   chatMessages: [] as ChatMessageDto[],
   corporationData: null,
-  showCorp: false,
   displayedInitPlayerId: null,
 };
 
@@ -78,7 +75,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setChatMessages: (chatMessages) => set({ chatMessages }),
   addChatMessage: (msg) => set((state) => ({ chatMessages: [...state.chatMessages, msg] })),
   setCorporationData: (corporationData) => set({ corporationData }),
-  setShowCorp: (showCorp) => set({ showCorp }),
   setDisplayedInitPlayerId: (displayedInitPlayerId) => set({ displayedInitPlayerId }),
   reset: () => set(initialState),
 }));

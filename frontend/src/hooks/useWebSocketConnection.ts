@@ -17,7 +17,7 @@ import type {
   PlayerDisconnectedPayload,
   StateDiffDto,
 } from "@/types/generated/api-types.ts";
-import { GamePhaseAction, GamePhaseInitApplyCorp } from "@/types/generated/api-types.ts";
+import { GamePhaseAction } from "@/types/generated/api-types.ts";
 import type { GameEvent } from "@/hooks/useGameEvent.ts";
 import type { PlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 
@@ -243,15 +243,6 @@ export function useWebSocketConnection(
         const notificationCount = updatedGame.triggeredEffects.length;
         notificationQueueDoneAt.current = Date.now() + notificationCount * 2500;
         setTimeout(() => useGameStore.getState().setTriggeredEffects([]), 100);
-
-        if (updatedGame.currentPhase === GamePhaseInitApplyCorp) {
-          const hasMyEffect = updatedGame.triggeredEffects.some(
-            (e) => e.playerId === updatedGame.currentPlayer?.id,
-          );
-          if (hasMyEffect) {
-            store.setShowCorp(true);
-          }
-        }
       }
 
       const store = useGameStore.getState();

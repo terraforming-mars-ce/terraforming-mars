@@ -149,7 +149,6 @@ interface BottomResourceBarProps {
   callbacks?: BottomResourceBarCallbacks;
   gameId?: string;
   corporation?: CardDto | null;
-  showCorporation?: boolean;
   spectatingPlayer?: PlayerDto | OtherPlayerDto | null;
   spectatingCorporation?: CardDto | null;
   spectatePlayerColor?: string;
@@ -165,7 +164,6 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
   callbacks = {},
   gameId,
   corporation,
-  showCorporation = true,
   spectatingPlayer,
   spectatingCorporation,
   spectatePlayerColor,
@@ -207,7 +205,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
     ? getCorporationBorderColor(displayCorporation.name)
     : "#ffc107";
 
-  const accentColor = showCorporation ? corpColor : "#ffffff";
+  const accentColor = displayCorporation ? corpColor : "#ffffff";
 
   const handleCorpToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -498,8 +496,7 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             {/* Corporation Section */}
             <div
               ref={corpContainerRef}
-              className="flex items-center relative w-[120px] justify-center transition-opacity duration-800 ease-in"
-              style={{ opacity: showCorporation ? 1 : 0 }}
+              className="flex items-center relative w-[120px] justify-center"
             >
               {displayCorporation && (
                 <>

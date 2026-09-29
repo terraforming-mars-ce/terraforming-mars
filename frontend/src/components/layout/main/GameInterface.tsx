@@ -125,7 +125,6 @@ export default function GameInterface() {
   const triggeredEffects = useGameStore((s) => s.triggeredEffects);
   const chatMessages = useGameStore((s) => s.chatMessages);
   const corporationData = useGameStore((s) => s.corporationData);
-  const showCorp = useGameStore((s) => s.showCorp);
   const displayedInitPlayerId = useGameStore((s) => s.displayedInitPlayerId);
 
   const showCardsPlayedModal = useUIOverlayStore((s) => s.showCardsPlayedModal);
@@ -683,7 +682,6 @@ export default function GameInterface() {
               currentPlayer={replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer)}
               playedCards={replayViewAsPlayer?.playedCards ?? currentPlayer?.playedCards ?? []}
               corporationCard={replayViewAsPlayer?.corporation ?? corporationData}
-              showCorporation={!!replayViewAsPlayer || showCorp}
               initTurnPlayerId={displayedInitPlayerId}
               showStartingSelection={showStartingSelection}
               animateHexEntrance={

@@ -6,11 +6,8 @@ import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore.ts";
 import { audioService } from "@/services/audioService.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import {
-  GamePhaseAction,
-  GamePhaseComplete,
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
-  GamePhaseProductionAndCardDraw,
   GamePhaseStartingSelection,
   GameStatusActive,
   GameStatusCompleted,
@@ -100,21 +97,6 @@ export function useGameTransitions(
       setCorporationData(null);
     }
   }, [corpData]);
-
-  useEffect(() => {
-    if (!gamePhase) {
-      return;
-    }
-    const { setShowCorp } = useGameStore.getState();
-    if (
-      gamePhase === GamePhaseInitApplyPrelude ||
-      gamePhase === GamePhaseAction ||
-      gamePhase === GamePhaseProductionAndCardDraw ||
-      gamePhase === GamePhaseComplete
-    ) {
-      setShowCorp(true);
-    }
-  }, [gamePhase]);
 
   useEffect(() => {
     const { setDisplayedInitPlayerId } = useGameStore.getState();

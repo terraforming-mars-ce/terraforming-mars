@@ -51,7 +51,6 @@ interface GameLayoutProps {
   currentPlayer: PlayerDto | null;
   playedCards?: CardDto[];
   corporationCard?: CardDto | null;
-  showCorporation?: boolean;
   initTurnPlayerId?: string | null;
   showStartingSelection?: boolean;
   animateHexEntrance?: boolean;
@@ -95,7 +94,6 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
     currentPlayer,
     playedCards = [],
     corporationCard = null,
-    showCorporation = true,
     initTurnPlayerId = null,
     showStartingSelection = false,
     animateHexEntrance = false,
@@ -339,7 +337,6 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
                 callbacks={bottomBarCallbacks}
                 gameId={gameState?.id}
                 corporation={corporationCard}
-                showCorporation={showCorporation}
                 spectatingPlayer={spectatingPlayer}
                 spectatingCorporation={spectatingCorporation}
                 spectatePlayerColor={spectatePlayerColor}
