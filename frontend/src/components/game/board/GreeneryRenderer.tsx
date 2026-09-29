@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useLayoutEffect } from "react";
+import { memo, useMemo, useRef, useEffect, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -10,8 +10,14 @@ import {
   splitSnippet,
 } from "./shaders";
 import { SPHERE_RADIUS, easeOutCubic } from "./boardConstants";
+import type { CityPlot } from "./cityLayout";
+
+import { boardCenter, projectBoardPoint, getBiomeValue, noise2D } from "./landscapeGeometry";
+import { isReserved, type LandscapePlan } from "./landscapeNetwork";
+const EMPTY_CITY_PLOTS: CityPlot[] = [];
 
 // Module-level temp objects for animation (avoid per-frame allocation)
+const _growthAxis = new THREE.Vector3(0, 0, 1);
 const _tmpMatrix = new THREE.Matrix4();
 const _tmpQuat = new THREE.Quaternion();
 const _tmpScale = new THREE.Vector3();
@@ -73,47 +79,6 @@ function getTileSeed(q: number, r: number, s: number): number {
   h = h + (s + 128) * 83492791;
   h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
   return (h >>> 0) % 2147483647;
-}
-
-// Get a biome value (0-1) for a tile based on large-scale noise
-// This creates regions with different vegetation densities
-function getBiomeValue(q: number, r: number): number {
-  // Use larger scale for regional variation (divide coords to get smoother regions)
-  const scale = 0.3;
-  const x = q * scale;
-  const y = r * scale;
-
-  // Layer multiple noise octaves for more interesting patterns
-  const n1 = noise2D(x, y, 12345);
-  const n2 = noise2D(x * 2, y * 2, 67890) * 0.5;
-  const n3 = noise2D(x * 4, y * 4, 11111) * 0.25;
-
-  return Math.min(1, Math.max(0, (n1 + n2 + n3) / 1.75));
-}
-
-function noise2D(x: number, y: number, seed: number): number {
-  const hash = (ix: number, iy: number) => {
-    const n = ix * 374761393 + iy * 668265263 + seed;
-    return ((n * (n * n * 15731 + 789221) + 1376312589) >>> 0) / 4294967296;
-  };
-
-  const floorX = Math.floor(x);
-  const floorY = Math.floor(y);
-  const fracX = x - floorX;
-  const fracY = y - floorY;
-
-  const v00 = hash(floorX, floorY);
-  const v10 = hash(floorX + 1, floorY);
-  const v01 = hash(floorX, floorY + 1);
-  const v11 = hash(floorX + 1, floorY + 1);
-
-  const sx = fracX * fracX * (3 - 2 * fracX);
-  const sy = fracY * fracY * (3 - 2 * fracY);
-
-  const nx0 = v00 * (1 - sx) + v10 * sx;
-  const nx1 = v01 * (1 - sx) + v11 * sx;
-
-  return nx0 * (1 - sy) + nx1 * sy;
 }
 
 function isInsideHex(x: number, y: number, radius: number, margin: number = 0): boolean {
@@ -247,10 +212,11 @@ export function addSphereProjectionWithSoftEdges(
   hexRadius: number,
   sphereCenter?: THREE.Vector3,
   groupInverseMatrix?: THREE.Matrix4,
+  edges: { circular?: boolean; overflow?: number; bandWidth?: number; warp?: number } = {},
 ): void {
-  const grassOverflow = hexRadius * 0.25;
-  const bandWidth = hexRadius * 0.35;
-  const warpAmount = hexRadius * 0.2;
+  const grassOverflow = hexRadius * (edges.overflow ?? 0.25);
+  const bandWidth = hexRadius * (edges.bandWidth ?? 0.35);
+  const warpAmount = hexRadius * (edges.warp ?? 0.2);
   const noiseScale = 1.5 / hexRadius;
   const centerVec = sphereCenter || new THREE.Vector3(0, 0, 0);
   const invMatrix = groupInverseMatrix || new THREE.Matrix4();
@@ -267,6 +233,7 @@ export function addSphereProjectionWithSoftEdges(
     shader.uniforms.uNoiseMap = { value: noiseMap };
     shader.uniforms.uNoiseMapHigh = { value: noiseMapHigh };
     shader.uniforms.uHexRadius = { value: hexRadius };
+    shader.uniforms.uCircularEdge = { value: edges.circular ?? false };
     shader.uniforms.uGrassOverflow = { value: grassOverflow };
     shader.uniforms.uBandWidth = { value: bandWidth };
     shader.uniforms.uWarpAmount = { value: warpAmount };
@@ -389,6 +356,8 @@ interface GreeneryTileData {
 
 interface GreeneryRendererProps {
   tiles: GreeneryTileData[];
+  cityPlots?: CityPlot[];
+  landscape?: LandscapePlan;
   volcanoTiles?: GreeneryTileData[];
   livingGreeneryTiles?: GreeneryTileData[];
   newTileKeys: Set<string>;
@@ -397,8 +366,10 @@ interface GreeneryRendererProps {
   groupInverseMatrix?: THREE.Matrix4;
 }
 
-export default function GreeneryRenderer({
+function GreeneryRenderer({
   tiles,
+  cityPlots = EMPTY_CITY_PLOTS,
+  landscape,
   volcanoTiles = [],
   livingGreeneryTiles = [],
   newTileKeys,
@@ -506,6 +477,13 @@ export default function GreeneryRenderer({
     return variantCache.rock;
   }, [rockScene, rockTexture]);
 
+  const vegetationSignature = JSON.stringify([
+    tiles.map((t) => t.coordinate),
+    volcanoTiles.map((t) => t.coordinate),
+    livingGreeneryTiles.map((t) => t.coordinate),
+    cityPlots.map((t) => [t.coordinate, t.layout.seed]),
+    hexRadius,
+  ]);
   // Generate all instance data for all tiles
   const {
     treeInstances,
@@ -566,6 +544,9 @@ export default function GreeneryRenderer({
       const tileKey = `${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`;
       const seed = getTileSeed(tile.coordinate.q, tile.coordinate.r, tile.coordinate.s);
       const isLivingGreenery = livingGreeneryKeys.has(tileKey);
+      const terrainCenter = boardCenter(tile.coordinate);
+      const blocksRoute = (x: number, y: number, clearance: number) =>
+        landscape && isReserved(landscape, terrainCenter.x + x, terrainCenter.y + y, clearance);
 
       // Get biome value for this tile (0-1)
       // High = forested (more trees), Low = scrubland (more bushes/rocks)
@@ -577,14 +558,16 @@ export default function GreeneryRenderer({
       const hasMountain = rockPreRoll >= 0.85;
 
       // Ground geometry per tile (unique due to noise)
-      const groundGeo = createNoisyHexGeometry(hexRadius * 2.0, 8, 6, 0.008, seed);
-      groundGeo.rotateZ(Math.PI / 2);
-      groundData.push({
-        geometry: groundGeo,
-        position: tile.worldPosition,
-        normal: tile.normal,
-        tileKey,
-      });
+      if (!landscape) {
+        const groundGeo = createNoisyHexGeometry(hexRadius * 2.0, 8, 6, 0.008, seed);
+        groundGeo.rotateZ(Math.PI / 2);
+        groundData.push({
+          geometry: groundGeo,
+          position: tile.worldPosition,
+          normal: tile.normal,
+          tileKey,
+        });
+      }
 
       // Generate rocks FIRST so vegetation can avoid them
       const rockRng = mulberry32(seed + 12345);
@@ -621,18 +604,17 @@ export default function GreeneryRenderer({
       for (let i = 0; i < rockScales.length; i++) {
         const pos = randomHexPosition(rockRng, hexRadius * 0.75, 0.03, rockSpacing, 0.04);
         if (pos) {
+          if (blocksRoute(pos.x, pos.y, rockBaseSize * rockScales[i] * 0.65)) {
+            continue;
+          }
           rockSpacing.push(pos);
           rockExclusions.push({ x: pos.x, y: pos.y, r: rockBaseSize * rockScales[i] * 0.6 });
           const localPos = new THREE.Vector3(pos.x, pos.y, 0.0);
-          const worldPos = localPos
-            .clone()
-            .applyMatrix4(
-              new THREE.Matrix4().compose(
-                tile.worldPosition,
-                new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
-                new THREE.Vector3(1, 1, 1),
-              ),
-            );
+          const worldPos = projectBoardPoint(
+            terrainCenter.x + localPos.x,
+            terrainCenter.y + localPos.y,
+            localPos.z,
+          );
           rockInstances.push({
             position: worldPos,
             rotation: new THREE.Euler(
@@ -660,24 +642,22 @@ export default function GreeneryRenderer({
       const livingMult = isLivingGreenery ? 0.65 : 1.0;
       const treeMult = hasMountain ? 1.8 : hasBigRock ? 1.4 : 1.0;
       const baseTreeCount = Math.floor(treeRng() * 10) + 9;
-      const treeCount = Math.floor(baseTreeCount * (0.3 + biome * 1.4) * treeMult * livingMult);
+      const treeCount = landscape
+        ? 0
+        : Math.floor(baseTreeCount * (0.3 + biome * 1.4) * treeMult * livingMult);
       const treePositions: { x: number; y: number }[] = [];
 
       for (let i = 0; i < treeCount; i++) {
         const pos = randomHexPosition(treeRng, hexRadius * 0.9, 0.012, treePositions, 0.025);
         if (pos) {
-          if (isInsideRock(pos.x, pos.y)) continue;
+          if (isInsideRock(pos.x, pos.y) || blocksRoute(pos.x, pos.y, 0.005)) continue;
           treePositions.push(pos);
           const localPos = new THREE.Vector3(pos.x, pos.y, 0.003);
-          const worldPos = localPos
-            .clone()
-            .applyMatrix4(
-              new THREE.Matrix4().compose(
-                tile.worldPosition,
-                new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
-                new THREE.Vector3(1, 1, 1),
-              ),
-            );
+          const worldPos = projectBoardPoint(
+            terrainCenter.x + localPos.x,
+            terrainCenter.y + localPos.y,
+            localPos.z,
+          );
           const tint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
           let rockProximityBoost = 0;
           for (const rock of rockExclusions) {
@@ -707,7 +687,9 @@ export default function GreeneryRenderer({
       const bushRng = mulberry32(seed + 54321);
       const baseBushCount = Math.floor(bushRng() * 100) + 160;
       const livingBushMult = isLivingGreenery ? 1.0 : 1.0;
-      const bushCount = Math.floor(baseBushCount * (0.5 + (1 - biome) * 1.2) * livingBushMult);
+      const bushCount = landscape
+        ? 0
+        : Math.floor(baseBushCount * (0.5 + (1 - biome) * 1.2) * livingBushMult);
       const bushPositions: { x: number; y: number }[] = [];
 
       for (let i = 0; i < bushCount; i++) {
@@ -715,15 +697,11 @@ export default function GreeneryRenderer({
         if (pos) {
           bushPositions.push(pos);
           const localPos = new THREE.Vector3(pos.x, pos.y, 0.001);
-          const worldPos = localPos
-            .clone()
-            .applyMatrix4(
-              new THREE.Matrix4().compose(
-                tile.worldPosition,
-                new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
-                new THREE.Vector3(1, 1, 1),
-              ),
-            );
+          const worldPos = projectBoardPoint(
+            terrainCenter.x + localPos.x,
+            terrainCenter.y + localPos.y,
+            localPos.z,
+          );
           const bushTint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
           bushInstances.push({
             position: worldPos,
@@ -744,18 +722,14 @@ export default function GreeneryRenderer({
       for (let i = 0; i < cloverCount; i++) {
         const pos = randomHexPosition(cloverRng, hexRadius * 0.95, 0.005, cloverPositions, 0.01);
         if (pos) {
-          if (isInsideRock(pos.x, pos.y)) continue;
+          if (isInsideRock(pos.x, pos.y) || blocksRoute(pos.x, pos.y, 0.005)) continue;
           cloverPositions.push(pos);
           const localPos = new THREE.Vector3(pos.x, pos.y, 0.0005);
-          const worldPos = localPos
-            .clone()
-            .applyMatrix4(
-              new THREE.Matrix4().compose(
-                tile.worldPosition,
-                new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
-                new THREE.Vector3(1, 1, 1),
-              ),
-            );
+          const worldPos = projectBoardPoint(
+            terrainCenter.x + localPos.x,
+            terrainCenter.y + localPos.y,
+            localPos.z,
+          );
           cloverInstances.push({
             position: worldPos,
             rotation: cloverRng() * Math.PI * 2,
@@ -774,20 +748,16 @@ export default function GreeneryRenderer({
         for (let i = 0; i < flowerCount; i++) {
           const pos = randomHexPosition(flowerRng, hexRadius * 0.88, 0.01, flowerPositions, 0.015);
           if (pos) {
+            if (blocksRoute(pos.x, pos.y, 0.008)) {
+              continue;
+            }
             flowerPositions.push(pos);
             const localPos = new THREE.Vector3(pos.x, pos.y, 0.002);
-            const worldPos = localPos
-              .clone()
-              .applyMatrix4(
-                new THREE.Matrix4().compose(
-                  tile.worldPosition,
-                  new THREE.Quaternion().setFromUnitVectors(
-                    new THREE.Vector3(0, 0, 1),
-                    tile.normal,
-                  ),
-                  new THREE.Vector3(1, 1, 1),
-                ),
-              );
+            const worldPos = projectBoardPoint(
+              terrainCenter.x + localPos.x,
+              terrainCenter.y + localPos.y,
+              localPos.z,
+            );
             flowerInstances.push({
               position: worldPos,
               rotation: flowerRng() * Math.PI * 2,
@@ -862,6 +832,89 @@ export default function GreeneryRenderer({
       }
     }
 
+    for (const plot of landscape ? [] : cityPlots) {
+      const tileKey = `${plot.coordinate.q},${plot.coordinate.r},${plot.coordinate.s}`;
+      const rng = mulberry32(getTileSeed(plot.coordinate.q, plot.coordinate.r, plot.coordinate.s));
+      const tileMatrix = new THREE.Matrix4().compose(
+        plot.worldPosition,
+        new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), plot.normal),
+        new THREE.Vector3(1, 1, 1),
+      );
+      for (const plant of plot.layout.plants) {
+        const data = {
+          position: new THREE.Vector3(
+            plant.x,
+            plant.y,
+            plant.z -
+              0.007 +
+              Math.sqrt(SPHERE_RADIUS ** 2 - plant.x ** 2 - plant.y ** 2) -
+              SPHERE_RADIUS,
+          ).applyMatrix4(tileMatrix),
+          rotation: rng() * Math.PI * 2,
+          scale: plant.scale,
+          variantIdx: Math.floor(
+            rng() * (plant.kind === "tree" ? TREE_NAMES.length : BUSH_NAMES.length),
+          ),
+          tint: 0.45 + rng() * 0.3,
+          tileKey,
+        };
+        if (plant.kind === "tree") {
+          treeInstances.push(data);
+        } else {
+          bushInstances.push(data);
+        }
+      }
+    }
+
+    if (landscape) {
+      rockGeometry.computeBoundingBox();
+      const rockBox = rockGeometry.boundingBox!;
+      const rockFootprints = new Map<string, { inverse: THREE.Matrix4; box: THREE.Box3 }[]>();
+      for (const rock of rockInstances) {
+        const inverse = new THREE.Matrix4()
+          .compose(
+            rock.position,
+            new THREE.Quaternion().setFromEuler(rock.rotation),
+            new THREE.Vector3(rock.scale, rock.scale, rock.scale),
+          )
+          .invert();
+        const list = rockFootprints.get(rock.tileKey) ?? [];
+        list.push({ inverse, box: rockBox });
+        rockFootprints.set(rock.tileKey, list);
+      }
+      const local = new THREE.Vector3();
+      for (const plant of landscape.plants) {
+        const position = projectBoardPoint(plant.x, plant.y, 0.001);
+        if (
+          (rockFootprints.get(plant.tileKey) ?? []).some(({ inverse, box }) => {
+            local.copy(position).applyMatrix4(inverse);
+            return (
+              local.x > box.min.x - 0.001 &&
+              local.x < box.max.x + 0.001 &&
+              local.y > box.min.y - 0.001 &&
+              local.y < box.max.y + 0.001 &&
+              local.z > box.min.z - 0.001 &&
+              local.z < box.max.z + 0.001
+            );
+          })
+        ) {
+          continue;
+        }
+        const data = {
+          position,
+          rotation: (plant.seed % 6283) / 1000,
+          scale: plant.scale,
+          variantIdx: plant.seed % (plant.kind === "tree" ? TREE_NAMES.length : BUSH_NAMES.length),
+          tint: 0.45 + (plant.seed % 100) / 400,
+          tileKey: plant.tileKey,
+        };
+        if (plant.kind === "tree") {
+          treeInstances.push(data);
+        } else {
+          bushInstances.push(data);
+        }
+      }
+    }
     return {
       treeInstances,
       bushInstances,
@@ -870,7 +923,7 @@ export default function GreeneryRenderer({
       rockInstances,
       groundData,
     };
-  }, [tiles, volcanoTiles, livingGreeneryTiles, hexRadius]);
+  }, [vegetationSignature, landscape]);
 
   // Group instances by variant
   const treesByVariant = useMemo(() => {
@@ -1044,6 +1097,7 @@ export default function GreeneryRenderer({
         _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
         if (rockInstanceRef.current) {
           rockInstanceRef.current.setMatrixAt(i, _tmpMatrix);
+          rockInstanceRef.current.instanceMatrix.addUpdateRange(i * 16, 16);
           rockInstanceRef.current.instanceMatrix.needsUpdate = true;
         }
       }
@@ -1062,10 +1116,11 @@ export default function GreeneryRenderer({
             if (data.tileKey !== tileKey) return;
             const rawT = Math.max(0, Math.min(1, (timeSinceStart - treeDelay) / treeDur));
             const animScale = data.scale * easeOutCubic(rawT);
-            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
             _tmpScale.setScalar(animScale);
             _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
             mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
             mesh.instanceMatrix.needsUpdate = true;
           });
         });
@@ -1085,10 +1140,11 @@ export default function GreeneryRenderer({
             if (data.tileKey !== tileKey) return;
             const rawT = Math.max(0, Math.min(1, (timeSinceStart - bushDelay) / bushDur));
             const animScale = data.scale * easeOutCubic(rawT);
-            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
             _tmpScale.set(animScale, animScale, animScale);
             _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
             mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
             mesh.instanceMatrix.needsUpdate = true;
           });
         });
@@ -1108,10 +1164,11 @@ export default function GreeneryRenderer({
             if (data.tileKey !== tileKey) return;
             const rawT = Math.max(0, Math.min(1, (timeSinceStart - cloverDelay) / cloverDur));
             const animScale = data.scale * easeOutCubic(rawT);
-            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
             _tmpScale.set(animScale, animScale, animScale);
             _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
             mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
             mesh.instanceMatrix.needsUpdate = true;
           });
         });
@@ -1131,10 +1188,11 @@ export default function GreeneryRenderer({
             if (data.tileKey !== tileKey) return;
             const rawT = Math.max(0, Math.min(1, (timeSinceStart - flowerDelay) / flowerDur));
             const animScale = data.scale * easeOutCubic(rawT);
-            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
             _tmpScale.set(animScale, animScale, animScale);
             _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
             mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
             mesh.instanceMatrix.needsUpdate = true;
           });
         });
@@ -1154,6 +1212,7 @@ export default function GreeneryRenderer({
         _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
         if (rockInstanceRef.current) {
           rockInstanceRef.current.setMatrixAt(i, _tmpMatrix);
+          rockInstanceRef.current.instanceMatrix.addUpdateRange(i * 16, 16);
           rockInstanceRef.current.instanceMatrix.needsUpdate = true;
         }
       }
@@ -1168,10 +1227,11 @@ export default function GreeneryRenderer({
           if (!mesh) return;
           transforms.forEach((data, i) => {
             if (data.tileKey !== tileKey) return;
-            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
             _tmpScale.setScalar(data.scale);
             _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
             mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
             mesh.instanceMatrix.needsUpdate = true;
           });
         });
@@ -1187,10 +1247,11 @@ export default function GreeneryRenderer({
           if (!mesh) return;
           transforms.forEach((data, i) => {
             if (data.tileKey !== tileKey) return;
-            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
             _tmpScale.set(data.scale, data.scale, data.scale);
             _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
             mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
             mesh.instanceMatrix.needsUpdate = true;
           });
         });
@@ -1206,10 +1267,11 @@ export default function GreeneryRenderer({
           if (!mesh) return;
           transforms.forEach((data, i) => {
             if (data.tileKey !== tileKey) return;
-            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
             _tmpScale.set(data.scale, data.scale, data.scale);
             _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
             mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
             mesh.instanceMatrix.needsUpdate = true;
           });
         });
@@ -1225,10 +1287,11 @@ export default function GreeneryRenderer({
           if (!mesh) return;
           transforms.forEach((data, i) => {
             if (data.tileKey !== tileKey) return;
-            _tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
+            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
             _tmpScale.set(data.scale, data.scale, data.scale);
             _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
             mesh.setMatrixAt(i, _tmpMatrix);
+            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
             mesh.instanceMatrix.needsUpdate = true;
           });
         });
@@ -1280,6 +1343,8 @@ export default function GreeneryRenderer({
           mesh.setColorAt(i, color);
         });
 
+        mesh.instanceMatrix.clearUpdateRanges();
+        mesh.instanceMatrix.addUpdateRange(0, transforms.length * 16);
         mesh.instanceMatrix.needsUpdate = true;
         if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
       });
@@ -1318,6 +1383,8 @@ export default function GreeneryRenderer({
           mesh.setColorAt(i, color);
         });
 
+        mesh.instanceMatrix.clearUpdateRanges();
+        mesh.instanceMatrix.addUpdateRange(0, transforms.length * 16);
         mesh.instanceMatrix.needsUpdate = true;
         if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
       });
@@ -1348,6 +1415,8 @@ export default function GreeneryRenderer({
           mesh.setMatrixAt(i, matrix);
         });
 
+        mesh.instanceMatrix.clearUpdateRanges();
+        mesh.instanceMatrix.addUpdateRange(0, transforms.length * 16);
         mesh.instanceMatrix.needsUpdate = true;
       });
     });
@@ -1377,6 +1446,8 @@ export default function GreeneryRenderer({
           mesh.setMatrixAt(i, matrix);
         });
 
+        mesh.instanceMatrix.clearUpdateRanges();
+        mesh.instanceMatrix.addUpdateRange(0, transforms.length * 16);
         mesh.instanceMatrix.needsUpdate = true;
       });
     });
@@ -1398,8 +1469,20 @@ export default function GreeneryRenderer({
       mesh.setMatrixAt(i, matrix);
     });
 
+    mesh.instanceMatrix.clearUpdateRanges();
+    mesh.instanceMatrix.addUpdateRange(0, rockInstances.length * 16);
     mesh.instanceMatrix.needsUpdate = true;
   }, [rockInstances, newTileKeys]);
+
+  const instanceCapacities = useRef(new Map<string, number>());
+  const instanceCapacity = (key: string, count: number) => {
+    const capacity = Math.max(
+      instanceCapacities.current.get(key) ?? 128,
+      2 ** Math.ceil(Math.log2(count)),
+    );
+    instanceCapacities.current.set(key, capacity);
+    return capacity;
+  };
 
   // Warm-up geometry: tiny plane to force shader compilation on mount
   const warmupGeometry = useMemo(() => new THREE.PlaneGeometry(0.001, 0.001), []);
@@ -1407,7 +1490,7 @@ export default function GreeneryRenderer({
   return (
     <group>
       {/* Warm-up mesh forces ground material shader compilation before first tile */}
-      {groundData.length === 0 && (
+      {groundData.length === 0 && !landscape && (
         <mesh geometry={warmupGeometry} material={groundMaterial} renderOrder={-1} />
       )}
 
@@ -1464,7 +1547,12 @@ export default function GreeneryRenderer({
             ref={(el) => {
               treeInstanceRefs.current.set(`tree-${variantIdx}-${primIdx}`, el);
             }}
-            args={[prim.geometry, prim.material, transforms.length]}
+            args={[
+              prim.geometry,
+              prim.material,
+              instanceCapacity(`tree-${variantIdx}`, transforms.length),
+            ]}
+            count={transforms.length}
             frustumCulled={false}
             renderOrder={15}
             raycast={() => {}}
@@ -1483,7 +1571,12 @@ export default function GreeneryRenderer({
             ref={(el) => {
               bushInstanceRefs.current.set(`bush-${variantIdx}-${primIdx}`, el);
             }}
-            args={[prim.geometry, prim.material, transforms.length]}
+            args={[
+              prim.geometry,
+              prim.material,
+              instanceCapacity(`bush-${variantIdx}`, transforms.length),
+            ]}
+            count={transforms.length}
             frustumCulled={false}
             renderOrder={15}
           />
@@ -1501,7 +1594,12 @@ export default function GreeneryRenderer({
             ref={(el) => {
               cloverInstanceRefs.current.set(`clover-${variantIdx}-${primIdx}`, el);
             }}
-            args={[prim.geometry, prim.material, transforms.length]}
+            args={[
+              prim.geometry,
+              prim.material,
+              instanceCapacity(`clover-${variantIdx}`, transforms.length),
+            ]}
+            count={transforms.length}
             frustumCulled={false}
             renderOrder={15}
           />
@@ -1519,7 +1617,12 @@ export default function GreeneryRenderer({
             ref={(el) => {
               flowerInstanceRefs.current.set(`flower-${variantIdx}-${primIdx}`, el);
             }}
-            args={[prim.geometry, prim.material, transforms.length]}
+            args={[
+              prim.geometry,
+              prim.material,
+              instanceCapacity(`flower-${variantIdx}`, transforms.length),
+            ]}
+            count={transforms.length}
             frustumCulled={false}
             renderOrder={15}
           />
@@ -1530,7 +1633,8 @@ export default function GreeneryRenderer({
       {rockInstances.length > 0 && (
         <instancedMesh
           ref={rockInstanceRef}
-          args={[rockGeometry, rockMaterial, rockInstances.length]}
+          args={[rockGeometry, rockMaterial, instanceCapacity("rocks", rockInstances.length)]}
+          count={rockInstances.length}
           frustumCulled={false}
           renderOrder={15}
         />
@@ -1538,3 +1642,5 @@ export default function GreeneryRenderer({
     </group>
   );
 }
+
+export default memo(GreeneryRenderer);

@@ -268,6 +268,7 @@ interface TileProps {
     | "mohole";
   ownerId?: string | null;
   ownerColor?: string;
+  renderBuilding?: boolean;
   reservedById?: string | null;
   displayName?: string;
   isOceanSpace?: boolean;
@@ -296,10 +297,11 @@ function Tile({
   tileType,
   ownerId,
   ownerColor,
+  renderBuilding = true,
   reservedById,
   displayName,
   isOceanSpace: _isOceanSpace = false,
-  bonuses: _bonuses = {},
+  bonuses = tileData.bonuses,
   onClick: _onClick,
   isAvailableForPlacement = false,
   animateEntrance = false,
@@ -683,7 +685,7 @@ function Tile({
   }
 
   const bonusIconGroups = useMemo((): BonusIconGroup[] => {
-    const entries = Object.entries(tileData.bonuses);
+    const entries = Object.entries(bonuses);
     if (entries.length === 0) return [];
 
     return entries.map(([key, value]) => ({
@@ -692,7 +694,7 @@ function Tile({
       count: value,
       isCredits: key === "credit",
     }));
-  }, [tileData.bonuses, getResourceIcon]);
+  }, [bonuses, getResourceIcon]);
 
   const calculateIconPositions = (groups: BonusIconGroup[]) => {
     const ICON_GAP = 0.005;
@@ -770,7 +772,7 @@ function Tile({
       <mesh geometry={overlayGeometry} material={vpHighlightMaterial} renderOrder={24} />
 
       {/* Building (city) 3D model */}
-      {tileType === "city" && (
+      {tileType === "city" && renderBuilding && (
         <BuildingTile
           position={[0, 0, 0.03]}
           isNewlyPlaced={isNewlyPlaced}

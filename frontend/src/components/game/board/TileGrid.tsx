@@ -1,3 +1,5 @@
+import { useLandscape } from "./useLandscape";
+import { sphereRaycast } from "../../../utils/sphereRaycast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
@@ -8,6 +10,12 @@ import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import { useSoundEffects } from "../../../hooks/useSoundEffects";
 import { useHoverSound } from "../../../hooks/useHoverSound";
 import GreeneryRenderer from "./GreeneryRenderer";
+import CityRenderer from "./CityRenderer";
+import CityBatchRenderer from "./CityBatchRenderer";
+import { createCityShowcase, generateCityLayout, type CityPlot } from "./cityLayout";
+import { type LandscapeTile } from "./landscapeNetwork";
+import { hashSeed } from "./landscapeGeometry";
+import LandscapeRenderer from "./LandscapeRenderer";
 import OceanRenderer from "./OceanRenderer";
 import PrimitiveRenderer from "./PrimitiveManager";
 import BirdRenderer from "./BirdRenderer";
@@ -19,7 +27,11 @@ import { panState } from "../controls/PanControls";
 import { useVPCounting } from "../../../contexts/VPCountingContext";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 
+const SHOWCASE =
+  import.meta.env.DEV &&
+  new URLSearchParams(window.location.search).get("landscape") === "showcase";
 const noop = () => {};
+const EMPTY_BONUSES = {};
 const VP_COLOR_SECONDARY: [number, number, number] = [0.4, 0.9, 0.4];
 const VP_COLOR_PRIMARY: [number, number, number] = [0.95, 0.95, 1.0];
 
@@ -131,6 +143,8 @@ export default function TileGrid({
     return map;
   }, [gameState]);
 
+  const showcaseOwnerId = gameState?.playerOrder[0] ?? null;
+
   const playerNameMap = useMemo(() => {
     const map = new Map<string, string>();
     if (gameState) {
@@ -198,11 +212,15 @@ export default function TileGrid({
     return converted;
   };
 
+  const tileSignature = JSON.stringify(gameState?.board?.tiles);
+  const boardTiles = useMemo(() => gameState?.board?.tiles, [tileSignature]);
+  const stablePlots = useRef(new Map<string, CityPlot>());
+  const stableCityList = useRef<CityPlot[]>([]);
   // Use backend board tiles or fallback to hardcoded generation
   const projectedHexGrid = useMemo((): ProjectedTile[] => {
     // Use backend tiles if available (filter to Mars-only)
-    if (gameState?.board?.tiles) {
-      return gameState.board.tiles
+    if (boardTiles) {
+      return boardTiles
         .filter((tile: TileDto) => tile.location === "mars" && tile.type !== "empty")
         .map((tile: TileDto): ProjectedTile => {
           // Convert hex coordinate to 2D position for projection
@@ -232,7 +250,80 @@ export default function TileGrid({
         normal: spherePosition.clone().normalize(),
       };
     });
-  }, [gameState?.board?.tiles]);
+  }, [boardTiles]);
+
+  const cityPlots = useMemo(() => {
+    if (!SHOWCASE) {
+      const plots = projectedHexGrid
+        .filter((tile) => tile.backendTile?.occupiedBy?.type === "city-tile")
+        .map((tile) => {
+          const key = HexGrid2D.coordinateToKey(tile.coordinate);
+          const layout = generateCityLayout(
+            tile.backendTile!.occupiedBy!.visual?.seed ?? hashSeed(`${gameState?.id}:${key}`),
+            tile.backendTile!.occupiedBy!.visual?.city,
+            tile.backendTile?.displayName ?? "City",
+          );
+          const cached = stablePlots.current.get(key);
+          if (cached?.layout === layout) {
+            return cached;
+          }
+          const plot = {
+            coordinate: tile.coordinate,
+            worldPosition: tile.spherePosition,
+            normal: tile.normal,
+            layout,
+          };
+          stablePlots.current.set(key, plot);
+          return plot;
+        });
+      const active = new Set(plots.map((p) => HexGrid2D.coordinateToKey(p.coordinate)));
+      for (const key of stablePlots.current.keys()) {
+        if (!active.has(key)) {
+          stablePlots.current.delete(key);
+        }
+      }
+      if (
+        plots.length === stableCityList.current.length &&
+        plots.every((p, i) => p === stableCityList.current[i])
+      ) {
+        return stableCityList.current;
+      }
+      stableCityList.current = plots;
+      return plots;
+    }
+    const available = projectedHexGrid.filter(
+      (tile) =>
+        !tile.backendTile?.occupiedBy &&
+        !tile.backendTile?.reservedBy &&
+        !tile.isOceanSpace &&
+        !tile.backendTile?.displayName,
+    );
+    const plots: CityPlot[] = [];
+    for (const [index, layout] of createCityShowcase().entries()) {
+      const targetQ = (index % 4) - 2;
+      const targetR = index < 4 ? -1 : 1;
+      available.sort(
+        (a, b) =>
+          Math.abs(a.coordinate.q - targetQ) +
+          Math.abs(a.coordinate.r - targetR) * 3 -
+          (Math.abs(b.coordinate.q - targetQ) + Math.abs(b.coordinate.r - targetR) * 3),
+      );
+      const tile = available.shift();
+      if (tile) {
+        plots.push({
+          coordinate: tile.coordinate,
+          worldPosition: tile.spherePosition,
+          normal: tile.normal,
+          layout,
+        });
+      }
+    }
+    return plots;
+  }, [projectedHexGrid, gameState?.id]);
+  const cityKeys = useMemo(
+    () => new Set(cityPlots.map((plot) => HexGrid2D.coordinateToKey(plot.coordinate))),
+    [cityPlots],
+  );
 
   // Get tile type and occupancy data
   const getTileData = (tile: ProjectedTile): TileData => {
@@ -360,6 +451,98 @@ export default function TileGrid({
       }));
   }, [projectedHexGrid]);
 
+  const showcaseGreenery = useMemo(() => {
+    if (!SHOWCASE) {
+      return [];
+    }
+    const available = projectedHexGrid.filter(
+      (t) =>
+        !t.backendTile?.occupiedBy &&
+        !t.isOceanSpace &&
+        !cityKeys.has(HexGrid2D.coordinateToKey(t.coordinate)),
+    );
+    return available
+      .filter((t) =>
+        cityPlots.some((city) =>
+          HexGrid2D.getNeighbors(city.coordinate).some(
+            (n) => HexGrid2D.coordinateToKey(n) === HexGrid2D.coordinateToKey(t.coordinate),
+          ),
+        ),
+      )
+      .map((t) => ({
+        coordinate: t.coordinate,
+        worldPosition: t.spherePosition,
+        normal: t.normal,
+      }));
+  }, [projectedHexGrid, cityPlots, cityKeys]);
+  const renderedGreenery = useMemo(
+    () => [...greeneryTiles, ...showcaseGreenery],
+    [greeneryTiles, showcaseGreenery],
+  );
+  const landscapeInputs = useMemo(() => {
+    const tiles: LandscapeTile[] = cityPlots.map((plot) => ({
+      coordinate: plot.coordinate,
+      kind: "city",
+      seed: plot.layout.seed,
+      layout: plot.layout,
+    }));
+    for (const t of renderedGreenery) {
+      const original = projectedHexGrid.find(
+        (p) => HexGrid2D.coordinateToKey(p.coordinate) === HexGrid2D.coordinateToKey(t.coordinate),
+      );
+      const special =
+        original?.backendTile?.occupiedBy?.type !== "greenery-tile" &&
+        !showcaseGreenery.includes(t);
+      tiles.push({
+        coordinate: t.coordinate,
+        kind: special ? "special-greenery" : "greenery",
+        seed:
+          original?.backendTile?.occupiedBy?.visual?.seed ??
+          hashSeed(`${gameState?.id}:${HexGrid2D.coordinateToKey(t.coordinate)}`),
+      });
+    }
+    const occupied = new Set(tiles.map((t) => HexGrid2D.coordinateToKey(t.coordinate)));
+    const spaces = projectedHexGrid.map((tile) => ({
+      coordinate: tile.coordinate,
+      blocked:
+        !occupied.has(HexGrid2D.coordinateToKey(tile.coordinate)) &&
+        (tile.isOceanSpace ||
+          Boolean(tile.backendTile?.occupiedBy) ||
+          Boolean(tile.backendTile?.reservedBy)),
+    }));
+    return { tiles, spaces };
+  }, [cityPlots, renderedGreenery, projectedHexGrid, showcaseGreenery, gameState?.id]);
+  // Collect ocean tiles for the OceanRenderer
+  const oceanTiles = useMemo(() => {
+    return projectedHexGrid
+      .filter((tile) => {
+        const tileData = getTileData(tile);
+        return tileData.type === "ocean";
+      })
+      .map((tile) => ({
+        coordinate: tile.coordinate,
+      }));
+  }, [projectedHexGrid]);
+
+  const landscapeSignature = JSON.stringify({
+    tiles: landscapeInputs.tiles.map((t) => [t.coordinate, t.kind, t.seed, t.layout?.style]),
+    spaces: landscapeInputs.spaces,
+    oceans: oceanTiles,
+  });
+  const { plan: landscape, ground: landscapeGround } = useLandscape(
+    { ...landscapeInputs, oceans: oceanTiles },
+    landscapeSignature,
+  );
+
+  const plannedGreenery = useMemo(() => {
+    const keys = new Set(
+      landscape.tiles
+        .filter((tile) => tile.kind !== "city")
+        .map((tile) => HexGrid2D.coordinateToKey(tile.coordinate)),
+    );
+    return renderedGreenery.filter((tile) => keys.has(HexGrid2D.coordinateToKey(tile.coordinate)));
+  }, [renderedGreenery, landscape]);
+
   // Collect living greenery tiles (ecological-zone, natural-preserve) for boosted vegetation
   const livingGreeneryTiles = useMemo(() => {
     return projectedHexGrid
@@ -385,18 +568,6 @@ export default function TileGrid({
         coordinate: tile.coordinate,
         worldPosition: tile.spherePosition,
         normal: tile.normal,
-      }));
-  }, [projectedHexGrid]);
-
-  // Collect ocean tiles for the OceanRenderer
-  const oceanTiles = useMemo(() => {
-    return projectedHexGrid
-      .filter((tile) => {
-        const tileData = getTileData(tile);
-        return tileData.type === "ocean";
-      })
-      .map((tile) => ({
-        coordinate: tile.coordinate,
       }));
   }, [projectedHexGrid]);
 
@@ -517,19 +688,23 @@ export default function TileGrid({
           );
           if (tile) {
             const tileData = getTileData(tile);
+            const cityPlot = cityPlots.find(
+              (plot) => HexGrid2D.coordinateToKey(plot.coordinate) === key,
+            );
             const isAvailable = availableHexes.includes(key);
             if (isAvailable) {
               hoverSound.onMouseEnter?.();
             }
             handleTileHoverInfo({
               position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
-              tileType: tileData.type,
-              displayName: tileData.specialLabel || tile.backendTile?.displayName,
-              ownerId: tileData.ownerId,
+              tileType: cityPlot ? "city" : tileData.type,
+              displayName:
+                cityPlot?.layout.name || tileData.specialLabel || tile.backendTile?.displayName,
+              ownerId: cityPlot && SHOWCASE ? showcaseOwnerId : tileData.ownerId,
               reservedById: tile.backendTile?.reservedBy || null,
               isOceanSpace: tile.isOceanSpace,
               isVolcanic: tile.backendTile?.tags?.includes("volcanic") ?? false,
-              bonuses: tile.bonuses,
+              bonuses: cityPlot ? {} : tile.bonuses,
             });
           }
         } else {
@@ -541,6 +716,8 @@ export default function TileGrid({
     },
     [
       projectedHexGrid,
+      cityPlots,
+      showcaseOwnerId,
       availableHexes,
       findNearestHex,
       handleTileHoverInfo,
@@ -574,6 +751,19 @@ export default function TileGrid({
     [findNearestHex, availableHexes, onHexClick, hoverSound],
   );
 
+  const vegetationBirthKey = [...newGreeneryKeys, ...newlyPlacedTiles]
+    .filter(
+      (key) =>
+        cityKeys.has(key) ||
+        renderedGreenery.some((tile) => HexGrid2D.coordinateToKey(tile.coordinate) === key) ||
+        volcanoTiles.some((tile) => HexGrid2D.coordinateToKey(tile.coordinate) === key),
+    )
+    .sort()
+    .join(";");
+  const newVegetationKeys = useMemo(
+    () => new Set(vegetationBirthKey ? vegetationBirthKey.split(";") : []),
+    [vegetationBirthKey],
+  );
   const oceanKeySet = useMemo(() => {
     const set = new Set<string>();
     for (const tile of oceanTiles) {
@@ -591,6 +781,7 @@ export default function TileGrid({
       {activePlanet === "mars" && (
         <mesh
           geometry={interactionSphereGeometry}
+          raycast={sphereRaycast}
           onPointerMove={handleSpherePointerMove}
           onPointerLeave={handleSpherePointerLeave}
           onClick={handleSphereClick}
@@ -604,13 +795,36 @@ export default function TileGrid({
       </Html>
       {/* Single GreeneryRenderer handles ALL greenery + volcano vegetation */}
       <GreeneryRenderer
-        tiles={greeneryTiles}
+        tiles={plannedGreenery}
+        landscape={landscape}
+        cityPlots={cityPlots}
         volcanoTiles={volcanoTiles}
         livingGreeneryTiles={livingGreeneryTiles}
-        newTileKeys={newGreeneryKeys}
+        newTileKeys={newVegetationKeys}
         sphereCenter={sphereCenter}
         groupInverseMatrix={groupInverseMatrix}
       />
+      <group visible={!startHidden || animateHexEntrance}>
+        <LandscapeRenderer plan={landscape} groundData={landscapeGround} />
+        <CityBatchRenderer
+          plots={cityPlots}
+          activeExits={landscape.activeExits}
+          newlyPlaced={newlyPlacedTiles}
+        />
+        {cityPlots.map((plot) => (
+          <CityRenderer
+            key={HexGrid2D.coordinateToKey(plot.coordinate)}
+            renderBuildings={false}
+            activeExits={landscape.activeExits.get(HexGrid2D.coordinateToKey(plot.coordinate))}
+            showLabel={SHOWCASE}
+            isNewlyPlaced={newlyPlacedTiles.has(HexGrid2D.coordinateToKey(plot.coordinate))}
+            connectedGround
+            plot={plot}
+            sphereCenter={sphereCenter}
+            groupInverseMatrix={groupInverseMatrix}
+          />
+        ))}
+      </group>
       <PrimitiveRenderer />
       <BirdRenderer livingGreeneryTiles={livingGreeneryTiles} />
       {gameState?.settings?.cardPacks?.includes("colonies") && (
@@ -632,7 +846,19 @@ export default function TileGrid({
       />
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
+        const isCityRenderer = cityKeys.has(hexKey);
+        const isShowcaseGreen = showcaseGreenery.some(
+          (t) => HexGrid2D.coordinateToKey(t.coordinate) === hexKey,
+        );
         const tileData = getTileData(tile);
+        let renderedType = tileData.type;
+        if (isCityRenderer) {
+          renderedType = "city";
+        }
+        if (isShowcaseGreen) {
+          renderedType = "greenery";
+        }
+        const ownerId = isCityRenderer && SHOWCASE ? showcaseOwnerId : tileData.ownerId;
         const isAvailable = availableHexes.includes(hexKey);
 
         const isHovered = !isDraggingCard && hoveredHexKey === hexKey;
@@ -646,14 +872,15 @@ export default function TileGrid({
           <Tile
             key={hexKey}
             tileData={tile}
-            tileType={tileData.type}
-            ownerId={tileData.ownerId}
-            ownerColor={tileData.ownerId ? playerColorMap.get(tileData.ownerId) : undefined}
+            tileType={renderedType}
+            renderBuilding={!isCityRenderer}
+            ownerId={ownerId}
+            ownerColor={ownerId ? playerColorMap.get(ownerId) : undefined}
             reservedById={tile.backendTile?.reservedBy || null}
             displayName={tileData.specialLabel || tile.backendTile?.displayName}
             isVolcanic={tile.backendTile?.tags?.includes("volcanic") ?? false}
             isOceanSpace={tile.isOceanSpace}
-            bonuses={tile.bonuses}
+            bonuses={isCityRenderer || isShowcaseGreen ? EMPTY_BONUSES : tile.bonuses}
             onClick={noop}
             isHovered={isHovered}
             isAvailableForPlacement={isAvailable}
