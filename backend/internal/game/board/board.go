@@ -3,6 +3,8 @@ package board
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
+	"strings"
 	"time"
 
 	"terraforming-mars-backend/internal/events"
@@ -99,8 +101,9 @@ type TileBonus struct {
 
 // TileOccupant represents what currently occupies a tile
 type TileOccupant struct {
-	Type shared.ResourceType `json:"type"`
-	Tags []string            `json:"tags"`
+	Visual *shared.TileVisual  `json:"visual,omitempty"`
+	Type   shared.ResourceType `json:"type"`
+	Tags   []string            `json:"tags"`
 }
 
 // Tile represents a single hexagonal tile on the game board
@@ -405,6 +408,22 @@ func (b *Board) UpdateTileOccupancy(ctx context.Context, coords shared.HexPositi
 	var found bool
 	for i := range *b.tiles {
 		if (*b.tiles)[i].Coordinates == coords {
+			if occupant.Type == shared.ResourceCityTile || occupant.Type == shared.ResourceGreeneryTile {
+				occupant.Visual = occupant.Visual.Clone()
+				if occupant.Visual == nil {
+					occupant.Visual = &shared.TileVisual{}
+				}
+				source := "standard"
+				for _, tag := range occupant.Tags {
+					if strings.HasPrefix(tag, "source:") {
+						source = tag
+						break
+					}
+				}
+				hash := fnv.New32a()
+				_, _ = fmt.Fprintf(hash, "landscape-v1|%s|%s|%s|%s|%s", b.gameID, (*b.tiles)[i].Location, coords.String(), occupant.Type, source)
+				occupant.Visual.Seed = hash.Sum32()
+			}
 			(*b.tiles)[i].OccupiedBy = &occupant
 			(*b.tiles)[i].OwnerID = &ownerID
 			(*b.tiles)[i].ReservedBy = nil
@@ -539,6 +558,7 @@ func (b *Board) deepCopyTile(tile *Tile) *Tile {
 
 	if tile.OccupiedBy != nil {
 		occupantCopy := *tile.OccupiedBy
+		occupantCopy.Visual = tile.OccupiedBy.Visual.Clone()
 		occupantCopy.Tags = make([]string, len(tile.OccupiedBy.Tags))
 		copy(occupantCopy.Tags, tile.OccupiedBy.Tags)
 		tileCopy.OccupiedBy = &occupantCopy
