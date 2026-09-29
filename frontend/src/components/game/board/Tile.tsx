@@ -26,6 +26,7 @@ import {
 import { SPHERE_RADIUS, CHROME_Z_BASE, easeOutCubic } from "./boardConstants";
 
 const BONUS_ICON_TINT = new THREE.Color(0.7, 0.7, 0.7);
+const EMPTY_HEX_OPACITY = 0.12;
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 const _bbWorldPos = new THREE.Vector3();
 const _bbNormal = new THREE.Vector3();
@@ -589,8 +590,11 @@ function Tile({
     if (ownerColor) {
       return new THREE.Color(ownerColor);
     }
+    if (tileType === "empty") {
+      return new THREE.Color("#67432e");
+    }
     return baseTileColor.clone().multiplyScalar(0.25);
-  }, [baseTileColor, ownerColor]);
+  }, [baseTileColor, ownerColor, tileType]);
 
   const hexTileMaterial = useMemo(() => {
     const isGreenery = tileType === "greenery";
@@ -611,12 +615,13 @@ function Tile({
         tileType === "mohole"
           ? 0
           : tileType === "empty"
-            ? 0.3
+            ? EMPTY_HEX_OPACITY
             : 0.7,
       depthWrite: false,
       roughness: 0.7,
       metalness: 0.1,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
     });
 
     const snippet = splitSnippet(tileSurfaceVertexSnippet);
@@ -645,7 +650,9 @@ function Tile({
       tileType === "nuclear-zone"
     )
       return 0;
-    if (tileType === "empty") return 0.3;
+    if (tileType === "empty") {
+      return EMPTY_HEX_OPACITY;
+    }
     return 0.7;
   }, [tileType]);
 
@@ -917,9 +924,12 @@ interface BonusIconProps {
 
 function BonusIcon({ texture, position, isCredits, creditAmount }: BonusIconProps) {
   const dimensions = useMemo((): [number, number] => {
-    if (!texture.image) return [0.05, 0.05];
+    const image = texture.image;
+    if (!(image instanceof HTMLImageElement)) {
+      return [0.05, 0.05];
+    }
 
-    const aspect = texture.image.width / texture.image.height;
+    const aspect = image.width / image.height;
     const maxSize = 0.05;
 
     if (aspect > 1) {

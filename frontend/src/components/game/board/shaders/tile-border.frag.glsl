@@ -9,6 +9,6 @@ varying vec2 vWorldUv;
 
 void main() {
   float noise = texture2D(uNoiseTex, vWorldUv).r;
-  float alpha = uOpacity * smoothstep(0.25, 0.55, noise);
+  float alpha = uOpacity * mix(0.92, 1.0, noise);
   gl_FragColor = vec4(uColor, alpha);
 }
