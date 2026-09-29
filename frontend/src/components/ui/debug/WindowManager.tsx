@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
 import { Z_INDEX } from "../../../constants/zIndex";
 
@@ -29,6 +37,9 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
 
   const bringToFront = useCallback((windowId: string) => {
     setFocusStack((prev) => {
+      if (prev.at(-1) === windowId) {
+        return prev;
+      }
       const filtered = prev.filter((id) => id !== windowId);
       return [...filtered, windowId];
     });
@@ -106,7 +117,24 @@ export function useWindowDrag({
   });
 
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const drag = useRef<{
+    element: HTMLElement;
+    x: number;
+    y: number;
+    startX: number;
+    startY: number;
+    offsetX: number;
+    offsetY: number;
+    frame: number;
+  } | null>(null);
+  useLayoutEffect(() => {
+    if (!isDragging && drag.current) {
+      cancelAnimationFrame(drag.current.frame);
+      drag.current.element.style.transform = "";
+      drag.current.element.style.willChange = "";
+      drag.current = null;
+    }
+  }, [isDragging]);
 
   const handleMouseDown = useCallback(
     (e: ReactMouseEvent) => {
@@ -131,36 +159,50 @@ export function useWindowDrag({
       }
 
       e.preventDefault();
+      const element = e.currentTarget as HTMLElement;
+      const rect = element.getBoundingClientRect();
+      drag.current = {
+        element,
+        x: rect.left,
+        y: rect.top,
+        startX: rect.left,
+        startY: rect.top,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        frame: 0,
+      };
+      element.style.willChange = "transform";
       setIsDragging(true);
-      setDragStart({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y,
-      });
     },
-    [position, bringToFront, windowId],
+    [bringToFront, windowId],
   );
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isDragging) return;
-      const h = getHeight();
-      const screenWidth = window.innerWidth;
-      const screenHeight = window.innerHeight;
-
-      const minX = -(width / 2);
-      const maxX = screenWidth - width / 2;
-      const minY = -(h / 2);
-      const maxY = screenHeight - h / 2;
-
-      setPosition({
-        x: Math.max(minX, Math.min(maxX, e.clientX - dragStart.x)),
-        y: Math.max(minY, Math.min(maxY, e.clientY - dragStart.y)),
-      });
+      const current = drag.current;
+      if (!current) {
+        return;
+      }
+      const renderedWidth = Math.min(width, window.innerWidth - 32);
+      current.x = Math.max(
+        16,
+        Math.min(window.innerWidth - renderedWidth - 16, e.clientX - current.offsetX),
+      );
+      current.y = Math.max(16, Math.min(window.innerHeight - 80, e.clientY - current.offsetY));
+      if (!current.frame) {
+        current.frame = requestAnimationFrame(() => {
+          current.frame = 0;
+          current.element.style.transform = `translate3d(${current.x - current.startX}px, ${current.y - current.startY}px, 0)`;
+        });
+      }
     },
-    [isDragging, dragStart, width, getHeight],
+    [width],
   );
 
   const handleMouseUp = useCallback(() => {
+    if (drag.current) {
+      setPosition({ x: drag.current.x, y: drag.current.y });
+    }
     setIsDragging(false);
   }, []);
 
@@ -170,11 +212,19 @@ export function useWindowDrag({
     document.body.style.cursor = "default";
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("blur", handleMouseUp);
     return () => {
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("blur", handleMouseUp);
+      if (drag.current) {
+        cancelAnimationFrame(drag.current.frame);
+        drag.current.frame = 0;
+        drag.current.element.style.transform = "";
+        drag.current.element.style.willChange = "";
+      }
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
