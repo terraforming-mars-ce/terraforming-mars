@@ -8,9 +8,9 @@ React Three Fiber components that render the hexagonal game board on a 3D Mars s
 MarsSphere          -> Textured sphere + rotation context
 +-- TileGrid        -> Generates projected hex positions, detects new tiles
 |   +-- Tile        -> Base hex tile (chrome border, hover, highlights, VP text)
-|   |   +-- BuildingTile  -> City model (city.glb) with rise emergence
+|   +-- CityRenderer     -> Procedural city geometry with rise emergence
 |   |   +-- VolcanoTile   -> Procedural volcano (custom GLSL shaders + smoke)
-|   +-- OceanRenderer     -> Single-pass merged ocean rendering (capsule SDF, DataTexture)
+|   +-- LandscapeRenderer -> Shared ground fields, recessed lakes, and shoreline materials
 |   +-- GreeneryRenderer  -> InstancedMesh vegetation (trees, bushes, clover, rocks)
 +-- GpuWarmup       -> Invisible warmup meshes to prevent first-render stalls
 ```
@@ -20,8 +20,8 @@ MarsSphere          -> Textured sphere + rotation context
 Each hex can be one of: `empty`, `ocean`, `greenery`, `city`, `special`, `volcano`.
 
 - **Tile** (`Tile.tsx`) — Base component for every hex. Renders the chrome border, hover/available glow, owner color, VP text. Delegates to child components based on type.
-- **OceanRenderer** (`OceanRenderer.tsx`) — Single-pass ocean renderer that merges adjacent ocean tiles into unified water bodies. Uses a capsule SDF (point + line segment union) computed from a DataTexture (`oceanDataTexture.ts`) encoding ocean centers and edges between adjacent oceans. Custom GLSL shaders (`ocean-renderer.vert.glsl`, `ocean-renderer.frag.glsl`) with GLSL 300 es. Animated normals, sand border, foam, shallow water, fresnel. Hover glow integrated. Sibling of Tile in TileGrid (not a child).
-- **BuildingTile** — Loads `city.glb` model, rise-from-ground animation with shake.
+- **LandscapeRenderer** — Owns `LandscapeSurface`: instanced lake stencil masks, opaque basin terrain, transparent outer ground, and water. `landscapeFields.ts` builds continuous height/material fields in a worker; adjacent ocean junctions are filled while island holes remain. Water is below the Mars surface and sandy banks rise to surrounding ground. Lake and Mohole masks use independent stencil bits. All passes share texture layers and a 600 ms transition clock.
+- **CityRenderer** — Renders seeded procedural cities on Mars and celestial bodies; surface projection uses the body radius.
 - **VolcanoTile** — Procedural volcano cone with crater, lava flows, and smoke particles. Uses custom vertex/fragment shaders (`volcano.vert.glsl`, `volcano.frag.glsl`). Height field is generated on both GPU (shaders) and CPU (flow map computation in `volcanoFlowMap.ts`). Smoke effect in `effects/VolcanoSmoke.tsx`.
 - **GreeneryRenderer** — Handles ALL vegetation (trees, bushes, clover, rocks) for both greenery tiles AND volcano tiles using InstancedMesh.
 
@@ -29,12 +29,10 @@ Each hex can be one of: `empty`, `ocean`, `greenery`, `city`, `special`, `volcan
 
 **CRITICAL**: All trees and bushes MUST be placed through `GreeneryRenderer`. Never create standalone tree/bush meshes in individual tile components.
 
-- GreeneryRenderer receives `tiles` (greenery) and `volcanoTiles` props from TileGrid
-- For greenery tiles: full vegetation (trees, bushes, clover, rocks, ground mesh)
-- For volcano tiles: trees (80% scale) and bushes (~100) placed OUTSIDE the volcano exclusion zone (radius ~0.105 in local hex space). No rocks, clover, or ground mesh for volcanoes
-- Uses InstancedMesh per variant for performance (one draw call per variant)
-- Vegetation models come from `useModels()` hook, processed via `createVariantsFromScene()`
-- Seeded RNG (`mulberry32`) ensures deterministic placement per tile coordinate
+- GreeneryRenderer receives the displayed and previous landscape states and the terrain transition timestamp from TileGrid.
+- The landscape worker deterministically scatters plants in world-space cells, with city/volcano exclusions, beach clearances, and reduced tree density near exposed hex borders.
+- Uses InstancedMesh per variant with stable slots; plant heights interpolate with the displayed terrain.
+- Vegetation models come from `useModels()` through `createVariantsFromScene()`.
 
 ## Coordinate System
 
@@ -42,7 +40,7 @@ Cube coordinates `(q, r, s)` where `q + r + s = 0`. TileGrid converts these to 2
 
 ## Key Constants
 
-- `SPHERE_RADIUS = 2.02` — Mars sphere radius, shared by TileGrid and OceanTile
+- `SPHERE_RADIUS = 2.02` — Mars sphere radius, shared by the board and landscape projection
 - `CHROME_Z_BASE = 0.0156` — Base z-offset for tile chrome to prevent z-fighting
 - `HEX_SIZE = 0.3` — Hex cell size for coordinate conversion
 - `HEX_RADIUS = 0.166` — Hex tile radius in world units
@@ -86,7 +84,7 @@ useFrame(() => {
 
 All 3D models and textures are loaded via centralized hooks in `hooks/`:
 
-- `useModels()` — trees, rock, city GLB models
+- `useModels()` — vegetation, rocks, and celestial models; cities use procedural geometry
 - `useTextures()` — terrain textures, resource icons, effects textures
 
 No direct `useGLTF`, `useTexture`, or `useLoader(TextureLoader)` calls in board components.
@@ -103,10 +101,10 @@ All GLSL shaders live in `.glsl` files imported via Vite `?raw`. The `shaders/in
 
 ## Effects (`effects/`)
 
-- **DustEffect** — Smoke particle cloud using billboard planes with a smoke texture. Used by BuildingTile for city placement.
+- **DustEffect** — Smoke particle cloud using billboard planes with a smoke texture. Used by CityRenderer for city placement.
 - **VolcanoSmoke** — Sprite-based smoke particles emitted from crater. Uses `renderOrder = 100` to render above tile geometry.
 
-Ocean emergence animation lives in OceanRenderer's useFrame (animates per-point emergence in the DataTexture).
+Landscape placement transitions live in `LandscapeSurface.tick`: changed layers upload before activation, lake cutouts cover the previous/current basin union during interpolation, and removed slots are released after the transition.
 
 ## External Exports
 
