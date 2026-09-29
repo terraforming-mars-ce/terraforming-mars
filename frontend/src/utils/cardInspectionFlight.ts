@@ -1,3 +1,5 @@
+import { coldStartTrace } from "@/services/performanceStore.ts";
+
 // The flight lives in the hand's stacking context, so neighboring cards naturally occlude it.
 const REGIONS = [
   ".game-card-artwork",
@@ -18,7 +20,14 @@ export interface CardInspectionFlight {
 }
 
 function snapshot(card: HTMLElement, width: number, height: number) {
+  const endClone = coldStartTrace.span("card:clone-dom", {
+    presentation: card.dataset.presentation,
+  });
   const clone = card.cloneNode(true) as HTMLElement;
+  endClone();
+  const endLayout = coldStartTrace.span("card:snapshot-layout", {
+    presentation: card.dataset.presentation,
+  });
   clone.dataset.moduleState = "idle";
   // A snapshot has no React onLoad handler to reveal newly mounted artwork.
   clone.querySelectorAll<HTMLElement>(".game-card-artwork img").forEach((image) => {
@@ -66,6 +75,7 @@ function snapshot(card: HTMLElement, width: number, height: number) {
       },
     ];
   });
+  endLayout();
   const face = document.createElement("div");
   Object.assign(face.style, {
     position: "absolute",
@@ -96,10 +106,13 @@ export function createCardInspectionFlight(
   if (!compact || !compactBody || !detailBody || !source.isConnected) {
     return null;
   }
+  const endSetup = coldStartTrace.span("card:flight-setup");
+  const endMeasure = coldStartTrace.span("card:measure-source-and-detail");
   const width = compactBody.offsetWidth;
   const height = compactBody.offsetHeight;
   const compactRect = compactBody.getBoundingClientRect();
   const detailRect = detailBody.getBoundingClientRect();
+  endMeasure();
   const small = snapshot(compact, width, height);
   const large = snapshot(detail, width, height);
   const flight = document.createElement("div");
@@ -121,6 +134,7 @@ export function createCardInspectionFlight(
   source.append(flight);
   source.dataset.cardFlight = "true";
 
+  const endTransforms = coldStartTrace.span("card:ancestor-transforms");
   let linear = new DOMMatrix();
   for (let element: HTMLElement | null = source; element; element = element.parentElement) {
     const transform = new DOMMatrix(getComputedStyle(element).transform);
@@ -140,6 +154,8 @@ export function createCardInspectionFlight(
   const scaleX = detailRect.width / width / Math.hypot(linear.a, linear.b);
   const scaleY = detailRect.height / height / Math.hypot(linear.c, linear.d);
   const expanded = `translate(${delta.x}px, ${delta.y}px) rotate(${-angle}deg) scale(${scaleX}, ${scaleY})`;
+  endTransforms();
+  const endAnimations = coldStartTrace.span("card:create-animations");
   const animations: Animation[] = [];
   const animate = (element: Element, frames: Keyframe[]) => {
     const animation = element.animate(frames, { duration: DURATION, easing: EASING, fill: "both" });
@@ -180,6 +196,8 @@ export function createCardInspectionFlight(
     }
   }
   let closing = false;
+  endAnimations();
+  endSetup();
   let started = false;
   let fade: Animation | null = null;
   const cancelFade = () => {
@@ -191,6 +209,7 @@ export function createCardInspectionFlight(
   };
   return {
     play(nextClosing, speed = 1) {
+      const endPlay = coldStartTrace.span("card:play-animations", { closing: nextClosing });
       const opacity = getComputedStyle(flight).opacity;
       cancelFade();
       if (Number(opacity) < 1) {
@@ -210,6 +229,7 @@ export function createCardInspectionFlight(
         } else {
           movement.finish();
         }
+        endPlay();
         return;
       }
       for (const animation of animations) {
@@ -217,6 +237,7 @@ export function createCardInspectionFlight(
         animation.playbackRate = closing ? -speed : 1.25 * speed;
         animation.play();
       }
+      endPlay();
     },
     fadeBack() {
       const opacity = getComputedStyle(flight).opacity;

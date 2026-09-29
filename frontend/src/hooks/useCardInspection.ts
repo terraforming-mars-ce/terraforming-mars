@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { coldStartTrace } from "@/services/performanceStore.ts";
 
 export interface CardInspectionDrag {
   pointerId: number;
@@ -30,6 +31,7 @@ export function useCardInspection() {
   }, []);
 
   const inspectCard = useCallback((cardId: string, source: HTMLElement) => {
+    coldStartTrace.begin("card-inspection", { cardId });
     setInspections((current) => {
       const existing = current.find((entry) => entry.cardId === cardId);
       const returning = current.map((entry) => ({ ...entry, closing: true, restoreFocus: false }));

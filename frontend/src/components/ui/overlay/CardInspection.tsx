@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Profiler, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { coldStartTrace } from "@/services/performanceStore.ts";
 import { createPortal, flushSync } from "react-dom";
 import type { PlayerCardDto } from "@/types/generated/api-types.ts";
 import { useReducedMotion } from "@/hooks/useReducedMotion.ts";
@@ -20,7 +21,18 @@ interface CardInspectionProps {
   onDragStart: (cardId: string, drag: CardInspectionDrag, detail: HTMLElement) => void;
 }
 
-export default function CardInspection({
+export default function CardInspection(props: CardInspectionProps) {
+  if (coldStartTrace.enabled) {
+    return (
+      <Profiler id="card-inspection" onRender={coldStartTrace.reactRender}>
+        <CardInspectionContent {...props} />
+      </Profiler>
+    );
+  }
+  return <CardInspectionContent {...props} />;
+}
+
+function CardInspectionContent({
   card,
   inspection,
   onReturned,
@@ -65,6 +77,30 @@ export default function CardInspection({
     : desktopHeight;
   const contentMaxHeight = maxHeight / scale;
 
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!coldStartTrace.active || !panel) {
+      return;
+    }
+    const describe = (image: HTMLImageElement) => ({
+      url: image.currentSrc || image.src,
+      complete: image.complete,
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+    });
+    coldStartTrace.mark("card:images-at-commit", {
+      source: Array.from(inspection.source.querySelectorAll("img"), describe),
+      inspection: Array.from(panel.querySelectorAll("img"), describe),
+    });
+    const loaded = (event: Event) => {
+      if (event.target instanceof HTMLImageElement) {
+        coldStartTrace.mark("card:image-loaded", describe(event.target));
+      }
+    };
+    panel.addEventListener("load", loaded, true);
+    return () => panel.removeEventListener("load", loaded, true);
+  }, [inspection.source]);
+
   useEffect(() => {
     const resize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
     window.addEventListener("resize", resize);
@@ -76,7 +112,11 @@ export default function CardInspection({
     if (!panel) {
       return;
     }
-    const measure = () => setPanelHeight(panel.offsetHeight);
+    const measure = () => {
+      const end = coldStartTrace.span("card:measure-panel");
+      setPanelHeight(panel.offsetHeight);
+      end();
+    };
     const observer = new ResizeObserver(measure);
     observer.observe(panel);
     measure();
@@ -97,6 +137,7 @@ export default function CardInspection({
       .map((selector) => panel.querySelector<HTMLElement>(selector))
       .filter((element): element is HTMLElement => element !== null);
     const measure = () => {
+      const end = coldStartTrace.span("card:measure-sections");
       // Reserve body padding, description padding, and its optional panning control.
       const fixedHeight = sections.reduce((sum, element) => sum + element.offsetHeight, 0) + 64;
       const available = contentMaxHeight - fixedHeight;
@@ -113,6 +154,7 @@ export default function CardInspection({
           ? previous
           : next,
       );
+      end();
     };
     const observer = new ResizeObserver(measure);
     sections.forEach((element) => observer.observe(element));
@@ -123,6 +165,7 @@ export default function CardInspection({
   useLayoutEffect(() => {
     let frame = 0;
     const run = () => {
+      coldStartTrace.mark("card:flight-callback", { closing: inspection.closing, reducedMotion });
       const detail = motionRef.current?.querySelector<HTMLElement>(".game-card");
       if (!detail) {
         return;
@@ -142,6 +185,7 @@ export default function CardInspection({
       }
       if (!flightRef.current) {
         flightRef.current = createCardInspectionFlight(inspection.source, detail, (closing) => {
+          coldStartTrace.mark("card:flight-finished", { closing });
           const finished = flightRef.current;
           flightRef.current = null;
           flushSync(() => {
@@ -170,7 +214,9 @@ export default function CardInspection({
     if (inspection.closing || flightRef.current) {
       run();
     } else {
+      coldStartTrace.mark("card:layout-committed-awaiting-two-frames", { cardId: card.id });
       frame = requestAnimationFrame(() => {
+        coldStartTrace.mark("card:first-animation-frame");
         frame = requestAnimationFrame(run);
       });
     }
