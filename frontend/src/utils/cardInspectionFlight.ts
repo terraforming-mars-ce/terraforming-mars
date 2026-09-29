@@ -157,7 +157,8 @@ export function createCardInspectionFlight(
   endTransforms();
   const endAnimations = coldStartTrace.span("card:create-animations");
   const animations: Animation[] = [];
-  const animate = (element: Element, frames: Keyframe[]) => {
+  const animate = (element: HTMLElement, frames: Keyframe[]) => {
+    element.style.willChange = "transform, opacity";
     const animation = element.animate(frames, { duration: DURATION, easing: EASING, fill: "both" });
     animation.pause();
     animations.push(animation);
