@@ -225,6 +225,17 @@ function CardInspectionContent({
 
   useLayoutEffect(() => () => flightRef.current?.dispose(), []);
 
+  useLayoutEffect(() => {
+    if (!motionReady) {
+      return;
+    }
+    const source = inspection.source;
+    source.dataset.cardInspectionReady = "true";
+    return () => {
+      delete source.dataset.cardInspectionReady;
+    };
+  }, [motionReady, inspection.source]);
+
   useEffect(() => {
     if (inspection.closing) {
       return;

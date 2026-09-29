@@ -548,8 +548,8 @@ export default function GameInterface() {
     isPreGamePhase ||
     !!currentPlayer?.pendingTileSelection;
 
-  const { inspections, inspectCard, closeInspection, finishInspection, clearInspection } =
-    useCardInspection();
+  const inspectionStore = useCardInspection();
+  const { inspectCard, finishInspection, clearInspection } = inspectionStore.getState();
   const dragInspectionCard = useCallback(
     (cardId: string, drag: CardInspectionDrag, detail: HTMLElement) => {
       cardFanRef.current?.startInspectionDrag(cardId, drag, detail);
@@ -580,12 +580,6 @@ export default function GameInterface() {
     showEndGameConfirm ||
     spectatePlayerId !== null;
   const inspectionHand = replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? [];
-  const inspectedCards = inspectionBlocked
-    ? []
-    : inspections.flatMap((inspection) => {
-        const card = inspectionHand.find((candidate) => candidate.id === inspection.cardId);
-        return card ? [{ card, inspection }] : [];
-      });
   useEffect(() => {
     clearInspection();
   }, [
@@ -601,12 +595,12 @@ export default function GameInterface() {
       clearInspection();
       return;
     }
-    for (const inspection of inspections) {
+    for (const inspection of inspectionStore.getState().inspections) {
       if (!inspectionHand.some((card) => card.id === inspection.cardId)) {
         finishInspection(inspection);
       }
     }
-  }, [inspectionBlocked, inspectionHand, inspections, clearInspection, finishInspection]);
+  }, [inspectionBlocked, inspectionHand, inspectionStore, clearInspection, finishInspection]);
 
   const cardFanTransitionClass = (() => {
     if (spectatePlayerId) {
@@ -674,9 +668,9 @@ export default function GameInterface() {
           phase.kind !== "spectating" && (
             <GameLayout
               ref={playerListRef}
-              inspectedCards={inspectedCards}
-              onInspectionReturned={finishInspection}
-              onCloseInspection={closeInspection}
+              inspectionStore={inspectionStore}
+              inspectionHand={inspectionHand}
+              inspectionBlocked={inspectionBlocked}
               onInspectionDrag={dragInspectionCard}
               gameState={replayGameState ?? game}
               currentPlayer={replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer)}
@@ -1095,7 +1089,7 @@ export default function GameInterface() {
                   }
                   hideWhenModalOpen={hideCardFanForModals}
                   onInspectCard={inspectCard}
-                  inspectedCardIds={inspectedCards.map(({ card }) => card.id)}
+                  inspectionStore={inspectionStore}
                   onDismissInspection={clearInspection}
                   onPlayCard={spectatePlayerId ? undefined : flow.handlePlayCard}
                 />
