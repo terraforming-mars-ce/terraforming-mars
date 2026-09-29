@@ -48,7 +48,7 @@ build() {
         --build-arg BUILD_VERSION="$BUILD_VERSION" \
         -t "$FRONTEND_IMAGE" \
         -f "$PROJECT_ROOT/frontend/Dockerfile" \
-        "$PROJECT_ROOT/frontend"
+        "$PROJECT_ROOT"
 
     echo "==> Images built"
 }

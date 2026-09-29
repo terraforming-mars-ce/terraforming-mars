@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useState, useCallback } from "react";
 import {
   CardPaymentDto,
@@ -91,9 +92,9 @@ const ProjectFundingPopover: React.FC<ProjectFundingPopoverProps> = ({
         width={560}
         maxHeight="80vh"
         animation="slideDown"
-        className="!bg-space-black-darker"
+        className="game-popover-list !bg-space-black-darker"
       >
-        <div className="p-2 space-y-2">
+        <div className="popover-list p-2 space-y-2">
           {projects.map((project) => (
             <ProjectCard
               key={project.id}
@@ -135,6 +136,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
     <GamePopoverItem
       state={dimmed ? "disabled" : "available"}
       borderColor={project.isCompleted ? "#10b981" : project.style.color}
+      className="popover-list-item"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -150,8 +152,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
         </div>
 
         {canAct && !project.isCompleted && (
-          <button
-            className={`px-3 py-1 rounded text-xs font-semibold font-orbitron transition-all cursor-pointer ${
+          <GameButton
+            emphasis="quiet"
+            className={`px-3 py-1 rounded-none text-xs font-semibold font-orbitron transition-all cursor-pointer ${
               canBuy ? "bg-white/15 hover:bg-white/25 text-white" : "bg-gray-600/30 text-gray-500"
             }`}
             onClick={(e) => {
@@ -163,7 +166,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, canAct, onBuySeat })
             disabled={!canBuy}
           >
             Buy Seat
-          </button>
+          </GameButton>
         )}
       </div>
 

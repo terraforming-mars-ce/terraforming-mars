@@ -34,7 +34,7 @@ class CardImageGenerator:
 
     def __init__(self) -> None:
         self.client = ComfyUIClient()
-        self.cards = self._load_cards()
+        self.cards = [card for card in self._load_cards() if card["type"] != "corporation"]
         self.output_dir = Path(config.OUTPUT_DIR)
 
     @staticmethod
@@ -51,11 +51,12 @@ class CardImageGenerator:
 
     def get_missing_cards(self) -> list[dict]:
         """Return cards that don't have generated images yet."""
-        return [
-            card
-            for card in self.cards
-            if not (self.output_dir / f"{card['id']}.webp").exists()
-        ]
+        catalog = json.loads(config.CATALOG_PATH.read_text())
+        available = {
+            entry["id"] for entry in catalog["assets"]
+            if (config.PROJECT_ROOT / "assets" / "original" / entry["source"]).is_file()
+        }
+        return [card for card in self.cards if f"cards/{card['id']}" not in available]
 
     async def generate_card(
         self, card: dict, seed: Optional[int] = None
@@ -71,7 +72,7 @@ class CardImageGenerator:
 
         image_data = await _generate_with_retry(self.client, prompt, seed)
 
-        output_path = self.output_dir / f"{card['id']}.webp"
+        output_path = self.output_dir / f"{card['id']}.png"
         process_and_save(image_data, output_path)
 
         print(f"  Saved:  {output_path}")

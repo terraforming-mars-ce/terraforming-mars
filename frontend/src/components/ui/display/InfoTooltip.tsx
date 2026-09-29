@@ -1,47 +1,60 @@
-import { FC, ReactNode } from "react";
-import { Z_INDEX } from "@/constants/zIndex.ts";
-
-type TooltipSize = "small" | "medium";
+import { type FC, type ReactNode, useId, useRef, useState } from "react";
+import DecorBoxTooltip from "./DecorBoxTooltip.tsx";
 
 interface InfoTooltipProps {
-  /** The tooltip content to display on hover */
   children: ReactNode;
-  /** Size variant affects icon size and tooltip width */
-  size?: TooltipSize;
+  size?: "small" | "medium";
 }
 
-const sizeConfig = {
-  small: {
-    icon: "text-[10px] w-[14px] h-[14px]",
-    tooltip: "w-[260px] text-[12px]",
-    shadow:
-      "shadow-[0_0_8px_rgba(30,60,150,0.2)] group-hover:shadow-[0_0_12px_rgba(30,60,150,0.4)]",
-  },
-  medium: {
-    icon: "text-[11px] w-[16px] h-[16px]",
-    tooltip: "w-[280px] text-[13px]",
-    shadow:
-      "shadow-[0_0_10px_rgba(30,60,150,0.2)] group-hover:shadow-[0_0_15px_rgba(30,60,150,0.4)]",
-  },
-};
-
 const InfoTooltip: FC<InfoTooltipProps> = ({ children, size = "medium" }) => {
-  const config = sizeConfig[size];
+  const id = useId();
+  const anchor = useRef<HTMLSpanElement>(null);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const show = () => {
+    const rect = anchor.current?.getBoundingClientRect();
+    if (rect) {
+      setPosition({ x: rect.left + rect.width / 2, y: rect.top - 6 });
+    }
+  };
 
   return (
-    <div className="relative inline-block group">
+    <span className="inline-flex align-middle">
       <span
-        className={`text-space-blue-solid cursor-help flex items-center justify-center rounded-full bg-space-blue-100 border border-space-blue-400 transition-all duration-200 group-hover:bg-space-blue-200 ${config.icon} ${config.shadow}`}
+        ref={anchor}
+        tabIndex={0}
+        aria-label="More information"
+        aria-describedby={position ? id : undefined}
+        className={`inline-flex shrink-0 items-center justify-center cursor-default text-white/50 hover:text-white focus-visible:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/60 ${size === "small" ? "size-4" : "size-5"}`}
+        onMouseEnter={show}
+        onMouseLeave={() => {
+          if (document.activeElement !== anchor.current) {
+            setPosition(null);
+          }
+        }}
+        onFocus={show}
+        onBlur={() => setPosition(null)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.stopPropagation();
+            setPosition(null);
+          }
+        }}
       >
-        <span className="font-serif italic">i</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M1.5 1.5h10l3 3v10h-10l-3-3z" stroke="currentColor" />
+          <path d="M8 7v4M8 4.5v.5" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
       </span>
-      <div
-        className={`invisible opacity-0 bg-space-black/[0.98] text-white text-left rounded-lg p-3 absolute bottom-[125%] right-0 leading-normal border border-space-blue-400 shadow-glow transition-all duration-300 group-hover:visible group-hover:opacity-100 after:content-[''] after:absolute after:top-full after:right-3 after:border-8 after:border-solid after:border-t-space-black/[0.98] after:border-r-transparent after:border-b-transparent after:border-l-transparent ${config.tooltip}`}
-        style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
+      <DecorBoxTooltip
+        id={id}
+        position={position}
+        placement="above"
+        maxWidth={size === "small" ? 260 : 280}
+        cornerSize={8}
       >
-        {children}
-      </div>
-    </div>
+        <span className="font-sans text-xs font-normal leading-relaxed">{children}</span>
+      </DecorBoxTooltip>
+    </span>
   );
 };
 

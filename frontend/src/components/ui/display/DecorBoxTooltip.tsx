@@ -1,9 +1,10 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FormattedDescription } from "./FormattedDescription.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface DecorBoxTooltipProps {
+  id?: string;
   description?: string | null;
   children?: ReactNode;
   position: { x: number; y: number } | null;
@@ -13,6 +14,7 @@ interface DecorBoxTooltipProps {
 }
 
 const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({
+  id,
   description,
   children,
   position,
@@ -20,6 +22,43 @@ const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({
   cornerSize = 14,
   maxWidth,
 }) => {
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const tooltip = tooltipRef.current;
+    if (!tooltip || !position) {
+      return;
+    }
+    const rect = tooltip.getBoundingClientRect();
+    const left = Math.max(
+      12,
+      Math.min(position.x - rect.width / 2, window.innerWidth - rect.width - 12),
+    );
+    let top = position.y;
+    if (placement === "above") {
+      top -= rect.height;
+    }
+    top = Math.max(12, Math.min(top, window.innerHeight - rect.height - 12));
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.style.transform = "none";
+  }, [position, placement, children]);
+  const [dismissedPosition, setDismissedPosition] = useState<typeof position>(null);
+  useEffect(() => {
+    if (!position) {
+      return;
+    }
+    const dismiss = () => setDismissedPosition(position);
+    window.addEventListener("scroll", dismiss, true);
+    window.addEventListener("resize", dismiss);
+    return () => {
+      window.removeEventListener("scroll", dismiss, true);
+      window.removeEventListener("resize", dismiss);
+    };
+  }, [position]);
+
+  if (position === dismissedPosition) {
+    return null;
+  }
   if ((!description && !children) || !position) return null;
 
   const paddingClass = placement === "below" ? "pt-1" : "pb-2";
@@ -27,50 +66,23 @@ const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({
 
   return createPortal(
     <div
+      ref={tooltipRef}
+      id={id}
+      role="tooltip"
       className={`fixed w-max ${maxWidth === undefined ? "max-w-40" : ""} ${paddingClass} pointer-events-none animate-[fadeIn_150ms_ease-in]`}
       style={{
         left: position.x,
         top: position.y,
         transform: `translate(-50%, ${translateY})`,
         zIndex: Z_INDEX.LOADING_OVERLAY,
-        maxWidth,
+        maxWidth: maxWidth ?? "min(160px, calc(100vw - 24px))",
       }}
     >
       <div
-        className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
-        style={{
-          clipPath: `polygon(0 0, calc(100% - ${cornerSize}px) 0, 100% ${cornerSize}px, 100% 100%, ${cornerSize}px 100%, 0 calc(100% - ${cornerSize}px))`,
-        }}
+        className="game-panel text-white/90 text-left text-[11px] leading-tight px-3 py-2"
+        style={{ "--panel-cut": `${cornerSize}px` } as React.CSSProperties}
       >
         {children || <FormattedDescription text={description!} />}
-        <svg
-          className={`absolute top-0 right-0 pointer-events-none`}
-          style={{ width: cornerSize, height: cornerSize }}
-          viewBox={`0 0 ${cornerSize} ${cornerSize}`}
-        >
-          <line
-            x1="0"
-            y1="0"
-            x2={cornerSize}
-            y2={cornerSize}
-            stroke="rgba(60,60,70,0.7)"
-            strokeWidth="1.5"
-          />
-        </svg>
-        <svg
-          className={`absolute bottom-0 left-0 pointer-events-none`}
-          style={{ width: cornerSize, height: cornerSize }}
-          viewBox={`0 0 ${cornerSize} ${cornerSize}`}
-        >
-          <line
-            x1="0"
-            y1="0"
-            x2={cornerSize}
-            y2={cornerSize}
-            stroke="rgba(60,60,70,0.7)"
-            strokeWidth="1.5"
-          />
-        </svg>
       </div>
     </div>,
     document.body,

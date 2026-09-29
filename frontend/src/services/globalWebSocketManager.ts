@@ -7,7 +7,7 @@ import type {
   GameDto,
   PlayerDisconnectedPayload,
   FullStatePayload,
-  StateDiffDto,
+  LogUpdatePayload,
   UpdateGameSettingsRequest,
 } from "../types/generated/api-types.ts";
 
@@ -99,8 +99,8 @@ class GlobalWebSocketManager implements WebSocketConnection {
       this.emit("game-ended", payload);
     });
 
-    webSocketService.on("log-update", (logs: StateDiffDto[]) => {
-      this.emit("log-update", logs);
+    webSocketService.on("log-update", (payload: LogUpdatePayload) => {
+      this.emit("log-update", payload);
     });
 
     webSocketService.on("available-cards", (payload: any) => {

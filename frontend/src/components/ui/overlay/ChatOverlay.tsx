@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 import { ChatMessageDto } from "@/types/generated/api-types.ts";
 import { Z_INDEX } from "@/constants/zIndex";
 
@@ -8,9 +8,10 @@ const SNAP_THRESHOLD = 40;
 interface ChatOverlayProps {
   messages: ChatMessageDto[];
   onSendMessage: (message: string) => void;
-  isLobby?: boolean;
+  embedded?: boolean;
   isEndgame?: boolean;
   playerColorMap?: Map<string, string>;
+  onBoundsChange?: (bounds: DOMRectReadOnly | null) => void;
 }
 
 const CHAT_WIDTH = 416;
@@ -19,9 +20,10 @@ const MIN_VISIBLE = 80;
 const ChatOverlay: React.FC<ChatOverlayProps> = ({
   messages,
   onSendMessage,
-  isLobby,
+  embedded,
   isEndgame,
   playerColorMap,
+  onBoundsChange,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -32,10 +34,30 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const snapBottom = isLobby ? 0 : BAR_HEIGHT;
+  const snapBottom = BAR_HEIGHT;
+
+  useLayoutEffect(() => {
+    const element = containerRef.current;
+    if (!element || embedded || !onBoundsChange) {
+      return;
+    }
+    const measure = () => onBoundsChange(element.getBoundingClientRect());
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    window.addEventListener("resize", measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [embedded, onBoundsChange, position, snapX, isSnapped, isEndgame]);
+
+  useEffect(() => () => onBoundsChange?.(null), [onBoundsChange]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.parentElement?.scrollTo({
+      top: messagesEndRef.current.parentElement.scrollHeight,
+    });
   }, [messages]);
 
   // Reset to default snapped position on window resize
@@ -56,13 +78,16 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
     return { x: clampedX, y: clampedY };
   };
 
-  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).tagName === "INPUT") return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    setIsDragging(true);
-  }, []);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (embedded || (e.target as HTMLElement).tagName === "INPUT") return;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      setIsDragging(true);
+    },
+    [embedded],
+  );
 
   useEffect(() => {
     if (!isDragging) return;
@@ -137,23 +162,29 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
       {isDragging && (
         <div
           className="fixed inset-0"
-          style={{ zIndex: Z_INDEX.LOADING_OVERLAY, cursor: "grabbing" }}
+          style={{ zIndex: Z_INDEX.LOADING_OVERLAY, cursor: "default" }}
         />
       )}
       <div
         ref={containerRef}
         onMouseDown={handleMouseDown}
-        className="w-[416px] select-none bg-white/5"
-        style={{ ...style, cursor: isDragging ? "grabbing" : "default" }}
+        className={
+          embedded
+            ? "w-full min-w-0 min-h-[240px] max-h-[320px] flex-1 flex flex-col border-t border-white/10 pt-3"
+            : "w-[416px] select-none bg-white/5"
+        }
+        style={embedded ? undefined : { ...style, cursor: "default" }}
       >
-        <div className="h-[200px] overflow-y-auto overflow-x-hidden px-2 py-1 flex flex-col gap-1.5">
+        <div
+          className={`${embedded ? "h-0 min-h-0 flex-1" : "h-[200px]"} overflow-y-auto overflow-x-hidden px-2 py-1 flex flex-col gap-1.5`}
+        >
           {messages.map((msg, i) => {
             const time = msg.timestamp ? new Date(msg.timestamp) : null;
             const timeStr = time
               ? `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`
               : "";
             return (
-              <div key={i} className="text-sm leading-relaxed flex text-left min-w-0">
+              <div key={i} className="text-sm leading-relaxed flex shrink-0 text-left min-w-0">
                 <span className="shrink-0">
                   {timeStr && <span className="text-white/20 text-[10px] mr-1.5">{timeStr}</span>}
                   <span
@@ -176,13 +207,14 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="border-t border-white/15">
+        <div className="border-t border-white/15 shrink-0">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Write..."
+            placeholder="Message…"
+            aria-label="Chat message"
             spellCheck={false}
             autoComplete="off"
             className="w-full bg-transparent text-white text-sm px-1 py-2 outline-none placeholder:text-white/25 border-b border-white/15"

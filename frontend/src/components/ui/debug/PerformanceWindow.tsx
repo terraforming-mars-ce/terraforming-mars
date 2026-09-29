@@ -1,4 +1,5 @@
-import React, { useRef, useMemo } from "react";
+import FloatingWindow from "./FloatingWindow.tsx";
+import React, { useMemo } from "react";
 import Sparkline from "./Sparkline.tsx";
 import { usePerformanceMetrics } from "@/hooks/usePerformanceMetrics.ts";
 import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
@@ -10,8 +11,6 @@ interface PerformanceWindowProps {
 
 const WINDOW_ID = "performance";
 const WINDOW_WIDTH = 320;
-const ACCENT = "#00d4aa";
-const ACCENT_SHADOW = "rgba(0, 212, 170, 0.3)";
 const EXCLUDE_SELECTORS = [".perf-content-area"];
 
 const hasMemoryApi =
@@ -20,9 +19,7 @@ const hasMemoryApi =
   (performance as any).memory != null;
 
 const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClose }) => {
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const { position, isDragging, handleMouseDown } = useWindowDrag({
+  const { position, handleMouseDown } = useWindowDrag({
     windowId: WINDOW_ID,
     width: WINDOW_WIDTH,
     height: () => window.innerHeight * 0.5,
@@ -47,85 +44,18 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
   const sparklineWidth = WINDOW_WIDTH - 32;
 
   return (
-    <div
-      ref={dropdownRef}
-      data-overlay-layer
+    <FloatingWindow
+      title="Performance"
+      onClose={onClose}
       onMouseDown={handleMouseDown}
       style={{
-        position: "fixed",
-        top: `${position.y}px`,
-        left: `${position.x}px`,
-        width: `${WINDOW_WIDTH}px`,
+        top: position.y,
+        left: position.x,
+        width: WINDOW_WIDTH,
         maxHeight: "50vh",
-        background: "rgba(0, 0, 0, 0.95)",
-        border: `2px solid ${ACCENT}`,
-        borderRadius: "8px",
-        padding: "12px 16px",
         zIndex: getZIndex(WINDOW_ID),
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: `0 4px 20px ${ACCENT_SHADOW}`,
-        cursor: isDragging ? "grabbing" : "default",
-        transition: isDragging ? "none" : "top 0.2s ease-out, left 0.2s ease-out",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "10px",
-          paddingBottom: "8px",
-          borderBottom: "1px solid #333",
-          userSelect: "none",
-          cursor: "grab",
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            color: ACCENT,
-            fontSize: "14px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-          className="font-orbitron"
-        >
-          <svg
-            width="10"
-            height="14"
-            viewBox="0 0 10 14"
-            fill="currentColor"
-            style={{ opacity: 0.5 }}
-          >
-            <circle cx="2" cy="2" r="1.5" />
-            <circle cx="8" cy="2" r="1.5" />
-            <circle cx="2" cy="7" r="1.5" />
-            <circle cx="8" cy="7" r="1.5" />
-            <circle cx="2" cy="12" r="1.5" />
-            <circle cx="8" cy="12" r="1.5" />
-          </svg>
-          Performance
-        </h3>
-        <button
-          onClick={onClose}
-          onMouseDown={(e) => e.stopPropagation()}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#abb2bf",
-            fontSize: "18px",
-            cursor: "pointer",
-            padding: "0 4px",
-            lineHeight: 1,
-          }}
-        >
-          ×
-        </button>
-      </div>
-
       <div
         className="perf-content-area"
         style={{
@@ -262,7 +192,7 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
           </div>
         </div>
       </div>
-    </div>
+    </FloatingWindow>
   );
 };
 

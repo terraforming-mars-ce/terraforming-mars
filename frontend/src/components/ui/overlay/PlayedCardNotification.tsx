@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import GameCard from "../cards/GameCard.tsx";
+import CardChoice from "../cards/CardChoice.tsx";
 import type { PlayedCardNotification as PlayedCardNotificationType } from "@/hooks/usePlayedCardNotification.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 
@@ -91,8 +91,8 @@ export default function PlayedCardNotificationOverlay({
         <span style={{ color: notification.playerColor }}>{notification.playerName}</span>
         <span className="text-white/60"> played</span>
       </div>
-      <div style={{ width: 200 }}>
-        <GameCard card={notification.card} isSelected={isPinned} onSelect={() => onTogglePin()} />
+      <div className="card-size">
+        <CardChoice card={notification.card} isSelected={isPinned} onSelect={() => onTogglePin()} />
       </div>
     </div>
   );

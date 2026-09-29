@@ -1,5 +1,8 @@
 export const SPHERE_RADIUS = 2.02;
+export const CITY_EMERGENCE_DURATION = 1.12;
 export const CHROME_Z_BASE = 0.0156;
+export const MOHOLE_STENCIL_BIT = 1;
+export const LAKE_STENCIL_BIT = 2;
 
 export const VENUS_RADIUS = 2.02;
 export const VENUS_POSITION = [-45, 25, -148] as const;

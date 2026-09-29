@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import GamePopover from "../GamePopover/GamePopover";
 import { usePlanetFocus, type PlanetTarget } from "../../../contexts/PlanetFocusContext";
@@ -39,27 +40,35 @@ export default function TravelPopover({ isVisible, onClose, anchorRef }: TravelP
       width={220}
       maxHeight={500}
       animation="slideDown"
+      className="game-popover-list"
     >
-      <div className="p-2 flex flex-col gap-1">
+      <div className="popover-list p-2 flex flex-col gap-1">
         {DESTINATIONS.map((dest) => {
           const isCurrent = dest.id === activePlanet;
           return (
-            <button
+            <GameButton
+              emphasis="quiet"
               key={dest.id}
+              style={
+                {
+                  "--item-border": "#ffffff30",
+                  "--item-surface": isCurrent ? "#141416" : "#0c0c0e",
+                } as React.CSSProperties
+              }
               onClick={() => {
                 if (!isCurrent) {
                   setActivePlanet(dest.id);
                 }
                 onClose();
               }}
-              className={`flex items-center px-3 py-2 rounded-lg border transition-all duration-150 ${
+              className={`popover-list-item flex items-center justify-start text-left px-3 py-2 rounded-none border transition-all duration-150 ${
                 isCurrent
                   ? "border-white/30 bg-white/10 opacity-50 cursor-default"
                   : "border-white/10 bg-white/5 hover:border-white/30 hover:bg-white/15 cursor-pointer"
               }`}
             >
               <span className="font-orbitron text-sm text-white/90">{dest.name}</span>
-            </button>
+            </GameButton>
           );
         })}
       </div>

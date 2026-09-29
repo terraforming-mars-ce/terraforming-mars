@@ -1,61 +1,89 @@
+import { assetUrl } from "@/assets";
 import { useMemo } from "react";
 import { useTexture } from "@react-three/drei";
 import { useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 
 const TEXTURE_PATHS = {
-  mars: "/assets/textures/mars_8k.jpg",
-  venus: "/assets/textures/4k_venus_atmosphere.jpg",
-  earth: "/assets/textures/earth_8k.jpg",
-  earthClouds: "/assets/textures/earth_clouds_8k.jpg",
-  jupiter: "/assets/textures/jupiter_8k.jpg",
-  mercury: "/assets/textures/mercury_8k.jpg",
-  saturn: "/assets/textures/saturn_8k.jpg",
-  neptune: "/assets/textures/neptune_2k.jpg",
-  uranus: "/assets/textures/uranus_2k.jpg",
-  ceres: "/assets/textures/ceres_4k.jpg",
-  moon: "/assets/textures/moon_8k.jpg",
-  ganymede: "/assets/textures/ganymede_4k.png",
-  sun: "/assets/textures/sun_8k.jpg",
-  grass: "/assets/textures/grass.jpg",
-  rock: "/assets/textures/rock.jpg",
-  sand: "/assets/textures/sand.jpg",
-  waterNormals: "/assets/textures/waternormals.jpg",
-  noiseMid: "/assets/textures/noise_mid.png",
-  noiseHigh: "/assets/textures/noise_high.png",
-  smoke: "/assets/effects/smoke.png",
-  concrete: "/assets/textures/concrete.jpg",
-  marsLod: "/assets/textures/mars_8k_512.jpg",
-  venusLod: "/assets/textures/4k_venus_atmosphere_512.jpg",
-  earthLod: "/assets/textures/earth_8k_512.jpg",
-  earthCloudsLod: "/assets/textures/earth_clouds_8k_512.jpg",
-  jupiterLod: "/assets/textures/jupiter_8k_512.jpg",
-  mercuryLod: "/assets/textures/mercury_8k_512.jpg",
-  saturnLod: "/assets/textures/saturn_8k_512.jpg",
-  neptuneLod: "/assets/textures/neptune_2k_512.jpg",
-  uranusLod: "/assets/textures/uranus_2k_512.jpg",
-  ceresLod: "/assets/textures/ceres_4k_512.jpg",
-  moonLod: "/assets/textures/moon_8k_512.jpg",
-  ganymedeLod: "/assets/textures/ganymede_4k_512.png",
-  sunLod: "/assets/textures/sun_8k_512.jpg",
+  mars: assetUrl("textures/planets/mars/surface"),
+  venus: assetUrl("textures/planets/venus/surface"),
+  earth: assetUrl("textures/planets/earth/surface"),
+  earthClouds: assetUrl("textures/planets/earth-clouds/surface"),
+  jupiter: assetUrl("textures/planets/jupiter/surface"),
+  mercury: assetUrl("textures/planets/mercury/surface"),
+  saturn: assetUrl("textures/planets/saturn/surface"),
+  neptune: assetUrl("textures/planets/neptune/surface"),
+  uranus: assetUrl("textures/planets/uranus/surface"),
+  ceres: assetUrl("textures/planets/ceres/surface"),
+  moon: assetUrl("textures/planets/moon/surface"),
+  ganymede: assetUrl("textures/planets/ganymede/surface"),
+  sun: assetUrl("textures/planets/sun/surface"),
+  grass: assetUrl("textures/terrain/grass"),
+  leafyGrass: assetUrl("textures/terrain/leafy-grass-color"),
+  leafyGrassDetail: assetUrl("textures/terrain/leafy-grass-detail"),
+  forestLitter: assetUrl("textures/terrain/leaves-forest-ground-color"),
+  forestLitterDetail: assetUrl("textures/terrain/leaves-forest-ground-detail"),
+  wetSoil: assetUrl("textures/terrain/brown-mud-leaves-01-color"),
+  wetSoilDetail: assetUrl("textures/terrain/brown-mud-leaves-01-detail"),
+  rock: assetUrl("textures/terrain/rock"),
+  sand: assetUrl("textures/terrain/sand"),
+  waterNormals: assetUrl("textures/terrain/waternormals"),
+  noiseMid: assetUrl("textures/terrain/noise-mid"),
+  noiseHigh: assetUrl("textures/terrain/noise-high"),
+  smoke: assetUrl("textures/effects/smoke"),
+  concrete: assetUrl("textures/terrain/concrete"),
+  marsLod: assetUrl("textures/planets/mars/overview"),
+  venusLod: assetUrl("textures/planets/venus/overview"),
+  earthLod: assetUrl("textures/planets/earth/overview"),
+  earthCloudsLod: assetUrl("textures/planets/earth-clouds/overview"),
+  jupiterLod: assetUrl("textures/planets/jupiter/overview"),
+  mercuryLod: assetUrl("textures/planets/mercury/overview"),
+  saturnLod: assetUrl("textures/planets/saturn/overview"),
+  neptuneLod: assetUrl("textures/planets/neptune/overview"),
+  uranusLod: assetUrl("textures/planets/uranus/overview"),
+  ceresLod: assetUrl("textures/planets/ceres/overview"),
+  moonLod: assetUrl("textures/planets/moon/overview"),
+  ganymedeLod: assetUrl("textures/planets/ganymede/overview"),
+  sunLod: assetUrl("textures/planets/sun/overview"),
 } as const;
 
+const CITY_FACADE_PATHS = [
+  [
+    assetUrl("textures/terrain/concrete-tile-facade-color"),
+    assetUrl("textures/terrain/concrete-tile-facade-normal"),
+    assetUrl("textures/terrain/concrete-tile-facade-roughness"),
+  ],
+  [
+    assetUrl("textures/terrain/rectangular-facade-tiles-color"),
+    assetUrl("textures/terrain/rectangular-facade-tiles-normal"),
+    assetUrl("textures/terrain/rectangular-facade-tiles-roughness"),
+  ],
+  [
+    assetUrl("textures/terrain/ribbed-concrete-wall-color"),
+    assetUrl("textures/terrain/ribbed-concrete-wall-normal"),
+    assetUrl("textures/terrain/ribbed-concrete-wall-roughness"),
+  ],
+];
+for (const paths of CITY_FACADE_PATHS) {
+  paths.forEach((path) => useTexture.preload(path));
+}
+
 const RESOURCE_ICON_PATHS = {
-  steel: "/assets/resources/steel.png",
-  titanium: "/assets/resources/titanium.png",
-  plant: "/assets/resources/plant.png",
-  megacredit: "/assets/resources/megacredit.png",
-  card: "/assets/resources/card.png",
-  heat: "/assets/resources/heat.png",
-  power: "/assets/resources/power.png",
-  microbe: "/assets/resources/microbe.png",
-  animal: "/assets/resources/animal.png",
-  science: "/assets/resources/science.png",
-  data: "/assets/resources/data.png",
-  director: "/assets/resources/director.png",
-  temperature: "/assets/global-parameters/temperature.png",
-  ocean: "/assets/tiles/ocean.png",
-  wild: "/assets/resources/wild.png",
+  steel: assetUrl("icons/resources/steel", 256),
+  titanium: assetUrl("icons/resources/titanium", 256),
+  plant: assetUrl("icons/resources/plant", 256),
+  megacredit: assetUrl("icons/resources/megacredit", 256),
+  card: assetUrl("icons/resources/card", 256),
+  heat: assetUrl("icons/resources/heat", 256),
+  power: assetUrl("icons/resources/power", 256),
+  microbe: assetUrl("icons/resources/microbe", 256),
+  animal: assetUrl("icons/resources/animal", 256),
+  science: assetUrl("icons/resources/science", 256),
+  data: assetUrl("icons/resources/data", 256),
+  director: assetUrl("icons/resources/director", 256),
+  temperature: assetUrl("icons/parameters/temperature", 256),
+  ocean: assetUrl("icons/placements/ocean", 256),
+  wild: assetUrl("icons/resources/wild", 256),
 } as const;
 
 type ResourceIconName = keyof typeof RESOURCE_ICON_PATHS;
@@ -109,6 +137,12 @@ useTexture.preload(TEXTURE_PATHS.moonLod);
 useTexture.preload(TEXTURE_PATHS.ganymedeLod);
 useTexture.preload(TEXTURE_PATHS.sunLod);
 useTexture.preload(TEXTURE_PATHS.grass);
+useTexture.preload(TEXTURE_PATHS.leafyGrass);
+useTexture.preload(TEXTURE_PATHS.leafyGrassDetail);
+useTexture.preload(TEXTURE_PATHS.forestLitter);
+useTexture.preload(TEXTURE_PATHS.forestLitterDetail);
+useTexture.preload(TEXTURE_PATHS.wetSoil);
+useTexture.preload(TEXTURE_PATHS.wetSoilDetail);
 useTexture.preload(TEXTURE_PATHS.rock);
 useTexture.preload(TEXTURE_PATHS.sand);
 useTexture.preload(TEXTURE_PATHS.waterNormals);
@@ -133,6 +167,7 @@ useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.ocean);
 useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.wild);
 
 interface TextureAssets {
+  cityFacades: { color: THREE.Texture; normal: THREE.Texture; roughness: THREE.Texture }[];
   mars: THREE.Texture;
   venus: THREE.Texture;
   earth: THREE.Texture;
@@ -147,6 +182,12 @@ interface TextureAssets {
   ganymede: THREE.Texture;
   sun: THREE.Texture;
   grass: THREE.Texture;
+  leafyGrass: THREE.Texture;
+  leafyGrassDetail: THREE.Texture;
+  forestLitter: THREE.Texture;
+  forestLitterDetail: THREE.Texture;
+  wetSoil: THREE.Texture;
+  wetSoilDetail: THREE.Texture;
   rock: THREE.Texture;
   sand: THREE.Texture;
   waterNormals: THREE.Texture;
@@ -172,6 +213,21 @@ interface TextureAssets {
 }
 
 export function useTextures(): TextureAssets {
+  const facadeTextures = useTexture(CITY_FACADE_PATHS.flat());
+  const cityFacades = useMemo(
+    () =>
+      CITY_FACADE_PATHS.map((_, i) => {
+        const [color, normal, roughness] = facadeTextures.slice(i * 3, i * 3 + 3);
+        color.colorSpace = THREE.SRGBColorSpace;
+        normal.colorSpace = roughness.colorSpace = THREE.NoColorSpace;
+        for (const texture of [color, normal, roughness]) {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          texture.anisotropy = 4;
+        }
+        return { color, normal, roughness };
+      }),
+    [facadeTextures],
+  );
   const mars = useTexture(TEXTURE_PATHS.mars);
   const venus = useTexture(TEXTURE_PATHS.venus);
   const earth = useTexture(TEXTURE_PATHS.earth);
@@ -186,6 +242,12 @@ export function useTextures(): TextureAssets {
   const ganymede = useTexture(TEXTURE_PATHS.ganymede);
   const sun = useTexture(TEXTURE_PATHS.sun);
   const grass = useTexture(TEXTURE_PATHS.grass);
+  const leafyGrass = useTexture(TEXTURE_PATHS.leafyGrass);
+  const leafyGrassDetail = useTexture(TEXTURE_PATHS.leafyGrassDetail);
+  const forestLitter = useTexture(TEXTURE_PATHS.forestLitter);
+  const forestLitterDetail = useTexture(TEXTURE_PATHS.forestLitterDetail);
+  const wetSoil = useTexture(TEXTURE_PATHS.wetSoil);
+  const wetSoilDetail = useTexture(TEXTURE_PATHS.wetSoilDetail);
   const rock = useTexture(TEXTURE_PATHS.rock);
   const sand = useTexture(TEXTURE_PATHS.sand);
   const waterNormals = useTexture(TEXTURE_PATHS.waterNormals);
@@ -262,6 +324,17 @@ export function useTextures(): TextureAssets {
       tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
     }
 
+    for (const tex of [leafyGrass, forestLitter, wetSoil]) {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 4;
+    }
+    for (const tex of [leafyGrassDetail, forestLitterDetail, wetSoilDetail]) {
+      tex.colorSpace = THREE.NoColorSpace;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 4;
+    }
+
     grass.wrapS = grass.wrapT = THREE.RepeatWrapping;
     grass.repeat.set(6.9, 6.9);
 
@@ -303,6 +376,12 @@ export function useTextures(): TextureAssets {
     sun,
     sunLod,
     grass,
+    leafyGrass,
+    leafyGrassDetail,
+    forestLitter,
+    forestLitterDetail,
+    wetSoil,
+    wetSoilDetail,
     sand,
     waterNormals,
     noiseMid,
@@ -357,6 +436,7 @@ export function useTextures(): TextureAssets {
   );
 
   return {
+    cityFacades,
     mars,
     venus,
     earth,
@@ -371,6 +451,12 @@ export function useTextures(): TextureAssets {
     ganymede,
     sun,
     grass,
+    leafyGrass,
+    leafyGrassDetail,
+    forestLitter,
+    forestLitterDetail,
+    wetSoil,
+    wetSoilDetail,
     rock,
     sand,
     waterNormals,

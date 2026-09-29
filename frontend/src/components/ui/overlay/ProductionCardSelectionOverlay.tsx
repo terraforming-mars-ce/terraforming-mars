@@ -1,5 +1,5 @@
 import React from "react";
-import GameCard from "../cards/GameCard.tsx";
+import CardChoice from "../cards/CardChoice.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { CardDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { useCardSelection } from "../../../hooks/useCardSelection.ts";
@@ -89,7 +89,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
               const isSelected = cardIndex !== -1;
 
               return (
-                <GameCard
+                <CardChoice
                   key={card.id}
                   card={card}
                   isSelected={isSelected}
@@ -137,12 +137,12 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
               )}
             </div>
             <div className="flex gap-3 items-center">
-              <GameButton buttonType="textonly" size="md" onClick={onReturn}>
+              <GameButton emphasis="quiet" size="md" onClick={onReturn}>
                 Hide
               </GameButton>
               {allowRandomBuy && selectedCardIds.length === 0 && (
                 <GameButton
-                  buttonType="secondary"
+                  emphasis="secondary"
                   size="lg"
                   onClick={() => onSelectCards([], { randomBuy: true })}
                   disabled={playerCredits < costPerCard}

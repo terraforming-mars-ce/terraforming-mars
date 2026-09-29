@@ -1,3 +1,5 @@
+import FloatingWindow from "./FloatingWindow.tsx";
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
 import { apiService } from "@/services/apiService.ts";
@@ -11,8 +13,7 @@ interface FeedbackWindowProps {
 
 const WINDOW_ID = "feedback";
 const WINDOW_WIDTH = 400;
-const ACCENT = "#f59e0b";
-const ACCENT_SHADOW = "rgba(245, 158, 11, 0.3)";
+const ACCENT = "#8aa7ed";
 const EXCLUDE_SELECTORS = [".feedback-content-area"];
 const POLL_INTERVAL_MS = 2000;
 
@@ -24,7 +25,6 @@ type ServiceStatus =
   | { state: "unavailable"; reason: string };
 
 const FeedbackWindow: React.FC<FeedbackWindowProps> = ({ isVisible, onClose, gameState }) => {
-  const windowRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [author, setAuthor] = useState("");
@@ -35,7 +35,7 @@ const FeedbackWindow: React.FC<FeedbackWindowProps> = ({ isVisible, onClose, gam
   const [status, setStatus] = useState<ServiceStatus>({ state: "loading" });
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { position, isDragging, handleMouseDown } = useWindowDrag({
+  const { position, handleMouseDown } = useWindowDrag({
     windowId: WINDOW_ID,
     width: WINDOW_WIDTH,
     height: 480,
@@ -149,98 +149,19 @@ const FeedbackWindow: React.FC<FeedbackWindowProps> = ({ isVisible, onClose, gam
   const showForm = status.state === "available" && !report && !isSubmitting;
   const canSubmit = showForm && title.trim().length > 0;
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    background: "rgba(255, 255, 255, 0.05)",
-    border: "1px solid #444",
-    borderRadius: "4px",
-    padding: "8px",
-    color: "#fff",
-    fontSize: "13px",
-    fontFamily: "inherit",
-    outline: "none",
-  };
-
   return (
-    <div
-      ref={windowRef}
-      data-feedback-window
-      data-overlay-layer
+    <FloatingWindow
+      title="Feedback"
+      onClose={onClose}
       onMouseDown={handleMouseDown}
       style={{
-        position: "fixed",
-        top: `${position.y}px`,
-        left: `${position.x}px`,
-        width: `${WINDOW_WIDTH}px`,
-        background: "rgba(0, 0, 0, 0.95)",
-        border: `2px solid ${ACCENT}`,
-        borderRadius: "8px",
-        padding: "12px 16px",
+        top: position.y,
+        left: position.x,
+        width: WINDOW_WIDTH,
+        maxHeight: "calc(100dvh - 100px)",
         zIndex: getZIndex(WINDOW_ID),
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: `0 4px 20px ${ACCENT_SHADOW}`,
-        cursor: isDragging ? "grabbing" : "default",
-        transition: isDragging ? "none" : "top 0.2s ease-out, left 0.2s ease-out",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "10px",
-          paddingBottom: "8px",
-          borderBottom: "1px solid #333",
-          userSelect: "none",
-          cursor: "grab",
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            color: ACCENT,
-            fontSize: "14px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-          className="font-orbitron"
-        >
-          <svg
-            width="10"
-            height="14"
-            viewBox="0 0 10 14"
-            fill="currentColor"
-            style={{ opacity: 0.5 }}
-          >
-            <circle cx="2" cy="2" r="1.5" />
-            <circle cx="8" cy="2" r="1.5" />
-            <circle cx="2" cy="7" r="1.5" />
-            <circle cx="8" cy="7" r="1.5" />
-            <circle cx="2" cy="12" r="1.5" />
-            <circle cx="8" cy="12" r="1.5" />
-          </svg>
-          Feedback
-        </h3>
-        <button
-          onClick={onClose}
-          onMouseDown={(e) => e.stopPropagation()}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#abb2bf",
-            fontSize: "18px",
-            cursor: "pointer",
-            padding: "0 4px",
-            lineHeight: 1,
-          }}
-        >
-          ×
-        </button>
-      </div>
-
       <div
         className="feedback-content-area"
         style={{
@@ -413,30 +334,26 @@ const FeedbackWindow: React.FC<FeedbackWindowProps> = ({ isVisible, onClose, gam
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title"
-              spellCheck={false}
+              spellCheck={true}
               autoCorrect="off"
               autoComplete="off"
               maxLength={200}
-              style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = ACCENT)}
-              onBlur={(e) => (e.target.style.borderColor = "#444")}
+              className="game-input w-full text-sm"
             />
 
             <textarea
+              className="game-input w-full text-sm"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add details..."
-              spellCheck={false}
+              spellCheck={true}
               autoCorrect="off"
               autoComplete="off"
               maxLength={30000}
               style={{
-                ...inputStyle,
                 minHeight: "100px",
                 resize: "vertical",
               }}
-              onFocus={(e) => (e.target.style.borderColor = ACCENT)}
-              onBlur={(e) => (e.target.style.borderColor = "#444")}
             />
 
             <input
@@ -448,30 +365,16 @@ const FeedbackWindow: React.FC<FeedbackWindowProps> = ({ isVisible, onClose, gam
               autoCorrect="off"
               autoComplete="off"
               maxLength={100}
-              style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = ACCENT)}
-              onBlur={(e) => (e.target.style.borderColor = "#444")}
+              className="game-input w-full text-sm"
             />
 
-            <button
+            <GameButton
               onClick={() => void handleSubmit()}
               disabled={!canSubmit}
-              style={{
-                width: "100%",
-                padding: "10px",
-                background: ACCENT,
-                color: "#000",
-                border: "none",
-                borderRadius: "4px",
-                fontSize: "14px",
-                fontWeight: "bold",
-                opacity: canSubmit ? 1 : 0.3,
-                cursor: canSubmit ? "pointer" : "default",
-              }}
-              className="font-orbitron"
+              className="w-full"
             >
               Submit
-            </button>
+            </GameButton>
 
             {errorMessage && (
               <div
@@ -487,7 +390,7 @@ const FeedbackWindow: React.FC<FeedbackWindowProps> = ({ isVisible, onClose, gam
           </>
         )}
       </div>
-    </div>
+    </FloatingWindow>
   );
 };
 
@@ -497,23 +400,16 @@ const TagChip: React.FC<{
   onClick: () => void;
   color: string;
 }> = ({ label, selected, onClick, color }) => (
-  <button
+  <GameButton
+    emphasis="secondary"
+    size="sm"
+    selected={selected}
+    aria-pressed={selected}
+    accent={color}
     onClick={onClick}
-    onMouseDown={(e) => e.stopPropagation()}
-    style={{
-      padding: "4px 12px",
-      borderRadius: "16px",
-      fontSize: "12px",
-      fontWeight: 600,
-      border: `1.5px solid ${selected ? color : "#555"}`,
-      background: selected ? `${color}20` : "transparent",
-      color: selected ? color : "rgba(255, 255, 255, 0.5)",
-      cursor: "pointer",
-      transition: "all 0.15s ease",
-    }}
   >
     {label}
-  </button>
+  </GameButton>
 );
 
 const CenteredMessage: React.FC<{ text: string }> = ({ text }) => (

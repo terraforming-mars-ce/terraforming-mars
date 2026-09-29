@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import GameCard from "../cards/GameCard.tsx";
+import CardChoice from "../cards/CardChoice.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { PendingCardSelectionDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { useCardSelection } from "../../../hooks/useCardSelection.ts";
@@ -135,7 +135,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
             </div>
             {!isSellPatents && (
               <GameButton
-                buttonType="secondary"
+                emphasis="secondary"
                 size="sm"
                 onClick={() => setShowPlayability((prev) => !prev)}
               >
@@ -155,7 +155,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
 
               return (
                 <div key={card.id} className="relative">
-                  <GameCard
+                  <CardChoice
                     card={card}
                     isSelected={isSelected}
                     onSelect={handleCardSelect}
@@ -243,7 +243,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
             </div>
             <div className="flex gap-3 items-center">
               {(onCancel || selection.minCards === 0) && (
-                <GameButton buttonType="textonly" size="md" onClick={handleCancel}>
+                <GameButton emphasis="quiet" size="md" onClick={handleCancel}>
                   Cancel
                 </GameButton>
               )}

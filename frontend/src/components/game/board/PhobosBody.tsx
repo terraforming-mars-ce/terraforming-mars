@@ -1,8 +1,9 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useModels } from "../../../hooks/useModels";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
+import PlanetAtmosphere from "./PlanetAtmosphere";
 import CelestialTileGrid from "./CelestialTileGrid";
 import { GameDto } from "../../../types/generated/api-types";
 import { PHOBOS_CONFIG, getMarsOrbitalPosition } from "./solarSystemConfig";
@@ -23,6 +24,24 @@ export default function PhobosBody({ gameState, onHexClick }: PhobosBodyProps) {
   const worldCenterRef = useRef(new THREE.Vector3());
 
   const clonedScene = useMemo(() => phobosScene.clone(), [phobosScene]);
+  const hazeShape = useMemo(() => {
+    phobosScene.updateMatrixWorld(true);
+    const mesh = phobosScene.getObjectByName("phobos") as THREE.Mesh;
+    const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+    geometry.scale(PHOBOS_SCALE, PHOBOS_SCALE, PHOBOS_SCALE);
+    geometry.computeBoundingSphere();
+    const radius = geometry.boundingSphere!.radius + geometry.boundingSphere!.center.length();
+    geometry.scale(1 / radius, 1 / radius, 1 / radius);
+    return { geometry, radius };
+  }, [phobosScene]);
+  useEffect(() => () => hazeShape.geometry.dispose(), [hazeShape]);
+  const settlementRadius = useMemo(() => {
+    phobosScene.updateMatrixWorld(true);
+    const ray = new THREE.Raycaster(new THREE.Vector3(0, 0, 100), new THREE.Vector3(0, 0, -1));
+    const [surface] = ray.intersectObject(phobosScene, true);
+    // Seat the foundation into the visible rock, not the moon's bounding sphere.
+    return surface.point.z * PHOBOS_SCALE - 0.01;
+  }, [phobosScene]);
 
   const _marsPos = useMemo(() => new THREE.Vector3(), []);
   const _toOrigin = useMemo(() => new THREE.Vector3(), []);
@@ -49,12 +68,18 @@ export default function PhobosBody({ gameState, onHexClick }: PhobosBodyProps) {
   return (
     <group ref={groupRef}>
       <primitive object={clonedScene} scale={[PHOBOS_SCALE, PHOBOS_SCALE, PHOBOS_SCALE]} />
+      <PlanetAtmosphere
+        radius={hazeShape.radius}
+        geometry={hazeShape.geometry}
+        profile={PHOBOS_CONFIG.atmosphere}
+      />
       <CelestialTileGrid
         gameState={gameState}
         onHexClick={onHexClick}
         tileOpacity={tileOpacity}
         location={PHOBOS_CONFIG.tileLocation!}
         radius={PHOBOS_CONFIG.radius}
+        contentRadius={settlementRadius}
         coordOffset={PHOBOS_CONFIG.coordOffset}
         worldCenter={worldCenterRef.current}
         activePlanetId="mars"

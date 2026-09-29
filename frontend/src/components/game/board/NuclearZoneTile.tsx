@@ -202,8 +202,6 @@ export default function NuclearZoneTile({
 
       {showDust && surfaceNormal && worldPosition && (
         <DustEffect
-          position={worldPosition}
-          normal={surfaceNormal}
           duration={3000}
           particleColor={new THREE.Color(0.35, 0.25, 0.15)}
           onComplete={() => setShowDust(false)}

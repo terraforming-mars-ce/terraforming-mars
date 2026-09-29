@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import GameLayout, { SolarSystemFade } from "./GameLayout.tsx";
 import CardsPlayedModal from "../../ui/modals/CardsPlayedModal.tsx";
@@ -31,11 +31,12 @@ import {
 import CorporationOverlay from "../../ui/overlay/CorporationOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
+import { useCardInspection, type CardInspectionDrag } from "@/hooks/useCardInspection.ts";
 import { useGameEvent } from "@/hooks/useGameEvent.ts";
 import { usePlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 import GameButton from "../../ui/buttons/GameButton.tsx";
-import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
+import { BotDifficultyChip, BotSpeedChip, PlayerChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import CardBrowserOverlay from "../../ui/overlay/CardBrowserOverlay.tsx";
 import MainMenuHamburger from "../../ui/buttons/MainMenuHamburger.tsx";
@@ -91,7 +92,7 @@ export default function GameInterface() {
   const location = useLocation();
   const navigate = useNavigate();
   const { gameId: urlGameId } = useParams<{ gameId?: string }>();
-  const { playProductionSound, playGameStartSound } = useSoundEffects();
+  const { playProductionSound } = useSoundEffects();
   const { showNotification } = useNotifications();
   const { isLoaded: isSpaceBgLoaded } = useSpaceBackground();
 
@@ -124,7 +125,6 @@ export default function GameInterface() {
   const triggeredEffects = useGameStore((s) => s.triggeredEffects);
   const chatMessages = useGameStore((s) => s.chatMessages);
   const corporationData = useGameStore((s) => s.corporationData);
-  const showCorp = useGameStore((s) => s.showCorp);
   const displayedInitPlayerId = useGameStore((s) => s.displayedInitPlayerId);
 
   const showCardsPlayedModal = useUIOverlayStore((s) => s.showCardsPlayedModal);
@@ -200,7 +200,7 @@ export default function GameInterface() {
     showNotification,
   );
   const init = useGameInitialization({ navigate, location, urlGameId });
-  useGameTransitions(playProductionSound, playGameStartSound, notificationQueueDoneAt);
+  useGameTransitions(playProductionSound, notificationQueueDoneAt);
   useGameHotkeys(cardFanRef, playerListRef);
 
   // --- VP counting animation ---
@@ -476,9 +476,9 @@ export default function GameInterface() {
   // --- Loading state ---
   const isFullyLoaded = (() => {
     if (phase.kind === "menu") {
-      return true;
+      return false;
     }
-    if (phase.kind === "checking" || phase.kind === "connecting") {
+    if (phase.kind === "checking" || phase.kind === "connecting" || phase.kind === "loading") {
       return false;
     }
     if (phase.kind === "selecting" || phase.kind === "joining" || phase.kind === "spectating") {
@@ -548,6 +548,60 @@ export default function GameInterface() {
     isPreGamePhase ||
     !!currentPlayer?.pendingTileSelection;
 
+  const inspectionStore = useCardInspection();
+  const { inspectCard, finishInspection, clearInspection } = inspectionStore.getState();
+  const dragInspectionCard = useCallback(
+    (cardId: string, drag: CardInspectionDrag, detail: HTMLElement) => {
+      cardFanRef.current?.startInspectionDrag(cardId, drag, detail);
+    },
+    [],
+  );
+  const inspectionBlocked =
+    hideCardFanForModals ||
+    hasPendingActionSelection ||
+    (showProductionPhaseModal && !isProductionModalHidden) ||
+    showChoiceSelection ||
+    showActionChoiceSelection ||
+    showActionReuseSelection ||
+    showBehaviorChoiceStorage ||
+    showCardStorageSelection ||
+    showPaymentSelection ||
+    showActionStorageSelection ||
+    showTargetPlayerSelection ||
+    showActionTargetPlayerSelection ||
+    showCardResourceSelection ||
+    showAmountSelection ||
+    showFreeTradeWarning ||
+    showTabConflict ||
+    showCardsPlayedModal ||
+    showCardBrowser ||
+    showLeaveGameConfirm ||
+    showCloseGameConfirm ||
+    showEndGameConfirm ||
+    spectatePlayerId !== null;
+  const inspectionHand = replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? [];
+  useEffect(() => {
+    clearInspection();
+  }, [
+    game?.id,
+    currentPlayer?.id,
+    replay.isActive,
+    replayViewAsPlayer?.id,
+    spectatePlayerId,
+    clearInspection,
+  ]);
+  useEffect(() => {
+    if (inspectionBlocked) {
+      clearInspection();
+      return;
+    }
+    for (const inspection of inspectionStore.getState().inspections) {
+      if (!inspectionHand.some((card) => card.id === inspection.cardId)) {
+        finishInspection(inspection);
+      }
+    }
+  }, [inspectionBlocked, inspectionHand, inspectionStore, clearInspection, finishInspection]);
+
   const cardFanTransitionClass = (() => {
     if (spectatePlayerId) {
       return "opacity-0 pointer-events-none";
@@ -614,11 +668,14 @@ export default function GameInterface() {
           phase.kind !== "spectating" && (
             <GameLayout
               ref={playerListRef}
+              inspectionStore={inspectionStore}
+              inspectionHand={inspectionHand}
+              inspectionBlocked={inspectionBlocked}
+              onInspectionDrag={dragInspectionCard}
               gameState={replayGameState ?? game}
               currentPlayer={replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer)}
               playedCards={replayViewAsPlayer?.playedCards ?? currentPlayer?.playedCards ?? []}
               corporationCard={replayViewAsPlayer?.corporation ?? corporationData}
-              showCorporation={!!replayViewAsPlayer || showCorp}
               initTurnPlayerId={displayedInitPlayerId}
               showStartingSelection={showStartingSelection}
               animateHexEntrance={
@@ -647,7 +704,6 @@ export default function GameInterface() {
               isGameSpectator={isSpectator}
               chatMessages={chatMessages}
               onSendChatMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
-              isLobbyPhase={isLobbyPhase}
               playerColorMap={playerColorMap}
               endgameFadeUI={endgameFadeUI}
               isEndgame={isGameComplete}
@@ -714,15 +770,17 @@ export default function GameInterface() {
               playerId={playerId ?? "spectator"}
               visible={isLobbyPhase}
               onExited={() => useAppPhaseStore.getState().setLobbyMounted(false)}
+              chat={
+                isLobbyPhase ? (
+                  <ChatOverlay
+                    messages={chatMessages}
+                    onSendMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
+                    embedded
+                    playerColorMap={playerColorMap}
+                  />
+                ) : null
+              }
             />
-            {isLobbyPhase && (
-              <ChatOverlay
-                messages={chatMessages}
-                onSendMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
-                isLobby={true}
-                playerColorMap={playerColorMap}
-              />
-            )}
           </>
         )}
 
@@ -760,19 +818,19 @@ export default function GameInterface() {
             title="Leave game?"
             showBackdrop={true}
             onClose={() => useUIOverlayStore.getState().setShowLeaveGameConfirm(false)}
-            zIndex={10000}
+            zIndex={Z_INDEX.CONFIRMATION_MODAL}
           >
             <p className="text-white/80 text-center mb-6">
               You can reconnect to the game again without losing any progress.
             </p>
             <div className="flex gap-4 justify-center">
               <GameButton
-                buttonType="secondary"
+                emphasis="secondary"
                 onClick={() => useUIOverlayStore.getState().setShowLeaveGameConfirm(false)}
               >
                 Cancel
               </GameButton>
-              <GameButton variant="error" onClick={handleConfirmLeaveGame}>
+              <GameButton tone="error" onClick={handleConfirmLeaveGame}>
                 Leave
               </GameButton>
             </div>
@@ -784,19 +842,19 @@ export default function GameInterface() {
             title="Close game?"
             showBackdrop={true}
             onClose={() => useUIOverlayStore.getState().setShowCloseGameConfirm(false)}
-            zIndex={10000}
+            zIndex={Z_INDEX.CONFIRMATION_MODAL}
           >
             <p className="text-white/80 text-center mb-6">
               You can reconnect to the game again without losing any progress.
             </p>
             <div className="flex gap-4 justify-center">
               <GameButton
-                buttonType="secondary"
+                emphasis="secondary"
                 onClick={() => useUIOverlayStore.getState().setShowCloseGameConfirm(false)}
               >
                 Cancel
               </GameButton>
-              <GameButton variant="error" onClick={handleConfirmLeaveGame}>
+              <GameButton tone="error" onClick={handleConfirmLeaveGame}>
                 Close
               </GameButton>
             </div>
@@ -808,19 +866,19 @@ export default function GameInterface() {
             title="End game?"
             showBackdrop={true}
             onClose={() => useUIOverlayStore.getState().setShowEndGameConfirm(false)}
-            zIndex={10000}
+            zIndex={Z_INDEX.CONFIRMATION_MODAL}
           >
             <p className="text-white/80 text-center mb-6">
               This will end the game for all players. This action cannot be undone.
             </p>
             <div className="flex gap-4 justify-center">
               <GameButton
-                buttonType="secondary"
+                emphasis="secondary"
                 onClick={() => useUIOverlayStore.getState().setShowEndGameConfirm(false)}
               >
                 Cancel
               </GameButton>
-              <GameButton variant="error" onClick={handleConfirmEndGame}>
+              <GameButton tone="error" onClick={handleConfirmEndGame}>
                 End game
               </GameButton>
             </div>
@@ -834,22 +892,23 @@ export default function GameInterface() {
             onEndGame={playerId === game.hostPlayerId ? handleEndGame : undefined}
           />
         )}
-        <StartingCardSelectionOverlay
-          isOpen={
-            showStartingSelection &&
-            !isStartingSelectionHidden &&
-            (marsRevealedReady || phase.kind === "playing")
-          }
-          availableCorporations={
-            game?.currentPlayer?.selectCorporationPhase?.availableCorporations || []
-          }
-          availablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.availablePreludes || []}
-          maxSelectablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.maxSelectable || 2}
-          cards={game?.currentPlayer?.selectStartingCardsPhase?.availableCards || []}
-          playerCredits={currentPlayer?.resources?.credits || 40}
-          onConfirm={handleStartingChoicesConfirm}
-          onHide={() => useUIOverlayStore.getState().setIsStartingSelectionHidden(true)}
-        />
+        {showStartingSelection && (
+          <StartingCardSelectionOverlay
+            key={`${game?.id}:${currentPlayer?.id}`}
+            isOpen={!isStartingSelectionHidden && (marsRevealedReady || phase.kind === "playing")}
+            availableCorporations={
+              game?.currentPlayer?.selectCorporationPhase?.availableCorporations || []
+            }
+            availablePreludes={
+              game?.currentPlayer?.selectPreludeCardsPhase?.availablePreludes || []
+            }
+            maxSelectablePreludes={game?.currentPlayer?.selectPreludeCardsPhase?.maxSelectable || 2}
+            cards={game?.currentPlayer?.selectStartingCardsPhase?.availableCards || []}
+            playerCredits={currentPlayer?.resources?.credits || 40}
+            onConfirm={handleStartingChoicesConfirm}
+            onHide={() => useUIOverlayStore.getState().setIsStartingSelectionHidden(true)}
+          />
+        )}
 
         {showStartingSelection && isStartingSelectionHidden && marsRevealedReady && (
           <GameButton
@@ -872,7 +931,7 @@ export default function GameInterface() {
               className="fixed inset-0 flex items-center justify-center"
               style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
             >
-              <div className="w-[450px] max-w-[90vw] bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] p-8 backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(30,60,150,0.3)] animate-[modalFadeIn_0.3s_ease-out]">
+              <div className="w-[450px] max-w-[90vw] game-panel game-panel-clipped game-window p-8 animate-[modalFadeIn_0.3s_ease-out]">
                 <div className="text-center mb-6">
                   <h2 className="font-orbitron text-white text-[24px] m-0 mb-2 text-shadow-glow font-bold tracking-wider">
                     Waiting for players...
@@ -880,7 +939,7 @@ export default function GameInterface() {
                 </div>
 
                 <div className="mb-6">
-                  <h3 className="text-white text-sm font-semibold mb-2 uppercase tracking-wide">
+                  <h3 className="font-orbitron text-white text-sm font-semibold mb-2 uppercase tracking-wide">
                     Players
                   </h3>
                   <div className="flex flex-col gap-2">
@@ -936,14 +995,12 @@ export default function GameInterface() {
                       return ordered.map((player) => (
                         <div
                           key={player.id}
-                          className="flex justify-between items-center py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50"
+                          className="flex flex-wrap justify-between items-center gap-2 py-2 px-3 bg-black/40 border border-space-blue-600/50"
                         >
                           <span className="text-white text-sm font-medium">{player.name}</span>
-                          <div className="flex gap-1.5 items-center">
+                          <div className="player-chip-group">
                             {player.isSelf && (
-                              <span className="bg-space-blue-800 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                                You
-                              </span>
+                              <PlayerChip className="bg-space-blue-800 text-white">You</PlayerChip>
                             )}
                             {player.playerType === "bot" && (
                               <>
@@ -952,7 +1009,7 @@ export default function GameInterface() {
                               </>
                             )}
                             {player.isReady ? (
-                              <span className="flex items-center gap-1 bg-emerald-700/80 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                              <PlayerChip className="bg-emerald-700/80 text-white">
                                 <svg
                                   width="10"
                                   height="10"
@@ -966,12 +1023,12 @@ export default function GameInterface() {
                                   <polyline points="20 6 9 17 4 12" />
                                 </svg>
                                 Ready
-                              </span>
+                              </PlayerChip>
                             ) : (
-                              <span className="flex items-center gap-1 bg-white/10 text-white/70 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                              <PlayerChip className="bg-white/10 text-white/70">
                                 <div className="w-2.5 h-2.5 border border-white/50 border-t-transparent rounded-full animate-spin" />
                                 Selecting...
-                              </span>
+                              </PlayerChip>
                             )}
                           </div>
                         </div>
@@ -1019,8 +1076,19 @@ export default function GameInterface() {
                 <CardFanOverlay
                   ref={cardFanRef}
                   cards={replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? []}
+                  pendingPlayCardId={
+                    cardPendingChoice?.id ??
+                    pendingCardStorage?.cardId ??
+                    pendingCardPayment?.card.id ??
+                    pendingTargetPlayer?.cardId ??
+                    (pendingVariableAmount?.type === "play-card"
+                      ? pendingVariableAmount.cardId
+                      : null)
+                  }
                   hideWhenModalOpen={hideCardFanForModals}
-                  onCardSelect={(_cardId) => {}}
+                  onInspectCard={inspectCard}
+                  inspectionStore={inspectionStore}
+                  onDismissInspection={clearInspection}
                   onPlayCard={spectatePlayerId ? undefined : flow.handlePlayCard}
                 />
               </div>
@@ -1426,6 +1494,7 @@ export default function GameInterface() {
 
         <LoadingOverlay
           isLoaded={isFullyLoaded}
+          fadeDurationMs={1500}
           message={loadingMessage}
           subtitle={loadingSubtitle}
           onTransitionEnd={handleLoadingTransitionEnd}

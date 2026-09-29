@@ -1,0 +1,3699 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "app/android-chrome-192x192",
+      "source": "app/android-chrome-192x192.png",
+      "profile": "copy",
+      "publicName": "android-chrome-192x192.png"
+    },
+    {
+      "id": "app/android-chrome-512x512",
+      "source": "app/android-chrome-512x512.png",
+      "profile": "copy",
+      "publicName": "android-chrome-512x512.png"
+    },
+    {
+      "id": "app/apple-touch-icon",
+      "source": "app/apple-touch-icon.png",
+      "profile": "copy",
+      "publicName": "apple-touch-icon.png"
+    },
+    {
+      "id": "fonts/prototype",
+      "source": "fonts/prototype.ttf",
+      "profile": "copy",
+      "font": {
+        "family": "Prototype",
+        "weight": 400
+      }
+    },
+    {
+      "id": "textures/skyboxes/starmap",
+      "source": "textures/skyboxes/starmap.exr",
+      "profile": "copy"
+    },
+    {
+      "id": "cards/001",
+      "source": "cards/001.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/002",
+      "source": "cards/002.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/003",
+      "source": "cards/003.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/004",
+      "source": "cards/004.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/005",
+      "source": "cards/005.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/006",
+      "source": "cards/006.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/007",
+      "source": "cards/007.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/008",
+      "source": "cards/008.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/009",
+      "source": "cards/009.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/010",
+      "source": "cards/010.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/011",
+      "source": "cards/011.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/012",
+      "source": "cards/012.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/013",
+      "source": "cards/013.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/014",
+      "source": "cards/014.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/015",
+      "source": "cards/015.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/016",
+      "source": "cards/016.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/017",
+      "source": "cards/017.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/018",
+      "source": "cards/018.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/019",
+      "source": "cards/019.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/020",
+      "source": "cards/020.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/021",
+      "source": "cards/021.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/022",
+      "source": "cards/022.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/023",
+      "source": "cards/023.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/024",
+      "source": "cards/024.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/025",
+      "source": "cards/025.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/026",
+      "source": "cards/026.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/027",
+      "source": "cards/027.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/028",
+      "source": "cards/028.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/029",
+      "source": "cards/029.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/030",
+      "source": "cards/030.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/031",
+      "source": "cards/031.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/032",
+      "source": "cards/032.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/033",
+      "source": "cards/033.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/034",
+      "source": "cards/034.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/035",
+      "source": "cards/035.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/036",
+      "source": "cards/036.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/037",
+      "source": "cards/037.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/038",
+      "source": "cards/038.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/039",
+      "source": "cards/039.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/040",
+      "source": "cards/040.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/041",
+      "source": "cards/041.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/042",
+      "source": "cards/042.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/043",
+      "source": "cards/043.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/044",
+      "source": "cards/044.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/045",
+      "source": "cards/045.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/046",
+      "source": "cards/046.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/047",
+      "source": "cards/047.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/048",
+      "source": "cards/048.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/049",
+      "source": "cards/049.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/050",
+      "source": "cards/050.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/051",
+      "source": "cards/051.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/052",
+      "source": "cards/052.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/053",
+      "source": "cards/053.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/054",
+      "source": "cards/054.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/055",
+      "source": "cards/055.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/056",
+      "source": "cards/056.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/057",
+      "source": "cards/057.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/058",
+      "source": "cards/058.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/059",
+      "source": "cards/059.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/060",
+      "source": "cards/060.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/061",
+      "source": "cards/061.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/062",
+      "source": "cards/062.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/063",
+      "source": "cards/063.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/064",
+      "source": "cards/064.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/065",
+      "source": "cards/065.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/066",
+      "source": "cards/066.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/067",
+      "source": "cards/067.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/068",
+      "source": "cards/068.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/069",
+      "source": "cards/069.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/070",
+      "source": "cards/070.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/071",
+      "source": "cards/071.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/072",
+      "source": "cards/072.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/073",
+      "source": "cards/073.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/074",
+      "source": "cards/074.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/075",
+      "source": "cards/075.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/076",
+      "source": "cards/076.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/077",
+      "source": "cards/077.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/078",
+      "source": "cards/078.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/079",
+      "source": "cards/079.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/080",
+      "source": "cards/080.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/081",
+      "source": "cards/081.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/082",
+      "source": "cards/082.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/083",
+      "source": "cards/083.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/084",
+      "source": "cards/084.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/085",
+      "source": "cards/085.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/086",
+      "source": "cards/086.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/087",
+      "source": "cards/087.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/088",
+      "source": "cards/088.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/089",
+      "source": "cards/089.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/090",
+      "source": "cards/090.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/091",
+      "source": "cards/091.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/092",
+      "source": "cards/092.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/093",
+      "source": "cards/093.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/094",
+      "source": "cards/094.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/095",
+      "source": "cards/095.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/096",
+      "source": "cards/096.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/097",
+      "source": "cards/097.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/098",
+      "source": "cards/098.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/099",
+      "source": "cards/099.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/100",
+      "source": "cards/100.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/101",
+      "source": "cards/101.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/102",
+      "source": "cards/102.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/103",
+      "source": "cards/103.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/104",
+      "source": "cards/104.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/105",
+      "source": "cards/105.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/106",
+      "source": "cards/106.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/107",
+      "source": "cards/107.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/108",
+      "source": "cards/108.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/109",
+      "source": "cards/109.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/110",
+      "source": "cards/110.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/111",
+      "source": "cards/111.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/112",
+      "source": "cards/112.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/113",
+      "source": "cards/113.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/114",
+      "source": "cards/114.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/115",
+      "source": "cards/115.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/116",
+      "source": "cards/116.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/117",
+      "source": "cards/117.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/118",
+      "source": "cards/118.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/119",
+      "source": "cards/119.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/120",
+      "source": "cards/120.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/121",
+      "source": "cards/121.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/122",
+      "source": "cards/122.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/123",
+      "source": "cards/123.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/124",
+      "source": "cards/124.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/125",
+      "source": "cards/125.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/126",
+      "source": "cards/126.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/127",
+      "source": "cards/127.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/128",
+      "source": "cards/128.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/129",
+      "source": "cards/129.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/130",
+      "source": "cards/130.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/131",
+      "source": "cards/131.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/132",
+      "source": "cards/132.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/133",
+      "source": "cards/133.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/134",
+      "source": "cards/134.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/135",
+      "source": "cards/135.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/136",
+      "source": "cards/136.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/137",
+      "source": "cards/137.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/138",
+      "source": "cards/138.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/139",
+      "source": "cards/139.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/140",
+      "source": "cards/140.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/141",
+      "source": "cards/141.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/142",
+      "source": "cards/142.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/143",
+      "source": "cards/143.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/144",
+      "source": "cards/144.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/145",
+      "source": "cards/145.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/146",
+      "source": "cards/146.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/147",
+      "source": "cards/147.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/148",
+      "source": "cards/148.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/149",
+      "source": "cards/149.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/150",
+      "source": "cards/150.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/151",
+      "source": "cards/151.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/152",
+      "source": "cards/152.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/153",
+      "source": "cards/153.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/154",
+      "source": "cards/154.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/155",
+      "source": "cards/155.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/156",
+      "source": "cards/156.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/157",
+      "source": "cards/157.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/158",
+      "source": "cards/158.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/159",
+      "source": "cards/159.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/160",
+      "source": "cards/160.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/161",
+      "source": "cards/161.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/162",
+      "source": "cards/162.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/163",
+      "source": "cards/163.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/164",
+      "source": "cards/164.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/165",
+      "source": "cards/165.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/166",
+      "source": "cards/166.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/167",
+      "source": "cards/167.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/168",
+      "source": "cards/168.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/169",
+      "source": "cards/169.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/170",
+      "source": "cards/170.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/171",
+      "source": "cards/171.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/172",
+      "source": "cards/172.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/173",
+      "source": "cards/173.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/174",
+      "source": "cards/174.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/175",
+      "source": "cards/175.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/176",
+      "source": "cards/176.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/177",
+      "source": "cards/177.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/178",
+      "source": "cards/178.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/179",
+      "source": "cards/179.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/180",
+      "source": "cards/180.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/181",
+      "source": "cards/181.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/182",
+      "source": "cards/182.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/183",
+      "source": "cards/183.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/184",
+      "source": "cards/184.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/185",
+      "source": "cards/185.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/186",
+      "source": "cards/186.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/187",
+      "source": "cards/187.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/188",
+      "source": "cards/188.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/189",
+      "source": "cards/189.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/190",
+      "source": "cards/190.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/191",
+      "source": "cards/191.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/192",
+      "source": "cards/192.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/193",
+      "source": "cards/193.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/194",
+      "source": "cards/194.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/195",
+      "source": "cards/195.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/196",
+      "source": "cards/196.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/197",
+      "source": "cards/197.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/198",
+      "source": "cards/198.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/199",
+      "source": "cards/199.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/200",
+      "source": "cards/200.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/201",
+      "source": "cards/201.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/202",
+      "source": "cards/202.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/203",
+      "source": "cards/203.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/204",
+      "source": "cards/204.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/205",
+      "source": "cards/205.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/206",
+      "source": "cards/206.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/207",
+      "source": "cards/207.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/208",
+      "source": "cards/208.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/209",
+      "source": "cards/209.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/210",
+      "source": "cards/210.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/211",
+      "source": "cards/211.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/212",
+      "source": "cards/212.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/213",
+      "source": "cards/213.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/214",
+      "source": "cards/214.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/215",
+      "source": "cards/215.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/216",
+      "source": "cards/216.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/217",
+      "source": "cards/217.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/218",
+      "source": "cards/218.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/219",
+      "source": "cards/219.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/220",
+      "source": "cards/220.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/221",
+      "source": "cards/221.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/222",
+      "source": "cards/222.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/223",
+      "source": "cards/223.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/224",
+      "source": "cards/224.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/225",
+      "source": "cards/225.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/226",
+      "source": "cards/226.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/227",
+      "source": "cards/227.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/228",
+      "source": "cards/228.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/229",
+      "source": "cards/229.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/230",
+      "source": "cards/230.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/231",
+      "source": "cards/231.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/232",
+      "source": "cards/232.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/233",
+      "source": "cards/233.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/234",
+      "source": "cards/234.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/235",
+      "source": "cards/235.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/236",
+      "source": "cards/236.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/237",
+      "source": "cards/237.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/238",
+      "source": "cards/238.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/239",
+      "source": "cards/239.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/240",
+      "source": "cards/240.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/241",
+      "source": "cards/241.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/242",
+      "source": "cards/242.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/243",
+      "source": "cards/243.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/244",
+      "source": "cards/244.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/245",
+      "source": "cards/245.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/246",
+      "source": "cards/246.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/247",
+      "source": "cards/247.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/248",
+      "source": "cards/248.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/249",
+      "source": "cards/249.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/250",
+      "source": "cards/250.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/251",
+      "source": "cards/251.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/252",
+      "source": "cards/252.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/253",
+      "source": "cards/253.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/254",
+      "source": "cards/254.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/255",
+      "source": "cards/255.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/256",
+      "source": "cards/256.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/257",
+      "source": "cards/257.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/258",
+      "source": "cards/258.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/259",
+      "source": "cards/259.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/260",
+      "source": "cards/260.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/261",
+      "source": "cards/261.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C01",
+      "source": "cards/C01.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C02",
+      "source": "cards/C02.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C03",
+      "source": "cards/C03.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C04",
+      "source": "cards/C04.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C05",
+      "source": "cards/C05.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C06",
+      "source": "cards/C06.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C07",
+      "source": "cards/C07.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C08",
+      "source": "cards/C08.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C09",
+      "source": "cards/C09.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C10",
+      "source": "cards/C10.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C11",
+      "source": "cards/C11.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C12",
+      "source": "cards/C12.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C13",
+      "source": "cards/C13.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C14",
+      "source": "cards/C14.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C15",
+      "source": "cards/C15.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C16",
+      "source": "cards/C16.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C17",
+      "source": "cards/C17.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C18",
+      "source": "cards/C18.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C19",
+      "source": "cards/C19.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C20",
+      "source": "cards/C20.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C21",
+      "source": "cards/C21.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C22",
+      "source": "cards/C22.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C23",
+      "source": "cards/C23.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C24",
+      "source": "cards/C24.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C25",
+      "source": "cards/C25.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C26",
+      "source": "cards/C26.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C27",
+      "source": "cards/C27.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C28",
+      "source": "cards/C28.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C29",
+      "source": "cards/C29.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C30",
+      "source": "cards/C30.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C31",
+      "source": "cards/C31.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C32",
+      "source": "cards/C32.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C33",
+      "source": "cards/C33.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C34",
+      "source": "cards/C34.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C35",
+      "source": "cards/C35.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C36",
+      "source": "cards/C36.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C37",
+      "source": "cards/C37.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C38",
+      "source": "cards/C38.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C39",
+      "source": "cards/C39.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C40",
+      "source": "cards/C40.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C41",
+      "source": "cards/C41.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C42",
+      "source": "cards/C42.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C43",
+      "source": "cards/C43.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C44",
+      "source": "cards/C44.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C45",
+      "source": "cards/C45.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C46",
+      "source": "cards/C46.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C47",
+      "source": "cards/C47.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C48",
+      "source": "cards/C48.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/C49",
+      "source": "cards/C49.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/EXP001",
+      "source": "cards/EXP001.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/EXP002",
+      "source": "cards/EXP002.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/EXP003",
+      "source": "cards/EXP003.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/EXP004",
+      "source": "cards/EXP004.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P01",
+      "source": "cards/P01.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P02",
+      "source": "cards/P02.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P03",
+      "source": "cards/P03.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P04",
+      "source": "cards/P04.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P05",
+      "source": "cards/P05.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P06",
+      "source": "cards/P06.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P07",
+      "source": "cards/P07.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P08",
+      "source": "cards/P08.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P09",
+      "source": "cards/P09.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P10",
+      "source": "cards/P10.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P11",
+      "source": "cards/P11.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P12",
+      "source": "cards/P12.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P13",
+      "source": "cards/P13.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P14",
+      "source": "cards/P14.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P15",
+      "source": "cards/P15.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P16",
+      "source": "cards/P16.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P17",
+      "source": "cards/P17.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P18",
+      "source": "cards/P18.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P19",
+      "source": "cards/P19.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P20",
+      "source": "cards/P20.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P21",
+      "source": "cards/P21.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P22",
+      "source": "cards/P22.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P23",
+      "source": "cards/P23.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P24",
+      "source": "cards/P24.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P25",
+      "source": "cards/P25.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P26",
+      "source": "cards/P26.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P27",
+      "source": "cards/P27.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P28",
+      "source": "cards/P28.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P29",
+      "source": "cards/P29.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P30",
+      "source": "cards/P30.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P31",
+      "source": "cards/P31.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P32",
+      "source": "cards/P32.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P33",
+      "source": "cards/P33.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P34",
+      "source": "cards/P34.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P35",
+      "source": "cards/P35.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P36",
+      "source": "cards/P36.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P37",
+      "source": "cards/P37.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P38",
+      "source": "cards/P38.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P39",
+      "source": "cards/P39.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P40",
+      "source": "cards/P40.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P41",
+      "source": "cards/P41.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/P42",
+      "source": "cards/P42.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T01",
+      "source": "cards/T01.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T02",
+      "source": "cards/T02.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T03",
+      "source": "cards/T03.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T04",
+      "source": "cards/T04.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T05",
+      "source": "cards/T05.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T06",
+      "source": "cards/T06.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T07",
+      "source": "cards/T07.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T08",
+      "source": "cards/T08.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T09",
+      "source": "cards/T09.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T10",
+      "source": "cards/T10.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T11",
+      "source": "cards/T11.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T12",
+      "source": "cards/T12.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T13",
+      "source": "cards/T13.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T14",
+      "source": "cards/T14.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T15",
+      "source": "cards/T15.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/T16",
+      "source": "cards/T16.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X01",
+      "source": "cards/X01.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X02",
+      "source": "cards/X02.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X03",
+      "source": "cards/X03.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X04",
+      "source": "cards/X04.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X05",
+      "source": "cards/X05.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X06",
+      "source": "cards/X06.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X07",
+      "source": "cards/X07.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X08",
+      "source": "cards/X08.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X09",
+      "source": "cards/X09.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X10",
+      "source": "cards/X10.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X11",
+      "source": "cards/X11.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X12",
+      "source": "cards/X12.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X13",
+      "source": "cards/X13.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X14",
+      "source": "cards/X14.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X15",
+      "source": "cards/X15.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X16",
+      "source": "cards/X16.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X17",
+      "source": "cards/X17.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X18",
+      "source": "cards/X18.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X19",
+      "source": "cards/X19.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X20",
+      "source": "cards/X20.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X21",
+      "source": "cards/X21.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X22",
+      "source": "cards/X22.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X23",
+      "source": "cards/X23.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X24",
+      "source": "cards/X24.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X25",
+      "source": "cards/X25.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X26",
+      "source": "cards/X26.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X27",
+      "source": "cards/X27.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X28",
+      "source": "cards/X28.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X29",
+      "source": "cards/X29.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X30",
+      "source": "cards/X30.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X31",
+      "source": "cards/X31.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X32",
+      "source": "cards/X32.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X33",
+      "source": "cards/X33.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X34",
+      "source": "cards/X34.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X35",
+      "source": "cards/X35.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X36",
+      "source": "cards/X36.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X37",
+      "source": "cards/X37.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X38",
+      "source": "cards/X38.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X39",
+      "source": "cards/X39.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X40",
+      "source": "cards/X40.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X41",
+      "source": "cards/X41.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X42",
+      "source": "cards/X42.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X43",
+      "source": "cards/X43.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X44",
+      "source": "cards/X44.webp",
+      "profile": "card"
+    },
+    {
+      "id": "cards/X45",
+      "source": "cards/X45.webp",
+      "profile": "card"
+    },
+    {
+      "id": "corporations/aphrodite",
+      "source": "corporations/aphrodite.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "aphrodite",
+        "name": "Aphrodite",
+        "color": "#efb5b5"
+      },
+      "prepare": {
+        "crop": [
+          0.02734375,
+          0.26157407407407407,
+          0.9453125,
+          0.47453703703703703
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/arcadian-communities",
+      "source": "corporations/arcadian-communities.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "arcadian-communities",
+        "name": "Arcadian Communities",
+        "color": "#a3b988"
+      },
+      "prepare": {
+        "crop": [
+          0.044270833333333336,
+          0.142578125,
+          0.91015625,
+          0.708984375
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/aridor",
+      "source": "corporations/aridor.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "aridor",
+        "name": "Aridor",
+        "color": "#f3ad18"
+      },
+      "prepare": {
+        "crop": [
+          0.05859375,
+          0.06378132118451026,
+          0.8645833333333334,
+          0.8701594533029613
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/arklight",
+      "source": "corporations/arklight.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "arklight",
+        "name": "Arklight",
+        "color": "#8fdddd"
+      },
+      "prepare": {
+        "crop": [
+          0.11067708333333333,
+          0.08679245283018867,
+          0.7786458333333334,
+          0.8716981132075472
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/astrodrill",
+      "source": "corporations/astrodrill.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "astrodrill",
+        "name": "AstroDrill",
+        "color": "#ffb60b"
+      },
+      "prepare": {
+        "crop": [
+          0.03515625,
+          0.30078125,
+          0.9361979166666666,
+          0.353515625
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/celestic",
+      "source": "corporations/celestic.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "celestic",
+        "name": "Celestic",
+        "color": "#8faeff"
+      },
+      "prepare": {
+        "crop": [
+          0.041666666666666664,
+          0.205078125,
+          0.9166666666666666,
+          0.55859375
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/cheung-shing-mars",
+      "source": "corporations/cheung-shing-mars.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "cheung-shing-mars",
+        "name": "Cheung Shing Mars",
+        "color": "#dd4e2d"
+      },
+      "prepare": {
+        "crop": [
+          0.0625,
+          0.1453125,
+          0.8776041666666666,
+          0.6953125
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/credicor",
+      "source": "corporations/credicor.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "credicor",
+        "name": "CrediCor",
+        "color": "#bda4e6"
+      },
+      "prepare": {
+        "crop": [
+          0.10286458333333333,
+          0.16145833333333334,
+          0.796875,
+          0.6575520833333334
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/ecoline",
+      "source": "corporations/ecoline.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "ecoline",
+        "name": "Ecoline",
+        "color": "#8ce329"
+      },
+      "prepare": {
+        "crop": [
+          0.037760416666666664,
+          0.2630208333333333,
+          0.9309895833333334,
+          0.4140625
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/factorum",
+      "source": "corporations/factorum.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "factorum",
+        "name": "Factorum",
+        "color": "#cf7047"
+      },
+      "prepare": {
+        "crop": [
+          0.06770833333333333,
+          0.158203125,
+          0.8658854166666666,
+          0.642578125
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/helion",
+      "source": "corporations/helion.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "helion",
+        "name": "Helion",
+        "color": "#ffb500"
+      },
+      "prepare": {
+        "crop": [
+          0.005208333333333333,
+          0.21458333333333332,
+          0.9921875,
+          0.5208333333333334
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/interplanetary-cinematics",
+      "source": "corporations/interplanetary-cinematics.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "interplanetary-cinematics",
+        "name": "Interplanetary Cinematics",
+        "color": "#ef5c52"
+      },
+      "prepare": {
+        "crop": [
+          0.032552083333333336,
+          0.24305555555555555,
+          0.9348958333333334,
+          0.5115740740740741
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/inventrix",
+      "source": "corporations/inventrix.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "inventrix",
+        "name": "Inventrix",
+        "color": "#00cbea"
+      },
+      "prepare": {
+        "crop": [
+          0.03515625,
+          0.31640625,
+          0.93359375,
+          0.357421875
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/lakefront-resorts",
+      "source": "corporations/lakefront-resorts.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "lakefront-resorts",
+        "name": "Lakefront Resorts",
+        "color": "#94cdd0"
+      },
+      "prepare": {
+        "crop": [
+          0.032552083333333336,
+          0.224609375,
+          0.9361979166666666,
+          0.515625
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/manutech",
+      "source": "corporations/manutech.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "manutech",
+        "name": "Manutech",
+        "color": "#ec8c43"
+      },
+      "prepare": {
+        "crop": [
+          0.04296875,
+          0.28703703703703703,
+          0.9140625,
+          0.4074074074074074
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/mining-guild",
+      "source": "corporations/mining-guild.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "mining-guild",
+        "name": "Mining Guild",
+        "color": "#c79555"
+      },
+      "prepare": {
+        "crop": [
+          0.053385416666666664,
+          0.0967741935483871,
+          0.89453125,
+          0.8
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/mons-insurance",
+      "source": "corporations/mons-insurance.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "mons-insurance",
+        "name": "Mons Insurance",
+        "color": "#9fceee"
+      },
+      "prepare": {
+        "crop": [
+          0.041666666666666664,
+          0.20572916666666666,
+          0.9153645833333334,
+          0.5677083333333334
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/morning-star-inc",
+      "source": "corporations/morning-star-inc.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "morning-star-inc",
+        "name": "Morning Star Inc.",
+        "color": "#ffa91c"
+      },
+      "prepare": {
+        "crop": [
+          0.049479166666666664,
+          0.24609375,
+          0.90625,
+          0.51171875
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/pharmacy-union",
+      "source": "corporations/pharmacy-union.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "pharmacy-union",
+        "name": "Pharmacy Union",
+        "color": "#56d2bf"
+      },
+      "prepare": {
+        "crop": [
+          0.10026041666666667,
+          0.15456674473067916,
+          0.80078125,
+          0.667447306791569
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/philares",
+      "source": "corporations/philares.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "philares",
+        "name": "Philares",
+        "color": "#2fc4c9"
+      },
+      "prepare": {
+        "crop": [
+          0.036458333333333336,
+          0.279296875,
+          0.9309895833333334,
+          0.439453125
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/phobolog",
+      "source": "corporations/phobolog.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "phobolog",
+        "name": "PhoboLog",
+        "color": "#9266ff"
+      },
+      "prepare": {
+        "crop": [
+          0.049479166666666664,
+          0.142578125,
+          0.90234375,
+          0.693359375
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/point-luna",
+      "source": "corporations/point-luna.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "point-luna",
+        "name": "Point Luna",
+        "color": "#43c8c6"
+      },
+      "prepare": {
+        "crop": [
+          0.029947916666666668,
+          0.14040114613180515,
+          0.9375,
+          0.7220630372492837
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/polyphemos",
+      "source": "corporations/polyphemos.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "polyphemos",
+        "name": "Polyphemos",
+        "color": "#984bff"
+      },
+      "prepare": {
+        "crop": [
+          0.045572916666666664,
+          0.201171875,
+          0.91015625,
+          0.59765625
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/poseidon",
+      "source": "corporations/poseidon.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "poseidon",
+        "name": "Poseidon",
+        "color": "#22c8d0"
+      },
+      "prepare": {
+        "crop": [
+          0.049479166666666664,
+          0.22265625,
+          0.9010416666666666,
+          0.5546875
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/pristar",
+      "source": "corporations/pristar.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "pristar",
+        "name": "Pristar",
+        "color": "#98b686"
+      },
+      "prepare": {
+        "crop": [
+          0.18229166666666666,
+          0.111328125,
+          0.63671875,
+          0.77734375
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/recyclon",
+      "source": "corporations/recyclon.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "recyclon",
+        "name": "Recyclon",
+        "color": "#a9ed2c"
+      },
+      "prepare": {
+        "crop": [
+          0.052083333333333336,
+          0.11848958333333333,
+          0.890625,
+          0.7552083333333334
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/robinson-industries",
+      "source": "corporations/robinson-industries.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "robinson-industries",
+        "name": "Robinson Industries",
+        "color": "#edaa4d"
+      },
+      "prepare": {
+        "crop": [
+          0.032552083333333336,
+          0.306640625,
+          0.9361979166666666,
+          0.333984375
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/saturn-systems",
+      "source": "corporations/saturn-systems.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "saturn-systems",
+        "name": "Saturn Systems",
+        "color": "#e76b4a"
+      },
+      "prepare": {
+        "crop": [
+          0.052083333333333336,
+          0.173828125,
+          0.8971354166666666,
+          0.5859375
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/septem-tribus",
+      "source": "corporations/septem-tribus.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "septem-tribus",
+        "name": "Septem Tribus",
+        "color": "#cc6848"
+      },
+      "prepare": {
+        "crop": [
+          0.08203125,
+          0.03125,
+          0.8359375,
+          0.90234375
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/splice-tactical-genomics",
+      "source": "corporations/splice-tactical-genomics.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "splice-tactical-genomics",
+        "name": "Splice Tactical Genomics",
+        "color": "#cd5596"
+      },
+      "prepare": {
+        "crop": [
+          0.040364583333333336,
+          0.19921875,
+          0.9244791666666666,
+          0.583984375
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/stormcraft-incorporated",
+      "source": "corporations/stormcraft-incorporated.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "stormcraft-incorporated",
+        "name": "Stormcraft Incorporated",
+        "color": "#96c6e5"
+      },
+      "prepare": {
+        "crop": [
+          0.028645833333333332,
+          0.296875,
+          0.9518229166666666,
+          0.3828125
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/teractor",
+      "source": "corporations/teractor.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "teractor",
+        "name": "Teractor",
+        "color": "#d6ed66"
+      },
+      "prepare": {
+        "crop": [
+          0.01171875,
+          0.328125,
+          0.9765625,
+          0.3229166666666667
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/terralabs-research",
+      "source": "corporations/terralabs-research.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "terralabs-research",
+        "name": "TerraLabs Research",
+        "color": "#2fc9ef"
+      },
+      "prepare": {
+        "crop": [
+          0.06640625,
+          0.11328125,
+          0.87109375,
+          0.73046875
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/tharsis-republic",
+      "source": "corporations/tharsis-republic.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "tharsis-republic",
+        "name": "Tharsis Republic",
+        "color": "#c45e3f"
+      },
+      "prepare": {
+        "crop": [
+          0.06770833333333333,
+          0.12871287128712872,
+          0.86328125,
+          0.7475247524752475
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/thorgate",
+      "source": "corporations/thorgate.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "thorgate",
+        "name": "ThorGate",
+        "color": "#00aeef"
+      },
+      "prepare": {
+        "crop": [
+          0.03125,
+          0.28125,
+          0.9361979166666666,
+          0.3932291666666667
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/united-nations-mars-initiative",
+      "source": "corporations/united-nations-mars-initiative.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "united-nations-mars-initiative",
+        "name": "United Nations Mars Initiative",
+        "color": "#79b7ec"
+      },
+      "prepare": {
+        "crop": [
+          0.026041666666666668,
+          0.08185840707964602,
+          0.9479166666666666,
+          0.8362831858407079
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/utopia-invest",
+      "source": "corporations/utopia-invest.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "utopia-invest",
+        "name": "Utopia Invest",
+        "color": "#b59aef"
+      },
+      "prepare": {
+        "crop": [
+          0.046875,
+          0.2109375,
+          0.9049479166666666,
+          0.55078125
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/valley-trust",
+      "source": "corporations/valley-trust.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "valley-trust",
+        "name": "Valley Trust",
+        "color": "#8fd2ab"
+      },
+      "prepare": {
+        "crop": [
+          0.07291666666666667,
+          0.140625,
+          0.85546875,
+          0.71875
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/viron",
+      "source": "corporations/viron.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "viron",
+        "name": "Viron",
+        "color": "#4be1b2"
+      },
+      "prepare": {
+        "crop": [
+          0.04296875,
+          0.255859375,
+          0.9140625,
+          0.4296875
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "corporations/vitor",
+      "source": "corporations/vitor.png",
+      "profile": "corporation",
+      "corporation": {
+        "key": "vitor",
+        "name": "Vitor",
+        "color": "#cda950"
+      },
+      "prepare": {
+        "crop": [
+          0.0390625,
+          0.22395833333333334,
+          0.9296875,
+          0.5
+        ],
+        "charcoalMatte": true
+      }
+    },
+    {
+      "id": "textures/effects/smoke",
+      "source": "textures/effects/smoke.png",
+      "profile": "copy"
+    },
+    {
+      "id": "icons/parameters/oxygen",
+      "source": "icons/parameters/oxygen.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/parameters/temperature",
+      "source": "icons/parameters/temperature.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/parameters/venus",
+      "source": "icons/parameters/venus.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/ui/mars",
+      "source": "icons/ui/mars.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/ui/arrow",
+      "source": "icons/ui/arrow.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/ui/asterisc",
+      "source": "icons/ui/asterisc.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/ui/checkmark",
+      "source": "icons/ui/checkmark.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/ui/first-player",
+      "source": "icons/ui/first-player.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/ui/influence",
+      "source": "icons/ui/influence.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/ui/production",
+      "source": "icons/ui/production.png",
+      "profile": "icon"
+    },
+    {
+      "id": "models/asteroid",
+      "source": "models/asteroid.glb",
+      "profile": "copy"
+    },
+    {
+      "id": "models/bird",
+      "source": "models/bird.glb",
+      "profile": "copy"
+    },
+    {
+      "id": "models/fence",
+      "source": "models/fence.glb",
+      "profile": "copy"
+    },
+    {
+      "id": "models/flowers",
+      "source": "models/flowers.glb",
+      "profile": "copy"
+    },
+    {
+      "id": "models/phobos",
+      "source": "models/phobos.glb",
+      "profile": "copy"
+    },
+    {
+      "id": "models/rock",
+      "source": "models/rock.glb",
+      "profile": "copy"
+    },
+    {
+      "id": "models/satellite",
+      "source": "models/satellite.glb",
+      "profile": "copy"
+    },
+    {
+      "id": "models/spaceship",
+      "source": "models/spaceship.glb",
+      "profile": "copy"
+    },
+    {
+      "id": "models/trees",
+      "source": "models/trees.glb",
+      "profile": "copy"
+    },
+    {
+      "id": "icons/resources/animal",
+      "source": "icons/resources/animal.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/asteroid",
+      "source": "icons/resources/asteroid.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/camp",
+      "source": "icons/resources/camp.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/card",
+      "source": "icons/resources/card.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/data",
+      "source": "icons/resources/data.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/director",
+      "source": "icons/resources/director.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/disease",
+      "source": "icons/resources/disease.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/fighter",
+      "source": "icons/resources/fighter.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/floater",
+      "source": "icons/resources/floater.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/heat",
+      "source": "icons/resources/heat.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/megacredit",
+      "source": "icons/resources/megacredit.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/microbe",
+      "source": "icons/resources/microbe.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/plant",
+      "source": "icons/resources/plant.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/power",
+      "source": "icons/resources/power.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/preservation",
+      "source": "icons/resources/preservation.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/science",
+      "source": "icons/resources/science.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/specialized-robot",
+      "source": "icons/resources/specialized-robot.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/steel",
+      "source": "icons/resources/steel.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/titanium",
+      "source": "icons/resources/titanium.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/tr",
+      "source": "icons/resources/tr.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/resources/wild",
+      "source": "icons/resources/wild.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/animal",
+      "source": "icons/tags/animal.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/building",
+      "source": "icons/tags/building.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/city",
+      "source": "icons/tags/city.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/clone",
+      "source": "icons/tags/clone.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/crime",
+      "source": "icons/tags/crime.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/earth",
+      "source": "icons/tags/earth.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/event",
+      "source": "icons/tags/event.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/jovian",
+      "source": "icons/tags/jovian.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/mars",
+      "source": "icons/tags/mars.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/microbe",
+      "source": "icons/tags/microbe.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/moon",
+      "source": "icons/tags/moon.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/plant",
+      "source": "icons/tags/plant.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/power",
+      "source": "icons/tags/power.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/science",
+      "source": "icons/tags/science.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/space",
+      "source": "icons/tags/space.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/venus",
+      "source": "icons/tags/venus.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/tags/wild",
+      "source": "icons/tags/wild.png",
+      "profile": "icon"
+    },
+    {
+      "id": "textures/planets/venus/surface",
+      "source": "textures/planets/venus/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/venus/overview",
+      "source": "textures/planets/venus/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/ceres/surface",
+      "source": "textures/planets/ceres/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/ceres/overview",
+      "source": "textures/planets/ceres/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/terrain/concrete",
+      "source": "textures/terrain/concrete.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/earth/surface",
+      "source": "textures/planets/earth/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/earth/overview",
+      "source": "textures/planets/earth/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/earth-clouds/surface",
+      "source": "textures/planets/earth-clouds/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/earth-clouds/overview",
+      "source": "textures/planets/earth-clouds/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/ganymede/surface",
+      "source": "textures/planets/ganymede/surface.png",
+      "profile": "ganymede"
+    },
+    {
+      "id": "textures/planets/ganymede/overview",
+      "source": "textures/planets/ganymede/overview.png",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/terrain/grass",
+      "source": "textures/terrain/grass.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/jupiter/surface",
+      "source": "textures/planets/jupiter/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/jupiter/overview",
+      "source": "textures/planets/jupiter/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/mars/surface",
+      "source": "textures/planets/mars/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/mars/overview",
+      "source": "textures/planets/mars/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/mercury/surface",
+      "source": "textures/planets/mercury/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/mercury/overview",
+      "source": "textures/planets/mercury/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/moon/surface",
+      "source": "textures/planets/moon/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/moon/overview",
+      "source": "textures/planets/moon/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/neptune/surface",
+      "source": "textures/planets/neptune/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/neptune/overview",
+      "source": "textures/planets/neptune/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/terrain/noise-high",
+      "source": "textures/terrain/noise-high.png",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/terrain/noise-mid",
+      "source": "textures/terrain/noise-mid.png",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/terrain/rock",
+      "source": "textures/terrain/rock.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/terrain/sand",
+      "source": "textures/terrain/sand.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/saturn/surface",
+      "source": "textures/planets/saturn/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/saturn/overview",
+      "source": "textures/planets/saturn/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/sun/surface",
+      "source": "textures/planets/sun/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/sun/overview",
+      "source": "textures/planets/sun/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/uranus/surface",
+      "source": "textures/planets/uranus/surface.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/planets/uranus/overview",
+      "source": "textures/planets/uranus/overview.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/terrain/waternormals",
+      "source": "textures/terrain/waternormals.jpg",
+      "profile": "copy"
+    },
+    {
+      "id": "icons/placements/city",
+      "source": "icons/placements/city.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/placements/colony",
+      "source": "icons/placements/colony.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/placements/greenery-no-oxygen",
+      "source": "icons/placements/greenery-no-oxygen.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/placements/volcano",
+      "source": "icons/placements/volcano.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/placements/ocean",
+      "source": "icons/placements/ocean.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/placements/special",
+      "source": "icons/placements/special.png",
+      "profile": "icon"
+    },
+    {
+      "id": "icons/placements/trade",
+      "source": "icons/placements/trade.png",
+      "profile": "icon"
+    },
+    {
+      "id": "app/favicon-16x16",
+      "source": "app/favicon-16x16.png",
+      "profile": "copy",
+      "publicName": "favicon-16x16.png"
+    },
+    {
+      "id": "app/favicon-32x32",
+      "source": "app/favicon-32x32.png",
+      "profile": "copy",
+      "publicName": "favicon-32x32.png"
+    },
+    {
+      "id": "app/favicon",
+      "source": "app/favicon.ico",
+      "profile": "copy",
+      "publicName": "favicon.ico"
+    },
+    {
+      "id": "fonts/orbitron/black",
+      "source": "fonts/orbitron/black.ttf",
+      "profile": "copy",
+      "font": {
+        "family": "Orbitron",
+        "weight": 900
+      }
+    },
+    {
+      "id": "fonts/orbitron/bold",
+      "source": "fonts/orbitron/bold.ttf",
+      "profile": "copy",
+      "font": {
+        "family": "Orbitron",
+        "weight": 700
+      }
+    },
+    {
+      "id": "fonts/orbitron/extrabold",
+      "source": "fonts/orbitron/extrabold.ttf",
+      "profile": "copy",
+      "font": {
+        "family": "Orbitron",
+        "weight": 800
+      }
+    },
+    {
+      "id": "fonts/orbitron/medium",
+      "source": "fonts/orbitron/medium.ttf",
+      "profile": "copy",
+      "font": {
+        "family": "Orbitron",
+        "weight": 500
+      }
+    },
+    {
+      "id": "fonts/orbitron/regular",
+      "source": "fonts/orbitron/regular.ttf",
+      "profile": "copy",
+      "font": {
+        "family": "Orbitron",
+        "weight": 400
+      }
+    },
+    {
+      "id": "fonts/orbitron/semibold",
+      "source": "fonts/orbitron/semibold.ttf",
+      "profile": "copy",
+      "font": {
+        "family": "Orbitron",
+        "weight": 600
+      }
+    },
+    {
+      "id": "audio/effects/award-funded",
+      "source": "audio/effects/award-funded.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/button-click",
+      "source": "audio/effects/button-click.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/button-hover",
+      "source": "audio/effects/button-hover.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/card-hover",
+      "source": "audio/effects/card-hover.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/card-played",
+      "source": "audio/effects/card-played.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/construction-1",
+      "source": "audio/effects/construction-1.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/construction-2",
+      "source": "audio/effects/construction-2.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/music/dreams",
+      "source": "audio/music/dreams.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/music/ethereum",
+      "source": "audio/music/ethereum.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/game-start",
+      "source": "audio/effects/game-start.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/oxygen-increase",
+      "source": "audio/effects/oxygen-increase.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/production-score",
+      "source": "audio/effects/production-score.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/production",
+      "source": "audio/effects/production.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/music/sands",
+      "source": "audio/music/sands.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/music/settlers",
+      "source": "audio/music/settlers.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/music/stars",
+      "source": "audio/music/stars.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/temperature-increase",
+      "source": "audio/effects/temperature-increase.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/travel",
+      "source": "audio/effects/travel.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/venus-increase",
+      "source": "audio/effects/venus-increase.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/water-placement",
+      "source": "audio/effects/water-placement.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/your-turn",
+      "source": "audio/effects/your-turn.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "textures/terrain/leafy-grass-color",
+      "source": "textures/terrain/leafy-grass-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/leafy_grass",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/leafy-grass-detail",
+      "source": "textures/terrain/leafy-grass-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/leafy_grass",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/brown-mud-leaves-01-color",
+      "source": "textures/terrain/brown-mud-leaves-01-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/brown_mud_leaves_01",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/brown-mud-leaves-01-detail",
+      "source": "textures/terrain/brown-mud-leaves-01-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/brown_mud_leaves_01",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/leaves-forest-ground-color",
+      "source": "textures/terrain/leaves-forest-ground-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/leaves_forest_ground",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/leaves-forest-ground-detail",
+      "source": "textures/terrain/leaves-forest-ground-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/leaves_forest_ground",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/concrete-tile-facade-color",
+      "source": "textures/terrain/concrete-tile-facade-color.jpg",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/concrete_tile_facade",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/concrete-tile-facade-normal",
+      "source": "textures/terrain/concrete-tile-facade-normal.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/concrete_tile_facade",
+        "license": "CC0-1.0",
+        "maps": "OpenGL normal XYZ; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/concrete-tile-facade-roughness",
+      "source": "textures/terrain/concrete-tile-facade-roughness.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/concrete_tile_facade",
+        "license": "CC0-1.0",
+        "maps": "Roughness; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/rectangular-facade-tiles-color",
+      "source": "textures/terrain/rectangular-facade-tiles-color.jpg",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/rectangular_facade_tiles",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/rectangular-facade-tiles-normal",
+      "source": "textures/terrain/rectangular-facade-tiles-normal.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/rectangular_facade_tiles",
+        "license": "CC0-1.0",
+        "maps": "OpenGL normal XYZ; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/rectangular-facade-tiles-roughness",
+      "source": "textures/terrain/rectangular-facade-tiles-roughness.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/rectangular_facade_tiles",
+        "license": "CC0-1.0",
+        "maps": "Roughness; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ribbed-concrete-wall-color",
+      "source": "textures/terrain/ribbed-concrete-wall-color.jpg",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/ribbed_concrete_wall",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ribbed-concrete-wall-normal",
+      "source": "textures/terrain/ribbed-concrete-wall-normal.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/ribbed_concrete_wall",
+        "license": "CC0-1.0",
+        "maps": "OpenGL normal XYZ; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ribbed-concrete-wall-roughness",
+      "source": "textures/terrain/ribbed-concrete-wall-roughness.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/ribbed_concrete_wall",
+        "license": "CC0-1.0",
+        "maps": "Roughness; linear 8-bit from EXR, 1K"
+      }
+    }
+  ]
+}

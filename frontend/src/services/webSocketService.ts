@@ -188,7 +188,7 @@ export class WebSocketService {
       }
       case MessageTypeLogUpdate: {
         const logPayload = message.payload as LogUpdatePayload;
-        this.emit("log-update", logPayload.logs);
+        this.emit("log-update", logPayload);
         break;
       }
       case MessageTypePlayerKicked: {

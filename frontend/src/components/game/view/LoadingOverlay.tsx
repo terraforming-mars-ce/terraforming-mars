@@ -17,6 +17,7 @@ interface LoadingOverlayProps {
    * load finishes quickly. Prevents a jarring pop-out on medium-speed loads.
    */
   minDurationMs?: number;
+  fadeDurationMs?: number;
 }
 
 type Phase = "waiting" | "showing" | "fading" | "done";
@@ -28,9 +29,10 @@ export default function LoadingOverlay({
   onTransitionEnd,
   showDelayMs = 500,
   minDurationMs = 200,
+  fadeDurationMs = 800,
 }: LoadingOverlayProps) {
-  const [phase, setPhase] = useState<Phase>("waiting");
-  const shownAtRef = useRef<number | null>(null);
+  const [phase, setPhase] = useState<Phase>(() => (showDelayMs === 0 ? "showing" : "waiting"));
+  const shownAtRef = useRef<number | null>(showDelayMs === 0 ? Date.now() : null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,16 +74,19 @@ export default function LoadingOverlay({
       return;
     }
     const animation = ref.current.animate([{ opacity: 1 }, { opacity: 0 }], {
-      duration: 800,
+      duration: fadeDurationMs,
       easing: "ease-out",
       fill: "forwards",
     });
-    void animation.finished.then(() => {
-      setPhase("done");
-      onTransitionEnd?.();
-    });
+    void animation.finished.then(
+      () => {
+        setPhase("done");
+        onTransitionEnd?.();
+      },
+      () => {},
+    );
     return () => animation.cancel();
-  }, [phase, onTransitionEnd]);
+  }, [phase, onTransitionEnd, fadeDurationMs]);
 
   useEffect(() => {
     if (!isLoaded && phase === "done") {

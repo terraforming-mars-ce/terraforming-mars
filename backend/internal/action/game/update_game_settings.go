@@ -155,6 +155,9 @@ func (a *UpdateGameSettingsAction) Execute(
 		}
 	}
 
+	if err := validateSetup(settings, a.mapRegistry); err != nil {
+		return err
+	}
 	g.UpdateSettings(ctx, settings)
 
 	if cardPacksChanged || venusChanged {

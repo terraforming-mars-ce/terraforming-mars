@@ -159,42 +159,14 @@ export function GameFlowPopover({
 
   const animationClass = isClosing ? "animate-fadeOut" : "animate-popIn";
 
-  const content = renderSiblings ? (
+  const content = (
     <div ref={popoverRef} className={`relative ${animationClass}`}>
       <div
-        className={`
-          min-w-[240px] w-fit max-w-[90vw] max-h-[500px]
-          bg-space-black-darker/95
-          border-2 border-space-blue-500
-          rounded-xl
-          shadow-[0_15px_40px_rgba(0,0,0,0.8),0_0_15px_rgba(30,60,150,1)]
-          backdrop-blur-space
-          flex flex-col overflow-hidden isolate
-          pointer-events-auto
-          ${className}
-        `}
+        className={`min-w-[240px] w-fit max-w-[90vw] max-h-[500px] game-panel game-panel-clipped game-window flex flex-col overflow-hidden pointer-events-auto ${className}`}
       >
         {children}
       </div>
       {renderSiblings}
-    </div>
-  ) : (
-    <div
-      ref={popoverRef}
-      className={`
-        min-w-[240px] w-fit max-w-[90vw] max-h-[500px]
-        bg-space-black-darker/95
-        border-2 border-space-blue-500
-        rounded-xl
-        shadow-[0_15px_40px_rgba(0,0,0,0.8),0_0_15px_rgba(30,60,150,1)]
-        backdrop-blur-space
-        flex flex-col overflow-hidden isolate
-        pointer-events-auto
-        ${animationClass}
-        ${className}
-      `}
-    >
-      {children}
     </div>
   );
 
@@ -238,11 +210,9 @@ export function GameFlowPopover({
         @keyframes popIn {
           from {
             opacity: 0;
-            transform: scale(0.9) translateY(-20px);
           }
           to {
             opacity: 1;
-            transform: scale(1) translateY(0);
           }
         }
 
@@ -258,11 +228,9 @@ export function GameFlowPopover({
         @keyframes choiceSlideIn {
           from {
             opacity: 0;
-            transform: translateX(-20px);
           }
           to {
             opacity: 1;
-            transform: translateX(0);
           }
         }
 
@@ -307,7 +275,7 @@ export function GameFlowTitle({ children, className = "" }: GameFlowTitleProps) 
 
   return (
     <div
-      className={`py-[15px] px-5 bg-black/40 border-b border-b-space-blue-500/60 select-none ${className}`}
+      className={`py-[15px] px-5 bg-black/40 border-b border-b-white/15 select-none ${className}`}
       onPointerDown={onDragStart}
       onPointerMove={onDragMove}
       onPointerUp={onDragEnd}
@@ -325,7 +293,7 @@ interface GameFlowBodyProps {
 export function GameFlowBody({ children, className = "" }: GameFlowBodyProps) {
   return (
     <div
-      className={`flex-1 overflow-y-auto p-2.5 scrollbar-thin scrollbar-thumb-space-blue-500/50 scrollbar-track-space-blue-900/30 ${className}`}
+      className={`flex-1 overflow-y-auto p-2.5 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-white/5 ${className}`}
     >
       {children}
     </div>
@@ -340,7 +308,7 @@ interface GameFlowFooterProps {
 export function GameFlowFooter({ children, className = "" }: GameFlowFooterProps) {
   return (
     <div
-      className={`px-4 py-3 bg-black/40 border-t border-space-blue-500/60 flex justify-center ${className}`}
+      className={`px-4 py-3 bg-black/40 border-t border-white/15 flex justify-center ${className}`}
     >
       {children}
     </div>

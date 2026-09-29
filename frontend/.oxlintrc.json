@@ -1,10 +1,10 @@
 {
-  "rules": {
+  "categories": {
     "correctness": "warn",
     "suspicious": "warn",
     "perf": "warn"
   },
-  "ignore": [
+  "ignorePatterns": [
     "build/**",
     "dist/**",
     "node_modules/**",

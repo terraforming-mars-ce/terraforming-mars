@@ -42,12 +42,12 @@ export function useSoundEffects() {
     return audioService.playCardHoverSound();
   }, []);
 
-  const playConstructionSound = useCallback(() => {
-    return audioService.playConstructionSound();
+  const playCardPlayedSound = useCallback(() => {
+    return audioService.playCardPlayedSound();
   }, []);
 
-  const playAsteroidImpactSound = useCallback(() => {
-    return audioService.playAsteroidImpactSound();
+  const playConstructionSound = useCallback(() => {
+    return audioService.playConstructionSound();
   }, []);
 
   const playYourTurnSound = useCallback(() => {
@@ -76,8 +76,8 @@ export function useSoundEffects() {
     playButtonHoverSound,
     playButtonClickSound,
     playCardHoverSound,
+    playCardPlayedSound,
     playConstructionSound,
-    playAsteroidImpactSound,
     playYourTurnSound,
     playAwardFundedSound,
     playGameStartSound,

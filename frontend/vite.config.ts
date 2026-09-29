@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { assetWatcher } from "./scripts/assets/vite.ts";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), assetWatcher()],
   server: {
     port: 3000,
     open: true,
@@ -22,18 +23,27 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   build: {
     outDir: "build",
     sourcemap: true,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          "react-vendor": ["react", "react-dom"],
-          "three-vendor": ["three", "@react-three/fiber", "@react-three/drei"],
-          "redux-vendor": ["@reduxjs/toolkit", "react-redux"],
+        codeSplitting: {
+          groups: [
+            {
+              name: "react-vendor",
+              test: /node_modules\/(react|react-dom|scheduler)\//,
+              priority: 20,
+            },
+            {
+              name: "three-vendor",
+              test: /node_modules\/(three|@react-three\/[^/]+)\//,
+              priority: 10,
+            },
+          ],
         },
       },
     },

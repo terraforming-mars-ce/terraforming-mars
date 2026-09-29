@@ -78,6 +78,7 @@ const VictoryPointsPopover: React.FC<VictoryPointsPopoverProps> = ({
 
   return (
     <GamePopover
+      className="game-popover-list"
       isVisible={isVisible}
       onClose={onClose}
       position={{ type: "anchor", anchorRef, placement: "above" }}
@@ -94,15 +95,15 @@ const VictoryPointsPopover: React.FC<VictoryPointsPopoverProps> = ({
           <span className="font-orbitron text-sm text-white/50">No VP sources</span>
         </div>
       ) : (
-        <div className="p-2 flex flex-col gap-2">
+        <div className="popover-list popover-list-headed p-2 flex flex-col gap-2">
           {vpGranters.map((granter, index) => {
             const showConditions = hasNonStaticCondition(granter.conditions);
 
             return (
               <GamePopoverItem
+                className="popover-list-item"
                 key={granter.cardId}
                 state="available"
-                hoverEffect="glow"
                 animationDelay={index * 0.05}
               >
                 <div

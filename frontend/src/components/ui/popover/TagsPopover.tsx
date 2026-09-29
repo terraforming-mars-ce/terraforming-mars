@@ -60,6 +60,7 @@ const TagsPopover: React.FC<TagsPopoverProps> = ({ isVisible, onClose, tagCounts
 
   return (
     <GamePopover
+      className="game-popover-list"
       isVisible={isVisible}
       onClose={onClose}
       position={{ type: "anchor", anchorRef, placement: "above" }}
@@ -74,12 +75,12 @@ const TagsPopover: React.FC<TagsPopoverProps> = ({ isVisible, onClose, tagCounts
           <span className="font-orbitron text-sm text-white/50">No tags</span>
         </div>
       ) : (
-        <div className="p-2 flex flex-col gap-2">
+        <div className="popover-list popover-list-headed p-2 flex flex-col gap-2">
           {nonWildTags.map((tagData, index) => (
             <GamePopoverItem
+              className="popover-list-item"
               key={tagData.tag}
               state="available"
-              hoverEffect="glow"
               animationDelay={index * 0.05}
             >
               <div className="flex items-center gap-3 flex-1">

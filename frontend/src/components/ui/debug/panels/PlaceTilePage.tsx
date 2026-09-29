@@ -1,3 +1,5 @@
+import { assetUrl } from "@/assets";
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { globalWebSocketManager } from "../../../../services/globalWebSocketManager.ts";
 import {
@@ -27,7 +29,7 @@ const ICON_MAP: Record<string, string | undefined> = {
   "nuclear-zone": TILE_ICONS["tile-placement"],
   mining: TILE_ICONS["tile-placement"],
   restricted: TILE_ICONS["tile-placement"],
-  colony: "/assets/tiles/colony.png",
+  colony: assetUrl("icons/placements/colony", 128),
 };
 
 const secondaryButtonStyle = {
@@ -128,7 +130,8 @@ const PlaceTilePage: React.FC<PlaceTilePageProps> = ({
                 {group.tiles.map((tile) => {
                   const iconSrc = ICON_MAP[tile.type];
                   return (
-                    <button
+                    <GameButton
+                      emphasis="quiet"
                       key={tile.type}
                       onClick={() => void handleTileSelection(tile.type)}
                       style={secondaryButtonStyle}
@@ -143,7 +146,7 @@ const PlaceTilePage: React.FC<PlaceTilePageProps> = ({
                         />
                       ) : null}
                       {tile.label}
-                    </button>
+                    </GameButton>
                   );
                 })}
               </div>

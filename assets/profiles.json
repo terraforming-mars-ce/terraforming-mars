@@ -1,0 +1,36 @@
+{
+  "icon": {
+    "sizes": [
+      128,
+      256,
+      512
+    ],
+    "lossless": true
+  },
+  "corporation": {
+    "sizes": [
+      128,
+      256,
+      512,
+      1024
+    ],
+    "lossless": true
+  },
+  "card": {
+    "sizes": [
+      480,
+      960
+    ],
+    "quality": 90,
+    "copyMatchingWebp": true
+  },
+  "ganymede": {
+    "sizes": [
+      4096
+    ],
+    "quality": 90
+  },
+  "copy": {
+    "copy": true
+  }
+}

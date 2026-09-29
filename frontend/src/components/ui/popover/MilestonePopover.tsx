@@ -98,8 +98,9 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
       width={500}
       maxHeight="80vh"
       animation="slideDown"
+      className="game-popover-list"
     >
-      <div className="p-2 flex flex-col gap-2">
+      <div className="popover-list p-2 flex flex-col gap-2">
         {milestones.map((milestone) => {
           const isClaimed = milestone.isClaimed;
           const isAvailable = milestone.available && !isClaimed;
@@ -128,7 +129,7 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
             <GamePopoverItem
               key={milestone.type}
               state={getState()}
-              className={meetsRequirement ? "milestone-eligible-glow" : ""}
+              className={`popover-list-item ${meetsRequirement ? "milestone-eligible-glow" : ""}`}
               onClick={isExecutable ? () => handleClaimMilestone(milestone.type) : undefined}
               error={(() => {
                 if (isAvailable || isClaimed || !milestone.errors?.length) {
@@ -163,7 +164,7 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
                   ...(isClaimed
                     ? {
                         borderColor: styleColor + "BB",
-                        background: "rgba(255,255,255,0.06)",
+                        background: "#141415",
                       }
                     : {}),
                   "--milestone-glow-rgb": `${parseInt(styleColor.slice(1, 3), 16)}, ${parseInt(styleColor.slice(3, 5), 16)}, ${parseInt(styleColor.slice(5, 7), 16)}`,

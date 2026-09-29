@@ -796,6 +796,7 @@ export interface VPConditionDto {
  * CardDto represents a card for client consumption
  */
 export interface CardDto {
+  style?: CardStyleDto;
   id: string;
   name: string;
   type: CardType;
@@ -1529,6 +1530,7 @@ export interface TileBonusDto {
  * TileOccupantDto represents what currently occupies a tile
  */
 export interface TileOccupantDto {
+  visual?: TileVisualDto;
   type: string;
   tags: string[];
 }
@@ -1746,6 +1748,39 @@ export interface GenerationalEventRequirementDto {
   count?: MinMaxValueDto;
   target?: TargetType;
 }
+/**
+ * CityStyleRequestDto contains optional visual requests, independent of placement rules.
+ */
+export interface CityStyleRequestDto {
+  plan?: "clustered" | "radial" | "grid" | "courtyard";
+  density?: "sparse" | "balanced" | "dense";
+  heights?: "low" | "mixed" | "tall";
+  ground?: "level" | "recessed";
+  exposure?: "surface" | "mostly-buried";
+  perimeter?: "open" | "low-wall" | "high-wall";
+  cover?: "none" | "dome" | "flat-glass";
+  landmark?: "none" | "hall" | "observatory";
+  connections?: "paths" | "skybridges" | "enclosed";
+  landscaping?: "sparse" | "parks" | "lush";
+  lighting?: "normal" | "bright";
+  perimeterRoad?: "none" | "ring";
+  entranceMin?: number /* int */;
+  entranceMax?: number /* int */;
+  details?: string[];
+}
+/**
+ * CardStyleDto contains card tile appearance requests.
+ */
+export interface CardStyleDto {
+  tile?: CityStyleRequestDto;
+}
+/**
+ * TileVisualDto is the stable visual input shared by every viewer.
+ */
+export interface TileVisualDto {
+  seed: number /* uint32 */;
+  city?: CityStyleRequestDto;
+}
 
 //////////
 // source: game_history_dto.go
@@ -1816,12 +1851,29 @@ export interface GetGameHistoryResponse {
 // source: http_dto.go
 
 /**
- * CreateGameRequest represents the request body for creating a game.
- * All fields are optional — defaults are applied server-side and settings are
- * edited from the lobby via UpdateGameSettingsRequest.
+ * GameSetupDto contains settings selected before creating a lobby.
+ */
+export interface GameSetupDto {
+  maxPlayers: number /* int */;
+  mapId: string;
+  cardPacks: string[];
+  venusNextEnabled: boolean;
+  developmentMode: boolean;
+  demoGame: boolean;
+  allowRandomBuy: boolean;
+}
+/**
+ * GameOptionsDto provides authoritative defaults and map previews for setup.
+ */
+export interface GameOptionsDto {
+  defaults: GameSetupDto;
+  availableMaps: MapInfoDto[];
+}
+/**
+ * CreateGameRequest selects initial settings; omission uses server defaults.
  */
 export interface CreateGameRequest {
-  playerName?: string;
+  settings?: GameSetupDto;
 }
 /**
  * UpdateGameSettingsRequest represents a partial settings update sent from the
@@ -1949,11 +2001,11 @@ export interface FeedbackStatusResponse {
  * Registries bundles optional expansion registries for DTO mapping
  */
 export interface Registries {
-  ColonyRegistry: any /* colonies.ColonyRegistry */;
-  ProjectFundingRegistry: any /* pfRegistry.ProjectFundingRegistry */;
-  StandardProjectRegistry: any /* standardprojects.StandardProjectRegistry */;
-  AwardRegistry: any /* awards.AwardRegistry */;
-  MilestoneRegistry: any /* milestones.MilestoneRegistry */;
+  ColonyRegistry: any /* colony.ColonyRegistry */;
+  ProjectFundingRegistry: any /* pfDomain.ProjectFundingRegistry */;
+  StandardProjectRegistry: any /* standardproject.StandardProjectRegistry */;
+  AwardRegistry: any /* award.AwardRegistry */;
+  MilestoneRegistry: any /* milestone.MilestoneRegistry */;
   AvailableMaps: MapInfoDto[];
 }
 
@@ -2249,6 +2301,7 @@ export interface ProductionPhaseStartedPayload {
  */
 export interface LogUpdatePayload {
   logs: StateDiffDto[];
+  isHistory: boolean;
 }
 /**
  * ConfirmStartingCardSelectionMessage represents confirm starting card selection message

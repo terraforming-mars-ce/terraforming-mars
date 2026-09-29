@@ -2,11 +2,26 @@ package dto
 
 import "encoding/json"
 
-// CreateGameRequest represents the request body for creating a game.
-// All fields are optional — defaults are applied server-side and settings are
-// edited from the lobby via UpdateGameSettingsRequest.
+// GameSetupDto contains settings selected before creating a lobby.
+type GameSetupDto struct {
+	MaxPlayers       int      `json:"maxPlayers"`
+	MapID            string   `json:"mapId"`
+	CardPacks        []string `json:"cardPacks"`
+	VenusNextEnabled bool     `json:"venusNextEnabled"`
+	DevelopmentMode  bool     `json:"developmentMode"`
+	DemoGame         bool     `json:"demoGame"`
+	AllowRandomBuy   bool     `json:"allowRandomBuy"`
+}
+
+// GameOptionsDto provides authoritative defaults and map previews for setup.
+type GameOptionsDto struct {
+	Defaults      GameSetupDto `json:"defaults"`
+	AvailableMaps []MapInfoDto `json:"availableMaps"`
+}
+
+// CreateGameRequest selects initial settings; omission uses server defaults.
 type CreateGameRequest struct {
-	PlayerName string `json:"playerName,omitempty"`
+	Settings *GameSetupDto `json:"settings,omitempty"`
 }
 
 // UpdateGameSettingsRequest represents a partial settings update sent from the

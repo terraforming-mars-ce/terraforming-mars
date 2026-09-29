@@ -1,4 +1,5 @@
 import React from "react";
+import { getCorporationLogo } from "../../../utils/corporationLogos.tsx";
 import { PlayerDto, OtherPlayerDto } from "../../../types/generated/api-types.ts";
 
 interface PlayerOverlayProps {
@@ -7,27 +8,6 @@ interface PlayerOverlayProps {
 }
 
 const PlayerOverlay: React.FC<PlayerOverlayProps> = ({ players, currentPlayer }) => {
-  // Corporation logo mapping from available assets
-  const corporationLogos: { [key: string]: string } = {
-    polaris: "/assets/pathfinders/corp-logo-polaris.png",
-    "mars-direct": "/assets/pathfinders/corp-logo-mars-direct.png",
-    "habitat-marte": "/assets/pathfinders/corp-logo-habitat-marte.png",
-    aurorai: "/assets/pathfinders/corp-logo-aurorai.png",
-    "bio-sol": "/assets/pathfinders/corp-logo-bio-sol.png",
-    chimera: "/assets/pathfinders/corp-logo-chimera.png",
-    ambient: "/assets/pathfinders/corp-logo-ambient.png",
-    odyssey: "/assets/pathfinders/corp-logo-odyssey.png",
-    steelaris: "/assets/pathfinders/corp-logo-steelaris.png",
-    soylent: "/assets/pathfinders/corp-logo-soylent.png",
-    ringcom: "/assets/pathfinders/corp-logo-ringcom.png",
-    "mind-set-mars": "/assets/pathfinders/corp-logo-mind-set-mars.png",
-  };
-
-  const getCorpLogo = (corporationId?: string) => {
-    if (!corporationId) return "/assets/pathfinders/corp-logo-polaris.png"; // Default
-    return corporationLogos[corporationId] || "/assets/pathfinders/corp-logo-polaris.png";
-  };
-
   const playersToShow = players.length > 0 ? players : [];
 
   return (
@@ -36,7 +16,6 @@ const PlayerOverlay: React.FC<PlayerOverlayProps> = ({ players, currentPlayer })
         {playersToShow.map((player, index) => {
           const isCurrentPlayer = player.id === currentPlayer?.id;
           const playerColor = player.color || "#6496ff";
-          const corpLogo = getCorpLogo(player.corporation?.id);
           const isPassed = player.passed || false;
 
           return (
@@ -64,11 +43,8 @@ const PlayerOverlay: React.FC<PlayerOverlayProps> = ({ players, currentPlayer })
             >
               <div className="flex items-center gap-3 relative">
                 <div className="flex-shrink-0">
-                  <img
-                    src={corpLogo}
-                    alt={`${player.corporation?.name || "Unknown"} Corporation`}
-                    className="w-8 h-8 rounded-md object-cover border border-white/20 transition-all duration-200 hover:border-white/40 hover:scale-105"
-                  />
+                  {player.corporation &&
+                    getCorporationLogo(player.corporation.name, "w-16 h-8 rounded-md", "64px")}
                 </div>
 
                 <div className="flex flex-col items-start flex-1">

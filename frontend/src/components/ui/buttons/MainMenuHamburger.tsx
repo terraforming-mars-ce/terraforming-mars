@@ -66,7 +66,8 @@ const MainMenuHamburger: React.FC<MainMenuHamburgerProps> = ({
     >
       <GameButton
         ref={buttonRef}
-        buttonType="secondary"
+        aria-label="Menu"
+        emphasis="secondary"
         size="sm"
         onClick={() => setMenuOpen(!menuOpen)}
         className="p-2.5"
@@ -87,6 +88,7 @@ const MainMenuHamburger: React.FC<MainMenuHamburgerProps> = ({
       </GameButton>
 
       <GamePopover
+        className="game-popover-list"
         isVisible={menuOpen}
         onClose={() => setMenuOpen(false)}
         position={{ type: "anchor", anchorRef: buttonRef, placement: "below" }}

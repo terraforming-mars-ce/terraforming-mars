@@ -25,6 +25,9 @@ help:
 	@echo "  make typecheck         - Run TypeScript type checking"
 	@echo "  make format            - Format all code (Go + TypeScript)"
 	@echo "  make generate          - Generate TypeScript types from Go structs"
+	@echo "  make assets            - Generate runtime media from approved originals"
+	@echo "  make assets-check      - Validate asset sources and generated outputs"
+	@echo "  make assets-preview    - Generate the asset review gallery"
 	@echo "  make prepare-for-commit- Format and lint before committing"
 	@echo ""
 	@echo "🏗️  Build & Deploy:"
@@ -33,7 +36,7 @@ help:
 	@echo ""
 
 # Main development commands
-run:
+run: assets
 	@echo "🚀 Starting Terraforming Mars (frontend + backend with hot reload)..."
 	@echo "   Frontend: http://localhost:3000"
 	@echo "   Backend:  http://localhost:3001"
@@ -44,7 +47,7 @@ run:
 		(cd frontend && bun start) & \
 		wait
 
-frontend:
+frontend: assets
 	@echo "🎨 Starting frontend development server..."
 	cd frontend && bun start
 
@@ -132,7 +135,7 @@ format-check:
 	@echo "✅ All code is properly formatted"
 
 # Pre-commit preparation
-prepare-for-commit: format lint typecheck test
+prepare-for-commit: format lint typecheck test assets-test assets-check
 	@echo "✅ Ready to commit"
 
 # Build and deployment
@@ -143,7 +146,7 @@ build-backend:
 	cd backend && go build -o bin/server cmd/server/main.go
 	@echo "✅ Backend binary: backend/bin/server"
 
-build-frontend:
+build-frontend: assets
 	@echo "🏗️  Building frontend for production..."
 	cd frontend && bun run build
 	@echo "✅ Frontend build: frontend/build/"
@@ -167,6 +170,7 @@ dev-setup:
 	go install github.com/air-verse/air@latest
 	cd backend && go mod tidy
 	cd frontend && bun install
+	$(MAKE) assets
 	@echo "✅ Development setup complete"
 
 # Type generation
@@ -205,3 +209,15 @@ bot-run:
 test-watch:
 	@echo "👀 Watching for Go file changes and running tests..."
 	cd backend && find . -name "*.go" | entr -c make test
+.PHONY: assets assets-check assets-preview assets-test
+assets:
+	cd frontend && bun run assets
+
+assets-check: assets
+	cd frontend && bun run assets:check
+
+assets-preview: assets
+	cd frontend && bun run assets:preview
+
+assets-test:
+	cd frontend && bun run assets:test

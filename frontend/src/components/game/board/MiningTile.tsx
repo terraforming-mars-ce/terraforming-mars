@@ -453,8 +453,6 @@ export default function MiningTile({
 
       {showDust && surfaceNormal && worldPosition && (
         <DustEffect
-          position={worldPosition}
-          normal={surfaceNormal}
           duration={2500}
           particleColor={new THREE.Color(0.45, 0.3, 0.15)}
           onComplete={() => setShowDust(false)}

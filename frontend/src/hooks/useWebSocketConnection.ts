@@ -15,9 +15,9 @@ import type {
   GameDto,
   FullStatePayload,
   PlayerDisconnectedPayload,
-  StateDiffDto,
+  LogUpdatePayload,
 } from "@/types/generated/api-types.ts";
-import { GamePhaseAction, GamePhaseInitApplyCorp } from "@/types/generated/api-types.ts";
+import { GamePhaseAction } from "@/types/generated/api-types.ts";
 import type { GameEvent } from "@/hooks/useGameEvent.ts";
 import type { PlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 
@@ -39,7 +39,6 @@ export function useWebSocketConnection(
 ): { attemptReconnection: () => Promise<void> } {
   const isWebSocketInitialized = useRef(false);
   const previousGameRef = useRef<GameDto | null>(null);
-  const hasReceivedInitialLogs = useRef(false);
 
   const {
     playTemperatureSound,
@@ -47,6 +46,7 @@ export function useWebSocketConnection(
     playVenusSound,
     playYourTurnSound,
     playAwardFundedSound,
+    playCardPlayedSound,
   } = useSoundEffects();
 
   const attemptReconnection = async () => {
@@ -243,15 +243,6 @@ export function useWebSocketConnection(
         const notificationCount = updatedGame.triggeredEffects.length;
         notificationQueueDoneAt.current = Date.now() + notificationCount * 2500;
         setTimeout(() => useGameStore.getState().setTriggeredEffects([]), 100);
-
-        if (updatedGame.currentPhase === GamePhaseInitApplyCorp) {
-          const hasMyEffect = updatedGame.triggeredEffects.some(
-            (e) => e.playerId === updatedGame.currentPlayer?.id,
-          );
-          if (hasMyEffect) {
-            store.setShowCorp(true);
-          }
-        }
       }
 
       const store = useGameStore.getState();
@@ -280,9 +271,8 @@ export function useWebSocketConnection(
       }
     };
 
-    const handleLogUpdate = (logs: StateDiffDto[]) => {
-      if (!hasReceivedInitialLogs.current) {
-        hasReceivedInitialLogs.current = true;
+    const handleLogUpdate = ({ logs, isHistory }: LogUpdatePayload) => {
+      if (isHistory) {
         return;
       }
       const store = useGameStore.getState();
@@ -316,6 +306,9 @@ export function useWebSocketConnection(
         }
 
         const isMe = log.playerId === myPlayerId;
+        if (isMe) {
+          void playCardPlayedSound();
+        }
         const player = isMe
           ? latestGame.currentPlayer
           : latestGame.otherPlayers?.find((p) => p.id === log.playerId);

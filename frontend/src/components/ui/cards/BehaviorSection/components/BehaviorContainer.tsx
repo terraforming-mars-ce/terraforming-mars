@@ -31,6 +31,7 @@ const DescriptionPortal: React.FC<{
 
   return createPortal(
     <div
+      role="tooltip"
       className="fixed w-[184px] max-md:w-[148px] -translate-x-1/2 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
       style={{ left: pos.x, top: pos.y, zIndex: Z_INDEX.LOADING_OVERLAY }}
     >
@@ -89,8 +90,8 @@ const BehaviorContainer: React.FC<BehaviorContainerProps> = ({
         ref={containerRef}
         key={index}
         className={`relative flex items-center justify-center my-px p-[3px] min-h-8 max-md:p-px max-md:my-px ${isHovered ? "z-10" : ""}`}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        onMouseEnter={onHover ? handleMouseEnter : undefined}
+        onMouseLeave={onHover ? handleMouseLeave : undefined}
       >
         {children}
         {isHovered && description && (
@@ -130,8 +131,8 @@ const BehaviorContainer: React.FC<BehaviorContainerProps> = ({
         ref={containerRef}
         key={index}
         className={`relative rounded-[3px] px-2 py-1 min-h-8 my-px border border-white/10 backdrop-blur-[2px] flex items-center ${widthClass} ${typeStyles[type] || ""} max-md:px-1.5 max-md:py-[3px] max-md:min-h-7 max-md:my-px ${isHovered ? "z-10" : ""}`}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        onMouseEnter={onHover ? handleMouseEnter : undefined}
+        onMouseLeave={onHover ? handleMouseLeave : undefined}
       >
         <div className="flex items-center gap-1.5 flex-nowrap w-full justify-center max-md:gap-1">
           {children}

@@ -12,6 +12,7 @@ import (
 func ToCardDto(card gamecards.Card) CardDto {
 	return CardDto{
 		ID:                 card.ID,
+		Style:              toCardStyleDto(card.Style),
 		Name:               card.Name,
 		Type:               CardType(card.Type),
 		Cost:               card.Cost,
@@ -372,4 +373,39 @@ func toVPConditionDto(vp gamecards.VictoryPointCondition) VPConditionDto {
 
 func toVPPerConditionDto(pc shared.PerCondition) PerConditionDto {
 	return toPerConditionDto(pc)
+}
+
+func toCardStyleDto(style *shared.CardStyle) *CardStyleDto {
+	if style == nil {
+		return nil
+	}
+	return &CardStyleDto{Tile: toCityStyleDto(style.Tile)}
+}
+func toCityStyleDto(style *shared.CityStyleRequest) *CityStyleRequestDto {
+	if style == nil {
+		return nil
+	}
+	return &CityStyleRequestDto{
+		Plan:          style.Plan,
+		Density:       style.Density,
+		Heights:       style.Heights,
+		Ground:        style.Ground,
+		Exposure:      style.Exposure,
+		Perimeter:     style.Perimeter,
+		Cover:         style.Cover,
+		Landmark:      style.Landmark,
+		Connections:   style.Connections,
+		Landscaping:   style.Landscaping,
+		Lighting:      style.Lighting,
+		PerimeterRoad: style.PerimeterRoad,
+		EntranceMin:   style.EntranceMin,
+		EntranceMax:   style.EntranceMax,
+		Details:       style.Details,
+	}
+}
+func toTileVisualDto(visual *shared.TileVisual) *TileVisualDto {
+	if visual == nil {
+		return nil
+	}
+	return &TileVisualDto{Seed: visual.Seed, City: toCityStyleDto(visual.City)}
 }

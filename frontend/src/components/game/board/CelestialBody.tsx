@@ -1,9 +1,11 @@
+import { sphereRaycast } from "../../../utils/sphereRaycast";
 import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTextures } from "../../../hooks/useTextures";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 import CelestialTileGrid from "./CelestialTileGrid";
+import PlanetAtmosphere from "./PlanetAtmosphere";
 import { GameDto } from "../../../types/generated/api-types";
 import type { PlanetConfig, MoonConfig } from "./solarSystemConfig";
 import { getPlanetOrbitalPosition } from "./solarSystemConfig";
@@ -40,14 +42,14 @@ function MoonSphere({
     ? (textures as unknown as Record<string, THREE.Texture>)[moon.textureKey]
     : undefined;
 
-  const geometry = useMemo(() => new THREE.SphereGeometry(moon.radius, 32, 16), [moon.radius]);
+  const geometry = useMemo(() => new THREE.SphereGeometry(moon.radius, 96, 64), [moon.radius]);
 
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
         map: texture,
         roughness: 0.9,
-        metalness: 0.05,
+        metalness: 0,
         fog: false,
       }),
     [texture],
@@ -55,7 +57,8 @@ function MoonSphere({
 
   return (
     <group ref={moonGroupRef} position={[moon.position[0], moon.position[1], moon.position[2]]}>
-      <mesh geometry={geometry} material={material} />
+      <mesh geometry={geometry} raycast={sphereRaycast} material={material} />
+      <PlanetAtmosphere radius={moon.radius} profile={moon.atmosphere} />
       {moon.tileLocation && (
         <CelestialTileGrid
           gameState={gameState}
@@ -113,21 +116,16 @@ export default function CelestialBody({ config, gameState, onHexClick }: Celesti
     ? (textures as unknown as Record<string, THREE.Texture>)[config.cloudTextureKey]
     : undefined;
 
-  const geometry = useMemo(() => new THREE.SphereGeometry(config.radius, 64, 32), [config.radius]);
+  const geometry = useMemo(() => new THREE.SphereGeometry(config.radius, 96, 64), [config.radius]);
 
   const material = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
-        map: texture,
-        roughness: 0.8,
-        metalness: 0.05,
-        fog: false,
-      }),
+      new THREE.MeshStandardMaterial({ map: texture, roughness: 0.8, metalness: 0, fog: false }),
     [texture],
   );
 
   const cloudGeometry = useMemo(
-    () => (cloudTexture ? new THREE.SphereGeometry(config.radius * 1.005, 64, 32) : undefined),
+    () => (cloudTexture ? new THREE.SphereGeometry(config.radius * 1.005, 96, 64) : undefined),
     [cloudTexture, config.radius],
   );
 
@@ -159,6 +157,7 @@ export default function CelestialBody({ config, gameState, onHexClick }: Celesti
     <group ref={groupRef}>
       <mesh
         geometry={geometry}
+        raycast={sphereRaycast}
         material={material}
         onPointerOver={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
@@ -167,6 +166,7 @@ export default function CelestialBody({ config, gameState, onHexClick }: Celesti
       {!isActive && (
         <mesh
           geometry={hitGeometry}
+          raycast={sphereRaycast}
           visible={false}
           onPointerEnter={(e) => {
             if (e.intersections[0]?.object !== e.object) {
@@ -191,6 +191,8 @@ export default function CelestialBody({ config, gameState, onHexClick }: Celesti
       {cloudGeometry && cloudMaterial && (
         <mesh ref={cloudRef} geometry={cloudGeometry} material={cloudMaterial} />
       )}
+
+      <PlanetAtmosphere radius={config.radius} profile={config.atmosphere} />
 
       {isActive && hasTiles && (
         <CelestialTileGrid

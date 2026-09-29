@@ -17,6 +17,7 @@ const (
 
 // Card represents a game card
 type Card struct {
+	Style           *shared.CardStyle       `json:"style,omitempty"`
 	ID              string                  `json:"id"`
 	Name            string                  `json:"name"`
 	Type            CardType                `json:"type"`
@@ -102,6 +103,7 @@ func (c Card) DeepCopy() Card {
 
 	return Card{
 		ID:                 c.ID,
+		Style:              c.Style.Clone(),
 		Name:               c.Name,
 		Type:               c.Type,
 		Cost:               c.Cost,

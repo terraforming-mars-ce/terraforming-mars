@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useMemo, useState } from "react";
 import {
   GameDto,
@@ -147,7 +148,8 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
 
   const toggleButton = (
     <div className="flex rounded overflow-hidden border border-white/20">
-      <button
+      <GameButton
+        emphasis="quiet"
         className={`px-3 py-1 text-[11px] font-orbitron font-bold transition-colors cursor-pointer ${
           mode === "trade"
             ? "bg-white/20 text-white"
@@ -156,8 +158,9 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
         onClick={() => setMode("trade")}
       >
         Trade
-      </button>
-      <button
+      </GameButton>
+      <GameButton
+        emphasis="quiet"
         className={`px-3 py-1 text-[11px] font-orbitron font-bold transition-colors cursor-pointer ${
           mode === "build"
             ? "bg-white/20 text-white"
@@ -166,7 +169,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
         onClick={() => setMode("build")}
       >
         Build
-      </button>
+      </GameButton>
     </div>
   );
 
@@ -201,7 +204,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
         width={560}
         maxHeight="80vh"
         animation="slideDown"
-        className="!bg-space-black-darker"
+        className="game-popover-list !bg-space-black-darker"
       >
         {/* Player trade fleets */}
         {gameState?.tradeFleets && (
@@ -229,7 +232,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
           </div>
         )}
 
-        <div className="p-2 space-y-2">
+        <div className="popover-list popover-list-headed p-2 space-y-2">
           {colonies.map((colony) => (
             <ColonyCard
               key={colony.id}
@@ -323,7 +326,11 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
   }, [markerOutput, viewerColonyCount, colony.colonyBonus]);
 
   return (
-    <GamePopoverItem state={dimmed ? "disabled" : "available"} borderColor={colony.style.color}>
+    <GamePopoverItem
+      state={dimmed ? "disabled" : "available"}
+      borderColor={colony.style.color}
+      className="popover-list-item"
+    >
       {/* Header: name, traded chip, action button */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -341,8 +348,9 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
         {canAct && (
           <div>
             {mode === "trade" ? (
-              <button
-                className={`px-3 py-1 rounded text-xs font-semibold font-orbitron transition-all cursor-pointer ${
+              <GameButton
+                emphasis="quiet"
+                className={`px-3 py-1 rounded-none text-xs font-semibold font-orbitron transition-all cursor-pointer ${
                   canTrade
                     ? "bg-white/15 hover:bg-white/25 text-white"
                     : "bg-gray-600/30 text-gray-500"
@@ -354,10 +362,11 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
                 disabled={!canTrade}
               >
                 Trade
-              </button>
+              </GameButton>
             ) : (
-              <button
-                className={`px-3 py-1 rounded text-xs font-semibold font-orbitron transition-all cursor-pointer ${
+              <GameButton
+                emphasis="quiet"
+                className={`px-3 py-1 rounded-none text-xs font-semibold font-orbitron transition-all cursor-pointer ${
                   canBuild
                     ? "bg-white/15 hover:bg-white/25 text-white"
                     : "bg-gray-600/30 text-gray-500"
@@ -369,7 +378,7 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
                 disabled={!canBuild}
               >
                 Build
-              </button>
+              </GameButton>
             )}
           </div>
         )}
@@ -499,7 +508,8 @@ const TradePaymentSelector: React.FC<TradePaymentSelectorProps> = ({
       {options.map((opt) => {
         const isSelected = selected === opt.type;
         return (
-          <button
+          <GameButton
+            emphasis="quiet"
             key={opt.type}
             className={`flex items-center px-1.5 py-0.5 transition-colors cursor-pointer ${
               isSelected
@@ -515,7 +525,7 @@ const TradePaymentSelector: React.FC<TradePaymentSelectorProps> = ({
               amount={opt.type === "credits" ? "X" : undefined}
               size="small"
             />
-          </button>
+          </GameButton>
         );
       })}
     </div>

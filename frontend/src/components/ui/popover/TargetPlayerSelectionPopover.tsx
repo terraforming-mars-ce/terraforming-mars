@@ -130,14 +130,13 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
               <div
                 key={player.id}
                 className="
-                  bg-black/30
-                  border-2 border-space-blue-500/40
-                  rounded-[10px] px-3.5 py-3
+                  game-panel game-panel-clipped game-choice
+                    px-3.5 py-3
                   mb-2
                   transition-all duration-[250ms] ease-out
                   animate-choiceSlideIn
                   flex items-center justify-between gap-3
-                  cursor-pointer hover:border-space-blue-500/80 hover:bg-black/50 hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]
+                  cursor-pointer hover:brightness-125
                 "
                 style={{ animationDelay: `${delay}s` }}
                 onClick={() => onPlayerSelect(player.id)}
@@ -156,26 +155,21 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
         <GameFlowFooter className="gap-3">
           {hasNoTargets ? (
             <>
-              <GameButton
-                buttonType="primary"
-                variant="warn"
-                size="sm"
-                onClick={handleContinueAnyway}
-              >
+              <GameButton emphasis="primary" tone="warn" size="sm" onClick={handleContinueAnyway}>
                 Continue Anyway
               </GameButton>
-              <GameButton buttonType="secondary" variant="info" size="sm" onClick={onCancel}>
+              <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
                 Cancel
               </GameButton>
             </>
           ) : (
             <>
               {onlySelfEligible && (
-                <GameButton buttonType="primary" variant="warn" size="sm" onClick={handleSkip}>
+                <GameButton emphasis="primary" tone="warn" size="sm" onClick={handleSkip}>
                   Skip
                 </GameButton>
               )}
-              <GameButton buttonType="secondary" variant="info" size="sm" onClick={onCancel}>
+              <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
                 Cancel
               </GameButton>
             </>

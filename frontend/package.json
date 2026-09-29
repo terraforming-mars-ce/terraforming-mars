@@ -4,51 +4,49 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "start": "vite",
-    "build": "vite build",
+    "dev": "bun run assets && vite",
+    "start": "bun run assets && vite",
+    "build": "bun run assets && vite build",
     "preview": "vite preview",
-    "lint": "oxlint src",
-    "typecheck": "tsc --noEmit",
-    "format": "oxfmt --check src",
-    "format:write": "oxfmt --write src"
+    "lint": "oxlint src scripts/assets --ignore-pattern src/assets/generated",
+    "typecheck": "bun run assets && tsc --noEmit && tsc -p scripts/assets/tsconfig.json",
+    "format": "oxfmt --check src scripts/assets --ignore-path .prettierignore",
+    "format:write": "oxfmt --write src scripts/assets --ignore-path .prettierignore",
+    "assets": "node scripts/assets/build.ts",
+    "assets:check": "node scripts/assets/check.ts",
+    "assets:preview": "node scripts/assets/preview.ts",
+    "assets:test": "bun test scripts/assets",
+    "verify:landscape": "bun scripts/landscape/verify.ts"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.4",
-    "@react-three/fiber": "^9.3.0",
-    "@types/three": "^0.179.0",
-    "@types/uuid": "^10.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.1",
-    "express": "^5.1.0",
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
+    "@tanstack/react-virtual": "^3.14.13",
+    "@types/three": "^0.186.0",
     "html2canvas": "^1.4.1",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.8.2",
-    "recharts": "^3.8.0",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1",
-    "three": "^0.179.1",
-    "uuid": "^11.1.0",
-    "web-vitals": "^2.1.4",
-    "zustand": "^5.0.11"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router-dom": "^7.18.4",
+    "recharts": "^3.10.1",
+    "three": "^0.186.1",
+    "uuid": "^14.0.2",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@gltf-transform/cli": "^4.3.0",
-    "@tailwindcss/postcss": "^4.1.14",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^4.17.23",
-    "@types/node": "^24.3.0",
-    "@types/react": "^19.1.12",
-    "@types/react-dom": "^19.1.9",
-    "@vitejs/plugin-react": "^5.0.2",
-    "autoprefixer": "^10.4.21",
-    "oxfmt": "^0.18.0",
-    "oxlint": "^1.28.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.13",
-    "typescript": "^5.9.2",
-    "vite": "^7.1.4"
+    "@gltf-transform/cli": "^4.5.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/bun": "1.4.2",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "postcss": "^8.5.28",
+    "sharp": "0.35.5",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1"
   },
   "browserslist": {
     "production": [
@@ -61,5 +59,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "engines": {
+    "node": ">=26.10.0",
+    "bun": ">=1.4.2"
+  },
+  "packageManager": "bun@1.4.2"
 }

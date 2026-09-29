@@ -372,7 +372,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
           <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 
           <div className="relative z-[1]">
-            <div className="max-w-[1050px] min-w-[850px] flex flex-col bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_60px_rgba(30,60,150,0.5)]">
+            <div className="max-w-[1050px] min-w-[850px] flex flex-col game-panel game-panel-clipped game-window overflow-hidden">
               <div className={OVERLAY_HEADER_CLASS}>
                 <h2 className={`${OVERLAY_TITLE_CLASS} text-center`}>Production</h2>
                 <p className="mt-2 mb-0 text-base text-white/60 text-center">
@@ -385,13 +385,10 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
                   {modalProductionData.playersData.map((player, index) => (
                     <GameButton
                       key={player.playerId}
-                      buttonType="secondary"
+                      emphasis="secondary"
                       size="sm"
-                      className={
-                        index === currentPlayerIndex
-                          ? "!bg-space-blue-400/20 !border-space-blue-400 !text-white shadow-[0_0_15px_rgba(30,60,150,0.4)]"
-                          : "!opacity-60"
-                      }
+                      selected={index === currentPlayerIndex}
+                      className={index === currentPlayerIndex ? "" : "opacity-60"}
                       onClick={() => handlePlayerSelect(index)}
                     >
                       <span
@@ -412,7 +409,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
             {!hasSubmittedCardSelection && !showCardSelection && (
               <div className="absolute left-full top-1/2 -translate-y-1/2 ml-5">
                 <GameButton
-                  buttonType="secondary"
+                  emphasis="secondary"
                   size="lg"
                   onClick={handleNextClick}
                   className="whitespace-nowrap"

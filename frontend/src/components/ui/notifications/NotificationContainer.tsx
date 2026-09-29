@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import { useLocation } from "react-router-dom";
 import { useNotifications } from "@/contexts/NotificationContext.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -80,9 +81,10 @@ export default function NotificationContainer() {
             </svg>
           )}
           <span className="text-sm font-medium">{notification.message}</span>
-          <button
+          <GameButton
+            emphasis="quiet"
             onClick={() => dismissNotification(notification.id)}
-            className="ml-2 p-1 rounded hover:bg-white/10 transition-colors"
+            className="ml-2 p-1 rounded-none hover:bg-white/10 transition-colors"
             aria-label="Dismiss notification"
           >
             <svg
@@ -97,7 +99,7 @@ export default function NotificationContainer() {
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
-          </button>
+          </GameButton>
         </div>
       ))}
     </div>

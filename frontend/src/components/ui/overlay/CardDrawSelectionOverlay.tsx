@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import GameCard from "../cards/GameCard.tsx";
+import CardChoice from "../cards/CardChoice.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import {
   PendingCardDrawSelectionDto,
@@ -203,7 +203,7 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
             </div>
             {!isCardDraw && (
               <GameButton
-                buttonType="secondary"
+                emphasis="secondary"
                 size="sm"
                 onClick={() => setShowPlayability((prev) => !prev)}
               >
@@ -221,7 +221,7 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
 
               return (
                 <div key={card.id} className="relative">
-                  <GameCard
+                  <CardChoice
                     card={card}
                     isSelected={isSelected}
                     onSelect={handleCardSelect}

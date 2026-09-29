@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import CorporationCard from "../cards/CorporationCard.tsx";
-import GameCard from "../cards/GameCard.tsx";
+import CardChoice from "../cards/CardChoice.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { CardDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
@@ -101,13 +101,6 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
     minCards: 0,
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedCorporationId(null);
-      setSelectedPreludeIds([]);
-    }
-  }, [isOpen]);
-
   const handlePreludeSelect = useCallback(
     (cardId: string) => {
       setSelectedPreludeIds((prev) => {
@@ -128,14 +121,18 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
   const allValid = !!selectedCorporationId && preludesValid && isValidCardSelection;
 
   const handleConfirm = () => {
-    if (!selectedCorporationId) return;
+    if (!selectedCorporationId) {
+      return;
+    }
 
     handleCardConfirm((cardIds) => {
       onConfirm(selectedCorporationId, selectedPreludeIds, cardIds);
     });
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div
@@ -158,7 +155,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
               <h3 className="text-white/60 text-sm font-orbitron font-bold uppercase tracking-widest mb-4">
                 Corporation
               </h3>
-              <div className="flex gap-4 justify-center flex-wrap">
+              <div className="flex gap-8 justify-center flex-wrap">
                 {availableCorporations.map((corp) => (
                   <div key={corp.id} className="w-[400px] max-[768px]:w-full">
                     <CorporationCard
@@ -185,10 +182,14 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
                 </h3>
                 <div className="flex gap-6 justify-center flex-wrap max-[768px]:gap-4">
                   {availablePreludes.map((card, index) => (
-                    <GameCard
+                    <CardChoice
                       key={card.id}
                       card={card}
                       isSelected={selectedPreludeIds.includes(card.id)}
+                      disabled={
+                        selectedPreludeIds.length >= maxSelectablePreludes &&
+                        !selectedPreludeIds.includes(card.id)
+                      }
                       onSelect={handlePreludeSelect}
                       animationDelay={index * 100}
                       showCheckbox={true}
@@ -215,7 +216,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
                 const isSelected = selectedCardIds.includes(card.id);
 
                 return (
-                  <GameCard
+                  <CardChoice
                     key={card.id}
                     card={card}
                     isSelected={isSelected}
@@ -253,7 +254,7 @@ const StartingCardSelectionOverlay: React.FC<StartingCardSelectionOverlayProps> 
 
           <div className="flex items-center gap-4 max-[768px]:w-full max-[768px]:flex-col max-[768px]:gap-3">
             {onHide && (
-              <GameButton buttonType="secondary" size="lg" onClick={onHide}>
+              <GameButton emphasis="secondary" size="lg" onClick={onHide}>
                 Hide
               </GameButton>
             )}

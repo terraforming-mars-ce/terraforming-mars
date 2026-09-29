@@ -1,16 +1,23 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { skyboxCache } from "../../../services/SkyboxCache.ts";
 import { useWorld3DSettings, SKYBOX_OPTIONS } from "../../../contexts/World3DSettingsContext.tsx";
+import skyboxVertex from "../board/shaders/skybox.vert.glsl?raw";
+import skyboxFragment from "../board/shaders/skybox.frag.glsl?raw";
 
 interface SkyboxLoaderProps {
   onReady?: () => void;
 }
 
 export default function SkyboxLoader({ onReady }: SkyboxLoaderProps) {
-  const { scene } = useThree();
+  const { scene, invalidate } = useThree();
   const { settings } = useWorld3DSettings();
+  const [texture, setTexture] = useState<THREE.Texture | null>(null);
+  const uniforms = useMemo(
+    () => ({ uSky: { value: texture }, uBrightness: { value: 0.35 } }),
+    [texture],
+  );
 
   const skyboxPath =
     SKYBOX_OPTIONS.find((o) => o.id === settings.skyboxId)?.path ?? SKYBOX_OPTIONS[0].path;
@@ -20,15 +27,13 @@ export default function SkyboxLoader({ onReady }: SkyboxLoaderProps) {
 
     skyboxCache
       .loadSkybox(skyboxPath)
-      .then((texture) => {
+      .then((loadedTexture) => {
         if (cancelled) {
           return;
         }
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        texture.colorSpace = THREE.LinearSRGBColorSpace;
-        scene.background = texture;
-        scene.environment = texture;
-        onReady?.();
+        loadedTexture.mapping = THREE.EquirectangularReflectionMapping;
+        loadedTexture.colorSpace = THREE.LinearSRGBColorSpace;
+        setTexture(loadedTexture);
       })
       .catch((error) => {
         console.error("Failed to load skybox:", error);
@@ -36,14 +41,44 @@ export default function SkyboxLoader({ onReady }: SkyboxLoaderProps) {
 
     return () => {
       cancelled = true;
-      scene.background = null;
-      scene.environment = null;
     };
-  }, [scene, onReady, skyboxPath]);
+  }, [skyboxPath]);
 
   useEffect(() => {
-    scene.backgroundIntensity = settings.skyboxBrightness;
-  }, [scene, settings.skyboxBrightness]);
+    if (!texture) {
+      return;
+    }
+    scene.environment = texture;
+    onReady?.();
+    invalidate();
+    return () => {
+      if (scene.environment === texture) {
+        scene.environment = null;
+      }
+    };
+  }, [scene, texture, onReady, invalidate]);
 
-  return null;
+  useLayoutEffect(() => {
+    uniforms.uBrightness.value = settings.skyboxBrightness;
+    invalidate();
+  }, [uniforms, settings.skyboxBrightness, invalidate]);
+
+  if (!texture) {
+    return null;
+  }
+
+  return (
+    <mesh frustumCulled={false} renderOrder={-1000} raycast={() => {}}>
+      <sphereGeometry args={[1, 32, 16]} />
+      <shaderMaterial
+        vertexShader={skyboxVertex}
+        fragmentShader={skyboxFragment}
+        uniforms={uniforms}
+        side={THREE.BackSide}
+        depthTest={false}
+        depthWrite={false}
+        fog={false}
+      />
+    </mesh>
+  );
 }

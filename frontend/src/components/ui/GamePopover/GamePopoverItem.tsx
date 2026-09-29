@@ -1,6 +1,7 @@
 import React from "react";
 import { GamePopoverItemProps } from "./types";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 
 const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   state,
@@ -9,7 +10,6 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   warning,
   info,
   statusBadge,
-  hoverEffect = "background",
   animationDelay = 0,
   children,
   className = "",
@@ -18,6 +18,23 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
 }) => {
   const { playButtonHoverSound, playButtonClickSound } = useSoundEffects();
   const isClickable = state === "available" && onClick;
+  const hasError = error && state === "disabled";
+  const contentLayout = borderColor ? "" : "flex items-center gap-3";
+  let surfaceOpacity = 0.2;
+  let borderOpacity = 0.3;
+  if (state === "disabled") {
+    surfaceOpacity = 0.1;
+    borderOpacity = 0.15;
+  } else if (state === "claimed") {
+    surfaceOpacity = 0.3;
+    borderOpacity = 1;
+  }
+  const itemBorder = borderColor
+    ? borderColor + "60"
+    : `rgba(var(--popover-accent-rgb),${borderOpacity})`;
+  const itemSurface = borderColor
+    ? "#050506"
+    : `linear-gradient(rgba(var(--popover-accent-rgb),${surfaceOpacity}), rgba(var(--popover-accent-rgb),${surfaceOpacity})), #050506`;
 
   const handleClick = () => {
     if (isClickable) {
@@ -36,15 +53,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
     switch (state) {
       case "available":
         return `border-[rgba(var(--popover-accent-rgb),0.3)] bg-[rgba(var(--popover-accent-rgb),0.2)] ${
-          isClickable
-            ? `cursor-pointer ${
-                hoverEffect === "translate-x"
-                  ? "hover:translate-x-1 hover:shadow-[0_4px_15px_rgba(var(--popover-accent-rgb),0.4)]"
-                  : hoverEffect === "glow"
-                    ? "hover:shadow-[0_4px_15px_rgba(var(--popover-accent-rgb),0.4)]"
-                    : ""
-              } hover:border-[var(--popover-accent)] hover:bg-[rgba(var(--popover-accent-rgb),0.3)]`
-            : "cursor-default"
+          isClickable ? "cursor-pointer hover:brightness-125" : "cursor-default"
         }`;
       case "disabled":
         return "border-[rgba(var(--popover-accent-rgb),0.15)] bg-[rgba(var(--popover-accent-rgb),0.1)] opacity-60 cursor-default";
@@ -57,28 +66,43 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
 
   return (
     <div
-      className={`relative ${borderColor ? "" : "flex items-center gap-3"} py-2.5 px-[15px] rounded-lg border transition-all duration-200 animate-[itemSlideIn_0.4s_ease-out_both] max-[768px]:py-2 max-[768px]:px-3 ${getStateClasses()} ${className}`}
+      className={`relative ${contentLayout} py-2.5 px-[15px] rounded-none border transition-all duration-200 animate-[itemSlideIn_0.4s_ease-out_both] max-[768px]:py-2 max-[768px]:px-3 ${getStateClasses()} ${className}`}
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (
+          event.target === event.currentTarget &&
+          (event.key === "Enter" || event.key === " ") &&
+          isClickable
+        ) {
+          event.preventDefault();
+          handleClick();
+        }
+      }}
       onClick={isClickable ? handleClick : undefined}
       onMouseEnter={isClickable ? () => void playButtonHoverSound() : undefined}
-      style={{
-        animationDelay: `${animationDelay}s`,
-        ...(borderColor ? { borderColor: borderColor + "60" } : {}),
-        ...externalStyle,
-      }}
+      style={
+        {
+          animationDelay: `${animationDelay}s`,
+          ...(borderColor ? { borderColor: borderColor + "60" } : {}),
+          "--item-border": externalStyle?.borderColor ?? itemBorder,
+          "--item-surface": externalStyle?.background ?? itemSurface,
+          ...externalStyle,
+        } as React.CSSProperties
+      }
     >
-      {error && state === "disabled" && (
-        <div className="absolute top-2 right-2 z-[4] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(231,76,60,0.8)] shadow-[0_2px_8px_rgba(231,76,60,0.4)] flex items-center gap-1">
-          <span>⚠</span>
-          <span>
-            {error.message}
-            {error.count && error.count > 1 && ` (+${error.count - 1})`}
-          </span>
-        </div>
+      {hasError && (
+        <span
+          className="popover-status popover-status-error absolute top-2 right-2 pointer-events-none"
+          style={{ zIndex: Z_INDEX.UI_BASE }}
+        >
+          {error.message}
+          {error.count && error.count > 1 && ` (+${error.count - 1})`}
+        </span>
       )}
 
       {warning && state === "available" && (
         <div className="absolute top-2 right-2 z-[4] bg-[linear-gradient(135deg,#f39c12,#e67e22)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(243,156,18,0.8)] shadow-[0_2px_8px_rgba(243,156,18,0.4)] flex items-center gap-1">
-          <span>⚠</span>
           <span>{warning.message}</span>
         </div>
       )}
@@ -90,7 +114,10 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
       )}
 
       {statusBadge && (
-        <span className="absolute top-2 right-2 text-[10px] text-[var(--popover-accent)] bg-[rgba(var(--popover-accent-rgb),0.3)] px-1.5 py-0.5 rounded border border-[rgba(var(--popover-accent-rgb),0.5)]">
+        <span
+          className="popover-status absolute top-2 right-2 pointer-events-none"
+          style={{ zIndex: Z_INDEX.UI_BASE }}
+        >
           {statusBadge}
         </span>
       )}

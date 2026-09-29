@@ -1,8 +1,11 @@
+import CloseButton from "@/components/ui/buttons/CloseButton.tsx";
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import BackButton from "../buttons/BackButton.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface GameMenuModalProps {
+  layout?: "dialog" | "lobby";
   title: string;
   subtitle?: string;
   children: React.ReactNode;
@@ -16,6 +19,7 @@ interface GameMenuModalProps {
 }
 
 const GameMenuModal: React.FC<GameMenuModalProps> = ({
+  layout = "dialog",
   title,
   subtitle,
   children,
@@ -23,7 +27,7 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
   visible,
   onExited,
   showBackdrop = false,
-  zIndex = 1000,
+  zIndex = Z_INDEX.MENU_DROPDOWN,
   onClose,
   showCloseButton = false,
 }) => {
@@ -50,7 +54,7 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
     if (animState === "exiting") onExited?.();
   };
 
-  return (
+  const content = (
     <>
       <style>{`
         @keyframes modalFadeIn {
@@ -79,6 +83,7 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
 
       {showBackdrop && (
         <div
+          data-overlay-layer
           className={`fixed inset-0 bg-black/60 backdrop-blur-sm ${
             animState === "exiting"
               ? "animate-[backdropFadeOut_0.2s_ease-out_forwards]"
@@ -95,18 +100,16 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
         </div>
       )}
       <div
-        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] max-w-[90vw] ${animationClass}`}
+        data-overlay-layer={showBackdrop || undefined}
+        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${layout === "lobby" ? "w-[1100px]" : "w-[450px]"} max-w-[calc(100vw-32px)] ${animationClass}`}
         style={{ zIndex }}
         onAnimationEnd={handleAnimationEnd}
       >
-        <div className="relative bg-space-black-darker/95 border-2 border-space-blue-400 rounded-[20px] p-8 backdrop-blur-space shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(30,60,150,0.3)] max-h-[90vh] overflow-y-auto">
+        <div className="relative game-panel p-6 sm:p-8 max-h-[calc(100dvh-100px)] overflow-y-auto">
           {showCloseButton && onClose && (
-            <button
-              className="absolute top-4 right-4 text-white/70 hover:text-white text-xl leading-none transition-colors"
-              onClick={onClose}
-            >
-              ×
-            </button>
+            <div className="absolute top-3 right-3">
+              <CloseButton onClick={onClose} />
+            </div>
           )}
           <div className="text-center mb-6">
             <h2 className="font-orbitron text-white text-[24px] m-0 mb-2 text-shadow-glow font-bold tracking-wider">
@@ -119,6 +122,8 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
       </div>
     </>
   );
+
+  return showBackdrop ? createPortal(content, document.body) : content;
 };
 
 export default GameMenuModal;

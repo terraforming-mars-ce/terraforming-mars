@@ -50,15 +50,14 @@ const AwardFundSelectionPopover: React.FC<AwardFundSelectionPopoverProps> = ({
             <div
               key={awardType}
               className="
-                bg-black/30
-                border-2 border-space-blue-500/40
-                rounded-[10px] px-3.5 py-3
+                game-panel game-panel-clipped game-choice
+                px-3.5 py-3
                 mb-2
                 transition-all duration-[250ms] ease-out
                 animate-choiceSlideIn
                 cursor-pointer
-                hover:border-space-blue-500/80 hover:bg-black/50
-                hover:shadow-[0_4px_16px_rgba(30,60,150,0.5)]
+                hover:brightness-125
+
               "
               style={{ animationDelay: `${delay}s` }}
               onClick={() => handleSelect(awardType)}

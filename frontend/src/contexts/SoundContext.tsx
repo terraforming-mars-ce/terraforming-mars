@@ -43,6 +43,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   const setVolume = useCallback((volume: number) => {
     setSettings((prev) => ({
       ...prev,
+      enabled: true,
       volume: Math.max(0, Math.min(1, volume)),
     }));
   }, []);
@@ -50,6 +51,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   const setMusicVolume = useCallback((volume: number) => {
     setSettings((prev) => ({
       ...prev,
+      musicEnabled: true,
       musicVolume: Math.max(0, Math.min(1, volume)),
     }));
   }, []);

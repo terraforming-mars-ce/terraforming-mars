@@ -1,3 +1,4 @@
+import { assetUrl } from "@/assets";
 import { getSoundSettings } from "../utils/soundStorage.ts";
 
 interface AudioFileEntry {
@@ -5,6 +6,8 @@ interface AudioFileEntry {
   path: string;
   volumeMultiplier: number;
 }
+
+const CONSTRUCTION_SOUNDS = ["construction-1", "construction-2"] as const;
 
 class AudioService {
   private audioCache: Map<string, HTMLAudioElement> = new Map();
@@ -15,13 +18,15 @@ class AudioService {
   private musicVolume: number = 0.5;
   private volumeMultipliers: Map<string, number> = new Map();
   private ambientVolumeMultiplier: number = 0.3;
-  private fadeOutInterval: ReturnType<typeof setInterval> | null = null;
+  private ambientFadeInterval: ReturnType<typeof setInterval> | null = null;
+  private ambientRequested = false;
+  private ambientGain = 1;
   private ambientTracks: string[] = [
-    "/sounds/stars.mp3",
-    "/sounds/sands.mp3",
-    "/sounds/ethereum.mp3",
-    "/sounds/dreams.mp3",
-    "/sounds/settlers.mp3",
+    assetUrl("audio/music/stars"),
+    assetUrl("audio/music/sands"),
+    assetUrl("audio/music/ethereum"),
+    assetUrl("audio/music/dreams"),
+    assetUrl("audio/music/settlers"),
   ];
   private playOrder: number[] = [];
   private playPosition: number = 0;
@@ -61,25 +66,45 @@ class AudioService {
 
   private preloadAudioFiles() {
     const audioFiles: AudioFileEntry[] = [
-      { key: "production", path: "/sounds/production.mp3", volumeMultiplier: 1.0 },
+      { key: "production", path: assetUrl("audio/effects/production"), volumeMultiplier: 1.0 },
       {
         key: "temperature-increase",
-        path: "/sounds/temperature-increase.mp3",
+        path: assetUrl("audio/effects/temperature-increase"),
+        volumeMultiplier: 0.7,
+      },
+      {
+        key: "water-placement",
+        path: assetUrl("audio/effects/water-placement"),
+        volumeMultiplier: 0.7,
+      },
+      {
+        key: "oxygen-increase",
+        path: assetUrl("audio/effects/oxygen-increase"),
+        volumeMultiplier: 0.7,
+      },
+      {
+        key: "venus-increase",
+        path: assetUrl("audio/effects/venus-increase"),
         volumeMultiplier: 1.0,
       },
-      { key: "water-placement", path: "/sounds/water-placement.mp3", volumeMultiplier: 1.0 },
-      { key: "oxygen-increase", path: "/sounds/oxygen-increase.mp3", volumeMultiplier: 1.0 },
-      { key: "venus-increase", path: "/sounds/venus-increase.mp3", volumeMultiplier: 1.0 },
-      { key: "button-hover", path: "/sounds/button-hover.mp3", volumeMultiplier: 0.4 },
-      { key: "button-click", path: "/sounds/button-click.mp3", volumeMultiplier: 0.4 },
-      { key: "card-hover", path: "/sounds/card-hover.mp3", volumeMultiplier: 0.2 },
-      { key: "construction", path: "/sounds/construction.mp3", volumeMultiplier: 1.0 },
-      { key: "asteroid-impact", path: "/sounds/asteroid-impact.mp3", volumeMultiplier: 1.0 },
-      { key: "your-turn", path: "/sounds/your-turn.mp3", volumeMultiplier: 1.0 },
-      { key: "award-funded", path: "/sounds/award-funded.mp3", volumeMultiplier: 1.0 },
-      { key: "game-start", path: "/sounds/game-start.mp3", volumeMultiplier: 1.0 },
-      { key: "travel", path: "/sounds/travel.mp3", volumeMultiplier: 0.8 },
-      { key: "production-score", path: "/sounds/production-score.mp3", volumeMultiplier: 1.0 },
+      { key: "button-hover", path: assetUrl("audio/effects/button-hover"), volumeMultiplier: 0.4 },
+      { key: "button-click", path: assetUrl("audio/effects/button-click"), volumeMultiplier: 0.28 },
+      { key: "card-hover", path: assetUrl("audio/effects/card-hover"), volumeMultiplier: 0.2 },
+      { key: "card-played", path: assetUrl("audio/effects/card-played"), volumeMultiplier: 0.4 },
+      ...CONSTRUCTION_SOUNDS.map((key) => ({
+        key,
+        path: assetUrl(`audio/effects/${key}`),
+        volumeMultiplier: 1.0,
+      })),
+      { key: "your-turn", path: assetUrl("audio/effects/your-turn"), volumeMultiplier: 1.0 },
+      { key: "award-funded", path: assetUrl("audio/effects/award-funded"), volumeMultiplier: 1.0 },
+      { key: "game-start", path: assetUrl("audio/effects/game-start"), volumeMultiplier: 1.0 },
+      { key: "travel", path: assetUrl("audio/effects/travel"), volumeMultiplier: 0.8 },
+      {
+        key: "production-score",
+        path: assetUrl("audio/effects/production-score"),
+        volumeMultiplier: 1.0,
+      },
     ];
 
     audioFiles.forEach(({ key, path, volumeMultiplier }) => {
@@ -136,7 +161,7 @@ class AudioService {
       const audioClone = audio.cloneNode() as HTMLAudioElement;
       const multiplier = this.volumeMultipliers.get(soundKey) ?? 1.0;
       audioClone.volume = this.volume * multiplier;
-      void audioClone.play();
+      void audioClone.play().catch(() => audioClone.dispatchEvent(new Event("error")));
       return audioClone;
     } catch {
       return null;
@@ -175,12 +200,13 @@ class AudioService {
     return this.playSound("card-hover");
   }
 
-  public async playConstructionSound(): Promise<void> {
-    return this.playSound("construction");
+  public async playCardPlayedSound(): Promise<void> {
+    return this.playSound("card-played");
   }
 
-  public async playAsteroidImpactSound(): Promise<void> {
-    return this.playSound("asteroid-impact");
+  public async playConstructionSound(): Promise<void> {
+    const sound = CONSTRUCTION_SOUNDS[Math.floor(Math.random() * CONSTRUCTION_SOUNDS.length)];
+    return this.playSound(sound);
   }
 
   public async playYourTurnSound(): Promise<void> {
@@ -224,75 +250,89 @@ class AudioService {
     const audio = new Audio(this.ambientTracks[this.playOrder[this.playPosition]]);
     audio.loop = false;
     audio.addEventListener("ended", () => {
-      this.playPosition += 1;
-      if (this.playPosition >= this.playOrder.length) {
-        this.shufflePlayOrder();
+      if (this.ambientAudio !== audio || !this.ambientRequested) {
+        return;
       }
-      this.ambientAudio = this.createAmbientAudio();
-      this.ambientAudio.volume = this.musicVolume * this.ambientVolumeMultiplier;
-      if (this.isMusicEnabled) {
-        void this.ambientAudio.play().catch(() => {});
-      }
+      this.playNextAmbient();
     });
     return audio;
   }
 
-  public playAmbient(): void {
-    if (this.fadeOutInterval !== null) {
-      clearInterval(this.fadeOutInterval);
-      this.fadeOutInterval = null;
+  private clearAmbientFade(): void {
+    if (this.ambientFadeInterval !== null) {
+      clearInterval(this.ambientFadeInterval);
+      this.ambientFadeInterval = null;
     }
+  }
 
+  private updateAmbientVolume(): void {
+    if (this.ambientAudio) {
+      this.ambientAudio.volume = this.musicVolume * this.ambientVolumeMultiplier * this.ambientGain;
+    }
+  }
+
+  private fadeAmbient(target: number, duration: number, onComplete?: () => void): void {
+    this.clearAmbientFade();
+    const startGain = this.ambientGain;
+    const startedAt = performance.now();
+    this.ambientFadeInterval = setInterval(() => {
+      const progress = Math.min((performance.now() - startedAt) / duration, 1);
+      this.ambientGain = startGain + (target - startGain) * progress;
+      this.updateAmbientVolume();
+      if (progress === 1) {
+        this.clearAmbientFade();
+        onComplete?.();
+      }
+    }, 20);
+  }
+
+  public playAmbient(fadeDuration: number = 0): void {
+    this.clearAmbientFade();
+    this.ambientRequested = true;
     if (!this.ambientAudio) {
       this.ambientAudio = this.createAmbientAudio();
     }
-    this.ambientAudio.volume = this.musicVolume * this.ambientVolumeMultiplier;
-
+    this.ambientGain = fadeDuration > 0 ? 0 : 1;
+    this.updateAmbientVolume();
     if (this.isMusicEnabled) {
       void this.ambientAudio.play().catch(() => {});
     }
-  }
-
-  private fadeOut(audio: HTMLAudioElement, duration: number = 300): void {
-    const steps = 15;
-    const interval = duration / steps;
-    const volumeStep = audio.volume / steps;
-
-    this.fadeOutInterval = setInterval(() => {
-      audio.volume = Math.max(0, audio.volume - volumeStep);
-      if (audio.volume <= 0.01) {
-        if (this.fadeOutInterval !== null) {
-          clearInterval(this.fadeOutInterval);
-          this.fadeOutInterval = null;
-        }
-        audio.pause();
-        audio.currentTime = 0;
-        audio.volume = this.musicVolume * this.ambientVolumeMultiplier;
-      }
-    }, interval);
-  }
-
-  public stopAmbient(): void {
-    if (this.ambientAudio) {
-      this.fadeOut(this.ambientAudio);
+    if (fadeDuration > 0) {
+      this.fadeAmbient(1, fadeDuration);
     }
   }
 
-  public stopAmbientWithDuration(duration: number): void {
+  public playNextAmbient(fadeDuration: number = 0): void {
+    this.clearAmbientFade();
     if (this.ambientAudio) {
-      this.fadeOut(this.ambientAudio, duration);
+      this.ambientAudio.pause();
+      this.playPosition += 1;
+      if (this.playPosition >= this.playOrder.length) {
+        this.shufflePlayOrder();
+      }
+    }
+    this.ambientAudio = this.createAmbientAudio();
+    this.playAmbient(fadeDuration);
+  }
+
+  public stopAmbient(): void {
+    this.stopAmbientWithDuration(300);
+  }
+
+  public stopAmbientWithDuration(duration: number): void {
+    this.ambientRequested = false;
+    if (this.ambientAudio) {
+      this.fadeAmbient(0, duration, () => {
+        this.ambientAudio?.pause();
+        if (this.ambientAudio) {
+          this.ambientAudio.currentTime = 0;
+        }
+      });
     }
   }
 
   public setEnabled(enabled: boolean): void {
     this.isEnabled = enabled;
-    if (this.ambientAudio) {
-      if (enabled) {
-        void this.ambientAudio.play().catch(() => {});
-      } else {
-        this.fadeOut(this.ambientAudio);
-      }
-    }
   }
 
   public setVolume(volume: number): void {
@@ -307,19 +347,18 @@ class AudioService {
   public setMusicVolume(volume: number): void {
     this.musicVolume = Math.max(0, Math.min(1, volume));
 
-    if (this.ambientAudio) {
-      this.ambientAudio.volume = this.musicVolume * this.ambientVolumeMultiplier;
-    }
+    this.updateAmbientVolume();
   }
 
   public setMusicEnabled(enabled: boolean): void {
+    if (this.isMusicEnabled === enabled) {
+      return;
+    }
     this.isMusicEnabled = enabled;
-    if (this.ambientAudio) {
-      if (enabled) {
-        void this.ambientAudio.play().catch(() => {});
-      } else {
-        this.fadeOut(this.ambientAudio);
-      }
+    if (!enabled) {
+      this.ambientAudio?.pause();
+    } else if (this.ambientRequested) {
+      void this.ambientAudio?.play().catch(() => {});
     }
   }
 

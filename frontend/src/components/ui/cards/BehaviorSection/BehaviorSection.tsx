@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { BehaviorSectionProps, ClassifiedBehavior } from "./types.ts";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { BehaviorSectionProps, ClassifiedBehavior, BehaviorPresentation } from "./types.ts";
 import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
 import { classifyBehaviors } from "./utils/behaviorClassifier.ts";
 import { detectTilePlacementScale } from "./utils/tileScaling.ts";
@@ -18,6 +18,43 @@ import ValueModifierLayout from "./components/ValueModifierLayout.tsx";
 import DefenseLayout from "./components/DefenseLayout.tsx";
 import BehaviorIcon from "./components/BehaviorIcon.tsx";
 
+function buildBehaviorLayout(
+  behaviors: NonNullable<BehaviorSectionProps["behaviors"]>,
+  presentation: BehaviorPresentation,
+) {
+  const classified = classifyBehaviors(behaviors);
+  const merged = mergeTriggeredEffects(mergeAutoProductionBehaviors(classified));
+  const layout = analyzeCardLayout(merged, presentation === "inspection" ? Infinity : undefined);
+  return {
+    tileScaleInfo: detectTilePlacementScale(merged),
+    cardLayoutPlan: layout,
+    optimizedBehaviors: optimizeBehaviorsForSpace(merged, layout),
+  };
+}
+
+const emptyBehaviors: NonNullable<BehaviorSectionProps["behaviors"]> = [];
+const layoutCache = new WeakMap<
+  NonNullable<BehaviorSectionProps["behaviors"]>,
+  Map<BehaviorPresentation, ReturnType<typeof buildBehaviorLayout>>
+>();
+
+function getBehaviorLayout(
+  behaviors = emptyBehaviors,
+  presentation: BehaviorPresentation = "compact",
+) {
+  let layouts = layoutCache.get(behaviors);
+  if (!layouts) {
+    layouts = new Map();
+    layoutCache.set(behaviors, layouts);
+  }
+  let layout = layouts.get(presentation);
+  if (!layout) {
+    layout = buildBehaviorLayout(behaviors, presentation);
+    layouts.set(presentation, layout);
+  }
+  return layout;
+}
+
 const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   behaviors,
   computedValues,
@@ -27,8 +64,14 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   greyOutAll = false,
   hideActionChip = false,
   noContainer = false,
+  presentation = "compact",
+  showTooltips = true,
 }) => {
   const [hoveredBehaviorIndex, setHoveredBehaviorIndex] = useState<number | null>(null);
+  const tooltipsEnabled = showTooltips && presentation === "compact";
+  useEffect(() => {
+    setHoveredBehaviorIndex(null);
+  }, [tooltipsEnabled]);
   const handleBehaviorHover = useCallback((index: number | null) => {
     setHoveredBehaviorIndex(index);
   }, []);
@@ -46,25 +89,14 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
     return map;
   }, [computedValues]);
 
+  const { tileScaleInfo, cardLayoutPlan, optimizedBehaviors } = getBehaviorLayout(
+    behaviors,
+    presentation,
+  );
+
   if (!behaviors || behaviors.length === 0) {
     return null;
   }
-
-  // Classify behaviors
-  const classifiedBehaviors = classifyBehaviors(behaviors);
-
-  // Merge auto production behaviors if needed
-  const mergedAutoProduction = mergeAutoProductionBehaviors(classifiedBehaviors);
-
-  // Merge triggered effects with same condition type (e.g., city-placed)
-  const mergedBehaviors = mergeTriggeredEffects(mergedAutoProduction);
-
-  // Detect tile placement scaling
-  const tileScaleInfo = detectTilePlacementScale(mergedBehaviors);
-
-  // Analyze card layout and optimize for space if needed
-  const cardLayoutPlan = analyzeCardLayout(mergedBehaviors);
-  const optimizedBehaviors = optimizeBehaviorsForSpace(mergedBehaviors, cardLayoutPlan);
 
   // Helper function to check if a resource is affordable (bound to current context)
   const checkResourceAffordable = (resource: any, isInput: boolean = true): boolean => {
@@ -184,8 +216,8 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
         classifiedBehavior={classifiedBehavior}
         index={index}
         description={classifiedBehavior.description}
-        isHovered={hoveredBehaviorIndex === index}
-        onHover={handleBehaviorHover}
+        isHovered={tooltipsEnabled && hoveredBehaviorIndex === index}
+        onHover={tooltipsEnabled ? handleBehaviorHover : undefined}
         noContainer={noContainer}
       >
         {content}
@@ -199,16 +231,9 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
     : "flex flex-col gap-[3px] items-center w-full max-md:gap-px";
 
   return (
-    <div className={containerClass}>
+    <div className={`behavior-section ${containerClass}`}>
       {optimizedBehaviors.map((classifiedBehavior, index) =>
         renderBehavior(classifiedBehavior, index),
-      )}
-
-      {/* Future: Add rolling effect indicators here when needed */}
-      {cardLayoutPlan.needsOverflowHandling && (
-        <div className="flex items-center justify-center h-4 text-[10px] text-white/60 italic">
-          {/* This could be a visual indicator that there are more behaviors */}
-        </div>
       )}
     </div>
   );

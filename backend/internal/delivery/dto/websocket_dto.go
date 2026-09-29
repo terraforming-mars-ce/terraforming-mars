@@ -67,7 +67,8 @@ type ProductionPhaseStartedPayload struct {
 
 // LogUpdatePayload contains game log entries sent via WebSocket
 type LogUpdatePayload struct {
-	Logs []StateDiffDto `json:"logs"`
+	Logs      []StateDiffDto `json:"logs"`
+	IsHistory bool           `json:"isHistory"`
 }
 
 // ConfirmStartingCardSelectionMessage represents confirm starting card selection message

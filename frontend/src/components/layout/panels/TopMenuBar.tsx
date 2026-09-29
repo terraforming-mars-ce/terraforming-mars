@@ -20,16 +20,12 @@ import AwardPopover from "../../ui/popover/AwardPopover.tsx";
 import ColonyPopover from "../../ui/popover/ColonyPopover.tsx";
 import ProjectFundingPopover from "../../ui/popover/ProjectFundingPopover.tsx";
 import { GamePopover } from "../../ui/GamePopover";
-import { useHoverSound } from "@/hooks/useHoverSound.ts";
 import { HamburgerIcon, EyeIcon } from "../../ui/menuIcons.tsx";
-import ParallelogramButton, { ANGLE_INDENT, BUTTON_SPACING } from "./ParallelogramButton.tsx";
+import GameButton, { ANGLE_INDENT, BUTTON_SPACING } from "../../ui/buttons/GameButton.tsx";
 import MilestoneAwardStatusStrip from "./MilestoneAwardStatusStrip.tsx";
 
-const BORDER_COLOR = "rgba(60,60,70,0.7)";
 const HAMBURGER_WIDTH = 65;
-const HAMBURGER_COLOR = "#ffffff";
 const TRAVEL_WIDTH = 140;
-const TRAVEL_COLOR = "#7eb8da";
 
 const MilestoneAlertIndicator: React.FC<{ visible: boolean; top: number }> = ({ visible, top }) => (
   <div
@@ -47,88 +43,35 @@ const MilestoneAlertIndicator: React.FC<{ visible: boolean; top: number }> = ({ 
   </div>
 );
 
-const ENDGAME_ACCENT = "#3b82f6";
-
 function EndgameTabButton({
   label,
   width,
   height,
-  isFirst,
   isActive,
   onClick,
 }: {
   label: string;
   width: number;
   height: number;
-  isFirst: boolean;
   isActive: boolean;
   onClick: () => void;
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const hoverSound = useHoverSound();
-
-  // "Left" direction: angled edges mirror the right-side style
-  const fillPoints = isFirst
-    ? `${ANGLE_INDENT},0 ${width},0 ${width - ANGLE_INDENT},${height} 0,${height}`
-    : `${ANGLE_INDENT},0 ${width},0 ${width - ANGLE_INDENT},${height} 0,${height}`;
-
-  const showAccent = isActive || isHovered;
-
   return (
-    <button
-      onClick={() => {
-        hoverSound.onClick?.();
-        onClick();
-      }}
-      onMouseEnter={() => {
-        setIsHovered(true);
-        hoverSound.onMouseEnter?.();
-      }}
-      onMouseLeave={() => setIsHovered(false)}
-      className="relative pointer-events-auto cursor-pointer outline-none"
-      style={{
-        width,
-        height,
-        marginRight: -ANGLE_INDENT + BUTTON_SPACING,
-      }}
+    <GameButton
+      shape="toolbar"
+      surface="console"
+      emphasis="secondary"
+      selected={isActive}
+      aria-pressed={isActive}
+      width={width}
+      height={height}
+      leftEdge="slope-left"
+      rightEdge="slope-right"
+      onClick={onClick}
+      style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
     >
-      <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-      >
-        <polygon
-          points={fillPoints}
-          fill={isHovered ? "rgba(20,20,25,0.95)" : "rgba(10,10,15,0.95)"}
-        />
-        <line
-          x1={ANGLE_INDENT}
-          y1={0}
-          x2={width}
-          y2={0}
-          stroke={showAccent ? ENDGAME_ACCENT : BORDER_COLOR}
-          strokeWidth="3"
-        />
-        <line
-          x1={width}
-          y1={0}
-          x2={width - ANGLE_INDENT}
-          y2={height}
-          stroke={BORDER_COLOR}
-          strokeWidth="2"
-        />
-        <line x1={ANGLE_INDENT} y1={0} x2={0} y2={height} stroke={BORDER_COLOR} strokeWidth="2" />
-      </svg>
-      <div className="relative z-10 h-full flex items-center justify-center px-4">
-        <span
-          className={`font-orbitron font-bold text-sm uppercase tracking-wider transition-colors duration-200 ${
-            showAccent ? "text-white" : "text-white/60"
-          }`}
-        >
-          {label}
-        </span>
-      </div>
-    </button>
+      {label}
+    </GameButton>
   );
 }
 
@@ -214,12 +157,14 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     );
   }, [gameState]);
 
-  const menuItems: { id: string; label: string; color: string }[] = [
-    { id: "projects", label: "STANDARD PROJECTS", color: "#4a90e2" },
-    { id: "milestones", label: "MILESTONES", color: "#ff6b35" },
-    { id: "awards", label: "AWARDS", color: "#f39c12" },
-    ...(hasColonies ? [{ id: "colonies", label: "COLONIES", color: "#7c6fc4" }] : []),
-    ...(hasProjectFunding ? [{ id: "funding", label: "FUNDING", color: "#10b981" }] : []),
+  const menuItems: { id: string; label: string; isOpen: boolean }[] = [
+    { id: "projects", label: "STANDARD PROJECTS", isOpen: showStandardProjectsPopover },
+    { id: "milestones", label: "MILESTONES", isOpen: showMilestonePopover },
+    { id: "awards", label: "AWARDS", isOpen: showAwardPopover },
+    ...(hasColonies ? [{ id: "colonies", label: "COLONIES", isOpen: showColonyPopover }] : []),
+    ...(hasProjectFunding
+      ? [{ id: "funding", label: "FUNDING", isOpen: showProjectFundingPopover }]
+      : []),
   ];
 
   const handleTabClick = (tabId: string) => {
@@ -274,37 +219,35 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
         className="bg-transparent relative pointer-events-none"
         style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}
       >
-        <div className="flex justify-between items-center px-2 h-[60px] max-lg:h-[50px] max-md:flex-wrap">
+        <div className="flex justify-between items-center h-[60px] max-lg:h-[50px] max-md:flex-wrap">
           <div
-            className={`flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left transition-opacity duration-500 ease-in-out ${activePlanet === "solar-system" ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+            className={`flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left transition-opacity duration-500 ease-in-out ${activePlanet === "solar-system" ? "opacity-0 pointer-events-none" : "opacity-100 pointer-events-auto"}`}
+            inert={activePlanet === "solar-system"}
             style={{ transform: `scale(${topBarScale})` }}
           >
             {!isInitPhase &&
               !isEndgame &&
               menuItems.map((item, index) => (
                 <div key={item.id} className="relative">
-                  <ParallelogramButton
+                  <GameButton
+                    shape="toolbar"
+                    surface="console"
+                    emphasis="secondary"
                     width={buttonWidths[index]}
                     height={buttonHeight}
-                    color={item.color}
                     onClick={() => handleTabClick(item.id)}
-                    buttonRef={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
+                    ref={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
                     leftEdge={index === 0 ? "flat" : "slope-right"}
                     rightEdge="slope-left"
                     style={{
                       marginLeft: index === 0 ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
                       zIndex: Z_INDEX.UI_BASE - index,
                     }}
-                    isActive={
-                      (item.id === "projects" && showStandardProjectsPopover) ||
-                      (item.id === "milestones" && showMilestonePopover) ||
-                      (item.id === "awards" && showAwardPopover) ||
-                      (item.id === "colonies" && showColonyPopover) ||
-                      (item.id === "funding" && showProjectFundingPopover)
-                    }
+                    selected={item.isOpen}
+                    aria-expanded={item.isOpen}
                   >
                     {item.label}
-                  </ParallelogramButton>
+                  </GameButton>
                   {item.id === "milestones" && (
                     <MilestoneAlertIndicator
                       visible={hasEligibleMilestones && !showMilestonePopover}
@@ -317,14 +260,14 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
 
           <div style={{ marginRight: HAMBURGER_WIDTH * topBarScale }}>
             <div
-              className="origin-top-right flex items-center"
+              className="origin-top-right flex items-center pointer-events-auto"
               style={{ transform: `scale(${topBarScale})` }}
             >
               {isEndgame && onEndgamePanelChange && (
                 <div className="flex items-center pointer-events-auto">
                   {ENDGAME_BUTTONS.filter(
                     (btn) => (btn.id !== "graphs" && btn.id !== "replay") || hasHistory,
-                  ).map((btn, idx) => {
+                  ).map((btn) => {
                     const isActive = activeEndgamePanel === btn.id;
                     return (
                       <EndgameTabButton
@@ -332,7 +275,6 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
                         label={btn.label}
                         width={btn.width}
                         height={buttonHeight}
-                        isFirst={idx === 0}
                         isActive={isActive}
                         onClick={() => onEndgamePanelChange(btn.id)}
                       />
@@ -341,33 +283,40 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
                 </div>
               )}
               {spectators.length > 0 && (
-                <ParallelogramButton
+                <GameButton
+                  shape="toolbar"
+                  surface="console"
+                  emphasis="secondary"
                   width={EYE_WIDTH}
                   height={buttonHeight}
-                  color="#7eb8da"
                   onClick={() => setSpectatorsOpen(!spectatorsOpen)}
-                  buttonRef={eyeButtonRef}
-                  isActive={spectatorsOpen}
+                  ref={eyeButtonRef}
+                  selected={spectatorsOpen}
+                  aria-expanded={spectatorsOpen}
+                  aria-label="Spectators"
                   leftEdge="slope-left"
                   rightEdge="slope-right"
                   style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
                 >
                   <EyeIcon />
-                </ParallelogramButton>
+                </GameButton>
               )}
-              <ParallelogramButton
+              <GameButton
+                shape="toolbar"
+                surface="console"
+                emphasis="secondary"
                 width={TRAVEL_WIDTH}
                 height={buttonHeight}
-                color={TRAVEL_COLOR}
                 onClick={() => setShowTravelPopover((prev) => !prev)}
-                buttonRef={travelButtonRef}
-                isActive={showTravelPopover}
+                ref={travelButtonRef}
+                selected={showTravelPopover}
+                aria-expanded={showTravelPopover}
                 leftEdge="slope-left"
                 rightEdge="slope-right"
                 style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
               >
                 TRAVEL
-              </ParallelogramButton>
+              </GameButton>
             </div>
           </div>
         </div>
@@ -375,8 +324,11 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
         {!isInitPhase && !isEndgame && (
           <div
             className={`absolute left-1/2 top-0 h-[60px] max-lg:h-[50px] flex items-center origin-top transition-opacity duration-500 ease-in-out ${
-              activePlanet === "solar-system" ? "opacity-0 pointer-events-none" : "opacity-100"
+              activePlanet === "solar-system"
+                ? "opacity-0 pointer-events-none"
+                : "opacity-100 pointer-events-auto"
             }`}
+            inert={activePlanet === "solar-system"}
             style={{ transform: `translateX(-50%) scale(${topBarScale})` }}
           >
             <MilestoneAwardStatusStrip />
@@ -465,25 +417,30 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
         )}
       </div>
       <div
-        className="fixed right-0 px-2 h-[60px] max-lg:h-[50px] flex items-center pointer-events-none origin-top-right"
+        className="fixed right-0 h-[60px] max-lg:h-[50px] flex items-center pointer-events-none origin-top-right"
         style={{
           zIndex: Z_INDEX.TOP_MENU_ALWAYS_ON_TOP,
           transform: `scale(${topBarScale})`,
           top: topBarScale < 1 ? 1 : 0,
         }}
       >
-        <ParallelogramButton
+        <GameButton
+          shape="toolbar"
+          surface="console"
+          emphasis="secondary"
+          className="pointer-events-auto"
+          aria-label="Menu"
           width={HAMBURGER_WIDTH}
           height={buttonHeight}
-          color={HAMBURGER_COLOR}
           onClick={() => setMenuOpen(!menuOpen)}
-          buttonRef={hamburgerButtonRef}
-          isActive={menuOpen}
+          ref={hamburgerButtonRef}
+          selected={menuOpen}
+          aria-expanded={menuOpen}
           leftEdge="slope-left"
           rightEdge="flat"
         >
           <HamburgerIcon />
-        </ParallelogramButton>
+        </GameButton>
       </div>
       <GameHamburgerMenu
         isOpen={menuOpen}

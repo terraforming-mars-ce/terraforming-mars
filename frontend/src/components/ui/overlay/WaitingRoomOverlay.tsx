@@ -1,3 +1,5 @@
+import { GamePopover } from "../GamePopover";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { GameDto, OtherPlayerDto, PlayerDto } from "../../../types/generated/api-types.ts";
@@ -8,7 +10,7 @@ import GameMenuModal from "./GameMenuModal.tsx";
 import DemoSetupOverlay from "./DemoSetupOverlay.tsx";
 import LobbySettingsOverlay from "./LobbySettingsOverlay.tsx";
 import LobbyMapInfoPanel from "../lobby/LobbyMapInfoPanel.tsx";
-import { BotDifficultyChip, BotSpeedChip } from "../display/BotChips.tsx";
+import { BotDifficultyChip, BotSpeedChip, PlayerChip } from "../display/BotChips.tsx";
 import MainMenuHamburger from "../buttons/MainMenuHamburger.tsx";
 
 interface WaitingRoomOverlayProps {
@@ -16,6 +18,7 @@ interface WaitingRoomOverlayProps {
   playerId: string;
   visible?: boolean;
   onExited?: () => void;
+  chat?: React.ReactNode;
 }
 
 interface LeavingPlayer {
@@ -68,6 +71,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   playerId,
   visible,
   onExited,
+  chat,
 }) => {
   const navigate = useNavigate();
   const isHost = game.hostPlayerId === playerId;
@@ -232,7 +236,9 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   };
 
   useEffect(() => {
-    if (!showBotDropdown && !colorPickerForPlayer) return;
+    if (!showBotDropdown) {
+      return;
+    }
     const handleClick = (e: MouseEvent) => {
       if (
         showBotDropdown &&
@@ -241,17 +247,10 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
       ) {
         setShowBotDropdown(false);
       }
-      if (
-        colorPickerForPlayer &&
-        colorPickerRef.current &&
-        !colorPickerRef.current.contains(e.target as Node)
-      ) {
-        setColorPickerForPlayer(null);
-      }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showBotDropdown, colorPickerForPlayer]);
+  }, [showBotDropdown]);
 
   const handleAddBot = (difficulty: string, speed: string) => {
     setShowBotDropdown(false);
@@ -260,8 +259,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
 
   return (
     <>
-      <MainMenuHamburger gameId={game.id} onLeaveGame={openLeaveConfirm} />
-      <LobbyMapInfoPanel game={game} playerId={playerId} />
+      <MainMenuHamburger gameId={game.id} />
 
       {/* Leave Confirmation Modal */}
       {showLeaveConfirm && (
@@ -271,30 +269,24 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
           visible={leaveConfirmVisible}
           onExited={handleLeaveConfirmExited}
           showBackdrop={true}
-          zIndex={2000}
+          zIndex={Z_INDEX.CONFIRMATION_MODAL}
           onClose={handleCancelLeave}
         >
           <div className="flex gap-3 justify-center">
-            <GameButton buttonType="secondary" size="sm" onClick={handleCancelLeave}>
+            <GameButton emphasis="secondary" size="sm" onClick={handleCancelLeave}>
               Cancel
             </GameButton>
-            <GameButton variant="error" size="sm" onClick={handleConfirmLeave}>
+            <GameButton tone="error" size="sm" onClick={handleConfirmLeave}>
               Leave
             </GameButton>
           </div>
         </GameMenuModal>
       )}
 
-      <GameMenuModal
-        title="Game Lobby"
-        subtitle={`${playerCount} player${playerCount !== 1 ? "s" : ""} joined`}
-        onBack={() => void navigate("/")}
-        visible={visible}
-        onExited={onExited}
-      >
+      <GameMenuModal layout="lobby" title="Game lobby" visible={visible} onExited={onExited}>
         {/* Leave Button - positioned at top-left of modal content */}
         <GameButton
-          buttonType="textonly"
+          emphasis="quiet"
           size="sm"
           onClick={openLeaveConfirm}
           className="absolute top-8 left-8 !p-2.5 hover:text-red-400"
@@ -319,7 +311,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
         {/* Settings Button - positioned at top-right of modal content (host only) */}
         {isHost && (
           <GameButton
-            buttonType="textonly"
+            emphasis="quiet"
             size="sm"
             onClick={() => setShowLobbySettings(true)}
             className="absolute top-8 right-8 !p-2.5 hover:text-space-blue-300"
@@ -352,322 +344,360 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
           }
         `}</style>
 
-        {/* Player List */}
-        <div className="mb-6">
-          <h3 className="text-white text-sm font-semibold mb-2 uppercase tracking-wide">Players</h3>
-          <div className="flex flex-col gap-2">
-            {(() => {
-              const playerMap = new Map();
-              if (hasCurrentPlayer && game.currentPlayer) {
-                playerMap.set(game.currentPlayer.id, game.currentPlayer);
-              }
-              game.otherPlayers?.forEach((otherPlayer) => {
-                playerMap.set(otherPlayer.id, otherPlayer);
-              });
-
-              const orderedPlayers = getOrderedPlayers(playerMap, game);
-
-              const playerItems = orderedPlayers.map((player) => ({
-                id: player.id,
-                name: player.name,
-                color: player.color || "",
-                playerType: player.playerType as string,
-                botStatus: (player.botStatus as string) || undefined,
-                botDifficulty: (player.botDifficulty as string) || undefined,
-                botSpeed: (player.botSpeed as string) || undefined,
-                demoReady: (player as PlayerDto | OtherPlayerDto).demoReady || false,
-                isLeaving: false,
-              }));
-
-              leavingPlayers.forEach((lp) => {
-                if (!playerMap.has(lp.id)) {
-                  playerItems.push({
-                    id: lp.id,
-                    name: lp.name,
-                    color: "",
-                    playerType: "human",
-                    botStatus: undefined,
-                    botDifficulty: undefined,
-                    botSpeed: undefined,
-                    demoReady: false,
-                    isLeaving: true,
-                  });
-                }
-              });
-
-              return playerItems.map((player) => {
-                let animClass = "";
-                if (player.isLeaving) {
-                  animClass = "animate-[playerSlideOut_0.3s_ease-out_forwards] overflow-hidden";
-                } else if (newPlayerIds.has(player.id)) {
-                  animClass = "animate-[playerSlideIn_0.3s_ease-out]";
-                }
-
-                const isCurrentPlayer = player.id === playerId;
-                const canEditColor =
-                  (isCurrentPlayer || (isHost && player.playerType === "bot")) && !player.isLeaving;
-                const showingPicker = colorPickerForPlayer === player.id;
-
-                return (
-                  <div
-                    key={player.id}
-                    className={`relative flex justify-between items-center py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50 ${animClass}`}
-                    onAnimationEnd={
-                      !player.isLeaving && newPlayerIds.has(player.id)
-                        ? () => handleAnimationEnd(player.id)
-                        : undefined
-                    }
-                  >
-                    <div className="flex gap-2 items-center">
-                      <div
-                        className="relative flex items-center"
-                        ref={showingPicker ? colorPickerRef : undefined}
-                      >
-                        <button
-                          className={`w-4 h-4 rounded-full transition-all flex-shrink-0 p-0 leading-none ${
-                            canEditColor ? "cursor-pointer hover:scale-125" : "cursor-default"
-                          }`}
-                          style={{ backgroundColor: player.color || "#555" }}
-                          onClick={() =>
-                            canEditColor &&
-                            setColorPickerForPlayer((v) => (v === player.id ? null : player.id))
-                          }
-                          disabled={!canEditColor}
-                        />
-                        {showingPicker && game.settings.availablePlayerColors && (
-                          <div className="absolute top-full left-0 mt-1 bg-black border border-white/20 rounded-lg p-3 z-20">
-                            <ColorPicker
-                              colors={game.settings.availablePlayerColors}
-                              takenColors={takenColorsFor(player.id)}
-                              currentColor={getPlayerColor(player.id)}
-                              onSelect={handleColorSelect}
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-white text-sm font-medium">{player.name}</span>
-                    </div>
-                    <div className="flex gap-1.5 items-center">
-                      {player.id === playerId && (
-                        <span className="bg-space-blue-800 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                          You
-                        </span>
-                      )}
-                      {game.hostPlayerId === player.id && (
-                        <span className="bg-gradient-to-br from-[#ffa500] to-[#ff8c00] text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                          Host
-                        </span>
-                      )}
-                      {player.playerType === "bot" && (
-                        <>
-                          <BotDifficultyChip
-                            difficulty={player.botDifficulty}
-                            botStatus={player.botStatus}
-                            showStatusIcon
-                          />
-                          <BotSpeedChip speed={player.botSpeed} />
-                        </>
-                      )}
-                      {isDemoGame &&
-                        player.playerType !== "bot" &&
-                        !player.isLeaving &&
-                        (player.demoReady ? (
-                          <span className="bg-green-700/60 text-green-300 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                            Ready
-                          </span>
-                        ) : (
-                          <span className="bg-red-900/40 text-red-300/70 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                            Not Ready
-                          </span>
-                        ))}
-                      {isHost && player.id !== playerId && !player.isLeaving && (
-                        <button
-                          onClick={() => void globalWebSocketManager.kickPlayer(player.id)}
-                          className="ml-1 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
-                          title={`Kick ${player.name}`}
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-
-          {/* Spectators Section */}
-          {game.spectators && game.spectators.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-white/60 text-xs font-semibold mb-2 uppercase tracking-wide">
-                Spectators
+        <div className="menu-grid">
+          <div className="min-w-0 flex flex-col">
+            {/* Player List */}
+            <div className="mb-6">
+              <h3 className="text-white text-sm font-semibold mb-2 uppercase tracking-wide">
+                Players
               </h3>
-              <div className="flex flex-col gap-1.5">
-                {game.spectators.map((spectator) => (
-                  <div
-                    key={spectator.id}
-                    className="flex justify-between items-center py-1.5 px-3 bg-black/25 rounded-lg border border-white/10"
-                  >
-                    <span className="text-white/70 text-sm">{spectator.name}</span>
-                    <div className="flex gap-1.5 items-center">
-                      {isHost && (
-                        <button
-                          onClick={() => void globalWebSocketManager.kickSpectator(spectator.id)}
-                          className="ml-1 text-red-400/60 hover:text-red-300 transition-colors cursor-pointer"
-                        >
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+              <div
+                aria-label="Players"
+                className="flex flex-col gap-2 max-h-[200px] overflow-y-auto overscroll-contain"
+              >
+                {(() => {
+                  const playerMap = new Map();
+                  if (hasCurrentPlayer && game.currentPlayer) {
+                    playerMap.set(game.currentPlayer.id, game.currentPlayer);
+                  }
+                  game.otherPlayers?.forEach((otherPlayer) => {
+                    playerMap.set(otherPlayer.id, otherPlayer);
+                  });
 
-          {/* Join Link & Add Bot */}
-          <div className="mt-4 flex justify-center gap-2">
-            <CopyLinkButton
-              textToCopy={joinUrl}
-              defaultText="Link"
-              copiedText="Copied!"
-              icon={
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-              }
-            />
-            {isHost && game.settings.hasClaudeApiKey && (
-              <div className="relative" ref={botDropdownRef}>
-                <GameButton
-                  buttonType="secondary"
-                  size="md"
-                  onClick={() => setShowBotDropdown((prev) => !prev)}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    Bot
+                  const orderedPlayers = getOrderedPlayers(playerMap, game);
+
+                  const playerItems = orderedPlayers.map((player) => ({
+                    id: player.id,
+                    name: player.name,
+                    color: player.color || "",
+                    playerType: player.playerType as string,
+                    botStatus: (player.botStatus as string) || undefined,
+                    botDifficulty: (player.botDifficulty as string) || undefined,
+                    botSpeed: (player.botSpeed as string) || undefined,
+                    demoReady: (player as PlayerDto | OtherPlayerDto).demoReady || false,
+                    isLeaving: false,
+                  }));
+
+                  leavingPlayers.forEach((lp) => {
+                    if (!playerMap.has(lp.id)) {
+                      playerItems.push({
+                        id: lp.id,
+                        name: lp.name,
+                        color: "",
+                        playerType: "human",
+                        botStatus: undefined,
+                        botDifficulty: undefined,
+                        botSpeed: undefined,
+                        demoReady: false,
+                        isLeaving: true,
+                      });
+                    }
+                  });
+
+                  return playerItems.map((player) => {
+                    let animClass = "";
+                    if (player.isLeaving) {
+                      animClass = "animate-[playerSlideOut_0.3s_ease-out_forwards] overflow-hidden";
+                    } else if (newPlayerIds.has(player.id)) {
+                      animClass = "animate-[playerSlideIn_0.3s_ease-out]";
+                    }
+
+                    const isCurrentPlayer = player.id === playerId;
+                    const canEditColor =
+                      (isCurrentPlayer || (isHost && player.playerType === "bot")) &&
+                      !player.isLeaving;
+                    const showingPicker = colorPickerForPlayer === player.id;
+
+                    return (
+                      <div
+                        key={player.id}
+                        className={`relative flex shrink-0 justify-between items-center py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50 ${animClass}`}
+                        onAnimationEnd={
+                          !player.isLeaving && newPlayerIds.has(player.id)
+                            ? () => handleAnimationEnd(player.id)
+                            : undefined
+                        }
+                      >
+                        <div className="flex gap-2 items-center">
+                          <div
+                            className="relative flex items-center"
+                            ref={showingPicker ? colorPickerRef : undefined}
+                          >
+                            <button
+                              className={`w-4 h-4 rounded-full transition-all flex-shrink-0 p-0 leading-none ${
+                                canEditColor ? "cursor-pointer hover:scale-125" : "cursor-default"
+                              }`}
+                              style={{ backgroundColor: player.color || "#555" }}
+                              onClick={() =>
+                                canEditColor &&
+                                setColorPickerForPlayer((v) => (v === player.id ? null : player.id))
+                              }
+                              aria-label={`Change ${player.name}'s color`}
+                              disabled={!canEditColor}
+                            />
+                            {showingPicker && game.settings.availablePlayerColors && (
+                              <GamePopover
+                                isVisible={showingPicker}
+                                onClose={() => setColorPickerForPlayer(null)}
+                                position={{
+                                  type: "anchor",
+                                  anchorRef: colorPickerRef,
+                                  placement: "below",
+                                }}
+                                theme="menu"
+                                width={200}
+                                zIndex={Z_INDEX.POPOVER}
+                              >
+                                <div className="p-3">
+                                  <ColorPicker
+                                    colors={game.settings.availablePlayerColors}
+                                    takenColors={takenColorsFor(player.id)}
+                                    currentColor={getPlayerColor(player.id)}
+                                    onSelect={handleColorSelect}
+                                  />
+                                </div>
+                              </GamePopover>
+                            )}
+                          </div>
+                          <span className="text-white text-sm font-medium">{player.name}</span>
+                        </div>
+                        <div className="player-chip-group">
+                          {player.id === playerId && (
+                            <PlayerChip className="bg-space-blue-800 text-white">You</PlayerChip>
+                          )}
+                          {game.hostPlayerId === player.id && (
+                            <PlayerChip className="bg-gradient-to-br from-[#ffa500] to-[#ff8c00] text-white">
+                              Host
+                            </PlayerChip>
+                          )}
+                          {player.playerType === "bot" && (
+                            <>
+                              <BotDifficultyChip
+                                difficulty={player.botDifficulty}
+                                botStatus={player.botStatus}
+                                showStatusIcon
+                              />
+                              <BotSpeedChip speed={player.botSpeed} />
+                            </>
+                          )}
+                          {isDemoGame &&
+                            player.playerType !== "bot" &&
+                            !player.isLeaving &&
+                            (player.demoReady ? (
+                              <PlayerChip className="bg-green-700/60 text-green-300">
+                                Ready
+                              </PlayerChip>
+                            ) : (
+                              <PlayerChip className="bg-red-900/40 text-red-300/70">
+                                Not Ready
+                              </PlayerChip>
+                            ))}
+                          {isHost && player.id !== playerId && !player.isLeaving && (
+                            <GameButton
+                              emphasis="quiet"
+                              onClick={() => void globalWebSocketManager.kickPlayer(player.id)}
+                              className="ml-1 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                              aria-label={`Kick ${player.name}`}
+                            >
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </GameButton>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Spectators Section */}
+              {game.spectators && game.spectators.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-white/60 text-xs font-semibold mb-2 uppercase tracking-wide">
+                    Spectators
+                  </h3>
+                  <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto overscroll-contain">
+                    {game.spectators.map((spectator) => (
+                      <div
+                        key={spectator.id}
+                        className="flex shrink-0 justify-between items-center py-1.5 px-3 bg-black/25 rounded-lg border border-white/10"
+                      >
+                        <span className="text-white/70 text-sm">{spectator.name}</span>
+                        <div className="flex gap-1.5 items-center">
+                          {isHost && (
+                            <GameButton
+                              emphasis="quiet"
+                              onClick={() =>
+                                void globalWebSocketManager.kickSpectator(spectator.id)
+                              }
+                              className="ml-1 text-red-400/60 hover:text-red-300 transition-colors cursor-pointer"
+                            >
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </GameButton>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Join Link & Add Bot */}
+              <div className="mt-4 flex justify-center gap-2">
+                <CopyLinkButton
+                  textToCopy={joinUrl}
+                  defaultText="Invite friends"
+                  copiedText="Link copied"
+                  icon={
                     <svg
                       width="14"
                       height="14"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="2.5"
+                      strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                     </svg>
-                  </span>
-                </GameButton>
-                {showBotDropdown && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black border border-white/20 rounded-lg overflow-hidden shadow-lg z-10">
-                    <div className="grid grid-cols-[auto_60px_60px] text-center">
-                      <div />
-                      {["Fast", "Thinker"].map((s) => (
-                        <div
-                          key={s}
-                          className="px-3 py-1.5 text-white/40 text-[10px] font-bold uppercase tracking-wide"
+                  }
+                />
+                {isHost && game.settings.hasClaudeApiKey && (
+                  <div className="relative" ref={botDropdownRef}>
+                    <GameButton
+                      emphasis="secondary"
+                      size="md"
+                      onClick={() => setShowBotDropdown((prev) => !prev)}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        Bot
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         >
-                          {s}
-                        </div>
-                      ))}
-                      {[
-                        { key: "normal", label: "Normal" },
-                        { key: "hard", label: "Hard" },
-                        { key: "extreme", label: "Actual Bot" },
-                      ].map((diff) => (
-                        <React.Fragment key={diff.key}>
-                          <div className="px-3 py-2 text-white/60 text-[11px] font-semibold flex items-center whitespace-nowrap">
-                            {diff.label}
-                          </div>
-                          {["fast", "thinker"].map((spd) => (
-                            <button
-                              key={spd}
-                              onClick={() => handleAddBot(diff.key, spd)}
-                              className="px-3 py-2 hover:bg-white/10 transition-colors cursor-pointer text-white text-lg"
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </span>
+                    </GameButton>
+                    {showBotDropdown && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black border border-white/20 rounded-lg overflow-hidden shadow-lg z-10">
+                        <div className="grid grid-cols-[auto_60px_60px] text-center">
+                          <div />
+                          {["Fast", "Thinker"].map((s) => (
+                            <div
+                              key={s}
+                              className="px-3 py-1.5 text-white/40 text-[10px] font-bold uppercase tracking-wide"
                             >
-                              +
-                            </button>
+                              {s}
+                            </div>
                           ))}
-                        </React.Fragment>
-                      ))}
-                    </div>
+                          {[
+                            { key: "normal", label: "Normal" },
+                            { key: "hard", label: "Hard" },
+                            { key: "extreme", label: "Actual Bot" },
+                          ].map((diff) => (
+                            <React.Fragment key={diff.key}>
+                              <div className="px-3 py-2 text-white/60 text-[11px] font-semibold flex items-center whitespace-nowrap">
+                                {diff.label}
+                              </div>
+                              {["fast", "thinker"].map((spd) => (
+                                <GameButton
+                                  emphasis="quiet"
+                                  key={spd}
+                                  onClick={() => handleAddBot(diff.key, spd)}
+                                  className="px-3 py-2 hover:bg-white/10 transition-colors cursor-pointer text-white text-lg"
+                                >
+                                  +
+                                </GameButton>
+                              ))}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+            </div>
+
+            {chat}
           </div>
+          <LobbyMapInfoPanel game={game} playerId={playerId} />
         </div>
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-white/10 pt-5 mt-6">
+          {/* Demo Game: Configure button */}
+          {isDemoGame && (
+            <div className="text-center">
+              <GameButton
+                emphasis="secondary"
+                size="md"
+                onClick={() => setShowDemoSetup(true)}
+                className="min-w-[180px]"
+              >
+                Configure demo
+              </GameButton>
+            </div>
+          )}
 
-        {/* Demo Game: Configure button */}
-        {isDemoGame && (
-          <div className="text-center">
-            <GameButton
-              buttonType="secondary"
-              size="md"
-              onClick={() => setShowDemoSetup(true)}
-              className="w-full"
-            >
-              DEMO CONFIG
-            </GameButton>
-          </div>
-        )}
+          {isDemoGame && <div className="h-2" />}
 
-        {isDemoGame && <div className="h-2" />}
+          {isHost && (!allBotsReady || !allDemoPlayersReady) && (
+            <p className="text-sm text-white/60">
+              {!allBotsReady ? "Waiting for bots" : "Waiting for demo setup"}
+            </p>
+          )}
+          {/* Start Game Button (Host only) */}
+          {isHost && (
+            <div className="text-center">
+              <GameButton
+                size="lg"
+                onClick={handleStartGame}
+                disabled={playerCount < 1 || !allBotsReady || !allDemoPlayersReady}
+                className="min-w-[180px]"
+              >
+                Start game
+              </GameButton>
+            </div>
+          )}
 
-        {/* Start Game Button (Host only) */}
-        {isHost && (
-          <div className="text-center">
-            <GameButton
-              size="lg"
-              onClick={handleStartGame}
-              disabled={playerCount < 1 || !allBotsReady || !allDemoPlayersReady}
-              className="w-full"
-            >
-              START GAME
-            </GameButton>
-          </div>
-        )}
-
-        {!isHost && (
-          <p className="text-white/50 text-sm text-center">Waiting for host to start the game...</p>
-        )}
+          {!isHost && (
+            <p className="text-white/50 text-sm text-center">
+              Waiting for host to start the game...
+            </p>
+          )}
+        </div>
       </GameMenuModal>
 
       {/* Lobby Settings Overlay (host only) */}

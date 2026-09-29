@@ -1,3 +1,4 @@
+import { assetUrl } from "@/assets";
 import * as THREE from "three";
 import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 
@@ -44,7 +45,7 @@ class SkyboxCacheService {
   }
 
   async loadSkybox(path?: string): Promise<THREE.Texture> {
-    const targetPath = path ?? "/assets/backgrounds/starmap_2020_8k.exr";
+    const targetPath = path ?? assetUrl("textures/skyboxes/starmap");
 
     const cached = this.textureCache.get(targetPath);
     if (cached) {

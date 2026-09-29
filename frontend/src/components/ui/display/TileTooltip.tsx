@@ -40,10 +40,16 @@ const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
     if (!data || !containerRef.current) return;
 
     let rafId: number;
+    let lastX = NaN;
+    let lastY = NaN;
     const update = () => {
       if (containerRef.current && positionRef.current) {
-        containerRef.current.style.left = positionRef.current.x + 12 + "px";
-        containerRef.current.style.top = positionRef.current.y + 12 + "px";
+        const { x, y } = positionRef.current;
+        if (x !== lastX || y !== lastY) {
+          containerRef.current.style.transform = `translate3d(${x + 12}px, ${y + 12}px, 0)`;
+          lastX = x;
+          lastY = y;
+        }
       }
       rafId = requestAnimationFrame(update);
     };
@@ -61,15 +67,13 @@ const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
   return createPortal(
     <div
       ref={containerRef}
+      role="tooltip"
       className="fixed w-max max-w-52 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
       style={{ left: 0, top: 0, zIndex: Z_INDEX.LOADING_OVERLAY }}
     >
       <div
-        className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
-        style={{
-          clipPath:
-            "polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px))",
-        }}
+        className="game-panel text-white/90 text-[11px] leading-tight px-3 py-2"
+        style={{ "--panel-cut": "14px" } as React.CSSProperties}
       >
         <div className="font-orbitron font-bold text-xs text-white mb-1">
           {isEmptySpace && !data.displayName ? spaceLabel : label}
@@ -101,19 +105,6 @@ const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
             ))}
           </div>
         )}
-
-        <svg
-          className="absolute top-0 right-0 w-[14px] h-[14px] pointer-events-none"
-          viewBox="0 0 14 14"
-        >
-          <line x1="0" y1="0" x2="14" y2="14" stroke="rgba(60,60,70,0.7)" strokeWidth="1.5" />
-        </svg>
-        <svg
-          className="absolute bottom-0 left-0 w-[14px] h-[14px] pointer-events-none"
-          viewBox="0 0 14 14"
-        >
-          <line x1="0" y1="0" x2="14" y2="14" stroke="rgba(60,60,70,0.7)" strokeWidth="1.5" />
-        </svg>
       </div>
     </div>,
     document.body,

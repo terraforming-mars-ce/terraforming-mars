@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/google/go-github/v75/github"
+	"github.com/google/go-github/v92/github"
 	"github.com/google/uuid"
 )
 
@@ -89,7 +89,11 @@ func (s *Service) initGitHub(cfg Config) bool {
 		return false
 	}
 
-	s.ghClient = github.NewClient(&http.Client{Transport: itr})
+	s.ghClient, err = github.NewClient(github.WithTransport(itr))
+	if err != nil {
+		s.logger.Error("Bug report: GitHub App disabled (failed to create client)", slog.Any("error", err))
+		return false
+	}
 	return true
 }
 
@@ -171,10 +175,10 @@ func (s *Service) processBugReport(id string, title string, description string, 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	issue, _, err := s.ghClient.Issues.Create(ctx, s.config.GitHubRepoOwner, s.config.GitHubRepoName, &github.IssueRequest{
-		Title:  github.Ptr(title),
+	issue, _, err := s.ghClient.Issues.Create(ctx, s.config.GitHubRepoOwner, s.config.GitHubRepoName, github.CreateIssueRequest{
+		Title:  title,
 		Body:   github.Ptr(body),
-		Labels: &labels,
+		Labels: labels,
 	})
 	if err != nil {
 		s.failReport(id, "Failed to create GitHub issue")

@@ -1,15 +1,13 @@
 import { useEffect, useRef } from "react";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
-import { useAppPhaseStore, gameIdOf } from "@/stores/appPhaseStore.ts";
+import { useAppPhaseStore, gameIdOf, isInGameWorld } from "@/stores/appPhaseStore.ts";
 import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore.ts";
+import { audioService } from "@/services/audioService.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import {
-  GamePhaseAction,
-  GamePhaseComplete,
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
-  GamePhaseProductionAndCardDraw,
   GamePhaseStartingSelection,
   GameStatusActive,
   GameStatusCompleted,
@@ -18,7 +16,6 @@ import {
 
 export function useGameTransitions(
   playProductionSound: () => Promise<void>,
-  playGameStartSound: () => Promise<void>,
   notificationQueueDoneAt: React.RefObject<number>,
 ): void {
   const gamePhase = useGameStore((s) => s.game?.currentPhase);
@@ -100,21 +97,6 @@ export function useGameTransitions(
       setCorporationData(null);
     }
   }, [corpData]);
-
-  useEffect(() => {
-    if (!gamePhase) {
-      return;
-    }
-    const { setShowCorp } = useGameStore.getState();
-    if (
-      gamePhase === GamePhaseInitApplyPrelude ||
-      gamePhase === GamePhaseAction ||
-      gamePhase === GamePhaseProductionAndCardDraw ||
-      gamePhase === GamePhaseComplete
-    ) {
-      setShowCorp(true);
-    }
-  }, [gamePhase]);
 
   useEffect(() => {
     const { setDisplayedInitPlayerId } = useGameStore.getState();
@@ -305,7 +287,7 @@ export function useGameTransitions(
     }
     const activeGameId = phase.gameId;
     const elapsed = Date.now() - loadingEnteredAt.current;
-    const remaining = Math.max(0, 1000 - elapsed);
+    const remaining = Math.max(0, 1000 - elapsed) + 1000;
     const advance = () => {
       useAppPhaseStore.getState().setPhase({ kind: "fadeOutLobby", gameId: activeGameId });
     };
@@ -322,7 +304,7 @@ export function useGameTransitions(
     if (phase.kind === "fadeOutLobby") {
       const timer = setTimeout(
         () => setPhase({ kind: "marsRevealed", gameId: phase.gameId }),
-        1500,
+        2500,
       );
       return () => clearTimeout(timer);
     }
@@ -350,11 +332,46 @@ export function useGameTransitions(
     return undefined;
   }, [phase]);
 
+  const entranceActive = phase.kind === "fadeOutLobby" || isInGameWorld(phase);
+
   useEffect(() => {
-    if (phase.kind === "fadeOutLobby") {
-      void playGameStartSound();
+    if (!entranceActive) {
+      return;
     }
-  }, [phase, playGameStartSound]);
+    if (useAppPhaseStore.getState().phase.kind !== "fadeOutLobby") {
+      audioService.playAmbient();
+      return;
+    }
+
+    audioService.stopAmbientWithDuration(1500);
+    const entranceSound = audioService.playSoundWithHandle("game-start");
+    let soundFinished = entranceSound === null;
+    let animationFinished = false;
+    let musicStarted = false;
+    const resumeMusic = () => {
+      if (soundFinished && animationFinished && !musicStarted) {
+        musicStarted = true;
+        audioService.playNextAmbient(3000);
+      }
+    };
+    const finishSound = () => {
+      soundFinished = true;
+      resumeMusic();
+    };
+    entranceSound?.addEventListener("ended", finishSound);
+    entranceSound?.addEventListener("error", finishSound);
+    const timer = window.setTimeout(() => {
+      animationFinished = true;
+      resumeMusic();
+    }, 4500);
+
+    return () => {
+      window.clearTimeout(timer);
+      entranceSound?.removeEventListener("ended", finishSound);
+      entranceSound?.removeEventListener("error", finishSound);
+      entranceSound?.pause();
+    };
+  }, [entranceActive, gameId]);
 
   useEffect(() => {
     const activeGameId = gameId ?? gameIdOf(phase);

@@ -198,8 +198,6 @@ export default function WorldTreeTile({
 
       {showDust && surfaceNormal && worldPosition && (
         <DustEffect
-          position={worldPosition}
-          normal={surfaceNormal}
           duration={3000}
           particleColor={new THREE.Color(0.15, 0.3, 0.08)}
           onComplete={() => setShowDust(false)}

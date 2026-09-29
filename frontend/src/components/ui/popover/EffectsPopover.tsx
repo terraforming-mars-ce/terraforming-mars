@@ -19,6 +19,7 @@ const EffectsPopover: React.FC<EffectsPopoverProps> = ({
 }) => {
   return (
     <GamePopover
+      className="game-popover-list"
       isVisible={isVisible}
       onClose={onClose}
       position={{ type: "anchor", anchorRef, placement: "above" }}
@@ -36,12 +37,12 @@ const EffectsPopover: React.FC<EffectsPopoverProps> = ({
           <span className="font-orbitron text-sm text-white/50">No effects</span>
         </div>
       ) : (
-        <div className="p-2 flex flex-col gap-2">
+        <div className="popover-list popover-list-headed p-2 flex flex-col gap-2">
           {effects.map((effect, index) => (
             <GamePopoverItem
+              className="popover-list-item"
               key={`${effect.cardId}-${effect.behaviorIndex}`}
               state="available"
-              hoverEffect="glow"
               animationDelay={index * 0.05}
             >
               <div className="flex flex-col gap-2 flex-1">

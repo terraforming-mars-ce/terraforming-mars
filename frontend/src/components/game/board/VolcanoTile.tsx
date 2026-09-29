@@ -5,7 +5,6 @@ import VolcanoSmoke from "./effects/VolcanoSmoke";
 import DustEffect from "./effects/DustEffect";
 import { useTextures } from "../../../hooks/useTextures";
 import { createVolcanoMaterial } from "./shaders";
-import { addSphereProjectionWithSoftEdges } from "./GreeneryRenderer";
 import { easeOutCubic } from "./boardConstants";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext";
 import { computeFlowMap } from "./volcanoFlowMap";
@@ -16,11 +15,9 @@ interface VolcanoTileProps {
   surfaceNormal?: THREE.Vector3;
   worldPosition?: THREE.Vector3;
   sphereCenter?: THREE.Vector3;
-  groupInverseMatrix?: THREE.Matrix4;
 }
 
 const VOLCANO_HEIGHT = 0.14;
-const HEX_RADIUS = 0.166;
 
 function createRadialDiscGeometry(
   radius: number,
@@ -74,7 +71,6 @@ export default function VolcanoTile({
   surfaceNormal,
   worldPosition,
   sphereCenter,
-  groupInverseMatrix,
 }: VolcanoTileProps) {
   const groupRef = useRef<THREE.Group>(null);
   const emergenceStartRef = useRef<number | null>(null);
@@ -99,46 +95,13 @@ export default function VolcanoTile({
     return createRadialDiscGeometry(0.15, 32, 64);
   }, []);
 
-  const groundGeometry = useMemo(() => {
-    const geo = createRadialDiscGeometry(HEX_RADIUS * 1.8, 10, 36);
-    geo.rotateZ(Math.PI / 2);
-    return geo;
-  }, []);
-
-  const {
-    grass: grassTexture,
-    noiseMid: noiseTexture,
-    noiseHigh: noiseHighTexture,
-  } = useTextures();
+  const { grass: grassTexture } = useTextures();
 
   const volcanoMaterial = useMemo(() => {
     const mat = createVolcanoMaterial(grassTexture, flowTexture, seed, sphereCenter);
     mat.uniforms.uEmergence.value = isEmergingRef.current ? 0.0 : 1.0;
     return mat;
   }, [grassTexture, flowTexture, seed]);
-
-  const groundMaterial = useMemo(() => {
-    const mat = new THREE.MeshStandardMaterial({
-      map: grassTexture,
-      color: new THREE.Color(0.4, 0.45, 0.35),
-      roughness: 0.9,
-      metalness: 0.0,
-      side: THREE.DoubleSide,
-      transparent: true,
-      alphaTest: 0.01,
-      depthWrite: false,
-    });
-    addSphereProjectionWithSoftEdges(
-      mat,
-      0.003,
-      noiseTexture,
-      noiseHighTexture,
-      HEX_RADIUS,
-      sphereCenter,
-      groupInverseMatrix,
-    );
-    return mat;
-  }, [grassTexture, noiseTexture, noiseHighTexture]);
 
   useFrame((state) => {
     volcanoMaterial.uniforms.uTime.value = state.clock.elapsedTime;
@@ -186,18 +149,9 @@ export default function VolcanoTile({
     }
   });
 
-  const groundQuaternion = useMemo(() => new THREE.Quaternion(), []);
-
   return (
     <>
       <group ref={groupRef}>
-        <mesh
-          geometry={groundGeometry}
-          material={groundMaterial}
-          quaternion={groundQuaternion}
-          renderOrder={12}
-        />
-
         <mesh
           geometry={volcanoGeometry}
           material={volcanoMaterial}
@@ -210,8 +164,6 @@ export default function VolcanoTile({
 
       {showDust && surfaceNormal && worldPosition && (
         <DustEffect
-          position={worldPosition}
-          normal={surfaceNormal}
           duration={3000}
           particleColor={new THREE.Color(0.55, 0.18, 0.08)}
           onComplete={() => setShowDust(false)}

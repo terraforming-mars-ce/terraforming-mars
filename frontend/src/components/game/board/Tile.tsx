@@ -1,9 +1,9 @@
+import { assetUrl } from "@/assets";
 import { useRef, useState, useMemo, useEffect, memo, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { HexTile2D } from "../../../utils/hex-grid-2d";
-import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
 import MiningTile from "./MiningTile";
@@ -25,6 +25,7 @@ import {
 import { SPHERE_RADIUS, CHROME_Z_BASE, easeOutCubic } from "./boardConstants";
 
 const BONUS_ICON_TINT = new THREE.Color(0.7, 0.7, 0.7);
+const EMPTY_HEX_OPACITY = 0.12;
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 const _bbWorldPos = new THREE.Vector3();
 const _bbNormal = new THREE.Vector3();
@@ -297,7 +298,7 @@ function Tile({
   reservedById,
   displayName,
   isOceanSpace: _isOceanSpace = false,
-  bonuses: _bonuses = {},
+  bonuses = tileData.bonuses,
   onClick: _onClick,
   isAvailableForPlacement = false,
   animateEntrance = false,
@@ -588,8 +589,11 @@ function Tile({
     if (ownerColor) {
       return new THREE.Color(ownerColor);
     }
+    if (tileType === "empty") {
+      return new THREE.Color("#67432e");
+    }
     return baseTileColor.clone().multiplyScalar(0.25);
-  }, [baseTileColor, ownerColor]);
+  }, [baseTileColor, ownerColor, tileType]);
 
   const hexTileMaterial = useMemo(() => {
     const isGreenery = tileType === "greenery";
@@ -610,12 +614,13 @@ function Tile({
         tileType === "mohole"
           ? 0
           : tileType === "empty"
-            ? 0.3
+            ? EMPTY_HEX_OPACITY
             : 0.7,
       depthWrite: false,
       roughness: 0.7,
       metalness: 0.1,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
     });
 
     const snippet = splitSnippet(tileSurfaceVertexSnippet);
@@ -644,7 +649,9 @@ function Tile({
       tileType === "nuclear-zone"
     )
       return 0;
-    if (tileType === "empty") return 0.3;
+    if (tileType === "empty") {
+      return EMPTY_HEX_OPACITY;
+    }
     return 0.7;
   }, [tileType]);
 
@@ -675,7 +682,7 @@ function Tile({
   }
 
   const bonusIconGroups = useMemo((): BonusIconGroup[] => {
-    const entries = Object.entries(tileData.bonuses);
+    const entries = Object.entries(bonuses);
     if (entries.length === 0) return [];
 
     return entries.map(([key, value]) => ({
@@ -684,7 +691,7 @@ function Tile({
       count: value,
       isCredits: key === "credit",
     }));
-  }, [tileData.bonuses, getResourceIcon]);
+  }, [bonuses, getResourceIcon]);
 
   const calculateIconPositions = (groups: BonusIconGroup[]) => {
     const ICON_GAP = 0.005;
@@ -761,16 +768,6 @@ function Tile({
       {/* VP counting highlight */}
       <mesh geometry={overlayGeometry} material={vpHighlightMaterial} renderOrder={24} />
 
-      {/* Building (city) 3D model */}
-      {tileType === "city" && (
-        <BuildingTile
-          position={[0, 0, 0.03]}
-          isNewlyPlaced={isNewlyPlaced}
-          surfaceNormal={tileData.normal}
-          worldPosition={adjustedPosition}
-        />
-      )}
-
       {/* Volcano 3D tile */}
       {tileType === "volcano" && (
         <VolcanoTile
@@ -778,7 +775,6 @@ function Tile({
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}
           sphereCenter={sphereCenter}
-          groupInverseMatrix={groupInverseMatrix}
         />
       )}
 
@@ -851,7 +847,7 @@ function Tile({
           {displayName && (
             <Text
               fontSize={0.045}
-              font="/assets/Prototype.ttf"
+              font={assetUrl("fonts/prototype")}
               color="white"
               outlineWidth={0.004}
               outlineColor="black"
@@ -916,9 +912,12 @@ interface BonusIconProps {
 
 function BonusIcon({ texture, position, isCredits, creditAmount }: BonusIconProps) {
   const dimensions = useMemo((): [number, number] => {
-    if (!texture.image) return [0.05, 0.05];
+    const image = texture.image;
+    if (!(image instanceof HTMLImageElement)) {
+      return [0.05, 0.05];
+    }
 
-    const aspect = texture.image.width / texture.image.height;
+    const aspect = image.width / image.height;
     const maxSize = 0.05;
 
     if (aspect > 1) {
@@ -947,7 +946,7 @@ function BonusIcon({ texture, position, isCredits, creditAmount }: BonusIconProp
         <Text
           position={[0, 0, 0.002]}
           fontSize={0.025}
-          font="/assets/Prototype.ttf"
+          font={assetUrl("fonts/prototype")}
           color="black"
           anchorX="center"
           anchorY="middle"

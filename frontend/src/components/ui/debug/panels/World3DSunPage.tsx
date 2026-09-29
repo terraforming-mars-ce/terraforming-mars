@@ -1,3 +1,4 @@
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { useWorld3DSettings } from "../../../../contexts/World3DSettingsContext";
 import { ColorSwatch } from "../HSVColorPicker.tsx";
@@ -110,7 +111,8 @@ const World3DSunPage: React.FC = () => {
         </div>
       </div>
 
-      <button
+      <GameButton
+        emphasis="quiet"
         onClick={resetSettings}
         style={{
           padding: "8px 16px",
@@ -124,7 +126,7 @@ const World3DSunPage: React.FC = () => {
         }}
       >
         Reset to Defaults
-      </button>
+      </GameButton>
     </div>
   );
 };

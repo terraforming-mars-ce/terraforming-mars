@@ -1,6 +1,7 @@
 uniform sampler2D uNoiseMap;
 uniform sampler2D uNoiseMapHigh;
 uniform float uHexRadius;
+uniform bool uCircularEdge;
 uniform float uGrassOverflow;
 uniform float uBandWidth;
 uniform float uWarpAmount;
@@ -19,7 +20,7 @@ float hexSDF(vec2 p, float circumR) {
 //#pragma body
 #include <alphamap_fragment>
 
-float d = hexSDF(vLocalPos, uHexRadius);
+float d = uCircularEdge ? length(vLocalPos) - uHexRadius : hexSDF(vLocalPos, uHexRadius);
 float edgeDist = -d;
 
 vec2 noiseUV1 = vLocalPos * uNoiseScale + vTileOffset;

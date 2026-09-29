@@ -1,4 +1,6 @@
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useState, useCallback, forwardRef } from "react";
+import { useStore } from "zustand";
 import LeftSidebar from "../panels/LeftSidebar.tsx";
 import type { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
 import TopMenuBar from "../panels/TopMenuBar.tsx";
@@ -28,6 +30,9 @@ import { globalWebSocketManager } from "../../../services/globalWebSocketManager
 import { useAppPhaseStore } from "@/stores/appPhaseStore.ts";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import GameButton from "../../ui/buttons/GameButton.tsx";
+import type { CardInspectionStore, CardInspectionDrag } from "@/hooks/useCardInspection.ts";
+import CardInspection from "../../ui/overlay/CardInspection.tsx";
+import type { PlayerCardDto } from "@/types/generated/api-types.ts";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 
 export function SolarSystemFade({ children }: { children: React.ReactNode }) {
@@ -40,10 +45,13 @@ export function SolarSystemFade({ children }: { children: React.ReactNode }) {
 
 interface GameLayoutProps {
   gameState: GameDto;
+  inspectionStore: CardInspectionStore;
+  inspectionHand: PlayerCardDto[];
+  inspectionBlocked: boolean;
+  onInspectionDrag: (cardId: string, drag: CardInspectionDrag, detail: HTMLElement) => void;
   currentPlayer: PlayerDto | null;
   playedCards?: CardDto[];
   corporationCard?: CardDto | null;
-  showCorporation?: boolean;
   initTurnPlayerId?: string | null;
   showStartingSelection?: boolean;
   animateHexEntrance?: boolean;
@@ -65,7 +73,6 @@ interface GameLayoutProps {
   isGameSpectator?: boolean;
   chatMessages?: ChatMessageDto[];
   onSendChatMessage?: (message: string) => void;
-  isLobbyPhase?: boolean;
   playerColorMap?: Map<string, string>;
   endgameFadeUI?: boolean;
   isEndgame?: boolean;
@@ -78,13 +85,61 @@ interface GameLayoutProps {
   onPlayedCardAdvance?: () => void;
 }
 
+function CardInspections({
+  store,
+  hand,
+  blocked,
+  chatBounds,
+  onDrag,
+}: {
+  store: CardInspectionStore;
+  hand: PlayerCardDto[];
+  blocked: boolean;
+  chatBounds: DOMRectReadOnly | null;
+  onDrag: GameLayoutProps["onInspectionDrag"];
+}) {
+  const inspections = useStore(store, (state) => state.inspections);
+  const { finishInspection, closeInspection } = store.getState();
+  if (blocked) {
+    return null;
+  }
+  return inspections.map((inspection) => {
+    const card = hand.find((candidate) => candidate.id === inspection.cardId);
+    return card ? (
+      <CardInspection
+        key={card.id}
+        card={card}
+        inspection={inspection}
+        onReturned={finishInspection}
+        chatBounds={chatBounds}
+        onClose={closeInspection}
+        onDragStart={onDrag}
+      />
+    ) : null;
+  });
+}
+
+function WithoutInspection({
+  store,
+  children,
+}: {
+  store: CardInspectionStore;
+  children: React.ReactNode;
+}) {
+  const inspecting = useStore(store, (state) => state.inspections.length > 0);
+  return inspecting ? null : children;
+}
+
 const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLayout(
   {
     gameState,
+    inspectionStore,
+    inspectionHand,
+    inspectionBlocked,
+    onInspectionDrag,
     currentPlayer,
     playedCards = [],
     corporationCard = null,
-    showCorporation = true,
     initTurnPlayerId = null,
     showStartingSelection = false,
     animateHexEntrance = false,
@@ -106,7 +161,6 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
     isGameSpectator = false,
     chatMessages,
     onSendChatMessage,
-    isLobbyPhase = false,
     playerColorMap,
     endgameFadeUI = false,
     isEndgame = false,
@@ -120,6 +174,8 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
   },
   ref,
 ) {
+  const [chatBounds, setChatBounds] = useState<DOMRectReadOnly | null>(null);
+
   // Create a map of all players (current + others) for easy lookup
   const playerMap = new Map<string, PlayerDto | OtherPlayerDto>();
   if (gameState?.currentPlayer) {
@@ -234,13 +290,25 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
         <SolarSystemFade>
           <div className={uiAnimationClass}>
             <ChatOverlay
+              onBoundsChange={setChatBounds}
               messages={chatMessages}
               onSendMessage={onSendChatMessage}
-              isLobby={isLobbyPhase}
               isEndgame={endgameFadeUI}
               playerColorMap={playerColorMap}
             />
           </div>
+        </SolarSystemFade>
+      )}
+
+      {showUI && (
+        <SolarSystemFade>
+          <CardInspections
+            store={inspectionStore}
+            hand={inspectionHand}
+            blocked={inspectionBlocked}
+            chatBounds={chatBounds}
+            onDrag={onInspectionDrag}
+          />
         </SolarSystemFade>
       )}
 
@@ -285,12 +353,14 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
             <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
 
             {playedCardNotification && onPlayedCardTogglePin && onPlayedCardAdvance && (
-              <PlayedCardNotificationOverlay
-                notification={playedCardNotification}
-                isPinned={isPlayedCardPinned ?? false}
-                onTogglePin={onPlayedCardTogglePin}
-                onAdvance={onPlayedCardAdvance}
-              />
+              <WithoutInspection store={inspectionStore}>
+                <PlayedCardNotificationOverlay
+                  notification={playedCardNotification}
+                  isPinned={isPlayedCardPinned ?? false}
+                  onTogglePin={onPlayedCardTogglePin}
+                  onAdvance={onPlayedCardAdvance}
+                />
+              </WithoutInspection>
             )}
           </div>
         </SolarSystemFade>
@@ -310,7 +380,6 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
                 callbacks={bottomBarCallbacks}
                 gameId={gameState?.id}
                 corporation={corporationCard}
-                showCorporation={showCorporation}
                 spectatingPlayer={spectatingPlayer}
                 spectatingCorporation={spectatingCorporation}
                 spectatePlayerColor={spectatePlayerColor}
@@ -326,17 +395,17 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
           title="Kick player?"
           showBackdrop={true}
           onClose={() => setPendingAction(null)}
-          zIndex={10000}
+          zIndex={Z_INDEX.CONFIRMATION_MODAL}
         >
           <p className="text-white/80 text-center mb-6">
             <span className="font-bold text-white">{pendingAction.playerName}</span> will be removed
             from the game and cannot rejoin.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameButton buttonType="secondary" onClick={() => setPendingAction(null)}>
+            <GameButton emphasis="secondary" onClick={() => setPendingAction(null)}>
               Cancel
             </GameButton>
-            <GameButton variant="error" onClick={() => void handleConfirmAction()}>
+            <GameButton tone="error" onClick={() => void handleConfirmAction()}>
               Kick
             </GameButton>
           </div>
@@ -348,17 +417,17 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
           title="Convert to bot?"
           showBackdrop={true}
           onClose={() => setPendingAction(null)}
-          zIndex={10000}
+          zIndex={Z_INDEX.CONFIRMATION_MODAL}
         >
           <p className="text-white/80 text-center mb-6">
             <span className="font-bold text-white">{pendingAction.playerName}</span> will be
             replaced by a bot. This cannot be undone.
           </p>
           <div className="flex gap-4 justify-center">
-            <GameButton buttonType="secondary" onClick={() => setPendingAction(null)}>
+            <GameButton emphasis="secondary" onClick={() => setPendingAction(null)}>
               Cancel
             </GameButton>
-            <GameButton variant="error" onClick={() => void handleConfirmAction()}>
+            <GameButton tone="error" onClick={() => void handleConfirmAction()}>
               Convert
             </GameButton>
           </div>

@@ -1,10 +1,11 @@
+import { assetUrl } from "@/assets";
 import { createContext, useContext, useState, useRef, ReactNode } from "react";
 
 export const SKYBOX_OPTIONS = [
   {
     id: "starmap-2020-8k",
     label: "NASA Starmap 2020",
-    path: "/assets/backgrounds/starmap_2020_8k.exr",
+    path: assetUrl("textures/skyboxes/starmap"),
   },
 ] as const;
 
@@ -44,8 +45,8 @@ const defaultSettings: World3DSettings = {
   sunDirectionX: 0.9,
   sunDirectionY: 0.0,
   sunDirectionZ: 0.8,
-  sunIntensity: 1,
-  sunColor: { r: 1.0, g: 0.86, b: 0.72 },
+  sunIntensity: 0.65,
+  sunColor: { r: 1.0, g: 0.93, b: 0.85 },
   waterColor: { r: 0.05, g: 0.09, b: 0.1 },
   reflectance: 0.1,
   orbitSpeedMultiplier: 1.0,
