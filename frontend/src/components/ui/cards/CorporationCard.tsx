@@ -341,7 +341,9 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
           <div
             className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300"
             style={{
-              backgroundColor: isSelected ? `${effectiveBorderColor}33` : "#1a1508",
+              backgroundColor: isSelected
+                ? `color-mix(in srgb, ${effectiveBorderColor} 20%, #1a1508)`
+                : "#1a1508",
               borderColor: isSelected ? effectiveBorderColor : `${effectiveBorderColor}4d`,
             }}
           >
