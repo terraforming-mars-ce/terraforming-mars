@@ -1,3 +1,4 @@
+import { sphereRaycast } from "../../../utils/sphereRaycast";
 import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -56,7 +57,7 @@ function MoonSphere({
 
   return (
     <group ref={moonGroupRef} position={[moon.position[0], moon.position[1], moon.position[2]]}>
-      <mesh geometry={geometry} material={material} />
+      <mesh geometry={geometry} raycast={sphereRaycast} material={material} />
       <PlanetAtmosphere radius={moon.radius} profile={moon.atmosphere} />
       {moon.tileLocation && (
         <CelestialTileGrid
@@ -156,6 +157,7 @@ export default function CelestialBody({ config, gameState, onHexClick }: Celesti
     <group ref={groupRef}>
       <mesh
         geometry={geometry}
+        raycast={sphereRaycast}
         material={material}
         onPointerOver={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
@@ -164,6 +166,7 @@ export default function CelestialBody({ config, gameState, onHexClick }: Celesti
       {!isActive && (
         <mesh
           geometry={hitGeometry}
+          raycast={sphereRaycast}
           visible={false}
           onPointerEnter={(e) => {
             if (e.intersections[0]?.object !== e.object) {

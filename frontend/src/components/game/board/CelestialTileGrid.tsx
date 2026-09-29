@@ -1,3 +1,4 @@
+import { sphereRaycast } from "../../../utils/sphereRaycast";
 import { useEffect, useCallback, useMemo, useRef, useState, type RefObject } from "react";
 import { useCardDragStore } from "@/stores/cardDragStore.ts";
 import * as THREE from "three";
@@ -315,6 +316,7 @@ export default function CelestialTileGrid({
       {activePlanet === activePlanetId && (
         <mesh
           geometry={interactionSphereGeometry}
+          raycast={sphereRaycast}
           onPointerMove={handleSpherePointerMove}
           onPointerLeave={handleSpherePointerLeave}
           onClick={handleSphereClick}

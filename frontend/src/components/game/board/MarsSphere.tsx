@@ -1,3 +1,4 @@
+import { sphereRaycast } from "../../../utils/sphereRaycast";
 import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -77,6 +78,7 @@ export default function MarsSphere({
     <group ref={marsGroupRef}>
       <mesh
         geometry={sphereGeometry}
+        raycast={sphereRaycast}
         material={marsMaterial}
         onPointerEnter={(e) => {
           if (activePlanet !== "mars") {
