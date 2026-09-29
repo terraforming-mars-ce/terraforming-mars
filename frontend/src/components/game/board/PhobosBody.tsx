@@ -35,6 +35,13 @@ export default function PhobosBody({ gameState, onHexClick }: PhobosBodyProps) {
     return { geometry, radius };
   }, [phobosScene]);
   useEffect(() => () => hazeShape.geometry.dispose(), [hazeShape]);
+  const settlementRadius = useMemo(() => {
+    phobosScene.updateMatrixWorld(true);
+    const ray = new THREE.Raycaster(new THREE.Vector3(0, 0, 100), new THREE.Vector3(0, 0, -1));
+    const [surface] = ray.intersectObject(phobosScene, true);
+    // Seat the foundation into the visible rock, not the moon's bounding sphere.
+    return surface.point.z * PHOBOS_SCALE - 0.01;
+  }, [phobosScene]);
 
   const _marsPos = useMemo(() => new THREE.Vector3(), []);
   const _toOrigin = useMemo(() => new THREE.Vector3(), []);
@@ -72,6 +79,7 @@ export default function PhobosBody({ gameState, onHexClick }: PhobosBodyProps) {
         tileOpacity={tileOpacity}
         location={PHOBOS_CONFIG.tileLocation!}
         radius={PHOBOS_CONFIG.radius}
+        contentRadius={settlementRadius}
         coordOffset={PHOBOS_CONFIG.coordOffset}
         worldCenter={worldCenterRef.current}
         activePlanetId="mars"
