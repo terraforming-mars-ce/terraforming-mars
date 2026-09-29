@@ -1,11 +1,16 @@
-attribute vec2 boardPosition;
-attribute vec4 landscapeField;
-attribute float shoreDistance;
-varying float vShoreDistance;
+attribute vec2 patchOrigin;
+attribute float patchLayer;
+attribute float patchBirth;
 varying vec2 vBoardPos;
-varying vec4 vLandscapeField;
+varying vec2 vFieldLocal;
+varying float vFieldLayer;
+varying float vFieldBirth;
 //#pragma body
-#include <begin_vertex>
-vBoardPos=boardPosition;
-vLandscapeField=landscapeField;
-vShoreDistance=shoreDistance;
+vec2 local=position.xy+0.5;
+vec2 board=patchOrigin+local*uPatchSize;
+float h=landscapeField(local,patchLayer,patchBirth).x;
+vec3 transformed=landscapeProject(board,h);
+vBoardPos=board;
+vFieldLocal=local;
+vFieldLayer=patchLayer;
+vFieldBirth=patchBirth;

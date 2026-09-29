@@ -1,0 +1,17 @@
+vec3 dx=terrainDx,dy=terrainDy;
+vec2 ux=terrainUvDx,uy=terrainUvDy;
+vec3 px=cross(dy,normal),py=cross(normal,dx);
+vec3 tangent=px*ux.x+py*uy.x;
+vec3 bitangent=px*ux.y+py*uy.y;
+float basisScale=inversesqrt(max(max(dot(tangent,tangent),dot(bitangent,bitangent)),1e-20));
+vec2 lushSlope=mat2(0.8,0.6,-0.6,0.8)*(lushDetail.rg*2.0-1.0);
+vec2 slope=materialWeights.y*lushSlope+materialWeights.z*(litterDetail.rg*2.0-1.0)+materialWeights.w*(soilDetail.rg*2.0-1.0);
+float natureSurface=groundCoverage*natureRatio*(1.0-bank);
+slope*=0.3*natureSurface;
+normal=normalize(normal*sqrt(max(0.0,1.0-dot(slope,slope)))+(tangent*slope.x+bitangent*slope.y)*basisScale);
+float materialRoughness=dot(materialWeights,vec4(0.93,lushDetail.b,litterDetail.b,soilDetail.b));
+roughnessFactor=mix(roughnessFactor,clamp(materialRoughness,0.65,1.0),natureSurface);
+vec3 pavingX=cross(dy,normal),pavingY=cross(normal,dx);
+float pavingDet=dot(dx,pavingX);
+vec3 pavingSlope=(pavingGradient.x*pavingX+pavingGradient.y*pavingY)*sign(pavingDet)/max(abs(pavingDet),1e-12);
+normal=normalize(normal-pavingSlope);

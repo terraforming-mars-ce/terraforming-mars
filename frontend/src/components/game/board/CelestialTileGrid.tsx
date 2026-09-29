@@ -4,6 +4,9 @@ import { useCardDragStore } from "@/stores/cardDragStore.ts";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import Tile from "./Tile";
+import CityRenderer from "./CityRenderer";
+import { generateCityLayout, type CityPlot } from "./cityLayout";
+import { BOARD_SCALE, hashSeed } from "./landscapeGeometry";
 import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
@@ -16,6 +19,7 @@ interface CelestialTileGridProps {
   tileOpacity?: RefObject<number>;
   location: string;
   radius: number;
+  contentRadius?: number;
   coordOffset: { q: number; r: number; s: number };
   worldCenter: THREE.Vector3;
   activePlanetId: string;
@@ -83,6 +87,7 @@ export default function CelestialTileGrid({
   tileOpacity,
   location,
   radius,
+  contentRadius = radius,
   coordOffset,
   worldCenter,
   activePlanetId,
@@ -190,6 +195,29 @@ export default function CelestialTileGrid({
         };
       });
   }, [gameState?.board?.tiles, location, coordOffset, radius]);
+
+  const cityPlots = useMemo((): CityPlot[] => {
+    return projectedTiles
+      .filter((tile) => tile.backendTile.occupiedBy?.type === "city-tile")
+      .map((tile) => {
+        const visual = tile.backendTile.occupiedBy!.visual;
+        const key = HexGrid2D.coordinateToKey(tile.coordinate);
+        return {
+          coordinate: tile.coordinate,
+          worldPosition: projectToSphere(tile.position, contentRadius),
+          normal: tile.normal,
+          surface: {
+            radius: contentRadius,
+            center: { x: tile.position.x * BOARD_SCALE, y: tile.position.y * BOARD_SCALE },
+          },
+          layout: generateCityLayout(
+            visual?.seed ?? hashSeed(`${gameState?.id}:${key}`),
+            { cover: "dome", landscaping: "sparse", heights: "low", ...visual?.city },
+            tile.backendTile.displayName ?? "City",
+          ),
+        };
+      });
+  }, [projectedTiles, contentRadius, gameState?.id]);
 
   const availableHexes = gameState?.currentPlayer?.pendingTileSelection?.availableHexes || [];
 
@@ -327,6 +355,18 @@ export default function CelestialTileGrid({
       <Html>
         <TileTooltip data={tooltipData} positionRef={tooltipPositionRef} />
       </Html>
+      {cityPlots.map((plot) => {
+        const key = HexGrid2D.coordinateToKey(plot.coordinate);
+        return (
+          <CityRenderer
+            key={key}
+            plot={plot}
+            sphereCenter={worldCenter}
+            groupInverseMatrix={groupInverseMatrix}
+            isNewlyPlaced={newlyPlacedTiles.has(key)}
+          />
+        );
+      })}
       {projectedTiles.map((tile) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
         const tileType = getTileType(tile);

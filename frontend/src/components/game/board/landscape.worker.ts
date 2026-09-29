@@ -1,24 +1,32 @@
-import { buildLandscape, connectOceanGround } from "./landscapeNetwork";
-import { createLandscapeGround, packLandscapeGround } from "./landscapeGeometry";
-import type { LandscapeRequest, LandscapeResult } from "./useLandscape";
-
-let previousKey = "";
-let previousPlan = buildLandscape([]);
-
+import { LandscapeBuilder } from "./landscapeFields";
+import type { LandscapeRequest, LandscapeDelta } from "./landscapeTypes";
+const builder = new LandscapeBuilder();
+let pending: LandscapeRequest | null = null;
+let scheduled = false;
 self.onmessage = ({ data }: MessageEvent<LandscapeRequest>) => {
-  const planKey = JSON.stringify([data.tiles, data.spaces]);
-  if (planKey !== previousKey) {
-    previousPlan = buildLandscape(data.tiles, data.spaces);
-    previousKey = planKey;
+  pending = data;
+  if (scheduled) {
+    return;
   }
-  const plan = previousPlan;
-  const geometry = createLandscapeGround(plan, connectOceanGround(plan, data.oceans));
-  const ground = packLandscapeGround(geometry);
-  const transfers: Transferable[] = Object.values(ground.attributes).map((a) => a.array.buffer);
-  if (ground.index) {
-    transfers.push(ground.index.buffer);
-  }
-  const result: LandscapeResult = { id: data.id, planKey, plan, ground };
-  self.postMessage(result, { transfer: transfers });
-  geometry.dispose();
+  scheduled = true;
+  setTimeout(() => {
+    scheduled = false;
+    const request = pending!;
+    const start = performance.now();
+    const result = builder.build(request);
+    const patches = [...result.values()]
+      .filter((p) => request.known[p.key] !== p.signature)
+      .map((p) => ({ ...p, terrain: p.terrain.slice(), materials: p.materials.slice() }));
+    const delta: LandscapeDelta = {
+      id: request.id,
+      seed: request.seed,
+      sources: request.sources,
+      patches,
+      removed: Object.keys(request.known).filter((key) => !result.has(key)),
+      preparationMs: performance.now() - start,
+    };
+    self.postMessage(delta, {
+      transfer: patches.flatMap((p) => [p.terrain.buffer, p.materials.buffer]),
+    });
+  }, 0);
 };

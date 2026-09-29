@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import DustEffect from "./effects/DustEffect";
+import { CITY_EMERGENCE_DURATION } from "./boardConstants";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { createGeometry } from "./cityGeometry";
@@ -11,69 +12,84 @@ import { addSphereProjectionWithSoftEdges } from "./GreeneryRenderer";
 import { randomSequence, type CityStyle, type CityPlot } from "./cityLayout";
 
 const ORIGIN = new THREE.Vector3();
-const materialCache = new Map<CityStyle["lighting"], THREE.MeshStandardMaterial[]>();
+const materialCache = new Map<string, THREE.MeshStandardMaterial[]>();
 
 export function getMaterials(
   lighting: CityStyle["lighting"],
-  textures: Pick<ReturnType<typeof useTextures>, "concrete" | "grass" | "sand">,
+  textures: Pick<ReturnType<typeof useTextures>, "concrete" | "grass" | "sand" | "cityFacades">,
 ) {
-  const cached = materialCache.get(lighting);
+  const cacheKey =
+    lighting +
+    textures.cityFacades
+      .map((f) => `${f.color.uuid}:${f.normal.uuid}:${f.roughness.uuid}`)
+      .join(":");
+  const cached = materialCache.get(cacheKey);
   if (cached) {
     return cached;
   }
-  const canvas = document.createElement("canvas");
-  const emissiveCanvas = document.createElement("canvas");
-  canvas.width = emissiveCanvas.width = 256;
-  canvas.height = emissiveCanvas.height = 512;
-  const ctx = canvas.getContext("2d")!;
-  const glow = emissiveCanvas.getContext("2d")!;
-  ctx.fillStyle = "#cbd0d0";
-  ctx.fillRect(0, 0, 256, 512);
-  glow.fillStyle = "#62696c";
-  glow.fillRect(0, 0, 256, 512);
-  const rng = randomSequence(475);
-  for (let row = 0; row < 8; row++) {
-    ctx.fillStyle = "#89969c";
-    ctx.fillRect(0, row * 64 + 57, 256, 4);
-    for (let column = 0; column < 4; column++) {
-      const x = column * 64 + 9;
-      const y = row * 64 + 10;
-      const lit = rng() > (lighting === "bright" ? 0.15 : 0.58);
-      ctx.fillStyle = "#77868d";
-      ctx.fillRect(x - 3, y - 3, 48, 41);
-      ctx.fillStyle = lit ? "#b9cbd0" : "#233e50";
-      ctx.fillRect(x, y, 42, 35);
-      ctx.fillStyle = lit ? "#e7d9a9" : "#416475";
-      ctx.fillRect(x + 3, y + 3, 36, 7);
-      ctx.fillStyle = "#89969c";
-      ctx.fillRect(x + 20, y, 2, 35);
-      if (lit) {
-        glow.fillStyle = "#9caeb8";
-        glow.fillRect(x, y, 42, 35);
-        glow.fillStyle = "#f0cf89";
-        glow.fillRect(x + 3, y + 3, 36, 7);
+  const materials = textures.cityFacades.map((facade, variant) => {
+    const canvases = Array.from({ length: 4 }, () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 1024;
+      return canvas;
+    });
+    const [ctx, glow, normals, roughness] = canvases.map((canvas) => {
+      const context = canvas.getContext("2d")!;
+      context.scale(2, 2);
+      return context;
+    });
+    ctx.drawImage(facade.color.image as CanvasImageSource, 0, 0, 256, 512);
+    normals.drawImage(facade.normal.image as CanvasImageSource, 0, 0, 256, 512);
+    roughness.drawImage(facade.roughness.image as CanvasImageSource, 0, 0, 256, 512);
+    glow.fillStyle = "#000000";
+    glow.fillRect(0, 0, 256, 512);
+    const rng = randomSequence(475 + variant * 31);
+    const width = [30, 36, 22][variant],
+      height = [32, 26, 40][variant];
+    for (let row = 0; row < 8; row++) {
+      for (let column = 0; column < 4; column++) {
+        const x = column * 64 + (64 - width) / 2;
+        const y = row * 64 + (64 - height) / 2;
+        const lit = rng() > (lighting === "bright" ? 0.15 : 0.58);
+        ctx.fillStyle = "#52636b";
+        ctx.fillRect(x - 2, y - 2, width + 4, height + 4);
+        ctx.fillStyle = lit ? "#b9cbd0" : "#233e50";
+        ctx.fillRect(x, y, width, height);
+        ctx.fillStyle = lit ? "#e7d9a9" : "#416475";
+        ctx.fillRect(x + 2, y + 2, width - 4, 5);
+        normals.fillStyle = "#8080ff";
+        normals.fillRect(x - 2, y - 2, width + 4, height + 4);
+        roughness.fillStyle = "#555555";
+        roughness.fillRect(x - 2, y - 2, width + 4, height + 4);
+        if (lit) {
+          glow.fillStyle = "#9caeb8";
+          glow.fillRect(x, y, width, height);
+          glow.fillStyle = "#f0cf89";
+          glow.fillRect(x + 2, y + 2, width - 4, 5);
+        }
       }
     }
-  }
-  const map = new THREE.CanvasTexture(canvas);
-  const emissiveMap = new THREE.CanvasTexture(emissiveCanvas);
-  for (const texture of [map, emissiveMap]) {
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 4;
-  }
-  const materials = ["#f2eee3", "#c3d3d8", "#a8b8c5"].map(
-    (color) =>
-      new THREE.MeshStandardMaterial({
-        color,
-        map,
-        emissiveMap,
-        emissive: "#ffffff",
-        emissiveIntensity: lighting === "bright" ? 1.4 : 0.6,
-        roughness: 0.65,
-        metalness: 0.15,
-      }),
-  );
+    const [map, emissiveMap, normalMap, roughnessMap] = canvases.map((canvas, index) => {
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.colorSpace = index < 2 ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      texture.anisotropy = 4;
+      return texture;
+    });
+    return new THREE.MeshStandardMaterial({
+      color: "#eef2f2",
+      map,
+      emissiveMap,
+      normalMap,
+      roughnessMap,
+      normalScale: new THREE.Vector2(0.45, 0.45),
+      emissive: "#ffffff",
+      emissiveIntensity: lighting === "bright" ? 1.4 : 0.6,
+      roughness: 0.95,
+      metalness: 0.08,
+    });
+  });
   for (const [color, roughness, metalness] of [
     ["#68777d", 0.85, 0.1],
     ["#b8b6a9", 0.9, 0],
@@ -131,10 +147,12 @@ export function getMaterials(
   );
   materials[4].side = THREE.DoubleSide;
   for (const index of [3, 4, 5]) {
-    materials[index].map = textures.concrete;
-    materials[index].bumpMap = textures.concrete;
-    materials[index].bumpScale = 0.0003;
-    materials[index].emissiveMap = textures.concrete;
+    const facade = textures.cityFacades[(index + 2) % 3];
+    materials[index].map = facade.color;
+    materials[index].normalMap = facade.normal;
+    materials[index].normalScale.set(0.35, 0.35);
+    materials[index].roughnessMap = facade.roughness;
+    materials[index].emissiveMap = facade.color;
   }
   materials[4].color.set("#a8a399");
   materials[7].map = textures.grass;
@@ -212,13 +230,12 @@ export function getMaterials(
   materials.forEach((material) => {
     material.vertexColors = true;
   });
-  materialCache.set(lighting, materials);
+  materialCache.set(cacheKey, materials);
   return materials;
 }
 
 interface CityRendererProps {
   renderBuildings?: boolean;
-  activeExits?: readonly number[];
   plot: CityPlot;
   sphereCenter?: THREE.Vector3;
   groupInverseMatrix?: THREE.Matrix4;
@@ -234,6 +251,7 @@ export function CityGroundPatch({
   renderOrder = 11,
   radius,
   surface,
+  sphereRadius,
   sphereCenter,
   groupInverseMatrix,
 }: {
@@ -243,6 +261,7 @@ export function CityGroundPatch({
   renderOrder?: number;
   radius: number;
   surface: "soil" | "grass" | "paving" | "asphalt";
+  sphereRadius?: number;
   sphereCenter: THREE.Vector3;
   groupInverseMatrix?: THREE.Matrix4;
 }) {
@@ -294,6 +313,7 @@ export function CityGroundPatch({
       sphereCenter,
       groupInverseMatrix,
       {
+        sphereRadius,
         circular: true,
         overflow: paved ? 0 : 0.12,
         bandWidth: paved ? 0.015 : 0.4,
@@ -308,6 +328,7 @@ export function CityGroundPatch({
     noiseMid,
     noiseHigh,
     surface,
+    sphereRadius,
     radius,
     elevation,
     sphereCenter,
@@ -339,7 +360,6 @@ function CityRenderer({
   showLabel = false,
   connectedGround = false,
   isNewlyPlaced = false,
-  activeExits,
   renderBuildings = true,
 }: CityRendererProps) {
   const buildings = useRef<THREE.Group>(null);
@@ -358,15 +378,15 @@ function CityRenderer({
       return;
     }
     started.current ??= clock.elapsedTime;
-    const t = Math.min(1, (clock.elapsedTime - started.current) / 0.8);
+    const t = Math.min(1, (clock.elapsedTime - started.current) / CITY_EMERGENCE_DURATION);
     buildings.current.position.z = -0.08 * Math.pow(1 - t, 3);
     if (t === 1) {
       emerging.current = false;
     }
   });
   const geometries = useMemo(
-    () => (renderBuildings ? createGeometry(plot.layout, plot, activeExits) : []),
-    [plot, activeExits, renderBuildings],
+    () => (renderBuildings ? createGeometry(plot.layout, plot) : []),
+    [plot, renderBuildings],
   );
   useEffect(
     () => () => {
@@ -414,14 +434,18 @@ function CityRenderer({
           surface="asphalt"
           elevation={0.0002}
           renderOrder={10}
+          sphereRadius={plot.surface?.radius}
           sphereCenter={sphereCenter}
           groupInverseMatrix={groupInverseMatrix}
         />
       )}
-      {(!connectedGround || groundSurface !== "grass") && (
+      {(!connectedGround ||
+        plot.layout.style.cover === "dome" ||
+        plot.layout.style.ground === "recessed") && (
         <CityGroundPatch
           radius={plot.layout.style.cover === "dome" ? 0.113 : 0.155}
           surface={groundSurface}
+          sphereRadius={plot.surface?.radius}
           sphereCenter={sphereCenter}
           groupInverseMatrix={groupInverseMatrix}
         />
@@ -432,6 +456,7 @@ function CityRenderer({
           {...patch}
           surface="soil"
           elevation={0.0005}
+          sphereRadius={plot.surface?.radius}
           sphereCenter={sphereCenter}
           groupInverseMatrix={groupInverseMatrix}
         />
@@ -445,6 +470,7 @@ function CityRenderer({
             elevation={0.0004}
             radius={park.radius}
             surface="grass"
+            sphereRadius={plot.surface?.radius}
             sphereCenter={sphereCenter}
             groupInverseMatrix={groupInverseMatrix}
           />
@@ -464,13 +490,7 @@ function CityRenderer({
             ),
         )}
       </group>
-      {dust && (
-        <DustEffect
-          position={plot.worldPosition}
-          normal={plot.normal}
-          onComplete={() => setDust(false)}
-        />
-      )}
+      {dust && <DustEffect duration={3000} onComplete={() => setDust(false)} />}
       {showLabel && (
         <Text
           position={[0, -0.137, 0.005]}

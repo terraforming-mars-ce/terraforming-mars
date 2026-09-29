@@ -4,7 +4,6 @@ import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { HexTile2D } from "../../../utils/hex-grid-2d";
-import BuildingTile from "./BuildingTile";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
 import MiningTile from "./MiningTile";
@@ -268,7 +267,6 @@ interface TileProps {
     | "mohole";
   ownerId?: string | null;
   ownerColor?: string;
-  renderBuilding?: boolean;
   reservedById?: string | null;
   displayName?: string;
   isOceanSpace?: boolean;
@@ -297,7 +295,6 @@ function Tile({
   tileType,
   ownerId,
   ownerColor,
-  renderBuilding = true,
   reservedById,
   displayName,
   isOceanSpace: _isOceanSpace = false,
@@ -771,16 +768,6 @@ function Tile({
       {/* VP counting highlight */}
       <mesh geometry={overlayGeometry} material={vpHighlightMaterial} renderOrder={24} />
 
-      {/* Building (city) 3D model */}
-      {tileType === "city" && renderBuilding && (
-        <BuildingTile
-          position={[0, 0, 0.03]}
-          isNewlyPlaced={isNewlyPlaced}
-          surfaceNormal={tileData.normal}
-          worldPosition={adjustedPosition}
-        />
-      )}
-
       {/* Volcano 3D tile */}
       {tileType === "volcano" && (
         <VolcanoTile
@@ -788,7 +775,6 @@ function Tile({
           surfaceNormal={tileData.normal}
           worldPosition={adjustedPosition}
           sphereCenter={sphereCenter}
-          groupInverseMatrix={groupInverseMatrix}
         />
       )}
 

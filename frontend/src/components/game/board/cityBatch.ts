@@ -5,7 +5,6 @@ import { createGeometry } from "./cityGeometry";
 
 type Entry = {
   plot: CityPlot;
-  exits: string;
   birth: number;
   parts: { key: string; geometry: number }[];
 };
@@ -16,7 +15,7 @@ export class CityBatchStore {
   private entries = new Map<string, Entry>();
   builds = 0;
   constructor(private materials: Map<string, THREE.MeshStandardMaterial>) {}
-  update(plots: CityPlot[], activeExits: Map<string, number[]>, births: Map<string, number>) {
+  update(plots: CityPlot[], births: Map<string, number>) {
     const keys = new Set(plots.map((p) => HexGrid2D.coordinateToKey(p.coordinate)));
     for (const [key, entry] of this.entries) {
       if (!keys.has(key)) {
@@ -26,22 +25,21 @@ export class CityBatchStore {
     }
     for (const plot of plots) {
       const key = HexGrid2D.coordinateToKey(plot.coordinate),
-        exits = (activeExits.get(key) ?? []).join(","),
         birth = births.get(key) ?? -1000;
       const previous = this.entries.get(key);
-      if (previous?.plot === plot && previous.exits === exits && previous.birth === birth) {
+      if (previous?.plot === plot && previous.birth === birth) {
         continue;
       }
       if (previous) {
         this.remove(previous);
       }
-      const entry: Entry = { plot, exits, birth, parts: [] };
+      const entry: Entry = { plot, birth, parts: [] };
       const matrix = new THREE.Matrix4().compose(
         plot.worldPosition,
         new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), plot.normal),
         new THREE.Vector3(1, 1, 1),
       );
-      const geometries = createGeometry(plot.layout, plot, activeExits.get(key) ?? []);
+      const geometries = createGeometry(plot.layout, plot);
       this.builds++;
       for (const [index, geometry] of geometries.entries()) {
         if (!geometry) {

@@ -235,8 +235,6 @@ export default function ReservedAreaTile({
 
       {showDust && surfaceNormal && worldPosition && (
         <DustEffect
-          position={worldPosition}
-          normal={surfaceNormal}
           duration={2000}
           particleColor={new THREE.Color(0.5, 0.35, 0.2)}
           onComplete={() => setShowDust(false)}

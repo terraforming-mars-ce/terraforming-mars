@@ -10,7 +10,7 @@ import { useMarsRotation } from "../../../contexts/MarsRotationContext.tsx";
 import { useTextures } from "../../../hooks/useTextures.ts";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext.tsx";
-import { SPHERE_RADIUS } from "./boardConstants.ts";
+import { SPHERE_RADIUS, MOHOLE_STENCIL_BIT, LAKE_STENCIL_BIT } from "./boardConstants.ts";
 import {
   getMarsOrbitalPosition,
   setOrbitSpeedMultiplier,
@@ -64,9 +64,10 @@ export default function MarsSphere({
     });
 
     mat.stencilWrite = true;
-    mat.stencilFunc = THREE.NotEqualStencilFunc;
-    mat.stencilRef = 1;
-    mat.stencilFuncMask = 0xff;
+    mat.stencilFunc = THREE.EqualStencilFunc;
+    mat.stencilRef = 0;
+    mat.stencilFuncMask = MOHOLE_STENCIL_BIT | LAKE_STENCIL_BIT;
+    mat.stencilWriteMask = 0;
     mat.stencilFail = THREE.KeepStencilOp;
     mat.stencilZFail = THREE.KeepStencilOp;
     mat.stencilZPass = THREE.KeepStencilOp;

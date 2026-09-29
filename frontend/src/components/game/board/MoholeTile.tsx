@@ -589,8 +589,6 @@ export default function MoholeTile({
 
       {showDust && surfaceNormal && worldPosition && (
         <DustEffect
-          position={worldPosition}
-          normal={surfaceNormal}
           duration={2800}
           particleColor={new THREE.Color(0.35, 0.15, 0.1)}
           onComplete={() => setShowDust(false)}

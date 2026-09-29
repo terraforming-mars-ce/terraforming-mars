@@ -31,13 +31,16 @@ func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
 		t.Fatal(err)
 	}
 	registry := cards.NewInMemoryCardRegistry(definitions)
-	for _, id := range []string{"020", "008", "017", "029", "120", "032", "108"} {
+	for _, id := range []string{"020", "021", "008", "017", "029", "120", "032", "108"} {
 		card, err := registry.GetByID(id)
 		if err != nil || card.Style == nil || card.Style.Tile == nil {
 			t.Fatalf("Missing card style %s: %v", id, err)
 		}
 		if dto.ToCardDto(*card).Style.Tile == nil {
 			t.Fatal("Card DTO lost style")
+		}
+		if id == "008" && (card.Style.Tile.Plan != "grid" || card.Style.Tile.Perimeter != "low-wall" || card.Style.Tile.Landmark != "hall" || card.Style.Tile.Landscaping != "lush") {
+			t.Fatalf("Capital lost its green civic layout: %+v", card.Style.Tile)
 		}
 	}
 	var coordinate shared.HexPosition
@@ -115,4 +118,35 @@ func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
 	if repeated.OccupiedBy.Visual.Seed != seed {
 		t.Fatal("Seed is not deterministic")
 	}
+}
+
+func TestPhobosCityUsesDomeAppearance(t *testing.T) {
+	ctx := context.Background()
+	g, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+	testutil.StartTestGame(t, g)
+	playerID := g.TurnOrder()[0]
+	registry := testutil.CreateTestCardRegistry()
+	for _, tile := range g.Board().Tiles() {
+		if tile.Location != board.TileLocationPhobos {
+			continue
+		}
+		selection := &shared.PendingTileSelection{TileType: "city", AvailableHexes: []string{tile.Coordinates.String()}, Source: "card", SourceCardID: "021"}
+		if err := g.SetPendingTileSelection(ctx, playerID, selection); err != nil {
+			t.Fatal(err)
+		}
+		action := tileAction.NewSelectTileAction(repo, registry, game.NewInMemoryGameStateRepository(), testutil.TestLogger())
+		if _, err := action.Execute(ctx, g.ID(), playerID, tile.Coordinates.String()); err != nil {
+			t.Fatal(err)
+		}
+		placed, err := g.Board().GetTile(tile.Coordinates)
+		if err != nil {
+			t.Fatal(err)
+		}
+		visual := placed.OccupiedBy.Visual
+		if visual == nil || visual.City == nil || visual.City.Cover != "dome" || visual.City.Landscaping != "sparse" {
+			t.Fatalf("Phobos lost its sealed habitat appearance: %+v", visual)
+		}
+		return
+	}
+	t.Fatal("Phobos tile is missing")
 }

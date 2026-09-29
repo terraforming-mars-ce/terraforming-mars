@@ -296,7 +296,8 @@
     "name": "Capital",
     "style": {
       "tile": {
-        "plan": "radial",
+        "plan": "grid",
+        "perimeter": "low-wall",
         "landmark": "hall",
         "landscaping": "lush",
         "entranceMin": 3,
@@ -987,7 +988,23 @@
         "condition": "fixed",
         "description": "3 VP"
       }
-    ]
+    ],
+    "style": {
+      "tile": {
+        "plan": "radial",
+        "cover": "dome",
+        "heights": "low",
+        "perimeter": "high-wall",
+        "connections": "enclosed",
+        "landscaping": "sparse",
+        "details": [
+          "antennas",
+          "dishes"
+        ],
+        "entranceMin": 2,
+        "entranceMax": 2
+      }
+    }
   },
   {
     "id": "022",
@@ -5244,7 +5261,6 @@
         "lighting": "bright",
         "connections": "skybridges",
         "landscaping": "sparse",
-        "perimeterRoad": "ring",
         "entranceMin": 2,
         "entranceMax": 3
       }

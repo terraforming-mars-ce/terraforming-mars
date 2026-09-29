@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { StateDiffDto, GameDto, CalculatedOutputDto } from "@/types/generated/api-types.ts";
+import {
+  StateDiffDto,
+  GameDto,
+  CalculatedOutputDto,
+  LogUpdatePayload,
+} from "@/types/generated/api-types.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import GameIcon from "@/components/ui/display/GameIcon.tsx";
 import VictoryPointIcon from "@/components/ui/display/VictoryPointIcon.tsx";
@@ -373,7 +378,7 @@ const LogPopover: React.FC<LogPopoverProps> = ({
   }, [gameState?.currentPlayer, gameState?.otherPlayers]);
 
   // Handle incoming log updates via WebSocket
-  const handleLogUpdate = useCallback((newLogs: StateDiffDto[]) => {
+  const handleLogUpdate = useCallback(({ logs: newLogs }: LogUpdatePayload) => {
     setLogs((prev) => {
       // Deduplicate by sequence number
       const existingSeqs = new Set(prev.map((l) => l.sequenceNumber));

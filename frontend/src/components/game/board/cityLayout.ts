@@ -56,6 +56,7 @@ export interface CityLayout {
 }
 
 export interface CityPlot {
+  surface?: { radius: number; center: Point2 };
   coordinate: { q: number; r: number; s: number };
   worldPosition: THREE.Vector3;
   normal: THREE.Vector3;
@@ -89,6 +90,32 @@ const BASE_STYLE: CityStyle = {
   entranceMax: 3,
   details: [],
 };
+export const CAPITAL_WALL_APOTHEM = 0.127;
+export function cityHexWallApothem(layout: CityLayout) {
+  const { style } = layout;
+  if (style.landmark === "hall") {
+    return CAPITAL_WALL_APOTHEM;
+  }
+  return style.plan === "grid" &&
+    style.ground === "level" &&
+    style.exposure === "surface" &&
+    style.cover !== "dome"
+    ? 0.132
+    : null;
+}
+export function cityWallDistance(layout: CityLayout, x: number, y: number) {
+  const apothem = cityHexWallApothem(layout);
+  if (apothem !== null) {
+    return (
+      Math.max(
+        Math.abs(x),
+        Math.abs(x * 0.5 + y * 0.866025404),
+        Math.abs(x * -0.5 + y * 0.866025404),
+      ) - apothem
+    );
+  }
+  return Math.hypot(x, y) - 0.121;
+}
 
 const CITY_RECIPES: { name: string; seed: number; style: Partial<CityStyle> }[] = [
   {
@@ -110,7 +137,8 @@ const CITY_RECIPES: { name: string; seed: number; style: Partial<CityStyle> }[] 
     seed: 839,
     style: {
       landmark: "hall",
-      plan: "radial",
+      plan: "grid",
+      perimeter: "low-wall",
       landscaping: "lush",
       entranceMin: 3,
       entranceMax: 3,
@@ -145,7 +173,6 @@ const CITY_RECIPES: { name: string; seed: number; style: Partial<CityStyle> }[] 
       density: "dense",
       heights: "tall",
       lighting: "bright",
-      perimeterRoad: "ring",
       connections: "skybridges",
       landscaping: "sparse",
     },
@@ -181,6 +208,9 @@ const CITY_RECIPES: { name: string; seed: number; style: Partial<CityStyle> }[] 
 export function insideBuilding(building: CityBuilding, x: number, y: number, padding: number) {
   const dx = x - building.x;
   const dy = y - building.y;
+  if (building.landmark && building.round) {
+    return Math.hypot(dx, dy) < Math.max(building.width, building.depth) / 2 + padding;
+  }
   const localX = dx * Math.cos(building.rotation) + dy * Math.sin(building.rotation);
   const localY = -dx * Math.sin(building.rotation) + dy * Math.cos(building.rotation);
   return (
@@ -207,9 +237,11 @@ export function onEntrancePath(building: CityBuilding, x: number, y: number, cle
   return Math.hypot(x - building.x - dx * t, y - building.y - dy * t) < clearance;
 }
 
-function neighborhoodGrid(seed: number, rotation: number) {
+function neighborhoodGrid(seed: number, rotation: number, dense = false) {
   const rng = randomSequence(seed ^ 0x3489);
-  const ys = [-0.14, -0.103, -0.069, -0.033, 0.004, 0.043, 0.077, 0.111, 0.14];
+  const ys = dense
+    ? [-0.14, -0.116, -0.09, -0.0675, -0.045, -0.0225, 0, 0.0225, 0.045, 0.0675, 0.09, 0.116, 0.14]
+    : [-0.14, -0.103, -0.069, -0.033, 0.004, 0.043, 0.077, 0.111, 0.14];
   const blocks: { x: number; y: number; width: number; depth: number }[] = [];
   const edgeRows = new Map<
     string,
@@ -234,7 +266,7 @@ function neighborhoodGrid(seed: number, rotation: number) {
         ny = Math.sin(angle);
       for (const y of [bottom, top]) {
         if (Math.abs(nx) > 1e-6) {
-          const x = (0.135 - ny * y) / nx;
+          const x = (0.124 - ny * y) / nx;
           if (nx > 0) {
             right = Math.min(right, x);
           } else {
@@ -248,24 +280,26 @@ function neighborhoodGrid(seed: number, rotation: number) {
     if (right - left < 0.024) {
       continue;
     }
-    const cells = Math.max(1, Math.round((right - left) / 0.034)),
+    const spacing = dense ? 0.0225 : 0.034;
+    const cells = Math.max(1, Math.round((right - left) / spacing)),
       xs = [left];
     for (let col = 1; col < cells; col++) {
-      xs.push(left + ((right - left) * col) / cells + (rng() - 0.5) * 0.01);
+      xs.push(left + ((right - left) * col) / cells + (rng() - 0.5) * (dense ? 0.003 : 0.01));
     }
     xs.push(right);
     for (let col = 0; col < cells; col++) {
       const x1 = xs[col];
       let x2 = xs[col + 1];
-      if (col < cells - 1 && rng() < 0.15) {
+      if (!dense && col < cells - 1 && rng() < 0.15) {
         x2 = xs[++col + 1];
       }
-      blocks.push({
-        x: (x1 + x2) / 2,
-        y: (bottom + top) / 2,
-        width: x2 - x1 - 0.008,
-        depth: top - bottom - 0.008,
-      });
+      const x = (x1 + x2) / 2,
+        y = (bottom + top) / 2;
+      const outer = dense && Math.hypot(x, y) > 0.09;
+      if (!outer || rng() > 0.22) {
+        const setback = dense ? 0.0065 : 0.008;
+        blocks.push({ x, y, width: x2 - x1 - setback, depth: top - bottom - setback });
+      }
       edge({ x: x1, y: bottom }, { x: x2, y: bottom });
       edge({ x: x1, y: top }, { x: x2, y: top });
       edge({ x: x1, y: bottom }, { x: x1, y: top });
@@ -287,7 +321,7 @@ function neighborhoodGrid(seed: number, rotation: number) {
     for (const [from, to] of merged) {
       roads.push({
         kind: "road",
-        width: 0.005,
+        width: dense ? 0.004 : 0.005,
         points: horizontal
           ? [
               { x: from, y: fixed },
@@ -303,12 +337,97 @@ function neighborhoodGrid(seed: number, rotation: number) {
   return { blocks, roads };
 }
 
+function capitalGrid() {
+  const edges = [-0.15, -0.106, -0.074, -0.043, 0.043, 0.074, 0.106, 0.15];
+  const limit = CAPITAL_WALL_APOTHEM - 0.008;
+  const normals = Array.from({ length: 6 }, (_, i) => ({
+    x: Math.cos((i * Math.PI) / 3),
+    y: Math.sin((i * Math.PI) / 3),
+  }));
+  const roads: RoadPath[] = [];
+  for (const offset of edges.slice(1, -1)) {
+    for (const horizontal of [true, false]) {
+      let low = -0.2,
+        high = 0.2;
+      for (const n of normals) {
+        const slope = horizontal ? n.x : n.y;
+        const fixed = horizontal ? n.y : n.x;
+        if (Math.abs(slope) < 1e-6) {
+          continue;
+        }
+        const end = (CAPITAL_WALL_APOTHEM - fixed * offset) / slope;
+        if (slope > 0) {
+          high = Math.min(high, end);
+        } else {
+          low = Math.max(low, end);
+        }
+      }
+      roads.push({
+        kind: "road",
+        width: 0.0035,
+        points: horizontal
+          ? [
+              { x: low, y: offset },
+              { x: high, y: offset },
+            ]
+          : [
+              { x: offset, y: low },
+              { x: offset, y: high },
+            ],
+      });
+    }
+  }
+  const blocks: { x: number; y: number; width: number; depth: number }[] = [];
+  for (let row = 0; row < edges.length - 1; row++) {
+    for (let col = 0; col < edges.length - 1; col++) {
+      if (row === 3 && col === 3) {
+        continue;
+      }
+      const x = (edges[col] + edges[col + 1]) / 2;
+      const y = (edges[row] + edges[row + 1]) / 2;
+      const width = edges[col + 1] - edges[col] - 0.012;
+      const depth = edges[row + 1] - edges[row] - 0.012;
+      let scale = 0.78;
+      for (const n of normals) {
+        const margin = limit - n.x * x - n.y * y;
+        scale = Math.min(
+          scale,
+          margin / ((Math.abs(n.x) * width) / 2 + (Math.abs(n.y) * depth) / 2),
+        );
+      }
+      if (Math.min(width, depth) * scale >= 0.012) {
+        blocks.push({ x, y, width: width * scale, depth: depth * scale });
+      }
+    }
+  }
+  const gates = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
+  for (const angle of gates) {
+    const gate = {
+      x: Math.cos(angle) * CAPITAL_WALL_APOTHEM,
+      y: Math.sin(angle) * CAPITAL_WALL_APOTHEM,
+    };
+    const target = nearestOnRoad(gate, roads);
+    roads.push({
+      kind: "road",
+      width: 0.006,
+      points: [
+        { x: target.x, y: target.y },
+        { x: target.x, y: gate.y },
+        { x: gate.x * 1.03, y: gate.y },
+      ],
+    });
+  }
+  return { blocks, roads, gates };
+}
+
 function createLayout(recipe: (typeof CITY_RECIPES)[number], rotation: number): CityLayout {
   const style: CityStyle = { ...BASE_STYLE, ...recipe.style };
   const rng = randomSequence(recipe.seed);
   const buildings: CityBuilding[] = [];
   const parks: CityLayout["parks"] = [];
   const plants: CityPlant[] = [];
+  const heightScale =
+    style.plan === "grid" && style.density === "dense" && style.heights === "tall" ? 0.75 : 1;
   const addBuilding = (x: number, y: number, width = 0.016, depth = 0.017) => {
     let height = 0.033 + rng() * 0.041;
     if (style.heights === "low") {
@@ -325,12 +444,19 @@ function createLayout(recipe: (typeof CITY_RECIPES)[number], rotation: number): 
       z: 0.007,
       width: width * (0.92 + rng() * 0.12),
       depth: depth * (0.92 + rng() * 0.12),
-      height: Math.max(0.011, Math.round(height / 0.011) * 0.011),
+      height: Math.max(0.011, Math.round(height / 0.011) * 0.011) * heightScale,
       stepped: rng() > 0.35,
       facade: Math.floor(rng() * 3),
-      tint: ["#ffffff", "#8595a1", "#515961", "#ac9785", "#687c79", "#d7d3c9"][
-        buildings.length % 6
-      ],
+      tint: [
+        "#edece8",
+        "#737b82",
+        "#353c42",
+        "#aaa59c",
+        "#50595b",
+        "#c7ccce",
+        "#45484e",
+        "#929a9b",
+      ][buildings.length % 8],
       landmark: false,
       round: rng() < 0.22,
       habitat: false,
@@ -338,31 +464,29 @@ function createLayout(recipe: (typeof CITY_RECIPES)[number], rotation: number): 
     });
   };
 
-  if (style.exposure === "mostly-buried") {
+  if (style.landmark === "hall") {
+    for (const block of capitalGrid().blocks) {
+      addBuilding(block.x, block.y, block.width, block.depth);
+      const building = buildings.at(-1)!;
+      building.width = block.width;
+      building.depth = block.depth;
+      building.round = false;
+    }
+  } else if (style.exposure === "mostly-buried") {
     for (let i = 0; i < 5; i++) {
       const angle = (i * Math.PI) / 4;
       addBuilding(Math.cos(angle) * 0.09, Math.sin(angle) * 0.09, 0.026, 0.023);
     }
-  } else if (style.plan === "grid" && style.perimeterRoad === "none") {
-    for (const block of neighborhoodGrid(recipe.seed, rotation).blocks) {
+  } else if (style.plan === "grid") {
+    for (const block of neighborhoodGrid(recipe.seed, rotation, style.density === "dense").blocks) {
       addBuilding(block.x, block.y, block.width, block.depth);
       const building = buildings.at(-1)!;
       building.width = block.width;
       building.depth = block.depth;
     }
-  } else if (style.plan === "grid") {
-    for (let row = 0; row < 6; row++) {
-      for (let column = 0; column < 6; column++) {
-        const x = (column - 2.5) * 0.033;
-        const y = (row - 2.5) * 0.033;
-        if (Math.hypot(x, y) < 0.115) {
-          addBuilding(x, y, 0.013 + rng() * 0.007, 0.013 + rng() * 0.008);
-        }
-      }
-    }
   } else {
     const rings = [
-      { radius: 0.104, count: style.density === "sparse" ? 16 : 24 },
+      { radius: style.cover === "dome" ? 0.104 : 0.1, count: style.density === "sparse" ? 16 : 24 },
       { radius: 0.055, count: style.density === "sparse" ? 10 : 14 },
       { radius: 0.023, count: style.density === "sparse" ? 0 : 6 },
     ];
@@ -389,16 +513,16 @@ function createLayout(recipe: (typeof CITY_RECIPES)[number], rotation: number): 
     const hall = style.landmark === "hall";
     buildings.push({
       x: 0,
-      y: 0.018,
+      y: hall ? 0 : 0.018,
       z: 0.007,
-      width: hall ? 0.054 : 0.039,
-      depth: hall ? 0.055 : 0.039,
-      height: hall ? 0.077 : 0.03,
-      stepped: hall,
+      width: hall ? 0.062 : 0.039,
+      depth: hall ? 0.062 : 0.039,
+      height: hall ? 0.175 : 0.03,
+      stepped: false,
       facade: 0,
       tint: "#ffffff",
       landmark: true,
-      round: !hall,
+      round: true,
       habitat: false,
       rotation: 0,
     });
@@ -434,21 +558,27 @@ export function generateCityLayout(
     ...request,
     details: (request.details ?? ["pipes"]) as CityStyle["details"],
   };
+  if (style.perimeter === "open") {
+    style.perimeter = "low-wall";
+  }
   if (style.cover === "dome") {
     style.plan = "radial";
     style.entranceMin = style.entranceMax = 2;
   }
+  if (style.landmark === "hall") {
+    style.plan = "grid";
+    style.perimeter = "low-wall";
+    style.cover = "flat-glass";
+  }
   const min = Math.max(1, Math.min(4, style.entranceMin));
   const max = Math.max(min, Math.min(4, style.entranceMax));
   const count = min + Math.floor(choices() * (max - min + 1));
-  const rotation = choices() * Math.PI * 2;
+  const rotation = style.landmark === "hall" ? 0 : choices() * Math.PI * 2;
   const layout = createLayout({ name, seed: seed ^ 0x5742, style }, rotation);
   layout.name = name;
   layout.seed = seed;
   layout.entrances = Array.from({ length: count }, (_, i) => rotation + (i * Math.PI * 2) / count);
   const roads: RoadPath[] = [];
-  const line = (a: Point2, b: Point2, width = 0.007) =>
-    roads.push({ points: [a, b], width, kind: "road" });
   const circle = (radius: number, offset = { x: 0, y: 0 }) =>
     roads.push({
       kind: "road",
@@ -458,20 +588,14 @@ export function generateCityLayout(
         y: Math.sin((i * Math.PI) / 48) * radius + offset.y,
       })),
     });
-  if (style.exposure === "mostly-buried") {
+  if (style.landmark === "hall") {
+    const capital = capitalGrid();
+    roads.push(...capital.roads);
+    layout.entrances = capital.gates;
+  } else if (style.exposure === "mostly-buried") {
     circle(0.077);
-  } else if (style.plan === "grid" && style.perimeterRoad === "none") {
-    roads.push(...neighborhoodGrid(seed ^ 0x5742, rotation).roads);
   } else if (style.plan === "grid") {
-    if (style.perimeterRoad === "ring") {
-      circle(0.108);
-    }
-    const extent = style.perimeterRoad === "ring" ? 0.108 : 0.098;
-    for (const offset of [-0.066, -0.033, 0, 0.033, 0.066]) {
-      const length = Math.sqrt(extent ** 2 - offset ** 2);
-      line({ x: offset, y: -length }, { x: offset, y: length }, 0.0065);
-      line({ x: -length, y: offset }, { x: length, y: offset }, 0.0065);
-    }
+    roads.push(...neighborhoodGrid(seed ^ 0x5742, rotation, style.density === "dense").roads);
   } else if (style.plan === "courtyard") {
     roads.push({
       kind: "road",
@@ -490,19 +614,29 @@ export function generateCityLayout(
   if (style.perimeterRoad === "ring" && style.plan !== "grid") {
     circle(0.108);
   }
-  for (let i = 0; i < count; i++) {
-    const angle = (i * Math.PI * 2) / count;
-    const gateRadius = style.plan === "grid" && style.perimeterRoad === "none" ? 0.151 : 0.124;
-    const gate = { x: Math.cos(angle) * gateRadius, y: Math.sin(angle) * gateRadius };
-    const nearest = nearestOnRoad(gate, roads);
-    line({ x: nearest.x, y: nearest.y }, gate);
-    roads[roads.length - 1].exit = i;
-  }
   const rotate = (point: Point2) => ({
     x: point.x * Math.cos(rotation) - point.y * Math.sin(rotation),
     y: point.x * Math.sin(rotation) + point.y * Math.cos(rotation),
   });
   layout.roads = roads.map((r) => ({ ...r, points: r.points.map(rotate) }));
+  const wallApothem = cityHexWallApothem(layout);
+  if (wallApothem !== null && style.landmark !== "hall") {
+    let sides = [0, 1, 3, 4];
+    if (layout.entrances.length === 1) {
+      sides = [0];
+    } else if (layout.entrances.length === 2) {
+      sides = [0, 3];
+    } else if (layout.entrances.length === 3) {
+      sides = [0, 2, 4];
+    }
+    layout.entrances = sides.map((side) => (side * Math.PI) / 3);
+    const gates = layout.entrances.map((angle) => {
+      const point = { x: Math.cos(angle) * wallApothem, y: Math.sin(angle) * wallApothem };
+      const target = nearestOnRoad(point, layout.roads);
+      return { kind: "road" as const, width: 0.006, points: [point, { x: target.x, y: target.y }] };
+    });
+    layout.roads.push(...gates);
+  }
   if (style.exposure === "mostly-buried") {
     for (const b of layout.buildings) {
       b.x *= 1.15;
@@ -523,10 +657,7 @@ export function generateCityLayout(
     b.y = p.y;
     b.rotation += rotation;
     {
-      const target = nearestOnRoad(
-        b,
-        layout.roads.filter((r) => r.exit === undefined),
-      );
+      const target = nearestOnRoad(b, layout.roads);
       if (style.plan === "grid") {
         const dx = target.x - b.x,
           dy = target.y - b.y;
@@ -550,7 +681,7 @@ export function generateCityLayout(
           Math.hypot(a.x - cluster.x, a.y - cluster.y) -
           Math.hypot(b.x - cluster.x, b.y - cluster.y),
       );
-    const towers = style.heights === "mixed" ? 4 : 0;
+    const towers = style.heights === "mixed" && style.landmark !== "hall" ? 4 : 0;
     for (const [i, b] of candidates.entries()) {
       if (style.heights === "mixed") {
         b.height =
@@ -560,6 +691,7 @@ export function generateCityLayout(
       }
       if (
         i >= towers &&
+        style.landmark !== "hall" &&
         i % 4 === 0 &&
         style.heights !== "tall" &&
         Math.max(b.width, b.depth) / Math.min(b.width, b.depth) < 1.4
@@ -581,8 +713,9 @@ export function generateCityLayout(
       y = (planting() - 0.5) * 0.254;
     const size = 0.25 + planting() * 0.17;
     if (
-      Math.hypot(x, y) > (style.perimeter === "open" ? 0.127 : 0.104) ||
+      cityWallDistance(layout, x, y) > -0.012 ||
       nearestOnRoad({ x, y }, layout.roads).distance < 0.013 ||
+      (style.landmark === "hall" && Math.max(Math.abs(x), Math.abs(y)) < 0.045) ||
       (style.ground === "recessed" && Math.hypot(x, y) < 0.085)
     ) {
       continue;
@@ -608,7 +741,3 @@ export const createCityShowcase = () =>
   CITY_RECIPES.map((recipe, i) =>
     generateCityLayout(recipe.seed, recipe.style, `${i + 1} ${recipe.name}`),
   );
-
-export function visibleCityRoads(layout: CityLayout, activeExits: readonly number[]): RoadPath[] {
-  return layout.roads.filter((road) => road.exit === undefined || activeExits.includes(road.exit));
-}

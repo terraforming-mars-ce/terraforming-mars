@@ -18,6 +18,7 @@ export interface Entry {
   corporation?: { key: string; name: string; color: string };
   font?: { family: string; weight: number };
   publicName?: string;
+  provenance?: { url: string; license: string; maps: string };
 }
 export interface Variant {
   url: string;

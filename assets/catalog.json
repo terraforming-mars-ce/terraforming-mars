@@ -2944,11 +2944,6 @@
       "profile": "copy"
     },
     {
-      "id": "models/city",
-      "source": "models/city.glb",
-      "profile": "copy"
-    },
-    {
       "id": "models/fence",
       "source": "models/fence.glb",
       "profile": "copy"
@@ -3446,11 +3441,6 @@
       }
     },
     {
-      "id": "audio/effects/asteroid-impact",
-      "source": "audio/effects/asteroid-impact.mp3",
-      "profile": "copy"
-    },
-    {
       "id": "audio/effects/award-funded",
       "source": "audio/effects/award-funded.mp3",
       "profile": "copy"
@@ -3471,8 +3461,18 @@
       "profile": "copy"
     },
     {
-      "id": "audio/effects/construction",
-      "source": "audio/effects/construction.mp3",
+      "id": "audio/effects/card-played",
+      "source": "audio/effects/card-played.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/construction-1",
+      "source": "audio/effects/construction-1.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/construction-2",
+      "source": "audio/effects/construction-2.mp3",
       "profile": "copy"
     },
     {
@@ -3544,6 +3544,156 @@
       "id": "audio/effects/your-turn",
       "source": "audio/effects/your-turn.mp3",
       "profile": "copy"
+    },
+    {
+      "id": "textures/terrain/leafy-grass-color",
+      "source": "textures/terrain/leafy-grass-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/leafy_grass",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/leafy-grass-detail",
+      "source": "textures/terrain/leafy-grass-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/leafy_grass",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/brown-mud-leaves-01-color",
+      "source": "textures/terrain/brown-mud-leaves-01-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/brown_mud_leaves_01",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/brown-mud-leaves-01-detail",
+      "source": "textures/terrain/brown-mud-leaves-01-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/brown_mud_leaves_01",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/leaves-forest-ground-color",
+      "source": "textures/terrain/leaves-forest-ground-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/leaves_forest_ground",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/leaves-forest-ground-detail",
+      "source": "textures/terrain/leaves-forest-ground-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/leaves_forest_ground",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/concrete-tile-facade-color",
+      "source": "textures/terrain/concrete-tile-facade-color.jpg",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/concrete_tile_facade",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/concrete-tile-facade-normal",
+      "source": "textures/terrain/concrete-tile-facade-normal.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/concrete_tile_facade",
+        "license": "CC0-1.0",
+        "maps": "OpenGL normal XYZ; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/concrete-tile-facade-roughness",
+      "source": "textures/terrain/concrete-tile-facade-roughness.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/concrete_tile_facade",
+        "license": "CC0-1.0",
+        "maps": "Roughness; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/rectangular-facade-tiles-color",
+      "source": "textures/terrain/rectangular-facade-tiles-color.jpg",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/rectangular_facade_tiles",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/rectangular-facade-tiles-normal",
+      "source": "textures/terrain/rectangular-facade-tiles-normal.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/rectangular_facade_tiles",
+        "license": "CC0-1.0",
+        "maps": "OpenGL normal XYZ; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/rectangular-facade-tiles-roughness",
+      "source": "textures/terrain/rectangular-facade-tiles-roughness.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/rectangular_facade_tiles",
+        "license": "CC0-1.0",
+        "maps": "Roughness; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ribbed-concrete-wall-color",
+      "source": "textures/terrain/ribbed-concrete-wall-color.jpg",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/ribbed_concrete_wall",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ribbed-concrete-wall-normal",
+      "source": "textures/terrain/ribbed-concrete-wall-normal.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/ribbed_concrete_wall",
+        "license": "CC0-1.0",
+        "maps": "OpenGL normal XYZ; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ribbed-concrete-wall-roughness",
+      "source": "textures/terrain/ribbed-concrete-wall-roughness.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/ribbed_concrete_wall",
+        "license": "CC0-1.0",
+        "maps": "Roughness; linear 8-bit from EXR, 1K"
+      }
     }
   ]
 }

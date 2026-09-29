@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useEffect, useLayoutEffect } from "react";
+import { memo, useMemo, useRef, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -10,29 +10,10 @@ import {
   splitSnippet,
 } from "./shaders";
 import { SPHERE_RADIUS, easeOutCubic } from "./boardConstants";
-import type { CityPlot } from "./cityLayout";
+import type { LandscapePlant, LandscapeState } from "./landscapeTypes";
+import { landscapeHeightAt, TRANSITION_MS } from "./landscapeFields";
 
-import { boardCenter, projectBoardPoint, getBiomeValue, noise2D } from "./landscapeGeometry";
-import { isReserved, type LandscapePlan } from "./landscapeNetwork";
-const EMPTY_CITY_PLOTS: CityPlot[] = [];
-
-// Module-level temp objects for animation (avoid per-frame allocation)
-const _growthAxis = new THREE.Vector3(0, 0, 1);
-const _tmpMatrix = new THREE.Matrix4();
-const _tmpQuat = new THREE.Quaternion();
-const _tmpScale = new THREE.Vector3();
-
-// Animation timing config (ms)
-const ANIM_DELAYS = { ground: 0, rocks: 100, bushes: 150, trees: 200, clover: 250, flowers: 200 };
-const ANIM_DURATIONS = {
-  ground: 500,
-  rocks: 400,
-  bushes: 400,
-  trees: 500,
-  clover: 350,
-  flowers: 400,
-};
-
+import { projectBoardPoint } from "./landscapeGeometry";
 export const TREE_NAMES = ["Tree-01-1", "Tree-01-2", "Tree-01-3", "Tree-01-4"];
 export const BUSH_NAMES = ["Bush-01", "Bush-02", "Bush-03", "Bush-04", "Bush-05"];
 export const CLOVER_NAMES = ["Clover-01", "Clover-02", "Clover-03", "Clover-04", "Clover-05"];
@@ -62,148 +43,6 @@ export const variantCache: {
   rock: null,
 };
 
-function mulberry32(seed: number): () => number {
-  return function () {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function getTileSeed(q: number, r: number, s: number): number {
-  let h = (q + 128) * 73856093;
-  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
-  h = h + (r + 128) * 19349663;
-  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
-  h = h + (s + 128) * 83492791;
-  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
-  return (h >>> 0) % 2147483647;
-}
-
-function isInsideHex(x: number, y: number, radius: number, margin: number = 0): boolean {
-  const effectiveRadius = radius - margin;
-  // Swap x/y to match pointy-top hex orientation (rotated π/2)
-  const absX = Math.abs(y);
-  const absY = Math.abs(x);
-  const q2 = effectiveRadius;
-  const q1 = (effectiveRadius * Math.sqrt(3)) / 2;
-  return absY <= q1 && q1 * absX + 0.5 * effectiveRadius * absY <= q1 * q2;
-}
-
-function randomHexPosition(
-  rng: () => number,
-  radius: number,
-  margin: number,
-  existingPositions: { x: number; y: number }[],
-  minSpacing: number,
-  maxAttempts: number = 50,
-): { x: number; y: number } | null {
-  for (let i = 0; i < maxAttempts; i++) {
-    const x = (rng() - 0.5) * 2 * radius;
-    const y = (rng() - 0.5) * 2 * radius;
-
-    if (!isInsideHex(x, y, radius, margin)) continue;
-
-    let tooClose = false;
-    for (const pos of existingPositions) {
-      const dx = x - pos.x;
-      const dy = y - pos.y;
-      if (dx * dx + dy * dy < minSpacing * minSpacing) {
-        tooClose = true;
-        break;
-      }
-    }
-
-    if (!tooClose) {
-      return { x, y };
-    }
-  }
-  return null;
-}
-
-function createNoisyHexGeometry(
-  radius: number,
-  rings: number,
-  noiseScale: number,
-  noiseAmplitude: number,
-  seed: number,
-): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-  const vertices: number[] = [];
-  const uvs: number[] = [];
-  const indices: number[] = [];
-
-  vertices.push(0, 0, noise2D(0, 0, seed) * noiseAmplitude);
-  uvs.push(0.5, 0.5);
-
-  for (let ring = 1; ring <= rings; ring++) {
-    const ringRadius = (ring / rings) * radius;
-    const verticesInRing = 6 * ring;
-
-    for (let i = 0; i < verticesInRing; i++) {
-      const edgeIndex = Math.floor(i / ring);
-      const posOnEdge = i % ring;
-
-      const angle1 = (edgeIndex * Math.PI) / 3;
-      const angle2 = ((edgeIndex + 1) * Math.PI) / 3;
-
-      const t = posOnEdge / ring;
-      const x = ringRadius * (Math.cos(angle1) * (1 - t) + Math.cos(angle2) * t);
-      const y = ringRadius * (Math.sin(angle1) * (1 - t) + Math.sin(angle2) * t);
-
-      const z = noise2D(x * noiseScale, y * noiseScale, seed) * noiseAmplitude;
-
-      vertices.push(x, y, z);
-      uvs.push(0.5 + (x / radius) * 0.5, 0.5 + (y / radius) * 0.5);
-    }
-  }
-
-  for (let i = 0; i < 6; i++) {
-    const next = (i + 1) % 6;
-    indices.push(0, 1 + i, 1 + next);
-  }
-
-  let prevRingStart = 1;
-  for (let ring = 2; ring <= rings; ring++) {
-    const currRingStart = prevRingStart + 6 * (ring - 1);
-    const prevRingVerts = 6 * (ring - 1);
-    const currRingVerts = 6 * ring;
-
-    let prevIdx = 0;
-    let currIdx = 0;
-
-    for (let edge = 0; edge < 6; edge++) {
-      for (let i = 0; i < ring; i++) {
-        const curr0 = currRingStart + currIdx;
-        const curr1 = currRingStart + ((currIdx + 1) % currRingVerts);
-
-        if (i < ring - 1) {
-          const prev0 = prevRingStart + prevIdx;
-          const prev1 = prevRingStart + ((prevIdx + 1) % prevRingVerts);
-
-          indices.push(prev0, curr0, curr1);
-          indices.push(prev0, curr1, prev1);
-          prevIdx++;
-        } else {
-          const prev0 = prevRingStart + (prevIdx % prevRingVerts);
-          indices.push(prev0, curr0, curr1);
-        }
-        currIdx++;
-      }
-    }
-
-    prevRingStart = currRingStart;
-  }
-
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-
-  return geometry;
-}
-
 export function addSphereProjectionWithSoftEdges(
   material: THREE.Material,
   zOffset: number,
@@ -212,7 +51,13 @@ export function addSphereProjectionWithSoftEdges(
   hexRadius: number,
   sphereCenter?: THREE.Vector3,
   groupInverseMatrix?: THREE.Matrix4,
-  edges: { circular?: boolean; overflow?: number; bandWidth?: number; warp?: number } = {},
+  edges: {
+    circular?: boolean;
+    overflow?: number;
+    bandWidth?: number;
+    warp?: number;
+    sphereRadius?: number;
+  } = {},
 ): void {
   const grassOverflow = hexRadius * (edges.overflow ?? 0.25);
   const bandWidth = hexRadius * (edges.bandWidth ?? 0.35);
@@ -226,7 +71,7 @@ export function addSphereProjectionWithSoftEdges(
 
   material.onBeforeCompile = (shader) => {
     (material as any).__shader = shader;
-    shader.uniforms.uSphereRadius = { value: SPHERE_RADIUS };
+    shader.uniforms.uSphereRadius = { value: edges.sphereRadius ?? SPHERE_RADIUS };
     shader.uniforms.uZOffset = { value: zOffset };
     shader.uniforms.uSphereCenter = { value: centerVec };
     shader.uniforms.uGroupInverseMatrix = { value: invMatrix };
@@ -348,50 +193,17 @@ export function createVariantsFromScene(
   return variants;
 }
 
-interface GreeneryTileData {
-  coordinate: { q: number; r: number; s: number };
-  worldPosition: THREE.Vector3;
-  normal: THREE.Vector3;
-}
-
-interface GreeneryRendererProps {
-  tiles: GreeneryTileData[];
-  cityPlots?: CityPlot[];
-  landscape?: LandscapePlan;
-  volcanoTiles?: GreeneryTileData[];
-  livingGreeneryTiles?: GreeneryTileData[];
-  newTileKeys: Set<string>;
-  hexRadius?: number;
-  sphereCenter?: THREE.Vector3;
-  groupInverseMatrix?: THREE.Matrix4;
-}
-
 function GreeneryRenderer({
-  tiles,
-  cityPlots = EMPTY_CITY_PLOTS,
   landscape,
-  volcanoTiles = [],
-  livingGreeneryTiles = [],
-  newTileKeys,
-  hexRadius = 0.166,
-  sphereCenter,
-  groupInverseMatrix,
-}: GreeneryRendererProps) {
-  const treeInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
-  const bushInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
-  const cloverInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
-  const flowerInstanceRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
-  const rockInstanceRef = useRef<THREE.InstancedMesh>(null);
-  const groundMeshRefs = useRef<THREE.Mesh[]>([]);
-
+  previousLandscape,
+  transitionStart,
+}: {
+  landscape: LandscapeState;
+  previousLandscape: LandscapeState;
+  transitionStart: number;
+}) {
   const { treesScene, rockScene, flowersScene } = useModels();
-  const {
-    grass: grassTexture,
-    rock: rockTexture,
-    noiseMid: noiseTexture,
-    noiseHigh: noiseHighTexture,
-  } = useTextures();
-
+  const { rock: rockTexture } = useTextures();
   // Create variants once (cached)
   const treeVariants = useMemo(() => {
     if (!variantCache.trees) {
@@ -477,1170 +289,183 @@ function GreeneryRenderer({
     return variantCache.rock;
   }, [rockScene, rockTexture]);
 
-  const vegetationSignature = JSON.stringify([
-    tiles.map((t) => t.coordinate),
-    volcanoTiles.map((t) => t.coordinate),
-    livingGreeneryTiles.map((t) => t.coordinate),
-    cityPlots.map((t) => [t.coordinate, t.layout.seed]),
-    hexRadius,
-  ]);
-  // Generate all instance data for all tiles
-  const {
-    treeInstances,
-    bushInstances,
-    cloverInstances,
-    flowerInstances,
-    rockInstances,
-    groundData,
-  } = useMemo(() => {
-    const treeInstances: {
-      position: THREE.Vector3;
-      rotation: number;
-      scale: number;
-      variantIdx: number;
-      tint: number;
-      tileKey: string;
-    }[] = [];
-    const bushInstances: {
-      position: THREE.Vector3;
-      rotation: number;
-      scale: number;
-      variantIdx: number;
-      tint: number;
-      tileKey: string;
-    }[] = [];
-    const cloverInstances: {
-      position: THREE.Vector3;
-      rotation: number;
-      scale: number;
-      variantIdx: number;
-      tileKey: string;
-    }[] = [];
-    const flowerInstances: {
-      position: THREE.Vector3;
-      rotation: number;
-      scale: number;
-      variantIdx: number;
-      tileKey: string;
-    }[] = [];
-    const rockInstances: {
-      position: THREE.Vector3;
-      rotation: THREE.Euler;
-      scale: number;
-      tileKey: string;
-    }[] = [];
-    const groundData: {
-      geometry: THREE.BufferGeometry;
-      position: THREE.Vector3;
-      normal: THREE.Vector3;
-      tileKey: string;
-    }[] = [];
-
-    const livingGreeneryKeys = new Set(
-      livingGreeneryTiles.map((t) => `${t.coordinate.q},${t.coordinate.r},${t.coordinate.s}`),
-    );
-
-    for (const tile of tiles) {
-      const tileKey = `${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`;
-      const seed = getTileSeed(tile.coordinate.q, tile.coordinate.r, tile.coordinate.s);
-      const isLivingGreenery = livingGreeneryKeys.has(tileKey);
-      const terrainCenter = boardCenter(tile.coordinate);
-      const blocksRoute = (x: number, y: number, clearance: number) =>
-        landscape && isReserved(landscape, terrainCenter.x + x, terrainCenter.y + y, clearance);
-
-      // Get biome value for this tile (0-1)
-      // High = forested (more trees), Low = scrubland (more bushes/rocks)
-      const biome = getBiomeValue(tile.coordinate.q, tile.coordinate.r);
-
-      // Pre-roll rock tier (separate RNG, doesn't affect tree sequence)
-      const rockPreRoll = mulberry32(seed + 12345)();
-      const hasBigRock = rockPreRoll >= 0.6;
-      const hasMountain = rockPreRoll >= 0.85;
-
-      // Ground geometry per tile (unique due to noise)
-      if (!landscape) {
-        const groundGeo = createNoisyHexGeometry(hexRadius * 2.0, 8, 6, 0.008, seed);
-        groundGeo.rotateZ(Math.PI / 2);
-        groundData.push({
-          geometry: groundGeo,
-          position: tile.worldPosition,
-          normal: tile.normal,
-          tileKey,
-        });
-      }
-
-      // Generate rocks FIRST so vegetation can avoid them
-      const rockRng = mulberry32(seed + 12345);
-      const rockExclusions: { x: number; y: number; r: number }[] = [];
-      const rockSpacing: { x: number; y: number }[] = [];
-      const rockRoll = rockRng();
-      const rockBaseSize = 0.04;
-
-      let rockScales: number[] = [];
-      if (rockRoll < 0.1) {
-        // 10%: no rocks
-      } else if (rockRoll < 0.55) {
-        // 45%: 2-6 small rocks
-        const count = 2 + Math.floor(rockRng() * 5);
-        for (let i = 0; i < count; i++) {
-          rockScales.push(0.3 + rockRng() * 0.4);
-        }
-      } else if (rockRoll < 0.85) {
-        // 25%: 1 large rock + 1-3 small companions
-        rockScales.push(1.2 + rockRng() * 0.6);
-        const companions = 1 + Math.floor(rockRng() * 3);
-        for (let i = 0; i < companions; i++) {
-          rockScales.push(0.2 + rockRng() * 0.4);
-        }
-      } else {
-        // 15%: 1 mountain rock + 2-4 small companions
-        rockScales.push(2.4 + rockRng() * 0.3);
-        const companions = 2 + Math.floor(rockRng() * 3);
-        for (let i = 0; i < companions; i++) {
-          rockScales.push(0.3 + rockRng() * 0.5);
-        }
-      }
-
-      for (let i = 0; i < rockScales.length; i++) {
-        const pos = randomHexPosition(rockRng, hexRadius * 0.75, 0.03, rockSpacing, 0.04);
-        if (pos) {
-          if (blocksRoute(pos.x, pos.y, rockBaseSize * rockScales[i] * 0.65)) {
-            continue;
-          }
-          rockSpacing.push(pos);
-          rockExclusions.push({ x: pos.x, y: pos.y, r: rockBaseSize * rockScales[i] * 0.6 });
-          const localPos = new THREE.Vector3(pos.x, pos.y, 0.0);
-          const worldPos = projectBoardPoint(
-            terrainCenter.x + localPos.x,
-            terrainCenter.y + localPos.y,
-            localPos.z,
-          );
-          rockInstances.push({
-            position: worldPos,
-            rotation: new THREE.Euler(
-              rockRng() * Math.PI * 2,
-              rockRng() * Math.PI * 2,
-              rockRng() * Math.PI * 2,
-            ),
-            scale: rockScales[i],
-            tileKey,
-          });
-        }
-      }
-
-      const isInsideRock = (x: number, y: number): boolean => {
-        for (const rock of rockExclusions) {
-          const dx = x - rock.x;
-          const dy = y - rock.y;
-          if (dx * dx + dy * dy < rock.r * rock.r) return true;
-        }
-        return false;
+  const groups = useMemo(() => {
+    const result = new Map<string, LandscapePlant[]>();
+    for (const p of landscape.plants) {
+      const counts = {
+        tree: TREE_NAMES.length,
+        bush: BUSH_NAMES.length,
+        clover: CLOVER_NAMES.length,
+        flower: FLOWER_NAMES.length,
+        rock: 1,
       };
-
-      // Generate trees - more in high biome areas, boosted near mountains/living greenery
-      const treeRng = mulberry32(seed);
-      const livingMult = isLivingGreenery ? 0.65 : 1.0;
-      const treeMult = hasMountain ? 1.8 : hasBigRock ? 1.4 : 1.0;
-      const baseTreeCount = Math.floor(treeRng() * 10) + 9;
-      const treeCount = landscape
-        ? 0
-        : Math.floor(baseTreeCount * (0.3 + biome * 1.4) * treeMult * livingMult);
-      const treePositions: { x: number; y: number }[] = [];
-
-      for (let i = 0; i < treeCount; i++) {
-        const pos = randomHexPosition(treeRng, hexRadius * 0.9, 0.012, treePositions, 0.025);
-        if (pos) {
-          if (isInsideRock(pos.x, pos.y) || blocksRoute(pos.x, pos.y, 0.005)) continue;
-          treePositions.push(pos);
-          const localPos = new THREE.Vector3(pos.x, pos.y, 0.003);
-          const worldPos = projectBoardPoint(
-            terrainCenter.x + localPos.x,
-            terrainCenter.y + localPos.y,
-            localPos.z,
-          );
-          const tint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
-          let rockProximityBoost = 0;
-          for (const rock of rockExclusions) {
-            const dx = pos.x - rock.x;
-            const dy = pos.y - rock.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const influenceRadius = rock.r * 3;
-            if (dist < influenceRadius) {
-              const proximity = 1 - dist / influenceRadius;
-              rockProximityBoost = Math.max(rockProximityBoost, proximity * 0.5);
-            }
-          }
-          const rawTreeScale = hasMountain ? 1.3 + treeRng() * 0.3 : 1.1 + treeRng() * 0.3;
-          const treeScale = rawTreeScale + rockProximityBoost;
-          treeInstances.push({
-            position: worldPos,
-            rotation: treeRng() * Math.PI * 2,
-            scale: treeScale,
-            variantIdx: Math.floor(treeRng() * 4),
-            tint,
-            tileKey,
-          });
-        }
-      }
-
-      // Generate bushes - more in low biome areas (inverse of trees)
-      const bushRng = mulberry32(seed + 54321);
-      const baseBushCount = Math.floor(bushRng() * 100) + 160;
-      const livingBushMult = isLivingGreenery ? 1.0 : 1.0;
-      const bushCount = landscape
-        ? 0
-        : Math.floor(baseBushCount * (0.5 + (1 - biome) * 1.2) * livingBushMult);
-      const bushPositions: { x: number; y: number }[] = [];
-
-      for (let i = 0; i < bushCount; i++) {
-        const pos = randomHexPosition(bushRng, hexRadius * 0.92, 0.003, bushPositions, 0.006);
-        if (pos) {
-          bushPositions.push(pos);
-          const localPos = new THREE.Vector3(pos.x, pos.y, 0.001);
-          const worldPos = projectBoardPoint(
-            terrainCenter.x + localPos.x,
-            terrainCenter.y + localPos.y,
-            localPos.z,
-          );
-          const bushTint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
-          bushInstances.push({
-            position: worldPos,
-            rotation: bushRng() * Math.PI * 2,
-            scale: 0.7 + bushRng() * 0.6,
-            variantIdx: Math.floor(bushRng() * 5),
-            tint: bushTint,
-            tileKey,
-          });
-        }
-      }
-
-      // Generate clover for this tile
-      const cloverRng = mulberry32(seed + 99999);
-      const cloverCount = Math.floor(cloverRng() * 20) + 40;
-      const cloverPositions: { x: number; y: number }[] = [];
-
-      for (let i = 0; i < cloverCount; i++) {
-        const pos = randomHexPosition(cloverRng, hexRadius * 0.95, 0.005, cloverPositions, 0.01);
-        if (pos) {
-          if (isInsideRock(pos.x, pos.y) || blocksRoute(pos.x, pos.y, 0.005)) continue;
-          cloverPositions.push(pos);
-          const localPos = new THREE.Vector3(pos.x, pos.y, 0.0005);
-          const worldPos = projectBoardPoint(
-            terrainCenter.x + localPos.x,
-            terrainCenter.y + localPos.y,
-            localPos.z,
-          );
-          cloverInstances.push({
-            position: worldPos,
-            rotation: cloverRng() * Math.PI * 2,
-            scale: 0.5 + cloverRng() * 1.0,
-            variantIdx: Math.floor(cloverRng() * 5),
-            tileKey,
-          });
-        }
-      }
-
-      if (isLivingGreenery) {
-        const flowerRng = mulberry32(seed + 11111);
-        const flowerCount = 15 + Math.floor(flowerRng() * 10);
-        const flowerPositions: { x: number; y: number }[] = [];
-
-        for (let i = 0; i < flowerCount; i++) {
-          const pos = randomHexPosition(flowerRng, hexRadius * 0.88, 0.01, flowerPositions, 0.015);
-          if (pos) {
-            if (blocksRoute(pos.x, pos.y, 0.008)) {
-              continue;
-            }
-            flowerPositions.push(pos);
-            const localPos = new THREE.Vector3(pos.x, pos.y, 0.002);
-            const worldPos = projectBoardPoint(
-              terrainCenter.x + localPos.x,
-              terrainCenter.y + localPos.y,
-              localPos.z,
-            );
-            flowerInstances.push({
-              position: worldPos,
-              rotation: flowerRng() * Math.PI * 2,
-              scale: 0.6 + flowerRng() * 0.8,
-              variantIdx: Math.floor(flowerRng() * FLOWER_NAMES.length),
-              tileKey,
-            });
-          }
-        }
-      }
+      const key = `${p.kind}:${p.seed % counts[p.kind]}`;
+      const list = result.get(key) ?? [];
+      list.push(p);
+      result.set(key, list);
     }
-
-    // === Volcano tiles: trees + bushes OUTSIDE the dark volcano area ===
-    const volcanoExclusionRadius = 0.105;
-    for (const tile of volcanoTiles) {
-      const tileKey = `${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`;
-      const seed = getTileSeed(tile.coordinate.q, tile.coordinate.r, tile.coordinate.s);
-
-      const isInsideVolcano = (x: number, y: number): boolean => {
-        return x * x + y * y < volcanoExclusionRadius * volcanoExclusionRadius;
-      };
-
-      const tileMatrix = new THREE.Matrix4().compose(
-        tile.worldPosition,
-        new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), tile.normal),
-        new THREE.Vector3(1, 1, 1),
-      );
-
-      // Trees around volcano (80% scale, placed outside exclusion zone)
-      const vTreeRng = mulberry32(seed + 77777);
-      const vTreeCount = 8 + Math.floor(vTreeRng() * 6);
-      const vTreePositions: { x: number; y: number }[] = [];
-
-      for (let i = 0; i < vTreeCount; i++) {
-        const pos = randomHexPosition(vTreeRng, hexRadius * 0.9, 0.012, vTreePositions, 0.025);
-        if (pos) {
-          if (isInsideVolcano(pos.x, pos.y)) continue;
-          vTreePositions.push(pos);
-          const worldPos = new THREE.Vector3(pos.x, pos.y, 0.003).applyMatrix4(tileMatrix);
-          const tint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
-          treeInstances.push({
-            position: worldPos,
-            rotation: vTreeRng() * Math.PI * 2,
-            scale: (0.9 + vTreeRng() * 0.2) * 0.8,
-            variantIdx: Math.floor(vTreeRng() * 4),
-            tint,
-            tileKey,
-          });
-        }
-      }
-
-      // Bushes around volcano (placed outside exclusion zone)
-      const vBushRng = mulberry32(seed + 88888);
-      const vBushPositions: { x: number; y: number }[] = [];
-
-      for (let i = 0; i < 200; i++) {
-        const pos = randomHexPosition(vBushRng, hexRadius * 0.92, 0.003, vBushPositions, 0.006);
-        if (pos) {
-          if (isInsideVolcano(pos.x, pos.y)) continue;
-          vBushPositions.push(pos);
-          const worldPos = new THREE.Vector3(pos.x, pos.y, 0.001).applyMatrix4(tileMatrix);
-          const bushTint = noise2D(worldPos.x * 8, worldPos.y * 8, 77777);
-          bushInstances.push({
-            position: worldPos,
-            rotation: vBushRng() * Math.PI * 2,
-            scale: 0.6 + vBushRng() * 0.5,
-            variantIdx: Math.floor(vBushRng() * 5),
-            tint: bushTint,
-            tileKey,
-          });
-        }
-      }
-    }
-
-    for (const plot of landscape ? [] : cityPlots) {
-      const tileKey = `${plot.coordinate.q},${plot.coordinate.r},${plot.coordinate.s}`;
-      const rng = mulberry32(getTileSeed(plot.coordinate.q, plot.coordinate.r, plot.coordinate.s));
-      const tileMatrix = new THREE.Matrix4().compose(
-        plot.worldPosition,
-        new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), plot.normal),
-        new THREE.Vector3(1, 1, 1),
-      );
-      for (const plant of plot.layout.plants) {
-        const data = {
-          position: new THREE.Vector3(
-            plant.x,
-            plant.y,
-            plant.z -
-              0.007 +
-              Math.sqrt(SPHERE_RADIUS ** 2 - plant.x ** 2 - plant.y ** 2) -
-              SPHERE_RADIUS,
-          ).applyMatrix4(tileMatrix),
-          rotation: rng() * Math.PI * 2,
-          scale: plant.scale,
-          variantIdx: Math.floor(
-            rng() * (plant.kind === "tree" ? TREE_NAMES.length : BUSH_NAMES.length),
-          ),
-          tint: 0.45 + rng() * 0.3,
-          tileKey,
-        };
-        if (plant.kind === "tree") {
-          treeInstances.push(data);
-        } else {
-          bushInstances.push(data);
-        }
-      }
-    }
-
-    if (landscape) {
-      rockGeometry.computeBoundingBox();
-      const rockBox = rockGeometry.boundingBox!;
-      const rockFootprints = new Map<string, { inverse: THREE.Matrix4; box: THREE.Box3 }[]>();
-      for (const rock of rockInstances) {
-        const inverse = new THREE.Matrix4()
-          .compose(
-            rock.position,
-            new THREE.Quaternion().setFromEuler(rock.rotation),
-            new THREE.Vector3(rock.scale, rock.scale, rock.scale),
-          )
-          .invert();
-        const list = rockFootprints.get(rock.tileKey) ?? [];
-        list.push({ inverse, box: rockBox });
-        rockFootprints.set(rock.tileKey, list);
-      }
-      const local = new THREE.Vector3();
-      for (const plant of landscape.plants) {
-        const position = projectBoardPoint(plant.x, plant.y, 0.001);
-        if (
-          (rockFootprints.get(plant.tileKey) ?? []).some(({ inverse, box }) => {
-            local.copy(position).applyMatrix4(inverse);
-            return (
-              local.x > box.min.x - 0.001 &&
-              local.x < box.max.x + 0.001 &&
-              local.y > box.min.y - 0.001 &&
-              local.y < box.max.y + 0.001 &&
-              local.z > box.min.z - 0.001 &&
-              local.z < box.max.z + 0.001
-            );
-          })
-        ) {
-          continue;
-        }
-        const data = {
-          position,
-          rotation: (plant.seed % 6283) / 1000,
-          scale: plant.scale,
-          variantIdx: plant.seed % (plant.kind === "tree" ? TREE_NAMES.length : BUSH_NAMES.length),
-          tint: 0.45 + (plant.seed % 100) / 400,
-          tileKey: plant.tileKey,
-        };
-        if (plant.kind === "tree") {
-          treeInstances.push(data);
-        } else {
-          bushInstances.push(data);
-        }
-      }
-    }
-    return {
-      treeInstances,
-      bushInstances,
-      cloverInstances,
-      flowerInstances,
-      rockInstances,
-      groundData,
-    };
-  }, [vegetationSignature, landscape]);
-
-  // Group instances by variant
-  const treesByVariant = useMemo(() => {
-    const groups: {
-      position: THREE.Vector3;
-      rotation: number;
-      scale: number;
-      tint: number;
-      tileKey: string;
-    }[][] = [[], [], [], []];
-    for (const inst of treeInstances) {
-      groups[inst.variantIdx].push({
-        position: inst.position,
-        rotation: inst.rotation,
-        scale: inst.scale,
-        tint: inst.tint,
-        tileKey: inst.tileKey,
-      });
-    }
-    return groups;
-  }, [treeInstances]);
-
-  const bushesByVariant = useMemo(() => {
-    const groups: {
-      position: THREE.Vector3;
-      rotation: number;
-      scale: number;
-      tint: number;
-      tileKey: string;
-    }[][] = [[], [], [], [], []];
-    for (const inst of bushInstances) {
-      groups[inst.variantIdx].push({
-        position: inst.position,
-        rotation: inst.rotation,
-        scale: inst.scale,
-        tint: inst.tint,
-        tileKey: inst.tileKey,
-      });
-    }
-    return groups;
-  }, [bushInstances]);
-
-  const cloverByVariant = useMemo(() => {
-    const groups: {
-      position: THREE.Vector3;
-      rotation: number;
-      scale: number;
-      tileKey: string;
-    }[][] = [[], [], [], [], []];
-    for (const inst of cloverInstances) {
-      groups[inst.variantIdx].push({
-        position: inst.position,
-        rotation: inst.rotation,
-        scale: inst.scale,
-        tileKey: inst.tileKey,
-      });
-    }
-    return groups;
-  }, [cloverInstances]);
-
-  const flowersByVariant = useMemo(() => {
-    const groups: {
-      position: THREE.Vector3;
-      rotation: number;
-      scale: number;
-      tileKey: string;
-    }[][] = FLOWER_NAMES.map(() => []);
-    for (const inst of flowerInstances) {
-      groups[inst.variantIdx].push({
-        position: inst.position,
-        rotation: inst.rotation,
-        scale: inst.scale,
-        tileKey: inst.tileKey,
-      });
-    }
-    return groups;
-  }, [flowerInstances]);
-
-  // Ground material (shared)
-  const groundMaterial = useMemo(() => {
-    const mat = new THREE.MeshStandardMaterial({
-      map: grassTexture,
-      color: new THREE.Color(0.4, 0.45, 0.35),
-      roughness: 0.9,
-      metalness: 0.0,
-      side: THREE.DoubleSide,
-      transparent: true,
-      alphaTest: 0.01,
-      depthWrite: false,
-    });
-    addSphereProjectionWithSoftEdges(
-      mat,
-      0.003,
-      noiseTexture,
-      noiseHighTexture,
-      hexRadius,
-      sphereCenter,
-      groupInverseMatrix,
-    );
-    return mat;
-  }, [grassTexture, noiseTexture, noiseHighTexture, hexRadius]);
-
-  // --- Animation tracking ---
-  const pendingAnimTilesRef = useRef<Set<string>>(new Set());
-  const warmupTilesRef = useRef<Set<string>>(new Set());
-  const tileAnimStartRef = useRef<Map<string, number>>(new Map());
-  const groundMaterialClonesRef = useRef<Map<string, THREE.MeshStandardMaterial>>(new Map());
-
-  useEffect(() => {
-    for (const key of newTileKeys) {
-      pendingAnimTilesRef.current.add(key);
-    }
-  }, [newTileKeys]);
-
-  useFrame(({ clock }) => {
-    const elapsed = clock.elapsedTime;
-
-    // Step 1: Tiles that warmed up last frame now get their animation start time.
-    // The warmup frame forced shader compilation, so the clock starts fresh here.
-    for (const key of warmupTilesRef.current) {
-      if (!tileAnimStartRef.current.has(key)) {
-        tileAnimStartRef.current.set(key, elapsed);
-      }
-    }
-    warmupTilesRef.current.clear();
-
-    // Step 2: New pending tiles get one warmup frame (render at scale 0, compile shaders)
-    for (const key of pendingAnimTilesRef.current) {
-      warmupTilesRef.current.add(key);
-    }
-    pendingAnimTilesRef.current.clear();
-
-    // Early return if nothing is animating
-    if (tileAnimStartRef.current.size === 0) return;
-
-    const completedKeys: string[] = [];
-
-    for (const [tileKey, startTime] of tileAnimStartRef.current) {
-      const timeSinceStart = (elapsed - startTime) * 1000; // ms
-
-      // Check if all elements are done (max total = 700ms for trees)
-      const maxTotal = ANIM_DELAYS.trees + ANIM_DURATIONS.trees;
-      if (timeSinceStart >= maxTotal) {
-        completedKeys.push(tileKey);
-        continue;
-      }
-
-      // Ground fade
-      const cloneMat = groundMaterialClonesRef.current.get(tileKey);
-      if (cloneMat) {
-        const shader = (cloneMat as any).__shader;
-        if (shader) {
-          const groundT = Math.max(
-            0,
-            Math.min(1, (timeSinceStart - ANIM_DELAYS.ground) / ANIM_DURATIONS.ground),
-          );
-          shader.uniforms.uFadeProgress.value = easeOutCubic(groundT);
-        }
-      }
-
-      // Vegetation grow - rocks
-      const rockDelay = ANIM_DELAYS.rocks;
-      const rockDur = ANIM_DURATIONS.rocks;
-      for (let i = 0; i < rockInstances.length; i++) {
-        if (rockInstances[i].tileKey !== tileKey) continue;
-        const rawT = Math.max(0, Math.min(1, (timeSinceStart - rockDelay) / rockDur));
-        const animScale = rockInstances[i].scale * easeOutCubic(rawT);
-        const data = rockInstances[i];
-        _tmpQuat.setFromEuler(data.rotation);
-        _tmpScale.setScalar(animScale);
-        _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-        if (rockInstanceRef.current) {
-          rockInstanceRef.current.setMatrixAt(i, _tmpMatrix);
-          rockInstanceRef.current.instanceMatrix.addUpdateRange(i * 16, 16);
-          rockInstanceRef.current.instanceMatrix.needsUpdate = true;
-        }
-      }
-
-      // Vegetation grow - trees
-      const treeDelay = ANIM_DELAYS.trees;
-      const treeDur = ANIM_DURATIONS.trees;
-      treesByVariant.forEach((transforms, variantIdx) => {
-        const variant = treeVariants[variantIdx];
-        if (!variant) return;
-        variant.primitives.forEach((_, primIdx) => {
-          const key = `tree-${variantIdx}-${primIdx}`;
-          const mesh = treeInstanceRefs.current.get(key);
-          if (!mesh) return;
-          transforms.forEach((data, i) => {
-            if (data.tileKey !== tileKey) return;
-            const rawT = Math.max(0, Math.min(1, (timeSinceStart - treeDelay) / treeDur));
-            const animScale = data.scale * easeOutCubic(rawT);
-            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
-            _tmpScale.setScalar(animScale);
-            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-            mesh.setMatrixAt(i, _tmpMatrix);
-            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
-            mesh.instanceMatrix.needsUpdate = true;
-          });
-        });
-      });
-
-      // Vegetation grow - bushes
-      const bushDelay = ANIM_DELAYS.bushes;
-      const bushDur = ANIM_DURATIONS.bushes;
-      bushesByVariant.forEach((transforms, variantIdx) => {
-        const variant = bushVariants[variantIdx];
-        if (!variant) return;
-        variant.primitives.forEach((_, primIdx) => {
-          const key = `bush-${variantIdx}-${primIdx}`;
-          const mesh = bushInstanceRefs.current.get(key);
-          if (!mesh) return;
-          transforms.forEach((data, i) => {
-            if (data.tileKey !== tileKey) return;
-            const rawT = Math.max(0, Math.min(1, (timeSinceStart - bushDelay) / bushDur));
-            const animScale = data.scale * easeOutCubic(rawT);
-            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
-            _tmpScale.set(animScale, animScale, animScale);
-            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-            mesh.setMatrixAt(i, _tmpMatrix);
-            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
-            mesh.instanceMatrix.needsUpdate = true;
-          });
-        });
-      });
-
-      // Vegetation grow - clover
-      const cloverDelay = ANIM_DELAYS.clover;
-      const cloverDur = ANIM_DURATIONS.clover;
-      cloverByVariant.forEach((transforms, variantIdx) => {
-        const variant = cloverVariants[variantIdx];
-        if (!variant) return;
-        variant.primitives.forEach((_, primIdx) => {
-          const key = `clover-${variantIdx}-${primIdx}`;
-          const mesh = cloverInstanceRefs.current.get(key);
-          if (!mesh) return;
-          transforms.forEach((data, i) => {
-            if (data.tileKey !== tileKey) return;
-            const rawT = Math.max(0, Math.min(1, (timeSinceStart - cloverDelay) / cloverDur));
-            const animScale = data.scale * easeOutCubic(rawT);
-            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
-            _tmpScale.set(animScale, animScale, animScale);
-            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-            mesh.setMatrixAt(i, _tmpMatrix);
-            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
-            mesh.instanceMatrix.needsUpdate = true;
-          });
-        });
-      });
-
-      // Vegetation grow - flowers
-      const flowerDelay = ANIM_DELAYS.flowers;
-      const flowerDur = ANIM_DURATIONS.flowers;
-      flowersByVariant.forEach((transforms, variantIdx) => {
-        const variant = flowerVariants[variantIdx];
-        if (!variant) return;
-        variant.primitives.forEach((_, primIdx) => {
-          const key = `flower-${variantIdx}-${primIdx}`;
-          const mesh = flowerInstanceRefs.current.get(key);
-          if (!mesh) return;
-          transforms.forEach((data, i) => {
-            if (data.tileKey !== tileKey) return;
-            const rawT = Math.max(0, Math.min(1, (timeSinceStart - flowerDelay) / flowerDur));
-            const animScale = data.scale * easeOutCubic(rawT);
-            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
-            _tmpScale.set(animScale, animScale, animScale);
-            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-            mesh.setMatrixAt(i, _tmpMatrix);
-            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
-            mesh.instanceMatrix.needsUpdate = true;
-          });
-        });
-      });
-    }
-
-    // Cleanup completed animations — write final full-scale matrices for ALL element types
-    for (const tileKey of completedKeys) {
-      tileAnimStartRef.current.delete(tileKey);
-
-      // Final matrices for rocks
-      for (let i = 0; i < rockInstances.length; i++) {
-        if (rockInstances[i].tileKey !== tileKey) continue;
-        const data = rockInstances[i];
-        _tmpQuat.setFromEuler(data.rotation);
-        _tmpScale.setScalar(data.scale);
-        _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-        if (rockInstanceRef.current) {
-          rockInstanceRef.current.setMatrixAt(i, _tmpMatrix);
-          rockInstanceRef.current.instanceMatrix.addUpdateRange(i * 16, 16);
-          rockInstanceRef.current.instanceMatrix.needsUpdate = true;
-        }
-      }
-
-      // Final matrices for trees
-      treesByVariant.forEach((transforms, variantIdx) => {
-        const variant = treeVariants[variantIdx];
-        if (!variant) return;
-        variant.primitives.forEach((_, primIdx) => {
-          const key = `tree-${variantIdx}-${primIdx}`;
-          const mesh = treeInstanceRefs.current.get(key);
-          if (!mesh) return;
-          transforms.forEach((data, i) => {
-            if (data.tileKey !== tileKey) return;
-            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
-            _tmpScale.setScalar(data.scale);
-            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-            mesh.setMatrixAt(i, _tmpMatrix);
-            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
-            mesh.instanceMatrix.needsUpdate = true;
-          });
-        });
-      });
-
-      // Final matrices for bushes
-      bushesByVariant.forEach((transforms, variantIdx) => {
-        const variant = bushVariants[variantIdx];
-        if (!variant) return;
-        variant.primitives.forEach((_, primIdx) => {
-          const key = `bush-${variantIdx}-${primIdx}`;
-          const mesh = bushInstanceRefs.current.get(key);
-          if (!mesh) return;
-          transforms.forEach((data, i) => {
-            if (data.tileKey !== tileKey) return;
-            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
-            _tmpScale.set(data.scale, data.scale, data.scale);
-            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-            mesh.setMatrixAt(i, _tmpMatrix);
-            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
-            mesh.instanceMatrix.needsUpdate = true;
-          });
-        });
-      });
-
-      // Final matrices for clover
-      cloverByVariant.forEach((transforms, variantIdx) => {
-        const variant = cloverVariants[variantIdx];
-        if (!variant) return;
-        variant.primitives.forEach((_, primIdx) => {
-          const key = `clover-${variantIdx}-${primIdx}`;
-          const mesh = cloverInstanceRefs.current.get(key);
-          if (!mesh) return;
-          transforms.forEach((data, i) => {
-            if (data.tileKey !== tileKey) return;
-            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
-            _tmpScale.set(data.scale, data.scale, data.scale);
-            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-            mesh.setMatrixAt(i, _tmpMatrix);
-            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
-            mesh.instanceMatrix.needsUpdate = true;
-          });
-        });
-      });
-
-      // Final matrices for flowers
-      flowersByVariant.forEach((transforms, variantIdx) => {
-        const variant = flowerVariants[variantIdx];
-        if (!variant) return;
-        variant.primitives.forEach((_, primIdx) => {
-          const key = `flower-${variantIdx}-${primIdx}`;
-          const mesh = flowerInstanceRefs.current.get(key);
-          if (!mesh) return;
-          transforms.forEach((data, i) => {
-            if (data.tileKey !== tileKey) return;
-            _tmpQuat.setFromAxisAngle(_growthAxis, data.rotation);
-            _tmpScale.set(data.scale, data.scale, data.scale);
-            _tmpMatrix.compose(data.position, _tmpQuat, _tmpScale);
-            mesh.setMatrixAt(i, _tmpMatrix);
-            mesh.instanceMatrix.addUpdateRange(i * 16, 16);
-            mesh.instanceMatrix.needsUpdate = true;
-          });
-        });
-      });
-
-      // Clean up ground material clone
-      const cloneMat = groundMaterialClonesRef.current.get(tileKey);
-      if (cloneMat) {
-        const groundIdx = groundData.findIndex((g) => g.tileKey === tileKey);
-        if (groundIdx >= 0 && groundMeshRefs.current[groundIdx]) {
-          groundMeshRefs.current[groundIdx].material = groundMaterial;
-        }
-        cloneMat.dispose();
-        groundMaterialClonesRef.current.delete(tileKey);
-      }
-    }
-  });
-
-  // Update tree instance matrices and colors
-  useLayoutEffect(() => {
-    const matrix = new THREE.Matrix4();
-    const quaternion = new THREE.Quaternion();
-    const scaleVec = new THREE.Vector3();
-    const color = new THREE.Color();
-
-    treesByVariant.forEach((transforms, variantIdx) => {
-      if (transforms.length === 0) return;
-
-      const variant = treeVariants[variantIdx];
-      if (!variant) return;
-
-      variant.primitives.forEach((_, primIdx) => {
-        const key = `tree-${variantIdx}-${primIdx}`;
-        const mesh = treeInstanceRefs.current.get(key);
-        if (!mesh) return;
-
-        transforms.forEach((data, i) => {
-          const isAnimating = newTileKeys.has(data.tileKey);
-          quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
-          scaleVec.setScalar(isAnimating ? 0 : data.scale);
-          matrix.compose(data.position, quaternion, scaleVec);
-          mesh.setMatrixAt(i, matrix);
-
-          const t = data.tint;
-          const r = 0.3 + t * 0.55;
-          const g = 0.4 + t * 0.6;
-          const b = 0.15 + t * 0.25;
-          color.setRGB(r, g, b);
-          mesh.setColorAt(i, color);
-        });
-
-        mesh.instanceMatrix.clearUpdateRanges();
-        mesh.instanceMatrix.addUpdateRange(0, transforms.length * 16);
-        mesh.instanceMatrix.needsUpdate = true;
-        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      });
-    });
-  }, [treesByVariant, treeVariants, newTileKeys]);
-
-  // Update bush instance matrices and colors
-  useLayoutEffect(() => {
-    const matrix = new THREE.Matrix4();
-    const quaternion = new THREE.Quaternion();
-    const color = new THREE.Color();
-
-    bushesByVariant.forEach((transforms, variantIdx) => {
-      if (transforms.length === 0) return;
-
-      const variant = bushVariants[variantIdx];
-      if (!variant) return;
-
-      variant.primitives.forEach((_, primIdx) => {
-        const key = `bush-${variantIdx}-${primIdx}`;
-        const mesh = bushInstanceRefs.current.get(key);
-        if (!mesh) return;
-
-        transforms.forEach((data, i) => {
-          const isAnimating = newTileKeys.has(data.tileKey);
-          const s = isAnimating ? 0 : data.scale;
-          quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
-          matrix.compose(data.position, quaternion, new THREE.Vector3(s, s, s));
-          mesh.setMatrixAt(i, matrix);
-
-          const t = data.tint;
-          const r = 0.4 + t * 0.4;
-          const g = 0.5 + t * 0.5;
-          const b = 0.25 + t * 0.2;
-          color.setRGB(r, g, b);
-          mesh.setColorAt(i, color);
-        });
-
-        mesh.instanceMatrix.clearUpdateRanges();
-        mesh.instanceMatrix.addUpdateRange(0, transforms.length * 16);
-        mesh.instanceMatrix.needsUpdate = true;
-        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      });
-    });
-  }, [bushesByVariant, bushVariants, newTileKeys]);
-
-  // Update clover instance matrices
-  useLayoutEffect(() => {
-    const matrix = new THREE.Matrix4();
-    const quaternion = new THREE.Quaternion();
-
-    cloverByVariant.forEach((transforms, variantIdx) => {
-      if (transforms.length === 0) return;
-
-      const variant = cloverVariants[variantIdx];
-      if (!variant) return;
-
-      variant.primitives.forEach((_, primIdx) => {
-        const key = `clover-${variantIdx}-${primIdx}`;
-        const mesh = cloverInstanceRefs.current.get(key);
-        if (!mesh) return;
-
-        transforms.forEach((data, i) => {
-          const isAnimating = newTileKeys.has(data.tileKey);
-          const s = isAnimating ? 0 : data.scale;
-          quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
-          matrix.compose(data.position, quaternion, new THREE.Vector3(s, s, s));
-          mesh.setMatrixAt(i, matrix);
-        });
-
-        mesh.instanceMatrix.clearUpdateRanges();
-        mesh.instanceMatrix.addUpdateRange(0, transforms.length * 16);
-        mesh.instanceMatrix.needsUpdate = true;
-      });
-    });
-  }, [cloverByVariant, cloverVariants, newTileKeys]);
-
-  // Update flower instance matrices
-  useLayoutEffect(() => {
-    const matrix = new THREE.Matrix4();
-    const quaternion = new THREE.Quaternion();
-
-    flowersByVariant.forEach((transforms, variantIdx) => {
-      if (transforms.length === 0) return;
-
-      const variant = flowerVariants[variantIdx];
-      if (!variant) return;
-
-      variant.primitives.forEach((_, primIdx) => {
-        const key = `flower-${variantIdx}-${primIdx}`;
-        const mesh = flowerInstanceRefs.current.get(key);
-        if (!mesh) return;
-
-        transforms.forEach((data, i) => {
-          const isAnimating = newTileKeys.has(data.tileKey);
-          const s = isAnimating ? 0 : data.scale;
-          quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), data.rotation);
-          matrix.compose(data.position, quaternion, new THREE.Vector3(s, s, s));
-          mesh.setMatrixAt(i, matrix);
-        });
-
-        mesh.instanceMatrix.clearUpdateRanges();
-        mesh.instanceMatrix.addUpdateRange(0, transforms.length * 16);
-        mesh.instanceMatrix.needsUpdate = true;
-      });
-    });
-  }, [flowersByVariant, flowerVariants, newTileKeys]);
-
-  // Update rock instance matrices
-  useLayoutEffect(() => {
-    if (!rockInstanceRef.current || rockInstances.length === 0) return;
-
-    const mesh = rockInstanceRef.current;
-    const matrix = new THREE.Matrix4();
-    const quaternion = new THREE.Quaternion();
-
-    rockInstances.forEach((data, i) => {
-      const isAnimating = newTileKeys.has(data.tileKey);
-      const s = isAnimating ? 0 : data.scale;
-      quaternion.setFromEuler(data.rotation);
-      matrix.compose(data.position, quaternion, new THREE.Vector3(s, s, s));
-      mesh.setMatrixAt(i, matrix);
-    });
-
-    mesh.instanceMatrix.clearUpdateRanges();
-    mesh.instanceMatrix.addUpdateRange(0, rockInstances.length * 16);
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [rockInstances, newTileKeys]);
-
-  const instanceCapacities = useRef(new Map<string, number>());
-  const instanceCapacity = (key: string, count: number) => {
-    const capacity = Math.max(
-      instanceCapacities.current.get(key) ?? 128,
-      2 ** Math.ceil(Math.log2(count)),
-    );
-    instanceCapacities.current.set(key, capacity);
-    return capacity;
-  };
-
-  // Warm-up geometry: tiny plane to force shader compilation on mount
-  const warmupGeometry = useMemo(() => new THREE.PlaneGeometry(0.001, 0.001), []);
-
+    return result;
+  }, [landscape]);
+  const variants = [
+    ...treeVariants.map((v, i) => ({ kind: "tree", i, v })),
+    ...bushVariants.map((v, i) => ({ kind: "bush", i, v })),
+    ...cloverVariants.map((v, i) => ({ kind: "clover", i, v })),
+    ...flowerVariants.map((v, i) => ({ kind: "flower", i, v })),
+    { kind: "rock", i: 0, v: { primitives: [{ geometry: rockGeometry, material: rockMaterial }] } },
+  ];
   return (
     <group>
-      {/* Warm-up mesh forces ground material shader compilation before first tile */}
-      {groundData.length === 0 && !landscape && (
-        <mesh geometry={warmupGeometry} material={groundMaterial} renderOrder={-1} />
-      )}
-
-      {/* Ground meshes - one per tile */}
-      {groundData.map((ground, idx) => {
-        const quaternion = new THREE.Quaternion().setFromUnitVectors(
-          new THREE.Vector3(0, 0, 1),
-          ground.normal,
-        );
-        const isAnimating = newTileKeys.has(ground.tileKey);
-        let mat = groundMaterial;
-        if (isAnimating) {
-          let clone = groundMaterialClonesRef.current.get(ground.tileKey);
-          if (!clone) {
-            clone = groundMaterial.clone();
-            addSphereProjectionWithSoftEdges(
-              clone,
-              0.003,
-              noiseTexture,
-              noiseHighTexture,
-              hexRadius,
-              sphereCenter,
-              groupInverseMatrix,
-            );
-            clone.needsUpdate = true;
-            groundMaterialClonesRef.current.set(ground.tileKey, clone);
-          }
-          mat = clone;
-        }
-        return (
-          <mesh
-            key={`ground-${idx}`}
-            ref={(el) => {
-              if (el) groundMeshRefs.current[idx] = el;
-            }}
-            geometry={ground.geometry}
-            material={mat}
-            position={ground.position}
-            quaternion={quaternion}
-            renderOrder={12}
-            receiveShadow
+      {variants.flatMap(({ kind, i, v }) =>
+        v.primitives.map((p, j) => (
+          <PlantBatch
+            key={`${kind}:${i}:${j}`}
+            geometry={p.geometry}
+            material={p.material}
+            plants={groups.get(`${kind}:${i}`) ?? EMPTY_PLANTS}
+            revision={landscape.id}
+            transitionStart={transitionStart}
+            previousLandscape={previousLandscape}
           />
-        );
-      })}
-
-      {/* Trees - single InstancedMesh per variant */}
-      {treeVariants.map((variant, variantIdx) => {
-        const transforms = treesByVariant[variantIdx];
-        if (!transforms || transforms.length === 0) return null;
-
-        return variant.primitives.map((prim, primIdx) => (
-          <instancedMesh
-            key={`tree-${variantIdx}-${primIdx}`}
-            ref={(el) => {
-              treeInstanceRefs.current.set(`tree-${variantIdx}-${primIdx}`, el);
-            }}
-            args={[
-              prim.geometry,
-              prim.material,
-              instanceCapacity(`tree-${variantIdx}`, transforms.length),
-            ]}
-            count={transforms.length}
-            frustumCulled={false}
-            renderOrder={15}
-            raycast={() => {}}
-          />
-        ));
-      })}
-
-      {/* Bushes - single InstancedMesh per variant */}
-      {bushVariants.map((variant, variantIdx) => {
-        const transforms = bushesByVariant[variantIdx];
-        if (!transforms || transforms.length === 0) return null;
-
-        return variant.primitives.map((prim, primIdx) => (
-          <instancedMesh
-            key={`bush-${variantIdx}-${primIdx}`}
-            ref={(el) => {
-              bushInstanceRefs.current.set(`bush-${variantIdx}-${primIdx}`, el);
-            }}
-            args={[
-              prim.geometry,
-              prim.material,
-              instanceCapacity(`bush-${variantIdx}`, transforms.length),
-            ]}
-            count={transforms.length}
-            frustumCulled={false}
-            renderOrder={15}
-          />
-        ));
-      })}
-
-      {/* Clover - single InstancedMesh per variant */}
-      {cloverVariants.map((variant, variantIdx) => {
-        const transforms = cloverByVariant[variantIdx];
-        if (!transforms || transforms.length === 0) return null;
-
-        return variant.primitives.map((prim, primIdx) => (
-          <instancedMesh
-            key={`clover-${variantIdx}-${primIdx}`}
-            ref={(el) => {
-              cloverInstanceRefs.current.set(`clover-${variantIdx}-${primIdx}`, el);
-            }}
-            args={[
-              prim.geometry,
-              prim.material,
-              instanceCapacity(`clover-${variantIdx}`, transforms.length),
-            ]}
-            count={transforms.length}
-            frustumCulled={false}
-            renderOrder={15}
-          />
-        ));
-      })}
-
-      {/* Flowers - single InstancedMesh per variant (living greenery only) */}
-      {flowerVariants.map((variant, variantIdx) => {
-        const transforms = flowersByVariant[variantIdx];
-        if (!transforms || transforms.length === 0) return null;
-
-        return variant.primitives.map((prim, primIdx) => (
-          <instancedMesh
-            key={`flower-${variantIdx}-${primIdx}`}
-            ref={(el) => {
-              flowerInstanceRefs.current.set(`flower-${variantIdx}-${primIdx}`, el);
-            }}
-            args={[
-              prim.geometry,
-              prim.material,
-              instanceCapacity(`flower-${variantIdx}`, transforms.length),
-            ]}
-            count={transforms.length}
-            frustumCulled={false}
-            renderOrder={15}
-          />
-        ));
-      })}
-
-      {/* Rocks - single InstancedMesh for all */}
-      {rockInstances.length > 0 && (
-        <instancedMesh
-          ref={rockInstanceRef}
-          args={[rockGeometry, rockMaterial, instanceCapacity("rocks", rockInstances.length)]}
-          count={rockInstances.length}
-          frustumCulled={false}
-          renderOrder={15}
-        />
+        )),
       )}
     </group>
   );
 }
-
+const EMPTY_PLANTS: LandscapePlant[] = [];
+const UP = new THREE.Vector3(0, 0, 1);
+function PlantBatch({
+  geometry,
+  material,
+  plants,
+  revision,
+  transitionStart,
+  previousLandscape,
+}: {
+  geometry: THREE.BufferGeometry;
+  material: THREE.Material;
+  plants: LandscapePlant[];
+  revision: number;
+  transitionStart: number;
+  previousLandscape: LandscapeState;
+}) {
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  const slots = useRef(new Map<string, { slot: number; plant: LandscapePlant }>());
+  const animations = useRef(
+    new Map<number, { plant: LandscapePlant; fromHeight: number; birth: number; grow: boolean }>(),
+  );
+  const seen = useRef(false);
+  const scratch = useMemo(
+    () => ({
+      matrix: new THREE.Matrix4(),
+      q: new THREE.Quaternion(),
+      turn: new THREE.Quaternion(),
+      scale: new THREE.Vector3(),
+      position: new THREE.Vector3(),
+      normal: new THREE.Vector3(),
+      color: new THREE.Color(),
+    }),
+    [],
+  );
+  const write = (slot: number, plant: LandscapePlant, growth: number, height: number) => {
+    projectBoardPoint(plant.x, plant.y, height, scratch.position);
+    scratch.normal.copy(scratch.position).normalize();
+    scratch.q.setFromUnitVectors(UP, scratch.normal);
+    scratch.turn.setFromAxisAngle(UP, (plant.seed % 6283) / 1000);
+    scratch.q.multiply(scratch.turn);
+    scratch.scale.setScalar(plant.scale * growth);
+    scratch.matrix.compose(scratch.position, scratch.q, scratch.scale);
+    mesh.current!.setMatrixAt(slot, scratch.matrix);
+    mesh.current!.instanceMatrix.addUpdateRange(slot * 16, 16);
+  };
+  useLayoutEffect(() => {
+    const target = mesh.current!;
+    let changed = false;
+    const ids = new Set(plants.map((p) => p.id));
+    for (const [id, entry] of slots.current) {
+      if (!ids.has(id)) {
+        changed = true;
+        scratch.matrix.makeScale(0, 0, 0);
+        target.setMatrixAt(entry.slot, scratch.matrix);
+        target.instanceMatrix.addUpdateRange(entry.slot * 16, 16);
+        animations.current.delete(entry.slot);
+        slots.current.delete(id);
+      }
+    }
+    const used = new Set([...slots.current.values()].map((e) => e.slot));
+    let next = 0;
+    for (const p of plants) {
+      const prior = slots.current.get(p.id);
+      if (prior?.plant === p) {
+        continue;
+      }
+      changed = true;
+      while (used.has(next)) {
+        next++;
+      }
+      const slot = prior?.slot ?? next;
+      if (slot >= 4096) {
+        throw new Error("Vegetation batch capacity exceeded");
+      }
+      used.add(slot);
+      const grow = seen.current && !prior;
+      const previousHeight = previousLandscape.id
+        ? landscapeHeightAt(previousLandscape.patches, p.x, p.y)
+        : p.height;
+      write(slot, p, grow ? 0 : 1, previousHeight);
+      if (grow || previousHeight !== p.height) {
+        animations.current.set(slot, {
+          plant: p,
+          fromHeight: previousHeight,
+          birth: transitionStart,
+          grow,
+        });
+      }
+      const tint = 0.65 + (p.seed % 100) / 400;
+      scratch.color.setRGB(tint, tint, tint);
+      target.setColorAt(slot, scratch.color);
+      target.instanceColor!.addUpdateRange(slot * 3, 3);
+      slots.current.set(p.id, { slot, plant: p });
+    }
+    target.count = used.size ? Math.max(...used) + 1 : 0;
+    if (changed) {
+      target.instanceMatrix.needsUpdate = true;
+      if (target.instanceColor) {
+        target.instanceColor.needsUpdate = true;
+      }
+    }
+    if (revision > 0) {
+      seen.current = true;
+    }
+  }, [plants, revision, transitionStart, previousLandscape]);
+  useFrame(() => {
+    if (!animations.current.size) {
+      return;
+    }
+    const now = performance.now();
+    for (const [slot, a] of animations.current) {
+      const t = Math.max(0, Math.min(1, (now - a.birth) / TRANSITION_MS));
+      const progress = easeOutCubic(t);
+      const heightProgress = t * t * (3 - 2 * t);
+      write(
+        slot,
+        a.plant,
+        a.grow ? progress : 1,
+        a.fromHeight + (a.plant.height - a.fromHeight) * heightProgress,
+      );
+      if (progress === 1) {
+        animations.current.delete(slot);
+      }
+    }
+    mesh.current!.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <instancedMesh
+      ref={mesh}
+      args={[geometry, material, 4096]}
+      frustumCulled={false}
+      raycast={() => {}}
+      renderOrder={15}
+    />
+  );
+}
 export default memo(GreeneryRenderer);

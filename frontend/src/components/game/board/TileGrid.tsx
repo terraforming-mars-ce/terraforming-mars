@@ -13,10 +13,9 @@ import GreeneryRenderer from "./GreeneryRenderer";
 import CityRenderer from "./CityRenderer";
 import CityBatchRenderer from "./CityBatchRenderer";
 import { createCityShowcase, generateCityLayout, type CityPlot } from "./cityLayout";
-import { type LandscapeTile } from "./landscapeNetwork";
+import { EMPTY_LANDSCAPE, type LandscapeSource, type LandscapeState } from "./landscapeTypes";
 import { hashSeed } from "./landscapeGeometry";
 import LandscapeRenderer from "./LandscapeRenderer";
-import OceanRenderer from "./OceanRenderer";
 import PrimitiveRenderer from "./PrimitiveManager";
 import BirdRenderer from "./BirdRenderer";
 import SpaceshipRenderer from "./SpaceshipRenderer";
@@ -480,7 +479,7 @@ export default function TileGrid({
     [greeneryTiles, showcaseGreenery],
   );
   const landscapeInputs = useMemo(() => {
-    const tiles: LandscapeTile[] = cityPlots.map((plot) => ({
+    const tiles: LandscapeSource[] = cityPlots.map((plot) => ({
       coordinate: plot.coordinate,
       kind: "city",
       seed: plot.layout.seed,
@@ -501,18 +500,26 @@ export default function TileGrid({
           hashSeed(`${gameState?.id}:${HexGrid2D.coordinateToKey(t.coordinate)}`),
       });
     }
-    const occupied = new Set(tiles.map((t) => HexGrid2D.coordinateToKey(t.coordinate)));
-    const spaces = projectedHexGrid.map((tile) => ({
-      coordinate: tile.coordinate,
-      blocked:
-        !occupied.has(HexGrid2D.coordinateToKey(tile.coordinate)) &&
-        (tile.isOceanSpace ||
-          Boolean(tile.backendTile?.occupiedBy) ||
-          Boolean(tile.backendTile?.reservedBy)),
-    }));
-    return { tiles, spaces };
+    for (const tile of projectedHexGrid) {
+      const type = getTileData(tile).type;
+      if (type === "ocean" || type === "volcano") {
+        tiles.push({
+          coordinate: tile.coordinate,
+          kind: type,
+          seed: hashSeed(`${gameState?.id}:${HexGrid2D.coordinateToKey(tile.coordinate)}`),
+        });
+      } else if (
+        tile.backendTile?.occupiedBy &&
+        !tiles.some(
+          (s) =>
+            HexGrid2D.coordinateToKey(s.coordinate) === HexGrid2D.coordinateToKey(tile.coordinate),
+        )
+      ) {
+        tiles.push({ coordinate: tile.coordinate, kind: "excluded", seed: 0 });
+      }
+    }
+    return { sources: tiles, seed: hashSeed(gameState?.id ?? "showcase") };
   }, [cityPlots, renderedGreenery, projectedHexGrid, showcaseGreenery, gameState?.id]);
-  // Collect ocean tiles for the OceanRenderer
   const oceanTiles = useMemo(() => {
     return projectedHexGrid
       .filter((tile) => {
@@ -524,25 +531,20 @@ export default function TileGrid({
       }));
   }, [projectedHexGrid]);
 
-  const landscapeSignature = JSON.stringify({
-    tiles: landscapeInputs.tiles.map((t) => [t.coordinate, t.kind, t.seed, t.layout?.style]),
-    spaces: landscapeInputs.spaces,
-    oceans: oceanTiles,
+  const landscapeSignature = useMemo(() => JSON.stringify(landscapeInputs), [landscapeInputs]);
+  const pendingLandscape = useLandscape(landscapeInputs, landscapeSignature);
+  const [landscapeView, setLandscapeView] = useState({
+    current: EMPTY_LANDSCAPE,
+    previous: EMPTY_LANDSCAPE,
+    transitionStart: 0,
   });
-  const { plan: landscape, ground: landscapeGround } = useLandscape(
-    { ...landscapeInputs, oceans: oceanTiles },
-    landscapeSignature,
-  );
-
-  const plannedGreenery = useMemo(() => {
-    const keys = new Set(
-      landscape.tiles
-        .filter((tile) => tile.kind !== "city")
-        .map((tile) => HexGrid2D.coordinateToKey(tile.coordinate)),
-    );
-    return renderedGreenery.filter((tile) => keys.has(HexGrid2D.coordinateToKey(tile.coordinate)));
-  }, [renderedGreenery, landscape]);
-
+  const handleLandscapeReady = useCallback((state: LandscapeState, transitionStart: number) => {
+    setLandscapeView((previous) => ({
+      current: state,
+      previous: previous.current,
+      transitionStart,
+    }));
+  }, []);
   // Collect living greenery tiles (ecological-zone, natural-preserve) for boosted vegetation
   const livingGreeneryTiles = useMemo(() => {
     return projectedHexGrid
@@ -556,74 +558,6 @@ export default function TileGrid({
         normal: tile.normal,
       }));
   }, [projectedHexGrid]);
-
-  // Collect volcano tiles for vegetation around them
-  const volcanoTiles = useMemo(() => {
-    return projectedHexGrid
-      .filter((tile) => {
-        const tileData = getTileData(tile);
-        return tileData.type === "volcano";
-      })
-      .map((tile) => ({
-        coordinate: tile.coordinate,
-        worldPosition: tile.spherePosition,
-        normal: tile.normal,
-      }));
-  }, [projectedHexGrid]);
-
-  // Detect newly placed ocean tiles
-  const knownOceanRef = useRef<Set<string>>(new Set());
-  const oceanInitializedRef = useRef(false);
-  const newOceanKeys = useMemo(() => {
-    const currentKeys = new Set<string>();
-    for (const tile of oceanTiles) {
-      currentKeys.add(`${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`);
-    }
-
-    if (!oceanInitializedRef.current) {
-      knownOceanRef.current = currentKeys;
-      oceanInitializedRef.current = true;
-      return new Set<string>();
-    }
-
-    const added = new Set<string>();
-    for (const key of currentKeys) {
-      if (!knownOceanRef.current.has(key)) {
-        added.add(key);
-      }
-    }
-    knownOceanRef.current = currentKeys;
-    return added;
-  }, [oceanTiles]);
-
-  // Detect newly placed greenery tiles
-  const knownGreeneryRef = useRef<Set<string>>(new Set());
-  const greeneryInitializedRef = useRef(false);
-  const newGreeneryKeys = useMemo(() => {
-    const currentKeys = new Set<string>();
-    for (const tile of greeneryTiles) {
-      currentKeys.add(`${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`);
-    }
-    for (const tile of volcanoTiles) {
-      currentKeys.add(`${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`);
-    }
-    for (const tile of livingGreeneryTiles) {
-      currentKeys.add(`${tile.coordinate.q},${tile.coordinate.r},${tile.coordinate.s}`);
-    }
-
-    if (!greeneryInitializedRef.current) {
-      knownGreeneryRef.current = currentKeys;
-      greeneryInitializedRef.current = true;
-      return new Set<string>();
-    }
-
-    const added = new Set<string>();
-    for (const key of currentKeys) {
-      if (!knownGreeneryRef.current.has(key)) added.add(key);
-    }
-    knownGreeneryRef.current = currentKeys;
-    return added;
-  }, [greeneryTiles, volcanoTiles, livingGreeneryTiles]);
 
   // --- Centralized interaction sphere (single raycast target) ---
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
@@ -751,19 +685,6 @@ export default function TileGrid({
     [findNearestHex, availableHexes, onHexClick, hoverSound],
   );
 
-  const vegetationBirthKey = [...newGreeneryKeys, ...newlyPlacedTiles]
-    .filter(
-      (key) =>
-        cityKeys.has(key) ||
-        renderedGreenery.some((tile) => HexGrid2D.coordinateToKey(tile.coordinate) === key) ||
-        volcanoTiles.some((tile) => HexGrid2D.coordinateToKey(tile.coordinate) === key),
-    )
-    .sort()
-    .join(";");
-  const newVegetationKeys = useMemo(
-    () => new Set(vegetationBirthKey ? vegetationBirthKey.split(";") : []),
-    [vegetationBirthKey],
-  );
   const oceanKeySet = useMemo(() => {
     const set = new Set<string>();
     for (const tile of oceanTiles) {
@@ -793,29 +714,23 @@ export default function TileGrid({
       <Html>
         <TileTooltip data={tooltipData} positionRef={tooltipPositionRef} />
       </Html>
-      {/* Single GreeneryRenderer handles ALL greenery + volcano vegetation */}
       <GreeneryRenderer
-        tiles={plannedGreenery}
-        landscape={landscape}
-        cityPlots={cityPlots}
-        volcanoTiles={volcanoTiles}
-        livingGreeneryTiles={livingGreeneryTiles}
-        newTileKeys={newVegetationKeys}
-        sphereCenter={sphereCenter}
-        groupInverseMatrix={groupInverseMatrix}
+        landscape={landscapeView.current}
+        previousLandscape={landscapeView.previous}
+        transitionStart={landscapeView.transitionStart}
       />
       <group visible={!startHidden || animateHexEntrance}>
-        <LandscapeRenderer plan={landscape} groundData={landscapeGround} />
-        <CityBatchRenderer
-          plots={cityPlots}
-          activeExits={landscape.activeExits}
-          newlyPlaced={newlyPlacedTiles}
+        <LandscapeRenderer
+          state={pendingLandscape}
+          onReady={handleLandscapeReady}
+          hoveredOceanHexKey={hoveredOceanHexKey}
+          groupInverseMatrix={groupInverseMatrix}
         />
+        <CityBatchRenderer plots={cityPlots} newlyPlaced={newlyPlacedTiles} />
         {cityPlots.map((plot) => (
           <CityRenderer
             key={HexGrid2D.coordinateToKey(plot.coordinate)}
             renderBuildings={false}
-            activeExits={landscape.activeExits.get(HexGrid2D.coordinateToKey(plot.coordinate))}
             showLabel={SHOWCASE}
             isNewlyPlaced={newlyPlacedTiles.has(HexGrid2D.coordinateToKey(plot.coordinate))}
             connectedGround
@@ -836,14 +751,6 @@ export default function TileGrid({
           groupInverseMatrix={groupInverseMatrix}
         />
       )}
-      {/* Single OceanRenderer handles ALL ocean tile water rendering */}
-      <OceanRenderer
-        oceanTiles={oceanTiles}
-        newOceanKeys={newOceanKeys}
-        hoveredOceanHexKey={hoveredOceanHexKey}
-        sphereCenter={sphereCenter}
-        groupInverseMatrix={groupInverseMatrix}
-      />
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
         const isCityRenderer = cityKeys.has(hexKey);
@@ -873,7 +780,6 @@ export default function TileGrid({
             key={hexKey}
             tileData={tile}
             tileType={renderedType}
-            renderBuilding={!isCityRenderer}
             ownerId={ownerId}
             ownerColor={ownerId ? playerColorMap.get(ownerId) : undefined}
             reservedById={tile.backendTile?.reservedBy || null}

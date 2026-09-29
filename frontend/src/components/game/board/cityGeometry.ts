@@ -1,10 +1,12 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
-  visibleCityRoads,
   insideBuilding,
   onEntrancePath,
   randomSequence,
+  CAPITAL_WALL_APOTHEM,
+  cityWallDistance,
+  cityHexWallApothem,
   type CityBuilding,
   type CityLayout,
   type CityPlot,
@@ -15,14 +17,7 @@ import {
   nearestOnRoad,
   createRoadRibbon,
 } from "./landscapeGeometry";
-export function createGeometry(
-  blueprint: CityLayout,
-  plot?: CityPlot,
-  activeExits?: readonly number[],
-) {
-  const layout = activeExits
-    ? { ...blueprint, roads: visibleCityRoads(blueprint, activeExits) }
-    : blueprint;
+export function createGeometry(layout: CityLayout, plot?: CityPlot) {
   const { style } = layout;
   const batches: THREE.BufferGeometry[][] = Array.from({ length: 19 }, () => []);
   const box = (x: number, y: number, z: number, w: number, d: number, h: number, mat: number) => {
@@ -151,8 +146,8 @@ export function createGeometry(
       box(x, 0.021, 0.026, 0.028, 0.015, 0.003, 17);
     }
   }
-  const curb = createRoadRibbon(layout.roads, 0.0012, 0.0076, [], false);
-  const asphalt = createRoadRibbon(layout.roads, 0, 0.008, [], false);
+  const curb = createRoadRibbon(layout.roads, 0.0012, 0.0076, false);
+  const asphalt = createRoadRibbon(layout.roads, 0, 0.008, false);
   curb.deleteAttribute("connectionBirth");
   asphalt.deleteAttribute("connectionBirth");
   batches[4].push(curb);
@@ -214,6 +209,80 @@ export function createGeometry(
       }
     };
     const base = b.z + 0.005;
+    if (b.landmark && style.landmark === "hall") {
+      disc(b.x, b.y, b.z + 0.0025, 0.031, 0.005, 4, 48);
+      const corners = [
+        new THREE.Vector3(-0.022, -0.022, 0),
+        new THREE.Vector3(0.022, -0.022, 0),
+        new THREE.Vector3(0.022, 0.022, 0),
+        new THREE.Vector3(-0.022, 0.022, 0),
+      ];
+      const face = (points: THREE.Vector3[], mat: number) => {
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(
+            points.flatMap((p) => [p.x + b.x, p.y + b.y, p.z + base]),
+            3,
+          ),
+        );
+        geo.setAttribute(
+          "uv",
+          new THREE.Float32BufferAttribute(
+            points.flatMap((p) => [p.x * 20, p.z * 20]),
+            2,
+          ),
+        );
+        geo.setIndex([0, 1, 2, 0, 2, 3]);
+        batches[mat].push(geo);
+      };
+      for (let side = 0; side < 4; side++) {
+        const a = corners[side],
+          c = corners[(side + 1) % 4];
+        const point = (t: number, z: number) =>
+          a
+            .clone()
+            .lerp(c, t)
+            .multiplyScalar(1 - z / (b.height * 1.035))
+            .setZ(z);
+        const left = point(0.02, 0),
+          right = point(0.98, 0);
+        const shoulder = point(0.98, b.height * (0.85 + side * 0.012));
+        const tip = point(0.08, b.height * [1, 0.945, 0.98, 0.915][side]);
+        face([left, right, shoulder, tip], 9);
+        for (const [from, to] of [
+          [left, tip],
+          [right, shoulder],
+        ]) {
+          beam(
+            from.clone().add(new THREE.Vector3(b.x, b.y, base)),
+            to.clone().add(new THREE.Vector3(b.x, b.y, base)),
+            0.00045,
+            0.00045,
+            17,
+          );
+        }
+        // Fine curtain-wall mullions stop below the staggered open crown.
+        for (let z = 0.003; z < b.height * 0.83; z += 0.0035) {
+          const from = point(0.025, z).add(new THREE.Vector3(b.x, b.y, base));
+          const to = point(0.975, z).add(new THREE.Vector3(b.x, b.y, base));
+          beam(from, to, 0.00018, 0.00025, 17);
+        }
+        for (const t of [0.25, 0.5, 0.75]) {
+          beam(
+            point(t, 0).add(new THREE.Vector3(b.x, b.y, base)),
+            point(t, b.height * 0.84).add(new THREE.Vector3(b.x, b.y, base)),
+            0.0002,
+            0.0002,
+            17,
+          );
+        }
+        const coreTop = point(0.5, b.height * 0.86);
+        face([point(0, 0), point(1, 0), coreTop, coreTop], 8);
+      }
+      finishBuilding();
+      continue;
+    }
     box(b.x, b.y, b.z, b.width + 0.002, b.depth + 0.002, 0.005, 5);
     const shadow = new THREE.PlaneGeometry(b.width + 0.014, b.depth + 0.014);
     shadow.translate(b.x, b.y, b.z + 0.0008);
@@ -267,27 +336,8 @@ export function createGeometry(
       facade(b, base, b.width, b.depth, b.height);
     }
     box(b.x, b.y, roof, roofWidth * 0.75, roofDepth * 0.75, 0.001, 5);
-    if (b.landmark && style.landmark === "hall") {
-      dome(b.x, b.y, roof + 0.001, 0.022, 0.55, 9);
-      for (let i = 0; i < 5; i++) {
-        disc(-0.024 + i * 0.012, b.y - b.depth / 2 - 0.006, base + 0.014, 0.002, 0.028, 4, 12);
-      }
-      box(b.x, b.y - b.depth / 2 - 0.006, base + 0.028, 0.059, 0.015, 0.004, 4);
-      for (let i = 0; i < 3; i++) {
-        box(
-          b.x,
-          b.y - b.depth / 2 - 0.015 - i * 0.005,
-          b.z,
-          0.058 + i * 0.008,
-          0.006,
-          0.004 - i * 0.001,
-          4,
-        );
-      }
-    } else {
-      box(b.x - roofWidth * 0.16, b.y, roof + 0.001, roofWidth * 0.35, roofDepth * 0.58, 0.002, 8);
-      box(b.x + roofWidth * 0.26, b.y, roof + 0.001, roofWidth * 0.18, roofDepth * 0.3, 0.003, 3);
-    }
+    box(b.x - roofWidth * 0.16, b.y, roof + 0.001, roofWidth * 0.35, roofDepth * 0.58, 0.002, 8);
+    box(b.x + roofWidth * 0.26, b.y, roof + 0.001, roofWidth * 0.18, roofDepth * 0.3, 0.003, 3);
     box(b.x, b.y - b.depth / 2 - 0.002, base + 0.007, b.width * 0.35, 0.008, 0.002, 6);
     box(b.x, b.y - b.depth / 2 - 0.001, base, 0.007, 0.001, 0.007, 8);
     if (style.details.includes("antennas") && index % 2 === 0) {
@@ -379,7 +429,70 @@ export function createGeometry(
     }
   }
 
-  if (hasGatedWall) {
+  const hexApothem = cityHexWallApothem(layout);
+  if (hasGatedWall && hexApothem !== null) {
+    const height = style.perimeter === "high-wall" ? 0.025 : 0.012;
+    const halfSide = hexApothem * Math.tan(Math.PI / 6);
+    for (let side = 0; side < 6; side++) {
+      const angle = (side * Math.PI) / 3;
+      const center = new THREE.Vector3(
+        Math.cos(angle) * hexApothem,
+        Math.sin(angle) * hexApothem,
+        0.007 + height / 2,
+      );
+      const tangent = new THREE.Vector3(-Math.sin(angle), Math.cos(angle), 0);
+      const gate = layout.entrances.some((entrance) => Math.abs(entrance - angle) < 1e-6);
+      const spans = gate
+        ? [
+            [-halfSide, -0.01],
+            [0.01, halfSide],
+          ]
+        : [[-halfSide, halfSide]];
+      for (const [a, b] of spans) {
+        const wallSection = (width: number, z: number, thickness: number, material: number) => {
+          const shape = new THREE.Shape();
+          const points = [
+            [a, -1],
+            [b, -1],
+            [b, 1],
+            [a, 1],
+          ].map(([along, edge]) => {
+            const apothem = hexApothem + (edge * width) / 2;
+            const end =
+              Math.abs(Math.abs(along) - halfSide) < 1e-8
+                ? Math.sign(along) * apothem * Math.tan(Math.PI / 6)
+                : along;
+            return new THREE.Vector2(
+              Math.cos(angle) * apothem + tangent.x * end,
+              Math.sin(angle) * apothem + tangent.y * end,
+            );
+          });
+          shape.setFromPoints(points);
+          shape.closePath();
+          const section = new THREE.ExtrudeGeometry(shape, {
+            depth: thickness,
+            bevelEnabled: false,
+            steps: 1,
+          });
+          section.translate(0, 0, z);
+          section.clearGroups();
+          batches[material].push(section);
+        };
+        wallSection(0.004, 0.007, height, 4);
+        wallSection(0.005, 0.007 + height, 0.0015, 17);
+      }
+      if (gate) {
+        for (const offset of [-0.011, 0.011]) {
+          const post = center.clone().addScaledVector(tangent, offset);
+          box(post.x, post.y, 0.007, 0.004, 0.004, height + 0.004, 17);
+        }
+        const from = center.clone().addScaledVector(tangent, -0.011);
+        const to = center.clone().addScaledVector(tangent, 0.011);
+        from.z = to.z = 0.007 + height + 0.003;
+        beam(from, to, 0.005, 0.003, 17);
+      }
+    }
+  } else if (hasGatedWall) {
     const wallHeight = style.perimeter === "high-wall" ? 0.025 : 0.01;
     const inner = 0.118;
     const outer = 0.124;
@@ -424,12 +537,6 @@ export function createGeometry(
         endCap.rotateZ(angle);
         endCap.translate(0, 0, 0.007);
         batches[4].push(endCap);
-      }
-      if (activeExits && !activeExits.includes(layout.entrances.indexOf(current))) {
-        const panel = new THREE.BoxGeometry(0.005, 0.019, wallHeight);
-        panel.translate(0.121, 0, 0.007 + wallHeight / 2);
-        panel.rotateZ(current);
-        batches[17].push(panel);
       }
       const gateAngle = current;
       const radial = new THREE.Vector3(Math.cos(gateAngle), Math.sin(gateAngle), 0);
@@ -483,7 +590,68 @@ export function createGeometry(
     }
   }
 
-  if (style.cover === "flat-glass") {
+  if (style.landmark === "hall") {
+    const segments = 96,
+      rows = 10;
+    const inner = 0.018;
+    const roofPoint = (angle: number, t: number) => {
+      const x = Math.cos(angle),
+        y = Math.sin(angle);
+      const outer =
+        CAPITAL_WALL_APOTHEM /
+        Math.max(
+          Math.abs(x),
+          Math.abs(x * 0.5 + (y * Math.sqrt(3)) / 2),
+          Math.abs(x * 0.5 - (y * Math.sqrt(3)) / 2),
+        );
+      const hole = inner / Math.max(Math.abs(x), Math.abs(y));
+      const r = THREE.MathUtils.lerp(hole, outer, t);
+      return new THREE.Vector3(x * r, y * r, 0.05 + 0.01 * (1 - t * t));
+    };
+    const positions: number[] = [],
+      uvs: number[] = [],
+      indices: number[] = [];
+    for (let row = 0; row <= rows + 1; row++) {
+      for (let i = 0; i <= segments; i++) {
+        const p = roofPoint((i * Math.PI * 2) / segments, Math.min(row / rows, 1));
+        if (row > rows) {
+          p.z = 0.019;
+        }
+        positions.push(p.x, p.y, p.z);
+        uvs.push(i / segments, row / rows);
+        if (row <= rows && i < segments) {
+          const a = row * (segments + 1) + i,
+            b = a + segments + 1;
+          indices.push(a, b, b + 1, a, b + 1, a + 1);
+        }
+      }
+    }
+    const roof = new THREE.BufferGeometry();
+    roof.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    roof.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    roof.setIndex(indices);
+    batches[10].push(roof);
+    for (let rib = 0; rib < 6; rib++) {
+      const angle = Math.PI / 6 + (rib * Math.PI) / 3;
+      for (let step = 0; step < rows; step++) {
+        beam(
+          roofPoint(angle, step / rows),
+          roofPoint(angle, (step + 1) / rows),
+          0.00065,
+          0.00065,
+          17,
+        );
+      }
+      const corner = roofPoint(angle, 1);
+      beam(corner, corner.clone().setZ(0.019), 0.0007, 0.0007, 17);
+      const next = roofPoint(angle + Math.PI / 3, 1);
+      beam(corner, next, 0.0008, 0.0008, 17);
+    }
+    for (let side = 0; side < 4; side++) {
+      const angle = Math.PI / 4 + (side * Math.PI) / 2;
+      beam(roofPoint(angle, 0), roofPoint(angle + Math.PI / 2, 0), 0.001, 0.001, 17);
+    }
+  } else if (style.cover === "flat-glass") {
     const radius = style.ground === "recessed" ? 0.054 : 0.113;
     const z = style.ground === "recessed" ? 0.033 : 0.025;
     const glass = new THREE.CircleGeometry(radius, 96);
@@ -642,7 +810,9 @@ export function createGeometry(
       );
       const underPlant = layout.plants.some((p) => Math.hypot(p.x - x, p.y - y) < 0.004);
       const nearLamp = placed.some((p) => Math.hypot(p.x - x, p.y - y) < 0.018);
-      const nearWall = style.cover === "dome" && radius > 0.102;
+      const nearWall =
+        (style.cover === "dome" && radius > 0.102) ||
+        (style.landmark === "hall" && cityWallDistance(layout, x, y) > -0.008);
       if (onRoad || underBuilding || underPlant || nearLamp || nearWall) {
         continue;
       }
@@ -700,7 +870,9 @@ export function createGeometry(
           const y = position.getY(i);
           const z = position.getZ(i);
           if (Math.abs(normal.getZ(i)) > 0.65) {
-            const center = plot ? boardCenter(plot.coordinate) : { x: 0, y: 0 };
+            const center = plot
+              ? (plot.surface?.center ?? boardCenter(plot.coordinate))
+              : { x: 0, y: 0 };
             uv.setXY(i, (x + center.x) * repeat, (y + center.y) * repeat);
           } else if (geo.userData.circularWall) {
             uv.setXY(
@@ -719,7 +891,7 @@ export function createGeometry(
         }
       }
       if (plot) {
-        const center = boardCenter(plot.coordinate);
+        const center = plot.surface?.center ?? boardCenter(plot.coordinate);
         const inverse = new THREE.Quaternion()
           .setFromUnitVectors(new THREE.Vector3(0, 0, 1), plot.normal)
           .invert();
@@ -731,6 +903,7 @@ export function createGeometry(
             center.y + vertices.getY(i),
             vertices.getZ(i) - 0.007,
             projected,
+            plot.surface?.radius,
           )
             .sub(plot.worldPosition)
             .applyQuaternion(inverse);

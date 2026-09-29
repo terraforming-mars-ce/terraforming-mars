@@ -19,6 +19,12 @@ const TEXTURE_PATHS = {
   ganymede: assetUrl("textures/planets/ganymede/surface"),
   sun: assetUrl("textures/planets/sun/surface"),
   grass: assetUrl("textures/terrain/grass"),
+  leafyGrass: assetUrl("textures/terrain/leafy-grass-color"),
+  leafyGrassDetail: assetUrl("textures/terrain/leafy-grass-detail"),
+  forestLitter: assetUrl("textures/terrain/leaves-forest-ground-color"),
+  forestLitterDetail: assetUrl("textures/terrain/leaves-forest-ground-detail"),
+  wetSoil: assetUrl("textures/terrain/brown-mud-leaves-01-color"),
+  wetSoilDetail: assetUrl("textures/terrain/brown-mud-leaves-01-detail"),
   rock: assetUrl("textures/terrain/rock"),
   sand: assetUrl("textures/terrain/sand"),
   waterNormals: assetUrl("textures/terrain/waternormals"),
@@ -40,6 +46,27 @@ const TEXTURE_PATHS = {
   ganymedeLod: assetUrl("textures/planets/ganymede/overview"),
   sunLod: assetUrl("textures/planets/sun/overview"),
 } as const;
+
+const CITY_FACADE_PATHS = [
+  [
+    assetUrl("textures/terrain/concrete-tile-facade-color"),
+    assetUrl("textures/terrain/concrete-tile-facade-normal"),
+    assetUrl("textures/terrain/concrete-tile-facade-roughness"),
+  ],
+  [
+    assetUrl("textures/terrain/rectangular-facade-tiles-color"),
+    assetUrl("textures/terrain/rectangular-facade-tiles-normal"),
+    assetUrl("textures/terrain/rectangular-facade-tiles-roughness"),
+  ],
+  [
+    assetUrl("textures/terrain/ribbed-concrete-wall-color"),
+    assetUrl("textures/terrain/ribbed-concrete-wall-normal"),
+    assetUrl("textures/terrain/ribbed-concrete-wall-roughness"),
+  ],
+];
+for (const paths of CITY_FACADE_PATHS) {
+  paths.forEach((path) => useTexture.preload(path));
+}
 
 const RESOURCE_ICON_PATHS = {
   steel: assetUrl("icons/resources/steel", 256),
@@ -110,6 +137,12 @@ useTexture.preload(TEXTURE_PATHS.moonLod);
 useTexture.preload(TEXTURE_PATHS.ganymedeLod);
 useTexture.preload(TEXTURE_PATHS.sunLod);
 useTexture.preload(TEXTURE_PATHS.grass);
+useTexture.preload(TEXTURE_PATHS.leafyGrass);
+useTexture.preload(TEXTURE_PATHS.leafyGrassDetail);
+useTexture.preload(TEXTURE_PATHS.forestLitter);
+useTexture.preload(TEXTURE_PATHS.forestLitterDetail);
+useTexture.preload(TEXTURE_PATHS.wetSoil);
+useTexture.preload(TEXTURE_PATHS.wetSoilDetail);
 useTexture.preload(TEXTURE_PATHS.rock);
 useTexture.preload(TEXTURE_PATHS.sand);
 useTexture.preload(TEXTURE_PATHS.waterNormals);
@@ -134,6 +167,7 @@ useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.ocean);
 useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.wild);
 
 interface TextureAssets {
+  cityFacades: { color: THREE.Texture; normal: THREE.Texture; roughness: THREE.Texture }[];
   mars: THREE.Texture;
   venus: THREE.Texture;
   earth: THREE.Texture;
@@ -148,6 +182,12 @@ interface TextureAssets {
   ganymede: THREE.Texture;
   sun: THREE.Texture;
   grass: THREE.Texture;
+  leafyGrass: THREE.Texture;
+  leafyGrassDetail: THREE.Texture;
+  forestLitter: THREE.Texture;
+  forestLitterDetail: THREE.Texture;
+  wetSoil: THREE.Texture;
+  wetSoilDetail: THREE.Texture;
   rock: THREE.Texture;
   sand: THREE.Texture;
   waterNormals: THREE.Texture;
@@ -173,6 +213,21 @@ interface TextureAssets {
 }
 
 export function useTextures(): TextureAssets {
+  const facadeTextures = useTexture(CITY_FACADE_PATHS.flat());
+  const cityFacades = useMemo(
+    () =>
+      CITY_FACADE_PATHS.map((_, i) => {
+        const [color, normal, roughness] = facadeTextures.slice(i * 3, i * 3 + 3);
+        color.colorSpace = THREE.SRGBColorSpace;
+        normal.colorSpace = roughness.colorSpace = THREE.NoColorSpace;
+        for (const texture of [color, normal, roughness]) {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          texture.anisotropy = 4;
+        }
+        return { color, normal, roughness };
+      }),
+    [facadeTextures],
+  );
   const mars = useTexture(TEXTURE_PATHS.mars);
   const venus = useTexture(TEXTURE_PATHS.venus);
   const earth = useTexture(TEXTURE_PATHS.earth);
@@ -187,6 +242,12 @@ export function useTextures(): TextureAssets {
   const ganymede = useTexture(TEXTURE_PATHS.ganymede);
   const sun = useTexture(TEXTURE_PATHS.sun);
   const grass = useTexture(TEXTURE_PATHS.grass);
+  const leafyGrass = useTexture(TEXTURE_PATHS.leafyGrass);
+  const leafyGrassDetail = useTexture(TEXTURE_PATHS.leafyGrassDetail);
+  const forestLitter = useTexture(TEXTURE_PATHS.forestLitter);
+  const forestLitterDetail = useTexture(TEXTURE_PATHS.forestLitterDetail);
+  const wetSoil = useTexture(TEXTURE_PATHS.wetSoil);
+  const wetSoilDetail = useTexture(TEXTURE_PATHS.wetSoilDetail);
   const rock = useTexture(TEXTURE_PATHS.rock);
   const sand = useTexture(TEXTURE_PATHS.sand);
   const waterNormals = useTexture(TEXTURE_PATHS.waterNormals);
@@ -263,6 +324,17 @@ export function useTextures(): TextureAssets {
       tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
     }
 
+    for (const tex of [leafyGrass, forestLitter, wetSoil]) {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 4;
+    }
+    for (const tex of [leafyGrassDetail, forestLitterDetail, wetSoilDetail]) {
+      tex.colorSpace = THREE.NoColorSpace;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 4;
+    }
+
     grass.wrapS = grass.wrapT = THREE.RepeatWrapping;
     grass.repeat.set(6.9, 6.9);
 
@@ -304,6 +376,12 @@ export function useTextures(): TextureAssets {
     sun,
     sunLod,
     grass,
+    leafyGrass,
+    leafyGrassDetail,
+    forestLitter,
+    forestLitterDetail,
+    wetSoil,
+    wetSoilDetail,
     sand,
     waterNormals,
     noiseMid,
@@ -358,6 +436,7 @@ export function useTextures(): TextureAssets {
   );
 
   return {
+    cityFacades,
     mars,
     venus,
     earth,
@@ -372,6 +451,12 @@ export function useTextures(): TextureAssets {
     ganymede,
     sun,
     grass,
+    leafyGrass,
+    leafyGrassDetail,
+    forestLitter,
+    forestLitterDetail,
+    wetSoil,
+    wetSoilDetail,
     rock,
     sand,
     waterNormals,

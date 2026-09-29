@@ -1,43 +1,45 @@
 import { useEffect, useRef, useState } from "react";
-import { buildLandscape, type LandscapePlan, type LandscapeTile } from "./landscapeNetwork";
-import type { LandscapeSpace } from "./landscapeRoutes";
-import type { LandscapeGroundData } from "./landscapeGeometry";
-import type { HexCoordinate } from "../../../utils/hex-grid-2d";
-
-export interface LandscapeRequest {
-  id: number;
-  tiles: LandscapeTile[];
-  spaces: LandscapeSpace[];
-  oceans: { coordinate: HexCoordinate }[];
-}
-export interface LandscapeResult {
-  id: number;
-  planKey: string;
-  plan: LandscapePlan;
-  ground: LandscapeGroundData;
-}
-const EMPTY_RESULT: LandscapeResult = {
-  id: 0,
-  planKey: "",
-  plan: buildLandscape([]),
-  ground: { attributes: {}, index: null },
-};
-
-export function useLandscape(input: Omit<LandscapeRequest, "id">, signature: string) {
+import {
+  EMPTY_LANDSCAPE,
+  type LandscapeInput,
+  type LandscapeState,
+  type LandscapeRequest,
+  type LandscapeDelta,
+} from "./landscapeTypes";
+export function useLandscape(input: LandscapeInput, signature: string) {
   const worker = useRef<Worker | null>(null);
   const generation = useRef(0);
-  const [result, setResult] = useState(EMPTY_RESULT);
+  const accepted = useRef(EMPTY_LANDSCAPE);
+  const [result, setResult] = useState<LandscapeState>(EMPTY_LANDSCAPE);
   useEffect(() => {
     const instance = new Worker(new URL("./landscape.worker.ts", import.meta.url), {
       type: "module",
     });
     worker.current = instance;
-    instance.onmessage = ({ data }: MessageEvent<LandscapeResult>) => {
-      if (data.id === generation.current) {
-        setResult((previous) =>
-          previous.planKey === data.planKey ? { ...data, plan: previous.plan } : data,
-        );
+    accepted.current = EMPTY_LANDSCAPE;
+    instance.onmessage = ({ data }: MessageEvent<LandscapeDelta>) => {
+      if (data.id !== generation.current) {
+        return;
       }
+      const patches = new Map(accepted.current.patches);
+      for (const key of data.removed) {
+        patches.delete(key);
+      }
+      for (const patch of data.patches) {
+        patches.set(patch.key, patch);
+      }
+      const state = {
+        id: data.id,
+        seed: data.seed,
+        sources: data.sources,
+        patches,
+        plants: [...patches.values()].flatMap((p) => p.plants),
+      };
+      accepted.current = state;
+      setResult(state);
+    };
+    instance.onerror = (event) => {
+      console.error("Landscape worker failed", event.message);
     };
     return () => {
       instance.terminate();
@@ -45,7 +47,13 @@ export function useLandscape(input: Omit<LandscapeRequest, "id">, signature: str
     };
   }, []);
   useEffect(() => {
-    worker.current!.postMessage({ ...input, id: ++generation.current } satisfies LandscapeRequest);
+    worker.current!.postMessage({
+      ...input,
+      id: ++generation.current,
+      known: Object.fromEntries(
+        [...accepted.current.patches].map(([key, p]) => [key, p.signature]),
+      ),
+    } satisfies LandscapeRequest);
   }, [signature]);
   return result;
 }

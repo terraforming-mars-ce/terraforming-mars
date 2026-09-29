@@ -5,17 +5,16 @@ import { useTextures } from "../../../hooks/useTextures";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import type { CityPlot } from "./cityLayout";
 import { CityBatchStore } from "./cityBatch";
+import { CITY_EMERGENCE_DURATION } from "./boardConstants";
 import { getMaterials } from "./CityRenderer";
 import { splitSnippet } from "./shaders";
 import emergence from "./shaders/city-emergence.vert.glsl?raw";
 
 function CityBatchRenderer({
   plots,
-  activeExits,
   newlyPlaced,
 }: {
   plots: CityPlot[];
-  activeExits: Map<string, number[]>;
   newlyPlaced: Set<string>;
 }) {
   const textures = useTextures();
@@ -26,7 +25,7 @@ function CityBatchRenderer({
   });
   const materials = useMemo(
     () => createCityBatchMaterials(textures, time),
-    [textures.concrete, textures.grass, textures.sand, time],
+    [textures.concrete, textures.grass, textures.sand, textures.cityFacades, time],
   );
   const store = useMemo(() => new CityBatchStore(materials), [materials]);
   useLayoutEffect(() => {
@@ -41,8 +40,8 @@ function CityBatchRenderer({
         birthTimes.current.set(key, newlyPlaced.has(key) ? performance.now() / 1000 : -1000);
       }
     }
-    store.update(plots, activeExits, birthTimes.current);
-  }, [plots, activeExits, store]);
+    store.update(plots, birthTimes.current);
+  }, [plots, store]);
   useLayoutEffect(() => () => store.dispose(), [store]);
   useEffect(
     () => () => {
@@ -69,6 +68,7 @@ export function createCityBatchMaterials(
       const material = source.clone();
       material.onBeforeCompile = (shader) => {
         shader.uniforms.uCityTime = time;
+        shader.uniforms.uCityDuration = { value: CITY_EMERGENCE_DURATION };
         shader.vertexShader =
           snippet.header +
           "\n" +

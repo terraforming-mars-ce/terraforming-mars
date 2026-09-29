@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { MOHOLE_STENCIL_BIT } from "../boardConstants";
 import type { AtmosphereProfile } from "../solarSystemConfig";
 import planetHazeFragment from "./planet-haze.frag.glsl?raw";
 import planetAtmosphereVertex from "./planet-atmosphere.vert.glsl?raw";
@@ -8,9 +9,6 @@ import sunSurfaceFragment from "./sun-surface.frag.glsl?raw";
 import sunCoronaVertex from "./sun-corona.vert.glsl?raw";
 import sunCoronaFragment from "./sun-corona.frag.glsl?raw";
 import sunProminenceFragment from "./sun-prominence.frag.glsl?raw";
-import { SPHERE_RADIUS } from "../boardConstants";
-import oceanRendererVertexRaw from "./ocean-renderer.vert.glsl?raw";
-import oceanRendererFragmentRaw from "./ocean-renderer.frag.glsl?raw";
 import sphereProjectionVertexRaw from "./sphere-projection.vert.glsl?raw";
 import oceanBorderFragmentRaw from "./ocean-border.frag.glsl?raw";
 import hoverGlowFragmentRaw from "./hover-glow.frag.glsl?raw";
@@ -55,8 +53,6 @@ export const worldTreeFragment = stripVersion(worldTreeFragmentRaw);
 export const moholeVertex = stripVersion(moholeVertexRaw);
 export const moholeFragment = stripVersion(moholeFragmentRaw);
 export const moholeMaskFragment = stripVersion(moholeMaskFragmentRaw);
-export const oceanRendererVertex = stripVersion(oceanRendererVertexRaw);
-export const oceanRendererFragment = stripVersion(oceanRendererFragmentRaw);
 
 export const MAX_ATMOSPHERES = 16;
 
@@ -132,10 +128,23 @@ export function createPlanetHazeUniforms() {
   };
 }
 
+export function receivesPlanetHaze(material: THREE.Material) {
+  return (
+    material.userData.planetHaze !== false &&
+    (material instanceof THREE.MeshStandardMaterial ||
+      (material instanceof THREE.ShaderMaterial &&
+        !(material instanceof THREE.RawShaderMaterial) &&
+        (material.depthWrite || material.userData.planetHaze === true)))
+  );
+}
+
 export function addPlanetHaze(
   material: THREE.Material,
   uniforms: ReturnType<typeof createPlanetHazeUniforms>,
 ) {
+  // Three reuses cached uniform objects even after needsUpdate. Rebinding after
+  // hot reload must release those programs so they cannot retain an old camera.
+  material.dispose();
   const compile = material.onBeforeCompile;
   const programKey = material.customProgramCacheKey;
   const baseKey = material.customProgramCacheKey();
@@ -322,79 +331,12 @@ export function createMoholeMaskMaterial(
   });
 
   mat.stencilWrite = true;
-  mat.stencilRef = 1;
+  mat.stencilRef = MOHOLE_STENCIL_BIT;
+  mat.stencilWriteMask = MOHOLE_STENCIL_BIT;
   mat.stencilFunc = THREE.AlwaysStencilFunc;
   mat.stencilZPass = THREE.ReplaceStencilOp;
   mat.stencilFail = THREE.KeepStencilOp;
   mat.stencilZFail = THREE.KeepStencilOp;
 
   return mat;
-}
-
-export function createOceanRendererMaterial(
-  waterNormals: THREE.Texture,
-  sandTexture: THREE.Texture,
-  sphereCenter: THREE.Vector3,
-  oceanDataTexture: THREE.DataTexture,
-  noiseMid: THREE.Texture,
-  noiseHigh: THREE.Texture,
-): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    glslVersion: THREE.GLSL3,
-    vertexShader: oceanRendererVertex,
-    fragmentShader: oceanRendererFragment,
-    uniforms: {
-      uSphereRadius: { value: SPHERE_RADIUS },
-      uSphereCenter: { value: sphereCenter.clone() },
-      uZOffset: { value: 0.008 },
-      uProjectionScale: { value: 0.4 },
-
-      uOceanData: { value: oceanDataTexture },
-      uPointCount: { value: 0 },
-      uEdgeCount: { value: 0 },
-      uCapsuleRadius: { value: 0.17 },
-
-      time: { value: 0.0 },
-      oceanSize: { value: 600.0 },
-      rf0: { value: 0.1 },
-      sunIntensity: { value: 1.0 },
-      normalSampler: { value: waterNormals },
-      sunColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) },
-      sunDirection: { value: new THREE.Vector3(0.9, 0.0, 0.8).normalize() },
-      eye: { value: new THREE.Vector3() },
-      waterColor: { value: new THREE.Vector3(0.01, 0.03, 0.03) },
-
-      uEdgeBand: { value: 0.04 },
-      uEdgeStrength: { value: 0.015 },
-      uEdgeScale: { value: 20.0 },
-      uWarpScale: { value: 4.0 },
-      uWarpAmount: { value: 0.042 },
-
-      uSandWidth: { value: 0.04 },
-      uGrainScale: { value: 60.0 },
-      sandSampler: { value: sandTexture },
-      uSandTexScale: { value: 10.0 },
-      uShoreNoise: { value: noiseMid },
-      uShoreNoiseHigh: { value: noiseHigh },
-
-      uShallowWidth: { value: 0.03 },
-      uShallowStrength: { value: 0.55 },
-
-      uEdgeSoftness: { value: 0.008 },
-
-      uFoamWidth: { value: 0.015 },
-      uFoamStrength: { value: 0.7 },
-      uFoamScale: { value: 25.0 },
-      uFoamSpeed: { value: 0.08 },
-      uFoamCutoff: { value: 0.52 },
-      uFoamPulseSpeed: { value: 0.9 },
-      uFoamPulseAmount: { value: 0.5 },
-
-      uHoverCenter: { value: new THREE.Vector2(0, 0) },
-      uHoverActive: { value: 0.0 },
-    },
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
 }

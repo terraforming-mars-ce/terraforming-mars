@@ -7,6 +7,8 @@ interface AudioFileEntry {
   volumeMultiplier: number;
 }
 
+const CONSTRUCTION_SOUNDS = ["construction-1", "construction-2"] as const;
+
 class AudioService {
   private audioCache: Map<string, HTMLAudioElement> = new Map();
   private ambientAudio: HTMLAudioElement | null = null;
@@ -68,17 +70,17 @@ class AudioService {
       {
         key: "temperature-increase",
         path: assetUrl("audio/effects/temperature-increase"),
-        volumeMultiplier: 1.0,
+        volumeMultiplier: 0.7,
       },
       {
         key: "water-placement",
         path: assetUrl("audio/effects/water-placement"),
-        volumeMultiplier: 1.0,
+        volumeMultiplier: 0.7,
       },
       {
         key: "oxygen-increase",
         path: assetUrl("audio/effects/oxygen-increase"),
-        volumeMultiplier: 1.0,
+        volumeMultiplier: 0.7,
       },
       {
         key: "venus-increase",
@@ -86,14 +88,14 @@ class AudioService {
         volumeMultiplier: 1.0,
       },
       { key: "button-hover", path: assetUrl("audio/effects/button-hover"), volumeMultiplier: 0.4 },
-      { key: "button-click", path: assetUrl("audio/effects/button-click"), volumeMultiplier: 0.4 },
+      { key: "button-click", path: assetUrl("audio/effects/button-click"), volumeMultiplier: 0.28 },
       { key: "card-hover", path: assetUrl("audio/effects/card-hover"), volumeMultiplier: 0.2 },
-      { key: "construction", path: assetUrl("audio/effects/construction"), volumeMultiplier: 1.0 },
-      {
-        key: "asteroid-impact",
-        path: assetUrl("audio/effects/asteroid-impact"),
+      { key: "card-played", path: assetUrl("audio/effects/card-played"), volumeMultiplier: 0.4 },
+      ...CONSTRUCTION_SOUNDS.map((key) => ({
+        key,
+        path: assetUrl(`audio/effects/${key}`),
         volumeMultiplier: 1.0,
-      },
+      })),
       { key: "your-turn", path: assetUrl("audio/effects/your-turn"), volumeMultiplier: 1.0 },
       { key: "award-funded", path: assetUrl("audio/effects/award-funded"), volumeMultiplier: 1.0 },
       { key: "game-start", path: assetUrl("audio/effects/game-start"), volumeMultiplier: 1.0 },
@@ -198,12 +200,13 @@ class AudioService {
     return this.playSound("card-hover");
   }
 
-  public async playConstructionSound(): Promise<void> {
-    return this.playSound("construction");
+  public async playCardPlayedSound(): Promise<void> {
+    return this.playSound("card-played");
   }
 
-  public async playAsteroidImpactSound(): Promise<void> {
-    return this.playSound("asteroid-impact");
+  public async playConstructionSound(): Promise<void> {
+    const sound = CONSTRUCTION_SOUNDS[Math.floor(Math.random() * CONSTRUCTION_SOUNDS.length)];
+    return this.playSound(sound);
   }
 
   public async playYourTurnSound(): Promise<void> {
