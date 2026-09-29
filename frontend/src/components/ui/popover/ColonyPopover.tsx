@@ -204,7 +204,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
         width={560}
         maxHeight="80vh"
         animation="slideDown"
-        className="!bg-space-black-darker"
+        className="game-popover-list !bg-space-black-darker"
       >
         {/* Player trade fleets */}
         {gameState?.tradeFleets && (
@@ -232,7 +232,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
           </div>
         )}
 
-        <div className="p-2 space-y-2">
+        <div className="popover-list popover-list-headed p-2 space-y-2">
           {colonies.map((colony) => (
             <ColonyCard
               key={colony.id}
@@ -326,7 +326,11 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
   }, [markerOutput, viewerColonyCount, colony.colonyBonus]);
 
   return (
-    <GamePopoverItem state={dimmed ? "disabled" : "available"} borderColor={colony.style.color}>
+    <GamePopoverItem
+      state={dimmed ? "disabled" : "available"}
+      borderColor={colony.style.color}
+      className="popover-list-item"
+    >
       {/* Header: name, traded chip, action button */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
