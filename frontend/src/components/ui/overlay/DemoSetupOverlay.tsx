@@ -585,6 +585,10 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
                           <CardChoice
                             card={prelude}
                             isSelected={selectedPreludeIds.includes(prelude.id)}
+                            disabled={
+                              selectedPreludeIds.length >= 2 &&
+                              !selectedPreludeIds.includes(prelude.id)
+                            }
                             onSelect={() => togglePreludeSelection(prelude.id)}
                             animationDelay={0}
                             showCheckbox
