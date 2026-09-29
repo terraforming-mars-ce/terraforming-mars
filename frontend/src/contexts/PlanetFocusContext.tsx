@@ -7,6 +7,7 @@ import {
   ReactNode,
   MutableRefObject,
 } from "react";
+import { coldStartTrace } from "@/services/performanceStore.ts";
 
 export type PlanetTarget =
   | "mars"
@@ -38,6 +39,7 @@ export function PlanetFocusProvider({ children }: { children: ReactNode }) {
     if (planet === activePlanetRef.current) {
       return;
     }
+    coldStartTrace.begin(`travel:${planet}`, { from: activePlanetRef.current, to: planet });
     previousPlanetRef.current = activePlanetRef.current;
     activePlanetRef.current = planet;
     setActivePlanetRaw(planet);

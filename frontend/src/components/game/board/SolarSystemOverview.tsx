@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { Profiler, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { coldStartTrace } from "@/services/performanceStore.ts";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -95,7 +96,7 @@ function PlanetMarker({ config, onSelect }: { config: PlanetConfig; onSelect: ()
       new THREE.MeshStandardMaterial({
         map: texture,
         roughness: 0.8,
-        metalness: 0.05,
+        metalness: 0,
         fog: false,
       }),
     [texture],
@@ -179,7 +180,7 @@ function MarsMarker({ onSelect }: { onSelect: () => void }) {
       new THREE.MeshStandardMaterial({
         map: texture,
         roughness: 0.8,
-        metalness: 0.05,
+        metalness: 0,
         fog: false,
       }),
     [texture],
@@ -251,7 +252,22 @@ function MarsMarker({ onSelect }: { onSelect: () => void }) {
 }
 
 export default function SolarSystemOverview() {
+  if (coldStartTrace.enabled) {
+    return (
+      <Profiler id="solar-system" onRender={coldStartTrace.reactRender}>
+        <SolarSystemOverviewContent />
+      </Profiler>
+    );
+  }
+  return <SolarSystemOverviewContent />;
+}
+
+function SolarSystemOverviewContent() {
   const { activePlanet, setActivePlanet } = usePlanetFocus();
+
+  useLayoutEffect(() => {
+    coldStartTrace.mark("solar-system:commit", { activePlanet });
+  }, [activePlanet]);
 
   const planetAngleRefs = useRef<Record<string, { current: number }>>(
     Object.fromEntries(PLANET_CONFIGS.map((c) => [c.id, { current: c.orbitAngle }])),
