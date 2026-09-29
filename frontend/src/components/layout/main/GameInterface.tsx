@@ -36,7 +36,7 @@ import { useGameEvent } from "@/hooks/useGameEvent.ts";
 import { usePlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 import GameButton from "../../ui/buttons/GameButton.tsx";
-import { BotDifficultyChip, BotSpeedChip } from "../../ui/display/BotChips.tsx";
+import { BotDifficultyChip, BotSpeedChip, PlayerChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import CardBrowserOverlay from "../../ui/overlay/CardBrowserOverlay.tsx";
 import MainMenuHamburger from "../../ui/buttons/MainMenuHamburger.tsx";
@@ -939,7 +939,7 @@ export default function GameInterface() {
                 </div>
 
                 <div className="mb-6">
-                  <h3 className="text-white text-sm font-semibold mb-2 uppercase tracking-wide">
+                  <h3 className="font-orbitron text-white text-sm font-semibold mb-2 uppercase tracking-wide">
                     Players
                   </h3>
                   <div className="flex flex-col gap-2">
@@ -995,14 +995,12 @@ export default function GameInterface() {
                       return ordered.map((player) => (
                         <div
                           key={player.id}
-                          className="flex justify-between items-center py-2 px-3 bg-black/40 rounded-lg border border-space-blue-600/50"
+                          className="flex flex-wrap justify-between items-center gap-2 py-2 px-3 bg-black/40 border border-space-blue-600/50"
                         >
                           <span className="text-white text-sm font-medium">{player.name}</span>
-                          <div className="flex gap-1.5 items-center">
+                          <div className="player-chip-group">
                             {player.isSelf && (
-                              <span className="bg-space-blue-800 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                                You
-                              </span>
+                              <PlayerChip className="bg-space-blue-800 text-white">You</PlayerChip>
                             )}
                             {player.playerType === "bot" && (
                               <>
@@ -1011,7 +1009,7 @@ export default function GameInterface() {
                               </>
                             )}
                             {player.isReady ? (
-                              <span className="flex items-center gap-1 bg-emerald-700/80 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                              <PlayerChip className="bg-emerald-700/80 text-white">
                                 <svg
                                   width="10"
                                   height="10"
@@ -1025,12 +1023,12 @@ export default function GameInterface() {
                                   <polyline points="20 6 9 17 4 12" />
                                 </svg>
                                 Ready
-                              </span>
+                              </PlayerChip>
                             ) : (
-                              <span className="flex items-center gap-1 bg-white/10 text-white/70 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                              <PlayerChip className="bg-white/10 text-white/70">
                                 <div className="w-2.5 h-2.5 border border-white/50 border-t-transparent rounded-full animate-spin" />
                                 Selecting...
-                              </span>
+                              </PlayerChip>
                             )}
                           </div>
                         </div>
