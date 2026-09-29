@@ -334,7 +334,7 @@ const FeedbackWindow: React.FC<FeedbackWindowProps> = ({ isVisible, onClose, gam
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title"
-              spellCheck={false}
+              spellCheck={true}
               autoCorrect="off"
               autoComplete="off"
               maxLength={200}
@@ -346,7 +346,7 @@ const FeedbackWindow: React.FC<FeedbackWindowProps> = ({ isVisible, onClose, gam
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add details..."
-              spellCheck={false}
+              spellCheck={true}
               autoCorrect="off"
               autoComplete="off"
               maxLength={30000}
