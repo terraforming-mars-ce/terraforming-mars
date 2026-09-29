@@ -40,10 +40,16 @@ const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
     if (!data || !containerRef.current) return;
 
     let rafId: number;
+    let lastX = NaN;
+    let lastY = NaN;
     const update = () => {
       if (containerRef.current && positionRef.current) {
-        containerRef.current.style.left = positionRef.current.x + 12 + "px";
-        containerRef.current.style.top = positionRef.current.y + 12 + "px";
+        const { x, y } = positionRef.current;
+        if (x !== lastX || y !== lastY) {
+          containerRef.current.style.transform = `translate3d(${x + 12}px, ${y + 12}px, 0)`;
+          lastX = x;
+          lastY = y;
+        }
       }
       rafId = requestAnimationFrame(update);
     };
