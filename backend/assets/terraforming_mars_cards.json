@@ -294,6 +294,15 @@
   {
     "id": "008",
     "name": "Capital",
+    "style": {
+      "tile": {
+        "plan": "radial",
+        "landmark": "hall",
+        "landscaping": "lush",
+        "entranceMin": 3,
+        "entranceMax": 3
+      }
+    },
     "type": "automated",
     "cost": 26,
     "description": "Build Capital. Decrease your energy production 2 steps and increase your M€ production 5 steps. 1 VP per adjacent ocean.",
@@ -712,6 +721,18 @@
   {
     "id": "017",
     "name": "Noctis City",
+    "style": {
+      "tile": {
+        "plan": "clustered",
+        "connections": "skybridges",
+        "landscaping": "lush",
+        "entranceMin": 2,
+        "entranceMax": 3,
+        "details": [
+          "antennas"
+        ]
+      }
+    },
     "type": "automated",
     "cost": 18,
     "description": "Decrease your energy production 1 step and increase your M€ production 3 steps. Build Noctis City.",
@@ -864,6 +885,23 @@
   {
     "id": "020",
     "name": "Research Outpost",
+    "style": {
+      "tile": {
+        "plan": "clustered",
+        "density": "sparse",
+        "heights": "low",
+        "landmark": "observatory",
+        "connections": "enclosed",
+        "perimeter": "high-wall",
+        "landscaping": "parks",
+        "entranceMin": 2,
+        "entranceMax": 3,
+        "details": [
+          "antennas",
+          "dishes"
+        ]
+      }
+    },
     "type": "active",
     "cost": 18,
     "description": "Pay 1 M€ less for all cards. Build a city **next to no other city**.",
@@ -1282,6 +1320,18 @@
   {
     "id": "029",
     "name": "Cupola City",
+    "style": {
+      "tile": {
+        "plan": "radial",
+        "cover": "dome",
+        "heights": "low",
+        "perimeter": "high-wall",
+        "connections": "enclosed",
+        "landscaping": "sparse",
+        "entranceMin": 2,
+        "entranceMax": 2
+      }
+    },
     "type": "automated",
     "cost": 16,
     "description": "Build a city. Decrease your energy production 1 step and increase your M€ production 3 steps.",
@@ -1416,6 +1466,23 @@
   {
     "id": "032",
     "name": "Underground City",
+    "style": {
+      "tile": {
+        "exposure": "mostly-buried",
+        "ground": "recessed",
+        "cover": "flat-glass",
+        "density": "sparse",
+        "heights": "low",
+        "landscaping": "sparse",
+        "entranceMin": 2,
+        "entranceMax": 2,
+        "details": [
+          "vents",
+          "shafts",
+          "pipes"
+        ]
+      }
+    },
     "type": "automated",
     "cost": 18,
     "description": "Build a city. Decrease your energy production 2 steps and increase your steel production 2 steps.",
@@ -4689,6 +4756,16 @@
   {
     "id": "108",
     "name": "Open City",
+    "style": {
+      "tile": {
+        "plan": "courtyard",
+        "heights": "low",
+        "landscaping": "lush",
+        "perimeter": "open",
+        "entranceMin": 3,
+        "entranceMax": 4
+      }
+    },
     "type": "automated",
     "cost": 23,
     "description": "Requires 12% oxygen. Decrease your energy production 1 step and increase your M€ production 4 steps. Gain 2 plants and build a city.",
@@ -5159,6 +5236,19 @@
   {
     "id": "120",
     "name": "Urbanized Area",
+    "style": {
+      "tile": {
+        "plan": "grid",
+        "density": "dense",
+        "heights": "tall",
+        "lighting": "bright",
+        "connections": "skybridges",
+        "landscaping": "sparse",
+        "perimeterRoad": "ring",
+        "entranceMin": 2,
+        "entranceMax": 3
+      }
+    },
     "type": "automated",
     "cost": 10,
     "description": "Decrease your energy production 1 step and increase your M€ production 2 steps. Build a city **adjacent to at least** 2 **other cities**.",

@@ -166,6 +166,11 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 			Tags: occupantTags,
 		}
 
+		if occupant.Type == shared.ResourceCityTile && pendingTileSelection.SourceCardID != "" && a.CardRegistry() != nil {
+			if card, err := a.CardRegistry().GetByID(pendingTileSelection.SourceCardID); err == nil && card.Style != nil {
+				occupant.Visual = &shared.TileVisual{City: card.Style.Tile.Clone()}
+			}
+		}
 		if err := g.Board().UpdateTileOccupancy(ctx, *coords, occupant, playerID); err != nil {
 			log.Warn("Failed to place replacement tile", slog.Any("error", err))
 			return nil, fmt.Errorf("failed to place replacement tile: %w", err)
@@ -310,6 +315,11 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		Tags: occupantTags,
 	}
 
+	if occupant.Type == shared.ResourceCityTile && pendingTileSelection.SourceCardID != "" && a.CardRegistry() != nil {
+		if card, err := a.CardRegistry().GetByID(pendingTileSelection.SourceCardID); err == nil && card.Style != nil {
+			occupant.Visual = &shared.TileVisual{City: card.Style.Tile.Clone()}
+		}
+	}
 	if err := g.Board().UpdateTileOccupancy(ctx, *coords, occupant, playerID); err != nil {
 		log.Warn("Failed to place tile", slog.Any("error", err))
 		return nil, fmt.Errorf("failed to place tile: %w", err)
