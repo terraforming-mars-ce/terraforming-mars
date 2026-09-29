@@ -39,6 +39,8 @@ uniform float uSandWidth;
 uniform float uGrainScale;
 uniform sampler2D sandSampler;
 uniform float uSandTexScale;
+uniform sampler2D uShoreNoise;
+uniform sampler2D uShoreNoiseHigh;
 
 // Shallow water
 uniform float uShallowWidth;
@@ -181,8 +183,10 @@ void main() {
   }
 
   // --- Sand rendering ---
-  float sandJitter = oceanSnoise(p * (uEdgeScale * 1.2) + 17.3) * 0.5 + 0.5;
-  sandJitter = (sandJitter - 0.5) * 0.03;
+  vec2 shoreNoiseUv = p * (0.4 * 3.14159265 / 2.0) * (1.5 / 0.166);
+  float shoreNoise = texture(uShoreNoise, shoreNoiseUv).r * 0.7
+    + texture(uShoreNoiseHigh, shoreNoiseUv * 2.5).r * 0.3;
+  float sandJitter = (shoreNoise - 0.5) * 0.055;
   float sandWidthVal = max(0.02, uSandWidth + sandJitter);
   float shoreT = smoothstep(0.0 - aa, sandWidthVal + aa, shoreDist);
 

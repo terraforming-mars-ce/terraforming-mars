@@ -92,8 +92,7 @@ function EnabledAtmosphereRenderer({
     }
     uniforms.uHazeCameraWorld.value.copy(camera.matrixWorld);
     uniforms.uHazeProjectionInverse.value.copy(camera.projectionMatrixInverse);
-    gl.getDrawingBufferSize(uniforms.uHazeViewport.value);
-    scene.traverse((object) => {
+    scene.traverseVisible((object) => {
       if (!(object instanceof THREE.Mesh)) {
         return;
       }
@@ -108,11 +107,24 @@ function EnabledAtmosphereRenderer({
             material.depthWrite &&
             !(material instanceof THREE.RawShaderMaterial))
         ) {
-          materials.set(material, addPlanetHaze(material, uniforms));
+          const restore = addPlanetHaze(material, uniforms);
+          const release = () => {
+            material.removeEventListener("dispose", release);
+            materials.delete(material);
+            restore();
+          };
+          material.addEventListener("dispose", release);
+          materials.set(material, release);
         }
       }
     });
-    gl.render(scene, camera);
+    const autoUpdate = scene.matrixWorldAutoUpdate;
+    scene.matrixWorldAutoUpdate = false;
+    try {
+      gl.render(scene, camera);
+    } finally {
+      scene.matrixWorldAutoUpdate = autoUpdate;
+    }
   }, 1);
 
   return <AtmospheresContext.Provider value={bodies}>{children}</AtmospheresContext.Provider>;

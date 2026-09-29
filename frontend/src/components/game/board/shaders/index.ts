@@ -121,7 +121,6 @@ export function createPlanetHazeUniforms() {
   return {
     uHazeCameraWorld: { value: new THREE.Matrix4() },
     uHazeProjectionInverse: { value: new THREE.Matrix4() },
-    uHazeViewport: { value: new THREE.Vector2() },
     uHazeSunPosition: { value: new THREE.Vector3() },
     uHazeSunColor: { value: new THREE.Color() },
     uHazeCount: { value: 0 },
@@ -144,6 +143,11 @@ export function addPlanetHaze(
   material.onBeforeCompile = (shader, renderer) => {
     compile.call(material, shader, renderer);
     Object.assign(shader.uniforms, uniforms);
+    const position = linearColor ? "-vViewPosition" : "(uHazeProjectionInverse * gl_Position).xyz";
+    shader.vertexShader =
+      "varying vec3 vHazeViewPosition;\nuniform mat4 uHazeProjectionInverse;\n" +
+      shader.vertexShader.replace(/void\s+main\s*\(\s*\)/, "void atmosphereSourceVertex()") +
+      `\nvoid main() { atmosphereSourceVertex(); vHazeViewPosition = ${position}; }`;
     shader.fragmentShader =
       `#define MAX_ATMOSPHERES ${MAX_ATMOSPHERES}\n` +
       planetHazeFragment +
@@ -332,6 +336,8 @@ export function createOceanRendererMaterial(
   sandTexture: THREE.Texture,
   sphereCenter: THREE.Vector3,
   oceanDataTexture: THREE.DataTexture,
+  noiseMid: THREE.Texture,
+  noiseHigh: THREE.Texture,
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
@@ -368,6 +374,8 @@ export function createOceanRendererMaterial(
       uGrainScale: { value: 60.0 },
       sandSampler: { value: sandTexture },
       uSandTexScale: { value: 10.0 },
+      uShoreNoise: { value: noiseMid },
+      uShoreNoiseHigh: { value: noiseHigh },
 
       uShallowWidth: { value: 0.03 },
       uShallowStrength: { value: 0.55 },

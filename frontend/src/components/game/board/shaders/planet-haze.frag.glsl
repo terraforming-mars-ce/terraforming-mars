@@ -1,6 +1,5 @@
 uniform mat4 uHazeCameraWorld;
-uniform mat4 uHazeProjectionInverse;
-uniform vec2 uHazeViewport;
+varying vec3 vHazeViewPosition;
 uniform vec3 uHazeSunPosition;
 uniform vec3 uHazeSunColor;
 uniform int uHazeCount;
@@ -10,10 +9,7 @@ uniform vec3 uHazeShadowColors[MAX_ATMOSPHERES];
 uniform vec3 uHazeProfiles[MAX_ATMOSPHERES];
 
 vec3 applyPlanetHaze(vec3 color, bool linearColor, vec3 surfaceNormal) {
-  // Fragment depth includes displaced terrain and instanced vegetation.
-  vec2 uv = gl_FragCoord.xy / uHazeViewport;
-  vec4 viewPosition = uHazeProjectionInverse * vec4(uv * 2.0 - 1.0, gl_FragCoord.z * 2.0 - 1.0, 1.0);
-  vec3 worldPosition = (uHazeCameraWorld * vec4(viewPosition.xyz / viewPosition.w, 1.0)).xyz;
+  vec3 worldPosition = (uHazeCameraWorld * vec4(vHazeViewPosition, 1.0)).xyz;
   vec3 viewDirection = normalize(uHazeCameraWorld[3].xyz - worldPosition);
   for (int i = 0; i < MAX_ATMOSPHERES; i++) {
     if (i >= uHazeCount) { break; }

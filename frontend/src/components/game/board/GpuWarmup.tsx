@@ -1,4 +1,6 @@
-import { useMemo, useRef, useLayoutEffect } from "react";
+import { createLandscapeGround, packLandscapeGround } from "./landscapeGeometry";
+import { connectOceanGround } from "./landscapeNetwork";
+import { useMemo, useRef, useLayoutEffect, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { SkeletonUtils } from "three-stdlib";
@@ -25,6 +27,16 @@ import { useModels } from "../../../hooks/useModels";
 import { useTextures } from "../../../hooks/useTextures";
 import { coldStartTrace } from "@/services/performanceStore.ts";
 
+import { createCityBatchMaterials } from "./CityBatchRenderer";
+import { mountCityWarmup } from "./cityBatch";
+import LandscapeRenderer from "./LandscapeRenderer";
+import { buildLandscape } from "./landscapeNetwork";
+const landscapeWarmup = buildLandscape([
+  { coordinate: { q: 0, r: 0, s: 0 }, seed: 1, kind: "greenery" },
+]);
+const landscapeWarmupGround = packLandscapeGround(
+  createLandscapeGround(landscapeWarmup, connectOceanGround(landscapeWarmup, [])),
+);
 const WARMUP_SCALE = 0.001;
 const WARMUP_FRAMES = 3;
 
@@ -35,6 +47,20 @@ interface GpuWarmupProps {
 export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   const { treesScene, rockScene, cityScene, flowersScene } = useModels();
   const textures = useTextures();
+  const cityMaterials = useMemo(
+    () => [...createCityBatchMaterials(textures, { value: 1000 }).values()],
+    [textures.concrete, textures.grass, textures.sand],
+  );
+  const cityWarmupGroup = useRef<THREE.Group>(null);
+  useLayoutEffect(() => {
+    return mountCityWarmup(cityWarmupGroup.current!, cityMaterials);
+  }, [cityMaterials]);
+  useEffect(
+    () => () => {
+      cityMaterials.forEach((m) => m.dispose());
+    },
+    [cityMaterials],
+  );
   const {
     rock: rockTexture,
     sand: sandTexture,
@@ -43,14 +69,23 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
     grass: grassTexture,
   } = textures;
 
+  const warmupRoot = useRef<THREE.Group>(null);
   const frameCount = useRef(0);
   const readyFired = useRef(false);
 
   useFrame(() => {
-    if (readyFired.current) return;
+    if (readyFired.current) {
+      if (warmupRoot.current) {
+        warmupRoot.current.visible = false;
+      }
+      return;
+    }
     frameCount.current++;
-    if (frameCount.current >= WARMUP_FRAMES) {
+    if (frameCount.current > WARMUP_FRAMES) {
       readyFired.current = true;
+      if (warmupRoot.current) {
+        warmupRoot.current.visible = false;
+      }
       coldStartTrace.mark("warmup:ready", { frames: frameCount.current });
       onReady?.();
     }
@@ -135,6 +170,9 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   const warmupCity = useMemo(() => {
     const cloned = SkeletonUtils.clone(cityScene);
     cloned.scale.setScalar(WARMUP_SCALE);
+    cloned.traverse((object) => {
+      object.frustumCulled = false;
+    });
     return cloned;
   }, [cityScene]);
 
@@ -145,7 +183,14 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
     emptyTex.minFilter = THREE.NearestFilter;
     emptyTex.magFilter = THREE.NearestFilter;
     emptyTex.needsUpdate = true;
-    return createOceanRendererMaterial(waterNormals, sandTexture, new THREE.Vector3(), emptyTex);
+    return createOceanRendererMaterial(
+      waterNormals,
+      sandTexture,
+      new THREE.Vector3(),
+      emptyTex,
+      textures.noiseMid,
+      textures.noiseHigh,
+    );
   }, [waterNormals, sandTexture]);
 
   const oceanGeometry = useMemo(() => new THREE.CircleGeometry(0.3, 32), []);
@@ -224,6 +269,8 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
             roughness: 0.8,
             metalness: 0.05,
             fog: false,
+            transparent: key === "earthClouds",
+            depthWrite: key !== "earthClouds",
           }),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -231,14 +278,20 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   );
 
   const orbitLineMaterial = useMemo(
-    () => new THREE.LineBasicMaterial({ color: 0x405080, transparent: true, fog: false }),
+    () => new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, fog: false }),
     [],
   );
 
   const orbitLineObj = useMemo(() => {
     const points = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(WARMUP_SCALE, 0, 0)];
     const geo = new THREE.BufferGeometry().setFromPoints(points);
-    return new THREE.Line(geo, orbitLineMaterial);
+    geo.setAttribute(
+      "color",
+      new THREE.Float32BufferAttribute([0.25, 0.35, 0.5, 0.25, 0.35, 0.5], 3),
+    );
+    const line = new THREE.Line(geo, orbitLineMaterial);
+    line.frustumCulled = false;
+    return line;
   }, [orbitLineMaterial]);
 
   const treeRefs = useRef<Map<string, THREE.InstancedMesh | null>>(new Map());
@@ -338,7 +391,11 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
     );
 
   return (
-    <group>
+    <group ref={warmupRoot}>
+      <group scale={WARMUP_SCALE}>
+        <LandscapeRenderer plan={landscapeWarmup} groundData={landscapeWarmupGround} />
+      </group>
+      <group ref={cityWarmupGroup} scale={WARMUP_SCALE} dispose={null} />
       {renderVariants(treeVariants, "warmup-tree", treeRefs)}
       {renderVariants(bushVariants, "warmup-bush", bushRefs)}
       {renderVariants(cloverVariants, "warmup-clover", cloverRefs)}
@@ -357,6 +414,7 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
       <sprite
         material={volcanoSmokeWarmupMaterial}
         scale={[WARMUP_SCALE, WARMUP_SCALE, WARMUP_SCALE]}
+        frustumCulled={false}
       />
 
       {/* Solar system warmup */}

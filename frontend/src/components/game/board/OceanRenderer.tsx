@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from "react";
+import { memo, useMemo, useRef, useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext";
@@ -27,7 +27,7 @@ interface OceanRendererProps {
   groupInverseMatrix?: THREE.Matrix4;
 }
 
-export default function OceanRenderer({
+function OceanRenderer({
   oceanTiles,
   newOceanKeys,
   hoveredOceanHexKey,
@@ -36,7 +36,7 @@ export default function OceanRenderer({
 }: OceanRendererProps) {
   const { camera } = useThree();
   const { settings: world3DSettings } = useWorld3DSettings();
-  const { waterNormals, sand: sandTexture } = useTextures();
+  const { waterNormals, sand: sandTexture, noiseMid, noiseHigh } = useTextures();
 
   const emergenceMapRef = useRef<Map<string, number | null>>(new Map());
   const oceanDataRef = useRef<OceanDataResult | null>(null);
@@ -99,8 +99,15 @@ export default function OceanRenderer({
   }, []);
 
   const material = useMemo(() => {
-    return createOceanRendererMaterial(waterNormals, sandTexture, sphereCenter, emptyTexture);
-  }, [waterNormals, sandTexture, sphereCenter, emptyTexture]);
+    return createOceanRendererMaterial(
+      waterNormals,
+      sandTexture,
+      sphereCenter,
+      emptyTexture,
+      noiseMid,
+      noiseHigh,
+    );
+  }, [waterNormals, sandTexture, sphereCenter, emptyTexture, noiseMid, noiseHigh]);
 
   useEffect(() => {
     const currentKeys = oceanTiles
@@ -235,3 +242,5 @@ export default function OceanRenderer({
     />
   );
 }
+
+export default memo(OceanRenderer);
