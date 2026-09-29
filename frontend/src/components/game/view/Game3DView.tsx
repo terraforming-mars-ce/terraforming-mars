@@ -174,18 +174,19 @@ function SunMesh() {
 }
 
 function DynamicFog() {
-  const { scene } = useThree();
+  const { camera } = useThree();
   const { activePlanet } = usePlanetFocus();
+  const overview = activePlanet === "solar-system";
 
-  useFrame(() => {
-    if (activePlanet === "solar-system") {
-      scene.fog = null;
-    } else if (!scene.fog) {
-      scene.fog = new THREE.Fog("#0a0a0a", 8, 25);
-    }
-  });
-
-  return <fog attach="fog" args={["#0a0a0a", 8, 25]} />;
+  // Removing fog changes shader cache keys, including materials with fog disabled.
+  return (
+    <fog
+      attach="fog"
+      args={["#0a0a0a"]}
+      near={overview ? camera.far : 8}
+      far={overview ? camera.far * 2 : 25}
+    />
+  );
 }
 
 function AutoNavigateForTileSelection({ gameState }: { gameState: GameDto }) {
