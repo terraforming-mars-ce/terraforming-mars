@@ -15,7 +15,8 @@
     "assets": "node scripts/assets/build.ts",
     "assets:check": "node scripts/assets/check.ts",
     "assets:preview": "node scripts/assets/preview.ts",
-    "assets:test": "bun test scripts/assets"
+    "assets:test": "bun test scripts/assets",
+    "verify:landscape": "bun scripts/landscape/verify.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
