@@ -5,6 +5,11 @@ import { useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useAppPhaseStore } from "@/stores/appPhaseStore";
 import SkyboxLoader from "../game/view/SkyboxLoader";
+import AtmosphereRenderer from "../game/board/AtmosphereRenderer";
+import PlanetAtmosphere from "../game/board/PlanetAtmosphere";
+import { MARS_ATMOSPHERE, PLANET_FILL_LIGHT } from "../game/board/solarSystemConfig";
+
+const MENU_SUN_INTENSITY = 0.65;
 
 class DecorativeAsset extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -15,27 +20,6 @@ class DecorativeAsset extends Component<{ children: ReactNode }, { failed: boole
     return this.state.failed ? null : this.props.children;
   }
 }
-
-const atmosphereVertex = `
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-  void main() {
-    vNormal = normalize(normalMatrix * normal);
-    vec4 p = modelViewMatrix * vec4(position, 1.0);
-    vPosition = p.xyz;
-    gl_Position = projectionMatrix * p;
-  }
-`;
-const atmosphereFragment = `
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-  void main() {
-    vec3 n = normalize(vNormal);
-    float rim = pow(1.0 - abs(dot(n, normalize(-vPosition))), 4.0);
-    float light = smoothstep(-0.15, 0.7, dot(n, normalize(vec3(-0.9, 0.35, 0.15))));
-    gl_FragColor = vec4(vec3(0.65, 0.35, 0.22), rim * light * 0.55);
-  }
-`;
 
 function Planet({ reduced }: { reduced: boolean }) {
   const texture = useTexture(assetUrl("textures/planets/mars/surface"));
@@ -54,16 +38,7 @@ function Planet({ reduced }: { reduced: boolean }) {
         <sphereGeometry args={[3, 96, 64]} />
         <meshStandardMaterial map={texture} roughness={1} metalness={0} envMapIntensity={0} />
       </mesh>
-      <mesh>
-        <sphereGeometry args={[3.045, 64, 48]} />
-        <shaderMaterial
-          vertexShader={atmosphereVertex}
-          fragmentShader={atmosphereFragment}
-          transparent
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
+      <PlanetAtmosphere radius={3} profile={MARS_ATMOSPHERE} />
     </>
   );
 }
@@ -72,6 +47,20 @@ function Phobos({ reduced }: { reduced: boolean }) {
   const { scene } = useGLTF(assetUrl("models/phobos"));
   const moon = useMemo(() => {
     const clone = scene.clone(true);
+    const materials: THREE.Material[] = [];
+    clone.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) {
+        return;
+      }
+      const cloneMaterial = (source: THREE.Material) => {
+        const material = source.clone();
+        materials.push(material);
+        return material;
+      };
+      object.material = Array.isArray(object.material)
+        ? object.material.map(cloneMaterial)
+        : cloneMaterial(object.material);
+    });
     const bounds = new THREE.Box3().setFromObject(clone);
     const size = bounds.getSize(new THREE.Vector3());
     const center = bounds.getCenter(new THREE.Vector3());
@@ -79,8 +68,9 @@ function Phobos({ reduced }: { reduced: boolean }) {
     const group = new THREE.Group();
     group.add(clone);
     group.scale.setScalar(0.32 / Math.max(size.x, size.y, size.z, 0.001));
-    return group;
+    return { group, materials };
   }, [scene]);
+  useEffect(() => () => moon.materials.forEach((material) => material.dispose()), [moon]);
   const ref = useRef<THREE.Group>(null);
   useFrame((state) => {
     if (!ref.current) {
@@ -92,7 +82,7 @@ function Phobos({ reduced }: { reduced: boolean }) {
   });
   return (
     <group ref={ref}>
-      <primitive object={moon} />
+      <primitive object={moon.group} />
     </group>
   );
 }
@@ -101,6 +91,7 @@ export default function MenuMars({ reduced }: { reduced: boolean }) {
   const { camera, size, invalidate } = useThree();
   const phase = useAppPhaseStore((state) => state.phase);
   const planet = useRef<THREE.Group>(null);
+  const sunLight = useRef<THREE.PointLight>(null);
   const pointer = useRef(new THREE.Vector2());
   const currentPointer = useRef(new THREE.Vector2());
   const target = useMemo(() => new THREE.Vector3(), []);
@@ -166,10 +157,28 @@ export default function MenuMars({ reduced }: { reduced: boolean }) {
     initialized.current = true;
   });
   return (
-    <>
+    <AtmosphereRenderer sunLight={sunLight}>
       <SkyboxLoader onReady={invalidate} />
       <ambientLight intensity={0.025} />
-      <directionalLight position={[-7, 4, 1]} intensity={2.2} color="#fff0df" />
+      <pointLight
+        ref={sunLight}
+        position={[-7, 4, 10]}
+        intensity={MENU_SUN_INTENSITY}
+        color={[1, 0.93, 0.85]}
+        decay={0}
+      />
+      <directionalLight
+        position={[0, 1, 0]}
+        intensity={MENU_SUN_INTENSITY * PLANET_FILL_LIGHT.keyIntensityRatio}
+        color={PLANET_FILL_LIGHT.keyColor}
+      />
+      <hemisphereLight
+        args={[
+          PLANET_FILL_LIGHT.skyColor,
+          PLANET_FILL_LIGHT.groundColor,
+          MENU_SUN_INTENSITY * PLANET_FILL_LIGHT.intensityRatio,
+        ]}
+      />
       <group ref={planet}>
         <DecorativeAsset>
           <Suspense fallback={null}>
@@ -182,6 +191,6 @@ export default function MenuMars({ reduced }: { reduced: boolean }) {
           </Suspense>
         </DecorativeAsset>
       </group>
-    </>
+    </AtmosphereRenderer>
   );
 }
