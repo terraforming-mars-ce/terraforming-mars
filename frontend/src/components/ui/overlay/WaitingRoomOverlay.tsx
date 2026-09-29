@@ -10,7 +10,7 @@ import GameMenuModal from "./GameMenuModal.tsx";
 import DemoSetupOverlay from "./DemoSetupOverlay.tsx";
 import LobbySettingsOverlay from "./LobbySettingsOverlay.tsx";
 import LobbyMapInfoPanel from "../lobby/LobbyMapInfoPanel.tsx";
-import { BotDifficultyChip, BotSpeedChip } from "../display/BotChips.tsx";
+import { BotDifficultyChip, BotSpeedChip, PlayerChip } from "../display/BotChips.tsx";
 import MainMenuHamburger from "../buttons/MainMenuHamburger.tsx";
 
 interface WaitingRoomOverlayProps {
@@ -461,16 +461,14 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                           </div>
                           <span className="text-white text-sm font-medium">{player.name}</span>
                         </div>
-                        <div className="flex gap-1.5 items-center">
+                        <div className="player-chip-group">
                           {player.id === playerId && (
-                            <span className="bg-space-blue-800 text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
-                              You
-                            </span>
+                            <PlayerChip className="bg-space-blue-800 text-white">You</PlayerChip>
                           )}
                           {game.hostPlayerId === player.id && (
-                            <span className="bg-gradient-to-br from-[#ffa500] to-[#ff8c00] text-white py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                            <PlayerChip className="bg-gradient-to-br from-[#ffa500] to-[#ff8c00] text-white">
                               Host
-                            </span>
+                            </PlayerChip>
                           )}
                           {player.playerType === "bot" && (
                             <>
@@ -486,13 +484,13 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                             player.playerType !== "bot" &&
                             !player.isLeaving &&
                             (player.demoReady ? (
-                              <span className="bg-green-700/60 text-green-300 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                              <PlayerChip className="bg-green-700/60 text-green-300">
                                 Ready
-                              </span>
+                              </PlayerChip>
                             ) : (
-                              <span className="bg-red-900/40 text-red-300/70 py-0.5 px-1.5 rounded text-[10px] font-bold uppercase">
+                              <PlayerChip className="bg-red-900/40 text-red-300/70">
                                 Not Ready
-                              </span>
+                              </PlayerChip>
                             ))}
                           {isHost && player.id !== playerId && !player.isLeaving && (
                             <GameButton
