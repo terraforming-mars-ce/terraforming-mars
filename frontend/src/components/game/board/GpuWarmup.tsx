@@ -7,9 +7,10 @@ import {
   createVolcanoMaterial,
   createNuclearZoneMaterial,
   createWorldTreeMaterial,
+  createSunSurfaceMaterial,
+  createSunCoronaMaterial,
+  createSunProminenceMaterial,
 } from "./shaders";
-import sunCoronaVert from "./shaders/sun-corona.vert.glsl?raw";
-import sunCoronaFrag from "./shaders/sun-corona.frag.glsl?raw";
 import { computeFlowMap } from "./volcanoFlowMap";
 import {
   variantCache,
@@ -22,6 +23,7 @@ import {
 } from "./GreeneryRenderer";
 import { useModels } from "../../../hooks/useModels";
 import { useTextures } from "../../../hooks/useTextures";
+import { coldStartTrace } from "@/services/performanceStore.ts";
 
 const WARMUP_SCALE = 0.001;
 const WARMUP_FRAMES = 3;
@@ -49,6 +51,7 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
     frameCount.current++;
     if (frameCount.current >= WARMUP_FRAMES) {
       readyFired.current = true;
+      coldStartTrace.mark("warmup:ready", { frames: frameCount.current });
       onReady?.();
     }
   });
@@ -194,37 +197,9 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   // --- Solar system warmup materials ---
   const solarSphereGeometry = useMemo(() => new THREE.SphereGeometry(WARMUP_SCALE, 8, 4), []);
 
-  const sunBasicMaterial = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        map: textures.sun,
-        color: new THREE.Color(1, 1, 1),
-        fog: false,
-      }),
-    [textures.sun],
-  );
-
-  const sunCoronaMaterial = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        uniforms: {
-          glowColor: { value: new THREE.Color(1.0, 0.5, 0.1) },
-          glowPower: { value: 2.0 },
-          glowStrength: { value: 1.5 },
-          uTime: { value: 0 },
-          noiseScale: { value: 3.0 },
-          noiseStrength: { value: 0.7 },
-        },
-        vertexShader: sunCoronaVert,
-        fragmentShader: sunCoronaFrag,
-        side: THREE.BackSide,
-        blending: THREE.AdditiveBlending,
-        transparent: true,
-        depthWrite: false,
-        fog: false,
-      }),
-    [],
-  );
+  const sunSurfaceMaterial = useMemo(() => createSunSurfaceMaterial(textures.sun), [textures.sun]);
+  const sunCoronaMaterial = useMemo(() => createSunCoronaMaterial(), []);
+  const sunProminenceMaterial = useMemo(() => createSunProminenceMaterial(), []);
 
   const planetTextureKeys = [
     "venus",
@@ -385,8 +360,9 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
       />
 
       {/* Solar system warmup */}
-      <mesh geometry={solarSphereGeometry} material={sunBasicMaterial} frustumCulled={false} />
+      <mesh geometry={solarSphereGeometry} material={sunSurfaceMaterial} frustumCulled={false} />
       <mesh geometry={solarSphereGeometry} material={sunCoronaMaterial} frustumCulled={false} />
+      <mesh geometry={solarSphereGeometry} material={sunProminenceMaterial} frustumCulled={false} />
       {planetMaterials.map((mat, i) => (
         <mesh
           key={`planet-warmup-${i}`}

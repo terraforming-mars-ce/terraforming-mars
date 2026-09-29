@@ -1,4 +1,13 @@
 import * as THREE from "three";
+import type { AtmosphereProfile } from "../solarSystemConfig";
+import planetHazeFragment from "./planet-haze.frag.glsl?raw";
+import planetAtmosphereVertex from "./planet-atmosphere.vert.glsl?raw";
+import planetAtmosphereFragment from "./planet-atmosphere.frag.glsl?raw";
+import sunSurfaceVertex from "./sun-surface.vert.glsl?raw";
+import sunSurfaceFragment from "./sun-surface.frag.glsl?raw";
+import sunCoronaVertex from "./sun-corona.vert.glsl?raw";
+import sunCoronaFragment from "./sun-corona.frag.glsl?raw";
+import sunProminenceFragment from "./sun-prominence.frag.glsl?raw";
 import { SPHERE_RADIUS } from "../boardConstants";
 import oceanRendererVertexRaw from "./ocean-renderer.vert.glsl?raw";
 import oceanRendererFragmentRaw from "./ocean-renderer.frag.glsl?raw";
@@ -48,6 +57,121 @@ export const moholeFragment = stripVersion(moholeFragmentRaw);
 export const moholeMaskFragment = stripVersion(moholeMaskFragmentRaw);
 export const oceanRendererVertex = stripVersion(oceanRendererVertexRaw);
 export const oceanRendererFragment = stripVersion(oceanRendererFragmentRaw);
+
+export const MAX_ATMOSPHERES = 16;
+
+export function createSunSurfaceMaterial(texture: THREE.Texture) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uSurface: { value: texture }, uTime: { value: 0 } },
+    vertexShader: sunSurfaceVertex,
+    fragmentShader: sunSurfaceFragment,
+    fog: false,
+    userData: { planetHaze: false },
+  });
+}
+
+export function createSunCoronaMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: sunCoronaVertex,
+    fragmentShader: sunCoronaFragment,
+    side: THREE.BackSide,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false,
+    fog: false,
+  });
+}
+
+export function createSunProminenceMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: sunSurfaceVertex,
+    fragmentShader: sunProminenceFragment,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false,
+    fog: false,
+  });
+}
+
+export function createPlanetAtmosphereMaterial(profile: AtmosphereProfile) {
+  return new THREE.ShaderMaterial({
+    vertexShader: planetAtmosphereVertex,
+    fragmentShader: planetAtmosphereFragment,
+    uniforms: {
+      uColor: { value: new THREE.Color(profile.color) },
+      uShadowColor: { value: new THREE.Color(profile.shadowColor) },
+      uSunColor: { value: new THREE.Color() },
+      uSunDirection: { value: new THREE.Vector3(0, 0, 1) },
+      uIntensity: { value: 0 },
+      uThickness: { value: profile.thickness },
+      uFollowsMesh: { value: 0 },
+    },
+    side: THREE.BackSide,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthTest: true,
+    depthWrite: false,
+    fog: false,
+  });
+}
+
+export function createPlanetHazeUniforms() {
+  return {
+    uHazeCameraWorld: { value: new THREE.Matrix4() },
+    uHazeProjectionInverse: { value: new THREE.Matrix4() },
+    uHazeViewport: { value: new THREE.Vector2() },
+    uHazeSunPosition: { value: new THREE.Vector3() },
+    uHazeSunColor: { value: new THREE.Color() },
+    uHazeCount: { value: 0 },
+    // Prepack once per frame instead of flattening vector arrays for every material upload.
+    uHazeBodies: { value: new Float32Array(MAX_ATMOSPHERES * 4) },
+    uHazeColors: { value: new Float32Array(MAX_ATMOSPHERES * 3) },
+    uHazeShadowColors: { value: new Float32Array(MAX_ATMOSPHERES * 3) },
+    uHazeProfiles: { value: new Float32Array(MAX_ATMOSPHERES * 3) },
+  };
+}
+
+export function addPlanetHaze(
+  material: THREE.Material,
+  uniforms: ReturnType<typeof createPlanetHazeUniforms>,
+) {
+  const compile = material.onBeforeCompile;
+  const programKey = material.customProgramCacheKey;
+  const baseKey = material.customProgramCacheKey();
+  const linearColor = material instanceof THREE.MeshStandardMaterial;
+  material.onBeforeCompile = (shader, renderer) => {
+    compile.call(material, shader, renderer);
+    Object.assign(shader.uniforms, uniforms);
+    shader.fragmentShader =
+      `#define MAX_ATMOSPHERES ${MAX_ATMOSPHERES}\n` +
+      planetHazeFragment +
+      "\n" +
+      shader.fragmentShader;
+    if (linearColor) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <opaque_fragment>",
+        "outgoingLight = applyPlanetHaze(outgoingLight, true, inverseTransformDirection(normal, viewMatrix));\n#include <opaque_fragment>",
+      );
+    } else {
+      // Custom board shaders already output display colors; preserve that pipeline.
+      const output = shader.fragmentShader.match(/out\s+vec4\s+(\w+)\s*;/)?.[1] ?? "gl_FragColor";
+      shader.fragmentShader = shader.fragmentShader.replace(
+        /void\s+main\s*\(\s*\)/,
+        "void atmosphereSourceMain()",
+      );
+      shader.fragmentShader += `\nvoid main() { atmosphereSourceMain(); ${output}.rgb = applyPlanetHaze(${output}.rgb, false, vec3(0.0)); }`;
+    }
+  };
+  material.customProgramCacheKey = () => baseKey + planetHazeFragment + linearColor;
+  material.needsUpdate = true;
+  return () => {
+    material.onBeforeCompile = compile;
+    material.customProgramCacheKey = programKey;
+    material.needsUpdate = true;
+  };
+}
 
 export function splitSnippet(raw: string): { header: string; body: string } {
   const marker = "//#pragma body\n";

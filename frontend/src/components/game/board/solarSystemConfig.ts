@@ -6,10 +6,19 @@ export interface MoonConfig {
   radius: number;
   position: [number, number, number];
   renderType: "sphere" | "glb";
+  atmosphere: AtmosphereProfile;
   textureKey?: string;
   modelKey?: string;
   tileLocation?: string;
   coordOffset: { q: number; r: number; s: number };
+}
+
+export interface AtmosphereProfile {
+  color: string;
+  shadowColor: string;
+  thickness: number;
+  intensity: number;
+  halo: number;
 }
 
 export interface PlanetConfig {
@@ -18,6 +27,7 @@ export interface PlanetConfig {
   radius: number;
   textureKey: string;
   cloudTextureKey?: string;
+  atmosphere: AtmosphereProfile;
   tileLocation: string;
   coordOffset: { q: number; r: number; s: number };
   moons: MoonConfig[];
@@ -49,9 +59,18 @@ export function getPlanetOrbitalPosition(
   return orbitPos(config.orbitRadius, angle);
 }
 
+const ROCKY_HAZE: AtmosphereProfile = {
+  color: "#cec3ad",
+  shadowColor: "#6583a5",
+  thickness: 0.055,
+  intensity: 1.1,
+  halo: 0.9,
+};
+
 export const PLANET_CONFIGS: PlanetConfig[] = [
   {
     id: "mercury",
+    atmosphere: ROCKY_HAZE,
     name: "MERCURY",
     radius: 1.2,
     textureKey: "mercury",
@@ -65,6 +84,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
   },
   {
     id: "venus",
+    atmosphere: {
+      color: "#f4d7a0",
+      shadowColor: "#857ba0",
+      thickness: 0.06,
+      intensity: 1.25,
+      halo: 1,
+    },
     name: "VENUS",
     radius: 2.02,
     textureKey: "venus",
@@ -78,6 +104,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
   },
   {
     id: "earth",
+    atmosphere: {
+      color: "#b1d9ff",
+      shadowColor: "#2870b3",
+      thickness: 0.055,
+      intensity: 1.1,
+      halo: 1,
+    },
     name: "EARTH",
     radius: 2.02,
     textureKey: "earth",
@@ -91,6 +124,7 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
         radius: 0.27,
         position: [3.5, 0.4, 0.8],
         renderType: "sphere",
+        atmosphere: ROCKY_HAZE,
         textureKey: "moon",
         tileLocation: "luna",
         coordOffset: { q: 300, r: 0, s: -300 },
@@ -105,6 +139,7 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
   },
   {
     id: "ceres",
+    atmosphere: ROCKY_HAZE,
     name: "CERES",
     radius: 0.28,
     textureKey: "ceres",
@@ -118,6 +153,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
   },
   {
     id: "jupiter",
+    atmosphere: {
+      color: "#d9c9aa",
+      shadowColor: "#627d96",
+      thickness: 0.065,
+      intensity: 1.5,
+      halo: 1,
+    },
     name: "JUPITER",
     radius: 11.3,
     textureKey: "jupiter",
@@ -130,6 +172,7 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
         radius: 0.5,
         position: [16, 0.5, 1.0],
         renderType: "sphere",
+        atmosphere: ROCKY_HAZE,
         textureKey: "ganymede",
         tileLocation: "ganymede",
         coordOffset: { q: 200, r: 0, s: -200 },
@@ -144,6 +187,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
   },
   {
     id: "saturn",
+    atmosphere: {
+      color: "#e6d5ac",
+      shadowColor: "#718795",
+      thickness: 0.065,
+      intensity: 1.5,
+      halo: 1,
+    },
     name: "SATURN",
     radius: 9.5,
     textureKey: "saturn",
@@ -157,6 +207,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
   },
   {
     id: "uranus",
+    atmosphere: {
+      color: "#90d5dc",
+      shadowColor: "#347894",
+      thickness: 0.06,
+      intensity: 1.35,
+      halo: 1,
+    },
     name: "URANUS",
     radius: 8.1,
     textureKey: "uranus",
@@ -170,6 +227,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
   },
   {
     id: "neptune",
+    atmosphere: {
+      color: "#719ee8",
+      shadowColor: "#234f9a",
+      thickness: 0.065,
+      intensity: 1.5,
+      halo: 1,
+    },
     name: "NEPTUNE",
     radius: 7.9,
     textureKey: "neptune",
@@ -206,12 +270,29 @@ export const PHOBOS_CONFIG: MoonConfig = {
   radius: 0.35,
   position: [3.2, 0.3, 0.5],
   renderType: "glb",
+  atmosphere: { ...ROCKY_HAZE, thickness: 0.075, intensity: 1.1, halo: 1.2 },
   modelKey: "phobos",
   tileLocation: "phobos",
   coordOffset: { q: 500, r: 0, s: -500 },
 };
 
-export const MARS_ORBIT = { minDistance: 2.4, maxDistance: 20, defaultRadius: 8 };
+export const MARS_ATMOSPHERE: AtmosphereProfile = {
+  color: "#efd2a3",
+  shadowColor: "#4b8cb5",
+  thickness: 0.055,
+  intensity: 1.1,
+  halo: 1,
+};
+
+export const PLANET_FILL_LIGHT = {
+  keyColor: "#fff1d4",
+  keyIntensityRatio: 3.2,
+  skyColor: "#62758b",
+  groundColor: "#0a2442",
+  intensityRatio: 0.35,
+};
+
+export const MARS_ORBIT = { minDistance: 2.4, maxDistance: 20, defaultRadius: 7 };
 
 export const SOLAR_SYSTEM_ORBIT = {
   minDistance: 300,

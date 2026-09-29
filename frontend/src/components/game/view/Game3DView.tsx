@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { Suspense, useEffect, useMemo, useState, useRef, useCallback, type RefObject } from "react";
 import CanvasClock from "../../3d/CanvasClock.tsx";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -6,6 +6,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { PanControls } from "../controls/PanControls.tsx";
 import { FreeCamera, CameraFrustumHelper } from "../controls/FreeCamera.tsx";
+import AtmosphereRenderer from "../board/AtmosphereRenderer.tsx";
 import MarsSphere from "../board/MarsSphere.tsx";
 import CelestialBody from "../board/CelestialBody.tsx";
 import PhobosBody from "../board/PhobosBody.tsx";
@@ -20,13 +21,17 @@ import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
 import { webSocketService } from "../../../services/webSocketService.ts";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext.tsx";
 import { useTextures } from "../../../hooks/useTextures.ts";
-import sunCoronaVert from "../board/shaders/sun-corona.vert.glsl?raw";
-import sunCoronaFrag from "../board/shaders/sun-corona.frag.glsl?raw";
+import {
+  createSunSurfaceMaterial,
+  createSunCoronaMaterial,
+  createSunProminenceMaterial,
+} from "../board/shaders";
 import GpuWarmup from "../board/GpuWarmup.tsx";
 import PerformanceProbe from "../board/PerformanceProbe.tsx";
 import SolarSystemOverview from "../board/SolarSystemOverview.tsx";
 import {
   PLANET_CONFIGS,
+  PLANET_FILL_LIGHT,
   LOCATION_TO_PLANET,
   getMarsOrbitalPosition,
   getPlanetOrbit,
@@ -47,9 +52,16 @@ function FreeCameraFrustum({ fov }: { fov: number }) {
   );
 }
 
-function CentralSunLight({ startDark = false }: { startDark?: boolean }) {
+function CentralSunLight({
+  startDark = false,
+  lightRef,
+}: {
+  startDark?: boolean;
+  lightRef: RefObject<THREE.PointLight | null>;
+}) {
   const { settings } = useWorld3DSettings();
-  const lightRef = useRef<THREE.PointLight>(null);
+  const fillLightRef = useRef<THREE.HemisphereLight>(null);
+  const keyLightRef = useRef<THREE.DirectionalLight>(null);
   const sunriseStartTime = useRef<number | null>(null);
 
   useFrame((state) => {
@@ -72,84 +84,91 @@ function CentralSunLight({ startDark = false }: { startDark?: boolean }) {
 
     lightRef.current.intensity = settings.sunIntensity * intensityMultiplier;
     lightRef.current.color.setRGB(settings.sunColor.r, settings.sunColor.g, settings.sunColor.b);
+    if (fillLightRef.current) {
+      fillLightRef.current.intensity =
+        lightRef.current.intensity * PLANET_FILL_LIGHT.intensityRatio;
+    }
+    if (keyLightRef.current) {
+      keyLightRef.current.intensity =
+        lightRef.current.intensity * PLANET_FILL_LIGHT.keyIntensityRatio;
+    }
   });
 
-  return <pointLight ref={lightRef} position={[0, 0, 0]} intensity={1} distance={0} decay={0} />;
+  return (
+    <>
+      <pointLight ref={lightRef} position={[0, 0, 0]} intensity={0} distance={0} decay={0} />
+      <directionalLight
+        ref={keyLightRef}
+        color={PLANET_FILL_LIGHT.keyColor}
+        intensity={0}
+        position={[0, 1, 0]}
+      />
+      <hemisphereLight
+        ref={fillLightRef}
+        args={[PLANET_FILL_LIGHT.skyColor, PLANET_FILL_LIGHT.groundColor, 0]}
+        position={[0, 1, 0]}
+      />
+    </>
+  );
 }
 
 function SunMesh() {
   const { sun: sunTexture } = useTextures();
-
-  const SUN_RADIUS = 22;
-
-  const geometry = useMemo(() => new THREE.SphereGeometry(SUN_RADIUS, 64, 32), []);
-  const material = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        map: sunTexture,
-        color: new THREE.Color(1, 1, 1),
-        fog: false,
-      }),
-    [sunTexture],
-  );
-
-  const coronaGeometry = useMemo(() => new THREE.SphereGeometry(SUN_RADIUS, 48, 24), []);
-
-  const outerCoronaMaterial = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        uniforms: {
-          glowColor: { value: new THREE.Color(1.0, 0.5, 0.1) },
-          glowPower: { value: 2.0 },
-          glowStrength: { value: 1.2 },
-          uTime: { value: 0 },
-          noiseScale: { value: 3.0 },
-          noiseStrength: { value: 0.7 },
-        },
-        vertexShader: sunCoronaVert,
-        fragmentShader: sunCoronaFrag,
-        side: THREE.FrontSide,
-        blending: THREE.AdditiveBlending,
-        transparent: true,
-        depthWrite: false,
-        fog: false,
-      }),
+  const geometry = useMemo(() => new THREE.SphereGeometry(22, 96, 64), []);
+  const material = useMemo(() => createSunSurfaceMaterial(sunTexture), [sunTexture]);
+  const corona = useMemo(() => createSunCoronaMaterial(), []);
+  const prominence = useMemo(() => createSunProminenceMaterial(), []);
+  const arcGeometry = useMemo(() => {
+    const points = Array.from({ length: 13 }, (_, i) => {
+      const t = i / 12;
+      return new THREE.Vector3(
+        (t - 0.5) * 5.6,
+        Math.sin(t * Math.PI) * (2.8 + 0.6 * Math.sin(t * 5)),
+        Math.sin(t * Math.PI * 2) * 0.65,
+      );
+    });
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 64, 0.12, 8, false);
+  }, []);
+  const arcs = useMemo(
+    () => [
+      { angle: 0.45, tilt: 0.15, scale: 1 },
+      { angle: 2.1, tilt: -0.35, scale: 0.75 },
+      { angle: 3.6, tilt: 0.4, scale: 1.15 },
+      { angle: 5.2, tilt: -0.15, scale: 0.6 },
+    ],
     [],
   );
 
-  const innerCoronaMaterial = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        uniforms: {
-          glowColor: { value: new THREE.Color(1.0, 0.85, 0.5) },
-          glowPower: { value: 3.5 },
-          glowStrength: { value: 2.0 },
-          uTime: { value: 0 },
-          noiseScale: { value: 5.0 },
-          noiseStrength: { value: 0.3 },
-        },
-        vertexShader: sunCoronaVert,
-        fragmentShader: sunCoronaFrag,
-        side: THREE.FrontSide,
-        blending: THREE.AdditiveBlending,
-        transparent: true,
-        depthWrite: false,
-        fog: false,
-      }),
-    [],
+  useEffect(
+    () => () => {
+      geometry.dispose();
+      arcGeometry.dispose();
+      corona.dispose();
+      prominence.dispose();
+    },
+    [geometry, arcGeometry, corona, prominence],
   );
-
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-    outerCoronaMaterial.uniforms.uTime.value = t;
-    innerCoronaMaterial.uniforms.uTime.value = t;
+  useEffect(() => () => material.dispose(), [material]);
+  useFrame(({ clock }) => {
+    material.uniforms.uTime.value = clock.elapsedTime;
+    corona.uniforms.uTime.value = clock.elapsedTime;
+    prominence.uniforms.uTime.value = clock.elapsedTime;
   });
 
   return (
     <group>
       <mesh geometry={geometry} material={material} />
-      <mesh geometry={coronaGeometry} material={outerCoronaMaterial} scale={[1.3, 1.3, 1.3]} />
-      <mesh geometry={coronaGeometry} material={innerCoronaMaterial} scale={[1.15, 1.15, 1.15]} />
+      <mesh geometry={geometry} material={corona} scale={1.5} />
+      {arcs.map(({ angle, tilt, scale }) => (
+        <group key={angle} rotation={[0, tilt, angle]}>
+          <mesh
+            position={[0, 21.82, 0]}
+            scale={scale}
+            geometry={arcGeometry}
+            material={prominence}
+          />
+        </group>
+      ))}
     </group>
   );
 }
@@ -265,9 +284,11 @@ export default function Game3DView({
   showUI = true,
   uiAnimationClass = "",
 }: Game3DViewProps) {
+  const { activePlanet } = usePlanetFocus();
   const orbitalProject = gameState.projectFunding?.find((p) => p.id === "pf_orbital_station");
   const orbitalStationSeats = orbitalProject ? orbitalProject.seatOwners.length : 0;
   const containerRef = useRef<HTMLDivElement>(null);
+  const sunLightRef = useRef<THREE.PointLight>(null);
   const initialCameraPos = useMemo((): [number, number, number] => {
     const mp = getMarsOrbitalPosition(0);
     const center = new THREE.Vector3(mp[0], mp[1], mp[2]);
@@ -399,55 +420,57 @@ export default function Game3DView({
         resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
         gl={{ stencil: true }}
         dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
-        shadows={{ type: THREE.PCFSoftShadowMap }}
+        shadows={{ type: THREE.PCFShadowMap }}
       >
         <CanvasClock />
         <MarsRotationProvider>
           <Suspense fallback={null}>
-            <SkyboxLoader onReady={onSkyboxReady} />
+            <AtmosphereRenderer sunLight={sunLightRef} enabled={activePlanet !== "solar-system"}>
+              <SkyboxLoader onReady={onSkyboxReady} />
 
-            <ambientLight intensity={0.4} color="#2a2a2a" />
-            <CentralSunLight startDark={startDark} />
-            <SunMesh />
-            <DynamicFog />
+              <ambientLight intensity={0.4} color="#2a2a2a" />
+              <CentralSunLight startDark={startDark} lightRef={sunLightRef} />
+              <SunMesh />
+              <DynamicFog />
 
-            <MarsSphere
-              gameState={gameState}
-              onHexClick={handleHexClick}
-              animateHexEntrance={animateHexEntrance}
-              startHidden={tilesHidden}
-            />
-
-            <PhobosBody gameState={gameState} onHexClick={handleHexClick} />
-
-            {PLANET_CONFIGS.map((config) => (
-              <CelestialBody
-                key={config.id}
-                config={config}
+              <MarsSphere
                 gameState={gameState}
                 onHexClick={handleHexClick}
+                animateHexEntrance={animateHexEntrance}
+                startHidden={tilesHidden}
               />
-            ))}
 
-            <SolarSystemOverview />
+              <PhobosBody gameState={gameState} onHexClick={handleHexClick} />
 
-            {orbitalProject && (
-              <OrbitalStation
-                filledSeats={orbitalStationSeats}
-                totalSeats={orbitalProject.seats.length}
-                isCompleted={orbitalProject.isCompleted}
-                name={orbitalProject.name}
-              />
-            )}
+              {PLANET_CONFIGS.map((config) => (
+                <CelestialBody
+                  key={config.id}
+                  config={config}
+                  gameState={gameState}
+                  onHexClick={handleHexClick}
+                />
+              ))}
 
-            <AsteroidImpact />
+              <SolarSystemOverview />
 
-            <GpuWarmup onReady={onGpuReady} />
-            <PerformanceProbe />
+              {orbitalProject && (
+                <OrbitalStation
+                  filledSeats={orbitalStationSeats}
+                  totalSeats={orbitalProject.seats.length}
+                  isCompleted={orbitalProject.isCompleted}
+                  name={orbitalProject.name}
+                />
+              )}
 
-            <PanControls />
-            <FreeCamera />
-            <FreeCameraFrustum fov={cameraConfig.fov} />
+              <AsteroidImpact />
+
+              <GpuWarmup onReady={onGpuReady} />
+              <PerformanceProbe />
+
+              <PanControls />
+              <FreeCamera />
+              <FreeCameraFrustum fov={cameraConfig.fov} />
+            </AtmosphereRenderer>
           </Suspense>
         </MarsRotationProvider>
       </Canvas>

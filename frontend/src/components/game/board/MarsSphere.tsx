@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import TileGrid from "./TileGrid.tsx";
+import PlanetAtmosphere from "./PlanetAtmosphere.tsx";
 
 import { GameDto } from "../../../types/generated/api-types.ts";
 import { useMarsRotation } from "../../../contexts/MarsRotationContext.tsx";
@@ -9,7 +10,11 @@ import { useTextures } from "../../../hooks/useTextures.ts";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext.tsx";
 import { SPHERE_RADIUS } from "./boardConstants.ts";
-import { getMarsOrbitalPosition, setOrbitSpeedMultiplier } from "./solarSystemConfig.ts";
+import {
+  getMarsOrbitalPosition,
+  setOrbitSpeedMultiplier,
+  MARS_ATMOSPHERE,
+} from "./solarSystemConfig.ts";
 
 interface MarsSphereProps {
   gameState?: GameDto;
@@ -53,7 +58,7 @@ export default function MarsSphere({
     const mat = new THREE.MeshStandardMaterial({
       map: diffuseMap,
       roughness: 0.8,
-      metalness: 0.05,
+      metalness: 0,
       fog: false,
     });
 
@@ -94,6 +99,8 @@ export default function MarsSphere({
           }
         }}
       />
+
+      <PlanetAtmosphere radius={SPHERE_RADIUS} profile={MARS_ATMOSPHERE} />
 
       <TileGrid
         gameState={gameState}
