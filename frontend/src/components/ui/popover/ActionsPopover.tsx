@@ -63,6 +63,7 @@ const ActionsPopover: React.FC<ActionsPopoverProps> = ({
                 key={`${action.cardId}-${action.behaviorIndex}`}
                 state={isAvailable ? "available" : "disabled"}
                 onClick={isActionPlayable ? () => handleActionClick(action) : undefined}
+                clickSound={false}
                 error={
                   !isAvailable &&
                   action.errors &&

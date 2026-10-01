@@ -617,6 +617,45 @@ for (let i = 0; i < 72; i++) {
     "Circular city ground must not leave a hex-shaped grass fringe",
   );
 }
+const cupolaCard = requests.find((card) => card.name === "Cupola City")!;
+const cupolaSource: LandscapeSource = {
+  coordinate: coord(0),
+  kind: "city",
+  seed: 2069,
+  layout: generateCityLayout(2069, cupolaCard.style!.tile, cupolaCard.name),
+};
+const cupola = createLandscapeSampler({ seed: 42, sources: [cupolaSource] });
+assert.equal(cupola(0, 0).foundation, 1, "Cupola interior must use the shared city foundation");
+for (const neighborKind of ["greenery", "ocean"] as const) {
+  for (const coordinate of HexGrid2D.getNeighbors(coord(0))) {
+    const sample = createLandscapeSampler({
+      seed: 42,
+      sources: [cupolaSource, { coordinate, kind: neighborKind, seed: 4 }],
+    });
+    for (let i = 0; i < 72; i++) {
+      const angle = (i * Math.PI) / 36;
+      const inner = sample(Math.cos(angle) * 0.12999, Math.sin(angle) * 0.12999);
+      const outer = sample(Math.cos(angle) * 0.13001, Math.sin(angle) * 0.13001);
+      assert.ok(
+        Math.abs(inner.foundation - outer.foundation) < 0.01 &&
+          Math.abs(inner.coverage - outer.coverage) < 0.01,
+        "Cupola paving and greenery must blend continuously across the former cutout edge",
+      );
+    }
+  }
+}
+for (let i = 0; i < 72; i++) {
+  const angle = (i * Math.PI) / 36;
+  assert.ok(
+    cupola(Math.cos(angle) * 0.122, Math.sin(angle) * 0.122).foundation > 0.95,
+    "Cupola paving must meet its circular collar without exposing Mars",
+  );
+  assert.equal(
+    cupola(Math.cos(angle) * 0.16, Math.sin(angle) * 0.16).foundation,
+    0,
+    "Cupola paving must remain circular rather than fill the hex corners",
+  );
+}
 const cityPair = createLandscapeSampler({
   seed: 42,
   sources: [0, 1].map((q) => ({ coordinate: coord(q), kind: "city", seed: q + 3 })),

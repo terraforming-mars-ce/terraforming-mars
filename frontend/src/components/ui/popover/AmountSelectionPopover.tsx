@@ -88,7 +88,13 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
         <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
           Cancel
         </GameButton>
-        <GameButton emphasis="primary" tone="success" size="sm" onClick={handleConfirm}>
+        <GameButton
+          emphasis="primary"
+          tone="success"
+          size="sm"
+          clickSound={false}
+          onClick={handleConfirm}
+        >
           Confirm
         </GameButton>
       </GameFlowFooter>

@@ -118,6 +118,8 @@ const AwardPopover: React.FC<AwardPopoverProps> = ({
               className="popover-list-item"
               state={getState()}
               onClick={isExecutable ? () => handleFundAward(award.type) : undefined}
+              clickSound={false}
+              hoverSound={false}
               error={
                 !isAvailable && !isFunded && award.errors && award.errors.length > 0
                   ? { message: award.errors[0].message, count: award.errors.length }

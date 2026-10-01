@@ -164,6 +164,7 @@ export function useWebSocketConnection(
             if (ms.isClaimed && ms.claimedBy) {
               const prev = prevMilestones.find((p) => p.type === ms.type);
               if (prev && !prev.isClaimed) {
+                void playAwardFundedSound();
                 const allPlayers = [updatedGame.currentPlayer, ...(updatedGame.otherPlayers ?? [])];
                 const claimPlayer = allPlayers.find((p) => p.id === ms.claimedBy);
                 enqueueGameEvent({
@@ -283,6 +284,12 @@ export function useWebSocketConnection(
       }
       const allPlayers = [latestGame.currentPlayer, ...(latestGame.otherPlayers ?? [])];
       for (const log of logs) {
+        if (
+          log.playerId === myPlayerId &&
+          (log.sourceType === "standard_project" || log.sourceType === "card_action")
+        ) {
+          void playCardPlayedSound();
+        }
         if (
           log.sourceType === "standard_project" &&
           log.source.toLowerCase().includes("asteroid")

@@ -164,7 +164,8 @@ const MilestoneAwardStatusStrip: React.FC = () => {
         <GameButton
           shape="toolbar"
           surface="console"
-          className="hud-status-slot"
+          className="hud-status-slot !cursor-default"
+          clickSound={false}
           data-occupied={isFilled || undefined}
           tabIndex={isFilled ? 0 : -1}
           aria-label={filled?.name}

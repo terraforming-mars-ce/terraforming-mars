@@ -131,6 +131,8 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
               state={getState()}
               className={`popover-list-item ${meetsRequirement ? "milestone-eligible-glow" : ""}`}
               onClick={isExecutable ? () => handleClaimMilestone(milestone.type) : undefined}
+              clickSound={false}
+              hoverSound={false}
               error={(() => {
                 if (isAvailable || isClaimed || !milestone.errors?.length) {
                   return undefined;

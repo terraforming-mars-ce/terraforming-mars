@@ -1,6 +1,7 @@
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
-import React from "react";
+import React, { useSyncExternalStore } from "react";
 import { useSound } from "../../../contexts/SoundContext.tsx";
+import { audioService } from "../../../services/audioService.ts";
 
 const sliderClassName =
   "w-full h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:hover:bg-space-blue-400 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:hover:bg-space-blue-400";
@@ -112,6 +113,7 @@ const SoundToggleButton: React.FC = () => {
     setVolume,
     setMusicVolume,
   } = useSound();
+  const music = useSyncExternalStore(audioService.subscribeMusic, audioService.getMusicState);
 
   const handleSfxVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setVolume(parseFloat(e.target.value));
@@ -166,6 +168,50 @@ const SoundToggleButton: React.FC = () => {
           className={sliderClassName}
           aria-label="Music Volume"
         />
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center justify-center gap-1">
+          <GameButton
+            emphasis="quiet"
+            className="!p-0 !min-h-8 w-8 h-8"
+            aria-label="Restart or previous song"
+            disabled={!music.title}
+            onClick={() => audioService.skipMusicTrack(-1)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M5 5h2v14H5zM19 5v14L8 12z" />
+            </svg>
+          </GameButton>
+          <GameButton
+            emphasis="quiet"
+            className="!p-0 !min-h-8 w-8 h-8"
+            aria-label={music.playing ? "Pause music" : "Play music"}
+            onClick={() => {
+              if (!music.playing && !musicEnabled) {
+                toggleMusicMute();
+              }
+              audioService.toggleMusicPlayback();
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d={music.playing ? "M6 4h4v16H6zM14 4h4v16h-4z" : "M7 4v16l13-8z"} />
+            </svg>
+          </GameButton>
+          <GameButton
+            emphasis="quiet"
+            className="!p-0 !min-h-8 w-8 h-8"
+            aria-label="Next song"
+            disabled={!music.title}
+            onClick={() => audioService.skipMusicTrack(1)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M17 5h2v14h-2zM5 5l11 7-11 7z" />
+            </svg>
+          </GameButton>
+        </div>
+        <div className="font-orbitron text-[11px] text-white/70 text-center" aria-live="polite">
+          {music.title ?? "No track selected"}
+        </div>
       </div>
     </div>
   );

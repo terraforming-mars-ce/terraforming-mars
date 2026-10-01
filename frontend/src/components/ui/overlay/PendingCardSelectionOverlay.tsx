@@ -249,6 +249,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
               )}
               <GameButton
                 size="lg"
+                clickSound={!isSellPatents}
                 onClick={handleConfirm}
                 disabled={!isValidSelection || totalCost > playerCredits}
                 className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"

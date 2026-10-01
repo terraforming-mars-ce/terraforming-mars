@@ -428,7 +428,7 @@ function CityRenderer({
 
   return (
     <group position={plot.worldPosition} quaternion={quaternion}>
-      {plot.layout.style.cover === "dome" && (
+      {!connectedGround && plot.layout.style.cover === "dome" && (
         <CityGroundPatch
           radius={0.15}
           surface="asphalt"
@@ -439,9 +439,7 @@ function CityRenderer({
           groupInverseMatrix={groupInverseMatrix}
         />
       )}
-      {(!connectedGround ||
-        plot.layout.style.cover === "dome" ||
-        plot.layout.style.ground === "recessed") && (
+      {(!connectedGround || plot.layout.style.ground === "recessed") && (
         <CityGroundPatch
           radius={plot.layout.style.cover === "dome" ? 0.113 : 0.155}
           surface={groundSurface}

@@ -145,6 +145,7 @@ const CardDiscardSelectionOverlay: React.FC<CardDiscardSelectionOverlayProps> = 
             )}
             <GameButton
               size="lg"
+              clickSound={false}
               onClick={handleConfirm}
               disabled={selectedCardIds.length < selection.minCards}
               className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"

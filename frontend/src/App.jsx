@@ -132,10 +132,8 @@ function AppWithBackground({ connectionReady }) {
   useEffect(() => {
     if (showSpaceBackgroundLayer && isLoaded) {
       audioService.playAmbient();
-    } else if (isCardsPage) {
-      audioService.stopAmbient();
     }
-  }, [showSpaceBackgroundLayer, isLoaded, isCardsPage]);
+  }, [showSpaceBackgroundLayer, isLoaded]);
 
   return (
     <>

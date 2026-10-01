@@ -113,6 +113,7 @@ export default function TileGrid({
         case "natural-preserve-tile":
           break;
         case "city-tile":
+        case "volcano-tile":
         case "special-tile":
         case "nuclear-zone-tile":
         case "mining-tile":

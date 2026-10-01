@@ -290,7 +290,7 @@ export function createLandscapeSampler(input: LandscapeInput) {
       if (city && s.layout) {
         const style = s.layout.style;
         const r = Math.hypot(lx, ly);
-        const hole = style.cover === "dome" ? 0.13 : style.ground === "recessed" ? 0.095 : 0;
+        const hole = style.ground === "recessed" ? 0.095 : 0;
         if (r < hole) {
           exclusion = 1;
           blocked = true;
