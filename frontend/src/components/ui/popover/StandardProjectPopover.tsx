@@ -65,6 +65,7 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
               className="popover-list-item"
               state={project.available ? "available" : "disabled"}
               onClick={isExecutable ? () => handleProjectClick(project) : undefined}
+              clickSound={false}
               borderColor={styleColor}
               error={
                 !project.available && project.errors?.length

@@ -82,6 +82,8 @@ export interface PopoverItemInfo {
 export interface GamePopoverItemProps {
   state: PopoverItemState;
   onClick?: () => void;
+  clickSound?: boolean;
+  hoverSound?: boolean;
   error?: PopoverItemError;
   warning?: PopoverItemWarning;
   info?: PopoverItemInfo;

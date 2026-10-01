@@ -155,7 +155,13 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
         <GameFlowFooter className="gap-3">
           {hasNoTargets ? (
             <>
-              <GameButton emphasis="primary" tone="warn" size="sm" onClick={handleContinueAnyway}>
+              <GameButton
+                emphasis="primary"
+                tone="warn"
+                size="sm"
+                clickSound={false}
+                onClick={handleContinueAnyway}
+              >
                 Continue Anyway
               </GameButton>
               <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
@@ -165,7 +171,13 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
           ) : (
             <>
               {onlySelfEligible && (
-                <GameButton emphasis="primary" tone="warn" size="sm" onClick={handleSkip}>
+                <GameButton
+                  emphasis="primary"
+                  tone="warn"
+                  size="sm"
+                  clickSound={false}
+                  onClick={handleSkip}
+                >
                   Skip
                 </GameButton>
               )}

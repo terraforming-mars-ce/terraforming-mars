@@ -62,6 +62,7 @@ const ActionReusePopover: React.FC<ActionReusePopoverProps> = ({
 
             return (
               <GamePopoverItem
+                clickSound={false}
                 key={`${action.cardId}-${action.behaviorIndex}`}
                 state={isReuseAvailable ? "available" : "disabled"}
                 onClick={isReuseAvailable ? () => handleActionClick(action) : undefined}

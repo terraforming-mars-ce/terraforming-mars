@@ -555,6 +555,7 @@ const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
           tone="info"
           size="sm"
           onClick={handleConfirm}
+          clickSound={false}
           disabled={!canConfirm}
         >
           Confirm

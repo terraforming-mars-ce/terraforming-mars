@@ -262,7 +262,13 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
       <GameFlowFooter className="gap-3">
         {hasNoTargets && !selectedPlayer ? (
           <>
-            <GameButton emphasis="primary" tone="warn" size="sm" onClick={handleContinueAnyway}>
+            <GameButton
+              emphasis="primary"
+              tone="warn"
+              size="sm"
+              clickSound={false}
+              onClick={handleContinueAnyway}
+            >
               Continue Anyway
             </GameButton>
             <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>

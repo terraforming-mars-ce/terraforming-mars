@@ -17,6 +17,7 @@ interface Appearance {
   surface?: "console";
   selected?: boolean;
   loading?: boolean;
+  clickSound?: boolean;
   accent?: string;
   width?: number;
   height?: number;
@@ -91,6 +92,7 @@ const GameButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, GameButtonP
       surface,
       selected = false,
       loading = false,
+      clickSound = true,
       accent,
       width,
       height,
@@ -176,7 +178,9 @@ const GameButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, GameButtonP
               event.preventDefault();
               return;
             }
-            sound.onClick?.();
+            if (clickSound) {
+              sound.onClick?.();
+            }
             onClick?.(event);
           }}
           onMouseEnter={(event) => {
@@ -198,7 +202,9 @@ const GameButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, GameButtonP
         disabled={inactive}
         onClick={(event) => {
           if (!inactive) {
-            sound.onClick?.();
+            if (clickSound) {
+              sound.onClick?.();
+            }
             onClick?.(event);
           }
         }}

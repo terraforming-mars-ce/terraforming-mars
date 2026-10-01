@@ -6,6 +6,8 @@ import { Z_INDEX } from "@/constants/zIndex.ts";
 const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   state,
   onClick,
+  clickSound = true,
+  hoverSound = true,
   error,
   warning,
   info,
@@ -38,7 +40,9 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
 
   const handleClick = () => {
     if (isClickable) {
-      void playButtonClickSound();
+      if (clickSound) {
+        void playButtonClickSound();
+      }
       onClick?.();
     }
   };
@@ -80,7 +84,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
         }
       }}
       onClick={isClickable ? handleClick : undefined}
-      onMouseEnter={isClickable ? () => void playButtonHoverSound() : undefined}
+      onMouseEnter={isClickable && hoverSound ? () => void playButtonHoverSound() : undefined}
       style={
         {
           animationDelay: `${animationDelay}s`,

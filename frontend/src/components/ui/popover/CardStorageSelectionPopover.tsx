@@ -193,6 +193,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
                 emphasis="primary"
                 tone="warn"
                 size="sm"
+                clickSound={false}
                 onClick={handleContinueWithoutStorage}
               >
                 Continue Anyway
