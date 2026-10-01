@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import BackButton from "../buttons/BackButton.tsx";
@@ -36,9 +37,10 @@ interface SidebarProps {
 }
 
 const fieldClass =
-  "w-full rounded-md border border-space-blue-500 bg-black px-3 py-2.5 text-sm text-white outline-none focus-visible:border-blue-400 focus-visible:ring-1 focus-visible:ring-blue-400";
+  "w-full rounded-none border border-space-blue-500 bg-black px-3 py-2.5 text-sm text-white outline-none focus-visible:border-blue-400 focus-visible:ring-1 focus-visible:ring-blue-400";
 
 export default memo(function CardBrowserSidebar(props: SidebarProps) {
+  const { playButtonClickSound } = useSoundEffects();
   const panel = useRef<HTMLElement>(null);
   const [copyError, setCopyError] = useState(false);
   const { open, onClose } = props;
@@ -116,7 +118,7 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
             {CARD_FAMILIES.map((family) => (
               <label
                 key={family}
-                className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 text-sm transition-colors has-focus-visible:ring-2 has-focus-visible:ring-blue-400 ${props.family === family ? "border-space-blue-600 bg-space-blue-400 text-white" : "border-transparent text-white/60 hover:bg-white/5 hover:text-white"}`}
+                className={`flex cursor-pointer items-center gap-2 rounded-none border px-3 py-2.5 text-sm transition-colors has-focus-visible:ring-2 has-focus-visible:ring-blue-400 ${props.family === family ? "border-space-blue-600 bg-space-blue-400 text-white" : "border-transparent text-white/60 hover:bg-white/5 hover:text-white"}`}
               >
                 <input
                   className="sr-only"
@@ -124,7 +126,10 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
                   name="card-family"
                   value={family}
                   checked={props.family === family}
-                  onChange={() => props.onFamily(family)}
+                  onChange={() => {
+                    void playButtonClickSound();
+                    props.onFamily(family);
+                  }}
                 />
                 <span className="flex-1 font-orbitron text-xs">{FAMILY_LABELS[family]}</span>
                 {props.selectedCounts[family] > 0 && (
@@ -163,7 +168,10 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
               value={
                 props.family !== "project" && props.sort.startsWith("type") ? "id" : props.sort
               }
-              onChange={(event) => props.onSort(event.target.value as CardSort)}
+              onChange={(event) => {
+                void playButtonClickSound();
+                props.onSort(event.target.value as CardSort);
+              }}
             >
               <option value="id">Card ID</option>
               <option value="name-asc">Name (A–Z)</option>
@@ -246,9 +254,13 @@ function FilterGroup({
   selected: ReadonlySet<string>;
   onToggle: SidebarProps["onToggle"];
 }) {
+  const { playButtonClickSound } = useSoundEffects();
   return (
     <details className="group">
-      <summary className="cursor-pointer font-orbitron text-xs text-white/80 focus-visible:outline-blue-400">
+      <summary
+        onClick={() => void playButtonClickSound()}
+        className="cursor-pointer font-orbitron text-xs text-white/80 focus-visible:outline-blue-400"
+      >
         {label}
         {selected.size > 0 ? ` (${selected.size})` : ""}
       </summary>
@@ -256,13 +268,16 @@ function FilterGroup({
         {values.map((value) => (
           <label
             key={value}
-            className={`flex cursor-pointer items-center gap-1.5 rounded border px-2 py-1.5 text-xs has-focus-visible:ring-2 has-focus-visible:ring-blue-400 ${selected.has(value) ? "border-blue-400/70 bg-blue-950 text-white" : "border-white/15 text-white/60 hover:border-white/40 hover:text-white"}`}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-none border px-2 py-1.5 text-xs has-focus-visible:ring-2 has-focus-visible:ring-blue-400 ${selected.has(value) ? "border-blue-400/70 bg-blue-950 text-white" : "border-white/15 text-white/60 hover:border-white/40 hover:text-white"}`}
           >
             <input
               type="checkbox"
               className="sr-only"
               checked={selected.has(value)}
-              onChange={() => onToggle(kind, value)}
+              onChange={() => {
+                void playButtonClickSound();
+                onToggle(kind, value);
+              }}
             />
             {kind === "tags" && <GameIcon iconType={`${value}-tag`} size="small" />}
             {labelFor(value)}

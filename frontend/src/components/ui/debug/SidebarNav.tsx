@@ -1,4 +1,5 @@
 import React from "react";
+import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 
 export type ActiveItem =
   | "game-state"
@@ -17,6 +18,12 @@ interface SidebarNavProps {
 }
 
 const SidebarNav: React.FC<SidebarNavProps> = ({ activeItem, onSelectItem, developmentMode }) => {
+  const { playButtonClickSound } = useSoundEffects();
+  const handleSelectItem = (item: ActiveItem) => {
+    void playButtonClickSound();
+    onSelectItem(item);
+  };
+
   const itemStyle = (isActive: boolean) => ({
     padding: "6px 12px",
     fontSize: "11px",
@@ -59,7 +66,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ activeItem, onSelectItem, devel
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div
-        onClick={() => onSelectItem("game-state")}
+        onClick={() => handleSelectItem("game-state")}
         style={itemStyle(activeItem === "game-state")}
       >
         Game State
@@ -70,25 +77,25 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ activeItem, onSelectItem, devel
           <div style={headerStyle}>Commands</div>
 
           <div
-            onClick={() => onSelectItem("player-resources")}
+            onClick={() => handleSelectItem("player-resources")}
             style={subItemStyle(activeItem === "player-resources")}
           >
             Player Resources
           </div>
           <div
-            onClick={() => onSelectItem("player-behavior")}
+            onClick={() => handleSelectItem("player-behavior")}
             style={subItemStyle(activeItem === "player-behavior")}
           >
             Card & Corp
           </div>
           <div
-            onClick={() => onSelectItem("place-tile")}
+            onClick={() => handleSelectItem("place-tile")}
             style={subItemStyle(activeItem === "place-tile")}
           >
             Place Tile
           </div>
           <div
-            onClick={() => onSelectItem("game-commands")}
+            onClick={() => handleSelectItem("game-commands")}
             style={subItemStyle(activeItem === "game-commands")}
           >
             Game
@@ -99,16 +106,16 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ activeItem, onSelectItem, devel
       <div style={headerStyle}>3D World</div>
 
       <div
-        onClick={() => onSelectItem("3d-camera")}
+        onClick={() => handleSelectItem("3d-camera")}
         style={subItemStyle(activeItem === "3d-camera")}
       >
         Camera
       </div>
-      <div onClick={() => onSelectItem("3d-sun")} style={subItemStyle(activeItem === "3d-sun")}>
+      <div onClick={() => handleSelectItem("3d-sun")} style={subItemStyle(activeItem === "3d-sun")}>
         Sun & Ocean
       </div>
       <div
-        onClick={() => onSelectItem("3d-skybox")}
+        onClick={() => handleSelectItem("3d-skybox")}
         style={subItemStyle(activeItem === "3d-skybox")}
       >
         Skybox
