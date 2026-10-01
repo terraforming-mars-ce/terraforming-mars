@@ -173,7 +173,7 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
                 props.onSort(event.target.value as CardSort);
               }}
             >
-              <option value="id">Card ID</option>
+              <option value="id">{props.shared ? "Link order" : "Card ID"}</option>
               <option value="name-asc">Name (A–Z)</option>
               <option value="name-desc">Name (Z–A)</option>
               {props.family === "project" && (

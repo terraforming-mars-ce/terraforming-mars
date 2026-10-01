@@ -100,6 +100,7 @@ export interface CatalogFilters {
 export function filterCatalog(entries: CatalogEntry[], filters: CatalogFilters) {
   const query = filters.query.trim().toLowerCase();
   const ids = new Set(filters.ids);
+  const idOrder = new Map([...ids].map((id, index) => [id, index]));
   const groups: Record<CardFamily, CardDto[]> = { project: [], prelude: [], corporation: [] };
   for (const entry of entries) {
     const { card, family } = entry;
@@ -131,7 +132,9 @@ export function filterCatalog(entries: CatalogEntry[], filters: CatalogFilters) 
       if (filters.sort.endsWith("desc")) {
         order *= -1;
       }
-      return order || a.id.localeCompare(b.id);
+      return (
+        order || (ids.size ? idOrder.get(a.id)! - idOrder.get(b.id)! : a.id.localeCompare(b.id))
+      );
     });
   }
   return groups;
