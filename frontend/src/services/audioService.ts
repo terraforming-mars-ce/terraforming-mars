@@ -20,14 +20,17 @@ class AudioService {
   private ambientVolumeMultiplier: number = 0.3;
   private ambientFadeInterval: ReturnType<typeof setInterval> | null = null;
   private ambientRequested = false;
+  private ambientPausedByUser = false;
   private ambientGain = 1;
-  private ambientTracks: string[] = [
-    assetUrl("audio/music/stars"),
-    assetUrl("audio/music/sands"),
-    assetUrl("audio/music/ethereum"),
-    assetUrl("audio/music/dreams"),
-    assetUrl("audio/music/settlers"),
+  private ambientTracks = [
+    { title: "Stars", path: assetUrl("audio/music/stars") },
+    { title: "Sands", path: assetUrl("audio/music/sands") },
+    { title: "Ethereum", path: assetUrl("audio/music/ethereum") },
+    { title: "Dreams", path: assetUrl("audio/music/dreams") },
+    { title: "Settlers", path: assetUrl("audio/music/settlers") },
   ];
+  private musicState: { title: string | null; playing: boolean } = { title: null, playing: false };
+  private musicListeners = new Set<() => void>();
   private playOrder: number[] = [];
   private playPosition: number = 0;
 
@@ -66,11 +69,11 @@ class AudioService {
 
   private preloadAudioFiles() {
     const audioFiles: AudioFileEntry[] = [
-      { key: "production", path: assetUrl("audio/effects/production"), volumeMultiplier: 1.0 },
+      { key: "production", path: assetUrl("audio/effects/production"), volumeMultiplier: 0.7 },
       {
         key: "temperature-increase",
         path: assetUrl("audio/effects/temperature-increase"),
-        volumeMultiplier: 0.7,
+        volumeMultiplier: 0.56,
       },
       {
         key: "water-placement",
@@ -88,7 +91,11 @@ class AudioService {
         volumeMultiplier: 1.0,
       },
       { key: "button-hover", path: assetUrl("audio/effects/button-hover"), volumeMultiplier: 0.4 },
-      { key: "button-click", path: assetUrl("audio/effects/button-click"), volumeMultiplier: 0.28 },
+      {
+        key: "button-click",
+        path: assetUrl("audio/effects/button-click"),
+        volumeMultiplier: 0.224,
+      },
       { key: "card-hover", path: assetUrl("audio/effects/card-hover"), volumeMultiplier: 0.2 },
       { key: "card-played", path: assetUrl("audio/effects/card-played"), volumeMultiplier: 0.4 },
       ...CONSTRUCTION_SOUNDS.map((key) => ({
@@ -247,8 +254,25 @@ class AudioService {
     if (this.playOrder.length === 0) {
       this.shufflePlayOrder();
     }
-    const audio = new Audio(this.ambientTracks[this.playOrder[this.playPosition]]);
+    const track = this.ambientTracks[this.playOrder[this.playPosition]];
+    const audio = new Audio(track.path);
     audio.loop = false;
+    this.updateMusicState(track.title, false);
+    audio.addEventListener("playing", () => {
+      if (this.ambientAudio === audio) {
+        this.updateMusicState(track.title, true);
+      }
+    });
+    audio.addEventListener("pause", () => {
+      if (this.ambientAudio === audio) {
+        this.updateMusicState(track.title, false);
+      }
+    });
+    audio.addEventListener("error", () => {
+      if (this.ambientAudio === audio) {
+        this.updateMusicState(track.title, false);
+      }
+    });
     audio.addEventListener("ended", () => {
       if (this.ambientAudio !== audio || !this.ambientRequested) {
         return;
@@ -256,6 +280,63 @@ class AudioService {
       this.playNextAmbient();
     });
     return audio;
+  }
+
+  public getMusicState = () => this.musicState;
+
+  public subscribeMusic = (listener: () => void) => {
+    this.musicListeners.add(listener);
+    return () => {
+      this.musicListeners.delete(listener);
+    };
+  };
+
+  private updateMusicState(title: string | null, playing: boolean): void {
+    if (this.musicState.title === title && this.musicState.playing === playing) {
+      return;
+    }
+    this.musicState = { title, playing };
+    this.musicListeners.forEach((listener) => listener());
+  }
+
+  public toggleMusicPlayback(): void {
+    if (this.musicState.playing) {
+      this.ambientPausedByUser = true;
+      this.ambientRequested = false;
+      this.clearAmbientFade();
+      this.ambientAudio?.pause();
+      this.updateMusicState(this.musicState.title, false);
+    } else {
+      this.ambientPausedByUser = false;
+      this.playAmbient();
+    }
+  }
+
+  public skipMusicTrack(direction: -1 | 1): void {
+    if (direction === -1 && this.ambientAudio && this.ambientAudio.currentTime > 3) {
+      this.ambientAudio.currentTime = 0;
+      return;
+    }
+    const resume = this.ambientRequested && !this.ambientPausedByUser;
+    this.selectAmbientTrack(direction);
+    if (resume) {
+      this.playAmbient();
+    }
+  }
+
+  private selectAmbientTrack(direction: -1 | 1): void {
+    this.clearAmbientFade();
+    if (this.ambientAudio) {
+      this.ambientAudio.pause();
+      this.playPosition += direction;
+      if (this.playPosition >= this.playOrder.length) {
+        this.shufflePlayOrder();
+      } else if (this.playPosition < 0) {
+        this.playPosition = this.playOrder.length - 1;
+      }
+    }
+    this.ambientAudio = this.createAmbientAudio();
+    this.updateAmbientVolume();
   }
 
   private clearAmbientFade(): void {
@@ -287,6 +368,9 @@ class AudioService {
   }
 
   public playAmbient(fadeDuration: number = 0): void {
+    if (this.ambientPausedByUser) {
+      return;
+    }
     this.clearAmbientFade();
     this.ambientRequested = true;
     if (!this.ambientAudio) {
@@ -303,20 +387,8 @@ class AudioService {
   }
 
   public playNextAmbient(fadeDuration: number = 0): void {
-    this.clearAmbientFade();
-    if (this.ambientAudio) {
-      this.ambientAudio.pause();
-      this.playPosition += 1;
-      if (this.playPosition >= this.playOrder.length) {
-        this.shufflePlayOrder();
-      }
-    }
-    this.ambientAudio = this.createAmbientAudio();
+    this.selectAmbientTrack(1);
     this.playAmbient(fadeDuration);
-  }
-
-  public stopAmbient(): void {
-    this.stopAmbientWithDuration(300);
   }
 
   public stopAmbientWithDuration(duration: number): void {
