@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
+import GameCard from "../cards/GameCard.tsx";
 import CardChoice from "../cards/CardChoice.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import {
   PendingCardDrawSelectionDto,
+  CardReceiptDto,
   ResourceTypeCredit,
 } from "../../../types/generated/api-types.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -20,14 +22,15 @@ import {
 } from "./overlayStyles.ts";
 import GameButton from "../buttons/GameButton.tsx";
 
-interface CardDrawSelectionOverlayProps {
+interface CardSelectionProps {
+  mode: "selection";
   isOpen: boolean;
   selection: PendingCardDrawSelectionDto;
   playerCredits: number;
   onConfirm: (cardsToTake: string[], cardsToBuy: string[]) => void;
 }
 
-const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
+const CardSelection: React.FC<CardSelectionProps> = ({
   isOpen,
   selection,
   playerCredits,
@@ -52,7 +55,7 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
   // Pure card-draw: All shown cards must be taken (no choice)
   // Peek+Draw/Take: Some cards must/can be taken (player has choice)
   const isCardDraw =
-    selection.maxBuyCount === 0 && selection.freeTakeCount === selection.availableCards.length;
+    selection.maxBuyCount === 0 && selection.minFreeTakeCount === selection.availableCards.length;
 
   const getTitleAndDescription = (): {
     title: string;
@@ -74,10 +77,15 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
 
     // For all peek/take/buy scenarios, use consistent "Select cards" title
     const maxCards = selection.freeTakeCount + selection.maxBuyCount;
-    return {
-      title: "Select cards",
-      description: `Select up to ${maxCards} card${maxCards !== 1 ? "s" : ""}`,
-    };
+    let description = `Select up to ${maxCards} cards`;
+    if (selection.minFreeTakeCount > 0) {
+      const count = selection.minFreeTakeCount;
+      description = `Select ${count} card${count === 1 ? "" : "s"}`;
+      if (maxCards > count) {
+        description += `, up to ${maxCards} total`;
+      }
+    }
+    return { title: "Select cards", description };
   };
 
   const canAffordBuy = (): boolean => {
@@ -128,7 +136,7 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
     const totalSelected = cardsToTake.length + cardsToBuy.length;
     const maxAllowed = selection.freeTakeCount + selection.maxBuyCount;
 
-    if (totalSelected > maxAllowed) {
+    if (totalSelected > maxAllowed || cardsToTake.length < selection.minFreeTakeCount) {
       return; // Invalid selection
     }
 
@@ -162,7 +170,7 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
       return "Confirm Selection";
     }
 
-    if (totalSelected === 0) {
+    if (totalSelected === 0 && selection.minFreeTakeCount === 0) {
       return "Discard all";
     }
 
@@ -180,7 +188,12 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
   const totalSelected = cardsToTake.length + cardsToBuy.length;
   // For peek scenarios, allow any selection from 0 to max (including discarding all)
   const isValidSelection =
-    isCardDraw || totalSelected <= selection.freeTakeCount + selection.maxBuyCount;
+    isCardDraw ||
+    (cardsToTake.length >= selection.minFreeTakeCount &&
+      cardsToTake.length <= selection.freeTakeCount &&
+      cardsToBuy.length <= selection.maxBuyCount &&
+      totalSelected <= selection.freeTakeCount + selection.maxBuyCount &&
+      totalBuyCost <= playerCredits);
 
   return (
     <div
@@ -251,7 +264,7 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
           {!selection.playAsPrelude && (
             <div className="flex gap-8 items-center max-[768px]:w-full max-[768px]:justify-between max-[768px]:flex-wrap">
               <div className="flex items-center gap-3">
-                <span className={RESOURCE_LABEL_CLASS}>Your Credits:</span>
+                <span className={RESOURCE_LABEL_CLASS}>Available payment:</span>
                 <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size="large" />
               </div>
               {totalBuyCost > 0 && (
@@ -307,5 +320,51 @@ const CardDrawSelectionOverlay: React.FC<CardDrawSelectionOverlayProps> = ({
     </div>
   );
 };
+
+type CardDrawSelectionOverlayProps =
+  | CardSelectionProps
+  | {
+      mode: "received";
+      isOpen: boolean;
+      receipt: CardReceiptDto;
+      onClose: () => void;
+    };
+
+function CardDrawSelectionOverlay(props: CardDrawSelectionOverlayProps) {
+  if (props.mode === "selection") return <CardSelection {...props} />;
+  if (!props.isOpen) return null;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Cards received"
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+    >
+      <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
+      <div className={OVERLAY_BACKDROP_TINT_CLASS} />
+      <div className={OVERLAY_CONTAINER_CLASS}>
+        <div className={OVERLAY_HEADER_CLASS}>
+          <h2 className={OVERLAY_TITLE_CLASS}>Cards received</h2>
+          <p className={OVERLAY_DESCRIPTION_CLASS}>{props.receipt.source}</p>
+        </div>
+        <div className={OVERLAY_CARDS_CONTAINER_CLASS}>
+          <div className={OVERLAY_CARDS_INNER_CLASS}>
+            {props.receipt.cards.map((card) => (
+              <div className="card-size" key={card.id}>
+                <GameCard card={card} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className={OVERLAY_FOOTER_CLASS}>
+          <GameButton size="lg" className="ml-auto" onClick={props.onClose}>
+            Close
+          </GameButton>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default CardDrawSelectionOverlay;

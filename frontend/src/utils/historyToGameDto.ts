@@ -113,7 +113,6 @@ function historyPlayerToOtherPlayerDto(
     actions: [],
     resourceStorage: historyPlayer.resourceStorage ?? {},
     paymentSubstitutes: [],
-    storagePaymentSubstitutes: [],
     vpGranters: [],
     bonusTags: {},
     demoReady: false,
@@ -143,6 +142,7 @@ export function historyPlayerToPlayerDto(
     : null;
 
   return {
+    resourceRemovalTargets: [],
     id: historyPlayer.id,
     name: historyPlayer.name,
     color: historyPlayer.color,
@@ -174,11 +174,12 @@ export function historyPlayerToPlayerDto(
     startingCards: [],
     resourceStorage: historyPlayer.resourceStorage ?? {},
     paymentSubstitutes: [],
-    storagePaymentSubstitutes: [],
     generationalEvents: [],
     vpGranters: [],
     bonusTags: {},
     actionCosts: [],
     demoReady: false,
+    pendingBehaviorResolutions: [],
+    cardReceipts: [],
   };
 }
