@@ -34,9 +34,10 @@ func toGameHistoryEntryDto(entry *datastore.GameStateHistoryEntry) GameHistoryEn
 		}
 		if tile.OccupiedBy != nil {
 			tileDtos[i].OccupiedBy = &TileOccupantDto{
-				Type:   string(tile.OccupiedBy.Type),
-				Tags:   tile.OccupiedBy.Tags,
-				Visual: toTileVisualDto(tile.OccupiedBy.Visual),
+				DisplayName: tile.OccupiedBy.DisplayName,
+				Type:        string(tile.OccupiedBy.Type),
+				Tags:        tile.OccupiedBy.Tags,
+				Visual:      toTileVisualDto(tile.OccupiedBy.Visual),
 			}
 		}
 	}
