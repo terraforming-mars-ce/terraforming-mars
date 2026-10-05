@@ -82,8 +82,8 @@ func TestUrbanizedArea_CityAdjacentTo2Cities(t *testing.T) {
 	testutil.AssertNoError(t, err, "placing city2")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-urbanized-area", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 10)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-urbanized-area", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Urbanized Area should play successfully")
 
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -213,8 +213,8 @@ func TestEcologicalZone_GreeneryAdjacentToGreenery(t *testing.T) {
 	testutil.AssertNoError(t, err, "placing greenery")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 12}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ecological-zone", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 12)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ecological-zone", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Ecological Zone should play successfully")
 
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -398,8 +398,8 @@ func TestUrbanizedArea_PlayCardRejectedWhenNoPlacements(t *testing.T) {
 	testutil.AssertNoError(t, err, "placing city")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-urbanized-area", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 10)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-urbanized-area", payment, nil, nil, nil, nil, nil)
 
 	testutil.AssertTrue(t, err != nil,
 		"Playing Urbanized Area should fail when no valid placements exist")
@@ -457,8 +457,8 @@ func TestPlantation_GreeneryAdjacentToOwnedTiles(t *testing.T) {
 	testutil.AssertNoError(t, err, "placing owned city")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 15}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-plantation", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 15)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-plantation", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Plantation should play successfully")
 
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -505,8 +505,8 @@ func TestPlantation_FallbackWhenNoOwnedTiles(t *testing.T) {
 	// No tiles placed — player has no owned tiles on board
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 15}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-plantation", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 15)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-plantation", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Plantation should play successfully with fallback")
 
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -535,7 +535,7 @@ func makeMangroveCard() gamecards.Card {
 					&shared.TilePlacementCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGreeneryPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{
-							OnTileType: "ocean",
+							Area: "ocean",
 						},
 					},
 				},
@@ -573,8 +573,8 @@ func TestMangrove_NotAffectedByAdjacentToOwned(t *testing.T) {
 	testutil.AssertNoError(t, err, "placing owned city")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 12}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-mangrove", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 12)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-mangrove", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Mangrove should play successfully")
 
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -655,8 +655,8 @@ func TestNaturalPreserve_TilePlacementWithNoAdjacency(t *testing.T) {
 	p.Hand().AddCard("card-natural-preserve")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 9}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-natural-preserve", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 9)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-natural-preserve", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Natural Preserve should play successfully")
 
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -773,8 +773,8 @@ func TestNuclearZone_TilePlacementOnNormalLand(t *testing.T) {
 	p.Hand().AddCard("card-nuclear-zone")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-nuclear-zone", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 10)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-nuclear-zone", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Nuclear Zone should play successfully")
 
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -807,7 +807,7 @@ func TestMoholeArea_TilePlacementOnOceanSpace(t *testing.T) {
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTilePlacement, Amount: 1, Target: "none"},
 						TileType:      "mohole",
 						TileRestrictions: &shared.TileRestrictions{
-							OnTileType: "ocean",
+							Area: "ocean",
 						},
 					},
 				},
@@ -831,8 +831,8 @@ func TestMoholeArea_TilePlacementOnOceanSpace(t *testing.T) {
 	p.Hand().AddCard("card-mohole-area")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 20}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-mohole-area", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 20)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-mohole-area", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Mohole Area should play successfully")
 
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -1009,7 +1009,7 @@ func TestMangrove_GreeneryOnOceanTileRestriction(t *testing.T) {
 					&shared.TilePlacementCondition{
 						ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceGreeneryPlacement, Amount: 1, Target: "none"},
 						TileRestrictions: &shared.TileRestrictions{
-							OnTileType: "ocean",
+							Area: "ocean",
 						},
 					},
 				},
@@ -1033,8 +1033,8 @@ func TestMangrove_GreeneryOnOceanTileRestriction(t *testing.T) {
 	p.Hand().AddCard("card-mangrove")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 12}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-mangrove", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 12)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-mangrove", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Mangrove should play successfully")
 
 	// After playing, ProcessNextTile moves the tile from the queue to PendingTileSelection
@@ -1085,8 +1085,8 @@ func TestLandClaim_CreatesLandClaimTileSelection(t *testing.T) {
 	p.Hand().AddCard("card-land-claim")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 1}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-land-claim", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 1)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-land-claim", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Land Claim should play successfully")
 
 	// After playing, ProcessNextTile moves the tile from the queue to PendingTileSelection
@@ -1142,8 +1142,8 @@ func TestArtificialLake_OceanPlacement(t *testing.T) {
 	p.Hand().AddCard("card-artificial-lake")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 15}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-artificial-lake", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 15)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-artificial-lake", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Artificial Lake should play successfully")
 
 	// After playing, ProcessNextTile moves the tile from the queue to PendingTileSelection
@@ -1194,8 +1194,79 @@ func TestArtificialLake_FailsWithoutTemperatureRequirement(t *testing.T) {
 	p.Hand().AddCard("card-artificial-lake")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 15}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-artificial-lake", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 15)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-artificial-lake", payment, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Artificial Lake should fail without meeting temperature requirement")
 	testutil.AssertTrue(t, p.Hand().HasCard("card-artificial-lake"), "Card should still be in hand")
+}
+
+func TestTileArea_ComposesWithReservationsAndGreeneryFallback(t *testing.T) {
+	ctx := context.Background()
+	g, _, _, id, otherID := testutil.SetupTwoPlayerGame(t)
+	restrictions := &shared.TileRestrictions{Area: "ocean", AdjacentToOwned: true}
+	oceanHexes := g.CalculateAvailableHexesForTile("greenery", id, restrictions)
+	if len(oceanHexes) < 2 {
+		t.Fatal("fixture needs ocean spaces")
+	}
+	var claimed shared.HexPosition
+	for _, tile := range g.Board().Tiles() {
+		if tile.Coordinates.String() == oceanHexes[0] {
+			claimed = tile.Coordinates
+		}
+	}
+	testutil.AssertNoError(t, g.Board().ReserveTile(ctx, claimed, otherID), "reserve target")
+	for _, hex := range g.CalculateAvailableHexesForTile("greenery", id, restrictions) {
+		if hex == claimed.String() {
+			t.Fatal("area exception bypassed opponent reservation")
+		}
+		for _, tile := range g.Board().Tiles() {
+			if tile.Coordinates.String() == hex {
+				testutil.AssertEqual(t, shared.ResourceOceanSpace, tile.Type, "fallback retains area")
+			}
+		}
+	}
+	for _, hex := range g.CalculateAvailableHexesForTile("ocean", id, nil) {
+		for _, tile := range g.Board().Tiles() {
+			if tile.Coordinates.String() == hex {
+				testutil.AssertEqual(t, shared.ResourceOceanSpace, tile.Type, "default ocean placement unchanged")
+			}
+		}
+	}
+}
+
+func TestTileArea_ManualActionChecksRestrictedAvailability(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, id, otherID := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	for _, tile := range g.Board().Tiles() {
+		if tile.Type == shared.ResourceLandTile {
+			testutil.AssertNoError(t, g.Board().UpdateTileOccupancy(ctx, tile.Coordinates, board.TileOccupant{Type: shared.ResourceGreeneryTile}, otherID), "fill land")
+		}
+	}
+	behavior := shared.CardBehavior{Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+		Inputs:  []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player")},
+		Outputs: []shared.BehaviorCondition{&shared.TilePlacementCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceOceanPlacement, Amount: 1, Target: "none"}, TileRestrictions: &shared.TileRestrictions{Area: "land"}}},
+	}
+	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 10})
+	p.Actions().SetActions([]shared.CardAction{{CardID: "test-land-ocean", Behavior: behavior}})
+	state := action.CalculatePlayerCardActionState("test-land-ocean", behavior, 0, p, g, registry)
+	testutil.AssertTrue(t, !state.Available(), "UI availability respects area")
+	before := p.Resources().Get()
+	err := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, "test-land-ocean", 0, nil, nil, nil, nil, nil, nil, nil, nil)
+	testutil.AssertError(t, err, "action cannot pay for impossible placement")
+	testutil.AssertEqual(t, before, p.Resources().Get(), "cost preserved")
+	testutil.AssertEqual(t, 0, p.Actions().List()[0].TimesUsedThisGeneration, "action count preserved")
+}
+
+func TestTileArea_PendingSelectionKeepsIndependentRestrictions(t *testing.T) {
+	ctx := context.Background()
+	g, _, _, id, _ := testutil.SetupTwoPlayerGame(t)
+	testutil.AssertNoError(t, g.AppendToPendingTileSelectionQueue(ctx, id, []string{"ocean"}, "Artificial Lake", "116", &shared.TileRestrictions{Area: "land"}), "queue land ocean")
+	pending := g.GetPendingTileSelection(id)
+	if pending == nil || pending.TileRestrictions == nil {
+		t.Fatal("pending selection lost area")
+	}
+	testutil.AssertEqual(t, "land", pending.TileRestrictions.Area, "retained area")
+	pending.TileRestrictions.Area = "ocean"
+	testutil.AssertEqual(t, "land", g.GetPendingTileSelection(id).TileRestrictions.Area, "getter does not alias authoritative rules")
 }

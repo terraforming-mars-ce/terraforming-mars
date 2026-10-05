@@ -17,6 +17,9 @@ func (a *BehaviorApplier) applyTilePlacementOutput(ctx context.Context, o *share
 	}
 
 	rt := o.ResourceType
+	if rt == shared.ResourceOceanPlacement && a.game.GlobalParameters().Oceans() >= a.game.GlobalParameters().GetMaxOceans() {
+		return nil
+	}
 
 	// Land claim is a special tile type
 	if rt == shared.ResourceLandClaim {
@@ -24,7 +27,7 @@ func (a *BehaviorApplier) applyTilePlacementOutput(ctx context.Context, o *share
 		for i := range tileTypes {
 			tileTypes[i] = "land-claim"
 		}
-		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, nil); err != nil {
+		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, o.TileRestrictions.Clone()); err != nil {
 			return fmt.Errorf("failed to append land claim to pending tile selection queue: %w", err)
 		}
 		log.Debug("Added land claim tile selection to queue", slog.Int("count", amount))
@@ -40,7 +43,7 @@ func (a *BehaviorApplier) applyTilePlacementOutput(ctx context.Context, o *share
 		for i := range tileTypes {
 			tileTypes[i] = o.TileType
 		}
-		restrictions := copyTileRestrictions(o.TileRestrictions)
+		restrictions := o.TileRestrictions.Clone()
 		if err := a.game.AppendToPendingTileSelectionQueue(ctx, a.player.ID(), tileTypes, a.source, a.sourceCardID, restrictions); err != nil {
 			return fmt.Errorf("failed to append to pending tile selection queue: %w", err)
 		}
@@ -69,13 +72,13 @@ func (a *BehaviorApplier) applyTilePlacementOutput(ctx context.Context, o *share
 		tileTypes[i] = tileType
 	}
 
-	restrictions := copyTileRestrictions(o.TileRestrictions)
+	restrictions := o.TileRestrictions.Clone()
 
 	// For greenery, enforce adjacency to owned tiles unless card overrides
 	if rt == shared.ResourceGreeneryPlacement {
 		if restrictions == nil {
 			restrictions = &shared.TileRestrictions{AdjacentToOwned: true}
-		} else if restrictions.OnTileType == "" {
+		} else if restrictions.Area == "" {
 			restrictions.AdjacentToOwned = true
 		}
 	}
@@ -86,29 +89,6 @@ func (a *BehaviorApplier) applyTilePlacementOutput(ctx context.Context, o *share
 	log.Debug("Added tile placements to queue",
 		slog.String("tile_type", tileType), slog.Int("count", amount), slog.Any("tile_restrictions", restrictions))
 	return nil
-}
-
-// copyTileRestrictions creates a deep copy of TileRestrictions, or returns nil.
-func copyTileRestrictions(tr *shared.TileRestrictions) *shared.TileRestrictions {
-	if tr == nil {
-		return nil
-	}
-	result := *tr
-	if tr.BoardTags != nil {
-		bt := make([]string, len(tr.BoardTags))
-		copy(bt, tr.BoardTags)
-		result.BoardTags = bt
-	}
-	if tr.OnBonusType != nil {
-		ob := make([]string, len(tr.OnBonusType))
-		copy(ob, tr.OnBonusType)
-		result.OnBonusType = ob
-	}
-	if tr.MinAdjacentOfType != nil {
-		v := *tr.MinAdjacentOfType
-		result.MinAdjacentOfType = &v
-	}
-	return &result
 }
 
 func (a *BehaviorApplier) applyTileModificationOutput(ctx context.Context, o *shared.TileModificationCondition, amount int, log *slog.Logger) error {
