@@ -438,7 +438,11 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
         <ProductionCardSelectionOverlay
           isOpen={showCardSelection}
           cards={gameState?.currentPlayer?.productionPhase?.availableCards || []}
-          playerCredits={gameState?.currentPlayer?.resources.credits || 0}
+          playerCredits={
+            gameState?.currentPlayer?.actionCosts
+              ?.find((a) => a.actionType === "card-buying")
+              ?.costs.find((c) => c.resource === "credit")?.paymentCapacity ?? 0
+          }
           costPerCard={
             gameState?.currentPlayer?.actionCosts?.find((a) => a.actionType === "card-buying")
               ?.costs[0]?.effectiveCost ?? 3

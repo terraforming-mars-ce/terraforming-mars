@@ -106,7 +106,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
         <div className={OVERLAY_FOOTER_CLASS}>
           <div className={OVERLAY_FOOTER_LEFT_CLASS}>
             <div className={RESOURCE_DISPLAY_CLASS}>
-              <span className={RESOURCE_LABEL_CLASS}>Your Credits:</span>
+              <span className={RESOURCE_LABEL_CLASS}>Available payment:</span>
               <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size="large" />
             </div>
             <div className={RESOURCE_DISPLAY_CLASS}>
