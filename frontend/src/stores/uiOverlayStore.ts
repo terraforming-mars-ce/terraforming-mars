@@ -16,8 +16,7 @@ interface UIOverlayState {
   isStartingSelectionHidden: boolean;
   showPendingCardSelection: boolean;
   showCardDrawSelection: boolean;
-  showCardDiscardSelection: boolean;
-  showStealTargetSelection: boolean;
+  showResourceRemovalSelection: boolean;
   showColonyResourceSelection: boolean;
   showColonyPlacementSelection: boolean;
   showFreeTradeSelection: boolean;
@@ -41,8 +40,7 @@ interface UIOverlayState {
   setIsStartingSelectionHidden: (hidden: boolean) => void;
   setShowPendingCardSelection: (show: boolean) => void;
   setShowCardDrawSelection: (show: boolean) => void;
-  setShowCardDiscardSelection: (show: boolean) => void;
-  setShowStealTargetSelection: (show: boolean) => void;
+  setShowResourceRemovalSelection: (show: boolean) => void;
   setShowColonyResourceSelection: (show: boolean) => void;
   setShowColonyPlacementSelection: (show: boolean) => void;
   setShowFreeTradeSelection: (show: boolean) => void;
@@ -71,8 +69,7 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   isStartingSelectionHidden: false,
   showPendingCardSelection: false,
   showCardDrawSelection: false,
-  showCardDiscardSelection: false,
-  showStealTargetSelection: false,
+  showResourceRemovalSelection: false,
   showColonyResourceSelection: false,
   showColonyPlacementSelection: false,
   showFreeTradeSelection: false,
@@ -96,8 +93,7 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   setIsStartingSelectionHidden: (hidden) => set({ isStartingSelectionHidden: hidden }),
   setShowPendingCardSelection: (show) => set({ showPendingCardSelection: show }),
   setShowCardDrawSelection: (show) => set({ showCardDrawSelection: show }),
-  setShowCardDiscardSelection: (show) => set({ showCardDiscardSelection: show }),
-  setShowStealTargetSelection: (show) => set({ showStealTargetSelection: show }),
+  setShowResourceRemovalSelection: (show) => set({ showResourceRemovalSelection: show }),
   setShowColonyResourceSelection: (show) => set({ showColonyResourceSelection: show }),
   setShowColonyPlacementSelection: (show) => set({ showColonyPlacementSelection: show }),
   setShowFreeTradeSelection: (show) => set({ showFreeTradeSelection: show }),

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { CardDto, ResourceType } from "@/types/generated/api-types.ts";
+import { CardDto, ResourceType, ResourceRemovalTargetDto } from "@/types/generated/api-types.ts";
+import { getResourceName } from "@/utils/resourceColors.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import CardPreviewPanel from "./CardPreviewPanel.tsx";
 import GameButton from "../buttons/GameButton.tsx";
@@ -20,51 +21,21 @@ interface CardResourcePlayer {
 interface CardResourceSelectionPopoverProps {
   resourceType: ResourceType;
   amount: number;
-  excludeCardId?: string;
+  removalTargets: ResourceRemovalTargetDto[];
+  optional: boolean;
+  selection: { kind: "remove" } | { kind: "spend"; playerId: string; eligibleCardIds: string[] };
   players: CardResourcePlayer[];
   onCardSelect: (cardId: string) => void;
   onCancel: () => void;
   isVisible: boolean;
 }
 
-function getPlayerTotalResourceOnCards(
-  player: CardResourcePlayer,
-  resourceType: ResourceType,
-  excludeCardId?: string,
-): number {
-  let total = 0;
-  for (const card of player.playedCards) {
-    if (card.id === excludeCardId) {
-      continue;
-    }
-    if (card.resourceStorage?.type === resourceType && player.resourceStorage[card.id] > 0) {
-      total += player.resourceStorage[card.id];
-    }
-  }
-  return total;
-}
-
-function getPlayerCardsWithResource(
-  player: CardResourcePlayer,
-  resourceType: ResourceType,
-  excludeCardId?: string,
-): { card: CardDto; count: number }[] {
-  const result: { card: CardDto; count: number }[] = [];
-  for (const card of player.playedCards) {
-    if (card.id === excludeCardId) {
-      continue;
-    }
-    if (card.resourceStorage?.type === resourceType && player.resourceStorage[card.id] > 0) {
-      result.push({ card, count: player.resourceStorage[card.id] });
-    }
-  }
-  return result;
-}
-
 const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> = ({
   resourceType,
   amount,
-  excludeCardId,
+  removalTargets,
+  optional,
+  selection,
   players,
   onCardSelect,
   onCancel,
@@ -91,6 +62,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
   useEffect(() => {
     if (!isVisible) {
       setSelectedPlayerId(null);
+      setHoveredCard(null);
     }
   }, [isVisible]);
 
@@ -102,8 +74,9 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (selectedPlayerId) {
+        if (selection.kind === "remove" && selectedPlayerId) {
           setSelectedPlayerId(null);
+          setHoveredCard(null);
         } else {
           onCancel();
         }
@@ -114,16 +87,101 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isVisible, selectedPlayerId, onCancel]);
+  }, [isVisible, selectedPlayerId, selection.kind, onCancel]);
 
-  const selectedPlayer = selectedPlayerId ? players.find((p) => p.id === selectedPlayerId) : null;
-  const cardsWithResource = selectedPlayer
-    ? getPlayerCardsWithResource(selectedPlayer, resourceType, excludeCardId)
-    : [];
-  const eligiblePlayers = players.filter(
-    (player) => getPlayerTotalResourceOnCards(player, resourceType, excludeCardId) > 0,
-  );
+  const getPlayerCardsWithResource = (player: CardResourcePlayer) =>
+    player.playedCards.flatMap((card) => {
+      if (selection.kind === "spend") {
+        if (player.id !== selection.playerId || !selection.eligibleCardIds.includes(card.id)) {
+          return [];
+        }
+        return [{ card, count: player.resourceStorage[card.id] ?? 0 }];
+      }
+      const target = removalTargets.find(
+        (t) =>
+          t.playerId === player.id &&
+          t.cardId === card.id &&
+          t.resourceType === resourceType &&
+          t.amount >= (optional ? 1 : amount),
+      );
+      return target ? [{ card, count: target.amount }] : [];
+    });
+  const getPlayerTotalResourceOnCards = (player: CardResourcePlayer) =>
+    getPlayerCardsWithResource(player).reduce((total, item) => total + item.count, 0);
+
+  const effectivePlayerId = selection.kind === "spend" ? selection.playerId : selectedPlayerId;
+  const eligiblePlayers = players.filter((player) => getPlayerCardsWithResource(player).length > 0);
+  const selectedPlayer = eligiblePlayers.find((player) => player.id === effectivePlayerId);
+  const cardsWithResource = selectedPlayer ? getPlayerCardsWithResource(selectedPlayer) : [];
   const hasNoTargets = eligiblePlayers.length === 0;
+
+  const removalTitle = (
+    <>
+      {selectedPlayer ? (
+        <>
+          <div className="flex items-center gap-2">
+            <GameButton
+              emphasis="quiet"
+              size="sm"
+              onClick={handleBackClick}
+              className="!py-0 !px-0 flex items-center gap-1"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              Back
+            </GameButton>
+            <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
+              {selectedPlayer.name}&apos;s Cards
+            </h3>
+          </div>
+          <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
+            <span>Select card to remove {amount}</span>
+            <GameIcon iconType={resourceType} size="small" />
+            <span>from</span>
+          </div>
+        </>
+      ) : hasNoTargets ? (
+        <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
+          No Valid Targets
+        </h3>
+      ) : (
+        <>
+          <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
+            Select Target
+          </h3>
+          <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
+            <span>Remove {amount}</span>
+            <GameIcon iconType={resourceType} size="small" />
+            <span>from any card</span>
+          </div>
+        </>
+      )}
+    </>
+  );
+
+  const spendingTitle = (
+    <>
+      <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
+        Select Card
+      </h3>
+      <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
+        <span>
+          Select a card to spend {amount} {getResourceName(resourceType, amount).toLowerCase()}
+        </span>
+        <GameIcon iconType={resourceType} size="small" />
+      </div>
+    </>
+  );
 
   return (
     <GameFlowPopover
@@ -133,57 +191,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
       className="min-w-[280px]"
       renderSiblings={<CardPreviewPanel card={hoveredCard} />}
     >
-      <GameFlowTitle>
-        {selectedPlayer ? (
-          <>
-            <div className="flex items-center gap-2">
-              <GameButton
-                emphasis="quiet"
-                size="sm"
-                onClick={handleBackClick}
-                className="!py-0 !px-0 flex items-center gap-1"
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-                Back
-              </GameButton>
-              <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
-                {selectedPlayer.name}&apos;s Cards
-              </h3>
-            </div>
-            <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
-              <span>Select card to remove {amount}</span>
-              <GameIcon iconType={resourceType} size="small" />
-              <span>from</span>
-            </div>
-          </>
-        ) : hasNoTargets ? (
-          <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
-            No Valid Targets
-          </h3>
-        ) : (
-          <>
-            <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
-              Select Target
-            </h3>
-            <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
-              <span>Remove {amount}</span>
-              <GameIcon iconType={resourceType} size="small" />
-              <span>from any card</span>
-            </div>
-          </>
-        )}
-      </GameFlowTitle>
+      <GameFlowTitle>{selection.kind === "spend" ? spendingTitle : removalTitle}</GameFlowTitle>
 
       <GameFlowBody>
         {selectedPlayer ? (
@@ -220,17 +228,13 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
               <GameIcon iconType={resourceType} size="large" />
             </div>
             <div className="text-white/70 text-xs mb-4 max-w-[280px]">
-              No cards have {resourceType} resources available. You can continue without targeting
-              any card.
+              No cards have removable {resourceType} resources available.
+              {optional ? " You may skip this removal." : " This action needs a valid source."}
             </div>
           </div>
         ) : (
           eligiblePlayers.map((player, index) => {
-            const totalResources = getPlayerTotalResourceOnCards(
-              player,
-              resourceType,
-              excludeCardId,
-            );
+            const totalResources = getPlayerTotalResourceOnCards(player);
             const delay = index * 0.05;
 
             return (
@@ -260,7 +264,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
       </GameFlowBody>
 
       <GameFlowFooter className="gap-3">
-        {hasNoTargets && !selectedPlayer ? (
+        {optional ? (
           <>
             <GameButton
               emphasis="primary"
@@ -269,7 +273,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
               clickSound={false}
               onClick={handleContinueAnyway}
             >
-              Continue Anyway
+              Skip
             </GameButton>
             <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
               Cancel
