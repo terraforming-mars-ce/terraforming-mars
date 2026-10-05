@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/award"
 	"terraforming-mars-backend/internal/game/player"
@@ -51,7 +50,7 @@ func (p *CorporationProcessor) ApplyStartingEffects(
 	// Process ONLY behaviors with auto-corporation-start trigger
 	for _, behavior := range card.Behaviors {
 		for _, trigger := range behavior.Triggers {
-			if trigger.Type == string(ResourceTriggerAutoCorporationStart) {
+			if trigger.Type == string(ResourceTriggerAutoCorporationStart) && trigger.Condition == nil {
 				log.Debug("Found auto-corporation-start behavior",
 					slog.Int("outputs", len(behavior.Outputs)))
 
@@ -106,47 +105,47 @@ func (p *CorporationProcessor) ApplyAutoEffects(
 	return nil
 }
 
-// SetupForcedFirstAction processes auto-corporation-first-action behaviors and sets forced actions
-func (p *CorporationProcessor) SetupForcedFirstAction(
-	ctx context.Context,
-	card *Card,
-	g *game.Game,
-	playerID string,
-) error {
-	log := p.logger.With(
-		slog.String("corporation_id", card.ID),
-		slog.String("corporation_name", card.Name),
-		slog.String("player_id", playerID),
-	)
-
-	log.Debug("Checking for forced first action")
-
-	// Process behaviors with auto-corporation-first-action trigger
-	for _, behavior := range card.Behaviors {
+// SetupForcedFirstAction queues corporation behaviors until the owner's first turn.
+func (p *CorporationProcessor) SetupForcedFirstAction(ctx context.Context, card *Card, g *game.Game, playerID string) error {
+	var indices []int
+	for i, behavior := range card.Behaviors {
 		for _, trigger := range behavior.Triggers {
 			if trigger.Type == string(ResourceTriggerAutoCorporationFirstAction) {
-				log.Debug("Found auto-corporation-first-action behavior",
-					slog.Int("outputs", len(behavior.Outputs)))
-
-				// Check if this behavior has card-peek/card-take outputs (e.g. Valley Trust)
-				if p.hasCardDrawOutputs(behavior) {
-					if err := p.applyCardDrawForcedAction(ctx, behavior, card, g, playerID, log); err != nil {
-						return fmt.Errorf("failed to apply card draw forced action: %w", err)
-					}
-					continue
-				}
-
-				// Create forced action based on individual outputs
-				for _, output := range behavior.Outputs {
-					if err := p.createForcedAction(ctx, output, card, g, playerID, log); err != nil {
-						return fmt.Errorf("failed to create forced action: %w", err)
-					}
-				}
+				indices = append(indices, i)
+				break
 			}
 		}
 	}
+	if len(indices) == 0 {
+		return nil
+	}
+	g.SetFirstActionExecutor(playerID, p.executeFirstAction)
+	if err := g.SetForcedFirstAction(ctx, playerID, &shared.ForcedFirstAction{
+		CorporationID: card.ID, BehaviorIndices: indices, State: "queued", Description: card.Name + " first action",
+	}); err != nil {
+		return err
+	}
+	return g.ExecuteFirstActionIfNeeded(ctx, playerID)
+}
 
-	return nil
+func (p *CorporationProcessor) executeFirstAction(ctx context.Context, g *game.Game, playerID string) error {
+	pending := g.GetForcedFirstAction(playerID)
+	card, err := p.cardRegistry.GetByID(pending.CorporationID)
+	if err != nil {
+		return err
+	}
+	pl, err := g.GetPlayer(playerID)
+	if err != nil {
+		return err
+	}
+	var outputs []shared.BehaviorCondition
+	for _, index := range pending.BehaviorIndices {
+		outputs = append(outputs, card.Behaviors[index].Outputs...)
+	}
+	applier := NewBehaviorApplier(pl, g, card.Name, p.logger).
+		WithSourceCardID(card.ID).WithCardRegistry(p.cardRegistry).
+		WithSourceType(shared.SourceTypeCorporationFirstAction).WithAwardRegistry(p.awardRegistry)
+	return applier.ApplyOutputs(ctx, outputs)
 }
 
 // GetAutoEffects returns all auto effects (without conditions) from a corporation card
@@ -221,350 +220,4 @@ func (p *CorporationProcessor) GetManualActions(card *Card) []shared.CardAction 
 	}
 
 	return actions
-}
-
-// hasCardDrawOutputs returns true if the behavior has card-peek or card-take outputs
-func (p *CorporationProcessor) hasCardDrawOutputs(behavior shared.CardBehavior) bool {
-	for _, output := range behavior.Outputs {
-		switch output.GetResourceType() {
-		case shared.ResourceCardPeek, shared.ResourceCardTake, shared.ResourceCardBuy:
-			return true
-		}
-	}
-	return false
-}
-
-// applyCardDrawForcedAction handles first-action behaviors with card-peek/card-take outputs.
-// These need to be processed as a batch via ApplyCardDrawOutputs.
-func (p *CorporationProcessor) applyCardDrawForcedAction(
-	ctx context.Context,
-	behavior shared.CardBehavior,
-	card *Card,
-	g *game.Game,
-	playerID string,
-	log *slog.Logger,
-) error {
-	pl, err := g.GetPlayer(playerID)
-	if err != nil {
-		return fmt.Errorf("failed to get player for card draw: %w", err)
-	}
-
-	applier := NewBehaviorApplier(pl, g, card.Name, log).
-		WithSourceCardID(card.ID).
-		WithCardRegistry(p.cardRegistry)
-
-	_, err = applier.ApplyCardDrawOutputs(ctx, behavior.Outputs)
-	if err != nil {
-		return fmt.Errorf("failed to apply card draw outputs: %w", err)
-	}
-
-	action := &shared.ForcedFirstAction{
-		ActionType:    "card-draw-selection",
-		CorporationID: card.ID,
-		Source:        "corporation-starting-action",
-		Completed:     false,
-		Description:   fmt.Sprintf("Draw and select cards (%s starting action)", card.Name),
-	}
-	if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
-		return fmt.Errorf("failed to set forced card draw action: %w", err)
-	}
-
-	log.Debug("Set forced card draw selection action",
-		slog.String("description", action.Description))
-
-	return nil
-}
-
-// createForcedAction creates a forced first action based on the output.
-// During starting_selection, only stores the ForcedFirstAction metadata without creating tile queues.
-// Tile queues are created when transitioning to action phase to avoid conflicts with prelude tile placements.
-func (p *CorporationProcessor) createForcedAction(
-	ctx context.Context,
-	outputBC shared.BehaviorCondition,
-	card *Card,
-	g *game.Game,
-	playerID string,
-	log *slog.Logger,
-) error {
-	inStartingSelection := g.CurrentPhase() == shared.GamePhaseStartingSelection
-
-	switch outputBC.GetResourceType() {
-	case shared.ResourceCityPlacement:
-		action := &shared.ForcedFirstAction{
-			ActionType:    "city-placement",
-			CorporationID: card.ID,
-			Source:        "corporation-starting-action",
-			Completed:     false,
-			Description:   fmt.Sprintf("Place a city tile (%s starting action)", card.Name),
-		}
-		if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
-			return fmt.Errorf("failed to set forced city placement action: %w", err)
-		}
-		log.Debug("Set forced city placement action",
-			slog.String("description", action.Description))
-
-		if !inStartingSelection {
-			queue := &shared.PendingTileSelectionQueue{
-				Items:  []string{"city"},
-				Source: "corporation-starting-action",
-			}
-			if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
-				return fmt.Errorf("failed to queue tile placement: %w", err)
-			}
-			log.Debug("Queued city tile for placement")
-		} else {
-			log.Debug("Deferred city tile queue to action phase")
-		}
-
-		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
-
-	case shared.ResourceGreeneryPlacement:
-		action := &shared.ForcedFirstAction{
-			ActionType:    "greenery-placement",
-			CorporationID: card.ID,
-			Source:        "corporation-starting-action",
-			Completed:     false,
-			Description:   fmt.Sprintf("Place a greenery tile (%s starting action)", card.Name),
-		}
-		if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
-			return fmt.Errorf("failed to set forced greenery placement action: %w", err)
-		}
-		log.Debug("Set forced greenery placement action",
-			slog.String("description", action.Description))
-
-		if !inStartingSelection {
-			queue := &shared.PendingTileSelectionQueue{
-				Items:  []string{"greenery"},
-				Source: "corporation-starting-action",
-			}
-			if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
-				return fmt.Errorf("failed to queue tile placement: %w", err)
-			}
-			log.Debug("Queued greenery tile for placement")
-		} else {
-			log.Debug("Deferred greenery tile queue to action phase")
-		}
-
-		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
-
-	case shared.ResourceOceanPlacement:
-		action := &shared.ForcedFirstAction{
-			ActionType:    "ocean-placement",
-			CorporationID: card.ID,
-			Source:        "corporation-starting-action",
-			Completed:     false,
-			Description:   fmt.Sprintf("Place an ocean tile (%s starting action)", card.Name),
-		}
-		if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
-			return fmt.Errorf("failed to set forced ocean placement action: %w", err)
-		}
-		log.Debug("Set forced ocean placement action",
-			slog.String("description", action.Description))
-
-		if !inStartingSelection {
-			queue := &shared.PendingTileSelectionQueue{
-				Items:  []string{"ocean"},
-				Source: "corporation-starting-action",
-			}
-			if err := g.SetPendingTileSelectionQueue(ctx, playerID, queue); err != nil {
-				return fmt.Errorf("failed to queue tile placement: %w", err)
-			}
-			log.Debug("Queued ocean tile for placement")
-		} else {
-			log.Debug("Deferred ocean tile queue to action phase")
-		}
-
-		p.subscribeForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
-
-	case shared.ResourceAwardFund:
-		forcedAction := &shared.ForcedFirstAction{
-			ActionType:    "award-fund",
-			CorporationID: card.ID,
-			Source:        "corporation-starting-action",
-			Completed:     false,
-			Description:   fmt.Sprintf("Fund an award for free (%s starting action)", card.Name),
-		}
-		if err := g.SetForcedFirstAction(ctx, playerID, forcedAction); err != nil {
-			return fmt.Errorf("failed to set forced award fund action: %w", err)
-		}
-		log.Debug("Set forced award fund action",
-			slog.String("description", forcedAction.Description))
-
-		var availableAwards []string
-		for _, def := range p.awardRegistry.GetAll() {
-			if !g.Awards().IsFunded(shared.AwardType(def.ID)) {
-				availableAwards = append(availableAwards, def.ID)
-			}
-		}
-
-		pl, err := g.GetPlayer(playerID)
-		if err != nil {
-			return fmt.Errorf("failed to get player for award fund: %w", err)
-		}
-		pl.Selection().SetPendingAwardFundSelection(&shared.PendingAwardFundSelection{
-			AvailableAwards: availableAwards,
-			Source:          "corporation-starting-action",
-		})
-		log.Debug("Set pending award fund selection",
-			slog.Int("available_awards", len(availableAwards)))
-
-	case shared.ResourceCardDraw:
-		pl, err := g.GetPlayer(playerID)
-		if err != nil {
-			return fmt.Errorf("failed to get player for card draw: %w", err)
-		}
-
-		applier := NewBehaviorApplier(pl, g, card.Name, log).
-			WithSourceCardID(card.ID).
-			WithCardRegistry(p.cardRegistry)
-
-		if err := applier.ApplyOutputs(ctx, []shared.BehaviorCondition{outputBC}); err != nil {
-			return fmt.Errorf("failed to apply card-draw output: %w", err)
-		}
-		log.Debug("Applied card-draw forced action",
-			slog.Int("amount", outputBC.GetAmount()))
-
-	case shared.ResourceColony:
-		action := &shared.ForcedFirstAction{
-			ActionType:    "colony-placement",
-			CorporationID: card.ID,
-			Source:        "corporation-starting-action",
-			Completed:     false,
-			Description:   fmt.Sprintf("Place a colony (%s starting action)", card.Name),
-		}
-		if err := g.SetForcedFirstAction(ctx, playerID, action); err != nil {
-			return fmt.Errorf("failed to set forced colony placement action: %w", err)
-		}
-		log.Debug("Set forced colony placement action",
-			slog.String("description", action.Description))
-
-		allowDuplicate := false
-		if cc, ok := outputBC.(*shared.ColonyCondition); ok {
-			allowDuplicate = cc.AllowDuplicatePlayerColony
-		}
-
-		if !inStartingSelection {
-			pl, err := g.GetPlayer(playerID)
-			if err != nil {
-				return fmt.Errorf("failed to get player for colony placement: %w", err)
-			}
-			colonyIDs := g.Colonies().GetPlaceableIDs(pl.ID(), allowDuplicate)
-			if len(colonyIDs) > 0 {
-				pl.Selection().SetPendingColonySelection(&shared.PendingColonySelection{
-					AvailableColonyIDs:         colonyIDs,
-					AllowDuplicatePlayerColony: allowDuplicate,
-					Source:                     "Build Colony",
-					SourceCardID:               card.ID,
-				})
-				log.Debug("Set pending colony selection for forced action",
-					slog.Int("available_colonies", len(colonyIDs)))
-			}
-		} else {
-			log.Debug("Deferred colony selection to action phase")
-		}
-
-		p.subscribeColonyForcedActionCompletion(ctx, g, playerID, "corporation-starting-action", log)
-
-	default:
-		log.Warn("Unhandled forced action type",
-			slog.String("type", string(outputBC.GetResourceType())))
-	}
-
-	return nil
-}
-
-// subscribeForcedActionCompletion subscribes to TilePlacedEvent to handle forced action completion
-// When the last tile in a forced action is placed, this consumes 1 player action and clears the forced action
-func (p *CorporationProcessor) subscribeForcedActionCompletion(
-	ctx context.Context,
-	g *game.Game,
-	playerID string,
-	source string,
-	log *slog.Logger,
-) {
-	eventBus := g.EventBus()
-	if eventBus == nil {
-		log.Warn("No event bus available, cannot subscribe to forced action completion")
-		return
-	}
-
-	var subID events.SubscriptionID
-	subID = events.Subscribe(eventBus, func(event events.TilePlacedEvent) {
-		// Only handle events for this player
-		if event.PlayerID != playerID {
-			return
-		}
-
-		log.Debug("Received TilePlacedEvent for forced action check",
-			slog.String("player_id", event.PlayerID),
-			slog.String("tile_type", event.TileType))
-
-		// Check if there's a forced first action for this player
-		forcedAction := g.GetForcedFirstAction(playerID)
-		if forcedAction == nil {
-			log.Debug("No forced first action, ignoring event")
-			return
-		}
-
-		// Check if the queue is now empty (last tile was placed)
-		queue := g.GetPendingTileSelectionQueue(playerID)
-		if queue != nil && len(queue.Items) > 0 {
-			log.Debug("Tile queue still has items, waiting for more tiles",
-				slog.Int("remaining_tiles", len(queue.Items)))
-			return
-		}
-
-		log.Debug("Forced first action completed (free action)",
-			slog.String("action_type", forcedAction.ActionType),
-			slog.String("corporation_id", forcedAction.CorporationID))
-
-		if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
-			log.Error("Failed to clear forced first action", slog.Any("error", err))
-		}
-		eventBus.Unsubscribe(subID)
-	})
-
-	log.Debug("Subscribed to TilePlacedEvent for forced action completion",
-		slog.String("player_id", playerID),
-		slog.String("source", source))
-}
-
-// subscribeColonyForcedActionCompletion subscribes to ColonyBuiltEvent to handle forced colony placement completion
-func (p *CorporationProcessor) subscribeColonyForcedActionCompletion(
-	ctx context.Context,
-	g *game.Game,
-	playerID string,
-	source string,
-	log *slog.Logger,
-) {
-	eventBus := g.EventBus()
-	if eventBus == nil {
-		log.Warn("No event bus available, cannot subscribe to forced colony action completion")
-		return
-	}
-
-	var subID events.SubscriptionID
-	subID = events.Subscribe(eventBus, func(event events.ColonyBuiltEvent) {
-		if event.PlayerID != playerID {
-			return
-		}
-
-		forcedAction := g.GetForcedFirstAction(playerID)
-		if forcedAction == nil || forcedAction.ActionType != "colony-placement" {
-			return
-		}
-
-		log.Debug("Forced colony placement completed",
-			slog.String("corporation_id", forcedAction.CorporationID),
-			slog.String("colony_id", event.ColonyID))
-
-		if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
-			log.Error("Failed to clear forced colony placement action", slog.Any("error", err))
-		}
-		eventBus.Unsubscribe(subID)
-	})
-
-	log.Debug("Subscribed to ColonyBuiltEvent for forced colony placement completion",
-		slog.String("player_id", playerID),
-		slog.String("source", source))
 }
