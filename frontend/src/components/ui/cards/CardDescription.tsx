@@ -1,15 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useReducedMotion } from "@/hooks/useReducedMotion.ts";
-import { FormattedDescription } from "../display/FormattedDescription.tsx";
+import type { CardDescriptionSectionDto } from "@/types/generated/api-types.ts";
+import { CardDescriptionSections } from "../display/CardDescriptionSections.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 
 interface CardDescriptionProps {
-  text: string;
+  sections: CardDescriptionSectionDto[];
   maxHeight?: number;
   autoPan: boolean;
 }
 
-export default function CardDescription({ text, maxHeight, autoPan }: CardDescriptionProps) {
+export default function CardDescription({ sections, maxHeight, autoPan }: CardDescriptionProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
@@ -121,7 +122,7 @@ export default function CardDescription({ text, maxHeight, autoPan }: CardDescri
         }}
       >
         <div ref={textRef}>
-          <FormattedDescription text={text} />
+          <CardDescriptionSections sections={sections} />
         </div>
       </div>
     </div>

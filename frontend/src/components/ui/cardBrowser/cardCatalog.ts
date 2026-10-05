@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import { apiService } from "@/services/apiService.ts";
 import type { CardDto } from "@/types/generated/api-types.ts";
+import { cardDescriptionToPlainText } from "@/utils/cardDescription.ts";
 
 export const CARD_FAMILIES = ["project", "prelude", "corporation"] as const;
 export type CardFamily = (typeof CARD_FAMILIES)[number];
+export type CardDisplaySize = "small" | "large";
 export type CardSort = "id" | "name-asc" | "name-desc" | "type-asc" | "type-desc";
 export interface CardBrowserView {
   query: string;
@@ -71,7 +73,12 @@ export function loadCardCatalog(): Promise<void> {
         entries: cards.map((card) => ({
           card,
           family: cardFamily(card),
-          search: [card.id, card.name, card.description, ...(card.tags ?? [])]
+          search: [
+            card.id,
+            card.name,
+            cardDescriptionToPlainText(card.description),
+            ...(card.tags ?? []),
+          ]
             .join("\n")
             .toLowerCase(),
         })),

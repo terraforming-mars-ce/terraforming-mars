@@ -2,7 +2,7 @@ import { cardImage } from "@/assets";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import GameIcon from "../display/GameIcon.tsx";
 import CardDecorBar from "../display/CardDecorBar.tsx";
-import BehaviorSection from "./BehaviorSection";
+import BehaviorSection, { hasBehaviorVisuals } from "./BehaviorSection";
 import RequirementsBox from "./RequirementsBox.tsx";
 import { getTagIconPath } from "@/utils/iconStore.ts";
 import {
@@ -12,7 +12,7 @@ import {
   TagWild,
 } from "@/types/generated/api-types.ts";
 import DecorBoxTooltip from "../display/DecorBoxTooltip.tsx";
-import { FormattedDescription } from "../display/FormattedDescription.tsx";
+import { CardDescriptionSections } from "../display/CardDescriptionSections.tsx";
 import { CARD_TYPE_COLORS } from "@/utils/cardTypeColors.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 
@@ -21,6 +21,7 @@ export interface GameCardProps {
   isSelected?: boolean;
   showCheckbox?: boolean;
   presentation?: "compact" | "inspection";
+  dimUnavailable?: boolean;
   moduleState?: "idle" | "armed" | "releasing";
   description?: ReactNode;
 }
@@ -69,6 +70,7 @@ export default function GameCard({
   isSelected = false,
   showCheckbox = false,
   presentation = "compact",
+  dimUnavailable = presentation === "compact",
   moduleState = showCheckbox && isSelected ? "armed" : "idle",
   description,
 }: GameCardProps) {
@@ -91,7 +93,7 @@ export default function GameCard({
         <RequirementsBox requirements={card.requirements} inFlow />
       </div>
       <div
-        className={`game-card-body group ${presentation === "compact" && hasState && !card.available ? "grayscale-[0.6] brightness-[0.65] saturate-[0.2]" : ""}`}
+        className={`game-card-body group ${dimUnavailable && hasState && !card.available ? "grayscale-[0.6] brightness-[0.65] saturate-[0.2]" : ""}`}
         style={
           {
             "--card-accent": accent,
@@ -156,21 +158,19 @@ export default function GameCard({
         <div className="game-card-labels">
           <CardDecorBar vpConditions={card.vpConditions} resourceStorage={card.resourceStorage} />
         </div>
-        <div className="game-card-behaviors">
-          <CardPanelCircuit />
-          <BehaviorSection
-            behaviors={card.behaviors}
-            computedValues={hasState ? card.computedValues : undefined}
-            presentation={presentation}
-          />
-        </div>
-        {presentation === "inspection" && card.description && (
+        {hasBehaviorVisuals(card.behaviors, presentation) && (
+          <div className="game-card-behaviors">
+            <CardPanelCircuit />
+            <BehaviorSection
+              behaviors={card.behaviors}
+              computedValues={hasState ? card.computedValues : undefined}
+              presentation={presentation}
+            />
+          </div>
+        )}
+        {presentation === "inspection" && card.description.length > 0 && (
           <div className="game-card-description">
-            {description ?? (
-              <div>
-                <FormattedDescription text={card.description} />
-              </div>
-            )}
+            {description ?? <CardDescriptionSections sections={card.description} />}
           </div>
         )}
         {showCheckbox && (
