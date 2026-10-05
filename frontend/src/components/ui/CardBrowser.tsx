@@ -11,7 +11,12 @@ import {
   loadCardCatalog,
   useCardCatalog,
 } from "./cardBrowser/cardCatalog.ts";
-import type { CardBrowserView, CardFamily, CardSort } from "./cardBrowser/cardCatalog.ts";
+import type {
+  CardBrowserView,
+  CardDisplaySize,
+  CardFamily,
+  CardSort,
+} from "./cardBrowser/cardCatalog.ts";
 
 interface CardBrowserProps {
   onBack: () => void;
@@ -47,6 +52,7 @@ export default function CardBrowser({
   const { entries, status, error } = useCardCatalog();
   const [filters, setFilters] = useState(emptyFilters);
   const [sort, setSort] = useState<CardSort>("id");
+  const [cardSize, setCardSize] = useState<CardDisplaySize>("small");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [visitedFamilies, setVisitedFamilies] = useState<ReadonlySet<CardFamily>>(() => new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -165,6 +171,8 @@ export default function CardBrowser({
         family={family}
         query={view.query}
         sort={sort}
+        cardSize={cardSize}
+        onCardSize={setCardSize}
         filters={filters}
         tags={tags}
         packs={packs}
@@ -227,6 +235,7 @@ export default function CardBrowser({
                   active={item === family}
                   cards={groups[item]}
                   family={item}
+                  size={cardSize}
                   selected={selected}
                   onSelect={toggleSelection}
                 />

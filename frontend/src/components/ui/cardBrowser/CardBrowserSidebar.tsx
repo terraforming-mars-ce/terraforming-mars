@@ -6,7 +6,7 @@ import BackButton from "../buttons/BackButton.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import CopyLinkButton from "../buttons/CopyLinkButton.tsx";
 import { CARD_FAMILIES, FAMILY_LABELS, labelFor } from "./cardCatalog.ts";
-import type { CardFamily, CardSort } from "./cardCatalog.ts";
+import type { CardDisplaySize, CardFamily, CardSort } from "./cardCatalog.ts";
 
 export type FilterKind = "tags" | "types" | "packs";
 export type BrowserFilters = Record<FilterKind, ReadonlySet<string>>;
@@ -15,6 +15,8 @@ interface SidebarProps {
   family: CardFamily;
   query: string;
   sort: CardSort;
+  cardSize: CardDisplaySize;
+  onCardSize: (size: CardDisplaySize) => void;
   filters: BrowserFilters;
   tags: string[];
   packs: string[];
@@ -160,6 +162,27 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
                 Exit shared selection
               </GameButton>
             </div>
+          )}
+          {props.family !== "corporation" && (
+            <fieldset className="m-0 space-y-2 border-0 p-0">
+              <legend className="font-orbitron text-xs text-white/70">Card size</legend>
+              <div className="flex">
+                {(["small", "large"] as const).map((size) => (
+                  <GameButton
+                    key={size}
+                    size="sm"
+                    shape="toolbar"
+                    emphasis="secondary"
+                    selected={props.cardSize === size}
+                    aria-pressed={props.cardSize === size}
+                    className="flex-1"
+                    onClick={() => props.onCardSize(size)}
+                  >
+                    {size === "small" ? "Small" : "Large"}
+                  </GameButton>
+                ))}
+              </div>
+            </fieldset>
           )}
           <label className="block space-y-2">
             <span className="font-orbitron text-xs text-white/70">Sort by</span>
