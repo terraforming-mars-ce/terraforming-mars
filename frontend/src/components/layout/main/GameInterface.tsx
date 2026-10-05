@@ -1,3 +1,7 @@
+import { usePaymentStore } from "@/stores/paymentStore";
+import ResourceRemovalOverlay from "../../ui/overlay/ResourceRemovalOverlay";
+import CardRevealOverlay from "@/components/ui/overlay/CardRevealOverlay.tsx";
+import EffectSelectionOverlay from "@/components/ui/overlay/EffectSelectionOverlay.tsx";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import GameLayout, { SolarSystemFade } from "./GameLayout.tsx";
@@ -17,7 +21,7 @@ import TabConflictOverlay from "../../ui/overlay/TabConflictOverlay.tsx";
 import StartingCardSelectionOverlay from "../../ui/overlay/StartingCardSelectionOverlay.tsx";
 import PendingCardSelectionOverlay from "../../ui/overlay/PendingCardSelectionOverlay.tsx";
 import CardDrawSelectionOverlay from "../../ui/overlay/CardDrawSelectionOverlay.tsx";
-import CardDiscardSelectionOverlay from "../../ui/overlay/CardDiscardSelectionOverlay.tsx";
+import BehaviorResolutionOverlay from "../../ui/overlay/BehaviorResolutionOverlay.tsx";
 import AwardFundSelectionPopover from "../../ui/popover/AwardFundSelectionPopover.tsx";
 import CardFanOverlay, { CardFanOverlayHandle } from "../../ui/overlay/CardFanOverlay.tsx";
 import ColonySelectionOverlay from "../../ui/overlay/ColonySelectionOverlay.tsx";
@@ -142,16 +146,27 @@ export default function GameInterface() {
   const showStartingSelection = useUIOverlayStore((s) => s.showStartingSelection);
   const isStartingSelectionHidden = useUIOverlayStore((s) => s.isStartingSelectionHidden);
   const showPendingCardSelection = useUIOverlayStore((s) => s.showPendingCardSelection);
+  const hasBlockingSelection = Boolean(
+    currentPlayer?.pendingCardDrawSelection ||
+    currentPlayer?.pendingCardSelection ||
+    currentPlayer?.pendingTileSelection ||
+    currentPlayer?.pendingColonySelection ||
+    currentPlayer?.pendingColonyResourceSelection ||
+    currentPlayer?.pendingAwardFundSelection ||
+    currentPlayer?.pendingFreeTradeSelection ||
+    currentPlayer?.pendingEffectSelection ||
+    currentPlayer?.pendingResourceRemovalSelection ||
+    currentPlayer?.pendingCardReveal ||
+    currentPlayer?.pendingBehaviorResolutions?.length,
+  );
   const showCardDrawSelection = useUIOverlayStore((s) => s.showCardDrawSelection);
-  const showCardDiscardSelection = useUIOverlayStore((s) => s.showCardDiscardSelection);
   const showCorporationOverlay = useUIOverlayStore((s) => s.showCorporationOverlay);
-  const showStealTargetSelection = useUIOverlayStore((s) => s.showStealTargetSelection);
+  const showResourceRemovalSelection = useUIOverlayStore((s) => s.showResourceRemovalSelection);
   const showColonyResourceSelection = useUIOverlayStore((s) => s.showColonyResourceSelection);
   const showColonyPlacementSelection = useUIOverlayStore((s) => s.showColonyPlacementSelection);
   const showFreeTradeSelection = useUIOverlayStore((s) => s.showFreeTradeSelection);
   const showCardBrowser = useUIOverlayStore((s) => s.showCardBrowser);
 
-  const showBehaviorChoiceSelection = useCardPlayFlowStore((s) => s.showBehaviorChoiceSelection);
   const cardPendingChoice = useCardPlayFlowStore((s) => s.cardPendingChoice);
   const pendingCardBehaviorIndex = useCardPlayFlowStore((s) => s.pendingCardBehaviorIndex);
   const showChoiceSelection = useCardPlayFlowStore((s) => s.showChoiceSelection);
@@ -161,13 +176,8 @@ export default function GameInterface() {
   const showActionReuseSelection = useCardPlayFlowStore((s) => s.showActionReuseSelection);
   const pendingFreeTradeWarning = useCardPlayFlowStore((s) => s.pendingFreeTradeWarning);
   const showFreeTradeWarning = useCardPlayFlowStore((s) => s.showFreeTradeWarning);
-  const pendingBehaviorChoiceStorage = useCardPlayFlowStore((s) => s.pendingBehaviorChoiceStorage);
-  const showBehaviorChoiceStorage = useCardPlayFlowStore((s) => s.showBehaviorChoiceStorage);
   const pendingCardStorage = useCardPlayFlowStore((s) => s.pendingCardStorage);
   const showCardStorageSelection = useCardPlayFlowStore((s) => s.showCardStorageSelection);
-  const pendingCardPayment = useCardPlayFlowStore((s) => s.pendingCardPayment);
-  const pendingGenericPayment = useCardPlayFlowStore((s) => s.pendingGenericPayment);
-  const showPaymentSelection = useCardPlayFlowStore((s) => s.showPaymentSelection);
   const pendingActionStorage = useCardPlayFlowStore((s) => s.pendingActionStorage);
   const showActionStorageSelection = useCardPlayFlowStore((s) => s.showActionStorageSelection);
   const pendingTargetPlayer = useCardPlayFlowStore((s) => s.pendingTargetPlayer);
@@ -383,14 +393,6 @@ export default function GameInterface() {
     }
   }, []);
 
-  const handleCardDiscardConfirm = useCallback(async (cardsToDiscard: string[]) => {
-    try {
-      await globalWebSocketManager.confirmCardDiscard(cardsToDiscard);
-    } catch (error) {
-      console.error("Failed to confirm card discard:", error);
-    }
-  }, []);
-
   // --- Leave/end game handlers ---
   const handleLeaveGame = useCallback(() => {
     useUIOverlayStore.getState().setShowEndGameConfirm(false);
@@ -502,7 +504,7 @@ export default function GameInterface() {
 
   // --- Backdrop ---
   const hasPendingActionSelection =
-    showStealTargetSelection ||
+    showResourceRemovalSelection ||
     showColonyResourceSelection ||
     showColonyPlacementSelection ||
     showFreeTradeSelection;
@@ -541,8 +543,7 @@ export default function GameInterface() {
     showStartingSelection ||
     showPendingCardSelection ||
     showCardDrawSelection ||
-    showCardDiscardSelection ||
-    showBehaviorChoiceSelection ||
+    (game?.currentPlayer?.pendingBehaviorResolutions?.length ?? 0) > 0 ||
     showColonyPlacementSelection ||
     showFreeTradeSelection ||
     isPreGamePhase ||
@@ -556,14 +557,17 @@ export default function GameInterface() {
     },
     [],
   );
+  const playSession = useCardPlayFlowStore((s) => s.playSession);
+  const playError = useCardPlayFlowStore((s) => s.playError);
+  const showPaymentSelection = usePaymentStore((s) => !!s.pending);
   const inspectionBlocked =
+    !!playSession ||
     hideCardFanForModals ||
     hasPendingActionSelection ||
     (showProductionPhaseModal && !isProductionModalHidden) ||
     showChoiceSelection ||
     showActionChoiceSelection ||
     showActionReuseSelection ||
-    showBehaviorChoiceStorage ||
     showCardStorageSelection ||
     showPaymentSelection ||
     showActionStorageSelection ||
@@ -582,6 +586,15 @@ export default function GameInterface() {
   const inspectionHand = replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? [];
   useEffect(() => {
     clearInspection();
+    const clearPlay = () => {
+      const pending = usePaymentStore.getState().pending;
+      if (pending?.intent.action === "play-card") {
+        pending.reject(new Error("Payment cancelled"));
+      }
+      useCardPlayFlowStore.getState().clearPlayPresentation();
+    };
+    clearPlay();
+    return clearPlay;
   }, [
     game?.id,
     currentPlayer?.id,
@@ -1045,26 +1058,47 @@ export default function GameInterface() {
           <PendingCardSelectionOverlay
             isOpen={showPendingCardSelection}
             selection={game.currentPlayer.pendingCardSelection}
-            playerCredits={currentPlayer?.resources?.credits || 0}
+            playerCredits={
+              currentPlayer?.actionCosts
+                ?.find((a) => a.actionType === "card-buying")
+                ?.costs.find((c) => c.resource === "credit")?.paymentCapacity ?? 0
+            }
             onSelectCards={handlePendingCardSelection}
           />
         )}
 
+        {game?.currentPlayer?.cardReceipts?.[0] && !hasBlockingSelection && (
+          <CardDrawSelectionOverlay
+            mode="received"
+            isOpen={showCardDrawSelection}
+            receipt={game.currentPlayer.cardReceipts[0]}
+            onClose={() => {
+              void globalWebSocketManager.acknowledgeCardReceipt(
+                game.currentPlayer.cardReceipts[0].id,
+              );
+            }}
+          />
+        )}
         {game?.currentPlayer?.pendingCardDrawSelection && (
           <CardDrawSelectionOverlay
+            mode="selection"
             isOpen={showCardDrawSelection}
             selection={game.currentPlayer.pendingCardDrawSelection}
-            playerCredits={currentPlayer?.resources?.credits || 0}
+            playerCredits={
+              currentPlayer?.actionCosts
+                ?.find((a) => a.actionType === "card-buying")
+                ?.costs.find((c) => c.resource === "credit")?.paymentCapacity ?? 0
+            }
             onConfirm={handleCardDrawConfirm}
           />
         )}
 
-        {game?.currentPlayer?.pendingCardDiscardSelection && currentPlayer && (
-          <CardDiscardSelectionOverlay
-            isOpen={showCardDiscardSelection}
-            selection={game.currentPlayer.pendingCardDiscardSelection}
+        {currentPlayer && (game?.currentPlayer?.pendingBehaviorResolutions?.length ?? 0) > 0 && (
+          <BehaviorResolutionOverlay
+            resolutions={game!.currentPlayer!.pendingBehaviorResolutions}
             handCards={currentPlayer.cards || []}
-            onConfirm={handleCardDiscardConfirm}
+            playedCards={currentPlayer.playedCards || []}
+            corporation={currentPlayer.corporation ?? undefined}
           />
         )}
 
@@ -1076,15 +1110,6 @@ export default function GameInterface() {
                 <CardFanOverlay
                   ref={cardFanRef}
                   cards={replayViewAsPlayer?.cards ?? currentPlayer?.cards ?? []}
-                  pendingPlayCardId={
-                    cardPendingChoice?.id ??
-                    pendingCardStorage?.cardId ??
-                    pendingCardPayment?.card.id ??
-                    pendingTargetPlayer?.cardId ??
-                    (pendingVariableAmount?.type === "play-card"
-                      ? pendingVariableAmount.cardId
-                      : null)
-                  }
                   hideWhenModalOpen={hideCardFanForModals}
                   onInspectCard={inspectCard}
                   inspectionStore={inspectionStore}
@@ -1174,38 +1199,6 @@ export default function GameInterface() {
           />
         )}
 
-        {game?.currentPlayer?.pendingBehaviorChoiceSelection && (
-          <ChoiceSelectionPopover
-            cardId={game.currentPlayer.pendingBehaviorChoiceSelection.sourceCardId}
-            cardName={`Triggered: ${game.currentPlayer.pendingBehaviorChoiceSelection.source}`}
-            behaviors={[
-              {
-                choices: game.currentPlayer.pendingBehaviorChoiceSelection.choices,
-              },
-            ]}
-            behaviorIndex={0}
-            onChoiceSelect={flow.handleBehaviorChoiceSelect}
-            onCancel={() => {}}
-            isVisible={showBehaviorChoiceSelection}
-            playerResources={currentPlayer?.resources}
-            resourceStorage={currentPlayer?.resourceStorage}
-          />
-        )}
-
-        {pendingBehaviorChoiceStorage && (
-          <CardStorageSelectionPopover
-            resourceType={pendingBehaviorChoiceStorage.resourceType}
-            amount={pendingBehaviorChoiceStorage.amount}
-            selectorTags={pendingBehaviorChoiceStorage.selectorTags}
-            playedCards={currentPlayer?.playedCards || []}
-            corporationCard={currentPlayer?.corporation}
-            resourceStorage={currentPlayer?.resourceStorage}
-            onCardSelect={flow.handleBehaviorChoiceStorageSelect}
-            onCancel={flow.handleBehaviorChoiceStorageCancel}
-            isVisible={showBehaviorChoiceStorage}
-          />
-        )}
-
         {pendingCardStorage && (
           <CardStorageSelectionPopover
             resourceType={pendingCardStorage.resourceType}
@@ -1229,29 +1222,25 @@ export default function GameInterface() {
           />
         )}
 
-        {pendingCardPayment && game && currentPlayer && (
-          <PaymentSelectionPopover
-            cardId={pendingCardPayment.card.id}
-            card={pendingCardPayment.card}
-            playerResources={currentPlayer.resources}
-            paymentConstants={game.paymentConstants}
-            playerPaymentSubstitutes={currentPlayer.paymentSubstitutes}
-            storagePaymentSubstitutes={currentPlayer.storagePaymentSubstitutes}
-            resourceStorage={currentPlayer.resourceStorage}
-            onConfirm={flow.handlePaymentConfirm}
-            onCancel={flow.handlePaymentCancel}
-            isVisible={showPaymentSelection}
-          />
-        )}
-
-        {pendingGenericPayment && currentPlayer && (
-          <PaymentSelectionPopover
-            playerResources={currentPlayer.resources}
-            genericPayment={pendingGenericPayment}
-            onConfirm={flow.handlePaymentConfirm}
-            onCancel={flow.handlePaymentCancel}
-            isVisible={showPaymentSelection}
-          />
+        <PaymentSelectionPopover />
+        {playError && (
+          <GameFlowPopover
+            isVisible
+            onClose={() => useCardPlayFlowStore.getState().dismissPlayError()}
+            className="text-white max-w-[420px]"
+          >
+            <GameFlowTitle>
+              <h3 className="font-orbitron text-base font-bold">Card not played</h3>
+            </GameFlowTitle>
+            <GameFlowBody>
+              <p className="p-3 text-sm">{playError}</p>
+            </GameFlowBody>
+            <GameFlowFooter>
+              <GameButton onClick={() => useCardPlayFlowStore.getState().dismissPlayError()}>
+                OK
+              </GameButton>
+            </GameFlowFooter>
+          </GameFlowPopover>
         )}
 
         {pendingActionStorage && (
@@ -1270,6 +1259,7 @@ export default function GameInterface() {
 
         {pendingTargetPlayer && game && (
           <TargetPlayerSelectionPopover
+            removalTargets={currentPlayer?.resourceRemovalTargets || []}
             resourceType={pendingTargetPlayer.resourceType}
             amount={pendingTargetPlayer.amount}
             isSteal={pendingTargetPlayer.isSteal}
@@ -1300,6 +1290,7 @@ export default function GameInterface() {
 
         {pendingActionTargetPlayer && game && (
           <TargetPlayerSelectionPopover
+            removalTargets={currentPlayer?.resourceRemovalTargets || []}
             resourceType={pendingActionTargetPlayer.resourceType}
             amount={pendingActionTargetPlayer.amount}
             isSteal={pendingActionTargetPlayer.isSteal}
@@ -1328,27 +1319,12 @@ export default function GameInterface() {
           />
         )}
 
-        {game?.currentPlayer?.pendingStealTargetSelection && game && (
-          <TargetPlayerSelectionPopover
-            resourceType={
-              game.currentPlayer.pendingStealTargetSelection.resourceType as ResourceType
-            }
-            amount={game.currentPlayer.pendingStealTargetSelection.amount}
-            isSteal={true}
-            players={(game.otherPlayers || [])
-              .filter((p) =>
-                game.currentPlayer!.pendingStealTargetSelection!.eligiblePlayerIds.includes(p.id),
-              )
-              .map((p) => ({
-                id: p.id,
-                name: p.name,
-                resources: p.resources,
-                production: p.production,
-              }))}
-            onPlayerSelect={flow.handleStealTargetSelect}
-            onCancel={flow.handleStealTargetSkip}
-            isVisible={showStealTargetSelection}
-            mandatory
+        {game?.currentPlayer?.pendingResourceRemovalSelection && (
+          <ResourceRemovalOverlay
+            key={game.currentPlayer.pendingResourceRemovalSelection.id}
+            selection={game.currentPlayer.pendingResourceRemovalSelection}
+            currentPlayerId={game.currentPlayer.id}
+            players={[game.currentPlayer, ...(game.otherPlayers ?? [])]}
           />
         )}
 
@@ -1373,23 +1349,48 @@ export default function GameInterface() {
           <ColonySelectionOverlay
             isOpen={showColonyPlacementSelection}
             pendingSelection={game.currentPlayer.pendingColonySelection}
-            colonies={game.colonies ?? []}
+            colonies={
+              game.currentPlayer.pendingColonySelection.addTile
+                ? (game.currentPlayer.pendingColonySelection.tileOptions ?? [])
+                : (game.colonies ?? [])
+            }
             allPlayers={colonyAllPlayers}
             onConfirm={(colonyId) => void globalWebSocketManager.confirmColonyPlacement(colonyId)}
           />
         )}
 
+        {game?.currentPlayer?.pendingCardReveal && (
+          <CardRevealOverlay
+            reveal={game.currentPlayer.pendingCardReveal}
+            onConfirm={() => globalWebSocketManager.confirmCardReveal()}
+          />
+        )}
+        {game?.currentPlayer?.pendingEffectSelection && (
+          <EffectSelectionOverlay
+            key={game.currentPlayer.pendingEffectSelection.sourceCardId}
+            selection={game.currentPlayer.pendingEffectSelection}
+            cards={[
+              ...game.currentPlayer.playedCards,
+              ...(game.currentPlayer.corporation ? [game.currentPlayer.corporation] : []),
+            ]}
+            colonies={game.colonies ?? []}
+            players={[game.currentPlayer, ...game.otherPlayers]}
+            onConfirm={(optionIndex) => globalWebSocketManager.confirmEffectSelection(optionIndex)}
+          />
+        )}
         {game?.currentPlayer?.pendingFreeTradeSelection && game && (
           <FreeTradeSelectionOverlay
             isOpen={showFreeTradeSelection}
             pendingSelection={game.currentPlayer.pendingFreeTradeSelection}
             colonies={game.colonies ?? []}
             viewingPlayerId={game.viewingPlayerId ?? ""}
-            tradeFleetAvailable={game.tradeFleetAvailable}
+            tradeFleets={game.tradeFleets ?? {}}
             allPlayers={colonyAllPlayers}
             playedCards={currentPlayer?.playedCards ?? []}
             corporation={currentPlayer?.corporation}
-            onConfirm={(colonyId) => void globalWebSocketManager.confirmFreeTrade(colonyId)}
+            onConfirm={(colonyId, trackSteps) =>
+              void globalWebSocketManager.confirmFreeTrade(colonyId, trackSteps)
+            }
           />
         )}
 
@@ -1438,14 +1439,30 @@ export default function GameInterface() {
           <CardResourceSelectionPopover
             resourceType={pendingCardResourceInput.resourceType}
             amount={pendingCardResourceInput.amount}
-            excludeCardId={pendingCardResourceInput.cardId}
+            selection={
+              pendingCardResourceInput.eligibleInputCardIds === undefined
+                ? { kind: "remove" }
+                : {
+                    kind: "spend",
+                    playerId: currentPlayer?.id ?? "",
+                    eligibleCardIds: pendingCardResourceInput.eligibleInputCardIds,
+                  }
+            }
+            removalTargets={currentPlayer?.resourceRemovalTargets ?? []}
+            optional={
+              pendingCardResourceInput.type === "play-card" &&
+              pendingCardResourceInput.eligibleInputCardIds === undefined
+            }
             players={[
               ...(currentPlayer
                 ? [
                     {
                       id: currentPlayer.id,
                       name: currentPlayer.name,
-                      playedCards: currentPlayer.playedCards,
+                      playedCards: [
+                        ...currentPlayer.playedCards,
+                        ...(currentPlayer.corporation ? [currentPlayer.corporation] : []),
+                      ],
                       resourceStorage: currentPlayer.resourceStorage,
                     },
                   ]
@@ -1453,7 +1470,7 @@ export default function GameInterface() {
               ...(game?.otherPlayers || []).map((p) => ({
                 id: p.id,
                 name: p.name,
-                playedCards: p.playedCards,
+                playedCards: [...p.playedCards, ...(p.corporation ? [p.corporation] : [])],
                 resourceStorage: p.resourceStorage,
               })),
             ]}
@@ -1465,8 +1482,7 @@ export default function GameInterface() {
 
         {pendingVariableAmount && (
           <AmountSelectionPopover
-            cardName={pendingVariableAmount.cardName}
-            resourceLabel={pendingVariableAmount.resourceLabel}
+            resourceType={pendingVariableAmount.resourceType}
             maxAmount={pendingVariableAmount.maxAmount}
             onAmountSelect={flow.handleAmountSelect}
             onCancel={flow.handleAmountCancel}
