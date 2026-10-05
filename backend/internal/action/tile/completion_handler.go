@@ -6,6 +6,7 @@ import (
 
 	baseaction "terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/game"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
@@ -14,7 +15,7 @@ const (
 	CallbackConvertPlantsToGreenery = "convert-plants-to-greenery"
 	CallbackStandardProjectGreenery = "standard-project-greenery"
 	CallbackStandardProjectAquifer  = "standard-project-aquifer"
-	CallbackAdjacentSteal           = "adjacent-steal"
+	CallbackAdjacentRemoval         = "adjacent-removal"
 )
 
 // TileCompletionHandlerFunc is the signature for tile completion callbacks
@@ -24,13 +25,15 @@ type TileCompletionHandlerFunc func(ctx context.Context, g *game.Game, playerID 
 type TileCompletionRegistry struct {
 	handlers  map[string]TileCompletionHandlerFunc
 	stateRepo game.GameStateRepository
+	registry  gamecards.CardRegistry
 }
 
 // NewTileCompletionRegistry creates a new registry with default handlers
-func NewTileCompletionRegistry(stateRepo game.GameStateRepository) *TileCompletionRegistry {
+func NewTileCompletionRegistry(stateRepo game.GameStateRepository, registry gamecards.CardRegistry) *TileCompletionRegistry {
 	r := &TileCompletionRegistry{
 		handlers:  make(map[string]TileCompletionHandlerFunc),
 		stateRepo: stateRepo,
+		registry:  registry,
 	}
 	r.registerDefaultHandlers()
 	return r
@@ -40,7 +43,7 @@ func (r *TileCompletionRegistry) registerDefaultHandlers() {
 	r.handlers[CallbackConvertPlantsToGreenery] = r.handleConvertPlantsToGreenery
 	r.handlers[CallbackStandardProjectGreenery] = r.handleStandardProjectGreenery
 	r.handlers[CallbackStandardProjectAquifer] = r.handleStandardProjectAquifer
-	r.handlers[CallbackAdjacentSteal] = r.handleAdjacentSteal
+	r.handlers[CallbackAdjacentRemoval] = r.handleAdjacentRemoval
 }
 
 // Handle invokes the appropriate handler for the callback type
@@ -103,50 +106,20 @@ func (r *TileCompletionRegistry) handleStandardProjectAquifer(ctx context.Contex
 	return err
 }
 
-func (r *TileCompletionRegistry) handleAdjacentSteal(_ context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *shared.TileCompletionCallback) error {
-	amount, _ := callback.Data["amount"].(int)
-	source, _ := callback.Data["source"].(string)
-	sourceCardID, _ := callback.Data["sourceCardID"].(string)
-
+func (r *TileCompletionRegistry) handleAdjacentRemoval(_ context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *shared.TileCompletionCallback) error {
+	output, ok := callback.Data["output"].(*shared.BasicResourceCondition)
+	if !ok {
+		return fmt.Errorf("missing resource removal output")
+	}
 	coords, err := parseHexPosition(result.Hex)
 	if err != nil {
-		return fmt.Errorf("failed to parse hex for adjacent steal: %w", err)
+		return err
 	}
-
-	neighbors := coords.GetNeighbors()
-	eligiblePlayerIDs := make(map[string]bool)
-
-	for _, neighbor := range neighbors {
-		neighborTile, tileErr := g.Board().GetTile(neighbor)
-		if tileErr != nil {
-			continue
-		}
-		if neighborTile.OwnerID != nil && *neighborTile.OwnerID != playerID {
-			eligiblePlayerIDs[*neighborTile.OwnerID] = true
-		}
-	}
-
-	if len(eligiblePlayerIDs) == 0 {
-		return nil
-	}
-
-	ids := make([]string, 0, len(eligiblePlayerIDs))
-	for id := range eligiblePlayerIDs {
-		ids = append(ids, id)
-	}
-
 	p, err := g.GetPlayer(playerID)
 	if err != nil {
-		return fmt.Errorf("player not found: %w", err)
+		return err
 	}
-
-	p.Selection().SetPendingStealTargetSelection(&shared.PendingStealTargetSelection{
-		EligiblePlayerIDs: ids,
-		ResourceType:      shared.ResourceCredit,
-		Amount:            amount,
-		Source:            source,
-		SourceCardID:      sourceCardID,
-	})
-
-	return nil
+	source, _ := callback.Data["source"].(string)
+	sourceCardID, _ := callback.Data["sourceCardID"].(string)
+	return gamecards.QueueResourceRemoval(g, p, output, coords, sourceCardID, source, r.registry)
 }

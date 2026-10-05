@@ -32,7 +32,7 @@ func TestPendingSelectionLock_TileSelection_BlocksCardPlay(t *testing.T) {
 	testutil.AssertTrue(t, !state.Available(), "Card should not be available during pending tile selection")
 }
 
-func TestPendingSelectionLock_StealTarget_BlocksCardPlay(t *testing.T) {
+func TestPendingSelectionLock_ResourceRemoval_BlocksCardPlay(t *testing.T) {
 	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
 	ctx := context.Background()
 
@@ -42,13 +42,13 @@ func TestPendingSelectionLock_StealTarget_BlocksCardPlay(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	testutil.SetPlayerCredits(ctx, p, 100)
 
-	p.Selection().SetPendingStealTargetSelection(&shared.PendingStealTargetSelection{
+	p.Selection().SetPendingResourceRemovalSelection(&shared.PendingResourceRemovalSelection{
 		Amount:            4,
 		EligiblePlayerIDs: []string{"other-player"},
 	})
 
 	state := action.CalculatePlayerCardState(card, p, testGame, cardRegistry)
-	testutil.AssertTrue(t, !state.Available(), "Card should not be available during pending steal target selection")
+	testutil.AssertTrue(t, !state.Available(), "Card should not be available during pending resource removal selection")
 }
 
 func TestPendingSelectionLock_ColonyResourceQueue_BlocksCardPlay(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"terraforming-mars-backend/internal/game/cards"
 )
 
-func TestNoStealTargetsInInputs(t *testing.T) {
+func TestNoResourceRemovalsInInputs(t *testing.T) {
 	allCards, err := cards.LoadCardsFromJSON("../../../assets/terraforming_mars_cards.json")
 	if err != nil {
 		t.Fatalf("Failed to load cards: %v", err)
