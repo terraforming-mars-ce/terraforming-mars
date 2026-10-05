@@ -48,10 +48,10 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
       <div className="absolute inset-0 backdrop-blur-sm" />
       <div className="absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]" />
 
-      <div className="relative z-[1] w-[480px] max-h-[80vh] flex flex-col game-panel game-panel-clipped game-window overflow-hidden">
+      <div className="relative z-[1] w-[640px] max-w-[calc(100vw-32px)] max-h-[80vh] flex flex-col game-panel game-panel-clipped game-window overflow-hidden">
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
           <h2 className="font-orbitron text-base font-bold text-white tracking-wider m-0">
-            Place Colony
+            {pendingSelection.addTile ? "Add colony tile" : "Place Colony"}
           </h2>
           <span className="text-xs text-white/40">{pendingSelection.source}</span>
         </div>
@@ -84,30 +84,34 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
                   }
                 }}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-white text-xs font-bold font-orbitron m-0">{colony.name}</h3>
-                  {reward.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-orbitron text-white/40 uppercase">
-                        Reward
-                      </span>
-                      <ColonyOutputDisplay outputs={reward} />
-                    </div>
-                  )}
-                </div>
+                <div className="w-full min-w-0">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <h3 className="text-white text-xs font-bold font-orbitron m-0">
+                      {colony.name}
+                    </h3>
+                    {!pendingSelection.addTile && reward.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] font-orbitron text-white/40 uppercase">
+                          Reward
+                        </span>
+                        <ColonyOutputDisplay outputs={reward} />
+                      </div>
+                    )}
+                  </div>
 
-                <ColonySteps
-                  steps={colony.steps}
-                  markerPosition={colony.markerPosition}
-                  playerColonies={colony.playerColonies}
-                  maxSlots={colony.colonies.length}
-                  getPlayerColor={getPlayerColor}
-                  getPlayerName={getPlayerName}
-                />
+                  <ColonySteps
+                    steps={colony.steps}
+                    markerPosition={colony.markerPosition}
+                    playerColonies={colony.playerColonies}
+                    maxSlots={colony.colonies.length}
+                    getPlayerColor={getPlayerColor}
+                    getPlayerName={getPlayerName}
+                  />
 
-                <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40">
-                  <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
-                  <ColonyOutputDisplay outputs={colony.colonyBonus} />
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40">
+                    <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
+                    <ColonyOutputDisplay outputs={colony.colonyBonus} />
+                  </div>
                 </div>
               </GameButton>
             );
