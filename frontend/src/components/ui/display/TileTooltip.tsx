@@ -6,6 +6,7 @@ import { Z_INDEX } from "@/constants/zIndex.ts";
 export interface TileTooltipData {
   tileType: string;
   displayName?: string;
+  placedName?: string;
   ownerName?: string;
   ownerColor?: string;
   reservedByName?: string;
@@ -59,7 +60,10 @@ const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
 
   if (!data) return null;
 
-  const label = data.displayName || TILE_TYPE_LABELS[data.tileType] || data.tileType;
+  const isCity = data.tileType === "city";
+  const label = isCity
+    ? "City"
+    : data.displayName || TILE_TYPE_LABELS[data.tileType] || data.tileType;
   const isEmptySpace = data.tileType === "empty";
   const spaceLabel = data.isOceanSpace ? "Ocean Space" : "Land Space";
   const bonusEntries = Object.entries(data.bonuses);
@@ -78,6 +82,12 @@ const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
         <div className="font-orbitron font-bold text-xs text-white mb-1">
           {isEmptySpace && !data.displayName ? spaceLabel : label}
         </div>
+
+        {isCity && data.placedName && (
+          <div className="font-orbitron text-[10px] text-white/60 mb-1 break-words">
+            {data.placedName}
+          </div>
+        )}
 
         {data.isVolcanic && isEmptySpace && (
           <div className="text-[10px] text-orange-400 mb-1">Volcanic</div>
