@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -96,13 +97,45 @@ func formatPendingActions(player *dto.PlayerDto) string {
 	if player.PendingCardDrawSelection != nil {
 		parts = append(parts, formatPendingCardDraw(player.PendingCardDrawSelection))
 	}
-	if player.PendingCardDiscardSelection != nil {
-		parts = append(parts, formatPendingCardDiscard(player.PendingCardDiscardSelection))
+	for i := range player.PendingBehaviorResolutions {
+		resolution := &player.PendingBehaviorResolutions[i]
+		if resolution.Kind == "card-discard" {
+			parts = append(parts, formatPendingCardDiscard(resolution))
+		} else {
+			parts = append(parts, formatPendingBehaviorChoice(resolution))
+		}
 	}
-	if player.PendingBehaviorChoiceSelection != nil {
-		parts = append(parts, formatPendingBehaviorChoice(player.PendingBehaviorChoiceSelection))
+	if reveal := player.PendingCardReveal; reveal != nil {
+		parts = append(parts, fmt.Sprintf("Public reveal from %s: %v. Rewards: %v. Acknowledge with action.confirm-card-reveal and empty payload.", reveal.Source, reveal.Results, reveal.Rewards))
 	}
-	if player.ForcedFirstAction != nil && !player.ForcedFirstAction.Completed {
+	if selection := player.PendingResourceRemovalSelection; selection != nil {
+		data, _ := json.Marshal(selection)
+		parts = append(parts, "Pending resource removal: "+string(data)+". Use action.card.confirm-resource-removal with selectionId, targetPlayerId and integer amount; skip with empty target and zero amount.")
+	}
+	if selection := player.PendingEffectSelection; selection != nil {
+		parts = append(parts, "Pending effect: "+selection.Source+". Confirm with action.confirm-effect-selection and optionIndex.")
+		for i, option := range selection.Options {
+			parts = append(parts, fmt.Sprintf("Option %d: card=%s target=%s colonies=%v outputs=%v", i, option.CardID, option.TargetPlayerID, option.ColonyIDs, option.Outputs))
+		}
+	}
+
+	for _, receipt := range player.CardReceipts {
+		parts = append(parts, fmt.Sprintf("Cards already received from %s: %v. Optionally dismiss with action.acknowledge-card-receipt and receiptId %s; this is not a game action.", receipt.Source, receipt.Cards, receipt.ID))
+	}
+	if pending := player.PendingColonySelection; pending != nil {
+		purpose := "Build colony"
+		if pending.AddTile {
+			purpose = "Add an unused colony tile"
+		}
+		parts = append(parts, fmt.Sprintf("%s: choose %v with action.confirm-colony-placement and colonyId.", purpose, pending.AvailableColonyIDs))
+	}
+	if pending := player.PendingAwardFundSelection; pending != nil {
+		parts = append(parts, fmt.Sprintf("Fund an award for free: choose %v with action.confirm-award-fund and awardType.", pending.AvailableAwards))
+	}
+	if pending := player.PendingColonyResourceSelection; pending != nil {
+		parts = append(parts, fmt.Sprintf("Place %d %s on an eligible owned card using action.confirm-colony-resource and cardId (empty to skip).", pending.Amount, pending.ResourceType))
+	}
+	if player.ForcedFirstAction != nil && player.ForcedFirstAction.State == "resolving" {
 		parts = append(parts, formatForcedAction(player.ForcedFirstAction))
 	}
 	if player.SelectCorporationPhase != nil || player.SelectStartingCardsPhase != nil || player.SelectPreludeCardsPhase != nil {
@@ -150,10 +183,15 @@ func formatPendingCardSelection(sel *dto.PendingCardSelectionDto) string {
 	}, "\n")
 }
 
+// formatCardDescription flattens a card description for a bullet line, indenting continuation lines
+func formatCardDescription(sections []dto.CardDescriptionSectionDto) string {
+	return strings.ReplaceAll(dto.CardDescriptionPlainText(sections), "\n", "\n    ")
+}
+
 func formatPendingCardDraw(sel *dto.PendingCardDrawSelectionDto) string {
 	var cardLines []string
 	for _, c := range sel.AvailableCards {
-		cardLines = append(cardLines, fmt.Sprintf("  - %s [%s]: %s", c.Name, c.ID, c.Description))
+		cardLines = append(cardLines, fmt.Sprintf("  - %s [%s]: %s", c.Name, c.ID, formatCardDescription(c.Description)))
 	}
 
 	buyCostStr := ""
@@ -163,21 +201,21 @@ func formatPendingCardDraw(sel *dto.PendingCardDrawSelectionDto) string {
 
 	return strings.Join([]string{
 		fmt.Sprintf("CARD DRAW SELECTION (source: %s)", sel.Source),
-		fmt.Sprintf("Free takes: %d, Max buy: %d%s", sel.FreeTakeCount, sel.MaxBuyCount, buyCostStr),
+		fmt.Sprintf("Free takes: %d to %d, Max buy: %d%s", sel.MinFreeTakeCount, sel.FreeTakeCount, sel.MaxBuyCount, buyCostStr),
 		strings.Join(cardLines, "\n"),
 		`Send a card-draw-confirmed command with cardsToTake and cardsToBuy.`,
 	}, "\n")
 }
 
-func formatPendingCardDiscard(sel *dto.PendingCardDiscardSelectionDto) string {
+func formatPendingCardDiscard(sel *dto.PendingBehaviorResolutionDto) string {
 	return strings.Join([]string{
 		fmt.Sprintf("CARD DISCARD REQUIRED (source: %s)", sel.Source),
 		fmt.Sprintf("Discard %d-%d cards from hand.", sel.MinCards, sel.MaxCards),
-		`Send a card-discard-confirmed command with cardsToDiscard.`,
+		fmt.Sprintf("Send card-discard-confirmed with resolutionId %q and cardsToDiscard.", sel.ID),
 	}, "\n")
 }
 
-func formatPendingBehaviorChoice(sel *dto.PendingBehaviorChoiceSelectionDto) string {
+func formatPendingBehaviorChoice(sel *dto.PendingBehaviorResolutionDto) string {
 	var choiceLines []string
 	for i, c := range sel.Choices {
 		desc := formatBehaviorBrief(c.Inputs, c.Outputs)
@@ -191,14 +229,14 @@ func formatPendingBehaviorChoice(sel *dto.PendingBehaviorChoiceSelectionDto) str
 	return strings.Join([]string{
 		fmt.Sprintf("BEHAVIOR CHOICE REQUIRED (source: %s)", sel.Source),
 		strings.Join(choiceLines, "\n"),
-		`Send a behavior-choice-confirmed command with choiceIndex.`,
+		fmt.Sprintf("Send behavior-choice-confirmed with resolutionId %q and choiceIndex. Triggering card: %s. Fixed triggering-card destinations cannot be overridden.", sel.ID, sel.TriggeringCardName),
 	}, "\n")
 }
 
 func formatForcedAction(fa *dto.ForcedFirstActionDto) string {
 	return strings.Join([]string{
 		fmt.Sprintf("FORCED FIRST ACTION: %s", fa.Description),
-		fmt.Sprintf("Action type: %s", fa.ActionType),
+		fmt.Sprintf("State: %s", fa.State),
 		fmt.Sprintf("Corporation: %s", fa.CorporationID),
 	}, "\n")
 }
@@ -209,7 +247,7 @@ func formatStartingSelection(player *dto.PlayerDto) string {
 	if player.SelectCorporationPhase != nil {
 		var corps []string
 		for _, c := range player.SelectCorporationPhase.AvailableCorporations {
-			corps = append(corps, fmt.Sprintf("  - %s [%s]: %s", c.Name, c.ID, c.Description))
+			corps = append(corps, fmt.Sprintf("  - %s [%s]: %s", c.Name, c.ID, formatCardDescription(c.Description)))
 		}
 		parts = append(parts, "Corporations:\n"+strings.Join(corps, "\n"))
 	}
@@ -217,7 +255,7 @@ func formatStartingSelection(player *dto.PlayerDto) string {
 	if player.SelectPreludeCardsPhase != nil {
 		var preludes []string
 		for _, c := range player.SelectPreludeCardsPhase.AvailablePreludes {
-			preludes = append(preludes, fmt.Sprintf("  - %s [%s]: %s", c.Name, c.ID, c.Description))
+			preludes = append(preludes, fmt.Sprintf("  - %s [%s]: %s", c.Name, c.ID, formatCardDescription(c.Description)))
 		}
 		parts = append(parts, fmt.Sprintf("Preludes (pick %d):\n%s",
 			player.SelectPreludeCardsPhase.MaxSelectable,
@@ -236,7 +274,7 @@ func formatStartingSelection(player *dto.PlayerDto) string {
 				tags = " " + strings.Join(tagStrs, ", ")
 			}
 			cards = append(cards, fmt.Sprintf("  - %s [%s] (%dM€) [%s]%s: %s",
-				c.Name, c.ID, c.Cost, string(c.Type), tags, c.Description))
+				c.Name, c.ID, c.Cost, string(c.Type), tags, formatCardDescription(c.Description)))
 		}
 		parts = append(parts, "Starting cards (pick any to buy at 3M€ each):\n"+strings.Join(cards, "\n"))
 	}
@@ -288,6 +326,10 @@ func formatPlayerStatus(player *dto.PlayerDto) string {
 		fmt.Sprintf("  Heat:     %d / %s", r.Heat, formatProd(p.Heat)),
 	}
 
+	lines = append(lines, "", "Legal resource removal targets (subject to the card's target restrictions):")
+	for _, target := range player.ResourceRemovalTargets {
+		lines = append(lines, fmt.Sprintf("  player=%s card=%s resource=%s amount=%d", target.PlayerID, target.CardID, target.ResourceType, target.Amount))
+	}
 	if len(player.PlayedCards) > 0 {
 		var names []string
 		for _, c := range player.PlayedCards {
@@ -311,7 +353,7 @@ func formatPlayerStatus(player *dto.PlayerDto) string {
 	if len(player.PaymentSubstitutes) > 0 {
 		var subs []string
 		for _, s := range player.PaymentSubstitutes {
-			subs = append(subs, fmt.Sprintf("%s (%d:1)", string(s.ResourceType), s.ConversionRate))
+			subs = append(subs, fmt.Sprintf("%s (%d:1)", string(s.Source.Resource), s.ConversionRate))
 		}
 		lines = append(lines, fmt.Sprintf("Payment substitutes: %s", strings.Join(subs, ", ")))
 	}
@@ -405,6 +447,12 @@ func formatCardActions(actions []dto.PlayerActionDto) string {
 			a.CardName, a.CardID, a.BehaviorIndex, avail, usedInfo, errInfo)
 		if desc != "" {
 			line += fmt.Sprintf("\n    %s", desc)
+		}
+
+		for _, option := range a.ReuseOptions {
+			if option.Available {
+				line += fmt.Sprintf("\n    Reuse target cardId=%s behaviorIndex=%d with reuseSourceCardId=%s", option.CardID, option.BehaviorIndex, a.CardID)
+			}
 		}
 
 		actionLines = append(actionLines, line)
