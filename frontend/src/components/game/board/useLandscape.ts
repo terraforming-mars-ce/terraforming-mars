@@ -31,6 +31,7 @@ export function useLandscape(input: LandscapeInput, signature: string) {
       const state = {
         id: data.id,
         seed: data.seed,
+        relief: data.relief,
         sources: data.sources,
         patches,
         plants: [...patches.values()].flatMap((p) => p.plants),

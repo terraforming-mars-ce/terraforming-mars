@@ -1,6 +1,7 @@
 precision highp sampler2DArray;
 uniform sampler2DArray uTerrain;
 uniform sampler2DArray uMaterials;
+uniform sampler2DArray uDetailField;
 uniform float uLandscapeTime;
 uniform float uLayerCapacity;
 uniform float uPatchSize;
@@ -8,6 +9,7 @@ uniform float uFieldSize;
 uniform float uFieldSamples;
 uniform float uFieldBorder;
 uniform float uWaterLevel;
+uniform float uMarsReliefDepth;
 uniform vec2 uBasinReach;
 float landscapeProgress(float birth) {
   float t=clamp((uLandscapeTime-birth)/0.6,0.0,1.0);
@@ -29,6 +31,13 @@ vec4 landscapeMaterials(vec2 local,float layer,float birth) {
   vec4 next=texture(uMaterials,vec3(uv,layer+uLayerCapacity));
   if(t>=1.0) {return next;}
   return mix(texture(uMaterials,vec3(uv,layer)),next,t);
+}
+vec4 landscapeDetail(vec2 local,float layer,float birth) {
+  float t=landscapeProgress(birth);
+  vec2 uv=fieldUv(local);
+  vec4 next=texture(uDetailField,vec3(uv,layer+uLayerCapacity));
+  if(t>=1.0) {return next;}
+  return mix(texture(uDetailField,vec3(uv,layer)),next,t);
 }
 float landscapeBasinShore(vec2 local,float layer,float birth) {
   float t=landscapeProgress(birth);
