@@ -80,7 +80,10 @@ Cards are defined in `/backend/assets/terraforming_mars_cards.json`:
   "name": "Deep Well Heating",
   "type": "automated",
   "cost": 13,
-  "description": "Raise temperature 1 step. Increase energy production 1 step.",
+  "description": [
+    {"type": "requirement", "text": "3 science tags."},
+    {"type": "generic", "text": "Raise temperature 1 step. Increase energy production 1 step."}
+  ],
   "tags": ["power", "building"],
   "requirements": {
     "tags": {"science": {"min": 3}}
@@ -378,7 +381,9 @@ If valid: PlayCardAction applies effects
   "name": "Advanced Alloys",
   "type": "automated",
   "cost": 9,
-  "description": "Increase steel production 1 step. Increase titanium production 1 step.",
+  "description": [
+    {"type": "generic", "text": "Increase steel production 1 step. Increase titanium production 1 step."}
+  ],
   "tags": ["science"],
   "behaviors": [{
     "triggers": [{"type": "auto"}],
@@ -397,7 +402,9 @@ If valid: PlayCardAction applies effects
   "name": "Energy Converter",
   "type": "active",
   "cost": 5,
-  "description": "Action: Spend 4 energy to gain 2 steel and raise oxygen 1 step.",
+  "description": [
+    {"type": "action", "text": "Spend 4 energy to gain 2 steel and raise oxygen 1 step."}
+  ],
   "tags": ["power", "building"],
   "behaviors": [{
     "triggers": [{"type": "manual"}],
@@ -419,7 +426,9 @@ If valid: PlayCardAction applies effects
   "name": "Architect Guild",
   "type": "automated",
   "cost": 8,
-  "description": "Gain 2 MC whenever you place a city tile.",
+  "description": [
+    {"type": "effect", "text": "Gain 2 M€ whenever you place a city tile."}
+  ],
   "tags": ["building"],
   "behaviors": [{
     "triggers": [{

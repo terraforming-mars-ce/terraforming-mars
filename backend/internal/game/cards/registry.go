@@ -115,7 +115,7 @@ func (a *VPCardLookupAdapter) LookupVPCard(cardID string) (*game.VPCardInfo, err
 		CardID:       card.ID,
 		CardName:     card.Name,
 		CardType:     string(card.Type),
-		Description:  card.Description,
+		Description:  card.Description.PlainText(),
 		VPConditions: vpConditions,
 		Tags:         tags,
 	}, nil

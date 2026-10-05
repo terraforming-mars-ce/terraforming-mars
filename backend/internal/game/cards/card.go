@@ -22,7 +22,7 @@ type Card struct {
 	Name            string                  `json:"name"`
 	Type            CardType                `json:"type"`
 	Cost            int                     `json:"cost"`
-	Description     string                  `json:"description"`
+	Description     CardDescription         `json:"description"`
 	Pack            string                  `json:"pack"`
 	Tags            []shared.CardTag        `json:"tags"`
 	Requirements    *CardRequirements       `json:"requirements,omitempty"`
@@ -107,7 +107,7 @@ func (c Card) DeepCopy() Card {
 		Name:               c.Name,
 		Type:               c.Type,
 		Cost:               c.Cost,
-		Description:        c.Description,
+		Description:        c.Description.DeepCopy(),
 		Pack:               c.Pack,
 		Tags:               tags,
 		Requirements:       requirements,

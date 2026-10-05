@@ -26,7 +26,7 @@ Each card has the following fields:
 | `name` | string | Card name |
 | `type` | string | One of: `automated`, `active`, `event`, `corporation`, `prelude` |
 | `cost` | number | Megacredit cost to play |
-| `description` | string | Card effect description |
+| `description` | array | Ordered `{type, text}` sections; `type` is `generic`, `effect`, `action`, or `requirement`. Labels are generated, so `text` has no prefix |
 | `pack` | string | Expansion pack the card belongs to |
 | `tags` | array | Card tags (optional) |
 | `requirements` | array | Play requirements (optional) |
