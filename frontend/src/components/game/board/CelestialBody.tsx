@@ -61,6 +61,7 @@ function MoonSphere({
       <PlanetAtmosphere radius={moon.radius} profile={moon.atmosphere} />
       {moon.tileLocation && (
         <CelestialTileGrid
+          highlightRoot={moonGroupRef}
           gameState={gameState}
           onHexClick={onHexClick}
           tileOpacity={tileOpacity}
@@ -196,6 +197,7 @@ export default function CelestialBody({ config, gameState, onHexClick }: Celesti
 
       {isActive && hasTiles && (
         <CelestialTileGrid
+          highlightRoot={groupRef}
           gameState={gameState}
           onHexClick={onHexClick}
           tileOpacity={tileOpacity}
