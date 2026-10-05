@@ -185,9 +185,10 @@ func toLogDisplayDataDto(data *game.LogDisplayData) *LogDisplayDataDto {
 	}
 
 	return &LogDisplayDataDto{
-		Behaviors:    mapSlice(data.Behaviors, toCardBehaviorDto),
-		Tags:         mapSlice(data.Tags, func(t shared.CardTag) CardTag { return CardTag(t) }),
-		VPConditions: mapSlice(data.VPConditions, toVPConditionForLogDto),
+		RevealedCards: mapSlice(data.RevealedCards, toRevealedCardDto),
+		Behaviors:     mapSlice(data.Behaviors, toCardBehaviorDto),
+		Tags:          mapSlice(data.Tags, func(t shared.CardTag) CardTag { return CardTag(t) }),
+		VPConditions:  mapSlice(data.VPConditions, toVPConditionForLogDto),
 	}
 }
 
