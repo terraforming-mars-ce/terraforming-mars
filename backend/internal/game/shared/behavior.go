@@ -27,6 +27,7 @@ type ChoicePolicy struct {
 
 // CardBehavior represents card behaviors (immediate and repeatable)
 type CardBehavior struct {
+	ProductionBox                 string                         `json:"productionBox,omitempty"`
 	Description                   string                         `json:"description,omitempty" ts:"string | undefined"`
 	Triggers                      []Trigger                      `json:"triggers,omitempty"`
 	Inputs                        []BehaviorCondition            `json:"inputs,omitempty"`
@@ -43,6 +44,7 @@ func (cb CardBehavior) DeepCopy() CardBehavior {
 
 	result.Description = cb.Description
 	result.Group = cb.Group
+	result.ProductionBox = cb.ProductionBox
 
 	if cb.ChoicePolicy != nil {
 		cp := *cb.ChoicePolicy
@@ -271,6 +273,7 @@ func IsProductionResourceType(rt ResourceType) bool {
 // convert to []BehaviorCondition with pointer elements.
 func (cb *CardBehavior) UnmarshalJSON(data []byte) error {
 	type cardBehaviorJSON struct {
+		ProductionBox                 string                         `json:"productionBox,omitempty"`
 		Description                   string                         `json:"description,omitempty"`
 		Triggers                      []Trigger                      `json:"triggers,omitempty"`
 		Inputs                        []resourceConditionJSON        `json:"inputs,omitempty"`
@@ -289,6 +292,7 @@ func (cb *CardBehavior) UnmarshalJSON(data []byte) error {
 	cb.ChoicePolicy = raw.ChoicePolicy
 	cb.GenerationalEventRequirements = raw.GenerationalEventRequirements
 	cb.Group = raw.Group
+	cb.ProductionBox = raw.ProductionBox
 	cb.Inputs = resourceConditionsToInterface(raw.Inputs)
 	cb.Outputs = resourceConditionsToInterface(raw.Outputs)
 	cb.Choices = make([]Choice, len(raw.Choices))
