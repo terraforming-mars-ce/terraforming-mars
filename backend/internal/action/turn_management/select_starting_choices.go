@@ -44,7 +44,7 @@ func NewSelectStartingChoicesAction(
 
 // Execute validates and stores starting selections without applying effects.
 // Effects are deferred to init_apply_corp and init_apply_prelude phases.
-func (a *SelectStartingChoicesAction) Execute(ctx context.Context, gameID string, playerID string, corporationID string, preludeIDs []string, cardIDs []string) error {
+func (a *SelectStartingChoicesAction) Execute(ctx context.Context, gameID string, playerID string, corporationID string, preludeIDs []string, cardIDs []string, payment shared.Payment) error {
 	log := a.logger.With(
 		slog.String("game_id", gameID),
 		slog.String("player_id", playerID),
@@ -84,12 +84,22 @@ func (a *SelectStartingChoicesAction) Execute(ctx context.Context, gameID string
 		return err
 	}
 
+	quote, err := gamecards.QuoteStartingPayment(a.cardRegistry, corporationID, len(cardIDs), g.Settings().DemoGame)
+	if err != nil {
+		return err
+	}
+	paymentPlan, err := gamecards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
+	}
+
 	p.SetCorporationID(corporationID)
 
 	if err := g.SetDeferredStartingChoices(ctx, playerID, &shared.DeferredStartingChoices{
 		CorporationID: corporationID,
 		PreludeIDs:    preludeIDs,
 		CardIDs:       cardIDs,
+		Payment:       paymentPlan.Payment,
 	}); err != nil {
 		return fmt.Errorf("failed to store deferred starting choices: %w", err)
 	}
@@ -228,13 +238,6 @@ func (a *SelectStartingChoicesAction) validateStartingCards(g *game.Game, p *pla
 		}
 	}
 
-	costPerCard := getCardBuyCost(a.cardRegistry, corporationID)
-	cost := len(cardIDs) * costPerCard
-	startingCredits := getCorpStartingCredits(a.cardRegistry, corporationID)
-	if startingCredits < cost {
-		return fmt.Errorf("insufficient credits: need %d, corp provides %d", cost, startingCredits)
-	}
-
 	return nil
 }
 
@@ -251,29 +254,6 @@ func getCardBuyCost(cardRegistry gamecards.CardRegistry, corporationID string) i
 		effectiveCost = 0
 	}
 	return effectiveCost
-}
-
-// getCorpStartingCredits calculates the starting credits a corporation provides
-// by examining its auto-corporation-start behaviors
-func getCorpStartingCredits(cardRegistry gamecards.CardRegistry, corporationID string) int {
-	corpCard, err := cardRegistry.GetByID(corporationID)
-	if err != nil {
-		return 0
-	}
-
-	credits := 0
-	for _, behavior := range corpCard.Behaviors {
-		for _, trigger := range behavior.Triggers {
-			if trigger.Type == string(gamecards.ResourceTriggerAutoCorporationStart) {
-				for _, output := range behavior.Outputs {
-					if output.GetResourceType() == shared.ResourceCredit {
-						credits += output.GetAmount()
-					}
-				}
-			}
-		}
-	}
-	return credits
 }
 
 // checkAndAdvanceToInitApplyCorp checks if all players have stored their choices
@@ -336,6 +316,7 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 	}
 
 	if corpCard.ResourceStorage != nil {
+		g.Colonies().ActivateResource(string(corpCard.ResourceStorage.Type))
 		p.Resources().AddToStorage(choices.CorporationID, corpCard.ResourceStorage.Starting)
 	}
 
@@ -408,11 +389,15 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 	if !g.Settings().DemoGame {
 		costPerCard := getCardBuyCost(cardRegistry, choices.CorporationID)
 		cost := len(choices.CardIDs) * costPerCard
-		if cost > 0 {
-			p.Resources().Add(map[shared.ResourceType]int{
-				shared.ResourceCredit: -cost,
-			})
+		quote, err := gamecards.QuotePayment(p, g, cardRegistry, gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: cost}, Action: shared.ActionCardBuying})
+		if err != nil {
+			return err
 		}
+		plan, err := gamecards.ValidatePayment(quote, choices.Payment)
+		if err != nil {
+			return err
+		}
+		gamecards.ApplyPayment(p, plan)
 	}
 	if len(choices.CardIDs) > 0 {
 		for _, cardID := range choices.CardIDs {
@@ -490,6 +475,9 @@ func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, prelu
 		tags[i] = string(tag)
 	}
 	p.PlayedCards().AddCard(card.ID, card.Name, string(card.Type), tags)
+	if card.ResourceStorage != nil {
+		g.Colonies().ActivateResource(string(card.ResourceStorage.Type))
+	}
 
 	for behaviorIndex, behavior := range card.Behaviors {
 		if !gamecards.HasAutoTrigger(behavior) {
@@ -552,6 +540,8 @@ func ApplyPreludeCard(ctx context.Context, g *game.Game, p *player.Player, prelu
 			Behavior:      behavior,
 		})
 	}
+
+	baseaction.ActivateSelfTagTriggers(g, p, card, cardRegistry, log)
 
 	if stateRepo != nil {
 		description := fmt.Sprintf("Played prelude %s", card.Name)

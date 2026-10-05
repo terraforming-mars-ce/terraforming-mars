@@ -107,7 +107,7 @@ func TestSelectStartingChoices_HappyPath_WithPreludes(t *testing.T) {
 	cardsPhase1 := testGame.GetSelectStartingCardsPhase(playerID1)
 	corpID1 := corpPhase1.AvailableCorporations[0]
 
-	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{"P01", "P03"}, cardsPhase1.AvailableCards[:2])
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{"P01", "P03"}, cardsPhase1.AvailableCards[:2], shared.NativePayment(shared.ResourceCredit, 6))
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 1")
 
 	// Player 1 phases should be cleared
@@ -134,7 +134,7 @@ func TestSelectStartingChoices_HappyPath_WithPreludes(t *testing.T) {
 	// Player 2 completes selection
 	corpPhase2 := testGame.GetSelectCorporationPhase(playerID2)
 	corpID2 := corpPhase2.AvailableCorporations[0]
-	err = action.Execute(ctx, testGame.ID(), playerID2, corpID2, []string{"P04", "P07"}, []string{})
+	err = action.Execute(ctx, testGame.ID(), playerID2, corpID2, []string{"P04", "P07"}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 2")
 
 	// Game should advance to init_apply_corp (not action phase)
@@ -152,13 +152,13 @@ func TestSelectStartingChoices_HappyPath_NoPreludes(t *testing.T) {
 	corpPhase1 := testGame.GetSelectCorporationPhase(playerID1)
 	corpID1 := corpPhase1.AvailableCorporations[0]
 
-	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{}, []string{})
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 1")
 
 	// Player 2 selects
 	corpPhase2 := testGame.GetSelectCorporationPhase(playerID2)
 	corpID2 := corpPhase2.AvailableCorporations[0]
-	err = action.Execute(ctx, testGame.ID(), playerID2, corpID2, []string{}, []string{})
+	err = action.Execute(ctx, testGame.ID(), playerID2, corpID2, []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 2")
 
 	// Should go to init_apply_corp (not directly to action phase)
@@ -179,7 +179,7 @@ func TestSelectStartingChoices_DeferredStorage(t *testing.T) {
 	corpPhase1 := testGame.GetSelectCorporationPhase(playerID1)
 	corpID1 := corpPhase1.AvailableCorporations[0]
 
-	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{"P01", "P03"}, []string{})
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID1, []string{"P01", "P03"}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "Failed to select starting choices")
 
 	// Preludes should NOT be in played cards (deferred)
@@ -217,11 +217,11 @@ func TestSelectStartingChoices_Validation_WrongPreludeCount(t *testing.T) {
 	corpID := corpPhase.AvailableCorporations[0]
 
 	// Selecting only 1 prelude should fail
-	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01"}, []string{})
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01"}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertError(t, err, "Should fail with wrong number of preludes")
 
 	// Selecting 3 preludes should fail
-	err = action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01", "P03", "P04"}, []string{})
+	err = action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01", "P03", "P04"}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertError(t, err, "Should fail with too many preludes")
 }
 
@@ -238,7 +238,7 @@ func TestSelectStartingChoices_Validation_InvalidPreludeID(t *testing.T) {
 	corpPhase := testGame.GetSelectCorporationPhase(playerID1)
 	corpID := corpPhase.AvailableCorporations[0]
 
-	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01", "invalid-prelude"}, []string{})
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01", "invalid-prelude"}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertError(t, err, "Should fail with invalid prelude ID")
 }
 
@@ -252,7 +252,7 @@ func TestSelectStartingChoices_Validation_WrongPhase(t *testing.T) {
 	corpPhase := testGame.GetSelectCorporationPhase(playerID1)
 	corpID := corpPhase.AvailableCorporations[0]
 
-	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{})
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertError(t, err, "Should fail when not in starting selection phase")
 }
 
@@ -261,7 +261,7 @@ func TestSelectStartingChoices_Validation_InvalidCorporation(t *testing.T) {
 	ctx := context.Background()
 
 	// Use a corporation ID not in the available list
-	err := action.Execute(ctx, testGame.ID(), playerID1, "invalid-corp", []string{}, []string{})
+	err := action.Execute(ctx, testGame.ID(), playerID1, "invalid-corp", []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertError(t, err, "Should fail with invalid corporation ID")
 
 	// Corporation phase should still be present
@@ -272,7 +272,7 @@ func TestSelectStartingChoices_Validation_NoPlayer(t *testing.T) {
 	testGame, action, _, _ := setupStartingSelectionGame(t, false)
 	ctx := context.Background()
 
-	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", "B08", []string{}, []string{})
+	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", "B08", []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertError(t, err, "Should fail with nonexistent player")
 }
 
@@ -284,10 +284,10 @@ func TestSelectStartingChoices_Validation_AlreadyCompleted(t *testing.T) {
 	corpID := corpPhase.AvailableCorporations[0]
 
 	// Complete selection
-	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{})
+	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "First selection should succeed")
 
 	// Try again — should fail (phase already cleared)
-	err = action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{})
+	err = action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertError(t, err, "Should fail when selection already completed")
 }

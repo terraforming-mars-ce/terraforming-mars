@@ -30,7 +30,7 @@ func TestConfirmProductionCards_RandomBuy_DisabledRejects(t *testing.T) {
 	p1.Resources().Set(shared.Resources{Credits: 10})
 
 	action := confirmAction.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
-	err = action.Execute(ctx, g.ID(), p1ID, []string{}, true)
+	err = action.Execute(ctx, g.ID(), p1ID, []string{}, true, shared.NativePayment(shared.ResourceCredit, 3))
 	testutil.AssertError(t, err, "randomBuy should reject when setting is off")
 }
 
@@ -56,7 +56,7 @@ func TestConfirmProductionCards_RandomBuy_BuysOneCardForThreeCredits(t *testing.
 	handBefore := len(p1.Hand().Cards())
 
 	action := confirmAction.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
-	err = action.Execute(ctx, g.ID(), p1ID, []string{}, true)
+	err = action.Execute(ctx, g.ID(), p1ID, []string{}, true, shared.NativePayment(shared.ResourceCredit, 3))
 	testutil.AssertNoError(t, err, "randomBuy should succeed when setting is on")
 
 	testutil.AssertEqual(t, handBefore+1, len(p1.Hand().Cards()), "hand should grow by exactly one card")
@@ -89,6 +89,6 @@ func TestConfirmProductionCards_RandomBuy_RejectsWithSelection(t *testing.T) {
 	p1.Resources().Set(shared.Resources{Credits: 10})
 
 	action := confirmAction.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
-	err = action.Execute(ctx, g.ID(), p1ID, []string{drawn[0]}, true)
+	err = action.Execute(ctx, g.ID(), p1ID, []string{drawn[0]}, true, shared.NativePayment(shared.ResourceCredit, 3))
 	testutil.AssertError(t, err, "randomBuy with non-empty selection should reject")
 }

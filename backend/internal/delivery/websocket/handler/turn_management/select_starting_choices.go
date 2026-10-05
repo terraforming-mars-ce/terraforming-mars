@@ -2,7 +2,9 @@ package turn_management
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+	"terraforming-mars-backend/internal/game/shared"
 
 	turnaction "terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -85,7 +87,20 @@ func (h *SelectStartingChoicesHandler) HandleMessage(ctx context.Context, connec
 		slog.Any("prelude_ids", preludeIDs),
 		slog.Any("card_ids", cardIDs))
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, corporationID, preludeIDs, cardIDs)
+	var paymentEnvelope struct {
+		Payment shared.Payment `json:"payment"`
+	}
+	paymentBytes, paymentErr := json.Marshal(message.Payload)
+	if paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, corporationID, preludeIDs, cardIDs, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute select starting choices action", slog.Any("error", err))
 		h.sendError(connection, err.Error())

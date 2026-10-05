@@ -44,7 +44,7 @@ func completeAllSelections(
 	if hasPrelude {
 		preludes1 = []string{"P01", "P03"}
 	}
-	err := selectAction.Execute(ctx, testGame.ID(), playerID1, corpID1, preludes1, []string{})
+	err := selectAction.Execute(ctx, testGame.ID(), playerID1, corpID1, preludes1, []string{}, shared.Payment{})
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 1")
 
 	corpPhase2 := testGame.GetSelectCorporationPhase(playerID2)
@@ -53,7 +53,7 @@ func completeAllSelections(
 	if hasPrelude {
 		preludes2 = []string{"P04", "P07"}
 	}
-	err = selectAction.Execute(ctx, testGame.ID(), playerID2, corpID2, preludes2, []string{})
+	err = selectAction.Execute(ctx, testGame.ID(), playerID2, corpID2, preludes2, []string{}, shared.Payment{})
 	testutil.AssertNoError(t, err, "Failed to select starting choices for player 2")
 
 	repo, _ := testutil.CreateTestGameWithPlayers(t, 0, testutil.NewMockBroadcaster())
@@ -278,10 +278,10 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	selectAction := turnAction.NewSelectStartingChoicesAction(repo, cardRegistry, nil, logger)
 
 	// Both players select their starting choices
-	err = selectAction.Execute(ctx, testGame.ID(), playerID1, "B01", []string{}, []string{})
+	err = selectAction.Execute(ctx, testGame.ID(), playerID1, "B01", []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "Player 1 selection")
 
-	err = selectAction.Execute(ctx, testGame.ID(), playerID2, "B08", []string{}, []string{})
+	err = selectAction.Execute(ctx, testGame.ID(), playerID2, "B08", []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "Player 2 selection")
 
 	testutil.AssertEqual(t, shared.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
@@ -306,32 +306,19 @@ func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	err = confirmAction.Execute(ctx, testGame.ID(), playerID2)
 	testutil.AssertNoError(t, err, "Apply player 2 corp (Tharsis Republic)")
 
-	// Player 2 should now have a pending tile selection for city placement
+	testutil.AssertTrue(t, testGame.GetPendingTileSelection(playerID2) == nil, "first action must wait until player's turn")
+	testutil.AssertEqual(t, "queued", testGame.GetForcedFirstAction(playerID2).State, "first action queued during setup")
+	err = confirmAction.Execute(ctx, testGame.ID(), playerID2)
+	testutil.AssertNoError(t, err, "queued first action must not block setup")
+	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "action phase starts")
+	testutil.AssertTrue(t, testGame.GetPendingTileSelection(playerID2) == nil, "second player waits for own turn")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID2, 2), "start second player's turn")
 	pendingTile := testGame.GetPendingTileSelection(playerID2)
-	testutil.AssertTrue(t, pendingTile != nil, "Player 2 should have pending tile selection after Tharsis Republic corp")
-	testutil.AssertEqual(t, "city", pendingTile.TileType, "Pending tile should be a city")
-	testutil.AssertTrue(t, len(pendingTile.AvailableHexes) > 0, "Should have available hexes for city placement")
-
-	// Confirm should be blocked while tile is pending
-	err = confirmAction.Execute(ctx, testGame.ID(), playerID2)
-	testutil.AssertError(t, err, "Should reject confirm while tile is pending")
-
-	// Place the city tile
-	selectTile := tileAction.NewSelectTileAction(
-		gameRepoWithGame(t, testGame),
-		cardRegistry,
-		stateRepo,
-		logger,
-	)
+	testutil.AssertTrue(t, pendingTile != nil, "first turn creates city selection")
+	selectTile := tileAction.NewSelectTileAction(gameRepoWithGame(t, testGame), cardRegistry, stateRepo, logger)
 	_, err = selectTile.Execute(ctx, testGame.ID(), playerID2, pendingTile.AvailableHexes[0])
-	testutil.AssertNoError(t, err, "Player 2 should be able to place city tile")
+	testutil.AssertNoError(t, err, "place first-action city")
+	testutil.AssertTrue(t, testGame.GetForcedFirstAction(playerID2) == nil, "first action completed")
+	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "one normal action remains")
 
-	// After placing, pending tile should be cleared
-	testutil.AssertTrue(t, testGame.GetPendingTileSelection(playerID2) == nil, "Pending tile should be cleared after placement")
-
-	// Confirm 4: advance past player 2 → action phase
-	err = confirmAction.Execute(ctx, testGame.ID(), playerID2)
-	testutil.AssertNoError(t, err, "Should advance to action phase after tile placed")
-
-	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "Should be in action phase")
 }

@@ -67,7 +67,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 		player.Effects().RemoveEffectsByCardID(oldCorpID)
 		player.Actions().RemoveActionsByCardID(oldCorpID)
 		player.Resources().RemoveCardStorage(oldCorpID)
-		player.Resources().ClearPaymentSubstitutes()
+		player.Resources().RemovePaymentSubstitutes(oldCorpID)
 		player.Resources().ClearValueModifiers()
 		player.VPGranters().RemoveByCardID(oldCorpID)
 
@@ -88,6 +88,7 @@ func (a *SetCorporationAction) Execute(ctx context.Context, gameID string, playe
 	player.SetCorporationID(corporationID)
 
 	if corpCard.ResourceStorage != nil {
+		g.Colonies().ActivateResource(string(corpCard.ResourceStorage.Type))
 		player.Resources().AddToStorage(corporationID, corpCard.ResourceStorage.Starting)
 	}
 
