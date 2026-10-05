@@ -1,5 +1,7 @@
 package core_test
 
+import "terraforming-mars-backend/internal/game/shared"
+
 import (
 	"context"
 	"testing"
@@ -31,9 +33,9 @@ func TestPlayCardIncrementsGlobalActionCounter(t *testing.T) {
 	p.Hand().AddCard(testutil.CardID("Power Plant"))
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 4}
+	payment := shared.NativePayment(shared.ResourceCredit, 4)
 
-	err := playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing card should succeed")
 
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().GlobalActionCounter(), "Global action counter should be 1 after playing a card")
@@ -60,7 +62,7 @@ func TestStandardProjectIncrementsGlobalActionCounter(t *testing.T) {
 	stdProjRegistry := createStdProjRegistry(t)
 	buildAction := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 
-	err := buildAction.Execute(context.Background(), testGame.ID(), playerID, "power-plant")
+	err := buildAction.Execute(context.Background(), testGame.ID(), playerID, "power-plant", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("power-plant")]))
 	testutil.AssertNoError(t, err, "Building power plant should succeed")
 
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().GlobalActionCounter(), "Global action counter should be 1 after standard project")
@@ -108,14 +110,14 @@ func TestMultipleActionsIncrementCounterSequentially(t *testing.T) {
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 
 	// Player 1 plays first card (counter: 0 -> 1)
-	payment := cardAction.PaymentRequest{Credits: 4}
-	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 4)
+	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing first card should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().GlobalActionCounter(), "Counter should be 1 after first action")
 
 	// Player 1 plays second card (counter: 1 -> 2), auto-advances to player 2
-	payment = cardAction.PaymentRequest{Credits: 30}
-	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Asteroid Mining"), payment, nil, nil, nil, nil)
+	payment = shared.NativePayment(shared.ResourceCredit, 30)
+	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Asteroid Mining"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing second card should succeed")
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().GlobalActionCounter(), "Counter should be 2 after second action")
 
@@ -125,7 +127,7 @@ func TestMultipleActionsIncrementCounterSequentially(t *testing.T) {
 
 	stdProjRegistry := createStdProjRegistry(t)
 	buildAction := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err = buildAction.Execute(context.Background(), testGame.ID(), player2ID, "power-plant")
+	err = buildAction.Execute(context.Background(), testGame.ID(), player2ID, "power-plant", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("power-plant")]))
 	testutil.AssertNoError(t, err, "Player 2 building power plant should succeed")
 	testutil.AssertEqual(t, 3, testGame.CurrentTurn().GlobalActionCounter(), "Counter should be 3 after player 2 action")
 }
@@ -149,11 +151,11 @@ func TestCounterIncrementsDuringUnlimitedActions(t *testing.T) {
 	stdProjRegistry := createStdProjRegistry(t)
 	buildAction := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 
-	err = buildAction.Execute(context.Background(), testGame.ID(), player1ID, "power-plant")
+	err = buildAction.Execute(context.Background(), testGame.ID(), player1ID, "power-plant", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("power-plant")]))
 	testutil.AssertNoError(t, err, "First action with unlimited should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().GlobalActionCounter(), "Counter should increment even with unlimited actions")
 
-	err = buildAction.Execute(context.Background(), testGame.ID(), player1ID, "power-plant")
+	err = buildAction.Execute(context.Background(), testGame.ID(), player1ID, "power-plant", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("power-plant")]))
 	testutil.AssertNoError(t, err, "Second action with unlimited should succeed")
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().GlobalActionCounter(), "Counter should be 2 after second unlimited action")
 }
