@@ -42,7 +42,7 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 	ctx context.Context,
 	gameID string,
 	playerID string,
-	storageSubstitutes map[string]int,
+	payment shared.Payment,
 ) error {
 	log := a.InitLogger(gameID, playerID)
 	log.Debug("Converting heat to temperature")
@@ -85,33 +85,15 @@ func (a *ConvertHeatToTemperatureAction) Execute(
 		slog.Int("discount", heatDiscount),
 		slog.Int("final_cost", requiredHeat))
 
-	storageValue, err := ValidateAndDeductStorageSubstitutes(player, storageSubstitutes, shared.ResourceHeat, log)
+	quote, err := gamecards.QuotePayment(player, g, a.cardRegistry, gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceHeat: requiredHeat}, Action: "standard-project", StandardProject: shared.StandardProjectConvertHeatToTemperature})
 	if err != nil {
-		return fmt.Errorf("storage substitute error: %w", err)
+		return err
 	}
-
-	remainingCost := requiredHeat - storageValue
-	if remainingCost < 0 {
-		remainingCost = 0
+	plan, err := gamecards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
 	}
-
-	resources := player.Resources().Get()
-	if resources.Heat < remainingCost {
-		log.Warn("Player cannot afford heat conversion",
-			slog.Int("required", requiredHeat),
-			slog.Int("storage_value", storageValue),
-			slog.Int("remaining_cost", remainingCost),
-			slog.Int("available_heat", resources.Heat))
-		return fmt.Errorf("insufficient heat: need %d (after %d from storage), have %d", remainingCost, storageValue, resources.Heat)
-	}
-
-	resources.Heat -= remainingCost
-	player.Resources().Set(resources)
-
-	log.Debug("Deducted heat",
-		slog.Int("heat_spent", remainingCost),
-		slog.Int("storage_value", storageValue),
-		slog.Int("remaining_heat", resources.Heat))
+	gamecards.ApplyPayment(player, plan)
 
 	var stepsRaised int
 	currentTemp := g.GlobalParameters().Temperature()

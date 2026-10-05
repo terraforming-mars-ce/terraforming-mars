@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"terraforming-mars-backend/internal/game/shared"
 
 	awardaction "terraforming-mars-backend/internal/action/award"
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -72,7 +73,20 @@ func (h *FundAwardHandler) HandleMessage(ctx context.Context, connection *core.C
 		return
 	}
 
-	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.AwardType)
+	var paymentEnvelope struct {
+		Payment shared.Payment `json:"payment"`
+	}
+	paymentBytes, paymentErr := json.Marshal(message.Payload)
+	if paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+
+	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.AwardType, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute fund award action", slog.Any("error", err))
 		h.sendError(connection, err.Error())

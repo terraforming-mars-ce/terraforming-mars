@@ -1,5 +1,7 @@
 package core_test
 
+import "terraforming-mars-backend/internal/game/shared"
+
 import (
 	"context"
 	"testing"
@@ -42,7 +44,7 @@ func TestConvertHeatAction_Success(t *testing.T) {
 	initialTemp := testGame.GlobalParameters().Temperature()
 
 	// Execute
-	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, nil)
+	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 
 	// Assert
 	testutil.AssertNoError(t, err, "Failed to convert heat")
@@ -74,7 +76,7 @@ func TestConvertHeatAction_InsufficientHeat(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	// Execute
-	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, nil)
+	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 
 	// Assert
 	testutil.AssertError(t, err, "Should fail with insufficient heat")
@@ -89,7 +91,7 @@ func TestConvertHeatAction_GameNotFound(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	// Execute
-	err := convertAction.Execute(context.Background(), "non-existent", "player-id", nil)
+	err := convertAction.Execute(context.Background(), "non-existent", "player-id", shared.NativePayment(shared.ResourceHeat, 8))
 
 	// Assert
 	testutil.AssertError(t, err, "Should fail when game not found")
@@ -103,7 +105,7 @@ func TestConvertHeatAction_PlayerNotFound(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	// Execute
-	err := convertAction.Execute(context.Background(), testGame.ID(), "non-existent-player", nil)
+	err := convertAction.Execute(context.Background(), testGame.ID(), "non-existent-player", shared.NativePayment(shared.ResourceHeat, 8))
 
 	// Assert
 	testutil.AssertError(t, err, "Should fail when player not found")
@@ -126,7 +128,7 @@ func TestConvertHeatAction_TemperatureMaxed(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	// Execute - should fail or not increase temperature
-	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, nil)
+	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 
 	if err == nil {
 		// If no error, verify temperature didn't exceed max

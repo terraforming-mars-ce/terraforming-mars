@@ -2,8 +2,10 @@ package standard_project
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"strings"
+	"terraforming-mars-backend/internal/game/shared"
 
 	stdprojaction "terraforming-mars-backend/internal/action/standard_project"
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -55,7 +57,20 @@ func (h *ExecuteHandler) HandleMessage(ctx context.Context, connection *core.Con
 	log = log.With(slog.String("project_id", projectID))
 	log.Debug("Processing standard project request")
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, projectID)
+	var paymentEnvelope struct {
+		Payment shared.Payment `json:"payment"`
+	}
+	paymentBytes, paymentErr := json.Marshal(message.Payload)
+	if paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, projectID, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute standard project", slog.Any("error", err))
 		h.sendError(connection, err.Error())

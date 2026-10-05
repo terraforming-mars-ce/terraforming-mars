@@ -42,6 +42,7 @@ func (a *ExecuteStandardProjectAction) Execute(
 	gameID string,
 	playerID string,
 	projectID string,
+	payment shared.Payment,
 ) error {
 	log := a.InitLogger(gameID, playerID).With(slog.String("project_id", projectID))
 	log.Debug("Executing standard project")
@@ -95,19 +96,15 @@ func (a *ExecuteStandardProjectAction) Execute(
 		}
 	}
 
-	if effectiveCost > 0 {
-		resources := player.Resources().Get()
-		if resources.Credits < effectiveCost {
-			log.Warn("Insufficient credits",
-				slog.Int("cost", effectiveCost),
-				slog.Int("player_credits", resources.Credits))
-			return fmt.Errorf("insufficient credits: need %d, have %d", effectiveCost, resources.Credits)
-		}
-
-		player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceCredit: -effectiveCost,
-		})
+	quote, err := gamecards.QuotePayment(player, g, a.CardRegistry(), gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: effectiveCost}, Action: "standard-project", StandardProject: shared.StandardProject(projectID)})
+	if err != nil {
+		return err
 	}
+	paymentPlan, err := gamecards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
+	}
+	gamecards.ApplyPayment(player, paymentPlan)
 
 	events.Publish(g.EventBus(), events.StandardProjectPlayedEvent{
 		GameID:      g.ID(),

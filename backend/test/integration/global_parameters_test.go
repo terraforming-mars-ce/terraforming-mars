@@ -1,5 +1,7 @@
 package integration_test
 
+import "terraforming-mars-backend/internal/game/shared"
+
 import (
 	"context"
 	"testing"
@@ -44,7 +46,7 @@ func TestGlobalParameters_TemperatureProgression(t *testing.T) {
 
 	// Convert heat 4 times
 	for i := 0; i < 4; i++ {
-		err := convertAction.Execute(ctx, testGame.ID(), playerID, nil)
+		err := convertAction.Execute(ctx, testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 		if err != nil {
 			t.Logf("Conversion %d failed: %v", i+1, err)
 			break
@@ -85,7 +87,7 @@ func TestGlobalParameters_TemperatureMax(t *testing.T) {
 
 	// Try to raise temperature multiple times
 	for i := 0; i < 5; i++ {
-		err := convertAction.Execute(ctx, testGame.ID(), playerID, nil)
+		err := convertAction.Execute(ctx, testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 		if err != nil {
 			break
 		}
@@ -139,7 +141,7 @@ func TestGlobalParameters_EventsPublished(t *testing.T) {
 	initialTemp := testGame.GlobalParameters().Temperature()
 
 	// Convert heat (should increase temperature)
-	err := convertAction.Execute(ctx, testGame.ID(), playerID, nil)
+	err := convertAction.Execute(ctx, testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 
 	testutil.AssertNoError(t, err, "Failed to convert heat")
 
@@ -165,7 +167,7 @@ func TestGlobalParameters_TRIncreasesWithTerraforming(t *testing.T) {
 	logger := testutil.TestLogger()
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
-	err := convertAction.Execute(ctx, testGame.ID(), playerID, nil)
+	err := convertAction.Execute(ctx, testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 	testutil.AssertNoError(t, err, "Heat conversion failed")
 
 	// Get final TR
@@ -202,14 +204,14 @@ func TestGlobalParameters_MultiplePlayers(t *testing.T) {
 	player1, _ := testGame.GetPlayer(player1ID)
 	testutil.SetPlayerHeat(ctx, player1, 8)
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player1ID, 2), "set current turn for player 1")
-	err1 := convertAction.Execute(ctx, testGame.ID(), player1ID, nil)
+	err1 := convertAction.Execute(ctx, testGame.ID(), player1ID, shared.NativePayment(shared.ResourceHeat, 8))
 
 	// Player 2 raises temperature
 	testGame, _ = repo.Get(ctx, testGame.ID())
 	player2, _ := testGame.GetPlayer(player2ID)
 	testutil.SetPlayerHeat(ctx, player2, 8)
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player2ID, 2), "set current turn for player 2")
-	err2 := convertAction.Execute(ctx, testGame.ID(), player2ID, nil)
+	err2 := convertAction.Execute(ctx, testGame.ID(), player2ID, shared.NativePayment(shared.ResourceHeat, 8))
 
 	// Both should succeed (if temperature not maxed)
 	if err1 == nil && err2 == nil {

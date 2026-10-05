@@ -50,10 +50,13 @@ func (h *ConvertHeatHandler) HandleMessage(ctx context.Context, connection *core
 	var req dto.ActionConvertHeatToTemperatureRequest
 	if message.Payload != nil {
 		payloadBytes, _ := json.Marshal(message.Payload)
-		_ = json.Unmarshal(payloadBytes, &req)
+		if err := json.Unmarshal(payloadBytes, &req); err != nil {
+			h.sendError(connection, "Invalid payment")
+			return
+		}
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, req.StorageSubstitutes)
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, dto.ToPayment(req.Payment))
 	if err != nil {
 		log.Error("Failed to execute convert heat action", slog.Any("error", err))
 		h.sendError(connection, err.Error())
