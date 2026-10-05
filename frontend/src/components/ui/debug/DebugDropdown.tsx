@@ -11,6 +11,7 @@ import GameCommandsPage from "./panels/GameCommandsPage.tsx";
 import World3DCameraPage from "./panels/World3DCameraPage.tsx";
 import World3DSunPage from "./panels/World3DSunPage.tsx";
 import World3DSkyboxPage from "./panels/World3DSkyboxPage.tsx";
+import World3DClimatePage from "./panels/World3DClimatePage.tsx";
 
 const WINDOW_ID = "admin-tools";
 const WINDOW_WIDTH = 780;
@@ -70,6 +71,9 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
     }
     if (activeItem === "3d-skybox") {
       return <World3DSkyboxPage />;
+    }
+    if (activeItem === "3d-climate") {
+      return <World3DClimatePage gameState={gameState} />;
     }
 
     if (!gameState) {

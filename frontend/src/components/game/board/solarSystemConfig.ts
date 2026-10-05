@@ -284,6 +284,13 @@ export const MARS_ATMOSPHERE: AtmosphereProfile = {
   halo: 1,
 };
 
+// Mars's sky as it warms: a thin cold blue limb, a salmon haze, then a thick warm red-orange.
+export const MARS_CLIMATE_ATMOSPHERES: AtmosphereProfile[] = [
+  { color: "#c3cddb", shadowColor: "#56708f", thickness: 0.045, intensity: 0.85, halo: 0.9 },
+  { color: "#f0b9a2", shadowColor: "#5b7d9c", thickness: 0.055, intensity: 1.1, halo: 1 },
+  { color: "#ec9468", shadowColor: "#7a4636", thickness: 0.07, intensity: 1.25, halo: 1.1 },
+];
+
 export const PLANET_FILL_LIGHT = {
   keyColor: "#fff1d4",
   keyIntensityRatio: 3.2,

@@ -9,7 +9,8 @@ export type ActiveItem =
   | "game-commands"
   | "3d-camera"
   | "3d-sun"
-  | "3d-skybox";
+  | "3d-skybox"
+  | "3d-climate";
 
 interface SidebarNavProps {
   activeItem: ActiveItem;
@@ -119,6 +120,12 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ activeItem, onSelectItem, devel
         style={subItemStyle(activeItem === "3d-skybox")}
       >
         Skybox
+      </div>
+      <div
+        onClick={() => handleSelectItem("3d-climate")}
+        style={subItemStyle(activeItem === "3d-climate")}
+      >
+        Climate
       </div>
     </div>
   );
