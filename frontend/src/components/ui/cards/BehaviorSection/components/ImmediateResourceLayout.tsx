@@ -1,11 +1,11 @@
 import React from "react";
+import PerConditionIcons from "./PerConditionIcons";
 import GameIcon from "../../../display/GameIcon.tsx";
 import ResourceDisplay from "./ResourceDisplay.tsx";
 import BehaviorIcon from "./BehaviorIcon.tsx";
 import CardIcon from "./CardIcon.tsx";
 import OrChip from "./OrChip.tsx";
 import Slash from "./Slash.tsx";
-import { getIconPath, getTagIconPath } from "@/utils/iconStore.ts";
 import { analyzeCardOutputs } from "../utils/displayAnalysis.ts";
 import ChoiceRequirementBox from "./ChoiceRequirementBox.tsx";
 import { CalculatedOutputDto, CardBehaviorDto } from "@/types/generated/api-types.ts";
@@ -13,6 +13,7 @@ import {
   type ResourceCondition,
   isProduction as isProductionType,
   isCardOperation,
+  getPer,
   isGlobalParameter,
   isTilePlacement as isTilePlacementType,
 } from "@/types/resourceConditions.ts";
@@ -64,6 +65,32 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
   renderIcon,
   computedOutputs,
 }) => {
+  const needsResourceLayout = behavior.outputs?.some(
+    (output) =>
+      output.type === "copy" ||
+      output.type === "card-reveal" ||
+      output.type === "colony-track-step" ||
+      output.type === "trade-fleet" ||
+      (output.type === "card-draw" && getPer(output)),
+  );
+  if (needsResourceLayout && !behavior.choices?.length) {
+    return (
+      <div className="flex items-center justify-center gap-2 flex-wrap">
+        {behavior.outputs?.map((output, index) => (
+          <ResourceDisplay
+            key={index}
+            resource={output}
+            displayInfo={analyzeResourceDisplayWithConstraints(output, 7, false)}
+            context="default"
+            isAffordable={isResourceAffordable(output, false)}
+            tileScaleInfo={tileScaleInfo}
+            computedOutputs={computedOutputs}
+          />
+        ))}
+      </div>
+    );
+  }
+
   const isGlobalParamOrTile = (output: ResourceCondition): boolean => {
     return isGlobalParameter(output) || isTilePlacementType(output);
   };
@@ -619,7 +646,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                         <GameIcon
                           iconType="credit"
                           amount={amount}
-                          size="small"
+                          size="behavior"
                           isAttack={isAttack}
                         />
                       </div>
@@ -1060,33 +1087,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                 {perConditionProduction.map((output, index: number) => {
                   const baseResourceType = output.type.replace("-production", "");
                   const perCond = output.per!;
-
-                  let perIcon = null;
-                  if (perCond.tag) {
-                    perIcon = getTagIconPath(perCond.tag);
-                  } else if (perCond.type) {
-                    perIcon = getIconPath(perCond.type);
-                  }
-
-                  const perAmount = perCond.amount ?? 1;
-                  const perIconEl = (
-                    <div className="flex items-center gap-px">
-                      {perAmount > 1 && (
-                        <span className="text-[13px] font-bold font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center max-md:text-[11px]">
-                          {perAmount}
-                        </span>
-                      )}
-                      <img
-                        src={perIcon!}
-                        alt={perCond.tag || perCond.type}
-                        className={`w-[26px] h-[26px] object-contain max-md:w-[22px] max-md:h-[22px] ${
-                          perCond.target !== "self-player"
-                            ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite]"
-                            : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-                        }`}
-                      />
-                    </div>
-                  );
+                  const perIconEl = <PerConditionIcons per={perCond} />;
 
                   const showPlus =
                     negativeProduction.length > 0 || positiveProduction.length > 0 || index > 0;
@@ -1105,7 +1106,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                         <GameIcon
                           iconType="credit"
                           amount={Math.abs(output.amount ?? 1)}
-                          size="small"
+                          size="behavior"
                         />
                         <Slash />
                         {perIconEl}
@@ -1295,33 +1296,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
             {perConditionProduction.map((output, index: number) => {
               const baseResourceType = output.type.replace("-production", "");
               const perCond = output.per!;
-
-              let perIcon = null;
-              if (perCond.tag) {
-                perIcon = getTagIconPath(perCond.tag);
-              } else if (perCond.type) {
-                perIcon = getIconPath(perCond.type);
-              }
-
-              const perAmount = perCond.amount ?? 1;
-              const perIconEl = (
-                <div className="flex items-center gap-px">
-                  {perAmount > 1 && (
-                    <span className="text-[13px] font-bold font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center max-md:text-[11px]">
-                      {perAmount}
-                    </span>
-                  )}
-                  <img
-                    src={perIcon!}
-                    alt={perCond.tag || perCond.type}
-                    className={`w-[26px] h-[26px] object-contain max-md:w-[22px] max-md:h-[22px] ${
-                      perCond.target !== "self-player"
-                        ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite]"
-                        : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-                    }`}
-                  />
-                </div>
-              );
+              const perIconEl = <PerConditionIcons per={perCond} />;
 
               if (baseResourceType === "credit") {
                 return (
@@ -1332,7 +1307,7 @@ const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
                     <GameIcon
                       iconType="credit"
                       amount={Math.abs(output.amount ?? 1)}
-                      size="small"
+                      size="behavior"
                     />
                     <Slash />
                     {perIconEl}

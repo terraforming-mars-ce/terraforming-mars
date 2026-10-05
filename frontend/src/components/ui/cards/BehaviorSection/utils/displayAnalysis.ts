@@ -49,13 +49,13 @@ export const analyzeResourceDisplayWithConstraints = (
     };
   }
 
-  // Per conditions count as 2 icons (production icon + per icon)
+  // Include every tag in combined per conditions when budgeting layout space.
   if (isProduction && hasPer) {
     return {
       resourceType,
       amount,
       displayMode: "number", // Always use number format for per conditions
-      iconCount: 2, // Production icon + per icon
+      iconCount: 1 + Math.max(1, hasPer.tags?.length ?? 0),
     };
   }
 

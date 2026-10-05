@@ -33,6 +33,7 @@ const resourceTypeToIconType: Record<string, string> = {
   asteroid: "asteroid",
   fighter: "fighter",
   disease: "disease",
+  camp: "camp",
   "credit-production": "credit-production",
   "steel-production": "steel-production",
   "titanium-production": "titanium-production",

@@ -1,7 +1,9 @@
+import PerConditionIcons from "./PerConditionIcons";
 import React from "react";
 import GameIcon from "../../../display/GameIcon.tsx";
 import { getIconPath, getTagIconPath } from "@/utils/iconStore.ts";
 import BehaviorIcon from "./BehaviorIcon.tsx";
+import CardIcon from "./CardIcon.tsx";
 import Slash from "./Slash.tsx";
 import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
 import {
@@ -38,6 +40,23 @@ interface ResourceDisplayProps {
   computedOutputs?: CalculatedOutputDto[];
 }
 
+export function hasResourceVisual(resource: ResourceCondition): boolean {
+  return (
+    !!getIconPath(resource.type) ||
+    [
+      "copy",
+      "card-reveal",
+      "discount",
+      "vp",
+      "global-parameter-lenience",
+      "card-peek",
+      "card-take",
+      "card-buy",
+      "card-discard",
+    ].includes(resource.type)
+  );
+}
+
 const isProductionResourceType = (type: string): boolean => type.includes("-production");
 
 const ComputedValueDisplay: React.FC<{
@@ -54,7 +73,7 @@ const ComputedValueDisplay: React.FC<{
     <span className="flex items-center gap-[2px] opacity-80 ml-1">
       <span className={parenClasses}>(</span>
       {isCredits ? (
-        <GameIcon iconType={resourceType} amount={amount} size="small" />
+        <GameIcon iconType={resourceType} amount={amount} size="behavior" />
       ) : (
         <span className="flex items-center gap-[2px]">
           {amount > 1 && (
@@ -62,7 +81,7 @@ const ComputedValueDisplay: React.FC<{
               {amount}
             </span>
           )}
-          <GameIcon iconType={resourceType} size="small" />
+          <GameIcon iconType={resourceType} size="behavior" />
         </span>
       )}
       <span className={parenClasses}>)</span>
@@ -89,6 +108,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   const isVP = resourceType === "vp";
   const isProduction = resource ? isProductionType(resource) : false;
   const hasPer = resource ? getPer(resource) : undefined;
+  const hasTriggerCap = resource && "maxTrigger" in resource && resource.maxTrigger != null;
   const isAttack =
     resource?.target === "any-player" ||
     resource?.target === "all-opponents" ||
@@ -100,37 +120,72 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
       ? computedOutputs.find((o) => o.resourceType === resourceType)?.amount
       : undefined);
 
+  if (resource?.type === "card-reveal") {
+    return (
+      <span className="inline-flex items-center gap-1 text-white">
+        <CardIcon
+          amount={resource.amount}
+          badgeType="peek"
+          label="Reveal and discard card"
+          isAffordable={isAffordable}
+        />
+        {resource.onMatch && <span>*</span>}
+      </span>
+    );
+  }
+  if (resource?.type === "copy") {
+    return (
+      <span
+        className="relative inline-flex w-12 h-10"
+        role="img"
+        aria-label="Copy a building production box"
+      >
+        <span className="absolute left-0 top-0 w-8 h-7 rounded border border-[#a06e3c] bg-[#684726]" />
+        <span className="absolute left-2 top-2 w-8 h-7 rounded border border-[#a06e3c] bg-[#80582f]" />
+        {resource.selectors
+          ?.flatMap((selector) => selector.tags ?? [])
+          .map((tag) => (
+            <img
+              key={tag}
+              src={getTagIconPath(tag) ?? undefined}
+              alt={tag}
+              className="absolute right-0 bottom-0 w-5 h-5 object-contain"
+            />
+          ))}
+      </span>
+    );
+  }
+  if (resource?.type === "colony-track-step" || resource?.type === "trade-fleet") {
+    return (
+      <span className="inline-flex items-center gap-1 font-orbitron text-white">
+        <span className="font-orbitron font-bold leading-none">
+          {amount > 0 ? "+" : "−"}
+          {Math.abs(amount)}
+        </span>
+        <GameIcon iconType={resource.type === "trade-fleet" ? "trade" : "colony"} size="behavior" />
+        {resource.selectionGroup && <span>*</span>}
+      </span>
+    );
+  }
+  if (resource && !hasResourceVisual(resource)) {
+    return null;
+  }
+
   // Handle production with per condition (e.g., 1 plant production per plant tag)
   if (isProduction && hasPer) {
     const baseResourceType = resourceType.replace("-production", "");
 
     let perIcon = null;
-    if (hasPer.tag) {
+    if (hasPer.tags?.length) {
+      perIcon = getTagIconPath(hasPer.tags[0]);
+    } else if (hasPer.tag) {
       perIcon = getTagIconPath(hasPer.tag);
     } else if (hasPer.type) {
-      perIcon = getIconPath(hasPer.type);
+      perIcon = getIconPath(hasPer.type === "card-count" ? "card-draw" : hasPer.type);
     }
 
     if (perIcon) {
-      const perAmount = hasPer.amount ?? 1;
-      const perIconEl = (
-        <div className="flex items-center gap-px">
-          {perAmount > 1 && (
-            <span className="text-[13px] font-bold font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center max-md:text-[11px]">
-              {perAmount}
-            </span>
-          )}
-          <img
-            src={perIcon}
-            alt={hasPer.tag || hasPer.type}
-            className={`w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)] ${
-              hasPer.target !== "self-player"
-                ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite]"
-                : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-            }`}
-          />
-        </div>
-      );
+      const perIconEl = <PerConditionIcons per={hasPer} />;
 
       // Special handling for credits-production - use GameIcon with amount inside
       if (baseResourceType === "credit") {
@@ -142,10 +197,13 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
           <div className="flex items-center gap-[3px]">
             <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
               <div className={itemClasses}>
-                <GameIcon iconType="credit" amount={Math.abs(amount)} size="small" />
+                <GameIcon iconType="credit" amount={Math.abs(amount)} size="behavior" />
               </div>
               <Slash />
               {perIconEl}
+              {(hasPer.selectors?.length ?? 0) > 0 && (
+                <span className="text-white font-bold">*</span>
+              )}
             </div>
             {resolvedComputedAmount !== undefined && (
               <ComputedValueDisplay amount={resolvedComputedAmount} resourceType={resourceType} />
@@ -178,6 +236,9 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
                 </div>
                 <Slash />
                 {perIconEl}
+                {(hasPer.selectors?.length ?? 0) > 0 && (
+                  <span className="text-white font-bold">*</span>
+                )}
               </div>
               {resolvedComputedAmount !== undefined && (
                 <ComputedValueDisplay amount={resolvedComputedAmount} resourceType={resourceType} />
@@ -204,7 +265,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
       <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.7)_0%,rgba(139,89,42,0.65)_100%)] border border-[rgba(160,110,60,0.7)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
         <div className={itemClasses}>
           {baseIsCredits ? (
-            <GameIcon iconType="credit" amount={Math.abs(amount)} size="small" />
+            <GameIcon iconType="credit" amount={Math.abs(amount)} size="behavior" />
           ) : (
             <>
               {amount > 1 && (
@@ -230,10 +291,12 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   // Handle regular resources with per condition (e.g., 1 floater per jovian tag)
   if (!isProduction && hasPer) {
     let perIcon = null;
-    if (hasPer.tag) {
+    if (hasPer.tags?.length) {
+      perIcon = getTagIconPath(hasPer.tags[0]);
+    } else if (hasPer.tag) {
       perIcon = getTagIconPath(hasPer.tag);
     } else if (hasPer.type) {
-      perIcon = getIconPath(hasPer.type);
+      perIcon = getIconPath(hasPer.type === "card-count" ? "card-draw" : hasPer.type);
     }
 
     if (perIcon) {
@@ -246,18 +309,11 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
         return (
           <div className="flex items-center gap-[3px]">
             <div className={itemClasses}>
-              <GameIcon iconType="credit" amount={Math.abs(amount)} size="small" />
+              <GameIcon iconType="credit" amount={Math.abs(amount)} size="behavior" />
             </div>
             <Slash />
-            <img
-              src={perIcon}
-              alt={hasPer.tag || hasPer.type}
-              className={`w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)] ${
-                hasPer.target !== "self-player"
-                  ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite]"
-                  : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-              }`}
-            />
+            <PerConditionIcons per={hasPer} />
+            {hasTriggerCap && <span className="font-orbitron text-white">*</span>}
             {resolvedComputedAmount !== undefined && (
               <ComputedValueDisplay amount={resolvedComputedAmount} resourceType={resourceType} />
             )}
@@ -288,15 +344,8 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
                 {iconElement}
               </div>
               <Slash />
-              <img
-                src={perIcon}
-                alt={hasPer.tag || hasPer.type}
-                className={`w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)] ${
-                  hasPer.target !== "self-player"
-                    ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite]"
-                    : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-                }`}
-              />
+              <PerConditionIcons per={hasPer} />
+              {hasTriggerCap && <span className="font-orbitron text-white">*</span>}
               {resolvedComputedAmount !== undefined && (
                 <ComputedValueDisplay amount={resolvedComputedAmount} resourceType={resourceType} />
               )}
@@ -326,8 +375,11 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
         <GameIcon
           iconType="credit"
           amount={isVariableAmount ? "X" : Math.abs(amount)}
-          size="small"
+          size="behavior"
         />
+        {resource && "targetRestriction" in resource && resource.targetRestriction && (
+          <span className="text-white font-bold">*</span>
+        )}
       </div>
     );
   }
@@ -339,7 +391,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
 
     return (
       <div className={discountClasses}>
-        <GameIcon iconType="credit" amount={-amount} size="small" />
+        <GameIcon iconType="credit" amount={-amount} size="behavior" />
       </div>
     );
   }
@@ -369,22 +421,24 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     };
 
     return (
-      <div className="flex items-center gap-[2px]">
-        {globalParams.map((param: string) => (
-          <BehaviorIcon
-            key={param}
-            resourceType={paramToIcon[param] ?? param}
-            isProduction={false}
-            isAttack={false}
-            context={context}
-            isAffordable={isAffordable}
-            tileScaleInfo={tileScaleInfo}
-          />
-        ))}
-        <span className="text-base font-bold text-white mx-1 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-          :
-        </span>
+      <div className="flex flex-wrap items-center justify-center gap-[2px]">
+        <div className="flex items-center gap-[2px]">
+          {globalParams.map((param: string) => (
+            <BehaviorIcon
+              key={param}
+              resourceType={paramToIcon[param] ?? param}
+              isProduction={false}
+              isAttack={false}
+              context={context}
+              isAffordable={isAffordable}
+              tileScaleInfo={tileScaleInfo}
+            />
+          ))}
+        </div>
         <div className="flex items-center gap-[3px]">
+          <span className="text-base font-bold text-white mx-1 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+            :
+          </span>
           <div className="flex flex-col items-center leading-none -space-y-[11px] translate-y-px">
             <span className="text-sm font-bold font-orbitron text-[#c8e6c9] [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
               +
@@ -396,6 +450,9 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
           <span className="text-base font-bold font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
             {amount}
           </span>
+          {resource && "temporary" in resource && resource.temporary && (
+            <span className="text-white font-bold">*</span>
+          )}
         </div>
       </div>
     );
@@ -427,7 +484,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
               bonusOutputs.map((o, i) => (
                 <span key={i} className="flex items-center gap-[2px]">
                   {o.resourceType === "credit" ? (
-                    <GameIcon iconType="credit" amount={o.amount} size="small" />
+                    <GameIcon iconType="credit" amount={o.amount} size="behavior" />
                   ) : (
                     <span className="flex items-center gap-[2px]">
                       {o.amount > 1 && (
@@ -435,7 +492,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
                           {o.amount}
                         </span>
                       )}
-                      <GameIcon iconType={o.resourceType} size="small" />
+                      <GameIcon iconType={o.resourceType} size="behavior" />
                     </span>
                   )}
                 </span>
@@ -477,7 +534,11 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     isTilePlacement &&
     resourceTileRestrictions &&
     (resourceTileRestrictions.adjacency ||
-      resourceTileRestrictions.onTileType ||
+      resourceTileRestrictions.area ||
+      resourceTileRestrictions.adjacentToType ||
+      resourceTileRestrictions.minAdjacentOfType !== undefined ||
+      resourceTileRestrictions.adjacentToOwned ||
+      (resourceTileRestrictions.onBonusType?.length ?? 0) > 0 ||
       (resourceTileRestrictions.boardTags?.length ?? 0) > 0);
 
   const allSelectors = resource ? getSelectors(resource) : undefined;
@@ -543,7 +604,10 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
           <React.Fragment key={i}>{baseIconElement}</React.Fragment>
         ))}
         {renderSelectorBadges()}
-        {hasTileRestrictions && (
+        {(resource?.type === "colony-tile-add" ||
+          hasTileRestrictions ||
+          (resource && "targetRestriction" in resource && !!resource.targetRestriction) ||
+          resource?.target === "triggering-card") && (
           <span className="text-white font-bold text-sm ml-0.5 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
             *
           </span>
@@ -565,7 +629,10 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
         </span>
         {baseIconElement}
         {renderSelectorBadges()}
-        {hasTileRestrictions && (
+        {(resource?.type === "colony-tile-add" ||
+          hasTileRestrictions ||
+          (resource && "targetRestriction" in resource && !!resource.targetRestriction) ||
+          resource?.target === "triggering-card") && (
           <span className="text-white font-bold text-sm ml-0.5 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
             *
           </span>
