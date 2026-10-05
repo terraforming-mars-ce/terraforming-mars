@@ -1,7 +1,10 @@
+import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore";
+import { selectPayment, usePaymentStore } from "@/stores/paymentStore";
+import type { PaymentIntentDto, PaymentQuoteDto } from "@/types/generated/api-types";
 import { v4 as uuidv4 } from "uuid";
 import { getWebSocketUrl } from "../config";
 import {
-  CardPaymentDto,
+  PaymentDto,
   SelectDemoChoicesRequest,
   ErrorPayload,
   FullStatePayload,
@@ -37,10 +40,12 @@ import {
   MessageTypeGameEnded,
   MessageTypeConvertToBot,
   MessageTypeActionBehaviorChoiceConfirmed,
-  MessageTypeActionConfirmStealTarget,
+  MessageTypeActionConfirmResourceRemoval,
   MessageTypeActionConfirmColonyResource,
   MessageTypeActionConfirmColonyPlacement,
   MessageTypeActionConfirmFreeTrade,
+  MessageTypeActionConfirmEffectSelection,
+  MessageTypeActionConfirmCardReveal,
   MessageTypeActionConfirmAwardFund,
   MessageTypeActionCardDiscardConfirmed,
   MessageTypeActionConfirmInitAdvance,
@@ -67,6 +72,10 @@ import {
 type EventCallback = (data: any) => void;
 
 export class WebSocketService {
+  private paymentQuotes = new Map<
+    string,
+    { resolve: (q: PaymentQuoteDto) => void; reject: (e: Error) => void }
+  >();
   private ws: WebSocket | null = null;
   private readonly url: string;
   private listeners: { [event: string]: EventCallback[] } = {};
@@ -129,6 +138,10 @@ export class WebSocketService {
         };
 
         this.ws.onclose = (event) => {
+          for (const request of this.paymentQuotes.values())
+            request.reject(new Error("Connection closed"));
+          this.paymentQuotes.clear();
+          usePaymentStore.getState().pending?.reject(new Error("Connection closed"));
           this.isConnected = false;
           this.emit("disconnect");
 
@@ -156,6 +169,18 @@ export class WebSocketService {
 
   private handleMessage(message: WebSocketMessage) {
     switch (message.type) {
+      case "payment-quote": {
+        const payload = message.payload as {
+          requestId: string;
+          quote?: PaymentQuoteDto;
+          error?: string;
+        };
+        const request = this.paymentQuotes.get(payload.requestId);
+        this.paymentQuotes.delete(payload.requestId);
+        if (payload.quote) request?.resolve(payload.quote);
+        else request?.reject(new Error(payload.error ?? "Could not quote payment"));
+        break;
+      }
       case MessageTypeGameUpdated: {
         const gamePayload = message.payload as GameUpdatedPayload;
         // Handle both direct game data and nested structure
@@ -235,6 +260,75 @@ export class WebSocketService {
     return reqId;
   }
 
+  quotePayment(intent: PaymentIntentDto): Promise<PaymentQuoteDto> {
+    const requestId = uuidv4();
+    return new Promise((resolve, reject) => {
+      this.paymentQuotes.set(requestId, { resolve, reject });
+      try {
+        this.send("quote-payment", { requestId, intent });
+      } catch (error) {
+        this.paymentQuotes.delete(requestId);
+        reject(error);
+      }
+    });
+  }
+
+  private async sendWithPayment(
+    type: MessageType,
+    action: string,
+    payload: Record<string, unknown>,
+  ): Promise<string> {
+    const session = action === "play-card" ? useCardPlayFlowStore.getState().playSession : null;
+    const sessionId = session && session.card.id === payload.cardId ? session.id : null;
+    try {
+      const intent = { ...payload, action } as PaymentIntentDto;
+      const quote = await this.quotePayment(intent);
+      const activeSession = useCardPlayFlowStore.getState().playSession;
+      if (
+        sessionId &&
+        (activeSession?.id !== sessionId ||
+          (activeSession.phase !== "preparing" && activeSession.phase !== "choosing"))
+      ) {
+        throw new Error("Payment cancelled");
+      }
+      let payment = payload.payment as PaymentDto | undefined;
+      if (!payment) {
+        const hasSubstitutes = quote.options.some(
+          (o) =>
+            o.available > 0 &&
+            (o.source.target !== "self-player" || o.source.resource !== o.targetResource),
+        );
+        if (hasSubstitutes) {
+          payment = await selectPayment(intent, quote, () => this.quotePayment(intent));
+        } else {
+          payment = {
+            allocations: quote.options
+              .filter(
+                (o) =>
+                  o.source.target === "self-player" &&
+                  o.source.resource === o.targetResource &&
+                  (quote.costs[o.targetResource] ?? 0) > 0,
+              )
+              .map((o) => ({
+                source: o.source,
+                targetResource: o.targetResource,
+                amount: quote.costs[o.targetResource],
+              })),
+          };
+        }
+      }
+      if (sessionId && !useCardPlayFlowStore.getState().submitPlay(sessionId)) {
+        throw new Error("Payment cancelled");
+      }
+      return this.send(type, { ...payload, payment });
+    } catch (error) {
+      if (sessionId) {
+        useCardPlayFlowStore.getState().returnPlay(sessionId, error);
+      }
+      throw error;
+    }
+  }
+
   playerConnect(playerName: string, gameId: string, playerId?: string): void {
     const payload: any = { playerName, gameId };
     if (playerId) {
@@ -245,21 +339,23 @@ export class WebSocketService {
     this.currentGameId = gameId;
   }
 
-  standardProject(projectId: string): string {
-    return this.send(MessageTypeActionStandardProject, { projectId });
-  }
-
-  convertPlantsToGreenery(storageSubstitutes?: Record<string, number>): string {
-    return this.send(MessageTypeActionConvertPlantsToGreenery, {
-      type: "convert-plants-to-greenery",
-      ...(storageSubstitutes && { storageSubstitutes }),
+  standardProject(projectId: string): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionStandardProject, "standard-project", {
+      projectId,
     });
   }
 
-  convertHeatToTemperature(storageSubstitutes?: Record<string, number>): string {
-    return this.send(MessageTypeActionConvertHeatToTemperature, {
+  convertPlantsToGreenery(payment?: PaymentDto): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionConvertPlantsToGreenery, "convert-plants", {
+      type: "convert-plants-to-greenery",
+      payment,
+    });
+  }
+
+  convertHeatToTemperature(payment?: PaymentDto): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionConvertHeatToTemperature, "convert-heat", {
       type: "convert-heat-to-temperature",
-      ...(storageSubstitutes && { storageSubstitutes }),
+      payment,
     });
   }
 
@@ -273,18 +369,20 @@ export class WebSocketService {
 
   playCard(
     cardId: string,
-    payment: CardPaymentDto,
+    payment: PaymentDto | undefined,
     choiceIndex?: number,
     cardStorageTargets?: string[],
     targetPlayerId?: string,
     selectedAmount?: number,
-  ): string {
-    return this.send(MessageTypeActionPlayCard, {
+    cardStorageSources?: string[],
+  ): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionPlayCard, "play-card", {
       type: "play-card",
       cardId,
       payment,
       ...(choiceIndex !== undefined && { choiceIndex }),
       ...(cardStorageTargets !== undefined && { cardStorageTargets }),
+      ...(cardStorageSources !== undefined && { cardStorageSources }),
       ...(targetPlayerId !== undefined && { targetPlayerId }),
       ...(selectedAmount !== undefined && { selectedAmount }),
     });
@@ -298,15 +396,17 @@ export class WebSocketService {
     targetPlayerId?: string,
     sourceCardForInput?: string,
     selectedAmount?: number,
-    payment?: CardPaymentDto,
+    payment?: PaymentDto,
     reuseSourceCardId?: string,
-  ): string {
-    return this.send(MessageTypeActionCardAction, {
+    cardStorageSources?: string[],
+  ): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionCardAction, "card-action", {
       type: "card-action",
       cardId,
       behaviorIndex,
       ...(choiceIndex !== undefined && { choiceIndex }),
       ...(cardStorageTargets !== undefined && { cardStorageTargets }),
+      ...(cardStorageSources !== undefined && { cardStorageSources }),
       ...(targetPlayerId !== undefined && { targetPlayerId }),
       ...(sourceCardForInput !== undefined && { sourceCardForInput }),
       ...(selectedAmount !== undefined && { selectedAmount }),
@@ -315,8 +415,12 @@ export class WebSocketService {
     });
   }
 
-  selectStartingChoices(corporationId: string, preludeIds: string[], cardIds: string[]): string {
-    return this.send(MessageTypeActionSelectStartingChoices, {
+  selectStartingChoices(
+    corporationId: string,
+    preludeIds: string[],
+    cardIds: string[],
+  ): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionSelectStartingChoices, "select-starting-choices", {
       corporationId,
       preludeIds,
       cardIds,
@@ -333,15 +437,23 @@ export class WebSocketService {
     });
   }
 
-  confirmProductionCards(cardIds: string[], options?: { randomBuy?: boolean }): string {
-    return this.send(MessageTypeActionConfirmProductionCards, {
-      cardIds,
-      randomBuy: options?.randomBuy ?? false,
-    });
+  confirmProductionCards(cardIds: string[], options?: { randomBuy?: boolean }): Promise<string> {
+    return this.sendWithPayment(
+      MessageTypeActionConfirmProductionCards,
+      "confirm-production-cards",
+      {
+        cardIds,
+        randomBuy: options?.randomBuy ?? false,
+      },
+    );
   }
 
-  confirmCardDraw(cardsToTake: string[], cardsToBuy: string[]): string {
-    return this.send(MessageTypeActionCardDrawConfirmed, {
+  acknowledgeCardReceipt(receiptId: string): string {
+    return this.send("action.acknowledge-card-receipt", { receiptId });
+  }
+
+  confirmCardDraw(cardsToTake: string[], cardsToBuy: string[]): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionCardDrawConfirmed, "confirm-card-draw", {
       cardsToTake,
       cardsToBuy,
     });
@@ -356,20 +468,26 @@ export class WebSocketService {
     return this.send(MessageTypeActionSelectDemoChoices, request);
   }
 
-  claimMilestone(milestoneType: string): string {
-    return this.send(MessageTypeActionClaimMilestone, { milestoneType });
+  claimMilestone(milestoneType: string): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionClaimMilestone, "claim-milestone", {
+      milestoneType,
+    });
   }
 
-  fundAward(awardType: string): string {
-    return this.send(MessageTypeActionFundAward, { awardType });
+  fundAward(awardType: string): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionFundAward, "fund-award", { awardType });
   }
 
-  tradeWithColony(colonyId: string, paymentType: string): string {
-    return this.send(MessageTypeActionColonyTrade, { colonyId, paymentType });
+  tradeWithColony(colonyId: string, paymentType: string, trackSteps: number): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionColonyTrade, "colony-trade", {
+      colonyId,
+      paymentType,
+      trackSteps,
+    });
   }
 
-  buildColony(colonyId: string): string {
-    return this.send(MessageTypeActionColonyBuild, { colonyId });
+  buildColony(colonyId: string): Promise<string> {
+    return this.sendWithPayment(MessageTypeActionColonyBuild, "build-colony", { colonyId });
   }
 
   buyProjectSeat(projectId: string, credits: number, steel: number, titanium: number): string {
@@ -386,19 +504,28 @@ export class WebSocketService {
     this.currentGameId = gameId;
   }
 
-  confirmCardDiscard(cardsToDiscard: string[]): string {
-    return this.send(MessageTypeActionCardDiscardConfirmed, { cardsToDiscard });
+  confirmCardDiscard(resolutionId: string, cardsToDiscard: string[]): string {
+    return this.send(MessageTypeActionCardDiscardConfirmed, { resolutionId, cardsToDiscard });
   }
 
-  confirmBehaviorChoice(choiceIndex: number, cardStorageTargets?: string[]): string {
+  confirmBehaviorChoice(
+    resolutionId: string,
+    choiceIndex: number,
+    cardStorageTargets?: string[],
+  ): string {
     return this.send(MessageTypeActionBehaviorChoiceConfirmed, {
+      resolutionId,
       choiceIndex,
       ...(cardStorageTargets !== undefined && { cardStorageTargets }),
     });
   }
 
-  confirmStealTarget(targetPlayerId: string): string {
-    return this.send(MessageTypeActionConfirmStealTarget, { targetPlayerId });
+  confirmResourceRemoval(selectionId: string, targetPlayerId: string, amount: number): string {
+    return this.send(MessageTypeActionConfirmResourceRemoval, {
+      selectionId,
+      targetPlayerId,
+      amount,
+    });
   }
 
   confirmColonyResource(cardId: string): string {
@@ -409,8 +536,16 @@ export class WebSocketService {
     return this.send(MessageTypeActionConfirmColonyPlacement, { colonyId });
   }
 
-  confirmFreeTrade(colonyId: string): string {
-    return this.send(MessageTypeActionConfirmFreeTrade, { colonyId });
+  confirmCardReveal(): string {
+    return this.send(MessageTypeActionConfirmCardReveal, {});
+  }
+
+  confirmEffectSelection(optionIndex: number): string {
+    return this.send(MessageTypeActionConfirmEffectSelection, { optionIndex });
+  }
+
+  confirmFreeTrade(colonyId: string, trackSteps: number): string {
+    return this.send(MessageTypeActionConfirmFreeTrade, { colonyId, trackSteps });
   }
 
   confirmAwardFund(awardType: string): string {

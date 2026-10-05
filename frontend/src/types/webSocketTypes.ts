@@ -1,4 +1,4 @@
-import type { CardPaymentDto } from "./generated/api-types.ts";
+import type { PaymentDto } from "./generated/api-types.ts";
 
 // Common interface for WebSocket connections used throughout the app
 export interface WebSocketConnection {
@@ -13,8 +13,8 @@ export interface WebSocketConnection {
   standardProject(projectId: string): Promise<string>;
 
   // Resource conversion actions
-  convertPlantsToGreenery(storageSubstitutes?: Record<string, number>): Promise<string>;
-  convertHeatToTemperature(storageSubstitutes?: Record<string, number>): Promise<string>;
+  convertPlantsToGreenery(payment?: PaymentDto): Promise<string>;
+  convertHeatToTemperature(payment?: PaymentDto): Promise<string>;
 
   // Game management actions
   startGame(): Promise<string>;
@@ -23,7 +23,7 @@ export interface WebSocketConnection {
   // Card actions
   playCard(
     cardId: string,
-    payment: CardPaymentDto,
+    payment: PaymentDto | undefined,
     choiceIndex?: number,
     cardStorageTargets?: string[],
   ): Promise<string>;
