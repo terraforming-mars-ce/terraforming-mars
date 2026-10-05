@@ -14,15 +14,16 @@ func TestNoDuplicatePlainAutoBehaviors(t *testing.T) {
 	}
 
 	for _, card := range allCards {
-		plainAutoCount := 0
+		plainAutoCounts := map[string]int{}
 		for _, behavior := range card.Behaviors {
 			if isPlainAuto(behavior) {
-				plainAutoCount++
+				plainAutoCounts[behavior.ProductionBox]++
 			}
 		}
-		if plainAutoCount > 1 {
-			t.Errorf("Card %s (%s) has %d plain auto behaviors; should be merged into one",
-				card.ID, card.Name, plainAutoCount)
+		for scope, count := range plainAutoCounts {
+			if count > 1 {
+				t.Errorf("Card %s (%s) has %d plain auto behaviors for production box %q; merge behaviors with the same copy semantics", card.ID, card.Name, count, scope)
+			}
 		}
 	}
 }
