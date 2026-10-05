@@ -23,7 +23,7 @@ One file per condition category. Tests exercise each field on the category struc
 |------|----------|---------------|
 | `basic_resource_test.go` | BasicResourceCondition | PaymentAllowed, TargetRestriction, steal/any-player targets |
 | `production_test.go` | ProductionCondition | Per (tag scaling, integer division), any-player reduction |
-| `tile_placement_test.go` | TilePlacementCondition | TileRestrictions (adjacency, onTileType, boardTags), TileType |
+| `tile_placement_test.go` | TilePlacementCondition | TileRestrictions (adjacency, area, boardTags), TileType |
 | `global_parameter_test.go` | GlobalParameterCondition | Temperature/oxygen/venus increases, TR with Per |
 | `card_operation_test.go` | CardOperationCondition | Optional discard, all-opponents draw |
 | `card_storage_test.go` | CardStorageCondition | Self-card/any-card targeting, steal-from-any-card, Selectors |
