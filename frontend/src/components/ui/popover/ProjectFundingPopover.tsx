@@ -1,7 +1,8 @@
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useState, useCallback } from "react";
 import {
-  CardPaymentDto,
+  PaymentDto,
+  PaymentQuoteDto,
   GameDto,
   GameStatusActive,
   GamePhaseAction,
@@ -15,8 +16,7 @@ import { webSocketService } from "@/services/webSocketService.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { GamePopover, GamePopoverItem } from "../GamePopover";
 import { mapOutputTypeToIcon } from "./ColonySteps.tsx";
-import PaymentSelectionPopover from "./PaymentSelectionPopover.tsx";
-import type { GenericPaymentConfig } from "./PaymentSelectionPopover.tsx";
+import { PaymentPicker } from "./PaymentSelectionPopover.tsx";
 
 interface ProjectFundingPopoverProps {
   isVisible: boolean;
@@ -42,25 +42,41 @@ const ProjectFundingPopover: React.FC<ProjectFundingPopoverProps> = ({
   const [pendingProject, setPendingProject] = useState<ProjectFundingDto | null>(null);
   const resources = gameState?.currentPlayer?.resources;
 
-  const paymentConfig: GenericPaymentConfig | undefined = pendingProject
-    ? {
-        name: `${pendingProject.name} Seat`,
-        cost: pendingProject.nextSeatCost,
-        substitutes: pendingProject.paymentSubstitutes.map((s) => ({
-          resourceType: s.resourceType,
-          conversionRate: s.conversionRate,
-        })),
-      }
-    : undefined;
+  const paymentConfig: PaymentQuoteDto | undefined =
+    pendingProject && resources
+      ? {
+          costs: { credit: pendingProject.nextSeatCost },
+          options: [
+            {
+              source: { target: "self-player", resource: "credit" },
+              targetResource: "credit",
+              conversionRate: 1,
+              available: resources.credits,
+            },
+            ...pendingProject.paymentSubstitutes.map((s) => ({
+              source: { target: "self-player" as const, resource: s.resourceType },
+              targetResource: "credit",
+              conversionRate: s.conversionRate,
+              available: s.resourceType === "steel" ? resources.steel : resources.titanium,
+            })),
+          ],
+        }
+      : undefined;
 
   const handlePaymentConfirm = useCallback(
-    (payment: CardPaymentDto) => {
+    (payment: PaymentDto) => {
       if (pendingProject) {
         void webSocketService.buyProjectSeat(
           pendingProject.id,
-          payment.credits,
-          payment.steel,
-          payment.titanium,
+          payment.allocations
+            .filter((a) => a.source.resource === "credit")
+            .reduce((n, a) => n + a.amount, 0),
+          payment.allocations
+            .filter((a) => a.source.resource === "steel")
+            .reduce((n, a) => n + a.amount, 0),
+          payment.allocations
+            .filter((a) => a.source.resource === "titanium")
+            .reduce((n, a) => n + a.amount, 0),
         );
         setPendingProject(null);
       }
@@ -107,12 +123,10 @@ const ProjectFundingPopover: React.FC<ProjectFundingPopoverProps> = ({
       </GamePopover>
 
       {resources && paymentConfig && (
-        <PaymentSelectionPopover
-          genericPayment={paymentConfig}
-          playerResources={resources}
+        <PaymentPicker
+          quote={paymentConfig}
           onConfirm={handlePaymentConfirm}
           onCancel={handlePaymentCancel}
-          isVisible={!!pendingProject}
         />
       )}
     </>
