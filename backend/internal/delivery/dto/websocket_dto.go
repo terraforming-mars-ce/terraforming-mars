@@ -32,6 +32,13 @@ type ErrorPayload struct {
 	Code    string `json:"code,omitempty"`
 }
 
+// PlayCardErrorPayload identifies the rejected card play for client presentation recovery.
+type PlayCardErrorPayload struct {
+	Action string `json:"action" tstype:"'play-card'"`
+	CardID string `json:"cardId"`
+	Error  string `json:"error"`
+}
+
 // FullStatePayload contains the complete game state
 type FullStatePayload struct {
 	Game     GameDto `json:"game"`
