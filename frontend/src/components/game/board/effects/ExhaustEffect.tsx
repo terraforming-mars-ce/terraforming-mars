@@ -73,6 +73,7 @@ export default function ExhaustEffect({
         depthTest: false,
         blending: THREE.NormalBlending,
         side: THREE.DoubleSide,
+        forceSinglePass: true,
         color: new THREE.Color(0.9, 0.85, 0.7),
       });
 

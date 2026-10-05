@@ -66,6 +66,7 @@ function ImpactDust({
         depthTest: false,
         blending: THREE.NormalBlending,
         side: THREE.DoubleSide,
+        forceSinglePass: true,
         color: new THREE.Color(0.8, 0.4, 0.15),
       });
 
