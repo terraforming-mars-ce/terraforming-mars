@@ -1,5 +1,11 @@
 package shared
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+)
+
 // Trigger represents when and how an action or effect is activated
 type Trigger struct {
 	Type      string                    `json:"type"`
@@ -22,6 +28,7 @@ type MinMaxValue struct {
 // Multiple fields within a Selector use AND logic (all must match).
 // Multiple Selectors in a slice use OR logic (any match is sufficient).
 type Selector struct {
+	TagCount             *MinMaxValue      `json:"tagCount,omitempty"`
 	Tags                 []CardTag         `json:"tags,omitempty"`
 	CardTypes            []string          `json:"cardTypes,omitempty"`
 	Resources            []string          `json:"resources,omitempty"`
@@ -48,11 +55,39 @@ type ResourceTriggerCondition struct {
 type TileRestrictions struct {
 	BoardTags         []string `json:"boardTags,omitempty" ts:"string[]"`
 	Adjacency         string   `json:"adjacency,omitempty" ts:"string"`                     // "none" = no adjacent occupied tiles
-	OnTileType        string   `json:"onTileType,omitempty" ts:"string"`                    // "ocean" = only on ocean spaces
+	Area              string   `json:"area,omitempty"`                                      // Underlying board space: land or ocean; empty uses placement defaults.
 	AdjacentToType    string   `json:"adjacentToType,omitempty" ts:"string"`                // "city", "greenery" = must be adjacent to this tile type
 	MinAdjacentOfType *int     `json:"minAdjacentOfType,omitempty" ts:"number | undefined"` // min count of adjacent tiles of AdjacentToType
 	AdjacentToOwned   bool     `json:"adjacentToOwned,omitempty" ts:"boolean | undefined"`  // must be adjacent to a tile owned by the placing player
 	OnBonusType       []string `json:"onBonusType,omitempty" ts:"string[]"`                 // tile must have one of these bonus types (e.g., "steel", "titanium")
+}
+
+// Clone returns an independent placement restriction.
+func (tr *TileRestrictions) Clone() *TileRestrictions {
+	if tr == nil {
+		return nil
+	}
+	result := *tr
+	result.BoardTags = append([]string(nil), tr.BoardTags...)
+	result.OnBonusType = append([]string(nil), tr.OnBonusType...)
+	result.MinAdjacentOfType = clonePointer(tr.MinAdjacentOfType)
+	return &result
+}
+
+// UnmarshalJSON rejects unknown restrictions instead of silently ignoring placement rules.
+func (tr *TileRestrictions) UnmarshalJSON(data []byte) error {
+	type plain TileRestrictions
+	var value plain
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&value); err != nil {
+		return err
+	}
+	if value.Area != "" && value.Area != "land" && value.Area != "ocean" {
+		return fmt.Errorf("invalid tile area %q", value.Area)
+	}
+	*tr = TileRestrictions(value)
+	return nil
 }
 
 // Temporary effect expiry constants
@@ -65,6 +100,13 @@ const (
 // It is only used internally for JSON unmarshaling, then converted to typed conditions
 // via categorizeCondition. All runtime code uses BehaviorCondition and typed category structs.
 type resourceConditionJSON struct {
+	Source                     *PaymentSource     `json:"source,omitempty"`
+	TargetResource             ResourceType       `json:"targetResource,omitempty"`
+	Destination                string             `json:"destination,omitempty"`
+	OnMatch                    *RevealMatch       `json:"onMatch,omitempty"`
+	Scope                      string             `json:"scope,omitempty"`
+	Zone                       string             `json:"zone,omitempty"`
+	SelectionGroup             string             `json:"selectionGroup,omitempty"`
 	ResourceType               ResourceType       `json:"type"`
 	Amount                     int                `json:"amount"`
 	Target                     string             `json:"target"`
@@ -74,6 +116,7 @@ type resourceConditionJSON struct {
 	TileRestrictions           *TileRestrictions  `json:"tileRestrictions,omitempty"`
 	TileType                   string             `json:"tileType,omitempty"`
 	VariableAmount             bool               `json:"variableAmount,omitempty"`
+	Against                    string             `json:"against,omitempty"`
 	Temporary                  string             `json:"temporary,omitempty"`
 	Optional                   bool               `json:"optional,omitempty"`
 	PaymentAllowed             []ResourceType     `json:"paymentAllowed,omitempty"`
@@ -83,12 +126,16 @@ type resourceConditionJSON struct {
 
 // TargetRestriction restricts which players can be targeted by an output.
 type TargetRestriction struct {
-	Adjacent string `json:"adjacent,omitempty" ts:"string"` // "self-card" = only players with tiles adjacent to this card's tile placement
+	Selectors []Selector `json:"selectors,omitempty"`
+	Adjacent  string     `json:"adjacent,omitempty" ts:"string"` // "self-card" = only players with tiles adjacent to this card's tile placement
 }
 
 // PerCondition represents what to count for conditional resource gains.
 // Used by card behaviors, VP conditions, and award quantifiers.
 type PerCondition struct {
+	Zone               string        `json:"zone,omitempty"`
+	Selectors          []Selector    `json:"selectors,omitempty"`
+	IncludeSource      bool          `json:"includeSource,omitempty"`
 	ResourceType       ResourceType  `json:"type"`
 	Amount             int           `json:"amount"`
 	Location           *string       `json:"location,omitempty"`
@@ -123,4 +170,57 @@ type Choice struct {
 	Inputs       []BehaviorCondition `json:"inputs,omitempty"`
 	Outputs      []BehaviorCondition `json:"outputs,omitempty"`
 	Requirements *ChoiceRequirements `json:"requirements,omitempty"` // If set, choice is only available when requirements are met
+}
+
+// Clone returns an independent copy of a count specification.
+func (p *PerCondition) Clone() *PerCondition {
+	if p == nil {
+		return nil
+	}
+	cp := *p
+	cp.Tags = append([]CardTag(nil), p.Tags...)
+	cp.Selectors = CloneSelectors(p.Selectors)
+	cp.Location = clonePointer(p.Location)
+	cp.Target = clonePointer(p.Target)
+	cp.Tag = clonePointer(p.Tag)
+	cp.AdjacentToTileType = clonePointer(p.AdjacentToTileType)
+	cp.MinRow = clonePointer(p.MinRow)
+	cp.CardTypeFilter = clonePointer(p.CardTypeFilter)
+	cp.MinCost = clonePointer(p.MinCost)
+	return &cp
+}
+
+func clonePointer[T any](p *T) *T {
+	if p == nil {
+		return nil
+	}
+	v := *p
+	return &v
+}
+
+// CloneSelectors copies selectors and their nested constraints.
+func CloneSelectors(selectors []Selector) []Selector {
+	if selectors == nil {
+		return nil
+	}
+	result := make([]Selector, len(selectors))
+	for i, s := range selectors {
+		result[i] = s
+		result[i].Tags = append([]CardTag(nil), s.Tags...)
+		result[i].CardTypes = append([]string(nil), s.CardTypes...)
+		result[i].Resources = append([]string(nil), s.Resources...)
+		result[i].StandardProjects = append([]StandardProject(nil), s.StandardProjects...)
+		result[i].GlobalParameters = append([]string(nil), s.GlobalParameters...)
+		result[i].Actions = append([]string(nil), s.Actions...)
+		result[i].TagCount = cloneMinMax(s.TagCount)
+		result[i].RequiredOriginalCost = cloneMinMax(s.RequiredOriginalCost)
+		result[i].VP = cloneMinMax(s.VP)
+	}
+	return result
+}
+func cloneMinMax(v *MinMaxValue) *MinMaxValue {
+	if v == nil {
+		return nil
+	}
+	return &MinMaxValue{Min: clonePointer(v.Min), Max: clonePointer(v.Max)}
 }
