@@ -3,6 +3,8 @@ package card_packs_test
 import (
 	"context"
 	"slices"
+	"terraforming-mars-backend/internal/action/admin"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"testing"
 
 	cardAction "terraforming-mars-backend/internal/action/card"
@@ -34,8 +36,8 @@ func TestPrelude_AlliedBank_ProductionAndCredits(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Allied Bank should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Allied Bank should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -68,8 +70,8 @@ func TestPrelude_AquiferTurbines_CreditsEnergyProductionAndOceanTile(t *testing.
 	creditsBefore := p.Resources().Get().Credits
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Aquifer Turbines should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Aquifer Turbines should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -104,8 +106,8 @@ func TestPrelude_Biofuels_PlantsAndProduction(t *testing.T) {
 	plantsBefore := p.Resources().Get().Plants
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Biofuels should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Biofuels should be in played cards")
 	plantsAfter := p.Resources().Get().Plants
@@ -139,8 +141,8 @@ func TestPrelude_Biolab_PlantProductionAndCardDraw(t *testing.T) {
 	handSizeBefore := p.Hand().CardCount()
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Biolab should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Biolab should be in played cards")
 	handSizeAfter := p.Hand().CardCount()
@@ -173,8 +175,8 @@ func TestPrelude_BiosphereSupport_ProductionChanges(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Biosphere Support should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Biosphere Support should be in played cards")
 	prodAfter := p.Resources().Production()
@@ -207,8 +209,8 @@ func TestPrelude_BusinessEmpire_RemovesCreditsAndIncreasesProduction(t *testing.
 	creditsBefore := p.Resources().Get().Credits
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Business Empire should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Business Empire should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -241,8 +243,8 @@ func TestPrelude_DomeFarming_IncreasesProductionBoth(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Dome Farming should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Dome Farming should be in played cards")
 	prodAfter := p.Resources().Production()
@@ -274,8 +276,8 @@ func TestPrelude_Donation_GainsCredits(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	creditsBefore := p.Resources().Get().Credits
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Donation should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Donation should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -306,8 +308,8 @@ func TestPrelude_EarlySettlement_PlantProductionAndCity(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Early Settlement should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Early Settlement should be in played cards")
 	prodAfter := p.Resources().Production()
@@ -340,8 +342,8 @@ func TestPrelude_EcologyExperts_PlantProduction(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Ecology Experts should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Ecology Experts should be in played cards")
 	prodAfter := p.Resources().Production()
@@ -368,11 +370,11 @@ func TestPrelude_EcologyExperts_PlayCardIgnoringRequirements(t *testing.T) {
 	p.Hand().AddCard(ecologyExperts.ID)
 	p.Hand().AddCard(trees.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), ecologyExperts.ID, cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), ecologyExperts.ID, shared.Payment{Allocations: []shared.PaymentAllocation{}}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Ecology Experts should play successfully")
 	plantsBefore := p.Resources().Get().Plants
 	prodBefore := p.Resources().Production()
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), trees.ID, cardAction.PaymentRequest{Credits: 13}, nil, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), trees.ID, shared.NativePayment(shared.ResourceCredit, 13), nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Trees should play successfully when ignoring global requirements")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(trees.ID), "Trees should be in played cards")
 	testutil.AssertEqual(t, plantsBefore+1, p.Resources().Get().Plants, "Should gain 1 plant")
@@ -404,8 +406,8 @@ func TestPrelude_ExcentricSponsor_GainsCredits(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	creditsBefore := p.Resources().Get().Credits
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Excentric Sponsor should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Excentric Sponsor should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -436,8 +438,8 @@ func TestPrelude_ExperimentalForest_GreeneryAndCardDraw(t *testing.T) {
 	})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Experimental Forest should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Experimental Forest should be in played cards")
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -475,8 +477,8 @@ func TestPrelude_GalileanMining_TitaniumProductionAndCostRemoval(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Galilean Mining should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Galilean Mining should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -505,8 +507,8 @@ func TestPrelude_GreatAquifer_PendingOceanTileSelection(t *testing.T) {
 	})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Great Aquifer should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Great Aquifer should be in played cards")
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -535,8 +537,8 @@ func TestPrelude_HugeAsteroid_TemperatureAndCostRemoval(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 	tempBefore := testGame.GlobalParameters().Temperature()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Huge Asteroid should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Huge Asteroid should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -567,8 +569,8 @@ func TestPrelude_IoResearchOutpost_TitaniumProductionAndCardDraw(t *testing.T) {
 	handSizeBefore := len(p.Hand().Cards())
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Io Research Outpost should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Io Research Outpost should be in played cards")
 	handSizeAfter := len(p.Hand().Cards())
@@ -600,8 +602,8 @@ func TestPrelude_Loan_ProductionDecreaseAndCredits(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Loan should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Loan should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -632,8 +634,8 @@ func TestPrelude_MartianIndustries_CreditsAndProduction(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Martian Industries should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Martian Industries should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -665,8 +667,8 @@ func TestPrelude_MetalRichAsteroid_TemperatureAndResources(t *testing.T) {
 	resourcesBefore := p.Resources().Get()
 	tempBefore := testGame.GlobalParameters().Temperature()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Metal-Rich Asteroid should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Metal-Rich Asteroid should be in played cards")
 	resourcesAfter := p.Resources().Get()
@@ -697,8 +699,8 @@ func TestPrelude_MetalsCompany_AllProductionIncrease(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Metals Company should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Metals Company should be in played cards")
 	prodAfter := p.Resources().Production()
@@ -732,8 +734,8 @@ func TestPrelude_MiningOperations_SteelProductionAndGain(t *testing.T) {
 	steelBefore := p.Resources().Get().Steel
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Mining Operations should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Mining Operations should be in played cards")
 	steelAfter := p.Resources().Get().Steel
@@ -767,8 +769,8 @@ func TestPrelude_Mohole_HeatProductionAndGain(t *testing.T) {
 	heatBefore := p.Resources().Get().Heat
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Mohole should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Mohole should be in played cards")
 	heatAfter := p.Resources().Get().Heat
@@ -802,8 +804,8 @@ func TestPrelude_MoholeExcavation_SteelAndHeatProductionAndHeatGain(t *testing.T
 	heatBefore := p.Resources().Get().Heat
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Mohole Excavation should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Mohole Excavation should be in played cards")
 	heatAfter := p.Resources().Get().Heat
@@ -839,8 +841,8 @@ func TestPrelude_NitrogenShipment_TRAndPlantProductionAndCredits(t *testing.T) {
 	prodBefore := p.Resources().Production()
 	trBefore := p.Resources().TerraformRating()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Nitrogen Shipment should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Nitrogen Shipment should be in played cards")
 	creditsAfter := p.Resources().Get().Credits
@@ -876,8 +878,8 @@ func TestPrelude_OrbitalConstructionYard_TitaniumAndProduction(t *testing.T) {
 	titaniumBefore := p.Resources().Get().Titanium
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Orbital Construction Yard should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Orbital Construction Yard should be in played cards")
 	titaniumAfter := p.Resources().Get().Titanium
@@ -910,8 +912,8 @@ func TestPrelude_PolarIndustries_HeatProductionAndOceanTile(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Polar Industries should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Polar Industries should be in played cards")
 	prodAfter := p.Resources().Production()
@@ -944,8 +946,8 @@ func TestPrelude_PowerGeneration_EnergyProduction(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Power Generation should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Power Generation should be in played cards")
 	prodAfter := p.Resources().Production()
@@ -977,8 +979,8 @@ func TestPrelude_ResearchNetwork_CreditProductionAndCardDraw(t *testing.T) {
 	handSizeBefore := p.Hand().CardCount()
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Research Network should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Research Network should be in played cards")
 	handSizeAfter := p.Hand().CardCount()
@@ -1011,8 +1013,8 @@ func TestPrelude_SelfSufficientSettlement_ProductionAndCity(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Self-Sufficient Settlement should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Self-Sufficient Settlement should be in played cards")
 	prodAfter := p.Resources().Production()
@@ -1046,8 +1048,8 @@ func TestPrelude_SmeltingPlant_SteelAndOxygen(t *testing.T) {
 	steelBefore := p.Resources().Get().Steel
 	oxygenBefore := testGame.GlobalParameters().Oxygen()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Smelting Plant should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Smelting Plant should be in played cards")
 	steelAfter := p.Resources().Get().Steel
@@ -1083,8 +1085,8 @@ func TestPrelude_SocietySupport_ProductionChanges(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Society Support should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Society Support should be in played cards")
 	prodAfter := p.Resources().Production()
@@ -1119,8 +1121,8 @@ func TestPrelude_Supplier_SteelAndEnergyProduction(t *testing.T) {
 	steelBefore := p.Resources().Get().Steel
 	prodBefore := p.Resources().Production()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Supplier should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Supplier should be in played cards")
 	steelAfter := p.Resources().Get().Steel
@@ -1153,8 +1155,8 @@ func TestPrelude_SupplyDrop_ResourceGains(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	resBefore := p.Resources().Get()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Supply Drop should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Supply Drop should be in played cards")
 	resAfter := p.Resources().Get()
@@ -1188,8 +1190,8 @@ func TestPrelude_UNMIContractor_DrawCardAndRaiseTR(t *testing.T) {
 	handSizeBefore := p.Hand().CardCount()
 	trBefore := p.Resources().TerraformRating()
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "UNMI Contractor should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "UNMI Contractor should be in played cards")
 	handSizeAfter := p.Hand().CardCount()
@@ -1223,8 +1225,8 @@ func TestPrelude_AcquiredSpaceAgency_TitaniumAndCardDraw(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	titaniumBefore := p.Resources().Get().Titanium
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Acquired Space Agency should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID), "Acquired Space Agency should be in played cards")
 	titaniumAfter := p.Resources().Get().Titanium
@@ -1237,4 +1239,72 @@ func TestPrelude_AcquiredSpaceAgency_TitaniumAndCardDraw(t *testing.T) {
 		testutil.AssertNoError(t, err, "Drawn card should exist in registry")
 		testutil.AssertTrue(t, slices.Contains(drawnCard.Tags, shared.TagSpace), "Drawn card "+drawnCard.Name+" should have space tag")
 	}
+}
+
+func TestPsychrophiles_PaymentAndManualMicrobe(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	log := testutil.TestLogger()
+	card := testutil.GetCardByName("Psychrophiles")
+	p.Resources().Set(shared.Resources{Credits: 20})
+	p.Hand().AddCard(card.ID)
+	play := cardAction.NewPlayCardAction(repo, registry, nil, log)
+	testutil.AssertNoError(t, play.Execute(ctx, g.ID(), id, card.ID, shared.NativePayment(shared.ResourceCredit, card.Cost), nil, nil, nil, nil, nil), "play Psychrophiles")
+	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(card.ID), "no free microbe on play")
+	for i, b := range card.Behaviors {
+		if gamecards.HasManualTrigger(b) {
+			testutil.AssertNoError(t, cardAction.NewUseCardActionAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, card.ID, i, nil, nil, nil, nil, nil, nil, nil, nil), "add microbe")
+		}
+	}
+	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(card.ID), "manual action adds one microbe")
+	p.Resources().AddToStorage(card.ID, 1)
+	source := shared.PaymentSource{Target: "self-card", Resource: shared.ResourceMicrobe, CardID: card.ID}
+	for _, tc := range []struct {
+		name, action, card string
+		allowed            bool
+	}{
+		{"plant card", shared.ActionCardPlaying, "Adapted Lichen", true},
+		{"other card", shared.ActionCardPlaying, "Power Plant", false},
+		{"purchase", shared.ActionCardBuying, "Adapted Lichen", false},
+		{"action", "card-action", "Adapted Lichen", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			target := testutil.GetCardByName(tc.card)
+			quote, err := gamecards.QuotePayment(p, g, registry, gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: 4}, Action: tc.action, Card: &target})
+			testutil.AssertNoError(t, err, "quote")
+			_, err = gamecards.ValidatePayment(quote, shared.Payment{Allocations: []shared.PaymentAllocation{{Source: source, TargetResource: shared.ResourceCredit, Amount: 2}}})
+			if tc.allowed {
+				testutil.AssertNoError(t, err, "plant payment")
+			} else {
+				testutil.AssertError(t, err, "restricted payment")
+			}
+		})
+	}
+	target := testutil.GetCardByName("Adapted Lichen")
+	p.Hand().AddCard(target.ID)
+	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, id, 2), "turn")
+	payment := shared.NativePayment(shared.ResourceCredit, target.Cost-4)
+	payment.Allocations = append(payment.Allocations, shared.PaymentAllocation{Source: source, TargetResource: shared.ResourceCredit, Amount: 2})
+	testutil.AssertNoError(t, play.Execute(ctx, g.ID(), id, target.ID, payment, nil, nil, nil, nil, nil), "spend microbes on plant card")
+	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(card.ID), "both microbes spent")
+}
+
+func TestResearchCoordination_WildTagIsNotAnActionOrTrigger(t *testing.T) {
+	g, repo, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	setCorp := admin.NewSetCorporationAction(repo, registry, nil, testutil.TestLogger())
+	testutil.AssertNoError(t, setCorp.Execute(context.Background(), g.ID(), id, testutil.CardID("Point Luna")), "set Point Luna")
+	card := testutil.GetCardByName("Research Coordination")
+	p.Hand().AddCard(card.ID)
+	g.InitDeck([]string{testutil.CardID("Sponsors")}, nil, nil)
+	beforeHand, beforeActions := p.Hand().CardCount(), len(p.Actions().List())
+	play := cardAction.NewPlayCardAction(repo, registry, nil, testutil.TestLogger())
+	testutil.AssertNoError(t, play.Execute(context.Background(), g.ID(), id, card.ID, shared.NativePayment(shared.ResourceCredit, card.Cost), nil, nil, nil, nil, nil), "play wild")
+	testutil.AssertEqual(t, beforeHand-1, p.Hand().CardCount(), "wild does not trigger Point Luna's Earth draw")
+	testutil.AssertEqual(t, beforeActions, len(p.Actions().List()), "wild adds no manual action")
+	for _, tag := range []shared.CardTag{shared.TagScience, shared.TagPlant} {
+		testutil.AssertEqual(t, 1, gamecards.CountPlayerTags(p, registry, []shared.CardTag{tag}, gamecards.TagCountContext{ActorID: id}), "wild can be used in later independent actions")
+	}
+	testutil.AssertEqual(t, 0, gamecards.CountPlayerTagsByType(p, registry, shared.TagScience), "wild never changes actual tags")
 }
