@@ -1,3 +1,4 @@
+import { usePaymentStore } from "@/stores/paymentStore";
 import { type RefObject, useEffect } from "react";
 import type { CardFanOverlayHandle } from "@/components/ui/overlay/CardFanOverlay.tsx";
 import type { PlayerListHandle } from "@/components/ui/list/PlayerList.tsx";
@@ -5,6 +6,7 @@ import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore.ts";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useSpectateStore } from "@/stores/spectateStore.ts";
+import { useWorld3DSettings } from "@/contexts/World3DSettingsContext.tsx";
 import {
   GamePhaseAction,
   GamePhaseInitApplyCorp,
@@ -17,6 +19,8 @@ export function useGameHotkeys(
   cardFanRef: RefObject<CardFanOverlayHandle | null>,
   playerListRef: RefObject<PlayerListHandle | null>,
 ): void {
+  const { settings } = useWorld3DSettings();
+
   useEffect(() => {
     const handleToggleDebug = () => {
       useUIOverlayStore.getState().toggleShowDebugDropdown();
@@ -110,12 +114,11 @@ export function useGameHotkeys(
         ui.showStartingSelection ||
         ui.showPendingCardSelection ||
         ui.showCardDrawSelection ||
-        ui.showCardDiscardSelection ||
-        cpf.showBehaviorChoiceSelection ||
-        ui.showStealTargetSelection ||
+        (game?.currentPlayer?.pendingBehaviorResolutions?.length ?? 0) > 0 ||
+        ui.showResourceRemovalSelection ||
         ui.showColonyResourceSelection ||
         ui.showProductionPhaseModal ||
-        cpf.showPaymentSelection ||
+        !!usePaymentStore.getState().pending ||
         cpf.showChoiceSelection ||
         cpf.showActionChoiceSelection ||
         cpf.showActionReuseSelection ||
@@ -125,7 +128,6 @@ export function useGameHotkeys(
         cpf.showActionTargetPlayerSelection ||
         cpf.showCardResourceSelection ||
         cpf.showAmountSelection ||
-        cpf.showBehaviorChoiceStorage ||
         ui.showLeaveGameConfirm ||
         ui.showEndGameConfirm ||
         ui.showCardsPlayedModal ||
@@ -134,6 +136,10 @@ export function useGameHotkeys(
 
       if (e.key === " ") {
         e.preventDefault();
+
+        if (settings.freeCameraEnabled) {
+          return;
+        }
 
         if (ui.showCorporationOverlay) {
           useUIOverlayStore.getState().setShowCorporationOverlay(false);
@@ -171,5 +177,5 @@ export function useGameHotkeys(
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [cardFanRef, playerListRef]);
+  }, [cardFanRef, playerListRef, settings.freeCameraEnabled]);
 }
