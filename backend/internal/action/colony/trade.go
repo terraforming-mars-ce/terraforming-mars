@@ -61,7 +61,7 @@ func NewTradeAction(
 }
 
 // Execute performs the trade action
-func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID string, colonyID string, paymentType TradePaymentType) error {
+func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID string, colonyID string, paymentType TradePaymentType, trackSteps int, payment shared.Payment) error {
 	log := a.InitLogger(gameID, playerID).With(
 		slog.String("action", "colony_trade"),
 		slog.String("colony_id", colonyID),
@@ -98,11 +98,14 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		return err
 	}
 
-	if !g.Colonies().GetTradeFleetAvailable(playerID) {
+	if g.Colonies().TradeFleet(playerID).Available() == 0 {
 		return fmt.Errorf("trade fleet is not available")
 	}
 
 	tileState := g.Colonies().GetState(colonyID)
+	if tileState != nil && tileState.AwaitingResource != "" {
+		return fmt.Errorf("colony is not active")
+	}
 	if tileState == nil {
 		return fmt.Errorf("colony tile not found: %s", colonyID)
 	}
@@ -120,14 +123,13 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 	effectiveCosts, _ := baseaction.CalculateEffectiveTradeCosts(traderPlayer, a.cardRegistry)
 	effectiveCost := effectiveCosts[string(paymentResource)]
 
-	resources := traderPlayer.Resources().Get()
-	available := map[shared.ResourceType]int{
-		shared.ResourceCredit:   resources.Credits,
-		shared.ResourceEnergy:   resources.Energy,
-		shared.ResourceTitanium: resources.Titanium,
-	}[paymentResource]
-	if available < effectiveCost {
-		return fmt.Errorf("insufficient %s: need %d, have %d", paymentResource, effectiveCost, available)
+	quote, err := cards.QuotePayment(traderPlayer, g, a.cardRegistry, cards.PaymentContext{Costs: map[shared.ResourceType]int{paymentResource: effectiveCost}, Action: "colony-trade"})
+	if err != nil {
+		return err
+	}
+	paymentPlan, err := cards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
 	}
 
 	definition, err := a.colonyRegistry.GetByID(colonyID)
@@ -135,23 +137,17 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 		return fmt.Errorf("colony definition not found: %w", err)
 	}
 
-	traderPlayer.Resources().Add(map[shared.ResourceType]int{
-		paymentResource: -effectiveCost,
-	})
-
-	// Apply trade step bonus from cards like Trade Envoys (advance marker before calculating income)
-	tradeStepBonus := CountTradeStepBonus(traderPlayer, a.cardRegistry)
-	if tradeStepBonus > 0 {
-		maxStep := len(definition.Steps) - 1
-		newPosition := tileState.MarkerPosition + tradeStepBonus
-		if newPosition > maxStep {
-			newPosition = maxStep
-		}
-		tileState.MarkerPosition = newPosition
-		log.Debug("Applied trade step bonus",
-			slog.Int("bonus", tradeStepBonus),
-			slog.Int("new_marker_position", newPosition))
+	option, err := baseaction.ValidateColonyTradeOption(traderPlayer, tileState, definition, a.cardRegistry, trackSteps)
+	if err != nil {
+		return err
 	}
+	if err := g.Colonies().UseTradeFleet(playerID); err != nil {
+		return err
+	}
+
+	cards.ApplyPayment(traderPlayer, paymentPlan)
+
+	tileState.MarkerPosition = option.MarkerPosition
 
 	// Collect pending card-targeted resources per player, so same-type resources
 	// from trade income + colony bonus are combined into a single selection.
@@ -227,8 +223,6 @@ func (a *TradeAction) Execute(ctx context.Context, gameID string, playerID strin
 	tileState.MarkerPosition = len(tileState.PlayerColonies)
 	tileState.TradedThisGen = true
 	tileState.TraderID = playerID
-
-	g.Colonies().SetTradeFleetAvailable(playerID, false)
 
 	events.Publish(g.EventBus(), events.ColonyTradedEvent{
 		GameID:    g.ID(),
@@ -307,45 +301,4 @@ func SetPendingColonyResourceFromTrade(p *player.Player, pendings []*PendingReso
 	for _, combined := range combinePendingResources(pendings) {
 		setPendingColonyResource(p, combined, colonyName, colonyID, reason, cardRegistry, log)
 	}
-}
-
-// CountTradeStepBonus counts how many colony track step bonuses a player has from
-// played cards with "before-colony-trade" condition triggers (e.g., Trade Envoys, Trading Colony).
-func CountTradeStepBonus(p *player.Player, cardRegistry cards.CardRegistry) int {
-	if cardRegistry == nil {
-		return 0
-	}
-	bonus := 0
-	for _, cardID := range p.PlayedCards().Cards() {
-		card, err := cardRegistry.GetByID(cardID)
-		if err != nil {
-			continue
-		}
-		bonus += countTradeStepBonusFromBehaviors(card.Behaviors)
-	}
-	if corpID := p.CorporationID(); corpID != "" {
-		corp, err := cardRegistry.GetByID(corpID)
-		if err == nil {
-			bonus += countTradeStepBonusFromBehaviors(corp.Behaviors)
-		}
-	}
-	return bonus
-}
-
-func countTradeStepBonusFromBehaviors(behaviors []shared.CardBehavior) int {
-	bonus := 0
-	for _, behavior := range behaviors {
-		for _, trigger := range behavior.Triggers {
-			if trigger.Type == shared.TriggerTypeAuto &&
-				trigger.Condition != nil &&
-				trigger.Condition.Type == "before-colony-trade" {
-				for _, output := range behavior.Outputs {
-					if output.GetResourceType() == "colony-track-step" {
-						bonus += output.GetAmount()
-					}
-				}
-			}
-		}
-	}
-	return bonus
 }

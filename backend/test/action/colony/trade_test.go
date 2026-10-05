@@ -2,10 +2,17 @@ package colony_test
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	baseaction "terraforming-mars-backend/internal/action"
+	confirmAction "terraforming-mars-backend/internal/action/confirmation"
+	"terraforming-mars-backend/internal/action/turn_management"
+	"terraforming-mars-backend/internal/delivery/dto"
 	"testing"
 
 	colonyAction "terraforming-mars-backend/internal/action/colony"
 	"terraforming-mars-backend/internal/game"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/colony"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -41,8 +48,8 @@ func setupColonyGame(t *testing.T) (*game.Game, game.GameRepository, colony.Colo
 	p2.Resources().Add(map[shared.ResourceType]int{shared.ResourceEnergy: 10})
 
 	// Enable trade fleets
-	testGame.Colonies().SetTradeFleetAvailable(player1, true)
-	testGame.Colonies().SetTradeFleetAvailable(player2, true)
+	testGame.Colonies().AddTradeFleets(player1, 1)
+	testGame.Colonies().AddTradeFleets(player2, 1)
 
 	_ = cardRegistry
 	return testGame, repo, colonyRegistry, player1, player2
@@ -70,7 +77,7 @@ func TestTrade_ImmediateResources_CreditsAdded(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade with Luna should succeed")
 
 	creditsAfter := p.Resources().Get().Credits
@@ -91,7 +98,7 @@ func TestTrade_ColonyBonusGivenToOwners(t *testing.T) {
 	creditsBefore := p2.Resources().Get().Credits
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), player1, "luna", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), player1, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade with Luna should succeed")
 
 	creditsAfter := p2.Resources().Get().Credits
@@ -112,7 +119,7 @@ func TestTrade_TraderWithColony_GetsBothIncomeAndBonus(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade with Luna should succeed")
 
 	creditsAfter := p.Resources().Get().Credits
@@ -136,7 +143,7 @@ func TestTrade_CardTargetedResources_CombinedWhenTraderHasColony(t *testing.T) {
 	p.PlayedCards().AddCard(aerialMappersID, "Aerial Mappers", "active", []string{"venus"})
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, cardRegistry, stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "titan", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "titan", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade with Titan should succeed")
 
 	// Should have a pending selection with combined amount: 4 (trade) + 1 (bonus) = 5
@@ -162,7 +169,7 @@ func TestTrade_CardTargetedResources_TradeOnlyWithoutColony(t *testing.T) {
 	p.PlayedCards().AddCard(aerialMappersID, "Aerial Mappers", "active", []string{"venus"})
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, cardRegistry, stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "titan", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "titan", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade with Titan should succeed")
 
 	selection := firstColonyResourceFromQueue(p)
@@ -187,7 +194,7 @@ func TestTrade_ColonyBonusReason_SetToColonyTax(t *testing.T) {
 	p2.PlayedCards().AddCard(aerialMappersID, "Aerial Mappers", "active", []string{"venus"})
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, cardRegistry, stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), player1, "titan", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), player1, "titan", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade with Titan should succeed")
 
 	selection := firstColonyResourceFromQueue(p2)
@@ -208,7 +215,7 @@ func TestTrade_MarkerAtZero_NoTradeIncome(t *testing.T) {
 	plantsBefore := p.Resources().Get().Plants
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "ganymede", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "ganymede", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade with Ganymede at position 0 should succeed")
 
 	plantsAfter := p.Resources().Get().Plants
@@ -225,7 +232,7 @@ func TestTrade_ResetsMarkerPosition(t *testing.T) {
 	setupColony(testGame, "luna", 5, []string{"other-1", "other-2"})
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade should succeed")
 
 	tileState := testGame.Colonies().GetState("luna")
@@ -246,7 +253,7 @@ func TestTrade_AlreadyTraded_Fails(t *testing.T) {
 	tileState.TradedThisGen = true
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertError(t, err, "Should fail when colony already traded")
 }
 
@@ -265,7 +272,7 @@ func TestTrade_InsufficientEnergy_Fails(t *testing.T) {
 	p.Resources().Set(r)
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertError(t, err, "Should fail with insufficient energy")
 }
 
@@ -276,10 +283,12 @@ func TestTrade_NoTradeFleet_Fails(t *testing.T) {
 	logger := testutil.TestLogger()
 
 	setupColony(testGame, "luna", 3, nil)
-	testGame.Colonies().SetTradeFleetAvailable(playerID, false)
+	if testGame.Colonies().TradeFleet(playerID).Available() > 0 {
+		testutil.AssertNoError(t, testGame.Colonies().UseTradeFleet(playerID), "Use fleet")
+	}
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertError(t, err, "Should fail without trade fleet")
 }
 
@@ -295,7 +304,7 @@ func TestTrade_DeductsEnergyCost(t *testing.T) {
 	energyBefore := p.Resources().Get().Energy
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade should succeed")
 
 	energyAfter := p.Resources().Get().Energy
@@ -311,10 +320,10 @@ func TestTrade_ConsumesTradeFleet(t *testing.T) {
 	setupColony(testGame, "luna", 3, nil)
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade should succeed")
 
-	testutil.AssertFalse(t, testGame.Colonies().GetTradeFleetAvailable(playerID), "Trade fleet should be consumed")
+	testutil.AssertFalse(t, testGame.Colonies().TradeFleet(playerID).Available() > 0, "Trade fleet should be consumed")
 }
 
 func TestTrade_MultipleColonyOwners_AllGetBonus(t *testing.T) {
@@ -332,7 +341,7 @@ func TestTrade_MultipleColonyOwners_AllGetBonus(t *testing.T) {
 	p2Heat := p2.Resources().Get().Heat
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), player1, "io", colonyAction.TradePaymentEnergy)
+	err := action.Execute(ctx, testGame.ID(), player1, "io", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
 	testutil.AssertNoError(t, err, "Trade should succeed")
 
 	// Io step 4 = 8 heat trade income, bonus = 2 heat per colony
@@ -359,7 +368,7 @@ func TestTrade_PayWithCredits(t *testing.T) {
 	energyBefore := p.Resources().Get().Energy
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentCredits)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentCredits, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentCredits)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentCredits)]))
 	testutil.AssertNoError(t, err, "Trade with credits should succeed")
 
 	testutil.AssertEqual(t, creditsBefore-9+7, p.Resources().Get().Credits, "Should deduct 9 credits cost and gain 7 from Luna")
@@ -380,7 +389,7 @@ func TestTrade_PayWithTitanium(t *testing.T) {
 	energyBefore := p.Resources().Get().Energy
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentTitanium)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentTitanium, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentTitanium)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentTitanium)]))
 	testutil.AssertNoError(t, err, "Trade with titanium should succeed")
 
 	testutil.AssertEqual(t, titaniumBefore-3, p.Resources().Get().Titanium, "Should deduct 3 titanium")
@@ -399,7 +408,7 @@ func TestTrade_InsufficientCredits_Fails(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 5)
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentCredits)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentCredits, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentCredits)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentCredits)]))
 	testutil.AssertError(t, err, "Should fail with insufficient credits")
 }
 
@@ -412,7 +421,7 @@ func TestTrade_InsufficientTitanium_Fails(t *testing.T) {
 	setupColony(testGame, "luna", 3, nil)
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentTitanium)
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentTitanium, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentTitanium)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentTitanium)]))
 	testutil.AssertError(t, err, "Should fail with insufficient titanium")
 }
 
@@ -425,6 +434,148 @@ func TestTrade_InvalidPaymentType_Fails(t *testing.T) {
 	setupColony(testGame, "luna", 3, nil)
 
 	action := colonyAction.NewTradeAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentType("invalid"))
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", colonyAction.TradePaymentType("invalid"), 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentType("invalid"))], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentType("invalid"))]))
 	testutil.AssertError(t, err, "Should fail with invalid payment type")
+}
+
+func addTradeModifierCards(p *player.Player, names ...string) {
+	for _, name := range names {
+		card := testutil.GetCardByName(name)
+		p.PlayedCards().AddCard(card.ID, card.Name, string(card.Type), nil)
+	}
+}
+
+func TestTrade_OptionalTrackChoicesAndPreview(t *testing.T) {
+	for _, names := range [][]string{nil, {"Trade Envoys"}, {"Trading Colony"}, {"Trade Envoys", "Trading Colony"}} {
+		for _, position := range []int{3, 5, 6} {
+			for _, free := range []bool{false, true} {
+				for steps := 0; steps <= min(len(names), 6-position); steps++ {
+					t.Run(fmt.Sprintf("%v/position%d/free%v/steps%d", names, position, free, steps), func(t *testing.T) {
+						g, repo, colonies, id, opponent := setupColonyGame(t)
+						p, _ := g.GetPlayer(id)
+						addTradeModifierCards(p, names...)
+						setupColony(g, "luna", position, []string{id, id, opponent})
+						registry := testutil.CreateTestCardRegistry()
+						mapped := dto.ToGameDto(g, registry, id, colonies)
+						options := mapped.Colonies[0].TradeOptions
+						testutil.AssertEqual(t, min(len(names), 6-position)+1, len(options), "Legal options, capped and deduplicated")
+						chosen := options[steps]
+						testutil.AssertEqual(t, steps, chosen.TrackSteps, "Choices ascending")
+						testutil.AssertEqual(t, position+steps, chosen.MarkerPosition, "Preview marker")
+						before := p.Resources().Get()
+						other, _ := g.GetPlayer(opponent)
+						otherBefore := other.Resources().Get().Credits
+						ctx := context.Background()
+						if free {
+							p.Selection().SetPendingFreeTradeSelection(&shared.PendingFreeTradeSelection{AvailableColonyIDs: []string{"luna"}, Source: "Test trade"})
+							action := confirmAction.NewConfirmFreeTradeAction(repo, registry, colonies, game.NewInMemoryGameStateRepository())
+							testutil.AssertNoError(t, action.Execute(ctx, g.ID(), id, "luna", steps), "Free trade")
+							testutil.AssertTrue(t, p.Selection().GetPendingFreeTradeSelection() == nil, "Pending cleared")
+							testutil.AssertEqual(t, before.Energy, p.Resources().Get().Energy, "Free trade has no resource cost")
+						} else {
+							action := colonyAction.NewTradeAction(repo, colonies, registry, game.NewInMemoryGameStateRepository(), testutil.TestLogger())
+							testutil.AssertNoError(t, action.Execute(ctx, g.ID(), id, "luna", colonyAction.TradePaymentEnergy, steps, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)])), "Paid trade")
+							testutil.AssertEqual(t, before.Energy-3, p.Resources().Get().Energy, "Trade cost paid once")
+						}
+						testutil.AssertEqual(t, before.Credits+chosen.Outputs[0].Amount, p.Resources().Get().Credits, "Actual gains equal preview including both owned colonies")
+						testutil.AssertEqual(t, otherBefore+2, other.Resources().Get().Credits, "Opponent receives colony bonus")
+						testutil.AssertEqual(t, 1, g.Colonies().TradeFleet(id).Used, "One fleet used")
+						testutil.AssertEqual(t, 3, g.Colonies().GetState("luna").MarkerPosition, "Marker resets beside colonies")
+						testutil.AssertTrue(t, g.Colonies().GetState("luna").TradedThisGen, "Colony unavailable for another fleet")
+					})
+				}
+			}
+		}
+	}
+}
+
+func TestTrade_InvalidOrStaleChoiceHasNoSideEffects(t *testing.T) {
+	for _, failure := range []string{"negative", "too large", "removed effect", "track moved", "colony traded", "fleet used", "unaffordable"} {
+		for _, free := range []bool{false, true} {
+			if free && failure == "unaffordable" {
+				continue
+			}
+			t.Run(fmt.Sprintf("%s/free%v", failure, free), func(t *testing.T) {
+				g, repo, colonies, id, _ := setupColonyGame(t)
+				p, _ := g.GetPlayer(id)
+				addTradeModifierCards(p, "Trade Envoys")
+				setupColony(g, "luna", 3, nil)
+				steps := 1
+				switch failure {
+				case "negative":
+					steps = -1
+				case "too large":
+					steps = 2
+				case "removed effect":
+					p.PlayedCards().RemoveCard(testutil.CardID("Trade Envoys"))
+				case "track moved":
+					g.Colonies().GetState("luna").MarkerPosition = 6
+				case "colony traded":
+					g.Colonies().GetState("luna").TradedThisGen = true
+				case "fleet used":
+					testutil.AssertNoError(t, g.Colonies().UseTradeFleet(id), "Use fleet")
+				case "unaffordable":
+					p.Resources().Set(shared.Resources{})
+				}
+				before := p.Resources().Get()
+				fleet := g.Colonies().TradeFleet(id)
+				marker := g.Colonies().GetState("luna").MarkerPosition
+				actions := g.CurrentTurn().ActionsRemaining()
+				registry := testutil.CreateTestCardRegistry()
+				var err error
+				if free {
+					p.Selection().SetPendingFreeTradeSelection(&shared.PendingFreeTradeSelection{AvailableColonyIDs: []string{"luna"}})
+					action := confirmAction.NewConfirmFreeTradeAction(repo, registry, colonies, game.NewInMemoryGameStateRepository())
+					err = action.Execute(context.Background(), g.ID(), id, "luna", steps)
+					testutil.AssertTrue(t, p.Selection().GetPendingFreeTradeSelection() != nil, "Pending retained after rejection")
+				} else {
+					action := colonyAction.NewTradeAction(repo, colonies, registry, game.NewInMemoryGameStateRepository(), testutil.TestLogger())
+					err = action.Execute(context.Background(), g.ID(), id, "luna", colonyAction.TradePaymentEnergy, steps, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)]))
+				}
+				testutil.AssertTrue(t, err != nil, "Invalid request rejected")
+				testutil.AssertTrue(t, reflect.DeepEqual(before, p.Resources().Get()), "Resources unchanged")
+				testutil.AssertTrue(t, fleet == g.Colonies().TradeFleet(id), "Fleets unchanged")
+				testutil.AssertEqual(t, marker, g.Colonies().GetState("luna").MarkerPosition, "Marker unchanged")
+				testutil.AssertEqual(t, actions, g.CurrentTurn().ActionsRemaining(), "Actions unchanged")
+			})
+		}
+	}
+}
+
+func TestTrade_MultipleFleetsAndGenerationReset(t *testing.T) {
+	g, repo, colonies, id, _ := setupColonyGame(t)
+	setupColony(g, "luna", 3, nil)
+	setupColony(g, "io", 3, nil)
+	setupColony(g, "callisto", 3, nil)
+	g.Colonies().AddTradeFleets(id, 1)
+	trade := colonyAction.NewTradeAction(repo, colonies, testutil.CreateTestCardRegistry(), game.NewInMemoryGameStateRepository(), testutil.TestLogger())
+	for _, colonyID := range []string{"luna", "io"} {
+		testutil.AssertNoError(t, trade.Execute(context.Background(), g.ID(), id, colonyID, colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)])), "Trade with another fleet")
+	}
+	testutil.AssertEqual(t, 0, g.Colonies().TradeFleet(id).Available(), "Fleets exhausted")
+	testutil.AssertNoError(t, g.SetCurrentTurn(context.Background(), id, 2), "Reset turn")
+	testutil.AssertTrue(t, trade.Execute(context.Background(), g.ID(), id, "callisto", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)])) != nil, "Cannot trade beyond capacity")
+	g.Colonies().AddTradeFleets(id, 1)
+	testutil.AssertEqual(t, 1, g.Colonies().TradeFleet(id).Available(), "Gaining a fleet after exhaustion")
+	testutil.AssertTrue(t, trade.Execute(context.Background(), g.ID(), id, "luna", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)])) != nil, "Extra fleet cannot revisit traded colony")
+	testutil.AssertNoError(t, trade.Execute(context.Background(), g.ID(), id, "callisto", colonyAction.TradePaymentEnergy, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(colonyAction.TradePaymentEnergy)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(colonyAction.TradePaymentEnergy)])), "New fleet can trade immediately")
+	testutil.AssertNoError(t, turn_management.ExecuteProductionPhase(context.Background(), g, g.GetAllPlayers(), testutil.TestLogger()), "Generation rollover")
+	testutil.AssertEqual(t, 3, g.Colonies().TradeFleet(id).Available(), "All fleets return")
+	testutil.AssertEqual(t, 3, g.Colonies().TradeFleet(id).Capacity, "Capacity retained")
+	testutil.AssertFalse(t, g.Colonies().GetState("luna").TradedThisGen, "Colonies become available")
+}
+
+func TestTradeOptions_SupportWholeNonUnitEffects(t *testing.T) {
+	g, _, colonies, id, _ := setupColonyGame(t)
+	p, _ := g.GetPlayer(id)
+	setupColony(g, "luna", 0, nil)
+	card := testutil.GetCardByName("Trade Envoys")
+	card.ID = "test-non-unit"
+	card.Behaviors[0].Outputs[0].(*shared.ColonyCondition).Amount = 2
+	registry := gamecards.NewInMemoryCardRegistry([]gamecards.Card{card})
+	p.PlayedCards().AddCard(card.ID, card.Name, string(card.Type), nil)
+	definition, _ := colonies.GetByID("luna")
+	options := baseaction.CalculateColonyTradeOptions(p, g.Colonies().GetState("luna"), definition, registry)
+	testutil.AssertEqual(t, 2, len(options), "Whole optional effect, not arbitrary partial amount")
+	testutil.AssertEqual(t, 2, options[1].TrackSteps, "Non-unit output is respected")
 }

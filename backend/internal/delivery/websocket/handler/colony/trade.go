@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"terraforming-mars-backend/internal/game/shared"
 
 	colonyaction "terraforming-mars-backend/internal/action/colony"
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -14,12 +15,6 @@ import (
 // Broadcaster defines the interface for broadcasting game state
 type Broadcaster interface {
 	BroadcastGameState(gameID string, playerIDs []string)
-}
-
-// TradePayload represents the expected payload for trading with a colony
-type TradePayload struct {
-	ColonyID    string `json:"colonyId"`
-	PaymentType string `json:"paymentType"`
 }
 
 // TradeHandler handles colony trade requests
@@ -60,7 +55,7 @@ func (h *TradeHandler) HandleMessage(ctx context.Context, connection *core.Conne
 		return
 	}
 
-	var payload TradePayload
+	var payload dto.ColonyTradeRequest
 	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
 		log.Error("Failed to unmarshal payload", slog.Any("error", err))
 		h.sendError(connection, "Invalid payload format")
@@ -73,12 +68,29 @@ func (h *TradeHandler) HandleMessage(ctx context.Context, connection *core.Conne
 		return
 	}
 
+	if payload.TrackSteps == nil {
+		h.sendError(connection, "trackSteps is required")
+		return
+	}
 	paymentType := colonyaction.TradePaymentType(payload.PaymentType)
 	if paymentType == "" {
 		paymentType = colonyaction.TradePaymentEnergy
 	}
 
-	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.ColonyID, paymentType)
+	var paymentEnvelope struct {
+		Payment shared.Payment `json:"payment"`
+	}
+	paymentBytes, paymentErr := json.Marshal(message.Payload)
+	if paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+
+	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.ColonyID, paymentType, *payload.TrackSteps, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute colony trade action", slog.Any("error", err))
 		h.sendError(connection, err.Error())
