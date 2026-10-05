@@ -3,6 +3,7 @@ package behavior_test
 import (
 	"context"
 	"log/slog"
+	baseaction "terraforming-mars-backend/internal/action"
 	"testing"
 
 	"terraforming-mars-backend/internal/game/board"
@@ -12,86 +13,60 @@ import (
 	"terraforming-mars-backend/test/testutil"
 )
 
-func TestPerCondition_CityTileMarsLocation(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
-	p := g.GetAllPlayers()[0]
-	ctx := context.Background()
-
-	// Place 3 city tiles on mars
-	tiles := g.Board().Tiles()
-	placed := 0
-	for _, tile := range tiles {
-		if tile.Location == board.TileLocationMars && tile.OccupiedBy == nil && placed < 3 {
-			err := g.Board().UpdateTileOccupancy(ctx, tile.Coordinates,
-				board.TileOccupant{Type: shared.ResourceCityTile}, p.ID())
-			testutil.AssertNoError(t, err, "placing city tile")
-			placed++
-		}
+func TestPerCondition_CityTileLocationAndOwner(t *testing.T) {
+	mars, anywhere, self := "mars", "anywhere", "self-player"
+	for _, tc := range []struct {
+		name     string
+		location *string
+		target   *string
+		want     int
+	}{
+		{"mars all owners", &mars, nil, 2},
+		{"anywhere all owners", &anywhere, nil, 4},
+		{"omitted location all owners", nil, nil, 4},
+		{"mars self", &mars, &self, 1},
+		{"anywhere self", &anywhere, &self, 2},
+		{"omitted location self", nil, &self, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, _, registry, id, opponentID := testutil.SetupTwoPlayerGame(t)
+			p, _ := g.GetPlayer(id)
+			ctx := context.Background()
+			for _, placement := range []struct {
+				location board.TileLocation
+				owner    string
+				kind     shared.ResourceType
+			}{
+				{board.TileLocationMars, id, shared.ResourceCityTile},
+				{board.TileLocationMars, opponentID, shared.ResourceCityTile},
+				{board.TileLocationPhobos, id, shared.ResourceCityTile},
+				{board.TileLocationGanymede, opponentID, shared.ResourceCityTile},
+				{board.TileLocationMars, id, shared.ResourceGreeneryTile},
+			} {
+				placed := false
+				for _, tile := range g.Board().Tiles() {
+					if tile.Location == placement.location && tile.OccupiedBy == nil {
+						testutil.AssertNoError(t, g.Board().UpdateTileOccupancy(ctx, tile.Coordinates,
+							board.TileOccupant{Type: placement.kind}, placement.owner), "place counting fixture")
+						placed = true
+						break
+					}
+				}
+				testutil.AssertTrue(t, placed, "fixture location exists")
+			}
+			per := &shared.PerCondition{ResourceType: shared.ResourceCityTile, Amount: 1, Location: tc.location, Target: tc.target}
+			count := gamecards.CountPerCondition(per, "", p, g.Board(), registry, g.GetAllPlayers(), nil, gamecards.TagCountContext{})
+			testutil.AssertEqual(t, tc.want, count, "city count filters location and owner together")
+			before := testutil.GetPlayerCredits(p)
+			outputs := []shared.BehaviorCondition{&shared.BasicResourceCondition{
+				ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
+				Per:           per,
+			}}
+			applier := gamecards.NewBehaviorApplier(p, g, "city count", slog.Default())
+			testutil.AssertNoError(t, applier.ApplyOutputs(ctx, outputs), "apply city-count output")
+			testutil.AssertEqual(t, before+tc.want, testutil.GetPlayerCredits(p), "effect uses the same count")
+		})
 	}
-	testutil.AssertEqual(t, 3, placed, "should place 3 cities")
-
-	// Set starting credits to 0
-	testutil.SetPlayerCredits(ctx, p, 0)
-
-	// Create output with per: city-tile, location: mars
-	marsLocation := "mars"
-	outputs := []shared.BehaviorCondition{
-		&shared.BasicResourceCondition{
-			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
-			Per: &shared.PerCondition{
-				ResourceType: shared.ResourceCityTile,
-				Amount:       1,
-				Location:     &marsLocation,
-			},
-		},
-	}
-
-	applier := gamecards.NewBehaviorApplier(p, g, "Martian Rails", slog.Default())
-	err := applier.ApplyOutputs(ctx, outputs)
-	testutil.AssertNoError(t, err, "applying outputs")
-
-	credits := testutil.GetPlayerCredits(p)
-	testutil.AssertEqual(t, 3, credits, "should gain 3 credits (1 per city on mars)")
-}
-
-func TestPerCondition_CityTileAnywhereLocation(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
-	p := g.GetAllPlayers()[0]
-	ctx := context.Background()
-
-	// Place 2 city tiles on mars
-	tiles := g.Board().Tiles()
-	placed := 0
-	for _, tile := range tiles {
-		if tile.Location == board.TileLocationMars && tile.OccupiedBy == nil && placed < 2 {
-			err := g.Board().UpdateTileOccupancy(ctx, tile.Coordinates,
-				board.TileOccupant{Type: shared.ResourceCityTile}, p.ID())
-			testutil.AssertNoError(t, err, "placing city tile")
-			placed++
-		}
-	}
-
-	testutil.SetPlayerCredits(ctx, p, 0)
-
-	// Per with no location (anywhere)
-	outputs := []shared.BehaviorCondition{
-		&shared.BasicResourceCondition{
-			ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 1, Target: "self-player"},
-			Per: &shared.PerCondition{
-				ResourceType: shared.ResourceCityTile,
-				Amount:       1,
-			},
-		},
-	}
-
-	applier := gamecards.NewBehaviorApplier(p, g, "Greenhouses", slog.Default())
-	err := applier.ApplyOutputs(ctx, outputs)
-	testutil.AssertNoError(t, err, "applying outputs")
-
-	credits := testutil.GetPlayerCredits(p)
-	testutil.AssertEqual(t, 2, credits, "should gain 2 credits (1 per city anywhere)")
 }
 
 func TestPerCondition_TagSelfPlayer(t *testing.T) {
@@ -290,7 +265,7 @@ func TestCountPerConditionResourceCounting(t *testing.T) {
 		Amount:       1,
 		Target:       &selfPlayer,
 	}
-	count := gamecards.CountPerCondition(heatPer, "", p, g.Board(), nil, nil)
+	count := gamecards.CountPerCondition(heatPer, "", p, g.Board(), nil, nil, nil, gamecards.TagCountContext{})
 	testutil.AssertEqual(t, 10, count, "should count 10 heat")
 
 	// Steel counting
@@ -299,7 +274,7 @@ func TestCountPerConditionResourceCounting(t *testing.T) {
 		Amount:       1,
 		Target:       &selfPlayer,
 	}
-	count = gamecards.CountPerCondition(steelPer, "", p, g.Board(), nil, nil)
+	count = gamecards.CountPerCondition(steelPer, "", p, g.Board(), nil, nil, nil, gamecards.TagCountContext{})
 	testutil.AssertEqual(t, 5, count, "should count 5 steel")
 
 	// Titanium counting
@@ -308,7 +283,7 @@ func TestCountPerConditionResourceCounting(t *testing.T) {
 		Amount:       1,
 		Target:       &selfPlayer,
 	}
-	count = gamecards.CountPerCondition(titaniumPer, "", p, g.Board(), nil, nil)
+	count = gamecards.CountPerCondition(titaniumPer, "", p, g.Board(), nil, nil, nil, gamecards.TagCountContext{})
 	testutil.AssertEqual(t, 3, count, "should count 3 titanium")
 
 	_ = ctx
@@ -331,7 +306,7 @@ func TestCountPerConditionProductionCounting(t *testing.T) {
 		Amount:       1,
 		Target:       &selfPlayer,
 	}
-	count := gamecards.CountPerCondition(creditProdPer, "", p, g.Board(), nil, nil)
+	count := gamecards.CountPerCondition(creditProdPer, "", p, g.Board(), nil, nil, nil, gamecards.TagCountContext{})
 	testutil.AssertEqual(t, 3, count, "should count 3 credit production")
 }
 
@@ -508,4 +483,100 @@ func TestPerCondition_PerAmountZero_NoScaling(t *testing.T) {
 
 	credits := testutil.GetPlayerCredits(p)
 	testutil.AssertEqual(t, 3, credits, "should gain base amount (3) when per.Amount is 0 (no scaling)")
+}
+
+func TestPerCondition_PlayedCardSelectorsAndSourceInclusion(t *testing.T) {
+	g, _, registry, id := testutil.SetupSoloGame(t)
+	p, _ := g.GetPlayer(id)
+	p.SetCorporationID(testutil.CardID("Point Luna"))
+	for _, name := range []string{"Dust Seals", "Research Network", "Indentured Workers", "Power Plant"} {
+		c := testutil.GetCardByName(name)
+		p.PlayedCards().AddCard(c.ID, c.Name, string(c.Type), nil)
+	}
+	zero := 0
+	target := "self-player"
+	per := &shared.PerCondition{ResourceType: shared.ResourceCardCount, Amount: 1, Target: &target, Zone: "played", IncludeSource: true, Selectors: []shared.Selector{{TagCount: &shared.MinMaxValue{Max: &zero}, CardTypes: []string{"active", "automated", "prelude", "corporation"}}}}
+	source := testutil.CardID("Community Services")
+	count := gamecards.CountPerCondition(per, source, p, g.Board(), registry, g.GetAllPlayers(), g.Colonies(), gamecards.TagCountContext{})
+	testutil.AssertEqual(t, 3, count, "Count source, tagless card and wild-only prelude; exclude event and tagged cards")
+	c := testutil.GetCardByName("Community Services")
+	p.PlayedCards().AddCard(c.ID, c.Name, string(c.Type), nil)
+	testutil.AssertEqual(t, count, gamecards.CountPerCondition(per, source, p, g.Board(), registry, g.GetAllPlayers(), g.Colonies(), gamecards.TagCountContext{}), "Source inclusion must not count twice after play")
+	p.Hand().AddCard(testutil.CardID("Mine"))
+	testutil.AssertEqual(t, p.Hand().CardCount(), gamecards.CountPerCondition(&shared.PerCondition{ResourceType: shared.ResourceCardCount, Amount: 1}, "", p, g.Board(), registry, nil, nil, gamecards.TagCountContext{}), "Unqualified card-count remains hand count")
+}
+
+func TestPerCondition_MaxTriggerExecutionAndPreviews(t *testing.T) {
+	three, zero := 3, 0
+	for _, tc := range []struct {
+		name  string
+		count int
+		cap   *int
+		want  int
+	}{
+		{"cap groups before multiplying", 9, &three, 6}, {"round down below cap", 5, &three, 4},
+		{"uncapped", 9, nil, 8}, {"zero cap", 9, &zero, 0}, {"zero count", 0, &three, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, _, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+			p, _ := g.GetPlayer(id)
+			source := "scaled-output-test"
+			p.Resources().AddToStorage(source, tc.count)
+			target := "self-card"
+			output := &shared.BasicResourceCondition{
+				ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 2, Target: "self-player"},
+				Per:           &shared.PerCondition{ResourceType: shared.ResourceFloater, Amount: 2, Target: &target}, MaxTrigger: tc.cap,
+			}
+			behavior := shared.CardBehavior{Outputs: []shared.BehaviorCondition{output}}
+			card := gamecards.Card{ID: source, Type: gamecards.CardTypeAutomated, Behaviors: []shared.CardBehavior{behavior}}
+			direct := baseaction.CalculatePlayerCardState(&card, p, g, registry)
+			choice := shared.CardBehavior{Choices: []shared.Choice{{Outputs: behavior.Outputs}}}
+			manual := baseaction.CalculatePlayerCardActionState(source, choice, 0, p, g, registry)
+			for _, state := range []struct {
+				name   string
+				values []shared.CalculatedOutput
+			}{
+				{"direct", direct.ComputedValues[0].Outputs}, {"choice", manual.ComputedValues[0].Outputs},
+			} {
+				testutil.AssertEqual(t, tc.want, state.values[0].Amount, state.name+" preview")
+			}
+			before := p.Resources().Get().Credits
+			outputs, err := gamecards.NewBehaviorApplier(p, g, "Test scaling", testutil.TestLogger()).WithSourceCardID(source).ApplyOutputsAndGetCalculated(context.Background(), behavior.Outputs)
+			testutil.AssertNoError(t, err, "Apply scaled output")
+			testutil.AssertEqual(t, before+tc.want, p.Resources().Get().Credits, "Applied payout")
+			testutil.AssertEqual(t, tc.want, outputs[0].Amount, "Recorded payout")
+			testutil.AssertTrue(t, outputs[0].IsScaled, "Recorded as scaled, including zero")
+		})
+	}
+}
+
+func TestPerCondition_WildTagLifecycle(t *testing.T) {
+	g, _, _, id, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	tag := shared.TagScience
+	source := gamecards.Card{ID: "wild-source", Name: "Wild source", Type: gamecards.CardTypeAutomated, Tags: []shared.CardTag{shared.TagWild}}
+	registry := testutil.CreateTestCardRegistryWithAdditionalCards([]gamecards.Card{source})
+	p.PlayedCards().AddCard(source.ID, source.Name, string(source.Type), nil)
+	output := shared.NewBasicResourceCondition(shared.ResourceCredit, 1, "self-player")
+	output.Per = &shared.PerCondition{ResourceType: shared.ResourceTag, Tag: &tag, Amount: 1}
+	for _, tc := range []struct {
+		name       string
+		sourceType shared.SourceType
+		phase      shared.GamePhase
+		want       int
+	}{
+		{"own play cannot use new wild", shared.SourceTypeCardPlay, shared.GamePhaseAction, 0},
+		{"later action", shared.SourceTypeCardAction, shared.GamePhaseAction, 1},
+		{"another action reuses wild", shared.SourceTypeCardAction, shared.GamePhaseAction, 1},
+		{"trigger", shared.SourceTypePassiveEffect, shared.GamePhaseAction, 0},
+		{"setup", shared.SourceTypeCardPlay, shared.GamePhaseInitApplyPrelude, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			testutil.AssertNoError(t, g.UpdatePhase(context.Background(), tc.phase), "phase")
+			before := p.Resources().Get().Credits
+			applier := gamecards.NewBehaviorApplier(p, g, source.Name, testutil.TestLogger()).WithSourceCardID(source.ID).WithCardRegistry(registry).WithSourceType(tc.sourceType)
+			testutil.AssertNoError(t, applier.ApplyOutputs(context.Background(), []shared.BehaviorCondition{output}), "output")
+			testutil.AssertEqual(t, before+tc.want, p.Resources().Get().Credits, "wild eligibility")
+		})
+	}
 }

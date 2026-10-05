@@ -75,8 +75,9 @@ func TestMirandaResort_CreditProductionPerEarthTag(t *testing.T) {
 	productionBefore := p.Resources().Production()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 12}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-miranda-resort", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 12)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-miranda-resort", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Miranda Resort should play successfully")
 
 	productionAfter := p.Resources().Production()
@@ -135,8 +136,9 @@ func TestMirandaResort_ZeroEarthTags(t *testing.T) {
 	productionBefore := p.Resources().Production()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 12}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-miranda-resort", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 12)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-miranda-resort", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Miranda Resort should play successfully with 0 earth tags")
 
 	productionAfter := p.Resources().Production()
@@ -205,8 +207,9 @@ func TestTerraformingGanymede_TRPerJovianTag(t *testing.T) {
 	trBefore := p.Resources().TerraformRating()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 33}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-terraforming-ganymede", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 33)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-terraforming-ganymede", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Terraforming Ganymede should play successfully")
 
 	trAfter := p.Resources().TerraformRating()
@@ -273,8 +276,9 @@ func TestTerraformingGanymede_OnlyCountsSelfPlayerTags(t *testing.T) {
 	trBefore := attacker.Resources().TerraformRating()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 33}
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), "card-terraforming-ganymede", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 33)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), "card-terraforming-ganymede", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Terraforming Ganymede should play successfully")
 
 	trAfter := attacker.Resources().TerraformRating()
@@ -343,11 +347,12 @@ func TestImportedNitrogen_MultipleAnyCardTargets(t *testing.T) {
 	p.Hand().AddCard("card-imported-nitrogen")
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 23}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 23)
 
 	// Test with two correct targets (microbe host for microbes, animal host for animals)
 	initialPlants := p.Resources().Get().Plants
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-imported-nitrogen", payment, nil, []string{"card-microbe-host", "card-animal-host"}, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-imported-nitrogen", payment, nil, []string{"card-microbe-host", "card-animal-host"}, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should succeed with two correct targets")
 
 	microbeStorage := p.Resources().GetCardStorage("card-microbe-host")
@@ -424,8 +429,9 @@ func TestWorms_OneMicrobeTagBefore_GainsOnePlantProduction(t *testing.T) {
 	productionBefore := p.Resources().Production()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 8}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "130", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 8)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "130", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Worms should play successfully")
 
 	productionAfter := p.Resources().Production()
@@ -459,8 +465,9 @@ func TestWorms_ZeroMicrobeTagsBefore_GainsZeroPlantProduction(t *testing.T) {
 	productionBefore := p.Resources().Production()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 8}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "130", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 8)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "130", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Worms should play successfully")
 
 	productionAfter := p.Resources().Production()
@@ -501,8 +508,9 @@ func TestWorms_ThreeMicrobeTagsBefore_GainsTwoPlantProduction(t *testing.T) {
 	productionBefore := p.Resources().Production()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 8}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "130", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 8)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "130", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Worms should play successfully")
 
 	productionAfter := p.Resources().Production()
@@ -541,8 +549,9 @@ func TestWorms_TwoMicrobeTagsBefore_RoundsDown(t *testing.T) {
 	productionBefore := p.Resources().Production()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 8}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "130", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 8)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "130", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Worms should play successfully")
 
 	productionAfter := p.Resources().Production()
