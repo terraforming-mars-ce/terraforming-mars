@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { collapseParameters } from "./nuclearTransitions";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   insideBuilding,
@@ -192,6 +193,8 @@ export function createGeometry(layout: CityLayout, plot?: CityPlot) {
           if (materialIndex < 3 || materialIndex === 18) {
             batch[i].userData.tint = b.tint;
           }
+          batch[i].userData.collapseGroup = index + 1;
+          batch[i].userData.collapsePivot = [b.x, b.y, b.z];
           batch[i].translate(-b.x, -b.y, 0);
           batch[i].rotateZ(b.rotation);
           batch[i].translate(b.x, b.y, 0);
@@ -846,6 +849,14 @@ export function createGeometry(layout: CityLayout, plot?: CityPlot) {
     }
   }
 
+  const collapseBounds = new Map<number, THREE.Box3>();
+  for (const geometry of batches.flat()) {
+    const id = geometry.userData.collapseGroup ?? 0;
+    geometry.computeBoundingBox();
+    const bounds = collapseBounds.get(id) ?? new THREE.Box3();
+    bounds.union(geometry.boundingBox!);
+    collapseBounds.set(id, bounds);
+  }
   return batches.map((geometries, materialIndex) => {
     if (geometries.length === 0) {
       return null;
@@ -860,6 +871,22 @@ export function createGeometry(layout: CityLayout, plot?: CityPlot) {
         colors[i + 2] = color.b;
       }
       geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      const frostVertices = geo.getAttribute("position");
+      const frostExposure = new Float32Array(frostVertices.count).fill(1);
+      if (style.cover !== "none" && materialIndex !== 10) {
+        const radius = style.cover === "flat-glass" && style.ground === "recessed" ? 0.054 : 0.113;
+        for (let i = 0; i < frostVertices.count; i++) {
+          const r = Math.hypot(frostVertices.getX(i), frostVertices.getY(i));
+          let roofHeight = style.ground === "recessed" ? 0.033 : 0.025;
+          if (style.cover === "dome") {
+            roofHeight = 0.024 + Math.sqrt(Math.max(0, 1 - (r / radius) ** 2)) * radius * 0.92;
+          }
+          if (r < radius - 0.002 && frostVertices.getZ(i) < roofHeight - 0.001) {
+            frostExposure[i] = 0.1;
+          }
+        }
+      }
+      geo.setAttribute("cityFrostExposure", new THREE.BufferAttribute(frostExposure, 1));
       if ([3, 4, 5, 7, 13, 16].includes(materialIndex)) {
         const position = geo.getAttribute("position");
         const uv = geo.getAttribute("uv");
@@ -911,6 +938,50 @@ export function createGeometry(layout: CityLayout, plot?: CityPlot) {
         }
         geo.computeVertexNormals();
       }
+      const group = geo.userData.collapseGroup ?? 0;
+      const pivot = new THREE.Vector3(
+        ...((geo.userData.collapsePivot ?? [0, 0, 0]) as [number, number, number]),
+      );
+      const bounds = collapseBounds.get(group)!;
+      const depth =
+        Math.max(0, bounds.max.z - pivot.z) +
+        bounds.getSize(new THREE.Vector3()).length() * 0.12 +
+        0.08;
+      if (plot) {
+        const center = plot.surface?.center ?? boardCenter(plot.coordinate);
+        projectBoardPoint(
+          center.x + pivot.x,
+          center.y + pivot.y,
+          pivot.z - 0.007,
+          pivot,
+          plot.surface?.radius,
+        );
+        pivot
+          .sub(plot.worldPosition)
+          .applyQuaternion(
+            new THREE.Quaternion()
+              .setFromUnitVectors(new THREE.Vector3(0, 0, 1), plot.normal)
+              .invert(),
+          );
+      }
+      const motion = collapseParameters(layout.seed + group * 97);
+      const count = geo.getAttribute("position").count;
+      const pivots = new Float32Array(count * 3);
+      const motions = new Float32Array(count * 4);
+      for (let i = 0; i < count; i++) {
+        pivots.set(pivot.toArray(), i * 3);
+        motions.set(
+          [
+            motion.delay,
+            Math.cos(motion.direction) * motion.tilt,
+            Math.sin(motion.direction) * motion.tilt,
+            depth,
+          ],
+          i * 4,
+        );
+      }
+      geo.setAttribute("cityCollapsePivot", new THREE.BufferAttribute(pivots, 3));
+      geo.setAttribute("cityCollapseMotion", new THREE.BufferAttribute(motions, 4));
       if (!geo.index) {
         return geo;
       }

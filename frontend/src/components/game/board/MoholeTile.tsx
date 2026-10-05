@@ -1,3 +1,4 @@
+import { useNuclearImpacted } from "./NuclearCollapse";
 import { useRef, useState, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -86,6 +87,7 @@ function extractFencePrimitive(
   const mat = firstMaterial as THREE.MeshStandardMaterial;
   mat.side = THREE.DoubleSide;
   mat.transparent = true;
+  mat.forceSinglePass = true;
   mat.alphaTest = 0.5;
 
   fenceCache = { geometry: merged, material: mat, pieceWidth: size.x * scaleF };
@@ -159,6 +161,7 @@ export default function MoholeTile({
   const groupRef = useRef<THREE.Group>(null);
   const emergenceStartRef = useRef<number | null>(null);
   const isEmergingRef = useRef(isNewlyPlaced);
+  const nuclearImpacted = useNuclearImpacted();
   const [showDust, setShowDust] = useState(isNewlyPlaced);
   const [showSmoke, setShowSmoke] = useState(!isNewlyPlaced);
   const { settings: world3DSettings } = useWorld3DSettings();
@@ -209,6 +212,7 @@ export default function MoholeTile({
       roughness: 0.95,
       metalness: 0.05,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
       transparent: true,
       alphaTest: 0.01,
       depthWrite: false,
@@ -266,6 +270,7 @@ export default function MoholeTile({
         }
       `,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
       transparent: true,
     });
   }, [concreteTexture]);
@@ -333,6 +338,7 @@ export default function MoholeTile({
       roughness: 0.4,
       metalness: 0.5,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
       transparent: true,
       opacity: isEmergingRef.current ? 0 : 1,
     });
@@ -476,6 +482,9 @@ export default function MoholeTile({
   }, [seed]);
 
   useFrame((state) => {
+    if (nuclearImpacted) {
+      return;
+    }
     moholeMaterial.uniforms.uTime.value = state.clock.elapsedTime;
     moholeMaterial.uniforms.uSunDirection.value
       .set(
@@ -583,11 +592,11 @@ export default function MoholeTile({
         )}
       </group>
 
-      {showSmoke && tileWorldMatrix && (
+      {!nuclearImpacted && showSmoke && tileWorldMatrix && (
         <MoholeSmoke isNewlyPlaced={isNewlyPlaced} tileWorldMatrix={tileWorldMatrix} />
       )}
 
-      {showDust && surfaceNormal && worldPosition && (
+      {!nuclearImpacted && showDust && surfaceNormal && worldPosition && (
         <DustEffect
           duration={2800}
           particleColor={new THREE.Color(0.35, 0.15, 0.1)}

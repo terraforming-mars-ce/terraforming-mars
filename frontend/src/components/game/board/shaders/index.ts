@@ -1,5 +1,13 @@
+import { tileHighlightSource } from "../tileHighlightMaterials";
+import collapseVertex from "./nuclear-collapse.vert.glsl?raw";
 import * as THREE from "three";
-import { MOHOLE_STENCIL_BIT } from "../boardConstants";
+import { MOHOLE_STENCIL_BIT, NUCLEAR_STENCIL_BIT, SPHERE_RADIUS } from "../boardConstants";
+import {
+  nuclearProfile,
+  NUCLEAR_WAVE_SECONDS,
+  NUCLEAR_WAVE_DUST_SECONDS,
+  NUCLEAR_WAVE_RADIUS,
+} from "../nuclearGeometry";
 import type { AtmosphereProfile } from "../solarSystemConfig";
 import planetHazeFragment from "./planet-haze.frag.glsl?raw";
 import planetAtmosphereVertex from "./planet-atmosphere.vert.glsl?raw";
@@ -11,21 +19,23 @@ import sunCoronaFragment from "./sun-corona.frag.glsl?raw";
 import sunProminenceFragment from "./sun-prominence.frag.glsl?raw";
 import sphereProjectionVertexRaw from "./sphere-projection.vert.glsl?raw";
 import oceanBorderFragmentRaw from "./ocean-border.frag.glsl?raw";
-import hoverGlowFragmentRaw from "./hover-glow.frag.glsl?raw";
-import availableGlowFragmentRaw from "./available-glow.frag.glsl?raw";
-import vpHighlightFragmentRaw from "./vp-highlight.frag.glsl?raw";
 
 import tileBorderVertexRaw from "./tile-border.vert.glsl?raw";
 import tileBorderFragmentRaw from "./tile-border.frag.glsl?raw";
 import volcanoVertexRaw from "./volcano.vert.glsl?raw";
 import volcanoFragmentRaw from "./volcano.frag.glsl?raw";
+import nuclearMaskFragment from "./nuclear-mask.frag.glsl?raw";
+import nuclearWaveFragment from "./nuclear-wave.frag.glsl?raw";
 import nuclearZoneVertexRaw from "./nuclear-zone.vert.glsl?raw";
+import nuclearSurfaceVertex from "./nuclear-surface.vert.glsl?raw";
 import nuclearZoneFragmentRaw from "./nuclear-zone.frag.glsl?raw";
 import worldTreeVertexRaw from "./world-tree.vert.glsl?raw";
 import worldTreeFragmentRaw from "./world-tree.frag.glsl?raw";
 import moholeVertexRaw from "./mohole.vert.glsl?raw";
 import moholeFragmentRaw from "./mohole.frag.glsl?raw";
 import moholeMaskFragmentRaw from "./mohole-mask.frag.glsl?raw";
+import marsClimateFragment from "./mars-climate.frag.glsl?raw";
+import marsSurface from "./mars-surface.glsl?raw";
 
 export { default as tileSurfaceVertexSnippet } from "./tile-surface.vert.glsl?raw";
 export { default as greeneryGroundVertexSnippet } from "./greenery-ground.vert.glsl?raw";
@@ -38,16 +48,12 @@ function stripVersion(raw: string): string {
 
 export const sphereProjectionVertex = stripVersion(sphereProjectionVertexRaw);
 export const oceanBorderFragment = stripVersion(oceanBorderFragmentRaw);
-export const hoverGlowFragment = stripVersion(hoverGlowFragmentRaw);
-export const availableGlowFragment = stripVersion(availableGlowFragmentRaw);
-export const vpHighlightFragment = stripVersion(vpHighlightFragmentRaw);
 
 export const tileBorderVertex = stripVersion(tileBorderVertexRaw);
 export const tileBorderFragment = stripVersion(tileBorderFragmentRaw);
 export const volcanoVertex = stripVersion(volcanoVertexRaw);
 export const volcanoFragment = stripVersion(volcanoFragmentRaw);
 export const nuclearZoneVertex = stripVersion(nuclearZoneVertexRaw);
-export const nuclearZoneFragment = stripVersion(nuclearZoneFragmentRaw);
 export const worldTreeVertex = stripVersion(worldTreeVertexRaw);
 export const worldTreeFragment = stripVersion(worldTreeFragmentRaw);
 export const moholeVertex = stripVersion(moholeVertexRaw);
@@ -113,6 +119,35 @@ export function createPlanetAtmosphereMaterial(profile: AtmosphereProfile) {
   });
 }
 
+export function createMarsClimateUniforms(noise: THREE.Texture) {
+  return {
+    uClimateNoise: { value: noise },
+    uChill: { value: 0 },
+    uSweep: { value: 0 },
+    uSweepFade: { value: 0 },
+  };
+}
+
+export function addMarsClimate(
+  material: THREE.MeshStandardMaterial,
+  uniforms: ReturnType<typeof createMarsClimateUniforms>,
+) {
+  const snippet = splitSnippet(marsClimateFragment);
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.fragmentShader =
+      marsSurface +
+      "\n" +
+      snippet.header +
+      "\n" +
+      shader.fragmentShader.replace(
+        "#include <map_fragment>",
+        "#include <map_fragment>\n" + snippet.body,
+      );
+  };
+  material.customProgramCacheKey = () => marsSurface + marsClimateFragment;
+}
+
 export function createPlanetHazeUniforms() {
   return {
     uHazeCameraWorld: { value: new THREE.Matrix4() },
@@ -132,6 +167,7 @@ export function receivesPlanetHaze(material: THREE.Material) {
   return (
     material.userData.planetHaze !== false &&
     (material instanceof THREE.MeshStandardMaterial ||
+      (material instanceof THREE.MeshLambertMaterial && material.userData.planetHaze === true) ||
       (material instanceof THREE.ShaderMaterial &&
         !(material instanceof THREE.RawShaderMaterial) &&
         (material.depthWrite || material.userData.planetHaze === true)))
@@ -148,7 +184,8 @@ export function addPlanetHaze(
   const compile = material.onBeforeCompile;
   const programKey = material.customProgramCacheKey;
   const baseKey = material.customProgramCacheKey();
-  const linearColor = material instanceof THREE.MeshStandardMaterial;
+  const linearColor =
+    material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshLambertMaterial;
   material.onBeforeCompile = (shader, renderer) => {
     compile.call(material, shader, renderer);
     Object.assign(shader.uniforms, uniforms);
@@ -177,7 +214,8 @@ export function addPlanetHaze(
       shader.fragmentShader += `\nvoid main() { atmosphereSourceMain(); ${output}.rgb = applyPlanetHaze(${output}.rgb, false, vec3(0.0)); }`;
     }
   };
-  material.customProgramCacheKey = () => baseKey + planetHazeFragment + linearColor;
+  const hazeKey = baseKey + planetHazeFragment + linearColor;
+  material.customProgramCacheKey = () => hazeKey;
   material.needsUpdate = true;
   return () => {
     material.onBeforeCompile = compile;
@@ -214,6 +252,8 @@ export function createVolcanoMaterial(
       uEmergence: { value: 1.0 },
       uTime: { value: 0.0 },
       uSeed: { value: seed },
+      uVegetation: { value: 1 },
+      uFrost: { value: 0 },
       uSunDirection: { value: new THREE.Vector3(0.9, 0.0, 0.8).normalize() },
       uSunIntensity: { value: 1.0 },
       uSunColor: { value: new THREE.Vector3(1.0, 0.86, 0.72) },
@@ -225,33 +265,90 @@ export function createVolcanoMaterial(
     depthWrite: true,
     depthTest: true,
     side: THREE.DoubleSide,
+    forceSinglePass: true,
+  });
+}
+
+export function createNuclearMaskMaterial(sphereCenter = new THREE.Vector3()) {
+  return new THREE.ShaderMaterial({
+    vertexShader: nuclearZoneVertex,
+    fragmentShader: nuclearMaskFragment,
+    uniforms: { uSphereRadius: { value: SPHERE_RADIUS }, uSphereCenter: { value: sphereCenter } },
+    colorWrite: false,
+    depthWrite: false,
+    side: THREE.FrontSide,
+    stencilWrite: true,
+    stencilRef: NUCLEAR_STENCIL_BIT,
+    stencilWriteMask: NUCLEAR_STENCIL_BIT,
+    stencilFunc: THREE.AlwaysStencilFunc,
+    stencilZPass: THREE.ReplaceStencilOp,
+    userData: { planetHaze: false },
+  });
+}
+
+export function createNuclearWaveMaterial(sphereCenter = new THREE.Vector3()) {
+  return new THREE.ShaderMaterial({
+    vertexShader: nuclearZoneVertex,
+    fragmentShader: nuclearWaveFragment,
+    uniforms: {
+      uAge: { value: 0 },
+      uDuration: { value: NUCLEAR_WAVE_SECONDS },
+      uDustDuration: { value: NUCLEAR_WAVE_DUST_SECONDS },
+      uRadius: { value: NUCLEAR_WAVE_RADIUS },
+      uSphereRadius: { value: SPHERE_RADIUS },
+      uSphereCenter: { value: sphereCenter },
+    },
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    forceSinglePass: true,
+    userData: { planetHaze: false },
   });
 }
 
 export function createNuclearZoneMaterial(
   seed: number,
-  sphereCenter?: THREE.Vector3,
-): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    vertexShader: nuclearZoneVertex,
-    fragmentShader: nuclearZoneFragment,
-    uniforms: {
-      uSphereRadius: { value: 2.02 },
-      uSphereCenter: { value: sphereCenter || new THREE.Vector3() },
-      uCraterDepth: { value: 0.04 },
-      uCraterRadius: { value: 0.35 },
-      uEmergence: { value: 1.0 },
-      uTime: { value: 0.0 },
-      uSeed: { value: seed },
-      uSunDirection: { value: new THREE.Vector3(0.9, 0.0, 0.8).normalize() },
-      uSunIntensity: { value: 1.0 },
-      uSunColor: { value: new THREE.Vector3(1.0, 0.86, 0.72) },
-    },
-    transparent: true,
-    depthWrite: true,
-    depthTest: true,
+  mars: THREE.Texture,
+  sphereCenter = new THREE.Vector3(),
+  scorch = false,
+) {
+  const uniforms = {
+    uSphereRadius: { value: SPHERE_RADIUS },
+    uSphereCenter: { value: sphereCenter },
+    uSeed: { value: seed },
+    uMars: { value: mars },
+    uChill: { value: 0 },
+    uGouges: { value: nuclearProfile(seed).gouges },
+    uScorch: { value: Number(scorch) },
+  };
+  const material = new THREE.MeshStandardMaterial({
+    roughness: 0.8,
+    metalness: 0,
+    emissive: 0,
+    fog: false,
+    flatShading: true,
+    userData: { tileHighlights: true },
+    transparent: scorch,
+    depthWrite: !scorch,
     side: THREE.DoubleSide,
+    forceSinglePass: true,
   });
+  const vs = splitSnippet(nuclearSurfaceVertex);
+  const fs = splitSnippet(nuclearZoneFragmentRaw);
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader =
+      vs.header + "\n" + shader.vertexShader.replace("#include <begin_vertex>", vs.body);
+    shader.fragmentShader =
+      marsSurface +
+      "\n" +
+      fs.header +
+      "\n" +
+      shader.fragmentShader.replace("#include <map_fragment>", fs.body);
+  };
+  material.customProgramCacheKey = () =>
+    nuclearSurfaceVertex + marsSurface + nuclearZoneFragmentRaw;
+  return { material, uniforms };
 }
 
 export function createWorldTreeMaterial(
@@ -276,6 +373,7 @@ export function createWorldTreeMaterial(
     depthWrite: true,
     depthTest: true,
     side: THREE.DoubleSide,
+    forceSinglePass: true,
   });
 }
 
@@ -305,6 +403,7 @@ export function createMoholeMaterial(
     depthWrite: true,
     depthTest: true,
     side: THREE.DoubleSide,
+    forceSinglePass: true,
   });
 }
 
@@ -339,4 +438,43 @@ export function createMoholeMaskMaterial(
   mat.stencilZFail = THREE.KeepStencilOp;
 
   return mat;
+}
+
+export function createNuclearCollapseMaterial(
+  source: THREE.Material,
+  transform: { value: THREE.Matrix4 },
+  viewRotation: { value: THREE.Matrix3 },
+  worldRotation: { value: THREE.Matrix3 },
+) {
+  const material = source.clone();
+  // The source compiler already carries any planet-haze wrapper. Do not apply it twice.
+  material.userData.planetHaze = false;
+  if (source instanceof THREE.ShaderMaterial && material instanceof THREE.ShaderMaterial) {
+    material.uniforms = { ...source.uniforms };
+  }
+  const highlightSource = tileHighlightSource(source);
+  const compile = highlightSource.compile;
+  material.onBeforeCompile = (
+    shader: THREE.WebGLProgramParametersWithUniforms,
+    renderer: THREE.WebGLRenderer,
+  ) => {
+    compile.call(material, shader, renderer);
+    shader.uniforms.uNuclearClipTransform = transform;
+    shader.uniforms.uNuclearViewRotation = viewRotation;
+    shader.uniforms.uNuclearWorldRotation = worldRotation;
+    let defines = "";
+    if (shader.vertexShader.includes("#include <normal_pars_vertex>")) {
+      defines += "#define NUCLEAR_VIEW_NORMAL\n";
+    }
+    if (/varying\s+vec3\s+vWorldNormal/.test(shader.vertexShader)) {
+      defines += "#define NUCLEAR_WORLD_NORMAL\n";
+    }
+    shader.vertexShader =
+      shader.vertexShader.replace(/void\s+main\s*\(\s*\)/, "void nuclearOriginalMain()") +
+      "\n" +
+      defines +
+      collapseVertex;
+  };
+  material.customProgramCacheKey = () => `${highlightSource.key.call(source)}:nuclear-collapse`;
+  return material;
 }

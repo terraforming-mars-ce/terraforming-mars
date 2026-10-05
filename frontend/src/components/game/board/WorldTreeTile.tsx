@@ -1,3 +1,4 @@
+import { useNuclearImpacted } from "./NuclearCollapse";
 import { useRef, useState, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -76,6 +77,7 @@ export default function WorldTreeTile({
   const groupRef = useRef<THREE.Group>(null);
   const emergenceStartRef = useRef<number | null>(null);
   const isEmergingRef = useRef(isNewlyPlaced);
+  const nuclearImpacted = useNuclearImpacted();
   const [showDust, setShowDust] = useState(isNewlyPlaced);
   const { settings: world3DSettings } = useWorld3DSettings();
 
@@ -113,6 +115,7 @@ export default function WorldTreeTile({
       roughness: 0.92,
       metalness: 0.0,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
       transparent: true,
       alphaTest: 0.01,
       depthWrite: false,
@@ -130,6 +133,9 @@ export default function WorldTreeTile({
   }, [noiseTexture, noiseHighTexture]);
 
   useFrame((state) => {
+    if (nuclearImpacted) {
+      return;
+    }
     worldTreeMaterial.uniforms.uTime.value = state.clock.elapsedTime;
     worldTreeMaterial.uniforms.uSunDirection.value
       .set(
@@ -196,7 +202,7 @@ export default function WorldTreeTile({
         />
       </group>
 
-      {showDust && surfaceNormal && worldPosition && (
+      {!nuclearImpacted && showDust && surfaceNormal && worldPosition && (
         <DustEffect
           duration={3000}
           particleColor={new THREE.Color(0.15, 0.3, 0.08)}

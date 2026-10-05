@@ -1,3 +1,4 @@
+import { useNuclearImpacted } from "./NuclearCollapse";
 import { useRef, useState, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -7,6 +8,7 @@ import { useTextures } from "../../../hooks/useTextures";
 import { createVolcanoMaterial } from "./shaders";
 import { easeOutCubic } from "./boardConstants";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext";
+import { useClimate } from "../../../contexts/ClimateContext";
 import { computeFlowMap } from "./volcanoFlowMap";
 
 interface VolcanoTileProps {
@@ -76,8 +78,10 @@ export default function VolcanoTile({
   const emergenceStartRef = useRef<number | null>(null);
   const isEmergingRef = useRef(isNewlyPlaced);
   const [showSmoke, setShowSmoke] = useState(!isNewlyPlaced);
+  const nuclearImpacted = useNuclearImpacted();
   const [showDust, setShowDust] = useState(isNewlyPlaced);
   const { settings: world3DSettings } = useWorld3DSettings();
+  const { runtime: climate } = useClimate();
 
   useEffect(() => {
     if (isNewlyPlaced) {
@@ -104,7 +108,12 @@ export default function VolcanoTile({
   }, [grassTexture, flowTexture, seed]);
 
   useFrame((state) => {
+    if (nuclearImpacted) {
+      return;
+    }
     volcanoMaterial.uniforms.uTime.value = state.clock.elapsedTime;
+    volcanoMaterial.uniforms.uVegetation.value = climate.current.current.grass;
+    volcanoMaterial.uniforms.uFrost.value = climate.current.current.frost;
     volcanoMaterial.uniforms.uSunDirection.value
       .set(
         world3DSettings.sunDirectionX,
@@ -160,9 +169,9 @@ export default function VolcanoTile({
         />
       </group>
 
-      {showSmoke && <VolcanoSmoke craterHeight={VOLCANO_HEIGHT * 0.85} />}
+      {!nuclearImpacted && showSmoke && <VolcanoSmoke craterHeight={VOLCANO_HEIGHT * 0.85} />}
 
-      {showDust && surfaceNormal && worldPosition && (
+      {!nuclearImpacted && showDust && surfaceNormal && worldPosition && (
         <DustEffect
           duration={3000}
           particleColor={new THREE.Color(0.55, 0.18, 0.08)}
