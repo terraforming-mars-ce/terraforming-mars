@@ -19,8 +19,7 @@ func (c *BasicResourceCondition) isBehaviorCondition() {}
 func (c *BasicResourceCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
 	if c.Per != nil {
-		p := *c.Per
-		cp.Per = &p
+		cp.Per = c.Per.Clone()
 	}
 	if c.MaxTrigger != nil {
 		v := *c.MaxTrigger
@@ -28,6 +27,7 @@ func (c *BasicResourceCondition) deepCopyCondition() BehaviorCondition {
 	}
 	if c.TargetRestriction != nil {
 		tr := *c.TargetRestriction
+		tr.Selectors = CloneSelectors(tr.Selectors)
 		cp.TargetRestriction = &tr
 	}
 	if c.PaymentAllowed != nil {
@@ -53,8 +53,7 @@ func (c *ProductionCondition) isBehaviorCondition() {}
 func (c *ProductionCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
 	if c.Per != nil {
-		p := *c.Per
-		cp.Per = &p
+		cp.Per = c.Per.Clone()
 	}
 	return &cp
 }
@@ -74,24 +73,7 @@ func NewTilePlacementCondition(rt ResourceType, amount int, target string) *Tile
 func (c *TilePlacementCondition) isBehaviorCondition() {}
 func (c *TilePlacementCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
-	if c.TileRestrictions != nil {
-		tr := *c.TileRestrictions
-		if tr.BoardTags != nil {
-			bt := make([]string, len(tr.BoardTags))
-			copy(bt, tr.BoardTags)
-			tr.BoardTags = bt
-		}
-		if tr.OnBonusType != nil {
-			ob := make([]string, len(tr.OnBonusType))
-			copy(ob, tr.OnBonusType)
-			tr.OnBonusType = ob
-		}
-		if tr.MinAdjacentOfType != nil {
-			v := *tr.MinAdjacentOfType
-			tr.MinAdjacentOfType = &v
-		}
-		cp.TileRestrictions = &tr
-	}
+	cp.TileRestrictions = c.TileRestrictions.Clone()
 	return &cp
 }
 
@@ -109,8 +91,7 @@ func (c *GlobalParameterCondition) isBehaviorCondition() {}
 func (c *GlobalParameterCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
 	if c.Per != nil {
-		p := *c.Per
-		cp.Per = &p
+		cp.Per = c.Per.Clone()
 	}
 	return &cp
 }
@@ -118,6 +99,7 @@ func (c *GlobalParameterCondition) deepCopyCondition() BehaviorCondition {
 // CardOperationCondition covers card-draw, card-take, card-peek, card-buy, card-discard.
 type CardOperationCondition struct {
 	ConditionBase
+	Per            *PerCondition  `json:"per,omitempty"`
 	Selectors      []Selector     `json:"selectors,omitempty"`
 	Optional       bool           `json:"optional,omitempty"`
 	PaymentAllowed []ResourceType `json:"paymentAllowed,omitempty"`
@@ -131,10 +113,9 @@ func NewCardOperationCondition(rt ResourceType, amount int, target string) *Card
 func (c *CardOperationCondition) isBehaviorCondition() {}
 func (c *CardOperationCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
+	cp.Per = c.Per.Clone()
 	if c.Selectors != nil {
-		s := make([]Selector, len(c.Selectors))
-		copy(s, c.Selectors)
-		cp.Selectors = s
+		cp.Selectors = CloneSelectors(c.Selectors)
 	}
 	if c.PaymentAllowed != nil {
 		pa := make([]ResourceType, len(c.PaymentAllowed))
@@ -161,22 +142,35 @@ func (c *CardStorageCondition) isBehaviorCondition() {}
 func (c *CardStorageCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
 	if c.Selectors != nil {
-		s := make([]Selector, len(c.Selectors))
-		copy(s, c.Selectors)
-		cp.Selectors = s
+		cp.Selectors = CloneSelectors(c.Selectors)
 	}
 	if c.Per != nil {
-		p := *c.Per
-		cp.Per = &p
+		cp.Per = c.Per.Clone()
 	}
 	return &cp
 }
 
-// EffectCondition covers discount, payment-substitute, storage-payment-substitute, value-modifier,
+// PaymentSubstituteCondition registers a payment capability without transferring resources.
+type PaymentSubstituteCondition struct {
+	ConditionBase
+	Source         PaymentSource `json:"source"`
+	TargetResource ResourceType  `json:"targetResource"`
+	Selectors      []Selector    `json:"selectors,omitempty"`
+}
+
+func (c *PaymentSubstituteCondition) isBehaviorCondition() {}
+func (c *PaymentSubstituteCondition) deepCopyCondition() BehaviorCondition {
+	cp := *c
+	cp.Selectors = CloneSelectors(c.Selectors)
+	return &cp
+}
+
+// EffectCondition covers discount, value-modifier,
 // global-parameter-lenience, ignore-global-requirements, ocean-adjacency-bonus, defense, action-reuse, effect, tag.
 type EffectCondition struct {
 	ConditionBase
 	Selectors []Selector `json:"selectors,omitempty"`
+	Against   string     `json:"against,omitempty"`
 	Temporary string     `json:"temporary,omitempty"`
 }
 
@@ -188,15 +182,15 @@ func (c *EffectCondition) isBehaviorCondition() {}
 func (c *EffectCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
 	if c.Selectors != nil {
-		s := make([]Selector, len(c.Selectors))
-		copy(s, c.Selectors)
-		cp.Selectors = s
+		cp.Selectors = CloneSelectors(c.Selectors)
 	}
 	return &cp
 }
 
 // ColonyCondition covers colony, colony-count, colony-bonus, colony-track-step.
 type ColonyCondition struct {
+	Optional       bool   `json:"optional,omitempty"`
+	SelectionGroup string `json:"selectionGroup,omitempty"`
 	ConditionBase
 	AllowDuplicatePlayerColony bool `json:"allowDuplicatePlayerColony,omitempty"`
 }
@@ -242,13 +236,10 @@ func (c *MiscCondition) isBehaviorCondition() {}
 func (c *MiscCondition) deepCopyCondition() BehaviorCondition {
 	cp := *c
 	if c.Per != nil {
-		p := *c.Per
-		cp.Per = &p
+		cp.Per = c.Per.Clone()
 	}
 	if c.Selectors != nil {
-		s := make([]Selector, len(c.Selectors))
-		copy(s, c.Selectors)
-		cp.Selectors = s
+		cp.Selectors = CloneSelectors(c.Selectors)
 	}
 	return &cp
 }
@@ -256,6 +247,10 @@ func (c *MiscCondition) deepCopyCondition() BehaviorCondition {
 // classifyResourceType maps a ResourceType to its category string.
 func classifyResourceType(rt ResourceType) string {
 	switch rt {
+	case ResourceCardReveal:
+		return "card-reveal"
+	case ResourceCopy:
+		return "copy"
 	case ResourceCredit, ResourceSteel, ResourceTitanium, ResourcePlant, ResourceEnergy, ResourceHeat:
 		return "basic-resource"
 	case ResourceCreditProduction, ResourceSteelProduction, ResourceTitaniumProduction,
@@ -269,13 +264,15 @@ func classifyResourceType(rt ResourceType) string {
 	case ResourceCardDraw, ResourceCardTake, ResourceCardPeek, ResourceCardBuy, ResourceCardDiscard:
 		return "card-operation"
 	case ResourceMicrobe, ResourceAnimal, ResourceFloater, ResourceScience, ResourceAsteroid,
-		ResourceFighter, ResourceDisease, ResourceCardResource:
+		ResourceFighter, ResourceDisease, ResourceCamp, ResourceCardResource:
 		return "card-storage"
-	case ResourceDiscount, ResourcePaymentSubstitute, ResourceStoragePaymentSubstitute,
+	case ResourcePaymentSubstitute:
+		return "payment-substitute"
+	case ResourceDiscount,
 		ResourceValueModifier, ResourceGlobalParameterLenience, ResourceIgnoreGlobalRequirements,
 		ResourceOceanAdjacencyBonus, ResourceDefense, ResourceActionReuse, ResourceEffect, ResourceTag:
 		return "effect"
-	case ResourceColony, ResourceColonyCount, ResourceColonyBonus, ResourceColonyTrackStep:
+	case ResourceColonyTileAdd, ResourceColony, ResourceColonyCount, ResourceColonyBonus, ResourceColonyTrackStep, ResourceTradeFleet:
 		return "colony"
 	case ResourceTileDestruction, ResourceTileReplacement:
 		return "tile-modification"
@@ -295,6 +292,16 @@ func categorizeCondition(rc resourceConditionJSON) BehaviorCondition {
 	}
 
 	switch classifyResourceType(rc.ResourceType) {
+	case "payment-substitute":
+		source := PaymentSource{}
+		if rc.Source != nil {
+			source = *rc.Source
+		}
+		return &PaymentSubstituteCondition{ConditionBase: base, Source: source, TargetResource: rc.TargetResource, Selectors: rc.Selectors}
+	case "card-reveal":
+		return &CardRevealCondition{ConditionBase: base, Destination: rc.Destination, OnMatch: rc.OnMatch}
+	case "copy":
+		return &CopyCondition{ConditionBase: base, Scope: rc.Scope, Zone: rc.Zone, Selectors: rc.Selectors}
 	case "basic-resource":
 		return &BasicResourceCondition{
 			ConditionBase:     base,
@@ -325,6 +332,7 @@ func categorizeCondition(rc resourceConditionJSON) BehaviorCondition {
 		}
 	case "card-operation":
 		return &CardOperationCondition{
+			Per:            rc.Per,
 			ConditionBase:  base,
 			Selectors:      rc.Selectors,
 			Optional:       rc.Optional,
@@ -344,9 +352,12 @@ func categorizeCondition(rc resourceConditionJSON) BehaviorCondition {
 			ConditionBase: base,
 			Selectors:     rc.Selectors,
 			Temporary:     rc.Temporary,
+			Against:       rc.Against,
 		}
 	case "colony":
 		return &ColonyCondition{
+			SelectionGroup:             rc.SelectionGroup,
+			Optional:                   rc.Optional,
 			ConditionBase:              base,
 			AllowDuplicatePlayerColony: rc.AllowDuplicatePlayerColony,
 		}
@@ -367,6 +378,12 @@ func categorizeCondition(rc resourceConditionJSON) BehaviorCondition {
 // flattenCondition converts any typed condition back to a flat resourceConditionJSON.
 func flattenCondition(bc BehaviorCondition) resourceConditionJSON {
 	switch c := bc.(type) {
+	case *PaymentSubstituteCondition:
+		return resourceConditionJSON{ResourceType: c.ResourceType, Amount: c.Amount, Target: c.Target, Source: &c.Source, TargetResource: c.TargetResource, Selectors: c.Selectors}
+	case *CardRevealCondition:
+		return resourceConditionJSON{ResourceType: c.ResourceType, Amount: c.Amount, Target: c.Target, Destination: c.Destination, OnMatch: c.OnMatch}
+	case *CopyCondition:
+		return resourceConditionJSON{ResourceType: c.ResourceType, Amount: c.Amount, Target: c.Target, Scope: c.Scope, Zone: c.Zone, Selectors: c.Selectors}
 	case *BasicResourceCondition:
 		return resourceConditionJSON{
 			ResourceType:      c.ResourceType,
@@ -405,6 +422,7 @@ func flattenCondition(bc BehaviorCondition) resourceConditionJSON {
 		}
 	case *CardOperationCondition:
 		return resourceConditionJSON{
+			Per:            c.Per,
 			ResourceType:   c.ResourceType,
 			Amount:         c.Amount,
 			Target:         c.Target,
@@ -430,9 +448,12 @@ func flattenCondition(bc BehaviorCondition) resourceConditionJSON {
 			Target:       c.Target,
 			Selectors:    c.Selectors,
 			Temporary:    c.Temporary,
+			Against:      c.Against,
 		}
 	case *ColonyCondition:
 		return resourceConditionJSON{
+			SelectionGroup:             c.SelectionGroup,
+			Optional:                   c.Optional,
 			ResourceType:               c.ResourceType,
 			Amount:                     c.Amount,
 			Target:                     c.Target,
@@ -460,4 +481,19 @@ func flattenCondition(bc BehaviorCondition) resourceConditionJSON {
 			Target:       bc.GetTarget(),
 		}
 	}
+}
+
+// CopyCondition selects one source and applies the specified part of its behavior.
+type CopyCondition struct {
+	ConditionBase
+	Scope     string     `json:"scope"`
+	Zone      string     `json:"zone"`
+	Selectors []Selector `json:"selectors,omitempty"`
+}
+
+func (c *CopyCondition) isBehaviorCondition() {}
+func (c *CopyCondition) deepCopyCondition() BehaviorCondition {
+	cp := *c
+	cp.Selectors = CloneSelectors(c.Selectors)
+	return &cp
 }
