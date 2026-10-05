@@ -89,6 +89,14 @@ func (b *BaseAction) WriteStateLogWithChoiceAndOutputs(ctx context.Context, g *g
 
 // WriteStateLogFull writes a state diff with all optional fields including display data
 func (b *BaseAction) WriteStateLogFull(ctx context.Context, g *game.Game, source string, sourceType shared.SourceType, playerID, description string, choiceIndex *int, calculatedOutputs []shared.CalculatedOutput, displayData *game.LogDisplayData) {
+	if p, err := g.GetPlayer(playerID); err == nil {
+		if reveal := p.Selection().GetPendingCardReveal(); reveal != nil && reveal.Source == source {
+			if displayData == nil {
+				displayData = &game.LogDisplayData{}
+			}
+			displayData.RevealedCards = append([]shared.RevealedCard(nil), reveal.Cards...)
+		}
+	}
 	if b.stateRepo == nil {
 		return
 	}
@@ -147,6 +155,7 @@ func (b *BaseAction) ConsumePlayerAction(g *game.Game, log *slog.Logger) bool {
 // if the current player has 0 actions remaining and no pending tile selection.
 // This is called after consuming an action or after completing a tile placement.
 func AutoAdvanceTurnIfNeeded(g *game.Game, playerID string, log *slog.Logger) {
+	g.CompleteFirstActionIfReady(playerID)
 	currentTurn := g.CurrentTurn()
 	if currentTurn == nil {
 		return

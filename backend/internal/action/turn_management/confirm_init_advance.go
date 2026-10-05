@@ -79,9 +79,6 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 	if g.GetPendingTileSelectionQueue(currentPlayerID) != nil {
 		return fmt.Errorf("current player has pending tile queue")
 	}
-	if fa := g.GetForcedFirstAction(currentPlayerID); fa != nil && !fa.Completed {
-		return fmt.Errorf("current player has incomplete forced first action")
-	}
 
 	// Check if the current player's effects have already been applied.
 	choices := g.GetDeferredStartingChoices(currentPlayerID)
@@ -117,7 +114,7 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 // It returns (false, nil) without mutating state when advancement is not applicable:
 // when the phase is not an init-apply phase, when not waiting for confirm, when the
 // init player index is out of range, or when the current init player still has a pending
-// selection, a pending tile queue, or an incomplete forced first action.
+// selection or a pending tile queue.
 func AdvanceInitPhaseAfterForcedAction(ctx context.Context, g *game.Game, log *slog.Logger) (bool, error) {
 	phase := g.CurrentPhase()
 	if phase != shared.GamePhaseInitApplyCorp && phase != shared.GamePhaseInitApplyPrelude {
@@ -140,9 +137,6 @@ func AdvanceInitPhaseAfterForcedAction(ctx context.Context, g *game.Game, log *s
 		return false, nil
 	}
 	if g.GetPendingTileSelectionQueue(currentPlayerID) != nil {
-		return false, nil
-	}
-	if fa := g.GetForcedFirstAction(currentPlayerID); fa != nil && !fa.Completed {
 		return false, nil
 	}
 

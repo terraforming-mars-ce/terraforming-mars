@@ -161,6 +161,9 @@ func ValidateNoPendingSelections(
 	playerID string,
 	log *slog.Logger,
 ) error {
+	if gameInstance.CurrentPhase() == shared.GamePhaseAction && gameInstance.GetForcedFirstAction(playerID) != nil {
+		return fmt.Errorf("corporation first action must finish first")
+	}
 	if gameInstance.HasAnyPendingSelection(playerID) {
 		return fmt.Errorf("pending selection")
 	}

@@ -39,7 +39,7 @@ func HasAvailableActions(
 	if g.HasAnyPendingSelection(p.ID()) {
 		return true
 	}
-	if forced := g.GetForcedFirstAction(p.ID()); forced != nil && !forced.Completed {
+	if forced := g.GetForcedFirstAction(p.ID()); forced != nil {
 		return true
 	}
 
@@ -76,7 +76,7 @@ func HasAvailableActions(
 	}
 
 	for _, def := range FilterAwards(awardRegistry.GetAll(), g.SelectedAwards(), g.Settings()) {
-		if CalculateAwardState(shared.AwardType(def.ID), p, g, awardRegistry).Available() {
+		if CalculateAwardState(shared.AwardType(def.ID), p, g, awardRegistry, cardRegistry).Available() {
 			return true
 		}
 	}

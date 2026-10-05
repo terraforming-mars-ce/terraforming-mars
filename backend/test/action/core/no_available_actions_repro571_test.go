@@ -231,7 +231,7 @@ func TestNoAvailableActions_PlayerIsStuck_Repro571(t *testing.T) {
 	}
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	for _, def := range awardRegistry.GetAll() {
-		state := action.CalculateAwardState(shared.AwardType(def.ID), p, g, awardRegistry)
+		state := action.CalculateAwardState(shared.AwardType(def.ID), p, g, awardRegistry, cardRegistry)
 		if state.Available() {
 			t.Fatalf("expected award %q to be UNAVAILABLE (0 credits), but it was available", def.ID)
 		}
@@ -312,9 +312,7 @@ func TestHasAvailableActions_TrueWhenForcedFirstActionPending(t *testing.T) {
 
 	ctx := context.Background()
 	if err := g.SetForcedFirstAction(ctx, p.ID(), &shared.ForcedFirstAction{
-		ActionType: "colony-placement",
-		Source:     "test",
-		Completed:  false,
+		State: "resolving",
 	}); err != nil {
 		t.Fatalf("failed to set forced first action: %v", err)
 	}
@@ -345,7 +343,7 @@ func TestHasAvailableActions_TrueViaColonyTrade(t *testing.T) {
 	}
 
 	setTradeableColony(g, "luna")
-	g.Colonies().SetTradeFleetAvailable(playerID, true)
+	g.Colonies().AddTradeFleets(playerID, 1)
 
 	if !action.HasAvailableActions(g, p, cardRegistry, stdProjRegistry, milestoneRegistry, awardRegistry) {
 		t.Fatalf("expected HasAvailableActions to be TRUE via the colony-trade surface")
