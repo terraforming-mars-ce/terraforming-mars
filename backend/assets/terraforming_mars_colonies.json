@@ -148,6 +148,7 @@
   },
   {
     "id": "enceladus",
+    "activationResource": "microbe",
     "name": "Enceladus",
     "steps": [
       { "outputs": [{ "type": "microbe", "amount": 0 }] },
@@ -169,6 +170,7 @@
   },
   {
     "id": "miranda",
+    "activationResource": "animal",
     "name": "Miranda",
     "steps": [
       { "outputs": [{ "type": "animal", "amount": 0 }] },
@@ -211,6 +213,7 @@
   },
   {
     "id": "titan",
+    "activationResource": "floater",
     "name": "Titan",
     "steps": [
       { "outputs": [{ "type": "floater", "amount": 0 }] },

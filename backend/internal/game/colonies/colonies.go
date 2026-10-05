@@ -1,6 +1,7 @@
 package colonies
 
 import (
+	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -13,9 +14,10 @@ import (
 const maxColoniesPerTile = 3
 
 type Colonies struct {
-	ds       *datastore.DataStore
-	gameID   string
-	eventBus *events.EventBusImpl
+	definitions []colony.ColonyDefinition
+	ds          *datastore.DataStore
+	gameID      string
+	eventBus    *events.EventBusImpl
 }
 
 func NewColonies(ds *datastore.DataStore, gameID string, eventBus *events.EventBusImpl) *Colonies {
@@ -79,7 +81,7 @@ func (c *Colonies) GetPlaceableIDs(playerID string, allowDuplicate bool) []strin
 	states := c.States()
 	ids := make([]string, 0, len(states))
 	for _, cs := range states {
-		if len(cs.PlayerColonies) >= maxColoniesPerTile {
+		if cs.AwaitingResource != "" || len(cs.PlayerColonies) >= maxColoniesPerTile {
 			continue
 		}
 		if !allowDuplicate && slices.Contains(cs.PlayerColonies, playerID) {
@@ -95,7 +97,7 @@ func (c *Colonies) GetTradeableIDs() []string {
 	states := c.States()
 	ids := make([]string, 0, len(states))
 	for _, cs := range states {
-		if !cs.TradedThisGen {
+		if cs.AwaitingResource == "" && !cs.TradedThisGen {
 			ids = append(ids, cs.DefinitionID)
 		}
 	}
@@ -127,23 +129,116 @@ func (c *Colonies) CountAllColonies() int {
 	return total
 }
 
-func (c *Colonies) GetTradeFleetAvailable(playerID string) bool {
-	var v bool
-	c.read(func(s *datastore.GameState) {
-		if s.TradeFleets == nil {
-			return
-		}
-		v = s.TradeFleets[playerID]
-	})
-	return v
+// TradeFleet returns a copy of the player's fleet state.
+func (c *Colonies) TradeFleet(playerID string) colony.TradeFleet {
+	var fleet colony.TradeFleet
+	c.read(func(s *datastore.GameState) { fleet = s.TradeFleets[playerID] })
+	return fleet
 }
 
-func (c *Colonies) SetTradeFleetAvailable(playerID string, available bool) {
+// AddTradeFleets increases permanent capacity without resetting used fleets.
+func (c *Colonies) AddTradeFleets(playerID string, amount int) {
+	if amount <= 0 {
+		return
+	}
 	c.update(func(s *datastore.GameState) {
 		if s.TradeFleets == nil {
-			s.TradeFleets = make(map[string]bool)
+			s.TradeFleets = make(map[string]colony.TradeFleet)
 		}
-		s.TradeFleets[playerID] = available
+		fleet := s.TradeFleets[playerID]
+		fleet.Capacity += amount
+		s.TradeFleets[playerID] = fleet
 		s.UpdatedAt = time.Now()
 	})
+}
+
+// UseTradeFleet consumes one available fleet, rejecting exhaustion.
+func (c *Colonies) UseTradeFleet(playerID string) error {
+	var result error
+	c.update(func(s *datastore.GameState) {
+		fleet := s.TradeFleets[playerID]
+		if fleet.Available() == 0 {
+			result = fmt.Errorf("trade fleet is not available")
+			return
+		}
+		fleet.Used++
+		s.TradeFleets[playerID] = fleet
+		s.UpdatedAt = time.Now()
+	})
+	return result
+}
+
+// ResetTradeFleets returns all fleets at generation rollover, retaining capacity.
+func (c *Colonies) ResetTradeFleets() {
+	c.update(func(s *datastore.GameState) {
+		for id, fleet := range s.TradeFleets {
+			fleet.Used = 0
+			s.TradeFleets[id] = fleet
+		}
+		s.UpdatedAt = time.Now()
+	})
+}
+
+// MoveTradeMarkers applies a validated group of track movements in one state update.
+func (c *Colonies) MoveTradeMarkers(moves map[string]int) {
+	c.update(func(s *datastore.GameState) {
+		for _, state := range s.ColonyStates {
+			state.MarkerPosition += moves[state.DefinitionID]
+		}
+		s.UpdatedAt = time.Now()
+	})
+}
+
+// SetDefinitions installs the colony catalog for unused-tile effects.
+func (c *Colonies) SetDefinitions(definitions []colony.ColonyDefinition) {
+	c.definitions = append([]colony.ColonyDefinition{}, definitions...)
+}
+
+// UnusedDefinitions returns colony tiles that have not entered this game.
+func (c *Colonies) UnusedDefinitions() []colony.ColonyDefinition {
+	result := []colony.ColonyDefinition{}
+	for _, def := range c.definitions {
+		if c.GetState(def.ID) == nil {
+			result = append(result, def)
+		}
+	}
+	return result
+}
+
+// AddTile introduces an unowned colony tile, without colony-building rewards.
+func (c *Colonies) AddTile(state *colony.ColonyState) error {
+	var result error
+	c.update(func(s *datastore.GameState) {
+		for _, existing := range s.ColonyStates {
+			if existing.DefinitionID == state.DefinitionID {
+				result = fmt.Errorf("colony tile is already in play")
+				return
+			}
+		}
+		s.ColonyStates = append(s.ColonyStates, state)
+	})
+	if result == nil && c.eventBus != nil {
+		events.Publish(c.eventBus, events.GameStateChangedEvent{GameID: c.gameID, Timestamp: time.Now()})
+	}
+	return result
+}
+
+// ActivateResource opens resource-dependent colonies when a matching resource holder enters play.
+func (c *Colonies) ActivateResource(resource string) {
+	if resource == "" {
+		return
+	}
+	changed := false
+	c.update(func(s *datastore.GameState) {
+		for _, state := range s.ColonyStates {
+			if state.AwaitingResource == resource {
+				state.AwaitingResource = ""
+				state.MarkerPosition = 1
+				changed = true
+			}
+		}
+	})
+	if changed && c.eventBus != nil {
+		events.Publish(c.eventBus, events.GameStateChangedEvent{GameID: c.gameID, Timestamp: time.Now()})
+	}
 }

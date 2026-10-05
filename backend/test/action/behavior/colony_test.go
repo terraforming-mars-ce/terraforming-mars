@@ -2,6 +2,8 @@ package behavior_test
 
 import (
 	"context"
+	"terraforming-mars-backend/internal/action/confirmation"
+	gamecards "terraforming-mars-backend/internal/game/cards"
 	"testing"
 
 	"terraforming-mars-backend/internal/game/colony"
@@ -91,4 +93,51 @@ func TestColony_PlacementNoColoniesAvailable(t *testing.T) {
 	// No colonies available, so no pending selection should be created
 	selection := p.Selection().GetPendingColonySelection()
 	testutil.AssertTrue(t, selection == nil, "Should have no pending colony selection when all colonies are full")
+}
+
+func TestColonyTileAddResolvesMultipleTilesWithoutBuildingColonies(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+	settings := g.Settings()
+	settings.CardPacks = append(settings.CardPacks, shared.PackColonies)
+	g.UpdateSettings(ctx, settings)
+	definitions := []colony.ColonyDefinition{{ID: "first", Name: "First"}, {ID: "second", Name: "Second"}}
+	g.Colonies().SetDefinitions(definitions)
+	p, _ := g.GetPlayer(id)
+	testutil.AssertNoError(t, g.SetForcedFirstAction(ctx, id, &shared.ForcedFirstAction{State: "resolving"}), "start effect")
+	applyOutputs(t, p, g, registry, shared.NewColonyCondition(shared.ResourceColonyTileAdd, 2, "none"))
+	confirm := confirmation.NewConfirmColonyPlacementAction(repo, registry, colony.NewInMemoryColonyRegistry(definitions), testutil.TestLogger())
+	testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), id, "first"), "add first tile")
+	testutil.AssertEqual(t, 2, g.CurrentTurn().ActionsRemaining(), "second tile still pending")
+	testutil.AssertTrue(t, p.Selection().GetPendingColonySelection() != nil, "next selection queued")
+	testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), id, "second"), "add second tile")
+	testutil.AssertEqual(t, 2, len(g.Colonies().States()), "both tiles added")
+	testutil.AssertEqual(t, 0, g.Colonies().CountAllColonies(), "no player colonies")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "only one action consumed")
+}
+
+func TestResourceDependentColonyInitializationAndActivation(t *testing.T) {
+	for _, resource := range []shared.ResourceType{shared.ResourceFloater, shared.ResourceAnimal, shared.ResourceMicrobe} {
+		t.Run(string(resource), func(t *testing.T) {
+			g, _, _, id, _ := testutil.SetupTwoPlayerGame(t)
+			p, _ := g.GetPlayer(id)
+			definition := colony.ColonyDefinition{ID: "resource-tile", ActivationResource: string(resource)}
+			holder := gamecards.Card{ID: "holder", ResourceStorage: &gamecards.ResourceStorage{Type: resource}}
+			registry := gamecards.NewInMemoryCardRegistry([]gamecards.Card{holder})
+			state := gamecards.InitializeColonyTile(g, definition, registry)
+			g.Colonies().SetStates([]*colony.ColonyState{state})
+			testutil.AssertEqual(t, -1, state.MarkerPosition, "inactive marker")
+			testutil.AssertEqual(t, 0, len(g.Colonies().GetPlaceableIDs(id, false)), "cannot build on inactive tile")
+			testutil.AssertEqual(t, 0, len(g.Colonies().GetTradeableIDs()), "cannot trade on inactive tile")
+			g.Colonies().ActivateResource("heat")
+			testutil.AssertEqual(t, string(resource), state.AwaitingResource, "unrelated resource cannot activate")
+			g.Colonies().ActivateResource(string(resource))
+			testutil.AssertEqual(t, 1, state.MarkerPosition, "activation starts trade track")
+			testutil.AssertEqual(t, 1, len(g.Colonies().GetPlaceableIDs(id, false)), "active tile accepts colonies")
+			testutil.AssertEqual(t, 1, len(g.Colonies().GetTradeableIDs()), "active tile accepts trades")
+			p.PlayedCards().SetCards([]string{holder.ID})
+			ready := gamecards.InitializeColonyTile(g, definition, registry)
+			testutil.AssertEqual(t, "", ready.AwaitingResource, "holder already in play activates new tile immediately")
+		})
+	}
 }
