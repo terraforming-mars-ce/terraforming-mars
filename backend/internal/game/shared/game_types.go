@@ -102,6 +102,7 @@ type SourceType string
 const (
 	SourceTypeCardPlay                 SourceType = "card_play"
 	SourceTypeCardAction               SourceType = "card_action"
+	SourceTypeCorporationFirstAction   SourceType = "corporation_first_action"
 	SourceTypeStandardProject          SourceType = "standard_project"
 	SourceTypePassiveEffect            SourceType = "passive_effect"
 	SourceTypeResourceConvert          SourceType = "resource_convert"
@@ -264,6 +265,7 @@ type PendingDemoChoices struct {
 
 // DeferredStartingChoices holds choices that are applied after init
 type DeferredStartingChoices struct {
+	Payment         Payment
 	CorporationID   string
 	PreludeIDs      []string
 	CardIDs         []string

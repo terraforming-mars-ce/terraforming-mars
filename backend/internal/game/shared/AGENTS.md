@@ -33,7 +33,8 @@ Card JSON (flat) → UnmarshalJSON → categorizeCondition() → Typed struct (e
 | `GlobalParameterCondition` | temperature, oxygen, ocean, venus, tr, global-parameter | Per |
 | `CardOperationCondition` | card-draw/take/peek/buy/discard | Selectors, Optional, PaymentAllowed, VariableAmount |
 | `CardStorageCondition` | microbe, animal, floater, science, asteroid, fighter, disease, card-resource | Selectors, Per, Optional, VariableAmount |
-| `EffectCondition` | discount, payment-substitute, value-modifier, defense, etc. | Selectors, Temporary |
+| `PaymentSubstituteCondition` | payment-substitute | Source, TargetResource, Selectors |
+| `EffectCondition` | discount, value-modifier, defense, etc. | Selectors, Temporary |
 | `ColonyCondition` | colony/count/bonus/track-step | AllowDuplicatePlayerColony |
 | `TileModificationCondition` | tile-destruction/replacement | TileType |
 | `MiscCondition` | extra-actions, bonus-tags, world-tree-tile, award-fund, trade | Per, Selectors |
