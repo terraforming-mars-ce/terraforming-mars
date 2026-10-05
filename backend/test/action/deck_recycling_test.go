@@ -36,7 +36,7 @@ func TestDeckRecycling_UnselectedCardsFromCardDraw(t *testing.T) {
 
 	// Player buys only 1 card, the other 3 should be discarded
 	action := confirmation.NewConfirmCardDrawAction(repo, cardRegistry, log)
-	err = action.Execute(ctx, testGame.ID(), playerID, []string{}, []string{drawnCards[0]})
+	err = action.Execute(ctx, testGame.ID(), playerID, []string{}, []string{drawnCards[0]}, shared.NativePayment(shared.ResourceCredit, len([]string{drawnCards[0]})*3))
 	testutil.AssertNoError(t, err, "confirm card draw")
 
 	discardPile := testGame.Deck().DiscardPile()
@@ -62,7 +62,7 @@ func TestDeckRecycling_DiscardedCardsFromHand(t *testing.T) {
 	}
 
 	// Set up pending card discard selection
-	p.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
+	p.Selection().AddPendingBehaviorResolution(&shared.PendingBehaviorResolution{Kind: "card-discard",
 		MinCards: 1,
 		MaxCards: 2,
 		Source:   "test-discard",
@@ -70,8 +70,8 @@ func TestDeckRecycling_DiscardedCardsFromHand(t *testing.T) {
 
 	// Player discards 2 cards
 	cardsToDiscard := []string{"card-power-plant", "card-asteroid"}
-	action := confirmation.NewConfirmCardDiscardAction(repo, cardRegistry, log)
-	err := action.Execute(ctx, testGame.ID(), playerID, cardsToDiscard)
+	action := confirmation.NewConfirmCardDiscardAction(repo, cardRegistry, nil, log)
+	err := action.Execute(ctx, testGame.ID(), playerID, p.Selection().GetPendingBehaviorResolutions()[0].ID, cardsToDiscard)
 	testutil.AssertNoError(t, err, "confirm card discard")
 
 	discardPile := testGame.Deck().DiscardPile()
@@ -154,7 +154,7 @@ func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
 	// Player selects corporation B08 and 3 out of 10 project cards
 	selectedCards := []string{"001", "002", "003"}
 	action := turn_management.NewSelectStartingChoicesAction(repo, cardRegistry, nil, log)
-	err = action.Execute(ctx, testGame.ID(), playerID, "B08", []string{}, selectedCards)
+	err = action.Execute(ctx, testGame.ID(), playerID, "B08", []string{}, selectedCards, shared.NativePayment(shared.ResourceCredit, len(selectedCards)*3))
 	testutil.AssertNoError(t, err, "select starting cards")
 
 	discardPile := testGame.Deck().DiscardPile()

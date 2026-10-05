@@ -48,6 +48,12 @@ func (h *ConfirmBehaviorChoiceHandler) HandleMessage(ctx context.Context, connec
 		return
 	}
 
+	resolutionID, ok := payloadMap["resolutionId"].(string)
+	if !ok || resolutionID == "" {
+		h.sendError(connection, "Missing resolutionId")
+		return
+	}
+
 	choiceIndexFloat, ok := payloadMap["choiceIndex"].(float64)
 	if !ok {
 		log.Error("Missing or invalid choiceIndex")
@@ -68,10 +74,10 @@ func (h *ConfirmBehaviorChoiceHandler) HandleMessage(ctx context.Context, connec
 	log.Debug("Parsed confirm behavior choice request",
 		slog.Int("choice_index", choiceIndex))
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, choiceIndex, cardStorageTargets)
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, resolutionID, choiceIndex, cardStorageTargets)
 	if err != nil {
 		log.Error("Failed to execute confirm behavior choice action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.Send <- dto.WebSocketMessage{Type: dto.MessageTypeError, Payload: map[string]interface{}{"error": err.Error(), "resolutionId": resolutionID}}
 		return
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	confirmAction "terraforming-mars-backend/internal/action/confirmation"
 	pfAction "terraforming-mars-backend/internal/action/projectfunding"
 	"terraforming-mars-backend/internal/game"
 	pf "terraforming-mars-backend/internal/game/projectfunding"
@@ -362,13 +363,22 @@ func TestFundSeat_Completion_ProductionChoice_SetForAllPlayers(t *testing.T) {
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_solar_forge", pfAction.FundSeatPayment{Credits: lastSeatCost})
 	testutil.AssertNoError(t, err, "Buy last seat should succeed")
 
-	p1Choice := p1.Selection().GetPendingBehaviorChoiceSelection()
-	p2Choice := p2.Selection().GetPendingBehaviorChoiceSelection()
+	p1Choice := p1.Selection().GetPendingBehaviorResolutions()[0]
+	p2Choice := p2.Selection().GetPendingBehaviorResolutions()[0]
 
 	testutil.AssertTrue(t, p1Choice != nil, "P1 should have pending production choice")
 	testutil.AssertTrue(t, p2Choice != nil, "P2 should have pending production choice")
 	testutil.AssertEqual(t, 6, len(p1Choice.Choices), "Should have 6 production type choices")
 	testutil.AssertEqual(t, "project-funding-completion", p1Choice.Source, "Source should be project-funding-completion")
+	current, actions := testGame.CurrentTurn().PlayerID(), testGame.CurrentTurn().ActionsRemaining()
+	confirm := confirmAction.NewConfirmBehaviorChoiceAction(repo, testutil.GetCardDB(), nil, testutil.TestLogger())
+	testutil.AssertNoError(t, confirm.Execute(ctx, testGame.ID(), player2, p2Choice.ID, 0, nil), "resolve off-turn completion reward")
+	testutil.AssertEqual(t, 0, len(p2.Selection().GetPendingBehaviorResolutions()), "off-turn decision removed")
+	testutil.AssertEqual(t, 1, len(p1.Selection().GetPendingBehaviorResolutions()), "other player's decision retained")
+	testutil.AssertEqual(t, current, testGame.CurrentTurn().PlayerID(), "off-turn reward does not change turn")
+	testutil.AssertEqual(t, actions, testGame.CurrentTurn().ActionsRemaining(), "off-turn reward does not consume action")
+	testutil.AssertError(t, confirm.Execute(ctx, testGame.ID(), player2, p2Choice.ID, 0, nil), "cannot replay completion reward")
+
 }
 
 func TestFundSeat_Completion_MassCardDraw(t *testing.T) {
