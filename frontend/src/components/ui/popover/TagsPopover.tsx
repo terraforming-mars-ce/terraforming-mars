@@ -16,38 +16,34 @@ interface TagsPopoverProps {
   anchorRef: React.RefObject<HTMLElement>;
 }
 
-const WildBadge: React.FC<{ count: number }> = ({ count }) => {
-  const badgeRef = useRef<HTMLSpanElement>(null);
+const WildTagRow: React.FC<{ count: number }> = ({ count }) => {
+  const ref = useRef<HTMLButtonElement>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
-
-  const handleMouseEnter = () => {
-    if (badgeRef.current) {
-      const rect = badgeRef.current.getBoundingClientRect();
-      setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
-    }
+  const explanation =
+    "Each wild tag can represent one tag during your action. The same wild cannot count as multiple tags at once. Wild tags do not count for endgame scoring.";
+  const showTooltip = () => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (rect) setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
   };
-
-  const handleMouseLeave = () => {
-    setTooltipPos(null);
-  };
-
   return (
     <>
-      <span
-        ref={badgeRef}
-        className="text-base font-bold font-orbitron text-white/60 [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] cursor-default"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+      <button
+        ref={ref}
+        type="button"
+        className="flex items-center gap-3 flex-1 w-full text-white/90 font-orbitron cursor-help rounded focus-visible:outline focus-visible:outline-white/60"
+        aria-label={`Wild × ${count}. ${explanation}`}
+        onMouseEnter={showTooltip}
+        onMouseLeave={() => setTooltipPos(null)}
+        onFocus={showTooltip}
+        onBlur={() => setTooltipPos(null)}
+        onClick={() => (tooltipPos ? setTooltipPos(null) : showTooltip())}
       >
-        +{count}
-      </span>
+        <GameIcon iconType="wild-tag" size="medium" />
+        <span className="text-sm font-semibold">Wild</span>
+        <span className="ml-auto text-base font-bold">× {count}</span>
+      </button>
       <DecorBoxTooltip position={tooltipPos} placement="above" cornerSize={10}>
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <GameIcon iconType="wild-tag" size="small" />
-          <span className="font-orbitron text-white font-bold">
-            {count} wild {count === 1 ? "tag" : "tags"}
-          </span>
-        </div>
+        <div className="max-w-64 text-sm leading-relaxed">{explanation}</div>
       </DecorBoxTooltip>
     </>
   );
@@ -56,7 +52,7 @@ const WildBadge: React.FC<{ count: number }> = ({ count }) => {
 const TagsPopover: React.FC<TagsPopoverProps> = ({ isVisible, onClose, tagCounts, anchorRef }) => {
   const wildCount = tagCounts.find((t) => t.tag === TagWild)?.count || 0;
   const nonWildTags = tagCounts.filter((tag) => tag.tag !== TagWild && tag.count > 0);
-  const totalTags = nonWildTags.reduce((sum, tag) => sum + tag.count, 0);
+  const totalTags = nonWildTags.reduce((sum, tag) => sum + tag.count, 0) + wildCount;
 
   return (
     <GamePopover
@@ -70,7 +66,7 @@ const TagsPopover: React.FC<TagsPopoverProps> = ({ isVisible, onClose, tagCounts
       width={320}
       maxHeight={400}
     >
-      {nonWildTags.length === 0 ? (
+      {totalTags === 0 ? (
         <div className="flex items-center justify-center py-10 px-5">
           <span className="font-orbitron text-sm text-white/50">No tags</span>
         </div>
@@ -90,11 +86,19 @@ const TagsPopover: React.FC<TagsPopoverProps> = ({ isVisible, onClose, tagCounts
                 </span>
                 <span className="ml-auto flex items-center gap-1.5 text-base font-bold text-white font-orbitron [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
                   {tagData.count}
-                  {wildCount > 0 && <WildBadge count={wildCount} />}
                 </span>
               </div>
             </GamePopoverItem>
           ))}
+          {wildCount > 0 && (
+            <GamePopoverItem
+              className="popover-list-item"
+              state="available"
+              animationDelay={nonWildTags.length * 0.05}
+            >
+              <WildTagRow count={wildCount} />
+            </GamePopoverItem>
+          )}
         </div>
       )}
     </GamePopover>
