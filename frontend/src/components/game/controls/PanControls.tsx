@@ -20,6 +20,8 @@ import { audioService } from "../../../services/audioService";
 export const panState = { isPanning: false, hasDragged: false };
 
 const ORBITAL_STATION_ORBIT_CONFIG = { minDistance: 0.3, maxDistance: 5, defaultRadius: 0.8 };
+const MIN_POLAR_ANGLE = Math.PI / 36;
+const MAX_POLAR_ANGLE = Math.PI - MIN_POLAR_ANGLE;
 
 function getOrbitalStationPosition(elapsedTime: number): THREE.Vector3 {
   const angle = elapsedTime * ORBITAL_STATION_ORBIT_SPEED;
@@ -292,7 +294,11 @@ export function PanControls() {
       const orbitSpeed = 0.0003;
 
       targetSpherical.current.theta -= deltaX * orbitSpeed;
-      targetSpherical.current.phi -= deltaY * orbitSpeed;
+      targetSpherical.current.phi = THREE.MathUtils.clamp(
+        targetSpherical.current.phi - deltaY * orbitSpeed,
+        MIN_POLAR_ANGLE,
+        MAX_POLAR_ANGLE,
+      );
 
       previousPointer.current = { x: event.clientX, y: event.clientY };
     };
