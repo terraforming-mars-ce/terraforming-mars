@@ -2,12 +2,13 @@ package card
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 
 	cardaction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
-	gamecards "terraforming-mars-backend/internal/game/cards"
+	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 )
 
@@ -70,6 +71,17 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 		choiceIndex = &idx
 	}
 
+	var cardStorageSources []string
+	if raw, ok := payload["cardStorageSources"].([]interface{}); ok {
+		for _, v := range raw {
+			id, ok := v.(string)
+			if !ok {
+				h.sendError(connection, "Invalid storage input source")
+				return
+			}
+			cardStorageSources = append(cardStorageSources, id)
+		}
+	}
 	var cardStorageTargets []string
 	if targetsRaw, ok := payload["cardStorageTargets"].([]interface{}); ok {
 		for _, t := range targetsRaw {
@@ -91,23 +103,27 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 
 	var selectedAmount *int
 	if saFloat, ok := payload["selectedAmount"].(float64); ok {
+		if saFloat < 0 || saFloat > 2147483647 || saFloat != float64(int(saFloat)) {
+			h.sendError(connection, "Invalid selected amount")
+			return
+		}
 		sa := int(saFloat)
 		selectedAmount = &sa
 	}
 
-	var actionPayment *gamecards.CardPayment
-	if paymentMap, ok := payload["payment"].(map[string]interface{}); ok {
-		payment := &gamecards.CardPayment{}
-		if credits, ok := paymentMap["credits"].(float64); ok {
-			payment.Credits = int(credits)
+	var actionPayment *shared.Payment
+	if value, ok := payload["payment"]; ok {
+		raw, err := json.Marshal(value)
+		if err != nil {
+			h.sendError(connection, "Invalid payment")
+			return
 		}
-		if steel, ok := paymentMap["steel"].(float64); ok {
-			payment.Steel = int(steel)
+		var payment shared.Payment
+		if err = json.Unmarshal(raw, &payment); err != nil {
+			h.sendError(connection, "Invalid payment")
+			return
 		}
-		if titanium, ok := paymentMap["titanium"].(float64); ok {
-			payment.Titanium = int(titanium)
-		}
-		actionPayment = payment
+		actionPayment = &payment
 	}
 
 	var reuseSourceCardID *string
@@ -135,7 +151,7 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 		log = log.With(slog.String("reuse_source_card_id", *reuseSourceCardID))
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, behaviorIndex, choiceIndex, cardStorageTargets, targetPlayerID, stealSourceCardID, selectedAmount, actionPayment, reuseSourceCardID)
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, behaviorIndex, choiceIndex, cardStorageTargets, targetPlayerID, stealSourceCardID, selectedAmount, actionPayment, reuseSourceCardID, cardStorageSources)
 	if err != nil {
 		log.Error("Failed to execute use card action", slog.Any("error", err))
 		h.sendError(connection, err.Error())
