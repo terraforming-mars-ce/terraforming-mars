@@ -19,12 +19,6 @@ const TEXTURE_PATHS = {
   ganymede: assetUrl("textures/planets/ganymede/surface"),
   sun: assetUrl("textures/planets/sun/surface"),
   grass: assetUrl("textures/terrain/grass"),
-  leafyGrass: assetUrl("textures/terrain/leafy-grass-color"),
-  leafyGrassDetail: assetUrl("textures/terrain/leafy-grass-detail"),
-  forestLitter: assetUrl("textures/terrain/leaves-forest-ground-color"),
-  forestLitterDetail: assetUrl("textures/terrain/leaves-forest-ground-detail"),
-  wetSoil: assetUrl("textures/terrain/brown-mud-leaves-01-color"),
-  wetSoilDetail: assetUrl("textures/terrain/brown-mud-leaves-01-detail"),
   rock: assetUrl("textures/terrain/rock"),
   sand: assetUrl("textures/terrain/sand"),
   waterNormals: assetUrl("textures/terrain/waternormals"),
@@ -66,6 +60,32 @@ const CITY_FACADE_PATHS = [
 ];
 for (const paths of CITY_FACADE_PATHS) {
   paths.forEach((path) => useTexture.preload(path));
+}
+
+// Layer order of the landscape's ground texture array; shaders index layers by position.
+const GROUND_LAYER_NAMES = [
+  "leafy-grass",
+  "leaves-forest-ground",
+  "brown-mud-leaves-01",
+  "frost",
+  "frost-patchy",
+] as const;
+const GROUND_LAYER_PATHS = {
+  color: GROUND_LAYER_NAMES.map((name) => assetUrl(`textures/terrain/${name}-color` as const)),
+  detail: GROUND_LAYER_NAMES.map((name) => assetUrl(`textures/terrain/${name}-detail` as const)),
+};
+const ICE_LAYER_NAMES = ["ice-solid", "ice-thin"] as const;
+const ICE_LAYER_PATHS = {
+  color: ICE_LAYER_NAMES.map((name) => assetUrl(`textures/terrain/${name}-color` as const)),
+  detail: ICE_LAYER_NAMES.map((name) => assetUrl(`textures/terrain/${name}-detail` as const)),
+};
+for (const paths of [GROUND_LAYER_PATHS, ICE_LAYER_PATHS]) {
+  [...paths.color, ...paths.detail].forEach((path) => useTexture.preload(path));
+}
+
+export interface TextureLayers {
+  color: THREE.Texture[];
+  detail: THREE.Texture[];
 }
 
 const RESOURCE_ICON_PATHS = {
@@ -137,12 +157,6 @@ useTexture.preload(TEXTURE_PATHS.moonLod);
 useTexture.preload(TEXTURE_PATHS.ganymedeLod);
 useTexture.preload(TEXTURE_PATHS.sunLod);
 useTexture.preload(TEXTURE_PATHS.grass);
-useTexture.preload(TEXTURE_PATHS.leafyGrass);
-useTexture.preload(TEXTURE_PATHS.leafyGrassDetail);
-useTexture.preload(TEXTURE_PATHS.forestLitter);
-useTexture.preload(TEXTURE_PATHS.forestLitterDetail);
-useTexture.preload(TEXTURE_PATHS.wetSoil);
-useTexture.preload(TEXTURE_PATHS.wetSoilDetail);
 useTexture.preload(TEXTURE_PATHS.rock);
 useTexture.preload(TEXTURE_PATHS.sand);
 useTexture.preload(TEXTURE_PATHS.waterNormals);
@@ -168,6 +182,8 @@ useLoader.preload(THREE.TextureLoader, RESOURCE_ICON_PATHS.wild);
 
 interface TextureAssets {
   cityFacades: { color: THREE.Texture; normal: THREE.Texture; roughness: THREE.Texture }[];
+  groundLayers: TextureLayers;
+  iceLayers: TextureLayers;
   mars: THREE.Texture;
   venus: THREE.Texture;
   earth: THREE.Texture;
@@ -182,12 +198,6 @@ interface TextureAssets {
   ganymede: THREE.Texture;
   sun: THREE.Texture;
   grass: THREE.Texture;
-  leafyGrass: THREE.Texture;
-  leafyGrassDetail: THREE.Texture;
-  forestLitter: THREE.Texture;
-  forestLitterDetail: THREE.Texture;
-  wetSoil: THREE.Texture;
-  wetSoilDetail: THREE.Texture;
   rock: THREE.Texture;
   sand: THREE.Texture;
   waterNormals: THREE.Texture;
@@ -228,6 +238,18 @@ export function useTextures(): TextureAssets {
       }),
     [facadeTextures],
   );
+  const groundColors = useTexture(GROUND_LAYER_PATHS.color);
+  const groundDetails = useTexture(GROUND_LAYER_PATHS.detail);
+  const groundLayers = useMemo(
+    () => ({ color: groundColors, detail: groundDetails }),
+    [groundColors, groundDetails],
+  );
+  const iceColors = useTexture(ICE_LAYER_PATHS.color);
+  const iceDetails = useTexture(ICE_LAYER_PATHS.detail);
+  const iceLayers = useMemo(
+    () => ({ color: iceColors, detail: iceDetails }),
+    [iceColors, iceDetails],
+  );
   const mars = useTexture(TEXTURE_PATHS.mars);
   const venus = useTexture(TEXTURE_PATHS.venus);
   const earth = useTexture(TEXTURE_PATHS.earth);
@@ -242,12 +264,6 @@ export function useTextures(): TextureAssets {
   const ganymede = useTexture(TEXTURE_PATHS.ganymede);
   const sun = useTexture(TEXTURE_PATHS.sun);
   const grass = useTexture(TEXTURE_PATHS.grass);
-  const leafyGrass = useTexture(TEXTURE_PATHS.leafyGrass);
-  const leafyGrassDetail = useTexture(TEXTURE_PATHS.leafyGrassDetail);
-  const forestLitter = useTexture(TEXTURE_PATHS.forestLitter);
-  const forestLitterDetail = useTexture(TEXTURE_PATHS.forestLitterDetail);
-  const wetSoil = useTexture(TEXTURE_PATHS.wetSoil);
-  const wetSoilDetail = useTexture(TEXTURE_PATHS.wetSoilDetail);
   const rock = useTexture(TEXTURE_PATHS.rock);
   const sand = useTexture(TEXTURE_PATHS.sand);
   const waterNormals = useTexture(TEXTURE_PATHS.waterNormals);
@@ -324,17 +340,6 @@ export function useTextures(): TextureAssets {
       tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
     }
 
-    for (const tex of [leafyGrass, forestLitter, wetSoil]) {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.anisotropy = 4;
-    }
-    for (const tex of [leafyGrassDetail, forestLitterDetail, wetSoilDetail]) {
-      tex.colorSpace = THREE.NoColorSpace;
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.anisotropy = 4;
-    }
-
     grass.wrapS = grass.wrapT = THREE.RepeatWrapping;
     grass.repeat.set(6.9, 6.9);
 
@@ -376,12 +381,6 @@ export function useTextures(): TextureAssets {
     sun,
     sunLod,
     grass,
-    leafyGrass,
-    leafyGrassDetail,
-    forestLitter,
-    forestLitterDetail,
-    wetSoil,
-    wetSoilDetail,
     sand,
     waterNormals,
     noiseMid,
@@ -437,6 +436,8 @@ export function useTextures(): TextureAssets {
 
   return {
     cityFacades,
+    groundLayers,
+    iceLayers,
     mars,
     venus,
     earth,
@@ -451,12 +452,6 @@ export function useTextures(): TextureAssets {
     ganymede,
     sun,
     grass,
-    leafyGrass,
-    leafyGrassDetail,
-    forestLitter,
-    forestLitterDetail,
-    wetSoil,
-    wetSoilDetail,
     rock,
     sand,
     waterNormals,
