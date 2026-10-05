@@ -13,8 +13,23 @@ import (
 // RequiredOriginalCost: card cost must satisfy min/max constraints
 // A selector must have at least one card-relevant criterion to match.
 func MatchesSelector(card *Card, selector shared.Selector) bool {
-	if len(selector.Tags) == 0 && len(selector.CardTypes) == 0 && selector.RequiredOriginalCost == nil && selector.VP == nil && len(selector.Resources) == 0 {
+	if len(selector.Tags) == 0 && len(selector.CardTypes) == 0 && selector.TagCount == nil && selector.RequiredOriginalCost == nil && selector.VP == nil && len(selector.Resources) == 0 {
 		return false
+	}
+
+	if selector.TagCount != nil {
+		count := 0
+		for _, tag := range card.Tags {
+			if tag != shared.TagWild {
+				count++
+			}
+		}
+		if selector.TagCount.Min != nil && count < *selector.TagCount.Min {
+			return false
+		}
+		if selector.TagCount.Max != nil && count > *selector.TagCount.Max {
+			return false
+		}
 	}
 
 	if len(selector.Tags) > 0 {
@@ -66,23 +81,39 @@ func MatchesSelector(card *Card, selector shared.Selector) bool {
 	return true
 }
 
-// cardHasAnyResource checks if a card has any of the specified resources
-// in its resource storage, behavior outputs, or behavior inputs.
+// cardHasAnyResource matches printed resource references, not storage capacity alone.
 func cardHasAnyResource(card *Card, resources []string) bool {
 	for _, res := range resources {
 		rt := shared.ResourceType(res)
 		if card.ResourceStorage != nil && card.ResourceStorage.Type == rt {
 			return true
 		}
-		for _, b := range card.Behaviors {
-			for _, o := range b.Outputs {
-				if o.GetResourceType() == rt {
+		if card.Requirements != nil {
+			for _, req := range card.Requirements.Items {
+				if req.Resource != nil && *req.Resource == rt {
 					return true
 				}
 			}
-			for _, i := range b.Inputs {
-				if i.GetResourceType() == rt {
+		}
+		for _, vp := range card.VPConditions {
+			if vp.Per != nil && vp.Per.ResourceType == rt {
+				return true
+			}
+		}
+		for _, b := range card.Behaviors {
+			if conditionsReferenceResource(b.Inputs, rt) || conditionsReferenceResource(b.Outputs, rt) {
+				return true
+			}
+			for _, choice := range b.Choices {
+				if conditionsReferenceResource(choice.Inputs, rt) || conditionsReferenceResource(choice.Outputs, rt) {
 					return true
+				}
+				if choice.Requirements != nil {
+					for _, req := range choice.Requirements.Items {
+						if req.Resource != nil && *req.Resource == rt {
+							return true
+						}
+					}
 				}
 			}
 		}
@@ -90,7 +121,26 @@ func cardHasAnyResource(card *Card, resources []string) bool {
 	return false
 }
 
-// MatchesAnySelector checks if a card matches any selector (OR between selectors)
+func conditionsReferenceResource(conditions []shared.BehaviorCondition, rt shared.ResourceType) bool {
+	for _, condition := range conditions {
+		if condition.GetResourceType() == rt {
+			return true
+		}
+		if per := shared.GetPerCondition(condition); per != nil && per.ResourceType == rt {
+			return true
+		}
+		if reveal, ok := condition.(*shared.CardRevealCondition); ok && reveal.OnMatch != nil && conditionsReferenceResource(reveal.OnMatch.Outputs, rt) {
+			return true
+		}
+		if payment, ok := condition.(*shared.PaymentSubstituteCondition); ok && payment.Source.Resource == rt {
+			return true
+		}
+	}
+	return false
+}
+
+// MatchesAnySelector tests OR alternatives, each of which combines its fields with AND.
+
 func MatchesAnySelector(card *Card, selectors []shared.Selector) bool {
 	if len(selectors) == 0 {
 		return false
@@ -121,7 +171,7 @@ func MatchesAnyStandardProjectSelector(project shared.StandardProject, selectors
 // HasCardSelectors returns true if any selector targets cards
 func HasCardSelectors(selectors []shared.Selector) bool {
 	for _, sel := range selectors {
-		if len(sel.Tags) > 0 || len(sel.CardTypes) > 0 || sel.RequiredOriginalCost != nil || sel.VP != nil || len(sel.Resources) > 0 {
+		if len(sel.Tags) > 0 || len(sel.CardTypes) > 0 || sel.TagCount != nil || sel.RequiredOriginalCost != nil || sel.VP != nil || len(sel.Resources) > 0 {
 			return true
 		}
 	}
@@ -133,7 +183,7 @@ func HasCardSelectors(selectors []shared.Selector) bool {
 // indicates the affected resource type rather than a card filter.
 func HasCardSelectorsExcludingResources(selectors []shared.Selector) bool {
 	for _, sel := range selectors {
-		if len(sel.Tags) > 0 || len(sel.CardTypes) > 0 || sel.RequiredOriginalCost != nil || sel.VP != nil {
+		if len(sel.Tags) > 0 || len(sel.CardTypes) > 0 || sel.TagCount != nil || sel.RequiredOriginalCost != nil || sel.VP != nil {
 			return true
 		}
 	}
@@ -143,8 +193,23 @@ func HasCardSelectorsExcludingResources(selectors []shared.Selector) bool {
 // MatchesSelectorExcludingResources checks if a card matches a selector, ignoring the Resources field.
 // Used for discount calculations where Resources indicates the discounted resource type, not a card filter.
 func MatchesSelectorExcludingResources(card *Card, selector shared.Selector) bool {
-	if len(selector.Tags) == 0 && len(selector.CardTypes) == 0 && selector.RequiredOriginalCost == nil && selector.VP == nil {
+	if len(selector.Tags) == 0 && len(selector.CardTypes) == 0 && selector.TagCount == nil && selector.RequiredOriginalCost == nil && selector.VP == nil {
 		return false
+	}
+
+	if selector.TagCount != nil {
+		count := 0
+		for _, tag := range card.Tags {
+			if tag != shared.TagWild {
+				count++
+			}
+		}
+		if selector.TagCount.Min != nil && count < *selector.TagCount.Min {
+			return false
+		}
+		if selector.TagCount.Max != nil && count > *selector.TagCount.Max {
+			return false
+		}
 	}
 
 	if len(selector.Tags) > 0 {

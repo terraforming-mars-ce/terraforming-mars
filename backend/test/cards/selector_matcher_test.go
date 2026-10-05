@@ -451,3 +451,25 @@ func TestOptimalAerobrakingScenario(t *testing.T) {
 		t.Error("Optimal Aerobraking should NOT trigger on non-space event card")
 	}
 }
+
+func TestResourceSelectorFindsNestedPrintedReferences(t *testing.T) {
+	floater := shared.ResourceFloater
+	selector := shared.Selector{Resources: []string{"floater"}}
+	cases := []struct {
+		name string
+		card gamecards.Card
+		want bool
+	}{
+		{"requirement", gamecards.Card{Requirements: &gamecards.CardRequirements{Items: []gamecards.Requirement{{Type: "resource", Resource: &floater}}}}, true},
+		{"ratio", gamecards.Card{Behaviors: []shared.CardBehavior{{Outputs: []shared.BehaviorCondition{&shared.ProductionCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceCreditProduction}, Per: &shared.PerCondition{ResourceType: floater}}}}}}, true},
+		{"choice", gamecards.Card{Behaviors: []shared.CardBehavior{{Choices: []shared.Choice{{Outputs: []shared.BehaviorCondition{shared.NewCardStorageCondition(floater, 1, "any-card")}}}}}}, true},
+		{"name only", gamecards.Card{Name: "Floater references without a mechanical icon"}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := gamecards.MatchesSelector(&tc.card, selector); got != tc.want {
+				t.Fatalf("match=%v, want %v", got, tc.want)
+			}
+		})
+	}
+}
