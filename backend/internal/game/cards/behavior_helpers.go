@@ -93,7 +93,7 @@ func GetPassiveBehaviors(card *Card) []shared.CardBehavior {
 func HasPersistentEffects(behavior shared.CardBehavior) bool {
 	for _, output := range behavior.Outputs {
 		switch output.GetResourceType() {
-		case shared.ResourceDiscount, shared.ResourcePaymentSubstitute, shared.ResourceGlobalParameterLenience, shared.ResourceIgnoreGlobalRequirements, shared.ResourceStoragePaymentSubstitute:
+		case shared.ResourceDefense, shared.ResourceDiscount, shared.ResourcePaymentSubstitute, shared.ResourceGlobalParameterLenience, shared.ResourceIgnoreGlobalRequirements:
 			return true
 		}
 	}

@@ -13,10 +13,21 @@ func (a *BehaviorApplier) applyCardStorageOutput(ctx context.Context, o *shared.
 		return fmt.Errorf("cannot apply card resource: no player context")
 	}
 	rt := o.ResourceType
+	if o.Target == "triggering-card" {
+		owner, target, err := ResolveTriggeringCard(a.game, a.cardRegistry, a.triggeringCardID, a.triggeringPlayerID, o)
+		if err != nil {
+			return err
+		}
+		owner.Resources().AddToStorage(target.ID, amount)
+		return nil
+	}
 
 	// Generic card-resource: add resources of whatever type the target card stores
 	if rt == shared.ResourceCardResource {
 		targetID := a.nextTargetCardID()
+		if amount == 0 || (targetID == "" && amount > 0) {
+			return nil
+		}
 		if targetID == "" {
 			return fmt.Errorf("no target card specified for card-resource output")
 		}
@@ -30,7 +41,15 @@ func (a *BehaviorApplier) applyCardStorageOutput(ctx context.Context, o *shared.
 		if targetCard.ResourceStorage == nil {
 			return fmt.Errorf("target card %s has no resource storage", targetID)
 		}
-		a.player.Resources().AddToStorage(targetID, amount)
+		if amount < 0 {
+			owner, err := a.removalStorageOwner(targetID, rt, -amount, false)
+			if err != nil {
+				return err
+			}
+			owner.Resources().AddToStorage(targetID, -min(-amount, owner.Resources().GetCardStorage(targetID)))
+		} else {
+			a.player.Resources().AddToStorage(targetID, amount)
+		}
 		log.Debug("Added card-resource to target card storage",
 			slog.String("card_id", targetID), slog.String("storage_type", string(targetCard.ResourceStorage.Type)), slog.Int("amount", amount))
 		return nil
@@ -48,32 +67,21 @@ func (a *BehaviorApplier) applyCardStorageOutput(ctx context.Context, o *shared.
 			slog.String("card_id", a.sourceCardID), slog.String("resource_type", string(rt)), slog.Int("amount", amount))
 
 	case "steal-from-any-card":
-		if a.stealSourceCardID == "" {
-			return fmt.Errorf("steal-from-any-card requires a source card ID")
+		owner, err := a.removalStorageOwner(a.stealSourceCardID, rt, amount, true)
+		if err != nil {
+			return err
 		}
-		if a.game == nil {
-			return fmt.Errorf("cannot steal from card: no game context")
+		if a.sourceCardID == "" {
+			return fmt.Errorf("missing transfer destination")
 		}
-		stolenAmount := 0
-		for _, p := range a.game.GetAllPlayers() {
-			storage := p.Resources().GetCardStorage(a.stealSourceCardID)
-			if storage > 0 {
-				stolenAmount = min(amount, storage)
-				p.Resources().AddToStorage(a.stealSourceCardID, -stolenAmount)
-				log.Debug("Stole resource from card",
-					slog.String("source_card_id", a.stealSourceCardID), slog.String("owner_player_id", p.ID()),
-					slog.String("resource_type", string(rt)), slog.Int("amount", stolenAmount))
-				break
-			}
-		}
-		if stolenAmount > 0 && a.sourceCardID != "" {
-			a.player.Resources().AddToStorage(a.sourceCardID, stolenAmount)
-			log.Debug("Added stolen resource to self card",
-				slog.String("card_id", a.sourceCardID), slog.String("resource_type", string(rt)), slog.Int("amount", stolenAmount))
-		}
+		owner.Resources().AddToStorage(a.stealSourceCardID, -amount)
+		a.player.Resources().AddToStorage(a.sourceCardID, amount)
 
 	case "any-card":
 		targetID := a.nextTargetCardID()
+		if amount == 0 {
+			return nil
+		}
 		if targetID == "" {
 			log.Warn("No target card for any-card resource placement — resources lost",
 				slog.String("resource_type", string(rt)), slog.Int("amount", amount))
@@ -91,7 +99,15 @@ func (a *BehaviorApplier) applyCardStorageOutput(ctx context.Context, o *shared.
 				return fmt.Errorf("target card %s stores %s, cannot add %s", targetID, targetCard.ResourceStorage.Type, rt)
 			}
 		}
-		a.player.Resources().AddToStorage(targetID, amount)
+		if amount < 0 {
+			owner, err := a.removalStorageOwner(targetID, rt, -amount, false)
+			if err != nil {
+				return err
+			}
+			owner.Resources().AddToStorage(targetID, -min(-amount, owner.Resources().GetCardStorage(targetID)))
+		} else {
+			a.player.Resources().AddToStorage(targetID, amount)
+		}
 		log.Debug("Added resource to target card storage",
 			slog.String("card_id", targetID), slog.String("resource_type", string(rt)), slog.Int("amount", amount))
 
@@ -144,6 +160,9 @@ func (a *BehaviorApplier) applyCardOperationOutput(ctx context.Context, o *share
 			for _, cardID := range matched {
 				a.player.Hand().AddCard(cardID)
 			}
+			if a.sourceType == shared.SourceTypeCorporationFirstAction {
+				a.player.Selection().AddCardReceipt(a.source, a.sourceCardID, matched)
+			}
 			if len(discarded) > 0 {
 				_ = a.game.Deck().Discard(ctx, discarded)
 			}
@@ -156,6 +175,9 @@ func (a *BehaviorApplier) applyCardOperationOutput(ctx context.Context, o *share
 			}
 			for _, cardID := range drawnCards {
 				a.player.Hand().AddCard(cardID)
+			}
+			if a.sourceType == shared.SourceTypeCorporationFirstAction {
+				a.player.Selection().AddCardReceipt(a.source, a.sourceCardID, drawnCards)
 			}
 			log.Debug("Drew cards and added to hand", slog.Int("amount", len(drawnCards)))
 		}
