@@ -35,18 +35,24 @@ func IsMyTurn(game *dto.GameDto, myPlayerID string) bool {
 	if p.PendingCardSelection != nil {
 		return true
 	}
+	if p.PendingColonySelection != nil || p.PendingColonyResourceSelection != nil || p.PendingAwardFundSelection != nil {
+		return true
+	}
 	if p.PendingCardDrawSelection != nil {
 		return true
 	}
-	if p.PendingCardDiscardSelection != nil {
+	if len(p.PendingBehaviorResolutions) > 0 {
 		return true
 	}
-	if p.PendingBehaviorChoiceSelection != nil {
+	if p.PendingCardReveal != nil {
+		return true
+	}
+	if p.PendingResourceRemovalSelection != nil || p.PendingEffectSelection != nil {
 		return true
 	}
 
 	// Forced first action
-	if p.ForcedFirstAction != nil && !p.ForcedFirstAction.Completed {
+	if p.ForcedFirstAction != nil && game.CurrentPhase == dto.GamePhaseAction {
 		return true
 	}
 
@@ -80,16 +86,29 @@ func GetPendingActionType(game *dto.GameDto) string {
 	if p.PendingCardSelection != nil {
 		return "card-selection"
 	}
+	if p.PendingColonySelection != nil {
+		return "colony-selection"
+	}
+	if p.PendingColonyResourceSelection != nil {
+		return "colony-resource-selection"
+	}
+	if p.PendingAwardFundSelection != nil {
+		return "award-fund-selection"
+	}
 	if p.PendingCardDrawSelection != nil {
 		return "card-draw-selection"
 	}
-	if p.PendingCardDiscardSelection != nil {
-		return "card-discard-selection"
+	if len(p.PendingBehaviorResolutions) > 0 {
+		return "behavior-resolution"
 	}
-	if p.PendingBehaviorChoiceSelection != nil {
-		return "behavior-choice-selection"
+	if p.PendingCardReveal != nil {
+		return "card-reveal"
 	}
-	if p.ForcedFirstAction != nil && !p.ForcedFirstAction.Completed {
+	if p.PendingResourceRemovalSelection != nil || p.PendingEffectSelection != nil {
+		return "effect-selection"
+	}
+
+	if p.ForcedFirstAction != nil && game.CurrentPhase == dto.GamePhaseAction {
 		return "forced-first-action"
 	}
 	return ""

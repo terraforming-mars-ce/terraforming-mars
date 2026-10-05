@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"maps"
 
 	awardAction "terraforming-mars-backend/internal/action/award"
 	cardAction "terraforming-mars-backend/internal/action/card"
@@ -15,12 +14,17 @@ import (
 	stdprojAction "terraforming-mars-backend/internal/action/standard_project"
 	tileAction "terraforming-mars-backend/internal/action/tile"
 	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
 // CommandDispatcher maps bot JSONL commands to direct action calls.
 type CommandDispatcher struct {
+	confirmColonyPlacement *confirmAction.ConfirmColonyPlacementAction
+	confirmColonyResource  *confirmAction.ConfirmColonyResourceAction
+	confirmAwardFund       *confirmAction.ConfirmAwardFundAction
+	confirmResourceRemoval *confirmAction.ConfirmResourceRemovalAction
+	confirmCardReveal      *confirmAction.ConfirmCardRevealAction
+	confirmEffectSelection *confirmAction.ConfirmEffectSelectionAction
 	playCard               *cardAction.PlayCardAction
 	useCardAction          *cardAction.UseCardActionAction
 	skipAction             *turnAction.SkipActionAction
@@ -51,6 +55,8 @@ func NewCommandDispatcher(
 	confirmCardDraw *confirmAction.ConfirmCardDrawAction,
 	confirmCardDiscard *confirmAction.ConfirmCardDiscardAction,
 	confirmBehaviorChoice *confirmAction.ConfirmBehaviorChoiceAction,
+	confirmEffectSelection *confirmAction.ConfirmEffectSelectionAction,
+	confirmCardReveal *confirmAction.ConfirmCardRevealAction,
 	confirmSellPatents *confirmAction.ConfirmSellPatentsAction,
 	executeStandardProject *stdprojAction.ExecuteStandardProjectAction,
 	convertHeat *resconvAction.ConvertHeatToTemperatureAction,
@@ -58,9 +64,17 @@ func NewCommandDispatcher(
 	claimMilestone *milestoneAction.ClaimMilestoneAction,
 	fundAward *awardAction.FundAwardAction,
 	confirmInitAdvance *turnAction.ConfirmInitAdvanceAction,
+	confirmResourceRemoval *confirmAction.ConfirmResourceRemovalAction,
+	confirmColonyPlacement *confirmAction.ConfirmColonyPlacementAction,
+	confirmColonyResource *confirmAction.ConfirmColonyResourceAction,
+	confirmAwardFund *confirmAction.ConfirmAwardFundAction,
 	logger *slog.Logger,
 ) *CommandDispatcher {
 	return &CommandDispatcher{
+		confirmColonyPlacement: confirmColonyPlacement, confirmColonyResource: confirmColonyResource, confirmAwardFund: confirmAwardFund,
+		confirmResourceRemoval: confirmResourceRemoval,
+		confirmEffectSelection: confirmEffectSelection,
+		confirmCardReveal:      confirmCardReveal,
 		playCard:               playCard,
 		useCardAction:          useCardAction,
 		skipAction:             skipAction,
@@ -96,6 +110,14 @@ func (d *CommandDispatcher) Dispatch(ctx context.Context, gameID, playerID strin
 		slog.String("player_id", playerID),
 		slog.String("type", envelope.Type))
 
+	var paymentEnvelope struct {
+		Payment shared.Payment `json:"payment"`
+	}
+	if len(envelope.Payload) > 0 {
+		if err := json.Unmarshal(envelope.Payload, &paymentEnvelope); err != nil {
+			return err
+		}
+	}
 	switch envelope.Type {
 	case "action.card.play-card":
 		return d.dispatchPlayCard(ctx, gameID, playerID, envelope.Payload)
@@ -109,10 +131,68 @@ func (d *CommandDispatcher) Dispatch(ctx context.Context, gameID, playerID strin
 		return d.dispatchSelectTile(ctx, gameID, playerID, envelope.Payload)
 	case "action.card.confirm-production-cards":
 		return d.dispatchConfirmProductionCards(ctx, gameID, playerID, envelope.Payload)
+	case "action.acknowledge-card-receipt":
+		var p struct {
+			ReceiptID string `json:"receiptId"`
+		}
+		if err := json.Unmarshal(envelope.Payload, &p); err != nil {
+			return err
+		}
+		return d.confirmCardDraw.AcknowledgeReceipt(ctx, gameID, playerID, p.ReceiptID)
+	case "action.confirm-colony-placement":
+		var p struct {
+			ColonyID string `json:"colonyId"`
+		}
+		if err := json.Unmarshal(envelope.Payload, &p); err != nil {
+			return err
+		}
+		return d.confirmColonyPlacement.Execute(ctx, gameID, playerID, p.ColonyID)
+	case "action.confirm-colony-resource":
+		var p struct {
+			CardID string `json:"cardId"`
+		}
+		if err := json.Unmarshal(envelope.Payload, &p); err != nil {
+			return err
+		}
+		return d.confirmColonyResource.Execute(ctx, gameID, playerID, p.CardID)
+	case "action.confirm-award-fund":
+		var p struct {
+			AwardType string `json:"awardType"`
+		}
+		if err := json.Unmarshal(envelope.Payload, &p); err != nil {
+			return err
+		}
+		return d.confirmAwardFund.Execute(ctx, gameID, playerID, p.AwardType)
 	case "action.card.card-draw-confirmed":
 		return d.dispatchConfirmCardDraw(ctx, gameID, playerID, envelope.Payload)
 	case "action.card.card-discard-confirmed":
 		return d.dispatchConfirmCardDiscard(ctx, gameID, playerID, envelope.Payload)
+	case "action.confirm-card-reveal":
+		return d.confirmCardReveal.Execute(ctx, gameID, playerID)
+	case "action.card.confirm-resource-removal":
+		var p struct {
+			SelectionID    string `json:"selectionId"`
+			TargetPlayerID string `json:"targetPlayerId"`
+			Amount         *int   `json:"amount"`
+		}
+		if err := json.Unmarshal(envelope.Payload, &p); err != nil {
+			return err
+		}
+		if p.Amount == nil {
+			return fmt.Errorf("missing amount")
+		}
+		return d.confirmResourceRemoval.Execute(ctx, gameID, playerID, p.SelectionID, p.TargetPlayerID, *p.Amount)
+	case "action.confirm-effect-selection":
+		var p struct {
+			OptionIndex *int `json:"optionIndex"`
+		}
+		if err := json.Unmarshal(envelope.Payload, &p); err != nil {
+			return err
+		}
+		if p.OptionIndex == nil {
+			return fmt.Errorf("missing optionIndex")
+		}
+		return d.confirmEffectSelection.Execute(ctx, gameID, playerID, *p.OptionIndex)
 	case "action.card.behavior-choice-confirmed":
 		return d.dispatchConfirmBehaviorChoice(ctx, gameID, playerID, envelope.Payload)
 	case "action.card.select-cards":
@@ -120,23 +200,23 @@ func (d *CommandDispatcher) Dispatch(ctx context.Context, gameID, playerID strin
 	case "action.standard-project":
 		return d.dispatchStandardProject(ctx, gameID, playerID, envelope.Payload)
 	case "action.standard-project.sell-patents":
-		return d.executeStandardProject.Execute(ctx, gameID, playerID, "sell-patents")
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "sell-patents", paymentEnvelope.Payment)
 	case "action.standard-project.confirm-sell-patents":
 		return d.dispatchConfirmSellPatents(ctx, gameID, playerID, envelope.Payload)
 	case "action.standard-project.launch-asteroid":
-		return d.executeStandardProject.Execute(ctx, gameID, playerID, "asteroid")
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "asteroid", paymentEnvelope.Payment)
 	case "action.standard-project.build-power-plant":
-		return d.executeStandardProject.Execute(ctx, gameID, playerID, "power-plant")
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "power-plant", paymentEnvelope.Payment)
 	case "action.standard-project.build-aquifer":
-		return d.executeStandardProject.Execute(ctx, gameID, playerID, "aquifer")
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "aquifer", paymentEnvelope.Payment)
 	case "action.standard-project.plant-greenery":
-		return d.executeStandardProject.Execute(ctx, gameID, playerID, "greenery")
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "greenery", paymentEnvelope.Payment)
 	case "action.standard-project.build-city":
-		return d.executeStandardProject.Execute(ctx, gameID, playerID, "city")
+		return d.executeStandardProject.Execute(ctx, gameID, playerID, "city", paymentEnvelope.Payment)
 	case "action.resource-conversion.convert-heat-to-temperature":
-		return d.convertHeat.Execute(ctx, gameID, playerID, nil)
+		return d.convertHeat.Execute(ctx, gameID, playerID, paymentEnvelope.Payment)
 	case "action.resource-conversion.convert-plants-to-greenery":
-		return d.convertPlants.Execute(ctx, gameID, playerID, nil)
+		return d.convertPlants.Execute(ctx, gameID, playerID, paymentEnvelope.Payment)
 	case "action.game-management.confirm-init-advance":
 		return d.confirmInitAdvance.Execute(ctx, gameID, playerID)
 	case "action.milestone.claim-milestone":
@@ -150,81 +230,52 @@ func (d *CommandDispatcher) Dispatch(ctx context.Context, gameID, playerID strin
 
 func (d *CommandDispatcher) dispatchPlayCard(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
-		CardID             string          `json:"cardId"`
-		Payment            playCardPayment `json:"payment"`
-		ChoiceIndex        *int            `json:"choiceIndex,omitempty"`
-		CardStorageTargets []string        `json:"cardStorageTargets,omitempty"`
-		TargetPlayerID     *string         `json:"targetPlayerId,omitempty"`
-		SelectedAmount     *int            `json:"selectedAmount,omitempty"`
+		CardID             string         `json:"cardId"`
+		Payment            shared.Payment `json:"payment"`
+		ChoiceIndex        *int           `json:"choiceIndex,omitempty"`
+		CardStorageSources []string       `json:"cardStorageSources,omitempty"`
+		CardStorageTargets []string       `json:"cardStorageTargets,omitempty"`
+		TargetPlayerID     *string        `json:"targetPlayerId,omitempty"`
+		SelectedAmount     *int           `json:"selectedAmount,omitempty"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse play-card payload: %w", err)
 	}
 
-	payment := cardAction.PaymentRequest{
-		Credits:            p.Payment.Credits,
-		Steel:              p.Payment.Steel,
-		Titanium:           p.Payment.Titanium,
-		Substitutes:        make(map[shared.ResourceType]int),
-		StorageSubstitutes: make(map[string]int),
-	}
-	for k, v := range p.Payment.Substitutes {
-		payment.Substitutes[shared.ResourceType(k)] = v
-	}
-	maps.Copy(payment.StorageSubstitutes, p.Payment.StorageSubstitutes)
-
-	return d.playCard.Execute(ctx, gameID, playerID, p.CardID, payment, p.ChoiceIndex, p.CardStorageTargets, p.TargetPlayerID, p.SelectedAmount)
-}
-
-type playCardPayment struct {
-	Credits            int            `json:"credits"`
-	Steel              int            `json:"steel"`
-	Titanium           int            `json:"titanium"`
-	Substitutes        map[string]int `json:"substitutes,omitempty"`
-	StorageSubstitutes map[string]int `json:"storageSubstitutes,omitempty"`
+	return d.playCard.Execute(ctx, gameID, playerID, p.CardID, p.Payment, p.ChoiceIndex, p.CardStorageTargets, p.TargetPlayerID, p.SelectedAmount, p.CardStorageSources)
 }
 
 func (d *CommandDispatcher) dispatchUseCardAction(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
-		CardID             string   `json:"cardId"`
-		BehaviorIndex      int      `json:"behaviorIndex"`
-		ChoiceIndex        *int     `json:"choiceIndex,omitempty"`
-		CardStorageTargets []string `json:"cardStorageTargets,omitempty"`
-		TargetPlayerID     *string  `json:"targetPlayerId,omitempty"`
-		SourceCardForInput *string  `json:"sourceCardForInput,omitempty"`
-		SelectedAmount     *int     `json:"selectedAmount,omitempty"`
-		Payment            *struct {
-			Credits  int `json:"credits"`
-			Steel    int `json:"steel"`
-			Titanium int `json:"titanium"`
-		} `json:"payment,omitempty"`
+		ReuseSourceCardID  *string         `json:"reuseSourceCardId,omitempty"`
+		CardID             string          `json:"cardId"`
+		BehaviorIndex      int             `json:"behaviorIndex"`
+		ChoiceIndex        *int            `json:"choiceIndex,omitempty"`
+		CardStorageSources []string        `json:"cardStorageSources,omitempty"`
+		CardStorageTargets []string        `json:"cardStorageTargets,omitempty"`
+		TargetPlayerID     *string         `json:"targetPlayerId,omitempty"`
+		SourceCardForInput *string         `json:"sourceCardForInput,omitempty"`
+		SelectedAmount     *int            `json:"selectedAmount,omitempty"`
+		Payment            *shared.Payment `json:"payment,omitempty"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse card-action payload: %w", err)
 	}
 
-	var actionPayment *gamecards.CardPayment
-	if p.Payment != nil {
-		actionPayment = &gamecards.CardPayment{
-			Credits:  p.Payment.Credits,
-			Steel:    p.Payment.Steel,
-			Titanium: p.Payment.Titanium,
-		}
-	}
-
-	return d.useCardAction.Execute(ctx, gameID, playerID, p.CardID, p.BehaviorIndex, p.ChoiceIndex, p.CardStorageTargets, p.TargetPlayerID, p.SourceCardForInput, p.SelectedAmount, actionPayment, nil)
+	return d.useCardAction.Execute(ctx, gameID, playerID, p.CardID, p.BehaviorIndex, p.ChoiceIndex, p.CardStorageTargets, p.TargetPlayerID, p.SourceCardForInput, p.SelectedAmount, p.Payment, p.ReuseSourceCardID, p.CardStorageSources)
 }
 
 func (d *CommandDispatcher) dispatchSelectStartingChoices(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
-		CorporationID string   `json:"corporationId"`
-		PreludeIDs    []string `json:"preludeIds"`
-		CardIDs       []string `json:"cardIds"`
+		Payment       shared.Payment `json:"payment"`
+		CorporationID string         `json:"corporationId"`
+		PreludeIDs    []string       `json:"preludeIds"`
+		CardIDs       []string       `json:"cardIds"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse select-starting-choices payload: %w", err)
 	}
-	return d.selectStartingChoices.Execute(ctx, gameID, playerID, p.CorporationID, p.PreludeIDs, p.CardIDs)
+	return d.selectStartingChoices.Execute(ctx, gameID, playerID, p.CorporationID, p.PreludeIDs, p.CardIDs, p.Payment)
 }
 
 func (d *CommandDispatcher) dispatchSelectTile(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
@@ -240,44 +291,49 @@ func (d *CommandDispatcher) dispatchSelectTile(ctx context.Context, gameID, play
 
 func (d *CommandDispatcher) dispatchConfirmProductionCards(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
-		CardIDs []string `json:"cardIds"`
+		Payment shared.Payment `json:"payment"`
+		CardIDs []string       `json:"cardIds"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse confirm-production-cards payload: %w", err)
 	}
-	return d.confirmProductionCards.Execute(ctx, gameID, playerID, p.CardIDs, false)
+	return d.confirmProductionCards.Execute(ctx, gameID, playerID, p.CardIDs, false, p.Payment)
 }
 
 func (d *CommandDispatcher) dispatchConfirmCardDraw(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
-		CardsToTake []string `json:"cardsToTake"`
-		CardsToBuy  []string `json:"cardsToBuy"`
+		Payment     shared.Payment `json:"payment"`
+		CardsToTake []string       `json:"cardsToTake"`
+		CardsToBuy  []string       `json:"cardsToBuy"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse card-draw-confirmed payload: %w", err)
 	}
-	return d.confirmCardDraw.Execute(ctx, gameID, playerID, p.CardsToTake, p.CardsToBuy)
+	return d.confirmCardDraw.Execute(ctx, gameID, playerID, p.CardsToTake, p.CardsToBuy, p.Payment)
 }
 
 func (d *CommandDispatcher) dispatchConfirmCardDiscard(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
+		ResolutionID   string   `json:"resolutionId"`
 		CardsToDiscard []string `json:"cardsToDiscard"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse card-discard-confirmed payload: %w", err)
 	}
-	return d.confirmCardDiscard.Execute(ctx, gameID, playerID, p.CardsToDiscard)
+	return d.confirmCardDiscard.Execute(ctx, gameID, playerID, p.ResolutionID, p.CardsToDiscard)
 }
 
 func (d *CommandDispatcher) dispatchConfirmBehaviorChoice(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
+		ResolutionID       string   `json:"resolutionId"`
 		ChoiceIndex        int      `json:"choiceIndex"`
+		CardStorageSources []string `json:"cardStorageSources,omitempty"`
 		CardStorageTargets []string `json:"cardStorageTargets,omitempty"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse behavior-choice-confirmed payload: %w", err)
 	}
-	return d.confirmBehaviorChoice.Execute(ctx, gameID, playerID, p.ChoiceIndex, p.CardStorageTargets)
+	return d.confirmBehaviorChoice.Execute(ctx, gameID, playerID, p.ResolutionID, p.ChoiceIndex, p.CardStorageTargets)
 }
 
 func (d *CommandDispatcher) dispatchConfirmSellPatents(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
@@ -297,30 +353,33 @@ func (d *CommandDispatcher) dispatchConfirmSellPatents(ctx context.Context, game
 
 func (d *CommandDispatcher) dispatchClaimMilestone(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
-		MilestoneType string `json:"milestoneType"`
+		Payment       shared.Payment `json:"payment"`
+		MilestoneType string         `json:"milestoneType"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse claim-milestone payload: %w", err)
 	}
-	return d.claimMilestone.Execute(ctx, gameID, playerID, p.MilestoneType)
+	return d.claimMilestone.Execute(ctx, gameID, playerID, p.MilestoneType, p.Payment)
 }
 
 func (d *CommandDispatcher) dispatchFundAward(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
-		AwardType string `json:"awardType"`
+		Payment   shared.Payment `json:"payment"`
+		AwardType string         `json:"awardType"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse fund-award payload: %w", err)
 	}
-	return d.fundAward.Execute(ctx, gameID, playerID, p.AwardType)
+	return d.fundAward.Execute(ctx, gameID, playerID, p.AwardType, p.Payment)
 }
 
 func (d *CommandDispatcher) dispatchStandardProject(ctx context.Context, gameID, playerID string, payload json.RawMessage) error {
 	var p struct {
-		ProjectID string `json:"projectId"`
+		Payment   shared.Payment `json:"payment"`
+		ProjectID string         `json:"projectId"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse standard-project payload: %w", err)
 	}
-	return d.executeStandardProject.Execute(ctx, gameID, playerID, p.ProjectID)
+	return d.executeStandardProject.Execute(ctx, gameID, playerID, p.ProjectID, p.Payment)
 }

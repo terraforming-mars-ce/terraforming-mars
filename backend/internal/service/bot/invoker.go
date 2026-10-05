@@ -330,28 +330,35 @@ Send: {"type": "action.tile-selection.tile-selected", "payload": {"hex": "q,r,s"
 =====================
 COMMAND REFERENCE
 =====================
+Every paid action includes payment: {"allocations":[{"source":{"target":"self-player","resource":"credit"},"targetResource":"credit","amount":N}]}.
+Use the displayed effective cost. Free actions use {"allocations":[]}.
+For heat, plants, steel or titanium payments, change source.resource to that resource. targetResource is the resource being paid (normally credit; heat/plant for conversions).
+Card storage uses source: {"target":"self-card","resource":"floater","cardId":"ID"}. Only the displayed payment rules permit substitutions. No chained conversions.
+This applies to card plays, card actions, purchases, standard projects, conversions, milestones and awards.
+
 
 == PLAY A CARD FROM HAND ==
-{"type": "action.card.play-card", "payload": {"cardId": "CARD_ID", "payment": {"credits": N, "steel": N, "titanium": N}}}
+{"type": "action.card.play-card", "payload": {"cardId": "CARD_ID", "payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
 Steel pays for building tags (1 steel = 2M€). Titanium pays for space tags (1 titanium = 3M€).
 Optional payload fields: choiceIndex (int), targetPlayerId (string), selectedAmount (int)
 
 == USE A CARD ACTION (from played cards) ==
-{"type": "action.card.card-action", "payload": {"cardId": "CARD_ID", "behaviorIndex": N}}
+{"type": "action.card.card-action", "payload": {"cardId": "CARD_ID", "behaviorIndex": N, "payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
+For action reuse, submit the target cardId and behaviorIndex with reuseSourceCardId set to the card providing reuse. Use only the available reuse targets listed in state.
 Optional: choiceIndex, targetPlayerId, sourceCardForInput, selectedAmount
 
 == STANDARD PROJECTS ==
 {"type": "action.standard-project.sell-patents", "payload": {}}
   (After sending, you must confirm with: {"type": "action.standard-project.confirm-sell-patents", "payload": {"selectedCardIds": ["id1", "id2"]}})
-{"type": "action.standard-project.launch-asteroid", "payload": {}}
-{"type": "action.standard-project.build-power-plant", "payload": {}}
-{"type": "action.standard-project.build-aquifer", "payload": {}}
-{"type": "action.standard-project.plant-greenery", "payload": {}}
-{"type": "action.standard-project.build-city", "payload": {}}
+{"type": "action.standard-project.launch-asteroid", "payload": {"payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
+{"type": "action.standard-project.build-power-plant", "payload": {"payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
+{"type": "action.standard-project.build-aquifer", "payload": {"payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
+{"type": "action.standard-project.plant-greenery", "payload": {"payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
+{"type": "action.standard-project.build-city", "payload": {"payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
 
 == RESOURCE CONVERSIONS ==
-{"type": "action.resource-conversion.convert-plants-to-greenery", "payload": {}}
-{"type": "action.resource-conversion.convert-heat-to-temperature", "payload": {}}
+{"type": "action.resource-conversion.convert-plants-to-greenery", "payload": {"payment": {"allocations": [{"source": {"target": "self-player", "resource": "plant"}, "targetResource": "plant", "amount": N}]}}}
+{"type": "action.resource-conversion.convert-heat-to-temperature", "payload": {"payment": {"allocations": [{"source": {"target": "self-player", "resource": "heat"}, "targetResource": "heat", "amount": N}]}}}
 
 == SKIP/PASS ==
 {"type": "action.game-management.skip-action", "payload": {}}
@@ -360,13 +367,13 @@ Optional: choiceIndex, targetPlayerId, sourceCardForInput, selectedAmount
 {"type": "action.tile-selection.tile-selected", "payload": {"hex": "q,r,s"}}
 
 == STARTING SELECTION ==
-{"type": "action.card.select-starting-choices", "payload": {"corporationId": "CORP_ID", "preludeIds": [], "cardIds": ["c1", "c2"]}}
+{"type": "action.card.select-starting-choices", "payload": {"corporationId": "CORP_ID", "preludeIds": [], "cardIds": ["c1", "c2"], "payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
 
 == PRODUCTION PHASE CARD SELECTION ==
-{"type": "action.card.confirm-production-cards", "payload": {"cardIds": ["id1"]}}
+{"type": "action.card.confirm-production-cards", "payload": {"cardIds": ["id1"], "payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
 
 == CARD DRAW CONFIRMATION ==
-{"type": "action.card.card-draw-confirmed", "payload": {"cardsToTake": ["id1"], "cardsToBuy": ["id2"]}}
+{"type": "action.card.card-draw-confirmed", "payload": {"cardsToTake": ["id1"], "cardsToBuy": ["id2"], "payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
 
 == CARD DISCARD ==
 {"type": "action.card.card-discard-confirmed", "payload": {"cardsToDiscard": ["id1"]}}
@@ -378,10 +385,10 @@ Optional: choiceIndex, targetPlayerId, sourceCardForInput, selectedAmount
 {"type": "action.card.select-cards", "payload": {"cardIds": ["id1"]}}
 
 == MILESTONES ==
-{"type": "action.milestone.claim-milestone", "payload": {"milestoneType": "TYPE"}}
+{"type": "action.milestone.claim-milestone", "payload": {"milestoneType": "TYPE", "payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
 
 == AWARDS ==
-{"type": "action.award.fund-award", "payload": {"awardType": "TYPE"}}
+{"type": "action.award.fund-award", "payload": {"awardType": "TYPE", "payment": {"allocations": [{"source": {"target": "self-player", "resource": "credit"}, "targetResource": "credit", "amount": N}]}}}
 
 == CHAT MESSAGE ==
 {"type": "chat.send-message", "payload": {"message": "Your message here"}}
