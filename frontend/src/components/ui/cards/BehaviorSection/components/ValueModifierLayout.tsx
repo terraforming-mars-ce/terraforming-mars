@@ -45,7 +45,7 @@ const ValueModifierLayout: React.FC<ValueModifierLayoutProps> = ({ behavior }) =
         {affectedResources.map((resourceType: string, resIndex: number) => (
           <React.Fragment key={`res-${resIndex}`}>
             {resIndex > 0 && <Slash />}
-            <GameIcon iconType={resourceType} size="small" />
+            <GameIcon iconType={resourceType} size="behavior" />
           </React.Fragment>
         ))}
       </div>
@@ -61,7 +61,7 @@ const ValueModifierLayout: React.FC<ValueModifierLayoutProps> = ({ behavior }) =
       </span>
 
       {/* Right side: Credits icon with amount inside */}
-      <GameIcon iconType="credit" amount={amount} size="small" />
+      <GameIcon iconType="credit" amount={amount} size="behavior" />
     </div>
   );
 };

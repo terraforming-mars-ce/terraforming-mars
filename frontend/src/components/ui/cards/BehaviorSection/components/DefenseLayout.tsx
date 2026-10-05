@@ -28,7 +28,7 @@ const DefenseLayout: React.FC<DefenseLayoutProps> = ({ behavior }) => {
   const defenseOutput = behavior.outputs.find(
     (output) => isEffect(output) && output.type === "defense",
   );
-  if (!defenseOutput) return null;
+  if (!defenseOutput || !isEffect(defenseOutput)) return null;
 
   const selectors: SelectorDto[] = getSelectors(defenseOutput) || [];
   const affectedResources = getResourcesFromSelectors(selectors);
@@ -36,14 +36,21 @@ const DefenseLayout: React.FC<DefenseLayoutProps> = ({ behavior }) => {
   if (affectedResources.length === 0) return null;
 
   return (
-    <div className="flex gap-[6px] items-center">
+    <div
+      className="flex gap-[6px] items-center"
+      title={
+        defenseOutput.against === "any-player"
+          ? "These resources cannot be removed by any player, including you."
+          : "Opponents cannot remove these resources. You can still spend them."
+      }
+    >
       <span className="text-[10px] font-semibold text-white bg-[rgba(60,60,60,0.8)] px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
         Protect
       </span>
 
       <div className="flex gap-[3px] items-center">
         {affectedResources.map((resourceType: string, index: number) => (
-          <GameIcon key={`res-${index}`} iconType={resourceType} size="small" />
+          <GameIcon key={`res-${index}`} iconType={resourceType} size="behavior" />
         ))}
       </div>
     </div>

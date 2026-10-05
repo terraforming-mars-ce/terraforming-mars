@@ -3,6 +3,7 @@ import { getIconPath } from "@/utils/iconStore.ts";
 
 interface CardIconProps {
   amount: number;
+  label?: string;
   badgeType: "peek" | "take" | "buy" | "discard" | "none";
   isAffordable?: boolean;
   isAttack?: boolean;
@@ -40,6 +41,7 @@ const cardActionBadges = {
 
 const CardIcon: React.FC<CardIconProps> = ({
   amount,
+  label,
   badgeType,
   isAffordable = true,
   isAttack = false,
@@ -65,7 +67,7 @@ const CardIcon: React.FC<CardIconProps> = ({
     : `w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]`;
 
   const renderSingleIcon = () => (
-    <div className="relative inline-block" role="img" aria-label={badge?.label ?? "Card"}>
+    <div className="relative inline-block" role="img" aria-label={label ?? badge?.label ?? "Card"}>
       <img src={cardIcon} alt="" className={iconClass} />
       {badge && (
         <svg

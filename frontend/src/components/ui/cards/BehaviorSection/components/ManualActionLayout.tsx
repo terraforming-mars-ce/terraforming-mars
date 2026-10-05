@@ -78,6 +78,7 @@ const renderChoiceOutputs = (
     forceCompact: boolean,
   ) => IconDisplayInfo,
   tileScaleInfo: TileScaleInfo,
+  computedOutputs?: CalculatedOutputDto[],
 ): React.ReactNode => {
   if (!outputs) return null;
   return outputs.map((output, outputIndex) => {
@@ -105,6 +106,7 @@ const renderChoiceOutputs = (
         context="action"
         isAffordable={isResourceAffordable(output, false)}
         tileScaleInfo={tileScaleInfo}
+        computedOutputs={computedOutputs}
       />
     );
   });
@@ -294,6 +296,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
                   isResourceAffordable,
                   analyzeResourceDisplayWithConstraints,
                   tileScaleInfo,
+                  computedOutputs,
                 )}
               </div>
             </React.Fragment>
@@ -350,6 +353,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
                 isResourceAffordable,
                 analyzeResourceDisplayWithConstraints,
                 tileScaleInfo,
+                computedOutputs,
               )}
             </div>
 

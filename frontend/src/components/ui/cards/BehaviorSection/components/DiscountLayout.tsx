@@ -35,7 +35,7 @@ const IconWithBadge: React.FC<{
 }> = ({ iconType, showSpBadge = false }) => {
   return (
     <div className="relative inline-flex items-center justify-center">
-      <GameIcon iconType={iconType} size="small" />
+      <GameIcon iconType={iconType} size="behavior" />
       {showSpBadge && (
         <span className="absolute -bottom-[2px] -right-[2px] text-[8px] font-black text-white bg-[rgba(80,80,80,0.9)] px-[3px] py-[1px] rounded-[2px] leading-none [text-shadow:0_0_2px_rgba(0,0,0,0.8)]">
           SP
@@ -58,7 +58,7 @@ const DiscountAmount: React.FC<{
         <span className="text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
           {sign}
         </span>
-        <GameIcon iconType="credit" amount={amount} size="small" />
+        <GameIcon iconType="credit" amount={amount} size="behavior" />
       </div>
     );
   }
@@ -71,7 +71,7 @@ const DiscountAmount: React.FC<{
       {resourceTypes.map((rt, i) => {
         const isCredit = rt === "credit" || rt === "credit-production";
         return (
-          <GameIcon key={i} iconType={rt} size="small" amount={isCredit ? amount : undefined} />
+          <GameIcon key={i} iconType={rt} size="behavior" amount={isCredit ? amount : undefined} />
         );
       })}
     </div>
@@ -119,7 +119,7 @@ const renderSelectorIcons = (selector: SelectorDto): React.ReactNode => {
   if (selector.cardTypes && selector.cardTypes.length > 0) {
     selector.cardTypes.forEach((cardType: string, typeIndex: number) => {
       if (cardType === "event") {
-        elements.push(<GameIcon key={`type-${typeIndex}`} iconType="event" size="small" />);
+        elements.push(<GameIcon key={`type-${typeIndex}`} iconType="event" size="behavior" />);
       } else {
         elements.push(
           <span
@@ -148,7 +148,9 @@ const renderSelectorIcons = (selector: SelectorDto): React.ReactNode => {
     selector.actions.forEach((action: string, actionIndex: number) => {
       const iconType = getActionIcon(action);
       if (iconType) {
-        elements.push(<GameIcon key={`action-${actionIndex}`} iconType={iconType} size="small" />);
+        elements.push(
+          <GameIcon key={`action-${actionIndex}`} iconType={iconType} size="behavior" />,
+        );
       }
     });
   }
@@ -192,12 +194,17 @@ const DiscountLayout: React.FC<DiscountLayoutProps> = ({ behavior }) => {
     ));
 
     return (
-      <DiscountRow
-        icons={selectorIcons}
-        amount={amount}
-        resourceTypes={affectedResources}
-        isNegativeDiscount={isNegativeDiscount}
-      />
+      <div className="flex items-center gap-1">
+        <DiscountRow
+          icons={selectorIcons}
+          amount={amount}
+          resourceTypes={affectedResources}
+          isNegativeDiscount={isNegativeDiscount}
+        />
+        {"temporary" in discountOutput && discountOutput.temporary && (
+          <span className="text-white font-bold">*</span>
+        )}
+      </div>
     );
   }
 

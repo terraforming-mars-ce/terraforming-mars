@@ -45,6 +45,25 @@ interface TriggeredEffectLayoutProps {
   computedOutputs?: CalculatedOutputDto[];
 }
 
+function PrintedCost({ constraint }: { constraint: MinMaxValueDto }) {
+  return (
+    <span className="flex items-center gap-0.5 text-white font-orbitron">
+      {constraint.min !== undefined && (
+        <>
+          <GameIcon iconType="credit" amount={constraint.min} size="behavior" />
+          <span>+</span>
+        </>
+      )}
+      {constraint.max !== undefined && (
+        <>
+          <span>≤</span>
+          <GameIcon iconType="credit" amount={constraint.max} size="behavior" />
+        </>
+      )}
+    </span>
+  );
+}
+
 // Extract requiredOriginalCost from selectors (new location) or condition level (legacy)
 const getRequiredOriginalCost = (
   selectors: SelectorDto[] | undefined,
@@ -75,7 +94,7 @@ const renderSelector = (
         <GameIcon
           key={`tag-${triggerIndex}-${selectorIndex}-${tagIndex}`}
           iconType={`${tag}-tag`}
-          size="small"
+          size="behavior"
         />,
       );
     });
@@ -88,7 +107,7 @@ const renderSelector = (
           <GameIcon
             key={`type-${triggerIndex}-${selectorIndex}-${typeIndex}`}
             iconType="event"
-            size="small"
+            size="behavior"
           />,
         );
       } else {
@@ -185,7 +204,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
         <div className="flex items-center gap-[2px]">
           {globalParams.map((param: string) => (
-            <GameIcon key={param} iconType={paramToIcon[param] ?? param} size="small" />
+            <GameIcon key={param} iconType={paramToIcon[param] ?? param} size="behavior" />
           ))}
         </div>
       </div>
@@ -197,7 +216,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
   if (isPlacementBonusGained) {
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
-        <GameIcon iconType="tile-placement" size="small" />
+        <GameIcon iconType="tile-placement" size="behavior" />
         {hasSelectors && (
           <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
             *
@@ -212,7 +231,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
   if (isTagPlayed && !hasSelectors) {
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
-        <GameIcon iconType="wild-tag" size="small" />
+        <GameIcon iconType="wild-tag" size="behavior" />
         {trigger.condition?.unique && (
           <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
             *
@@ -259,7 +278,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
         <div className={`flex items-center justify-center ${redGlowClass}`}>
-          <GameIcon iconType="city-tile" size="small" />
+          <GameIcon iconType="city-tile" size="behavior" />
         </div>
       </div>
     );
@@ -279,7 +298,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
         <div className={`flex items-center justify-center ${redGlowClass}`}>
-          <GameIcon iconType="greenery-tile" size="small" />
+          <GameIcon iconType="greenery-tile" size="behavior" />
         </div>
       </div>
     );
@@ -299,7 +318,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
         <div className={`flex items-center justify-center ${redGlowClass}`}>
-          <GameIcon iconType="ocean-tile" size="small" />
+          <GameIcon iconType="ocean-tile" size="behavior" />
         </div>
       </div>
     );
@@ -318,7 +337,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
         <div className={`flex items-center justify-center ${redGlowClass}`}>
-          <GameIcon iconType="colony" size="small" />
+          <GameIcon iconType="colony" size="behavior" />
         </div>
       </div>
     );
@@ -341,7 +360,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
           {bonusTypes.map((bonusType: string, idx: number) => (
             <React.Fragment key={`bonus-${triggerIndex}-${idx}`}>
               {idx > 0 && <Slash />}
-              <GameIcon iconType={bonusType} size="small" />
+              <GameIcon iconType={bonusType} size="behavior" />
             </React.Fragment>
           ))}
         </div>
@@ -354,37 +373,15 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
     trigger.condition?.selectors,
     trigger.condition?.requiredOriginalCost,
   );
-  const hasRequiredOriginalCost = requiredOriginalCost !== undefined;
-
-  if (hasRequiredOriginalCost) {
-    const costReq = requiredOriginalCost;
-    const hasMin = costReq.min !== undefined;
-    const hasMax = costReq.max !== undefined;
-    const value = (hasMin ? costReq.min : hasMax ? costReq.max : 0) ?? 0;
-    const isMax = hasMax && !hasMin;
-
-    return (
-      <div key={triggerIndex} className="flex gap-[3px] items-center">
-        {isMax && (
-          <span className="text-xs font-semibold text-[#e0e0e0] [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-[11px]">
-            Max
-          </span>
-        )}
-        <div className="flex items-center gap-0.5">
-          <span className="relative z-10 text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-            -
-          </span>
-          <GameIcon iconType="credit" amount={value} size="small" />
-        </div>
-      </div>
-    );
+  if (requiredOriginalCost) {
+    return <PrintedCost key={triggerIndex} constraint={requiredOriginalCost} />;
   }
 
   // Handle trading trigger (e.g., Trade Envoys, Trading Colony)
   if (trigger.condition?.type === "before-colony-trade") {
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center justify-center">
-        <GameIcon iconType="trade" size="small" />
+        <GameIcon iconType="trade" size="behavior" />
       </div>
     );
   }
@@ -401,7 +398,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
             return (
               <React.Fragment key={`prod-${triggerIndex}-${idx}`}>
                 {idx > 0 && <Slash />}
-                <GameIcon iconType={iconType} size="small" />
+                <GameIcon iconType={iconType} size="behavior" />
               </React.Fragment>
             );
           })}
@@ -439,7 +436,8 @@ const renderBehaviorRow = (
     behavior.outputs?.some((output) => output.type === "global-parameter-lenience") ?? false;
 
   const hasTriggers =
-    !isGlobalParameterLenience && behavior.triggers && behavior.triggers.length > 0;
+    !isGlobalParameterLenience &&
+    behavior.triggers?.some((trigger) => trigger.condition !== undefined);
 
   const hasChoices = behavior.choices && behavior.choices.length > 0;
   const hasOutputs = behavior.outputs && behavior.outputs.length > 0;
@@ -453,7 +451,7 @@ const renderBehaviorRow = (
       {!skipMainRow && (
         <div className="flex gap-[3px] items-center justify-center">
           {/* Trigger conditions - hide for global-parameter-lenience */}
-          {!isGlobalParameterLenience && behavior.triggers && behavior.triggers.length > 0 && (
+          {hasTriggers && behavior.triggers && (
             <>
               <div className="flex gap-[3px] items-center">
                 {(() => {
@@ -468,44 +466,19 @@ const renderBehaviorRow = (
 
                   // If we have cost-based triggers, deduplicate and show once
                   if (triggersWithCost.length > 0) {
-                    // Get unique cost requirements
-                    const uniqueCosts: string[] = Array.from(
-                      new Set(
-                        triggersWithCost.map((trigger) => {
-                          const costReq = getRequiredOriginalCost(
-                            trigger.condition?.selectors,
-                            trigger.condition?.requiredOriginalCost,
-                          );
-                          const hasMin = costReq?.min !== undefined;
-                          const hasMax = costReq?.max !== undefined;
-                          const value = hasMin ? costReq?.min : costReq?.max;
-                          const prefix = hasMax && !hasMin ? "Max-" : "";
-                          return `${prefix}${value}`;
-                        }),
-                      ),
-                    );
-
-                    // Render unique cost requirements
-                    return uniqueCosts.map((costKey: string, idx: number) => {
-                      const isMax = costKey.startsWith("Max-");
-                      const value = parseInt(costKey.replace("Max-", ""), 10);
-
-                      return (
-                        <div key={`cost-${idx}`} className="flex gap-[3px] items-center">
-                          {isMax && (
-                            <span className="text-xs font-semibold text-[#e0e0e0] [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-[11px]">
-                              Max
-                            </span>
-                          )}
-                          <div className="flex items-center gap-0.5">
-                            <span className="relative z-10 text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-                              -
-                            </span>
-                            <GameIcon iconType="credit" amount={value} size="small" />
-                          </div>
-                        </div>
+                    const uniqueCosts = new Map<string, MinMaxValueDto>();
+                    for (const trigger of triggersWithCost) {
+                      const cost = getRequiredOriginalCost(
+                        trigger.condition?.selectors,
+                        trigger.condition?.requiredOriginalCost,
                       );
-                    });
+                      if (cost) {
+                        uniqueCosts.set(JSON.stringify(cost), cost);
+                      }
+                    }
+                    return [...uniqueCosts].map(([key, constraint]) => (
+                      <PrintedCost key={key} constraint={constraint} />
+                    ));
                   }
 
                   // Otherwise, render other trigger types normally
@@ -518,6 +491,35 @@ const renderBehaviorRow = (
                 :
               </span>
             </>
+          )}
+
+          {behavior.inputs?.map((input, index) => {
+            if (input.type === "card-discard") {
+              return (
+                <CardIcon
+                  key={`triggered-input-${rowIndex}-${index}`}
+                  amount={input.amount}
+                  badgeType="discard"
+                  isAffordable={isResourceAffordable(input, true)}
+                  totalCardTypes={1}
+                />
+              );
+            }
+            return (
+              <ResourceDisplay
+                key={`triggered-input-${rowIndex}-${index}`}
+                displayInfo={analyzeResourceDisplayWithConstraints(input, 6, false)}
+                isInput
+                resource={input}
+                isGroupedWithOtherNegatives={false}
+                context="action"
+                isAffordable={isResourceAffordable(input, true)}
+                tileScaleInfo={tileScaleInfo}
+              />
+            );
+          })}
+          {(behavior.inputs?.length ?? 0) > 0 && (behavior.outputs?.length ?? 0) > 0 && (
+            <span className="text-white text-sm font-bold">→</span>
           )}
 
           {/* Outputs in same row if they fit */}
@@ -861,7 +863,7 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
     return (
       <div className="flex flex-col gap-1 items-center justify-center">
         <div className="flex gap-[2px] items-center justify-center">
-          <GameIcon iconType="tile-placement" size="small" />
+          <GameIcon iconType="tile-placement" size="behavior" />
           {hasBonusRestriction && (
             <span className="text-white font-bold text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
               *
