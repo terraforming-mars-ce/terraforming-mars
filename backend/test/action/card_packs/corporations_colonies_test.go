@@ -1,16 +1,21 @@
 package card_packs_test
 
 import (
+	"terraforming-mars-backend/internal/delivery/dto"
+
 	"context"
 	"testing"
 	"time"
 
 	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/action/admin"
+	cardAction "terraforming-mars-backend/internal/action/card"
 	"terraforming-mars-backend/internal/action/confirmation"
 	resconvaction "terraforming-mars-backend/internal/action/resource_conversion"
+	tileAction "terraforming-mars-backend/internal/action/tile"
 	turnAction "terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/events"
+	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/colony"
 	"terraforming-mars-backend/internal/game/shared"
@@ -57,11 +62,14 @@ func TestAridor_NewTagTriggersProductionIncrease(t *testing.T) {
 		Type: gamecards.CardTypeAutomated,
 		Tags: []shared.CardTag{shared.TagScience},
 	}
-	cardRegistry := gamecards.NewInMemoryCardRegistry([]gamecards.Card{scienceCard})
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards([]gamecards.Card{scienceCard})
 
 	p := testGame.GetAllPlayers()[0]
 	p.SetCorporationID("CC1")
 	testutil.StartTestGame(t, testGame)
+
+	wild := testutil.GetCardByName("Research Coordination")
+	p.PlayedCards().AddCard(wild.ID, wild.Name, string(wild.Type), nil)
 
 	effect := newAridorEffect()
 	p.Effects().AddEffect(effect)
@@ -228,30 +236,8 @@ func TestAridor_WildTagDoesNotTrigger(t *testing.T) {
 // =============================================================================
 
 func newArklightEffect() shared.CardEffect {
-	selfPlayer := "self-player"
-	return shared.CardEffect{
-		CardID:        "CC2",
-		CardName:      "Arklight",
-		BehaviorIndex: 1,
-		Behavior: shared.CardBehavior{
-			Triggers: []shared.Trigger{
-				{
-					Type: "auto-corporation-start",
-					Condition: &shared.ResourceTriggerCondition{
-						Type: "card-played",
-						Selectors: []shared.Selector{
-							{Tags: []shared.CardTag{shared.TagPlant}},
-							{Tags: []shared.CardTag{shared.TagAnimal}},
-						},
-						Target: &selfPlayer,
-					},
-				},
-			},
-			Outputs: []shared.BehaviorCondition{
-				shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card"),
-			},
-		},
-	}
+	card := testutil.GetCardByName("Arklight")
+	return shared.CardEffect{CardID: card.ID, CardName: card.Name, BehaviorIndex: 1, Behavior: card.Behaviors[1]}
 }
 
 func TestArklight_PassiveEffectByTag(t *testing.T) {
@@ -292,15 +278,13 @@ func TestArklight_PassiveEffectByTag(t *testing.T) {
 
 			storageBefore := p.Resources().GetCardStorage("CC2")
 
-			events.Publish(testGame.EventBus(), events.CardPlayedEvent{
+			events.Publish(testGame.EventBus(), events.TagPlayedEvent{
 				GameID:   testGame.ID(),
 				PlayerID: p.ID(),
 				CardID:   testCard.ID,
 				CardName: testCard.Name,
-				CardType: string(testCard.Type),
+				Tag:      string(tt.tag),
 			})
-
-			time.Sleep(50 * time.Millisecond)
 
 			testutil.AssertEqual(t, storageBefore+tt.expectedGain, p.Resources().GetCardStorage("CC2"), tt.description)
 		})
@@ -308,7 +292,7 @@ func TestArklight_PassiveEffectByTag(t *testing.T) {
 }
 
 func TestArklight_StartingResources(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -406,7 +390,7 @@ func TestPolyphemos_CardBuyCostFromCorpBehaviors(t *testing.T) {
 }
 
 func TestPolyphemos_ProductionPhaseCardBuyCost(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -443,7 +427,7 @@ func TestPolyphemos_ProductionPhaseCardBuyCost(t *testing.T) {
 
 	// Buying 2 cards should succeed (2 * 5 = 10 MC)
 	action := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
-	err = action.Execute(ctx, testGame.ID(), playerID, drawnCards[:2], false)
+	err = action.Execute(ctx, testGame.ID(), playerID, drawnCards[:2], false, shared.NativePayment(shared.ResourceCredit, len(drawnCards[:2])*5))
 	testutil.AssertNoError(t, err, "buying 2 cards at 5 MC each should succeed with 10 credits")
 
 	resources := p.Resources().Get()
@@ -451,7 +435,7 @@ func TestPolyphemos_ProductionPhaseCardBuyCost(t *testing.T) {
 }
 
 func TestPolyphemos_ProductionPhaseCardBuyCost_InsufficientCredits(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -488,7 +472,7 @@ func TestPolyphemos_ProductionPhaseCardBuyCost_InsufficientCredits(t *testing.T)
 
 	// Buying 2 cards should fail (2 * 5 = 10 MC, only have 9)
 	action := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
-	err = action.Execute(ctx, testGame.ID(), playerID, drawnCards[:2], false)
+	err = action.Execute(ctx, testGame.ID(), playerID, drawnCards[:2], false, shared.NativePayment(shared.ResourceCredit, len(drawnCards[:2])*5))
 	testutil.AssertError(t, err, "buying 2 cards at 5 MC each should fail with only 9 credits")
 }
 
@@ -628,7 +612,7 @@ func TestPartialResourceTradeDiscount_OnlyAffectsSpecifiedResources(t *testing.T
 // =============================================================================
 
 func TestPoseidon_StartingResources(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -646,7 +630,7 @@ func TestPoseidon_StartingResources(t *testing.T) {
 }
 
 func TestPoseidon_ForcedFirstActionSetup(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -660,7 +644,7 @@ func TestPoseidon_ForcedFirstActionSetup(t *testing.T) {
 
 	forcedAction := testGame.GetForcedFirstAction(playerID)
 	testutil.AssertTrue(t, forcedAction != nil, "Poseidon should create a forced first action")
-	testutil.AssertEqual(t, "colony-placement", forcedAction.ActionType, "Forced first action should be colony-placement")
+	testutil.AssertEqual(t, "resolving", forcedAction.State, "First action should be resolving")
 	testutil.AssertEqual(t, testutil.CardID("Poseidon"), forcedAction.CorporationID, "Forced first action should reference Poseidon")
 
 	p, _ := testGame.GetPlayer(playerID)
@@ -670,7 +654,7 @@ func TestPoseidon_ForcedFirstActionSetup(t *testing.T) {
 }
 
 func TestPoseidon_GainProductionOnColonyPlacement(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -704,7 +688,7 @@ func TestPoseidon_GainProductionOnColonyPlacement(t *testing.T) {
 // =============================================================================
 
 func TestStormcraft_StartingResources(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -719,7 +703,7 @@ func TestStormcraft_StartingResources(t *testing.T) {
 }
 
 func TestStormcraft_StoragePaymentSubstituteRegistered(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -728,19 +712,19 @@ func TestStormcraft_StoragePaymentSubstituteRegistered(t *testing.T) {
 	testutil.AssertNoError(t, err, "SetCorporation should succeed")
 
 	p, _ := testGame.GetPlayer(playerID)
-	subs := p.Resources().StoragePaymentSubstitutes()
+	subs := p.Resources().PaymentSubstitutes()
 
 	testutil.AssertEqual(t, 1, len(subs), "Should have 1 storage payment substitute")
 	testutil.AssertEqual(t, string(shared.ResourceHeat), string(subs[0].TargetResource),
 		"Storage substitute should target heat")
 	testutil.AssertEqual(t, 2, subs[0].ConversionRate,
 		"Conversion rate should be 2 heat per floater")
-	testutil.AssertEqual(t, string(shared.ResourceFloater), string(subs[0].ResourceType),
+	testutil.AssertEqual(t, string(shared.ResourceFloater), string(subs[0].Source.Resource),
 		"Storage resource type should be floater")
 }
 
 func TestStormcraft_ConvertHeatWithFloatersOnly(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -760,7 +744,7 @@ func TestStormcraft_ConvertHeatWithFloatersOnly(t *testing.T) {
 	convertAction := resconvaction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 	initialTemp := testGame.GlobalParameters().Temperature()
 
-	err = convertAction.Execute(ctx, testGame.ID(), playerID, map[string]int{stormcraftID: 4})
+	err = convertAction.Execute(ctx, testGame.ID(), playerID, shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-card", Resource: shared.ResourceFloater, CardID: stormcraftID}, TargetResource: shared.ResourceHeat, Amount: 4}}})
 	testutil.AssertNoError(t, err, "Should succeed with 4 floaters (= 8 heat)")
 
 	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(stormcraftID),
@@ -770,7 +754,7 @@ func TestStormcraft_ConvertHeatWithFloatersOnly(t *testing.T) {
 }
 
 func TestStormcraft_ConvertHeatWithMixedPayment(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -789,7 +773,7 @@ func TestStormcraft_ConvertHeatWithMixedPayment(t *testing.T) {
 
 	convertAction := resconvaction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
-	err = convertAction.Execute(ctx, testGame.ID(), playerID, map[string]int{stormcraftID: 2})
+	err = convertAction.Execute(ctx, testGame.ID(), playerID, shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-card", Resource: shared.ResourceFloater, CardID: stormcraftID}, TargetResource: shared.ResourceHeat, Amount: 2}, {Source: shared.PaymentSource{Target: "self-player", Resource: shared.ResourceHeat}, TargetResource: shared.ResourceHeat, Amount: 4}}})
 	testutil.AssertNoError(t, err, "Should succeed with 2 floaters + 4 heat")
 
 	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(stormcraftID),
@@ -799,7 +783,7 @@ func TestStormcraft_ConvertHeatWithMixedPayment(t *testing.T) {
 }
 
 func TestStormcraft_ConvertHeatInsufficientResources(t *testing.T) {
-	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, repo, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -818,12 +802,14 @@ func TestStormcraft_ConvertHeatInsufficientResources(t *testing.T) {
 
 	convertAction := resconvaction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
-	err = convertAction.Execute(ctx, testGame.ID(), playerID, map[string]int{stormcraftID: 1})
+	err = convertAction.Execute(ctx, testGame.ID(), playerID, shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-card", Resource: shared.ResourceFloater, CardID: stormcraftID}, TargetResource: shared.ResourceHeat, Amount: 1}}})
 	testutil.AssertError(t, err, "Should fail with only 5 heat equivalent (need 8)")
+	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(stormcraftID), "failed payment preserves floaters")
+	testutil.AssertEqual(t, 3, p.Resources().Get().Heat, "failed payment preserves heat")
 }
 
 func TestStormcraft_StateCalculatorShowsAffordableWithFloaters(t *testing.T) {
-	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, _, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	ctx := context.Background()
 
 	p, _ := testGame.GetPlayer(playerID)
@@ -832,9 +818,7 @@ func TestStormcraft_StateCalculatorShowsAffordableWithFloaters(t *testing.T) {
 	stormcraftID := testutil.CardID("Stormcraft Incorporated")
 
 	// Register the storage payment substitute manually
-	p.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
-		CardID:         stormcraftID,
-		ResourceType:   shared.ResourceFloater,
+	p.Resources().AddPaymentSubstitute(shared.PaymentSubstitute{Source: shared.PaymentSource{Target: "self-card", CardID: stormcraftID, Resource: shared.ResourceFloater},
 		ConversionRate: 2,
 		TargetResource: shared.ResourceHeat,
 	})
@@ -853,7 +837,7 @@ func TestStormcraft_StateCalculatorShowsAffordableWithFloaters(t *testing.T) {
 }
 
 func TestStormcraft_StateCalculatorShowsUnaffordableWithoutEnoughFloaters(t *testing.T) {
-	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	testGame, _, cardRegistry, playerID, _ := setupCorporationColoniesGame(t)
 	ctx := context.Background()
 
 	p, _ := testGame.GetPlayer(playerID)
@@ -861,9 +845,7 @@ func TestStormcraft_StateCalculatorShowsUnaffordableWithoutEnoughFloaters(t *tes
 
 	stormcraftID := testutil.CardID("Stormcraft Incorporated")
 
-	p.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
-		CardID:         stormcraftID,
-		ResourceType:   shared.ResourceFloater,
+	p.Resources().AddPaymentSubstitute(shared.PaymentSubstitute{Source: shared.PaymentSource{Target: "self-card", CardID: stormcraftID, Resource: shared.ResourceFloater},
 		ConversionRate: 2,
 		TargetResource: shared.ResourceHeat,
 	})
@@ -938,10 +920,10 @@ func TestPoseidon_ForcedColonyDoesNotBlockInitAdvance_Repro568(t *testing.T) {
 
 	selectAction := turnAction.NewSelectStartingChoicesAction(repo, cardRegistry, nil, logger)
 
-	err = selectAction.Execute(ctx, testGame.ID(), playerID1, "B01", []string{}, []string{})
+	err = selectAction.Execute(ctx, testGame.ID(), playerID1, "B01", []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "Player 1 selection")
 
-	err = selectAction.Execute(ctx, testGame.ID(), playerID2, poseidonID, []string{}, []string{})
+	err = selectAction.Execute(ctx, testGame.ID(), playerID2, poseidonID, []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "Player 2 (Poseidon) selection")
 
 	testutil.AssertEqual(t, shared.GamePhaseInitApplyCorp, testGame.CurrentPhase(), "Should be in init_apply_corp")
@@ -959,28 +941,18 @@ func TestPoseidon_ForcedColonyDoesNotBlockInitAdvance_Repro568(t *testing.T) {
 	testutil.AssertNoError(t, err, "Apply player 2 corp (Poseidon)")
 
 	forcedAction := testGame.GetForcedFirstAction(playerID2)
-	testutil.AssertTrue(t, forcedAction != nil, "Poseidon should have a forced colony placement action")
-	testutil.AssertEqual(t, "colony-placement", forcedAction.ActionType, "Forced action should be colony-placement")
+	testutil.AssertTrue(t, forcedAction != nil, "Poseidon first action is queued")
+	testutil.AssertEqual(t, "queued", forcedAction.State, "setup does not run first action")
+	testutil.AssertTrue(t, players[1].Selection().GetPendingColonySelection() == nil, "no colony selection during setup")
+	testutil.AssertNoError(t, confirmAction.Execute(ctx, testGame.ID(), playerID2), "finish setup with first action queued")
+	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "setup can advance")
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID2, 2), "start Poseidon's turn")
+	selection := players[1].Selection().GetPendingColonySelection()
+	testutil.AssertTrue(t, selection != nil, "first turn creates colony selection")
+	testutil.AssertNoError(t, confirmColony.Execute(ctx, testGame.ID(), playerID2, selection.AvailableColonyIDs[0]), "build colony")
+	testutil.AssertTrue(t, testGame.GetForcedFirstAction(playerID2) == nil, "first action completes")
+	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "first action uses one action")
 
-	p2, _ := testGame.GetPlayer(playerID2)
-	colonySelection := p2.Selection().GetPendingColonySelection()
-	testutil.AssertTrue(t, colonySelection != nil, "Poseidon should have a pending colony selection")
-	testutil.AssertTrue(t, len(colonySelection.AvailableColonyIDs) > 0, "Should have placeable colonies")
-
-	err = confirmAction.Execute(ctx, testGame.ID(), playerID2)
-	testutil.AssertError(t, err, "Confirm should be blocked while colony placement is pending")
-
-	err = confirmColony.Execute(ctx, testGame.ID(), playerID2, colonySelection.AvailableColonyIDs[0])
-	testutil.AssertNoError(t, err, "Player 2 should be able to place the forced colony")
-
-	testutil.AssertTrue(t, testGame.GetForcedFirstAction(playerID2) == nil,
-		"Forced colony action should be cleared after placement")
-	testutil.AssertTrue(t, p2.Selection().GetPendingColonySelection() == nil,
-		"Pending colony selection should be cleared after placement")
-
-	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(),
-		"Init phase should advance to action phase after Poseidon's forced colony is placed")
-	testutil.AssertTrue(t, testGame.CurrentTurn() != nil, "Current turn should be set after init advance")
 }
 
 func TestPoseidon_ForcedColonyInitAdvance_FourPlayerPrelude_Repro568(t *testing.T) {
@@ -1045,7 +1017,7 @@ func TestPoseidon_ForcedColonyInitAdvance_FourPlayerPrelude_Repro568(t *testing.
 
 	selectAction := turnAction.NewSelectStartingChoicesAction(repo, cardRegistry, nil, logger)
 	for i, p := range players {
-		err = selectAction.Execute(ctx, testGame.ID(), p.ID(), corpForPlayer[i], []string{"P01", "P03"}, []string{})
+		err = selectAction.Execute(ctx, testGame.ID(), p.ID(), corpForPlayer[i], []string{"P01", "P03"}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 		testutil.AssertNoError(t, err, "selection for player "+p.ID())
 	}
 
@@ -1080,4 +1052,103 @@ func indexOf(ss []string, s string) int {
 		}
 	}
 	return -1
+}
+
+func TestStormcraft_PaysHeatActionWithoutPayingCreditCosts(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, id, _ := setupCorporationColoniesGame(t)
+	p, _ := g.GetPlayer(id)
+	log := testutil.TestLogger()
+	testutil.AssertNoError(t, admin.NewSetCorporationAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, "CC5"), "Stormcraft")
+	p.Resources().Set(shared.Resources{})
+	p.Resources().AddToStorage("CC5", 4)
+	source := shared.PaymentSource{Target: "self-card", Resource: shared.ResourceFloater, CardID: "CC5"}
+	creditCard := testutil.GetCardByName("Imported GHG")
+	p.Hand().AddCard(creditCard.ID)
+	bad := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: source, TargetResource: shared.ResourceCredit, Amount: 4}}}
+	testutil.AssertError(t, cardAction.NewPlayCardAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, creditCard.ID, bad, nil, nil, nil, nil, nil), "floaters cannot pay credits")
+	testutil.AssertEqual(t, 4, p.Resources().GetCardStorage("CC5"), "rejected credit payment preserves floaters")
+	card := testutil.GetCardByName("Caretaker Contract")
+	p.PlayedCards().AddCard(card.ID, card.Name, string(card.Type), nil)
+	var index int
+	for i, b := range card.Behaviors {
+		if gamecards.HasManualTrigger(b) {
+			index = i
+			p.Actions().AddAction(shared.CardAction{CardID: card.ID, CardName: card.Name, BehaviorIndex: i, Behavior: b})
+		}
+	}
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: source, TargetResource: shared.ResourceHeat, Amount: 4}}}
+	before := p.Resources().TerraformRating()
+	testutil.AssertNoError(t, cardAction.NewUseCardActionAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, card.ID, index, nil, nil, nil, nil, nil, &payment, nil, nil), "pay heat input with floaters")
+	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage("CC5"), "four floaters spent")
+	testutil.AssertEqual(t, before+1, p.Resources().TerraformRating(), "action reward")
+}
+
+func setupCorporationColoniesGame(t *testing.T) (*game.Game, game.GameRepository, gamecards.CardRegistry, string, string) {
+	g, repo, registry, id, other := testutil.SetupTwoPlayerGame(t)
+	settings := g.Settings()
+	settings.CardPacks = append(settings.CardPacks, shared.PackColonies)
+	g.UpdateSettings(context.Background(), settings)
+	defs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	testutil.AssertNoError(t, err, "load colony catalog")
+	g.Colonies().SetDefinitions(defs)
+	return g, repo, registry, id, other
+}
+
+func TestAridor_AddsUnownedTileAndActivatesOnResourceHolder(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, id, other := setupCorporationColoniesGame(t)
+	addColony(g, "luna", 1, nil)
+	p, _ := g.GetPlayer(id)
+	eventsSeen := 0
+	events.Subscribe(g.EventBus(), func(events.ColonyBuiltEvent) { eventsSeen++ })
+	defs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	testutil.AssertNoError(t, err, "load colonies")
+	colonies := colony.NewInMemoryColonyRegistry(defs)
+	testutil.AssertNoError(t, admin.NewSetCorporationAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, testutil.CardID("Aridor")), "start Aridor action")
+	selection := p.Selection().GetPendingColonySelection()
+	testutil.AssertTrue(t, selection != nil && selection.AddTile, "choose unused tile")
+	view := dto.ToGameDto(g, registry, id, colonies)
+	testutil.AssertEqual(t, len(defs)-1, len(view.CurrentPlayer.PendingColonySelection.TileOptions), "unused tile previews sent")
+	skip := turnAction.NewSkipActionAction(repo, nil, testutil.TestLogger())
+	testutil.AssertError(t, skip.Execute(ctx, g.ID(), id), "cannot pass first action")
+	confirm := confirmation.NewConfirmColonyPlacementAction(repo, registry, colonies, testutil.TestLogger())
+	testutil.AssertError(t, confirm.Execute(ctx, g.ID(), other, "titan"), "other player cannot confirm")
+	testutil.AssertError(t, confirm.Execute(ctx, g.ID(), id, "luna"), "existing tile rejected")
+	before := p.Resources().Get()
+	testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), id, "titan"), "add Titan")
+	titan := g.Colonies().GetState("titan")
+	testutil.AssertEqual(t, 0, len(titan.PlayerColonies), "no player colony granted")
+	testutil.AssertEqual(t, "floater", titan.AwaitingResource, "Titan starts inactive")
+	testutil.AssertEqual(t, -1, titan.MarkerPosition, "inactive marker off track")
+	testutil.AssertEqual(t, 0, eventsSeen, "adding tile does not trigger colony building")
+	testutil.AssertEqual(t, before, p.Resources().Get(), "no placement reward")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "one action spent")
+	testutil.AssertError(t, confirm.Execute(ctx, g.ID(), id, "titan"), "duplicate confirmation rejected")
+	testutil.AssertEqual(t, 2, len(g.Colonies().States()), "no duplicate tile")
+	p.Hand().AddCard("213")
+	p.Resources().Set(shared.Resources{Credits: 100})
+	play := cardAction.NewPlayCardAction(repo, registry, nil, testutil.TestLogger())
+	testutil.AssertNoError(t, play.Execute(ctx, g.ID(), id, "213", shared.NativePayment(shared.ResourceCredit, 11), nil, nil, nil, nil, nil), "play floater holder")
+	testutil.AssertEqual(t, "", g.Colonies().GetState("titan").AwaitingResource, "holder activates Titan")
+	testutil.AssertEqual(t, 1, g.Colonies().GetState("titan").MarkerPosition, "activation sets normal starting marker")
+}
+
+func TestPoseidon_FirstActionWaitsForOceanReward(t *testing.T) {
+	g, repo, registry, id, _ := setupCorporationColoniesGame(t)
+	ctx := context.Background()
+	addColony(g, "europa", 1, nil)
+	definitions, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	testutil.AssertNoError(t, err, "load colonies")
+	testutil.AssertNoError(t, admin.NewSetCorporationAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, testutil.CardID("Poseidon")), "start Poseidon action")
+	confirm := confirmation.NewConfirmColonyPlacementAction(repo, registry, colony.NewInMemoryColonyRegistry(definitions), testutil.TestLogger())
+	testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), id, "europa"), "build Europa colony")
+	testutil.AssertTrue(t, g.GetForcedFirstAction(id) != nil, "ocean reward keeps action open")
+	testutil.AssertEqual(t, 2, g.CurrentTurn().ActionsRemaining(), "not consumed before reward")
+	pending := g.GetPendingTileSelection(id)
+	testutil.AssertTrue(t, pending != nil, "ocean selection exists")
+	_, err = tileAction.NewSelectTileAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, pending.AvailableHexes[0])
+	testutil.AssertNoError(t, err, "place ocean")
+	testutil.AssertTrue(t, g.GetForcedFirstAction(id) == nil, "first action completes after reward")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "only one action consumed")
 }
