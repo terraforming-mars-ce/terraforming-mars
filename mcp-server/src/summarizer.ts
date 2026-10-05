@@ -11,17 +11,31 @@ import type {
   PlayerMilestoneDto,
   PlayerAwardDto,
   CardDto,
+  CardDescriptionSectionDto,
   TileDto,
   PendingTileSelectionDto,
   PendingCardSelectionDto,
   PendingCardDrawSelectionDto,
-  PendingCardDiscardSelectionDto,
-  PendingBehaviorChoiceSelectionDto,
+  PendingBehaviorResolutionDto,
   ForcedFirstActionDto,
   CardBehaviorDto,
   ResourceCondition,
 } from "./types.js";
 import { GameState } from "./state.js";
+
+const DESCRIPTION_LABELS: Record<CardDescriptionSectionDto["type"], string | null> = {
+  generic: null,
+  effect: "Effect",
+  action: "Action",
+  requirement: "Requirement",
+};
+
+// Flatten a card description into labelled lines, indenting continuation lines for bullet output
+function formatCardDescription(sections: CardDescriptionSectionDto[], indent = "    "): string {
+  return sections
+    .map((s) => (DESCRIPTION_LABELS[s.type] ? `${DESCRIPTION_LABELS[s.type]}: ${s.text}` : s.text))
+    .join(`\n${indent}`);
+}
 
 export function summarizeGameState(
   state: GameState,
@@ -97,15 +111,24 @@ function formatPendingActions(player: PlayerDto): string {
   if (player.pendingCardDrawSelection) {
     parts.push(formatPendingCardDraw(player.pendingCardDrawSelection));
   }
-  if (player.pendingCardDiscardSelection) {
-    parts.push(formatPendingCardDiscard(player.pendingCardDiscardSelection));
+  for (const resolution of player.pendingBehaviorResolutions ?? []) {
+    parts.push(resolution.kind === "card-discard" ? formatPendingCardDiscard(resolution) : formatPendingBehaviorChoice(resolution));
   }
-  if (player.pendingBehaviorChoiceSelection) {
-    parts.push(
-      formatPendingBehaviorChoice(player.pendingBehaviorChoiceSelection),
-    );
+  if (player.pendingCardReveal) {
+    parts.push(`Resolved public reveal: ${JSON.stringify(player.pendingCardReveal)}. Acknowledge with confirm_cards action reveal.`);
   }
-  if (player.forcedFirstAction && !player.forcedFirstAction.completed) {
+  if (player.pendingResourceRemovalSelection) {
+    parts.push(`Pending removal: ${JSON.stringify(player.pendingResourceRemovalSelection)}. Use confirm_resource_removal; empty target and amount 0 skips.`);
+  }
+  if (player.pendingEffectSelection) {
+    parts.push(`Pending effect selection: ${JSON.stringify(player.pendingEffectSelection)}. Use confirm_cards action effect with choiceIndex.`);
+  }
+
+  for (const receipt of player.cardReceipts ?? []) parts.push(`Cards already received from ${receipt.source}: ${receipt.cards.map(c => c.name).join(", ")}. Optional acknowledgement: acknowledge_cards_received with receiptId ${receipt.id}.`);
+  if (player.pendingColonySelection) parts.push(`Pending colony choice: ${JSON.stringify(player.pendingColonySelection)}. Use confirm_colony_selection.`);
+  if (player.pendingColonyResourceSelection) parts.push(`Pending colony resource: ${JSON.stringify(player.pendingColonyResourceSelection)}. Use confirm_colony_resource.`);
+  if (player.pendingAwardFundSelection) parts.push(`Pending free award: ${JSON.stringify(player.pendingAwardFundSelection)}. Use confirm_free_award.`);
+  if (player.forcedFirstAction?.state === "resolving") {
     parts.push(formatForcedAction(player.forcedFirstAction));
   }
 
@@ -158,12 +181,12 @@ function formatPendingCardSelection(sel: PendingCardSelectionDto): string {
 
 function formatPendingCardDraw(sel: PendingCardDrawSelectionDto): string {
   const cardList = sel.availableCards
-    .map((c) => `  - ${c.name} [${c.id}]: ${c.description}`)
+    .map((c) => `  - ${c.name} [${c.id}]: ${formatCardDescription(c.description)}`)
     .join("\n");
 
   const parts = [
     `CARD DRAW SELECTION (source: ${sel.source})`,
-    `Free takes: ${sel.freeTakeCount}, Max buy: ${sel.maxBuyCount}${sel.cardBuyCost > 0 ? ` (${sel.cardBuyCost}M€ each)` : ""}`,
+    `Free takes: ${sel.minFreeTakeCount} to ${sel.freeTakeCount}, Max buy: ${sel.maxBuyCount}${sel.cardBuyCost > 0 ? ` (${sel.cardBuyCost}M€ each)` : ""}`,
     cardList,
     `Use confirm_cards tool with action="draw" and cardsToTake/cardsToBuy.`,
   ];
@@ -171,18 +194,18 @@ function formatPendingCardDraw(sel: PendingCardDrawSelectionDto): string {
   return parts.join("\n");
 }
 
-function formatPendingCardDiscard(sel: PendingCardDiscardSelectionDto): string {
+function formatPendingCardDiscard(sel: PendingBehaviorResolutionDto): string {
   return [
     `CARD DISCARD REQUIRED (source: ${sel.source})`,
     `Discard ${sel.minCards}-${sel.maxCards} cards from hand.`,
-    `Use confirm_cards tool with action="discard" and cardsToDiscard.`,
+    `Use confirm_cards tool with action="discard" and cardsToDiscard, with resolutionId="${sel.id}".`,
   ].join("\n");
 }
 
 function formatPendingBehaviorChoice(
-  sel: PendingBehaviorChoiceSelectionDto,
+  sel: PendingBehaviorResolutionDto,
 ): string {
-  const choiceList = sel.choices
+  const choiceList = (sel.choices ?? [])
     .map((c, i) => {
       const desc = formatBehaviorBrief(c.inputs, c.outputs);
       const avail = c.available ? "" : " [UNAVAILABLE]";
@@ -193,14 +216,14 @@ function formatPendingBehaviorChoice(
   return [
     `BEHAVIOR CHOICE REQUIRED (source: ${sel.source})`,
     choiceList,
-    `Use confirm_cards tool with action="behavior-choice" and choiceIndex.`,
+    `Use confirm_cards tool with action="behavior-choice" and choiceIndex, with resolutionId="${sel.id}". Triggering card: ${sel.triggeringCardName ?? "none"}; triggering-card targets are fixed.`,
   ].join("\n");
 }
 
 function formatForcedAction(fa: ForcedFirstActionDto): string {
   return [
     `FORCED FIRST ACTION: ${fa.description}`,
-    `Action type: ${fa.actionType}`,
+    `State: ${fa.state}`,
     `Corporation: ${fa.corporationId}`,
   ].join("\n");
 }
@@ -210,14 +233,14 @@ function formatStartingSelection(player: PlayerDto): string {
 
   if (player.selectCorporationPhase) {
     const corps = player.selectCorporationPhase.availableCorporations
-      .map((c) => `  - ${c.name} [${c.id}]: ${c.description}`)
+      .map((c) => `  - ${c.name} [${c.id}]: ${formatCardDescription(c.description)}`)
       .join("\n");
     parts.push("Corporations:\n" + corps);
   }
 
   if (player.selectPreludeCardsPhase) {
     const preludes = player.selectPreludeCardsPhase.availablePreludes
-      .map((c) => `  - ${c.name} [${c.id}]: ${c.description}`)
+      .map((c) => `  - ${c.name} [${c.id}]: ${formatCardDescription(c.description)}`)
       .join("\n");
     parts.push(
       `Preludes (pick ${player.selectPreludeCardsPhase.maxSelectable}):\n` +
@@ -229,7 +252,7 @@ function formatStartingSelection(player: PlayerDto): string {
     const cards = player.selectStartingCardsPhase.availableCards
       .map(
         (c) =>
-          `  - ${c.name} [${c.id}] (${c.cost}M€) [${c.type}] ${c.tags?.join(", ") || ""}: ${c.description}`,
+          `  - ${c.name} [${c.id}] (${c.cost}M€) [${c.type}] ${c.tags?.join(", ") || ""}: ${formatCardDescription(c.description)}`,
       )
       .join("\n");
     parts.push("Starting cards (pick any to buy at 3M€ each):\n" + cards);
@@ -273,6 +296,11 @@ function formatPlayerStatus(player: PlayerDto): string {
     `  Heat:     ${r.heat} / ${formatProd(p.heat)}`,
   ];
 
+  lines.push("", "Legal resource removal targets (subject to the card's target restrictions):");
+  for (const target of player.resourceRemovalTargets) {
+    lines.push(`  player=${target.playerId} card=${target.cardId || ""} resource=${target.resourceType} amount=${target.amount}`);
+  }
+
   if (player.playedCards.length > 0) {
     lines.push(
       "",
@@ -291,7 +319,7 @@ function formatPlayerStatus(player: PlayerDto): string {
 
   if (player.paymentSubstitutes.length > 0) {
     lines.push(
-      `Payment substitutes: ${player.paymentSubstitutes.map((s) => `${s.resourceType} (${s.conversionRate}:1)`).join(", ")}`,
+      `Payment substitutes: ${player.paymentSubstitutes.map((s) => `${s.source.resource} (${s.conversionRate}:1)`).join(", ")}`,
     );
   }
 
@@ -322,8 +350,8 @@ function formatHand(cards: PlayerCardDto[], verbose: boolean): string {
 
     let line = `  - ${c.name} [${c.id}] | ${c.effectiveCost}M€${discount} | ${c.type}${tags} | ${avail}${errInfo}`;
 
-    if (verbose && c.description) {
-      line += `\n    ${c.description}`;
+    if (verbose && c.description.length > 0) {
+      line += `\n    ${formatCardDescription(c.description)}`;
     }
 
     return line;
@@ -357,6 +385,12 @@ function formatCardActions(
 
     if (verbose && a.behavior.description) {
       line += `\n    Description: ${a.behavior.description}`;
+    }
+
+    for (const option of a.reuseOptions ?? []) {
+      if (option.available) {
+        line += `\n    Reuse target cardId=${option.cardId} behaviorIndex=${option.behaviorIndex} with reuseSourceCardId=${a.cardId}`;
+      }
     }
 
     return line;

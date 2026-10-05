@@ -2,6 +2,7 @@
 // This avoids duplicating the large generated file.
 
 export type {
+  CardDescriptionSectionDto,
   GameDto,
   PlayerDto,
   OtherPlayerDto,
@@ -21,7 +22,7 @@ export type {
   TileBonusDto,
   TileOccupantDto,
   HexPositionDto,
-  CardPaymentDto,
+  PaymentDto,
   CardBehaviorDto,
   ResourceCondition,
   ChoiceDto,
@@ -38,12 +39,10 @@ export type {
   PendingTileSelectionDto,
   PendingCardSelectionDto,
   PendingCardDrawSelectionDto,
-  PendingCardDiscardSelectionDto,
-  PendingBehaviorChoiceSelectionDto,
+  PendingBehaviorResolutionDto,
   ForcedFirstActionDto,
   PaymentConstantsDto,
   PaymentSubstituteDto,
-  StoragePaymentSubstituteDto,
   SelectCorporationPhaseDto,
   SelectStartingCardsPhaseDto,
   SelectPreludeCardsPhaseDto,

@@ -49,11 +49,12 @@ export class GameState {
 
     if (player.pendingTileSelection) return true;
     if (player.pendingCardSelection) return true;
-    if (player.pendingCardDrawSelection) return true;
-    if (player.pendingCardDiscardSelection) return true;
-    if (player.pendingBehaviorChoiceSelection) return true;
+    if (player.pendingCardDrawSelection || player.pendingColonySelection || player.pendingColonyResourceSelection || player.pendingAwardFundSelection) return true;
+    if (player.pendingBehaviorResolutions?.length) return true;
+    if (player.pendingResourceRemovalSelection || player.pendingEffectSelection) return true;
+    if (player.pendingCardReveal) return true;
 
-    if (player.forcedFirstAction && !player.forcedFirstAction.completed) {
+    if (player.forcedFirstAction?.state === "resolving") {
       return true;
     }
 
@@ -91,10 +92,15 @@ export class GameState {
 
     if (p.pendingTileSelection) return "tile-selection";
     if (p.pendingCardSelection) return "card-selection";
+    if (p.pendingColonySelection) return "colony-selection";
+    if (p.pendingColonyResourceSelection) return "colony-resource-selection";
+    if (p.pendingAwardFundSelection) return "award-fund-selection";
     if (p.pendingCardDrawSelection) return "card-draw-selection";
-    if (p.pendingCardDiscardSelection) return "card-discard-selection";
-    if (p.pendingBehaviorChoiceSelection) return "behavior-choice-selection";
-    if (p.forcedFirstAction && !p.forcedFirstAction.completed)
+    if (p.pendingBehaviorResolutions?.length) return "behavior-resolution";
+    if (p.pendingResourceRemovalSelection) return "resource-removal";
+    if (p.pendingEffectSelection) return "effect-selection";
+    if (p.pendingCardReveal) return "card-reveal";
+    if (p.forcedFirstAction?.state === "resolving")
       return "forced-first-action";
     return null;
   }
