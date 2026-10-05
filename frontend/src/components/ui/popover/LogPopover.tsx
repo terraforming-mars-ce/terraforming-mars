@@ -338,6 +338,20 @@ const LogEntry: React.FC<LogEntryProps> = ({ diff, playerNames }) => {
         )
       )}
 
+      {displayData?.revealedCards?.map((card, index) => (
+        <div key={`${index}-${card.cardId}`} className="text-sm text-white/80">
+          Revealed and discarded:{" "}
+          <a
+            className="text-[#64c8ff] underline cursor-pointer"
+            href={`/cards?cId=${encodeURIComponent(card.cardId)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {card.name}
+          </a>
+          {card.matched ? " — matched" : " — no match"}
+        </div>
+      ))}
       {diff.calculatedOutputs && diff.calculatedOutputs.length > 0 && (
         <CalculatedOutputsDisplay
           outputs={diff.calculatedOutputs}
