@@ -7,7 +7,7 @@ import GameIcon from "../display/GameIcon.tsx";
 interface ColonyStepsProps {
   steps: ColonyStepDto[];
   markerPosition: number;
-  tradeStepBonus?: number;
+  previewPosition?: number;
   playerColonies: string[];
   maxSlots: number;
   getPlayerColor: (id: string) => string;
@@ -105,7 +105,7 @@ const ColonySlotTooltip: React.FC<{
 const ColonySteps: React.FC<ColonyStepsProps> = ({
   steps,
   markerPosition,
-  tradeStepBonus = 0,
+  previewPosition,
   playerColonies,
   maxSlots,
   getPlayerColor,
@@ -183,12 +183,12 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
         />
 
         {/* Boosted marker from Trade Envoys */}
-        {tradeStepBonus > 0 && (
+        {previewPosition !== undefined && previewPosition !== markerPosition && (
           <div
             className="absolute top-0 h-full pointer-events-none z-[8] ring-1 ring-amber-400/60 bg-amber-400/15 rounded-sm"
             style={{
               width: `${100 / stepCount}%`,
-              left: `${(Math.min(markerPosition + tradeStepBonus, stepCount - 1) / stepCount) * 100}%`,
+              left: `${(previewPosition / stepCount) * 100}%`,
               transition: "left 500ms cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           />

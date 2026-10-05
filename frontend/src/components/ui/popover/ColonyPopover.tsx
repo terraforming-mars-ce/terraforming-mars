@@ -1,3 +1,4 @@
+import TradeTrackChoices, { selectedTradeOption } from "../display/TradeTrackChoices.tsx";
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React, { useMemo, useState } from "react";
 import {
@@ -41,7 +42,6 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
     action: () => void;
   } | null>(null);
 
-  const resources = gameState?.currentPlayer?.resources;
   const tradeActionCosts = gameState?.currentPlayer?.actionCosts?.find(
     (a) => a.actionType === "colony-trade",
   );
@@ -52,9 +52,15 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
   const tradeTitaniumCost =
     tradeActionCosts?.costs.find((c) => c.resource === "titanium")?.effectiveCost ?? 3;
 
-  const canAffordCredits = (resources?.credits ?? 0) >= tradeCreditsCost;
-  const canAffordEnergy = (resources?.energy ?? 0) >= tradeEnergyCost;
-  const canAffordTitanium = (resources?.titanium ?? 0) >= tradeTitaniumCost;
+  const canAffordCredits =
+    (tradeActionCosts?.costs.find((c) => c.resource === "credit")?.paymentCapacity ?? 0) >=
+    tradeCreditsCost;
+  const canAffordEnergy =
+    (tradeActionCosts?.costs.find((c) => c.resource === "energy")?.paymentCapacity ?? 0) >=
+    tradeEnergyCost;
+  const canAffordTitanium =
+    (tradeActionCosts?.costs.find((c) => c.resource === "titanium")?.paymentCapacity ?? 0) >=
+    tradeTitaniumCost;
 
   const defaultPayment = (): TradePaymentType => {
     if (canAffordCredits) return "credits";
@@ -97,11 +103,12 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
     return allPlayers.find((p) => p.id === playerId)?.name ?? "Unknown";
   };
 
-  const handleTrade = (colonyId: string) => {
+  const handleTrade = (colonyId: string, trackSteps: number) => {
     if (!canAct) return;
     const colony = colonies.find((c) => c.id === colonyId);
     if (colony) {
-      const tradeOutputs = colony.steps[colony.markerPosition]?.outputs ?? [];
+      const tradeOutputs =
+        colony.tradeOptions.find((option) => option.trackSteps === trackSteps)?.outputs ?? [];
       const warning = getStorageWarning(
         tradeOutputs,
         gameState?.currentPlayer?.playedCards ?? [],
@@ -111,14 +118,14 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
         setStorageWarning({
           message: warning,
           action: () => {
-            void webSocketService.tradeWithColony(colonyId, tradePayment);
+            void webSocketService.tradeWithColony(colonyId, tradePayment, trackSteps);
             setStorageWarning(null);
           },
         });
         return;
       }
     }
-    void webSocketService.tradeWithColony(colonyId, tradePayment);
+    void webSocketService.tradeWithColony(colonyId, tradePayment, trackSteps);
   };
 
   const handleBuild = (colonyId: string) => {
@@ -213,7 +220,8 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
               Ships:
             </span>
             {allPlayers.map((player) => {
-              const hasFleet = gameState.tradeFleets?.[player.id] ?? false;
+              const fleet = gameState.tradeFleets?.[player.id];
+              const hasFleet = (fleet?.available ?? 0) > 0;
               return (
                 <div key={player.id} className="flex items-center gap-1">
                   <div
@@ -224,7 +232,7 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
                   <span
                     className={`text-[10px] font-orbitron ${hasFleet ? "text-white/60" : "text-white/25"}`}
                   >
-                    {hasFleet ? "1" : "0"}
+                    {fleet?.available ?? 0}/{fleet?.total ?? 0}
                   </span>
                 </div>
               );
@@ -235,11 +243,10 @@ const ColonyPopover: React.FC<ColonyPopoverProps> = ({
         <div className="popover-list popover-list-headed p-2 space-y-2">
           {colonies.map((colony) => (
             <ColonyCard
-              key={colony.id}
+              key={`${colony.id}:${colony.markerPosition}:${colony.tradedThisGen}`}
               colony={colony}
               mode={mode}
               canAct={canAct}
-              viewingPlayerId={gameState?.viewingPlayerId ?? ""}
               tradePayment={tradePayment}
               tradeCosts={{
                 credits: { icon: ResourceTypeCredit, amount: tradeCreditsCost },
@@ -270,12 +277,11 @@ interface ColonyCardProps {
   colony: ColonyDto;
   mode: ColonyMode;
   canAct: boolean;
-  viewingPlayerId: string;
   tradePayment: TradePaymentType;
   tradeCosts: Record<TradePaymentType, { icon: string; amount: number }>;
   getPlayerColor: (playerId: string) => string;
   getPlayerName: (playerId: string) => string;
-  onTrade: (colonyId: string) => void;
+  onTrade: (colonyId: string, trackSteps: number) => void;
   onBuild: (colonyId: string) => void;
 }
 
@@ -283,7 +289,6 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
   colony,
   mode,
   canAct,
-  viewingPlayerId,
   tradePayment,
   tradeCosts,
   getPlayerColor,
@@ -297,33 +302,11 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
   const isDisabled = mode === "trade" ? !canTrade : !canBuild;
   const dimmed = canAct && isDisabled;
 
-  const boostedPosition = Math.min(
-    colony.markerPosition + (colony.tradeStepBonus ?? 0),
-    colony.steps.length - 1,
-  );
-  const markerOutput = colony.steps[boostedPosition]?.outputs ?? [];
+  const [selectedSteps, setSelectedSteps] = useState<number>();
+  const tradeOption = selectedTradeOption(colony.tradeOptions, selectedSteps);
+  const tradeGainOutputs = tradeOption?.outputs ?? [];
   const buildReward = colony.colonies[0]?.reward ?? [];
   const tradeExpression = getTradeExpression(colony.steps);
-
-  const viewerColonyCount = colony.playerColonies.filter((id) => id === viewingPlayerId).length;
-  const tradeGainOutputs: ColonyOutputDto[] = useMemo(() => {
-    const combined = [...markerOutput];
-    if (viewerColonyCount > 0) {
-      for (const bonus of colony.colonyBonus) {
-        const scaledAmount = bonus.amount * viewerColonyCount;
-        const existing = combined.find((o) => o.type === bonus.type);
-        if (existing) {
-          combined[combined.indexOf(existing)] = {
-            ...existing,
-            amount: existing.amount + scaledAmount,
-          };
-        } else {
-          combined.push({ ...bonus, amount: scaledAmount });
-        }
-      }
-    }
-    return combined;
-  }, [markerOutput, viewerColonyCount, colony.colonyBonus]);
 
   return (
     <GamePopoverItem
@@ -357,7 +340,9 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (canTrade) onTrade(colony.id);
+                  if (canTrade && tradeOption) {
+                    onTrade(colony.id, tradeOption.trackSteps);
+                  }
                 }}
                 disabled={!canTrade}
               >
@@ -384,6 +369,14 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
         )}
       </div>
 
+      {mode === "trade" && (
+        <TradeTrackChoices
+          options={colony.tradeOptions}
+          selected={tradeOption?.trackSteps ?? 0}
+          onSelect={setSelectedSteps}
+          disabled={!canTrade}
+        />
+      )}
       {/* Info row: cost → gain (layered for cross-fade without re-mount) */}
       <div className="relative h-7">
         {(["credits", "energy", "titanium"] as TradePaymentType[]).map((pt) => {
@@ -444,7 +437,7 @@ const ColonyCard: React.FC<ColonyCardProps> = ({
         <ColonySteps
           steps={colony.steps}
           markerPosition={colony.markerPosition}
-          tradeStepBonus={colony.tradeStepBonus}
+          previewPosition={tradeOption?.markerPosition}
           playerColonies={colony.playerColonies}
           maxSlots={colony.colonies.length}
           getPlayerColor={getPlayerColor}
