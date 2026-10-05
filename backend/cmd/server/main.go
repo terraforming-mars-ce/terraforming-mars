@@ -248,12 +248,14 @@ func main() {
 	confirmSellPatentsAction := confirmAction.NewConfirmSellPatentsAction(gameRepo, stateRepo, log)
 	confirmProductionCardsAction := confirmAction.NewConfirmProductionCardsAction(gameRepo, cardRegistry, finalScoringAction, log)
 	confirmCardDrawAction := confirmAction.NewConfirmCardDrawAction(gameRepo, cardRegistry, log)
-	confirmCardDiscardAction := confirmAction.NewConfirmCardDiscardAction(gameRepo, cardRegistry, log)
-	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, log)
-	confirmStealTargetAction := confirmAction.NewConfirmStealTargetAction(gameRepo, cardRegistry, stateRepo, log)
+	confirmCardDiscardAction := confirmAction.NewConfirmCardDiscardAction(gameRepo, cardRegistry, stateRepo, log)
+	confirmBehaviorChoiceAction := confirmAction.NewConfirmBehaviorChoiceAction(gameRepo, cardRegistry, stateRepo, log)
+	confirmResourceRemovalAction := confirmAction.NewConfirmResourceRemovalAction(gameRepo, cardRegistry, stateRepo, log)
 	confirmColonyResourceAction := confirmAction.NewConfirmColonyResourceAction(gameRepo, cardRegistry, stateRepo, log)
 	confirmAwardFundAction := confirmAction.NewConfirmAwardFundAction(gameRepo, cardRegistry, awardRegistry, log)
 	confirmColonyPlacementAction := confirmAction.NewConfirmColonyPlacementAction(gameRepo, cardRegistry, colonyRegistry, log)
+	confirmCardRevealAction := confirmAction.NewConfirmCardRevealAction(gameRepo)
+	confirmEffectSelectionAction := confirmAction.NewConfirmEffectSelectionAction(gameRepo, cardRegistry, colonyRegistry, stateRepo)
 	confirmFreeTradeAction := confirmAction.NewConfirmFreeTradeAction(gameRepo, cardRegistry, colonyRegistry, stateRepo)
 
 	// Turn management (4)
@@ -268,11 +270,15 @@ func main() {
 		selectTileAction,
 		confirmProductionCardsAction, confirmCardDrawAction,
 		confirmCardDiscardAction, confirmBehaviorChoiceAction,
+		confirmEffectSelectionAction,
+		confirmCardRevealAction,
 		confirmSellPatentsAction,
 		executeStandardProjectAction,
 		convertHeatAction, convertPlantsAction,
 		claimMilestoneAction, fundAwardAction,
 		confirmInitAdvanceAction,
+		confirmResourceRemovalAction,
+		confirmColonyPlacementAction, confirmColonyResourceAction, confirmAwardFundAction,
 		log,
 	)
 	botController := bot.NewBotController(gameRepo, stateRepo, cardRegistry, commandDispatcher, broadcaster, log)
@@ -349,11 +355,13 @@ func main() {
 		confirmCardDrawAction,
 		confirmCardDiscardAction,
 		confirmBehaviorChoiceAction,
-		confirmStealTargetAction,
+		confirmResourceRemovalAction,
 		confirmColonyResourceAction,
 		confirmAwardFundAction,
 		confirmColonyPlacementAction,
 		confirmFreeTradeAction,
+		confirmEffectSelectionAction,
+		confirmCardRevealAction,
 		// Connection
 		playerDisconnectedAction,
 		playerTakeoverAction,

@@ -170,8 +170,9 @@ func (a *KickPlayerAction) clearPendingState(ctx context.Context, g *game.Game, 
 	sel := p.Selection()
 	sel.SetPendingCardSelection(nil)
 	sel.SetPendingCardDrawSelection(nil)
-	sel.SetPendingCardDiscardSelection(nil)
-	sel.SetPendingBehaviorChoiceSelection(nil)
+	sel.ClearPendingBehaviorResolutions()
+	sel.SetPendingEffectSelection(nil)
+	sel.SetPendingCardReveal(nil)
 }
 
 func (a *KickPlayerAction) moveToEndOfTurnOrder(ctx context.Context, g *game.Game, playerID string, log *slog.Logger) {
