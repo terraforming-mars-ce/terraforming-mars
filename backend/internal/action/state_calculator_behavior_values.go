@@ -39,10 +39,9 @@ func computeBehaviorValues(
 			if per == nil {
 				continue
 			}
-			count := gamecards.CountPerCondition(per, sourceCardID, p, board, cardRegistry, allPlayers)
+			count := gamecards.CountPerCondition(per, sourceCardID, p, board, cardRegistry, allPlayers, g.Colonies(), gamecards.TagCountContext{ActorID: p.ID()})
 			if per.Amount > 0 {
-				multiplier := count / per.Amount
-				actualAmount := outputBC.GetAmount() * multiplier
+				actualAmount := shared.CalculateScaledAmount(outputBC, count)
 				outputs = append(outputs, shared.CalculatedOutput{
 					ResourceType: string(outputBC.GetResourceType()),
 					Amount:       actualAmount,
@@ -56,10 +55,9 @@ func computeBehaviorValues(
 				if per == nil {
 					continue
 				}
-				count := gamecards.CountPerCondition(per, sourceCardID, p, board, cardRegistry, allPlayers)
+				count := gamecards.CountPerCondition(per, sourceCardID, p, board, cardRegistry, allPlayers, g.Colonies(), gamecards.TagCountContext{ActorID: p.ID()})
 				if per.Amount > 0 {
-					multiplier := count / per.Amount
-					actualAmount := outputBC.GetAmount() * multiplier
+					actualAmount := shared.CalculateScaledAmount(outputBC, count)
 					outputs = append(outputs, shared.CalculatedOutput{
 						ResourceType: string(outputBC.GetResourceType()),
 						Amount:       actualAmount,

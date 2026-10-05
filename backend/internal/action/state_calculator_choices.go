@@ -14,6 +14,10 @@ func CalculateChoiceErrors(choice shared.Choice, p *player.Player, g *game.Game,
 	var errors []player.StateError
 
 	if choice.Requirements != nil && len(choice.Requirements.Items) > 0 {
+		if err := gamecards.ValidateChoiceTagRequirements(choice.Requirements.Items, gamecards.PlayerTagCounts(p, cardRegistry)); err != nil {
+			errors = append(errors, player.StateError{Code: player.ErrorCodeInsufficientTags, Category: player.ErrorCategoryRequirement, Message: "Tag requirements not met"})
+		}
+
 		for _, req := range choice.Requirements.Items {
 			if err := checkChoiceRequirement(req, p, g, cardRegistry); err != nil {
 				errors = append(errors, *err)
@@ -63,28 +67,7 @@ func CalculateChoiceErrors(choice shared.Choice, p *player.Player, g *game.Game,
 func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *game.Game, cardRegistry gamecards.CardRegistry) *player.StateError {
 	switch req.Type {
 	case "tags":
-		if req.Tag == nil {
-			return &player.StateError{
-				Code:     player.ErrorCodeInvalidRequirement,
-				Category: player.ErrorCategoryRequirement,
-				Message:  "Invalid tag requirement",
-			}
-		}
-		tagCount := gamecards.CountPlayerTagsByType(p, cardRegistry, *req.Tag)
-		if req.Min != nil && tagCount < *req.Min {
-			return &player.StateError{
-				Code:     player.ErrorCodeInsufficientTags,
-				Category: player.ErrorCategoryRequirement,
-				Message:  formatInsufficientTagsMessage(string(*req.Tag)),
-			}
-		}
-		if req.Max != nil && tagCount > *req.Max {
-			return &player.StateError{
-				Code:     player.ErrorCodeTooManyTags,
-				Category: player.ErrorCategoryRequirement,
-				Message:  formatTooManyTagsMessage(string(*req.Tag)),
-			}
-		}
+		return nil
 
 	case "temperature":
 		temp := g.GlobalParameters().Temperature()

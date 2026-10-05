@@ -769,14 +769,13 @@ func TestCalculatePlayerCardState_StoragePaymentSubstituteCountedForMatchingCard
 
 	// Simulate Dirigibles played: register storage payment substitute for Venus cards
 	dirigiblesID := "dirigibles-played"
+	cardRegistry = gamecards.NewInMemoryCardRegistry(append(cardRegistry.GetAll(), gamecards.Card{ID: dirigiblesID, ResourceStorage: &gamecards.ResourceStorage{Type: shared.ResourceFloater}}))
 	p.PlayedCards().AddCard(dirigiblesID, "Dirigibles", "active", []string{"venus"})
 	p.Resources().AddToStorage(dirigiblesID, 1) // 1 floater = 3 MC
-	p.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
-		CardID:         dirigiblesID,
-		ResourceType:   shared.ResourceFloater,
+	p.Resources().AddPaymentSubstitute(shared.PaymentSubstitute{Source: shared.PaymentSource{Target: "self-card", CardID: dirigiblesID, Resource: shared.ResourceFloater},
 		ConversionRate: 3,
 		Selectors:      []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}},
-	})
+		TargetResource: shared.ResourceCredit})
 
 	// Get venus card (cost 11) — 8 credits + 1 floater * 3 = 11 >= 11
 	card, err := cardRegistry.GetByID("card-venus")
@@ -804,14 +803,13 @@ func TestCalculatePlayerCardState_StoragePaymentSubstituteNotCountedForNonMatchi
 
 	// Simulate Dirigibles played: register storage payment substitute for Venus cards only
 	dirigiblesID := "dirigibles-played"
+	cardRegistry = gamecards.NewInMemoryCardRegistry(append(cardRegistry.GetAll(), gamecards.Card{ID: dirigiblesID, ResourceStorage: &gamecards.ResourceStorage{Type: shared.ResourceFloater}}))
 	p.PlayedCards().AddCard(dirigiblesID, "Dirigibles", "active", []string{"venus"})
 	p.Resources().AddToStorage(dirigiblesID, 3) // 3 floaters = 9 MC (but only for Venus)
-	p.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
-		CardID:         dirigiblesID,
-		ResourceType:   shared.ResourceFloater,
+	p.Resources().AddPaymentSubstitute(shared.PaymentSubstitute{Source: shared.PaymentSource{Target: "self-card", CardID: dirigiblesID, Resource: shared.ResourceFloater},
 		ConversionRate: 3,
 		Selectors:      []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}},
-	})
+		TargetResource: shared.ResourceCredit})
 
 	// Get microbe card (cost 6, no Venus tag) — floaters should NOT apply
 	card, err := cardRegistry.GetByID("card-microbe")
