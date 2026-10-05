@@ -1,6 +1,7 @@
 package player
 
 import (
+	"github.com/google/uuid"
 	"log/slog"
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game/datastore"
@@ -112,45 +113,57 @@ func (s *Selection) SetPendingCardDrawSelection(selection *shared.PendingCardDra
 	})
 }
 
-func (s *Selection) GetPendingCardDiscardSelection() *shared.PendingCardDiscardSelection {
-	var sel *shared.PendingCardDiscardSelection
+func (s *Selection) GetPendingBehaviorResolutions() []*shared.PendingBehaviorResolution {
+	var result []*shared.PendingBehaviorResolution
 	s.read(func(st *datastore.PlayerState) {
-		sel = st.PendingCardDiscardSelection
+		result = append([]*shared.PendingBehaviorResolution{}, st.PendingBehaviorResolutions...)
+	})
+	return result
+}
+
+func (s *Selection) GetPendingBehaviorResolution(id string) *shared.PendingBehaviorResolution {
+	for _, resolution := range s.GetPendingBehaviorResolutions() {
+		if resolution.ID == id {
+			return resolution
+		}
+	}
+	return nil
+}
+
+func (s *Selection) AddPendingBehaviorResolution(resolution *shared.PendingBehaviorResolution) string {
+	resolution.ID = uuid.NewString()
+	s.update(func(st *datastore.PlayerState) {
+		st.PendingBehaviorResolutions = append(st.PendingBehaviorResolutions, resolution)
+	})
+	return resolution.ID
+}
+
+func (s *Selection) RemovePendingBehaviorResolution(id string) {
+	s.update(func(st *datastore.PlayerState) {
+		for i, resolution := range st.PendingBehaviorResolutions {
+			if resolution.ID == id {
+				st.PendingBehaviorResolutions = append(st.PendingBehaviorResolutions[:i], st.PendingBehaviorResolutions[i+1:]...)
+				return
+			}
+		}
+	})
+}
+
+func (s *Selection) ClearPendingBehaviorResolutions() {
+	s.update(func(st *datastore.PlayerState) { st.PendingBehaviorResolutions = nil })
+}
+
+func (s *Selection) GetPendingResourceRemovalSelection() *shared.PendingResourceRemovalSelection {
+	var sel *shared.PendingResourceRemovalSelection
+	s.read(func(st *datastore.PlayerState) {
+		sel = st.PendingResourceRemovalSelection
 	})
 	return sel
 }
 
-func (s *Selection) SetPendingCardDiscardSelection(selection *shared.PendingCardDiscardSelection) {
+func (s *Selection) SetPendingResourceRemovalSelection(selection *shared.PendingResourceRemovalSelection) {
 	s.update(func(st *datastore.PlayerState) {
-		st.PendingCardDiscardSelection = selection
-	})
-}
-
-func (s *Selection) GetPendingBehaviorChoiceSelection() *shared.PendingBehaviorChoiceSelection {
-	var sel *shared.PendingBehaviorChoiceSelection
-	s.read(func(st *datastore.PlayerState) {
-		sel = st.PendingBehaviorChoiceSelection
-	})
-	return sel
-}
-
-func (s *Selection) SetPendingBehaviorChoiceSelection(selection *shared.PendingBehaviorChoiceSelection) {
-	s.update(func(st *datastore.PlayerState) {
-		st.PendingBehaviorChoiceSelection = selection
-	})
-}
-
-func (s *Selection) GetPendingStealTargetSelection() *shared.PendingStealTargetSelection {
-	var sel *shared.PendingStealTargetSelection
-	s.read(func(st *datastore.PlayerState) {
-		sel = st.PendingStealTargetSelection
-	})
-	return sel
-}
-
-func (s *Selection) SetPendingStealTargetSelection(selection *shared.PendingStealTargetSelection) {
-	s.update(func(st *datastore.PlayerState) {
-		st.PendingStealTargetSelection = selection
+		st.PendingResourceRemovalSelection = selection
 	})
 }
 
@@ -251,14 +264,61 @@ func (s *Selection) HasPendingSelection() bool {
 	var has bool
 	s.read(func(st *datastore.PlayerState) {
 		has = st.PendingCardSelection != nil ||
+			st.PendingCardReveal != nil ||
 			st.PendingCardDrawSelection != nil ||
-			st.PendingCardDiscardSelection != nil ||
-			st.PendingBehaviorChoiceSelection != nil ||
-			st.PendingStealTargetSelection != nil ||
+			len(st.PendingBehaviorResolutions) > 0 ||
+			st.PendingResourceRemovalSelection != nil ||
 			len(st.PendingColonyResourceQueue) > 0 ||
 			st.PendingAwardFundSelection != nil ||
 			st.PendingColonySelection != nil ||
-			st.PendingFreeTradeSelection != nil
+			st.PendingFreeTradeSelection != nil || st.PendingEffectSelection != nil
 	})
 	return has
+}
+
+func (s *Selection) GetPendingEffectSelection() *shared.PendingEffectSelection {
+	var result *shared.PendingEffectSelection
+	s.read(func(st *datastore.PlayerState) { result = st.PendingEffectSelection })
+	return result
+}
+func (s *Selection) SetPendingEffectSelection(selection *shared.PendingEffectSelection) {
+	s.update(func(st *datastore.PlayerState) { st.PendingEffectSelection = selection })
+}
+
+func (s *Selection) GetPendingCardReveal() *shared.PendingCardReveal {
+	var result *shared.PendingCardReveal
+	s.read(func(st *datastore.PlayerState) { result = st.PendingCardReveal })
+	return result
+}
+func (s *Selection) SetPendingCardReveal(reveal *shared.PendingCardReveal) {
+	s.update(func(st *datastore.PlayerState) { st.PendingCardReveal = reveal })
+}
+
+// CardReceipts returns unacknowledged card grants for this player.
+func (s *Selection) CardReceipts() []shared.CardReceipt {
+	var result []shared.CardReceipt
+	s.read(func(st *datastore.PlayerState) { result = append([]shared.CardReceipt{}, st.CardReceipts...) })
+	return result
+}
+
+// AddCardReceipt records a completed draw without blocking gameplay.
+func (s *Selection) AddCardReceipt(source, sourceCardID string, cards []string) {
+	if len(cards) == 0 {
+		return
+	}
+	s.update(func(st *datastore.PlayerState) {
+		st.CardReceipts = append(st.CardReceipts, shared.CardReceipt{ID: uuid.NewString(), Source: source, SourceCardID: sourceCardID, Cards: append([]string{}, cards...)})
+	})
+}
+
+// AcknowledgeCardReceipt only dismisses the named receipt, including on repeated requests.
+func (s *Selection) AcknowledgeCardReceipt(id string) {
+	s.update(func(st *datastore.PlayerState) {
+		for i, receipt := range st.CardReceipts {
+			if receipt.ID == id {
+				st.CardReceipts = append(st.CardReceipts[:i], st.CardReceipts[i+1:]...)
+				break
+			}
+		}
+	})
 }

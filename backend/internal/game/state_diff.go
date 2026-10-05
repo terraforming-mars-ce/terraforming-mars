@@ -73,9 +73,10 @@ type GameChanges struct {
 
 // LogDisplayData contains pre-computed display information for log entries
 type LogDisplayData struct {
-	Behaviors    []shared.CardBehavior
-	Tags         []shared.CardTag
-	VPConditions []shared.VPConditionForLog
+	RevealedCards []shared.RevealedCard
+	Behaviors     []shared.CardBehavior
+	Tags          []shared.CardTag
+	VPConditions  []shared.VPConditionForLog
 }
 
 // StateDiff represents the difference between two consecutive game states
