@@ -15,10 +15,6 @@ export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehav
 
     const hasDiscount = outputHasType(behavior.outputs, "discount");
     const hasPaymentSubstitute = outputHasType(behavior.outputs, "payment-substitute");
-    const hasStoragePaymentSubstitute = outputHasType(
-      behavior.outputs,
-      "storage-payment-substitute",
-    );
     const hasValueModifier = outputHasType(behavior.outputs, "value-modifier");
     const hasDefense = outputHasType(behavior.outputs, "defense");
 
@@ -47,10 +43,6 @@ export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehav
 
     if (hasPaymentSubstitute) {
       return { behavior, type: "payment-substitute", description, originalIndex };
-    }
-
-    if (hasStoragePaymentSubstitute) {
-      return { behavior, type: "storage-payment-substitute", description, originalIndex };
     }
 
     if (hasValueModifier) {

@@ -1,4 +1,4 @@
-export { default } from "./BehaviorSection.tsx";
+export { default, hasBehaviorVisuals } from "./BehaviorSection.tsx";
 
 export type {
   BehaviorSectionProps,

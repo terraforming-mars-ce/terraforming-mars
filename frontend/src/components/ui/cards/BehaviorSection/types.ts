@@ -29,7 +29,6 @@ export interface ClassifiedBehavior {
     | "auto-no-background"
     | "discount"
     | "payment-substitute"
-    | "storage-payment-substitute"
     | "value-modifier"
     | "defense";
   description?: string;
