@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import type { PaymentIntentDto, PaymentQuoteDto } from "../../frontend/src/types/generated/api-types.js";
 import WebSocket from "ws";
 import type {
   WebSocketMessage,
@@ -28,6 +30,7 @@ export type LogCallback = (logs: any[]) => void;
 export type DisconnectCallback = () => void;
 
 export class WsConnection {
+  private quotes = new Map<string, { resolve: (quote: PaymentQuoteDto) => void; reject: (error: Error) => void }>();
   private ws: WebSocket | null = null;
   private url: string = "";
   private isConnected = false;
@@ -49,6 +52,15 @@ export class WsConnection {
   onError: ErrorCallback | null = null;
   onLog: LogCallback | null = null;
   onDisconnect: DisconnectCallback | null = null;
+
+  quotePayment(intent: PaymentIntentDto): Promise<PaymentQuoteDto> {
+    const requestId = randomUUID();
+    return new Promise((resolve, reject) => {
+      this.quotes.set(requestId, { resolve, reject });
+      try { this.send("quote-payment", { requestId, intent }); }
+      catch (e) { this.quotes.delete(requestId); reject(e); }
+    });
+  }
 
   connect(url: string): Promise<void> {
     this.url = url;
@@ -82,6 +94,8 @@ export class WsConnection {
 
       this.ws.on("close", (code) => {
         this.isConnected = false;
+        for (const q of this.quotes.values()) q.reject(new Error("Connection closed"));
+        this.quotes.clear();
         this.onDisconnect?.();
         if (this.shouldReconnect && code !== 1000) {
           this.attemptReconnect();
@@ -98,6 +112,13 @@ export class WsConnection {
 
   private handleMessage(message: WebSocketMessage) {
     switch (message.type) {
+      case "payment-quote": {
+        const payload = message.payload as { requestId: string; quote?: PaymentQuoteDto; error?: string };
+        const pending = this.quotes.get(payload.requestId);
+        this.quotes.delete(payload.requestId);
+        if (payload.quote) pending?.resolve(payload.quote); else pending?.reject(new Error(payload.error));
+        break;
+      }
       case MessageTypeGameUpdated: {
         const payload = message.payload as GameUpdatedPayload;
         const game = payload.game || (payload as unknown as GameDto);

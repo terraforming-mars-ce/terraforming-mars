@@ -24,6 +24,11 @@ import {
   MessageTypeActionFundAward,
 } from "./message-types.js";
 
+const paymentSchema = z.object({ allocations: z.array(z.object({
+ source: z.object({ target: z.enum(["self-player", "self-card"]), resource: z.string(), cardId: z.string().optional() }),
+ targetResource: z.string(), amount: z.number().int().nonnegative(),
+})) }).describe("Source allocations from quote_payment; quantities are resources spent");
+
 const DEFAULT_SERVER_URL = "ws://localhost:3001/ws";
 
 export function registerTools(
@@ -31,6 +36,15 @@ export function registerTools(
   conn: WsConnection,
   state: GameState,
 ) {
+  server.tool("quote_payment", "Get current costs and eligible payment sources without spending resources.", {
+    action: z.enum(["play-card", "card-action", "standard-project", "convert-heat", "convert-plants", "select-starting-choices", "confirm-production-cards", "confirm-card-draw", "claim-milestone", "fund-award", "build-colony", "colony-trade"]),
+    cardId: z.string().optional(), behaviorIndex: z.number().int().optional(), choiceIndex: z.number().int().optional(), selectedAmount: z.number().int().nonnegative().optional(), cardStorageSources: z.array(z.string()).optional(),
+    projectId: z.string().optional(), corporationId: z.string().optional(), cardIds: z.array(z.string()).optional(), cardsToBuy: z.array(z.string()).optional(), randomBuy: z.boolean().optional(), paymentType: z.string().optional(), milestoneType: z.string().optional(), awardType: z.string().optional(),
+  }, async (intent) => {
+    try { return { content: [{ type: "text" as const, text: JSON.stringify(await conn.quotePayment(intent)) }] }; }
+    catch (error) { return { content: [{ type: "text" as const, text: String(error) }], isError: true }; }
+  });
+
   // --- connect_to_game ---
   server.tool(
     "connect_to_game",
@@ -184,17 +198,12 @@ export function registerTools(
     "Play a card from your hand.",
     {
       cardId: z.string().describe("Card ID to play"),
-      credits: z.number().describe("Credits to spend"),
-      steel: z.number().optional().describe("Steel resources to use"),
-      titanium: z.number().optional().describe("Titanium resources to use"),
-      heat: z
-        .number()
-        .optional()
-        .describe("Heat to use as M€ (Helion corporation ability)"),
+      payment: paymentSchema,
       choiceIndex: z
         .number()
         .optional()
         .describe("Choice index for cards with multiple options"),
+      cardStorageSources: z.array(z.string()).optional().describe("Owned card IDs paying any-card storage inputs, in input order"),
       cardStorageTargets: z
         .array(z.string())
         .optional()
@@ -212,29 +221,20 @@ export function registerTools(
     },
     async ({
       cardId,
-      credits,
-      steel,
-      titanium,
-      heat,
+      payment,
       choiceIndex,
       cardStorageTargets,
+      cardStorageSources,
       targetPlayerId,
       selectedAmount,
     }) => {
-      const payment: Record<string, unknown> = {
-        credits,
-        steel: steel ?? 0,
-        titanium: titanium ?? 0,
-      };
-      if (heat !== undefined && heat > 0) {
-        payment.substitutes = { heat };
-      }
       return sendAction(conn, state, MessageTypeActionPlayCard, {
         type: "play-card",
         cardId,
         payment,
         ...(choiceIndex !== undefined && { choiceIndex }),
         ...(cardStorageTargets !== undefined && { cardStorageTargets }),
+        ...(cardStorageSources !== undefined && { cardStorageSources }),
         ...(targetPlayerId !== undefined && { targetPlayerId }),
         ...(selectedAmount !== undefined && { selectedAmount }),
       });
@@ -246,12 +246,14 @@ export function registerTools(
     "use_card_action",
     "Activate a played card's action.",
     {
+      reuseSourceCardId: z.string().optional().describe("Card providing action reuse, such as Viron"),
       cardId: z.string().describe("Card ID of the played card"),
       behaviorIndex: z.number().describe("Index of the behavior to activate"),
       choiceIndex: z
         .number()
         .optional()
         .describe("Choice index for actions with multiple options"),
+      cardStorageSources: z.array(z.string()).optional().describe("Owned card IDs paying any-card storage inputs, in input order"),
       cardStorageTargets: z
         .array(z.string())
         .optional()
@@ -268,46 +270,32 @@ export function registerTools(
         .number()
         .optional()
         .describe("Selected amount for variable-amount effects"),
-      credits: z
-        .number()
-        .optional()
-        .describe("Credits to pay (for actions with costs)"),
-      steel: z.number().optional().describe("Steel to pay"),
-      titanium: z.number().optional().describe("Titanium to pay"),
+      payment: paymentSchema,
     },
     async ({
+      reuseSourceCardId,
       cardId,
       behaviorIndex,
       choiceIndex,
       cardStorageTargets,
+      cardStorageSources,
       targetPlayerId,
       sourceCardForInput,
       selectedAmount,
-      credits,
-      steel,
-      titanium,
+      payment,
     }) => {
-      const hasPayment =
-        credits !== undefined ||
-        steel !== undefined ||
-        titanium !== undefined;
-
       return sendAction(conn, state, MessageTypeActionCardAction, {
         type: "card-action",
+        ...(reuseSourceCardId !== undefined && { reuseSourceCardId }),
         cardId,
         behaviorIndex,
         ...(choiceIndex !== undefined && { choiceIndex }),
         ...(cardStorageTargets !== undefined && { cardStorageTargets }),
+        ...(cardStorageSources !== undefined && { cardStorageSources }),
         ...(targetPlayerId !== undefined && { targetPlayerId }),
         ...(sourceCardForInput !== undefined && { sourceCardForInput }),
         ...(selectedAmount !== undefined && { selectedAmount }),
-        ...(hasPayment && {
-          payment: {
-            credits: credits ?? 0,
-            steel: steel ?? 0,
-            titanium: titanium ?? 0,
-          },
-        }),
+        payment,
       });
     },
   );
@@ -317,6 +305,7 @@ export function registerTools(
     "standard_project",
     "Execute a standard project (sell-patents, power-plant, asteroid, aquifer, greenery, city).",
     {
+      payment: paymentSchema,
       project: z
         .enum([
           "sell-patents",
@@ -328,8 +317,8 @@ export function registerTools(
         ])
         .describe("Standard project type"),
     },
-    async ({ project }) => {
-      return sendAction(conn, state, MessageTypeActionStandardProject, { projectId: project });
+    async ({ payment, project }) => {
+      return sendAction(conn, state, MessageTypeActionStandardProject, { projectId: project, payment });
     },
   );
 
@@ -338,17 +327,19 @@ export function registerTools(
     "convert_resources",
     "Convert resources: plants to greenery or heat to temperature.",
     {
+      payment: paymentSchema,
       conversion: z
         .enum(["plants-to-greenery", "heat-to-temperature"])
         .describe("Conversion type"),
     },
-    async ({ conversion }) => {
+    async ({ payment, conversion }) => {
       const messageType =
         conversion === "plants-to-greenery"
           ? MessageTypeActionConvertPlantsToGreenery
           : MessageTypeActionConvertHeatToTemperature;
 
       return sendAction(conn, state, messageType, {
+        payment,
         type:
           conversion === "plants-to-greenery"
             ? "convert-plants-to-greenery"
@@ -388,6 +379,7 @@ export function registerTools(
     "select_starting_choices",
     "Select corporation, preludes, and starting cards during game setup.",
     {
+      payment: paymentSchema,
       corporationId: z.string().describe("Corporation card ID to select"),
       preludeIds: z
         .array(z.string())
@@ -397,13 +389,14 @@ export function registerTools(
         .array(z.string())
         .describe("Starting card IDs to buy (3M€ each)"),
     },
-    async ({ corporationId, preludeIds, cardIds }) => {
+    async ({ payment, corporationId, preludeIds, cardIds }) => {
       return sendAction(
         conn,
         state,
         MessageTypeActionSelectStartingChoices,
         {
           corporationId,
+          payment,
           preludeIds: preludeIds ?? [],
           cardIds,
         },
@@ -411,13 +404,26 @@ export function registerTools(
     },
   );
 
+  server.tool("acknowledge_cards_received", "Close a cards-received receipt. Cards have already been added to your hand.", { receiptId: z.string() }, async ({ receiptId }) => sendAction(conn, state, "action.acknowledge-card-receipt", { receiptId }));
+  server.tool("confirm_colony_selection", "Confirm a pending build-colony or add-colony-tile choice using an offered colony ID.", { colonyId: z.string() }, async ({ colonyId }) => sendAction(conn, state, "action.confirm-colony-placement", { colonyId }));
+  server.tool("confirm_colony_resource", "Place a pending colony resource on an owned card, or use an empty cardId to skip.", { cardId: z.string() }, async ({ cardId }) => sendAction(conn, state, "action.confirm-colony-resource", { cardId }));
+  server.tool("confirm_free_award", "Confirm Vitor's pending free award funding choice.", { awardType: z.string() }, async ({ awardType }) => sendAction(conn, state, "action.confirm-award-fund", { awardType }));
   // --- confirm_cards ---
+  server.tool(
+    "confirm_resource_removal",
+    "Remove a chosen amount from an eligible player, or skip with empty targetPlayerId and amount 0.",
+    { selectionId: z.string(), targetPlayerId: z.string(), amount: z.number().int().min(0) },
+    async ({ selectionId, targetPlayerId, amount }) => sendAction(conn, state, "action.card.confirm-resource-removal", { selectionId, targetPlayerId, amount }),
+  );
+
   server.tool(
     "confirm_cards",
     "Confirm card draw/discard/production/sell/behavior-choice selections.",
     {
+      payment: paymentSchema,
+      resolutionId: z.string().optional().describe("Required for discard and behavior-choice; use the pending decision ID"),
       action: z
-        .enum(["select", "production", "draw", "discard", "behavior-choice"])
+        .enum(["select", "production", "draw", "discard", "behavior-choice", "effect", "reveal"])
         .describe("Type of card confirmation"),
       cardIds: z
         .array(z.string())
@@ -444,7 +450,8 @@ export function registerTools(
         .optional()
         .describe("Target card IDs for resource storage (behavior-choice)"),
     },
-    async ({
+    async ({ payment,
+      resolutionId,
       action,
       cardIds,
       cardsToTake,
@@ -453,6 +460,9 @@ export function registerTools(
       choiceIndex,
       cardStorageTargets,
     }) => {
+      if ((action === "discard" || action === "behavior-choice") && !resolutionId) {
+        throw new Error("resolutionId is required");
+      }
       switch (action) {
         case "select":
           return sendAction(
@@ -466,7 +476,7 @@ export function registerTools(
             conn,
             state,
             MessageTypeActionConfirmProductionCards,
-            { cardIds: cardIds ?? [] },
+            { cardIds: cardIds ?? [], payment },
           );
         case "draw":
           return sendAction(
@@ -476,6 +486,7 @@ export function registerTools(
             {
               cardsToTake: cardsToTake ?? [],
               cardsToBuy: cardsToBuy ?? [],
+              payment,
             },
           );
         case "discard":
@@ -483,14 +494,19 @@ export function registerTools(
             conn,
             state,
             MessageTypeActionCardDiscardConfirmed,
-            { cardsToDiscard: cardsToDiscard ?? [] },
+            { resolutionId, cardsToDiscard: cardsToDiscard ?? [] },
           );
+        case "reveal":
+          return sendAction(conn, state, "action.confirm-card-reveal", {});
+        case "effect":
+          return sendAction(conn, state, "action.confirm-effect-selection", { optionIndex: choiceIndex ?? 0 });
         case "behavior-choice":
           return sendAction(
             conn,
             state,
             MessageTypeActionBehaviorChoiceConfirmed,
             {
+              resolutionId,
               choiceIndex: choiceIndex ?? 0,
               ...(cardStorageTargets !== undefined && { cardStorageTargets }),
             },
@@ -504,11 +520,13 @@ export function registerTools(
     "claim_milestone",
     "Claim a milestone.",
     {
+      payment: paymentSchema,
       milestoneType: z.string().describe("Milestone type to claim"),
     },
-    async ({ milestoneType }) => {
+    async ({ payment, milestoneType }) => {
       return sendAction(conn, state, MessageTypeActionClaimMilestone, {
         milestoneType,
+        payment,
       });
     },
   );
@@ -518,11 +536,13 @@ export function registerTools(
     "fund_award",
     "Fund an award.",
     {
+      payment: paymentSchema,
       awardType: z.string().describe("Award type to fund"),
     },
-    async ({ awardType }) => {
+    async ({ payment, awardType }) => {
       return sendAction(conn, state, MessageTypeActionFundAward, {
         awardType,
+        payment,
       });
     },
   );
