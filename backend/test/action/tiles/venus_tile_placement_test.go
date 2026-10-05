@@ -38,8 +38,9 @@ func TestMaxwellBase_PlacesOnVenusTile_WhenVenusEnabled(t *testing.T) {
 	}
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 18}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 18)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Maxwell Base should play successfully")
 
 	selection := testGame.GetPendingTileSelection(p.ID())
@@ -81,8 +82,9 @@ func TestStratopolis_PlacesOnVenusTile_WhenVenusEnabled(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 22}
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 22)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Stratopolis should play successfully")
 
 	selection := testGame.GetPendingTileSelection(p.ID())

@@ -67,6 +67,9 @@ func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
 		t.Fatal(err)
 	}
 	visual := placed.OccupiedBy.Visual
+	if placed.OccupiedBy.DisplayName != "Underground City" {
+		t.Fatalf("City lost its card name: %q", placed.OccupiedBy.DisplayName)
+	}
 	if visual == nil || visual.Seed == 0 || visual.City == nil || visual.City.Cover != "flat-glass" {
 		t.Fatalf("Invalid visual: %+v", visual)
 	}
@@ -78,6 +81,7 @@ func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
 	}
 	card, _ := registry.GetByID("032")
 	card.Style.Tile.Cover = "dome"
+	card.Name = "Renamed card"
 	again, _ = g.Board().GetTile(coordinate)
 	if again.OccupiedBy.Visual.City.Cover != "flat-glass" {
 		t.Fatal("Card request aliases placed appearance")
@@ -90,6 +94,9 @@ func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
 		for _, tile := range tiles {
 			if tile.Coordinates.Q == coordinate.Q && tile.Coordinates.R == coordinate.R {
 				views = append(views, tile.OccupiedBy.Visual)
+				if tile.OccupiedBy.DisplayName != "Underground City" {
+					t.Fatalf("Viewer lost the placement-time name: %q", tile.OccupiedBy.DisplayName)
+				}
 			}
 		}
 	}
@@ -107,6 +114,9 @@ func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
 		t.Fatal(err)
 	}
 	standard, _ := g.Board().GetTile(coordinate)
+	if standard.OccupiedBy.DisplayName != "" {
+		t.Fatal("Standard city retained card name")
+	}
 	if standard.OccupiedBy.Visual == nil || standard.OccupiedBy.Visual.City != nil {
 		t.Fatal("Standard city retained card request")
 	}
@@ -130,7 +140,7 @@ func TestPhobosCityUsesDomeAppearance(t *testing.T) {
 		if tile.Location != board.TileLocationPhobos {
 			continue
 		}
-		selection := &shared.PendingTileSelection{TileType: "city", AvailableHexes: []string{tile.Coordinates.String()}, Source: "card", SourceCardID: "021"}
+		selection := &shared.PendingTileSelection{TileType: "city", AvailableHexes: []string{tile.Coordinates.String()}, Source: "card", SourceCardID: "021", TileRestrictions: &shared.TileRestrictions{BoardTags: []string{"phobos-space-haven"}}}
 		if err := g.SetPendingTileSelection(ctx, playerID, selection); err != nil {
 			t.Fatal(err)
 		}
@@ -143,10 +153,87 @@ func TestPhobosCityUsesDomeAppearance(t *testing.T) {
 			t.Fatal(err)
 		}
 		visual := placed.OccupiedBy.Visual
+		if placed.OccupiedBy.DisplayName != "Phobos Space Haven" {
+			t.Fatalf("Phobos lost its card name: %q", placed.OccupiedBy.DisplayName)
+		}
 		if visual == nil || visual.City == nil || visual.City.Cover != "dome" || visual.City.Landscaping != "sparse" {
 			t.Fatalf("Phobos lost its sealed habitat appearance: %+v", visual)
 		}
 		return
 	}
 	t.Fatal("Phobos tile is missing")
+}
+
+func TestCityPlacementNamesWithoutCustomModels(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		sourceID    string
+		cardType    cards.CardType
+		replacement string
+		wantName    string
+	}{
+		{name: "project", sourceID: "named-city", cardType: cards.CardTypeAutomated, wantName: "Named City"},
+		{name: "prelude", sourceID: "named-city", cardType: cards.CardTypePrelude, wantName: "Named City"},
+		{name: "standard project"},
+		{name: "unknown source", sourceID: "missing"},
+		{name: "named replacement", sourceID: "named-city", replacement: "city", wantName: "Named City"},
+		{name: "unnamed replacement", replacement: "city"},
+		{name: "non-city replacement", sourceID: "named-city", replacement: "greenery"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			g, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+			testutil.StartTestGame(t, g)
+			playerID := g.TurnOrder()[0]
+			registry := cards.NewInMemoryCardRegistry([]cards.Card{{ID: "named-city", Name: "Named City", Type: tt.cardType}})
+			var coordinate shared.HexPosition
+			found := false
+			for _, tile := range g.Board().Tiles() {
+				if tile.Type == shared.ResourceLandTile && tile.OccupiedBy == nil && len(tile.Bonuses) == 0 && len(tile.Tags) == 0 {
+					coordinate = tile.Coordinates
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatal("No empty land tile")
+			}
+			var output shared.BehaviorCondition = shared.NewTilePlacementCondition(shared.ResourceCityPlacement, 1, "none")
+			if tt.replacement != "" {
+				if err := g.Board().UpdateTileOccupancy(ctx, coordinate, board.TileOccupant{Type: shared.ResourceCityTile, DisplayName: "Previous City"}, playerID); err != nil {
+					t.Fatal(err)
+				}
+				output = &shared.TileModificationCondition{
+					ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceTileReplacement, Amount: 1, Target: "none"},
+					TileType:      tt.replacement,
+				}
+			}
+			p, err := g.GetPlayer(playerID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			applier := cards.NewBehaviorApplier(p, g, "card", testutil.TestLogger()).WithSourceCardID(tt.sourceID).WithCardRegistry(registry)
+			if err := applier.ApplyOutputs(ctx, []shared.BehaviorCondition{output}); err != nil {
+				t.Fatal(err)
+			}
+			selection := g.GetPendingTileSelection(playerID)
+			if selection == nil || selection.SourceCardID != tt.sourceID {
+				t.Fatalf("Placement lost its source card: %+v", selection)
+			}
+			action := tileAction.NewSelectTileAction(repo, registry, game.NewInMemoryGameStateRepository(), testutil.TestLogger())
+			if _, err := action.Execute(ctx, g.ID(), playerID, coordinate.String()); err != nil {
+				t.Fatal(err)
+			}
+			placed, err := g.Board().GetTile(coordinate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if placed.OccupiedBy.DisplayName != tt.wantName {
+				t.Fatalf("Placed name = %q, want %q", placed.OccupiedBy.DisplayName, tt.wantName)
+			}
+			if placed.DisplayName != nil {
+				t.Fatal("Placement overwrote the board-space name")
+			}
+		})
+	}
 }
