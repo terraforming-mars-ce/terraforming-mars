@@ -44,6 +44,7 @@ export function getAllAnyCardStorageSelections(outputs: any[] | undefined): Stor
 
   for (const output of outputs) {
     if (
+      output.amount > 0 &&
       (output.target === "any-card" || output.target === "self-card") &&
       STORAGE_RESOURCES.includes(output.type as ResourceType)
     ) {
@@ -70,6 +71,7 @@ export function needsCardStorageSelection(outputs: any[] | undefined): StorageSe
 
   for (const output of outputs) {
     if (
+      output.amount > 0 &&
       (output.target === "any-card" || output.target === "self-card") &&
       STORAGE_RESOURCES.includes(output.type as ResourceType)
     ) {
@@ -146,8 +148,15 @@ export function getVariableAmountInfo(
   inputs: any[] | undefined,
   outputs: any[] | undefined,
   currentPlayer: PlayerDto | null,
-): { resourceLabel: string; maxAmount: number } | null {
+  inputOptions?: import("@/types/generated/api-types.ts").BehaviorInputOptionsDto,
+): { resourceType: ResourceType; maxAmount: number } | null {
   if (!currentPlayer) return null;
+  if (inputOptions?.variableAmount) {
+    return {
+      resourceType: inputOptions.variableAmount.resourceType,
+      maxAmount: inputOptions.variableAmount.max,
+    };
+  }
 
   if (inputs) {
     for (const input of inputs) {
@@ -168,7 +177,7 @@ export function getVariableAmountInfo(
       } else if (resType === "plant") {
         max = resources.plants;
       }
-      if (max > 0) return { resourceLabel: resType, maxAmount: max };
+      if (max > 0) return { resourceType: resType, maxAmount: max };
     }
   }
 
@@ -191,8 +200,7 @@ export function getVariableAmountInfo(
       } else if (resType === "plant-production") {
         max = production.plants;
       }
-      const label = resType.replace("-production", " production");
-      if (max > 0) return { resourceLabel: label, maxAmount: max };
+      if (max > 0) return { resourceType: resType, maxAmount: max };
     }
   }
 

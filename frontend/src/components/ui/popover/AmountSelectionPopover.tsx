@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import type { ResourceType } from "@/types/generated/api-types.ts";
+import { getResourceName } from "@/utils/resourceColors.ts";
+import GameIcon from "../display/GameIcon.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import { GameFlowPopover, GameFlowTitle, GameFlowFooter } from "./GameFlowPopover.tsx";
 
 interface AmountSelectionPopoverProps {
-  cardName: string;
-  resourceLabel: string;
+  resourceType: ResourceType;
   maxAmount: number;
   onAmountSelect: (amount: number) => void;
   onCancel: () => void;
@@ -12,8 +14,7 @@ interface AmountSelectionPopoverProps {
 }
 
 const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
-  cardName,
-  resourceLabel,
+  resourceType,
   maxAmount,
   onAmountSelect,
   onCancel,
@@ -37,12 +38,12 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
         <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
           Select Amount
         </h3>
-        <div className="text-white/60 text-xs text-shadow-glow mt-1">{cardName}</div>
       </GameFlowTitle>
 
       <div className="p-5 flex flex-col items-center gap-4">
-        <div className="text-white/80 text-sm text-center">
-          How many <span className="text-space-blue-300 font-semibold">{resourceLabel}</span>?
+        <div className="text-white/80 text-sm text-center flex items-center justify-center gap-1.5">
+          <span>Select the amount of {getResourceName(resourceType).toLowerCase()}</span>
+          <GameIcon iconType={resourceType} size="small" />
         </div>
 
         <div className="flex items-center gap-4">
@@ -90,7 +91,7 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
         </GameButton>
         <GameButton
           emphasis="primary"
-          tone="success"
+          tone="info"
           size="sm"
           clickSound={false}
           onClick={handleConfirm}
