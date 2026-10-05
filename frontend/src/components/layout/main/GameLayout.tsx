@@ -1,3 +1,4 @@
+import CardPlayPresentation from "../../ui/overlay/CardPlayPresentation";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useState, useCallback, forwardRef } from "react";
 import { useStore } from "zustand";
@@ -302,6 +303,7 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
 
       {showUI && (
         <SolarSystemFade>
+          <CardPlayPresentation chatBounds={chatBounds} />
           <CardInspections
             store={inspectionStore}
             hand={inspectionHand}

@@ -1,25 +1,9 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Z_INDEX } from "@/constants/zIndex";
 
 type GameFlowType = "immediate" | "interactive" | "interactive-mandatory";
-
-interface GameFlowPopoverContext {
-  requestClose: () => void;
-  onDragStart: (e: React.PointerEvent) => void;
-  onDragMove: (e: React.PointerEvent) => void;
-  onDragEnd: (e: React.PointerEvent) => void;
-}
-
-const GameFlowCtx = createContext<GameFlowPopoverContext | null>(null);
-
-function useGameFlowContext() {
-  const ctx = useContext(GameFlowCtx);
-  if (!ctx) {
-    throw new Error("GameFlow* components must be used within GameFlowPopover");
-  }
-  return ctx;
-}
 
 interface GameFlowPopoverProps {
   isVisible: boolean;
@@ -42,17 +26,16 @@ export function GameFlowPopover({
   handleEscapeKey = true,
   children,
 }: GameFlowPopoverProps) {
+  const host = useCardPlayFlowStore((state) =>
+    state.playSession?.phase === "choosing" ? state.playPromptHost : null,
+  );
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isClosing, setIsClosing] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
 
   const isDismissible = type === "interactive" || (type === "immediate" && !!onClose);
 
   useEffect(() => {
     if (isVisible) {
-      setDragOffset({ x: 0, y: 0 });
       setIsClosing(false);
     }
   }, [isVisible]);
@@ -70,7 +53,10 @@ export function GameFlowPopover({
 
   useEffect(() => {
     const preventScroll = (event: WheelEvent | TouchEvent) => {
-      if (popoverRef.current && popoverRef.current.contains(event.target as Node)) {
+      if (
+        (event.target instanceof Element && event.target.closest("[data-card-play-stage]")) ||
+        (popoverRef.current && popoverRef.current.contains(event.target as Node))
+      ) {
         return;
       }
       event.preventDefault();
@@ -127,32 +113,6 @@ export function GameFlowPopover({
     };
   }, [isVisible, isDismissible, type, requestClose, handleEscapeKey]);
 
-  const onDragStart = useCallback(
-    (e: React.PointerEvent) => {
-      isDraggingRef.current = true;
-      dragStartRef.current = {
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y,
-      };
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    },
-    [dragOffset],
-  );
-
-  const onDragMove = useCallback((e: React.PointerEvent) => {
-    if (!isDraggingRef.current) {
-      return;
-    }
-    setDragOffset({
-      x: e.clientX - dragStartRef.current.x,
-      y: e.clientY - dragStartRef.current.y,
-    });
-  }, []);
-
-  const onDragEnd = useCallback(() => {
-    isDraggingRef.current = false;
-  }, []);
-
   if (!isVisible) {
     return null;
   }
@@ -160,9 +120,13 @@ export function GameFlowPopover({
   const animationClass = isClosing ? "animate-fadeOut" : "animate-popIn";
 
   const content = (
-    <div ref={popoverRef} className={`relative ${animationClass}`}>
+    <div
+      ref={popoverRef}
+      className={`relative pointer-events-auto ${animationClass}`}
+      style={host ? { maxWidth: "100%" } : undefined}
+    >
       <div
-        className={`min-w-[240px] w-fit max-w-[90vw] max-h-[500px] game-panel game-panel-clipped game-window flex flex-col overflow-hidden pointer-events-auto ${className}`}
+        className={`min-w-[240px] w-fit max-w-[90vw] max-h-[500px] game-panel game-panel-clipped game-window flex flex-col overflow-hidden pointer-events-auto ${className} ${host ? "max-w-full! min-w-0!" : ""}`}
       >
         {children}
       </div>
@@ -171,7 +135,7 @@ export function GameFlowPopover({
   );
 
   const rendered = (
-    <GameFlowCtx.Provider value={{ requestClose, onDragStart, onDragMove, onDragEnd }}>
+    <>
       {type === "immediate" && (
         <div
           className="fixed inset-0 transition-opacity duration-[245ms] ease-in-out"
@@ -185,26 +149,24 @@ export function GameFlowPopover({
           onClick={onClose ? requestClose : undefined}
         />
       )}
-      <div
-        className={`
+      {host ? (
+        createPortal(content, host)
+      ) : (
+        <div
+          className={`
           fixed top-0 left-0 right-0 bottom-0
           flex items-center justify-center
           pointer-events-none overflow-hidden
           ${outerClassName}
         `}
-        style={{
-          zIndex: type === "immediate" ? Z_INDEX.IMMEDIATE_POPOVER : Z_INDEX.SELECTION_POPOVER + 1,
-        }}
-      >
-        <div
-          className="pointer-events-auto"
           style={{
-            transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
+            zIndex:
+              type === "immediate" ? Z_INDEX.IMMEDIATE_POPOVER : Z_INDEX.SELECTION_POPOVER + 1,
           }}
         >
-          {content}
+          <div className="pointer-events-auto">{content}</div>
         </div>
-      </div>
+      )}
 
       <style>{`
         @keyframes popIn {
@@ -255,7 +217,7 @@ export function GameFlowPopover({
           }
         }
       `}</style>
-    </GameFlowCtx.Provider>
+    </>
   );
 
   if (type === "immediate") {
@@ -271,14 +233,9 @@ interface GameFlowTitleProps {
 }
 
 export function GameFlowTitle({ children, className = "" }: GameFlowTitleProps) {
-  const { onDragStart, onDragMove, onDragEnd } = useGameFlowContext();
-
   return (
     <div
-      className={`py-[15px] px-5 bg-black/40 border-b border-b-white/15 select-none ${className}`}
-      onPointerDown={onDragStart}
-      onPointerMove={onDragMove}
-      onPointerUp={onDragEnd}
+      className={`shrink-0 py-[15px] px-5 bg-black/40 border-b border-b-white/15 select-none ${className}`}
     >
       {children}
     </div>
@@ -293,7 +250,7 @@ interface GameFlowBodyProps {
 export function GameFlowBody({ children, className = "" }: GameFlowBodyProps) {
   return (
     <div
-      className={`flex-1 overflow-y-auto p-2.5 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-white/5 ${className}`}
+      className={`min-h-0 flex-1 overflow-y-auto p-2.5 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-white/5 ${className}`}
     >
       {children}
     </div>
@@ -308,7 +265,7 @@ interface GameFlowFooterProps {
 export function GameFlowFooter({ children, className = "" }: GameFlowFooterProps) {
   return (
     <div
-      className={`px-4 py-3 bg-black/40 border-t border-white/15 flex justify-center ${className}`}
+      className={`shrink-0 px-4 py-3 bg-black/40 border-t border-white/15 flex justify-center ${className}`}
     >
       {children}
     </div>

@@ -1,3 +1,4 @@
+import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore";
 import React from "react";
 import { CardDto } from "@/types/generated/api-types.ts";
 import GameCard from "../cards/GameCard.tsx";
@@ -10,13 +11,13 @@ interface CardPreviewPanelProps {
 const noop = () => {};
 
 const CardPreviewPanel: React.FC<CardPreviewPanelProps> = ({ card }) => {
+  const inPlayFlow = useCardPlayFlowStore((state) => state.playSession?.phase === "choosing");
   const isCorporation = card?.type === "corporation";
 
   return (
     <div
       className={`
-        hidden md:block
-        absolute left-full top-0 ml-4
+        ${inPlayFlow ? "hidden lg:block absolute right-full top-0 mr-4" : "hidden md:block absolute left-full top-0 ml-4"}
         transition-all duration-200 ease-out
         ${card ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none"}
       `}

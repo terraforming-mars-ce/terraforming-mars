@@ -1,3 +1,4 @@
+import { useCardPlayFlowStore, type CardPlaySession } from "@/stores/cardPlayFlowStore";
 import { Profiler, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { coldStartTrace } from "@/services/performanceStore.ts";
 import { createPortal, flushSync } from "react-dom";
@@ -11,9 +12,12 @@ import {
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameCard from "../cards/GameCard.tsx";
 import CardDescription from "../cards/CardDescription.tsx";
+import CardStatusMessages from "../display/CardStatusMessages.tsx";
 
 interface CardInspectionProps {
   card: PlayerCardDto;
+  playSession?: CardPlaySession;
+  compact?: boolean;
   inspection: CardInspectionSession;
   onReturned: (inspection: CardInspectionSession) => void;
   chatBounds: DOMRectReadOnly | null;
@@ -34,6 +38,8 @@ export default function CardInspection(props: CardInspectionProps) {
 
 function CardInspectionContent({
   card,
+  playSession,
+  compact,
   inspection,
   onReturned,
   chatBounds,
@@ -45,8 +51,10 @@ function CardInspectionContent({
   const motionRef = useRef<HTMLDivElement>(null);
   const motionStarted = useRef(false);
   const flightRef = useRef<CardInspectionFlight | null>(null);
-  const latest = useRef({ inspection, onReturned });
-  latest.current = { inspection, onReturned };
+  const latest = useRef({ inspection, onReturned, playSession });
+  latest.current = { inspection, onReturned, playSession };
+  const releaseRef = useRef<Animation | null>(null);
+  const releasingRef = useRef(false);
   const reducedMotion = useReducedMotion();
   const [motionReady, setMotionReady] = useState(false);
   const [viewport, setViewport] = useState(() => ({
@@ -54,9 +62,21 @@ function CardInspectionContent({
     height: window.innerHeight,
   }));
   const [panelHeight, setPanelHeight] = useState(0);
-  const [contentLayout, setContentLayout] = useState({ descriptionHeight: 200, scrollBody: false });
+  const [contentLayout, setContentLayout] = useState({
+    descriptionHeight: 200,
+    scrollBody: false,
+    requirementsHeight: 0,
+  });
+  const [contentScrollTop, setContentScrollTop] = useState(0);
+  const showStatus =
+    !playSession && ((!card.available && card.errors.length > 0) || !!card.warnings?.length);
   const desktopScale = Math.min(1.15, Math.max(0.7, viewport.height / 1320));
-  const right = Math.max(96, viewport.width * 0.12);
+  const statusWidth = 240;
+  const right = Math.max(
+    96,
+    viewport.width * 0.12,
+    showStatus ? (statusWidth + 10) * desktopScale + 12 : 0,
+  );
   const topInset = 96;
   const panelWidth = 372 * desktopScale;
   const panelLeft = viewport.width - right - panelWidth;
@@ -66,14 +86,15 @@ function CardInspectionContent({
     ? Math.min(chatBounds.top - 16, viewport.height - 106)
     : viewport.height - 106;
   const desktopHeight = desktopBottom - topInset;
-  const sheet = viewport.width < 1024 || desktopHeight < 540 * desktopScale;
+  const sheet = compact ?? (viewport.width < 1024 || desktopHeight < 540 * desktopScale);
   const scale = sheet ? 1 : desktopScale;
   const top = Math.max(
     topInset,
     Math.min((viewport.height - panelHeight) / 2, desktopBottom - panelHeight),
   );
+  const sheetRatio = playSession ? 0.4 : 0.7;
   const maxHeight = sheet
-    ? Math.max(100, Math.min(viewport.height * 0.7, viewport.height - 122))
+    ? Math.max(100, Math.min(viewport.height * sheetRatio, viewport.height - 122))
     : desktopHeight;
   const contentMaxHeight = maxHeight / scale;
 
@@ -147,10 +168,12 @@ function CardInspectionContent({
       const next = {
         descriptionHeight: Math.min(240, Math.max(0, available)),
         scrollBody: available < 84 || minimumHeight + requirementsHeight + 4 > contentMaxHeight,
+        requirementsHeight,
       };
       setContentLayout((previous) =>
         previous.descriptionHeight === next.descriptionHeight &&
-        previous.scrollBody === next.scrollBody
+        previous.scrollBody === next.scrollBody &&
+        previous.requirementsHeight === next.requirementsHeight
           ? previous
           : next,
       );
@@ -167,7 +190,7 @@ function CardInspectionContent({
     const run = () => {
       coldStartTrace.mark("card:flight-callback", { closing: inspection.closing, reducedMotion });
       const detail = motionRef.current?.querySelector<HTMLElement>(".game-card");
-      if (!detail) {
+      if ((releasingRef.current && !inspection.closing) || !detail) {
         return;
       }
       if (reducedMotion || (inspection.closing && !motionStarted.current)) {
@@ -179,8 +202,16 @@ function CardInspectionContent({
         }
         return;
       }
+      if (
+        (latest.current.playSession?.phase === "submitting" ||
+          latest.current.playSession?.phase === "reconnecting") &&
+        !flightRef.current
+      ) {
+        setMotionReady(true);
+        return;
+      }
       motionStarted.current = true;
-      if (!inspection.closing) {
+      if (!inspection.closing && !latest.current.playSession) {
         panelRef.current?.focus({ preventScroll: true });
       }
       if (!flightRef.current) {
@@ -223,11 +254,67 @@ function CardInspectionContent({
     return () => cancelAnimationFrame(frame);
   }, [inspection.closing, inspection.source, reducedMotion]);
 
-  useLayoutEffect(() => () => flightRef.current?.dispose(), []);
+  useLayoutEffect(
+    () => () => {
+      flightRef.current?.dispose();
+      if (releaseRef.current) {
+        releaseRef.current.onfinish = null;
+        releaseRef.current.cancel();
+      }
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    if (
+      !playSession ||
+      (playSession.phase !== "submitting" && playSession.phase !== "reconnecting") ||
+      playSession.animationDone ||
+      releasingRef.current
+    ) {
+      return;
+    }
+    const finish = () => useCardPlayFlowStore.getState().finishPlayAnimation(playSession.id);
+    if (reducedMotion) {
+      finish();
+      return;
+    }
+    if (flightRef.current) {
+      releasingRef.current = true;
+      flightRef.current.release(finish);
+    } else if (motionReady && motionRef.current) {
+      releasingRef.current = true;
+      const animation = motionRef.current.animate(
+        [
+          { transform: "scale(1)", opacity: 1 },
+          { transform: "scale(0.85)", opacity: 0 },
+        ],
+        { duration: 350, easing: "ease-out", fill: "forwards" },
+      );
+      animation.onfinish = finish;
+      releaseRef.current = animation;
+    }
+  }, [playSession?.id, playSession?.phase, playSession?.animationDone, motionReady, reducedMotion]);
+
+  useLayoutEffect(() => {
+    if (playSession?.phase !== "returning") {
+      return;
+    }
+    releasingRef.current = false;
+    if (releaseRef.current) {
+      releaseRef.current.onfinish = null;
+      releaseRef.current.cancel();
+      releaseRef.current = null;
+    }
+  }, [playSession?.phase]);
 
   useLayoutEffect(() => {
     if (!motionReady) {
       return;
+    }
+    const session = latest.current.playSession;
+    if (session) {
+      useCardPlayFlowStore.getState().inspectionArrived(session.id);
     }
     const source = inspection.source;
     source.dataset.cardInspectionReady = "true";
@@ -237,7 +324,7 @@ function CardInspectionContent({
   }, [motionReady, inspection.source]);
 
   useEffect(() => {
-    if (inspection.closing) {
+    if (inspection.closing || playSession) {
       return;
     }
     const dismissOutside = (event: PointerEvent) => {
@@ -264,18 +351,19 @@ function CardInspectionContent({
       document.removeEventListener("pointerdown", dismissOutside);
       document.removeEventListener("keydown", dismissEscape, true);
     };
-  }, [onClose, inspection.closing]);
+  }, [onClose, inspection.closing, !!playSession]);
 
-  return createPortal(
+  const content = (
     <div
       ref={panelRef}
       role="region"
       aria-label={`Inspect ${card.name}`}
-      className="fixed outline-none cursor-default select-none"
+      className="outline-none cursor-default select-none shrink-0"
       tabIndex={-1}
       onDragStart={(event) => event.preventDefault()}
       onPointerDown={(event) => {
         if (
+          !!playSession ||
           event.button !== 0 ||
           inspection.closing ||
           !motionReady ||
@@ -325,22 +413,26 @@ function CardInspectionContent({
         gestureRef.current = null;
       }}
       data-card-inspection
-      data-motion={inspection.closing ? "returning" : "inspecting"}
+      data-overlay-layer={playSession ? true : undefined}
+      data-motion={playSession?.phase ?? (inspection.closing ? "returning" : "inspecting")}
       data-placement={sheet ? "sheet" : "side"}
       style={{
-        zIndex: Z_INDEX.CARDS_PREVIEW,
-        pointerEvents: inspection.closing ? "none" : "auto",
+        position: playSession && sheet ? "relative" : "fixed",
+        zIndex: playSession ? Z_INDEX.SELECTION_POPOVER : Z_INDEX.CARDS_PREVIEW,
+        pointerEvents: inspection.closing || playSession?.phase === "submitting" ? "none" : "auto",
         width: sheet ? "min(420px, calc(100vw - 24px))" : panelWidth,
         maxHeight,
         right: sheet ? undefined : right,
         top: sheet ? undefined : top,
-        left: sheet ? "50%" : undefined,
-        bottom: sheet ? "calc(90px + env(safe-area-inset-bottom) + 12px)" : undefined,
-        transform: sheet ? "translateX(-50%)" : undefined,
+        left: sheet && !playSession ? "50%" : undefined,
+        bottom:
+          sheet && !playSession ? "calc(90px + env(safe-area-inset-bottom) + 12px)" : undefined,
+        transform: sheet && !playSession ? "translateX(-50%)" : undefined,
       }}
     >
       <div
         ref={motionRef}
+        className="relative"
         style={{
           visibility: motionReady ? "visible" : "hidden",
           zoom: scale,
@@ -354,22 +446,40 @@ function CardInspectionContent({
               : "px-1.5 pb-1"
           }
           style={{ maxHeight: contentMaxHeight }}
+          onScroll={(event) => setContentScrollTop(event.currentTarget.scrollTop)}
         >
           <GameCard
             card={card}
             presentation="inspection"
+            dimUnavailable={!playSession}
             description={
               <CardDescription
-                key={`${card.id}:${card.description}`}
-                text={card.description}
+                key={card.id}
+                sections={card.description}
                 maxHeight={contentLayout.descriptionHeight}
                 autoPan={!contentLayout.scrollBody}
               />
             }
           />
+          {showStatus && sheet && (
+            <div className="mt-2">
+              <CardStatusMessages card={card} size="large" />
+            </div>
+          )}
         </div>
+        {showStatus && !sheet && (
+          <div
+            className="absolute left-full ml-1 pointer-events-none"
+            style={{
+              top: Math.max(0, contentLayout.requirementsHeight - contentScrollTop),
+              width: statusWidth,
+            }}
+          >
+            <CardStatusMessages card={card} size="large" />
+          </div>
+        )}
       </div>
-    </div>,
-    document.body,
+    </div>
   );
+  return playSession ? content : createPortal(content, document.body);
 }
