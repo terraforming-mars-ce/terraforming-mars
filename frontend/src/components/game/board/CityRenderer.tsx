@@ -1,3 +1,4 @@
+import { useNuclearImpacted } from "./NuclearCollapse";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import DustEffect from "./effects/DustEffect";
@@ -254,6 +255,7 @@ export function CityGroundPatch({
   sphereRadius,
   sphereCenter,
   groupInverseMatrix,
+  frustumCulled = true,
 }: {
   x?: number;
   y?: number;
@@ -264,6 +266,7 @@ export function CityGroundPatch({
   sphereRadius?: number;
   sphereCenter: THREE.Vector3;
   groupInverseMatrix?: THREE.Matrix4;
+  frustumCulled?: boolean;
 }) {
   const { sand, grass, concrete, noiseMid, noiseHigh } = useTextures();
   const geometry = useMemo(() => {
@@ -302,6 +305,7 @@ export function CityGroundPatch({
       depthWrite: false,
       alphaTest: 0.005,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
     });
     const paved = surface === "paving";
     addSphereProjectionWithSoftEdges(
@@ -347,6 +351,7 @@ export function CityGroundPatch({
       geometry={geometry}
       material={material}
       renderOrder={renderOrder}
+      frustumCulled={frustumCulled}
       raycast={() => {}}
       dispose={null}
     />
@@ -362,6 +367,7 @@ function CityRenderer({
   isNewlyPlaced = false,
   renderBuildings = true,
 }: CityRendererProps) {
+  const nuclearImpacted = useNuclearImpacted();
   const buildings = useRef<THREE.Group>(null);
   const started = useRef<number | null>(null);
   const emerging = useRef(isNewlyPlaced);
@@ -488,8 +494,8 @@ function CityRenderer({
             ),
         )}
       </group>
-      {dust && <DustEffect duration={3000} onComplete={() => setDust(false)} />}
-      {showLabel && (
+      {!nuclearImpacted && dust && <DustEffect duration={3000} onComplete={() => setDust(false)} />}
+      {!nuclearImpacted && showLabel && (
         <Text
           position={[0, -0.137, 0.005]}
           font={assetUrl("fonts/prototype")}

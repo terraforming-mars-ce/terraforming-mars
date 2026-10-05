@@ -1,10 +1,17 @@
+import type { MarsRelief } from "./marsRelief";
+import NuclearDebrisRenderer from "./NuclearDebrisRenderer";
+import { createNuclearSites } from "./nuclearDebris";
 import { useLandscape } from "./useLandscape";
+import { PlantShadeMap } from "./plantShade";
 import { sphereRaycast } from "../../../utils/sphereRaycast";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { TileHighlightBoardContext, useTileHighlightBoard } from "./TileHighlightContext";
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import { useCardDragStore } from "../../../stores/cardDragStore";
 import Tile from "./Tile";
+import { useNuclearTransitions } from "./useNuclearTransitions";
+import { NuclearCollapse } from "./NuclearCollapse";
 import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import { useSoundEffects } from "../../../hooks/useSoundEffects";
@@ -25,6 +32,7 @@ import { Html } from "@react-three/drei";
 import { panState } from "../controls/PanControls";
 import { useVPCounting } from "../../../contexts/VPCountingContext";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
+import { coldStartTrace } from "../../../services/performanceStore";
 
 const SHOWCASE =
   import.meta.env.DEV &&
@@ -35,12 +43,15 @@ const VP_COLOR_SECONDARY: [number, number, number] = [0.4, 0.9, 0.4];
 const VP_COLOR_PRIMARY: [number, number, number] = [0.95, 0.95, 1.0];
 
 interface TileGridProps {
+  relief: MarsRelief;
+  highlightRoot: RefObject<THREE.Group | null>;
   gameState?: GameDto;
   onHexClick?: (hexCoordinate: string) => void;
   animateHexEntrance?: boolean;
   startHidden?: boolean;
   sphereCenter?: THREE.Vector3;
   groupInverseMatrix?: THREE.Matrix4;
+  onCityReady?: () => void;
 }
 
 // Local type for tiles with projected positions
@@ -71,7 +82,10 @@ type TileType =
   | "mohole";
 
 // Labels for special tile types (keyed by occupant type from backend)
-const SPECIAL_TILE_LABELS: Record<string, string> = {};
+const SPECIAL_TILE_LABELS: Record<string, string> = {
+  "commercial-district-tile": "Commercial District",
+  "industrial-center-tile": "Industrial Center",
+};
 
 interface TileData {
   type: TileType;
@@ -82,14 +96,27 @@ interface TileData {
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 
 export default function TileGrid({
+  highlightRoot,
+  relief,
   gameState,
   onHexClick,
   animateHexEntrance = false,
   startHidden = false,
   sphereCenter = ORIGIN,
   groupInverseMatrix,
+  onCityReady,
 }: TileGridProps) {
-  const newlyPlacedTiles = usePreviousTiles(gameState?.board?.tiles);
+  const highlightBoard = useTileHighlightBoard(highlightRoot, SPHERE_RADIUS, -1, gameState?.id);
+  const { newlyPlaced: newlyPlacedTiles, replacedTiles } = usePreviousTiles(
+    gameState?.board?.tiles,
+    gameState?.id,
+  );
+  const nuclearTransitions = useNuclearTransitions(
+    gameState?.board?.tiles,
+    gameState?.id,
+    newlyPlacedTiles,
+    replacedTiles,
+  );
   const { playWaterPlacementSound, playOxygenSound, playConstructionSound } = useSoundEffects();
   const { state: vpCountingState } = useVPCounting();
   const { activePlanet } = usePlanetFocus();
@@ -115,7 +142,8 @@ export default function TileGrid({
         case "city-tile":
         case "volcano-tile":
         case "special-tile":
-        case "nuclear-zone-tile":
+        case "commercial-district-tile":
+        case "industrial-center-tile":
         case "mining-tile":
         case "restricted-tile":
           void playConstructionSound();
@@ -173,6 +201,7 @@ export default function TileGrid({
       setTooltipData({
         tileType: data.tileType,
         displayName: data.displayName,
+        placedName: data.placedName,
         ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
         ownerColor: data.ownerId ? playerColorMap.get(data.ownerId) : undefined,
         reservedByName: data.reservedById ? playerNameMap.get(data.reservedById) : undefined,
@@ -217,6 +246,8 @@ export default function TileGrid({
   const stablePlots = useRef(new Map<string, CityPlot>());
   const stableCityList = useRef<CityPlot[]>([]);
   // Use backend board tiles or fallback to hardcoded generation
+  const plantShade = useMemo(() => new PlantShadeMap(), []);
+  useEffect(() => () => plantShade.dispose(), [plantShade]);
   const projectedHexGrid = useMemo((): ProjectedTile[] => {
     // Use backend tiles if available (filter to Mars-only)
     if (boardTiles) {
@@ -252,17 +283,54 @@ export default function TileGrid({
     });
   }, [boardTiles]);
 
+  const nuclearTiles = useMemo(
+    () =>
+      new Set(
+        projectedHexGrid
+          .filter((tile) => tile.backendTile?.occupiedBy?.type === "nuclear-zone-tile")
+          .map((tile) => HexGrid2D.coordinateToKey(tile.coordinate)),
+      ),
+    [projectedHexGrid],
+  );
+  const visualHexGrid = useMemo(
+    () =>
+      projectedHexGrid.map((tile) => {
+        const transition = nuclearTransitions.get(HexGrid2D.coordinateToKey(tile.coordinate));
+        return transition?.outgoing && !transition.collapsed
+          ? { ...tile, backendTile: transition.outgoing }
+          : tile;
+      }),
+    [projectedHexGrid, nuclearTransitions],
+  );
+  const landscapeHexGrid = useMemo(
+    () =>
+      projectedHexGrid.map((tile) => {
+        const transition = nuclearTransitions.get(HexGrid2D.coordinateToKey(tile.coordinate));
+        return transition?.outgoing && !transition.impacted
+          ? { ...tile, backendTile: transition.outgoing }
+          : tile;
+      }),
+    [projectedHexGrid, nuclearTransitions],
+  );
+
   const cityPlots = useMemo(() => {
     if (!SHOWCASE) {
-      const plots = projectedHexGrid
+      let tracedPlacement = false;
+      const plots = visualHexGrid
         .filter((tile) => tile.backendTile?.occupiedBy?.type === "city-tile")
         .map((tile) => {
           const key = HexGrid2D.coordinateToKey(tile.coordinate);
+          if (!tracedPlacement && newlyPlacedTiles.has(key) && !stablePlots.current.has(key)) {
+            coldStartTrace.begin("city-placement", { key });
+            tracedPlacement = true;
+          }
+          const endLayout = coldStartTrace.span("city:layout", { key });
           const layout = generateCityLayout(
             tile.backendTile!.occupiedBy!.visual?.seed ?? hashSeed(`${gameState?.id}:${key}`),
             tile.backendTile!.occupiedBy!.visual?.city,
             tile.backendTile?.displayName ?? "City",
           );
+          endLayout();
           const cached = stablePlots.current.get(key);
           if (cached?.layout === layout) {
             return cached;
@@ -291,7 +359,7 @@ export default function TileGrid({
       stableCityList.current = plots;
       return plots;
     }
-    const available = projectedHexGrid.filter(
+    const available = visualHexGrid.filter(
       (tile) =>
         !tile.backendTile?.occupiedBy &&
         !tile.backendTile?.reservedBy &&
@@ -319,7 +387,7 @@ export default function TileGrid({
       }
     }
     return plots;
-  }, [projectedHexGrid, gameState?.id]);
+  }, [visualHexGrid, gameState?.id]);
   const cityKeys = useMemo(
     () => new Set(cityPlots.map((plot) => HexGrid2D.coordinateToKey(plot.coordinate))),
     [cityPlots],
@@ -435,7 +503,7 @@ export default function TileGrid({
 
   // Collect all greenery tiles for the GreeneryRenderer (includes living greenery types)
   const greeneryTiles = useMemo(() => {
-    return projectedHexGrid
+    return landscapeHexGrid
       .filter((tile) => {
         const tileData = getTileData(tile);
         return (
@@ -449,13 +517,13 @@ export default function TileGrid({
         worldPosition: tile.spherePosition,
         normal: tile.normal,
       }));
-  }, [projectedHexGrid]);
+  }, [landscapeHexGrid]);
 
   const showcaseGreenery = useMemo(() => {
     if (!SHOWCASE) {
       return [];
     }
-    const available = projectedHexGrid.filter(
+    const available = landscapeHexGrid.filter(
       (t) =>
         !t.backendTile?.occupiedBy &&
         !t.isOceanSpace &&
@@ -474,20 +542,24 @@ export default function TileGrid({
         worldPosition: t.spherePosition,
         normal: t.normal,
       }));
-  }, [projectedHexGrid, cityPlots, cityKeys]);
+  }, [landscapeHexGrid, cityPlots, cityKeys]);
   const renderedGreenery = useMemo(
     () => [...greeneryTiles, ...showcaseGreenery],
     [greeneryTiles, showcaseGreenery],
   );
   const landscapeInputs = useMemo(() => {
-    const tiles: LandscapeSource[] = cityPlots.map((plot) => ({
-      coordinate: plot.coordinate,
-      kind: "city",
-      seed: plot.layout.seed,
-      layout: plot.layout,
-    }));
+    const tiles: LandscapeSource[] = cityPlots
+      .filter(
+        (plot) => !nuclearTransitions.get(HexGrid2D.coordinateToKey(plot.coordinate))?.impacted,
+      )
+      .map((plot) => ({
+        coordinate: plot.coordinate,
+        kind: "city",
+        seed: plot.layout.seed,
+        layout: plot.layout,
+      }));
     for (const t of renderedGreenery) {
-      const original = projectedHexGrid.find(
+      const original = landscapeHexGrid.find(
         (p) => HexGrid2D.coordinateToKey(p.coordinate) === HexGrid2D.coordinateToKey(t.coordinate),
       );
       const special =
@@ -501,7 +573,7 @@ export default function TileGrid({
           hashSeed(`${gameState?.id}:${HexGrid2D.coordinateToKey(t.coordinate)}`),
       });
     }
-    for (const tile of projectedHexGrid) {
+    for (const tile of landscapeHexGrid) {
       const type = getTileData(tile).type;
       if (type === "ocean" || type === "volcano") {
         tiles.push({
@@ -519,20 +591,20 @@ export default function TileGrid({
         tiles.push({ coordinate: tile.coordinate, kind: "excluded", seed: 0 });
       }
     }
-    return { sources: tiles, seed: hashSeed(gameState?.id ?? "showcase") };
-  }, [cityPlots, renderedGreenery, projectedHexGrid, showcaseGreenery, gameState?.id]);
-  const oceanTiles = useMemo(() => {
-    return projectedHexGrid
-      .filter((tile) => {
-        const tileData = getTileData(tile);
-        return tileData.type === "ocean";
-      })
-      .map((tile) => ({
-        coordinate: tile.coordinate,
-      }));
-  }, [projectedHexGrid]);
-
-  const landscapeSignature = useMemo(() => JSON.stringify(landscapeInputs), [landscapeInputs]);
+    return { sources: tiles, seed: hashSeed(gameState?.id ?? "showcase"), relief };
+  }, [
+    relief,
+    cityPlots,
+    renderedGreenery,
+    landscapeHexGrid,
+    showcaseGreenery,
+    gameState?.id,
+    nuclearTransitions,
+  ]);
+  const landscapeSignature = useMemo(
+    () => JSON.stringify([landscapeInputs.seed, landscapeInputs.sources, relief.revision]),
+    [landscapeInputs, relief],
+  );
   const pendingLandscape = useLandscape(landscapeInputs, landscapeSignature);
   const [landscapeView, setLandscapeView] = useState({
     current: EMPTY_LANDSCAPE,
@@ -546,6 +618,19 @@ export default function TileGrid({
       transitionStart,
     }));
   }, []);
+  const nuclearBoard = projectedHexGrid.map((tile) => ({
+    coordinate: tile.coordinate,
+    kind: getTileData(tile).type,
+  }));
+  const nuclearTerrainSignature = JSON.stringify([
+    gameState?.id,
+    nuclearBoard,
+    [...landscapeView.current.patches.values()].map((patch) => [patch.key, patch.signature]),
+  ]);
+  const nuclearSites = useMemo(
+    () => createNuclearSites(nuclearBoard, gameState?.id ?? "showcase", landscapeView.current),
+    [nuclearTerrainSignature],
+  );
   // Collect living greenery tiles (ecological-zone, natural-preserve) for boosted vegetation
   const livingGreeneryTiles = useMemo(() => {
     return projectedHexGrid
@@ -563,6 +648,11 @@ export default function TileGrid({
   // --- Centralized interaction sphere (single raycast target) ---
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
   const hoveredHexKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    hoveredHexKeyRef.current = null;
+    setHoveredHexKey(null);
+    handleTileHoverLeave();
+  }, [activePlanet, gameState?.id]);
   const hoverSound = useHoverSound();
   const interactionSphereGeometry = useMemo(
     () => new THREE.SphereGeometry(SPHERE_RADIUS + 0.02, 64, 64),
@@ -633,8 +723,10 @@ export default function TileGrid({
             handleTileHoverInfo({
               position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
               tileType: cityPlot ? "city" : tileData.type,
-              displayName:
-                cityPlot?.layout.name || tileData.specialLabel || tile.backendTile?.displayName,
+              displayName: tileData.specialLabel || tile.backendTile?.displayName,
+              placedName: SHOWCASE
+                ? cityPlot?.layout.name
+                : tile.backendTile?.occupiedBy?.displayName,
               ownerId: cityPlot && SHOWCASE ? showcaseOwnerId : tileData.ownerId,
               reservedById: tile.backendTile?.reservedBy || null,
               isOceanSpace: tile.isOceanSpace,
@@ -686,19 +778,8 @@ export default function TileGrid({
     [findNearestHex, availableHexes, onHexClick, hoverSound],
   );
 
-  const oceanKeySet = useMemo(() => {
-    const set = new Set<string>();
-    for (const tile of oceanTiles) {
-      set.add(HexGrid2D.coordinateToKey(tile.coordinate));
-    }
-    return set;
-  }, [oceanTiles]);
-
-  const hoveredOceanHexKey =
-    !isDraggingCard && hoveredHexKey && oceanKeySet.has(hoveredHexKey) ? hoveredHexKey : null;
-
   return (
-    <>
+    <TileHighlightBoardContext.Provider value={highlightBoard}>
       {/* Single invisible sphere for all pointer interaction */}
       {activePlanet === "mars" && (
         <mesh
@@ -716,31 +797,52 @@ export default function TileGrid({
         <TileTooltip data={tooltipData} positionRef={tooltipPositionRef} />
       </Html>
       <GreeneryRenderer
+        shade={plantShade}
         landscape={landscapeView.current}
         previousLandscape={landscapeView.previous}
+        nuclearTransitions={nuclearTransitions}
+        nuclearTiles={nuclearTiles}
         transitionStart={landscapeView.transitionStart}
+      />
+      <CityBatchRenderer
+        key={gameState?.id}
+        plots={cityPlots}
+        newlyPlaced={newlyPlacedTiles}
+        nuclearTransitions={nuclearTransitions}
+        visible={!startHidden || animateHexEntrance}
+        onReady={onCityReady}
       />
       <group visible={!startHidden || animateHexEntrance}>
         <LandscapeRenderer
           state={pendingLandscape}
           onReady={handleLandscapeReady}
-          hoveredOceanHexKey={hoveredOceanHexKey}
           groupInverseMatrix={groupInverseMatrix}
+          plantShade={plantShade}
         />
-        <CityBatchRenderer plots={cityPlots} newlyPlaced={newlyPlacedTiles} />
         {cityPlots.map((plot) => (
-          <CityRenderer
+          <NuclearCollapse
             key={HexGrid2D.coordinateToKey(plot.coordinate)}
-            renderBuildings={false}
-            showLabel={SHOWCASE}
-            isNewlyPlaced={newlyPlacedTiles.has(HexGrid2D.coordinateToKey(plot.coordinate))}
-            connectedGround
-            plot={plot}
-            sphereCenter={sphereCenter}
-            groupInverseMatrix={groupInverseMatrix}
-          />
+            transition={nuclearTransitions.get(HexGrid2D.coordinateToKey(plot.coordinate))}
+            seed={plot.layout.seed}
+            origin={plot.worldPosition}
+            normal={plot.normal}
+          >
+            <CityRenderer
+              renderBuildings={false}
+              showLabel={SHOWCASE}
+              isNewlyPlaced={
+                !nuclearTransitions.has(HexGrid2D.coordinateToKey(plot.coordinate)) &&
+                newlyPlacedTiles.has(HexGrid2D.coordinateToKey(plot.coordinate))
+              }
+              connectedGround
+              plot={plot}
+              sphereCenter={sphereCenter}
+              groupInverseMatrix={groupInverseMatrix}
+            />
+          </NuclearCollapse>
         ))}
       </group>
+      <NuclearDebrisRenderer sites={nuclearSites} transitions={nuclearTransitions} />
       <PrimitiveRenderer />
       <BirdRenderer livingGreeneryTiles={livingGreeneryTiles} />
       {gameState?.settings?.cardPacks?.includes("colonies") && (
@@ -754,7 +856,8 @@ export default function TileGrid({
       )}
       {projectedHexGrid.map((tile, index) => {
         const hexKey = HexGrid2D.coordinateToKey(tile.coordinate);
-        const isCityRenderer = cityKeys.has(hexKey);
+        const transition = nuclearTransitions.get(hexKey);
+        const isCityRenderer = cityKeys.has(hexKey) && !transition;
         const isShowcaseGreen = showcaseGreenery.some(
           (t) => HexGrid2D.coordinateToKey(t.coordinate) === hexKey,
         );
@@ -781,10 +884,31 @@ export default function TileGrid({
             key={hexKey}
             tileData={tile}
             tileType={renderedType}
+            nuclearSite={nuclearSites.get(hexKey)}
+            nuclearTransition={transition}
+            outgoingType={
+              transition?.outgoing
+                ? getTileData({ ...tile, backendTile: transition.outgoing }).type
+                : undefined
+            }
             ownerId={ownerId}
             ownerColor={ownerId ? playerColorMap.get(ownerId) : undefined}
+            outgoingOwnerColor={
+              transition?.outgoing?.ownerId
+                ? playerColorMap.get(transition.outgoing.ownerId)
+                : undefined
+            }
             reservedById={tile.backendTile?.reservedBy || null}
-            displayName={tileData.specialLabel || tile.backendTile?.displayName}
+            reservedByColor={
+              tile.backendTile?.reservedBy
+                ? playerColorMap.get(tile.backendTile.reservedBy)
+                : undefined
+            }
+            displayName={
+              !transition?.impacted && transition?.outgoing
+                ? transition.outgoing.displayName
+                : tileData.specialLabel || tile.backendTile?.displayName
+            }
             isVolcanic={tile.backendTile?.tags?.includes("volcanic") ?? false}
             isOceanSpace={tile.isOceanSpace}
             bonuses={isCityRenderer || isShowcaseGreen ? EMPTY_BONUSES : tile.bonuses}
@@ -795,6 +919,7 @@ export default function TileGrid({
             startHidden={startHidden}
             entranceDelay={index * 15}
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
+            visualSeed={hashSeed(`${gameState?.id}:${hexKey}`)}
             vpHighlightIntensity={vpHighlightIntensity}
             vpHighlightColor={vpHighlightColor}
             sphereCenter={sphereCenter}
@@ -802,7 +927,7 @@ export default function TileGrid({
           />
         );
       })}
-    </>
+    </TileHighlightBoardContext.Provider>
   );
 }
 

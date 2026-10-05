@@ -20,7 +20,7 @@ MarsSphere          -> Textured sphere + rotation context
 Each hex can be one of: `empty`, `ocean`, `greenery`, `city`, `special`, `volcano`.
 
 - **Tile** (`Tile.tsx`) — Base component for every hex. Renders the chrome border, hover/available glow, owner color, VP text. Delegates to child components based on type.
-- **LandscapeRenderer** — Owns `LandscapeSurface`: instanced lake stencil masks, opaque basin terrain, transparent outer ground, and water. `landscapeFields.ts` builds continuous height/material fields in a worker; adjacent ocean junctions are filled while island holes remain. Water is below the Mars surface and sandy banks rise to surrounding ground. Lake and Mohole masks use independent stencil bits. All passes share texture layers and a 600 ms transition clock.
+- **LandscapeRenderer** — Owns `LandscapeSurface`: instanced lake stencil masks, opaque basin and ground terrain, blended ground edges, and water. `landscapeFields.ts` builds continuous height/material fields in a worker; adjacent ocean junctions are filled while island holes remain. Water is below the Mars surface and sandy banks rise to surrounding ground. Lake and Mohole masks use independent stencil bits. All passes share texture layers and a 600 ms transition clock.
 - **CityRenderer** — Renders seeded procedural cities on Mars and celestial bodies; surface projection uses the body radius.
 - **VolcanoTile** — Procedural volcano cone with crater, lava flows, and smoke particles. Uses custom vertex/fragment shaders (`volcano.vert.glsl`, `volcano.frag.glsl`). Height field is generated on both GPU (shaders) and CPU (flow map computation in `volcanoFlowMap.ts`). Smoke effect in `effects/VolcanoSmoke.tsx`.
 - **GreeneryRenderer** — Handles ALL vegetation (trees, bushes, clover, rocks) for both greenery tiles AND volcano tiles using InstancedMesh.
@@ -33,6 +33,28 @@ Each hex can be one of: `empty`, `ocean`, `greenery`, `city`, `special`, `volcan
 - The landscape worker deterministically scatters plants in world-space cells, with city/volcano exclusions, beach clearances, and reduced tree density near exposed hex borders.
 - Uses InstancedMesh per variant with stable slots; plant heights interpolate with the displayed terrain.
 - Vegetation models come from `useModels()` through `createVariantsFromScene()`.
+
+## Climate
+
+`climate.ts` maps temperature, oxygen and oceans to normalized signals (frost, ice, plant gates, sky, ...). `ClimateProvider` (inside `MarsSphere`) eases them in a mutable ref each frame; read it with `useClimate()` in `useFrame` and write uniforms, never re-render per frame. Plant gating uses the target state and each plant's stable `rank`, so rising gates only add plants. Override values from the Admin Tools "Climate" page.
+
+## Landscape Depth
+
+- `uDetailField` (RGBA8, mirrors `uMaterials`): R shoreline meadow outside greeneries, G hummock noise, B greenery weight. Greenery hummocks are added to the height field in the worker, so plants stay grounded.
+- `PlantShadeMap` (`plantShade.ts`) bakes a top-down occlusion map of the visible plants whenever the gated set or tree sizes change. The ground reads it via `uPlantShade`.
+- Ground occlusion (cavity from layer heights, plant shade, canopy litter) replaces `aomap_fragment` (`landscape-ao.frag.glsl`). It dims indirect light and applies a micro-shadow to the sun, since the board has no shadow maps.
+
+## Rendering Cost
+
+- **Ground bake** (`groundBake.ts`): when the landscape, climate uniforms, plant shade and view hold still, the board region in view (+25 % margin) is baked at screen density into two 4096×2048 targets: albedo+alpha (sRGB) and surface (slope, roughness, AO). The live ground shader then takes the `uGroundBaked` branch and reads two texels. Any input change falls back to the live branch at once; rebakes wait 3 steady frames and render in 4 strips. Anything added to the ground's material stage must also be listed in `LandscapeSurface.updateBake` inputs and land in the bake outputs (`base`, `groundAlpha`, `surfaceSlope`, `surfaceRoughness`, `landscapeAO`).
+- **Ground depth**: fully opaque ground writes color and actual surface depth together. A separate transparent pass draws only the soft edge without writing depth; both use the same geometry and live or baked alpha. The Mars sphere (`renderOrder` 16, after plants) fills uncovered pixels and remains behind blended edges. Only actual holes use stencil masks.
+- **Foliage depth pre-pass**: each foliage batch draws `userData.depthMaterial` first (alpha-to-coverage cut-out, depth only, `renderOrder` 14), then the Lambert shading pass with `EqualDepth` and no discard, so each pixel is shaded once. Both programs declare `invariant gl_Position`; keep their vertex transform and polygon offset identical.
+- **Transparent DoubleSide materials need `forceSinglePass: true`**: otherwise three draws them twice and flags `needsUpdate` on every draw, which rebuilds program parameters (heavy GC).
+- `useFrame` and `onBeforeRender` code must not allocate (no closures, arrays, `color.set(string)`).
+
+## Texture Budget
+
+Landscape ground uses 15 of the 16 fragment texture units (fields: terrain, materials, detail; plus Mars, climate noise, dry grass, sand, rock, paving, plant shade, the two ground arrays and the two ground-bake targets). Same-sized terrain layers go into `sampler2DArray`s built by `textureArray()` (`groundLayers` and `iceLayers` in `useTextures`), sampled with a negated v. Add a layer to an array instead of a new sampler.
 
 ## Coordinate System
 

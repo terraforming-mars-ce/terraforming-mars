@@ -1,30 +1,37 @@
+import { sharedRockGeometry, createNuclearDebrisMaterial } from "./rockGeometry";
 import { useMemo, useRef, useLayoutEffect, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
   createVolcanoMaterial,
   createNuclearZoneMaterial,
+  createNuclearMaskMaterial,
+  createNuclearWaveMaterial,
   createWorldTreeMaterial,
   createSunSurfaceMaterial,
   createSunCoronaMaterial,
   createSunProminenceMaterial,
 } from "./shaders";
 import { computeFlowMap } from "./volcanoFlowMap";
+import { bareNuclearGround, createNuclearGeometry } from "./nuclearGeometry";
+import { SPHERE_RADIUS } from "./boardConstants";
 import {
   variantCache,
   createVariantsFromScene,
   TREE_NAMES,
+  PINE_NAMES,
   BUSH_NAMES,
   CLOVER_NAMES,
   FLOWER_NAMES,
+  createRockMaterial,
   type TreeVariant,
 } from "./GreeneryRenderer";
 import { useModels } from "../../../hooks/useModels";
 import { useTextures } from "../../../hooks/useTextures";
 import { coldStartTrace } from "@/services/performanceStore.ts";
 
-import { createCityBatchMaterials } from "./CityBatchRenderer";
-import { mountCityWarmup } from "./cityBatch";
+import { CityGroundPatch, getMaterials } from "./CityRenderer";
+import { createCityWarmupGeometry } from "./cityBatch";
 import LandscapeRenderer from "./LandscapeRenderer";
 import { LandscapeBuilder } from "./landscapeFields";
 import type { LandscapeState } from "./landscapeTypes";
@@ -42,28 +49,21 @@ const landscapeWarmup: LandscapeState = {
 };
 const WARMUP_SCALE = 0.001;
 const WARMUP_FRAMES = 3;
+const ORIGIN = new THREE.Vector3();
 
 interface GpuWarmupProps {
   onReady?: () => void;
 }
 
 export default function GpuWarmup({ onReady }: GpuWarmupProps) {
-  const { treesScene, rockScene, flowersScene } = useModels();
+  const { treesScene, pinesScene, rockScene, flowersScene } = useModels();
   const textures = useTextures();
   const cityMaterials = useMemo(
-    () => [...createCityBatchMaterials(textures, { value: 1000 }).values()],
+    () => [...getMaterials("normal", textures), ...getMaterials("bright", textures).slice(0, 3)],
     [textures.concrete, textures.grass, textures.sand, textures.cityFacades],
   );
-  const cityWarmupGroup = useRef<THREE.Group>(null);
-  useLayoutEffect(() => {
-    return mountCityWarmup(cityWarmupGroup.current!, cityMaterials);
-  }, [cityMaterials]);
-  useEffect(
-    () => () => {
-      cityMaterials.forEach((m) => m.dispose());
-    },
-    [cityMaterials],
-  );
+  const cityGeometry = useMemo(() => createCityWarmupGeometry(), []);
+  useEffect(() => () => cityGeometry.dispose(), [cityGeometry]);
   const { rock: rockTexture, smoke: smokeTexture, grass: grassTexture } = textures;
 
   const warmupRoot = useRef<THREE.Group>(null);
@@ -95,6 +95,13 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
     return variantCache.trees;
   }, [treesScene]);
 
+  const pineVariants = useMemo(() => {
+    if (!variantCache.pines) {
+      variantCache.pines = createVariantsFromScene(pinesScene, PINE_NAMES, 0.075);
+    }
+    return variantCache.pines;
+  }, [pinesScene]);
+
   const bushVariants = useMemo(() => {
     if (!variantCache.bushes) {
       variantCache.bushes = createVariantsFromScene(treesScene, BUSH_NAMES, 0.035);
@@ -119,50 +126,17 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   const { geometry: rockGeometry, material: rockMaterial } = useMemo(() => {
     if (variantCache.rock) return variantCache.rock;
 
-    let geo: THREE.BufferGeometry = new THREE.DodecahedronGeometry(0.015, 1);
-    rockScene.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        const name = child.name.toLowerCase();
-        if (name.includes("plane") || name.includes("ground")) return;
-        geo = child.geometry.clone();
-        child.updateWorldMatrix(true, false);
-        geo.applyMatrix4(child.matrixWorld);
-      }
-    });
+    const geo = sharedRockGeometry(rockScene);
 
-    const box = new THREE.Box3().setFromBufferAttribute(
-      geo.getAttribute("position") as THREE.BufferAttribute,
-    );
-    const size = box.getSize(new THREE.Vector3());
-    const targetSize = 0.04;
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = targetSize / maxDim;
-
-    const rotationMatrix = new THREE.Matrix4().makeRotationX(Math.PI / 2);
-    geo.applyMatrix4(rotationMatrix);
-
-    const boxRotated = new THREE.Box3().setFromBufferAttribute(
-      geo.getAttribute("position") as THREE.BufferAttribute,
-    );
-    const centerRotated = boxRotated.getCenter(new THREE.Vector3());
-    const transform = new THREE.Matrix4()
-      .makeScale(scale, scale, scale)
-      .multiply(
-        new THREE.Matrix4().makeTranslation(-centerRotated.x, -centerRotated.y, -boxRotated.min.z),
-      );
-    geo.applyMatrix4(transform);
-    geo.computeVertexNormals();
-
-    const mat = new THREE.MeshStandardMaterial({
-      map: rockTexture,
-      color: 0xffffff,
-      roughness: 0.9,
-      metalness: 0.0,
-    });
-
-    variantCache.rock = { geometry: geo, material: mat };
+    variantCache.rock = { geometry: geo, material: createRockMaterial(rockTexture) };
     return variantCache.rock;
   }, [rockScene, rockTexture]);
+
+  const nuclearDebrisMaterial = useMemo(
+    () => createNuclearDebrisMaterial(rockTexture),
+    [rockTexture],
+  );
+  useEffect(() => () => nuclearDebrisMaterial.dispose(), [nuclearDebrisMaterial]);
 
   const smokeWarmupMaterial = useMemo(() => {
     return new THREE.MeshBasicMaterial({
@@ -173,6 +147,7 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
       depthTest: false,
       blending: THREE.NormalBlending,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
     });
   }, [smokeTexture]);
 
@@ -186,10 +161,33 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   const volcanoGeometry = useMemo(() => new THREE.CircleGeometry(0.15, 32), []);
 
   const nuclearZoneWarmupMaterial = useMemo(() => {
-    return createNuclearZoneMaterial(42);
-  }, []);
+    return createNuclearZoneMaterial(42, textures.mars).material;
+  }, [textures.mars]);
 
-  const nuclearZoneGeometry = useMemo(() => new THREE.CircleGeometry(0.14, 32), []);
+  const nuclearMaskMaterial = useMemo(() => createNuclearMaskMaterial(), []);
+  const nuclearWaveMaterial = useMemo(() => createNuclearWaveMaterial(), []);
+  const nuclearZoneGeometry = useMemo(
+    () =>
+      createNuclearGeometry(42, bareNuclearGround, {
+        origin: new THREE.Vector3(0, 0, SPHERE_RADIUS + 0.01),
+        rotation: new THREE.Quaternion(),
+      }),
+    [],
+  );
+  useEffect(
+    () => () => {
+      Object.values(nuclearZoneGeometry).forEach((geometry) => geometry.dispose());
+    },
+    [nuclearZoneGeometry],
+  );
+  useEffect(
+    () => () => {
+      nuclearMaskMaterial.dispose();
+      nuclearWaveMaterial.dispose();
+      nuclearZoneWarmupMaterial.dispose();
+    },
+    [nuclearMaskMaterial, nuclearWaveMaterial, nuclearZoneWarmupMaterial],
+  );
 
   const worldTreeWarmupMaterial = useMemo(() => {
     return createWorldTreeMaterial(42);
@@ -282,7 +280,7 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
       mesh.setColorAt(0, new THREE.Color(1, 1, 1));
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
-  }, [treeVariants]);
+  }, [treeVariants, pineVariants]);
 
   useLayoutEffect(() => {
     const matrix = new THREE.Matrix4().compose(
@@ -355,15 +353,26 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
       variant.primitives.map((prim, pIdx) => {
         const key = `${prefix}-${vIdx}-${pIdx}`;
         const mat = materialOverrides ? materialOverrides[vIdx][pIdx] : prim.material;
+        const depth = mat.userData.depthMaterial as THREE.Material | undefined;
         return (
-          <instancedMesh
-            key={key}
-            ref={(el) => {
-              refs.current.set(key, el);
-            }}
-            args={[prim.geometry, mat, 1]}
-            frustumCulled={false}
-          />
+          <group key={key}>
+            {depth && (
+              <instancedMesh
+                ref={(el) => {
+                  refs.current.set(`${key}-depth`, el);
+                }}
+                args={[prim.geometry, depth, 1]}
+                frustumCulled={false}
+              />
+            )}
+            <instancedMesh
+              ref={(el) => {
+                refs.current.set(key, el);
+              }}
+              args={[prim.geometry, mat, 1]}
+              frustumCulled={false}
+            />
+          </group>
         );
       }),
     );
@@ -373,17 +382,56 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
       <group scale={WARMUP_SCALE}>
         <LandscapeRenderer capacity={16} state={landscapeWarmup} />
       </group>
-      <group ref={cityWarmupGroup} scale={WARMUP_SCALE} dispose={null} />
+      <group scale={WARMUP_SCALE} dispose={null}>
+        {cityMaterials.map((material) => (
+          <mesh
+            key={material.uuid}
+            geometry={cityGeometry}
+            material={material}
+            frustumCulled={false}
+          />
+        ))}
+        <CityGroundPatch
+          radius={0.155}
+          surface="soil"
+          sphereCenter={ORIGIN}
+          frustumCulled={false}
+        />
+      </group>
       {renderVariants(treeVariants, "warmup-tree", treeRefs)}
+      {renderVariants(pineVariants, "warmup-pine", treeRefs)}
       {renderVariants(bushVariants, "warmup-bush", bushRefs)}
       {renderVariants(cloverVariants, "warmup-clover", cloverRefs)}
       {renderVariants(flowerVariants, "warmup-flower", flowerRefs)}
+      <instancedMesh
+        ref={(mesh) => {
+          if (mesh) {
+            mesh.setColorAt(0, new THREE.Color(1, 1, 1));
+          }
+        }}
+        args={[rockGeometry, nuclearDebrisMaterial, 1]}
+        scale={WARMUP_SCALE}
+        frustumCulled={false}
+      />
       <instancedMesh ref={rockRef} args={[rockGeometry, rockMaterial, 1]} frustumCulled={false} />
       <mesh geometry={smokeGeometry} material={smokeWarmupMaterial} frustumCulled={false} />
       <mesh geometry={volcanoGeometry} material={volcanoWarmupMaterial} frustumCulled={false} />
       <mesh
-        geometry={nuclearZoneGeometry}
+        geometry={nuclearZoneGeometry.bowl}
         material={nuclearZoneWarmupMaterial}
+        frustumCulled={false}
+      />
+      <mesh geometry={nuclearZoneGeometry.bowl} frustumCulled={false}>
+        <meshStandardMaterial color="#59633d" roughness={0.85} />
+      </mesh>
+      <mesh
+        geometry={nuclearZoneGeometry.mask}
+        material={nuclearMaskMaterial}
+        frustumCulled={false}
+      />
+      <mesh
+        geometry={nuclearZoneGeometry.bowl}
+        material={nuclearWaveMaterial}
         frustumCulled={false}
       />
       <mesh geometry={worldTreeGeometry} material={worldTreeWarmupMaterial} frustumCulled={false} />
