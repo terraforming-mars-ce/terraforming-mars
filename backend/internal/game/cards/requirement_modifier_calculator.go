@@ -208,15 +208,15 @@ func (c *RequirementModifierCalculator) CalculateCardDiscounts(p *player.Player,
 	return totalDiscount
 }
 
-// CalculateGlobalParameterLenience computes the total lenience for a specific global parameter requirement.
-// Lenience widens the min/max window: min is lowered, max is raised.
+// CalculateGlobalParameterRequirementOffset converts matching requirement steps to parameter units.
+// The result widens the requirement window in degrees, percentage points, or ocean tiles.
 // The paramType should be one of: "temperature", "oxygen", "ocean", "venus".
-func (c *RequirementModifierCalculator) CalculateGlobalParameterLenience(p *player.Player, paramType string) int {
+func (c *RequirementModifierCalculator) CalculateGlobalParameterRequirementOffset(p *player.Player, paramType string) int {
 	if p == nil {
 		return 0
 	}
 
-	totalLenience := 0
+	totalSteps := 0
 	for _, effect := range p.Effects().List() {
 		for _, outputBC := range effect.Behavior.Outputs {
 			if outputBC.GetResourceType() != shared.ResourceGlobalParameterLenience {
@@ -225,15 +225,20 @@ func (c *RequirementModifierCalculator) CalculateGlobalParameterLenience(p *play
 			selectors := shared.GetSelectors(outputBC)
 			if len(selectors) > 0 {
 				if matchesGlobalParameterSelector(selectors, paramType) {
-					totalLenience += outputBC.GetAmount()
+					totalSteps += outputBC.GetAmount()
 				}
 			} else {
-				totalLenience += outputBC.GetAmount()
+				totalSteps += outputBC.GetAmount()
 			}
 		}
 	}
 
-	return totalLenience
+	switch paramType {
+	case "temperature", "venus":
+		return totalSteps * 2
+	default:
+		return totalSteps
+	}
 }
 
 // HasIgnoreGlobalRequirements returns true if the player has an active effect
