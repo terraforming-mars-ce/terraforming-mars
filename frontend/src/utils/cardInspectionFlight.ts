@@ -16,6 +16,7 @@ const EASING = "cubic-bezier(0.22, 0.8, 0.3, 1)";
 export interface CardInspectionFlight {
   play: (closing: boolean, speed?: number) => void;
   fadeBack: () => void;
+  release: (onFinish: () => void) => void;
   dispose: () => void;
 }
 
@@ -239,6 +240,23 @@ export function createCardInspectionFlight(
         animation.play();
       }
       endPlay();
+    },
+    release(onFinish) {
+      cancelFade();
+      movement.onfinish = null;
+      animations.forEach((animation) => animation.pause());
+      const computedTransform = getComputedStyle(flight).transform;
+      const transform = computedTransform === "none" ? "scale(1)" : computedTransform;
+      const opacity = getComputedStyle(flight).opacity;
+      // Animate the paused flight itself, including an interrupted inspection entrance.
+      fade = flight.animate(
+        [
+          { transform, opacity },
+          { transform: `${transform} scale(0.85)`, opacity: 0 },
+        ],
+        { duration: 350, easing: "ease-out", fill: "both" },
+      );
+      fade.onfinish = onFinish;
     },
     fadeBack() {
       const opacity = getComputedStyle(flight).opacity;
