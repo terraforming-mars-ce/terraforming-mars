@@ -4,6 +4,7 @@ import * as THREE from "three";
 
 const MODEL_PATHS = {
   trees: assetUrl("models/trees"),
+  pines: assetUrl("models/pines"),
   rock: assetUrl("models/rock"),
   flowers: assetUrl("models/flowers"),
   bird: assetUrl("models/bird"),
@@ -14,6 +15,7 @@ const MODEL_PATHS = {
 } as const;
 
 useGLTF.preload(MODEL_PATHS.trees);
+useGLTF.preload(MODEL_PATHS.pines);
 useGLTF.preload(MODEL_PATHS.rock);
 useGLTF.preload(MODEL_PATHS.flowers);
 useGLTF.preload(MODEL_PATHS.bird);
@@ -24,6 +26,7 @@ useGLTF.preload(MODEL_PATHS.phobos);
 
 interface Models {
   treesScene: THREE.Group;
+  pinesScene: THREE.Group;
   rockScene: THREE.Group;
   flowersScene: THREE.Group;
   birdScene: THREE.Group;
@@ -36,6 +39,7 @@ interface Models {
 
 export function useModels(): Models {
   const { scene: treesScene } = useGLTF(MODEL_PATHS.trees);
+  const { scene: pinesScene } = useGLTF(MODEL_PATHS.pines);
   const { scene: rockScene } = useGLTF(MODEL_PATHS.rock);
   const { scene: flowersScene } = useGLTF(MODEL_PATHS.flowers);
   const { scene: birdScene, animations: birdAnimations } = useGLTF(MODEL_PATHS.bird);
@@ -46,6 +50,7 @@ export function useModels(): Models {
 
   return {
     treesScene,
+    pinesScene,
     rockScene,
     flowersScene,
     birdScene,
