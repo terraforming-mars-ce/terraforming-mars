@@ -75,7 +75,7 @@ func TestRobinsonIndustries_ActionSucceedsWithSufficientCredits(t *testing.T) {
 
 	choiceIndex := 0
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Robinson Industries action should succeed with 10 credits")
 
 	resources := p.Resources().Get()
@@ -147,7 +147,7 @@ func TestRobinsonIndustries_OnlyAllowsIncreasingLowestProduction(t *testing.T) {
 	// This should FAIL because Robinson Industries only allows increasing the LOWEST production
 	steelChoice := 1
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &steelChoice, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &steelChoice, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Robinson Industries should reject increasing steel production (3) when other productions are at 0")
 }
 
@@ -188,7 +188,7 @@ func TestRobinsonIndustries_ActionFailsWithInsufficientCredits(t *testing.T) {
 
 	choiceIndex := 0
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Robinson Industries action should fail with only 3 credits")
 
 	resources := p.Resources().Get()
@@ -270,8 +270,8 @@ func TestSaturnSystems_CorporationPlays(t *testing.T) {
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Saturn Systems should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID),
 		"Saturn Systems should be in played cards")
@@ -328,8 +328,8 @@ func TestTeractor_CorporationPlays(t *testing.T) {
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Teractor should play successfully")
 	testutil.AssertTrue(t, p.PlayedCards().Contains(card.ID),
 		"Teractor should be in played cards")
