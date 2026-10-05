@@ -4,7 +4,9 @@ import (
 	"context"
 	"testing"
 
+	baseaction "terraforming-mars-backend/internal/action"
 	cardAction "terraforming-mars-backend/internal/action/card"
+	turnAction "terraforming-mars-backend/internal/action/turn_management"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -33,7 +35,7 @@ func TestStoragePaymentSubstitute_RegisteredOnCardPlay(t *testing.T) {
 				{
 					Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
 					Outputs: []shared.BehaviorCondition{
-						&shared.EffectCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceStoragePaymentSubstitute, Amount: 3}, Selectors: []shared.Selector{
+						&shared.PaymentSubstituteCondition{ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePaymentSubstitute, Amount: 3, Target: "self-player"}, Source: shared.PaymentSource{Target: "self-card", Resource: shared.ResourceFloater}, TargetResource: shared.ResourceCredit, Selectors: []shared.Selector{
 							{Tags: []shared.CardTag{shared.TagVenus}},
 						}},
 					},
@@ -50,14 +52,14 @@ func TestStoragePaymentSubstitute_RegisteredOnCardPlay(t *testing.T) {
 	p.Hand().AddCard(dirigiblesID)
 
 	playAction := cardAction.NewPlayCardAction(repo, testCardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 11}
-	err := playAction.Execute(ctx, testGame.ID(), playerID, dirigiblesID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.ResourceCredit, 11)
+	err := playAction.Execute(ctx, testGame.ID(), playerID, dirigiblesID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Dirigibles should succeed")
 
 	// Verify storage payment substitute was registered
-	subs := p.Resources().StoragePaymentSubstitutes()
+	subs := p.Resources().PaymentSubstitutes()
 	testutil.AssertTrue(t, len(subs) > 0, "Should have at least one storage payment substitute")
-	testutil.AssertEqual(t, dirigiblesID, subs[0].CardID, "Storage payment substitute should reference Dirigibles card")
+	testutil.AssertEqual(t, dirigiblesID, subs[0].Source.CardID, "Storage payment substitute should reference Dirigibles card")
 	testutil.AssertEqual(t, 3, subs[0].ConversionRate, "Floater conversion rate should be 3")
 }
 
@@ -74,12 +76,10 @@ func TestStoragePaymentSubstitute_UsedForCardPayment(t *testing.T) {
 	p.PlayedCards().AddCard(dirigiblesID, "Test Dirigibles", "active", []string{"venus"})
 	p.Resources().AddToStorage(dirigiblesID, 3) // 3 floaters stored
 
-	p.Resources().AddStoragePaymentSubstitute(shared.StoragePaymentSubstitute{
-		CardID:         dirigiblesID,
-		ResourceType:   shared.ResourceFloater,
+	p.Resources().AddPaymentSubstitute(shared.PaymentSubstitute{Source: shared.PaymentSource{Target: "self-card", CardID: dirigiblesID, Resource: shared.ResourceFloater},
 		ConversionRate: 3,
 		Selectors:      []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}},
-	})
+		TargetResource: shared.ResourceCredit})
 
 	// Define a synthetic Venus-tagged card for this test
 	venusCardID := "test-venus-card"
@@ -90,94 +90,23 @@ func TestStoragePaymentSubstitute_UsedForCardPayment(t *testing.T) {
 		Cost: 7,
 		Tags: []shared.CardTag{shared.TagVenus},
 	}
-	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards([]gamecards.Card{syntheticVenusCard})
+	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards([]gamecards.Card{syntheticVenusCard, {ID: dirigiblesID, Name: "Test Dirigibles", Type: gamecards.CardTypeActive, ResourceStorage: &gamecards.ResourceStorage{Type: shared.ResourceFloater}}})
 
 	p.Hand().AddCard(venusCardID)
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{
-		Credits:            1, // 1 credit + 2 floaters * 3 M€ = 7 M€
-		StorageSubstitutes: map[string]int{dirigiblesID: 2},
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-player", Resource: "credit"}, TargetResource: shared.ResourceCredit, Amount: 1}, {Source: shared.PaymentSource{
+		Target: "self-card", Resource: "floater", CardID: dirigiblesID}, TargetResource: shared.ResourceCredit, Amount: 2}},
+
+	// 1 credit + 2 floaters * 3 M€ = 7 M€
+
 	}
 
-	err := playAction.Execute(ctx, testGame.ID(), playerID, venusCardID, payment, nil, nil, nil, nil)
+	err := playAction.Execute(ctx, testGame.ID(), playerID, venusCardID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Venus card with storage payment should succeed")
 
 	// Verify floaters were deducted
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(dirigiblesID), "Should have 1 floater remaining after using 2")
-}
-
-// --- CardPayment unit tests ---
-
-func TestCardPayment_TotalValue_WithStorageSubstitutes(t *testing.T) {
-	substitutes := []shared.PaymentSubstitute{
-		{ResourceType: shared.ResourceSteel, ConversionRate: 2},
-		{ResourceType: shared.ResourceTitanium, ConversionRate: 3},
-	}
-	storageSubs := []shared.StoragePaymentSubstitute{
-		{CardID: "card-a", ResourceType: shared.ResourceFloater, ConversionRate: 3},
-	}
-
-	payment := gamecards.CardPayment{
-		Credits:            5,
-		StorageSubstitutes: map[string]int{"card-a": 2},
-	}
-
-	total := payment.TotalValue(substitutes, storageSubs)
-	// 5 credits + 2 floaters * 3 M€ = 11 M€
-	testutil.AssertEqual(t, 11, total, "Total value should include storage substitute value")
-}
-
-func TestCardPayment_CoversCardCost_WithStorageSubstitutes(t *testing.T) {
-	substitutes := []shared.PaymentSubstitute{
-		{ResourceType: shared.ResourceSteel, ConversionRate: 2},
-		{ResourceType: shared.ResourceTitanium, ConversionRate: 3},
-	}
-	storageSubs := []shared.StoragePaymentSubstitute{
-		{CardID: "card-a", ResourceType: shared.ResourceFloater, ConversionRate: 3},
-	}
-
-	payment := gamecards.CardPayment{
-		Credits:            5,
-		StorageSubstitutes: map[string]int{"card-a": 2},
-	}
-
-	err := payment.CoversCardCost(11, false, false, substitutes, storageSubs)
-	testutil.AssertNoError(t, err, "Payment of 5 credits + 2*3 floaters should cover 11 M€ cost")
-}
-
-func TestCardPayment_CoversCardCost_RejectsInvalidStorageCard(t *testing.T) {
-	substitutes := []shared.PaymentSubstitute{
-		{ResourceType: shared.ResourceSteel, ConversionRate: 2},
-		{ResourceType: shared.ResourceTitanium, ConversionRate: 3},
-	}
-
-	// No storage substitutes registered
-	payment := gamecards.CardPayment{
-		Credits:            5,
-		StorageSubstitutes: map[string]int{"unregistered-card": 2},
-	}
-
-	err := payment.CoversCardCost(11, false, false, substitutes, nil)
-	testutil.AssertError(t, err, "Should reject payment from unregistered storage card")
-}
-
-func TestCardPayment_CanAfford_ChecksStorageAvailability(t *testing.T) {
-	payment := gamecards.CardPayment{
-		Credits:            5,
-		StorageSubstitutes: map[string]int{"card-a": 3},
-	}
-
-	resources := shared.Resources{Credits: 10}
-	storageGetter := func(cardID string) int {
-		if cardID == "card-a" {
-			return 2 // Only 2 available, but trying to use 3
-		}
-		return 0
-	}
-
-	err := payment.CanAfford(resources, storageGetter)
-	testutil.AssertError(t, err, "Should fail when trying to use more storage resources than available")
 }
 
 // --- Variable Amount Storage Inputs (Sulphur-Eating Bacteria pattern) ---
@@ -227,7 +156,7 @@ func TestVariableAmount_StorageInput_SpendMultipleMicrobes(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, nil, nil, nil, &selectedAmount, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, nil, nil, nil, &selectedAmount, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Spending 3 microbes should succeed")
 
 	testutil.AssertEqual(t, 2, p.Resources().GetCardStorage(cardID), "Should have 2 microbes remaining after spending 3")
@@ -277,7 +206,7 @@ func TestVariableAmount_StorageInput_InsufficientMicrobes(t *testing.T) {
 	selectedAmount := 5
 
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, nil, nil, nil, &selectedAmount, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, nil, nil, nil, &selectedAmount, nil, nil, nil)
 	testutil.AssertError(t, err, "Should fail when trying to spend more microbes than available")
 
 	testutil.AssertEqual(t, 2, p.Resources().GetCardStorage(cardID), "Microbes should not be deducted on failure")
@@ -329,9 +258,10 @@ func TestEffect_PaymentSubstituteRegistration(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 
-	effect := &shared.EffectCondition{
+	effect := &shared.PaymentSubstituteCondition{
+		Source: shared.PaymentSource{Target: "self-player", Resource: shared.ResourceHeat}, TargetResource: shared.ResourceCredit,
 		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePaymentSubstitute, Amount: 1, Target: "self-player"},
-		Selectors:     []shared.Selector{{Resources: []string{"heat"}}},
+		Selectors:     nil,
 	}
 
 	applyOutputs(t, p, testGame, cardRegistry, effect)
@@ -339,7 +269,7 @@ func TestEffect_PaymentSubstituteRegistration(t *testing.T) {
 	subs := p.Resources().PaymentSubstitutes()
 	found := false
 	for _, sub := range subs {
-		if sub.ResourceType == shared.ResourceHeat {
+		if sub.Source.Resource == shared.ResourceHeat {
 			found = true
 			break
 		}
@@ -380,9 +310,9 @@ func TestEffect_GlobalParameterLenience(t *testing.T) {
 
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(nil)
 	calc := gamecards.NewRequirementModifierCalculator(cardRegistry)
-	lenience := calc.CalculateGlobalParameterLenience(p, "temperature")
+	lenience := calc.CalculateGlobalParameterRequirementOffset(p, "temperature")
 
-	testutil.AssertEqual(t, 2, lenience, "Temperature lenience should be 2")
+	testutil.AssertEqual(t, 4, lenience, "Two temperature steps should allow 4 degrees")
 }
 
 func TestEffect_IgnoreGlobalRequirements(t *testing.T) {
@@ -443,7 +373,8 @@ func TestEffect_PaymentSubstituteEmptySelectors(t *testing.T) {
 
 	subsBefore := len(p.Resources().PaymentSubstitutes())
 
-	effect := &shared.EffectCondition{
+	effect := &shared.PaymentSubstituteCondition{
+		Source: shared.PaymentSource{Target: "self-player", Resource: shared.ResourceHeat}, TargetResource: shared.ResourceCredit,
 		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourcePaymentSubstitute, Amount: 1, Target: "self-player"},
 		Selectors:     nil,
 	}
@@ -451,8 +382,8 @@ func TestEffect_PaymentSubstituteEmptySelectors(t *testing.T) {
 	applyOutputs(t, p, testGame, cardRegistry, effect)
 
 	subsAfter := p.Resources().PaymentSubstitutes()
-	testutil.AssertEqual(t, subsBefore, len(subsAfter),
-		"No payment substitute should be registered when selectors are empty")
+	testutil.AssertEqual(t, subsBefore+1, len(subsAfter),
+		"Empty selectors grant unrestricted payment substitution")
 }
 
 func TestEffect_ValueModifierEmptySelectors(t *testing.T) {
@@ -472,4 +403,73 @@ func TestEffect_ValueModifierEmptySelectors(t *testing.T) {
 	titaniumMod := p.Resources().GetValueModifier(shared.ResourceTitanium)
 	testutil.AssertEqual(t, 0, steelMod, "Steel value modifier should be 0 with empty selectors")
 	testutil.AssertEqual(t, 0, titaniumMod, "Titanium value modifier should be 0 with empty selectors")
+}
+
+func TestPrelude_SelfTagEffectsOnlyReplayForNewCard(t *testing.T) {
+	ctx := context.Background()
+	g, _, _, id, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	log := testutil.TestLogger()
+	behavior := shared.CardBehavior{
+		Triggers: []shared.Trigger{{Type: "auto", Condition: &shared.ResourceTriggerCondition{Type: "tag-played", Selectors: []shared.Selector{{Tags: []shared.CardTag{shared.TagScience}}}}}},
+		Outputs:  []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 1, "self-player")},
+	}
+	prelude := gamecards.Card{ID: "test-tag-prelude", Name: "Tag Prelude", Type: gamecards.CardTypePrelude, Tags: []shared.CardTag{shared.TagScience, shared.TagScience}, Behaviors: []shared.CardBehavior{behavior}}
+	registry := testutil.CreateTestCardRegistryWithAdditionalCards([]gamecards.Card{prelude})
+	existing := shared.CardEffect{CardID: "existing", CardName: "Existing", Behavior: behavior}
+	p.Effects().AddEffect(existing)
+	baseaction.SubscribePassiveEffectToEvents(ctx, g, p, existing, log, registry)
+	before := p.Resources().Get().Credits
+	testutil.AssertNoError(t, turnAction.ApplyPreludeCard(ctx, g, p, prelude.ID, registry, nil, log), "apply prelude")
+	testutil.AssertEqual(t, before+4, p.Resources().Get().Credits, "two matching tags reward new and existing effects twice each")
+}
+
+func TestCorporationStartingEffects_DoNotApplyConditionalOutputs(t *testing.T) {
+	ctx := context.Background()
+	g, _, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	corp := gamecards.Card{ID: "conditional-corp", Name: "Conditional corporation", Type: gamecards.CardTypeCorporation, Behaviors: []shared.CardBehavior{
+		{Triggers: []shared.Trigger{{Type: "auto-corporation-start", Condition: &shared.ResourceTriggerCondition{Type: "tag-played", Selectors: []shared.Selector{{Tags: []shared.CardTag{shared.TagScience}}}}}}, Outputs: []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 10, "self-player")}},
+	}}
+	before := p.Resources().Get().Credits
+	processor := gamecards.NewCorporationProcessor(registry, nil, testutil.TestLogger())
+	testutil.AssertNoError(t, processor.ApplyStartingEffects(ctx, &corp, p, g), "starting effects")
+	testutil.AssertEqual(t, before, p.Resources().Get().Credits, "conditional output must wait for matching event")
+}
+
+func TestDefense_ResourceScopeAndOverlappingPolicies(t *testing.T) {
+	g, _, registry, id, otherID := testutil.SetupTwoPlayerGame(t)
+	owner, _ := g.GetPlayer(id)
+	other, _ := g.GetPlayer(otherID)
+	habitats := testutil.GetCardByName("Protected Habitats")
+	pets := testutil.GetCardByName("Pets")
+	owner.Effects().AddEffect(shared.CardEffect{CardID: habitats.ID, Behavior: habitats.Behaviors[0]})
+	owner.Effects().AddEffect(shared.CardEffect{CardID: pets.ID, Behavior: pets.Behaviors[0]})
+	for _, tc := range []struct {
+		rt        shared.ResourceType
+		card      string
+		own, want bool
+	}{
+		{shared.ResourceAnimal, pets.ID, true, true}, {shared.ResourceAnimal, pets.ID, false, true},
+		{shared.ResourceAnimal, testutil.CardID("Birds"), true, false},
+		{shared.ResourceAnimal, testutil.CardID("Birds"), false, true},
+		{shared.ResourceMicrobe, testutil.CardID("Decomposers"), false, true},
+		{shared.ResourcePlant, "", false, true}, {shared.ResourcePlant, "", true, false},
+		{shared.ResourceHeat, "", false, false}, {shared.ResourceFloater, "any", false, false},
+		{shared.ResourcePlantProduction, "", false, false},
+	} {
+		actor := other
+		if tc.own {
+			actor = owner
+		}
+		testutil.AssertEqual(t, tc.want, gamecards.IsResourceProtected(actor, owner, tc.rt, tc.card), "scope")
+	}
+	testutil.AssertEqual(t, false, gamecards.IsResourceProtected(owner, other, shared.ResourcePlant, ""), "unprotected owner unaffected")
+	owner.Resources().Add(map[shared.ResourceType]int{shared.ResourcePlant: 8})
+	applier := gamecards.NewBehaviorApplier(owner, g, "conversion", testutil.TestLogger()).WithCardRegistry(registry)
+	testutil.AssertNoError(t, applier.ApplyInputs(context.Background(), []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourcePlant, 8, "self-player")}), "own plants spend normally")
+	owner.Resources().AddProduction(map[shared.ResourceType]int{shared.ResourcePlantProduction: 2})
+	attacker := gamecards.NewBehaviorApplier(other, g, "attack", testutil.TestLogger()).WithCardRegistry(registry).WithTargetPlayerID(id)
+	testutil.AssertNoError(t, attacker.ApplyOutputs(context.Background(), []shared.BehaviorCondition{shared.NewProductionCondition(shared.ResourcePlantProduction, -1, "any-player")}), "production not protected")
+	testutil.AssertEqual(t, 1, owner.Resources().Production().Plants, "production removed")
 }
