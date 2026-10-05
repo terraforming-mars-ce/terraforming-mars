@@ -1,5 +1,7 @@
 package colony_test
 
+import "terraforming-mars-backend/internal/game/shared"
+
 import (
 	"context"
 	"testing"
@@ -21,7 +23,7 @@ func TestBuildColony_DeductsCredits(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 50)
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
 	testutil.AssertEqual(t, 33, testutil.GetPlayerCredits(p), "Should deduct 17 credits (50 - 17 = 33)")
@@ -41,7 +43,7 @@ func TestBuildColony_GivesPlacementReward(t *testing.T) {
 	creditsBefore := 50
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
 	// 50 - 17 (cost) + reward from first Luna slot
@@ -68,7 +70,7 @@ func TestBuildColony_CardTargetedReward_CreatesPendingSelection(t *testing.T) {
 	p.PlayedCards().AddCard(aerialMappersID, "Aerial Mappers", "active", []string{"venus"})
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, cardRegistry, stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "titan")
+	err := action.Execute(ctx, testGame.ID(), playerID, "titan", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
 	selection := firstColonyResourceFromQueue(p)
@@ -91,7 +93,7 @@ func TestBuildColony_FullColony_Fails(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 50)
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertError(t, err, "Should fail when colony is full")
 }
 
@@ -108,7 +110,7 @@ func TestBuildColony_DuplicateColony_Fails(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 50)
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertError(t, err, "Should fail when player already has colony on this tile")
 }
 
@@ -124,7 +126,7 @@ func TestBuildColony_InsufficientCredits_Fails(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 10)
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertError(t, err, "Should fail with insufficient credits")
 }
 
@@ -141,7 +143,7 @@ func TestBuildColony_OceanPlacementReward_CreatesTileSelection(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 50)
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "europa")
+	err := action.Execute(ctx, testGame.ID(), playerID, "europa", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
 	tileSelection := testGame.GetPendingTileSelection(playerID)
@@ -161,7 +163,7 @@ func TestBuildColony_PlacesPlayerOnTile(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 50)
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
 	tileState := testGame.Colonies().GetState("luna")
@@ -182,7 +184,7 @@ func TestBuildColony_BumpsMarkerToMinimum(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 50)
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
 	tileState := testGame.Colonies().GetState("luna")
@@ -202,7 +204,7 @@ func TestBuildColony_BumpsMarkerWhenMultipleColoniesBuilt(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 50)
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
 	tileState := testGame.Colonies().GetState("luna")
@@ -222,7 +224,7 @@ func TestBuildColony_DoesNotLowerMarker(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 50)
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "luna")
+	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
 	testutil.AssertNoError(t, err, "Build colony should succeed")
 
 	tileState := testGame.Colonies().GetState("luna")

@@ -46,17 +46,20 @@ func (a *ConfirmColonyResourceAction) Execute(ctx context.Context, gameID string
 		return err
 	}
 
-	selection := p.Selection().PopPendingColonyResource()
-	if selection == nil {
+	queue := p.Selection().GetPendingColonyResourceQueue()
+	if len(queue) == 0 {
 		log.Warn("No pending colony resource selection found")
 		return fmt.Errorf("no pending colony resource selection found")
 	}
 
+	selection := queue[0]
 	// If empty target, player skipped (no eligible card or chose to skip)
 	if targetCardID == "" {
 		log.Debug("Player skipped colony resource placement",
 			slog.String("resource_type", selection.ResourceType),
 			slog.Int("amount", selection.Amount))
+		p.Selection().PopPendingColonyResource()
+		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 		return nil
 	}
 
@@ -86,6 +89,7 @@ func (a *ConfirmColonyResourceAction) Execute(ctx context.Context, gameID string
 		return fmt.Errorf("card %s does not belong to player", targetCardID)
 	}
 
+	p.Selection().PopPendingColonyResource()
 	// Apply the resources to the card's storage
 	p.Resources().AddToStorage(targetCardID, selection.Amount)
 
@@ -95,5 +99,6 @@ func (a *ConfirmColonyResourceAction) Execute(ctx context.Context, gameID string
 		slog.String("target_card", targetCardID),
 		slog.String("source", selection.Source))
 
+	baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 	return nil
 }

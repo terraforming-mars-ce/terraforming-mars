@@ -190,6 +190,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 
 func (a *StartGameAction) initializeColonies(g *game.Game, playerIDs []string, rng *rand.Rand, log *slog.Logger) {
 	allColonies := a.colonyRegistry.GetAll()
+	g.Colonies().SetDefinitions(allColonies)
 	if len(allColonies) == 0 {
 		log.Warn("No colony definitions available")
 		return
@@ -213,12 +214,7 @@ func (a *StartGameAction) initializeColonies(g *game.Game, playerIDs []string, r
 	// Initialize tile states
 	states := make([]*colony.ColonyState, len(selected))
 	for i, def := range selected {
-		states[i] = &colony.ColonyState{
-			DefinitionID:   def.ID,
-			MarkerPosition: 1,
-			PlayerColonies: []string{},
-			TradedThisGen:  false,
-		}
+		states[i] = colony.NewTileState(def, false)
 	}
 	g.Colonies().SetStates(states)
 	g.InitializeTradeFleets(playerIDs)

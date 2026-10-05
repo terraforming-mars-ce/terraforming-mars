@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"terraforming-mars-backend/internal/game/shared"
 
 	colonyaction "terraforming-mars-backend/internal/action/colony"
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -67,7 +68,20 @@ func (h *BuildColonyHandler) HandleMessage(ctx context.Context, connection *core
 		return
 	}
 
-	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.ColonyID)
+	var paymentEnvelope struct {
+		Payment shared.Payment `json:"payment"`
+	}
+	paymentBytes, paymentErr := json.Marshal(message.Payload)
+	if paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+
+	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.ColonyID, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute build colony action", slog.Any("error", err))
 		h.sendError(connection, err.Error())

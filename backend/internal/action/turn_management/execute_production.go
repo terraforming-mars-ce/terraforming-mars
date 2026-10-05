@@ -22,15 +22,16 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 	// Solar Phase: advance colony markers and reset trade fleets
 	if g.HasColonies() {
 		for _, state := range g.Colonies().States() {
+			if state.AwaitingResource != "" {
+				continue
+			}
 			state.TradedThisGen = false
 			state.TraderID = ""
 			if state.MarkerPosition < 6 {
 				state.MarkerPosition++
 			}
 		}
-		for _, p := range players {
-			g.Colonies().SetTradeFleetAvailable(p.ID(), true)
-		}
+		g.Colonies().ResetTradeFleets()
 		log.Debug("Solar phase complete: colony markers advanced, trade fleets reset")
 	}
 
@@ -184,15 +185,16 @@ func ExecuteFinalProductionPhase(ctx context.Context, g *game.Game, players []*p
 
 	if g.HasColonies() {
 		for _, state := range g.Colonies().States() {
+			if state.AwaitingResource != "" {
+				continue
+			}
 			state.TradedThisGen = false
 			state.TraderID = ""
 			if state.MarkerPosition < 6 {
 				state.MarkerPosition++
 			}
 		}
-		for _, p := range players {
-			g.Colonies().SetTradeFleetAvailable(p.ID(), true)
-		}
+		g.Colonies().ResetTradeFleets()
 		log.Debug("Solar phase complete: colony markers advanced, trade fleets reset")
 	}
 
