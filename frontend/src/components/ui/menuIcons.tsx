@@ -127,3 +127,9 @@ export const HamburgerIcon: React.FC = () => (
     <line x1="3" y1="18" x2="21" y2="18" />
   </svg>
 );
+
+export const ThoughtIcon: React.FC = () => (
+  <svg {...svgProps}>
+    <path d="M21 11.5a8.38 8.38 0 0 1-9 8 8.5 8.5 0 0 1-3.8-.9L3 20l1.4-4.2A8.38 8.38 0 0 1 3.5 12a8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 9 8z" />
+  </svg>
+);
