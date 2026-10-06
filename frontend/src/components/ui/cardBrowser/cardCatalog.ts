@@ -6,13 +6,27 @@ import { cardDescriptionToPlainText } from "@/utils/cardDescription.ts";
 export const CARD_FAMILIES = ["project", "prelude", "corporation"] as const;
 export type CardFamily = (typeof CARD_FAMILIES)[number];
 export type CardDisplaySize = "small" | "large";
-export type CardSort = "id" | "name-asc" | "name-desc" | "type-asc" | "type-desc";
+export const CARD_SORTS = ["id", "name-asc", "name-desc", "type-asc", "type-desc"] as const;
+export type CardSort = (typeof CARD_SORTS)[number];
 export interface CardBrowserView {
   query: string;
   family?: CardFamily;
   ids: readonly string[];
+  tags: readonly string[];
+  types: readonly string[];
+  packs: readonly string[];
+  sort: CardSort;
+  size: CardDisplaySize;
 }
-export const EMPTY_VIEW: CardBrowserView = { query: "", ids: [] };
+export const EMPTY_VIEW: CardBrowserView = {
+  query: "",
+  ids: [],
+  tags: [],
+  types: [],
+  packs: [],
+  sort: "id",
+  size: "small",
+};
 export const FAMILY_LABELS: Record<CardFamily, string> = {
   project: "Project cards",
   prelude: "Preludes",
@@ -28,6 +42,14 @@ export function cardFamily(card: CardDto): CardFamily {
 
 export function parseFamily(value: string | null): CardFamily | undefined {
   return CARD_FAMILIES.find((family) => family === value);
+}
+
+export function parseSort(value: string | null): CardSort {
+  return CARD_SORTS.find((sort) => sort === value) ?? "id";
+}
+
+export function parseSize(value: string | null): CardDisplaySize {
+  return value === "large" ? "large" : "small";
 }
 
 interface CatalogEntry {
@@ -108,7 +130,11 @@ export function filterCatalog(entries: CatalogEntry[], filters: CatalogFilters) 
   const query = filters.query.trim().toLowerCase();
   const ids = new Set(filters.ids);
   const idOrder = new Map([...ids].map((id, index) => [id, index]));
-  const groups: Record<CardFamily, CardDto[]> = { project: [], prelude: [], corporation: [] };
+  const groups: Record<CardFamily, CardDto[]> = {
+    project: [],
+    prelude: [],
+    corporation: [],
+  };
   for (const entry of entries) {
     const { card, family } = entry;
     if (ids.size && !ids.has(card.id)) {

@@ -1,5 +1,6 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Z_INDEX } from "@/constants/zIndex.ts";
+import { afterNextPaint, whenIdle } from "@/utils/scheduling.ts";
 import GameButton from "./buttons/GameButton.tsx";
 import CardBrowserSidebar from "./cardBrowser/CardBrowserSidebar.tsx";
 import type { BrowserFilters, FilterKind } from "./cardBrowser/CardBrowserSidebar.tsx";
@@ -25,11 +26,28 @@ interface CardBrowserProps {
   onViewChange?: (patch: Partial<CardBrowserView>) => void;
 }
 
-const emptyFilters = (): BrowserFilters => ({
-  tags: new Set(),
-  types: new Set(),
-  packs: new Set(),
-});
+type ContentView = Pick<CardBrowserView, "sort" | "size" | "tags" | "types" | "packs"> & {
+  family: CardFamily;
+};
+
+function sameContent(a: ContentView, b: ContentView) {
+  return (
+    a.family === b.family &&
+    a.sort === b.sort &&
+    a.size === b.size &&
+    a.tags === b.tags &&
+    a.types === b.types &&
+    a.packs === b.packs
+  );
+}
+
+function toFilters(
+  tags: readonly string[],
+  types: readonly string[],
+  packs: readonly string[],
+): BrowserFilters {
+  return { tags: new Set(tags), types: new Set(types), packs: new Set(packs) };
+}
 
 export default function CardBrowser({
   onBack,
@@ -50,9 +68,10 @@ export default function CardBrowser({
     [onViewChange],
   );
   const { entries, status, error } = useCardCatalog();
-  const [filters, setFilters] = useState(emptyFilters);
-  const [sort, setSort] = useState<CardSort>("id");
-  const [cardSize, setCardSize] = useState<CardDisplaySize>("small");
+  const filters = useMemo(
+    () => toFilters(view.tags, view.types, view.packs),
+    [view.tags, view.types, view.packs],
+  );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [visitedFamilies, setVisitedFamilies] = useState<ReadonlySet<CardFamily>>(() => new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -84,17 +103,51 @@ export default function CardBrowser({
     );
   }, [entries, view.ids]);
   const family = view.family ?? baseFamily;
+  const content = useMemo<ContentView>(
+    () => ({
+      family,
+      sort: view.sort,
+      size: view.size,
+      tags: view.tags,
+      types: view.types,
+      packs: view.packs,
+    }),
+    [family, view.sort, view.size, view.tags, view.types, view.packs],
+  );
+  const [shown, setShown] = useState(content);
+  useEffect(() => {
+    if (sameContent(shown, content)) {
+      return;
+    }
+    // Let the sidebar controls paint on their own before the heavier grid update.
+    return afterNextPaint(() => setShown(content));
+  }, [content, shown]);
+  const shownFamily = shown.family;
+  const shownFilters = useMemo(
+    () => toFilters(shown.tags, shown.types, shown.packs),
+    [shown.tags, shown.types, shown.packs],
+  );
   useEffect(() => {
     setVisitedFamilies((previous) => {
-      if (previous.has(family)) {
+      if (previous.has(shownFamily)) {
         return previous;
       }
-      return new Set([...previous, family]);
+      return new Set([...previous, shownFamily]);
     });
-  }, [family]);
+  }, [shownFamily]);
+  useEffect(() => {
+    if (status !== "ready") {
+      return;
+    }
+    const missing = CARD_FAMILIES.find((item) => !visitedFamilies.has(item));
+    if (!missing) {
+      return;
+    }
+    return whenIdle(() => setVisitedFamilies((previous) => new Set([...previous, missing])));
+  }, [status, visitedFamilies]);
   const groups = useMemo(
-    () => filterCatalog(entries, { query, ids: view.ids, ...filters, sort }),
-    [entries, query, view.ids, filters, sort],
+    () => filterCatalog(entries, { query, ids: view.ids, ...shownFilters, sort: shown.sort }),
+    [entries, query, view.ids, shownFilters, shown.sort],
   );
   const counts = useMemo(
     () => ({
@@ -141,21 +194,32 @@ export default function CardBrowser({
       return next;
     });
   }, []);
-  const toggleFilter = useCallback((kind: FilterKind, value: string) => {
-    setFilters((previous) => {
-      const next = new Set(previous[kind]);
-      if (next.has(value)) {
-        next.delete(value);
-      } else {
-        next.add(value);
-      }
-      return { ...previous, [kind]: next };
-    });
-  }, []);
-  const clearFilters = () => {
-    setFilters(emptyFilters());
-    updateView({ query: "" });
-  };
+  const currentView = useRef(view);
+  currentView.current = view;
+  const toggleFilter = useCallback(
+    (kind: FilterKind, value: string) => {
+      const values = currentView.current[kind];
+      updateView({
+        [kind]: values.includes(value)
+          ? values.filter((item) => item !== value)
+          : [...values, value],
+      });
+    },
+    [updateView],
+  );
+  const clearFilters = useCallback(
+    () => updateView({ query: "", tags: [], types: [], packs: [] }),
+    [updateView],
+  );
+  const changeCardSize = useCallback((size: CardDisplaySize) => updateView({ size }), [updateView]);
+  const changeFamily = useCallback(
+    (next: CardFamily) => updateView({ family: next }),
+    [updateView],
+  );
+  const changeQuery = useCallback((next: string) => updateView({ query: next }), [updateView]);
+  const changeSort = useCallback((next: CardSort) => updateView({ sort: next }), [updateView]);
+  const clearSelection = useCallback(() => setSelected(new Set()), []);
+  const exitShared = useCallback(() => updateView({ ids: [] }), [updateView]);
 
   return (
     <div
@@ -170,9 +234,9 @@ export default function CardBrowser({
       <CardBrowserSidebar
         family={family}
         query={view.query}
-        sort={sort}
-        cardSize={cardSize}
-        onCardSize={setCardSize}
+        sort={view.sort}
+        cardSize={view.size}
+        onCardSize={changeCardSize}
         filters={filters}
         tags={tags}
         packs={packs}
@@ -185,13 +249,13 @@ export default function CardBrowser({
         backLabel={backLabel}
         onBack={onBack}
         onClose={closeDrawer}
-        onFamily={(family: CardFamily) => updateView({ family })}
-        onQuery={(query) => updateView({ query })}
-        onSort={setSort}
+        onFamily={changeFamily}
+        onQuery={changeQuery}
+        onSort={changeSort}
         onToggle={toggleFilter}
         onClearFilters={clearFilters}
-        onClearSelection={() => setSelected(new Set())}
-        onExitShared={() => updateView({ ids: [] })}
+        onClearSelection={clearSelection}
+        onExitShared={exitShared}
       />
       <main className="relative min-h-0 min-w-0 flex-1 pt-16 lg:pt-0" inert={drawerOpen}>
         <div className="absolute left-4 top-3 lg:hidden">
@@ -212,7 +276,7 @@ export default function CardBrowser({
             </GameButton>
           </div>
         )}
-        {status === "ready" && groups[family].length === 0 && (
+        {status === "ready" && groups[shownFamily].length === 0 && (
           <div className="space-y-4 p-8 text-left">
             <h2 className="font-orbitron text-lg">No matching cards</h2>
             <p className="text-white/60">Try another family or clear your search and filters.</p>
@@ -227,15 +291,15 @@ export default function CardBrowser({
           </div>
         )}
         {status === "ready" && (
-          <div className="relative h-full min-h-0" hidden={groups[family].length === 0}>
-            {CARD_FAMILIES.filter((item) => item === family || visitedFamilies.has(item)).map(
+          <div className="relative h-full min-h-0" hidden={groups[shownFamily].length === 0}>
+            {CARD_FAMILIES.filter((item) => item === shownFamily || visitedFamilies.has(item)).map(
               (item) => (
                 <CachedCardFamily
                   key={item}
-                  active={item === family}
+                  active={item === shownFamily}
                   cards={groups[item]}
                   family={item}
-                  size={cardSize}
+                  size={shown.size}
                   selected={selected}
                   onSelect={toggleSelection}
                 />
