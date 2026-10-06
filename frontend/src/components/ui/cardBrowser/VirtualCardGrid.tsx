@@ -1,8 +1,18 @@
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import type { KeyboardEvent } from "react";
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import type { Range } from "@tanstack/react-virtual";
 import type { CardDto } from "@/types/generated/api-types.ts";
+import { whenIdle } from "@/utils/scheduling.ts";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 import GameCard from "../cards/GameCard.tsx";
 import CorporationCard from "../cards/CorporationCard.tsx";
@@ -289,18 +299,47 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
   );
 });
 
-export default memo(
-  function CachedCardFamily({ active, ...props }: VirtualCardGridProps & { active: boolean }) {
-    return (
-      <div
-        className={`absolute inset-0 ${active ? "visible opacity-100" : "invisible opacity-0 pointer-events-none"}`}
-        aria-hidden={!active}
-        inert={!active}
-        data-card-family={props.family}
-      >
-        <VirtualCardGrid {...props} />
-      </div>
-    );
-  },
-  (previous, next) => !previous.active && !next.active,
-);
+function sameGridProps(a: VirtualCardGridProps, b: VirtualCardGridProps) {
+  return (
+    a.cards === b.cards &&
+    a.family === b.family &&
+    a.size === b.size &&
+    a.selected === b.selected &&
+    a.onSelect === b.onSelect
+  );
+}
+
+export default memo(function CachedCardFamily({
+  active,
+  cards,
+  family,
+  size,
+  selected,
+  onSelect,
+}: VirtualCardGridProps & { active: boolean }) {
+  const latest = { cards, family, size, selected, onSelect };
+  const shown = useRef(latest);
+  const [, refresh] = useReducer((count: number) => count + 1, 0);
+  if (active) {
+    shown.current = latest;
+  }
+  const stale = !sameGridProps(shown.current, latest);
+  useEffect(() => {
+    if (!stale) {
+      return;
+    }
+    return whenIdle(() => {
+      shown.current = { cards, family, size, selected, onSelect };
+      refresh();
+    });
+  }, [stale, cards, family, size, selected, onSelect]);
+  return (
+    <div
+      className={`absolute inset-0 ${active ? "" : "[content-visibility:hidden] pointer-events-none"}`}
+      inert={!active}
+      data-card-family={family}
+    >
+      <VirtualCardGrid {...shown.current} />
+    </div>
+  );
+});
