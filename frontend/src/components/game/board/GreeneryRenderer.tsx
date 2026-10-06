@@ -23,7 +23,12 @@ import {
 } from "./shaders";
 import { SPHERE_RADIUS, easeOutCubic } from "./boardConstants";
 import type { LandscapePlant, LandscapeState } from "./landscapeTypes";
-import { landscapeHeightAt, TRANSITION_MS } from "./landscapeFields";
+import {
+  landscapeHeightAt,
+  landscapeShoreAt,
+  lakeBlendWeight,
+  TRANSITION_MS,
+} from "./landscapeFields";
 
 import { projectBoardPoint } from "./landscapeGeometry";
 export const TREE_NAMES = ["Tree-01-1", "Tree-01-2", "Tree-01-3", "Tree-01-4"];
@@ -484,7 +489,7 @@ function GreeneryRenderer({
             geometry={p.geometry}
             material={p.material}
             plants={groups.get(`${kind}:${i}`) ?? EMPTY_PLANTS}
-            revision={landscape.id}
+            landscape={landscape}
             transitionStart={transitionStart}
             previousLandscape={previousLandscape}
             nuclearTransitions={nuclearTransitions}
@@ -549,7 +554,7 @@ function PlantBatch({
   geometry,
   material,
   plants,
-  revision,
+  landscape,
   transitionStart,
   previousLandscape,
   nuclearTransitions,
@@ -562,10 +567,11 @@ function PlantBatch({
   geometry: THREE.BufferGeometry;
   material: THREE.Material;
   plants: LandscapePlant[];
-  revision: number;
+  landscape: LandscapeState;
   transitionStart: number;
   previousLandscape: LandscapeState;
 }) {
+  const revision = landscape.id;
   const capacity = kind === "pine" ? PINE_CAPACITY : BATCH_CAPACITY;
   const statsKey = useMemo(() => ({}), []);
   useEffect(() => () => void batchStats.delete(statsKey), [statsKey]);
@@ -581,7 +587,16 @@ function PlantBatch({
   }, [depthMaterial, geometry]);
   const slots = useRef(new Map<string, { slot: number; plant: LandscapePlant }>());
   const animations = useRef(
-    new Map<number, { plant: LandscapePlant; fromHeight: number; birth: number; grow: boolean }>(),
+    new Map<
+      number,
+      {
+        plant: LandscapePlant;
+        fromHeight: number;
+        birth: number;
+        grow: boolean;
+        shores: { previous: number; next: number } | null;
+      }
+    >(),
   );
   const seen = useRef(false);
   const retiring = useRef(new Map<number, { plant: LandscapePlant; start: number }>());
@@ -725,6 +740,12 @@ function PlantBatch({
           fromHeight: previousHeight,
           birth,
           grow,
+          shores: climateChange
+            ? null
+            : {
+                previous: landscapeShoreAt(previousLandscape.patches, p.x, p.y),
+                next: landscapeShoreAt(landscape.patches, p.x, p.y),
+              },
         });
       }
       colorize(slot, p);
@@ -734,7 +755,7 @@ function PlantBatch({
     if (revision > 0) {
       seen.current = true;
     }
-  }, [plants, revision, transitionStart, previousLandscape, nuclearTransitions, nuclearTiles]);
+  }, [plants, landscape, transitionStart, previousLandscape, nuclearTransitions, nuclearTiles]);
   useFrame(({ clock, camera }) => {
     let collapsing = false;
     if (nuclearTransitions.size) {
@@ -781,7 +802,9 @@ function PlantBatch({
       for (const [slot, a] of animations.current) {
         const t = Math.max(0, Math.min(1, (now - a.birth) / TRANSITION_MS));
         const progress = easeOutCubic(t);
-        const heightProgress = t * t * (3 - 2 * t);
+        const heightProgress = a.shores
+          ? lakeBlendWeight(a.shores.previous, a.shores.next, t)
+          : t * t * (3 - 2 * t);
         write(
           slot,
           a.plant,

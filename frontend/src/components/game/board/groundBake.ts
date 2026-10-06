@@ -125,6 +125,13 @@ export class GroundBake {
     this.renderStrip(gl, basinPresent);
   }
 
+  prepare(gl: THREE.WebGLRenderer) {
+    if (!this.initialized) {
+      gl.initRenderTarget(this.target);
+      this.initialized = true;
+    }
+  }
+
   stats() {
     return {
       state: this.uniforms.uGroundBaked.value === 1 ? "baked" : this.strip >= 0 ? "baking" : "live",
@@ -270,10 +277,7 @@ export class GroundBake {
       this.lastBakeMs = 0;
     }
     const [albedo, surface] = this.target.textures;
-    if (!this.initialized) {
-      gl.initRenderTarget(this.target);
-      this.initialized = true;
-    }
+    this.prepare(gl);
     const last = this.strip === STRIPS - 1;
     albedo.generateMipmaps = surface.generateMipmaps = last;
     this.bakeRegion.value.copy(this.region);

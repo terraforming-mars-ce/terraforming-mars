@@ -1,5 +1,5 @@
 import { sharedRockGeometry, createNuclearDebrisMaterial } from "./rockGeometry";
-import { useMemo, useRef, useLayoutEffect, useEffect } from "react";
+import { useCallback, useMemo, useRef, useLayoutEffect, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
@@ -69,12 +69,20 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   const warmupRoot = useRef<THREE.Group>(null);
   const frameCount = useRef(0);
   const readyFired = useRef(false);
+  // Water, basin and lake mask only draw once the warmup landscape commits its patches.
+  const landscapeReady = useRef(false);
+  const handleLandscapeReady = useCallback(() => {
+    landscapeReady.current = true;
+  }, []);
 
   useFrame(() => {
     if (readyFired.current) {
       if (warmupRoot.current) {
         warmupRoot.current.visible = false;
       }
+      return;
+    }
+    if (!landscapeReady.current) {
       return;
     }
     frameCount.current++;
@@ -380,7 +388,7 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   return (
     <group ref={warmupRoot}>
       <group scale={WARMUP_SCALE}>
-        <LandscapeRenderer capacity={16} state={landscapeWarmup} />
+        <LandscapeRenderer capacity={16} state={landscapeWarmup} onReady={handleLandscapeReady} />
       </group>
       <group scale={WARMUP_SCALE} dispose={null}>
         {cityMaterials.map((material) => (

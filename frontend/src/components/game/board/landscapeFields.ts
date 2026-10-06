@@ -30,6 +30,8 @@ export const LAKE_GROUND_REACH = BEACH_WIDTH_MAX + 0.04;
 export const TRANSITION_MS = 600;
 const REACH = PATCH_SIZE * 1.1;
 export const WATER_RADIUS = 0.17 * BOARD_SCALE;
+// Shore distance of land without a patch; matches LandscapeSurface.clearTerrain.
+export const EMPTY_SHORE = 0.2;
 const keyOf = HexGrid2D.coordinateToKey;
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 export function smooth(a: number, b: number, x: number) {
@@ -56,15 +58,35 @@ export function landscapeHeightAt(
   if (!patch) {
     return marsReliefAtBoard(relief, x, y) + 0.0003;
   }
+  return sampleTerrain(patch, x, y, 0);
+}
+export function landscapeShoreAt(patches: Map<string, LandscapePatch>, x: number, y: number) {
+  const patch = patches.get(`${Math.floor(x / PATCH_SIZE)}:${Math.floor(y / PATCH_SIZE)}`);
+  if (!patch) {
+    return EMPTY_SHORE;
+  }
+  return sampleTerrain(patch, x, y, 1);
+}
+function sampleTerrain(patch: LandscapePatch, x: number, y: number, channel: number) {
   const px = (x - patch.x) / FIELD_STEP + FIELD_BORDER;
   const py = (y - patch.y) / FIELD_STEP + FIELD_BORDER;
   const ix = Math.floor(px),
     iy = Math.floor(py);
   const read = (dx: number, dy: number) =>
-    DataUtils.fromHalfFloat(patch.terrain[((iy + dy) * FIELD_SIZE + ix + dx) * 4]);
+    DataUtils.fromHalfFloat(patch.terrain[((iy + dy) * FIELD_SIZE + ix + dx) * 4 + channel]);
   const a = read(0, 0) * (1 - (px - ix)) + read(1, 0) * (px - ix);
   const b = read(0, 1) * (1 - (px - ix)) + read(1, 1) * (px - ix);
   return a * (1 - (py - iy)) + b * (py - iy);
+}
+// Weight of the next field at linear progress `elapsed`; see landscapeWeight in
+// landscape-field.glsl, which this mirrors.
+export function lakeBlendWeight(previous: number, next: number, elapsed: number) {
+  if (next >= previous) {
+    return elapsed * elapsed * (3 - 2 * elapsed);
+  }
+  const front = -WATER_RADIUS + elapsed * (EMPTY_SHORE + WATER_RADIUS);
+  const settle = Math.max(next, -WATER_RADIUS);
+  return Math.max(smooth(settle, settle + 0.1, front), smooth(0.85, 1, elapsed));
 }
 function hash(x: number, y: number, seed: number) {
   let n = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ seed;

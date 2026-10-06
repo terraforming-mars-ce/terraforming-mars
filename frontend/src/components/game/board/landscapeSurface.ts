@@ -13,6 +13,7 @@ import {
   LAKE_GROUND_REACH,
   TRANSITION_MS,
   WATER_RADIUS,
+  EMPTY_SHORE,
 } from "./landscapeFields";
 import { EMPTY_LANDSCAPE, type LandscapeState, type LandscapePatch } from "./landscapeTypes";
 import { splitSnippet } from "./shaders";
@@ -138,6 +139,7 @@ export class LandscapeSurface {
       uMarsReliefDepth: { value: MARS_RELIEF_DEPTH },
       uBeachWidths: { value: new THREE.Vector2(BEACH_WIDTH_MIN, BEACH_WIDTH_MAX) },
       uBasinReach: { value: new THREE.Vector2(LAKE_MASK_REACH, LAKE_GROUND_REACH) },
+      uLakeShape: { value: new THREE.Vector2(WATER_RADIUS, EMPTY_SHORE) },
       uFrost: { value: 0 },
       uChill: { value: 0 },
       uGreening: { value: 1 },
@@ -308,7 +310,7 @@ export class LandscapeSurface {
   private clearTerrain(layer: number, x = 0, y = 0, relief?: MarsRelief) {
     const data = this.terrain.image.data as Uint16Array;
     const detailData = this.detail.image.data as Uint8Array;
-    const shore = THREE.DataUtils.toHalfFloat(0.2);
+    const shore = THREE.DataUtils.toHalfFloat(EMPTY_SHORE);
     for (let pixel = 0; pixel < FIELD_SIZE * FIELD_SIZE; pixel++) {
       const i = layer * STRIDE + pixel * 4;
       const height = marsReliefAtBoard(
@@ -489,12 +491,29 @@ export class LandscapeSurface {
       inputs,
     );
   }
-  // Compiles the bake programs, so the first bake does not stall.
-  compileBake(gl: THREE.WebGLRenderer) {
+  // Draws both bake programs once, so the first bake does not stall. Compiling alone is not enough:
+  // drivers finish a program on its first draw. Three keys programs on the bound target's tone
+  // mapping and color space, so the draw goes into a render target like the bake's.
+  warmBake(gl: THREE.WebGLRenderer) {
     const scene = new THREE.Scene();
     scene.add(this.bakeMeshes.ground, this.bakeMeshes.basin);
-    gl.compile(scene, new THREE.OrthographicCamera());
+    this.bakeMeshes.basin.visible = true;
+    const bounds = this.updatePatchBounds();
+    if (bounds) {
+      this.bakeRegion.value.copy(bounds);
+    }
+    const target = new THREE.WebGLRenderTarget(1, 1, { count: 2, depthBuffer: false });
+    const previousTarget = gl.getRenderTarget();
+    gl.setRenderTarget(target);
+    gl.render(scene, new THREE.OrthographicCamera());
+    gl.setRenderTarget(previousTarget);
+    target.dispose();
     scene.clear();
+  }
+  // Allocates the bake target up front; its first allocation is large enough to stall a frame.
+  prepareBake(gl: THREE.WebGLRenderer) {
+    this.groundBake ??= new GroundBake(this.bakeMeshes, this.bakeRegion, this.uniforms);
+    this.groundBake.prepare(gl);
   }
   bakeStats() {
     return this.groundBake?.stats() ?? { state: "off" };

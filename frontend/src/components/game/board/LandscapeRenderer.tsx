@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTextures } from "../../../hooks/useTextures";
@@ -62,17 +62,27 @@ function LandscapeRenderer({
     gl.initTexture(surface.detail);
   }, [gl, surface]);
   useEffect(() => {
-    // Only the board bakes; other instances (the warmup) compile the bake programs for it.
-    if (!plantShade) {
-      surface.compileBake(gl);
+    if (plantShade) {
+      surface.prepareBake(gl);
     }
   }, [surface, gl, plantShade]);
+  // Only the board bakes; other instances (the warmup) draw the bake programs for it once their
+  // patches are in, since a draw without instances leaves the programs unfinished.
+  const handleReady = useCallback(
+    (committed: LandscapeState, transitionStart: number) => {
+      if (!plantShade) {
+        surface.warmBake(gl);
+      }
+      onReady(committed, transitionStart);
+    },
+    [surface, gl, plantShade, onReady],
+  );
   useEffect(() => {
     surface.retain();
     return () => surface.release();
   }, [surface]);
   useFrame(({ camera }) => {
-    surface.tick(gl, performance.now(), onReady);
+    surface.tick(gl, performance.now(), handleReady);
     if (plantShade && performanceStore.sectionDue("Landscape")) {
       performanceStore.setSection("Landscape", surface.stats());
     }
