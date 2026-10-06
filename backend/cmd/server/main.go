@@ -302,7 +302,7 @@ func main() {
 	kickSpectatorAction := connAction.NewKickSpectatorAction(gameRepo, log)
 	sendChatMessageAction := connAction.NewSendChatMessageAction(gameRepo, log)
 
-	// Admin actions (9)
+	// Admin actions (11)
 	adminSetPhaseAction := admin.NewSetPhaseAction(gameRepo, log)
 	adminSetCurrentTurnAction := admin.NewSetCurrentTurnAction(gameRepo, log)
 	adminSetResourcesAction := admin.NewSetResourcesAction(gameRepo, log)
@@ -312,6 +312,8 @@ func main() {
 	adminSetCorporationAction := admin.NewSetCorporationAction(gameRepo, cardRegistry, awardRegistry, log)
 	adminStartTileSelectionAction := admin.NewStartTileSelectionAction(gameRepo, log)
 	adminSetTRAction := admin.NewSetTRAction(gameRepo, log)
+	adminSetActionsRemainingAction := admin.NewSetActionsRemainingAction(gameRepo, log)
+	adminRestartGameAction := admin.NewRestartGameAction(gameRepo, createGameAction, startGameAction, cardRegistry, colonyRegistry, botController, log)
 
 	// Query actions for HTTP (6)
 	getGameAction := query.NewGetGameAction(gameRepo, log)
@@ -393,6 +395,8 @@ func main() {
 		adminSetCorporationAction,
 		adminStartTileSelectionAction,
 		adminSetTRAction,
+		adminRestartGameAction,
+		adminSetActionsRemainingAction,
 	)
 
 	log.Debug("WebSocket handlers registered")

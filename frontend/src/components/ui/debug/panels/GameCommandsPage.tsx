@@ -4,6 +4,7 @@ import { globalWebSocketManager } from "../../../../services/globalWebSocketMana
 import {
   GameDto,
   AdminCommandRequest,
+  AdminCommandTypeRestartGame,
   AdminCommandTypeSetGlobalParams,
   AdminCommandTypeSetPhase,
   SetGlobalParamsAdminCommand,
@@ -77,6 +78,7 @@ const GameCommandsPage: React.FC<GameCommandsPageProps> = ({ gameState }) => {
     venus: gameState.globalParameters.venus.toString(),
   });
   const [phase, setPhase] = useState("");
+  const [confirmRestart, setConfirmRestart] = useState(false);
 
   useEffect(() => {
     setForm({
@@ -131,6 +133,15 @@ const GameCommandsPage: React.FC<GameCommandsPageProps> = ({ gameState }) => {
     }
     const command: SetPhaseAdminCommand = { phase };
     await sendCommand(AdminCommandTypeSetPhase, command);
+  };
+
+  const handleRestart = async () => {
+    if (!confirmRestart) {
+      setConfirmRestart(true);
+      return;
+    }
+    setConfirmRestart(false);
+    await sendCommand(AdminCommandTypeRestartGame, {});
   };
 
   const setAllMin = () => {
@@ -302,6 +313,35 @@ const GameCommandsPage: React.FC<GameCommandsPageProps> = ({ gameState }) => {
           <GameButton emphasis="quiet" onClick={() => void handleSetPhase()} style={buttonStyle}>
             Set
           </GameButton>
+        </div>
+      </div>
+
+      <div style={{ borderTop: "1px solid #333", paddingTop: "12px", marginTop: "12px" }}>
+        <label
+          style={{
+            color: "#3b82f6",
+            fontSize: "11px",
+            fontWeight: "bold",
+            display: "block",
+            textAlign: "left",
+            marginBottom: "8px",
+          }}
+        >
+          Restart Game
+        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <GameButton emphasis="quiet" onClick={() => void handleRestart()} style={buttonStyle}>
+            {confirmRestart ? "Confirm restart" : "Restart game"}
+          </GameButton>
+          {confirmRestart && (
+            <GameButton
+              emphasis="quiet"
+              onClick={() => setConfirmRestart(false)}
+              style={secondaryButtonStyle}
+            >
+              Cancel
+            </GameButton>
+          )}
         </div>
       </div>
     </div>

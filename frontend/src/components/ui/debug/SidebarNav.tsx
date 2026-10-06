@@ -7,6 +7,7 @@ export type ActiveItem =
   | "player-behavior"
   | "place-tile"
   | "game-commands"
+  | "turn-commands"
   | "3d-camera"
   | "3d-sun"
   | "3d-skybox"
@@ -100,6 +101,12 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ activeItem, onSelectItem, devel
             style={subItemStyle(activeItem === "game-commands")}
           >
             Game
+          </div>
+          <div
+            onClick={() => handleSelectItem("turn-commands")}
+            style={subItemStyle(activeItem === "turn-commands")}
+          >
+            Turn
           </div>
         </>
       )}

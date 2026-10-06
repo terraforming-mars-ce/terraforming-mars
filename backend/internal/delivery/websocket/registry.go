@@ -89,6 +89,8 @@ func RegisterHandlers(
 	adminSetCorporationAction *adminAction.SetCorporationAction,
 	adminStartTileSelectionAction *adminAction.StartTileSelectionAction,
 	adminSetTRAction *adminAction.SetTRAction,
+	adminRestartGameAction *adminAction.RestartGameAction,
+	adminSetActionsRemainingAction *adminAction.SetActionsRemainingAction,
 ) {
 	hub.RegisterHandler("quote-payment", &paymentQuoteHandler{broadcaster: broadcaster})
 	log := logger.Get()
@@ -239,6 +241,8 @@ func RegisterHandlers(
 		adminSetCorporationAction,
 		adminStartTileSelectionAction,
 		adminSetTRAction,
+		adminRestartGameAction,
+		adminSetActionsRemainingAction,
 		broadcaster,
 	)
 	hub.RegisterHandler(dto.MessageTypeAdminCommand, adminCommandHandler)

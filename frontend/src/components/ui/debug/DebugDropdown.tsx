@@ -8,6 +8,7 @@ import PlayerResourcesPage from "./panels/PlayerResourcesPage.tsx";
 import PlayerBehaviorPage from "./panels/PlayerBehaviorPage.tsx";
 import PlaceTilePage from "./panels/PlaceTilePage.tsx";
 import GameCommandsPage from "./panels/GameCommandsPage.tsx";
+import TurnCommandsPage from "./panels/TurnCommandsPage.tsx";
 import World3DCameraPage from "./panels/World3DCameraPage.tsx";
 import World3DSunPage from "./panels/World3DSunPage.tsx";
 import World3DSkyboxPage from "./panels/World3DSkyboxPage.tsx";
@@ -99,6 +100,8 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
         return <PlaceTilePage {...playerProps} />;
       case "game-commands":
         return <GameCommandsPage gameState={gameState} />;
+      case "turn-commands":
+        return <TurnCommandsPage gameState={gameState} />;
       default:
         return null;
     }

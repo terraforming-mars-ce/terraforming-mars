@@ -48,10 +48,28 @@ func (a *CreateGameAction) Execute(
 	)
 	log.Debug("Creating new game")
 
-	// 1. Generate game ID
 	gameID := uuid.New().String()
+	newGame, err := a.Build(gameID, settings)
+	if err != nil {
+		return nil, err
+	}
 
-	// 2. Apply default settings
+	if err := a.gameRepo.Create(ctx, newGame); err != nil {
+		log.Error("Failed to create game", slog.Any("error", err))
+		return nil, err
+	}
+
+	// Log the master RNG seed so a reported game can be reproduced deterministically
+	// (seed + action sequence) via the replay harness. Kept out of the client DTO on
+	// purpose: exposing it would let players predict the deck shuffle.
+	log.Info("Game created", slog.String("game_id", gameID), slog.Uint64("seed", newGame.Seed()))
+	return newGame, nil
+}
+
+// Build constructs a lobby game with its board and deck under the given ID without
+// registering it in the repository. The game state is written to the data store,
+// replacing any existing state for that ID.
+func (a *CreateGameAction) Build(gameID string, settings shared.GameSettings) (*game.Game, error) {
 	if settings.MaxPlayers == 0 {
 		settings.MaxPlayers = game.DefaultMaxPlayers
 	}
@@ -65,37 +83,24 @@ func (a *CreateGameAction) Execute(
 		settings.CardPacks = append(settings.CardPacks, shared.PackVenus)
 	}
 
-	// 3. Generate board tiles from selected map
 	mapDef, ok := a.mapRegistry.GetMap(settings.MapID)
 	if !ok {
 		return nil, fmt.Errorf("unknown map: %s", settings.MapID)
 	}
 	initialTiles := board.GenerateBoardFromMap(mapDef, settings.VenusNextEnabled)
 
-	// 4. Create game entity
 	newGame := game.NewGame(a.gameRepo.DataStore(), gameID, "", settings, initialTiles)
 
-	// 4. Initialize deck with cards from selected packs
 	projectCardIDs, corpIDs, preludeIDs := cards.GetCardIDsByPacks(a.cardRegistry, settings.CardPacks)
 	newGame.InitDeck(projectCardIDs, corpIDs, preludeIDs)
 	newGame.SetVPCardLookup(cards.NewVPCardLookupAdapter(a.cardRegistry))
-	log.Debug("Deck initialized",
+	a.logger.Debug("Deck initialized",
+		slog.String("game_id", gameID),
 		slog.Int("project_cards", len(projectCardIDs)),
 		slog.Int("corporations", len(corpIDs)),
 		slog.Int("preludes", len(preludeIDs)),
 		slog.Any("first_5_corps", getFirst5(corpIDs)))
 
-	// 5. Store game in repository
-	err := a.gameRepo.Create(ctx, newGame)
-	if err != nil {
-		log.Error("Failed to create game", slog.Any("error", err))
-		return nil, err
-	}
-
-	// Log the master RNG seed so a reported game can be reproduced deterministically
-	// (seed + action sequence) via the replay harness. Kept out of the client DTO on
-	// purpose: exposing it would let players predict the deck shuffle.
-	log.Info("Game created", slog.String("game_id", gameID), slog.Uint64("seed", newGame.Seed()))
 	return newGame, nil
 }
 
