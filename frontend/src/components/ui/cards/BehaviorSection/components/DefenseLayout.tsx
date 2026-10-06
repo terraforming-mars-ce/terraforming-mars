@@ -44,7 +44,7 @@ const DefenseLayout: React.FC<DefenseLayoutProps> = ({ behavior }) => {
           : "Opponents cannot remove these resources. You can still spend them."
       }
     >
-      <span className="text-[10px] font-semibold text-white bg-[rgba(60,60,60,0.8)] px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
+      <span className="text-[10px] font-semibold text-white bg-[rgba(60,60,60,0.8)] px-1.5 py-0.5 [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
         Protect
       </span>
 

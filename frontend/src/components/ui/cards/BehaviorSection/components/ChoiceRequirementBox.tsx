@@ -62,7 +62,7 @@ const ChoiceRequirementBox: React.FC<ChoiceRequirementBoxProps> = ({ requirement
   }
 
   return (
-    <div className="border border-dashed border-white/30 rounded px-1.5 py-1 flex flex-col items-center gap-[3px]">
+    <div className="border border-dashed border-white/30 px-1.5 py-1 flex flex-col items-center gap-[3px]">
       <div className="flex items-center gap-1">{renderRequirementItems(requirements.items)}</div>
       {children}
     </div>
