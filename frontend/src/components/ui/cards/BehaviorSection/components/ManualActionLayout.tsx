@@ -1,8 +1,10 @@
+import { BehaviorArrow } from "./BehaviorIcon";
 import React from "react";
 import ResourceDisplay from "./ResourceDisplay.tsx";
 import CardIcon from "./CardIcon.tsx";
 import OrChip from "./OrChip.tsx";
-import { analyzeCardOutputs } from "../utils/displayAnalysis.ts";
+import { useBehaviorLayout } from "./BehaviorContainer";
+import { orderIndependentResources, analyzeCardOutputs } from "../utils/displayAnalysis.ts";
 import { CalculatedOutputDto, CardBehaviorDto } from "@/types/generated/api-types.ts";
 import {
   type ResourceCondition,
@@ -121,13 +123,14 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
   hideActionChip = false,
   computedOutputs,
 }) => {
+  const { compact } = useBehaviorLayout();
   // Handle choice-based behaviors
   if (behavior.choices && behavior.choices.length > 0) {
     // Compact rendering for "any standard production +1" patterns (e.g. Robinson Industries)
     if (isAnyProductionChoicePattern(behavior)) {
       const hasInputs = behavior.inputs && behavior.inputs.length > 0;
       return (
-        <div className="flex items-center justify-center gap-2 w-full">
+        <div className="behavior-flow flex items-center justify-center gap-2 w-full">
           {hasInputs ? (
             <div className="flex items-center gap-[3px]">
               {behavior.inputs!.map((input, inputIndex: number) => {
@@ -147,15 +150,13 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
               })}
             </div>
           ) : !hideActionChip ? (
-            <span className="text-[10px] font-semibold text-white bg-[rgba(33,150,243,0.5)] px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
+            <span className="text-[10px] font-semibold text-white bg-[rgba(33,150,243,0.5)] px-1.5 py-0.5 [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
               Action
             </span>
           ) : null}
-          <div className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
-            →
-          </div>
-          <div className="bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] flex items-center">
-            <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold rounded px-1 py-[1px] leading-tight">
+          <BehaviorArrow />
+          <div className="bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] flex items-center">
+            <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold px-1 py-[1px] leading-tight">
               SR
             </span>
           </div>
@@ -178,7 +179,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
     // Format: <input1> / <input2> -> <outputs>
     if (choicesOnlyHaveInputs && behaviorHasOutputs) {
       return (
-        <div className="flex items-center justify-center gap-2 w-full">
+        <div className="behavior-flow flex items-center justify-center gap-2 w-full">
           {/* All choice inputs with "/" separator */}
           <div className="flex items-center gap-[6px]">
             {behavior.choices.map((choice, choiceIndex) => (
@@ -208,9 +209,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
           </div>
 
           {/* Arrow separator */}
-          <div className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
-            →
-          </div>
+          <BehaviorArrow />
 
           {/* Behavior-level outputs */}
           <div className="flex flex-col gap-0.5 items-center min-w-0">
@@ -257,14 +256,14 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
     // Horizontal layout for small choice-based actions
     if (canFitOnSingleRow) {
       return (
-        <div className="flex items-center justify-center gap-1 w-full">
+        <div className="behavior-flow flex items-center justify-center gap-1 w-full">
           {behavior.choices.map((choice, choiceIndex) => (
-            <React.Fragment key={`choice-${choiceIndex}`}>
+            <div key={`choice-${choiceIndex}`} className="flex items-center gap-1 max-w-full">
               {/* OR separator between choices */}
               {choiceIndex > 0 && <OrChip />}
 
               {/* Choice content (inputs -> outputs) */}
-              <div className="flex items-center gap-1">
+              <div className="behavior-flow flex items-center gap-1 max-w-full">
                 {/* Inputs */}
                 {choice.inputs?.map((input, inputIndex: number) => {
                   const displayInfo = analyzeResourceDisplayWithConstraints(input, 3, false);
@@ -284,9 +283,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
 
                 {/* Arrow if both inputs and outputs */}
                 {(choice.inputs?.length ?? 0) > 0 && (choice.outputs?.length ?? 0) > 0 && (
-                  <span className="text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                    →
-                  </span>
+                  <BehaviorArrow />
                 )}
 
                 {/* Outputs */}
@@ -299,7 +296,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
                   computedOutputs,
                 )}
               </div>
-            </React.Fragment>
+            </div>
           ))}
 
           {(behavior.generationalEventRequirements?.length ?? 0) > 0 && (
@@ -340,9 +337,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
 
             {/* Arrow separator for this choice */}
             {(choice.inputs?.length ?? 0) > 0 && (choice.outputs?.length ?? 0) > 0 && (
-              <div className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
-                →
-              </div>
+              <BehaviorArrow />
             )}
 
             {/* Output side for this choice */}
@@ -374,13 +369,13 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
     behavior.outputs && behavior.outputs.some((o) => o.type === "action-reuse");
   if (hasActionReuse) {
     return (
-      <div className="flex items-center justify-center gap-1 w-full">
+      <div className="behavior-flow flex items-center justify-center gap-1 w-full">
         {!hideActionChip && (
-          <span className="text-[10px] font-semibold text-white bg-[rgba(33,150,243,0.5)] px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
+          <span className="text-[10px] font-semibold text-white bg-[rgba(33,150,243,0.5)] px-1.5 py-0.5 [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
             Action
           </span>
         )}
-        <div className="bg-white/[0.08] border border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.15)] rounded px-2 py-1 flex items-center justify-center">
+        <div className="bg-white/[0.08] border border-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.15)] px-2 py-1 flex items-center justify-center">
           <svg
             width="16"
             height="16"
@@ -415,7 +410,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
   const hasInputs = behavior.inputs && behavior.inputs.length > 0;
 
   return (
-    <div className="flex items-center justify-center gap-1 w-full">
+    <div className="behavior-flow flex items-center justify-center gap-1 w-full">
       {/* Input side */}
       <div className="flex flex-col gap-0.5 items-center min-w-0">
         {hasInputs ? (
@@ -436,23 +431,19 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
             );
           })
         ) : !hideActionChip ? (
-          <span className="text-[10px] font-semibold text-white bg-[rgba(33,150,243,0.5)] px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
+          <span className="text-[10px] font-semibold text-white bg-[rgba(33,150,243,0.5)] px-1.5 py-0.5 [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
             Action
           </span>
         ) : null}
       </div>
 
       {/* Arrow separator - only show when there are inputs */}
-      {hasInputs && (
-        <div className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
-          →
-        </div>
-      )}
+      {hasInputs && <BehaviorArrow />}
 
       {/* Output side */}
       <div className="flex flex-row flex-wrap gap-0.5 items-center min-w-0">
         {/* Regular non-card outputs */}
-        {nonCardOutputs.map((output, outputIndex: number) => {
+        {orderIndependentResources(nonCardOutputs, compact).map((output, outputIndex: number) => {
           const displayInfo = analyzeResourceDisplayWithConstraints(output, 3, false);
           return (
             <React.Fragment key={`output-${outputIndex}`}>
@@ -475,6 +466,7 @@ const ManualActionLayout: React.FC<ManualActionLayoutProps> = ({
           <React.Fragment key={`card-${index}`}>
             <CardIcon
               amount={cardItem.amount}
+              keepAmount={cardItem.keepAmount}
               badgeType={cardItem.badgeType}
               isAffordable={true}
               isAttack={cardItem.isAttack}
