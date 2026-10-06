@@ -9,6 +9,7 @@ import PlayerBehaviorPage from "./panels/PlayerBehaviorPage.tsx";
 import PlaceTilePage from "./panels/PlaceTilePage.tsx";
 import GameCommandsPage from "./panels/GameCommandsPage.tsx";
 import TurnCommandsPage from "./panels/TurnCommandsPage.tsx";
+import BotInspectorPage from "./panels/BotInspectorPage.tsx";
 import World3DCameraPage from "./panels/World3DCameraPage.tsx";
 import World3DSunPage from "./panels/World3DSunPage.tsx";
 import World3DSkyboxPage from "./panels/World3DSkyboxPage.tsx";
@@ -58,6 +59,12 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
 
   const is3DItem = (item: ActiveItem) => item.startsWith("3d-");
   const isCommandItem = (item: ActiveItem) => item !== "game-state" && !is3DItem(item);
+  const contentOverflow = (item: ActiveItem) => {
+    if (item === "bots") {
+      return "hidden";
+    }
+    return isCommandItem(item) ? "visible" : "auto";
+  };
 
   const renderContent = () => {
     if (activeItem === "game-state") {
@@ -102,6 +109,8 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
         return <GameCommandsPage gameState={gameState} />;
       case "turn-commands":
         return <TurnCommandsPage gameState={gameState} />;
+      case "bots":
+        return <BotInspectorPage gameState={gameState} />;
       default:
         return null;
     }
@@ -138,7 +147,7 @@ const DebugDropdown: React.FC<DebugDropdownProps> = ({
           className="debug-content-area"
           style={{
             flex: 1,
-            overflow: isCommandItem(activeItem) ? "visible" : "auto",
+            overflow: contentOverflow(activeItem),
             padding: "16px",
             display: "flex",
             flexDirection: "column",

@@ -9,6 +9,7 @@ import { TileHighlightBoardContext, useTileHighlightBoard } from "./TileHighligh
 import * as THREE from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import { useCardDragStore } from "../../../stores/cardDragStore";
+import { useDebugHexHighlightStore } from "../../../stores/debugHexHighlightStore";
 import Tile from "./Tile";
 import { useNuclearTransitions } from "./useNuclearTransitions";
 import { NuclearCollapse } from "./NuclearCollapse";
@@ -41,6 +42,8 @@ const noop = () => {};
 const EMPTY_BONUSES = {};
 const VP_COLOR_SECONDARY: [number, number, number] = [0.4, 0.9, 0.4];
 const VP_COLOR_PRIMARY: [number, number, number] = [0.95, 0.95, 1.0];
+const DEBUG_HIGHLIGHT_COLOR: [number, number, number] = [0.72, 0.42, 1.0];
+const DEBUG_HIGHLIGHT_INTENSITY = 0.5;
 
 interface TileGridProps {
   relief: MarsRelief;
@@ -119,6 +122,7 @@ export default function TileGrid({
   );
   const { playWaterPlacementSound, playOxygenSound, playConstructionSound } = useSoundEffects();
   const { state: vpCountingState } = useVPCounting();
+  const debugHighlightedHexes = useDebugHexHighlightStore((state) => state.hexes);
   const { activePlanet } = usePlanetFocus();
 
   // Play placement sounds for newly placed tiles
@@ -879,6 +883,7 @@ export default function TileGrid({
         const isSecondaryHighlight = vpCountingState.secondaryHighlightedTiles.has(hexKey);
         const vpHighlightIntensity = isPrimaryHighlight ? 0.5 : isSecondaryHighlight ? 0.25 : 0;
         const vpHighlightColor = isSecondaryHighlight ? VP_COLOR_SECONDARY : VP_COLOR_PRIMARY;
+        const isDebugHighlight = vpHighlightIntensity === 0 && debugHighlightedHexes.has(hexKey);
 
         return (
           <Tile
@@ -921,8 +926,10 @@ export default function TileGrid({
             entranceDelay={index * 15}
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
             visualSeed={hashSeed(`${gameState?.id}:${hexKey}`)}
-            vpHighlightIntensity={vpHighlightIntensity}
-            vpHighlightColor={vpHighlightColor}
+            vpHighlightIntensity={
+              isDebugHighlight ? DEBUG_HIGHLIGHT_INTENSITY : vpHighlightIntensity
+            }
+            vpHighlightColor={isDebugHighlight ? DEBUG_HIGHLIGHT_COLOR : vpHighlightColor}
             sphereCenter={sphereCenter}
             groupInverseMatrix={groupInverseMatrix}
           />
