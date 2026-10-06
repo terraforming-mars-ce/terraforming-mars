@@ -2,8 +2,9 @@ import PerConditionIcons from "./PerConditionIcons";
 import React from "react";
 import GameIcon from "../../../display/GameIcon.tsx";
 import { getIconPath, getTagIconPath } from "@/utils/iconStore.ts";
-import BehaviorIcon from "./BehaviorIcon.tsx";
+import BehaviorIcon, { BehaviorSign } from "./BehaviorIcon.tsx";
 import CardIcon from "./CardIcon.tsx";
+import { useBehaviorLayout } from "./BehaviorContainer";
 import Slash from "./Slash.tsx";
 import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
 import {
@@ -13,6 +14,8 @@ import {
   getPer,
   getSelectors,
   getTileRestrictions,
+  getTileType,
+  isCardOperation,
 } from "@/types/resourceConditions.ts";
 
 interface IconDisplayInfo {
@@ -77,7 +80,7 @@ const ComputedValueDisplay: React.FC<{
       ) : (
         <span className="flex items-center gap-[2px]">
           {amount > 1 && (
-            <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+            <span className="text-[13px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none translate-y-[2px]">
               {amount}
             </span>
           )}
@@ -100,7 +103,9 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   computedAmount,
   computedOutputs,
 }) => {
-  const { resourceType, amount, displayMode } = displayInfo;
+  const { compact, cardId } = useBehaviorLayout();
+  const { resourceType, amount } = displayInfo;
+  const displayMode = compact && Math.abs(amount) > 1 ? "number" : displayInfo.displayMode;
   const isVariableAmount = !!displayInfo.variableAmount;
 
   const isCredits = resourceType === "credit" || resourceType === "credit-production";
@@ -119,6 +124,62 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     (hasPer && computedOutputs
       ? computedOutputs.find((o) => o.resourceType === resourceType)?.amount
       : undefined);
+
+  const allSelectors = resource ? getSelectors(resource) : undefined;
+  const selectorTags: string[] = [];
+  if (allSelectors) {
+    for (const selector of allSelectors) {
+      if (selector.tags) {
+        for (const tag of selector.tags) {
+          if (!selectorTags.includes(tag)) selectorTags.push(tag);
+        }
+      }
+    }
+  }
+
+  const renderSelectorBadges = () => {
+    if (selectorTags.length === 0) return null;
+    return selectorTags.map((tag: string) => {
+      const tagIcon = getTagIconPath(tag);
+      if (!tagIcon) return null;
+      return (
+        <img
+          key={`badge-${tag}`}
+          src={tagIcon}
+          alt={tag}
+          className="w-[14px] h-[14px] shrink-0 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] max-md:w-[12px] max-md:h-[12px]"
+        />
+      );
+    });
+  };
+
+  if (resource && isCardOperation(resource) && !hasPer) {
+    let badgeType: "none" | "peek" | "take" | "buy" | "discard" = "none";
+    if (resource.type === "card-peek") {
+      badgeType = "peek";
+    }
+    if (resource.type === "card-take") {
+      badgeType = "take";
+    }
+    if (resource.type === "card-buy") {
+      badgeType = "buy";
+    }
+    if (resource.type === "card-discard") {
+      badgeType = "discard";
+    }
+    return (
+      <span className="inline-flex items-center gap-px shrink-0">
+        <CardIcon
+          amount={Math.abs(amount)}
+          badgeType={badgeType}
+          isAffordable={isAffordable}
+          isAttack={isAttack}
+          forceNumber={displayMode === "number"}
+        />
+        {renderSelectorBadges()}
+      </span>
+    );
+  }
 
   if (resource?.type === "card-reveal") {
     return (
@@ -140,8 +201,8 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
         role="img"
         aria-label="Copy a building production box"
       >
-        <span className="absolute left-0 top-0 w-8 h-7 rounded border border-[#a06e3c] bg-[#684726]" />
-        <span className="absolute left-2 top-2 w-8 h-7 rounded border border-[#a06e3c] bg-[#80582f]" />
+        <span className="absolute left-0 top-0 w-8 h-7 border border-[#a06e3c] bg-[#684726]" />
+        <span className="absolute left-2 top-2 w-8 h-7 border border-[#a06e3c] bg-[#80582f]" />
         {resource.selectors
           ?.flatMap((selector) => selector.tags ?? [])
           .map((tag) => (
@@ -158,7 +219,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   if (resource?.type === "colony-track-step" || resource?.type === "trade-fleet") {
     return (
       <span className="inline-flex items-center gap-1 font-orbitron text-white">
-        <span className="font-orbitron font-bold leading-none">
+        <span className="font-orbitron font-bold leading-none translate-y-[2px]">
           {amount > 0 ? "+" : "−"}
           {Math.abs(amount)}
         </span>
@@ -190,12 +251,12 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
       // Special handling for credits-production - use GameIcon with amount inside
       if (baseResourceType === "credit") {
         const itemClasses = !isAffordable
-          ? "flex items-center gap-px relative opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-          : "flex items-center gap-px relative";
+          ? "flex items-center gap-[3px] relative shrink-0 opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
+          : "flex items-center gap-[3px] relative shrink-0";
 
         return (
           <div className="flex items-center gap-[3px]">
-            <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+            <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
               <div className={itemClasses}>
                 <GameIcon iconType="credit" amount={Math.abs(amount)} size="behavior" />
               </div>
@@ -225,10 +286,10 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
         if (productionIcon) {
           return (
             <div className="flex items-center gap-[3px]">
-              <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-                <div className="flex items-center gap-px relative">
+              <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+                <div className="flex items-center gap-[3px] relative shrink-0">
                   {amount > 1 && (
-                    <span className="text-[20px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center ml-0.5 max-md:text-xs">
+                    <span className="text-[20px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center ml-0.5 max-md:text-xs leading-none translate-y-[2px]">
                       {amount}
                     </span>
                   )}
@@ -258,18 +319,18 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     const baseIsCredits = baseResourceType === "credit";
 
     const itemClasses = !isAffordable
-      ? "flex items-center gap-px relative opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-      : "flex items-center gap-px relative";
+      ? "flex items-center gap-[3px] relative shrink-0 opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
+      : "flex items-center gap-[3px] relative shrink-0";
 
     return (
-      <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.7)_0%,rgba(139,89,42,0.65)_100%)] border border-[rgba(160,110,60,0.7)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+      <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.7)_0%,rgba(139,89,42,0.65)_100%)] border border-[rgba(160,110,60,0.7)] px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
         <div className={itemClasses}>
           {baseIsCredits ? (
             <GameIcon iconType="credit" amount={Math.abs(amount)} size="behavior" />
           ) : (
             <>
               {amount > 1 && (
-                <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+                <span className="text-[13px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none translate-y-[2px]">
                   {amount}
                 </span>
               )}
@@ -303,8 +364,8 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
       // Special handling for credits - use GameIcon with amount inside
       if (isCredits) {
         const itemClasses = !isAffordable
-          ? "flex items-center gap-px relative opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-          : "flex items-center gap-px relative";
+          ? "flex items-center gap-[3px] relative shrink-0 opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
+          : "flex items-center gap-[3px] relative shrink-0";
 
         return (
           <div className="flex items-center gap-[3px]">
@@ -335,13 +396,14 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
         if (iconElement) {
           return (
             <div className="flex items-center gap-[3px]">
-              <div className="flex items-center gap-px relative">
+              <div className="flex items-center gap-[3px] relative shrink-0">
                 {amount > 1 && (
-                  <span className="text-[20px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center ml-0.5 max-md:text-xs">
+                  <span className="text-[20px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center ml-0.5 max-md:text-xs leading-none translate-y-[2px]">
                     {amount}
                   </span>
                 )}
                 {iconElement}
+                {renderSelectorBadges()}
               </div>
               <Slash />
               <PerConditionIcons per={hasPer} />
@@ -357,7 +419,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   }
 
   if (isCredits) {
-    const creditsClasses = `flex items-center gap-0.5 relative ${isAttack ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulseCredits_2s_ease-in-out_infinite]" : ""}`;
+    const creditsClasses = `flex items-center gap-[3px] relative shrink-0 text-[13px] font-black pl-[var(--behavior-credit-inset,0px)] ${isAttack ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulseCredits_2s_ease-in-out_infinite]" : ""}`;
 
     const isNegative = amount < 0 && !isGroupedWithOtherNegatives;
 
@@ -367,11 +429,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
 
     return (
       <div className={finalCreditsClasses}>
-        {isNegative && (
-          <span className="relative z-10 text-base font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-            -
-          </span>
-        )}
+        {isNegative && <BehaviorSign />}
         <GameIcon
           iconType="credit"
           amount={isVariableAmount ? "X" : Math.abs(amount)}
@@ -398,7 +456,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
 
   if (isVP) {
     return (
-      <span className="font-orbitron font-bold text-white text-sm leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+      <span className="font-orbitron font-bold text-white text-sm [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] leading-none translate-y-[2px]">
         {amount} VP
       </span>
     );
@@ -439,7 +497,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
           <span className="text-base font-bold text-white mx-1 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
             :
           </span>
-          <div className="flex flex-col items-center leading-none -space-y-[11px] translate-y-px">
+          <div className="flex flex-col items-center leading-none -space-y-[11px] translate-y-[2px]">
             <span className="text-sm font-bold font-orbitron text-[#c8e6c9] [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
               +
             </span>
@@ -447,7 +505,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
               -
             </span>
           </div>
-          <span className="text-base font-bold font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+          <span className="text-base font-bold font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] leading-none translate-y-[2px]">
             {amount}
           </span>
           {resource && "temporary" in resource && resource.temporary && (
@@ -488,7 +546,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
                   ) : (
                     <span className="flex items-center gap-[2px]">
                       {o.amount > 1 && (
-                        <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+                        <span className="text-[13px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none translate-y-[2px]">
                           {o.amount}
                         </span>
                       )}
@@ -541,42 +599,18 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
       (resourceTileRestrictions.onBonusType?.length ?? 0) > 0 ||
       (resourceTileRestrictions.boardTags?.length ?? 0) > 0);
 
-  const allSelectors = resource ? getSelectors(resource) : undefined;
-  const selectorTags: string[] = [];
-  if (allSelectors) {
-    for (const selector of allSelectors) {
-      if (selector.tags) {
-        for (const tag of selector.tags) {
-          if (!selectorTags.includes(tag)) selectorTags.push(tag);
-        }
-      }
-    }
-  }
-
-  const renderSelectorBadges = () => {
-    if (selectorTags.length === 0) return null;
-    return selectorTags.map((tag: string) => {
-      const tagIcon = getTagIconPath(tag);
-      if (!tagIcon) return null;
-      return (
-        <img
-          key={`badge-${tag}`}
-          src={tagIcon}
-          alt={tag}
-          className="w-[14px] h-[14px] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] max-md:w-[12px] max-md:h-[12px]"
-        />
-      );
-    });
-  };
-
+  const isWorldTree = resource && getTileType(resource) === "world-tree";
+  const specialRestriction = isWorldTree || (cardId === "149" && resourceType === "card-resource");
+  const iconType = isWorldTree ? "greenery-placement" : resourceType;
+  const iconTileScale = isWorldTree ? { ...tileScaleInfo, tileType: iconType } : tileScaleInfo;
   const baseIconElement = (
     <BehaviorIcon
-      resourceType={resourceType}
+      resourceType={iconType}
       isProduction={false}
       isAttack={isAttack}
       context={iconContext}
       isAffordable={isAffordable}
-      tileScaleInfo={tileScaleInfo}
+      tileScaleInfo={iconTileScale}
     />
   );
 
@@ -592,19 +626,16 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   if (displayMode === "individual") {
     const absoluteAmount = Math.abs(amount);
     return (
-      <div className="flex items-center gap-px relative">
+      <div className="flex items-center gap-px relative shrink-0">
         {(isInput || isAttack || amount < 0) &&
           !isGroupedWithOtherNegatives &&
-          context !== "action" && (
-            <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)]">
-              -
-            </span>
-          )}
+          context !== "action" && <BehaviorSign className="mr-[2px]" />}
         {Array.from({ length: absoluteAmount }, (_, i) => (
           <React.Fragment key={i}>{baseIconElement}</React.Fragment>
         ))}
         {renderSelectorBadges()}
-        {(resource?.type === "colony-tile-add" ||
+        {(specialRestriction ||
+          resource?.type === "colony-tile-add" ||
           hasTileRestrictions ||
           (resource && "targetRestriction" in resource && !!resource.targetRestriction) ||
           resource?.target === "triggering-card") && (
@@ -616,20 +647,21 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
     );
   } else {
     return (
-      <div className="flex items-center gap-[3px] relative">
+      <div className="flex items-center gap-[3px] relative shrink-0">
         {(isInput || isAttack || amount < 0) &&
           !isGroupedWithOtherNegatives &&
-          context !== "action" && (
-            <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-[#ffcdd2] [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center justify-center">
-              -
+          context !== "action" && <BehaviorSign />}
+        <span className="text-[13px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center justify-end min-w-[var(--behavior-quantity-width,0px)] leading-none translate-y-[2px]">
+          {Array.from(String(isVariableAmount ? "X" : Math.abs(amount)), (digit, index) => (
+            <span key={index} className="inline-block w-[1ch] text-center">
+              {digit}
             </span>
-          )}
-        <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center justify-center">
-          {isVariableAmount ? "X" : Math.abs(amount)}
+          ))}
         </span>
         {baseIconElement}
         {renderSelectorBadges()}
-        {(resource?.type === "colony-tile-add" ||
+        {(specialRestriction ||
+          resource?.type === "colony-tile-add" ||
           hasTileRestrictions ||
           (resource && "targetRestriction" in resource && !!resource.targetRestriction) ||
           resource?.target === "triggering-card") && (

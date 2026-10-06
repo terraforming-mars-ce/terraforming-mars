@@ -16,7 +16,6 @@ import PaymentSubstituteLayout from "./components/PaymentSubstituteLayout.tsx";
 import ValueModifierLayout from "./components/ValueModifierLayout.tsx";
 import DefenseLayout from "./components/DefenseLayout.tsx";
 import { hasResourceVisual } from "./components/ResourceDisplay.tsx";
-import BehaviorIcon from "./components/BehaviorIcon.tsx";
 
 function buildBehaviorLayout(
   behaviors: NonNullable<BehaviorSectionProps["behaviors"]>,
@@ -129,26 +128,6 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
     );
   };
 
-  // Helper function to render icons (for ImmediateResourceLayout)
-  const renderIcon = (
-    resourceType: string,
-    isProduction: boolean,
-    isAttack: boolean,
-    context: "standalone" | "action" | "production" | "default",
-    isAffordable: boolean,
-  ): React.ReactNode => {
-    return (
-      <BehaviorIcon
-        resourceType={resourceType}
-        isProduction={isProduction}
-        isAttack={isAttack}
-        context={context}
-        isAffordable={isAffordable}
-        tileScaleInfo={tileScaleInfo}
-      />
-    );
-  };
-
   // Render individual behavior based on its type
   const renderBehavior = (
     classifiedBehavior: ClassifiedBehavior,
@@ -156,10 +135,12 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   ): React.ReactNode => {
     const { behavior, type } = classifiedBehavior;
     const layoutPlan = cardLayoutPlan.behaviors[index]?.layoutPlan;
-    const behaviorComputedOutputs =
-      classifiedBehavior.originalIndex !== undefined
-        ? computedValuesByIndex.get(classifiedBehavior.originalIndex)
-        : undefined;
+    const sourceIndices =
+      classifiedBehavior.originalIndices ??
+      (classifiedBehavior.originalIndex === undefined ? [] : [classifiedBehavior.originalIndex]);
+    const behaviorComputedOutputs = sourceIndices.flatMap(
+      (sourceIndex) => computedValuesByIndex.get(sourceIndex) ?? [],
+    );
 
     let content: React.ReactNode = null;
 
@@ -198,11 +179,8 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
         content = (
           <ImmediateResourceLayout
             behavior={behavior}
-            layoutPlan={layoutPlan}
             isResourceAffordable={checkResourceAffordable}
-            analyzeResourceDisplayWithConstraints={analyzeResourceDisplayWithConstraints}
             tileScaleInfo={tileScaleInfo}
-            renderIcon={renderIcon}
             computedOutputs={behaviorComputedOutputs}
           />
         );
@@ -234,6 +212,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
         isHovered={tooltipsEnabled && hoveredBehaviorIndex === index}
         onHover={tooltipsEnabled ? handleBehaviorHover : undefined}
         noContainer={noContainer}
+        cardId={cardId}
       >
         {content}
       </BehaviorContainer>
@@ -242,7 +221,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
 
   // Render behaviors with overflow handling if needed
   const containerClass = cardLayoutPlan.needsOverflowHandling
-    ? "flex flex-col gap-[var(--behavior-section-gap,3px)] items-center w-full max-h-[120px] overflow-y-auto scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-0.5 [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-track]:rounded-px [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-thumb]:rounded-px max-md:gap-[var(--behavior-section-gap,1px)]"
+    ? "flex flex-col gap-[var(--behavior-section-gap,3px)] items-center w-full max-h-[120px] overflow-y-auto overflow-x-hidden scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-0.5 [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-track]:rounded-px [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-thumb]:rounded-px max-md:gap-[var(--behavior-section-gap,1px)]"
     : "flex flex-col gap-[var(--behavior-section-gap,3px)] items-center w-full max-md:gap-[var(--behavior-section-gap,1px)]";
 
   return (

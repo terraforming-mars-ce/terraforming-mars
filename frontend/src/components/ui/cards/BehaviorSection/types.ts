@@ -34,6 +34,7 @@ export interface ClassifiedBehavior {
   description?: string;
   mergedBehaviors?: CardBehaviorDto[];
   originalIndex?: number;
+  originalIndices?: number[];
 }
 
 export interface LayoutRequirement {

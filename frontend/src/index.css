@@ -1345,6 +1345,7 @@ code {
   }
 
   .game-card-body {
+    min-width: 0;
     position: relative;
     isolation: isolate;
     display: flex;
@@ -1669,6 +1670,28 @@ code {
     max-height: 100%;
     overflow-y: auto;
     scrollbar-width: thin;
+  }
+
+  .behavior-section {
+    overflow-anchor: none;
+  }
+
+  .behavior-fitting img {
+    flex-shrink: 0;
+  }
+
+  .behavior-fitting .behavior-flow {
+    min-width: 0;
+    flex-wrap: nowrap;
+  }
+
+  .behavior-fitting .behavior-flow > * {
+    flex-shrink: 0;
+    max-width: 100%;
+  }
+
+  .behavior-fitting[data-compact="true"] .behavior-flow {
+    flex-wrap: wrap;
   }
 
   .game-card-behaviors > div > div {

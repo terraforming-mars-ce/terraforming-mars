@@ -2,7 +2,6 @@ import { IconDisplayInfo } from "../types.ts";
 import {
   type ResourceCondition,
   isProduction as isProductionType,
-  isCardOperation,
   getPer,
   getVariableAmount,
 } from "@/types/resourceConditions.ts";
@@ -27,18 +26,6 @@ export const analyzeResourceDisplayWithConstraints = (
   const isProduction = isProductionType(resource);
   const variableAmount = getVariableAmount(resource);
 
-  const isCardResource = isCardOperation(resource);
-
-  if (isCardResource) {
-    return {
-      resourceType,
-      amount,
-      displayMode: "number",
-      iconCount: 1,
-      variableAmount: !!variableAmount,
-    };
-  }
-
   if (variableAmount) {
     return {
       resourceType,
@@ -60,7 +47,7 @@ export const analyzeResourceDisplayWithConstraints = (
   }
 
   // Use individual display for amounts ≤3 (unless compact mode forces earlier threshold)
-  const maxIndividualIcons = forceCompact || resource.forceNumberFormat ? 2 : 3;
+  const maxIndividualIcons = forceCompact || resource.forceNumberFormat ? 1 : 3;
   const absoluteAmount = Math.abs(amount);
   const useIndividual =
     absoluteAmount > 0 && absoluteAmount <= maxIndividualIcons && absoluteAmount <= availableSpace;
@@ -73,44 +60,44 @@ export const analyzeResourceDisplayWithConstraints = (
   };
 };
 
-/**
- * Coordinates display modes across multiple resources for consistency.
- * If ANY resource uses "number + icon" format, ALL should use it (except amount=1).
- *
- * @param resources - Array of resources to coordinate
- * @returns Map of resources to their display information
- */
 export const coordinateDisplayModes = (
   resources: ResourceCondition[],
+  compact = false,
+  paired = false,
 ): Map<ResourceCondition, IconDisplayInfo> => {
-  // First pass: analyze each resource independently
-  const displayInfos = resources.map((r) => ({
-    resource: r,
-    info: analyzeResourceDisplayWithConstraints(r, 7, false),
+  const infos = resources.map((resource) => ({
+    resource,
+    info: analyzeResourceDisplayWithConstraints(resource, Infinity, compact),
   }));
-
-  // Check if ANY resource uses "number" mode
-  const hasNumberMode = displayInfos.some((d) => d.info.displayMode === "number");
-
-  // Second pass: if any uses number mode, force all to use it (except amount=1)
-  if (hasNumberMode) {
-    return new Map(
-      displayInfos.map(({ resource, info }) => {
-        const amount = Math.abs(resource.amount ?? 1);
-        if (amount === 1) {
-          // Keep individual mode for amount=1 (redundant to show "1")
-          return [resource, info];
-        } else {
-          // Force number mode for consistency
-          return [resource, { ...info, displayMode: "number", iconCount: 1 }];
-        }
-      }),
+  const numeric =
+    paired &&
+    infos.some(
+      ({ resource, info }) => !resource.type.startsWith("credit") && info.displayMode === "number",
     );
-  }
-
-  // Otherwise, keep original display modes
-  return new Map(displayInfos.map(({ resource, info }) => [resource, info]));
+  return new Map(
+    infos.map(({ resource, info }) => [
+      resource,
+      numeric ? { ...info, displayMode: "number", iconCount: 1 } : info,
+    ]),
+  );
 };
+
+export function orderIndependentResources(resources: ResourceCondition[], compact = false) {
+  const hasExternalNumber = (resource: ResourceCondition) => {
+    if (resource.type.startsWith("credit")) {
+      return false;
+    }
+    return (
+      resource.type === "trade-fleet" ||
+      resource.type === "colony-track-step" ||
+      analyzeResourceDisplayWithConstraints(resource, Infinity, compact).displayMode === "number"
+    );
+  };
+  return [
+    ...resources.filter(hasExternalNumber),
+    ...resources.filter((resource) => !hasExternalNumber(resource)),
+  ];
+}
 
 /**
  * Analyzes and consolidates card outputs for optimal display.
@@ -127,6 +114,7 @@ export interface CardDisplayItem {
   amount: number;
   badgeType: "peek" | "take" | "buy" | "discard" | "none";
   isAttack: boolean;
+  keepAmount?: number;
 }
 
 const isAttackTarget = (target: string | undefined): boolean =>
@@ -202,6 +190,11 @@ export const analyzeCardOutputs = (outputs: ResourceCondition[]): CardDisplayIte
     // Peek + Buy with equal amounts -> consolidate to buy only
     if (peek > 0 && buy > 0 && peek === buy && take === 0) {
       result.push({ amount: buy, badgeType: "buy", isAttack });
+      return;
+    }
+
+    if (peek > take && take > 0 && buy === 0 && draw === 0) {
+      result.push({ amount: peek, badgeType: "peek", isAttack, keepAmount: take });
       return;
     }
 

@@ -1,5 +1,31 @@
 import React from "react";
 import { getIconPath } from "@/utils/iconStore.ts";
+import { useBehaviorLayout } from "./BehaviorContainer";
+import GameIcon from "../../../display/GameIcon";
+
+export function TaggedCardIcon({
+  tags,
+  iconType = "card-draw",
+}: {
+  tags: string[];
+  iconType?: string;
+}) {
+  return (
+    <span
+      data-behavior-atom
+      className="relative inline-flex items-center shrink-0 pr-2"
+      role="img"
+      aria-label={`${tags.join(" and ")} card`}
+    >
+      <GameIcon iconType={iconType} size="behavior" />
+      <span className="absolute right-0 bottom-0 flex items-center gap-px [--behavior-icon-size:14px] [--behavior-icon-small-size:12px]">
+        {tags.map((tag) => (
+          <GameIcon key={tag} iconType={`${tag}-tag`} size="behavior" />
+        ))}
+      </span>
+    </span>
+  );
+}
 
 interface CardIconProps {
   amount: number;
@@ -8,6 +34,8 @@ interface CardIconProps {
   isAffordable?: boolean;
   isAttack?: boolean;
   totalCardTypes?: number;
+  keepAmount?: number;
+  forceNumber?: boolean;
 }
 
 const cardActionBadges = {
@@ -46,7 +74,10 @@ const CardIcon: React.FC<CardIconProps> = ({
   isAffordable = true,
   isAttack = false,
   totalCardTypes = 1,
+  keepAmount,
+  forceNumber = false,
 }) => {
+  const { compact } = useBehaviorLayout();
   const cardIcon = getIconPath("card-draw");
 
   if (!cardIcon) {
@@ -66,10 +97,14 @@ const CardIcon: React.FC<CardIconProps> = ({
     ? `w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:${glowFilter}]${attackAnimation} max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]`
     : `w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]`;
 
-  const renderSingleIcon = () => (
-    <div className="relative inline-block" role="img" aria-label={label ?? badge?.label ?? "Card"}>
+  const renderSingleIcon = (picked = false, hideBadge = false) => (
+    <div
+      className="relative inline-flex shrink-0"
+      role="img"
+      aria-label={picked ? "Keep this card" : (label ?? badge?.label ?? "Card")}
+    >
       <img src={cardIcon} alt="" className={iconClass} />
-      {badge && (
+      {((badge && !hideBadge) || picked) && (
         <svg
           className={`absolute -bottom-[2px] -right-[3px] w-4 h-4 text-[#fff8e7] pointer-events-none max-md:w-3.5 max-md:h-3.5 ${badgeOpacity}`}
           viewBox="0 0 16 16"
@@ -80,15 +115,53 @@ const CardIcon: React.FC<CardIconProps> = ({
           focusable="false"
         >
           <g stroke="#090b10" strokeWidth="4.5">
-            {badge.glyph}
+            {picked ? cardActionBadges.take.glyph : badge?.glyph}
           </g>
           <g stroke="currentColor" strokeWidth="1.75">
-            {badge.glyph}
+            {picked ? cardActionBadges.take.glyph : badge?.glyph}
           </g>
         </svg>
       )}
     </div>
   );
+
+  if (keepAmount !== undefined) {
+    const showSet = amount <= 4;
+    return (
+      <div
+        data-behavior-atom
+        className="flex flex-col items-center gap-1 shrink-0 font-orbitron text-white"
+        role="img"
+        aria-label={`Look at ${amount} cards and keep ${keepAmount} of them`}
+      >
+        <svg
+          className="w-4 h-4"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          aria-hidden="true"
+        >
+          {cardActionBadges.peek.glyph}
+        </svg>
+        <div className="flex items-center gap-2 pb-1">
+          {showSet ? (
+            Array.from({ length: amount }, (_, index) => (
+              <React.Fragment key={index}>
+                {renderSingleIcon(index < keepAmount, true)}
+              </React.Fragment>
+            ))
+          ) : (
+            <>
+              <span className="text-[13px] font-bold leading-none translate-y-[2px]">{amount}</span>
+              {renderSingleIcon(false, true)}
+              <span className="text-[11px] font-bold">Keep {keepAmount}</span>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Amount 1: Show single icon, no number
   if (amount === 1) {
@@ -96,7 +169,7 @@ const CardIcon: React.FC<CardIconProps> = ({
   }
 
   // Amount 2-3 with single card type: Show individual icons side by side, no number
-  if (amount <= 3 && totalCardTypes === 1) {
+  if (amount <= 3 && totalCardTypes === 1 && !compact && !forceNumber) {
     return (
       <div className="flex items-center gap-0.5 relative">
         {Array.from({ length: amount }, (_, i) => (
@@ -109,7 +182,7 @@ const CardIcon: React.FC<CardIconProps> = ({
   // Multiple card types or amount > 2: Show number + single icon
   return (
     <div className="flex items-center gap-0.5 relative">
-      <span className="text-[11px] font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] mr-px">
+      <span className="text-[13px] font-orbitron font-bold leading-none translate-y-[2px] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] mr-px">
         {amount}
       </span>
       {renderSingleIcon()}

@@ -162,6 +162,7 @@ export default function GameCard({
           <div className="game-card-behaviors">
             <CardPanelCircuit />
             <BehaviorSection
+              cardId={card.id}
               behaviors={card.behaviors}
               computedValues={hasState ? card.computedValues : undefined}
               presentation={presentation}

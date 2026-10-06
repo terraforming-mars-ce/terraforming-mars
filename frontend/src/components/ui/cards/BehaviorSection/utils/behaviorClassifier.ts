@@ -32,7 +32,7 @@ export const classifyBehaviors = (behaviors: CardBehaviorDto[]): ClassifiedBehav
           {
             behavior: remainderBehavior,
             type: "auto-no-background" as const,
-            description: undefined,
+            description,
             originalIndex,
           },
         ];

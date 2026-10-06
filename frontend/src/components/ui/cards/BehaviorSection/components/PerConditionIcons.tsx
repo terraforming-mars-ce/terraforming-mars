@@ -23,7 +23,7 @@ export default function PerConditionIcons({ per }: { per: PerConditionDto }) {
             <img
               src={icon.src}
               alt={icon.name}
-              className={`w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)] ${
+              className={`w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain shrink-0 max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)] ${
                 others
                   ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite]"
                   : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
