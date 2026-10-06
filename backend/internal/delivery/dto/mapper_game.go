@@ -79,8 +79,9 @@ func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID s
 		DemoGame:              settings.DemoGame,
 		AllowRandomBuy:        settings.AllowRandomBuy,
 		CardPacks:             settings.CardPacks,
-		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
-		ClaudeModel:           settings.ClaudeModel,
+		HasClaudeOAuthToken:   settings.ClaudeOAuthToken != "",
+		BotSpendCapUSD:        settings.EffectiveBotSpendCapUSD(),
+		BotSpendUSD:           g.BotSpendUSD(),
 		AvailablePlayerColors: shared.PlayerColors,
 		AvailableMaps:         registries.AvailableMaps,
 		Temperature:           settings.Temperature,
@@ -229,18 +230,28 @@ func toSpectatorDtos(g *game.Game) []SpectatorDto {
 	return dtos
 }
 
+// ToChatMessageDto maps a chat message to its DTO. Messages without a kind are plain chat.
+func ToChatMessageDto(msg shared.ChatMessage) ChatMessageDto {
+	kind := msg.Kind
+	if kind == "" {
+		kind = shared.ChatMessageKindChat
+	}
+	return ChatMessageDto{
+		SenderID:    msg.SenderID,
+		SenderName:  msg.SenderName,
+		SenderColor: msg.SenderColor,
+		Message:     msg.Message,
+		Timestamp:   msg.Timestamp.Format(time.RFC3339),
+		IsSpectator: msg.IsSpectator,
+		Kind:        string(kind),
+	}
+}
+
 func toChatMessageDtos(g *game.Game) []ChatMessageDto {
 	messages := g.GetChatMessages()
 	dtos := make([]ChatMessageDto, len(messages))
 	for i, msg := range messages {
-		dtos[i] = ChatMessageDto{
-			SenderID:    msg.SenderID,
-			SenderName:  msg.SenderName,
-			SenderColor: msg.SenderColor,
-			Message:     msg.Message,
-			Timestamp:   msg.Timestamp.Format(time.RFC3339),
-			IsSpectator: msg.IsSpectator,
-		}
+		dtos[i] = ToChatMessageDto(msg)
 	}
 	return dtos
 }

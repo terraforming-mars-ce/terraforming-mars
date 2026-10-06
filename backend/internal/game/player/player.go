@@ -26,24 +26,6 @@ const (
 	BotStatusThinking BotStatus = "thinking"
 )
 
-// BotDifficulty represents the difficulty level of a bot player
-type BotDifficulty string
-
-const (
-	BotDifficultyNormal  BotDifficulty = "normal"
-	BotDifficultyHard    BotDifficulty = "hard"
-	BotDifficultyExtreme BotDifficulty = "extreme"
-)
-
-// BotSpeed represents the speed/model tier of a bot player
-type BotSpeed string
-
-const (
-	BotSpeedFast    BotSpeed = "fast"
-	BotSpeedNormal  BotSpeed = "normal"
-	BotSpeedThinker BotSpeed = "thinker"
-)
-
 // Player represents a player in the game.
 type Player struct {
 	ds       *datastore.DataStore
@@ -139,20 +121,20 @@ func (p *Player) SetBotStatus(status BotStatus) {
 	})
 }
 
-func (p *Player) BotDifficulty() BotDifficulty {
-	var diff BotDifficulty
+func (p *Player) BotPersona() string {
+	var persona string
 	p.read(func(s *datastore.PlayerState) {
-		diff = BotDifficulty(s.BotDifficulty)
+		persona = s.BotPersona
 	})
-	return diff
+	return persona
 }
 
-func (p *Player) BotSpeed() BotSpeed {
-	var speed BotSpeed
+func (p *Player) BotError() string {
+	var botErr string
 	p.read(func(s *datastore.PlayerState) {
-		speed = BotSpeed(s.BotSpeed)
+		botErr = s.BotError
 	})
-	return speed
+	return botErr
 }
 
 func (p *Player) SetPlayerType(playerType PlayerType) {
@@ -161,15 +143,16 @@ func (p *Player) SetPlayerType(playerType PlayerType) {
 	})
 }
 
-func (p *Player) SetBotDifficulty(difficulty BotDifficulty) {
+func (p *Player) SetBotPersona(persona string) {
 	p.update(func(s *datastore.PlayerState) {
-		s.BotDifficulty = string(difficulty)
+		s.BotPersona = persona
 	})
 }
 
-func (p *Player) SetBotSpeed(speed BotSpeed) {
+// SetBotError records why the bot is failing; an empty reason clears it.
+func (p *Player) SetBotError(reason string) {
 	p.update(func(s *datastore.PlayerState) {
-		s.BotSpeed = string(speed)
+		s.BotError = reason
 	})
 }
 

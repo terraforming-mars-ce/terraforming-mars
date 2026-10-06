@@ -344,7 +344,9 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
             triggeredEffects={triggeredEffects}
             onPlayerClick={onPlayerClick}
             onKickPlayer={handleKickPlayer}
-            onConvertToBot={gameState?.settings?.hasClaudeApiKey ? handleConvertToBot : undefined}
+            onConvertToBot={
+              gameState?.settings?.hasClaudeOAuthToken ? handleConvertToBot : undefined
+            }
           />
         </div>
       )}

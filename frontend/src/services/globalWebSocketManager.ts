@@ -9,6 +9,11 @@ import type {
   FullStatePayload,
   LogUpdatePayload,
   UpdateGameSettingsRequest,
+  EmotePayload,
+  EmoteSendPayload,
+  BotThoughtPayload,
+  BotTraceDto,
+  BotTraceEventDto,
 } from "../types/generated/api-types.ts";
 
 class GlobalWebSocketManager implements WebSocketConnection {
@@ -117,6 +122,22 @@ class GlobalWebSocketManager implements WebSocketConnection {
 
     webSocketService.on("spectator-kicked", (payload: any) => {
       this.emit("spectator-kicked", payload);
+    });
+
+    webSocketService.on("emote", (payload: EmotePayload) => {
+      this.emit("emote", payload);
+    });
+
+    webSocketService.on("bot-thought", (payload: BotThoughtPayload) => {
+      this.emit("bot-thought", payload);
+    });
+
+    webSocketService.on("bot-trace-snapshot", (payload: BotTraceDto) => {
+      this.emit("bot-trace-snapshot", payload);
+    });
+
+    webSocketService.on("bot-trace-event", (payload: BotTraceEventDto) => {
+      this.emit("bot-trace-event", payload);
     });
 
     webSocketService.on("error", (error: any) => {
@@ -371,9 +392,24 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.buildColony(colonyId);
   }
 
-  async addBot(botName?: string, difficulty?: string, speed?: string): Promise<string> {
+  async addBot(): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.addBot(botName, difficulty, speed);
+    return webSocketService.addBot();
+  }
+
+  async retryBot(playerId: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.retryBot(playerId);
+  }
+
+  async inspectBot(playerId: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.inspectBot(playerId);
+  }
+
+  async sendEmote(emote: EmoteSendPayload["emote"]): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.sendEmote(emote);
   }
 
   async kickPlayer(targetPlayerId: string): Promise<string> {

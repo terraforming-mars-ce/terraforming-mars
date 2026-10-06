@@ -2,11 +2,10 @@ package bot
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"hash/fnv"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -17,192 +16,380 @@ import (
 	"terraforming-mars-backend/internal/game/shared"
 )
 
-// Broadcaster is used by the controller to broadcast game state and chat after dispatched commands.
+// Broadcaster publishes bot activity to the players.
 type Broadcaster interface {
 	BroadcastGameState(gameID string, playerIDs []string)
 	BroadcastChatMessage(gameID string, chatMsg shared.ChatMessage)
+	BroadcastEmote(gameID, playerID, emote string)
+	BroadcastBotThought(gameID, playerID, text string, typing bool)
 }
 
-// BotController manages all bot sessions and coordinates the turn-play loop.
+// Config tunes the bot runtime.
+type Config struct {
+	ExecutorModel string
+	PlannerModel  string
+	ReactorModel  string
+
+	TurnTimeout  time.Duration
+	PlanTimeout  time.Duration
+	ReactTimeout time.Duration
+
+	// ActionGap is the minimum time between two game actions of one bot, so humans can follow them.
+	ActionGap time.Duration
+	// RetryBackoff holds the wait before each retry; when it runs out the bot falls back to autopilot.
+	RetryBackoff []time.Duration
+	// MaxStepsPerTurn bounds model calls and autopilot steps in one turn.
+	MaxStepsPerTurn int
+
+	ReactionBatch    time.Duration
+	ReactionCooldown time.Duration
+	BigEventChance   float64
+	// BigCardCost is the card cost from which an opponent's card counts as a big moment.
+	BigCardCost int
+	// ThoughtInterval is the minimum time between two thought bubbles of one bot.
+	ThoughtInterval time.Duration
+
+	ExecutorBudgetUSD float64
+	PlannerBudgetUSD  float64
+	ReactorBudgetUSD  float64
+
+	Strategy string
+}
+
+// DefaultConfig returns production settings.
+func DefaultConfig(strategy string) Config {
+	return Config{
+		ExecutorModel:     "sonnet",
+		PlannerModel:      "opus",
+		ReactorModel:      "haiku",
+		TurnTimeout:       3 * time.Minute,
+		PlanTimeout:       4 * time.Minute,
+		ReactTimeout:      45 * time.Second,
+		ActionGap:         1500 * time.Millisecond,
+		RetryBackoff:      []time.Duration{5 * time.Second, 15 * time.Second},
+		MaxStepsPerTurn:   40,
+		ReactionBatch:     2 * time.Second,
+		ReactionCooldown:  30 * time.Second,
+		BigEventChance:    0.25,
+		BigCardCost:       20,
+		ThoughtInterval:   10 * time.Second,
+		ExecutorBudgetUSD: 1.0,
+		PlannerBudgetUSD:  1.5,
+		ReactorBudgetUSD:  0.05,
+		Strategy:          strategy,
+	}
+}
+
+// BotController owns every running bot session.
 type BotController struct {
 	gameRepo     game.GameRepository
 	stateRepo    game.GameStateRepository
 	cardRegistry cards.CardRegistry
-	dispatcher   *CommandDispatcher
 	broadcaster  Broadcaster
+	runner       Runner
+	tools        *ToolServer
+	personas     *PersonaCatalog
+	cfg          Config
 	logger       *slog.Logger
-	mu           sync.Mutex
-	sessions     map[string]map[string]*BotSession // gameID -> playerID -> session
+
+	mu       sync.Mutex
+	sessions map[string]map[string]*botSession
+
+	inspectMu sync.Mutex
+	inspect   map[string]inspector
+
+	// leaving holds bots that finished their recap, per game, until every bot of the game has.
+	leaving map[string][]string
 }
 
-// BotSession holds the state for a single bot player in a game.
-type BotSession struct {
-	gameID     string
-	playerID   string
-	botName    string
-	model      string
-	apiKey     string
-	difficulty string
-	runDir     string
-
-	invoker       *Invoker
-	stateWriter   *StateWriter
-	commandReader *CommandReader
-	historyWriter *HistoryWriter
-
-	turnCh chan struct{}
-	cancel context.CancelFunc
-	done   chan struct{}
+// inspector is an admin connection watching one bot's trace.
+type inspector struct {
+	gameID   string
+	playerID string
+	send     func(dto.WebSocketMessage)
+	done     <-chan struct{}
 }
 
-// NewBotController creates a new bot controller.
+// NewBotController creates a bot controller.
 func NewBotController(
 	gameRepo game.GameRepository,
 	stateRepo game.GameStateRepository,
 	cardRegistry cards.CardRegistry,
-	dispatcher *CommandDispatcher,
 	broadcaster Broadcaster,
+	runner Runner,
+	tools *ToolServer,
+	personas *PersonaCatalog,
+	cfg Config,
 	logger *slog.Logger,
 ) *BotController {
 	return &BotController{
 		gameRepo:     gameRepo,
 		stateRepo:    stateRepo,
 		cardRegistry: cardRegistry,
-		dispatcher:   dispatcher,
 		broadcaster:  broadcaster,
+		runner:       runner,
+		tools:        tools,
+		personas:     personas,
+		cfg:          cfg,
 		logger:       logger,
-		sessions:     make(map[string]map[string]*BotSession),
+		sessions:     make(map[string]map[string]*botSession),
+		inspect:      make(map[string]inspector),
+		leaving:      make(map[string][]string),
 	}
 }
 
-// StartBot initializes and starts a bot session for the given player.
-func (bc *BotController) StartBot(gameID, playerID, botName, difficulty, speed string, settings shared.GameSettings) error {
+// announceLeft records that a bot left after the game ended. When the last bot of the game
+// has left, one "left the game" line per bot is posted, so they come after every recap.
+func (bc *BotController) announceLeft(gameID, playerID string) {
+	bc.mu.Lock()
+	bc.leaving[gameID] = append(bc.leaving[gameID], playerID)
+	if len(bc.sessions[gameID]) > 0 {
+		bc.mu.Unlock()
+		return
+	}
+	left := bc.leaving[gameID]
+	delete(bc.leaving, gameID)
+	bc.mu.Unlock()
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_ = bc.onGame(ctx, func() {
+			g, err := bc.gameRepo.Get(ctx, gameID)
+			if err != nil {
+				return
+			}
+			for _, id := range left {
+				if bot, err := g.GetPlayer(id); err == nil {
+					bc.say(ctx, g, bot, bot.Name()+" left the game", shared.ChatMessageKindSystem)
+				}
+			}
+		})
+	}()
+}
+
+// InspectBot subscribes an admin connection to one bot's trace and sends the current
+// snapshot. An empty playerID unsubscribes. Only the host may inspect, and only in
+// development mode, because the trace shows the bot's hand and plans. It runs on the
+// executor, like the WebSocket handler that calls it.
+func (bc *BotController) InspectBot(ctx context.Context, gameID, requesterID, connectionID, playerID string, send func(dto.WebSocketMessage), done <-chan struct{}) error {
+	if playerID == "" {
+		bc.inspectMu.Lock()
+		delete(bc.inspect, connectionID)
+		bc.inspectMu.Unlock()
+		return nil
+	}
+	g, err := bc.gameRepo.Get(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("game not found: %s", gameID)
+	}
+	if g.HostPlayerID() != requesterID {
+		return fmt.Errorf("only the host can inspect bots")
+	}
+	if !g.Settings().DevelopmentMode {
+		return fmt.Errorf("bot inspection is only available in development mode")
+	}
+	bc.mu.Lock()
+	s := bc.sessions[gameID][playerID]
+	bc.mu.Unlock()
+	if s == nil {
+		return fmt.Errorf("no running bot for player %s", playerID)
+	}
+
+	bc.inspectMu.Lock()
+	bc.inspect[connectionID] = inspector{gameID: gameID, playerID: playerID, send: send, done: done}
+	bc.inspectMu.Unlock()
+	send(dto.WebSocketMessage{Type: dto.MessageTypeBotTraceSnapshot, GameID: gameID, Payload: s.trace.snapshot()})
+	return nil
+}
+
+// publishTrace sends a trace event to every connection inspecting that bot.
+func (bc *BotController) publishTrace(gameID string, event dto.BotTraceEventDto) {
+	bc.inspectMu.Lock()
+	var targets []func(dto.WebSocketMessage)
+	for id, in := range bc.inspect {
+		select {
+		case <-in.done:
+			delete(bc.inspect, id)
+			continue
+		default:
+		}
+		if in.gameID == gameID && in.playerID == event.PlayerID {
+			targets = append(targets, in.send)
+		}
+	}
+	bc.inspectMu.Unlock()
+	message := dto.WebSocketMessage{Type: dto.MessageTypeBotTraceEvent, GameID: gameID, Payload: event}
+	for _, send := range targets {
+		send(message)
+	}
+}
+
+// AssignIdentity picks a free bot name and its persona for a new bot.
+func (bc *BotController) AssignIdentity(seed uint64, takenNames []string) (name, personaID string) {
+	return bc.personas.AssignIdentity(seed, takenNames)
+}
+
+// PrepareBot checks the bot's credential with a short in-character greeting, then marks the
+// bot ready (posting the greeting) or failed. It runs in the background.
+func (bc *BotController) PrepareBot(gameID, playerID string) {
+	go bc.prepareBot(gameID, playerID)
+}
+
+func (bc *BotController) prepareBot(gameID, playerID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), bc.cfg.ReactTimeout)
+	defer cancel()
+	log := bc.logger.With(slog.String("game_id", gameID), slog.String("player_id", playerID))
+
+	var name, personaID, token string
+	found := false
+	if err := bc.onGame(ctx, func() {
+		g, err := bc.gameRepo.Get(ctx, gameID)
+		if err != nil {
+			return
+		}
+		bot, err := g.GetPlayer(playerID)
+		if err != nil {
+			return
+		}
+		name, personaID, token, found = bot.Name(), bot.BotPersona(), g.Settings().ClaudeOAuthToken, true
+	}); err != nil || !found {
+		return
+	}
+
+	result, runErr := bc.runner.Run(ctx, Invocation{
+		Model:        bc.cfg.ReactorModel,
+		SystemPrompt: identityPreamble(name, bc.personas.Get(personaID)) + "\n\n" + untrustedTextRule,
+		Prompt:       greetingPrompt(),
+		Token:        token,
+		MaxBudgetUSD: bc.cfg.ReactorBudgetUSD,
+	})
+
+	_ = bc.onGame(ctx, func() {
+		g, err := bc.gameRepo.Get(ctx, gameID)
+		if err != nil {
+			return
+		}
+		bot, err := g.GetPlayer(playerID)
+		if err != nil {
+			return
+		}
+		g.AddBotSpend(result.CostUSD)
+		if runErr != nil {
+			log.Warn("Bot credential check failed", slog.Any("error", runErr))
+			bot.SetBotStatus(playerPkg.BotStatusFailed)
+			bot.SetBotError(credentialError(runErr))
+			bc.broadcaster.BroadcastGameState(gameID, nil)
+			return
+		}
+		bot.SetBotStatus(playerPkg.BotStatusReady)
+		bot.SetBotError("")
+		bc.broadcaster.BroadcastGameState(gameID, nil)
+		if greeting := cleanLine(result.Text, shared.MaxChatMessageLength); greeting != "" {
+			bc.say(ctx, g, bot, greeting, shared.ChatMessageKindChat)
+		}
+	})
+}
+
+// onGame runs fn on the executor and reports whether it ran.
+func (bc *BotController) onGame(ctx context.Context, fn func()) error {
+	return bc.tools.exec.Do(ctx, fn)
+}
+
+func credentialError(err error) string {
+	if errors.Is(err, ErrAuthentication) {
+		return "The Claude token was rejected. Create one with `claude setup-token`."
+	}
+	return "Claude token check failed: " + truncate(err.Error(), 200)
+}
+
+// StartBot starts the session that plays for a bot player. It runs on the executor,
+// like the game actions that call it.
+func (bc *BotController) StartBot(gameID, playerID string) error {
+	ctx := context.Background()
+	g, err := bc.gameRepo.Get(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("get game: %w", err)
+	}
+	bot, err := g.GetPlayer(playerID)
+	if err != nil {
+		return fmt.Errorf("get bot player: %w", err)
+	}
+	if bot.BotPersona() == "" {
+		bot.SetBotPersona(bc.personaFor(bot.Name()))
+	}
+
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
-
-	if _, exists := bc.sessions[gameID]; !exists {
-		bc.sessions[gameID] = make(map[string]*BotSession)
+	if bc.sessions[gameID] == nil {
+		bc.sessions[gameID] = make(map[string]*botSession)
 	}
 	if _, exists := bc.sessions[gameID][playerID]; exists {
 		return fmt.Errorf("bot session already exists for player %s in game %s", playerID, gameID)
 	}
-
-	var model string
-	switch speed {
-	case "fast":
-		model = "haiku"
-	case "thinker":
-		model = "opus"
-	default:
-		model = "sonnet"
+	s := newBotSession(bc, g, bot)
+	if diffs, err := bc.stateRepo.GetDiff(ctx, gameID); err == nil && len(diffs) > 0 {
+		s.seenLogSeq = diffs[len(diffs)-1].SequenceNumber
 	}
+	bc.sessions[gameID][playerID] = s
+	s.start()
 
-	runDir, err := os.MkdirTemp("", fmt.Sprintf("tm-bot-%s-", playerID[:8]))
-	if err != nil {
-		return fmt.Errorf("create bot temp dir: %w", err)
-	}
-
-	statePath := filepath.Join(runDir, "state.txt")
-	commandPath := filepath.Join(runDir, "commands.jsonl")
-	historyPath := filepath.Join(runDir, "history.log")
-
-	botLogger := bc.logger.With(
-		slog.String("game_id", gameID),
-		slog.String("player_id", playerID),
-		slog.String("bot_name", botName),
-	)
-
-	historyWriter, err := NewHistoryWriter(historyPath, botLogger)
-	if err != nil {
-		if removeErr := os.RemoveAll(runDir); removeErr != nil {
-			bc.logger.Warn("Failed to remove bot run directory", slog.String("path", runDir), slog.Any("error", removeErr))
-		}
-		return fmt.Errorf("create history writer: %w", err)
-	}
-
-	commandReader := NewCommandReader(commandPath, botLogger)
-	if err := commandReader.Start(); err != nil {
-		if closeErr := historyWriter.Close(); closeErr != nil {
-			bc.logger.Warn("Failed to close history writer", slog.Any("error", closeErr))
-		}
-		if removeErr := os.RemoveAll(runDir); removeErr != nil {
-			bc.logger.Warn("Failed to remove bot run directory", slog.String("path", runDir), slog.Any("error", removeErr))
-		}
-		return fmt.Errorf("start command reader: %w", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	if difficulty == "" {
-		difficulty = "normal"
-	}
-
-	session := &BotSession{
-		gameID:        gameID,
-		playerID:      playerID,
-		botName:       botName,
-		model:         model,
-		apiKey:        settings.ClaudeAPIKey,
-		difficulty:    difficulty,
-		runDir:        runDir,
-		invoker:       NewInvoker(historyPath, statePath, commandPath, model, settings.ClaudeAPIKey, difficulty, botLogger),
-		stateWriter:   NewStateWriter(statePath),
-		commandReader: commandReader,
-		historyWriter: historyWriter,
-		turnCh:        make(chan struct{}, 1),
-		cancel:        cancel,
-		done:          make(chan struct{}),
-	}
-
-	bc.sessions[gameID][playerID] = session
-
-	go bc.runBotLoop(ctx, session)
-
-	bc.logger.Debug("Bot session started",
-		slog.String("game_id", gameID),
-		slog.String("player_id", playerID),
-		slog.String("bot_name", botName),
-		slog.String("model", model))
-
+	bc.logger.Debug("Bot session started", slog.String("game_id", gameID), slog.String("player_id", playerID), slog.String("persona", bot.BotPersona()))
 	return nil
 }
 
-// OnGameBroadcast is called by the Broadcaster after every game state broadcast.
-// It checks if any bot in the game should take a turn.
+func (bc *BotController) personaFor(name string) string {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(name))
+	return bc.personas.AssignPersona(h.Sum64())
+}
+
+// OnGameBroadcast wakes every bot of the game so it can check whether it must act.
 func (bc *BotController) OnGameBroadcast(gameID string) {
-	bc.mu.Lock()
-	gameSessions, exists := bc.sessions[gameID]
-	if !exists {
-		bc.mu.Unlock()
+	for _, s := range bc.gameSessions(gameID) {
+		s.wake()
+	}
+}
+
+// OnChatMessage forwards chat to the game's bots so they can answer between turns.
+// It runs on the executor, inside the chat broadcast.
+func (bc *BotController) OnChatMessage(gameID string, chatMsg shared.ChatMessage) {
+	sessions := bc.gameSessions(gameID)
+	if len(sessions) == 0 || chatMsg.IsSpectator {
 		return
 	}
-	sessions := make([]*BotSession, 0, len(gameSessions))
-	for _, s := range gameSessions {
-		sessions = append(sessions, s)
+	fromBot := false
+	if g, err := bc.gameRepo.Get(context.Background(), gameID); err == nil {
+		if sender, err := g.GetPlayer(chatMsg.SenderID); err == nil {
+			fromBot = sender.IsBot()
+		}
 	}
-	bc.mu.Unlock()
-
-	ctx := context.Background()
-	g, err := bc.gameRepo.Get(ctx, gameID)
-	if err != nil {
-		return
-	}
-
-	for _, session := range sessions {
-		// Skip exited bot players
-		p, err := g.GetPlayer(session.playerID)
-		if err != nil || p.HasExited() {
+	for _, s := range sessions {
+		if chatMsg.SenderID == s.playerID {
 			continue
 		}
-
-		gameDto := dto.ToGameDto(g, bc.cardRegistry, session.playerID)
-		if IsMyTurn(&gameDto, session.playerID) {
-			select {
-			case session.turnCh <- struct{}{}:
-			default:
-			}
-		}
+		s.observe(Happening{Kind: HappeningChat, ActorID: chatMsg.SenderID, Detail: chatMsg.Message, FromBot: fromBot, At: chatMsg.Timestamp})
 	}
+}
+
+// RetryBot clears a failed bot and lets it use the model again. Host only. It runs on
+// the executor, like the WebSocket handler that calls it.
+func (bc *BotController) RetryBot(ctx context.Context, gameID, requesterID, playerID string) error {
+	g, err := bc.gameRepo.Get(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("game not found: %s", gameID)
+	}
+	if g.HostPlayerID() != requesterID {
+		return fmt.Errorf("only the host can retry a bot")
+	}
+	bc.mu.Lock()
+	s := bc.sessions[gameID][playerID]
+	bc.mu.Unlock()
+	if s == nil {
+		return fmt.Errorf("no running bot for player %s", playerID)
+	}
+	s.requestRetry()
+	return nil
 }
 
 // BotStopper can stop individual bot sessions.
@@ -215,256 +402,104 @@ type BotGameStopper interface {
 	StopAllBotsForGame(gameID string)
 }
 
-// StopBot stops a single bot session for a player.
+// StopBot stops a single bot session and waits for it to finish.
 func (bc *BotController) StopBot(gameID, playerID string) {
 	bc.mu.Lock()
-	gameSessions, exists := bc.sessions[gameID]
-	if !exists {
-		bc.mu.Unlock()
-		return
+	s := bc.sessions[gameID][playerID]
+	if s != nil {
+		delete(bc.sessions[gameID], playerID)
 	}
-	session, exists := gameSessions[playerID]
-	if !exists {
-		bc.mu.Unlock()
-		return
-	}
-	delete(gameSessions, playerID)
 	bc.mu.Unlock()
-
-	session.cancel()
-	<-session.done
-	bc.cleanupSession(session)
-
-	bc.logger.Debug("Bot stopped for player",
-		slog.String("game_id", gameID),
-		slog.String("player_id", playerID))
+	if s != nil {
+		s.stop()
+	}
 }
 
-// StopAllBotsForGame stops all bot sessions for a game.
+// StopAllBotsForGame stops every bot session of a game and waits for them to finish.
 func (bc *BotController) StopAllBotsForGame(gameID string) {
 	bc.mu.Lock()
-	gameSessions, exists := bc.sessions[gameID]
-	if !exists {
-		bc.mu.Unlock()
-		return
-	}
+	sessions := bc.sessions[gameID]
 	delete(bc.sessions, gameID)
 	bc.mu.Unlock()
-
-	for _, session := range gameSessions {
-		session.cancel()
-		<-session.done
-		bc.cleanupSession(session)
+	for _, s := range sessions {
+		s.stop()
 	}
-
+	bc.inspectMu.Lock()
+	for id, in := range bc.inspect {
+		if in.gameID == gameID {
+			delete(bc.inspect, id)
+		}
+	}
+	bc.inspectMu.Unlock()
 	bc.logger.Debug("All bots stopped for game", slog.String("game_id", gameID))
 }
 
-func (bc *BotController) runBotLoop(ctx context.Context, session *BotSession) {
-	defer close(session.done)
+// RunningBots returns how many bot sessions are running, for tests and diagnostics.
+func (bc *BotController) RunningBots() int {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+	n := 0
+	for _, sessions := range bc.sessions {
+		n += len(sessions)
+	}
+	return n
+}
 
-	log := bc.logger.With(
-		slog.String("game_id", session.gameID),
-		slog.String("player_id", session.playerID),
-	)
+func (bc *BotController) gameSessions(gameID string) []*botSession {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+	sessions := make([]*botSession, 0, len(bc.sessions[gameID]))
+	for _, s := range bc.sessions[gameID] {
+		sessions = append(sessions, s)
+	}
+	return sessions
+}
 
-	for {
-		select {
-		case <-ctx.Done():
-			log.Debug("Bot loop exiting")
-			return
-		case <-session.turnCh:
-			bc.handleTurn(ctx, session, log)
+// forget removes a session that ended on its own, such as after the game ended.
+func (bc *BotController) forget(s *botSession) {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+	if bc.sessions[s.gameID][s.playerID] == s {
+		delete(bc.sessions[s.gameID], s.playerID)
+		if len(bc.sessions[s.gameID]) == 0 {
+			delete(bc.sessions, s.gameID)
 		}
 	}
 }
 
-func (bc *BotController) handleTurn(ctx context.Context, session *BotSession, log *slog.Logger) {
-	for {
-		if ctx.Err() != nil {
-			return
-		}
-
-		g, err := bc.gameRepo.Get(ctx, session.gameID)
-		if err != nil {
-			log.Error("Failed to get game", slog.Any("error", err))
-			return
-		}
-
-		gameDto := dto.ToGameDto(g, bc.cardRegistry, session.playerID)
-		if !IsMyTurn(&gameDto, session.playerID) {
-			log.Debug("Not my turn anymore, stopping")
-			return
-		}
-
-		log.Debug("Starting turn invocation")
-
-		if bot, err := g.GetPlayer(session.playerID); err == nil {
-			bot.SetBotStatus(playerPkg.BotStatusThinking)
-			bc.broadcaster.BroadcastGameState(session.gameID, nil)
-		}
-
-		summary := SummarizeGameState(&gameDto, session.playerID)
-
-		// Append recent action log and chat messages
-		if diffs, err := bc.stateRepo.GetDiff(ctx, session.gameID); err == nil {
-			summary += "\n\n" + formatRecentLog(diffs, 20)
-		}
-		chatMessages := g.GetChatMessages()
-		if len(chatMessages) > 0 {
-			summary += "\n\n" + formatRecentChat(chatMessages, 10)
-		}
-
-		if err := session.stateWriter.WriteState(summary); err != nil {
-			log.Error("Failed to write state", slog.Any("error", err))
-			return
-		}
-
-		if err := session.commandReader.Reset(); err != nil {
-			log.Error("Failed to reset command reader", slog.Any("error", err))
-			return
-		}
-
-		cmdCtx, cmdCancel := context.WithCancel(ctx)
-		cmdDone := make(chan struct{})
-		go bc.processCommands(cmdCtx, session, cmdDone, log)
-
-		invokeCtx, invokeCancel := context.WithTimeout(ctx, 5*time.Minute)
-		err = session.invoker.PlayTurn(invokeCtx, &gameDto, session.playerID)
-		invokeCancel()
-
-		if err != nil {
-			log.Error("Claude CLI invocation failed", slog.Any("error", err))
-		}
-
-		// Give time for remaining commands to be processed
-		time.Sleep(3 * time.Second)
-		cmdCancel()
-		<-cmdDone
-
-		log.Debug("Turn invocation complete")
-
-		if g, err := bc.gameRepo.Get(ctx, session.gameID); err == nil {
-			if bot, err := g.GetPlayer(session.playerID); err == nil {
-				bot.SetBotStatus(playerPkg.BotStatusReady)
-				bc.broadcaster.BroadcastGameState(session.gameID, nil)
-			}
-		}
-	}
-}
-
-func (bc *BotController) processCommands(ctx context.Context, session *BotSession, done chan struct{}, log *slog.Logger) {
-	defer close(done)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case rawCmd, ok := <-session.commandReader.Commands():
-			if !ok {
-				return
-			}
-			bc.executeCommand(ctx, session, rawCmd, log)
-		}
-	}
-}
-
-func (bc *BotController) executeCommand(ctx context.Context, session *BotSession, rawCmd json.RawMessage, log *slog.Logger) {
-	session.historyWriter.WriteSent("command", rawCmd)
-
-	var envelope struct {
-		Type    string          `json:"type"`
-		Payload json.RawMessage `json:"payload"`
-	}
-	if err := json.Unmarshal(rawCmd, &envelope); err != nil {
-		log.Error("Failed to parse command envelope", slog.Any("error", err))
-		return
-	}
-
-	// Handle chat messages directly (not through dispatcher to avoid import cycle)
-	if envelope.Type == "chat.send-message" {
-		bc.handleChatMessage(ctx, session, envelope.Payload, log)
-		return
-	}
-
-	err := bc.dispatcher.Dispatch(ctx, session.gameID, session.playerID, rawCmd)
+// snapshot reads the game as one bot sees it. It must run on the executor.
+func (bc *BotController) snapshot(ctx context.Context, gameID, playerID string) (*Snapshot, error) {
+	g, err := bc.gameRepo.Get(ctx, gameID)
 	if err != nil {
-		log.Error("Command dispatch failed", slog.Any("error", err))
-		errPayload, _ := json.Marshal(map[string]string{
-			"type":  "error",
-			"error": err.Error(),
-		})
-		session.historyWriter.WriteReceived("error", errPayload)
-		return
+		return nil, fmt.Errorf("get game: %w", err)
 	}
-
-	successPayload, _ := json.Marshal(map[string]string{
-		"type": "action-success",
-	})
-	session.historyWriter.WriteReceived("action-success", successPayload)
-
-	bc.broadcaster.BroadcastGameState(session.gameID, nil)
-
-	if g, err := bc.gameRepo.Get(ctx, session.gameID); err == nil {
-		gameDto := dto.ToGameDto(g, bc.cardRegistry, session.playerID)
-		summary := SummarizeGameState(&gameDto, session.playerID)
-		if err := session.stateWriter.WriteState(summary); err != nil {
-			log.Error("Failed to update state file after command", slog.Any("error", err))
-		}
+	p, err := g.GetPlayer(playerID)
+	if err != nil {
+		return nil, fmt.Errorf("get bot player: %w", err)
 	}
+	snap := &Snapshot{
+		Game:     g,
+		Player:   p,
+		View:     dto.ToGameDto(g, bc.cardRegistry, playerID),
+		PlayerID: playerID,
+		Chat:     g.GetChatMessages(),
+	}
+	if diffs, err := bc.stateRepo.GetDiff(ctx, gameID); err == nil {
+		snap.Log = diffs
+	}
+	return snap, nil
 }
 
-func (bc *BotController) handleChatMessage(ctx context.Context, session *BotSession, payload json.RawMessage, log *slog.Logger) {
-	var p struct {
-		Message string `json:"message"`
-	}
-	if err := json.Unmarshal(payload, &p); err != nil {
-		log.Error("Failed to parse chat message payload", slog.Any("error", err))
-		return
-	}
-
-	if len(p.Message) == 0 {
-		return
-	}
-	if len(p.Message) > shared.MaxChatMessageLength {
-		p.Message = p.Message[:shared.MaxChatMessageLength]
-	}
-
-	g, err := bc.gameRepo.Get(ctx, session.gameID)
-	if err != nil {
-		log.Error("Failed to get game for chat", slog.Any("error", err))
-		return
-	}
-
-	bot, err := g.GetPlayer(session.playerID)
-	if err != nil {
-		log.Error("Failed to get bot player for chat", slog.Any("error", err))
-		return
-	}
-
-	chatMsg := shared.ChatMessage{
-		SenderID:    session.playerID,
+// say posts a chat message from a bot. It must run on the executor.
+func (bc *BotController) say(ctx context.Context, g *game.Game, bot *playerPkg.Player, text string, kind shared.ChatMessageKind) {
+	msg := shared.ChatMessage{
+		SenderID:    bot.ID(),
 		SenderName:  bot.Name(),
 		SenderColor: bot.Color(),
-		Message:     p.Message,
+		Message:     text,
 		Timestamp:   time.Now(),
+		Kind:        kind,
 	}
-	g.AddChatMessage(ctx, chatMsg)
-
-	successPayload, _ := json.Marshal(map[string]string{
-		"type": "action-success",
-	})
-	session.historyWriter.WriteReceived("action-success", successPayload)
-
-	bc.broadcaster.BroadcastChatMessage(session.gameID, chatMsg)
-}
-
-func (bc *BotController) cleanupSession(session *BotSession) {
-	session.commandReader.Stop()
-	if err := session.historyWriter.Close(); err != nil {
-		bc.logger.Warn("Failed to close history writer", slog.Any("error", err))
-	}
-	if err := os.RemoveAll(session.runDir); err != nil {
-		bc.logger.Warn("Failed to remove bot run directory", slog.String("path", session.runDir), slog.Any("error", err))
-	}
+	g.AddChatMessage(ctx, msg)
+	bc.broadcaster.BroadcastChatMessage(g.ID(), msg)
 }

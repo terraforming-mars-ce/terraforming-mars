@@ -5,37 +5,41 @@ export const PlayerChip: React.FC<{ children: React.ReactNode; className?: strin
   className = "",
 }) => <span className={`player-chip ${className}`}>{children}</span>;
 
-const difficultyConfig: Record<string, { label: string; color: string }> = {
-  hard: { label: "Hard", color: "bg-amber-600/80" },
-  extreme: { label: "Actual Bot", color: "bg-red-700/80" },
-  normal: { label: "Normal", color: "bg-green-700/80" },
+const personaLabels: Record<string, string> = {
+  rival: "Rival",
+  commentator: "Commentator",
+  veteran: "Grumpy veteran",
+  scientist: "Scientist",
+  corporate: "Corporate",
+  optimist: "Optimist",
 };
 
-const speedConfig: Record<string, { label: string; color: string }> = {
-  fast: { label: "Haiku", color: "bg-sky-600/80" },
-  thinker: { label: "Opus", color: "bg-violet-600/80" },
-};
-
-interface BotDifficultyChipProps {
-  difficulty?: string;
-  botStatus?: string;
-  showStatusIcon?: boolean;
+export function getBotPersonaLabel(persona?: string): string {
+  if (!persona) {
+    return "Bot";
+  }
+  return personaLabels[persona] ?? persona;
 }
 
-export const BotDifficultyChip: React.FC<BotDifficultyChipProps> = ({
-  difficulty = "normal",
-  botStatus,
-  showStatusIcon = false,
-}) => {
+interface BotPersonaChipProps {
+  persona?: string;
+  botStatus?: string;
+}
+
+export const BotPersonaChip: React.FC<BotPersonaChipProps> = ({ persona, botStatus }) => {
   const failed = botStatus === "failed";
   const loading = botStatus === "loading";
-  const config = difficultyConfig[difficulty] || difficultyConfig.normal;
-  const color = failed ? "bg-red-700/80" : loading ? "bg-purple-700/80" : config.color;
+  let color = "bg-indigo-600/80";
+  if (failed) {
+    color = "bg-red-700/80";
+  } else if (loading) {
+    color = "bg-purple-700/80";
+  }
 
   return (
     <PlayerChip className={`${color} text-white`}>
-      {config.label}
-      {showStatusIcon && loading && (
+      {getBotPersonaLabel(persona)}
+      {loading && (
         <svg
           className="animate-spin"
           width="10"
@@ -48,7 +52,7 @@ export const BotDifficultyChip: React.FC<BotDifficultyChipProps> = ({
           <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
         </svg>
       )}
-      {showStatusIcon && failed && (
+      {failed && (
         <svg
           width="10"
           height="10"
@@ -65,14 +69,4 @@ export const BotDifficultyChip: React.FC<BotDifficultyChipProps> = ({
       )}
     </PlayerChip>
   );
-};
-
-interface BotSpeedChipProps {
-  speed?: string;
-}
-
-export const BotSpeedChip: React.FC<BotSpeedChipProps> = ({ speed = "fast" }) => {
-  const config = speedConfig[speed] || speedConfig.fast;
-
-  return <PlayerChip className={`${config.color} text-white`}>{config.label}</PlayerChip>;
 };

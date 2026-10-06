@@ -27,8 +27,9 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegi
 		DemoGame:              settings.DemoGame,
 		AllowRandomBuy:        settings.AllowRandomBuy,
 		CardPacks:             settings.CardPacks,
-		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
-		ClaudeModel:           settings.ClaudeModel,
+		HasClaudeOAuthToken:   settings.ClaudeOAuthToken != "",
+		BotSpendCapUSD:        settings.EffectiveBotSpendCapUSD(),
+		BotSpendUSD:           g.BotSpendUSD(),
 		AvailablePlayerColors: shared.PlayerColors,
 	}
 

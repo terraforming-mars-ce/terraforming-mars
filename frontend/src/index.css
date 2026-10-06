@@ -248,6 +248,47 @@ code {
   }
 }
 
+@keyframes botThoughtBubble {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% + 6px));
+  }
+  8% {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+  88% {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 4px));
+  }
+}
+
+@keyframes emotePop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+  22% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -80%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -130%) scale(0.9);
+  }
+}
+
 @keyframes stripeMove {
   from {
     background-position: 0 0;

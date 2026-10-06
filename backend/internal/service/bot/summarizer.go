@@ -3,6 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -27,10 +28,12 @@ func SummarizeGameState(game *dto.GameDto, myPlayerID string) string {
 	lines = append(lines, formatHand(p.Cards))
 	lines = append(lines, formatCardActions(p.Actions))
 	lines = append(lines, formatStandardProjects(p.StandardProjects))
-	lines = append(lines, formatMilestones(p.Milestones))
-	lines = append(lines, formatAwards(p.Awards))
+	lines = append(lines, formatMilestones(game, p.Milestones))
+	lines = append(lines, formatAwards(game, p.Awards))
+	lines = append(lines, formatColonies(game, myPlayerID))
+	lines = append(lines, formatProjectFunding(game.ProjectFunding))
 	lines = append(lines, formatOpponents(game.OtherPlayers))
-	lines = append(lines, formatBoard(game.Board.Tiles))
+	lines = append(lines, formatBoard(game))
 
 	if len(game.FinalScores) > 0 {
 		lines = append(lines, formatFinalScores(game))
@@ -106,34 +109,34 @@ func formatPendingActions(player *dto.PlayerDto) string {
 		}
 	}
 	if reveal := player.PendingCardReveal; reveal != nil {
-		parts = append(parts, fmt.Sprintf("Public reveal from %s: %v. Rewards: %v. Acknowledge with action.confirm-card-reveal and empty payload.", reveal.Source, reveal.Results, reveal.Rewards))
+		parts = append(parts, fmt.Sprintf("Public reveal from %s: %v. Rewards: %v. Acknowledge with confirm_card_reveal.", reveal.Source, reveal.Results, reveal.Rewards))
 	}
 	if selection := player.PendingResourceRemovalSelection; selection != nil {
 		data, _ := json.Marshal(selection)
-		parts = append(parts, "Pending resource removal: "+string(data)+". Use action.card.confirm-resource-removal with selectionId, targetPlayerId and integer amount; skip with empty target and zero amount.")
+		parts = append(parts, "Pending resource removal: "+string(data)+". Use confirm_resource_removal with selectionId, targetPlayerId and amount; skip with empty target and zero amount.")
 	}
 	if selection := player.PendingEffectSelection; selection != nil {
-		parts = append(parts, "Pending effect: "+selection.Source+". Confirm with action.confirm-effect-selection and optionIndex.")
+		parts = append(parts, "Pending effect: "+selection.Source+". Confirm with confirm_effect_selection and optionIndex.")
 		for i, option := range selection.Options {
 			parts = append(parts, fmt.Sprintf("Option %d: card=%s target=%s colonies=%v outputs=%v", i, option.CardID, option.TargetPlayerID, option.ColonyIDs, option.Outputs))
 		}
 	}
 
-	for _, receipt := range player.CardReceipts {
-		parts = append(parts, fmt.Sprintf("Cards already received from %s: %v. Optionally dismiss with action.acknowledge-card-receipt and receiptId %s; this is not a game action.", receipt.Source, receipt.Cards, receipt.ID))
-	}
 	if pending := player.PendingColonySelection; pending != nil {
 		purpose := "Build colony"
 		if pending.AddTile {
 			purpose = "Add an unused colony tile"
 		}
-		parts = append(parts, fmt.Sprintf("%s: choose %v with action.confirm-colony-placement and colonyId.", purpose, pending.AvailableColonyIDs))
+		parts = append(parts, fmt.Sprintf("%s: choose %v with confirm_colony_placement and colonyId.", purpose, pending.AvailableColonyIDs))
 	}
 	if pending := player.PendingAwardFundSelection; pending != nil {
-		parts = append(parts, fmt.Sprintf("Fund an award for free: choose %v with action.confirm-award-fund and awardType.", pending.AvailableAwards))
+		parts = append(parts, fmt.Sprintf("Fund an award for free: choose %v with confirm_award_fund and awardType.", pending.AvailableAwards))
 	}
 	if pending := player.PendingColonyResourceSelection; pending != nil {
-		parts = append(parts, fmt.Sprintf("Place %d %s on an eligible owned card using action.confirm-colony-resource and cardId (empty to skip).", pending.Amount, pending.ResourceType))
+		parts = append(parts, fmt.Sprintf("Place %d %s on an eligible owned card using confirm_colony_resource and cardId (empty to skip).", pending.Amount, pending.ResourceType))
+	}
+	if pending := player.PendingFreeTradeSelection; pending != nil {
+		parts = append(parts, fmt.Sprintf("FREE TRADE from %s: choose a colony from %v and a track option with confirm_free_trade (colonyId, trackSteps). See COLONIES for each colony's trade options.", pending.Source, pending.AvailableColonyIDs))
 	}
 	if player.ForcedFirstAction != nil && player.ForcedFirstAction.State == "resolving" {
 		parts = append(parts, formatForcedAction(player.ForcedFirstAction))
@@ -157,7 +160,7 @@ func formatPendingTile(sel *dto.PendingTileSelectionDto) string {
 		fmt.Sprintf("TILE PLACEMENT REQUIRED: Place a %s tile", sel.TileType),
 		fmt.Sprintf("Source: %s", sel.Source),
 		fmt.Sprintf("Available hexes: %s", strings.Join(sel.AvailableHexes, ", ")),
-		"Send a tile-selected command with q, r, s coordinates.",
+		"Use select_tile with one of these hexes.",
 	}, "\n")
 }
 
@@ -179,7 +182,7 @@ func formatPendingCardSelection(sel *dto.PendingCardSelectionDto) string {
 		fmt.Sprintf("CARD SELECTION REQUIRED (source: %s)", sel.Source),
 		fmt.Sprintf("Select %d-%d cards:", sel.MinCards, sel.MaxCards),
 		strings.Join(cardLines, "\n"),
-		`Send a select-cards command with cardIds.`,
+		`Use confirm_sell_patents with cardIds.`,
 	}, "\n")
 }
 
@@ -203,7 +206,7 @@ func formatPendingCardDraw(sel *dto.PendingCardDrawSelectionDto) string {
 		fmt.Sprintf("CARD DRAW SELECTION (source: %s)", sel.Source),
 		fmt.Sprintf("Free takes: %d to %d, Max buy: %d%s", sel.MinFreeTakeCount, sel.FreeTakeCount, sel.MaxBuyCount, buyCostStr),
 		strings.Join(cardLines, "\n"),
-		`Send a card-draw-confirmed command with cardsToTake and cardsToBuy.`,
+		`Use confirm_card_draw with cardsToTake and cardsToBuy.`,
 	}, "\n")
 }
 
@@ -211,7 +214,7 @@ func formatPendingCardDiscard(sel *dto.PendingBehaviorResolutionDto) string {
 	return strings.Join([]string{
 		fmt.Sprintf("CARD DISCARD REQUIRED (source: %s)", sel.Source),
 		fmt.Sprintf("Discard %d-%d cards from hand.", sel.MinCards, sel.MaxCards),
-		fmt.Sprintf("Send card-discard-confirmed with resolutionId %q and cardsToDiscard.", sel.ID),
+		fmt.Sprintf("Use confirm_card_discard with resolutionId %q and cardsToDiscard.", sel.ID),
 	}, "\n")
 }
 
@@ -229,7 +232,7 @@ func formatPendingBehaviorChoice(sel *dto.PendingBehaviorResolutionDto) string {
 	return strings.Join([]string{
 		fmt.Sprintf("BEHAVIOR CHOICE REQUIRED (source: %s)", sel.Source),
 		strings.Join(choiceLines, "\n"),
-		fmt.Sprintf("Send behavior-choice-confirmed with resolutionId %q and choiceIndex. Triggering card: %s. Fixed triggering-card destinations cannot be overridden.", sel.ID, sel.TriggeringCardName),
+		fmt.Sprintf("Use confirm_behavior_choice with resolutionId %q and choiceIndex. Triggering card: %s. Fixed triggering-card destinations cannot be overridden.", sel.ID, sel.TriggeringCardName),
 	}, "\n")
 }
 
@@ -279,7 +282,7 @@ func formatStartingSelection(player *dto.PlayerDto) string {
 		parts = append(parts, "Starting cards (pick any to buy at 3M€ each):\n"+strings.Join(cards, "\n"))
 	}
 
-	parts = append(parts, "Send a select-starting-choices command with corporationId, preludeIds, and cardIds.")
+	parts = append(parts, "Use select_starting_choices with corporationId, preludeIds, and cardIds.")
 
 	return strings.Join(parts, "\n")
 }
@@ -288,7 +291,7 @@ func formatProductionPhase(player *dto.PlayerDto) string {
 	pp := player.ProductionPhase
 	var cards []string
 	for _, c := range pp.AvailableCards {
-		cards = append(cards, fmt.Sprintf("  - %s [%s]", c.Name, c.ID))
+		cards = append(cards, fmt.Sprintf("  - %s [%s] (%dM€): %s", c.Name, c.ID, c.Cost, formatCardDescription(c.Description)))
 	}
 
 	cardList := "  (no cards available)"
@@ -299,7 +302,7 @@ func formatProductionPhase(player *dto.PlayerDto) string {
 	return strings.Join([]string{
 		"PRODUCTION PHASE - Select cards to buy:",
 		cardList,
-		`Send a confirm-production-cards command with cardIds.`,
+		`Use confirm_production_cards with cardIds.`,
 	}, "\n")
 }
 
@@ -407,6 +410,9 @@ func formatHand(cards []dto.PlayerCardDto) string {
 
 		line := fmt.Sprintf("  - %s [%s] | %dM€%s | %s%s | %s%s",
 			c.Name, c.ID, c.EffectiveCost, discount, string(c.Type), tags, avail, errInfo)
+		if desc := formatCardDescription(c.Description); desc != "" {
+			line += "\n    " + desc
+		}
 
 		cardLines = append(cardLines, line)
 	}
@@ -491,7 +497,18 @@ func formatStandardProjects(projects []dto.PlayerStandardProjectDto) string {
 	return header + "\n" + strings.Join(lines, "\n")
 }
 
-func formatMilestones(milestones []dto.PlayerMilestoneDto) string {
+func blockedReason(errors []dto.StateErrorDto) string {
+	if len(errors) == 0 {
+		return ""
+	}
+	msgs := make([]string, 0, len(errors))
+	for _, e := range errors {
+		msgs = append(msgs, e.Message)
+	}
+	return strings.Join(msgs, "; ")
+}
+
+func formatMilestones(game *dto.GameDto, milestones []dto.PlayerMilestoneDto) string {
 	if len(milestones) == 0 {
 		return ""
 	}
@@ -499,24 +516,29 @@ func formatMilestones(milestones []dto.PlayerMilestoneDto) string {
 	header := "=== MILESTONES ==="
 	var lines []string
 	for _, m := range milestones {
-		claimed := "NOT YET"
-		if m.IsClaimed {
+		var status string
+		switch {
+		case m.IsClaimed:
 			by := ""
 			if m.ClaimedBy != nil {
-				by = *m.ClaimedBy
+				by = findPlayerName(game, *m.ClaimedBy)
 			}
-			claimed = fmt.Sprintf("CLAIMED by %s", by)
-		} else if m.Available {
-			claimed = fmt.Sprintf("CLAIMABLE (%dM€)", m.ClaimCost)
+			status = "CLAIMED by " + by
+		case m.Available:
+			status = fmt.Sprintf("CLAIMABLE NOW (%dM€)", m.ClaimCost)
+		case m.Progress >= m.Required:
+			status = fmt.Sprintf("QUALIFIED but blocked (%s); costs %dM€", blockedReason(m.Errors), m.ClaimCost)
+		default:
+			status = "not yet qualified"
 		}
-		lines = append(lines, fmt.Sprintf("  - %s: %s | Progress: %d/%d | %s",
-			m.Name, m.Description, m.Progress, m.Required, claimed))
+		lines = append(lines, fmt.Sprintf("  - %s [%s]: %s | Progress: %d/%d | %s",
+			m.Name, m.Type, m.Description, m.Progress, m.Required, status))
 	}
 
 	return header + "\n" + strings.Join(lines, "\n")
 }
 
-func formatAwards(awards []dto.PlayerAwardDto) string {
+func formatAwards(game *dto.GameDto, awards []dto.PlayerAwardDto) string {
 	if len(awards) == 0 {
 		return ""
 	}
@@ -524,17 +546,20 @@ func formatAwards(awards []dto.PlayerAwardDto) string {
 	header := "=== AWARDS ==="
 	var lines []string
 	for _, a := range awards {
-		funded := "NOT AVAILABLE"
-		if a.IsFunded {
+		var status string
+		switch {
+		case a.IsFunded:
 			by := ""
 			if a.FundedBy != nil {
-				by = *a.FundedBy
+				by = findPlayerName(game, *a.FundedBy)
 			}
-			funded = fmt.Sprintf("FUNDED by %s", by)
-		} else if a.Available {
-			funded = fmt.Sprintf("FUNDABLE (%dM€)", a.FundingCost)
+			status = "FUNDED by " + by
+		case a.Available:
+			status = fmt.Sprintf("FUNDABLE NOW (%dM€)", a.FundingCost)
+		default:
+			status = fmt.Sprintf("not fundable (%s)", blockedReason(a.Errors))
 		}
-		lines = append(lines, fmt.Sprintf("  - %s: %s | %s", a.Name, a.Description, funded))
+		lines = append(lines, fmt.Sprintf("  - %s [%s]: %s | %s", a.Name, a.Type, a.Description, status))
 	}
 
 	return header + "\n" + strings.Join(lines, "\n")
@@ -566,47 +591,123 @@ func formatOpponents(others []dto.OtherPlayerDto) string {
 	return header + "\n" + strings.Join(lines, "\n")
 }
 
-func formatBoard(tiles []dto.TileDto) string {
-	var occupied []dto.TileDto
-	for _, t := range tiles {
-		if t.OccupiedBy != nil {
-			occupied = append(occupied, t)
-		}
-	}
-
-	if len(occupied) == 0 {
-		return ""
-	}
-
-	header := "=== BOARD ==="
-
-	var lines []string
-	for _, t := range occupied {
-		coord := fmt.Sprintf("(%d,%d,%d)", t.Coordinates.Q, t.Coordinates.R, t.Coordinates.S)
-		occ := ""
-		if t.OccupiedBy != nil {
-			ownerStr := ""
-			if t.OwnerID != nil {
-				ownerStr = fmt.Sprintf(" (owner: %s)", *t.OwnerID)
+func formatBoard(game *dto.GameDto) string {
+	var occupied []string
+	freeByType := map[string][]string{}
+	var freeTypes []string
+	for _, t := range game.Board.Tiles {
+		coord := fmt.Sprintf("%d,%d,%d", t.Coordinates.Q, t.Coordinates.R, t.Coordinates.S)
+		if t.OccupiedBy == nil {
+			if t.ReservedBy != nil || t.Location != "mars" {
+				continue
 			}
-			occ = fmt.Sprintf(" | %s%s", t.OccupiedBy.Type, ownerStr)
+			if _, seen := freeByType[t.Type]; !seen {
+				freeTypes = append(freeTypes, t.Type)
+			}
+			freeByType[t.Type] = append(freeByType[t.Type], coord+formatTileBonuses(t.Bonuses))
+			continue
+		}
+		owner := ""
+		if t.OwnerID != nil {
+			owner = " (owner: " + findPlayerName(game, *t.OwnerID) + ")"
 		}
 		name := ""
 		if t.DisplayName != nil {
 			name = " " + *t.DisplayName
 		}
-		bonuses := ""
-		if len(t.Bonuses) > 0 {
-			var bonusParts []string
-			for _, b := range t.Bonuses {
-				bonusParts = append(bonusParts, fmt.Sprintf("%dx %s", b.Amount, b.Type))
-			}
-			bonuses = " | bonuses: " + strings.Join(bonusParts, ", ")
-		}
-		lines = append(lines, fmt.Sprintf("  %s%s%s%s", coord, name, occ, bonuses))
+		occupied = append(occupied, fmt.Sprintf("  %s%s | %s%s", coord, name, t.OccupiedBy.Type, owner))
 	}
 
-	return header + "\n" + strings.Join(lines, "\n")
+	lines := []string{"=== BOARD ==="}
+	if len(occupied) > 0 {
+		lines = append(lines, "Occupied:", strings.Join(occupied, "\n"))
+	}
+	for _, tileType := range freeTypes {
+		lines = append(lines, fmt.Sprintf("Free %s spaces: %s", tileType, strings.Join(freeByType[tileType], "; ")))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func formatTileBonuses(bonuses []dto.TileBonusDto) string {
+	if len(bonuses) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(bonuses))
+	for _, b := range bonuses {
+		parts = append(parts, fmt.Sprintf("%d %s", b.Amount, b.Type))
+	}
+	return " [" + strings.Join(parts, ", ") + "]"
+}
+
+func formatColonyOutputs(outputs []dto.ColonyOutputDto) string {
+	parts := make([]string, 0, len(outputs))
+	for _, o := range outputs {
+		parts = append(parts, fmt.Sprintf("%d %s", o.Amount, o.Type))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func formatColonies(game *dto.GameDto, myPlayerID string) string {
+	if len(game.Colonies) == 0 {
+		return ""
+	}
+	lines := []string{"=== COLONIES ==="}
+	if fleet, ok := game.TradeFleets[myPlayerID]; ok {
+		lines = append(lines, fmt.Sprintf("Your trade fleets: %d available of %d", fleet.Available, fleet.Total))
+	}
+	for _, c := range game.Colonies {
+		if !c.Active {
+			continue
+		}
+		owners := make([]string, 0, len(c.PlayerColonies))
+		for _, id := range c.PlayerColonies {
+			owners = append(owners, findPlayerName(game, id))
+		}
+		status := []string{}
+		if c.TradeAvailable {
+			status = append(status, "TRADE: colony_trade")
+		} else if len(c.TradeErrors) > 0 {
+			status = append(status, "trade blocked ("+c.TradeErrors[0].Message+")")
+		}
+		if c.BuildAvailable {
+			status = append(status, "BUILD: colony_build")
+		} else if len(c.BuildErrors) > 0 {
+			status = append(status, "build blocked ("+c.BuildErrors[0].Message+")")
+		}
+		if c.TradedThisGen {
+			status = append(status, "traded this generation")
+		}
+		lines = append(lines, fmt.Sprintf("  - %s [%s] | marker %d | colonies: %s | colony bonus: %s | %s",
+			c.Name, c.ID, c.MarkerPosition, strings.Join(owners, ", "), formatColonyOutputs(c.ColonyBonus), strings.Join(status, " | ")))
+		for _, option := range c.TradeOptions {
+			lines = append(lines, fmt.Sprintf("    trackSteps=%d -> marker %d, you gain: %s", option.TrackSteps, option.MarkerPosition, formatColonyOutputs(option.Outputs)))
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func formatProjectFunding(projects []dto.ProjectFundingDto) string {
+	if len(projects) == 0 {
+		return ""
+	}
+	lines := []string{"=== PROJECT FUNDING ==="}
+	for _, p := range projects {
+		owners := make([]string, 0, len(p.SeatOwners))
+		for _, o := range p.SeatOwners {
+			owners = append(owners, o.Name)
+		}
+		status := "COMPLETED"
+		if !p.IsCompleted {
+			if p.CanBuySeat {
+				status = fmt.Sprintf("next seat %dM€: project_fund_seat", p.NextSeatCost)
+			} else if len(p.BuyErrors) > 0 {
+				status = fmt.Sprintf("next seat %dM€, blocked (%s)", p.NextSeatCost, p.BuyErrors[0].Message)
+			}
+		}
+		lines = append(lines, fmt.Sprintf("  - %s [%s]: %s | seats: %s | your seats: %d | %s",
+			p.Name, p.ID, p.Description, strings.Join(owners, ", "), p.CurrentPlayerSeats, status))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func formatFinalScores(game *dto.GameDto) string {
@@ -683,30 +784,89 @@ func findPlayerName(game *dto.GameDto, playerID string) string {
 	return playerID
 }
 
-func formatRecentLog(diffs []game.StateDiff, maxEntries int) string {
+// formatRecentLog lists recent game events with who did them and what changed for whom,
+// so the bot can tell which player hurt or helped it.
+func formatRecentLog(diffs []game.StateDiff, maxEntries int, nameOf func(playerID string) string) string {
 	if len(diffs) == 0 {
 		return ""
 	}
-
-	start := 0
-	if len(diffs) > maxEntries {
-		start = len(diffs) - maxEntries
-	}
-	recent := diffs[start:]
+	start := max(0, len(diffs)-maxEntries)
 
 	var lines []string
-	for _, d := range recent {
+	for _, d := range diffs[start:] {
 		if d.Description == "" {
 			continue
 		}
-		lines = append(lines, fmt.Sprintf("  - %s", d.Description))
+		actor := "Game"
+		if d.PlayerID != "" {
+			actor = nameOf(d.PlayerID)
+		}
+		line := fmt.Sprintf("  - %s: %s", actor, d.Description)
+		if effects := formatDiffEffects(d.Changes, nameOf); effects != "" {
+			line += " [" + effects + "]"
+		}
+		lines = append(lines, line)
 	}
-
 	if len(lines) == 0 {
 		return ""
 	}
+	return "=== RECENT GAME LOG (oldest first; who acted: what happened [effects]) ===\n" + strings.Join(lines, "\n")
+}
 
-	return "=== RECENT GAME LOG ===\n" + strings.Join(lines, "\n")
+func formatDiffEffects(changes *game.GameChanges, nameOf func(playerID string) string) string {
+	if changes == nil {
+		return ""
+	}
+	var parts []string
+	addInt := func(label string, v *game.DiffValueInt) {
+		if v != nil && v.New != v.Old {
+			parts = append(parts, fmt.Sprintf("%s %+d", label, v.New-v.Old))
+		}
+	}
+	addInt("temperature", changes.Temperature)
+	addInt("oxygen", changes.Oxygen)
+	addInt("oceans", changes.Oceans)
+
+	playerIDs := make([]string, 0, len(changes.PlayerChanges))
+	for id := range changes.PlayerChanges {
+		playerIDs = append(playerIDs, id)
+	}
+	sort.Strings(playerIDs)
+	for _, id := range playerIDs {
+		pc := changes.PlayerChanges[id]
+		var deltas []string
+		add := func(label string, v *game.DiffValueInt) {
+			if v != nil && v.New != v.Old {
+				deltas = append(deltas, fmt.Sprintf("%s %+d", label, v.New-v.Old))
+			}
+		}
+		add("credits", pc.Credits)
+		add("steel", pc.Steel)
+		add("titanium", pc.Titanium)
+		add("plants", pc.Plants)
+		add("energy", pc.Energy)
+		add("heat", pc.Heat)
+		add("TR", pc.TerraformRating)
+		add("credit prod", pc.CreditsProduction)
+		add("steel prod", pc.SteelProduction)
+		add("titanium prod", pc.TitaniumProduction)
+		add("plant prod", pc.PlantsProduction)
+		add("energy prod", pc.EnergyProduction)
+		add("heat prod", pc.HeatProduction)
+		if len(deltas) > 0 {
+			parts = append(parts, nameOf(id)+" "+strings.Join(deltas, ", "))
+		}
+	}
+	if changes.BoardChanges != nil {
+		for _, t := range changes.BoardChanges.TilesPlaced {
+			owner := ""
+			if t.OwnerID != "" {
+				owner = " by " + nameOf(t.OwnerID)
+			}
+			parts = append(parts, fmt.Sprintf("%s placed at %s%s", t.TileType, t.HexID, owner))
+		}
+	}
+	return strings.Join(parts, "; ")
 }
 
 func formatRecentChat(messages []shared.ChatMessage, maxEntries int) string {

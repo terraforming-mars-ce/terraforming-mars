@@ -75,6 +75,10 @@ func RegisterHandlers(
 	kickSpectatorAction *connAction.KickSpectatorAction,
 	sendChatMessageAction *connAction.SendChatMessageAction,
 	convertToBotAction *gameAction.ConvertToBotAction,
+	bots interface {
+		game.BotRetrier
+		game.BotInspector
+	},
 	claimMilestoneAction *milestoneAction.ClaimMilestoneAction,
 	fundAwardAction *awardAction.FundAwardAction,
 	colonyTradeAction *colonyAction.TradeAction,
@@ -215,6 +219,10 @@ func RegisterHandlers(
 
 	convertToBotHandler := game.NewConvertToBotHandler(convertToBotAction, broadcaster, hub)
 	hub.RegisterHandler(dto.MessageTypeConvertToBot, convertToBotHandler)
+
+	hub.RegisterHandler(dto.MessageTypeBotRetry, game.NewBotRetryHandler(bots))
+	hub.RegisterHandler(dto.MessageTypeBotInspect, game.NewBotInspectHandler(bots))
+	hub.RegisterHandler(dto.MessageTypeEmoteSend, connection.NewEmoteSendHandler(broadcaster))
 
 	claimMilestoneHandler := milestone.NewClaimMilestoneHandler(claimMilestoneAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionClaimMilestone, claimMilestoneHandler)

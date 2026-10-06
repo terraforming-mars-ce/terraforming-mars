@@ -339,6 +339,104 @@ export interface SetTRAdminCommand {
 }
 
 //////////
+// source: bot_trace_dto.go
+
+/**
+ * BotInspectPayload subscribes the sending connection to one bot's trace. An empty
+ * playerId unsubscribes. Host only, development mode only.
+ */
+export interface BotInspectPayload {
+  playerId: string;
+}
+/**
+ * BotPlannedMoveDto is one candidate move in a bot's plan.
+ */
+export interface BotPlannedMoveDto {
+  move: string;
+  why: string;
+}
+/**
+ * BotPlanDto is a bot's current plan and memory.
+ */
+export interface BotPlanDto {
+  summary: string;
+  wantedHexes: string[];
+  targetMilestones: string[];
+  targetAwards: string[];
+  targetColonies: string[];
+  rivals: string[];
+  nextMoves: BotPlannedMoveDto[];
+  mood: string;
+  notes: string;
+}
+/**
+ * BotCallStepDto is one step of a model call: a piece of reasoning text or a tool call.
+ */
+export interface BotCallStepDto {
+  at: string;
+  kind: "text" | "tool";
+  text?: string;
+  tool?: string;
+  input?: string;
+  result?: string;
+  isError: boolean;
+}
+/**
+ * BotCallDto is one model call made by a bot.
+ */
+export interface BotCallDto {
+  id: string;
+  role: "executor" | "planner" | "reactor" | "recap";
+  model: string;
+  startedAt: string;
+  endedAt?: string;
+  running: boolean;
+  prompt: string;
+  steps: BotCallStepDto[];
+  costUsd: number /* float64 */;
+  durationMs: number /* int */;
+  error?: string;
+}
+/**
+ * BotReactionDto records how a bot judged a batch of table events.
+ */
+export interface BotReactionDto {
+  at: string;
+  lines: string[];
+  planHit: boolean;
+  personal: boolean;
+  directed: boolean;
+  big: boolean;
+  decision: "reacted" | "throttled" | "busy" | "own-turn";
+  output?: string;
+}
+/**
+ * BotTraceDto is everything recorded about one bot.
+ */
+export interface BotTraceDto {
+  playerId: string;
+  plan: BotPlanDto;
+  planUpdatedAt?: string;
+  calls: BotCallDto[];
+  reactions: BotReactionDto[];
+}
+/**
+ * BotTraceEventDto is one change to a bot's trace. call-start carries the new call;
+ * call-step carries callId and step; call-end carries the finished call without prompt
+ * and steps; plan carries plan and planUpdatedAt; reaction carries reaction.
+ */
+export interface BotTraceEventDto {
+  playerId: string;
+  kind: "call-start" | "call-step" | "call-end" | "plan" | "reaction";
+  call?: BotCallDto;
+  callId?: string;
+  step?: BotCallStepDto;
+  plan?: BotPlanDto;
+  planUpdatedAt?: string;
+  reaction?: BotReactionDto;
+}
+
+//////////
 // source: game_dto.go
 
 /**
@@ -948,8 +1046,9 @@ export interface GameSettingsDto {
   demoGame: boolean;
   allowRandomBuy: boolean;
   cardPacks?: string[];
-  hasClaudeApiKey: boolean;
-  claudeModel?: string;
+  hasClaudeOAuthToken: boolean;
+  botSpendCapUsd: number /* float64 */;
+  botSpendUsd: number /* float64 */;
   availablePlayerColors: string[];
   availableMaps: MapInfoDto[];
   temperature?: number /* int */;
@@ -1352,9 +1451,9 @@ export interface PlayerDto {
   id: string;
   name: string;
   playerType: string;
-  botStatus?: string;
-  botDifficulty?: string;
-  botSpeed?: string;
+  botStatus?: "loading" | "ready" | "failed" | "thinking";
+  botPersona?: string;
+  botError?: string;
   color: string;
   status: PlayerStatus;
   corporation?: CardDto;
@@ -1428,9 +1527,9 @@ export interface OtherPlayerDto {
   id: string;
   name: string;
   playerType: string;
-  botStatus?: string;
-  botDifficulty?: string;
-  botSpeed?: string;
+  botStatus?: "loading" | "ready" | "failed" | "thinking";
+  botPersona?: string;
+  botError?: string;
   color: string;
   status: PlayerStatus;
   corporation?: CardDto;
@@ -1508,6 +1607,7 @@ export interface ChatMessageDto {
   message: string;
   timestamp: string;
   isSpectator: boolean;
+  kind: "chat" | "recap" | "system";
 }
 /**
  * PlaceableTileTypeDto represents a tile type available for placement in the demo tile picker
@@ -2124,8 +2224,8 @@ export interface UpdateGameSettingsRequest {
   demoGame?: boolean;
   allowRandomBuy?: boolean;
   cardPacks?: string[];
-  claudeApiKey?: string;
-  claudeModel?: string;
+  claudeOAuthToken?: string;
+  botSpendCapUsd?: number /* float64 */;
 }
 /**
  * CreateGameResponse represents the response for creating a game
@@ -2336,6 +2436,13 @@ export const MessageTypeSpectatorConnected: MessageType = "spectator-connected";
 export const MessageTypeSpectatorDisconnected: MessageType = "spectator-disconnected";
 export const MessageTypeChatMessage: MessageType = "chat-message";
 export const MessageTypeChatUpdate: MessageType = "chat-update";
+export const MessageTypeEmoteSend: MessageType = "emote-send";
+export const MessageTypeEmote: MessageType = "emote";
+export const MessageTypeBotThought: MessageType = "bot-thought";
+export const MessageTypeBotRetry: MessageType = "bot-retry";
+export const MessageTypeBotInspect: MessageType = "bot-inspect";
+export const MessageTypeBotTraceSnapshot: MessageType = "bot-trace-snapshot";
+export const MessageTypeBotTraceEvent: MessageType = "bot-trace-event";
 export const MessageTypeKickSpectator: MessageType = "kick-spectator";
 export const MessageTypeSpectatorKicked: MessageType = "spectator-kicked";
 
@@ -2603,4 +2710,43 @@ export interface ChatMessagePayload {
  */
 export interface ChatUpdatePayload {
   chatMessage: ChatMessageDto;
+}
+/**
+ * EmoteName is one of the emotes a player or bot can show over their player card.
+ */
+export type EmoteName = string;
+export const EmoteAngry: EmoteName = "angry";
+export const EmoteCelebrate: EmoteName = "celebrate";
+export const EmoteThinking: EmoteName = "thinking";
+export const EmoteApplause: EmoteName = "applause";
+export const EmoteShock: EmoteName = "shock";
+export const EmoteLaugh: EmoteName = "laugh";
+export const EmoteSad: EmoteName = "sad";
+export const EmoteCool: EmoteName = "cool";
+/**
+ * EmoteSendPayload is sent by a client to show an emote.
+ */
+export interface EmoteSendPayload {
+  emote: "angry" | "celebrate" | "thinking" | "applause" | "shock" | "laugh" | "sad" | "cool";
+}
+/**
+ * EmotePayload is broadcast when a player or bot shows an emote.
+ */
+export interface EmotePayload {
+  playerId: string;
+  emote: "angry" | "celebrate" | "thinking" | "applause" | "shock" | "laugh" | "sad" | "cool";
+}
+/**
+ * BotThoughtPayload is broadcast when a bot shows a thought bubble or starts or stops typing.
+ */
+export interface BotThoughtPayload {
+  playerId: string;
+  text: string;
+  typing: boolean;
+}
+/**
+ * BotRetryPayload is sent by the host to retry a failed bot.
+ */
+export interface BotRetryPayload {
+  playerId: string;
 }

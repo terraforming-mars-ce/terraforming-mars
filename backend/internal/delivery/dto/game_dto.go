@@ -590,8 +590,9 @@ type GameSettingsDto struct {
 	DemoGame              bool         `json:"demoGame"`
 	AllowRandomBuy        bool         `json:"allowRandomBuy"`
 	CardPacks             []string     `json:"cardPacks,omitempty"`
-	HasClaudeAPIKey       bool         `json:"hasClaudeApiKey"`
-	ClaudeModel           string       `json:"claudeModel,omitempty"`
+	HasClaudeOAuthToken   bool         `json:"hasClaudeOAuthToken"`
+	BotSpendCapUSD        float64      `json:"botSpendCapUsd"`
+	BotSpendUSD           float64      `json:"botSpendUsd"`
 	AvailablePlayerColors []string     `json:"availablePlayerColors"`
 	AvailableMaps         []MapInfoDto `json:"availableMaps"`
 	Temperature           *int         `json:"temperature,omitempty"`
@@ -994,9 +995,9 @@ type PlayerDto struct {
 	ID                     string                     `json:"id"`
 	Name                   string                     `json:"name"`
 	PlayerType             string                     `json:"playerType"`
-	BotStatus              string                     `json:"botStatus,omitempty"`
-	BotDifficulty          string                     `json:"botDifficulty,omitempty"`
-	BotSpeed               string                     `json:"botSpeed,omitempty"`
+	BotStatus              string                     `json:"botStatus,omitempty" tstype:"'loading' | 'ready' | 'failed' | 'thinking'"`
+	BotPersona             string                     `json:"botPersona,omitempty"`
+	BotError               string                     `json:"botError,omitempty"`
 	Color                  string                     `json:"color"`
 	Status                 PlayerStatus               `json:"status"`
 	Corporation            *CardDto                   `json:"corporation"`
@@ -1068,9 +1069,9 @@ type OtherPlayerDto struct {
 	ID               string            `json:"id"`
 	Name             string            `json:"name"`
 	PlayerType       string            `json:"playerType"`
-	BotStatus        string            `json:"botStatus,omitempty"`
-	BotDifficulty    string            `json:"botDifficulty,omitempty"`
-	BotSpeed         string            `json:"botSpeed,omitempty"`
+	BotStatus        string            `json:"botStatus,omitempty" tstype:"'loading' | 'ready' | 'failed' | 'thinking'"`
+	BotPersona       string            `json:"botPersona,omitempty"`
+	BotError         string            `json:"botError,omitempty"`
 	Color            string            `json:"color"`
 	Status           PlayerStatus      `json:"status"`
 	Corporation      *CardDto          `json:"corporation"`
@@ -1147,6 +1148,7 @@ type ChatMessageDto struct {
 	Message     string `json:"message"`
 	Timestamp   string `json:"timestamp"`
 	IsSpectator bool   `json:"isSpectator"`
+	Kind        string `json:"kind" tstype:"'chat' | 'recap' | 'system'"`
 }
 
 // PlaceableTileTypeDto represents a tile type available for placement in the demo tile picker

@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"sync"
-	"time"
 
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
@@ -19,9 +18,10 @@ import (
 	"terraforming-mars-backend/internal/logger"
 )
 
-// BotNotifier is called after every game state broadcast to notify bot controller.
+// BotNotifier lets the bot controller observe broadcasts it reacts to.
 type BotNotifier interface {
 	OnGameBroadcast(gameID string)
+	OnChatMessage(gameID string, chatMsg shared.ChatMessage)
 }
 
 // Broadcaster handles game state broadcasting to WebSocket clients
@@ -309,37 +309,62 @@ func (b *Broadcaster) BroadcastChatMessage(gameID string, chatMsg shared.ChatMes
 		return
 	}
 
-	message := dto.WebSocketMessage{
-		Type:   dto.MessageTypeChatUpdate,
-		GameID: gameID,
-		Payload: dto.ChatUpdatePayload{
-			ChatMessage: dto.ChatMessageDto{
-				SenderID:    chatMsg.SenderID,
-				SenderName:  chatMsg.SenderName,
-				SenderColor: chatMsg.SenderColor,
-				Message:     chatMsg.Message,
-				Timestamp:   chatMsg.Timestamp.Format(time.RFC3339),
-				IsSpectator: chatMsg.IsSpectator,
-			},
-		},
-	}
+	b.sendToEveryone(g, dto.WebSocketMessage{
+		Type:    dto.MessageTypeChatUpdate,
+		GameID:  gameID,
+		Payload: dto.ChatUpdatePayload{ChatMessage: dto.ToChatMessageDto(chatMsg)},
+	})
+	log.Debug("Broadcasted chat message")
 
+	if b.botNotifier != nil {
+		b.botNotifier.OnChatMessage(gameID, chatMsg)
+	}
+}
+
+// BroadcastEmote shows an emote over a player's card for everyone in the game.
+func (b *Broadcaster) BroadcastEmote(gameID, playerID, emote string) {
+	g, err := b.gameRepo.Get(context.Background(), gameID)
+	if err != nil {
+		b.logger.Warn("Failed to get game for emote broadcast", slog.String("game_id", gameID), slog.Any("error", err))
+		return
+	}
+	b.sendToEveryone(g, dto.WebSocketMessage{
+		Type:    dto.MessageTypeEmote,
+		GameID:  gameID,
+		Payload: dto.EmotePayload{PlayerID: playerID, Emote: dto.EmoteName(emote)},
+	})
+}
+
+// BroadcastBotThought shows a bot's thought bubble, or its typing state, for everyone in the game.
+func (b *Broadcaster) BroadcastBotThought(gameID, playerID, text string, typing bool) {
+	g, err := b.gameRepo.Get(context.Background(), gameID)
+	if err != nil {
+		b.logger.Warn("Failed to get game for bot thought broadcast", slog.String("game_id", gameID), slog.Any("error", err))
+		return
+	}
+	b.sendToEveryone(g, dto.WebSocketMessage{
+		Type:    dto.MessageTypeBotThought,
+		GameID:  gameID,
+		Payload: dto.BotThoughtPayload{PlayerID: playerID, Text: text, Typing: typing},
+	})
+}
+
+func (b *Broadcaster) sendToEveryone(g *game.Game, message dto.WebSocketMessage) {
 	for _, p := range g.GetAllPlayers() {
-		if !p.HasExited() {
-			if err := b.hub.SendToPlayer(gameID, p.ID(), message); err != nil {
-				log.Error("Failed to send chat to player",
-					slog.String("player_id", p.ID()),
-					slog.Any("error", err))
-			}
+		if p.HasExited() {
+			continue
+		}
+		if err := b.hub.SendToPlayer(g.ID(), p.ID(), message); err != nil {
+			b.logger.Error("Failed to send message to player",
+				slog.String("game_id", g.ID()),
+				slog.String("player_id", p.ID()),
+				slog.String("type", string(message.Type)),
+				slog.Any("error", err))
 		}
 	}
-
-	spectatorConns := b.hub.GetManager().GetSpectatorConnections(gameID)
-	for _, conn := range spectatorConns {
+	for _, conn := range b.hub.GetManager().GetSpectatorConnections(g.ID()) {
 		conn.SendMessage(message)
 	}
-
-	log.Debug("Broadcasted chat message")
 }
 
 // SendInitialLogsToSpectator sends all game logs to a spectator (used on connect).

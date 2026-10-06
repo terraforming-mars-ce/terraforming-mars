@@ -86,6 +86,13 @@ const (
 	MessageTypeSpectatorDisconnected MessageType = "spectator-disconnected"
 	MessageTypeChatMessage           MessageType = "chat-message"
 	MessageTypeChatUpdate            MessageType = "chat-update"
+	MessageTypeEmoteSend             MessageType = "emote-send"
+	MessageTypeEmote                 MessageType = "emote"
+	MessageTypeBotThought            MessageType = "bot-thought"
+	MessageTypeBotRetry              MessageType = "bot-retry"
+	MessageTypeBotInspect            MessageType = "bot-inspect"
+	MessageTypeBotTraceSnapshot      MessageType = "bot-trace-snapshot"
+	MessageTypeBotTraceEvent         MessageType = "bot-trace-event"
 	MessageTypeKickSpectator         MessageType = "kick-spectator"
 	MessageTypeSpectatorKicked       MessageType = "spectator-kicked"
 )

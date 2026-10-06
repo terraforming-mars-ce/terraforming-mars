@@ -214,8 +214,6 @@ func main() {
 	createGameAction := gameAction.NewCreateGameAction(gameRepo, cardRegistry, mapRegistry, log)
 	updateGameSettingsAction := gameAction.NewUpdateGameSettingsAction(gameRepo, cardRegistry, mapRegistry, log)
 	joinGameAction := gameAction.NewJoinGameAction(gameRepo, cardRegistry, log, colonyRegistry)
-	healthChecker := bot.NewHealthChecker(log)
-	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, healthChecker, broadcaster, log, colonyRegistry)
 	selectDemoChoicesAction := gameAction.NewSelectDemoChoicesAction(gameRepo, cardRegistry, log)
 	finalScoringAction := gameAction.NewFinalScoringAction(gameRepo, cardRegistry, awardRegistry, milestoneRegistry, log)
 
@@ -264,25 +262,58 @@ func main() {
 	confirmInitAdvanceAction := turnAction.NewConfirmInitAdvanceAction(gameRepo, cardRegistry, awardRegistry, stateRepo, log)
 
 	// Bot service
-	commandDispatcher := bot.NewCommandDispatcher(
-		playCardAction, useCardActionAction,
-		skipActionAction, selectStartingChoicesAction,
-		selectTileAction,
-		confirmProductionCardsAction, confirmCardDrawAction,
-		confirmCardDiscardAction, confirmBehaviorChoiceAction,
-		confirmEffectSelectionAction,
-		confirmCardRevealAction,
-		confirmSellPatentsAction,
-		executeStandardProjectAction,
-		convertHeatAction, convertPlantsAction,
-		claimMilestoneAction, fundAwardAction,
-		confirmInitAdvanceAction,
-		confirmResourceRemovalAction,
-		confirmColonyPlacementAction, confirmColonyResourceAction, confirmAwardFundAction,
-		log,
-	)
-	botController := bot.NewBotController(gameRepo, stateRepo, cardRegistry, commandDispatcher, broadcaster, log)
+	personas, err := bot.LoadPersonaCatalog(filepath.Join(wd, "assets", "bot", "personas.json"))
+	if err != nil {
+		log.Error("Failed to load bot personas", slog.Any("error", err))
+		os.Exit(1)
+	}
+	strategy, err := bot.LoadStrategyGuide(filepath.Join(wd, "assets", "bot", "strategy.md"))
+	if err != nil {
+		log.Error("Failed to load bot strategy guide", slog.Any("error", err))
+		os.Exit(1)
+	}
+	botTools := bot.NewToolServer(bot.Actions{
+		PlayCard:               playCardAction,
+		UseCardAction:          useCardActionAction,
+		SkipAction:             skipActionAction,
+		SelectStartingChoices:  selectStartingChoicesAction,
+		ConfirmInitAdvance:     confirmInitAdvanceAction,
+		SelectTile:             selectTileAction,
+		ConfirmProductionCards: confirmProductionCardsAction,
+		ConfirmCardDraw:        confirmCardDrawAction,
+		ConfirmCardDiscard:     confirmCardDiscardAction,
+		ConfirmBehaviorChoice:  confirmBehaviorChoiceAction,
+		ConfirmEffectSelection: confirmEffectSelectionAction,
+		ConfirmCardReveal:      confirmCardRevealAction,
+		ConfirmSellPatents:     confirmSellPatentsAction,
+		ConfirmResourceRemoval: confirmResourceRemovalAction,
+		ConfirmColonyPlacement: confirmColonyPlacementAction,
+		ConfirmColonyResource:  confirmColonyResourceAction,
+		ConfirmAwardFund:       confirmAwardFundAction,
+		ConfirmFreeTrade:       confirmFreeTradeAction,
+		ExecuteStandardProject: executeStandardProjectAction,
+		ConvertHeat:            convertHeatAction,
+		ConvertPlants:          convertPlantsAction,
+		ClaimMilestone:         claimMilestoneAction,
+		FundAward:              fundAwardAction,
+		ColonyTrade:            colonyTradeAction,
+		ColonyBuild:            colonyBuildAction,
+		FundSeat:               fundSeatAction,
+	}, bot.Registries{
+		Cards:            cardRegistry,
+		StandardProjects: stdProjRegistry,
+		Milestones:       milestoneRegistry,
+		Awards:           awardRegistry,
+	}, gameRepo, hub, log)
+	botToolsCtx, stopBotTools := context.WithCancel(context.Background())
+	defer stopBotTools()
+	if err := botTools.Start(botToolsCtx); err != nil {
+		log.Error("Failed to start bot tool server", slog.Any("error", err))
+		os.Exit(1)
+	}
+	botController := bot.NewBotController(gameRepo, stateRepo, cardRegistry, broadcaster, bot.NewCLIRunner(log), botTools, personas, bot.DefaultConfig(strategy), log)
 	broadcaster.SetBotNotifier(botController)
+	addBotAction := gameAction.NewAddBotAction(gameRepo, cardRegistry, botController, log, colonyRegistry)
 
 	startGameAction := turnAction.NewStartGameAction(gameRepo, colonyRegistry, pfRegistry, milestoneRegistry, awardRegistry, botController, log)
 
@@ -377,6 +408,7 @@ func main() {
 		sendChatMessageAction,
 		// Convert to bot
 		convertToBotAction,
+		botController,
 		// Milestones & Awards
 		claimMilestoneAction,
 		fundAwardAction,

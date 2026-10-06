@@ -41,7 +41,7 @@ import { useGameEvent } from "@/hooks/useGameEvent.ts";
 import { usePlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 import ChatOverlay from "../../ui/overlay/ChatOverlay.tsx";
 import GameButton from "../../ui/buttons/GameButton.tsx";
-import { BotDifficultyChip, BotSpeedChip, PlayerChip } from "../../ui/display/BotChips.tsx";
+import { BotPersonaChip, PlayerChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import CardBrowserOverlay from "../../ui/overlay/CardBrowserOverlay.tsx";
 import MainMenuHamburger from "../../ui/buttons/MainMenuHamburger.tsx";
@@ -84,7 +84,7 @@ import { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore.ts";
-import { useAppPhaseStore } from "@/stores/appPhaseStore.ts";
+import { isInGameWorld, useAppPhaseStore } from "@/stores/appPhaseStore.ts";
 import { useSpectateStore } from "@/stores/spectateStore.ts";
 import { useCardPlayFlow } from "@/hooks/useCardPlayFlow.ts";
 import { useWebSocketConnection } from "@/hooks/useWebSocketConnection.ts";
@@ -968,8 +968,8 @@ export default function GameInterface() {
                         isReady: boolean;
                         isSelf: boolean;
                         playerType: string;
-                        botDifficulty?: string;
-                        botSpeed?: string;
+                        botPersona?: string;
+                        botStatus?: string;
                       }[] = [];
 
                       if (game.currentPlayer) {
@@ -983,8 +983,8 @@ export default function GameInterface() {
                             !!game.currentPlayer.corporation,
                           isSelf: true,
                           playerType: game.currentPlayer.playerType,
-                          botDifficulty: game.currentPlayer.botDifficulty || undefined,
-                          botSpeed: game.currentPlayer.botSpeed || undefined,
+                          botPersona: game.currentPlayer.botPersona || undefined,
+                          botStatus: game.currentPlayer.botStatus || undefined,
                         });
                       }
 
@@ -999,8 +999,8 @@ export default function GameInterface() {
                             !!other.corporation,
                           isSelf: false,
                           playerType: other.playerType,
-                          botDifficulty: other.botDifficulty || undefined,
-                          botSpeed: other.botSpeed || undefined,
+                          botPersona: other.botPersona || undefined,
+                          botStatus: other.botStatus || undefined,
                         });
                       });
 
@@ -1021,10 +1021,10 @@ export default function GameInterface() {
                               <PlayerChip className="bg-space-blue-800 text-white">You</PlayerChip>
                             )}
                             {player.playerType === "bot" && (
-                              <>
-                                <BotDifficultyChip difficulty={player.botDifficulty} />
-                                <BotSpeedChip speed={player.botSpeed} />
-                              </>
+                              <BotPersonaChip
+                                persona={player.botPersona}
+                                botStatus={player.botStatus}
+                              />
                             )}
                             {player.isReady ? (
                               <PlayerChip className="bg-emerald-700/80 text-white">
@@ -1108,6 +1108,7 @@ export default function GameInterface() {
         )}
 
         {game &&
+          isInGameWorld(phase) &&
           (currentPlayer || replayViewAsPlayer) &&
           (game.currentPhase !== GamePhaseComplete || !!replayViewAsPlayer) && (
             <SolarSystemFade>

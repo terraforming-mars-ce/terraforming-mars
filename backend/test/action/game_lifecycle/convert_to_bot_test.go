@@ -24,9 +24,9 @@ func TestConvertToBot_Success(t *testing.T) {
 	g, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
 	g.UpdateSettings(ctx, shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
 
 	convert := newConvertAction(repo)
@@ -45,9 +45,7 @@ func TestConvertToBot_Success(t *testing.T) {
 
 	target, _ := g.GetPlayer(targetID)
 	testutil.AssertTrue(t, target.IsBot(), "Player should be a bot")
-	testutil.AssertEqual(t, player.BotStatusLoading, target.BotStatus(), "Bot status should be loading")
-	testutil.AssertEqual(t, player.BotDifficultyNormal, target.BotDifficulty(), "Bot difficulty should be normal")
-	testutil.AssertEqual(t, player.BotSpeedFast, target.BotSpeed(), "Bot speed should be fast")
+	testutil.AssertEqual(t, player.BotStatusReady, target.BotStatus(), "Bot status should be ready")
 	testutil.AssertTrue(t, target.IsConnected(), "Bot should be connected")
 }
 
@@ -59,9 +57,9 @@ func TestConvertToBot_NotHost_Fails(t *testing.T) {
 	g, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 3)
 	ctx := testutil.TestContext()
 	g.UpdateSettings(ctx, shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
 
 	convert := newConvertAction(repo)
@@ -86,9 +84,9 @@ func TestConvertToBot_Self_Fails(t *testing.T) {
 	g, repo, _, _ := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
 	g.UpdateSettings(ctx, shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
 
 	convert := newConvertAction(repo)
@@ -102,9 +100,9 @@ func TestConvertToBot_AlreadyBot_Fails(t *testing.T) {
 	g, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
 	g.UpdateSettings(ctx, shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
 
 	convert := newConvertAction(repo)
@@ -131,9 +129,9 @@ func TestConvertToBot_Exited_Fails(t *testing.T) {
 	g, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
 	g.UpdateSettings(ctx, shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
 
 	convert := newConvertAction(repo)
@@ -163,9 +161,9 @@ func TestPlayerTakeover_BlockedForBot(t *testing.T) {
 	g, repo, cardRegistry, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
 	ctx := testutil.TestContext()
 	g.UpdateSettings(ctx, shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
 
 	hostID := g.HostPlayerID()
@@ -199,13 +197,13 @@ func TestGameDeletedWhenLastHumanLeavesLobbyWithBots(t *testing.T) {
 
 	// Add a bot player manually
 	g.UpdateSettings(ctx, shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
 	cardRegistry := testutil.CreateTestCardRegistry()
-	addBotAction := gameaction.NewAddBotAction(repo, cardRegistry, nil, nil, testutil.TestLogger())
-	_, err := addBotAction.Execute(ctx, g.ID(), "", "", "")
+	addBotAction := gameaction.NewAddBotAction(repo, cardRegistry, newFakeBotLifecycle(t), testutil.TestLogger())
+	_, err := addBotAction.Execute(ctx, g.ID(), g.HostPlayerID())
 	testutil.AssertNoError(t, err, "Should add bot")
 
 	// Verify we have 1 human + 1 bot
@@ -231,13 +229,13 @@ func TestHostReassignedToHumanNotBot(t *testing.T) {
 
 	// Add a bot player
 	g.UpdateSettings(ctx, shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
 	cardRegistry := testutil.CreateTestCardRegistry()
-	addBotAction := gameaction.NewAddBotAction(repo, cardRegistry, nil, nil, testutil.TestLogger())
-	_, err := addBotAction.Execute(ctx, g.ID(), "", "", "")
+	addBotAction := gameaction.NewAddBotAction(repo, cardRegistry, newFakeBotLifecycle(t), testutil.TestLogger())
+	_, err := addBotAction.Execute(ctx, g.ID(), g.HostPlayerID())
 	testutil.AssertNoError(t, err, "Should add bot")
 
 	// We have: host (human), player2 (human), bot

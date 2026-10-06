@@ -7,11 +7,14 @@ import { skyboxCache } from "@/services/SkyboxCache.ts";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { useAsteroidEventStore } from "@/stores/asteroidEventStore.ts";
+import { useBotPresenceStore } from "@/stores/botPresenceStore.ts";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 import { deepClone, findChangedPaths } from "@/utils/deepCompare.ts";
 import { clearGameSession, getGameSession, saveGameSession } from "@/utils/sessionStorage.ts";
 import type {
+  BotThoughtPayload,
   ChatMessageDto,
+  EmotePayload,
   GameDto,
   FullStatePayload,
   PlayerDisconnectedPayload,
@@ -411,6 +414,18 @@ export function useWebSocketConnection(
       useGameStore.getState().addChatMessage(chatMessage);
     };
 
+    const handleEmote = (payload: EmotePayload) => {
+      useBotPresenceStore.getState().setEmote(payload.playerId, payload.emote);
+    };
+
+    const handleBotThought = (payload: BotThoughtPayload) => {
+      const presence = useBotPresenceStore.getState();
+      presence.setTyping(payload.playerId, payload.typing);
+      if (payload.text) {
+        presence.setThought(payload.playerId, payload.text);
+      }
+    };
+
     const handleSpectatorKicked = () => {
       globalWebSocketManager.disconnect();
       navigate("/", { replace: true });
@@ -442,6 +457,8 @@ export function useWebSocketConnection(
     globalWebSocketManager.on("disconnect", handleDisconnect);
     globalWebSocketManager.on("max-reconnects-reached", handleMaxReconnectsReached);
     globalWebSocketManager.on("chat-update", handleChatUpdate);
+    globalWebSocketManager.on("emote", handleEmote);
+    globalWebSocketManager.on("bot-thought", handleBotThought);
     globalWebSocketManager.on("spectator-kicked", handleSpectatorKicked);
     globalWebSocketManager.on("spectator-connected", handleSpectatorIdReceived);
 
@@ -458,6 +475,9 @@ export function useWebSocketConnection(
       globalWebSocketManager.off("disconnect", handleDisconnect);
       globalWebSocketManager.off("max-reconnects-reached", handleMaxReconnectsReached);
       globalWebSocketManager.off("chat-update", handleChatUpdate);
+      globalWebSocketManager.off("emote", handleEmote);
+      globalWebSocketManager.off("bot-thought", handleBotThought);
+      useBotPresenceStore.getState().reset();
       globalWebSocketManager.off("spectator-kicked", handleSpectatorKicked);
       globalWebSocketManager.off("spectator-connected", handleSpectatorIdReceived);
       isWebSocketInitialized.current = false;

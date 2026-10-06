@@ -229,6 +229,23 @@ func (g *Game) State() *datastore.GameState {
 	return state
 }
 
+// BotSpendUSD returns the total LLM spend of all bots in this game.
+func (g *Game) BotSpendUSD() float64 {
+	var v float64
+	g.read(func(s *datastore.GameState) { v = s.BotSpendUSD })
+	return v
+}
+
+// AddBotSpend adds to the game's bot LLM spend and returns the new total.
+func (g *Game) AddBotSpend(amountUSD float64) float64 {
+	var total float64
+	g.update(func(s *datastore.GameState) {
+		s.BotSpendUSD += amountUSD
+		total = s.BotSpendUSD
+	})
+	return total
+}
+
 // EventBus returns the event bus for publishing domain events
 func (g *Game) EventBus() *events.EventBusImpl {
 	return g.eventBus
@@ -421,7 +438,7 @@ func (g *Game) AddNewPlayer(ctx context.Context, playerID, playerName string) (*
 }
 
 // AddNewBotPlayer creates a new bot player backed by this game's state and adds them to the game
-func (g *Game) AddNewBotPlayer(ctx context.Context, botID, botName string, difficulty player.BotDifficulty, speed player.BotSpeed) (*player.Player, error) {
+func (g *Game) AddNewBotPlayer(ctx context.Context, botID, botName, persona string) (*player.Player, error) {
 	if err := g.ds.UpdateGame(g.id, func(s *datastore.GameState) {
 		s.Players[botID] = &datastore.PlayerState{
 			ID:                 botID,
@@ -429,8 +446,7 @@ func (g *Game) AddNewBotPlayer(ctx context.Context, botID, botName string, diffi
 			Connected:          false,
 			PlayerType:         "bot",
 			BotStatus:          string(player.BotStatusLoading),
-			BotDifficulty:      string(difficulty),
-			BotSpeed:           string(speed),
+			BotPersona:         persona,
 			TerraformRating:    20,
 			HandCardIDs:        []string{},
 			PlayedCardIDs:      []string{},
@@ -455,8 +471,7 @@ type PlayerIdentity struct {
 	Color              string
 	PlayerType         string
 	BotStatus          string
-	BotDifficulty      string
-	BotSpeed           string
+	BotPersona         string
 	Connected          bool
 	PendingDemoChoices *shared.PendingDemoChoices
 }
@@ -469,8 +484,7 @@ func IdentityOf(s *datastore.PlayerState) PlayerIdentity {
 		Color:              s.Color,
 		PlayerType:         s.PlayerType,
 		BotStatus:          s.BotStatus,
-		BotDifficulty:      s.BotDifficulty,
-		BotSpeed:           s.BotSpeed,
+		BotPersona:         s.BotPersona,
 		Connected:          s.Connected,
 		PendingDemoChoices: s.PendingDemoChoices,
 	}
@@ -486,8 +500,7 @@ func (g *Game) AddRestoredPlayer(ctx context.Context, identity PlayerIdentity) (
 			Connected:          identity.Connected,
 			PlayerType:         identity.PlayerType,
 			BotStatus:          identity.BotStatus,
-			BotDifficulty:      identity.BotDifficulty,
-			BotSpeed:           identity.BotSpeed,
+			BotPersona:         identity.BotPersona,
 			PendingDemoChoices: identity.PendingDemoChoices,
 			TerraformRating:    20,
 			HandCardIDs:        []string{},

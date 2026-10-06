@@ -63,6 +63,9 @@ type GameState struct {
 	Spectators   map[string]*shared.SpectatorState
 	ChatMessages []shared.ChatMessage
 
+	// BotSpendUSD is the total LLM spend of all bots in this game.
+	BotSpendUSD float64
+
 	PendingTileSelections      map[string]*shared.PendingTileSelection
 	PendingTileSelectionQueues map[string]*shared.PendingTileSelectionQueue
 	ForcedFirstActions         map[string]*shared.ForcedFirstAction
@@ -105,8 +108,8 @@ type PlayerState struct {
 	Connected               bool
 	PlayerType              string
 	BotStatus               string
-	BotDifficulty           string
-	BotSpeed                string
+	BotPersona              string
+	BotError                string
 
 	CorporationID      string
 	Color              string

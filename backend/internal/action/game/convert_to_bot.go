@@ -12,7 +12,7 @@ import (
 
 // BotStarter starts a bot session for a player.
 type BotStarter interface {
-	StartBot(gameID, playerID, botName, difficulty, speed string, settings shared.GameSettings) error
+	StartBot(gameID, playerID string) error
 }
 
 // ConvertToBotAction converts a human player to a bot in an active game.
@@ -72,23 +72,22 @@ func (a *ConvertToBotAction) Execute(ctx context.Context, gameID string, request
 		return fmt.Errorf("cannot convert exited player to bot")
 	}
 
-	if g.Settings().ClaudeAPIKey == "" {
-		return fmt.Errorf("claude API key is required to convert players to bots")
+	if g.Settings().ClaudeOAuthToken == "" {
+		return fmt.Errorf("a Claude token is required to convert players to bots")
 	}
 
 	log.Debug("Converting player to bot", slog.String("player_name", target.Name()))
 
 	target.SetPlayerType(playerPkg.PlayerTypeBot)
-	target.SetBotDifficulty(playerPkg.BotDifficultyNormal)
-	target.SetBotSpeed(playerPkg.BotSpeedFast)
-	target.SetBotStatus(playerPkg.BotStatusLoading)
+	target.SetBotStatus(playerPkg.BotStatusReady)
+	target.SetBotError("")
 	target.SetConnected(true)
 
 	if a.botStarter != nil {
-		settings := g.Settings()
-		if err := a.botStarter.StartBot(gameID, targetPlayerID, target.Name(), string(playerPkg.BotDifficultyNormal), string(playerPkg.BotSpeedFast), settings); err != nil {
+		if err := a.botStarter.StartBot(gameID, targetPlayerID); err != nil {
 			log.Error("Failed to start bot session", slog.Any("error", err))
 			target.SetBotStatus(playerPkg.BotStatusFailed)
+			target.SetBotError("the bot could not start")
 		}
 	}
 

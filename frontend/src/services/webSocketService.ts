@@ -35,6 +35,13 @@ import {
   MessageTypeActionClaimMilestone,
   MessageTypeActionFundAward,
   MessageTypeAddBot,
+  MessageTypeBotInspect,
+  MessageTypeBotRetry,
+  MessageTypeBotThought,
+  MessageTypeBotTraceEvent,
+  MessageTypeBotTraceSnapshot,
+  MessageTypeEmote,
+  MessageTypeEmoteSend,
   MessageTypeKickPlayer,
   MessageTypeEndGame,
   MessageTypeGameEnded,
@@ -63,7 +70,12 @@ import {
   MessageTypeActionColonyBuild,
   MessageTypeActionProjectFundingSeat,
   // Payload types
+  BotThoughtPayload,
+  BotTraceDto,
+  BotTraceEventDto,
   ChatUpdatePayload,
+  EmotePayload,
+  EmoteSendPayload,
   PlayerConnectedPayload,
   PlayerDisconnectedPayload,
   WebSocketMessage,
@@ -235,6 +247,22 @@ export class WebSocketService {
       }
       case MessageTypeSpectatorKicked: {
         this.emit("spectator-kicked", message.payload);
+        break;
+      }
+      case MessageTypeEmote: {
+        this.emit("emote", message.payload as EmotePayload);
+        break;
+      }
+      case MessageTypeBotThought: {
+        this.emit("bot-thought", message.payload as BotThoughtPayload);
+        break;
+      }
+      case MessageTypeBotTraceSnapshot: {
+        this.emit("bot-trace-snapshot", message.payload as BotTraceDto);
+        break;
+      }
+      case MessageTypeBotTraceEvent: {
+        this.emit("bot-trace-event", message.payload as BotTraceEventDto);
         break;
       }
       default:
@@ -552,12 +580,20 @@ export class WebSocketService {
     return this.send(MessageTypeActionConfirmAwardFund, { awardType });
   }
 
-  addBot(botName?: string, difficulty?: string, speed?: string): string {
-    return this.send(MessageTypeAddBot, {
-      botName: botName || "",
-      difficulty: difficulty || "normal",
-      speed: speed || "normal",
-    });
+  addBot(): string {
+    return this.send(MessageTypeAddBot, {});
+  }
+
+  retryBot(playerId: string): string {
+    return this.send(MessageTypeBotRetry, { playerId });
+  }
+
+  inspectBot(playerId: string): string {
+    return this.send(MessageTypeBotInspect, { playerId });
+  }
+
+  sendEmote(emote: EmoteSendPayload["emote"]): string {
+    return this.send(MessageTypeEmoteSend, { emote });
   }
 
   kickPlayer(targetPlayerId: string): string {
