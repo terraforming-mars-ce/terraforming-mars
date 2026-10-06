@@ -1,6 +1,7 @@
 import React from "react";
 import GameIcon from "../../../display/GameIcon.tsx";
 import Slash from "./Slash.tsx";
+import { TaggedCardIcon } from "./CardIcon";
 import type { CardBehaviorDto, SelectorDto } from "@/types/generated/api-types";
 import { isEffect, getSelectors } from "@/types/resourceConditions";
 
@@ -37,7 +38,7 @@ const IconWithBadge: React.FC<{
     <div className="relative inline-flex items-center justify-center">
       <GameIcon iconType={iconType} size="behavior" />
       {showSpBadge && (
-        <span className="absolute -bottom-[2px] -right-[2px] text-[8px] font-black text-white bg-[rgba(80,80,80,0.9)] px-[3px] py-[1px] rounded-[2px] leading-none [text-shadow:0_0_2px_rgba(0,0,0,0.8)]">
+        <span className="absolute -bottom-[2px] -right-[2px] text-[8px] font-black text-white bg-[rgba(80,80,80,0.9)] px-[3px] py-[1px] leading-none [text-shadow:0_0_2px_rgba(0,0,0,0.8)]">
           SP
         </span>
       )}
@@ -104,7 +105,11 @@ const DiscountRow: React.FC<{
 const renderSelectorIcons = (selector: SelectorDto): React.ReactNode => {
   const elements: React.ReactNode[] = [];
 
-  if (selector.tags && selector.tags.length > 0) {
+  const hasCardAction = selector.actions?.some(
+    (action) => action === "card-playing" || action === "card-buying",
+  );
+
+  if (!hasCardAction && selector.tags && selector.tags.length > 0) {
     selector.tags.forEach((tag: string, tagIndex: number) => {
       elements.push(
         <IconWithBadge
@@ -149,7 +154,15 @@ const renderSelectorIcons = (selector: SelectorDto): React.ReactNode => {
       const iconType = getActionIcon(action);
       if (iconType) {
         elements.push(
-          <GameIcon key={`action-${actionIndex}`} iconType={iconType} size="behavior" />,
+          hasCardAction && selector.tags?.length ? (
+            <TaggedCardIcon
+              key={`action-${actionIndex}`}
+              iconType={iconType}
+              tags={selector.tags}
+            />
+          ) : (
+            <GameIcon key={`action-${actionIndex}`} iconType={iconType} size="behavior" />
+          ),
         );
       }
     });
@@ -212,7 +225,7 @@ const DiscountLayout: React.FC<DiscountLayoutProps> = ({ behavior }) => {
   return (
     <DiscountRow
       icons={
-        <span className="text-[10px] font-semibold text-white bg-[rgba(60,60,60,0.8)] px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
+        <span className="text-[10px] font-semibold text-white bg-[rgba(60,60,60,0.8)] px-1.5 py-0.5 [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
           All cards
         </span>
       }
