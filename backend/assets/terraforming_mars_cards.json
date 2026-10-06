@@ -11875,7 +11875,11 @@
       },
       {
         "type": "generic",
-        "text": "Add 2 microbes or 2 animals **to another venus card**. Decrease your energy production 1 step, and increase your M€ production 2 steps."
+        "text": "Add 2 microbes or 2 animals **to another venus card**."
+      },
+      {
+        "type": "generic",
+        "text": "Decrease your energy production 1 step, and increase your M€ production 2 steps."
       }
     ],
     "pack": "venus-next",
@@ -11897,18 +11901,6 @@
         "triggers": [
           {
             "type": "auto"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "credit-production",
-            "amount": 2,
-            "target": "self-player"
-          },
-          {
-            "type": "energy-production",
-            "amount": -1,
-            "target": "self-player"
           }
         ],
         "choices": [
@@ -11945,7 +11937,27 @@
             ]
           }
         ],
-        "description": "Add 2 microbes or 2 animals **to another venus card**. Decrease your energy production 1 step, and increase your M€ production 2 steps."
+        "description": "Add 2 microbes or 2 animals **to another venus card**."
+      },
+      {
+        "triggers": [
+          {
+            "type": "auto"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "credit-production",
+            "amount": 2,
+            "target": "self-player"
+          },
+          {
+            "type": "energy-production",
+            "amount": -1,
+            "target": "self-player"
+          }
+        ],
+        "description": "Decrease your energy production 1 step, and increase your M€ production 2 steps."
       }
     ],
     "vpConditions": [
