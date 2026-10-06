@@ -133,6 +133,7 @@ export default function TileGrid({
 
       switch (tile.occupiedBy.type) {
         case "ocean-tile":
+          coldStartTrace.begin("ocean-placement", { key: hexKey });
           void playWaterPlacementSound();
           break;
         case "greenery-tile":
