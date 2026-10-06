@@ -1,6 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect, useMemo } from "react";
 import { ChatMessageDto } from "@/types/generated/api-types.ts";
 import { Z_INDEX } from "@/constants/zIndex";
+import { useGameStore } from "@/stores/gameStore.ts";
+import { useBotPresenceStore } from "@/stores/botPresenceStore.ts";
+import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
+import EmoteIcon, { EMOTES } from "@/components/ui/display/EmoteIcon.tsx";
 
 const BAR_HEIGHT = 90;
 const SNAP_THRESHOLD = 40;
@@ -33,6 +37,38 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
   const dragOffset = useRef({ x: 0, y: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [showEmotePicker, setShowEmotePicker] = useState(false);
+  const emotePickerRef = useRef<HTMLDivElement>(null);
+  const isSpectator = useGameStore((s) => s.isSpectator);
+  const game = useGameStore((s) => s.game);
+  const typing = useBotPresenceStore((s) => s.typing);
+
+  const typingNames = useMemo(() => {
+    const names: string[] = [];
+    const players = [
+      ...(game?.currentPlayer?.id ? [game.currentPlayer] : []),
+      ...(game?.otherPlayers ?? []),
+    ];
+    for (const player of players) {
+      if (typing[player.id]) {
+        names.push(player.name);
+      }
+    }
+    return names;
+  }, [game?.currentPlayer, game?.otherPlayers, typing]);
+
+  useEffect(() => {
+    if (!showEmotePicker) {
+      return undefined;
+    }
+    const handleClick = (e: MouseEvent) => {
+      if (emotePickerRef.current && !emotePickerRef.current.contains(e.target as Node)) {
+        setShowEmotePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showEmotePicker]);
 
   const snapBottom = BAR_HEIGHT;
 
@@ -183,16 +219,42 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
             const timeStr = time
               ? `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`
               : "";
+            const senderColor =
+              (msg.senderId && playerColorMap?.get(msg.senderId)) || msg.senderColor;
+            if (msg.kind === "system") {
+              return (
+                <div key={i} className="shrink-0 text-left text-xs italic text-white/40 min-w-0">
+                  {timeStr && (
+                    <span className="not-italic text-white/20 text-[10px] mr-1.5">{timeStr}</span>
+                  )}
+                  {msg.message}
+                </div>
+              );
+            }
+            if (msg.kind === "recap") {
+              return (
+                <div
+                  key={i}
+                  className="shrink-0 text-left min-w-0 border-l-2 bg-white/5 px-2 py-1.5 my-0.5"
+                  style={{ borderLeftColor: senderColor }}
+                >
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-orbitron text-[9px] font-bold tracking-[0.15em] text-white/50">
+                      RECAP
+                    </span>
+                    <span className="text-sm font-semibold" style={{ color: senderColor }}>
+                      {msg.senderName}
+                    </span>
+                  </div>
+                  <p className="text-sm text-white/75 leading-relaxed break-words">{msg.message}</p>
+                </div>
+              );
+            }
             return (
               <div key={i} className="text-sm leading-relaxed flex shrink-0 text-left min-w-0">
                 <span className="shrink-0">
                   {timeStr && <span className="text-white/20 text-[10px] mr-1.5">{timeStr}</span>}
-                  <span
-                    className="font-semibold"
-                    style={{
-                      color: (msg.senderId && playerColorMap?.get(msg.senderId)) || msg.senderColor,
-                    }}
-                  >
+                  <span className="font-semibold" style={{ color: senderColor }}>
                     {msg.senderName}
                   </span>
                   {msg.isSpectator && (
@@ -207,7 +269,51 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="border-t border-white/15 shrink-0">
+        {typingNames.length > 0 && (
+          <div className="shrink-0 px-2 pb-1 text-[11px] italic text-white/40 text-left">
+            {`${typingNames.join(", ")} ${typingNames.length > 1 ? "are" : "is"} typing…`}
+          </div>
+        )}
+
+        <div className="border-t border-white/15 shrink-0 flex items-center gap-1">
+          {!isSpectator && (
+            <div
+              ref={emotePickerRef}
+              className="relative shrink-0"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                aria-label="Send an emote"
+                aria-expanded={showEmotePicker}
+                onClick={() => setShowEmotePicker((v) => !v)}
+                className={`flex items-center justify-center w-7 h-7 cursor-pointer transition-opacity ${showEmotePicker ? "opacity-100" : "opacity-50 hover:opacity-100"}`}
+              >
+                <EmoteIcon emote="laugh" size={18} />
+              </button>
+              {showEmotePicker && (
+                <div
+                  className="absolute bottom-full left-0 mb-1 w-max grid grid-cols-[repeat(4,2.25rem)] gap-1 p-1.5 bg-[rgba(10,10,15,0.97)] border border-white/20 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+                  style={{ zIndex: Z_INDEX.DROPDOWNS }}
+                >
+                  {EMOTES.map(({ kind, label }) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      aria-label={label}
+                      onClick={() => {
+                        setShowEmotePicker(false);
+                        void globalWebSocketManager.sendEmote(kind);
+                      }}
+                      className="flex items-center justify-center w-9 h-9 rounded cursor-pointer hover:bg-white/10 hover:scale-110 transition-transform"
+                    >
+                      <EmoteIcon emote={kind} size={24} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <input
             type="text"
             value={inputValue}
@@ -217,7 +323,7 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
             aria-label="Chat message"
             spellCheck={false}
             autoComplete="off"
-            className="w-full bg-transparent text-white text-sm px-1 py-2 outline-none placeholder:text-white/25 border-b border-white/15"
+            className="flex-1 min-w-0 bg-transparent text-white text-sm px-1 py-2 outline-none placeholder:text-white/25 border-b border-white/15"
           />
         </div>
       </div>
