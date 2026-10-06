@@ -1,4 +1,7 @@
+import { BehaviorArrow } from "./BehaviorIcon";
 import React from "react";
+import { useBehaviorLayout } from "./BehaviorContainer";
+import { orderIndependentResources } from "../utils/displayAnalysis";
 import ResourceDisplay from "./ResourceDisplay.tsx";
 import CardIcon from "./CardIcon.tsx";
 import OrChip from "./OrChip.tsx";
@@ -133,7 +136,7 @@ const renderSelector = (
     elements.push(
       <span
         key={`vp-${triggerIndex}-${selectorIndex}`}
-        className="font-orbitron text-[10px] font-semibold text-white bg-black/40 border border-white/15 px-1.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)] leading-[22px]"
+        className="font-orbitron text-[10px] font-semibold text-white bg-black/40 border border-white/15 px-1.5 [text-shadow:0_0_2px_rgba(0,0,0,0.6)] leading-[22px]"
       >
         {vpLabel}
       </span>,
@@ -173,7 +176,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
 
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center">
-        <span className="text-[10px] font-semibold text-white bg-black/30 border border-white/15 px-1.5 py-0.5 rounded [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
+        <span className="text-[10px] font-semibold text-white bg-black/30 border border-white/15 px-1.5 py-0.5 [text-shadow:0_0_2px_rgba(0,0,0,0.6)]">
           SP
         </span>
         {isSubset && (
@@ -392,7 +395,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
     const resourceTypes: string[] = trigger.condition?.resourceTypes ?? [];
     return (
       <div key={triggerIndex} className="flex gap-[2px] items-center">
-        <div className="bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1 py-[2px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] flex items-center gap-[2px]">
+        <div className="bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] px-1 py-[2px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] flex items-center gap-[2px]">
           {resourceTypes.map((rt: string, idx: number) => {
             const iconType = PRODUCTION_TYPE_TO_RESOURCE[rt] ?? rt;
             return (
@@ -430,6 +433,7 @@ const renderBehaviorRow = (
   ) => IconDisplayInfo,
   tileScaleInfo: TileScaleInfo,
   computedOutputs?: CalculatedOutputDto[],
+  compact = false,
 ): React.ReactNode => {
   // Check if this is a global-parameter-lenience effect (special case)
   const isGlobalParameterLenience =
@@ -449,7 +453,7 @@ const renderBehaviorRow = (
   return (
     <React.Fragment key={`behavior-${rowIndex}`}>
       {!skipMainRow && (
-        <div className="flex gap-[3px] items-center justify-center">
+        <div className="behavior-flow flex gap-[3px] items-center justify-center max-w-full">
           {/* Trigger conditions - hide for global-parameter-lenience */}
           {hasTriggers && behavior.triggers && (
             <>
@@ -487,7 +491,7 @@ const renderBehaviorRow = (
                   );
                 })()}
               </div>
-              <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
+              <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0 z-[1]">
                 :
               </span>
             </>
@@ -519,12 +523,12 @@ const renderBehaviorRow = (
             );
           })}
           {(behavior.inputs?.length ?? 0) > 0 && (behavior.outputs?.length ?? 0) > 0 && (
-            <span className="text-white text-sm font-bold">→</span>
+            <BehaviorArrow />
           )}
 
           {/* Outputs in same row if they fit */}
           {behavior.outputs &&
-            behavior.outputs.map((output, index: number) => {
+            orderIndependentResources(behavior.outputs, compact).map((output, index: number) => {
               const resourceType = output.type;
               const cardOutputTypes = [
                 "card-draw",
@@ -598,17 +602,17 @@ const renderBehaviorRow = (
             // Simple output-only choices: two rows — triggers on top, outputs below
             return (
               <>
-                <div className="flex gap-[3px] items-center justify-center">
+                <div className="behavior-flow flex gap-[3px] items-center justify-center max-w-full">
                   <div className="flex gap-[3px] items-center">
                     {behavior.triggers!.map((trigger, triggerIndex: number) =>
                       renderTriggerIcon(trigger, triggerIndex),
                     )}
                   </div>
-                  <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
+                  <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0 z-[1]">
                     :
                   </span>
                 </div>
-                <div className="flex gap-[3px] items-center justify-center">
+                <div className="behavior-flow flex gap-[3px] items-center justify-center max-w-full">
                   {behavior.choices.map((choice, idx: number) => (
                     <React.Fragment key={`choice-${rowIndex}-${idx}`}>
                       {idx > 0 && <Slash />}
@@ -638,14 +642,14 @@ const renderBehaviorRow = (
           return behavior.choices.map((choice, idx: number) => (
             <div
               key={`choice-row-${rowIndex}-${idx}`}
-              className="flex gap-[3px] items-center justify-center"
+              className="behavior-flow flex gap-[3px] items-center justify-center max-w-full"
             >
               <div className="flex gap-[3px] items-center">
                 {behavior.triggers!.map((trigger, triggerIndex: number) =>
                   renderTriggerIcon(trigger, triggerIndex),
                 )}
               </div>
-              <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
+              <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0 z-[1]">
                 :
               </span>
               {choice.inputs?.map((input, inputIndex: number) => {
@@ -664,9 +668,7 @@ const renderBehaviorRow = (
                 );
               })}
               {(choice.inputs?.length ?? 0) > 0 && (choice.outputs?.length ?? 0) > 0 && (
-                <span className="text-white text-sm font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                  →
-                </span>
+                <BehaviorArrow />
               )}
               {choice.outputs?.map((output, outputIndex: number) => {
                 const resourceType = output.type;
@@ -740,9 +742,7 @@ const renderBehaviorRow = (
                 );
               })}
               {(choice.inputs?.length ?? 0) > 0 && (choice.outputs?.length ?? 0) > 0 && (
-                <span className="text-white text-sm font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                  →
-                </span>
+                <BehaviorArrow />
               )}
               {choice.outputs?.map((output, outputIndex: number) => {
                 const displayInfo = analyzeResourceDisplayWithConstraints(output, 6, false);
@@ -826,22 +826,23 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
   tileScaleInfo,
   computedOutputs,
 }) => {
+  const { compact } = useBehaviorLayout();
   // Collect all behaviors to render (primary + merged)
   const allBehaviors = [behavior, ...(mergedBehaviors || [])];
 
   // Compact rendering for all-6-standard-resource production-increased pattern (Manutech)
   if (isAllStandardResourceProductionPattern(allBehaviors)) {
     return (
-      <div className="flex gap-[3px] items-center justify-center">
-        <div className="bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] flex items-center">
-          <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold rounded px-1 py-[1px] leading-tight">
+      <div className="behavior-flow flex gap-[3px] items-center justify-center max-w-full">
+        <div className="bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] flex items-center">
+          <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold px-1 py-[1px] leading-tight">
             SR
           </span>
         </div>
-        <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
+        <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0 z-[1]">
           :
         </span>
-        <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold rounded px-1 py-[1px] leading-tight">
+        <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold px-1 py-[1px] leading-tight">
           SR
         </span>
       </div>
@@ -878,6 +879,7 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
             analyzeResourceDisplayWithConstraints,
             tileScaleInfo,
             computedOutputs,
+            compact,
           ),
         )}
       </div>
@@ -895,6 +897,7 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
           analyzeResourceDisplayWithConstraints,
           tileScaleInfo,
           computedOutputs,
+          compact,
         ),
       )}
     </div>
