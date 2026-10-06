@@ -2,7 +2,10 @@ import * as THREE from "three";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { HexGrid2D } from "../../src/utils/hex-grid-2d";
-import { CityBatchStore, mountCityWarmup } from "../../src/components/game/board/cityBatch";
+import {
+  CityBatchStore,
+  createCityWarmupGeometry,
+} from "../../src/components/game/board/cityBatch";
 import { createGeometry } from "../../src/components/game/board/cityGeometry";
 import {
   generateCityLayout,
@@ -26,6 +29,7 @@ import {
   basinHeight,
   landscapeHeightAt,
   WATER_LEVEL,
+  WATER_RADIUS,
   LAKE_BED_LEVEL,
   BEACH_WIDTH_MIN,
   BEACH_WIDTH_MAX,
@@ -34,6 +38,7 @@ import {
 } from "../../src/components/game/board/landscapeFields";
 import {
   MOHOLE_STENCIL_BIT,
+  NUCLEAR_STENCIL_BIT,
   LAKE_STENCIL_BIT,
 } from "../../src/components/game/board/boardConstants";
 import type {
@@ -211,6 +216,9 @@ const showcase = createCityShowcase().map((layout, i) => {
 const materials = new Map<string, THREE.MeshStandardMaterial>();
 for (const mode of ["normal", "bright"]) {
   for (let i = 0; i < 19; i++) {
+    if (mode === "bright" && i >= 3) {
+      continue;
+    }
     materials.set(`${mode}:${i}`, new THREE.MeshStandardMaterial());
   }
 }
@@ -235,42 +243,86 @@ for (const plot of showcase) {
 const batchCount = store.meshes.size;
 store.update([], new Map());
 store.dispose();
-// Exercise the same render preparation that threw after Strict Mode effect replay.
-const warmupGroup = new THREE.Group();
-const warmupMaterial = new THREE.MeshStandardMaterial();
 const camera = new THREE.PerspectiveCamera();
 const scene = new THREE.Scene();
-function prepareWarmupRender() {
-  for (const object of warmupGroup.children) {
-    const mesh = object as THREE.BatchedMesh;
+const cityRenderer = { info: { render: { frame: 0 } } } as THREE.WebGLRenderer;
+function prepareCityBatches() {
+  store.beginPreparation();
+  let steps = 0;
+  while (store.meshes.size === 0) {
+    assert.equal(store.prepareNext(), false);
+    assert.ok(++steps <= 9, "Preparation must yield between the eight city fixtures");
+  }
+  assert.equal(steps, 9);
+  assert.equal(store.meshes.size, 22, "Every production material must have a prepared batch");
+  assert.equal(store.ready, false);
+  return new Map([...store.meshes].map(([key, mesh]) => [key, { mesh, geometry: mesh.geometry }]));
+}
+function renderCityPreparation() {
+  for (const mesh of store.meshes.values()) {
+    assert.equal(mesh.geometry.index, null, "Warmup must use the production non-indexed draw path");
     assert.doesNotThrow(() =>
       mesh.onBeforeRender(
-        {} as THREE.WebGLRenderer,
+        cityRenderer,
         scene,
         camera,
         mesh.geometry,
-        warmupMaterial,
+        mesh.material,
         {} as THREE.Group,
       ),
     );
+    mesh.onAfterRender(
+      cityRenderer,
+      scene,
+      camera,
+      mesh.geometry,
+      mesh.material,
+      {} as THREE.Group,
+    );
   }
 }
-const firstCleanup = mountCityWarmup(warmupGroup, [warmupMaterial]);
-const firstMesh = warmupGroup.children[0];
-prepareWarmupRender();
-firstCleanup();
-assert.equal(warmupGroup.children.length, 0, "Disposed warmup meshes must leave the scene");
-const secondCleanup = mountCityWarmup(warmupGroup, [warmupMaterial]);
-assert.notEqual(
-  warmupGroup.children[0],
-  firstMesh,
-  "Effect replay must create fresh batching textures",
-);
-prepareWarmupRender();
-secondCleanup();
-warmupMaterial.dispose();
+const abandoned = prepareCityBatches();
+renderCityPreparation();
+store.dispose();
+assert.equal(store.group.children.length, 0, "Disposed preparation must leave the scene");
+assert.equal(store.ready, false);
+const prepared = prepareCityBatches();
+for (const [key, { mesh }] of prepared) {
+  assert.notEqual(mesh, abandoned.get(key)!.mesh, "Effect replay must create fresh batches");
+}
+for (let frame = 0; frame < 2; frame++) {
+  cityRenderer.info.render.frame++;
+  renderCityPreparation();
+  renderCityPreparation();
+  assert.equal(store.prepareNext(), false, "Repeated draws within a frame are not extra frames");
+}
+cityRenderer.info.render.frame++;
+renderCityPreparation();
+assert.equal(store.prepareNext(), true);
+assert.equal(store.ready, true);
+const warmupSchema = createCityWarmupGeometry();
+for (const [key, { mesh, geometry }] of prepared) {
+  assert.equal(store.meshes.get(key), mesh);
+  assert.equal(mesh.geometry, geometry, "Finishing preparation must retain uploaded buffers");
+  assert.equal(mesh.unusedVertexCount, mesh.geometry.getAttribute("position").count);
+  assert.equal(mesh.instanceCount, 0, "Preparation instances must be removed");
+  for (const [name, attribute] of Object.entries(warmupSchema.attributes)) {
+    assert.equal(mesh.geometry.getAttribute(name).itemSize, attribute.itemSize);
+  }
+}
+warmupSchema.dispose();
+store.update([showcase[0]], new Map());
+for (const [key, { mesh, geometry }] of prepared) {
+  assert.equal(store.meshes.get(key), mesh, "First placement must reuse the prepared batches");
+  assert.equal(mesh.geometry, geometry, "First placement must fit the prepared buffers");
+}
+store.update([], new Map());
 store.update(showcase, new Map());
 assert.ok(store.group.children.length > 0, "City batches must survive effect replay too");
+assert.ok(
+  [...store.meshes].some(([key, mesh]) => mesh.geometry !== prepared.get(key)!.geometry),
+  "Larger boards must still grow beyond prepared capacity",
+);
 store.dispose();
 materials.forEach((material) => material.dispose());
 assert.ok(
@@ -511,6 +563,39 @@ const oceanRing: LandscapeSource[] = HexGrid2D.getNeighbors(coord(0)).map((coord
   seed: 1,
 }));
 for (const seed of [42, 7, 1234]) {
+  const single = createLandscapeSampler({
+    seed,
+    sources: [{ coordinate: coord(0), kind: "ocean", seed: 1 }],
+  });
+  for (let i = 0; i < 120; i++) {
+    const angle = (i / 120) * Math.PI * 2;
+    const radius = WATER_RADIUS + Math.SQRT2 * 0.04 + 0.007;
+    assert.ok(
+      single(Math.cos(angle) * radius, Math.sin(angle) * radius).shore > 0,
+      "Coast distortion must stay inside the existing lake support bounds",
+    );
+  }
+  for (const neighbor of HexGrid2D.getNeighbors(coord(0))) {
+    const pair: LandscapeSource[] = [
+      { coordinate: coord(0), kind: "ocean", seed: 1 },
+      { coordinate: neighbor, kind: "ocean", seed: 2 },
+    ];
+    const joined = createLandscapeSampler({ seed, sources: pair });
+    const reversed = createLandscapeSampler({ seed, sources: pair.toReversed() });
+    const center = boardCenter(neighbor);
+    for (let i = 0; i <= 40; i++) {
+      const x = (center.x * i) / 40,
+        y = (center.y * i) / 40;
+      assert.ok(joined(x, y).shore < -0.035, "Adjacent oceans must keep an open water channel");
+      for (const offset of [-0.14, -0.08, 0, 0.08, 0.14]) {
+        assert.equal(
+          joined(x + offset, y - offset).shore,
+          reversed(x + offset, y - offset).shore,
+          "Coast shape must not depend on ocean placement order",
+        );
+      }
+    }
+  }
   const lake = createLandscapeSampler({
     seed,
     sources: [{ coordinate: coord(0), kind: "ocean", seed: 1 }, ...oceanRing],
@@ -539,7 +624,50 @@ for (const seed of [42, 7, 1234]) {
       "Filling the center of a lake must not change its outer coastline",
     );
   }
+  const shoreSources: LandscapeSource[] = [
+    ...oceanRing,
+    { coordinate: coord(0), kind: "greenery", seed: 3 },
+  ];
+  const shoreSampler = createLandscapeSampler({ seed, sources: shoreSources });
+  const shorePatches = new LandscapeBuilder().build({ seed, sources: shoreSources });
+  let shorePlants = 0;
+  for (const patch of shorePatches.values()) {
+    for (const plant of patch.plants) {
+      const terrain = shoreSampler(plant.x, plant.y);
+      assert.ok(!terrain.blocked && terrain.shore > 0.008, "Island plants must clear the coast");
+      shorePlants++;
+    }
+    const [ix, iy] = patch.key.split(":").map(Number);
+    for (const [dx, dy] of [
+      [1, 0],
+      [0, 1],
+    ]) {
+      const neighbor = shorePatches.get(`${ix + dx}:${iy + dy}`);
+      if (!neighbor) {
+        continue;
+      }
+      for (let t = 0; t < FIELD_SAMPLES; t++) {
+        const a =
+          ((dy ? FIELD_BORDER + FIELD_SAMPLES - 1 : FIELD_BORDER + t) * FIELD_SIZE +
+            (dx ? FIELD_BORDER + FIELD_SAMPLES - 1 : FIELD_BORDER + t)) *
+          4;
+        const b =
+          ((dy ? FIELD_BORDER : FIELD_BORDER + t) * FIELD_SIZE +
+            (dx ? FIELD_BORDER : FIELD_BORDER + t)) *
+          4;
+        assert.deepEqual(
+          patch.terrain.slice(a, a + 2),
+          neighbor.terrain.slice(b, b + 2),
+          `Ocean height and shore distance must be continuous at ${patch.key} for seed ${seed}`,
+        );
+      }
+    }
+  }
+  assert.ok(shorePlants > 0, "The island fixture must exercise shoreline vegetation clearance");
 }
+console.log(
+  "Ocean coast bounds, connectivity, islands, placement order, seams, and plants passed.",
+);
 assert.ok(
   Array.from(
     { length: 100 },
@@ -853,20 +981,22 @@ await plugin({
 });
 const { LandscapeSurface } = await import("../../src/components/game/board/landscapeSurface");
 const texture = new THREE.Texture();
-const surface = new LandscapeSurface({
-  mars: texture,
-  grass: texture,
-  sand: texture,
-  rock: texture,
-  concrete: texture,
-  waterNormals: texture,
-  leafyGrass: texture,
-  leafyGrassDetail: texture,
-  forestLitter: texture,
-  forestLitterDetail: texture,
-  wetSoil: texture,
-  wetSoilDetail: texture,
-} as unknown as ReturnType<typeof import("../../src/hooks/useTextures").useTextures>);
+const surface = new LandscapeSurface(
+  {
+    mars: texture,
+    grass: texture,
+    sand: texture,
+    rock: texture,
+    concrete: texture,
+    waterNormals: texture,
+  } as unknown as ReturnType<typeof import("../../src/hooks/useTextures").useTextures>,
+  {
+    groundAlbedo: new THREE.DataArrayTexture(),
+    groundDetail: new THREE.DataArrayTexture(),
+    iceAlbedo: new THREE.DataArrayTexture(),
+    iceDetail: new THREE.DataArrayTexture(),
+  },
+);
 let uploads = 0;
 const renderer = {
   initTexture(t: THREE.DataArrayTexture) {
@@ -879,15 +1009,20 @@ const { receivesPlanetHaze, addPlanetHaze, createPlanetHazeUniforms } =
 assert.ok(receivesPlanetHaze(surface.water), "Blended ocean must receive the planet's haze");
 assert.ok(receivesPlanetHaze(surface.basin), "Recessed ground must receive haze");
 assert.ok(!receivesPlanetHaze(surface.mask), "Cutout must not receive haze");
+assert.equal(surface.ground.transparent, false, "Solid ground must precede transparent overlays");
+assert.equal(surface.ground.depthWrite, true, "Solid ground must occlude far-side tiles");
+assert.equal(surface.ground.stencilWriteMask, 0, "Ground must not cut holes in Mars");
+assert.equal(surface.groundEdge.transparent, true, "Ground fringes must retain alpha blending");
+assert.equal(surface.groundEdge.depthWrite, false, "Soft fringes must not become solid occluders");
 assert.equal(surface.basin.transparent, false);
 assert.equal(surface.basin.depthWrite, true);
 assert.equal(surface.mask.colorWrite, false);
 assert.equal(surface.mask.depthWrite, false);
 assert.equal(surface.mask.stencilWriteMask, LAKE_STENCIL_BIT);
 assert.equal(surface.mask.stencilRef, LAKE_STENCIL_BIT);
-assert.equal(surface.basin.stencilFuncMask, MOHOLE_STENCIL_BIT);
+assert.equal(surface.basin.stencilFuncMask, MOHOLE_STENCIL_BIT | NUCLEAR_STENCIL_BIT);
 assert.equal(surface.basin.stencilWriteMask, 0);
-assert.equal(surface.group.children.length, 4, "Lake rendering must use four shared passes");
+assert.equal(surface.group.children.length, 5, "Landscape includes solid ground and soft edges");
 assert.ok(surface.group.children[0].renderOrder < 0, "Cutout must precede Mars");
 for (const material of [surface.mask, surface.water]) {
   assert.equal(material.uniforms.uTerrain, surface.uniforms.uTerrain);
@@ -957,6 +1092,26 @@ const groundShader = {
   uniforms: {},
 };
 surface.ground.onBeforeCompile(groundShader, renderer);
+const edgeShader = {
+  vertexShader: THREE.ShaderLib.standard.vertexShader,
+  fragmentShader: THREE.ShaderLib.standard.fragmentShader,
+  uniforms: {},
+};
+surface.groundEdge.onBeforeCompile(edgeShader, renderer);
+assert.equal(edgeShader.vertexShader, groundShader.vertexShader, "Ground passes share geometry");
+assert.equal(
+  edgeShader.fragmentShader,
+  groundShader.fragmentShader,
+  "Ground passes classify the same live or baked alpha",
+);
+assert.doesNotMatch(groundShader.fragmentShader, /gl_FragDepth/, "Ground uses its actual depth");
+const coverageSplit = groundShader.fragmentShader.indexOf("if(groundAlpha>=1.0)");
+assert.ok(coverageSplit > 0);
+assert.doesNotMatch(
+  groundShader.fragmentShader.slice(coverageSplit),
+  /\b(?:dFdx|dFdy|fwidth)\s*\(/,
+  "Coverage splitting must follow material derivatives",
+);
 const alphaTestOffset = groundShader.fragmentShader.indexOf("#include <alphatest_fragment>");
 assert.ok(alphaTestOffset > 0);
 assert.match(groundShader.fragmentShader.slice(0, alphaTestOffset), /dFdx\(pavingHeight\)/);
@@ -987,8 +1142,8 @@ function flush(next: typeof state, time: number) {
 flush(state, 1000);
 assert.equal(
   uploads,
-  patches.size * 4,
-  "Each changed patch uploads two terrain and two material layers",
+  patches.size * 6,
+  "Each changed patch uploads two terrain, two material and two detail layers",
 );
 const uploaded = uploads;
 flush({ ...state, id: 2 }, 1100);
@@ -1003,7 +1158,7 @@ assert.ok(surface.group.children[0].visible, "Cutout must survive the removal tr
 surface.tick(renderer, 3000, () => {});
 assert.equal(
   surface.group.children.filter((mesh) => mesh.visible).length,
-  1,
+  2,
   "Boards without oceans must skip lake passes",
 );
 assert.ok(
@@ -1016,7 +1171,13 @@ flush({ ...state, id: 4 }, 4000);
 assert.equal(uploads, uploaded * 3, "Reused slots did not upload restored patches");
 let disposed = 0;
 let disposedPasses = 0;
-for (const material of [surface.ground, surface.basin, surface.mask, surface.water]) {
+for (const material of [
+  surface.ground,
+  surface.groundEdge,
+  surface.basin,
+  surface.mask,
+  surface.water,
+]) {
   material.addEventListener("dispose", () => disposedPasses++);
 }
 surface.terrain.addEventListener("dispose", () => disposed++);
@@ -1028,8 +1189,96 @@ assert.equal(disposed, 0, "Strict Mode replay disposed the live surface");
 surface.release();
 await Promise.resolve();
 assert.equal(disposed, 1);
-assert.equal(disposedPasses, 4, "All four surface materials must be released exactly once");
+assert.equal(disposedPasses, 5, "All surface materials must be released exactly once");
 texture.dispose();
+const {
+  climateFromParameters,
+  climateMilestones,
+  easeClimate,
+  CLIMATE_KEYS,
+  BARREN_PARAMETERS,
+  TERRAFORMED_PARAMETERS,
+  plantForm,
+} = await import("../../src/components/game/board/climate");
+const barren = climateFromParameters(BARREN_PARAMETERS);
+const terraformed = climateFromParameters(TERRAFORMED_PARAMETERS);
+for (const key of CLIMATE_KEYS) {
+  for (const value of [barren[key], terraformed[key]]) {
+    assert.ok(value >= 0 && value <= 1, `Climate ${key} must stay within 0..1`);
+  }
+}
+assert.equal(barren.ice, 1, "Barren oceans are frozen");
+assert.equal(barren.frost, 1);
+assert.equal(barren.tree + barren.bush + barren.grass + barren.birds, 0);
+assert.equal(terraformed.ice, 0);
+assert.equal(terraformed.frost, 0);
+assert.equal(terraformed.tree * terraformed.grass * terraformed.birds, 1);
+const thawed = climateFromParameters({ temperature: 0, oxygen: 0, oceans: 0 });
+assert.equal(thawed.ice, 0, "Oceans are liquid at 0 °C");
+assert.equal(thawed.frost, 0, "Frost is gone at 0 °C");
+for (let temperature = -30; temperature < 8; temperature += 2) {
+  const before = climateFromParameters({ temperature, oxygen: 7, oceans: 4 });
+  const after = climateFromParameters({ temperature: temperature + 2, oxygen: 7, oceans: 4 });
+  for (const key of ["grass", "bush", "tree", "greening"] as const) {
+    assert.ok(after[key] >= before[key], `${key} must not recede as temperature rises`);
+  }
+  for (const key of ["frost", "ice"] as const) {
+    assert.ok(after[key] <= before[key], `${key} must not grow as temperature rises`);
+  }
+  // Plants unlock in card order: grass, then bushes, then trees.
+  assert.ok(before.grass >= before.bush && before.bush >= before.tree);
+}
+const eased = { ...barren };
+assert.ok(easeClimate(eased, terraformed, 0.016), "Easing reports motion");
+for (let i = 0; i < 2000 && easeClimate(eased, terraformed, 0.016); i++) {}
+assert.deepEqual(eased, terraformed, "Easing settles on the target");
+assert.deepEqual(climateMilestones(BARREN_PARAMETERS, TERRAFORMED_PARAMETERS), [
+  "temperature",
+  "oceans",
+  "terraformed",
+]);
+assert.deepEqual(climateMilestones(TERRAFORMED_PARAMETERS, TERRAFORMED_PARAMETERS), []);
+const climateSources = [{ coordinate: { q: 0, r: 0, s: 0 }, seed: 3, kind: "greenery" as const }];
+const climatePlants = [
+  ...new LandscapeBuilder().build({ seed: 5, sources: climateSources }).values(),
+].flatMap((patch) => patch.plants);
+assert.ok(climatePlants.length > 0);
+for (const plant of climatePlants) {
+  assert.ok(
+    plant.rank >= 0 && plant.rank <= 1,
+    "Plant rank must stay within its density threshold",
+  );
+}
+for (let temperature = -30; temperature <= 8; temperature += 1) {
+  const state = climateFromParameters({ temperature, oxygen: 7, oceans: 4 });
+  assert.ok(state.bush >= state.tree, "Saplings follow bushes");
+  const warmer = climateFromParameters({ temperature: temperature + 1, oxygen: 7, oceans: 4 });
+  for (const kind of ["tree", "pine"]) {
+    assert.deepEqual(
+      plantForm(kind, warmer),
+      plantForm(kind, state),
+      "Trees do not grow with warmth",
+    );
+  }
+  assert.ok(warmer.sky >= state.sky, "The sky warms with temperature");
+}
+const greenSample = createLandscapeSampler({ seed: 5, sources: climateSources })(0, 0);
+assert.equal(greenSample.meadow, 0, "Greeneries are not shoreline meadows");
+assert.ok(greenSample.greenery > 0.99);
+const meadowSources = [{ coordinate: { q: 0, r: 0, s: 0 }, seed: 3, kind: "ocean" as const }];
+const meadowSampler = createLandscapeSampler({ seed: 5, sources: meadowSources });
+const meadowPeak = Math.max(
+  ...Array.from({ length: 60 }, (_, i) => meadowSampler(0.06 + i * 0.002, 0).meadow),
+);
+assert.ok(meadowPeak > 0.5, "Isolated oceans grow a shoreline meadow");
+let shown = new Set<string>();
+for (let gate = 0; gate <= 1; gate += 0.05) {
+  const next = new Set(climatePlants.filter((p) => p.rank <= gate).map((p) => p.id));
+  for (const id of shown) {
+    assert.ok(next.has(id), "Raising a climate gate must only add plants");
+  }
+  shown = next;
+}
 console.log(
-  "Full board capacity, forest density, partial texture uploads, slot reuse, and effect replay passed.",
+  "Full board capacity, forest density, partial texture uploads, slot reuse, effect replay, and climate passed.",
 );

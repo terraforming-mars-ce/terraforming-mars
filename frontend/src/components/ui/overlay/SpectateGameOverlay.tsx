@@ -38,6 +38,7 @@ const SpectateGameOverlay: React.FC<SpectateGameOverlayProps> = ({
     <GameMenuModal
       title="Spectate Game"
       onBack={onCancel}
+      backLabel="Main menu"
       showBackdrop={true}
       onClose={onCancel}
       showCloseButton={true}

@@ -24,7 +24,7 @@ func CalculateAwardScore(
 ) int {
 	total := 0
 	for _, q := range def.Quantifier {
-		total += CountPerCondition(&q, "", p, b, cardRegistry, nil)
+		total += CountPerCondition(&q, "", p, b, cardRegistry, nil, nil, TagCountContext{})
 	}
 	return total
 }

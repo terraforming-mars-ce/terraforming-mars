@@ -1,5 +1,6 @@
 import { assetUrl } from "@/assets";
 import { createContext, useContext, useState, useRef, ReactNode } from "react";
+import type { ClimateParameters } from "../components/game/board/climate";
 
 export const SKYBOX_OPTIONS = [
   {
@@ -17,13 +18,13 @@ export interface World3DSettings {
   sunDirectionZ: number;
   sunIntensity: number;
   sunColor: { r: number; g: number; b: number };
-  waterColor: { r: number; g: number; b: number };
   reflectance: number;
   orbitSpeedMultiplier: number;
   freeCameraEnabled: boolean;
   showCameraFrustum: boolean;
   skyboxId: SkyboxId;
   skyboxBrightness: number;
+  climateOverride: ClimateParameters | null;
 }
 
 export interface StoredCameraState {
@@ -47,13 +48,13 @@ const defaultSettings: World3DSettings = {
   sunDirectionZ: 0.8,
   sunIntensity: 0.65,
   sunColor: { r: 1.0, g: 0.93, b: 0.85 },
-  waterColor: { r: 0.05, g: 0.09, b: 0.1 },
   reflectance: 0.1,
   orbitSpeedMultiplier: 1.0,
   freeCameraEnabled: false,
   showCameraFrustum: false,
   skyboxId: "starmap-2020-8k" as SkyboxId,
   skyboxBrightness: 0.35,
+  climateOverride: null,
 };
 
 interface World3DSettingsContextType {
@@ -69,7 +70,10 @@ interface World3DSettingsContextType {
 const World3DSettingsContext = createContext<World3DSettingsContextType | null>(null);
 
 export function World3DSettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<World3DSettings>(defaultSettings);
+  const [{ settings }, setSettingsState] = useState({
+    settings: defaultSettings,
+    orbitSpeedBeforeMarsMode: defaultSettings.orbitSpeedMultiplier,
+  });
   const [storedCameraState, setStoredCameraState] = useState<StoredCameraState | null>(null);
   const cameraStateRef = useRef<CameraDisplayState>({
     position: { x: 0, y: 0, z: 8 },
@@ -78,11 +82,28 @@ export function World3DSettingsProvider({ children }: { children: ReactNode }) {
   const pendingCameraTransformRef = useRef<PendingCameraTransform | null>(null);
 
   const updateSettings = (partial: Partial<World3DSettings>) => {
-    setSettings((prev) => ({ ...prev, ...partial }));
+    setSettingsState((prev) => {
+      const nextSettings = { ...prev.settings, ...partial };
+      let orbitSpeedBeforeMarsMode = prev.orbitSpeedBeforeMarsMode;
+
+      if (nextSettings.freeCameraEnabled !== prev.settings.freeCameraEnabled) {
+        if (nextSettings.freeCameraEnabled) {
+          orbitSpeedBeforeMarsMode = prev.settings.orbitSpeedMultiplier;
+          nextSettings.orbitSpeedMultiplier = 0;
+        } else {
+          nextSettings.orbitSpeedMultiplier = orbitSpeedBeforeMarsMode;
+        }
+      }
+
+      return { settings: nextSettings, orbitSpeedBeforeMarsMode };
+    });
   };
 
   const resetSettings = () => {
-    setSettings(defaultSettings);
+    setSettingsState({
+      settings: defaultSettings,
+      orbitSpeedBeforeMarsMode: defaultSettings.orbitSpeedMultiplier,
+    });
   };
 
   return (

@@ -15,7 +15,7 @@ func CalculateMilestoneProgress(def *milestone.MilestoneDefinition, p *player.Pl
 		if req.Countable == nil {
 			return 0
 		}
-		return CountPerCondition(&req.Countable.PerCondition, "", p, b, cardRegistry, nil)
+		return CountPerCondition(&req.Countable.PerCondition, "", p, b, cardRegistry, nil, nil, TagCountContext{ActorID: p.ID()})
 	case milestone.RequirementKindState:
 		if req.State == nil {
 			return 0
@@ -38,7 +38,7 @@ func CanClaimMilestone(def *milestone.MilestoneDefinition, p *player.Player, b *
 		if req.Countable == nil {
 			return false
 		}
-		progress := CountPerCondition(&req.Countable.PerCondition, "", p, b, cardRegistry, nil)
+		progress := CountPerCondition(&req.Countable.PerCondition, "", p, b, cardRegistry, nil, nil, TagCountContext{ActorID: p.ID()})
 		if req.Countable.Min != nil && progress < *req.Countable.Min {
 			return false
 		}

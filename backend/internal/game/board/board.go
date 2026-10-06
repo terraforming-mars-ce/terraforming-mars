@@ -13,20 +13,22 @@ import (
 
 // Tile type string constants for placement operations
 const (
-	TileTypeCity            = "city"
-	TileTypeGreenery        = "greenery"
-	TileTypeOcean           = "ocean"
-	TileTypeNaturalPreserve = "natural-preserve"
-	TileTypeMining          = "mining"
-	TileTypeNuclearZone     = "nuclear-zone"
-	TileTypeEcologicalZone  = "ecological-zone"
-	TileTypeMohole          = "mohole"
-	TileTypeRestricted      = "restricted"
-	TileTypeVolcano         = "volcano"
-	TileTypeColony          = "colony"
-	TileTypeLandClaim       = "land-claim"
-	TileTypeClear           = "clear"
-	TileTypeWorldTree       = "world-tree"
+	TileTypeCommercialDistrict = "commercial-district"
+	TileTypeIndustrialCenter   = "industrial-center"
+	TileTypeCity               = "city"
+	TileTypeGreenery           = "greenery"
+	TileTypeOcean              = "ocean"
+	TileTypeNaturalPreserve    = "natural-preserve"
+	TileTypeMining             = "mining"
+	TileTypeNuclearZone        = "nuclear-zone"
+	TileTypeEcologicalZone     = "ecological-zone"
+	TileTypeMohole             = "mohole"
+	TileTypeRestricted         = "restricted"
+	TileTypeVolcano            = "volcano"
+	TileTypeColony             = "colony"
+	TileTypeLandClaim          = "land-claim"
+	TileTypeClear              = "clear"
+	TileTypeWorldTree          = "world-tree"
 )
 
 // PlaceableTileType describes a tile type available in the demo tile picker
@@ -39,6 +41,8 @@ type PlaceableTileType struct {
 // PlaceableTileTypes is the single registry of all tile types available for placement.
 // Adding a new entry here automatically updates backend validation and frontend UI.
 var PlaceableTileTypes = []PlaceableTileType{
+	{Type: TileTypeCommercialDistrict, Label: "Commercial District", Group: "Special"},
+	{Type: TileTypeIndustrialCenter, Label: "Industrial Center", Group: "Industrial"},
 	{Type: TileTypeCity, Label: "City", Group: "Base"},
 	{Type: TileTypeGreenery, Label: "Greenery", Group: "Base"},
 	{Type: TileTypeOcean, Label: "Ocean", Group: "Base"},
@@ -101,9 +105,10 @@ type TileBonus struct {
 
 // TileOccupant represents what currently occupies a tile
 type TileOccupant struct {
-	Visual *shared.TileVisual  `json:"visual,omitempty"`
-	Type   shared.ResourceType `json:"type"`
-	Tags   []string            `json:"tags"`
+	DisplayName string              `json:"displayName,omitempty"`
+	Visual      *shared.TileVisual  `json:"visual,omitempty"`
+	Type        shared.ResourceType `json:"type"`
+	Tags        []string            `json:"tags"`
 }
 
 // Tile represents a single hexagonal tile on the game board

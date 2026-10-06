@@ -50,6 +50,9 @@ func (a *ConfirmAwardFundAction) Execute(ctx context.Context, gameID string, pla
 		return err
 	}
 
+	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
+		return err
+	}
 	pending := p.Selection().GetPendingAwardFundSelection()
 	if pending == nil {
 		return fmt.Errorf("no pending award fund selection")
@@ -57,6 +60,9 @@ func (a *ConfirmAwardFundAction) Execute(ctx context.Context, gameID string, pla
 
 	if !slices.Contains(pending.AvailableAwards, awardType) {
 		return fmt.Errorf("award %s is not available for selection", awardType)
+	}
+	if selected := g.SelectedAwards(); len(selected) > 0 && !slices.Contains(selected, awardType) {
+		return fmt.Errorf("award %s is not available in this game", awardType)
 	}
 
 	def, err := a.awardRegistry.GetByID(awardType)
@@ -70,9 +76,7 @@ func (a *ConfirmAwardFundAction) Execute(ctx context.Context, gameID string, pla
 
 	p.Selection().SetPendingAwardFundSelection(nil)
 
-	if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
-		return fmt.Errorf("failed to clear forced first action: %w", err)
-	}
+	baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 
 	log.Info("Award funded for free",
 		slog.String("award", def.Name))

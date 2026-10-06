@@ -5,7 +5,7 @@
 
 set -e
 
-PROJECT_DIR="/home/mafs/Documents/Repositories/terraforming-mars"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 echo "🛑 Terminating Terraforming Mars development servers..."
 
 # Function to kill processes by name pattern with error handling

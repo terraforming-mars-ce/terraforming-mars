@@ -25,6 +25,7 @@ export const ActionTypeConvertHeatToTemperature: ActionType = "convert-heat-to-t
  * SelectStartingCardAction represents selecting starting cards and corporation
  */
 export interface SelectStartingCardAction {
+  payment: PaymentDto;
   type: ActionType;
   cardIds: string[];
   corporationId: string;
@@ -46,17 +47,21 @@ export interface SkipAction {
  */
 export interface PlayCardAction {
   cardId: string;
-  payment: CardPaymentDto; // Required: payment breakdown (credits, steel, titanium)
+  payment: PaymentDto; // Selected source allocations
   choiceIndex?: number /* int */; // Optional: index of choice to play (for cards with choices)
+  cardStorageSources?: string[];
   cardStorageTargets?: string[]; // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 /**
  * PlayCardActionAction represents playing a card action from player's action list
  */
 export interface PlayCardActionAction {
+  reuseSourceCardId?: string;
+  payment: PaymentDto;
   cardId: string;
   behaviorIndex: number /* int */;
   choiceIndex?: number /* int */; // Optional: index of choice to play (for actions with choices)
+  cardStorageSources?: string[];
   cardStorageTargets?: string[]; // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 /**
@@ -77,18 +82,21 @@ export interface SellPatentsAction {
  * BuildPowerPlantAction represents building a power plant
  */
 export interface BuildPowerPlantAction {
+  payment: PaymentDto;
   type: ActionType;
 }
 /**
  * LaunchAsteroidAction represents launching an asteroid
  */
 export interface LaunchAsteroidAction {
+  payment: PaymentDto;
   type: ActionType;
 }
 /**
  * BuildAquiferAction represents building an aquifer
  */
 export interface BuildAquiferAction {
+  payment: PaymentDto;
   type: ActionType;
   hexPosition: HexPositionDto;
 }
@@ -96,6 +104,7 @@ export interface BuildAquiferAction {
  * PlantGreeneryAction represents planting greenery
  */
 export interface PlantGreeneryAction {
+  payment: PaymentDto;
   type: ActionType;
   hexPosition: HexPositionDto;
 }
@@ -103,6 +112,7 @@ export interface PlantGreeneryAction {
  * BuildCityAction represents building a city
  */
 export interface BuildCityAction {
+  payment: PaymentDto;
   type: ActionType;
   hexPosition: HexPositionDto;
 }
@@ -110,6 +120,7 @@ export interface BuildCityAction {
  * ActionSelectStartingCardRequest contains the action data for select starting card actions
  */
 export interface ActionSelectStartingCardRequest {
+  payment: PaymentDto;
   type: ActionType;
   cardIds: string[];
   corporationId: string; // Corporation selected alongside starting cards
@@ -118,6 +129,7 @@ export interface ActionSelectStartingCardRequest {
  * ActionSelectProductionCardsRequest contains the action data for select production card actions
  */
 export interface ActionSelectProductionCardsRequest {
+  payment: PaymentDto;
   type: ActionType;
   cardIds: string[];
 }
@@ -154,18 +166,21 @@ export interface SelectDemoChoicesRequest {
 export interface ActionPlayCardRequest {
   type: ActionType;
   cardId: string;
-  payment: CardPaymentDto; // Required: payment breakdown (credits, steel, titanium)
+  payment: PaymentDto; // Selected source allocations
   choiceIndex?: number /* int */; // Optional: index of choice to play (for cards with choices)
+  cardStorageSources?: string[];
   cardStorageTargets?: string[]; // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 /**
  * ActionPlayCardActionRequest contains the action data for play card action actions
  */
 export interface ActionPlayCardActionRequest {
+  payment: PaymentDto;
   type: ActionType;
   cardId: string;
   behaviorIndex: number /* int */;
   choiceIndex?: number /* int */; // Optional: index of choice to play (for actions with choices)
+  cardStorageSources?: string[];
   cardStorageTargets?: string[]; // Optional: target card IDs for resource storage (positional, one per any-card output)
 }
 /**
@@ -178,18 +193,21 @@ export interface ActionSellPatentsRequest {
  * ActionBuildPowerPlantRequest contains the action data for build power plant actions
  */
 export interface ActionBuildPowerPlantRequest {
+  payment: PaymentDto;
   type: ActionType;
 }
 /**
  * ActionLaunchAsteroidRequest contains the action data for launch asteroid actions
  */
 export interface ActionLaunchAsteroidRequest {
+  payment: PaymentDto;
   type: ActionType;
 }
 /**
  * ActionBuildAquiferRequest contains the action data for build aquifer actions
  */
 export interface ActionBuildAquiferRequest {
+  payment: PaymentDto;
   type: ActionType;
   hexPosition: HexPositionDto;
 }
@@ -197,6 +215,7 @@ export interface ActionBuildAquiferRequest {
  * ActionPlantGreeneryRequest contains the action data for plant greenery actions
  */
 export interface ActionPlantGreeneryRequest {
+  payment: PaymentDto;
   type: ActionType;
   hexPosition: HexPositionDto;
 }
@@ -204,6 +223,7 @@ export interface ActionPlantGreeneryRequest {
  * ActionBuildCityRequest contains the action data for build city actions
  */
 export interface ActionBuildCityRequest {
+  payment: PaymentDto;
   type: ActionType;
   hexPosition: HexPositionDto;
 }
@@ -212,28 +232,28 @@ export interface ActionBuildCityRequest {
  */
 export interface ActionConvertPlantsToGreeneryRequest {
   type: ActionType;
-  storageSubstitutes?: { [key: string]: number /* int */ };
+  payment: PaymentDto;
 }
 /**
  * ActionConvertHeatToTemperatureRequest contains the action data for converting heat to temperature
  */
 export interface ActionConvertHeatToTemperatureRequest {
   type: ActionType;
-  storageSubstitutes?: { [key: string]: number /* int */ };
+  payment: PaymentDto;
 }
 /**
  * ConvertPlantsToGreeneryAction represents converting 8 plants to a greenery tile
  */
 export interface ConvertPlantsToGreeneryAction {
   type: ActionType;
-  storageSubstitutes?: { [key: string]: number /* int */ };
+  payment: PaymentDto;
 }
 /**
  * ConvertHeatToTemperatureAction represents converting 8 heat to raise temperature
  */
 export interface ConvertHeatToTemperatureAction {
   type: ActionType;
-  storageSubstitutes?: { [key: string]: number /* int */ };
+  payment: PaymentDto;
 }
 /**
  * AdminCommandType represents different types of admin commands
@@ -248,6 +268,8 @@ export const AdminCommandTypeStartTileSelection: AdminCommandType = "start-tile-
 export const AdminCommandTypeSetCurrentTurn: AdminCommandType = "set-current-turn";
 export const AdminCommandTypeSetCorporation: AdminCommandType = "set-corporation";
 export const AdminCommandTypeSetTR: AdminCommandType = "set-tr";
+export const AdminCommandTypeRestartGame: AdminCommandType = "restart-game";
+export const AdminCommandTypeSetActionsRemaining: AdminCommandType = "set-actions-remaining";
 /**
  * AdminCommandRequest contains the admin command data
  */
@@ -303,21 +325,115 @@ export interface SetCorporationAdminCommand {
   corporationId: string;
 }
 /**
+ * SetActionsRemainingAdminCommand represents setting the current player's remaining actions
+ */
+export interface SetActionsRemainingAdminCommand {
+  actions: number /* int */;
+}
+/**
  * SetTRAdminCommand represents setting a player's terraform rating
  */
 export interface SetTRAdminCommand {
   playerId: string;
   terraformRating: number /* int */;
 }
+
+//////////
+// source: bot_trace_dto.go
+
 /**
- * CardPaymentDto represents how a player is paying for a card
+ * BotInspectPayload subscribes the sending connection to one bot's trace. An empty
+ * playerId unsubscribes. Host only, development mode only.
  */
-export interface CardPaymentDto {
-  credits: number /* int */; // MC spent
-  steel: number /* int */; // Steel resources used (2 MC value each)
-  titanium: number /* int */; // Titanium resources used (3 MC value each)
-  substitutes?: { [key: string]: number /* int */ }; // Payment substitutes (e.g., heat for Helion)
-  storageSubstitutes?: { [key: string]: number /* int */ }; // Storage payment substitutes (e.g., floaters from Dirigibles)
+export interface BotInspectPayload {
+  playerId: string;
+}
+/**
+ * BotPlannedMoveDto is one candidate move in a bot's plan.
+ */
+export interface BotPlannedMoveDto {
+  move: string;
+  why: string;
+}
+/**
+ * BotPlanDto is a bot's current plan and memory.
+ */
+export interface BotPlanDto {
+  summary: string;
+  wantedHexes: string[];
+  targetMilestones: string[];
+  targetAwards: string[];
+  targetColonies: string[];
+  rivals: string[];
+  nextMoves: BotPlannedMoveDto[];
+  mood: string;
+  notes: string;
+}
+/**
+ * BotCallStepDto is one step of a model call: a piece of reasoning text or a tool call.
+ */
+export interface BotCallStepDto {
+  at: string;
+  kind: "text" | "tool";
+  text?: string;
+  tool?: string;
+  input?: string;
+  result?: string;
+  isError: boolean;
+}
+/**
+ * BotCallDto is one model call made by a bot.
+ */
+export interface BotCallDto {
+  id: string;
+  role: "executor" | "planner" | "reactor" | "recap";
+  model: string;
+  startedAt: string;
+  endedAt?: string;
+  running: boolean;
+  prompt: string;
+  steps: BotCallStepDto[];
+  costUsd: number /* float64 */;
+  durationMs: number /* int */;
+  error?: string;
+}
+/**
+ * BotReactionDto records how a bot judged a batch of table events.
+ */
+export interface BotReactionDto {
+  at: string;
+  lines: string[];
+  planHit: boolean;
+  personal: boolean;
+  directed: boolean;
+  big: boolean;
+  decision: "reacted" | "throttled" | "busy" | "own-turn";
+  output?: string;
+}
+/**
+ * BotTraceDto is everything recorded about one bot.
+ */
+export interface BotTraceDto {
+  playerId: string;
+  plan: BotPlanDto;
+  planUpdatedAt?: string;
+  calls: BotCallDto[];
+  reactions: BotReactionDto[];
+}
+/**
+ * BotTraceEventDto is one change to a bot's trace. call-start carries the new call;
+ * call-step carries callId and step; call-end carries the finished call without prompt
+ * and steps; plan carries plan and planUpdatedAt; reaction carries reaction.
+ */
+export interface BotTraceEventDto {
+  playerId: string;
+  kind: "call-start" | "call-step" | "call-end" | "plan" | "reaction";
+  call?: BotCallDto;
+  callId?: string;
+  step?: BotCallStepDto;
+  plan?: BotPlanDto;
+  planUpdatedAt?: string;
+  reaction?: BotReactionDto;
 }
 
 //////////
@@ -388,6 +504,7 @@ export const TagWild: CardTag = "wild";
  * This is a 1:1 mapping from types.ResourceType
  */
 export type ResourceType = string;
+export const ResourceTypeCopy: ResourceType = "copy";
 export const ResourceTypeCredit: ResourceType = "credit";
 export const ResourceTypeSteel: ResourceType = "steel";
 export const ResourceTypeTitanium: ResourceType = "titanium";
@@ -401,16 +518,21 @@ export const ResourceTypeScience: ResourceType = "science";
 export const ResourceTypeAsteroid: ResourceType = "asteroid";
 export const ResourceTypeFighter: ResourceType = "fighter";
 export const ResourceTypeDisease: ResourceType = "disease";
+export const ResourceTypeCamp: ResourceType = "camp";
 export const ResourceTypeCardDraw: ResourceType = "card-draw";
+export const ResourceTypeCardReveal: ResourceType = "card-reveal";
 export const ResourceTypeCardTake: ResourceType = "card-take";
 export const ResourceTypeCardPeek: ResourceType = "card-peek";
 export const ResourceTypeCityPlacement: ResourceType = "city-placement";
 export const ResourceTypeOceanPlacement: ResourceType = "ocean-placement";
 export const ResourceTypeGreeneryPlacement: ResourceType = "greenery-placement";
+export const ResourceTypeCommercialDistrictTile: ResourceType = "commercial-district-tile";
+export const ResourceTypeIndustrialCenterTile: ResourceType = "industrial-center-tile";
 export const ResourceTypeCityTile: ResourceType = "city-tile";
 export const ResourceTypeOceanTile: ResourceType = "ocean-tile";
 export const ResourceTypeGreeneryTile: ResourceType = "greenery-tile";
 export const ResourceTypeColony: ResourceType = "colony";
+export const ResourceTypeTradeFleet: ResourceType = "trade-fleet";
 export const ResourceTypeTemperature: ResourceType = "temperature";
 export const ResourceTypeOxygen: ResourceType = "oxygen";
 export const ResourceTypeVenus: ResourceType = "venus";
@@ -433,6 +555,8 @@ export const ResourceTypeValueModifier: ResourceType = "value-modifier";
 export type TargetType = string;
 export const TargetSelfPlayer: TargetType = "self-player";
 export const TargetSelfCard: TargetType = "self-card";
+export const TargetTriggeringCard: TargetType = "triggering-card";
+export const TargetTriggerColony: TargetType = "trigger-colony";
 export const TargetAnyCard: TargetType = "any-card";
 export const TargetAnyPlayer: TargetType = "any-player";
 export const TargetOpponent: TargetType = "opponent";
@@ -451,7 +575,7 @@ export const RequirementTemperature: RequirementType = "temperature";
 export const RequirementOxygen: RequirementType = "oxygen";
 export const RequirementOceans: RequirementType = "oceans";
 export const RequirementVenus: RequirementType = "venus";
-export const RequirementCities: RequirementType = "cities";
+export const RequirementCities: RequirementType = "city";
 export const RequirementGreeneries: RequirementType = "greeneries";
 export const RequirementTags: RequirementType = "tags";
 export const RequirementProduction: RequirementType = "production";
@@ -500,7 +624,7 @@ export interface ResourceSet {
 export interface TileRestrictionsDto {
   boardTags?: string[];
   adjacency?: string; // "none" = no adjacent occupied tiles
-  onTileType?: string; // "ocean" = only on ocean spaces
+  area?: "land" | "ocean";
   adjacentToType?: string; // "city", "greenery" = must be adjacent to this tile type
   minAdjacentOfType?: number /* int */; // min count of adjacent tiles of AdjacentToType
   adjacentToOwned?: boolean; // must be adjacent to a tile owned by the placing player
@@ -510,6 +634,7 @@ export interface TileRestrictionsDto {
  * TargetRestrictionDto represents restrictions on target player selection
  */
 export interface TargetRestrictionDto {
+  selectors?: SelectorDto[];
   adjacent?: string;
 }
 /**
@@ -518,6 +643,7 @@ export interface TargetRestrictionDto {
  * Multiple Selectors in a slice use OR logic (any match is sufficient).
  */
 export interface SelectorDto {
+  tagCount?: MinMaxValueDto;
   tags?: CardTag[];
   cardTypes?: CardType[];
   resources?: string[];
@@ -537,7 +663,10 @@ export type ResourceCondition =
   | EffectConditionDto
   | ColonyConditionDto
   | TileModificationConditionDto
-  | MiscConditionDto;
+  | MiscConditionDto
+  | CopyConditionDto
+  | CardRevealConditionDto
+  | PaymentSubstituteConditionDto;
 /**
  * BasicResourceConditionDto covers credit, steel, titanium, plant, energy, heat.
  */
@@ -596,6 +725,8 @@ export interface GlobalParameterConditionDto {
  * CardOperationConditionDto covers card-draw, card-take, card-peek, card-buy, card-discard.
  */
 export interface CardOperationConditionDto {
+  optional?: boolean;
+  per?: PerConditionDto;
   type: "card-draw" | "card-take" | "card-peek" | "card-buy" | "card-discard";
   amount: number /* int */;
   target: TargetType;
@@ -603,7 +734,7 @@ export interface CardOperationConditionDto {
   variableAmount?: boolean;
 }
 /**
- * CardStorageConditionDto covers microbe, animal, floater, science, asteroid, fighter, disease, card-resource.
+ * CardStorageConditionDto covers microbe, animal, floater, science, asteroid, fighter, disease, camp, card-resource.
  */
 export interface CardStorageConditionDto {
   type:
@@ -614,6 +745,7 @@ export interface CardStorageConditionDto {
     | "asteroid"
     | "fighter"
     | "disease"
+    | "camp"
     | "card-resource";
   amount: number /* int */;
   target: TargetType;
@@ -621,14 +753,22 @@ export interface CardStorageConditionDto {
   per?: PerConditionDto;
   variableAmount?: boolean;
 }
+export interface PaymentSubstituteConditionDto {
+  type: "payment-substitute";
+  amount: number /* int */;
+  target: TargetType;
+  source: PaymentSourceDto;
+  targetResource: ResourceType;
+  selectors?: SelectorDto[];
+}
 /**
  * EffectConditionDto covers discount, payment-substitute, and other effect types.
  */
 export interface EffectConditionDto {
+  against?: "any-player" | "opponents";
+  temporary?: string;
   type:
     | "discount"
-    | "payment-substitute"
-    | "storage-payment-substitute"
     | "value-modifier"
     | "global-parameter-lenience"
     | "ignore-global-requirements"
@@ -645,7 +785,15 @@ export interface EffectConditionDto {
  * ColonyConditionDto covers colony, colony-count, colony-bonus, colony-track-step.
  */
 export interface ColonyConditionDto {
-  type: "colony" | "colony-count" | "colony-bonus" | "colony-track-step";
+  optional?: boolean;
+  selectionGroup?: string;
+  type:
+    | "colony-tile-add"
+    | "colony"
+    | "colony-count"
+    | "colony-bonus"
+    | "colony-track-step"
+    | "trade-fleet";
   amount: number /* int */;
   target: TargetType;
 }
@@ -672,17 +820,23 @@ export interface MiscConditionDto {
  * PerConditionDto represents a per condition for client consumption
  */
 export interface PerConditionDto {
+  zone?: string;
+  selectors?: SelectorDto[];
+  includeSource?: boolean;
   type: ResourceType;
   amount: number /* int */;
   location?: CardApplyLocation;
   target?: TargetType;
   tag?: CardTag;
+  tags?: CardTag[];
   adjacentToSelfTile: boolean;
 }
 /**
  * ChoiceDto represents a choice for client consumption
  */
 export interface ChoiceDto {
+  inputOptions?: BehaviorInputOptionsDto;
+  storageTargets?: string[][];
   originalIndex: number /* int */;
   inputs?: ResourceCondition[];
   outputs?: ResourceCondition[];
@@ -736,9 +890,26 @@ export interface ChoicePolicyDto {
   select?: ChoicePolicySelectDto;
 }
 /**
- * CardBehaviorDto represents a card behavior for client consumption
+ * BehaviorInputOptionsDto contains server-calculated payment choices.
+ */
+export interface BehaviorInputOptionsDto {
+  storageSources?: string[][];
+  variableAmount?: VariableInputAmountDto;
+}
+/**
+ * VariableInputAmountDto describes an inclusive affordable repetition range.
+ */
+export interface VariableInputAmountDto {
+  resourceType: ResourceType;
+  min: number /* int */;
+  max: number /* int */;
+}
+/**
+ * CardBehaviorDto represents a card behavior for client consumption.
  */
 export interface CardBehaviorDto {
+  inputOptions?: BehaviorInputOptionsDto;
+  productionBox?: string;
   description?: string;
   triggers?: TriggerDto[];
   inputs?: ResourceCondition[];
@@ -793,6 +964,14 @@ export interface VPConditionDto {
   description?: string;
 }
 /**
+ * CardDescriptionSectionDto is one labelled paragraph of a card's description.
+ * Text excludes the label and may contain inline **bold** emphasis.
+ */
+export interface CardDescriptionSectionDto {
+  type: "generic" | "effect" | "action" | "requirement";
+  text: string;
+}
+/**
  * CardDto represents a card for client consumption
  */
 export interface CardDto {
@@ -801,7 +980,7 @@ export interface CardDto {
   name: string;
   type: CardType;
   cost: number /* int */;
-  description: string;
+  description: CardDescriptionSectionDto[];
   pack: string;
   tags?: CardTag[];
   requirements?: CardRequirementsDto;
@@ -867,8 +1046,9 @@ export interface GameSettingsDto {
   demoGame: boolean;
   allowRandomBuy: boolean;
   cardPacks?: string[];
-  hasClaudeApiKey: boolean;
-  claudeModel?: string;
+  hasClaudeOAuthToken: boolean;
+  botSpendCapUsd: number /* float64 */;
+  botSpendUsd: number /* float64 */;
   availablePlayerColors: string[];
   availableMaps: MapInfoDto[];
   temperature?: number /* int */;
@@ -949,22 +1129,35 @@ export interface ProductionDto {
   energy: number /* int */;
   heat: number /* int */;
 }
-/**
- * PaymentSubstituteDto represents an alternative resource that can be used as payment for credits
- */
-export interface PaymentSubstituteDto {
-  resourceType: ResourceType;
-  conversionRate: number /* int */;
+export interface PaymentSourceDto {
+  target: "self-player" | "self-card";
+  resource: ResourceType;
+  cardId?: string;
 }
-/**
- * StoragePaymentSubstituteDto represents card storage resources that can be used as payment
- */
-export interface StoragePaymentSubstituteDto {
-  cardId: string;
-  resourceType: ResourceType;
-  conversionRate: number /* int */;
+export interface PaymentSubstituteDto {
+  source: PaymentSourceDto;
   targetResource: ResourceType;
+  conversionRate: number /* int */;
+  grantedByCardId?: string;
   selectors: SelectorDto[];
+}
+export interface PaymentAllocationDto {
+  source: PaymentSourceDto;
+  targetResource: ResourceType;
+  amount: number /* int */;
+}
+export interface PaymentDto {
+  allocations: PaymentAllocationDto[];
+}
+export interface PaymentOptionDto {
+  source: PaymentSourceDto;
+  targetResource: ResourceType;
+  conversionRate: number /* int */;
+  available: number /* int */;
+}
+export interface PaymentQuoteDto {
+  costs: { [key: ResourceType]: number /* int */ };
+  options: PaymentOptionDto[];
 }
 /**
  * StateErrorCode represents error codes for entity state validation.
@@ -1038,7 +1231,7 @@ export interface PlayerCardDto {
   name: string;
   type: CardType;
   cost: number /* int */; // Original card cost (same as CardDto.Cost)
-  description: string;
+  description: CardDescriptionSectionDto[];
   pack: string;
   tags?: CardTag[];
   requirements?: CardRequirementsDto;
@@ -1064,10 +1257,19 @@ export interface PlayerEffectDto {
   computedValues?: ComputedBehaviorValueDto[]; // Pre-computed per-condition values
 }
 /**
- * PlayerActionDto represents an action that a player can take for client consumption
- * Enhanced with calculated usability state from Player-Scoped Card Architecture
+ * ActionReuseOptionDto identifies a candidate and its current reuse availability.
+ */
+export interface ActionReuseOptionDto {
+  cardId: string;
+  behaviorIndex: number /* int */;
+  available: boolean;
+  errors: StateErrorDto[];
+}
+/**
+ * PlayerActionDto represents an owned action with calculated usability.
  */
 export interface PlayerActionDto {
+  reuseOptions?: ActionReuseOptionDto[];
   cardId: string; // ID of the card that provides this action
   cardName: string; // Name of the card for display purposes
   behaviorIndex: number /* int */; // Which behavior on the card this action represents
@@ -1107,10 +1309,9 @@ export interface StyleDto {
  * ForcedFirstActionDto represents an action that must be completed as the player's first turn action
  */
 export interface ForcedFirstActionDto {
-  actionType: string; // Type of action: "city_placement", "card_draw", etc.
-  corporationId: string; // Corporation that requires this action
-  completed: boolean; // Whether the forced action has been completed
-  description: string; // Human-readable description for UI
+  corporationId: string;
+  state: "queued" | "resolving";
+  description: string;
 }
 /**
  * PendingTileSelectionDto represents a pending tile placement action for client consumption
@@ -1135,34 +1336,36 @@ export interface PendingCardSelectionDto {
  * PendingCardDrawSelectionDto represents a pending card draw/peek/take/buy action from card effects
  */
 export interface PendingCardDrawSelectionDto {
+  minFreeTakeCount: number /* int */;
   availableCards: PlayerCardDto[]; // Cards with playability state
-  freeTakeCount: number /* int */; // Number of cards to take for free (mandatory for card-draw, 0 = optional)
+  freeTakeCount: number /* int */; // Maximum number of cards to take for free
   maxBuyCount: number /* int */; // Maximum cards to buy (optional, 0 = no buying allowed)
   cardBuyCost: number /* int */; // Cost per card when buying (typically 3 MC, 0 if no buying)
   source: string; // Card ID or action that triggered this
   playAsPrelude: boolean; // When true, selected card is played as prelude
 }
 /**
- * PendingCardDiscardSelectionDto represents a pending card discard action from card effects
+ * PendingBehaviorResolutionDto describes one independently resolvable decision.
  */
-export interface PendingCardDiscardSelectionDto {
-  minCards: number /* int */; // 0 if optional (player can skip)
-  maxCards: number /* int */; // Maximum cards to discard
-  source: string; // Card name that triggered this
-  sourceCardId: string; // Card ID that triggered this
-}
-/**
- * PendingBehaviorChoiceSelectionDto represents a pending behavior choice from a passive triggered effect
- */
-export interface PendingBehaviorChoiceSelectionDto {
-  choices: ChoiceDto[];
+export interface PendingBehaviorResolutionDto {
+  id: string;
+  kind: "card-discard" | "choice";
   source: string;
   sourceCardId: string;
+  sourceBehaviorIndex: number /* int */;
+  triggeringCardId?: string;
+  triggeringCardName?: string;
+  minCards: number /* int */;
+  maxCards: number /* int */;
+  outputs?: ResourceCondition[];
+  choices?: ChoiceDto[];
 }
 /**
- * PendingStealTargetSelectionDto represents a pending steal target selection after tile placement
+ * PendingResourceRemovalSelectionDto represents a pending optional resource removal
  */
-export interface PendingStealTargetSelectionDto {
+export interface PendingResourceRemovalSelectionDto {
+  id: string;
+  maxAmounts: { [key: string]: number /* int */ };
   eligiblePlayerIds: string[];
   resourceType: string;
   amount: number /* int */;
@@ -1199,6 +1402,8 @@ export interface PendingAwardFundSelectionDto {
  * PendingColonySelectionDto represents a pending colony selection from a card effect
  */
 export interface PendingColonySelectionDto {
+  addTile: boolean;
+  tileOptions?: ColonyDto[];
   availableColonyIds: string[];
   allowDuplicatePlayerColony: boolean;
   source: string;
@@ -1226,13 +1431,29 @@ export const PlayerStatusExited: PlayerStatus = "exited";
 /**
  * PlayerDto represents a player in the game for client consumption
  */
+export interface ResourceRemovalTargetDto {
+  playerId: string;
+  cardId?: string;
+  resourceType: ResourceType;
+  amount: number /* int */;
+}
+export interface CardReceiptDto {
+  id: string;
+  source: string;
+  sourceCardId: string;
+  cards: CardDto[];
+}
 export interface PlayerDto {
+  cardReceipts: CardReceiptDto[];
+  resourceRemovalTargets: ResourceRemovalTargetDto[];
+  pendingCardReveal?: PendingCardRevealDto;
+  pendingEffectSelection?: PendingEffectSelectionDto;
   id: string;
   name: string;
   playerType: string;
-  botStatus?: string;
-  botDifficulty?: string;
-  botSpeed?: string;
+  botStatus?: "loading" | "ready" | "failed" | "thinking";
+  botPersona?: string;
+  botError?: string;
   color: string;
   status: PlayerStatus;
   corporation?: CardDto;
@@ -1261,9 +1482,8 @@ export interface PlayerDto {
   pendingTileSelection?: PendingTileSelectionDto;
   pendingCardSelection?: PendingCardSelectionDto;
   pendingCardDrawSelection?: PendingCardDrawSelectionDto;
-  pendingCardDiscardSelection?: PendingCardDiscardSelectionDto;
-  pendingBehaviorChoiceSelection?: PendingBehaviorChoiceSelectionDto;
-  pendingStealTargetSelection?: PendingStealTargetSelectionDto;
+  pendingBehaviorResolutions: PendingBehaviorResolutionDto[];
+  pendingResourceRemovalSelection?: PendingResourceRemovalSelectionDto;
   pendingColonyResourceSelection?: PendingColonyResourceSelectionDto;
   pendingAwardFundSelection?: PendingAwardFundSelectionDto;
   pendingColonySelection?: PendingColonySelectionDto;
@@ -1271,7 +1491,6 @@ export interface PlayerDto {
   forcedFirstAction?: ForcedFirstActionDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
-  storagePaymentSubstitutes: StoragePaymentSubstituteDto[];
   generationalEvents: PlayerGenerationalEventEntryDto[];
   vpGranters: VPGranterDto[];
   bonusTags: { [key: string]: number /* int */ };
@@ -1295,6 +1514,7 @@ export interface ActionCostDto {
  * ActionCostEntryDto represents a single resource cost for an action
  */
 export interface ActionCostEntryDto {
+  paymentCapacity: number /* int */;
   resource: string;
   baseCost: number /* int */;
   effectiveCost: number /* int */;
@@ -1307,9 +1527,9 @@ export interface OtherPlayerDto {
   id: string;
   name: string;
   playerType: string;
-  botStatus?: string;
-  botDifficulty?: string;
-  botSpeed?: string;
+  botStatus?: "loading" | "ready" | "failed" | "thinking";
+  botPersona?: string;
+  botError?: string;
   color: string;
   status: PlayerStatus;
   corporation?: CardDto;
@@ -1332,7 +1552,6 @@ export interface OtherPlayerDto {
   productionPhase?: ProductionPhaseOtherPlayerDto;
   resourceStorage: { [key: string]: number /* int */ };
   paymentSubstitutes: PaymentSubstituteDto[];
-  storagePaymentSubstitutes: StoragePaymentSubstituteDto[];
   vpGranters: VPGranterDto[];
   bonusTags: { [key: string]: number /* int */ };
 }
@@ -1366,8 +1585,7 @@ export interface GameDto {
   chatMessages: ChatMessageDto[];
   isSpectator: boolean;
   colonies?: ColonyDto[];
-  tradeFleetAvailable: boolean;
-  tradeFleets?: { [key: string]: boolean };
+  tradeFleets?: { [key: string]: TradeFleetDto };
   projectFunding?: ProjectFundingDto[];
   isLastRound: boolean;
 }
@@ -1389,6 +1607,7 @@ export interface ChatMessageDto {
   message: string;
   timestamp: string;
   isSpectator: boolean;
+  kind: "chat" | "recap" | "system";
 }
 /**
  * PlaceableTileTypeDto represents a tile type available for placement in the demo tile picker
@@ -1399,6 +1618,13 @@ export interface PlaceableTileTypeDto {
   group: string;
 }
 /**
+ * InitPhaseStage is the showcase stage of the current init player
+ */
+export type InitPhaseStage = string;
+export const InitPhaseStageReveal: InitPhaseStage = "reveal";
+export const InitPhaseStageApplied: InitPhaseStage = "applied";
+export const InitPhaseStageRoster: InitPhaseStage = "roster";
+/**
  * InitPhaseDto represents the state of the init_apply_corp or init_apply_prelude phase
  */
 export interface InitPhaseDto {
@@ -1408,12 +1634,17 @@ export interface InitPhaseDto {
   waitingForConfirm: boolean;
   confirmVersion: number /* int */;
   hasPreludePhase: boolean;
-  hasPendingTiles: boolean;
+  stage: "reveal" | "applied" | "roster";
+  preludes: CardDto[];
+  preludesPlayed: number /* int */;
+  hasPendingSelection: boolean;
+  pendingSourceCardId: string;
 }
 /**
  * ColonyDto represents a colony in the game
  */
 export interface ColonyDto {
+  active: boolean;
   id: string;
   name: string;
   location: string;
@@ -1425,7 +1656,7 @@ export interface ColonyDto {
   tradedThisGen: boolean;
   traderId: string;
   style: StyleDto;
-  tradeStepBonus: number /* int */;
+  tradeOptions: ColonyTradeOptionDto[];
   tradeAvailable: boolean;
   buildAvailable: boolean;
   tradeErrors: StateErrorDto[];
@@ -1530,6 +1761,7 @@ export interface TileBonusDto {
  * TileOccupantDto represents what currently occupies a tile
  */
 export interface TileOccupantDto {
+  displayName?: string;
   visual?: TileVisualDto;
   type: string;
   tags: string[];
@@ -1781,6 +2013,111 @@ export interface TileVisualDto {
   seed: number /* uint32 */;
   city?: CityStyleRequestDto;
 }
+/**
+ * CopyConditionDto describes the source and scope of a copy operation.
+ */
+export interface CopyConditionDto {
+  type: "copy";
+  amount: number /* int */;
+  target: TargetType;
+  scope: "production-box";
+  zone: "played";
+  selectors?: SelectorDto[];
+}
+export interface PendingEffectSelectionDto {
+  source: string;
+  sourceCardId: string;
+  outputs: ResourceCondition[];
+  options: EffectSelectionOptionDto[];
+}
+export interface EffectSelectionOptionDto {
+  cardId?: string;
+  targetPlayerId?: string;
+  colonyIds?: string[];
+  outputs?: ResourceCondition[];
+}
+/**
+ * CardRevealConditionDto defines a public project-card reveal.
+ */
+export interface CardRevealConditionDto {
+  type: "card-reveal";
+  amount: number /* int */;
+  target: TargetType;
+  destination: "discard";
+  onMatch?: RevealMatchDto;
+}
+export interface RevealMatchDto {
+  selectors: SelectorDto[];
+  outputs: ResourceCondition[];
+}
+/**
+ * RevealedCardDto is public information from a resolved reveal.
+ */
+export interface RevealedCardDto {
+  cardId: string;
+  name: string;
+  matched: boolean;
+}
+/**
+ * PendingCardRevealDto presents the resolved result for acknowledgement.
+ */
+export interface PendingCardRevealDto {
+  source: string;
+  sourceCardId: string;
+  cards: CardDto[];
+  results: RevealedCardDto[];
+  rewards: CalculatedOutputDto[];
+}
+/**
+ * TradeFleetDto reports permanent fleet capacity and remaining trades.
+ */
+export interface TradeFleetDto {
+  total: number /* int */;
+  available: number /* int */;
+}
+/**
+ * ColonyTradeOptionDto previews a legal increase and all gains for the viewing player.
+ */
+export interface ColonyTradeOptionDto {
+  trackSteps: number /* int */;
+  markerPosition: number /* int */;
+  outputs: ColonyOutputDto[];
+}
+/**
+ * ColonyTradeRequest supplies an explicit track choice for a paid trade.
+ */
+export interface ColonyTradeRequest {
+  payment: PaymentDto;
+  colonyId: string;
+  paymentType: string;
+  trackSteps?: number;
+}
+/**
+ * FreeTradeRequest supplies an explicit track choice for a pending free trade.
+ */
+export interface FreeTradeRequest {
+  colonyId: string;
+  trackSteps?: number;
+}
+/**
+ * PaymentIntentDto identifies the operation to quote.
+ */
+export interface PaymentIntentDto {
+  action: string;
+  cardId?: string;
+  behaviorIndex?: number /* int */;
+  choiceIndex?: number /* int */;
+  selectedAmount?: number /* int */;
+  cardStorageSources?: string[];
+  projectId?: string;
+  corporationId?: string;
+  cardIds?: string[];
+  cardsToBuy?: string[];
+  randomBuy?: boolean;
+  paymentType?: string;
+  milestoneType?: string;
+  awardType?: string;
+}
 
 //////////
 // source: game_history_dto.go
@@ -1887,8 +2224,8 @@ export interface UpdateGameSettingsRequest {
   demoGame?: boolean;
   allowRandomBuy?: boolean;
   cardPacks?: string[];
-  claudeApiKey?: string;
-  claudeModel?: string;
+  claudeOAuthToken?: string;
+  botSpendCapUsd?: number /* float64 */;
 }
 /**
  * CreateGameResponse represents the response for creating a game
@@ -2016,6 +2353,8 @@ export interface Registries {
  * MessageType represents different types of WebSocket messages
  */
 export type MessageType = string;
+export const MessageTypeQuotePayment: MessageType = "quote-payment";
+export const MessageTypePaymentQuote: MessageType = "payment-quote";
 export const MessageTypePlayerConnect: MessageType = "player-connect";
 export const MessageTypeJoinGame: MessageType = "join-game";
 export const MessageTypeGameUpdated: MessageType = "game-updated";
@@ -2067,14 +2406,20 @@ export const MessageTypeActionCardDiscardConfirmed: MessageType =
   "action.card.card-discard-confirmed";
 export const MessageTypeActionBehaviorChoiceConfirmed: MessageType =
   "action.card.behavior-choice-confirmed";
-export const MessageTypeActionConfirmStealTarget: MessageType = "action.card.confirm-steal-target";
+export const MessageTypeActionConfirmResourceRemoval: MessageType =
+  "action.card.confirm-resource-removal";
 export const MessageTypeActionColonyTrade: MessageType = "action.colony.trade";
 export const MessageTypeActionColonyBuild: MessageType = "action.colony.build";
 export const MessageTypeActionProjectFundingSeat: MessageType = "action.project-funding.buy-seat";
 export const MessageTypeActionConfirmColonyResource: MessageType = "action.confirm-colony-resource";
 export const MessageTypeActionConfirmAwardFund: MessageType = "action.confirm-award-fund";
+export const MessageTypeActionAcknowledgeCardReceipt: MessageType =
+  "action.acknowledge-card-receipt";
 export const MessageTypeActionConfirmColonyPlacement: MessageType =
   "action.confirm-colony-placement";
+export const MessageTypeActionConfirmCardReveal: MessageType = "action.confirm-card-reveal";
+export const MessageTypeActionConfirmEffectSelection: MessageType =
+  "action.confirm-effect-selection";
 export const MessageTypeActionConfirmFreeTrade: MessageType = "action.confirm-free-trade";
 export const MessageTypeAdminCommand: MessageType = "admin-command";
 export const MessageTypeRequestLogs: MessageType = "request-logs";
@@ -2091,6 +2436,13 @@ export const MessageTypeSpectatorConnected: MessageType = "spectator-connected";
 export const MessageTypeSpectatorDisconnected: MessageType = "spectator-disconnected";
 export const MessageTypeChatMessage: MessageType = "chat-message";
 export const MessageTypeChatUpdate: MessageType = "chat-update";
+export const MessageTypeEmoteSend: MessageType = "emote-send";
+export const MessageTypeEmote: MessageType = "emote";
+export const MessageTypeBotThought: MessageType = "bot-thought";
+export const MessageTypeBotRetry: MessageType = "bot-retry";
+export const MessageTypeBotInspect: MessageType = "bot-inspect";
+export const MessageTypeBotTraceSnapshot: MessageType = "bot-trace-snapshot";
+export const MessageTypeBotTraceEvent: MessageType = "bot-trace-event";
 export const MessageTypeKickSpectator: MessageType = "kick-spectator";
 export const MessageTypeSpectatorKicked: MessageType = "spectator-kicked";
 
@@ -2189,6 +2541,7 @@ export interface ComputedBehaviorValueDto {
  * LogDisplayDataDto contains pre-computed display information for log entries
  */
 export interface LogDisplayDataDto {
+  revealedCards?: RevealedCardDto[];
   behaviors?: CardBehaviorDto[];
   tags?: CardTag[];
   vpConditions?: VPConditionDto[];
@@ -2257,6 +2610,14 @@ export interface PlayerConnectedPayload {
 export interface ErrorPayload {
   message: string;
   code?: string;
+}
+/**
+ * PlayCardErrorPayload identifies the rejected card play for client presentation recovery.
+ */
+export interface PlayCardErrorPayload {
+  action: "play-card";
+  cardId: string;
+  error: string;
 }
 /**
  * FullStatePayload contains the complete game state
@@ -2349,4 +2710,43 @@ export interface ChatMessagePayload {
  */
 export interface ChatUpdatePayload {
   chatMessage: ChatMessageDto;
+}
+/**
+ * EmoteName is one of the emotes a player or bot can show over their player card.
+ */
+export type EmoteName = string;
+export const EmoteAngry: EmoteName = "angry";
+export const EmoteCelebrate: EmoteName = "celebrate";
+export const EmoteThinking: EmoteName = "thinking";
+export const EmoteApplause: EmoteName = "applause";
+export const EmoteShock: EmoteName = "shock";
+export const EmoteLaugh: EmoteName = "laugh";
+export const EmoteSad: EmoteName = "sad";
+export const EmoteCool: EmoteName = "cool";
+/**
+ * EmoteSendPayload is sent by a client to show an emote.
+ */
+export interface EmoteSendPayload {
+  emote: "angry" | "celebrate" | "thinking" | "applause" | "shock" | "laugh" | "sad" | "cool";
+}
+/**
+ * EmotePayload is broadcast when a player or bot shows an emote.
+ */
+export interface EmotePayload {
+  playerId: string;
+  emote: "angry" | "celebrate" | "thinking" | "applause" | "shock" | "laugh" | "sad" | "cool";
+}
+/**
+ * BotThoughtPayload is broadcast when a bot shows a thought bubble or starts or stops typing.
+ */
+export interface BotThoughtPayload {
+  playerId: string;
+  text: string;
+  typing: boolean;
+}
+/**
+ * BotRetryPayload is sent by the host to retry a failed bot.
+ */
+export interface BotRetryPayload {
+  playerId: string;
 }

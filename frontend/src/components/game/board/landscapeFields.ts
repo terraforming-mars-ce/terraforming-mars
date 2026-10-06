@@ -1,3 +1,4 @@
+import { MARS_RELIEF_DEPTH, marsReliefAtBoard, type MarsRelief } from "./marsRelief";
 import { DataUtils } from "three";
 import { HexGrid2D } from "../../../utils/hex-grid-2d";
 import {
@@ -28,7 +29,9 @@ export const LAKE_MASK_REACH = BEACH_WIDTH_MAX + 0.015;
 export const LAKE_GROUND_REACH = BEACH_WIDTH_MAX + 0.04;
 export const TRANSITION_MS = 600;
 const REACH = PATCH_SIZE * 1.1;
-const WATER_RADIUS = 0.17 * BOARD_SCALE;
+export const WATER_RADIUS = 0.17 * BOARD_SCALE;
+// Shore distance of land without a patch; matches LandscapeSurface.clearTerrain.
+export const EMPTY_SHORE = 0.2;
 const keyOf = HexGrid2D.coordinateToKey;
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 export function smooth(a: number, b: number, x: number) {
@@ -39,22 +42,51 @@ export function basinHeight(shore: number, beachWidth: number, landHeight: numbe
   if (shore < 0) {
     return WATER_LEVEL + (LAKE_BED_LEVEL - WATER_LEVEL) * smooth(0, 0.07, -shore);
   }
-  return WATER_LEVEL + (landHeight - WATER_LEVEL) * smooth(0, beachWidth, shore);
+  // Keep the dry bank above water, then grade back into any deeper terrain beyond the beach.
+  const bankHeight = Math.max(landHeight, WATER_LEVEL + 0.002);
+  const bank = WATER_LEVEL + (bankHeight - WATER_LEVEL) * smooth(0, beachWidth, shore);
+  const blend = smooth(beachWidth, LAKE_GROUND_REACH, shore);
+  return bank + (landHeight - bank) * blend;
 }
-export function landscapeHeightAt(patches: Map<string, LandscapePatch>, x: number, y: number) {
+export function landscapeHeightAt(
+  patches: Map<string, LandscapePatch>,
+  x: number,
+  y: number,
+  relief?: MarsRelief,
+) {
   const patch = patches.get(`${Math.floor(x / PATCH_SIZE)}:${Math.floor(y / PATCH_SIZE)}`);
   if (!patch) {
-    return 0.0003;
+    return marsReliefAtBoard(relief, x, y) + 0.0003;
   }
+  return sampleTerrain(patch, x, y, 0);
+}
+export function landscapeShoreAt(patches: Map<string, LandscapePatch>, x: number, y: number) {
+  const patch = patches.get(`${Math.floor(x / PATCH_SIZE)}:${Math.floor(y / PATCH_SIZE)}`);
+  if (!patch) {
+    return EMPTY_SHORE;
+  }
+  return sampleTerrain(patch, x, y, 1);
+}
+function sampleTerrain(patch: LandscapePatch, x: number, y: number, channel: number) {
   const px = (x - patch.x) / FIELD_STEP + FIELD_BORDER;
   const py = (y - patch.y) / FIELD_STEP + FIELD_BORDER;
   const ix = Math.floor(px),
     iy = Math.floor(py);
   const read = (dx: number, dy: number) =>
-    DataUtils.fromHalfFloat(patch.terrain[((iy + dy) * FIELD_SIZE + ix + dx) * 4]);
+    DataUtils.fromHalfFloat(patch.terrain[((iy + dy) * FIELD_SIZE + ix + dx) * 4 + channel]);
   const a = read(0, 0) * (1 - (px - ix)) + read(1, 0) * (px - ix);
   const b = read(0, 1) * (1 - (px - ix)) + read(1, 1) * (px - ix);
   return a * (1 - (py - iy)) + b * (py - iy);
+}
+// Weight of the next field at linear progress `elapsed`; see landscapeWeight in
+// landscape-field.glsl, which this mirrors.
+export function lakeBlendWeight(previous: number, next: number, elapsed: number) {
+  if (next >= previous) {
+    return elapsed * elapsed * (3 - 2 * elapsed);
+  }
+  const front = -WATER_RADIUS + elapsed * (EMPTY_SHORE + WATER_RADIUS);
+  const settle = Math.max(next, -WATER_RADIUS);
+  return Math.max(smooth(settle, settle + 0.1, front), smooth(0.85, 1, elapsed));
 }
 function hash(x: number, y: number, seed: number) {
   let n = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ seed;
@@ -98,6 +130,7 @@ function segmentDistance(x: number, y: number, ax: number, ay: number, bx: numbe
 }
 type Source = LandscapeSource & { x: number; y: number; key: string };
 export interface LandscapeSample {
+  relief: number;
   height: number;
   shore: number;
   coverage: number;
@@ -108,9 +141,13 @@ export interface LandscapeSample {
   lush: number;
   litter: number;
   mud: number;
+  meadow: number;
+  mound: number;
+  greenery: number;
   source?: Source;
   blocked: boolean;
 }
+const ENVIRONMENT_STRIDE = 8;
 function environmentAt(x: number, y: number, seed: number, target: Float64Array, offset: number) {
   const broad = fractal(x * 2.6, y * 2.6, seed);
   const wx = x + (landscapeNoise(x * 5, y * 5, seed + 1) - 0.5) * 0.1;
@@ -119,7 +156,9 @@ function environmentAt(x: number, y: number, seed: number, target: Float64Array,
   const fine = landscapeNoise(x * 73, y * 73, seed + 4);
   const ox = x + (fractal(x * 18, y * 18, seed + 5) - 0.5) * 0.08;
   const oy = y + (fractal(x * 18 + 31.7, y * 18, seed + 5) - 0.5) * 0.08;
-  target.set([broad, wx, wy, soil, fine, ox, oy], offset);
+  // Rounded hills about 0.11 wide, spanning roughly ten mesh quads.
+  const mound = fractal(wx * 9, wy * 9, seed + 6);
+  target.set([broad, wx, wy, soil, fine, ox, oy, mound], offset);
 }
 export function createLandscapeSampler(input: LandscapeInput) {
   const sources: Source[] = input.sources
@@ -177,7 +216,8 @@ export function createLandscapeSampler(input: LandscapeInput) {
       const dx = green.x - city.x,
         dy = green.y - city.y;
       const length = Math.hypot(dx, dy);
-      return [{ city, dx: dx / length, dy: dy / length, midpoint: length / 2 }];
+      const circular = city.layout && cityHexWallApothem(city.layout) === null;
+      return [{ city, circular, dx: dx / length, dy: dy / length, midpoint: length / 2 }];
     }),
   );
   const greeneryLinks = greenery.flatMap((a) =>
@@ -193,7 +233,7 @@ export function createLandscapeSampler(input: LandscapeInput) {
     }),
   );
   const seed = input.seed;
-  const scratch = new Float64Array(7);
+  const scratch = new Float64Array(ENVIRONMENT_STRIDE);
   return (
     x: number,
     y: number,
@@ -211,7 +251,8 @@ export function createLandscapeSampler(input: LandscapeInput) {
       soil = data[offset + 3],
       fine = data[offset + 4],
       ox = data[offset + 5],
-      oy = data[offset + 6];
+      oy = data[offset + 6],
+      mound = data[offset + 7];
     let shore = 1;
     for (const s of waters) {
       shore = Math.min(shore, Math.hypot(ox - s.x, oy - s.y) - WATER_RADIUS);
@@ -234,6 +275,7 @@ export function createLandscapeSampler(input: LandscapeInput) {
     const moisture =
       (1 - smooth(0.005, 0.06 + soil * 0.09, Math.max(shore, 0))) * (0.55 + broad * 0.45);
     let growth = 0,
+      greenery = 0,
       forest = 0,
       strongest = 0,
       source: Source | undefined;
@@ -252,7 +294,10 @@ export function createLandscapeSampler(input: LandscapeInput) {
         continue;
       }
       if (s.kind === "excluded") {
-        exclusion = Math.max(exclusion, 1 - smooth(-0.01, 0.03, distance));
+        // Special tiles keep their own ground; the landscape around them reaches irregularly up to,
+        // and a little into, their edge instead of leaving a bare ring.
+        const edge = hexDistance(wx - s.x, wy - s.y, TILE_RADIUS) + (soil - 0.5) * 0.04;
+        exclusion = Math.max(exclusion, 1 - smooth(-0.045, -0.005, edge));
         blocked ||= distance < 0.008;
         continue;
       }
@@ -280,8 +325,10 @@ export function createLandscapeSampler(input: LandscapeInput) {
         influence = 1 - smooth(0.004, 0.028, footprintDistance);
       }
       if (!city) {
-        const edge = hexDistance(lx, ly, TILE_RADIUS) + (soil - 0.5) * 0.012 + (fine - 0.5) * 0.002;
-        influence = 1 - smooth(-0.012, 0.022, edge);
+        // Ground spills irregularly into neighbouring tiles, like the beach around lakes.
+        const edge =
+          hexDistance(wx - s.x, wy - s.y, TILE_RADIUS) + (soil - 0.5) * 0.05 + (fine - 0.5) * 0.006;
+        influence = 1 - smooth(-0.02, 0.05, edge);
       }
       const canopy =
         (1 - smooth(-0.035, 0.006, warpedDistance)) *
@@ -344,11 +391,15 @@ export function createLandscapeSampler(input: LandscapeInput) {
         strongest = strength;
       }
       growth = 1 - (1 - growth) * (1 - strength * (0.88 + suitability * 0.12));
+      if (s.kind === "greenery" || s.kind === "special-greenery") {
+        greenery = Math.max(greenery, influence);
+      }
       forest = Math.max(forest, canopy * (city ? 0.12 : 1));
     }
     for (const { a, b } of greeneryLinks) {
       const distance = segmentDistance(x, y, a.x, a.y, b.x, b.y) + (soil - 0.5) * 0.012;
       growth = Math.max(growth, 1 - smooth(0.085, 0.115, distance));
+      greenery = Math.max(greenery, 1 - smooth(0.085, 0.115, distance));
     }
     let shoreGrowth = 0;
     for (const { a, b } of shorelineLinks) {
@@ -363,7 +414,7 @@ export function createLandscapeSampler(input: LandscapeInput) {
       foundation = Math.max(foundation, infill);
       cityPad = Math.max(cityPad, infill);
     }
-    for (const { city, dx, dy, midpoint } of cityGreeneryLinks) {
+    for (const { city, circular, dx, dy, midpoint } of cityGreeneryLinks) {
       const lx = x - city.x,
         ly = y - city.y;
       const along = lx * dx + ly * dy + (soil - 0.5) * 0.006;
@@ -371,6 +422,17 @@ export function createLandscapeSampler(input: LandscapeInput) {
       const wall = city.layout
         ? cityWallDistance(city.layout, lx, ly)
         : hexDistance(lx, ly, TILE_RADIUS) + 0.01;
+      if (circular) {
+        const halfEdge = midpoint / Math.sqrt(3);
+        const edge =
+          (1 - smooth(halfEdge, halfEdge + 0.025, across)) *
+          smooth(0, 0.025, along) *
+          (1 - smooth(midpoint + 0.04, midpoint + 0.08, along));
+        // Complement the circular paving fade so greenery meets the wall without a bare strip.
+        const workedEdge = wall + (soil - 0.5) * 0.006 + (fine - 0.5) * 0.004;
+        growth = Math.max(growth, edge * smooth(0.004, 0.024, workedEdge));
+        continue;
+      }
       const edge =
         (1 - smooth(0.08, 0.115, across)) *
         smooth(midpoint - 0.07, midpoint - 0.035, along) *
@@ -405,7 +467,16 @@ export function createLandscapeSampler(input: LandscapeInput) {
     );
     const dry = Math.max(0, coverage - lush - litter - mud);
     const beachWidth = BEACH_WIDTH_MAX + (BEACH_WIDTH_MIN - BEACH_WIDTH_MAX) * clamp(lush + litter);
-    const naturalHeight = 0.0003 + coverage * (0.0012 + broad * 0.0048);
+    // Hummocks only rise inside greeneries and flatten out before the beach.
+    const hummocks =
+      greenery *
+      (1 - exclusion) *
+      0.027 *
+      clamp((mound - 0.25) / 0.45) *
+      smooth(beachWidth, beachWidth + 0.03, shore);
+    const relief = marsReliefAtBoard(input.relief, x, y);
+    const naturalHeight =
+      relief * (1 - exclusion) + 0.0003 + coverage * (0.0012 + broad * 0.0048) + hummocks;
     let height = basinHeight(shore, beachWidth, naturalHeight);
     height = height * (1 - exclusion) + naturalHeight * exclusion;
     height = height * (1 - cityPad) + 0.0003 * cityPad;
@@ -413,6 +484,7 @@ export function createLandscapeSampler(input: LandscapeInput) {
       forest = 0;
     }
     return {
+      relief,
       height,
       shore,
       coverage,
@@ -423,6 +495,9 @@ export function createLandscapeSampler(input: LandscapeInput) {
       lush,
       litter,
       mud,
+      meadow: clamp(wetGrass * (1 - growth) * (1 - exclusion)),
+      mound,
+      greenery: clamp(greenery * (1 - exclusion)),
       source,
       blocked: blocked || shore < beachWidth * 0.8 || exclusion > 0.2,
     };
@@ -440,7 +515,8 @@ function scatterPatch(
   const rocks: { x: number; y: number; r: number }[] = [];
   for (const [kind, spacing, capitalOnly] of [
     ["rock", 0.095, false],
-    ["tree", 0.018, false],
+    ["tree", 0.016, false],
+    ["pine", 0.014, false],
     ["bush", 0.014, false],
     ["clover", 0.031, false],
     ["flower", 0.046, false],
@@ -452,8 +528,9 @@ function scatterPatch(
     }
     for (let ix = Math.floor(x / spacing); ix <= Math.ceil((x + PATCH_SIZE) / spacing); ix++) {
       for (let iy = Math.floor(y / spacing); iy <= Math.ceil((y + PATCH_SIZE) / spacing); iy++) {
-        const h = hash(ix, iy, seed + kind.length * 311),
-          h2 = hash(ix, iy, seed + kind.length * 829);
+        const salt = kind === "pine" ? 977 : kind.length;
+        const h = hash(ix, iy, seed + salt * 311),
+          h2 = hash(ix, iy, seed + salt * 829);
         const px = (ix + 0.2 + h * 0.6) * spacing,
           py = (iy + 0.2 + h2 * 0.6) * spacing;
         if (px < x || px >= x + PATCH_SIZE || py < y || py >= y + PATCH_SIZE) {
@@ -471,11 +548,17 @@ function scatterPatch(
         }
         let threshold = 0;
         if (kind === "tree") {
-          threshold = capital ? f.coverage * 0.95 : f.forest * 0.88;
+          threshold = capital ? f.coverage * 0.95 : f.forest * 0.665;
           if (!city) {
             const edge = hexDistance(px - s.x, py - s.y, TILE_RADIUS);
             threshold *= 1 - 0.92 * smooth(-0.025, 0.006, edge);
           }
+        }
+        // Hardy pines are the first trees. They grow in groves, with only a few strays between.
+        if (kind === "pine" && !city && s.kind !== "volcano") {
+          const edge = hexDistance(px - s.x, py - s.y, TILE_RADIUS);
+          const grove = smooth(0.38, 0.64, fractal(px * 11, py * 11, seed + 41));
+          threshold = f.coverage * 0.8 * (0.1 + 0.9 * grove) * (1 - smooth(-0.03, 0.0, edge));
         }
         if (kind === "bush") {
           threshold = f.coverage * (capital ? 0.9 : 0.12 + f.forest * 0.18);
@@ -497,6 +580,9 @@ function scatterPatch(
         if (!city && kind === "tree") {
           scale *= 0.6;
         }
+        if (kind === "pine") {
+          scale *= 0.7;
+        }
         if (!city && kind === "bush") {
           scale *= 0.75;
         }
@@ -509,6 +595,7 @@ function scatterPatch(
           height: f.height,
           seed: cellSeed,
           scale,
+          rank: city || kind === "rock" ? 0 : h2 / threshold,
         });
         if (kind === "rock") {
           rocks.push({ x: px, y: py, r: 0.025 * scale });
@@ -567,7 +654,7 @@ export class LandscapeBuilder {
           p.y <= y + PATCH_SIZE + REACH + FIELD_STEP * 2
         );
       });
-      const content = JSON.stringify([input.seed, local]);
+      const content = JSON.stringify([input.seed, input.relief?.revision, local]);
       const signature = `${hashSeed(content).toString(36)}:${hashSeed(content + "landscape").toString(36)}`;
       const previous = this.cache.get(key);
       signatures.set(key, signature);
@@ -577,10 +664,14 @@ export class LandscapeBuilder {
         }
         continue;
       }
-      const sample = createLandscapeSampler({ seed: input.seed, sources: local });
+      const sample = createLandscapeSampler({
+        seed: input.seed,
+        sources: local,
+        relief: input.relief,
+      });
       let environment = this.environment.get(key);
       if (!environment) {
-        environment = new Float64Array(FIELD_SIZE * FIELD_SIZE * 7);
+        environment = new Float64Array(FIELD_SIZE * FIELD_SIZE * ENVIRONMENT_STRIDE);
         for (let row = 0; row < FIELD_SIZE; row++) {
           for (let col = 0; col < FIELD_SIZE; col++) {
             environmentAt(
@@ -588,14 +679,15 @@ export class LandscapeBuilder {
               y + (row - FIELD_BORDER) * FIELD_STEP,
               input.seed,
               environment,
-              (row * FIELD_SIZE + col) * 7,
+              (row * FIELD_SIZE + col) * ENVIRONMENT_STRIDE,
             );
           }
         }
         this.environment.set(key, environment);
       }
       const terrain = new Uint16Array(FIELD_SIZE * FIELD_SIZE * 4),
-        materials = new Uint8Array(terrain.length);
+        materials = new Uint8Array(terrain.length),
+        detail = new Uint8Array(terrain.length);
       let visible = false,
         water = false;
       for (let row = 0; row < FIELD_SIZE; row++) {
@@ -605,7 +697,7 @@ export class LandscapeBuilder {
               y + (row - FIELD_BORDER) * FIELD_STEP,
               false,
               environment,
-              (row * FIELD_SIZE + col) * 7,
+              (row * FIELD_SIZE + col) * ENVIRONMENT_STRIDE,
             ),
             offset = (row * FIELD_SIZE + col) * 4;
           terrain[offset] = DataUtils.toHalfFloat(f.height);
@@ -616,6 +708,10 @@ export class LandscapeBuilder {
           materials[offset + 1] = Math.round(clamp(f.lush) * 255);
           materials[offset + 2] = Math.round(clamp(f.litter) * 255);
           materials[offset + 3] = Math.round(clamp(f.mud) * 255);
+          detail[offset] = Math.round(f.meadow * 255);
+          detail[offset + 1] = Math.round(clamp(f.mound) * 255);
+          detail[offset + 2] = Math.round(f.greenery * 255);
+          detail[offset + 3] = Math.round(clamp(-f.relief / MARS_RELIEF_DEPTH) * 255);
           visible ||= f.coverage > 0.001 || f.foundation > 0.001 || f.shore < LAKE_GROUND_REACH;
           water ||= f.shore < 0.005;
         }
@@ -628,6 +724,7 @@ export class LandscapeBuilder {
           y,
           terrain,
           materials,
+          detail,
           plants: scatterPatch(
             x,
             y,

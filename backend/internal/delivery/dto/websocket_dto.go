@@ -32,6 +32,13 @@ type ErrorPayload struct {
 	Code    string `json:"code,omitempty"`
 }
 
+// PlayCardErrorPayload identifies the rejected card play for client presentation recovery.
+type PlayCardErrorPayload struct {
+	Action string `json:"action" tstype:"'play-card'"`
+	CardID string `json:"cardId"`
+	Error  string `json:"error"`
+}
+
 // FullStatePayload contains the complete game state
 type FullStatePayload struct {
 	Game     GameDto `json:"game"`
@@ -109,4 +116,41 @@ type ChatMessagePayload struct {
 // ChatUpdatePayload contains a new chat message broadcast to all clients.
 type ChatUpdatePayload struct {
 	ChatMessage ChatMessageDto `json:"chatMessage"`
+}
+
+// EmoteName is one of the emotes a player or bot can show over their player card.
+type EmoteName string
+
+const (
+	EmoteAngry     EmoteName = "angry"
+	EmoteCelebrate EmoteName = "celebrate"
+	EmoteThinking  EmoteName = "thinking"
+	EmoteApplause  EmoteName = "applause"
+	EmoteShock     EmoteName = "shock"
+	EmoteLaugh     EmoteName = "laugh"
+	EmoteSad       EmoteName = "sad"
+	EmoteCool      EmoteName = "cool"
+)
+
+// EmoteSendPayload is sent by a client to show an emote.
+type EmoteSendPayload struct {
+	Emote EmoteName `json:"emote" tstype:"'angry' | 'celebrate' | 'thinking' | 'applause' | 'shock' | 'laugh' | 'sad' | 'cool'"`
+}
+
+// EmotePayload is broadcast when a player or bot shows an emote.
+type EmotePayload struct {
+	PlayerID string    `json:"playerId"`
+	Emote    EmoteName `json:"emote" tstype:"'angry' | 'celebrate' | 'thinking' | 'applause' | 'shock' | 'laugh' | 'sad' | 'cool'"`
+}
+
+// BotThoughtPayload is broadcast when a bot shows a thought bubble or starts or stops typing.
+type BotThoughtPayload struct {
+	PlayerID string `json:"playerId"`
+	Text     string `json:"text"`
+	Typing   bool   `json:"typing"`
+}
+
+// BotRetryPayload is sent by the host to retry a failed bot.
+type BotRetryPayload struct {
+	PlayerID string `json:"playerId"`
 }

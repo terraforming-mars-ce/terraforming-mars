@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import {
   PlayerDto,
   OtherPlayerDto,
@@ -34,7 +35,10 @@ const LeftSidebar = forwardRef<PlayerListHandle, LeftSidebarProps>(function Left
   ref,
 ) {
   return (
-    <div className="absolute top-[15%] left-0 z-10 h-[calc(85vh-120px)] bg-transparent py-[15px] flex flex-col overflow-visible pointer-events-none">
+    <div
+      className="absolute top-[15%] left-0 h-[calc(85vh-120px)] bg-transparent py-[15px] flex flex-col overflow-visible pointer-events-none"
+      style={{ zIndex: Z_INDEX.PLAYER_LIST }}
+    >
       <PlayerList
         ref={ref}
         players={players}

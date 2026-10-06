@@ -376,14 +376,6 @@ const World3DPanel: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ marginBottom: "16px" }}>
-        <ColorSwatch
-          label="Water Color"
-          color={settings.waterColor}
-          onChange={(c) => updateSettings({ waterColor: c })}
-        />
-      </div>
-
       <GameButton
         emphasis="quiet"
         onClick={resetSettings}

@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { SkeletonUtils } from "three-stdlib";
 import { useModels } from "../../../hooks/useModels";
+import { useClimate } from "../../../contexts/ClimateContext";
 
 const BIRD_SCALE = 0.0015;
 const BIRDS_PER_TILE_MIN = 5;
@@ -111,6 +112,8 @@ interface BirdState {
   clone: THREE.Object3D;
   mixer: THREE.AnimationMixer;
   tileKey: string;
+  index: number;
+  count: number;
 }
 
 interface PendingBird {
@@ -130,6 +133,8 @@ interface PendingBird {
   tx: THREE.Vector3;
   ty: THREE.Vector3;
   tileKey: string;
+  index: number;
+  count: number;
 }
 
 interface BirdRendererProps {
@@ -150,6 +155,7 @@ export default function BirdRenderer({ livingGreeneryTiles }: BirdRendererProps)
   const allBirdsRef = useRef<BirdState[]>([]);
   const spawnQueueRef = useRef<PendingBird[]>([]);
   const [noiseReady, setNoiseReady] = useState(!!noiseData);
+  const { runtime } = useClimate();
 
   useEffect(() => {
     if (!noiseReady) {
@@ -218,6 +224,8 @@ export default function BirdRenderer({ livingGreeneryTiles }: BirdRendererProps)
           tx: tx.clone(),
           ty: ty.clone(),
           tileKey: key,
+          index: i,
+          count,
         });
       }
     }
@@ -262,13 +270,21 @@ export default function BirdRenderer({ livingGreeneryTiles }: BirdRendererProps)
           clone,
           mixer,
           tileKey: p.tileKey,
+          index: p.index,
+          count: p.count,
         });
       }
     }
 
     const t = performance.now() / 1000;
+    const density = runtime.current.current.birds;
 
     for (const bird of allBirdsRef.current) {
+      // Hiding by spawn index keeps each tile's flock stable as oxygen rises.
+      bird.clone.visible = bird.index < Math.round(bird.count * density);
+      if (!bird.clone.visible) {
+        continue;
+      }
       bird.mixer.update(delta);
 
       const angle = t * bird.speed + bird.phase;
@@ -308,7 +324,7 @@ export default function BirdRenderer({ livingGreeneryTiles }: BirdRendererProps)
     }
   });
 
-  return <group ref={groupRef} />;
+  return <group ref={groupRef} userData={{ perfGroup: "birds", tileHighlights: false }} />;
 }
 
 const _v0 = new THREE.Vector3();

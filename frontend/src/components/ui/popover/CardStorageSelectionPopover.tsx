@@ -109,24 +109,14 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
         <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
           {title}
         </h3>
-        <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
-          {hasNoStorage ? (
-            resourceType === "card-resource" ? (
-              "You have no matching cards with resource storage"
-            ) : (
-              `You have no cards that can store ${resourceType}`
-            )
-          ) : (
-            <>
-              <span>
-                Place {amount} resource{amount !== 1 ? "s" : ""}
-              </span>
-              {resourceType !== "card-resource" && (
-                <GameIcon iconType={resourceType} size="small" />
-              )}
-            </>
-          )}
-        </div>
+        {!hasNoStorage && (
+          <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
+            <span>
+              Place {amount} resource{amount !== 1 ? "s" : ""}
+            </span>
+            {resourceType !== "card-resource" && <GameIcon iconType={resourceType} size="small" />}
+          </div>
+        )}
       </GameFlowTitle>
 
       <GameFlowBody>
@@ -134,21 +124,22 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
           <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="text-yellow-400 text-4xl">⚠️</div>
-              <GameIcon
-                iconType={resourceType === "card-resource" ? "card" : resourceType}
-                size="large"
-              />
+              <div className="flex items-center gap-1">
+                <GameIcon
+                  iconType={resourceType === "card-resource" ? "card" : resourceType}
+                  size="large"
+                />
+                {[...new Set(selectorTags ?? [])].map((tag) => (
+                  <GameIcon key={tag} iconType={`${tag}-tag`} size="small" className="!w-4 !h-4" />
+                ))}
+              </div>
             </div>
             <div className="text-white text-sm mb-3 font-semibold">
               No {resourceType === "card-resource" ? "matching" : resourceType} storage available
             </div>
-            <div className="text-white/70 text-xs mb-4 max-w-[280px]">
-              {resourceType === "card-resource"
-                ? "You don't have any matching cards with resource storage. If you continue, the resource will be lost."
-                : `You don't have any cards with ${resourceType} storage. If you continue, the ${resourceType} will be lost.`}
-            </div>
-            <div className="text-white/50 text-xs italic">
-              Play cards with resource storage first to avoid losing resources
+            <div className="text-white/70 text-xs max-w-[280px]">
+              If you continue, the {resourceType === "card-resource" ? "resource" : resourceType}{" "}
+              will be lost.
             </div>
           </div>
         ) : (
@@ -189,17 +180,17 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
         <GameFlowFooter className="gap-3">
           {hasNoStorage ? (
             <>
+              <GameButton emphasis="primary" tone="info" size="sm" onClick={onCancel}>
+                Cancel
+              </GameButton>
               <GameButton
-                emphasis="primary"
+                emphasis="secondary"
                 tone="warn"
                 size="sm"
                 clickSound={false}
                 onClick={handleContinueWithoutStorage}
               >
                 Continue Anyway
-              </GameButton>
-              <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
-                Cancel
               </GameButton>
             </>
           ) : (

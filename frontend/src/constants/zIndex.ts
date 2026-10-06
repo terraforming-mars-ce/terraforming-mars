@@ -21,11 +21,16 @@ export const Z_INDEX = {
 
   // UI Layer (10-99)
   UI_BASE: 10,
+  // Player list in the left sidebar; thought bubbles and emotes sit one above it, so any modal backdrop covers them
+  PLAYER_LIST: 10,
+  PLAYER_PRESENCE: 11,
   COST_DISPLAY: 20,
   TILE_PLACEMENT_PROMPT: 50,
   PLAYER_OVERLAY: 90,
 
   // Navigation Layer (100-199)
+  // Pre-game corporation showcase: above the board, below selection popovers and the hamburger
+  SHOWCASE: 105,
   TOP_MENU_BAR: 100,
   BOTTOM_RESOURCE_BAR: 100,
   LEFT_SIDEBAR: 110,

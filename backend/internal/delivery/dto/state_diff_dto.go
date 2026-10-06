@@ -81,9 +81,10 @@ type ComputedBehaviorValueDto struct {
 
 // LogDisplayDataDto contains pre-computed display information for log entries
 type LogDisplayDataDto struct {
-	Behaviors    []CardBehaviorDto `json:"behaviors,omitempty"`
-	Tags         []CardTag         `json:"tags,omitempty"`
-	VPConditions []VPConditionDto  `json:"vpConditions,omitempty"`
+	RevealedCards []RevealedCardDto `json:"revealedCards,omitempty"`
+	Behaviors     []CardBehaviorDto `json:"behaviors,omitempty"`
+	Tags          []CardTag         `json:"tags,omitempty"`
+	VPConditions  []VPConditionDto  `json:"vpConditions,omitempty"`
 }
 
 // StateDiffDto represents the difference between two consecutive game states

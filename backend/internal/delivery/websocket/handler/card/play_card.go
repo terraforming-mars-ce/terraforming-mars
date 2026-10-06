@@ -2,13 +2,13 @@ package card
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 
 	cardaction "terraforming-mars-backend/internal/action/card"
 
 	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/internal/logger"
 )
 
@@ -41,60 +41,36 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 	)
 
 	log.Debug("Processing play card request")
+	payload, payloadOK := message.Payload.(map[string]interface{})
+	cardID, _ := payload["cardId"].(string)
 
 	if connection.GameID == "" || connection.PlayerID == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		h.sendError(connection, cardID, "Not connected to a game")
 		return
 	}
 
-	payload, ok := message.Payload.(map[string]interface{})
-	if !ok {
+	if !payloadOK {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		h.sendError(connection, cardID, "Invalid payload format")
 		return
 	}
 
-	cardID, ok := payload["cardId"].(string)
-	if !ok || cardID == "" {
+	if cardID == "" {
 		log.Error("Missing or invalid cardId")
-		h.sendError(connection, "Missing cardId")
+		h.sendError(connection, cardID, "Missing cardId")
 		return
 	}
 
-	payment := cardaction.PaymentRequest{
-		Credits:            0,
-		Steel:              0,
-		Titanium:           0,
-		Substitutes:        make(map[shared.ResourceType]int),
-		StorageSubstitutes: make(map[string]int),
+	var payment dto.PaymentDto
+	raw, err := json.Marshal(payload["payment"])
+	if err != nil {
+		h.sendError(connection, cardID, "Invalid payment")
+		return
 	}
-
-	if paymentData, ok := payload["payment"].(map[string]interface{}); ok {
-		if credits, ok := paymentData["credits"].(float64); ok {
-			payment.Credits = int(credits)
-		}
-		if steel, ok := paymentData["steel"].(float64); ok {
-			payment.Steel = int(steel)
-		}
-		if titanium, ok := paymentData["titanium"].(float64); ok {
-			payment.Titanium = int(titanium)
-		}
-		if substitutesData, ok := paymentData["substitutes"].(map[string]interface{}); ok {
-			for resourceTypeStr, amountVal := range substitutesData {
-				if amount, ok := amountVal.(float64); ok && amount > 0 {
-					resourceType := shared.ResourceType(resourceTypeStr)
-					payment.Substitutes[resourceType] = int(amount)
-				}
-			}
-		}
-		if storageSubs, ok := paymentData["storageSubstitutes"].(map[string]interface{}); ok {
-			for cardID, amountVal := range storageSubs {
-				if amount, ok := amountVal.(float64); ok && amount > 0 {
-					payment.StorageSubstitutes[cardID] = int(amount)
-				}
-			}
-		}
+	if err = json.Unmarshal(raw, &payment); err != nil {
+		h.sendError(connection, cardID, "Invalid payment")
+		return
 	}
 
 	var choiceIndex *int
@@ -103,6 +79,17 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 		choiceIndex = &idx
 	}
 
+	var cardStorageSources []string
+	if raw, ok := payload["cardStorageSources"].([]interface{}); ok {
+		for _, v := range raw {
+			id, ok := v.(string)
+			if !ok {
+				h.sendError(connection, cardID, "Invalid storage input source")
+				return
+			}
+			cardStorageSources = append(cardStorageSources, id)
+		}
+	}
 	var cardStorageTargets []string
 	if targetsRaw, ok := payload["cardStorageTargets"].([]interface{}); ok {
 		for _, t := range targetsRaw {
@@ -119,15 +106,14 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 
 	var selectedAmount *int
 	if saFloat, ok := payload["selectedAmount"].(float64); ok {
+		if saFloat < 0 || saFloat > 2147483647 || saFloat != float64(int(saFloat)) {
+			h.sendError(connection, cardID, "Invalid selected amount")
+			return
+		}
 		sa := int(saFloat)
 		selectedAmount = &sa
 	}
 
-	log.Debug("Payment extracted",
-		slog.Int("credits", payment.Credits),
-		slog.Int("steel", payment.Steel),
-		slog.Int("titanium", payment.Titanium),
-		slog.Any("substitutes", payment.Substitutes))
 	if choiceIndex != nil {
 		log.Debug("Choice index extracted", slog.Int("choice_index", *choiceIndex))
 	}
@@ -138,10 +124,10 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 		log.Debug("Target player extracted", slog.String("target_player_id", *targetPlayerID))
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, payment, choiceIndex, cardStorageTargets, targetPlayerID, selectedAmount)
+	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, dto.ToPayment(payment), choiceIndex, cardStorageTargets, targetPlayerID, selectedAmount, cardStorageSources)
 	if err != nil {
 		log.Error("Failed to execute play card action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		h.sendError(connection, cardID, err.Error())
 		return
 	}
 
@@ -163,11 +149,13 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 	connection.Send <- response
 }
 
-func (h *PlayCardHandler) sendError(connection *core.Connection, errorMessage string) {
+func (h *PlayCardHandler) sendError(connection *core.Connection, cardID, errorMessage string) {
 	connection.Send <- dto.WebSocketMessage{
 		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
+		Payload: dto.PlayCardErrorPayload{
+			Action: "play-card",
+			CardID: cardID,
+			Error:  errorMessage,
 		},
 	}
 }

@@ -2,6 +2,7 @@ package cards
 
 import (
 	"fmt"
+	"terraforming-mars-backend/internal/game/board"
 
 	"terraforming-mars-backend/internal/game/global_parameters"
 	"terraforming-mars-backend/internal/game/player"
@@ -19,8 +20,16 @@ func ValidateCardCanBePlayed(
 	if card.Requirements == nil {
 		return nil
 	}
+	counts := tagsFromCards(playedCards)
+	for tag, n := range pl.BonusTags() {
+		counts[tag] += n
+	}
+	if err := ValidateTagRequirements(card.Requirements.Items, counts); err != nil {
+		return err
+	}
+
 	for _, req := range card.Requirements.Items {
-		if err := validateRequirementMet(req, pl, globalParams, playedCards); err != nil {
+		if err := validateRequirementMet(req, pl, globalParams); err != nil {
 			return fmt.Errorf("requirement not met: %w", err)
 		}
 	}
@@ -53,7 +62,6 @@ func validateRequirementMet(
 	req Requirement,
 	pl *player.Player,
 	globalParams *global_parameters.GlobalParameters,
-	playedCards []*Card,
 ) error {
 	switch req.Type {
 	case RequirementTemperature:
@@ -63,7 +71,7 @@ func validateRequirementMet(
 	case RequirementOceans:
 		return validateOceansRequirement(req, globalParams)
 	case RequirementTags:
-		return validateTagsRequirement(req, playedCards)
+		return nil
 	case RequirementProduction:
 		return validateProductionRequirement(req, pl)
 	case RequirementTR:
@@ -122,38 +130,6 @@ func validateOceansRequirement(req Requirement, globalParams *global_parameters.
 	}
 
 	return nil
-}
-
-// validateTagsRequirement checks if tag count requirement is met
-func validateTagsRequirement(req Requirement, playedCards []*Card) error {
-	if req.Tag == nil {
-		return fmt.Errorf("tags requirement missing tag specification")
-	}
-
-	tagCount := countTagsInPlayedCards(*req.Tag, playedCards)
-
-	if req.Min != nil && tagCount < *req.Min {
-		return fmt.Errorf("tag %s count %d is below required minimum %d", *req.Tag, tagCount, *req.Min)
-	}
-
-	if req.Max != nil && tagCount > *req.Max {
-		return fmt.Errorf("tag %s count %d is above required maximum %d", *req.Tag, tagCount, *req.Max)
-	}
-
-	return nil
-}
-
-// countTagsInPlayedCards counts occurrences of a specific tag in played cards (excluding events).
-// Wild tags count toward any tag type.
-func countTagsInPlayedCards(tag shared.CardTag, playedCards []*Card) int {
-	count := 0
-	for _, card := range playedCards {
-		if card.Type == CardTypeEvent {
-			continue
-		}
-		count += countTagsInList(card.Tags, tag)
-	}
-	return count
 }
 
 // validateProductionRequirement checks if production requirement is met
@@ -261,5 +237,28 @@ func validateCitiesRequirement(req Requirement) error {
 // TODO: Implement when greenery tracking is available
 func validateGreeeneriesRequirement(req Requirement) error {
 	// Placeholder - requires board state to count greeneries
+	return nil
+}
+
+// ValidateTileRequirement checks city totals and owned greenery requirements.
+func ValidateTileRequirement(req Requirement, p *player.Player, b *board.Board) error {
+	count := 0
+	if req.Type == RequirementCities {
+		var location *string
+		if req.Location != nil {
+			value := string(*req.Location)
+			location = &value
+		}
+		count = CountTilesOfTypeByLocation(b, shared.ResourceCityTile, location, nil)
+	} else {
+		resource := shared.ResourceGreeneryTile
+		count = CountPlayerTiles(p.ID(), b, &resource)
+	}
+	if req.Min != nil && count < *req.Min {
+		return fmt.Errorf("need at least %d %s tiles, have %d", *req.Min, req.Type, count)
+	}
+	if req.Max != nil && count > *req.Max {
+		return fmt.Errorf("need at most %d %s tiles, have %d", *req.Max, req.Type, count)
+	}
 	return nil
 }

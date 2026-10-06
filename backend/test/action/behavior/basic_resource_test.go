@@ -46,9 +46,9 @@ func TestWaterImportFromEuropa_PayWithCreditsOnly(t *testing.T) {
 		},
 	})
 
-	payment := &gamecards.CardPayment{Credits: 12}
+	payment := shared.NativePayment(shared.ResourceCredit, 12)
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, &payment, nil, nil)
 	testutil.AssertNoError(t, err, "Water Import action should succeed with credits only")
 
 	resources := p.Resources().Get()
@@ -89,9 +89,15 @@ func TestWaterImportFromEuropa_PayWithTitaniumAndCredits(t *testing.T) {
 	})
 
 	// Pay 6 credits + 2 titanium (value 3 each = 6) = 12 total
-	payment := &gamecards.CardPayment{Credits: 6, Titanium: 2}
+	payment := &shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-player",
+
+		Resource: "credit"}, TargetResource: shared.ResourceCredit,
+		Amount: 6}, {Source: shared.PaymentSource{Target: "self-player",
+		Resource: "titanium"}, TargetResource: shared.ResourceCredit,
+		Amount: 2}},
+	}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil, nil)
 	testutil.AssertNoError(t, err, "Water Import action should succeed with titanium + credits")
 
 	resources := p.Resources().Get()
@@ -133,9 +139,15 @@ func TestWaterImportFromEuropa_FailInsufficientPayment(t *testing.T) {
 	})
 
 	// Pay 3 credits + 1 titanium (value 3) = 6, need 12
-	payment := &gamecards.CardPayment{Credits: 3, Titanium: 1}
+	payment := &shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-player",
+
+		Resource: "credit"}, TargetResource: shared.ResourceCredit,
+		Amount: 3}, {Source: shared.PaymentSource{Target: "self-player",
+		Resource: "titanium"}, TargetResource: shared.ResourceCredit,
+		Amount: 1}},
+	}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil, nil)
 	testutil.AssertError(t, err, "Should fail with insufficient payment")
 }
 
@@ -173,9 +185,15 @@ func TestWaterImportFromEuropa_FailSteelNotAllowed(t *testing.T) {
 	})
 
 	// Try to pay with steel (not allowed)
-	payment := &gamecards.CardPayment{Credits: 6, Steel: 3}
+	payment := &shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-player",
+
+		Resource: "credit"}, TargetResource: shared.ResourceCredit,
+		Amount: 6}, {Source: shared.PaymentSource{Target: "self-player",
+		Resource: "steel"}, TargetResource: shared.ResourceCredit,
+		Amount: 3}},
+	}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil, nil)
 	testutil.AssertError(t, err, "Should fail when using steel (not allowed)")
 }
 
@@ -213,7 +231,7 @@ func TestWaterImportFromEuropa_NoPaymentFallsBackToCredits(t *testing.T) {
 
 	// No payment provided — should fall back to credits-only
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should succeed with no payment (falls back to credits)")
 
 	resources := p.Resources().Get()
@@ -271,9 +289,13 @@ func TestRotatorImpacts_Choice1_PayWithTitanium(t *testing.T) {
 	})
 
 	// Pay with 2 titanium (3 MC each = 6 MC total)
-	payment := &gamecards.CardPayment{Credits: 0, Titanium: 2}
+	payment := &shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-player",
+
+		Resource: "titanium"}, TargetResource: shared.ResourceCredit,
+		Amount: 2}},
+	}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, nil, nil, nil, nil, payment, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, nil, nil, nil, nil, payment, nil, nil)
 	testutil.AssertNoError(t, err, "Rotator Impacts choice 1 should succeed with titanium")
 
 	resources := p.Resources().Get()
@@ -317,34 +339,38 @@ func TestWaterImportFromEuropa_TitaniumWithValueModifier(t *testing.T) {
 	})
 
 	// Pay with 3 titanium (4 MC each with modifier = 12 MC total)
-	payment := &gamecards.CardPayment{Credits: 0, Titanium: 3}
+	payment := &shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-player",
+
+		Resource: "titanium"}, TargetResource: shared.ResourceCredit,
+		Amount: 3}},
+	}
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil, nil)
 	testutil.AssertNoError(t, err, "Should succeed with titanium value modifier")
 
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 0, resources.Titanium, "Should have 0 titanium after spending 3")
 }
 
-func TestBasicResource_DeferredStealWithAdjacentRestriction(t *testing.T) {
+func TestBasicResource_DeferredRemovalWithAdjacentRestriction(t *testing.T) {
 	testGame, _, cardRegistry, playerID, targetPlayerID := testutil.SetupTwoPlayerGame(t)
 
 	p, _ := testGame.GetPlayer(playerID)
 	target, _ := testGame.GetPlayer(targetPlayerID)
 	target.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 10})
 
-	stealOutput := &shared.BasicResourceCondition{
-		ConditionBase:     shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: 3, Target: "steal-any-player"},
+	removalOutput := &shared.BasicResourceCondition{
+		ConditionBase:     shared.ConditionBase{ResourceType: shared.ResourceCredit, Amount: -3, Target: "any-player"},
 		TargetRestriction: &shared.TargetRestriction{Adjacent: "self-card"},
 	}
 
 	applier := gamecards.NewBehaviorApplier(p, testGame, "test", slog.Default()).
 		WithCardRegistry(cardRegistry).
 		WithTargetPlayerID(targetPlayerID)
-	err := applier.ApplyOutputs(context.Background(), []shared.BehaviorCondition{stealOutput})
+	err := applier.ApplyOutputs(context.Background(), []shared.BehaviorCondition{removalOutput})
 	testutil.AssertNoError(t, err, "ApplyOutputs should succeed")
 
-	testutil.AssertTrue(t, applier.DeferredSteal() != nil, "Steal should be deferred, not applied immediately")
+	testutil.AssertTrue(t, applier.DeferredRemoval() != nil, "Removal should be deferred, not applied immediately")
 	testutil.AssertEqual(t, 10, target.Resources().Get().Credits, "Target credits should be unchanged")
 }
 
@@ -482,4 +508,72 @@ func TestBasicResource_VariableAmountZero(t *testing.T) {
 	assertResources(t, p, map[shared.ResourceType]int{
 		shared.ResourceCredit: 0,
 	})
+}
+
+func TestRestrictedResourceRemoval_CombinesRestrictions(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, id, otherID := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	target, _ := g.GetPlayer(otherID)
+	target.Resources().Set(shared.Resources{Steel: 7})
+	c := testutil.GetCardByName("Dirigibles")
+	target.PlayedCards().AddCard(c.ID, c.Name, string(c.Type), []string{"venus"})
+	output := shared.NewBasicResourceCondition(shared.ResourceSteel, -3, "any-player")
+	output.TargetRestriction = &shared.TargetRestriction{Selectors: []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}}, Adjacent: "self-card"}
+	position := shared.HexPosition{Q: 4, R: -1, S: -3}
+	targets, err := gamecards.ResourceRemovalTargets(g, p, output, &position, registry)
+	testutil.AssertNoError(t, err, "resolve tags and adjacency")
+	testutil.AssertEqual(t, 0, len(targets), "tag alone is insufficient")
+	testutil.PlaceTileForPlayer(ctx, t, g, repo, otherID, "city", "3,-1,-2")
+	targets, err = gamecards.ResourceRemovalTargets(g, p, output, &position, registry)
+	testutil.AssertNoError(t, err, "resolve matching target")
+	testutil.AssertEqual(t, 3, targets[otherID], "generic resource type with both restrictions")
+	output.TargetRestriction.Selectors = []shared.Selector{{Tags: []shared.CardTag{shared.TagEarth}}}
+	targets, err = gamecards.ResourceRemovalTargets(g, p, output, &position, registry)
+	testutil.AssertNoError(t, err, "resolve nonmatching tag")
+	testutil.AssertEqual(t, 0, len(targets), "adjacency alone is insufficient")
+}
+
+func TestRestrictedResourceRemoval_UsesCardSelectors(t *testing.T) {
+	testCards := []gamecards.Card{
+		{ID: "venus-only", Type: gamecards.CardTypeActive, Tags: []shared.CardTag{shared.TagVenus}},
+		{ID: "science-only", Type: gamecards.CardTypeAutomated, Tags: []shared.CardTag{shared.TagScience}},
+		{ID: "venus-science", Type: gamecards.CardTypeActive, Cost: 12, Tags: []shared.CardTag{shared.TagVenus, shared.TagScience}},
+		{ID: "venus-event", Type: gamecards.CardTypeEvent, Tags: []shared.CardTag{shared.TagVenus}},
+		{ID: "wild-only", Type: gamecards.CardTypePrelude, Tags: []shared.CardTag{shared.TagWild}},
+	}
+	minCost := 10
+	for _, tc := range []struct {
+		name      string
+		cards     []string
+		selectors []shared.Selector
+		matches   bool
+	}{
+		{"tags on separate cards do not combine", []string{"venus-only", "science-only"}, []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus, shared.TagScience}}}, false},
+		{"tags on one card match", []string{"venus-science"}, []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus, shared.TagScience}}}, true},
+		{"selectors use OR", []string{"science-only"}, []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}, {Tags: []shared.CardTag{shared.TagScience}}}, true},
+		{"fields use AND", []string{"venus-only"}, []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}, CardTypes: []string{"automated"}}}, false},
+		{"cost constraint", []string{"venus-science"}, []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}, RequiredOriginalCost: &shared.MinMaxValue{Min: &minCost}}}, true},
+		{"cost constraint rejects", []string{"venus-only"}, []shared.Selector{{RequiredOriginalCost: &shared.MinMaxValue{Min: &minCost}}}, false},
+		{"event excluded", []string{"venus-event"}, []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}}, false},
+		{"wild is not a Venus tag", []string{"wild-only"}, []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, _, _, id, otherID := testutil.SetupTwoPlayerGame(t)
+			registry := testutil.CreateTestCardRegistryWithAdditionalCards(testCards)
+			actor, _ := g.GetPlayer(id)
+			target, _ := g.GetPlayer(otherID)
+			target.Resources().Set(shared.Resources{Credits: 10})
+			for _, id := range tc.cards {
+				c, err := registry.GetByID(id)
+				testutil.AssertNoError(t, err, "get card")
+				target.PlayedCards().AddCard(c.ID, c.Name, string(c.Type), nil)
+			}
+			output := shared.NewBasicResourceCondition(shared.ResourceCredit, -4, "any-player")
+			output.TargetRestriction = &shared.TargetRestriction{Selectors: tc.selectors}
+			targets, err := gamecards.ResourceRemovalTargets(g, actor, output, nil, registry)
+			testutil.AssertNoError(t, err, "evaluate selectors")
+			testutil.AssertEqual(t, tc.matches, targets[otherID] > 0, "card selector eligibility")
+		})
+	}
 }

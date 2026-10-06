@@ -11,11 +11,13 @@ import {
   EndGameIcon,
   BugIcon,
   CardsIcon,
+  ThoughtIcon,
 } from "./menuIcons.tsx";
 import SoundToggleButton from "./buttons/SoundToggleButton.tsx";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
+import { useBotThoughtsPreferenceStore } from "@/stores/botPresenceStore.ts";
 
 interface GameHamburgerMenuProps {
   isOpen: boolean;
@@ -39,6 +41,8 @@ const GameHamburgerMenu: React.FC<GameHamburgerMenuProps> = ({
   onEndGame,
 }) => {
   const menuItemHover = useHoverSound();
+  const showBotThoughts = useBotThoughtsPreferenceStore((s) => s.showBotThoughts);
+  const setShowBotThoughts = useBotThoughtsPreferenceStore((s) => s.setShowBotThoughts);
   const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
 
   useEffect(() => {
@@ -60,7 +64,7 @@ const GameHamburgerMenu: React.FC<GameHamburgerMenuProps> = ({
     if (!gameId) {
       return;
     }
-    const url = `${window.location.origin}/join/${gameId}`;
+    const url = `${window.location.origin}/game/${gameId}`;
     await navigator.clipboard.writeText(url);
     onClose();
   }, [gameId, onClose]);
@@ -88,7 +92,7 @@ const GameHamburgerMenu: React.FC<GameHamburgerMenuProps> = ({
         placement: "below",
       }}
       theme="menu"
-      width={200}
+      width={230}
       maxHeight="auto"
       animation="slideDown"
       excludeRef={anchorRef}
@@ -107,6 +111,16 @@ const GameHamburgerMenu: React.FC<GameHamburgerMenuProps> = ({
         />
         <MenuPopoverDivider />
         <SoundToggleButton />
+        <MenuPopoverDivider />
+        <MenuPopoverItem
+          icon={<ThoughtIcon />}
+          label={showBotThoughts ? "Hide bot thoughts" : "Show bot thoughts"}
+          onClick={() => {
+            menuItemHover.onClick?.();
+            setShowBotThoughts(!showBotThoughts);
+          }}
+          onMouseEnter={menuItemHover.onMouseEnter}
+        />
         <MenuPopoverDivider />
         <MenuPopoverItem
           icon={<CardsIcon />}

@@ -13,16 +13,27 @@ import TriggeredEffectLayout from "./components/TriggeredEffectLayout.tsx";
 import ImmediateResourceLayout from "./components/ImmediateResourceLayout.tsx";
 import DiscountLayout from "./components/DiscountLayout.tsx";
 import PaymentSubstituteLayout from "./components/PaymentSubstituteLayout.tsx";
-import StoragePaymentSubstituteLayout from "./components/StoragePaymentSubstituteLayout.tsx";
 import ValueModifierLayout from "./components/ValueModifierLayout.tsx";
 import DefenseLayout from "./components/DefenseLayout.tsx";
-import BehaviorIcon from "./components/BehaviorIcon.tsx";
+import { hasResourceVisual } from "./components/ResourceDisplay.tsx";
 
 function buildBehaviorLayout(
   behaviors: NonNullable<BehaviorSectionProps["behaviors"]>,
   presentation: BehaviorPresentation,
 ) {
-  const classified = classifyBehaviors(behaviors);
+  const classified = classifyBehaviors(behaviors).filter(({ behavior, type }) => {
+    if (["discount", "payment-substitute", "value-modifier", "defense"].includes(type)) {
+      return (behavior.outputs?.length ?? 0) > 0;
+    }
+    const resources = [
+      ...(behavior.inputs ?? []),
+      ...(behavior.outputs ?? []),
+      ...(behavior.choices ?? []).flatMap((choice) =>
+        (choice.inputs ?? []).concat(choice.outputs ?? []),
+      ),
+    ];
+    return resources.some(hasResourceVisual);
+  });
   const merged = mergeTriggeredEffects(mergeAutoProductionBehaviors(classified));
   const layout = analyzeCardLayout(merged, presentation === "inspection" ? Infinity : undefined);
   return {
@@ -53,6 +64,13 @@ function getBehaviorLayout(
     layouts.set(presentation, layout);
   }
   return layout;
+}
+
+export function hasBehaviorVisuals(
+  behaviors: BehaviorSectionProps["behaviors"],
+  presentation: BehaviorPresentation = "compact",
+): boolean {
+  return getBehaviorLayout(behaviors, presentation).optimizedBehaviors.length > 0;
 }
 
 const BehaviorSection: React.FC<BehaviorSectionProps> = ({
@@ -94,7 +112,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
     presentation,
   );
 
-  if (!behaviors || behaviors.length === 0) {
+  if (optimizedBehaviors.length === 0) {
     return null;
   }
 
@@ -110,26 +128,6 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
     );
   };
 
-  // Helper function to render icons (for ImmediateResourceLayout)
-  const renderIcon = (
-    resourceType: string,
-    isProduction: boolean,
-    isAttack: boolean,
-    context: "standalone" | "action" | "production" | "default",
-    isAffordable: boolean,
-  ): React.ReactNode => {
-    return (
-      <BehaviorIcon
-        resourceType={resourceType}
-        isProduction={isProduction}
-        isAttack={isAttack}
-        context={context}
-        isAffordable={isAffordable}
-        tileScaleInfo={tileScaleInfo}
-      />
-    );
-  };
-
   // Render individual behavior based on its type
   const renderBehavior = (
     classifiedBehavior: ClassifiedBehavior,
@@ -137,10 +135,12 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   ): React.ReactNode => {
     const { behavior, type } = classifiedBehavior;
     const layoutPlan = cardLayoutPlan.behaviors[index]?.layoutPlan;
-    const behaviorComputedOutputs =
-      classifiedBehavior.originalIndex !== undefined
-        ? computedValuesByIndex.get(classifiedBehavior.originalIndex)
-        : undefined;
+    const sourceIndices =
+      classifiedBehavior.originalIndices ??
+      (classifiedBehavior.originalIndex === undefined ? [] : [classifiedBehavior.originalIndex]);
+    const behaviorComputedOutputs = sourceIndices.flatMap(
+      (sourceIndex) => computedValuesByIndex.get(sourceIndex) ?? [],
+    );
 
     let content: React.ReactNode = null;
 
@@ -179,11 +179,8 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
         content = (
           <ImmediateResourceLayout
             behavior={behavior}
-            layoutPlan={layoutPlan}
             isResourceAffordable={checkResourceAffordable}
-            analyzeResourceDisplayWithConstraints={analyzeResourceDisplayWithConstraints}
             tileScaleInfo={tileScaleInfo}
-            renderIcon={renderIcon}
             computedOutputs={behaviorComputedOutputs}
           />
         );
@@ -195,10 +192,6 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
 
       case "payment-substitute":
         content = <PaymentSubstituteLayout behavior={behavior} />;
-        break;
-
-      case "storage-payment-substitute":
-        content = <StoragePaymentSubstituteLayout behavior={behavior} />;
         break;
 
       case "value-modifier":
@@ -219,6 +212,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
         isHovered={tooltipsEnabled && hoveredBehaviorIndex === index}
         onHover={tooltipsEnabled ? handleBehaviorHover : undefined}
         noContainer={noContainer}
+        cardId={cardId}
       >
         {content}
       </BehaviorContainer>
@@ -227,8 +221,8 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
 
   // Render behaviors with overflow handling if needed
   const containerClass = cardLayoutPlan.needsOverflowHandling
-    ? "flex flex-col gap-[3px] items-center w-full max-h-[120px] overflow-y-auto scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-0.5 [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-track]:rounded-px [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-thumb]:rounded-px max-md:gap-px"
-    : "flex flex-col gap-[3px] items-center w-full max-md:gap-px";
+    ? "flex flex-col gap-[var(--behavior-section-gap,3px)] items-center w-full max-h-[120px] overflow-y-auto overflow-x-hidden scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-0.5 [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-track]:rounded-px [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-thumb]:rounded-px max-md:gap-[var(--behavior-section-gap,1px)]"
+    : "flex flex-col gap-[var(--behavior-section-gap,3px)] items-center w-full max-md:gap-[var(--behavior-section-gap,1px)]";
 
   return (
     <div className={`behavior-section ${containerClass}`}>

@@ -8,11 +8,13 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"terraforming-mars-backend/internal/events"
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/colonies"
+	"terraforming-mars-backend/internal/game/colony"
 	"terraforming-mars-backend/internal/game/datastore"
 	"terraforming-mars-backend/internal/game/deck"
 	"terraforming-mars-backend/internal/game/global_parameters"
@@ -22,19 +24,21 @@ import (
 )
 
 type Game struct {
-	mu               sync.RWMutex
-	ds               *datastore.DataStore
-	id               string
-	globalParameters *global_parameters.GlobalParameters
-	currentTurn      *Turn
-	board            *board.Board
-	colonies         *colonies.Colonies
-	deck             *deck.Deck
-	players          map[string]*player.Player
-	eventBus         *events.EventBusImpl
-	milestones       *Milestones
-	awards           *Awards
-	vpCardLookup     VPCardLookup
+	mu                   sync.RWMutex
+	ds                   *datastore.DataStore
+	id                   string
+	globalParameters     *global_parameters.GlobalParameters
+	currentTurn          *Turn
+	board                *board.Board
+	colonies             *colonies.Colonies
+	deck                 *deck.Deck
+	players              map[string]*player.Player
+	eventBus             *events.EventBusImpl
+	milestones           *Milestones
+	awards               *Awards
+	vpCardLookup         VPCardLookup
+	firstActionExecutors map[string]func(context.Context, *Game, string) error
+	executingFirstAction atomic.Bool
 }
 
 func (g *Game) update(fn func(s *datastore.GameState)) {
@@ -110,7 +114,7 @@ func NewGame(
 		SelectStartingCardsPhases:  make(map[string]*shared.SelectStartingCardsPhase),
 		SelectPreludeCardsPhases:   make(map[string]*shared.SelectPreludeCardsPhase),
 		DeferredStartingChoices:    make(map[string]*shared.DeferredStartingChoices),
-		TradeFleets:                make(map[string]bool),
+		TradeFleets:                make(map[string]colony.TradeFleet),
 		Seed:                       mathrand.Uint64(),
 	}
 
@@ -223,6 +227,23 @@ func (g *Game) HostPlayerID() string {
 func (g *Game) State() *datastore.GameState {
 	state, _ := g.ds.GetGame(g.id)
 	return state
+}
+
+// BotSpendUSD returns the total LLM spend of all bots in this game.
+func (g *Game) BotSpendUSD() float64 {
+	var v float64
+	g.read(func(s *datastore.GameState) { v = s.BotSpendUSD })
+	return v
+}
+
+// AddBotSpend adds to the game's bot LLM spend and returns the new total.
+func (g *Game) AddBotSpend(amountUSD float64) float64 {
+	var total float64
+	g.update(func(s *datastore.GameState) {
+		s.BotSpendUSD += amountUSD
+		total = s.BotSpendUSD
+	})
+	return total
 }
 
 // EventBus returns the event bus for publishing domain events
@@ -417,7 +438,7 @@ func (g *Game) AddNewPlayer(ctx context.Context, playerID, playerName string) (*
 }
 
 // AddNewBotPlayer creates a new bot player backed by this game's state and adds them to the game
-func (g *Game) AddNewBotPlayer(ctx context.Context, botID, botName string, difficulty player.BotDifficulty, speed player.BotSpeed) (*player.Player, error) {
+func (g *Game) AddNewBotPlayer(ctx context.Context, botID, botName, persona string) (*player.Player, error) {
 	if err := g.ds.UpdateGame(g.id, func(s *datastore.GameState) {
 		s.Players[botID] = &datastore.PlayerState{
 			ID:                 botID,
@@ -425,8 +446,7 @@ func (g *Game) AddNewBotPlayer(ctx context.Context, botID, botName string, diffi
 			Connected:          false,
 			PlayerType:         "bot",
 			BotStatus:          string(player.BotStatusLoading),
-			BotDifficulty:      string(difficulty),
-			BotSpeed:           string(speed),
+			BotPersona:         persona,
 			TerraformRating:    20,
 			HandCardIDs:        []string{},
 			PlayedCardIDs:      []string{},
@@ -442,6 +462,69 @@ func (g *Game) AddNewBotPlayer(ctx context.Context, botID, botName string, diffi
 		return nil, err
 	}
 	return p, nil
+}
+
+// PlayerIdentity is the part of a player that is kept when a game is rebuilt.
+type PlayerIdentity struct {
+	ID                 string
+	Name               string
+	Color              string
+	PlayerType         string
+	BotStatus          string
+	BotPersona         string
+	Connected          bool
+	PendingDemoChoices *shared.PendingDemoChoices
+}
+
+// IdentityOf returns the identity of a player state.
+func IdentityOf(s *datastore.PlayerState) PlayerIdentity {
+	return PlayerIdentity{
+		ID:                 s.ID,
+		Name:               s.Name,
+		Color:              s.Color,
+		PlayerType:         s.PlayerType,
+		BotStatus:          s.BotStatus,
+		BotPersona:         s.BotPersona,
+		Connected:          s.Connected,
+		PendingDemoChoices: s.PendingDemoChoices,
+	}
+}
+
+// AddRestoredPlayer adds a fresh player that keeps the given identity.
+func (g *Game) AddRestoredPlayer(ctx context.Context, identity PlayerIdentity) (*player.Player, error) {
+	if err := g.ds.UpdateGame(g.id, func(s *datastore.GameState) {
+		s.Players[identity.ID] = &datastore.PlayerState{
+			ID:                 identity.ID,
+			Name:               identity.Name,
+			Color:              identity.Color,
+			Connected:          identity.Connected,
+			PlayerType:         identity.PlayerType,
+			BotStatus:          identity.BotStatus,
+			BotPersona:         identity.BotPersona,
+			PendingDemoChoices: identity.PendingDemoChoices,
+			TerraformRating:    20,
+			HandCardIDs:        []string{},
+			PlayedCardIDs:      []string{},
+			ResourceStorage:    make(map[string]int),
+			BonusTags:          make(map[shared.CardTag]int),
+			GenerationalEvents: make(map[shared.GenerationalEvent]int),
+		}
+	}); err != nil {
+		return nil, fmt.Errorf("failed to restore player %s: %w", identity.ID, err)
+	}
+	p := player.NewPlayer(g.ds, g.id, identity.ID, g.eventBus)
+	if err := g.AddPlayer(ctx, p); err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// RestoreSocial copies spectators and chat from a previous state of this game.
+func (g *Game) RestoreSocial(spectators map[string]*shared.SpectatorState, chat []shared.ChatMessage) {
+	g.update(func(s *datastore.GameState) {
+		s.Spectators = spectators
+		s.ChatMessages = chat
+	})
 }
 
 func (g *Game) AddPlayer(ctx context.Context, p *player.Player) error {
@@ -766,6 +849,31 @@ func (g *Game) SetCurrentTurn(ctx context.Context, playerID string, actionsRemai
 	})
 	g.currentTurn = NewTurn(g.ds, g.id)
 	g.mu.Unlock()
+	if err := g.ExecuteFirstActionIfNeeded(ctx, playerID); err != nil {
+		return err
+	}
+
+	if g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{
+			GameID:    g.id,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return nil
+}
+
+// SetCurrentTurnActions replaces the current turn's remaining and total actions.
+func (g *Game) SetCurrentTurnActions(ctx context.Context, actions int) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.update(func(s *datastore.GameState) {
+		s.CurrentTurnActions = actions
+		s.CurrentTurnTotalActions = actions
+		s.UpdatedAt = time.Now()
+	})
 
 	if g.eventBus != nil {
 		events.Publish(g.eventBus, events.GameStateChangedEvent{
@@ -859,6 +967,7 @@ func (g *Game) GetPendingTileSelection(playerID string) *shared.PendingTileSelec
 			return
 		}
 		selectionCopy := *selection
+		selectionCopy.TileRestrictions = selection.TileRestrictions.Clone()
 		result = &selectionCopy
 	})
 	return result
@@ -874,6 +983,7 @@ func (g *Game) SetPendingTileSelection(ctx context.Context, playerID string, sel
 			delete(s.PendingTileSelections, playerID)
 		} else {
 			selectionCopy := *selection
+			selectionCopy.TileRestrictions = selection.TileRestrictions.Clone()
 			s.PendingTileSelections[playerID] = &selectionCopy
 		}
 		s.UpdatedAt = time.Now()
@@ -1013,6 +1123,7 @@ func (g *Game) GetForcedFirstAction(playerID string) *shared.ForcedFirstAction {
 			return
 		}
 		actionCopy := *action
+		actionCopy.BehaviorIndices = append([]int{}, action.BehaviorIndices...)
 		result = &actionCopy
 	})
 	return result
@@ -1028,6 +1139,7 @@ func (g *Game) SetForcedFirstAction(ctx context.Context, playerID string, action
 			delete(s.ForcedFirstActions, playerID)
 		} else {
 			actionCopy := *action
+			actionCopy.BehaviorIndices = append([]int{}, action.BehaviorIndices...)
 			s.ForcedFirstActions[playerID] = &actionCopy
 		}
 		s.UpdatedAt = time.Now()
@@ -1238,6 +1350,9 @@ func (g *Game) ProcessNextTile(ctx context.Context, playerID string) error {
 		return nil
 	}
 
+	if nextTileType == "ocean" && g.GlobalParameters().Oceans() >= g.GlobalParameters().GetMaxOceans() {
+		return g.ProcessNextTile(ctx, playerID)
+	}
 	availableHexes := g.calculateAvailableHexesForTile(nextTileType, playerID, tileRestrictions)
 
 	if len(availableHexes) == 0 {
@@ -1245,11 +1360,12 @@ func (g *Game) ProcessNextTile(ctx context.Context, playerID string) error {
 	}
 
 	err := g.SetPendingTileSelection(ctx, playerID, &shared.PendingTileSelection{
-		TileType:       nextTileType,
-		AvailableHexes: availableHexes,
-		Source:         source,
-		SourceCardID:   sourceCardID,
-		OnComplete:     onComplete,
+		TileType:         nextTileType,
+		TileRestrictions: tileRestrictions,
+		AvailableHexes:   availableHexes,
+		Source:           source,
+		SourceCardID:     sourceCardID,
+		OnComplete:       onComplete,
 	})
 
 	return err
@@ -1266,6 +1382,11 @@ func (g *Game) ProcessNextTile(ctx context.Context, playerID string) error {
 func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, tileRestrictions *shared.TileRestrictions) []string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+	return g.calculateAvailableHexesForTileLocked(tileType, playerID, tileRestrictions)
+}
+
+// calculateAvailableHexesForTileLocked preserves restrictions during fallback without reacquiring the game lock.
+func (g *Game) calculateAvailableHexesForTileLocked(tileType string, playerID string, tileRestrictions *shared.TileRestrictions) []string {
 
 	if g.board == nil {
 		return []string{}
@@ -1280,6 +1401,20 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 	if tileRestrictions != nil {
 		boardTags = tileRestrictions.BoardTags
 		adjacency = tileRestrictions.Adjacency
+	}
+
+	if tileRestrictions != nil && tileRestrictions.Area != "" && tileRestrictions.Area != "land" && tileRestrictions.Area != "ocean" {
+		return availableHexes
+	}
+	matchesArea := func(tile board.Tile, defaultArea string) bool {
+		area := defaultArea
+		if tileRestrictions != nil && tileRestrictions.Area != "" {
+			area = tileRestrictions.Area
+		}
+		if area == "ocean" {
+			return tile.Type == shared.ResourceOceanSpace
+		}
+		return tile.Type == shared.ResourceLandTile
 	}
 
 	// Helper to check if tile has any of the required board tags
@@ -1444,11 +1579,30 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 		if tile.OccupiedBy != nil {
 			continue
 		}
+		// Area exceptions do not waive ownership, reservation or adjacency restrictions.
+		if isReservedByOther(tile) {
+			continue
+		}
+		if !passesAdjacentRestrictions(tile) {
+			continue
+		}
+		if adjacency == "none" && hasAnyAdjacentOccupied(tile) {
+			continue
+		}
+		if tileRestrictions != nil && len(tileRestrictions.OnBonusType) > 0 && !hasBonusOfType(tile, tileRestrictions.OnBonusType) {
+			continue
+		}
+		if len(boardTags) > 0 && !tileHasRequiredTag(tile, boardTags) {
+			continue
+		}
+		if len(boardTags) == 0 && tileHasAnyTag(tile) && tileType != "volcano" {
+			continue
+		}
 
 		switch tileType {
 		case "land-claim":
 			// Land claim can only be placed on unoccupied, unreserved land tiles
-			if tile.Type != shared.ResourceLandTile {
+			if !matchesArea(tile, "land") {
 				continue
 			}
 			// Exclude reserved areas (tagged tiles like Noctis City)
@@ -1462,7 +1616,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			availableHexes = append(availableHexes, tile.Coordinates.String())
 
 		case "city":
-			if tile.Type != shared.ResourceLandTile {
+			if !matchesArea(tile, "land") {
 				continue
 			}
 
@@ -1553,8 +1707,8 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 
 		case "greenery", "world-tree":
 			// Check if restricted to ocean tiles (Mangrove card)
-			if tileRestrictions != nil && tileRestrictions.OnTileType == "ocean" {
-				if tile.Type == shared.ResourceOceanSpace {
+			if tileRestrictions != nil && tileRestrictions.Area == "ocean" {
+				if matchesArea(tile, "ocean") {
 					availableHexes = append(availableHexes, tile.Coordinates.String())
 				}
 				continue
@@ -1569,7 +1723,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			if len(boardTags) == 0 && tileHasAnyTag(tile) {
 				continue
 			}
-			if tile.Type == shared.ResourceLandTile {
+			if matchesArea(tile, "land") {
 				// Apply adjacency restrictions if set (e.g., Ecological Zone: adjacent to greenery)
 				if !passesAdjacentRestrictions(tile) {
 					continue
@@ -1578,7 +1732,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			}
 
 		case "ocean":
-			if tile.Type == shared.ResourceOceanSpace {
+			if matchesArea(tile, "ocean") {
 				availableHexes = append(availableHexes, tile.Coordinates.String())
 			}
 
@@ -1586,19 +1740,19 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			if !tileHasRequiredTag(tile, []string{board.BoardTagVolcanic}) {
 				continue
 			}
-			if tile.Type == shared.ResourceLandTile {
+			if matchesArea(tile, "land") {
 				availableHexes = append(availableHexes, tile.Coordinates.String())
 			}
 
 		case "mohole":
-			if tile.Type == shared.ResourceOceanSpace {
+			if matchesArea(tile, "ocean") {
 				availableHexes = append(availableHexes, tile.Coordinates.String())
 			}
 
 		default:
 			// Handle ocean-space placement (e.g., Mohole Area)
-			if tileRestrictions != nil && tileRestrictions.OnTileType == "ocean" {
-				if tile.Type == shared.ResourceOceanSpace {
+			if tileRestrictions != nil && tileRestrictions.Area == "ocean" {
+				if matchesArea(tile, "ocean") {
 					availableHexes = append(availableHexes, tile.Coordinates.String())
 				}
 				continue
@@ -1623,7 +1777,7 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 			}
 
 			// Must be on land
-			if tile.Type != shared.ResourceLandTile {
+			if !matchesArea(tile, "land") {
 				continue
 			}
 
@@ -1652,20 +1806,30 @@ func (g *Game) calculateAvailableHexesForTile(tileType string, playerID string, 
 	}
 
 	if len(availableHexes) == 0 && tileRestrictions != nil {
-		// Board tags fallback (e.g., Noctis City already occupied)
-		canFallback := len(boardTags) > 0
-		// AdjacentToOwned-only fallback: greenery must be placed adjacent to own tiles if possible,
-		// but if no owned tiles exist, placement is allowed anywhere (TM rules)
-		if tileRestrictions.AdjacentToOwned && tileRestrictions.AdjacentToType == "" && len(tileRestrictions.OnBonusType) == 0 {
+		fallback := *tileRestrictions
+		canFallback := false
+		if len(boardTags) > 0 {
+			hasReservedSpace := false
+			for _, tile := range tiles {
+				if tileHasRequiredTag(tile, boardTags) {
+					hasReservedSpace = true
+					break
+				}
+			}
+			if !hasReservedSpace {
+				fallback.BoardTags = nil
+				canFallback = true
+			}
+		}
+		// Only greenery's standard ownership adjacency is a preference, not a requirement.
+		if (tileType == "greenery" || tileType == "world-tree") && tileRestrictions.AdjacentToOwned && tileRestrictions.AdjacentToType == "" && len(tileRestrictions.OnBonusType) == 0 {
+			fallback.AdjacentToOwned = false
 			canFallback = true
 		}
 		if canFallback {
-			slog.Default().Debug("No tiles match restrictions, falling back to normal placement",
-				slog.String("tile_type", tileType))
-			return g.calculateAvailableHexesForTile(tileType, playerID, nil)
+			return g.calculateAvailableHexesForTileLocked(tileType, playerID, &fallback)
 		}
 	}
-
 	return availableHexes
 }
 
@@ -1735,6 +1899,7 @@ func (g *Game) GetDeferredStartingChoices(playerID string) *shared.DeferredStart
 			return
 		}
 		choicesCopy := *choices
+		choicesCopy.Payment.Allocations = append([]shared.PaymentAllocation(nil), choices.Payment.Allocations...)
 		result = &choicesCopy
 	})
 	return result
@@ -1750,6 +1915,7 @@ func (g *Game) SetDeferredStartingChoices(ctx context.Context, playerID string, 
 			delete(s.DeferredStartingChoices, playerID)
 		} else {
 			choicesCopy := *choices
+			choicesCopy.Payment.Allocations = append([]shared.PaymentAllocation(nil), choices.Payment.Allocations...)
 			s.DeferredStartingChoices[playerID] = &choicesCopy
 		}
 		s.UpdatedAt = time.Now()
@@ -1773,10 +1939,10 @@ func (g *Game) MarkCorpApplied(playerID string) {
 	})
 }
 
-func (g *Game) MarkPreludesApplied(playerID string) {
+func (g *Game) MarkPreludeApplied(playerID string) {
 	g.update(func(s *datastore.GameState) {
 		if choices, ok := s.DeferredStartingChoices[playerID]; ok && choices != nil {
-			choices.PreludesApplied = true
+			choices.PreludesAppliedCount++
 		}
 	})
 }
@@ -1819,6 +1985,34 @@ func (g *Game) InitPhaseConfirmVersion() int {
 	return v
 }
 
+// InitPhaseRoster reports whether the init phase is showing the final roster of all players
+// before the action phase begins.
+func (g *Game) InitPhaseRoster() bool {
+	var v bool
+	g.read(func(s *datastore.GameState) { v = s.InitPhaseRoster })
+	return v
+}
+
+func (g *Game) SetInitPhaseRoster(ctx context.Context, roster bool) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.update(func(s *datastore.GameState) {
+		s.InitPhaseRoster = roster
+		s.UpdatedAt = time.Now()
+	})
+
+	if g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{
+			GameID:    g.id,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return nil
+}
+
 func (g *Game) SetInitPhaseWaitingForConfirm(ctx context.Context, waiting bool) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -1854,9 +2048,9 @@ func (g *Game) CountAllColonies() int {
 
 func (g *Game) InitializeTradeFleets(playerIDs []string) {
 	g.update(func(s *datastore.GameState) {
-		s.TradeFleets = make(map[string]bool, len(playerIDs))
+		s.TradeFleets = make(map[string]colony.TradeFleet, len(playerIDs))
 		for _, id := range playerIDs {
-			s.TradeFleets[id] = true
+			s.TradeFleets[id] = colony.TradeFleet{Capacity: 1}
 		}
 		s.UpdatedAt = time.Now()
 	})
@@ -1909,4 +2103,68 @@ func (g *Game) GetProjectFundingState(projectID string) *projectfunding.ProjectS
 		}
 	})
 	return result
+}
+
+// SetFirstActionExecutor installs the owner's behavior executor used at turn entry.
+func (g *Game) SetFirstActionExecutor(playerID string, execute func(context.Context, *Game, string) error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.firstActionExecutors == nil {
+		g.firstActionExecutors = make(map[string]func(context.Context, *Game, string) error)
+	}
+	g.firstActionExecutors[playerID] = execute
+}
+
+// ExecuteFirstActionIfNeeded executes a queued first action only on its owner's action-phase turn.
+func (g *Game) ExecuteFirstActionIfNeeded(ctx context.Context, playerID string) error {
+	if !g.executingFirstAction.CompareAndSwap(false, true) {
+		return nil
+	}
+	defer g.executingFirstAction.Store(false)
+	turn := g.CurrentTurn()
+	pending := g.GetForcedFirstAction(playerID)
+	if g.CurrentPhase() != shared.GamePhaseAction || turn == nil || turn.PlayerID() != playerID || turn.ActionsRemaining() == 0 || pending == nil || pending.State != "queued" {
+		return nil
+	}
+	g.mu.RLock()
+	execute := g.firstActionExecutors[playerID]
+	g.mu.RUnlock()
+	if execute == nil {
+		return fmt.Errorf("missing first action executor")
+	}
+	pending.State = "resolving"
+	if err := g.SetForcedFirstAction(ctx, playerID, pending); err != nil {
+		return err
+	}
+	if err := execute(ctx, g, playerID); err != nil {
+		return err
+	}
+	g.executingFirstAction.Store(false)
+	g.CompleteFirstActionIfReady(playerID)
+	return nil
+}
+
+// CompleteFirstActionIfReady finishes a first action after all of its selections resolve.
+func (g *Game) CompleteFirstActionIfReady(playerID string) bool {
+	if g.executingFirstAction.Load() || g.HasAnyPendingSelection(playerID) || g.GetPendingTileSelectionQueue(playerID) != nil {
+		return false
+	}
+	completed := false
+	g.update(func(s *datastore.GameState) {
+		pending := s.ForcedFirstActions[playerID]
+		if s.CurrentPhase != shared.GamePhaseAction || pending == nil || pending.State != "resolving" || s.CurrentTurnPlayerID != playerID {
+			return
+		}
+		delete(s.ForcedFirstActions, playerID)
+		s.GlobalActionCounter++
+		if s.CurrentTurnActions > 0 {
+			s.CurrentTurnActions--
+		}
+		s.UpdatedAt = time.Now()
+		completed = true
+	})
+	if completed && g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{GameID: g.id, Timestamp: time.Now()})
+	}
+	return completed
 }

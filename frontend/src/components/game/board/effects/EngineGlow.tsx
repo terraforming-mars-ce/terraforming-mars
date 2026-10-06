@@ -93,6 +93,7 @@ function createFlameMaterial(smokeTexture: THREE.Texture | undefined): THREE.Sha
     transparent: true,
     depthWrite: false,
     side: THREE.DoubleSide,
+    forceSinglePass: true,
     blending: THREE.AdditiveBlending,
   });
 }

@@ -36,7 +36,7 @@ func NewConfirmProductionCardsAction(
 // Execute performs the confirm production cards action.
 // When randomBuy is true and the selection is empty, a single fresh card is
 // drawn from the deck and bought (subject to the AllowRandomBuy setting).
-func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID string, playerID string, selectedCardIDs []string, randomBuy bool) error {
+func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID string, playerID string, selectedCardIDs []string, randomBuy bool, payment shared.Payment) error {
 	log := a.InitLogger(gameID, playerID).With(
 		slog.String("action", "confirm_production_cards"),
 		slog.Any("selected_card_ids", selectedCardIDs),
@@ -81,13 +81,7 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 		if len(selectedCardIDs) > 0 {
 			return fmt.Errorf("random buy requires an empty selection")
 		}
-		drawn, err := g.Deck().DrawProjectCards(ctx, 1)
-		if err != nil || len(drawn) == 0 {
-			log.Error("Failed to draw random card from deck", slog.Any("error", err))
-			return fmt.Errorf("failed to draw random card: %w", err)
-		}
-		selectedCardIDs = drawn
-		log.Debug("Random buy drew card from deck", slog.String("card_id", drawn[0]))
+
 	} else {
 		availableSet := make(map[string]bool)
 		for _, id := range productionPhase.AvailableCards {
@@ -98,30 +92,37 @@ func (a *ConfirmProductionCardsAction) Execute(ctx context.Context, gameID strin
 				log.Error("Selected card not available", slog.String("card_id", cardID))
 				return fmt.Errorf("card %s not available for selection", cardID)
 			}
+			delete(availableSet, cardID)
 		}
 	}
 
 	calc := gamecards.NewRequirementModifierCalculator(a.CardRegistry())
 	cardBuyDiscounts := calc.CalculateActionDiscounts(player, shared.ActionCardBuying)
 	costPerCard := max(3-cardBuyDiscounts[shared.ResourceCredit], 0)
-	cost := len(selectedCardIDs) * costPerCard
-
-	resources := player.Resources().Get()
-	if resources.Credits < cost {
-		log.Error("Insufficient credits",
-			slog.Int("cost", cost),
-			slog.Int("available", resources.Credits))
-		return fmt.Errorf("insufficient credits: need %d, have %d", cost, resources.Credits)
+	count := len(selectedCardIDs)
+	if randomBuy {
+		count = 1
 	}
+	cost := count * costPerCard
 
-	player.Resources().Add(map[shared.ResourceType]int{
-		shared.ResourceCredit: -cost,
-	})
-
-	resources = player.Resources().Get()
-	log.Debug("Resources updated",
-		slog.Int("cost", cost),
-		slog.Int("remaining_credits", resources.Credits))
+	quote, err := gamecards.QuotePayment(player, g, a.CardRegistry(), gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: cost}, Action: "card-buying"})
+	if err != nil {
+		return err
+	}
+	paymentPlan, err := gamecards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
+	}
+	if randomBuy {
+		drawn, err := g.Deck().DrawProjectCards(ctx, 1)
+		if err != nil || len(drawn) == 0 {
+			log.Error("Failed to draw random card from deck", slog.Any("error", err))
+			return fmt.Errorf("failed to draw random card: %w", err)
+		}
+		selectedCardIDs = drawn
+		log.Debug("Random buy drew card from deck", slog.String("card_id", drawn[0]))
+	}
+	gamecards.ApplyPayment(player, paymentPlan)
 
 	log.Debug("Adding cards to player hand",
 		slog.Any("card_ids", selectedCardIDs),

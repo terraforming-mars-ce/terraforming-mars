@@ -73,13 +73,7 @@ func CalculateMilestoneState(
 	}
 
 	cost := def.ClaimCost
-	if p.Resources().Get().Credits < cost {
-		errors = append(errors, player.StateError{
-			Code:     player.ErrorCodeInsufficientCredits,
-			Category: player.ErrorCategoryCost,
-			Message:  "Cannot afford",
-		})
-	}
+	errors = append(errors, paymentAffordability(p, g, cardRegistry, gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: cost}, Action: "claim-milestone"})...)
 
 	costMap := map[string]int{string(shared.ResourceCredit): cost}
 
@@ -98,6 +92,7 @@ func CalculateAwardState(
 	p *player.Player,
 	g *game.Game,
 	awardRegistry award.AwardRegistry,
+	cardRegistry gamecards.CardRegistry,
 ) player.EntityState {
 	var errors []player.StateError
 	metadata := make(map[string]interface{})
@@ -141,13 +136,7 @@ func CalculateAwardState(
 	cost := def.GetCostForFundedCount(gameAwards.FundedCount())
 	metadata["fundingCost"] = cost
 
-	if p.Resources().Get().Credits < cost {
-		errors = append(errors, player.StateError{
-			Code:     player.ErrorCodeInsufficientCredits,
-			Category: player.ErrorCategoryCost,
-			Message:  "Cannot afford",
-		})
-	}
+	errors = append(errors, paymentAffordability(p, g, cardRegistry, gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: cost}, Action: "fund-award"})...)
 
 	costMap := map[string]int{string(shared.ResourceCredit): cost}
 

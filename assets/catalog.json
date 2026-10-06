@@ -2979,6 +2979,16 @@
       "profile": "copy"
     },
     {
+      "id": "models/pines",
+      "source": "models/pines.glb",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://www.cgtrader.com/free-3d-models/plant/conifer/free-pine-trees-sample-model-6ce9f61e2ff2bc4b922aeda874e96d5b",
+        "license": "CGTrader Royalty Free License",
+        "maps": "Pine4m LOD2 (262 tris) converted from Collada; diffuse resized to 512, leaf/branch brightened 1.3x with a cool green tint"
+      }
+    },
+    {
       "id": "icons/resources/animal",
       "source": "icons/resources/animal.png",
       "profile": "icon"
@@ -3476,6 +3486,11 @@
       "profile": "copy"
     },
     {
+      "id": "audio/effects/nuclear-blast",
+      "source": "audio/effects/nuclear-blast.mp3",
+      "profile": "copy"
+    },
+    {
       "id": "audio/music/dreams",
       "source": "audio/music/dreams.mp3",
       "profile": "copy"
@@ -3693,6 +3708,86 @@
         "url": "https://polyhaven.com/a/ribbed_concrete_wall",
         "license": "CC0-1.0",
         "maps": "Roughness; linear 8-bit from EXR, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/frost-color",
+      "source": "textures/terrain/frost-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/snow_02",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/frost-detail",
+      "source": "textures/terrain/frost-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/snow_02",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/frost-patchy-color",
+      "source": "textures/terrain/frost-patchy-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/snow_field_aerial",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/frost-patchy-detail",
+      "source": "textures/terrain/frost-patchy-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://polyhaven.com/a/snow_field_aerial",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ice-solid-color",
+      "source": "textures/terrain/ice-solid-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://ambientcg.com/view?id=Ice001",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ice-solid-detail",
+      "source": "textures/terrain/ice-solid-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://ambientcg.com/view?id=Ice001",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ice-thin-color",
+      "source": "textures/terrain/ice-thin-color.webp",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://ambientcg.com/view?id=Ice003",
+        "license": "CC0-1.0",
+        "maps": "Diffuse (sRGB), 1K"
+      }
+    },
+    {
+      "id": "textures/terrain/ice-thin-detail",
+      "source": "textures/terrain/ice-thin-detail.png",
+      "profile": "copy",
+      "provenance": {
+        "url": "https://ambientcg.com/view?id=Ice003",
+        "license": "CC0-1.0",
+        "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
       }
     }
   ]

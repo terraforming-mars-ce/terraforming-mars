@@ -20,15 +20,16 @@ type ConfirmBehaviorChoiceAction struct {
 func NewConfirmBehaviorChoiceAction(
 	gameRepo game.GameRepository,
 	cardRegistry gamecards.CardRegistry,
+	stateRepo game.GameStateRepository,
 	logger *slog.Logger,
 ) *ConfirmBehaviorChoiceAction {
 	return &ConfirmBehaviorChoiceAction{
-		BaseAction: baseaction.NewBaseAction(gameRepo, cardRegistry),
+		BaseAction: baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),
 	}
 }
 
 // Execute performs the confirm behavior choice action
-func (a *ConfirmBehaviorChoiceAction) Execute(ctx context.Context, gameID string, playerID string, choiceIndex int, cardStorageTargets []string) error {
+func (a *ConfirmBehaviorChoiceAction) Execute(ctx context.Context, gameID string, playerID string, resolutionID string, choiceIndex int, cardStorageTargets []string) error {
 	log := a.InitLogger(gameID, playerID).With(
 		slog.String("action", "confirm_behavior_choice"),
 		slog.Int("choice_index", choiceIndex),
@@ -45,8 +46,8 @@ func (a *ConfirmBehaviorChoiceAction) Execute(ctx context.Context, gameID string
 		return err
 	}
 
-	selection := p.Selection().GetPendingBehaviorChoiceSelection()
-	if selection == nil {
+	selection := p.Selection().GetPendingBehaviorResolution(resolutionID)
+	if selection == nil || selection.Kind != "choice" {
 		log.Warn("No pending behavior choice selection found")
 		return fmt.Errorf("no pending behavior choice selection found")
 	}
@@ -61,20 +62,28 @@ func (a *ConfirmBehaviorChoiceAction) Execute(ctx context.Context, gameID string
 	selectedChoice := selection.Choices[choiceIndex]
 
 	// Validate choice requirements before applying
-	if choiceErrors := baseaction.CalculateChoiceErrors(selectedChoice, p, g, a.CardRegistry()); len(choiceErrors) > 0 {
+	if choiceErrors := baseaction.CalculateResolutionChoiceErrors(selectedChoice, selection, p, g, a.CardRegistry()); len(choiceErrors) > 0 {
 		log.Warn("Choice requirements not met",
 			slog.Int("choice_index", choiceIndex),
 			slog.String("error", choiceErrors[0].Message))
 		return fmt.Errorf("choice %d requirements not met: %s", choiceIndex, choiceErrors[0].Message)
 	}
 
+	if err := baseaction.ValidateResolutionStorageTargets(selectedChoice, cardStorageTargets, p, a.CardRegistry()); err != nil {
+		return err
+	}
 	applier := gamecards.NewBehaviorApplier(p, g, selection.Source, slog.Default()).
 		WithSourceCardID(selection.SourceCardID).
+		WithTriggeringCard(selection.TriggeringCardID, selection.TriggeringPlayerID).
 		WithCardRegistry(a.CardRegistry()).
 		WithSourceType(shared.SourceTypePassiveEffect)
 
 	if len(cardStorageTargets) > 0 {
 		applier = applier.WithTargetCardIDs(cardStorageTargets)
+	}
+
+	if err := applier.ValidateResourceOutputs(selectedChoice.Outputs); err != nil {
+		return err
 	}
 
 	// Apply inputs (deduct resources)
@@ -86,15 +95,20 @@ func (a *ConfirmBehaviorChoiceAction) Execute(ctx context.Context, gameID string
 	}
 
 	// Apply outputs (add resources)
+	var calculatedOutputs []shared.CalculatedOutput
 	if len(selectedChoice.Outputs) > 0 {
-		if err := applier.ApplyOutputs(ctx, selectedChoice.Outputs); err != nil {
+		var err error
+		calculatedOutputs, err = applier.ApplyOutputsAndGetCalculated(ctx, selectedChoice.Outputs)
+		if err != nil {
 			log.Error("Failed to apply choice outputs", slog.Any("error", err))
 			return fmt.Errorf("failed to apply choice outputs: %w", err)
 		}
 	}
 
 	// Clear the pending selection
-	p.Selection().SetPendingBehaviorChoiceSelection(nil)
+	p.Selection().RemovePendingBehaviorResolution(resolutionID)
+	a.WriteStateLogWithChoiceAndOutputs(ctx, g, selection.Source, shared.SourceTypePassiveEffect, playerID, "Resolved effect", &choiceIndex, calculatedOutputs)
+	baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 
 	log.Info("Behavior choice confirmation completed",
 		slog.String("source", selection.Source),

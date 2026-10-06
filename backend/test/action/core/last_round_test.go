@@ -71,9 +71,9 @@ func TestLastRound_FinalProductionRunsBeforeScoring(t *testing.T) {
 	testutil.AssertEqual(t, expectedP2Credits, p2After.Resources().Get().Credits, "P2 credits should include final production")
 
 	// Both players confirm production (no cards to select)
-	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P1 confirm production")
-	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P2 confirm production")
 
 	// Now game should be completed

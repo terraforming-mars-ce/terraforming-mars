@@ -4,34 +4,19 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	rand "math/rand/v2"
-	"time"
 
 	"github.com/google/uuid"
 
 	"terraforming-mars-backend/internal/action"
 	"terraforming-mars-backend/internal/game"
 	gamecards "terraforming-mars-backend/internal/game/cards"
-	playerPkg "terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
 )
 
-var botNames = []string{
-	"HAL 9000", "GLaDOS", "SHODAN", "Cortana", "JARVIS",
-	"Deep Thought", "WOPR", "MU-TH-UR", "Skynet", "Data",
-	"Bishop", "Ash", "CASE", "TARS", "Marvin",
-	"R2-D2", "C-3PO", "Wall-E", "Bender", "Sonny",
-}
-
-// BotHealthChecker verifies that a Claude API key is valid and generates a greeting.
-type BotHealthChecker interface {
-	CheckHealth(ctx context.Context, apiKey, model, botName, difficulty string) (string, error)
-}
-
-// BotBroadcaster broadcasts game state and chat updates.
-type BotBroadcaster interface {
-	BroadcastGameState(gameID string, playerIDs []string)
-	BroadcastChatMessage(gameID string, chatMsg shared.ChatMessage)
+// BotLifecycle assigns bot identities and checks a new bot's credential in the background.
+type BotLifecycle interface {
+	AssignIdentity(seed uint64, takenNames []string) (name, personaID string)
+	PrepareBot(gameID, playerID string)
 }
 
 // AddBotAction handles adding a bot player to a game lobby
@@ -39,8 +24,7 @@ type AddBotAction struct {
 	gameRepo          game.GameRepository
 	cardRegistry      gamecards.CardRegistry
 	colonyBonusLookup gamecards.ColonyBonusLookup
-	healthChecker     BotHealthChecker
-	broadcaster       BotBroadcaster
+	bots              BotLifecycle
 	logger            *slog.Logger
 }
 
@@ -53,8 +37,7 @@ type AddBotResult struct {
 func NewAddBotAction(
 	gameRepo game.GameRepository,
 	cardRegistry gamecards.CardRegistry,
-	healthChecker BotHealthChecker,
-	broadcaster BotBroadcaster,
+	bots BotLifecycle,
 	logger *slog.Logger,
 	colonyBonusLookup ...gamecards.ColonyBonusLookup,
 ) *AddBotAction {
@@ -66,34 +49,36 @@ func NewAddBotAction(
 		gameRepo:          gameRepo,
 		cardRegistry:      cardRegistry,
 		colonyBonusLookup: lookup,
-		healthChecker:     healthChecker,
-		broadcaster:       broadcaster,
+		bots:              bots,
 		logger:            logger,
 	}
 }
 
-// Execute adds a bot player to the game lobby
-func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName string, difficulty string, speed string) (*AddBotResult, error) {
+// Execute adds a bot player to the game lobby. Only the host may add bots, since bots
+// spend the host's Claude token.
+func (a *AddBotAction) Execute(ctx context.Context, gameID, requesterID string) (*AddBotResult, error) {
 	log := a.logger.With(
 		slog.String("game_id", gameID),
-		slog.String("bot_name", botName),
 		slog.String("action", "add_bot"),
 	)
 	log.Debug("Adding bot to game")
 
 	g, err := a.gameRepo.Get(ctx, gameID)
 	if err != nil {
-		log.Error("Game not found", slog.Any("error", err))
+		log.Warn("Game not found", slog.Any("error", err))
 		return nil, fmt.Errorf("game not found: %s", gameID)
 	}
 
+	if g.HostPlayerID() != requesterID {
+		return nil, fmt.Errorf("only the host can add bots")
+	}
+
 	if g.Status() != shared.GameStatusLobby {
-		log.Warn("Game is not in lobby", slog.String("status", string(g.Status())))
 		return nil, fmt.Errorf("game is not in lobby: %s", g.Status())
 	}
 
-	if g.Settings().ClaudeAPIKey == "" {
-		return nil, fmt.Errorf("claude API key is required to add bots (set claudeApiKey in game settings)")
+	if g.Settings().ClaudeOAuthToken == "" {
+		return nil, fmt.Errorf("a Claude token is required to add bots")
 	}
 
 	existingPlayers := g.GetAllPlayers()
@@ -105,106 +90,22 @@ func (a *AddBotAction) Execute(ctx context.Context, gameID string, botName strin
 		return nil, fmt.Errorf("game is full")
 	}
 
-	if botName == "" {
-		botName = a.generateBotName(g, existingPlayers)
+	takenNames := make([]string, 0, len(existingPlayers))
+	for _, p := range existingPlayers {
+		takenNames = append(takenNames, p.Name())
 	}
-
-	botDifficulty := playerPkg.BotDifficulty(difficulty)
-	if botDifficulty != playerPkg.BotDifficultyNormal && botDifficulty != playerPkg.BotDifficultyHard && botDifficulty != playerPkg.BotDifficultyExtreme {
-		botDifficulty = playerPkg.BotDifficultyNormal
-	}
-
-	botSpeed := playerPkg.BotSpeed(speed)
-	if botSpeed != playerPkg.BotSpeedFast && botSpeed != playerPkg.BotSpeedNormal && botSpeed != playerPkg.BotSpeedThinker {
-		botSpeed = playerPkg.BotSpeedNormal
-	}
+	botName, personaID := a.bots.AssignIdentity(g.Seed(), takenNames)
 
 	botID := uuid.New().String()
-	botPlayer, err := g.AddNewBotPlayer(ctx, botID, botName, botDifficulty, botSpeed)
+	botPlayer, err := g.AddNewBotPlayer(ctx, botID, botName, personaID)
 	if err != nil {
 		log.Error("Failed to add bot to game", slog.Any("error", err))
 		return nil, fmt.Errorf("failed to add bot to game: %w", err)
 	}
 	action.SetupPlayerCardStore(botPlayer, g, a.cardRegistry, a.colonyBonusLookup)
 
-	log.Info("Bot added to game", slog.String("bot_id", botID), slog.String("bot_name", botName))
+	a.bots.PrepareBot(gameID, botID)
 
-	if a.healthChecker != nil && a.broadcaster != nil {
-		settings := g.Settings()
-		go a.runHealthCheck(gameID, botID, botName, difficulty, settings.ClaudeAPIKey, settings.ClaudeModel, log)
-	}
-
+	log.Info("Bot added to game", slog.String("bot_id", botID), slog.String("bot_name", botName), slog.String("persona", personaID))
 	return &AddBotResult{PlayerID: botID}, nil
-}
-
-func (a *AddBotAction) runHealthCheck(gameID, botID, botName, difficulty, apiKey, model string, log *slog.Logger) {
-	log.Debug("Running Claude health check for bot", slog.String("bot_id", botID))
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	greeting, err := a.healthChecker.CheckHealth(ctx, apiKey, model, botName, difficulty)
-
-	g, gErr := a.gameRepo.Get(ctx, gameID)
-	if gErr != nil {
-		log.Error("Failed to get game after health check", slog.Any("error", gErr))
-		return
-	}
-
-	bot, bErr := g.GetPlayer(botID)
-	if bErr != nil {
-		log.Error("Bot not found after health check", slog.Any("error", bErr))
-		return
-	}
-
-	if err != nil {
-		log.Error("Health check failed for bot", slog.String("bot_id", botID), slog.Any("error", err))
-		bot.SetBotStatus(playerPkg.BotStatusFailed)
-		a.broadcaster.BroadcastGameState(gameID, nil)
-		return
-	}
-
-	log.Debug("Bot health check passed", slog.String("bot_id", botID))
-	bot.SetBotStatus(playerPkg.BotStatusReady)
-	a.broadcaster.BroadcastGameState(gameID, nil)
-
-	if greeting != "" {
-		chatMsg := shared.ChatMessage{
-			SenderID:    botID,
-			SenderName:  botName,
-			SenderColor: bot.Color(),
-			Message:     greeting,
-			Timestamp:   time.Now(),
-		}
-		g.AddChatMessage(ctx, chatMsg)
-		a.broadcaster.BroadcastChatMessage(gameID, chatMsg)
-	}
-}
-
-// botNameRNGStream keeps deterministic bot-name selection independent of the deck
-// and setup RNG streams; offsetting by the current player count varies each bot.
-const botNameRNGStream uint64 = 0xB07
-
-func (a *AddBotAction) generateBotName(g *game.Game, existingPlayers []*playerPkg.Player) string {
-	taken := make(map[string]bool, len(existingPlayers))
-	for _, p := range existingPlayers {
-		taken[p.Name()] = true
-	}
-
-	// Shuffle and pick the first available name (deterministic from the game Seed)
-	rng := rand.New(rand.NewPCG(g.Seed(), botNameRNGStream+uint64(len(existingPlayers))))
-	perm := rng.Perm(len(botNames))
-	for _, i := range perm {
-		if !taken[botNames[i]] {
-			return botNames[i]
-		}
-	}
-
-	// Fallback if all names taken
-	for i := 1; ; i++ {
-		name := fmt.Sprintf("Claude Bot %d", i)
-		if !taken[name] {
-			return name
-		}
-	}
 }

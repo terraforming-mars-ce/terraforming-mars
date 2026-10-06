@@ -78,25 +78,46 @@ const (
 	baseTitaniumValue = 3
 )
 
-// PaymentSubstitutes returns all payment substitutes including steel/titanium with dynamic values.
-func (r *PlayerResources) PaymentSubstitutes() []shared.PaymentSubstitute {
-	var substitutes []shared.PaymentSubstitute
-	r.read(func(s *datastore.PlayerState) {
-		substitutes = []shared.PaymentSubstitute{
-			{ResourceType: shared.ResourceSteel, ConversionRate: baseSteelValue + s.ValueModifiers[shared.ResourceSteel]},
-			{ResourceType: shared.ResourceTitanium, ConversionRate: baseTitaniumValue + s.ValueModifiers[shared.ResourceTitanium]},
-		}
-		substitutes = append(substitutes, s.PaymentSubstitutes...)
-	})
-	return substitutes
+// ResourceValue returns the current credit value of an explicitly permitted material.
+func (r *PlayerResources) ResourceValue(rt shared.ResourceType) int {
+	base := 1
+	if rt == shared.ResourceSteel {
+		base = baseSteelValue
+	}
+	if rt == shared.ResourceTitanium {
+		base = baseTitaniumValue
+	}
+	return base + r.GetValueModifier(rt)
 }
 
-func (r *PlayerResources) AddPaymentSubstitute(resourceType shared.ResourceType, conversionRate int) {
+// PaymentSubstitutes returns independent copies of registered payment rules.
+func (r *PlayerResources) PaymentSubstitutes() []shared.PaymentSubstitute {
+	var rules []shared.PaymentSubstitute
+	r.read(func(s *datastore.PlayerState) {
+		for _, rule := range s.PaymentSubstitutes {
+			rule.Selectors = shared.CloneSelectors(rule.Selectors)
+			rules = append(rules, rule)
+		}
+	})
+	return rules
+}
+
+// AddPaymentSubstitute registers a capability granted by a card.
+func (r *PlayerResources) AddPaymentSubstitute(rule shared.PaymentSubstitute) {
+	rule.Selectors = shared.CloneSelectors(rule.Selectors)
+	r.update(func(s *datastore.PlayerState) { s.PaymentSubstitutes = append(s.PaymentSubstitutes, rule) })
+}
+
+// RemovePaymentSubstitutes removes only rules granted by the specified card.
+func (r *PlayerResources) RemovePaymentSubstitutes(cardID string) {
 	r.update(func(s *datastore.PlayerState) {
-		s.PaymentSubstitutes = append(s.PaymentSubstitutes, shared.PaymentSubstitute{
-			ResourceType:   resourceType,
-			ConversionRate: conversionRate,
-		})
+		kept := s.PaymentSubstitutes[:0]
+		for _, rule := range s.PaymentSubstitutes {
+			if rule.GrantedByCardID != cardID {
+				kept = append(kept, rule)
+			}
+		}
+		s.PaymentSubstitutes = kept
 	})
 }
 
@@ -378,13 +399,6 @@ func (r *PlayerResources) RemoveCardStorage(cardID string) {
 	})
 }
 
-// ClearPaymentSubstitutes removes all non-standard payment substitutes
-func (r *PlayerResources) ClearPaymentSubstitutes() {
-	r.update(func(s *datastore.PlayerState) {
-		s.PaymentSubstitutes = []shared.PaymentSubstitute{}
-	})
-}
-
 // ClearValueModifiers resets all value modifiers to zero
 func (r *PlayerResources) ClearValueModifiers() {
 	r.update(func(s *datastore.PlayerState) {
@@ -392,34 +406,19 @@ func (r *PlayerResources) ClearValueModifiers() {
 	})
 }
 
-// AddStoragePaymentSubstitute registers a card's storage resources as usable for payment
-func (r *PlayerResources) AddStoragePaymentSubstitute(sub shared.StoragePaymentSubstitute) {
+// RecordProductionBox remembers production determined by a source's one-time choice.
+func (r *PlayerResources) RecordProductionBox(cardID string, output shared.ProductionCondition) {
 	r.update(func(s *datastore.PlayerState) {
-		s.StoragePaymentSubstitutes = append(s.StoragePaymentSubstitutes, sub)
-	})
-}
-
-// StoragePaymentSubstitutes returns all storage payment substitutes
-func (r *PlayerResources) StoragePaymentSubstitutes() []shared.StoragePaymentSubstitute {
-	var result []shared.StoragePaymentSubstitute
-	r.read(func(s *datastore.PlayerState) {
-		result = make([]shared.StoragePaymentSubstitute, len(s.StoragePaymentSubstitutes))
-		copy(result, s.StoragePaymentSubstitutes)
-	})
-	return result
-}
-
-// GetStoragePaymentSubstitute returns the storage payment substitute for a specific card, or nil
-func (r *PlayerResources) GetStoragePaymentSubstitute(cardID string) *shared.StoragePaymentSubstitute {
-	var result *shared.StoragePaymentSubstitute
-	r.read(func(s *datastore.PlayerState) {
-		for _, sub := range s.StoragePaymentSubstitutes {
-			if sub.CardID == cardID {
-				subCopy := sub
-				result = &subCopy
-				return
-			}
+		if s.ResolvedProductionBoxes == nil {
+			s.ResolvedProductionBoxes = map[string][]shared.ProductionCondition{}
 		}
+		s.ResolvedProductionBoxes[cardID] = append(s.ResolvedProductionBoxes[cardID], output)
 	})
+}
+
+// ResolvedProductionBox returns the production originally resolved for a card.
+func (r *PlayerResources) ResolvedProductionBox(cardID string) []shared.ProductionCondition {
+	var result []shared.ProductionCondition
+	r.read(func(s *datastore.PlayerState) { result = append(result, s.ResolvedProductionBoxes[cardID]...) })
 	return result
 }

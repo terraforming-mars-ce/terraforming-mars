@@ -7,22 +7,27 @@ import (
 	"terraforming-mars-backend/internal/game/shared"
 )
 
-func TestNoDuplicatePlainAutoBehaviors(t *testing.T) {
+func TestNoDuplicatePlainAutoBehaviorDescriptions(t *testing.T) {
 	allCards, err := cards.LoadCardsFromJSON("../../../assets/terraforming_mars_cards.json")
 	if err != nil {
 		t.Fatalf("Failed to load cards: %v", err)
 	}
 
 	for _, card := range allCards {
-		plainAutoCount := 0
+		type behaviorScope struct {
+			productionBox string
+			description   string
+		}
+		plainAutoCounts := map[behaviorScope]int{}
 		for _, behavior := range card.Behaviors {
 			if isPlainAuto(behavior) {
-				plainAutoCount++
+				plainAutoCounts[behaviorScope{behavior.ProductionBox, behavior.Description}]++
 			}
 		}
-		if plainAutoCount > 1 {
-			t.Errorf("Card %s (%s) has %d plain auto behaviors; should be merged into one",
-				card.ID, card.Name, plainAutoCount)
+		for scope, count := range plainAutoCounts {
+			if count > 1 {
+				t.Errorf("Card %s (%s) has %d plain auto behaviors for production box %q and description %q; merge behaviors with the same description and copy semantics", card.ID, card.Name, count, scope.productionBox, scope.description)
+			}
 		}
 	}
 }

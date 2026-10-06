@@ -23,8 +23,8 @@ type SettingsPatch struct {
 	DemoGame         *bool
 	AllowRandomBuy   *bool
 	CardPacks        *[]string
-	ClaudeAPIKey     *string
-	ClaudeModel      *string
+	ClaudeOAuthToken *string
+	BotSpendCapUSD   *float64
 }
 
 // UpdateGameSettingsAction handles editing game settings during the lobby phase.
@@ -137,11 +137,14 @@ func (a *UpdateGameSettingsAction) Execute(
 		}
 	}
 
-	if patch.ClaudeAPIKey != nil {
-		settings.ClaudeAPIKey = *patch.ClaudeAPIKey
+	if patch.ClaudeOAuthToken != nil {
+		settings.ClaudeOAuthToken = *patch.ClaudeOAuthToken
 	}
-	if patch.ClaudeModel != nil {
-		settings.ClaudeModel = *patch.ClaudeModel
+	if patch.BotSpendCapUSD != nil {
+		if *patch.BotSpendCapUSD <= 0 {
+			return fmt.Errorf("bot spend cap must be positive")
+		}
+		settings.BotSpendCapUSD = *patch.BotSpendCapUSD
 	}
 
 	if demoTurnedOff {

@@ -17,7 +17,7 @@ import (
 
 // BotStarter starts bot sessions when a game begins.
 type BotStarter interface {
-	StartBot(gameID, playerID, botName, difficulty, speed string, settings shared.GameSettings) error
+	StartBot(gameID, playerID string) error
 }
 
 // StartGameAction handles the business logic for starting games
@@ -172,10 +172,9 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 
 	// Start bot sessions for any bot players
 	if a.botStarter != nil {
-		settings := g.Settings()
 		for _, p := range players {
 			if p.IsBot() {
-				if err := a.botStarter.StartBot(gameID, p.ID(), p.Name(), string(p.BotDifficulty()), string(p.BotSpeed()), settings); err != nil {
+				if err := a.botStarter.StartBot(gameID, p.ID()); err != nil {
 					log.Error("Failed to start bot",
 						slog.String("bot_player_id", p.ID()),
 						slog.Any("error", err))
@@ -190,6 +189,7 @@ func (a *StartGameAction) Execute(ctx context.Context, gameID string, playerID s
 
 func (a *StartGameAction) initializeColonies(g *game.Game, playerIDs []string, rng *rand.Rand, log *slog.Logger) {
 	allColonies := a.colonyRegistry.GetAll()
+	g.Colonies().SetDefinitions(allColonies)
 	if len(allColonies) == 0 {
 		log.Warn("No colony definitions available")
 		return
@@ -213,12 +213,7 @@ func (a *StartGameAction) initializeColonies(g *game.Game, playerIDs []string, r
 	// Initialize tile states
 	states := make([]*colony.ColonyState, len(selected))
 	for i, def := range selected {
-		states[i] = &colony.ColonyState{
-			DefinitionID:   def.ID,
-			MarkerPosition: 1,
-			PlayerColonies: []string{},
-			TradedThisGen:  false,
-		}
+		states[i] = colony.NewTileState(def, false)
 	}
 	g.Colonies().SetStates(states)
 	g.InitializeTradeFleets(playerIDs)

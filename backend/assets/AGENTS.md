@@ -14,7 +14,10 @@ Authoritative source for all card definitions: corporations, project cards, and 
   "name": "PhoboLog",
   "type": "corporation",
   "cost": 0,
-  "description": "Effect description text",
+  "description": [
+    { "type": "effect", "text": "Each titanium is worth +1 M€." },
+    { "type": "generic", "text": "You start with 10 titanium and 23 M€." }
+  ],
   "pack": "base-game",
   "tags": ["space"],
   "behaviors": [...]
@@ -56,7 +59,8 @@ Each output `type` belongs to a category that determines which fields are valid:
 | Global Parameter | `temperature`, `oxygen`, `ocean`, `venus`, `tr`, `global-parameter` | `per` |
 | Card Operation | `card-draw`, `card-take`, `card-peek`, `card-buy`, `card-discard` | `selectors`, `variableAmount` |
 | Card Storage | `microbe`, `animal`, `floater`, `science`, `asteroid`, `fighter`, `disease`, `card-resource` | `selectors`, `per`, `variableAmount` |
-| Effect | `discount`, `payment-substitute`, `value-modifier`, `defense`, `global-parameter-lenience`, `ignore-global-requirements`, `ocean-adjacency-bonus`, `action-reuse`, `effect`, `tag` | `selectors`, `temporary` |
+| Payment substitute | `payment-substitute` | `source` (`target`, `resource`), `targetResource`, `selectors` |
+| Effect | `discount`, `value-modifier`, `defense`, `global-parameter-lenience`, `ignore-global-requirements`, `ocean-adjacency-bonus`, `action-reuse`, `effect`, `tag` | `selectors`, `temporary` |
 | Colony | `colony`, `colony-count`, `colony-bonus`, `colony-track-step` | `allowDuplicatePlayerColony` |
 | Tile Modification | `tile-destruction`, `tile-replacement` | `tileType` |
 | Misc | `extra-actions`, `bonus-tags`, `world-tree-tile`, `award-fund`, `trade` | `per`, `selectors` |

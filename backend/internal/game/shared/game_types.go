@@ -43,10 +43,21 @@ type GameSettings struct {
 	AllowRandomBuy     bool
 	CardPacks          []string
 	Generation         *int
-	ClaudeAPIKey       string
-	ClaudeModel        string
+	ClaudeOAuthToken   string
+	BotSpendCapUSD     float64
 	SelectedMilestones []string
 	SelectedAwards     []string
+}
+
+// DefaultBotSpendCapUSD is the per-game bot LLM spend cap used when the host has not set one.
+const DefaultBotSpendCapUSD = 5.0
+
+// EffectiveBotSpendCapUSD returns the configured bot spend cap, or the default when unset.
+func (s GameSettings) EffectiveBotSpendCapUSD() float64 {
+	if s.BotSpendCapUSD <= 0 {
+		return DefaultBotSpendCapUSD
+	}
+	return s.BotSpendCapUSD
 }
 
 // Card pack constants
@@ -102,6 +113,7 @@ type SourceType string
 const (
 	SourceTypeCardPlay                 SourceType = "card_play"
 	SourceTypeCardAction               SourceType = "card_action"
+	SourceTypeCorporationFirstAction   SourceType = "corporation_first_action"
 	SourceTypeStandardProject          SourceType = "standard_project"
 	SourceTypePassiveEffect            SourceType = "passive_effect"
 	SourceTypeResourceConvert          SourceType = "resource_convert"
@@ -123,6 +135,24 @@ const (
 	MaxChatMessages      = 200
 	MaxChatMessageLength = 500
 )
+
+// ChatMessageKind distinguishes ordinary chat from bot end-of-game recaps.
+type ChatMessageKind string
+
+const (
+	ChatMessageKindChat  ChatMessageKind = "chat"
+	ChatMessageKindRecap ChatMessageKind = "recap"
+	// ChatMessageKindSystem is a notice such as a bot leaving, shown without a speaker.
+	ChatMessageKindSystem ChatMessageKind = "system"
+)
+
+// Emotes are the reactions players and bots can show over their player card.
+var Emotes = []string{"angry", "celebrate", "thinking", "applause", "shock", "laugh", "sad", "cool"}
+
+// IsEmote reports whether name is a known emote.
+func IsEmote(name string) bool {
+	return slices.Contains(Emotes, name)
+}
 
 // Spectator constants and colors
 const MaxSpectators = 4
@@ -151,6 +181,7 @@ type ChatMessage struct {
 	Message     string
 	Timestamp   time.Time
 	IsSpectator bool
+	Kind        ChatMessageKind
 }
 
 // ClaimedMilestone represents a milestone that has been claimed
@@ -264,9 +295,15 @@ type PendingDemoChoices struct {
 
 // DeferredStartingChoices holds choices that are applied after init
 type DeferredStartingChoices struct {
-	CorporationID   string
-	PreludeIDs      []string
-	CardIDs         []string
-	CorpApplied     bool
-	PreludesApplied bool
+	Payment              Payment
+	CorporationID        string
+	PreludeIDs           []string
+	CardIDs              []string
+	CorpApplied          bool
+	PreludesAppliedCount int
+}
+
+// PreludesDone reports whether every chosen prelude has been applied.
+func (c *DeferredStartingChoices) PreludesDone() bool {
+	return c.PreludesAppliedCount >= len(c.PreludeIDs)
 }

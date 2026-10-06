@@ -2,9 +2,10 @@ import React, { useState, useMemo } from "react";
 import {
   PendingFreeTradeSelectionDto,
   ColonyDto,
-  ColonyOutputDto,
+  TradeFleetDto,
   CardDto,
 } from "@/types/generated/api-types.ts";
+import TradeTrackChoices, { selectedTradeOption } from "../display/TradeTrackChoices.tsx";
 import ColonySteps from "../popover/ColonySteps.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
@@ -17,11 +18,11 @@ interface FreeTradeSelectionOverlayProps {
   pendingSelection: PendingFreeTradeSelectionDto;
   colonies: ColonyDto[];
   viewingPlayerId: string;
-  tradeFleetAvailable: boolean;
+  tradeFleets: Record<string, TradeFleetDto>;
   allPlayers: PlayerInfo[];
   playedCards: CardDto[];
   corporation?: CardDto | null;
-  onConfirm: (colonyId: string) => void;
+  onConfirm: (colonyId: string, trackSteps: number) => void;
 }
 
 const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
@@ -29,16 +30,19 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
   pendingSelection,
   colonies,
   viewingPlayerId,
-  tradeFleetAvailable,
+  tradeFleets,
   allPlayers,
   playedCards,
   corporation,
   onConfirm,
 }) => {
+  const tradeFleetAvailable = (tradeFleets[viewingPlayerId]?.available ?? 0) > 0;
+  const [selectedSteps, setSelectedSteps] = useState<Record<string, number>>({});
   const [selectedColonyId, setSelectedColonyId] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState<{
     message: string;
     colonyId: string;
+    trackSteps: number;
   } | null>(null);
 
   const tradeableIds = useMemo(
@@ -57,6 +61,11 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
   const getPlayerName = (playerId: string): string => {
     return allPlayers.find((p) => p.id === playerId)?.name ?? "Unknown";
   };
+
+  const selectedColony = colonies.find((colony) => colony.id === selectedColonyId);
+  const selectedOption = selectedColony
+    ? selectedTradeOption(selectedColony.tradeOptions, selectedSteps[selectedColony.id])
+    : undefined;
 
   if (!isOpen) {
     return null;
@@ -91,7 +100,10 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
           {allPlayers.map((player) => (
             <div key={player.id} className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: player.color }} />
-              <span className="text-[10px] font-orbitron text-white/60">{player.name}</span>
+              <span className="text-[10px] font-orbitron text-white/60">
+                {player.name} {tradeFleets[player.id]?.available ?? 0}/
+                {tradeFleets[player.id]?.total ?? 0}
+              </span>
             </div>
           ))}
         </div>
@@ -100,82 +112,74 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
           {colonies.map((colony) => {
             const tradeable = isColonyTradeable(colony);
             const isSelected = selectedColonyId === colony.id;
-            const markerOutput = colony.steps[colony.markerPosition]?.outputs ?? [];
-
-            const viewerColonyCount = colony.playerColonies.filter(
-              (id) => id === viewingPlayerId,
-            ).length;
-            const tradeGainOutputs: ColonyOutputDto[] = [...markerOutput];
-            if (viewerColonyCount > 0) {
-              for (const bonus of colony.colonyBonus) {
-                const scaledAmount = bonus.amount * viewerColonyCount;
-                const existing = tradeGainOutputs.find((o) => o.type === bonus.type);
-                if (existing) {
-                  tradeGainOutputs[tradeGainOutputs.indexOf(existing)] = {
-                    ...existing,
-                    amount: existing.amount + scaledAmount,
-                  };
-                } else {
-                  tradeGainOutputs.push({ ...bonus, amount: scaledAmount });
-                }
-              }
-            }
+            const tradeOption = selectedTradeOption(colony.tradeOptions, selectedSteps[colony.id]);
+            const tradeGainOutputs = tradeOption?.outputs ?? [];
 
             return (
-              <GameButton
-                emphasis="quiet"
-                key={colony.id}
-                type="button"
-                className={`w-full text-left px-3 py-2.5 rounded-none border transition-all ${
-                  !tradeable
-                    ? "border-white/5 bg-white/[0.01] opacity-40 cursor-default"
-                    : isSelected
-                      ? "bg-white/10 cursor-pointer"
-                      : "border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04] cursor-pointer"
-                }`}
-                style={{
-                  borderColor: isSelected && tradeable ? colony.style.color : undefined,
-                }}
-                onClick={() => {
-                  if (tradeable) {
-                    setSelectedColonyId(colony.id);
-                  }
-                }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-white text-xs font-bold font-orbitron m-0">
-                      {colony.name}
-                    </h3>
-                    {colony.tradedThisGen && (
-                      <span className="text-[9px] font-orbitron text-white/30 uppercase">
-                        Traded
-                      </span>
+              <div key={colony.id}>
+                <GameButton
+                  emphasis="quiet"
+                  type="button"
+                  className={`w-full text-left px-3 py-2.5 rounded-none border transition-all ${
+                    !tradeable
+                      ? "border-white/5 bg-white/[0.01] opacity-40 cursor-default"
+                      : isSelected
+                        ? "bg-white/10 cursor-pointer"
+                        : "border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04] cursor-pointer"
+                  }`}
+                  style={{
+                    borderColor: isSelected && tradeable ? colony.style.color : undefined,
+                  }}
+                  onClick={() => {
+                    if (tradeable) {
+                      setSelectedColonyId(colony.id);
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-white text-xs font-bold font-orbitron m-0">
+                        {colony.name}
+                      </h3>
+                      {colony.tradedThisGen && (
+                        <span className="text-[9px] font-orbitron text-white/30 uppercase">
+                          Traded
+                        </span>
+                      )}
+                    </div>
+                    {tradeable && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-white/30 text-sm">→</span>
+                        <ColonyOutputDisplay outputs={tradeGainOutputs} />
+                      </div>
                     )}
                   </div>
-                  {tradeable && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-white/30 text-sm">→</span>
-                      <ColonyOutputDisplay outputs={tradeGainOutputs} />
-                    </div>
-                  )}
-                </div>
 
-                <ColonySteps
-                  steps={colony.steps}
-                  markerPosition={colony.markerPosition}
-                  tradeStepBonus={colony.tradeStepBonus}
-                  playerColonies={colony.playerColonies}
-                  maxSlots={colony.colonies.length}
-                  getPlayerColor={getPlayerColor}
-                  getPlayerName={getPlayerName}
+                  <ColonySteps
+                    steps={colony.steps}
+                    markerPosition={colony.markerPosition}
+                    previewPosition={tradeOption?.markerPosition}
+                    playerColonies={colony.playerColonies}
+                    maxSlots={colony.colonies.length}
+                    getPlayerColor={getPlayerColor}
+                    getPlayerName={getPlayerName}
+                  />
+
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40">
+                    <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
+                    <ColonyOutputDisplay outputs={colony.colonyBonus} />
+                  </div>
+                </GameButton>
+                <TradeTrackChoices
+                  options={colony.tradeOptions}
+                  selected={tradeOption?.trackSteps ?? 0}
+                  disabled={!tradeable}
+                  onSelect={(steps) => {
+                    setSelectedSteps((previous) => ({ ...previous, [colony.id]: steps }));
+                    setSelectedColonyId(colony.id);
+                  }}
                 />
-
-                <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40">
-                  <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
-                  <ColonyOutputDisplay outputs={colony.colonyBonus} />
-                </div>
-              </GameButton>
+              </div>
             );
           })}
         </div>
@@ -184,21 +188,21 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
           <GameButton
             size="sm"
             onClick={() => {
-              if (!selectedColonyId) {
+              if (!selectedColony || !selectedOption || !isColonyTradeable(selectedColony)) {
                 return;
               }
-              const colony = colonies.find((c) => c.id === selectedColonyId);
-              if (colony) {
-                const tradeOutputs = colony.steps[colony.markerPosition]?.outputs ?? [];
-                const warning = getStorageWarning(tradeOutputs, playedCards, corporation);
-                if (warning) {
-                  setStorageWarning({ message: warning, colonyId: selectedColonyId });
-                  return;
-                }
+              const warning = getStorageWarning(selectedOption.outputs, playedCards, corporation);
+              if (warning) {
+                setStorageWarning({
+                  message: warning,
+                  colonyId: selectedColony.id,
+                  trackSteps: selectedOption.trackSteps,
+                });
+                return;
               }
-              onConfirm(selectedColonyId);
+              onConfirm(selectedColony.id, selectedOption.trackSteps);
             }}
-            disabled={!selectedColonyId}
+            disabled={!selectedColony || !selectedOption || !isColonyTradeable(selectedColony)}
           >
             Confirm Trade
           </GameButton>
@@ -210,7 +214,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
           message={storageWarning.message}
           onCancel={() => setStorageWarning(null)}
           onContinue={() => {
-            onConfirm(storageWarning.colonyId);
+            onConfirm(storageWarning.colonyId, storageWarning.trackSteps);
             setStorageWarning(null);
           }}
         />

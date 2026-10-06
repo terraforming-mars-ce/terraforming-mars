@@ -9,5 +9,6 @@ void main() {
   vFieldLayer=patchLayer;
   vFieldBirth=patchBirth;
   vec2 board=patchOrigin+vFieldLocal*uPatchSize;
-  gl_Position=projectionMatrix*modelViewMatrix*vec4(landscapeProject(board,0.0),1.0);
+  float baseHeight=-landscapeDetail(vFieldLocal,patchLayer,patchBirth).a*uMarsReliefDepth;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(landscapeProject(board,baseHeight),1.0);
 }

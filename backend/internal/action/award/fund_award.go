@@ -34,7 +34,7 @@ func NewFundAwardAction(
 }
 
 // Execute funds an award for the player
-func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID string, awardType string) error {
+func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID string, awardType string, payment shared.Payment) error {
 	log := a.InitLogger(gameID, playerID).With(slog.String("action", "fund_award"), slog.String("award", awardType))
 	log.Debug("Funding award")
 
@@ -89,17 +89,15 @@ func (a *FundAwardAction) Execute(ctx context.Context, gameID string, playerID s
 	}
 
 	fundingCost := def.GetCostForFundedCount(awardState.FundedCount())
-	resources := player.Resources().Get()
-	if resources.Credits < fundingCost {
-		log.Warn("Insufficient credits for award",
-			slog.Int("cost", fundingCost),
-			slog.Int("player_credits", resources.Credits))
-		return fmt.Errorf("insufficient credits: need %d, have %d", fundingCost, resources.Credits)
+	quote, err := cards.QuotePayment(player, g, a.CardRegistry(), cards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: fundingCost}, Action: "fund-award"})
+	if err != nil {
+		return err
 	}
-
-	player.Resources().Add(map[shared.ResourceType]int{
-		shared.ResourceCredit: -fundingCost,
-	})
+	paymentPlan, err := cards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
+	}
+	cards.ApplyPayment(player, paymentPlan)
 	log.Debug("Deducted award funding cost",
 		slog.Int("cost", fundingCost),
 		slog.Int("remaining_credits", player.Resources().Get().Credits))

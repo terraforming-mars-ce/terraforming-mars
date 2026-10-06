@@ -18,6 +18,9 @@ import GameIcon from "@/components/ui/display/GameIcon.tsx";
 import { PlayerChip } from "@/components/ui/display/BotChips.tsx";
 import CardIcon from "./BehaviorSection/components/CardIcon.tsx";
 import VictoryPointIcon from "@/components/ui/display/VictoryPointIcon.tsx";
+import DecorBoxTooltip from "@/components/ui/display/DecorBoxTooltip.tsx";
+import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
+import PlayerPresence from "./PlayerPresence.tsx";
 
 const resourceTypeToIconType: Record<string, string> = {
   credit: "credit",
@@ -33,6 +36,7 @@ const resourceTypeToIconType: Record<string, string> = {
   asteroid: "asteroid",
   fighter: "fighter",
   disease: "disease",
+  camp: "camp",
   "credit-production": "credit-production",
   "steel-production": "steel-production",
   "titanium-production": "titanium-production",
@@ -165,7 +169,17 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   const canKick = isHost && !isCurrentPlayer && !isExited && onKickPlayer;
   const canConvertToBot =
     isHost && !isCurrentPlayer && !isExited && player.playerType !== "bot" && onConvertToBot;
-  const hasContextMenu = canKick || canConvertToBot;
+  const canRetryBot = isHost && player.playerType === "bot" && player.botStatus === "failed";
+  const hasContextMenu = canKick || canConvertToBot || canRetryBot;
+  const errorChipRef = useRef<HTMLSpanElement>(null);
+  const [errorTooltipPos, setErrorTooltipPos] = useState<{ x: number; y: number } | null>(null);
+
+  const showErrorTooltip = () => {
+    const rect = errorChipRef.current?.getBoundingClientRect();
+    if (rect) {
+      setErrorTooltipPos({ x: rect.left + rect.width / 2, y: rect.top - 6 });
+    }
+  };
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -282,6 +296,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <div
       ref={cardRef}
+      data-player-id={player.id}
       className={`relative w-[260px] max-w-[calc(100vw-16px)] h-[66px] overflow-visible pointer-events-auto ${isCurrentTurn ? "mb-1.5" : "mb-2"} ${onPlayerClick ? "cursor-pointer" : ""}`}
       onClick={() => onPlayerClick?.(player)}
       onContextMenu={handleContextMenu}
@@ -309,7 +324,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           />
         )}
         <div className="flex min-w-0 flex-1 flex-col items-start justify-center gap-1">
-          <div className="player-chip-group">
+          <div className="player-chip-group flex-nowrap gap-1">
             {isCurrentPlayer && (
               <PlayerChip className="text-[8px] tracking-[0.5px] bg-[rgba(60,100,150,0.8)] text-white border border-[rgba(80,130,180,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
                 YOU
@@ -352,9 +367,31 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
               </PlayerChip>
             )}
             {player.botStatus === "failed" && (
-              <PlayerChip className="text-[8px] tracking-[0.5px] bg-[rgba(200,50,50,0.6)] text-[rgb(255,140,140)] border border-[rgba(200,50,50,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
-                ERROR
-              </PlayerChip>
+              <span
+                ref={errorChipRef}
+                className="inline-flex cursor-default"
+                onMouseEnter={showErrorTooltip}
+                onMouseLeave={() => setErrorTooltipPos(null)}
+              >
+                <PlayerChip className="text-[8px] tracking-[0.5px] bg-[rgba(200,50,50,0.6)] text-[rgb(255,140,140)] border border-[rgba(200,50,50,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+                  ERROR
+                </PlayerChip>
+                <DecorBoxTooltip
+                  position={errorTooltipPos}
+                  placement="above"
+                  maxWidth={260}
+                  cornerSize={8}
+                >
+                  {player.botError && (
+                    <span className="block font-sans text-xs font-normal leading-relaxed">
+                      {player.botError}
+                    </span>
+                  )}
+                  <span className="block mt-1 font-sans text-[10px] text-white/50">
+                    Playing on autopilot until retried.
+                  </span>
+                </DecorBoxTooltip>
+              </span>
             )}
             {showStuckIndicator && (
               <PlayerChip className="text-[8px] tracking-[0.5px] bg-[rgba(180,140,50,0.6)] text-[rgb(255,220,140)] border border-[rgba(180,140,50,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
@@ -398,6 +435,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
               </span>
             )}
           </div>
+          {player.corporation && (
+            <span className="-mt-1 max-w-full truncate text-[9px] font-orbitron uppercase tracking-[0.5px] text-white/50 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+              {player.corporation.name}
+            </span>
+          )}
         </div>
         {/* TR Display */}
         <div className="flex items-center bg-[rgba(30,50,80,0.9)] border border-[rgba(60,100,150,0.6)] px-2.5 py-1 shrink-0 ml-3">
@@ -430,6 +472,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         )}
       </div>
 
+      <PlayerPresence playerId={player.id} anchorRef={cardRef} />
+
       {/* Right-click context menu */}
       {contextMenu &&
         createPortal(
@@ -450,6 +494,22 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
               >
                 Convert to bot
               </GameButton>
+            )}
+            {canRetryBot && (
+              <GameButton
+                emphasis="quiet"
+                className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition-colors cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenu(null);
+                  void globalWebSocketManager.retryBot(player.id);
+                }}
+              >
+                Retry bot
+              </GameButton>
+            )}
+            {canRetryBot && (canConvertToBot || canKick) && (
+              <div className="border-t border-[#333]" />
             )}
             {canConvertToBot && canKick && <div className="border-t border-[#333]" />}
             {canKick && (

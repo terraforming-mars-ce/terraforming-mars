@@ -1,8 +1,10 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useLayoutEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useNuclearCollapse } from "./NuclearCollapse";
 
 interface Registration {
+  collapse: ReturnType<typeof useNuclearCollapse>;
   transforms: THREE.Matrix4[];
   colors: THREE.Color[] | null;
 }
@@ -33,6 +35,7 @@ export function usePrimitiveInstances(
   renderOrder: number = 10,
   castShadow: boolean = false,
 ): PrimitiveHandle {
+  const collapse = useNuclearCollapse();
   const regIdRef = useRef(`pm-${nextId++}`);
   const batchKeyRef = useRef(batchKey);
 
@@ -56,7 +59,7 @@ export function usePrimitiveInstances(
       batches.set(batchKey, batch);
     }
 
-    batch.registrations.set(regIdRef.current, { transforms: [], colors: null });
+    batch.registrations.set(regIdRef.current, { transforms: [], colors: null, collapse });
     batch.needsRebuild = true;
     batchKeyRef.current = batchKey;
 
@@ -77,6 +80,13 @@ export function usePrimitiveInstances(
       }
     };
   }, [batchKey, geometry, material, renderOrder]);
+
+  useLayoutEffect(() => {
+    const registration = batches.get(batchKeyRef.current)?.registrations.get(regIdRef.current);
+    if (registration) {
+      registration.collapse = collapse;
+    }
+  }, [collapse]);
 
   const setTransforms = useCallback((transforms: THREE.Matrix4[]) => {
     const batch = batches.get(batchKeyRef.current);
@@ -143,6 +153,14 @@ function applyColors(mesh: THREE.InstancedMesh, registrations: Map<string, Regis
 
 export default function PrimitiveRenderer() {
   const containerRef = useRef<THREE.Group>(null);
+  const scratch = useMemo(
+    () => ({
+      inverse: new THREE.Matrix4(),
+      transform: new THREE.Matrix4(),
+      matrix: new THREE.Matrix4(),
+    }),
+    [],
+  );
 
   useFrame(() => {
     const container = containerRef.current;
@@ -150,7 +168,32 @@ export default function PrimitiveRenderer() {
       return;
     }
 
-    for (const [, batch] of batches) {
+    container.updateWorldMatrix(true, false);
+    scratch.inverse.copy(container.matrixWorld).invert();
+    const writeMatrix = (
+      mesh: THREE.InstancedMesh,
+      index: number,
+      reg: Registration,
+      matrix: THREE.Matrix4,
+    ) => {
+      if (reg.collapse?.transition) {
+        scratch.transform
+          .copy(scratch.inverse)
+          .multiply(reg.collapse.matrix)
+          .multiply(container.matrixWorld);
+        scratch.matrix.multiplyMatrices(scratch.transform, matrix);
+        mesh.setMatrixAt(index, scratch.matrix);
+      } else {
+        mesh.setMatrixAt(index, matrix);
+      }
+    };
+    for (const batch of batches.values()) {
+      for (const reg of batch.registrations.values()) {
+        if (reg.collapse?.transition?.impacted) {
+          batch.needsUpdate = true;
+          break;
+        }
+      }
       if (batch.needsRebuild) {
         if (batch.mesh) {
           container.remove(batch.mesh);
@@ -158,7 +201,7 @@ export default function PrimitiveRenderer() {
         }
 
         let total = 0;
-        for (const [, reg] of batch.registrations) {
+        for (const reg of batch.registrations.values()) {
           total += reg.transforms.length;
         }
 
@@ -174,9 +217,9 @@ export default function PrimitiveRenderer() {
         mesh.castShadow = batch.castShadow;
 
         let idx = 0;
-        for (const [, reg] of batch.registrations) {
+        for (const reg of batch.registrations.values()) {
           for (const matrix of reg.transforms) {
-            mesh.setMatrixAt(idx++, matrix);
+            writeMatrix(mesh, idx++, reg, matrix);
           }
         }
         mesh.instanceMatrix.needsUpdate = true;
@@ -189,9 +232,9 @@ export default function PrimitiveRenderer() {
         batch.needsUpdate = false;
       } else if (batch.needsUpdate && batch.mesh) {
         let idx = 0;
-        for (const [, reg] of batch.registrations) {
+        for (const reg of batch.registrations.values()) {
           for (const matrix of reg.transforms) {
-            batch.mesh.setMatrixAt(idx++, matrix);
+            writeMatrix(batch.mesh, idx++, reg, matrix);
           }
         }
         batch.mesh.instanceMatrix.needsUpdate = true;

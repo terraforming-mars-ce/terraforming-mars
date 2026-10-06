@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"path/filepath"
@@ -29,9 +30,9 @@ func TestPlayCardConsumesAction(t *testing.T) {
 	p.Hand().AddCard(testutil.CardID("Power Plant"))
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 4}
+	payment := shared.NativePayment(shared.ResourceCredit, 4)
 
-	err := playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing card should succeed")
 
 	turn := testGame.CurrentTurn()
@@ -51,9 +52,9 @@ func TestZeroActionsBlocksCardPlay(t *testing.T) {
 	p.Hand().AddCard(testutil.CardID("Power Plant"))
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 4}
+	payment := shared.NativePayment(shared.ResourceCredit, 4)
 
-	err = playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
+	err = playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
 }
 
@@ -74,7 +75,7 @@ func TestZeroActionsBlocksStandardProject(t *testing.T) {
 
 	buildAction := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 
-	err = buildAction.Execute(context.Background(), testGame.ID(), playerID, "power-plant")
+	err = buildAction.Execute(context.Background(), testGame.ID(), playerID, "power-plant", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("power-plant")]))
 	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
 }
 
@@ -90,7 +91,7 @@ func TestZeroActionsBlocksConvertHeat(t *testing.T) {
 
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
-	err = convertAction.Execute(context.Background(), testGame.ID(), playerID, nil)
+	err = convertAction.Execute(context.Background(), testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
 }
 
@@ -104,17 +105,17 @@ func TestAutoAdvanceAfterSecondAction(t *testing.T) {
 	// Play first card
 	p1.Hand().AddCard(testutil.CardID("Power Plant"))
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 4}
+	payment := shared.NativePayment(shared.ResourceCredit, 4)
 
-	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "First card play should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "Should have 1 action after first play")
 	testutil.AssertEqual(t, player1ID, testGame.CurrentTurn().PlayerID(), "Should still be player 1's turn")
 
 	// Play second card
 	p1.Hand().AddCard(testutil.CardID("Asteroid"))
-	payment2 := cardAction.PaymentRequest{Credits: 14}
-	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Asteroid"), payment2, nil, nil, nil, nil)
+	payment2 := shared.NativePayment(shared.ResourceCredit, 14)
+	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Asteroid"), payment2, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Second card play should succeed")
 
 	// Should auto-advance to player 2
@@ -135,9 +136,9 @@ func TestSoloUnlimitedActionsNotBlocked(t *testing.T) {
 	// Play card - should succeed and remain unlimited
 	p.Hand().AddCard(testutil.CardID("Power Plant"))
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 4}
+	payment := shared.NativePayment(shared.ResourceCredit, 4)
 
-	err := playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Solo card play should succeed")
 
 	testutil.AssertEqual(t, -1, testGame.CurrentTurn().ActionsRemaining(), "Solo should still have unlimited actions")
@@ -229,16 +230,16 @@ func TestAutoAdvanceGrantsUnlimitedActionsToLastNonPassedPlayer(t *testing.T) {
 	// Play first card
 	p1.Hand().AddCard(testutil.CardID("Power Plant"))
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 4}
+	payment := shared.NativePayment(shared.ResourceCredit, 4)
 
-	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil)
+	err := playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "First card play should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "Should have 1 action after first play")
 
 	// Play second card - this should auto-advance and grant unlimited actions to player 1
 	p1.Hand().AddCard(testutil.CardID("Asteroid"))
-	payment2 := cardAction.PaymentRequest{Credits: 14}
-	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Asteroid"), payment2, nil, nil, nil, nil)
+	payment2 := shared.NativePayment(shared.ResourceCredit, 14)
+	err = playAction.Execute(context.Background(), testGame.ID(), player1ID, testutil.CardID("Asteroid"), payment2, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Second card play should succeed")
 
 	// Player 1 should now have unlimited actions since they're the last non-passed player
@@ -299,30 +300,48 @@ func TestTurnOrderRotatesAfterGeneration(t *testing.T) {
 	testutil.AssertEqual(t, player1ID, newTurnOrder[1], "Player 1 should be second after turn order rotation")
 }
 
-func TestForcedFirstActionDoesNotConsumePlayerAction(t *testing.T) {
-	testGame, _, _, player1ID, _ := testutil.SetupTwoPlayerGame(t)
+func TestForcedFirstActionConsumesExactlyOnePlayerAction(t *testing.T) {
+	g, _, _, id, _ := testutil.SetupTwoPlayerGame(t)
 	ctx := context.Background()
+	testutil.AssertNoError(t, g.SetForcedFirstAction(ctx, id, &shared.ForcedFirstAction{CorporationID: testutil.CardID("Tharsis Republic"), State: "resolving"}), "queue first action")
+	testutil.AssertTrue(t, g.CompleteFirstActionIfReady(id), "complete first action")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "first action consumes one action")
+	testutil.AssertFalse(t, g.CompleteFirstActionIfReady(id), "completion cannot replay")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "duplicate completion consumes nothing")
+}
 
-	// Set a forced first action for player 1 (simulating Tharsis Republic)
-	forcedAction := &shared.ForcedFirstAction{
-		ActionType:    "city-placement",
-		CorporationID: testutil.CardID("Tharsis Republic"),
-		Source:        "corporation-starting-action",
-		Completed:     false,
-		Description:   "Place a city tile (Tharsis Republic starting action)",
+func TestCardAction_RequirementsCheckedBeforePayment(t *testing.T) {
+	for _, reuse := range []bool{false, true} {
+		t.Run(fmt.Sprint(reuse), func(t *testing.T) {
+			g, repo, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+			p, _ := g.GetPlayer(id)
+			testutil.SetPlayerCredits(context.Background(), p, 10)
+			minimum := 5
+			scienceTag := shared.TagScience
+			behavior := shared.CardBehavior{
+				Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}},
+				Inputs:   []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player")},
+				Choices:  []shared.Choice{{Requirements: &shared.ChoiceRequirements{Items: []shared.ChoiceRequirement{{Type: "tags", Tag: &scienceTag, Min: &minimum}}}, Outputs: []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceHeat, 2, "self-player")}}},
+			}
+			target := shared.CardAction{CardID: "conditional-action", Behavior: behavior}
+			var source *string
+			if reuse {
+				target.TimesUsedThisGeneration = 1
+				value := "reuse"
+				source = &value
+			}
+			p.Actions().SetActions([]shared.CardAction{target, {CardID: "reuse", Behavior: shared.CardBehavior{Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}}, Outputs: []shared.BehaviorCondition{shared.NewEffectCondition(shared.ResourceActionReuse, 1, "self-player")}}}})
+			choice := 0
+			err := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(context.Background(), g.ID(), id, target.CardID, 0, &choice, nil, nil, nil, nil, nil, source, nil)
+			testutil.AssertError(t, err, "unmet requirement")
+			testutil.AssertEqual(t, 10, p.Resources().Get().Credits, "no payment")
+			testutil.AssertEqual(t, 0, p.Resources().Get().Heat, "no output")
+			testutil.AssertEqual(t, 2, g.CurrentTurn().ActionsRemaining(), "no action consumed")
+			if reuse {
+				options := baseaction.CalculateActionReuseOptions("reuse", p, g, registry)
+				testutil.AssertEqual(t, 1, len(options), "target listed")
+				testutil.AssertTrue(t, len(options[0].Errors) > 0, "UI also blocks unmet requirement")
+			}
+		})
 	}
-	err := testGame.SetForcedFirstAction(ctx, player1ID, forcedAction)
-	testutil.AssertNoError(t, err, "Setting forced first action should succeed")
-
-	// Verify player has 2 actions
-	testutil.AssertEqual(t, 2, testGame.CurrentTurn().ActionsRemaining(), "Player should have 2 actions before forced action")
-
-	// Clear the forced first action (simulating completion)
-	// Note: In the real flow, this is done by the corporation_processor after tile placement
-	// The key test is that NO action consumption happens - we removed ConsumeAction() from the processor
-	err = testGame.SetForcedFirstAction(ctx, player1ID, nil)
-	testutil.AssertNoError(t, err, "Clearing forced first action should succeed")
-
-	// Verify player STILL has 2 actions (forced actions are FREE)
-	testutil.AssertEqual(t, 2, testGame.CurrentTurn().ActionsRemaining(), "Player should still have 2 actions after forced action (forced actions are free)")
 }

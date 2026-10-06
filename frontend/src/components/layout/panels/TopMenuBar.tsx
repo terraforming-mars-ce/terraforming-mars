@@ -98,6 +98,9 @@ interface TopMenuBarProps {
   activeEndgamePanel?: "score" | "graphs" | "replay";
   onEndgamePanelChange?: (panel: "score" | "graphs" | "replay") => void;
   hasHistory?: boolean;
+  /** Render only the hamburger menu (used during the pre-game corporation showcase). */
+  minimal?: boolean;
+  contentClassName?: string;
 }
 
 const TopMenuBar: React.FC<TopMenuBarProps> = ({
@@ -111,6 +114,8 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
   activeEndgamePanel,
   onEndgamePanelChange,
   hasHistory = false,
+  minimal = false,
+  contentClassName = "",
 }) => {
   const { activePlanet } = usePlanetFocus();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -215,207 +220,209 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
 
   return (
     <>
-      <div
-        className="bg-transparent relative pointer-events-none"
-        style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}
-      >
-        <div className="flex justify-between items-center h-[60px] max-lg:h-[50px] max-md:flex-wrap">
-          <div
-            className={`flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left transition-opacity duration-500 ease-in-out ${activePlanet === "solar-system" ? "opacity-0 pointer-events-none" : "opacity-100 pointer-events-auto"}`}
-            inert={activePlanet === "solar-system"}
-            style={{ transform: `scale(${topBarScale})` }}
-          >
-            {!isInitPhase &&
-              !isEndgame &&
-              menuItems.map((item, index) => (
-                <div key={item.id} className="relative">
+      {!minimal && (
+        <div
+          className={`bg-transparent relative pointer-events-none ${contentClassName}`}
+          style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}
+        >
+          <div className="flex justify-between items-center h-[60px] max-lg:h-[50px] max-md:flex-wrap">
+            <div
+              className={`flex max-md:order-2 max-md:flex-[0_0_100%] max-md:mt-2.5 origin-top-left transition-opacity duration-500 ease-in-out ${activePlanet === "solar-system" ? "opacity-0 pointer-events-none" : "opacity-100 pointer-events-auto"}`}
+              inert={activePlanet === "solar-system"}
+              style={{ transform: `scale(${topBarScale})` }}
+            >
+              {!isInitPhase &&
+                !isEndgame &&
+                menuItems.map((item, index) => (
+                  <div key={item.id} className="relative">
+                    <GameButton
+                      shape="toolbar"
+                      surface="console"
+                      emphasis="secondary"
+                      width={buttonWidths[index]}
+                      height={buttonHeight}
+                      onClick={() => handleTabClick(item.id)}
+                      ref={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
+                      leftEdge={index === 0 ? "flat" : "slope-right"}
+                      rightEdge="slope-left"
+                      style={{
+                        marginLeft: index === 0 ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
+                        zIndex: Z_INDEX.UI_BASE - index,
+                      }}
+                      selected={item.isOpen}
+                      aria-expanded={item.isOpen}
+                    >
+                      {item.label}
+                    </GameButton>
+                    {item.id === "milestones" && (
+                      <MilestoneAlertIndicator
+                        visible={hasEligibleMilestones && !showMilestonePopover}
+                        top={buttonHeight + 6}
+                      />
+                    )}
+                  </div>
+                ))}
+            </div>
+
+            <div style={{ marginRight: HAMBURGER_WIDTH * topBarScale }}>
+              <div
+                className="origin-top-right flex items-center pointer-events-auto"
+                style={{ transform: `scale(${topBarScale})` }}
+              >
+                {isEndgame && onEndgamePanelChange && (
+                  <div className="flex items-center pointer-events-auto">
+                    {ENDGAME_BUTTONS.filter(
+                      (btn) => (btn.id !== "graphs" && btn.id !== "replay") || hasHistory,
+                    ).map((btn) => {
+                      const isActive = activeEndgamePanel === btn.id;
+                      return (
+                        <EndgameTabButton
+                          key={btn.id}
+                          label={btn.label}
+                          width={btn.width}
+                          height={buttonHeight}
+                          isActive={isActive}
+                          onClick={() => onEndgamePanelChange(btn.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+                {spectators.length > 0 && (
                   <GameButton
                     shape="toolbar"
                     surface="console"
                     emphasis="secondary"
-                    width={buttonWidths[index]}
+                    width={EYE_WIDTH}
                     height={buttonHeight}
-                    onClick={() => handleTabClick(item.id)}
-                    ref={getButtonRef(item.id) as React.RefObject<HTMLButtonElement | null>}
-                    leftEdge={index === 0 ? "flat" : "slope-right"}
-                    rightEdge="slope-left"
-                    style={{
-                      marginLeft: index === 0 ? 0 : -ANGLE_INDENT + BUTTON_SPACING,
-                      zIndex: Z_INDEX.UI_BASE - index,
-                    }}
-                    selected={item.isOpen}
-                    aria-expanded={item.isOpen}
+                    onClick={() => setSpectatorsOpen(!spectatorsOpen)}
+                    ref={eyeButtonRef}
+                    selected={spectatorsOpen}
+                    aria-expanded={spectatorsOpen}
+                    aria-label="Spectators"
+                    leftEdge="slope-left"
+                    rightEdge="slope-right"
+                    style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
                   >
-                    {item.label}
+                    <EyeIcon />
                   </GameButton>
-                  {item.id === "milestones" && (
-                    <MilestoneAlertIndicator
-                      visible={hasEligibleMilestones && !showMilestonePopover}
-                      top={buttonHeight + 6}
-                    />
-                  )}
-                </div>
-              ))}
-          </div>
-
-          <div style={{ marginRight: HAMBURGER_WIDTH * topBarScale }}>
-            <div
-              className="origin-top-right flex items-center pointer-events-auto"
-              style={{ transform: `scale(${topBarScale})` }}
-            >
-              {isEndgame && onEndgamePanelChange && (
-                <div className="flex items-center pointer-events-auto">
-                  {ENDGAME_BUTTONS.filter(
-                    (btn) => (btn.id !== "graphs" && btn.id !== "replay") || hasHistory,
-                  ).map((btn) => {
-                    const isActive = activeEndgamePanel === btn.id;
-                    return (
-                      <EndgameTabButton
-                        key={btn.id}
-                        label={btn.label}
-                        width={btn.width}
-                        height={buttonHeight}
-                        isActive={isActive}
-                        onClick={() => onEndgamePanelChange(btn.id)}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-              {spectators.length > 0 && (
+                )}
                 <GameButton
                   shape="toolbar"
                   surface="console"
                   emphasis="secondary"
-                  width={EYE_WIDTH}
+                  width={TRAVEL_WIDTH}
                   height={buttonHeight}
-                  onClick={() => setSpectatorsOpen(!spectatorsOpen)}
-                  ref={eyeButtonRef}
-                  selected={spectatorsOpen}
-                  aria-expanded={spectatorsOpen}
-                  aria-label="Spectators"
+                  onClick={() => setShowTravelPopover((prev) => !prev)}
+                  ref={travelButtonRef}
+                  selected={showTravelPopover}
+                  aria-expanded={showTravelPopover}
                   leftEdge="slope-left"
                   rightEdge="slope-right"
                   style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
                 >
-                  <EyeIcon />
+                  TRAVEL
                 </GameButton>
-              )}
-              <GameButton
-                shape="toolbar"
-                surface="console"
-                emphasis="secondary"
-                width={TRAVEL_WIDTH}
-                height={buttonHeight}
-                onClick={() => setShowTravelPopover((prev) => !prev)}
-                ref={travelButtonRef}
-                selected={showTravelPopover}
-                aria-expanded={showTravelPopover}
-                leftEdge="slope-left"
-                rightEdge="slope-right"
-                style={{ marginRight: -ANGLE_INDENT + BUTTON_SPACING }}
-              >
-                TRAVEL
-              </GameButton>
+              </div>
             </div>
           </div>
+
+          {!isInitPhase && !isEndgame && (
+            <div
+              className={`absolute left-1/2 top-0 h-[60px] max-lg:h-[50px] flex items-center origin-top transition-opacity duration-500 ease-in-out ${
+                activePlanet === "solar-system"
+                  ? "opacity-0 pointer-events-none"
+                  : "opacity-100 pointer-events-auto"
+              }`}
+              inert={activePlanet === "solar-system"}
+              style={{ transform: `translateX(-50%) scale(${topBarScale})` }}
+            >
+              <MilestoneAwardStatusStrip />
+            </div>
+          )}
+
+          <TravelPopover
+            isVisible={showTravelPopover}
+            onClose={() => setShowTravelPopover(false)}
+            anchorRef={travelButtonRef}
+          />
+
+          <StandardProjectPopover
+            isVisible={showStandardProjectsPopover}
+            onClose={() => setShowStandardProjectsPopover(false)}
+            onProjectSelect={handleStandardProjectSelect}
+            gameState={gameState}
+            anchorRef={standardProjectsButtonRef}
+          />
+
+          <MilestonePopover
+            isVisible={showMilestonePopover}
+            onClose={() => setShowMilestonePopover(false)}
+            gameState={gameState}
+            anchorRef={milestonesButtonRef}
+          />
+
+          <AwardPopover
+            isVisible={showAwardPopover}
+            onClose={() => setShowAwardPopover(false)}
+            gameState={gameState}
+            anchorRef={awardsButtonRef}
+          />
+
+          {hasColonies && (
+            <ColonyPopover
+              isVisible={showColonyPopover}
+              onClose={() => setShowColonyPopover(false)}
+              gameState={gameState}
+              anchorRef={coloniesButtonRef}
+            />
+          )}
+
+          {hasProjectFunding && (
+            <ProjectFundingPopover
+              isVisible={showProjectFundingPopover}
+              onClose={() => setShowProjectFundingPopover(false)}
+              gameState={gameState}
+              anchorRef={projectFundingButtonRef}
+            />
+          )}
+
+          {spectators.length > 0 && (
+            <GamePopover
+              isVisible={spectatorsOpen}
+              onClose={() => setSpectatorsOpen(false)}
+              position={{
+                type: "anchor",
+                anchorRef: eyeButtonRef,
+                placement: "below",
+              }}
+              theme="menu"
+              width={180}
+              maxHeight="auto"
+              animation="slideDown"
+              excludeRef={eyeButtonRef}
+              zIndex={Z_INDEX.TOP_MENU_ALWAYS_ON_TOP + 1}
+            >
+              <div className="py-2 px-3">
+                <div className="text-white/40 text-[10px] font-orbitron font-bold uppercase tracking-wider mb-2">
+                  Spectators ({spectators.length})
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {spectators.map((s) => (
+                    <div key={s.id} className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: s.color }}
+                      />
+                      <span className="text-white/80 text-sm truncate">{s.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </GamePopover>
+          )}
         </div>
-
-        {!isInitPhase && !isEndgame && (
-          <div
-            className={`absolute left-1/2 top-0 h-[60px] max-lg:h-[50px] flex items-center origin-top transition-opacity duration-500 ease-in-out ${
-              activePlanet === "solar-system"
-                ? "opacity-0 pointer-events-none"
-                : "opacity-100 pointer-events-auto"
-            }`}
-            inert={activePlanet === "solar-system"}
-            style={{ transform: `translateX(-50%) scale(${topBarScale})` }}
-          >
-            <MilestoneAwardStatusStrip />
-          </div>
-        )}
-
-        <TravelPopover
-          isVisible={showTravelPopover}
-          onClose={() => setShowTravelPopover(false)}
-          anchorRef={travelButtonRef}
-        />
-
-        <StandardProjectPopover
-          isVisible={showStandardProjectsPopover}
-          onClose={() => setShowStandardProjectsPopover(false)}
-          onProjectSelect={handleStandardProjectSelect}
-          gameState={gameState}
-          anchorRef={standardProjectsButtonRef}
-        />
-
-        <MilestonePopover
-          isVisible={showMilestonePopover}
-          onClose={() => setShowMilestonePopover(false)}
-          gameState={gameState}
-          anchorRef={milestonesButtonRef}
-        />
-
-        <AwardPopover
-          isVisible={showAwardPopover}
-          onClose={() => setShowAwardPopover(false)}
-          gameState={gameState}
-          anchorRef={awardsButtonRef}
-        />
-
-        {hasColonies && (
-          <ColonyPopover
-            isVisible={showColonyPopover}
-            onClose={() => setShowColonyPopover(false)}
-            gameState={gameState}
-            anchorRef={coloniesButtonRef}
-          />
-        )}
-
-        {hasProjectFunding && (
-          <ProjectFundingPopover
-            isVisible={showProjectFundingPopover}
-            onClose={() => setShowProjectFundingPopover(false)}
-            gameState={gameState}
-            anchorRef={projectFundingButtonRef}
-          />
-        )}
-
-        {spectators.length > 0 && (
-          <GamePopover
-            isVisible={spectatorsOpen}
-            onClose={() => setSpectatorsOpen(false)}
-            position={{
-              type: "anchor",
-              anchorRef: eyeButtonRef,
-              placement: "below",
-            }}
-            theme="menu"
-            width={180}
-            maxHeight="auto"
-            animation="slideDown"
-            excludeRef={eyeButtonRef}
-            zIndex={Z_INDEX.TOP_MENU_ALWAYS_ON_TOP + 1}
-          >
-            <div className="py-2 px-3">
-              <div className="text-white/40 text-[10px] font-orbitron font-bold uppercase tracking-wider mb-2">
-                Spectators ({spectators.length})
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {spectators.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: s.color }}
-                    />
-                    <span className="text-white/80 text-sm truncate">{s.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </GamePopover>
-        )}
-      </div>
+      )}
       <div
         className="fixed right-0 h-[60px] max-lg:h-[50px] flex items-center pointer-events-none origin-top-right"
         style={{

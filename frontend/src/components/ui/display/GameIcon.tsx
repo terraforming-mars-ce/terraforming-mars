@@ -27,7 +27,7 @@ interface GameIconProps {
    */
   isAttack?: boolean;
   /** Size of the icon: small (24px), medium (32px), large (40px) */
-  size?: "small" | "medium" | "large";
+  size?: "small" | "medium" | "large" | "behavior";
   /** Additional CSS classes to apply to the icon container */
   className?: string;
 }
@@ -99,7 +99,19 @@ const GameIcon: React.FC<GameIconProps> = ({
     large: { icon: 40, baseFontSize: 20 },
   };
 
-  const dimensions = sizeMap[size];
+  const dimensions = sizeMap[size === "behavior" ? "small" : size];
+  const behaviorClass =
+    size === "behavior"
+      ? "[--game-icon-size:var(--behavior-icon-size,26px)] max-md:[--game-icon-size:var(--behavior-icon-small-size,22px)] shrink-0"
+      : "";
+  const iconSize = size === "behavior" ? "var(--game-icon-size)" : `${dimensions.icon}px`;
+  const creditFontSize = () => {
+    if (size !== "behavior") {
+      return `${getCreditFontSize()}px`;
+    }
+    const digits = amount === undefined ? 1 : String(amount).length;
+    return `calc(var(--game-icon-size) * ${digits > 2 ? 0.425 : 0.5})`;
+  };
 
   const getCreditFontSize = () => {
     if (amount === undefined) return dimensions.baseFontSize;
@@ -122,10 +134,10 @@ const GameIcon: React.FC<GameIconProps> = ({
     if (isCredits && amount !== undefined) {
       return (
         <div
-          className={`relative inline-flex items-center justify-center ${glowEffect}`}
+          className={`relative inline-flex items-center justify-center ${glowEffect} ${behaviorClass} ${isProduction ? "" : className}`}
           style={{
-            width: `${dimensions.icon}px`,
-            height: `${dimensions.icon}px`,
+            width: iconSize,
+            height: iconSize,
           }}
         >
           <img
@@ -135,7 +147,7 @@ const GameIcon: React.FC<GameIconProps> = ({
           />
           <span
             className="absolute top-0 left-0 right-0 bottom-0 text-black font-black font-[Prototype,Arial_Black,Arial,sans-serif] flex items-center justify-center text-center leading-none [text-shadow:0_0_2px_rgba(255,255,255,0.3)] tracking-[0.5px] [-webkit-font-smoothing:antialiased] [-moz-osx-font-smoothing:grayscale] [text-rendering:optimizeLegibility]"
-            style={{ fontSize: `${getCreditFontSize()}px` }}
+            style={{ fontSize: creditFontSize() }}
           >
             {amount}
           </span>
@@ -145,10 +157,10 @@ const GameIcon: React.FC<GameIconProps> = ({
 
     return (
       <div
-        className={`relative inline-flex items-center justify-center ${glowEffect}`}
+        className={`relative inline-flex items-center justify-center ${glowEffect} ${behaviorClass} ${isProduction ? "" : className}`}
         style={{
-          width: `${dimensions.icon}px`,
-          height: `${dimensions.icon}px`,
+          width: iconSize,
+          height: iconSize,
         }}
       >
         <img
@@ -171,7 +183,7 @@ const GameIcon: React.FC<GameIconProps> = ({
   if (isProduction) {
     return (
       <div
-        className={`inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] ${className}`}
+        className={`inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)] ${className}`}
       >
         {renderCoreIcon()}
       </div>

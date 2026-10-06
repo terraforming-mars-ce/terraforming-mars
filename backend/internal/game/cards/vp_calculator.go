@@ -205,7 +205,7 @@ func evaluateVPConditionDetailed(
 		if vpCond.Per.ResourceType == shared.ResourceColony {
 			count = bc.CountAllColonies()
 		} else {
-			count = CountPerCondition(vpCond.Per, card.ID, p, bc.Board(), cardRegistry, nil)
+			count = CountPerCondition(vpCond.Per, card.ID, p, bc.Board(), cardRegistry, nil, nil, TagCountContext{})
 		}
 		detail.Count = count
 

@@ -107,3 +107,18 @@ func TestGetPendingActionType_None(t *testing.T) {
 func TestGetPendingActionType_NilGame(t *testing.T) {
 	testutil.AssertEqual(t, "", bot.GetPendingActionType(nil), "Should return empty for nil game")
 }
+
+func TestIsMyTurn_PendingFreeTrade(t *testing.T) {
+	otherID := "player-2"
+	game := &dto.GameDto{
+		CurrentPhase: dto.GamePhaseAction,
+		CurrentTurn:  &otherID,
+		CurrentPlayer: dto.PlayerDto{
+			Status:                    dto.PlayerStatusWaiting,
+			PendingFreeTradeSelection: &dto.PendingFreeTradeSelectionDto{AvailableColonyIDs: []string{"luna"}},
+		},
+	}
+
+	testutil.AssertTrue(t, bot.IsMyTurn(game, "player-1"), "A pending free trade must wake the bot")
+	testutil.AssertEqual(t, "free-trade-selection", bot.GetPendingActionType(game), "Pending type should be free trade")
+}

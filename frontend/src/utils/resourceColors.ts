@@ -16,12 +16,37 @@ export const RESOURCE_NAMES: Record<ResourceType, string> = {
   plant: "Plants",
   energy: "Energy",
   heat: "Heat",
+  floater: "Floaters",
+  microbe: "Microbes",
+  animal: "Animals",
+  asteroid: "Asteroids",
+  fighter: "Fighters",
+  science: "Science resources",
+  "card-resource": "Resources",
 };
 
 export const getResourceColor = (resourceType: ResourceType): string => {
   return RESOURCE_COLORS[resourceType];
 };
 
-export const getResourceName = (resourceType: ResourceType): string => {
-  return RESOURCE_NAMES[resourceType];
+const SINGULAR_RESOURCE_NAMES: Record<ResourceType, string> = {
+  credit: "Credit",
+  plant: "Plant",
+  floater: "Floater",
+  microbe: "Microbe",
+  animal: "Animal",
+  asteroid: "Asteroid",
+  fighter: "Fighter",
+  science: "Science resource",
+  "card-resource": "Resource",
+};
+
+export const getResourceName = (resourceType: ResourceType, amount?: number): string => {
+  if (resourceType.endsWith("-production")) {
+    return `${getResourceName(resourceType.replace("-production", ""), 1)} production`;
+  }
+  if (amount === 1 && SINGULAR_RESOURCE_NAMES[resourceType]) {
+    return SINGULAR_RESOURCE_NAMES[resourceType];
+  }
+  return RESOURCE_NAMES[resourceType] ?? resourceType.replaceAll("-", " ");
 };

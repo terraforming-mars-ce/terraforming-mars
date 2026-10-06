@@ -49,3 +49,11 @@ func (p Production) GetAmount(resourceType ResourceType) int {
 		return 0
 	}
 }
+
+// ProductionMinimum returns the lowest legal production for a resource.
+func ProductionMinimum(rt ResourceType) int {
+	if rt == ResourceCredit || rt == ResourceCreditProduction {
+		return MinCreditProduction
+	}
+	return MinOtherProduction
+}

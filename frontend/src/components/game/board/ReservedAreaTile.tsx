@@ -1,3 +1,4 @@
+import { useNuclearImpacted } from "./NuclearCollapse";
 import { useRef, useState, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -83,6 +84,7 @@ export default function ReservedAreaTile({
   const groupRef = useRef<THREE.Group>(null);
   const emergenceStartRef = useRef<number | null>(null);
   const isEmergingRef = useRef(isNewlyPlaced);
+  const nuclearImpacted = useNuclearImpacted();
   const [showDust, setShowDust] = useState(isNewlyPlaced);
 
   useEffect(() => {
@@ -107,6 +109,7 @@ export default function ReservedAreaTile({
       roughness: 0.9,
       metalness: 0.0,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
       transparent: true,
       alphaTest: 0.01,
       depthWrite: false,
@@ -153,6 +156,9 @@ export default function ReservedAreaTile({
   const railProgressRef = useRef(isNewlyPlaced ? 0 : 1);
 
   useFrame((state) => {
+    if (nuclearImpacted) {
+      return;
+    }
     if (!isEmergingRef.current) return;
     if (!groupRef.current) return;
 
@@ -233,7 +239,7 @@ export default function ReservedAreaTile({
         })}
       </group>
 
-      {showDust && surfaceNormal && worldPosition && (
+      {!nuclearImpacted && showDust && surfaceNormal && worldPosition && (
         <DustEffect
           duration={2000}
           particleColor={new THREE.Color(0.5, 0.35, 0.2)}

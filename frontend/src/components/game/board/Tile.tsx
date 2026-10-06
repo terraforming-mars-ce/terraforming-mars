@@ -1,3 +1,4 @@
+import type { NuclearSite } from "./nuclearDebris";
 import { assetUrl } from "@/assets";
 import { useRef, useState, useMemo, useEffect, memo, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -6,6 +7,9 @@ import * as THREE from "three";
 import { HexTile2D } from "../../../utils/hex-grid-2d";
 import VolcanoTile from "./VolcanoTile";
 import NuclearZoneTile from "./NuclearZoneTile";
+import { NuclearCollapse } from "./NuclearCollapse";
+import type { NuclearTransition } from "./nuclearTransitions";
+import { useTileHighlight } from "./TileHighlightContext";
 import MiningTile from "./MiningTile";
 import ReservedAreaTile from "./ReservedAreaTile";
 import WorldTreeTile from "./WorldTreeTile";
@@ -13,9 +17,6 @@ import MoholeTile from "./MoholeTile";
 import { useTextures } from "../../../hooks/useTextures";
 import {
   sphereProjectionVertex,
-  hoverGlowFragment,
-  availableGlowFragment,
-  vpHighlightFragment,
   oceanBorderFragment,
   tileBorderVertex,
   tileBorderFragment,
@@ -30,6 +31,24 @@ const ORIGIN = new THREE.Vector3(0, 0, 0);
 const _bbWorldPos = new THREE.Vector3();
 const _bbNormal = new THREE.Vector3();
 const _bbToCamera = new THREE.Vector3();
+const HOVER_BORDER_COLOR = new THREE.Color("#ffffff");
+let _bbOpacity = 1;
+
+// A shared traverse callback, so fading billboards allocates nothing per frame.
+function applyBillboardOpacity(child: THREE.Object3D) {
+  if (!(child instanceof THREE.Mesh) || !child.material) {
+    return;
+  }
+  if (Array.isArray(child.material)) {
+    for (const mat of child.material) {
+      mat.opacity = _bbOpacity;
+    }
+  } else {
+    child.material.opacity = _bbOpacity;
+  }
+}
+
+const GLOW_CUTOFF = 0.002;
 
 function createSubdividedHexagonGeometry(radius: number, rings: number): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -211,14 +230,8 @@ function ClampedBillboard({
     group.visible = opacity > 0.001;
     if (!group.visible) return;
 
-    group.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.material) {
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        for (const mat of mats) {
-          mat.opacity = opacity;
-        }
-      }
-    });
+    _bbOpacity = opacity;
+    group.traverse(applyBillboardOpacity);
 
     group.lookAt(camera.position);
     billboardQuat.copy(group.quaternion);
@@ -250,6 +263,10 @@ interface TileHoverInfo {
 }
 
 interface TileProps {
+  nuclearSite?: NuclearSite;
+  nuclearTransition?: NuclearTransition;
+  outgoingType?: TileProps["tileType"];
+  outgoingOwnerColor?: string;
   tileData: TileData3D;
   tileType:
     | "empty"
@@ -268,6 +285,7 @@ interface TileProps {
   ownerId?: string | null;
   ownerColor?: string;
   reservedById?: string | null;
+  reservedByColor?: string;
   displayName?: string;
   isOceanSpace?: boolean;
   bonuses?: { [key: string]: number };
@@ -277,6 +295,7 @@ interface TileProps {
   startHidden?: boolean;
   entranceDelay?: number;
   isNewlyPlaced?: boolean;
+  visualSeed?: number;
   isVolcanic?: boolean;
   isHovered?: boolean;
   onHoverInfo?: (data: TileHoverInfo) => void;
@@ -291,11 +310,13 @@ interface TileProps {
 }
 
 function Tile({
+  nuclearSite,
   tileData,
   tileType,
   ownerId,
   ownerColor,
   reservedById,
+  reservedByColor,
   displayName,
   isOceanSpace: _isOceanSpace = false,
   bonuses = tileData.bonuses,
@@ -305,6 +326,10 @@ function Tile({
   startHidden = false,
   entranceDelay = 0,
   isNewlyPlaced = false,
+  visualSeed = 1,
+  nuclearTransition,
+  outgoingType,
+  outgoingOwnerColor,
   isVolcanic = false,
   isHovered: isHoveredProp = false,
   sphereRadius = SPHERE_RADIUS,
@@ -314,11 +339,20 @@ function Tile({
   vpHighlightIntensity = 0,
   vpHighlightColor = [0.95, 0.95, 1.0],
 }: TileProps) {
+  const contentType = outgoingType ?? tileType;
+  const contentNewlyPlaced = nuclearTransition?.outgoing ? false : isNewlyPlaced;
   const tileGroupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
 
   const extraMatsRef = useRef<THREE.Material[] | null>(null);
   const hovered = isHoveredProp;
+  const highlight = useTileHighlight(
+    tileData,
+    hovered,
+    isAvailableForPlacement,
+    vpHighlightIntensity,
+    vpHighlightColor,
+  );
 
   const [entranceScale, setEntranceScale] = useState(animateEntrance || startHidden ? 0 : 1);
   const entranceStartRef = useRef<number | null>(null);
@@ -353,59 +387,6 @@ function Tile({
     return geometry;
   }, []);
 
-  const hoverGlowMaterial = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      vertexShader: sphereProjectionVertex,
-      fragmentShader: hoverGlowFragment,
-      uniforms: {
-        time: { value: 0.0 },
-        opacity: { value: 0.0 },
-        uSphereRadius: { value: sphereRadius },
-        uZOffset: { value: CHROME_Z_BASE + 0.003 },
-        uSphereCenter: { value: sphereCenter },
-      },
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-    });
-  }, [sphereRadius, sphereCenter]);
-
-  const availableGlowMaterial = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      vertexShader: sphereProjectionVertex,
-      fragmentShader: availableGlowFragment,
-      uniforms: {
-        time: { value: 0.0 },
-        uSphereRadius: { value: sphereRadius },
-        uZOffset: { value: CHROME_Z_BASE + 0.005 },
-        uSphereCenter: { value: sphereCenter },
-      },
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-    });
-  }, [sphereRadius, sphereCenter]);
-
-  const vpHighlightMaterial = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      vertexShader: sphereProjectionVertex,
-      fragmentShader: vpHighlightFragment,
-      uniforms: {
-        uColor: { value: new THREE.Vector3(0.95, 0.95, 1.0) },
-        opacity: { value: 0.0 },
-        uSphereRadius: { value: sphereRadius },
-        uZOffset: { value: CHROME_Z_BASE + 0.004 },
-        uSphereCenter: { value: sphereCenter },
-      },
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-    });
-  }, [sphereRadius, sphereCenter]);
-
   const volcanicTintMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       vertexShader: sphereProjectionVertex,
@@ -429,6 +410,9 @@ function Tile({
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
+      // Flat overlays: one pass. Two-pass transparent DoubleSide doubles draws and re-validates the
+      // material every frame.
+      forceSinglePass: true,
     });
   }, [sphereRadius, sphereCenter]);
 
@@ -445,18 +429,22 @@ function Tile({
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
+      // Flat overlays: one pass. Two-pass transparent DoubleSide doubles draws and re-validates the
+      // material every frame.
+      forceSinglePass: true,
     });
   }, [sphereRadius, sphereCenter]);
 
   useFrame((state) => {
     oceanBorderMaterial.uniforms.time.value = state.clock.elapsedTime;
+    if (highlight.current) {
+      highlight.current.visibility = entranceScale * (tileOpacity?.current ?? 1);
+    }
 
     // Update colors for hover state (avoids recreating materials)
     if (hovered) {
-      hexTileMaterial.color.set("#ffff88");
-      borderMaterial.uniforms.uColor.value.set("#ffffff");
+      borderMaterial.uniforms.uColor.value.copy(HOVER_BORDER_COLOR);
     } else {
-      hexTileMaterial.color.copy(baseTileColor);
       borderMaterial.uniforms.uColor.value.copy(baseBorderColor);
     }
 
@@ -476,50 +464,20 @@ function Tile({
       }
     }
 
-    if (hoverGlowMaterial.uniforms) {
-      hoverGlowMaterial.uniforms.time.value = state.clock.elapsedTime;
-
-      const targetOpacity = hovered ? 0.3 : 0.0;
-      hoverGlowMaterial.uniforms.opacity.value = THREE.MathUtils.lerp(
-        hoverGlowMaterial.uniforms.opacity.value,
-        targetOpacity,
-        0.15,
-      );
-    }
-
-    if (availableGlowMaterial.uniforms) {
-      availableGlowMaterial.uniforms.time.value = state.clock.elapsedTime;
-    }
-
-    if (vpHighlightMaterial.uniforms) {
-      vpHighlightMaterial.uniforms.uColor.value.set(
-        vpHighlightColor[0],
-        vpHighlightColor[1],
-        vpHighlightColor[2],
-      );
-      const lerpSpeed =
-        vpHighlightIntensity > vpHighlightMaterial.uniforms.opacity.value ? 0.08 : 0.04;
-      vpHighlightMaterial.uniforms.opacity.value = THREE.MathUtils.lerp(
-        vpHighlightMaterial.uniforms.opacity.value,
-        vpHighlightIntensity,
-        lerpSpeed,
-      );
+    if (meshRef.current) {
+      meshRef.current.visible = hexTileMaterial.opacity > GLOW_CUTOFF;
     }
 
     if (tileOpacity && tileGroupRef.current) {
       const o = tileOpacity.current;
       hexTileMaterial.opacity = baseHexOpacity * o;
       borderMaterial.uniforms.uOpacity.value = 0.9 * o;
-      hoverGlowMaterial.uniforms.opacity.value *= o;
 
       if (!extraMatsRef.current) {
         const knownMats = new Set<THREE.Material>([
           hexTileMaterial,
           borderMaterial,
-          hoverGlowMaterial,
-          availableGlowMaterial,
           volcanicTintMaterial,
-          vpHighlightMaterial,
           oceanBorderMaterial,
         ]);
         const extras: THREE.Material[] = [];
@@ -620,6 +578,8 @@ function Tile({
       roughness: 0.7,
       metalness: 0.1,
       side: THREE.DoubleSide,
+      // Flat overlays: one pass. Two-pass transparent DoubleSide doubles draws and re-validates the
+      // material every frame.
       forceSinglePass: true,
     });
 
@@ -664,15 +624,30 @@ function Tile({
         uZOffset: { value: CHROME_Z_BASE + 0.0025 },
         uColor: { value: new THREE.Color(baseBorderColor.r, baseBorderColor.g, baseBorderColor.b) },
         uOpacity: { value: 0.9 },
+        uOpacityScale: { value: 1 },
         uNoiseTex: { value: borderNoiseTexture },
         uSphereCenter: { value: sphereCenter },
         uGroupInverseMatrix: { value: groupInverseMatrix || new THREE.Matrix4() },
       },
       transparent: true,
       depthWrite: false,
-      side: THREE.DoubleSide,
+      side: THREE.FrontSide,
     });
   }, [baseBorderColor, borderNoiseTexture, sphereRadius, sphereCenter]);
+
+  // Where trees or terrain stand in front of the border, it shows through dimmed, so the grid stays
+  // readable without flattening the forest.
+  const occludedBorderMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      vertexShader: tileBorderVertex,
+      fragmentShader: tileBorderFragment,
+      uniforms: { ...borderMaterial.uniforms, uOpacityScale: { value: 0.4 } },
+      transparent: true,
+      depthWrite: false,
+      depthFunc: THREE.GreaterDepth,
+      side: THREE.FrontSide,
+    });
+  }, [borderMaterial]);
 
   interface BonusIconGroup {
     type: string;
@@ -730,19 +705,24 @@ function Tile({
       scale={[entranceScale, entranceScale, entranceScale]}
     >
       {/* Main hex tile - hidden for ocean (water mesh handles rendering) */}
-      {tileType !== "ocean" && (
-        <mesh
-          ref={meshRef}
-          geometry={hexGeometry}
-          material={hexTileMaterial}
-          renderOrder={10}
-          raycast={() => {}}
-        />
-      )}
+      {tileType !== "ocean" &&
+        (tileType !== "nuclear-zone" ||
+          (nuclearTransition?.outgoing && !nuclearTransition.impacted)) && (
+          <mesh
+            ref={meshRef}
+            geometry={hexGeometry}
+            material={hexTileMaterial}
+            renderOrder={10}
+            raycast={() => {}}
+          />
+        )}
 
       {/* Hex border - hidden for ocean tiles */}
       {tileType !== "ocean" && (
-        <mesh geometry={borderGeometry} material={borderMaterial} renderOrder={20} />
+        <>
+          <mesh geometry={borderGeometry} material={borderMaterial} renderOrder={20} />
+          <mesh geometry={borderGeometry} material={occludedBorderMaterial} renderOrder={20} />
+        </>
       )}
 
       {/* Ocean space border indicator (for empty ocean-reserved tiles) */}
@@ -755,130 +735,119 @@ function Tile({
         <mesh geometry={overlayGeometry} material={volcanicTintMaterial} renderOrder={21} />
       )}
 
-      {/* Hover glow effect - hidden for ocean tiles */}
-      {tileType !== "ocean" && (
-        <mesh geometry={overlayGeometry} material={hoverGlowMaterial} renderOrder={22} />
-      )}
-
-      {/* Available placement glow */}
-      {isAvailableForPlacement && (
-        <mesh geometry={overlayGeometry} material={availableGlowMaterial} renderOrder={23} />
-      )}
-
-      {/* VP counting highlight */}
-      <mesh geometry={overlayGeometry} material={vpHighlightMaterial} renderOrder={24} />
-
-      {/* Volcano 3D tile */}
-      {tileType === "volcano" && (
-        <VolcanoTile
-          isNewlyPlaced={isNewlyPlaced}
-          surfaceNormal={tileData.normal}
-          worldPosition={adjustedPosition}
-          sphereCenter={sphereCenter}
-        />
-      )}
-
       {/* Nuclear Zone 3D tile */}
-      {tileType === "nuclear-zone" && (
+      {tileType === "nuclear-zone" && nuclearSite && (
         <NuclearZoneTile
-          isNewlyPlaced={isNewlyPlaced}
-          surfaceNormal={tileData.normal}
-          worldPosition={adjustedPosition}
+          key={visualSeed}
+          isNewlyPlaced={!!nuclearTransition || isNewlyPlaced}
+          startTime={nuclearTransition?.start}
+          site={nuclearSite}
           sphereCenter={sphereCenter}
-          groupInverseMatrix={groupInverseMatrix}
         />
       )}
 
-      {/* Mohole 3D tile */}
-      {tileType === "mohole" && (
-        <MoholeTile
-          isNewlyPlaced={isNewlyPlaced}
-          surfaceNormal={tileData.normal}
-          worldPosition={adjustedPosition}
-          sphereCenter={sphereCenter}
-          groupInverseMatrix={groupInverseMatrix}
-        />
-      )}
+      <NuclearCollapse transition={nuclearTransition} seed={visualSeed}>
+        {/* Volcano 3D tile */}
+        {contentType === "volcano" && (
+          <VolcanoTile
+            isNewlyPlaced={contentNewlyPlaced}
+            surfaceNormal={tileData.normal}
+            worldPosition={adjustedPosition}
+            sphereCenter={sphereCenter}
+          />
+        )}
 
-      {/* Mining 3D tile */}
-      {tileType === "mining" && (
-        <MiningTile
-          isNewlyPlaced={isNewlyPlaced}
-          surfaceNormal={tileData.normal}
-          worldPosition={adjustedPosition}
-          sphereCenter={sphereCenter}
-          groupInverseMatrix={groupInverseMatrix}
-        />
-      )}
+        {/* Mohole 3D tile */}
+        {contentType === "mohole" && (
+          <MoholeTile
+            isNewlyPlaced={contentNewlyPlaced}
+            surfaceNormal={tileData.normal}
+            worldPosition={adjustedPosition}
+            sphereCenter={sphereCenter}
+            groupInverseMatrix={groupInverseMatrix}
+          />
+        )}
 
-      {/* Reserved Area fence tile */}
-      {tileType === "restricted" && (
-        <ReservedAreaTile
-          isNewlyPlaced={isNewlyPlaced}
-          ownerColor={ownerColor}
-          surfaceNormal={tileData.normal}
-          worldPosition={adjustedPosition}
-          sphereCenter={sphereCenter}
-          groupInverseMatrix={groupInverseMatrix}
-        />
-      )}
+        {/* Mining 3D tile */}
+        {contentType === "mining" && (
+          <MiningTile
+            isNewlyPlaced={contentNewlyPlaced}
+            surfaceNormal={tileData.normal}
+            worldPosition={adjustedPosition}
+            sphereCenter={sphereCenter}
+            groupInverseMatrix={groupInverseMatrix}
+          />
+        )}
 
-      {/* World Tree 3D tile */}
-      {tileType === "world-tree" && (
-        <WorldTreeTile
-          isNewlyPlaced={isNewlyPlaced}
-          surfaceNormal={tileData.normal}
-          worldPosition={adjustedPosition}
-          sphereCenter={sphereCenter}
-          groupInverseMatrix={groupInverseMatrix}
-        />
-      )}
+        {/* Reserved Area fence tile */}
+        {contentType === "restricted" && (
+          <ReservedAreaTile
+            isNewlyPlaced={contentNewlyPlaced}
+            ownerColor={outgoingOwnerColor ?? ownerColor}
+            surfaceNormal={tileData.normal}
+            worldPosition={adjustedPosition}
+            sphereCenter={sphereCenter}
+            groupInverseMatrix={groupInverseMatrix}
+          />
+        )}
 
+        {/* World Tree 3D tile */}
+        {contentType === "world-tree" && (
+          <WorldTreeTile
+            isNewlyPlaced={contentNewlyPlaced}
+            surfaceNormal={tileData.normal}
+            worldPosition={adjustedPosition}
+            sphereCenter={sphereCenter}
+            groupInverseMatrix={groupInverseMatrix}
+          />
+        )}
+      </NuclearCollapse>
       {/* Special tile label (rendered via displayName below) */}
 
       {/* Billboard display name and/or bonus icons */}
-      {(displayName ||
-        (tileType !== "greenery" &&
-          tileType !== "ecological-zone" &&
-          tileType !== "natural-preserve" &&
-          tileType !== "world-tree" &&
-          bonusIconGroups.length > 0)) && (
-        <ClampedBillboard position={[0, 0, 0.02]} renderOrder={110} sphereCenter={sphereCenter}>
-          {displayName && (
-            <Text
-              fontSize={0.045}
-              font={assetUrl("fonts/prototype")}
-              color="white"
-              outlineWidth={0.004}
-              outlineColor="black"
-              anchorX="center"
-              anchorY="middle"
-              textAlign="center"
-              maxWidth={0.18}
-              renderOrder={110}
-            >
-              {displayName}
-            </Text>
-          )}
-          {tileType !== "greenery" &&
+      {!nuclearTransition?.impacted &&
+        (displayName ||
+          (tileType !== "greenery" &&
             tileType !== "ecological-zone" &&
             tileType !== "natural-preserve" &&
             tileType !== "world-tree" &&
-            bonusIconGroups.length > 0 && (
-              <group position={[0, displayName ? -0.08 : 0, 0]}>
-                {calculateIconPositions(bonusIconGroups).map((pos) => (
-                  <BonusIcon
-                    key={`${pos.group.type}-${pos.indexInGroup}`}
-                    texture={pos.group.texture}
-                    position={[pos.x, 0, 0]}
-                    isCredits={pos.group.isCredits}
-                    creditAmount={pos.group.isCredits ? pos.group.count : undefined}
-                  />
-                ))}
-              </group>
+            bonusIconGroups.length > 0)) && (
+          <ClampedBillboard position={[0, 0, 0.02]} renderOrder={110} sphereCenter={sphereCenter}>
+            {displayName && (
+              <Text
+                fontSize={0.045}
+                font={assetUrl("fonts/prototype")}
+                color="white"
+                outlineWidth={0.004}
+                outlineColor="black"
+                anchorX="center"
+                anchorY="middle"
+                textAlign="center"
+                maxWidth={0.18}
+                renderOrder={110}
+              >
+                {displayName}
+              </Text>
             )}
-        </ClampedBillboard>
-      )}
+            {tileType !== "greenery" &&
+              tileType !== "ecological-zone" &&
+              tileType !== "natural-preserve" &&
+              tileType !== "world-tree" &&
+              bonusIconGroups.length > 0 && (
+                <group position={[0, displayName ? -0.08 : 0, 0]}>
+                  {calculateIconPositions(bonusIconGroups).map((pos) => (
+                    <BonusIcon
+                      key={`${pos.group.type}-${pos.indexInGroup}`}
+                      texture={pos.group.texture}
+                      position={[pos.x, 0, 0]}
+                      isCredits={pos.group.isCredits}
+                      creditAmount={pos.group.isCredits ? pos.group.count : undefined}
+                    />
+                  ))}
+                </group>
+              )}
+          </ClampedBillboard>
+        )}
 
       {/* Reserved tile marker (land claim) */}
       {/* Reserved tile marker (fallback for non-fence reserved tiles) */}
@@ -890,9 +859,7 @@ function Tile({
           </mesh>
           <mesh position={[0.1, 0.07, 0]}>
             <circleGeometry args={[0.025, 3]} />
-            <meshBasicMaterial
-              color={`hsl(${(reservedById.charCodeAt(0) * 137.5) % 360}, 70%, 50%)`}
-            />
+            <meshBasicMaterial color={reservedByColor ?? "#67432e"} />
           </mesh>
         </group>
       )}

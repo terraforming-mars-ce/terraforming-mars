@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/award"
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/colony"
 	"terraforming-mars-backend/internal/game/player"
@@ -20,27 +21,36 @@ type ColonyBonusLookup interface {
 // BehaviorApplier handles applying card behavior inputs and outputs
 // This is the single source of truth for all input/output application
 type BehaviorApplier struct {
-	player            *player.Player        // Player affected by the behavior (may be nil for game-only effects)
-	game              *game.Game            // Game context for global params/tiles (may be nil for player-only effects)
-	source            string                // Source identifier for logging (card name, action name, etc.)
-	sourceCardID      string                // Card ID for self-card targeting (optional)
-	targetCardIDs     []string              // Card IDs for any-card targeting (positional, one per any-card output)
-	anyCardTargetIdx  int                   // Index into targetCardIDs, incremented each time an any-card output is processed
-	targetPlayerID    string                // Player ID for any-player targeting (optional, set by caller)
-	stealSourceCardID string                // Card ID to steal resources from for steal-from-any-card outputs (optional)
-	sourceBehaviorIdx int                   // Behavior index for card draw selection tracking
-	selectedAmount    int                   // Player-selected amount for variable-amount behaviors (0 = not applicable)
-	actionPayment     *CardPayment          // Optional payment for action inputs with paymentAllowed (e.g., titanium for Water Import From Europa)
-	cardRegistry      CardRegistryInterface // Card registry for tag counting in per conditions (optional)
-	sourceType        shared.SourceType     // Source type for triggered effect classification
-	colonyBonusLookup ColonyBonusLookup
-	deferredSteal     shared.BehaviorCondition
-	logger            *slog.Logger
+	productionBox      string
+	player             *player.Player // Player affected by the behavior (may be nil for game-only effects)
+	game               *game.Game     // Game context for global params/tiles (may be nil for player-only effects)
+	source             string         // Source identifier for logging (card name, action name, etc.)
+	triggeringCardID   string
+	triggeringPlayerID string
+	sourceCardID       string // Card ID for self-card targeting (optional)
+	inputCardIDs       []string
+	reservedResources  map[shared.ResourceType]int
+	reservedStorage    map[string]int
+	targetCardIDs      []string // Card IDs for any-card targeting (positional, one per any-card output)
+	anyCardTargetIdx   int      // Index into targetCardIDs, incremented each time an any-card output is processed
+	targetPlayerID     string   // Player ID for any-player targeting (optional, set by caller)
+	stealSourceCardID  string   // Card ID to steal resources from for steal-from-any-card outputs (optional)
+	completeAction     *shared.CardActionRef
+	sourceBehaviorIdx  int // Behavior index for card draw selection tracking
+	selectedAmount     int // Player-selected amount for variable-amount behaviors (0 = not applicable)
+	inputPaymentPlan   PaymentPlan
+	actionPayment      *shared.Payment       // Optional payment for action inputs with paymentAllowed (e.g., titanium for Water Import From Europa)
+	cardRegistry       CardRegistryInterface // Card registry for tag counting in per conditions (optional)
+	sourceType         shared.SourceType     // Source type for triggered effect classification
+	colonyBonusLookup  ColonyBonusLookup
+	awardRegistry      award.AwardRegistry
+	deferredRemoval    *shared.BasicResourceCondition
+	logger             *slog.Logger
 }
 
-// DeferredSteal returns the deferred steal output, if any (for post-tile-placement processing)
-func (a *BehaviorApplier) DeferredSteal() shared.BehaviorCondition {
-	return a.deferredSteal
+// DeferredRemoval returns the deferred resource removal output, if any (for post-tile-placement processing)
+func (a *BehaviorApplier) DeferredRemoval() *shared.BasicResourceCondition {
+	return a.deferredRemoval
 }
 
 // NewBehaviorApplier creates a new behavior applier
@@ -100,6 +110,12 @@ func (a *BehaviorApplier) WithStealSourceCardID(cardID string) *BehaviorApplier 
 	return a
 }
 
+// WithActionCompletion identifies the action consumed when a deferred selection completes.
+func (a *BehaviorApplier) WithActionCompletion(ref shared.CardActionRef) *BehaviorApplier {
+	a.completeAction = &ref
+	return a
+}
+
 // WithSourceBehaviorIndex sets the source behavior index for card draw selection tracking
 func (a *BehaviorApplier) WithSourceBehaviorIndex(behaviorIndex int) *BehaviorApplier {
 	a.sourceBehaviorIdx = behaviorIndex
@@ -114,7 +130,7 @@ func (a *BehaviorApplier) WithSelectedAmount(amount int) *BehaviorApplier {
 
 // WithActionPayment sets the payment for action inputs that have paymentAllowed
 // (e.g., Water Import From Europa allows titanium as payment for the 12 M€ action cost)
-func (a *BehaviorApplier) WithActionPayment(payment *CardPayment) *BehaviorApplier {
+func (a *BehaviorApplier) WithActionPayment(payment *shared.Payment) *BehaviorApplier {
 	a.actionPayment = payment
 	return a
 }
@@ -137,9 +153,6 @@ func (a *BehaviorApplier) ApplyInputs(
 	ctx context.Context,
 	inputs []shared.BehaviorCondition,
 ) error {
-	if len(inputs) == 0 {
-		return nil
-	}
 
 	if a.player == nil {
 		return fmt.Errorf("cannot apply inputs: no player context")
@@ -152,43 +165,16 @@ func (a *BehaviorApplier) ApplyInputs(
 
 	log.Debug("Processing behavior inputs")
 
-	resources := a.player.Resources().Get()
-
-	// Pass 1: Validate all inputs before deducting anything
-	for _, input := range inputs {
-		rt := input.GetResourceType()
-		effectiveAmount := input.GetAmount()
-		if shared.IsVariableAmount(input) {
-			effectiveAmount = input.GetAmount() * a.selectedAmount
-		}
-
-		// Storage resource inputs (target: "self-card") deduct from card storage
-		if input.GetTarget() == "self-card" && IsStorageResourceType(rt) {
-			if a.sourceCardID == "" {
-				return fmt.Errorf("cannot deduct from self-card: no source card ID")
-			}
-			storage := a.player.Resources().GetCardStorage(a.sourceCardID)
-			if storage < effectiveAmount {
-				return fmt.Errorf("insufficient %s on card: need %d, have %d", rt, effectiveAmount, storage)
-			}
-			continue
-		}
-
-		// Credit inputs with paymentAllowed use CardPayment-style validation
-		if paymentAllowed := shared.GetPaymentAllowed(input); rt == shared.ResourceCredit && len(paymentAllowed) > 0 {
-			if err := a.validateActionPayment(effectiveAmount, paymentAllowed, log); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if err := a.validateInputAmount(rt, effectiveAmount, resources); err != nil {
-			return err
-		}
+	if err := a.ValidateInputs(inputs); err != nil {
+		return err
+	}
+	inputSources, err := a.resolveInputSources(inputs)
+	if err != nil {
+		return err
 	}
 
-	// Pass 2: Deduct resources
-	for _, input := range inputs {
+	ApplyPayment(a.player, a.inputPaymentPlan)
+	for inputIndex, input := range inputs {
 		rt := input.GetResourceType()
 		effectiveAmount := input.GetAmount()
 		if shared.IsVariableAmount(input) {
@@ -199,19 +185,16 @@ func (a *BehaviorApplier) ApplyInputs(
 			continue
 		}
 
-		// Storage resource inputs (target: "self-card") deduct from card storage
-		if input.GetTarget() == "self-card" && IsStorageResourceType(rt) {
-			a.player.Resources().AddToStorage(a.sourceCardID, -effectiveAmount)
+		if IsStorageResourceType(rt) {
+			a.player.Resources().AddToStorage(inputSources[inputIndex], -effectiveAmount)
 			log.Debug("Deducted from card storage",
-				slog.String("card_id", a.sourceCardID),
+				slog.String("card_id", inputSources[inputIndex]),
 				slog.String("resource_type", string(rt)),
 				slog.Int("amount", effectiveAmount))
 			continue
 		}
 
-		// Credit inputs with paymentAllowed use CardPayment-style deduction
-		if paymentAllowed := shared.GetPaymentAllowed(input); rt == shared.ResourceCredit && len(paymentAllowed) > 0 {
-			a.applyActionPayment(effectiveAmount, log)
+		if shared.IsBasicPaymentResource(rt) {
 			continue
 		}
 
@@ -258,7 +241,7 @@ func (a *BehaviorApplier) validateInputAmount(rt shared.ResourceType, amount int
 		if shared.IsProductionResourceType(rt) {
 			production := a.player.Resources().Production()
 			available := production.GetAmount(rt)
-			if available < amount {
+			if available-amount < shared.ProductionMinimum(rt) {
 				return fmt.Errorf("insufficient %s: need %d, have %d", rt, amount, available)
 			}
 		}
@@ -266,118 +249,11 @@ func (a *BehaviorApplier) validateInputAmount(rt shared.ResourceType, amount int
 	return nil
 }
 
-// validateActionPayment validates that the action payment covers the required cost
-func (a *BehaviorApplier) validateActionPayment(
-	requiredAmount int,
-	paymentAllowed []shared.ResourceType,
-	log *slog.Logger,
-) error {
-	if a.actionPayment == nil {
-		// No payment provided — fall back to checking if player has enough credits
-		resources := a.player.Resources().Get()
-		if resources.Credits < requiredAmount {
-			return fmt.Errorf("insufficient credits: need %d, have %d", requiredAmount, resources.Credits)
-		}
-		return nil
-	}
-
-	payment := a.actionPayment
-
-	if err := payment.Validate(); err != nil {
-		return fmt.Errorf("invalid action payment: %w", err)
-	}
-
-	// Verify player has the resources
-	resources := a.player.Resources().Get()
-	if resources.Credits < payment.Credits {
-		return fmt.Errorf("insufficient credits: need %d, have %d", payment.Credits, resources.Credits)
-	}
-
-	// Build allowed resource set
-	allowed := make(map[shared.ResourceType]bool)
-	for _, rt := range paymentAllowed {
-		allowed[rt] = true
-	}
-
-	// Validate titanium usage
-	if payment.Titanium > 0 {
-		if !allowed[shared.ResourceTitanium] {
-			return fmt.Errorf("titanium is not allowed as payment for this action")
-		}
-		if resources.Titanium < payment.Titanium {
-			return fmt.Errorf("insufficient titanium: need %d, have %d", payment.Titanium, resources.Titanium)
-		}
-	}
-
-	// Validate steel usage
-	if payment.Steel > 0 {
-		if !allowed[shared.ResourceSteel] {
-			return fmt.Errorf("steel is not allowed as payment for this action")
-		}
-		if resources.Steel < payment.Steel {
-			return fmt.Errorf("insufficient steel: need %d, have %d", payment.Steel, resources.Steel)
-		}
-	}
-
-	// Calculate total payment value using player's substitution rates
-	playerSubstitutes := a.player.Resources().PaymentSubstitutes()
-	totalValue := payment.TotalValue(playerSubstitutes, nil)
-
-	if totalValue < requiredAmount {
-		return fmt.Errorf("payment insufficient: action costs %d MC, payment provides %d MC", requiredAmount, totalValue)
-	}
-
-	log.Debug("Validated action payment",
-		slog.Int("required", requiredAmount),
-		slog.Int("credits", payment.Credits),
-		slog.Int("titanium", payment.Titanium),
-		slog.Int("steel", payment.Steel),
-		slog.Int("total_value", totalValue))
-
-	return nil
-}
-
-// applyActionPayment deducts resources according to the action payment
-func (a *BehaviorApplier) applyActionPayment(
-	requiredAmount int,
-	log *slog.Logger,
-) {
-	if a.actionPayment == nil {
-		// No payment struct — just deduct credits
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceCredit: -requiredAmount,
-		})
-		log.Debug("Deducted credits (no action payment)", slog.Int("amount", requiredAmount))
-		return
-	}
-
-	payment := a.actionPayment
-
-	if payment.Credits > 0 {
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceCredit: -payment.Credits,
-		})
-		log.Debug("Deducted credits from action payment", slog.Int("amount", payment.Credits))
-	}
-	if payment.Titanium > 0 {
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceTitanium: -payment.Titanium,
-		})
-		log.Debug("Deducted titanium from action payment", slog.Int("amount", payment.Titanium))
-	}
-	if payment.Steel > 0 {
-		a.player.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceSteel: -payment.Steel,
-		})
-		log.Debug("Deducted steel from action payment", slog.Int("amount", payment.Steel))
-	}
-}
-
 // isStorageResourceType returns true for resource types that are stored on cards
 func IsStorageResourceType(rt shared.ResourceType) bool {
 	switch rt {
 	case shared.ResourceMicrobe, shared.ResourceAnimal, shared.ResourceFloater,
-		shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceFighter, shared.ResourceDisease:
+		shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceFighter, shared.ResourceDisease, shared.ResourceCamp, shared.ResourceCardResource:
 		return true
 	}
 	return false
@@ -389,7 +265,7 @@ func isEffectOutputType(rt shared.ResourceType) bool {
 	switch rt {
 	case shared.ResourceDiscount, shared.ResourcePaymentSubstitute, shared.ResourceValueModifier,
 		shared.ResourceGlobalParameterLenience, shared.ResourceIgnoreGlobalRequirements,
-		shared.ResourceStoragePaymentSubstitute, shared.ResourceOceanAdjacencyBonus,
+		shared.ResourceOceanAdjacencyBonus,
 		shared.ResourceDefense, shared.ResourceActionReuse:
 		return true
 	}
@@ -416,6 +292,10 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 		return nil, nil
 	}
 
+	if err := a.ValidateResourceOutputs(outputs); err != nil {
+		return nil, err
+	}
+
 	log := a.logger.With(
 		slog.String("source", a.source),
 		slog.Int("output_count", len(outputs)),
@@ -423,10 +303,36 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 
 	log.Debug("Processing behavior outputs")
 
+	options, deferred, err := EffectSelectionOptions(outputs, a.player, a.game, a.cardRegistry, a.colonyBonusLookup)
+	if err != nil {
+		return nil, err
+	}
+	if deferred {
+		if len(options) == 0 {
+			return nil, fmt.Errorf("no legal effect selection")
+		}
+		a.player.Selection().SetPendingEffectSelection(&shared.PendingEffectSelection{Source: a.source, SourceCardID: a.sourceCardID, Outputs: outputs, Options: options})
+		return nil, nil
+	}
+
+	if err := ValidateRevealOutputs(outputs, a.game, a.cardRegistry); err != nil {
+		return nil, err
+	}
+	if _, err := a.ApplyCardDrawOutputs(ctx, outputs); err != nil {
+		return nil, err
+	}
 	var calculatedOutputs []shared.CalculatedOutput
 	var notificationOutputs []shared.CalculatedOutput
 
 	for _, output := range outputs {
+		if reveal, ok := output.(*shared.CardRevealCondition); ok {
+			rewards, err := a.applyCardReveal(ctx, reveal)
+			if err != nil {
+				return nil, err
+			}
+			calculatedOutputs = append(calculatedOutputs, rewards...)
+			continue
+		}
 		rt := output.GetResourceType()
 		baseAmount := output.GetAmount()
 
@@ -437,8 +343,7 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 		if per := shared.GetPerCondition(output); per != nil && a.player != nil && a.game != nil {
 			count := a.countPerCondition(per)
 			if per.Amount > 0 {
-				multiplier := count / per.Amount
-				actualAmount = baseAmount * multiplier
+				actualAmount = shared.CalculateScaledAmount(output, count)
 				isScaled = true
 				log.Debug("Calculated scaled output",
 					slog.String("resource_type", string(rt)),
@@ -464,6 +369,10 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 			return calculatedOutputs, err
 		}
 
+		if basic, ok := output.(*shared.BasicResourceCondition); ok && basic.Target == "any-player" && actualAmount < 0 && basic.TargetRestriction != nil {
+			continue // The removal is logged only when its selection is confirmed.
+		}
+
 		// Colony-bonus outputs expand into the actual resources gained
 		if rt == shared.ResourceColonyBonus {
 			bonusOutputs := a.collectColonyBonusOutputs(log)
@@ -487,7 +396,7 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 		if actualAmount != 0 && !isEffectOutputType(rt) {
 			resourceType := string(rt)
 			if resourceType == string(shared.ResourceCardResource) {
-				resourceType = a.resolveCardResourceType()
+				resourceType = a.resolveCardResourceType(output.GetTarget())
 			}
 			notificationOutputs = append(notificationOutputs, shared.CalculatedOutput{
 				ResourceType: resourceType,
@@ -515,22 +424,42 @@ func (a *BehaviorApplier) ApplyOutputsAndGetCalculated(
 	return calculatedOutputs, nil
 }
 
-// resolveCardResourceType resolves "card-resource" to the actual storage type of the last consumed target card
-func (a *BehaviorApplier) resolveCardResourceType() string {
-	if a.anyCardTargetIdx == 0 || a.cardRegistry == nil {
+// resolveCardResourceType resolves a generic storage reward to its destination resource type.
+func (a *BehaviorApplier) resolveCardResourceType(target string) string {
+	if a.cardRegistry == nil {
 		return string(shared.ResourceCardResource)
 	}
-	lastTargetID := a.targetCardIDs[a.anyCardTargetIdx-1]
-	targetCard, err := a.cardRegistry.GetByID(lastTargetID)
+	targetID := a.triggeringCardID
+	if target != "triggering-card" {
+		if a.anyCardTargetIdx == 0 {
+			return string(shared.ResourceCardResource)
+		}
+		targetID = a.targetCardIDs[a.anyCardTargetIdx-1]
+	}
+	targetCard, err := a.cardRegistry.GetByID(targetID)
 	if err != nil || targetCard.ResourceStorage == nil {
 		return string(shared.ResourceCardResource)
 	}
 	return string(targetCard.ResourceStorage.Type)
 }
 
+func (a *BehaviorApplier) tagCountContext() TagCountContext {
+	if a.player == nil || (a.game != nil && a.game.CurrentPhase() != shared.GamePhaseAction) {
+		return TagCountContext{}
+	}
+	switch a.sourceType {
+	case shared.SourceTypeCardPlay:
+		return TagCountContext{ActorID: a.player.ID(), ExcludeWildCardID: a.sourceCardID}
+	case shared.SourceTypeCardAction, shared.SourceTypeCorporationFirstAction:
+		return TagCountContext{ActorID: a.player.ID()}
+	}
+	return TagCountContext{}
+}
+
 func (a *BehaviorApplier) countPerCondition(per *shared.PerCondition) int {
-	if per != nil && per.ResourceType == shared.ResourceColonyCount && a.game != nil {
-		return a.game.Colonies().CountAllColonies()
+	var colonies ColonyCounter
+	if a.game != nil {
+		colonies = a.game.Colonies()
 	}
 	var b *board.Board
 	var allPlayers []*player.Player
@@ -538,7 +467,7 @@ func (a *BehaviorApplier) countPerCondition(per *shared.PerCondition) int {
 		b = a.game.Board()
 		allPlayers = a.game.GetAllPlayers()
 	}
-	return CountPerCondition(per, a.sourceCardID, a.player, b, a.cardRegistry, allPlayers)
+	return CountPerCondition(per, a.sourceCardID, a.player, b, a.cardRegistry, allPlayers, colonies, a.tagCountContext())
 }
 
 // ApplyCardDrawOutputs processes card-peek/take/buy outputs together
@@ -553,7 +482,7 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 	)
 
 	// Scan outputs for card-peek, card-take, card-buy
-	var peekAmount, takeAmount, buyAmount int
+	var peekAmount, takeAmount, buyAmount, minTakeAmount int
 	var isPrelude bool
 	for _, output := range outputs {
 		switch output.GetResourceType() {
@@ -561,6 +490,9 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 			peekAmount += output.GetAmount()
 		case shared.ResourceCardTake:
 			takeAmount += output.GetAmount()
+			if !shared.IsOptional(output) {
+				minTakeAmount += output.GetAmount()
+			}
 		case shared.ResourceCardBuy:
 			buyAmount += output.GetAmount()
 		}
@@ -581,6 +513,9 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 		return false, fmt.Errorf("cannot apply card draw outputs: no game context")
 	}
 
+	if a.player.Selection().GetPendingCardDrawSelection() != nil {
+		return false, fmt.Errorf("a card draw selection is already pending")
+	}
 	// Draw cards from the appropriate deck
 	var drawnCards []string
 	var err error
@@ -612,6 +547,8 @@ func (a *BehaviorApplier) ApplyCardDrawOutputs(
 	selection := &shared.PendingCardDrawSelection{
 		AvailableCards:      drawnCards,
 		FreeTakeCount:       takeAmount,
+		MinFreeTakeCount:    minTakeAmount,
+		CompleteAction:      a.completeAction,
 		MaxBuyCount:         buyAmount,
 		CardBuyCost:         cardBuyCost,
 		Source:              a.source,
@@ -656,6 +593,9 @@ func (a *BehaviorApplier) stealAnyPlayerResource(
 		return fmt.Errorf("target player not found: %w", err)
 	}
 
+	if targetPlayer.HasExited() || IsResourceProtected(a.player, targetPlayer, resourceType, "") {
+		return fmt.Errorf("%s are protected or unavailable", resourceType)
+	}
 	resources := targetPlayer.Resources().Get()
 	var current int
 	switch resourceType {
@@ -711,6 +651,9 @@ func (a *BehaviorApplier) applyAnyPlayerResource(
 		return fmt.Errorf("target player not found: %w", err)
 	}
 
+	if targetPlayer.HasExited() || IsResourceProtected(a.player, targetPlayer, resourceType, "") {
+		return fmt.Errorf("%s are protected or unavailable", resourceType)
+	}
 	resources := targetPlayer.Resources().Get()
 	var current int
 	switch resourceType {
@@ -792,6 +735,23 @@ func (a *BehaviorApplier) applyOutput(
 	log *slog.Logger,
 ) error {
 	switch o := output.(type) {
+	case *shared.PaymentSubstituteCondition:
+		if problems := shared.ValidateResourceCondition(o, false); len(problems) > 0 {
+			return fmt.Errorf("invalid payment substitute: %v", problems)
+		}
+		source := o.Source
+		if source.Target == "self-card" {
+			if a.cardRegistry == nil {
+				return fmt.Errorf("payment source requires card registry")
+			}
+			card, err := a.cardRegistry.GetByID(a.sourceCardID)
+			if err != nil || card.ResourceStorage == nil || card.ResourceStorage.Type != source.Resource {
+				return fmt.Errorf("payment source does not match card storage")
+			}
+			source.CardID = a.sourceCardID
+		}
+		a.player.Resources().AddPaymentSubstitute(shared.PaymentSubstitute{Source: source, TargetResource: o.TargetResource, ConversionRate: amount, GrantedByCardID: a.sourceCardID, Selectors: shared.CloneSelectors(o.Selectors)})
+		return nil
 	case *shared.BasicResourceCondition:
 		return a.applyBasicResourceOutput(ctx, o, amount, log)
 	case *shared.ProductionCondition:
@@ -945,4 +905,16 @@ func HasEligibleStorageCard(p *player.Player, resourceType shared.ResourceType, 
 		}
 	}
 	return false
+}
+
+// WithProductionBox identifies whether to record the resolved production of this behavior.
+func (a *BehaviorApplier) WithProductionBox(mode string) *BehaviorApplier {
+	a.productionBox = mode
+	return a
+}
+
+// WithAwardRegistry supplies the available awards for free funding effects.
+func (a *BehaviorApplier) WithAwardRegistry(registry award.AwardRegistry) *BehaviorApplier {
+	a.awardRegistry = registry
+	return a
 }

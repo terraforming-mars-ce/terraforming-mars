@@ -29,11 +29,12 @@ type ProductionPhase struct {
 
 // PendingTileSelection represents a pending tile placement
 type PendingTileSelection struct {
-	TileType       string
-	AvailableHexes []string
-	Source         string
-	SourceCardID   string
-	OnComplete     *TileCompletionCallback
+	TileRestrictions *TileRestrictions
+	TileType         string
+	AvailableHexes   []string
+	Source           string
+	SourceCardID     string
+	OnComplete       *TileCompletionCallback
 }
 
 // TileCompletionCallback stores info about what to call when tile placement completes
@@ -61,10 +62,18 @@ type PendingCardSelection struct {
 	Source         string
 }
 
+// CardActionRef identifies an owned card action independently of an effect source.
+type CardActionRef struct {
+	CardID        string
+	BehaviorIndex int
+}
+
 // PendingCardDrawSelection represents a pending card draw/peek/take/buy action
 type PendingCardDrawSelection struct {
 	AvailableCards      []string
 	FreeTakeCount       int
+	MinFreeTakeCount    int
+	CompleteAction      *CardActionRef
 	MaxBuyCount         int
 	CardBuyCost         int
 	Source              string
@@ -73,24 +82,27 @@ type PendingCardDrawSelection struct {
 	PlayAsPrelude       bool
 }
 
-// PendingCardDiscardSelection represents a pending card discard action
-type PendingCardDiscardSelection struct {
-	MinCards       int
-	MaxCards       int
-	Source         string
-	SourceCardID   string
-	PendingOutputs []BehaviorCondition
+// PendingBehaviorResolution is one independently resolvable discard or behavior choice.
+type PendingBehaviorResolution struct {
+	ID                  string
+	Kind                string
+	Source              string
+	SourceCardID        string
+	SourceBehaviorIndex int
+	TriggeringCardID    string
+	TriggeringPlayerID  string
+	MinCards            int
+	MaxCards            int
+	PendingOutputs      []BehaviorCondition
+	Choices             []Choice
 }
 
-// PendingBehaviorChoiceSelection represents a pending behavior choice
-type PendingBehaviorChoiceSelection struct {
-	Choices      []Choice
-	Source       string
-	SourceCardID string
-}
-
-// PendingStealTargetSelection represents a pending steal target selection
-type PendingStealTargetSelection struct {
+// PendingResourceRemovalSelection represents a pending optional resource removal
+type PendingResourceRemovalSelection struct {
+	ID                string
+	Output            *BasicResourceCondition
+	Placement         *HexPosition
+	MaxAmounts        map[string]int
 	EligiblePlayerIDs []string
 	ResourceType      ResourceType
 	Amount            int
@@ -115,6 +127,8 @@ type PendingAwardFundSelection struct {
 
 // PendingColonySelection represents a pending colony tile selection from a card effect
 type PendingColonySelection struct {
+	Remaining                  int
+	AddTile                    bool
 	AvailableColonyIDs         []string
 	AllowDuplicatePlayerColony bool
 	Source                     string
@@ -130,9 +144,32 @@ type PendingFreeTradeSelection struct {
 
 // ForcedFirstAction represents an action that must be completed first
 type ForcedFirstAction struct {
-	ActionType    string
-	CorporationID string
-	Source        string
-	Completed     bool
-	Description   string
+	CorporationID   string
+	BehaviorIndices []int
+	State           string
+	Description     string
+}
+
+// PendingEffectSelection defers a complete effect until its source or targets are chosen.
+type PendingEffectSelection struct {
+	Source       string
+	SourceCardID string
+	Outputs      []BehaviorCondition
+	Options      []EffectSelectionOption
+}
+
+// EffectSelectionOption identifies one complete, legal assignment of an effect's targets.
+type EffectSelectionOption struct {
+	CardID         string
+	TargetPlayerID string
+	ColonyIDs      []string
+	Outputs        []BehaviorCondition
+}
+
+// CardReceipt records cards already granted, independently of action resolution.
+type CardReceipt struct {
+	ID           string
+	Source       string
+	SourceCardID string
+	Cards        []string
 }

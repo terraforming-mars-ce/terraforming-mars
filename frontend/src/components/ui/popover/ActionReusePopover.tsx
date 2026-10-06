@@ -20,14 +20,18 @@ const ActionReusePopover: React.FC<ActionReusePopoverProps> = ({
   onActionSelect,
   gameState,
 }) => {
-  const usedActions = actions.filter(
-    (a) => a.timesUsedThisGeneration > 0 && a.cardId !== reuseSourceCardId,
+  const source = actions.find((action) => action.cardId === reuseSourceCardId);
+  const options = source?.reuseOptions ?? [];
+  const usedActions = actions.filter((action) =>
+    options.some(
+      (option) => option.cardId === action.cardId && option.behaviorIndex === action.behaviorIndex,
+    ),
   );
-
-  const getReuseErrors = (action: PlayerActionDto) =>
-    (action.errors || []).filter((e) => e.code !== "action-already-played");
-
-  const availableCount = usedActions.filter((a) => getReuseErrors(a).length === 0).length;
+  const getOption = (action: PlayerActionDto) =>
+    options.find(
+      (option) => option.cardId === action.cardId && option.behaviorIndex === action.behaviorIndex,
+    );
+  const availableCount = options.filter((option) => option.available).length;
 
   const handleActionClick = (action: PlayerActionDto) => {
     onActionSelect(action);
@@ -57,8 +61,9 @@ const ActionReusePopover: React.FC<ActionReusePopoverProps> = ({
       ) : (
         <div className="p-2 flex flex-col gap-2">
           {usedActions.map((action, index) => {
-            const reuseErrors = getReuseErrors(action);
-            const isReuseAvailable = reuseErrors.length === 0;
+            const option = getOption(action);
+            const reuseErrors = option?.errors ?? [];
+            const isReuseAvailable = option?.available ?? false;
 
             return (
               <GamePopoverItem

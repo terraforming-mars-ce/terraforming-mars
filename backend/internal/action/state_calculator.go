@@ -2,7 +2,6 @@ package action
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"terraforming-mars-backend/internal/game"
@@ -35,7 +34,7 @@ func CalculatePlayerCardState(
 		metadata["discounts"] = discounts
 	}
 
-	errors = append(errors, validateAffordabilityWithSubstitutes(p, card, costMap)...)
+	errors = append(errors, validateAffordabilityWithSubstitutes(p, g, cardRegistry, card, costMap)...)
 	errors = append(errors, validateRequirements(card, p, g, cardRegistry)...)
 	errors = append(errors, validateProductionOutputs(card, p)...)
 	errors = append(errors, validateCardResourceOutputs(card, p, cardRegistry)...)
@@ -47,6 +46,12 @@ func CalculatePlayerCardState(
 		if !gamecards.HasAutoTrigger(behavior) {
 			continue
 		}
+		inputOptions := gamecards.NewBehaviorApplier(p, g, card.Name, nil).WithSourceCardID(card.ID).WithCardRegistry(cardRegistry).InputOptions(behavior.Inputs)
+		for _, sources := range inputOptions.StorageSources {
+			if len(sources) == 0 {
+				errors = append(errors, player.StateError{Code: player.ErrorCodeInsufficientResources, Category: player.ErrorCategoryInput, Message: "No eligible storage input source"})
+			}
+		}
 		warnings = append(warnings, validateGlobalParamWarnings(behavior.Outputs, g)...)
 		for _, choice := range behavior.Choices {
 			warnings = append(warnings, validateGlobalParamWarnings(choice.Outputs, g)...)
@@ -57,8 +62,17 @@ func CalculatePlayerCardState(
 	if len(colonyBonusLookup) > 0 {
 		lookup = colonyBonusLookup[0]
 	}
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+		options, deferred, err := gamecards.EffectSelectionOptions(behavior.Outputs, p, g, cardRegistry, lookup)
+		if err != nil || (deferred && len(options) == 0) {
+			errors = append(errors, player.StateError{Code: player.ErrorCodeInvalidRequirement, Category: player.ErrorCategoryRequirement, Message: "No legal effect selection"})
+		}
+	}
 	warnings = append(warnings, validateColonyBonusStorageTargets(card, p, g, cardRegistry, lookup)...)
-	computedValues := computeBehaviorValues(card.Behaviors, "", p, g, cardRegistry, lookup)
+	computedValues := computeBehaviorValues(card.Behaviors, card.ID, p, g, cardRegistry, lookup)
 
 	return player.EntityState{
 		Errors:         errors,
@@ -88,7 +102,7 @@ func CalculatePendingCardPlayability(
 		metadata["discounts"] = discounts
 	}
 
-	errors = append(errors, validateAffordabilityWithSubstitutes(p, card, costMap)...)
+	errors = append(errors, validateAffordabilityWithSubstitutes(p, g, cardRegistry, card, costMap)...)
 	errors = append(errors, validateRequirements(card, p, g, cardRegistry)...)
 	errors = append(errors, validateProductionOutputs(card, p)...)
 	errors = append(errors, validateCardResourceOutputs(card, p, cardRegistry)...)
@@ -140,6 +154,9 @@ func CalculatePlayerCardActionState(
 	errors = append(errors, validateActionsRemaining(p, g)...)
 	errors = append(errors, validateNoPendingSelection(p, g)...)
 
+	basicCosts := map[shared.ResourceType]int{}
+	reservedStorage := map[string]int{}
+	var paymentAllowed []shared.ResourceType
 	resources := p.Resources().Get()
 	for _, inputBC := range behavior.Inputs {
 		// Skip variable-amount inputs — the player selects how much to spend (can be 0)
@@ -151,6 +168,24 @@ func CalculatePlayerCardActionState(
 		amt := inputBC.GetAmount()
 		target := inputBC.GetTarget()
 
+		protectionCardID := ""
+		if target == "self-card" {
+			protectionCardID = cardID
+		}
+		if amt > 0 && gamecards.IsResourceProtected(p, p, rt, protectionCardID) {
+			errors = append(errors, player.StateError{Code: player.ErrorCodeInsufficientResources, Category: player.ErrorCategoryInput, Message: "Resources are protected"})
+		}
+		if target == "any-card" && gamecards.IsStorageResourceType(rt) {
+			var registry gamecards.CardRegistry
+			if len(cardRegistry) > 0 {
+				registry = cardRegistry[0]
+			}
+			options := gamecards.NewBehaviorApplier(p, g, "", nil).WithCardRegistry(registry).InputOptions([]shared.BehaviorCondition{inputBC})
+			if len(options.StorageSources[0]) == 0 {
+				errors = append(errors, player.StateError{Code: player.ErrorCodeInsufficientResources, Category: player.ErrorCategoryInput, Message: "No eligible storage input source"})
+			}
+			continue
+		}
 		// Storage resource inputs (target: "self-card") check card storage instead of player resources
 		if target == "self-card" && gamecards.IsStorageResourceType(rt) {
 			storage := p.Resources().GetCardStorage(cardID)
@@ -164,33 +199,16 @@ func CalculatePlayerCardActionState(
 			continue
 		}
 
-		// Credit inputs with paymentAllowed consider alternative resources (e.g., titanium)
-		paymentAllowed := shared.GetPaymentAllowed(inputBC)
-		if rt == shared.ResourceCredit && len(paymentAllowed) > 0 {
-			effectiveCredits := resources.Credits
-			substitutes := p.Resources().PaymentSubstitutes()
-			for _, allowed := range paymentAllowed {
-				for _, sub := range substitutes {
-					if sub.ResourceType == allowed {
-						available := resources.GetAmount(allowed)
-						effectiveCredits += available * sub.ConversionRate
-					}
-				}
-			}
-			if effectiveCredits < amt {
-				errors = append(errors, player.StateError{
-					Code:     player.ErrorCodeInsufficientResources,
-					Category: player.ErrorCategoryInput,
-					Message:  fmt.Sprintf("Not enough %s", rt),
-				})
-			}
+		if shared.IsBasicPaymentResource(rt) {
+			basicCosts[rt] += amt
+			paymentAllowed = append(paymentAllowed, shared.GetPaymentAllowed(inputBC)...)
 			continue
 		}
 
 		// Production inputs check player production instead of basic resources
 		if shared.IsProductionResourceType(rt) {
 			available := p.Resources().Production().GetAmount(rt)
-			if available < amt {
+			if available-shared.ProductionMinimum(rt) < amt {
 				errors = append(errors, player.StateError{
 					Code:     player.ErrorCodeInsufficientResources,
 					Category: player.ErrorCategoryInput,
@@ -209,6 +227,16 @@ func CalculatePlayerCardActionState(
 			})
 		}
 	}
+	var registry gamecards.CardRegistry
+	if len(cardRegistry) > 0 {
+		registry = cardRegistry[0]
+	}
+	for _, input := range behavior.Inputs {
+		if input.GetTarget() == "self-card" && gamecards.IsStorageResourceType(input.GetResourceType()) && !shared.IsVariableAmount(input) {
+			reservedStorage[cardID] += input.GetAmount()
+		}
+	}
+	errors = append(errors, paymentAffordability(p, g, registry, gamecards.PaymentContext{Costs: basicCosts, Action: "card-action", PaymentAllowed: paymentAllowed, ReservedStorage: reservedStorage})...)
 
 	for _, outputBC := range behavior.Outputs {
 		if outputBC.GetTarget() == "steal-from-any-card" {
@@ -217,25 +245,9 @@ func CalculatePlayerCardActionState(
 			if len(cardRegistry) > 0 {
 				reg = cardRegistry[0]
 			}
-			for _, anyPlayer := range g.GetAllPlayers() {
-				for _, playerCardID := range anyPlayer.PlayedCards().Cards() {
-					if playerCardID == cardID && anyPlayer.ID() == p.ID() {
-						continue
-					}
-					storage := anyPlayer.Resources().GetCardStorage(playerCardID)
-					if storage <= 0 {
-						continue
-					}
-					if reg != nil {
-						registryCard, err := reg.GetByID(playerCardID)
-						if err != nil || registryCard.ResourceStorage == nil {
-							continue
-						}
-						if registryCard.ResourceStorage.Type != outputBC.GetResourceType() {
-							continue
-						}
-					}
-					totalAvailable += storage
+			for _, target := range gamecards.AvailableResourceRemovalTargets(g, p, reg) {
+				if target.CardID != "" && target.ResourceType == outputBC.GetResourceType() {
+					totalAvailable = max(totalAvailable, target.Amount)
 				}
 			}
 			if totalAvailable < outputBC.GetAmount() {
@@ -249,8 +261,8 @@ func CalculatePlayerCardActionState(
 	}
 
 	errors = append(errors, validateActionUsageLimit(behavior, timesUsedThisGeneration)...)
-	errors = append(errors, validateActionReuseAvailability(cardID, behavior, p)...)
-	errors = append(errors, validateBehaviorTileOutputs(behavior, p, g)...)
+	errors = append(errors, validateActionReuseAvailability(cardID, behavior, p, g, registry)...)
+	errors = append(errors, ValidateBehaviorTileOutputs(behavior, p, g)...)
 	errors = append(errors, validateGenerationalEventRequirements(behavior, p)...)
 	errors = append(errors, validateNegativeResourceOutputs(behavior, p)...)
 
@@ -263,6 +275,9 @@ func CalculatePlayerCardActionState(
 	var reg gamecards.CardRegistry
 	if len(cardRegistry) > 0 {
 		reg = cardRegistry[0]
+	}
+	if err := gamecards.ValidateRevealOutputs(behavior.Outputs, g, reg); err != nil {
+		errors = append(errors, player.StateError{Code: player.ErrorCodeInsufficientResources, Category: player.ErrorCategoryInput, Message: err.Error()})
 	}
 	computedValues := computeBehaviorValues([]shared.CardBehavior{behavior}, cardID, p, g, reg, nil)
 
@@ -334,11 +349,7 @@ func CalculatePlayerStandardProjectState(
 		metadata["discounts"] = discounts
 	}
 
-	storageSubstituteValue := calculateStorageSubstituteValueForProject(p, projectType)
-	if storageSubstituteValue > 0 {
-		metadata["storageSubstituteValue"] = storageSubstituteValue
-	}
-	errors = append(errors, validateAffordabilityMapWithExtraResources(p, effectiveCosts, storageSubstituteValue, projectType)...)
+	errors = append(errors, paymentAffordability(p, g, cardRegistry, gamecards.PaymentContext{Costs: paymentCosts(effectiveCosts), Action: "standard-project", StandardProject: projectType})...)
 
 	switch projectType {
 	case shared.StandardProjectSellPatents:
@@ -508,43 +519,16 @@ func validateActionUsageLimit(
 	return nil
 }
 
-func validateActionReuseAvailability(
-	cardID string,
-	behavior shared.CardBehavior,
-	p *player.Player,
-) []player.StateError {
-	hasActionReuse := false
-	for _, output := range behavior.Outputs {
-		if output.GetResourceType() == shared.ResourceActionReuse {
-			hasActionReuse = true
-			break
-		}
-	}
-	if !hasActionReuse {
+func validateActionReuseAvailability(cardID string, behavior shared.CardBehavior, p *player.Player, g *game.Game, registry gamecards.CardRegistry) []player.StateError {
+	if !IsActionReuse(behavior) {
 		return nil
 	}
-
-	for _, act := range p.Actions().List() {
-		if act.CardID == cardID {
-			continue
-		}
-		hasManual := false
-		for _, trigger := range act.Behavior.Triggers {
-			if trigger.Type == shared.TriggerTypeManual {
-				hasManual = true
-				break
-			}
-		}
-		if hasManual && act.TimesUsedThisGeneration >= 1 {
+	for _, option := range CalculateActionReuseOptions(cardID, p, g, registry) {
+		if len(option.Errors) == 0 {
 			return nil
 		}
 	}
-
-	return []player.StateError{{
-		Code:     player.ErrorCodeNoUsedActions,
-		Category: player.ErrorCategoryAvailability,
-		Message:  "No used actions to reuse",
-	}}
+	return []player.StateError{{Code: player.ErrorCodeNoUsedActions, Category: player.ErrorCategoryAvailability, Message: "No available used actions to reuse"}}
 }
 
 // validateRequirements checks all card requirements.
@@ -557,6 +541,10 @@ func validateRequirements(
 ) []player.StateError {
 	if card.Requirements == nil || len(card.Requirements.Items) == 0 {
 		return nil
+	}
+
+	if err := gamecards.ValidateTagRequirements(card.Requirements.Items, gamecards.PlayerTagCounts(p, cardRegistry)); err != nil {
+		return []player.StateError{{Code: player.ErrorCodeInsufficientTags, Category: player.ErrorCategoryRequirement, Message: "Tag requirements not met"}}
 	}
 
 	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
@@ -936,8 +924,8 @@ func ValidateTileOutputs(
 				}
 
 			case shared.ResourceOceanPlacement:
-				oceanPlacements := g.CountAvailableHexesForTile("ocean", p.ID(), nil)
-				if oceanPlacements == 0 {
+				oceanPlacements := g.CountAvailableHexesForTile("ocean", p.ID(), shared.GetTileRestrictions(outputBC))
+				if oceanPlacements == 0 && g.GlobalParameters().Oceans() < g.GlobalParameters().GetMaxOceans() {
 					errors = append(errors, player.StateError{
 						Code:     player.ErrorCodeNoOceanTiles,
 						Category: player.ErrorCategoryAvailability,
@@ -946,7 +934,7 @@ func ValidateTileOutputs(
 				}
 
 			case shared.ResourceVolcanoPlacement:
-				volcanoPlacements := g.CountAvailableHexesForTile("volcano", p.ID(), nil)
+				volcanoPlacements := g.CountAvailableHexesForTile("volcano", p.ID(), shared.GetTileRestrictions(outputBC))
 				if volcanoPlacements == 0 {
 					errors = append(errors, player.StateError{
 						Code:     player.ErrorCodeNoTilePlacements,
@@ -1046,9 +1034,9 @@ func formatGenerationalEventError(event shared.GenerationalEvent) string {
 	}
 }
 
-// validateBehaviorTileOutputs checks tile availability for a single behavior's outputs.
+// ValidateBehaviorTileOutputs checks tile availability for a single behavior's outputs.
 // Used by card action state calculation.
-func validateBehaviorTileOutputs(
+func ValidateBehaviorTileOutputs(
 	behavior shared.CardBehavior,
 	p *player.Player,
 	g *game.Game,
@@ -1063,7 +1051,7 @@ func validateBehaviorTileOutputs(
 	for _, outputBC := range behavior.Outputs {
 		switch outputBC.GetResourceType() {
 		case shared.ResourceCityPlacement:
-			cityPlacements := g.CountAvailableHexesForTile("city", p.ID(), nil)
+			cityPlacements := g.CountAvailableHexesForTile("city", p.ID(), shared.GetTileRestrictions(outputBC))
 			if cityPlacements == 0 {
 				errors = append(errors, player.StateError{
 					Code:     player.ErrorCodeNoCityPlacements,
@@ -1072,7 +1060,7 @@ func validateBehaviorTileOutputs(
 				})
 			}
 		case shared.ResourceGreeneryPlacement:
-			greeneryPlacements := g.CountAvailableHexesForTile("greenery", p.ID(), nil)
+			greeneryPlacements := g.CountAvailableHexesForTile("greenery", p.ID(), shared.GetTileRestrictions(outputBC))
 			if greeneryPlacements == 0 {
 				errors = append(errors, player.StateError{
 					Code:     player.ErrorCodeNoGreeneryPlacements,
@@ -1081,8 +1069,8 @@ func validateBehaviorTileOutputs(
 				})
 			}
 		case shared.ResourceOceanPlacement:
-			oceanPlacements := g.CountAvailableHexesForTile("ocean", p.ID(), nil)
-			if oceanPlacements == 0 {
+			oceanPlacements := g.CountAvailableHexesForTile("ocean", p.ID(), shared.GetTileRestrictions(outputBC))
+			if oceanPlacements == 0 && g.GlobalParameters().Oceans() < g.GlobalParameters().GetMaxOceans() {
 				errors = append(errors, player.StateError{
 					Code:     player.ErrorCodeNoOceanTiles,
 					Category: player.ErrorCategoryAvailability,
@@ -1120,7 +1108,7 @@ func checkRequirement(
 ) *player.StateError {
 	switch req.Type {
 	case gamecards.RequirementTemperature:
-		lenience := calculator.CalculateGlobalParameterLenience(p, "temperature")
+		lenience := calculator.CalculateGlobalParameterRequirementOffset(p, "temperature")
 		temp := g.GlobalParameters().Temperature()
 		if req.Min != nil && temp < *req.Min-lenience {
 			return &player.StateError{
@@ -1138,7 +1126,7 @@ func checkRequirement(
 		}
 
 	case gamecards.RequirementOxygen:
-		lenience := calculator.CalculateGlobalParameterLenience(p, "oxygen")
+		lenience := calculator.CalculateGlobalParameterRequirementOffset(p, "oxygen")
 		oxygen := g.GlobalParameters().Oxygen()
 		if req.Min != nil && oxygen < *req.Min-lenience {
 			return &player.StateError{
@@ -1156,7 +1144,7 @@ func checkRequirement(
 		}
 
 	case gamecards.RequirementOceans:
-		lenience := calculator.CalculateGlobalParameterLenience(p, "ocean")
+		lenience := calculator.CalculateGlobalParameterRequirementOffset(p, "ocean")
 		oceans := g.GlobalParameters().Oceans()
 		if req.Min != nil && oceans < *req.Min-lenience {
 			return &player.StateError{
@@ -1191,33 +1179,7 @@ func checkRequirement(
 		}
 
 	case gamecards.RequirementTags:
-		if req.Tag == nil {
-			return &player.StateError{
-				Code:     player.ErrorCodeInvalidRequirement,
-				Category: player.ErrorCategoryRequirement,
-				Message:  "Invalid tag requirement",
-			}
-		}
-
-		tagCount := 0
-		if cardRegistry != nil {
-			tagCount = gamecards.CountPlayerTagsByType(p, cardRegistry, *req.Tag)
-		}
-
-		if req.Min != nil && tagCount < *req.Min {
-			return &player.StateError{
-				Code:     player.ErrorCodeInsufficientTags,
-				Category: player.ErrorCategoryRequirement,
-				Message:  formatInsufficientTagsMessage(string(*req.Tag)),
-			}
-		}
-		if req.Max != nil && tagCount > *req.Max {
-			return &player.StateError{
-				Code:     player.ErrorCodeTooManyTags,
-				Category: player.ErrorCategoryRequirement,
-				Message:  formatTooManyTagsMessage(string(*req.Tag)),
-			}
-		}
+		return nil
 
 	case gamecards.RequirementProduction:
 		if req.Resource == nil {
@@ -1257,8 +1219,7 @@ func checkRequirement(
 				Message:  "Invalid resource requirement",
 			}
 		}
-		resources := p.Resources().Get()
-		currentAmount := resources.GetAmount(*req.Resource)
+		currentAmount := gamecards.CountPlayerResources(p, cardRegistry, *req.Resource)
 
 		if req.Min != nil && currentAmount < *req.Min {
 			return &player.StateError{
@@ -1276,8 +1237,9 @@ func checkRequirement(
 		}
 
 	case gamecards.RequirementCities, gamecards.RequirementGreeneries:
-		// TODO: Implement tile-based requirements when Board tile counting is ready
-		// For now, skip these validations (same as PlayCardAction line 310-312)
+		if err := gamecards.ValidateTileRequirement(req, p, g.Board()); err != nil {
+			return &player.StateError{Code: player.ErrorCodeInvalidRequirement, Category: player.ErrorCategoryRequirement, Message: err.Error()}
+		}
 
 	case gamecards.RequirementColony:
 		colonyCount := g.Colonies().CountPlayerColonies(p.ID())
@@ -1297,7 +1259,7 @@ func checkRequirement(
 		}
 
 	case gamecards.RequirementVenus:
-		lenience := calculator.CalculateGlobalParameterLenience(p, "venus")
+		lenience := calculator.CalculateGlobalParameterRequirementOffset(p, "venus")
 		venus := g.GlobalParameters().Venus()
 		if req.Min != nil && venus < *req.Min-lenience {
 			return &player.StateError{
@@ -1414,125 +1376,36 @@ func validateAffordabilityMap(p *player.Player, costMap map[string]int) []player
 	return errors
 }
 
-// calculateStorageSubstituteValueForProject returns the total extra resource value available
-// from storage payment substitutes for resource conversion standard projects.
-func calculateStorageSubstituteValueForProject(p *player.Player, projectType shared.StandardProject) int {
-	var targetResource shared.ResourceType
-	switch projectType {
-	case shared.StandardProjectConvertHeatToTemperature:
-		targetResource = shared.ResourceHeat
-	case shared.StandardProjectConvertPlantsToGreenery:
-		targetResource = shared.ResourcePlant
-	default:
-		return 0
+func paymentCosts(costs map[string]int) map[shared.ResourceType]int {
+	result := map[shared.ResourceType]int{}
+	for rt, amount := range costs {
+		result[shared.ResourceType(rt)] = amount
 	}
-
-	totalValue := 0
-	for _, sub := range p.Resources().StoragePaymentSubstitutes() {
-		if sub.TargetResource == targetResource {
-			totalValue += p.Resources().GetCardStorage(sub.CardID) * sub.ConversionRate
-		}
-	}
-	return totalValue
+	return result
 }
 
-// validateAffordabilityMapWithExtraResources checks affordability considering extra resources
-// from storage substitutes for resource conversion projects.
-func validateAffordabilityMapWithExtraResources(p *player.Player, costMap map[string]int, extraValue int, projectType shared.StandardProject) []player.StateError {
-	if extraValue == 0 {
-		return validateAffordabilityMap(p, costMap)
+func paymentAffordability(p *player.Player, g *game.Game, registry gamecards.CardRegistry, context gamecards.PaymentContext) []player.StateError {
+	quote, err := gamecards.QuotePayment(p, g, registry, context)
+	if err == nil {
+		_, err = gamecards.DefaultPayment(quote)
 	}
-
-	var targetResourceType string
-	switch projectType {
-	case shared.StandardProjectConvertHeatToTemperature:
-		targetResourceType = string(shared.ResourceHeat)
-	case shared.StandardProjectConvertPlantsToGreenery:
-		targetResourceType = string(shared.ResourcePlant)
-	default:
-		return validateAffordabilityMap(p, costMap)
-	}
-
-	adjustedCosts := make(map[string]int)
-	for k, v := range costMap {
-		if k == targetResourceType {
-			adjusted := v - extraValue
-			if adjusted < 0 {
-				adjusted = 0
-			}
-			adjustedCosts[k] = adjusted
-		} else {
-			adjustedCosts[k] = v
+	if err != nil {
+		code := player.ErrorCodeInsufficientResources
+		category := player.ErrorCategoryCost
+		if context.Costs[shared.ResourceCredit] > 0 {
+			code = player.ErrorCodeInsufficientCredits
 		}
+		if context.Action == "card-action" {
+			code = player.ErrorCodeInsufficientResources
+			category = player.ErrorCategoryInput
+		}
+		return []player.StateError{{Code: code, Category: category, Message: "Cannot afford"}}
 	}
-	return validateAffordabilityMap(p, adjustedCosts)
+	return nil
 }
 
-// validateAffordabilityWithSubstitutes checks if player can afford a multi-resource cost,
-// considering payment substitutes like Helion's heat-to-credit conversion and
-// storage payment substitutes like Dirigibles' floaters.
-// Steel is only counted for cards with the Building tag, titanium only for Space tag.
-func validateAffordabilityWithSubstitutes(p *player.Player, card *gamecards.Card, costMap map[string]int) []player.StateError {
-	var errors []player.StateError
-	resources := p.Resources().Get()
-	substitutes := p.Resources().PaymentSubstitutes()
-
-	allowSteel := hasCardTag(card.Tags, shared.TagBuilding)
-	allowTitanium := hasCardTag(card.Tags, shared.TagSpace)
-
-	for resourceType, cost := range costMap {
-		if shared.ResourceType(resourceType) == shared.ResourceCredit {
-			// For credit costs, calculate effective purchasing power including substitutes
-			effectiveCredits := resources.Credits
-
-			// Add substitute resources at their conversion rates
-			for _, sub := range substitutes {
-				switch sub.ResourceType {
-				case shared.ResourceSteel:
-					if allowSteel {
-						effectiveCredits += resources.Steel * sub.ConversionRate
-					}
-				case shared.ResourceTitanium:
-					if allowTitanium {
-						effectiveCredits += resources.Titanium * sub.ConversionRate
-					}
-				case shared.ResourceHeat:
-					effectiveCredits += resources.Heat * sub.ConversionRate
-				case shared.ResourceEnergy:
-					effectiveCredits += resources.Energy * sub.ConversionRate
-				case shared.ResourcePlant:
-					effectiveCredits += resources.Plants * sub.ConversionRate
-				}
-			}
-
-			// Add storage payment substitutes (e.g., Dirigibles floaters for Venus cards)
-			for _, storageSub := range p.Resources().StoragePaymentSubstitutes() {
-				if len(storageSub.Selectors) == 0 || gamecards.MatchesAnySelector(card, storageSub.Selectors) {
-					stored := p.Resources().GetCardStorage(storageSub.CardID)
-					effectiveCredits += stored * storageSub.ConversionRate
-				}
-			}
-
-			if effectiveCredits < cost {
-				errors = append(errors, player.StateError{
-					Code:     player.ErrorCodeInsufficientCredits,
-					Category: player.ErrorCategoryCost,
-					Message:  "Cannot afford",
-				})
-			}
-		} else {
-			// Non-credit costs checked directly (no substitutes apply)
-			available := resources.GetAmount(shared.ResourceType(resourceType))
-			if available < cost {
-				errors = append(errors, player.StateError{
-					Code:     player.ErrorCodeInsufficientCredits,
-					Category: player.ErrorCategoryCost,
-					Message:  "Cannot afford",
-				})
-			}
-		}
-	}
-	return errors
+func validateAffordabilityWithSubstitutes(p *player.Player, g *game.Game, registry gamecards.CardRegistry, card *gamecards.Card, costs map[string]int) []player.StateError {
+	return paymentAffordability(p, g, registry, gamecards.PaymentContext{Costs: paymentCosts(costs), Action: shared.ActionCardPlaying, Card: card})
 }
 
 // getStandardProjectBaseCosts returns the base cost map for a standard project.
@@ -1684,23 +1557,4 @@ func formatTooMuchResourceMessage(resourceType shared.ResourceType) string {
 
 func formatInsufficientProductionMessage(resourceType shared.ResourceType) string {
 	return fmt.Sprintf("Not enough %s production", getResourceDisplayName(resourceType))
-}
-
-// formatTagDisplayName returns a human-readable tag name.
-// Proper nouns (Venus, Earth, Jovian) get capitalized; other tags stay lowercase.
-func formatTagDisplayName(tag string) string {
-	switch strings.ToLower(tag) {
-	case "venus", "earth", "jovian":
-		return strings.ToUpper(tag[:1]) + strings.ToLower(tag[1:])
-	default:
-		return strings.ToLower(tag)
-	}
-}
-
-func formatInsufficientTagsMessage(tag string) string {
-	return fmt.Sprintf("Not enough %s tags", formatTagDisplayName(tag))
-}
-
-func formatTooManyTagsMessage(tag string) string {
-	return fmt.Sprintf("Too many %s tags", formatTagDisplayName(tag))
 }

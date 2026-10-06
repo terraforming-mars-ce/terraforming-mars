@@ -2,6 +2,7 @@ package behavior_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -79,7 +80,7 @@ func TestMarsUniversity_CreatesDiscardSelectionOnScienceTag(t *testing.T) {
 	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
 
 	// Verify no pending selection before event
-	testutil.AssertTrue(t, owner.Selection().GetPendingCardDiscardSelection() == nil,
+	testutil.AssertTrue(t, len(owner.Selection().GetPendingBehaviorResolutions()) == 0,
 		"Should have no pending discard selection before science tag event")
 
 	// Publish a science tag played event
@@ -92,7 +93,7 @@ func TestMarsUniversity_CreatesDiscardSelectionOnScienceTag(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 
 	// Should have a pending card discard selection
-	selection := owner.Selection().GetPendingCardDiscardSelection()
+	selection := owner.Selection().GetPendingBehaviorResolutions()[0]
 	testutil.AssertTrue(t, selection != nil, "Should have a pending discard selection after science tag event")
 	testutil.AssertEqual(t, 0, selection.MinCards, "MinCards should be 0 (optional)")
 	testutil.AssertEqual(t, 1, selection.MaxCards, "MaxCards should be 1")
@@ -104,7 +105,7 @@ func TestMarsUniversity_CreatesDiscardSelectionOnScienceTag(t *testing.T) {
 	_ = repo // suppress unused warning
 }
 
-func TestMarsUniversity_SkipsDiscardWhenNoCardsInHand(t *testing.T) {
+func TestMarsUniversity_RetainsDecisionWhenNoCardsInHand(t *testing.T) {
 	broadcaster := testutil.NewMockBroadcaster()
 	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
 	logger := testutil.TestLogger()
@@ -164,9 +165,7 @@ func TestMarsUniversity_SkipsDiscardWhenNoCardsInHand(t *testing.T) {
 
 	time.Sleep(20 * time.Millisecond)
 
-	// Should NOT have a pending discard selection since player has no cards
-	testutil.AssertTrue(t, owner.Selection().GetPendingCardDiscardSelection() == nil,
-		"Should NOT have pending discard selection when hand is empty")
+	testutil.AssertEqual(t, 1, len(owner.Selection().GetPendingBehaviorResolutions()), "Keep the optional decision: another effect may draw cards first")
 }
 
 func TestMarsUniversity_DoesNotTriggerOnNonScienceTag(t *testing.T) {
@@ -230,7 +229,7 @@ func TestMarsUniversity_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 
 	// Should NOT trigger for building tag
-	testutil.AssertTrue(t, owner.Selection().GetPendingCardDiscardSelection() == nil,
+	testutil.AssertTrue(t, len(owner.Selection().GetPendingBehaviorResolutions()) == 0,
 		"Mars University should not trigger on non-science tags")
 }
 
@@ -263,7 +262,7 @@ func TestConfirmCardDiscard_DiscardAndDraw(t *testing.T) {
 	testutil.AssertEqual(t, 2, handBefore, "Should have 2 cards before discard")
 
 	// Set up pending discard selection
-	owner.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
+	owner.Selection().AddPendingBehaviorResolution(&shared.PendingBehaviorResolution{Kind: "card-discard",
 		MinCards:     0,
 		MaxCards:     1,
 		Source:       "Mars University",
@@ -274,8 +273,8 @@ func TestConfirmCardDiscard_DiscardAndDraw(t *testing.T) {
 	})
 
 	// Execute confirm discard
-	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, logger)
-	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), []string{"card-to-discard"})
+	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, nil, logger)
+	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, []string{"card-to-discard"})
 	testutil.AssertNoError(t, err, "Confirm card discard should succeed")
 
 	// Verify card was removed from hand
@@ -289,7 +288,7 @@ func TestConfirmCardDiscard_DiscardAndDraw(t *testing.T) {
 	testutil.AssertFalse(t, found, "Discarded card should not be in hand")
 
 	// Verify pending selection was cleared
-	testutil.AssertTrue(t, owner.Selection().GetPendingCardDiscardSelection() == nil,
+	testutil.AssertTrue(t, len(owner.Selection().GetPendingBehaviorResolutions()) == 0,
 		"Pending discard selection should be cleared after confirmation")
 }
 
@@ -315,7 +314,7 @@ func TestConfirmCardDiscard_SkipOptionalDiscard(t *testing.T) {
 	owner.Hand().AddCard("card-to-keep")
 
 	// Set up pending discard with min=0 (optional)
-	owner.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
+	owner.Selection().AddPendingBehaviorResolution(&shared.PendingBehaviorResolution{Kind: "card-discard",
 		MinCards:     0,
 		MaxCards:     1,
 		Source:       "Mars University",
@@ -326,15 +325,15 @@ func TestConfirmCardDiscard_SkipOptionalDiscard(t *testing.T) {
 	})
 
 	// Skip discard by sending empty list
-	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, logger)
-	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), []string{})
+	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, nil, logger)
+	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, []string{})
 	testutil.AssertNoError(t, err, "Skipping optional discard should succeed")
 
 	// Hand should still have the card
 	testutil.AssertEqual(t, 1, len(owner.Hand().Cards()), "Hand should still have 1 card")
 
 	// Pending selection should be cleared
-	testutil.AssertTrue(t, owner.Selection().GetPendingCardDiscardSelection() == nil,
+	testutil.AssertTrue(t, len(owner.Selection().GetPendingBehaviorResolutions()) == 0,
 		"Pending discard selection should be cleared even when skipping")
 }
 
@@ -359,7 +358,7 @@ func TestConfirmCardDiscard_RejectsNonHandCard(t *testing.T) {
 
 	owner.Hand().AddCard("real-card")
 
-	owner.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
+	owner.Selection().AddPendingBehaviorResolution(&shared.PendingBehaviorResolution{Kind: "card-discard",
 		MinCards:     0,
 		MaxCards:     1,
 		Source:       "Mars University",
@@ -370,8 +369,8 @@ func TestConfirmCardDiscard_RejectsNonHandCard(t *testing.T) {
 	})
 
 	// Try to discard a card not in hand
-	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, logger)
-	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), []string{"fake-card"})
+	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, nil, logger)
+	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, []string{"fake-card"})
 	testutil.AssertError(t, err, "Should reject discard of card not in hand")
 }
 
@@ -396,8 +395,8 @@ func TestConfirmCardDiscard_RejectsWithoutPendingSelection(t *testing.T) {
 
 	// No pending selection set
 
-	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, logger)
-	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), []string{})
+	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, nil, logger)
+	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), "missing", []string{})
 	testutil.AssertError(t, err, "Should reject confirm when no pending selection exists")
 }
 
@@ -423,7 +422,7 @@ func TestConfirmCardDiscard_RejectsTooManyCards(t *testing.T) {
 	owner.Hand().AddCard("card-1")
 	owner.Hand().AddCard("card-2")
 
-	owner.Selection().SetPendingCardDiscardSelection(&shared.PendingCardDiscardSelection{
+	owner.Selection().AddPendingBehaviorResolution(&shared.PendingBehaviorResolution{Kind: "card-discard",
 		MinCards:     0,
 		MaxCards:     1,
 		Source:       "Mars University",
@@ -434,8 +433,8 @@ func TestConfirmCardDiscard_RejectsTooManyCards(t *testing.T) {
 	})
 
 	// Try to discard 2 cards when max is 1
-	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, logger)
-	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), []string{"card-1", "card-2"})
+	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, nil, logger)
+	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, []string{"card-1", "card-2"})
 	testutil.AssertError(t, err, "Should reject discarding too many cards")
 }
 
@@ -490,8 +489,9 @@ func TestPlayCard_AllOpponentsDrawCard_TwoPlayers(t *testing.T) {
 	player2HandBefore := player2.Hand().CardCount()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 5}
-	err := playCardAction.Execute(ctx, testGame.ID(), player1.ID(), "card-all-opponents-draw-test", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 5)
+	err := playCardAction.Execute(ctx, testGame.ID(), player1.ID(), "card-all-opponents-draw-test", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing all-opponents draw card should succeed")
 
 	// Player 1: played 1 card (-1) and drew 2 cards (+2) = net +1
@@ -534,8 +534,9 @@ func TestPlayCard_AllOpponentsDrawCard_ThreePlayers(t *testing.T) {
 	player3HandBefore := player3.Hand().CardCount()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 5}
-	err := playCardAction.Execute(ctx, testGame.ID(), player1.ID(), "card-all-opponents-draw-test", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 5)
+	err := playCardAction.Execute(ctx, testGame.ID(), player1.ID(), "card-all-opponents-draw-test", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing all-opponents draw card should succeed")
 
 	// Both opponents should have drawn 1 card each
@@ -572,8 +573,9 @@ func TestPlayCard_AllOpponentsDrawCard_SoloMode(t *testing.T) {
 	player1HandBefore := player1.Hand().CardCount()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 5}
-	err := playCardAction.Execute(ctx, testGame.ID(), player1.ID(), "card-all-opponents-draw-test", payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 5)
+	err := playCardAction.Execute(ctx, testGame.ID(), player1.ID(), "card-all-opponents-draw-test", payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing all-opponents draw card in solo mode should succeed")
 
 	// Solo: played 1 card (-1) and drew 2 cards (+2), no opponents = net +1
@@ -642,4 +644,87 @@ func TestCardOperation_DrawFromNearlyEmptyDeck(t *testing.T) {
 	testutil.AssertTrue(t, handAfter >= handBefore,
 		"Hand should not decrease")
 	_ = remaining
+}
+
+func TestCardTake_OptionalAndBuySelection(t *testing.T) {
+	for _, optional := range []bool{false, true} {
+		t.Run(fmt.Sprintf("optional-%v", optional), func(t *testing.T) {
+			g, repo, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+			p, _ := g.GetPlayer(id)
+			testutil.SetPlayerCredits(context.Background(), p, 20)
+			take := shared.NewCardOperationCondition(shared.ResourceCardTake, 1, "self-player")
+			take.Optional = optional
+			applier := gamecards.NewBehaviorApplier(p, g, "Take and buy", testutil.TestLogger()).WithCardRegistry(registry)
+			testutil.AssertNoError(t, applier.ApplyOutputs(context.Background(), []shared.BehaviorCondition{
+				shared.NewCardOperationCondition(shared.ResourceCardPeek, 3, "self-player"), take, shared.NewCardOperationCondition(shared.ResourceCardBuy, 1, "self-player"),
+			}), "create selection")
+			selection := p.Selection().GetPendingCardDrawSelection()
+			if selection == nil {
+				t.Fatal("missing selection")
+			}
+			confirm := confirmAction.NewConfirmCardDrawAction(repo, registry, testutil.TestLogger())
+			testutil.AssertError(t, confirm.Execute(context.Background(), g.ID(), id, []string{selection.AvailableCards[0]}, []string{selection.AvailableCards[0]}, shared.NativePayment(shared.ResourceCredit, len([]string{selection.AvailableCards[0]})*3)), "reject duplicate across free and bought lists")
+			testutil.AssertEqual(t, 20, p.Resources().Get().Credits, "invalid selection never charges")
+			if optional {
+				testutil.AssertEqual(t, 0, selection.MinFreeTakeCount, "optional minimum")
+				testutil.AssertNoError(t, confirm.Execute(context.Background(), g.ID(), id, nil, nil, shared.NativePayment(shared.ResourceCredit, 0*3)), "decline all optional cards")
+			} else {
+				testutil.AssertError(t, confirm.Execute(context.Background(), g.ID(), id, nil, []string{selection.AvailableCards[0]}, shared.NativePayment(shared.ResourceCredit, len([]string{selection.AvailableCards[0]})*3)), "buy cannot replace mandatory free take")
+				testutil.AssertNoError(t, confirm.Execute(context.Background(), g.ID(), id, []string{selection.AvailableCards[0]}, []string{selection.AvailableCards[1]}, shared.NativePayment(shared.ResourceCredit, len([]string{selection.AvailableCards[1]})*3)), "take and buy")
+				testutil.AssertEqual(t, 17, p.Resources().Get().Credits, "charge only bought card")
+			}
+		})
+	}
+}
+
+func TestTriggeringCardStorage_ContextAndValidation(t *testing.T) {
+	g, _, registry, id, opponentID := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	opponent, _ := g.GetPlayer(opponentID)
+	card := testutil.GetCardByName("Fish")
+	opponent.PlayedCards().AddCard(card.ID, card.Name, string(card.Type), []string{"animal"})
+	output := shared.NewCardStorageCondition(shared.ResourceCardResource, 2, "triggering-card")
+	apply := func(cardID, ownerID string, condition shared.BehaviorCondition) error {
+		return gamecards.NewBehaviorApplier(p, g, "Generic effect", testutil.TestLogger()).WithCardRegistry(registry).WithSourceCardID(testutil.CardID("Viral Enhancers")).WithTriggeringCard(cardID, ownerID).ApplyOutputs(context.Background(), []shared.BehaviorCondition{condition})
+	}
+	testutil.AssertError(t, apply("", "", output), "missing context cannot fall back to source")
+	testutil.AssertError(t, apply(card.ID, id, output), "wrong owner rejected")
+	testutil.AssertError(t, apply(testutil.CardID("Tardigrades"), id, output), "unplayed target rejected")
+	testutil.AssertError(t, apply(card.ID, opponentID, shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "triggering-card")), "incompatible storage rejected")
+	restricted := shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "triggering-card")
+	restricted.Selectors = []shared.Selector{{Tags: []shared.CardTag{shared.TagScience}}}
+	testutil.AssertError(t, apply(card.ID, opponentID, restricted), "selectors enforced")
+	testutil.AssertEqual(t, 0, opponent.Resources().GetCardStorage(card.ID), "invalid outputs do not mutate storage")
+	g.ClearTriggeredEffects()
+	testutil.AssertNoError(t, apply(card.ID, opponentID, output), "generic resource uses retained owner and storage type")
+	testutil.AssertEqual(t, 2, opponent.Resources().GetCardStorage(card.ID), "reward goes to triggering owner")
+	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(card.ID), "effect owner does not receive storage")
+	effects := g.GetTriggeredEffects()
+	testutil.AssertEqual(t, 1, len(effects), "one reward notification")
+	testutil.AssertEqual(t, "animal", effects[0].CalculatedOutputs[0].ResourceType, "notification uses concrete storage type")
+}
+
+func TestPreludeDrawConfirmationPreservesNestedCardSelection(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+	nested := gamecards.Card{ID: "nested-prelude", Name: "Nested Prelude", Type: gamecards.CardTypePrelude,
+		Behaviors: []shared.CardBehavior{{Triggers: []shared.Trigger{{Type: "auto"}}, Outputs: []shared.BehaviorCondition{
+			shared.NewCardOperationCondition(shared.ResourceCardPeek, 2, "self-player"),
+			shared.NewCardOperationCondition(shared.ResourceCardTake, 1, "self-player"),
+		}}}}
+	cards := registry.GetAll()
+	cards = append(cards, nested)
+	registry = gamecards.NewInMemoryCardRegistry(cards)
+	g.InitDeck([]string{"001", "002"}, nil, nil)
+	p, _ := g.GetPlayer(id)
+	p.Selection().SetPendingCardDrawSelection(&shared.PendingCardDrawSelection{AvailableCards: []string{nested.ID}, FreeTakeCount: 1, MinFreeTakeCount: 1, PlayAsPrelude: true})
+	testutil.AssertNoError(t, g.SetForcedFirstAction(ctx, id, &shared.ForcedFirstAction{State: "resolving", CorporationID: "test"}), "resolving action")
+	confirm := confirmAction.NewConfirmCardDrawAction(repo, registry, testutil.TestLogger())
+	testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), id, []string{nested.ID}, nil, shared.Payment{}), "play selected prelude")
+	pending := p.Selection().GetPendingCardDrawSelection()
+	testutil.AssertTrue(t, pending != nil && !pending.PlayAsPrelude, "nested selection survives")
+	testutil.AssertEqual(t, 2, g.CurrentTurn().ActionsRemaining(), "not complete yet")
+	testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), id, []string{pending.AvailableCards[0]}, nil, shared.Payment{}), "take nested card")
+	testutil.AssertTrue(t, g.GetForcedFirstAction(id) == nil, "first action resolved")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "consume exactly once")
 }

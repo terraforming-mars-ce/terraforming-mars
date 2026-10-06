@@ -1,7 +1,8 @@
 import FloatingWindow from "./FloatingWindow.tsx";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Sparkline from "./Sparkline.tsx";
 import { usePerformanceMetrics } from "@/hooks/usePerformanceMetrics.ts";
+import { performanceStore } from "@/services/performanceStore.ts";
 import { useWindowDrag, useWindowManager } from "./WindowManager.tsx";
 
 interface PerformanceWindowProps {
@@ -10,7 +11,7 @@ interface PerformanceWindowProps {
 }
 
 const WINDOW_ID = "performance";
-const WINDOW_WIDTH = 320;
+const WINDOW_WIDTH = 380;
 const EXCLUDE_SELECTORS = [".perf-content-area"];
 
 const hasMemoryApi =
@@ -52,7 +53,7 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
         top: position.y,
         left: position.x,
         width: WINDOW_WIDTH,
-        maxHeight: "50vh",
+        maxHeight: "80vh",
         zIndex: getZIndex(WINDOW_ID),
       }}
     >
@@ -191,8 +192,100 @@ const PerformanceWindow: React.FC<PerformanceWindowProps> = ({ isVisible, onClos
             <span>Geometries: {latest?.geometryCount ?? "—"}</span>
           </div>
         </div>
+
+        <SceneBreakdown />
+        <StatSections />
       </div>
     </FloatingWindow>
+  );
+};
+
+const sectionStyle: React.CSSProperties = {
+  borderTop: "1px solid #222",
+  paddingTop: "8px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "3px",
+  fontSize: "10px",
+};
+const headingStyle: React.CSSProperties = {
+  color: "rgba(255,255,255,0.55)",
+  fontSize: "11px",
+  marginBottom: "2px",
+};
+const rowStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "8px",
+};
+const labelStyle: React.CSSProperties = { color: "rgba(255,255,255,0.4)" };
+const valueStyle: React.CSSProperties = { color: "#ddd", textAlign: "right" };
+
+// Estimated per-group submissions (upper bound: frustum culling is not applied). Clicking a row
+// hides that group from the render, for A/B measurements.
+const SceneBreakdown: React.FC = () => {
+  const [, setRevision] = useState(0);
+  const census = performanceStore.getCensus();
+  const hidden = [...performanceStore.hiddenGroups].filter(
+    (group) => !census.some((entry) => entry.group === group),
+  );
+  if (!census.length && !hidden.length) {
+    return null;
+  }
+  const toggle = (group: string) => {
+    performanceStore.toggleGroup(group);
+    setRevision((revision) => revision + 1);
+  };
+  return (
+    <div style={sectionStyle}>
+      <div style={{ ...rowStyle, ...headingStyle }}>
+        <span>Scene breakdown</span>
+        <span>calls · triangles</span>
+      </div>
+      {census.map((group) => (
+        <div
+          key={group.group}
+          className="cursor-pointer"
+          style={rowStyle}
+          onClick={() => toggle(group.group)}
+        >
+          <span style={labelStyle}>{group.group}</span>
+          <span style={valueStyle} className="font-orbitron">
+            {group.drawCalls} · {group.triangles.toLocaleString()}
+          </span>
+        </div>
+      ))}
+      {hidden.map((group) => (
+        <div
+          key={group}
+          className="cursor-pointer"
+          style={{ ...rowStyle, opacity: 0.35 }}
+          onClick={() => toggle(group)}
+        >
+          <span style={labelStyle}>{group}</span>
+          <span style={valueStyle}>hidden</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const StatSections: React.FC = () => {
+  const sections = [...performanceStore.getSections()];
+  return (
+    <>
+      {sections.map(([name, values]) => (
+        <div key={name} style={sectionStyle}>
+          <div style={headingStyle}>{name}</div>
+          {Object.entries(values).map(([key, value]) => (
+            <div key={key} style={rowStyle}>
+              <span style={labelStyle}>{key}</span>
+              <span style={valueStyle}>{value}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </>
   );
 };
 

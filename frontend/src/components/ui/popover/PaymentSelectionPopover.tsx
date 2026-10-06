@@ -1,568 +1,226 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  CardPaymentDto,
-  PaymentConstantsDto,
-  PlayerCardDto,
-  PaymentSubstituteDto,
-  ResourcesDto,
-  StoragePaymentSubstituteDto,
-  TagBuilding,
-  TagSpace,
-} from "@/types/generated/api-types.ts";
-import GameIcon from "../display/GameIcon.tsx";
-import { cardMatchesStorageSubstitute } from "@/utils/paymentUtils.ts";
-import GameButton from "../buttons/GameButton.tsx";
-import { GameFlowPopover, GameFlowTitle, GameFlowFooter } from "./GameFlowPopover.tsx";
+import { useEffect, useState } from "react";
+import type {
+  PaymentDto,
+  PaymentOptionDto,
+  PaymentQuoteDto,
+  ResourceType,
+} from "@/types/generated/api-types";
+import { usePaymentStore } from "@/stores/paymentStore";
+import { useGameStore } from "@/stores/gameStore";
+import GameIcon from "../display/GameIcon";
+import GameButton from "../buttons/GameButton";
+import { GameFlowPopover, GameFlowTitle, GameFlowFooter } from "./GameFlowPopover";
 
-export interface GenericPaymentConfig {
-  name: string;
-  cost: number;
-  substitutes: Array<{ resourceType: string; conversionRate: number }>;
-  baseResource?: string;
-  storageSubstitutes?: StoragePaymentSubstituteDto[];
-  resourceStorage?: { [key: string]: number };
+const key = (o: PaymentOptionDto) => JSON.stringify([o.source, o.targetResource]);
+const poolKey = (o: PaymentOptionDto) => JSON.stringify(o.source);
+const native = (o: PaymentOptionDto) =>
+  o.source.target === "self-player" && o.source.resource === o.targetResource;
+
+export default function PaymentSelectionPopover() {
+  const pending = usePaymentStore((s) => s.pending);
+  const player = useGameStore((s) => s.currentPlayer);
+  const [quote, setQuote] = useState<PaymentQuoteDto | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    setQuote(pending?.quote ?? null);
+    setError("");
+  }, [pending]);
+  useEffect(() => {
+    if (!pending) return;
+    let active = true;
+    setLoading(true);
+    void pending
+      .refresh()
+      .then((next) => {
+        if (active) {
+          setQuote(next);
+          setError("");
+        }
+      })
+      .catch((e: Error) => {
+        if (active) setError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pending, player]);
+  if (!pending || !quote) return null;
+  return (
+    <PaymentPicker
+      quote={quote}
+      loading={loading}
+      error={error}
+      onConfirm={pending.resolve}
+      onCancel={() => pending.reject(new Error("Payment cancelled"))}
+    />
+  );
 }
 
-interface PaymentSelectionPopoverProps {
-  cardId?: string;
-  card?: PlayerCardDto;
-  playerResources: ResourcesDto;
-  paymentConstants?: PaymentConstantsDto;
-  playerPaymentSubstitutes?: PaymentSubstituteDto[];
-  storagePaymentSubstitutes?: StoragePaymentSubstituteDto[];
-  resourceStorage?: { [key: string]: number };
-  genericPayment?: GenericPaymentConfig;
-  onConfirm: (payment: CardPaymentDto) => void;
-  onCancel: () => void;
-  isVisible: boolean;
-}
-
-const PaymentSelectionPopover: React.FC<PaymentSelectionPopoverProps> = ({
-  card,
-  playerResources,
-  paymentConstants,
-  playerPaymentSubstitutes,
-  storagePaymentSubstitutes,
-  resourceStorage,
-  genericPayment,
+export function PaymentPicker({
+  quote,
+  loading = false,
+  error = "",
   onConfirm,
   onCancel,
-  isVisible,
-}) => {
-  const [steel, setSteel] = useState(0);
-  const [titanium, setTitanium] = useState(0);
-  const [substitutes, setSubstitutes] = useState<Record<string, number>>({});
-  const [storageSubstitutes, setStorageSubstitutes] = useState<Record<string, number>>({});
-
-  const isGenericMode = !!genericPayment;
-  const effectiveCost = genericPayment?.cost ?? card?.effectiveCost ?? 0;
-  const effectiveName = genericPayment?.name ?? card?.name ?? "";
-
-  const genericSteelSub = genericPayment?.substitutes.find((s) => s.resourceType === "steel");
-  const genericTitaniumSub = genericPayment?.substitutes.find((s) => s.resourceType === "titanium");
-
-  const steelValue = isGenericMode
-    ? (genericSteelSub?.conversionRate ?? 0)
-    : (playerPaymentSubstitutes?.find((s) => s.resourceType === "steel")?.conversionRate ??
-      paymentConstants?.steelValue ??
-      2);
-  const titaniumValue = isGenericMode
-    ? (genericTitaniumSub?.conversionRate ?? 0)
-    : (playerPaymentSubstitutes?.find((s) => s.resourceType === "titanium")?.conversionRate ??
-      paymentConstants?.titaniumValue ??
-      3);
-
-  const applicableStorageSubstitutes = useMemo(() => {
-    if (isGenericMode) {
-      const genSubs = genericPayment?.storageSubstitutes;
-      const genStorage = genericPayment?.resourceStorage;
-      if (!genSubs || !genStorage) {
-        return [];
-      }
-      return genSubs.filter((sub) => (genStorage[sub.cardId] ?? 0) > 0);
-    }
-    if (!storagePaymentSubstitutes || !resourceStorage) {
-      return [];
-    }
-    return storagePaymentSubstitutes.filter((sub) => {
-      const available = resourceStorage[sub.cardId] ?? 0;
-      return available > 0 && cardMatchesStorageSubstitute(card!, sub);
-    });
-  }, [isGenericMode, genericPayment, storagePaymentSubstitutes, resourceStorage, card]);
-
+}: {
+  quote: PaymentQuoteDto;
+  loading?: boolean;
+  error?: string;
+  onConfirm: (payment: PaymentDto) => void;
+  onCancel: () => void;
+}) {
+  const player = useGameStore((s) => s.currentPlayer);
+  const [counts, setCounts] = useState<Record<string, number>>({});
   useEffect(() => {
-    if (isVisible) {
-      setSteel(0);
-      setTitanium(0);
-      setSubstitutes({});
-      setStorageSubstitutes({});
-    }
-  }, [isVisible, effectiveCost]);
-
-  let storageSubstitutesValue = 0;
-  for (const [cardId, amount] of Object.entries(storageSubstitutes)) {
-    const sub = applicableStorageSubstitutes.find((s) => s.cardId === cardId);
-    if (sub) {
-      storageSubstitutesValue += amount * sub.conversionRate;
-    }
+    setCounts((previous) => {
+      const pools = new Map(quote.options.map((o) => [poolKey(o), o.available]));
+      const next: Record<string, number> = {};
+      for (const option of quote.options.filter((o) => !native(o))) {
+        const remaining = pools.get(poolKey(option)) ?? 0;
+        const amount = Math.min(previous[key(option)] ?? 0, remaining);
+        next[key(option)] = amount;
+        pools.set(poolKey(option), remaining - amount);
+      }
+      return next;
+    });
+  }, [quote]);
+  const available = new Map(quote.options.map((o) => [poolKey(o), o.available]));
+  const totals: Record<string, number> = {};
+  const payment: PaymentDto = { allocations: [] };
+  let valid = !loading && !error;
+  const allocate = (o: PaymentOptionDto, amount: number) => {
+    const left = available.get(poolKey(o)) ?? 0;
+    if (amount > left) valid = false;
+    available.set(poolKey(o), left - amount);
+    totals[o.targetResource] = (totals[o.targetResource] ?? 0) + amount * o.conversionRate;
+    if (amount > 0)
+      payment.allocations.push({ source: o.source, targetResource: o.targetResource, amount });
+  };
+  for (const o of quote.options.filter((o) => !native(o))) allocate(o, counts[key(o)] ?? 0);
+  const remainingPools = new Map(available);
+  const substituteTotals = { ...totals };
+  for (const o of quote.options.filter(native)) {
+    allocate(
+      o,
+      Math.max(0, (quote.costs[o.targetResource] ?? 0) - (totals[o.targetResource] ?? 0)),
+    );
   }
-
-  let substitutesValue = 0;
-  if (playerPaymentSubstitutes) {
-    for (const [resourceType, amount] of Object.entries(substitutes)) {
-      const substitute = playerPaymentSubstitutes.find((sub) => sub.resourceType === resourceType);
-      if (substitute) {
-        substitutesValue += amount * substitute.conversionRate;
-      }
-    }
-  }
-
-  const finalCost =
-    effectiveCost -
-    steel * steelValue -
-    titanium * titaniumValue -
-    substitutesValue -
-    storageSubstitutesValue;
-
-  const totalOtherPaymentValue = (
-    excludeSteel: boolean,
-    excludeTitanium: boolean,
-    excludeSubResourceType?: string,
-    excludeStorageCardId?: string,
-  ) => {
-    let total = 0;
-    if (!excludeSteel) {
-      total += steel * steelValue;
-    }
-    if (!excludeTitanium) {
-      total += titanium * titaniumValue;
-    }
-    if (playerPaymentSubstitutes) {
-      for (const [resourceType, amount] of Object.entries(substitutes)) {
-        if (resourceType !== excludeSubResourceType) {
-          const sub = playerPaymentSubstitutes.find((s) => s.resourceType === resourceType);
-          if (sub) {
-            total += amount * sub.conversionRate;
-          }
-        }
-      }
-    }
-    for (const [cardId, amount] of Object.entries(storageSubstitutes)) {
-      if (cardId !== excludeStorageCardId) {
-        const sub = applicableStorageSubstitutes.find((s) => s.cardId === cardId);
-        if (sub) {
-          total += amount * sub.conversionRate;
-        }
-      }
-    }
-    return total;
-  };
-
-  const canUseSteel = isGenericMode ? !!genericSteelSub : card?.tags?.includes(TagBuilding);
-  const canUseTitanium = isGenericMode ? !!genericTitaniumSub : card?.tags?.includes(TagSpace);
-
-  const remainingCostForSteel = effectiveCost - totalOtherPaymentValue(true, false);
-  const maxSteelUnits = canUseSteel
-    ? Math.min(playerResources.steel, Math.ceil(Math.max(0, remainingCostForSteel) / steelValue))
-    : 0;
-
-  const remainingCostForTitanium = effectiveCost - totalOtherPaymentValue(false, true);
-  const maxTitaniumUnits = canUseTitanium
-    ? Math.min(
-        playerResources.titanium,
-        Math.ceil(Math.max(0, remainingCostForTitanium) / titaniumValue),
-      )
-    : 0;
-
-  const baseResource = genericPayment?.baseResource ?? "credit";
-  const baseResourceMap: Record<string, number> = {
-    heat: playerResources.heat,
-    plant: playerResources.plants,
-  };
-  const baseResourceAvailable = baseResourceMap[baseResource] ?? playerResources.credits;
-
-  const isOverpaying = finalCost < 0;
-  const cannotAfford = finalCost > baseResourceAvailable;
-  const canConfirm = !cannotAfford;
-
-  const handleConfirm = useCallback(() => {
-    if (!canConfirm) {
-      return;
-    }
-
-    const payment: CardPaymentDto = {
-      credits: Math.max(0, finalCost),
-      steel,
-      titanium,
-      substitutes: Object.keys(substitutes).length > 0 ? substitutes : undefined,
-      storageSubstitutes:
-        Object.keys(storageSubstitutes).length > 0 ? storageSubstitutes : undefined,
-    };
-
-    onConfirm(payment);
-  }, [steel, titanium, substitutes, storageSubstitutes, finalCost, canConfirm, onConfirm]);
-
-  const incrementSteel = () => {
-    if (steel < maxSteelUnits) {
-      setSteel(steel + 1);
-    }
-  };
-
-  const decrementSteel = () => {
-    if (steel > 0) {
-      setSteel(steel - 1);
-    }
-  };
-
-  const incrementTitanium = () => {
-    if (titanium < maxTitaniumUnits) {
-      setTitanium(titanium + 1);
-    }
-  };
-
-  const decrementTitanium = () => {
-    if (titanium > 0) {
-      setTitanium(titanium - 1);
-    }
-  };
-
+  for (const [rt, cost] of Object.entries(quote.costs)) if ((totals[rt] ?? 0) < cost) valid = false;
+  const names = new Map(
+    [...(player?.playedCards ?? []), ...(player?.corporation ? [player.corporation] : [])].map(
+      (c) => [c.id, c.name],
+    ),
+  );
   return (
     <GameFlowPopover
-      isVisible={isVisible}
+      isVisible
       onClose={onCancel}
-      outerClassName="items-start pt-[30vh]"
-      className="min-w-[400px] max-h-[600px]"
+      className="min-w-[360px] max-h-[650px] text-white"
     >
       <GameFlowTitle>
-        <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
-          Select Payment Method
-        </h3>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-sm text-gray-400">Pay for: {effectiveName}</span>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">Cost:</span>
-            <GameIcon iconType="credit" amount={effectiveCost} size="small" />
-          </div>
-        </div>
+        <h3 className="m-0 font-orbitron text-white text-base font-bold">Select payment</h3>
       </GameFlowTitle>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {canUseSteel && playerResources.steel > 0 && (
-          <div className="flex items-center justify-between game-panel game-panel-clipped game-choice p-4">
-            <div className="flex items-center gap-3">
-              <GameIcon iconType="steel" size="medium" />
-              <div className="flex flex-col">
-                <span className="text-white">Steel</span>
-                <span className="text-xs text-gray-400">
-                  {steelValue} MC each ({playerResources.steel} available)
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <GameButton
-                emphasis="quiet"
-                onClick={decrementSteel}
-                disabled={steel === 0}
-                className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
-              >
-                −
-              </GameButton>
-              <span className="w-12 text-center text-lg text-white font-semibold">{steel}</span>
-              <GameButton
-                emphasis="quiet"
-                onClick={incrementSteel}
-                disabled={steel >= maxSteelUnits}
-                className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
-              >
-                +
-              </GameButton>
-            </div>
-          </div>
-        )}
-
-        {canUseTitanium && playerResources.titanium > 0 && (
-          <div className="flex items-center justify-between game-panel game-panel-clipped game-choice p-4">
-            <div className="flex items-center gap-3">
-              <GameIcon iconType="titanium" size="medium" />
-              <div className="flex flex-col">
-                <span className="text-white">Titanium</span>
-                <span className="text-xs text-gray-400">
-                  {titaniumValue} MC each ({playerResources.titanium} available)
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <GameButton
-                emphasis="quiet"
-                onClick={decrementTitanium}
-                disabled={titanium === 0}
-                className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
-              >
-                −
-              </GameButton>
-              <span className="w-12 text-center text-lg text-white font-semibold">{titanium}</span>
-              <GameButton
-                emphasis="quiet"
-                onClick={incrementTitanium}
-                disabled={titanium >= maxTitaniumUnits}
-                className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
-              >
-                +
-              </GameButton>
-            </div>
-          </div>
-        )}
-
-        {playerPaymentSubstitutes &&
-          playerPaymentSubstitutes
-            .filter((sub) => sub.resourceType !== "steel" && sub.resourceType !== "titanium")
-            .map((substitute) => {
-              const resourceType = substitute.resourceType;
-              let available = 0;
-
-              switch (resourceType) {
-                case "heat":
-                  available = playerResources.heat;
-                  break;
-                case "energy":
-                  available = playerResources.energy;
-                  break;
-                case "plant":
-                  available = playerResources.plants;
-                  break;
-              }
-
-              if (available === 0) {
-                return null;
-              }
-
-              const currentAmount = substitutes[resourceType] || 0;
-
-              const remainingCostForThisSubstitute =
-                effectiveCost - totalOtherPaymentValue(false, false, resourceType, undefined);
-
-              const maxUnits = Math.min(
-                available,
-                Math.ceil(Math.max(0, remainingCostForThisSubstitute) / substitute.conversionRate),
-              );
-
-              const incrementSubstitute = () => {
-                if (currentAmount < maxUnits) {
-                  setSubstitutes((prev) => ({
-                    ...prev,
-                    [resourceType]: currentAmount + 1,
-                  }));
-                }
-              };
-
-              const decrementSubstitute = () => {
-                if (currentAmount > 0) {
-                  setSubstitutes((prev) => {
-                    const newSubs = { ...prev };
-                    if (currentAmount === 1) {
-                      delete newSubs[resourceType];
-                    } else {
-                      newSubs[resourceType] = currentAmount - 1;
-                    }
-                    return newSubs;
-                  });
-                }
-              };
-
-              return (
-                <div
-                  key={resourceType}
-                  className="flex items-center justify-between game-panel game-panel-clipped game-choice p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <GameIcon iconType={resourceType} size="medium" />
-                    <div className="flex flex-col">
-                      <span className="text-white capitalize">{resourceType}</span>
-                      <span className="text-xs text-gray-400">
-                        {substitute.conversionRate}{" "}
-                        {baseResource === "credit" ? "MC" : baseResource} each ({available}{" "}
-                        available)
-                      </span>
-                    </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
+        {quote.options
+          .filter((o) => !native(o) && o.available > 0)
+          .map((o) => {
+            const n = counts[key(o)] ?? 0;
+            return (
+              <div key={key(o)} className="rounded border border-white/15 p-3">
+                {o.source.cardId && (
+                  <div className="mb-2 font-orbitron text-sm text-gray-300">
+                    {names.get(o.source.cardId) ?? o.source.cardId}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <GameButton
-                      emphasis="quiet"
-                      onClick={decrementSubstitute}
-                      disabled={currentAmount === 0}
-                      className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
-                    >
-                      −
-                    </GameButton>
-                    <span className="w-12 text-center text-lg text-white font-semibold">
-                      {currentAmount}
-                    </span>
-                    <GameButton
-                      emphasis="quiet"
-                      onClick={incrementSubstitute}
-                      disabled={currentAmount >= maxUnits}
-                      className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
-                    >
-                      +
-                    </GameButton>
-                  </div>
-                </div>
-              );
-            })}
-
-        {applicableStorageSubstitutes.map((substitute) => {
-          const effectiveStorage = isGenericMode
-            ? genericPayment?.resourceStorage
-            : resourceStorage;
-          const available = effectiveStorage?.[substitute.cardId] ?? 0;
-          if (available === 0) {
-            return null;
-          }
-
-          const currentAmount = storageSubstitutes[substitute.cardId] || 0;
-
-          const remainingCostForThis =
-            effectiveCost - totalOtherPaymentValue(false, false, undefined, substitute.cardId);
-
-          const maxUnits = Math.min(
-            available,
-            Math.ceil(Math.max(0, remainingCostForThis) / substitute.conversionRate),
-          );
-
-          const incrementStorage = () => {
-            if (currentAmount < maxUnits) {
-              setStorageSubstitutes((prev) => ({
-                ...prev,
-                [substitute.cardId]: currentAmount + 1,
-              }));
-            }
-          };
-
-          const decrementStorage = () => {
-            if (currentAmount > 0) {
-              setStorageSubstitutes((prev) => {
-                const newSubs = { ...prev };
-                if (currentAmount === 1) {
-                  delete newSubs[substitute.cardId];
-                } else {
-                  newSubs[substitute.cardId] = currentAmount - 1;
-                }
-                return newSubs;
-              });
-            }
-          };
-
-          return (
-            <div
-              key={`storage-${substitute.cardId}`}
-              className="flex items-center justify-between game-panel game-panel-clipped game-choice p-4"
-            >
-              <div className="flex items-center gap-3">
-                <GameIcon iconType={substitute.resourceType} size="medium" />
-                <div className="flex flex-col">
-                  <span className="text-white capitalize">{substitute.resourceType}</span>
-                  <span className="text-xs text-gray-400">
-                    {substitute.conversionRate} {baseResource === "credit" ? "MC" : baseResource}{" "}
-                    each ({available} available)
+                )}
+                <div className="flex items-center gap-2">
+                  <GameIcon iconType={o.source.resource} size="small" />
+                  <span>→</span>
+                  <GameIcon iconType={o.targetResource} amount={o.conversionRate} size="small" />
+                  <span className="font-orbitron text-xs text-gray-400 mr-auto">
+                    {o.available} available
                   </span>
+                  <GameButton
+                    size="sm"
+                    className="w-9 h-9 p-0"
+                    onClick={() => setCounts({ ...counts, [key(o)]: Math.max(0, n - 1) })}
+                    aria-label={`Use less ${o.source.resource}`}
+                    disabled={!n}
+                  >
+                    <span className="text-xl font-bold leading-none" aria-hidden="true">
+                      −
+                    </span>
+                  </GameButton>
+                  <span className="font-orbitron min-w-5 text-center">{n}</span>
+                  <GameButton
+                    size="sm"
+                    className="w-9 h-9 p-0"
+                    onClick={() => setCounts({ ...counts, [key(o)]: n + 1 })}
+                    aria-label={`Use more ${o.source.resource}`}
+                    disabled={
+                      (remainingPools.get(poolKey(o)) ?? 0) <= 0 ||
+                      (substituteTotals[o.targetResource] ?? 0) >= quote.costs[o.targetResource]
+                    }
+                  >
+                    <span className="text-xl font-bold leading-none" aria-hidden="true">
+                      +
+                    </span>
+                  </GameButton>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <GameButton
-                  emphasis="quiet"
-                  onClick={decrementStorage}
-                  disabled={currentAmount === 0}
-                  className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
-                >
-                  −
-                </GameButton>
-                <span className="w-12 text-center text-lg text-white font-semibold">
-                  {currentAmount}
-                </span>
-                <GameButton
-                  emphasis="quiet"
-                  onClick={incrementStorage}
-                  disabled={currentAmount >= maxUnits}
-                  className="h-8 w-8 rounded-none border border-space-blue-500 bg-space-black text-white hover:bg-space-blue-900 disabled:opacity-30 disabled:hover:bg-space-black transition-all"
-                >
-                  +
-                </GameButton>
-              </div>
+            );
+          })}
+        {payment.allocations
+          .filter(
+            (a) => a.source.target === "self-player" && a.source.resource === a.targetResource,
+          )
+          .map((a) => (
+            <div key={a.targetResource} className="flex justify-between items-center text-gray-300">
+              <span className="font-orbitron text-sm">Remaining payment</span>
+              <GameIcon iconType={a.source.resource} amount={a.amount} size="medium" />
             </div>
-          );
-        })}
-
-        {!canUseSteel &&
-          !canUseTitanium &&
-          (!playerPaymentSubstitutes || playerPaymentSubstitutes.length === 0) &&
-          applicableStorageSubstitutes.length === 0 && (
-            <div className="text-center text-gray-400 py-4">
-              No alternative payment methods available
+          ))}
+        {Object.entries(quote.costs)
+          .filter(([rt, cost]) => (totals[rt] ?? 0) > cost)
+          .map(([rt, cost]) => (
+            <div key={rt} className="flex items-center gap-2 text-sm text-white">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="shrink-0 text-yellow-400"
+                aria-hidden="true"
+              >
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span>Excess</span>
+              <GameIcon iconType={rt as ResourceType} amount={totals[rt] - cost} size="medium" />
+              <span>is lost</span>
             </div>
-          )}
+          ))}
+        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {!valid && !loading && !error && (
+          <p className="text-red-400 text-sm">Choose enough resources to cover the cost.</p>
+        )}
       </div>
-
-      <div className="px-4 pb-4">
-        <div className="rounded-md border border-space-blue-500/30 bg-space-black/30 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-400">
-              {isGenericMode
-                ? `${baseResource === "credit" ? "Credits" : baseResource.charAt(0).toUpperCase() + baseResource.slice(1)} needed:`
-                : "Card cost:"}
-            </span>
-            <div
-              className={`flex items-center gap-2 ${finalCost < 0 ? "opacity-90" : cannotAfford ? "opacity-90" : ""}`}
-            >
-              <GameIcon iconType={baseResource} amount={finalCost} size="medium" />
-            </div>
-          </div>
-          <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              isOverpaying ? "max-h-[100px] opacity-100" : "max-h-0 opacity-0"
-            }`}
-          >
-            <div
-              className={`mt-2 text-sm text-yellow-500 border-t border-space-blue-500/20 pt-2 transition-opacity duration-150 ${
-                isOverpaying ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              Overpaying by {Math.max(-finalCost, 0)} MC (excess will be lost)
-            </div>
-          </div>
-          <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              cannotAfford ? "max-h-[100px] opacity-100" : "max-h-0 opacity-0"
-            }`}
-          >
-            <div
-              className={`mt-2 text-sm text-error-red border-t border-space-blue-500/20 pt-2 transition-opacity duration-150 ${
-                cannotAfford ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              Can't afford: Need {Math.max(finalCost - baseResourceAvailable, 0)} more{" "}
-              {baseResource === "credit" ? "MC" : baseResource}
-            </div>
-          </div>
-        </div>
-      </div>
-
       <GameFlowFooter className="justify-end gap-3">
-        <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>
+        <GameButton size="sm" emphasis="secondary" onClick={onCancel}>
           Cancel
         </GameButton>
-        <GameButton
-          emphasis="primary"
-          tone="info"
-          size="sm"
-          onClick={handleConfirm}
-          clickSound={false}
-          disabled={!canConfirm}
-        >
+        <GameButton size="sm" disabled={!valid} onClick={() => onConfirm(payment)}>
           Confirm
         </GameButton>
       </GameFlowFooter>
     </GameFlowPopover>
   );
-};
-
-export default PaymentSelectionPopover;
+}

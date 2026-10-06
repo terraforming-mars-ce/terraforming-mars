@@ -559,7 +559,7 @@ Production-quality logging. Every log line should earn its place at its level.
 - Query operations (get game, list cards, list games)
 - Handler entry/exit, message routing
 - Initialization details, configuration, setup steps
-- Bot/service internals (health checks, dispatching)
+- Bot/service internals (model calls, tool calls, planning)
 
 **Warn Level**
 - Expected failure cases that callers should handle (game not found, player not found)
@@ -647,7 +647,8 @@ func TestPlayerService_DoAction(t *testing.T) {
 ### Core Libraries
 
 - **gorilla/websocket**: WebSocket communication
-- **go-chi/chi**: HTTP routing and middleware
+- **gorilla/mux**: HTTP routing
+- **modelcontextprotocol/go-sdk**: MCP tool server for bots
 - **tygo**: TypeScript type generation
 
 ### Development Tools

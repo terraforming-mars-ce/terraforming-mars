@@ -29,10 +29,7 @@ import GameIcon from "../display/GameIcon.tsx";
 import CorporationCard from "../cards/CorporationCard.tsx";
 import { getCorporationLogo } from "@/utils/corporationLogos.tsx";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
-import {
-  calculatePlantsForGreenery,
-  calculateHeatForTemperature,
-} from "@/utils/resourceConversionUtils.ts";
+
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -366,29 +363,16 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
   const playedCardsCount = displayPlayer?.playedCards?.length || 0;
 
-  const requiredPlants = calculatePlantsForGreenery(displayPlayer?.effects);
-  const requiredHeat = calculateHeatForTemperature(displayPlayer?.effects);
-
-  const storageHeatValue =
-    displayPlayer?.storagePaymentSubstitutes
-      ?.filter((sub) => sub.targetResource === "heat")
-      .reduce(
-        (acc, sub) => acc + (displayPlayer.resourceStorage?.[sub.cardId] ?? 0) * sub.conversionRate,
-        0,
-      ) ?? 0;
-  const storagePlantValue =
-    displayPlayer?.storagePaymentSubstitutes
-      ?.filter((sub) => sub.targetResource === "plant")
-      .reduce(
-        (acc, sub) => acc + (displayPlayer.resourceStorage?.[sub.cardId] ?? 0) * sub.conversionRate,
-        0,
-      ) ?? 0;
-
   const canConvertPlants =
-    !isSpectating && (displayPlayer?.resources.plants ?? 0) + storagePlantValue >= requiredPlants;
+    !isSpectating &&
+    !!gameState?.currentPlayer?.standardProjects.find(
+      (p) => p.projectType === "convert-plants-to-greenery",
+    )?.available;
   const canConvertHeat =
     !isSpectating &&
-    (displayPlayer?.resources.heat ?? 0) + storageHeatValue >= requiredHeat &&
+    !!gameState?.currentPlayer?.standardProjects.find(
+      (p) => p.projectType === "convert-heat-to-temperature",
+    )?.available &&
     (gameState?.globalParameters?.temperature ?? -30) < 8;
 
   const handleOpenCardsModal = () => {

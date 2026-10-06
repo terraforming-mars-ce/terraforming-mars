@@ -22,16 +22,17 @@ type ConfirmCardDiscardAction struct {
 func NewConfirmCardDiscardAction(
 	gameRepo game.GameRepository,
 	cardRegistry gamecards.CardRegistry,
+	stateRepo game.GameStateRepository,
 	logger *slog.Logger,
 ) *ConfirmCardDiscardAction {
 	return &ConfirmCardDiscardAction{
-		BaseAction: baseaction.NewBaseAction(gameRepo, cardRegistry),
+		BaseAction: baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),
 	}
 }
 
 // Execute performs the confirm card discard action
 // cardsToDiscard: card IDs from hand to discard (empty = skip if optional)
-func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, playerID string, cardsToDiscard []string) error {
+func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, playerID string, resolutionID string, cardsToDiscard []string) error {
 	log := a.InitLogger(gameID, playerID).With(
 		slog.String("action", "confirm_card_discard"),
 		slog.Int("cards_to_discard", len(cardsToDiscard)),
@@ -48,8 +49,8 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 		return err
 	}
 
-	selection := p.Selection().GetPendingCardDiscardSelection()
-	if selection == nil {
+	selection := p.Selection().GetPendingBehaviorResolution(resolutionID)
+	if selection == nil || selection.Kind != "card-discard" {
 		log.Warn("No pending card discard selection found")
 		return fmt.Errorf("no pending card discard selection found")
 	}
@@ -69,6 +70,13 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 		return fmt.Errorf("can discard at most %d card(s), selected %d", selection.MaxCards, len(cardsToDiscard))
 	}
 
+	seen := map[string]bool{}
+	for _, id := range cardsToDiscard {
+		if seen[id] {
+			return fmt.Errorf("duplicate discard card %s", id)
+		}
+		seen[id] = true
+	}
 	// Validate all cards are in hand
 	handCards := p.Hand().Cards()
 	for _, cardID := range cardsToDiscard {
@@ -79,6 +87,12 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 	}
 
 	// Remove discarded cards from hand
+	if len(cardsToDiscard) > 0 {
+		validator := gamecards.NewBehaviorApplier(p, g, selection.Source, log).WithSourceCardID(selection.SourceCardID).WithTriggeringCard(selection.TriggeringCardID, selection.TriggeringPlayerID).WithCardRegistry(a.CardRegistry())
+		if err := validator.ValidateResourceOutputs(selection.PendingOutputs); err != nil {
+			return err
+		}
+	}
 	for _, cardID := range cardsToDiscard {
 		p.Hand().RemoveCard(cardID)
 	}
@@ -93,7 +107,8 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 			slog.Any("card_ids", cardsToDiscard))
 	}
 
-	// Apply pending outputs if player actually discarded (or if discard was mandatory with min=0)
+	var calculatedOutputs []shared.CalculatedOutput
+	// Skipping an optional discard does not grant its reward.
 	if len(cardsToDiscard) > 0 && len(selection.PendingOutputs) > 0 {
 		selfOutputs, err := a.applyPendingOutputs(ctx, g, p, selection, log)
 		if err != nil {
@@ -102,7 +117,7 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 		}
 
 		// Add triggered effect for self-player: discard + draws
-		calculatedOutputs := []shared.CalculatedOutput{
+		calculatedOutputs = []shared.CalculatedOutput{
 			{ResourceType: string(shared.ResourceCardDiscard), Amount: len(cardsToDiscard)},
 		}
 		calculatedOutputs = append(calculatedOutputs, selfOutputs...)
@@ -115,7 +130,13 @@ func (a *ConfirmCardDiscardAction) Execute(ctx context.Context, gameID string, p
 	}
 
 	// Clear the pending selection
-	p.Selection().SetPendingCardDiscardSelection(nil)
+	p.Selection().RemovePendingBehaviorResolution(resolutionID)
+	description := "Skipped discard"
+	if len(cardsToDiscard) > 0 {
+		description = fmt.Sprintf("Discarded %d card(s)", len(cardsToDiscard))
+	}
+	a.WriteStateLogWithChoiceAndOutputs(ctx, g, selection.Source, shared.SourceTypePassiveEffect, playerID, description, nil, calculatedOutputs)
+	baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 
 	log.Info("Card discard confirmation completed",
 		slog.String("source", selection.Source),
@@ -130,7 +151,7 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 	ctx context.Context,
 	g *game.Game,
 	p *player.Player,
-	selection *shared.PendingCardDiscardSelection,
+	selection *shared.PendingBehaviorResolution,
 	log *slog.Logger,
 ) ([]shared.CalculatedOutput, error) {
 	var selfOutputs []shared.CalculatedOutput
@@ -187,6 +208,7 @@ func (a *ConfirmCardDiscardAction) applyPendingOutputs(
 		// For non-card-draw outputs, use the behavior applier
 		applier := gamecards.NewBehaviorApplier(p, g, selection.Source, slog.Default()).
 			WithSourceCardID(selection.SourceCardID).
+			WithTriggeringCard(selection.TriggeringCardID, selection.TriggeringPlayerID).
 			WithCardRegistry(a.CardRegistry()).
 			WithSourceType(shared.SourceTypePassiveEffect)
 		if err := applier.ApplyOutputs(ctx, []shared.BehaviorCondition{outputBC}); err != nil {

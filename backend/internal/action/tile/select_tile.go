@@ -43,7 +43,7 @@ func NewSelectTileAction(
 ) *SelectTileAction {
 	return &SelectTileAction{
 		BaseAction:         baseaction.NewBaseActionWithStateRepo(gameRepo, cardRegistry, stateRepo),
-		completionRegistry: NewTileCompletionRegistry(stateRepo),
+		completionRegistry: NewTileCompletionRegistry(stateRepo, cardRegistry),
 	}
 }
 
@@ -91,6 +91,18 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		return nil, fmt.Errorf("selected hex %s is not valid for placement", selectedHex)
 	}
 
+	if pendingTileSelection.SourceCardID != "" || pendingTileSelection.TileRestrictions != nil {
+		valid := false
+		for _, hex := range g.CalculateAvailableHexesForTile(pendingTileSelection.TileType, playerID, pendingTileSelection.TileRestrictions) {
+			if hex == selectedHex {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return nil, fmt.Errorf("selected hex %s is no longer valid for placement", selectedHex)
+		}
+	}
 	coords, err := parseHexPosition(selectedHex)
 	if err != nil {
 		log.Warn("Failed to parse hex coordinates", slog.String("hex", selectedHex), slog.Any("error", err))
@@ -99,6 +111,18 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 
 	tileType := pendingTileSelection.TileType
 
+	if tileType != "clear" && tileType != "tile-destruction" && !strings.HasPrefix(tileType, "tile-replacement:") {
+		tile, err := g.Board().GetTile(*coords)
+		if err != nil {
+			return nil, err
+		}
+		if tile.OccupiedBy != nil || (tile.ReservedBy != nil && *tile.ReservedBy != playerID) {
+			return nil, fmt.Errorf("selected hex is occupied or reserved")
+		}
+	}
+	if tileType == "ocean" && g.GlobalParameters().Oceans() >= g.GlobalParameters().GetMaxOceans() {
+		return nil, fmt.Errorf("ocean placement is no longer available")
+	}
 	// Handle clear differently - removes occupant/reservation from a tile (admin debug tool)
 	if tileType == "clear" {
 		// Check if tile is an ocean before clearing, so we can decrement the ocean count
@@ -157,20 +181,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 			return nil, fmt.Errorf("failed to destroy tile: %w", err)
 		}
 
-		occupantTags := []string{}
-		if pendingTileSelection.SourceCardID != "" {
-			occupantTags = append(occupantTags, "source:"+pendingTileSelection.SourceCardID)
-		}
-		occupant := board.TileOccupant{
-			Type: mapTileTypeToResourceType(replacementTileType),
-			Tags: occupantTags,
-		}
-
-		if occupant.Type == shared.ResourceCityTile && pendingTileSelection.SourceCardID != "" && a.CardRegistry() != nil {
-			if card, err := a.CardRegistry().GetByID(pendingTileSelection.SourceCardID); err == nil && card.Style != nil {
-				occupant.Visual = &shared.TileVisual{City: card.Style.Tile.Clone()}
-			}
-		}
+		occupant := a.createTileOccupant(replacementTileType, pendingTileSelection.SourceCardID)
 		if err := g.Board().UpdateTileOccupancy(ctx, *coords, occupant, playerID); err != nil {
 			log.Warn("Failed to place replacement tile", slog.Any("error", err))
 			return nil, fmt.Errorf("failed to place replacement tile: %w", err)
@@ -306,20 +317,7 @@ func (a *SelectTileAction) Execute(ctx context.Context, gameID string, playerID 
 		}
 	}
 
-	occupantTags := []string{}
-	if pendingTileSelection.SourceCardID != "" {
-		occupantTags = append(occupantTags, "source:"+pendingTileSelection.SourceCardID)
-	}
-	occupant := board.TileOccupant{
-		Type: mapTileTypeToResourceType(tileType),
-		Tags: occupantTags,
-	}
-
-	if occupant.Type == shared.ResourceCityTile && pendingTileSelection.SourceCardID != "" && a.CardRegistry() != nil {
-		if card, err := a.CardRegistry().GetByID(pendingTileSelection.SourceCardID); err == nil && card.Style != nil {
-			occupant.Visual = &shared.TileVisual{City: card.Style.Tile.Clone()}
-		}
-	}
+	occupant := a.createTileOccupant(tileType, pendingTileSelection.SourceCardID)
 	if err := g.Board().UpdateTileOccupancy(ctx, *coords, occupant, playerID); err != nil {
 		log.Warn("Failed to place tile", slog.Any("error", err))
 		return nil, fmt.Errorf("failed to place tile: %w", err)
@@ -640,4 +638,27 @@ func mapTileTypeToResourceType(tileType string) shared.ResourceType {
 	default:
 		return shared.ResourceType(tileType + "-tile")
 	}
+}
+
+func (a *SelectTileAction) createTileOccupant(tileType, sourceCardID string) board.TileOccupant {
+	occupant := board.TileOccupant{
+		Type: mapTileTypeToResourceType(tileType),
+		Tags: []string{},
+	}
+	if sourceCardID == "" {
+		return occupant
+	}
+	occupant.Tags = append(occupant.Tags, "source:"+sourceCardID)
+	if occupant.Type != shared.ResourceCityTile || a.CardRegistry() == nil {
+		return occupant
+	}
+	card, err := a.CardRegistry().GetByID(sourceCardID)
+	if err != nil {
+		return occupant
+	}
+	occupant.DisplayName = card.Name
+	if card.Style != nil {
+		occupant.Visual = &shared.TileVisual{City: card.Style.Tile.Clone()}
+	}
+	return occupant
 }

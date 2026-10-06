@@ -62,8 +62,8 @@ func (h *UpdateGameSettingsHandler) HandleMessage(ctx context.Context, connectio
 		DemoGame:         patch.DemoGame,
 		AllowRandomBuy:   patch.AllowRandomBuy,
 		CardPacks:        patch.CardPacks,
-		ClaudeAPIKey:     patch.ClaudeAPIKey,
-		ClaudeModel:      patch.ClaudeModel,
+		ClaudeOAuthToken: patch.ClaudeOAuthToken,
+		BotSpendCapUSD:   patch.BotSpendCapUSD,
 	}
 	if err := h.action.Execute(ctx, gameID, playerID, &domainPatch); err != nil {
 		log.Debug("Failed to update game settings", slog.Any("error", err))

@@ -56,7 +56,7 @@ frontend/
 type AppPhase =
   | { kind: "menu"; route: "landing" | "create" | "join" | "cards" | "reconnecting" }
   | { kind: "checking" | "connecting" | "selecting" | "joining" | "spectating"; gameId: string }
-  | { kind: "lobby" | "loading" | "fadeOutLobby" | "marsRevealed" | "animateUI" | "playing" | "completed"; gameId: string };
+  | { kind: "lobby" | "loading" | "fadeOutLobby" | "marsRevealed" | "showcase" | "animateUI" | "playing" | "completed"; gameId: string };
 ```
 
 The legal transitions form a state machine driven from two places only:
@@ -73,7 +73,7 @@ Selector helpers live next to the type in `appPhaseStore.ts`, so adding a phase 
 
 1. **Phase writes are one-way.** Components must NOT call `setPhase`; only `useGameInitialization` and `useGameTransitions` may. If you need to drive a transition, add it to `useGameTransitions` as a `useEffect` keyed on the relevant inputs.
 2. **Reset world-ready flags between games.** `isSkyboxReady`, `isGpuReady`, `marsRevealedReady` are cleared in `setInitPhase("checking", ...)`. If you add new ready-flags, reset them there too — sticky flags across games cause the next game to skip the loading transition entirely.
-3. **Animation timers are explicit.** The `loading → fadeOutLobby → marsRevealed → animateUI → playing` chain is driven by fixed timers (1000 / 1500 / 2500 ms) anchored to phase entry. Cleaning them up on phase-kind change is mandatory (each effect's `return () => clearTimeout(...)` is load-bearing — a stale timer firing after a phase change will skip states).
+3. **Animation timers are explicit.** The `loading → fadeOutLobby → marsRevealed → animateUI → playing` chain is driven by fixed timers (1000 / 1500 / 2500 ms) anchored to phase entry. When the server enters `init_apply_corp`/`init_apply_prelude`, `marsRevealed` (or a reconnect) goes to `showcase` instead; `showcase → animateUI` fires when the server leaves the init phases. During `showcase` the HUD is reduced to the hamburger and the left player list, and `CorporationShowcaseOverlay` presents each player's corp, preludes and the final roster. Cleaning them up on phase-kind change is mandatory (each effect's `return () => clearTimeout(...)` is load-bearing — a stale timer firing after a phase change will skip states).
 4. **Never gate visibility on "x ≠ idle" or composite booleans.** Use `phase.kind === "playing"`, `isInGameWorld(phase)`, etc. The discriminated union gives you exhaustiveness; ad-hoc booleans don't.
 
 #### Persistent 3D background

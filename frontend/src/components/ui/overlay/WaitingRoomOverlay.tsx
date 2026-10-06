@@ -10,7 +10,8 @@ import GameMenuModal from "./GameMenuModal.tsx";
 import DemoSetupOverlay from "./DemoSetupOverlay.tsx";
 import LobbySettingsOverlay from "./LobbySettingsOverlay.tsx";
 import LobbyMapInfoPanel from "../lobby/LobbyMapInfoPanel.tsx";
-import { BotDifficultyChip, BotSpeedChip, PlayerChip } from "../display/BotChips.tsx";
+import { BotPersonaChip, PlayerChip } from "../display/BotChips.tsx";
+import InlineEmote from "../display/InlineEmote.tsx";
 import MainMenuHamburger from "../buttons/MainMenuHamburger.tsx";
 
 interface WaitingRoomOverlayProps {
@@ -79,9 +80,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaveConfirmVisible, setLeaveConfirmVisible] = useState(true);
   const [pendingLeave, setPendingLeave] = useState(false);
-  const [showBotDropdown, setShowBotDropdown] = useState(false);
   const [colorPickerForPlayer, setColorPickerForPlayer] = useState<string | null>(null);
-  const botDropdownRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
 
   const isDemoGame = game.settings.demoGame;
@@ -104,6 +103,11 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
     });
     return bots.every((b) => b.botStatus === "ready");
   }, [hasCurrentPlayer, game.currentPlayer, game.otherPlayers]);
+
+  const anyBotFailed = React.useMemo(
+    () => (game.otherPlayers ?? []).some((p) => p.playerType === "bot" && p.botStatus === "failed"),
+    [game.otherPlayers],
+  );
 
   const allDemoPlayersReady = React.useMemo(() => {
     if (!isDemoGame) {
@@ -235,27 +239,12 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
     setLeaveConfirmVisible(true);
   };
 
-  useEffect(() => {
-    if (!showBotDropdown) {
-      return;
-    }
-    const handleClick = (e: MouseEvent) => {
-      if (
-        showBotDropdown &&
-        botDropdownRef.current &&
-        !botDropdownRef.current.contains(e.target as Node)
-      ) {
-        setShowBotDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [showBotDropdown]);
-
-  const handleAddBot = (difficulty: string, speed: string) => {
-    setShowBotDropdown(false);
-    void globalWebSocketManager.addBot(undefined, difficulty, speed);
-  };
+  let botWaitMessage = "Waiting for demo setup";
+  if (anyBotFailed) {
+    botWaitMessage = "A bot failed to start";
+  } else if (!allBotsReady) {
+    botWaitMessage = "Waiting for bots";
+  }
 
   return (
     <>
@@ -372,8 +361,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                     color: player.color || "",
                     playerType: player.playerType as string,
                     botStatus: (player.botStatus as string) || undefined,
-                    botDifficulty: (player.botDifficulty as string) || undefined,
-                    botSpeed: (player.botSpeed as string) || undefined,
+                    botPersona: (player.botPersona as string) || undefined,
                     demoReady: (player as PlayerDto | OtherPlayerDto).demoReady || false,
                     isLeaving: false,
                   }));
@@ -386,8 +374,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                         color: "",
                         playerType: "human",
                         botStatus: undefined,
-                        botDifficulty: undefined,
-                        botSpeed: undefined,
+                        botPersona: undefined,
                         demoReady: false,
                         isLeaving: true,
                       });
@@ -460,6 +447,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                             )}
                           </div>
                           <span className="text-white text-sm font-medium">{player.name}</span>
+                          <InlineEmote playerId={player.id} />
                         </div>
                         <div className="player-chip-group">
                           {player.id === playerId && (
@@ -471,14 +459,10 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                             </PlayerChip>
                           )}
                           {player.playerType === "bot" && (
-                            <>
-                              <BotDifficultyChip
-                                difficulty={player.botDifficulty}
-                                botStatus={player.botStatus}
-                                showStatusIcon
-                              />
-                              <BotSpeedChip speed={player.botSpeed} />
-                            </>
+                            <BotPersonaChip
+                              persona={player.botPersona}
+                              botStatus={player.botStatus}
+                            />
                           )}
                           {isDemoGame &&
                             player.playerType !== "bot" &&
@@ -587,67 +571,29 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
                     </svg>
                   }
                 />
-                {isHost && game.settings.hasClaudeApiKey && (
-                  <div className="relative" ref={botDropdownRef}>
-                    <GameButton
-                      emphasis="secondary"
-                      size="md"
-                      onClick={() => setShowBotDropdown((prev) => !prev)}
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        Bot
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <line x1="12" y1="5" x2="12" y2="19" />
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
-                      </span>
-                    </GameButton>
-                    {showBotDropdown && (
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black border border-white/20 rounded-lg overflow-hidden shadow-lg z-10">
-                        <div className="grid grid-cols-[auto_60px_60px] text-center">
-                          <div />
-                          {["Fast", "Thinker"].map((s) => (
-                            <div
-                              key={s}
-                              className="px-3 py-1.5 text-white/40 text-[10px] font-bold uppercase tracking-wide"
-                            >
-                              {s}
-                            </div>
-                          ))}
-                          {[
-                            { key: "normal", label: "Normal" },
-                            { key: "hard", label: "Hard" },
-                            { key: "extreme", label: "Actual Bot" },
-                          ].map((diff) => (
-                            <React.Fragment key={diff.key}>
-                              <div className="px-3 py-2 text-white/60 text-[11px] font-semibold flex items-center whitespace-nowrap">
-                                {diff.label}
-                              </div>
-                              {["fast", "thinker"].map((spd) => (
-                                <GameButton
-                                  emphasis="quiet"
-                                  key={spd}
-                                  onClick={() => handleAddBot(diff.key, spd)}
-                                  className="px-3 py-2 hover:bg-white/10 transition-colors cursor-pointer text-white text-lg"
-                                >
-                                  +
-                                </GameButton>
-                              ))}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                {isHost && game.settings.hasClaudeOAuthToken && (
+                  <GameButton
+                    emphasis="secondary"
+                    size="md"
+                    onClick={() => void globalWebSocketManager.addBot()}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      Bot
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </span>
+                  </GameButton>
                 )}
               </div>
             </div>
@@ -674,9 +620,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
           {isDemoGame && <div className="h-2" />}
 
           {isHost && (!allBotsReady || !allDemoPlayersReady) && (
-            <p className="text-sm text-white/60">
-              {!allBotsReady ? "Waiting for bots" : "Waiting for demo setup"}
-            </p>
+            <p className="text-sm text-white/60">{botWaitMessage}</p>
           )}
           {/* Start Game Button (Host only) */}
           {isHost && (

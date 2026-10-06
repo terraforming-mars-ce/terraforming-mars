@@ -13,6 +13,7 @@ export type AppPhase =
   | { kind: "loading"; gameId: string }
   | { kind: "fadeOutLobby"; gameId: string }
   | { kind: "marsRevealed"; gameId: string }
+  | { kind: "showcase"; gameId: string }
   | { kind: "animateUI"; gameId: string }
   | { kind: "playing"; gameId: string }
   | { kind: "completed"; gameId: string };
@@ -77,6 +78,7 @@ export const isStartingTransition = (p: AppPhase): boolean =>
 
 export const isInGameWorld = (p: AppPhase): boolean =>
   p.kind === "marsRevealed" ||
+  p.kind === "showcase" ||
   p.kind === "animateUI" ||
   p.kind === "playing" ||
   p.kind === "completed";

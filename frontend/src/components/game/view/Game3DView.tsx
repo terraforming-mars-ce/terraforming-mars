@@ -37,6 +37,9 @@ import {
   getPlanetOrbit,
 } from "../board/solarSystemConfig.ts";
 
+// The 3D view is pixel-bound (dense foliage); beyond 1.5x the extra pixels cost more than they show.
+const MAX_PIXEL_RATIO = 1.5;
+
 function FreeCameraFrustum({ fov }: { fov: number }) {
   const { size } = useThree();
   const { storedCameraState } = useWorld3DSettings();
@@ -286,6 +289,33 @@ export default function Game3DView({
   uiAnimationClass = "",
 }: Game3DViewProps) {
   const { activePlanet } = usePlanetFocus();
+  const [warmup, setWarmup] = useState({ gameId: gameState.id, general: false, cities: false });
+  const notifiedGame = useRef<string | null>(null);
+  const handleGeneralReady = useCallback(() => {
+    setWarmup((previous) => ({
+      gameId: gameState.id,
+      general: true,
+      cities: previous.gameId === gameState.id && previous.cities,
+    }));
+  }, [gameState.id]);
+  const handleCityReady = useCallback(() => {
+    setWarmup((previous) => ({
+      gameId: gameState.id,
+      cities: true,
+      general: previous.gameId === gameState.id && previous.general,
+    }));
+  }, [gameState.id]);
+  useEffect(() => {
+    if (
+      warmup.gameId === gameState.id &&
+      warmup.general &&
+      warmup.cities &&
+      notifiedGame.current !== gameState.id
+    ) {
+      notifiedGame.current = gameState.id;
+      onGpuReady?.();
+    }
+  }, [warmup, gameState.id, onGpuReady]);
   const orbitalProject = gameState.projectFunding?.find((p) => p.id === "pf_orbital_station");
   const orbitalStationSeats = orbitalProject ? orbitalProject.seatOwners.length : 0;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -420,18 +450,25 @@ export default function Game3DView({
         }}
         resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
         gl={{ stencil: true }}
-        dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
+        dpr={typeof window !== "undefined" ? Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO) : 1}
         shadows={{ type: THREE.PCFShadowMap }}
       >
         <CanvasClock />
         <MarsRotationProvider>
           <Suspense fallback={null}>
-            <AtmosphereRenderer sunLight={sunLightRef} enabled={activePlanet !== "solar-system"}>
+            <AtmosphereRenderer
+              sunLight={sunLightRef}
+              enabled={activePlanet !== "solar-system"}
+              shakeEnabled={activePlanet === "mars"}
+              reportGpuStats
+            >
               <SkyboxLoader onReady={onSkyboxReady} />
 
               <ambientLight intensity={0.4} color="#2a2a2a" />
               <CentralSunLight startDark={startDark} lightRef={sunLightRef} />
-              <SunMesh />
+              <group userData={{ perfGroup: "sun" }}>
+                <SunMesh />
+              </group>
               <DynamicFog />
 
               <MarsSphere
@@ -439,20 +476,24 @@ export default function Game3DView({
                 onHexClick={handleHexClick}
                 animateHexEntrance={animateHexEntrance}
                 startHidden={tilesHidden}
+                onCityReady={handleCityReady}
               />
 
-              <PhobosBody gameState={gameState} onHexClick={handleHexClick} />
+              <group userData={{ perfGroup: "other planets & moons" }}>
+                <PhobosBody gameState={gameState} onHexClick={handleHexClick} />
+                {PLANET_CONFIGS.map((config) => (
+                  <CelestialBody
+                    key={config.id}
+                    config={config}
+                    gameState={gameState}
+                    onHexClick={handleHexClick}
+                  />
+                ))}
+              </group>
 
-              {PLANET_CONFIGS.map((config) => (
-                <CelestialBody
-                  key={config.id}
-                  config={config}
-                  gameState={gameState}
-                  onHexClick={handleHexClick}
-                />
-              ))}
-
-              <SolarSystemOverview />
+              <group userData={{ perfGroup: "solar system overview" }}>
+                <SolarSystemOverview />
+              </group>
 
               {orbitalProject && (
                 <OrbitalStation
@@ -465,7 +506,9 @@ export default function Game3DView({
 
               <AsteroidImpact />
 
-              <GpuWarmup onReady={onGpuReady} />
+              <group userData={{ perfGroup: "gpu warmup" }}>
+                <GpuWarmup key={gameState.id} onReady={handleGeneralReady} />
+              </group>
               <PerformanceProbe />
 
               <PanControls />

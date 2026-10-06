@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { CardDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
+import { cardDescriptionToPlainText } from "../../../utils/cardDescription.ts";
 import GameCard from "../cards/GameCard.tsx";
 import { GameModal, GameModalHeader, GameModalContent } from "../GameModal";
 
@@ -22,7 +23,7 @@ const CardsPlayedModal: React.FC<CardsPlayedModalProps> = ({ isVisible, onClose,
     const matchesCard = (card: CardDto): boolean => {
       // Name, description, type, pack
       if (card.name.toLowerCase().includes(query)) return true;
-      if (card.description?.toLowerCase().includes(query)) return true;
+      if (cardDescriptionToPlainText(card.description).toLowerCase().includes(query)) return true;
       if (card.type?.toLowerCase().includes(query)) return true;
       if (String(card.cost).includes(query)) return true;
 

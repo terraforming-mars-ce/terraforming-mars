@@ -44,8 +44,9 @@ func TestNuke_ReplacesOccupiedTileWithNuclearZone(t *testing.T) {
 	p1.Hand().AddCard(nukeCard.ID)
 
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, stateRepo, logger)
-	payment := cardAction.PaymentRequest{Credits: nukeCard.Cost}
-	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, nukeCard.Cost)
+	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Nuke card should play successfully")
 
 	// Should have pending tile selection for tile-replacement
@@ -100,8 +101,9 @@ func TestNuke_DoesNotTargetOceanTiles(t *testing.T) {
 	p1.Hand().AddCard(nukeCard.ID)
 
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, stateRepo, logger)
-	payment := cardAction.PaymentRequest{Credits: nukeCard.Cost}
-	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, nukeCard.Cost)
+	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Nuke card should play successfully")
 
 	pending := testGame.GetPendingTileSelection(p1ID)
@@ -167,8 +169,11 @@ func TestNuke_PayWithSteel(t *testing.T) {
 
 	// Pay with 5 steel (5*2=10) + 20 credits = 30
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, stateRepo, logger)
-	payment := cardAction.PaymentRequest{Credits: 20, Steel: 5}
-	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{
+		Target:                 "self-player", Resource: "credit"}, TargetResource: shared.
+		ResourceCredit, Amount: 20}, {Source: shared.PaymentSource{Target: "self-player", Resource: "steel"}, TargetResource: shared.ResourceCredit, Amount: 5}},
+	}
+	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Nuke should accept steel payment (building tag)")
 
 	resources := p1.Resources().Get()
@@ -204,8 +209,11 @@ func TestNuke_PayWithTitanium(t *testing.T) {
 
 	// Pay with 3 titanium (3*3=9) + 21 credits = 30
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, stateRepo, logger)
-	payment := cardAction.PaymentRequest{Credits: 21, Titanium: 3}
-	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{
+		Target:                 "self-player", Resource: "credit"}, TargetResource: shared.
+		ResourceCredit, Amount: 21}, {Source: shared.PaymentSource{Target: "self-player", Resource: "titanium"}, TargetResource: shared.ResourceCredit, Amount: 3}},
+	}
+	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Nuke should accept titanium payment (space tag)")
 
 	resources := p1.Resources().Get()
@@ -248,8 +256,12 @@ func TestNuke_PayWithBothSteelAndTitanium(t *testing.T) {
 	})
 
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, stateRepo, logger)
-	payment := cardAction.PaymentRequest{Credits: 12, Steel: 3, Titanium: 4}
-	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{
+		Target:                                                                     "self-player", Resource: "credit"}, TargetResource: shared.
+		ResourceCredit, Amount:                                                     12}, {Source: shared.PaymentSource{Target: "self-player", Resource: "steel"}, TargetResource: shared.ResourceCredit, Amount: 3}, {Source: shared.
+		PaymentSource{Target: "self-player", Resource: "titanium"}, TargetResource: shared.ResourceCredit, Amount: 4}},
+	}
+	err = playCard.Execute(ctx, testGame.ID(), p1ID, nukeCard.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Nuke should accept both steel and titanium payment (building + space tags)")
 
 	resources := p1.Resources().Get()
@@ -300,12 +312,13 @@ func TestFrontOfTheLine_GrantsExtraActions(t *testing.T) {
 	p.Hand().AddCard(testutil.CardID("Front of the Line"))
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 3}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 3)
 
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().ActionsRemaining(), "Should start with 2 actions")
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().TotalActions(), "Should start with 2 total actions")
 
-	err := playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil)
+	err := playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Front of the Line should play successfully")
 
 	testutil.AssertEqual(t, 3, testGame.CurrentTurn().ActionsRemaining(), "Should have 3 actions remaining (2 - 1 + 2)")
@@ -325,9 +338,10 @@ func TestFrontOfTheLine_AsLastAction(t *testing.T) {
 	p.Hand().AddCard(testutil.CardID("Front of the Line"))
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 3}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 3)
 
-	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil)
+	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Front of the Line should play as last action")
 
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().ActionsRemaining(), "Should have 2 actions remaining (1 - 1 + 2)")
@@ -347,9 +361,10 @@ func TestFrontOfTheLine_UnlimitedActionsUnchanged(t *testing.T) {
 	testutil.AssertEqual(t, -1, testGame.CurrentTurn().ActionsRemaining(), "Solo should have unlimited actions")
 
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 3}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 3)
 
-	err := playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil)
+	err := playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Front of the Line should play in solo mode")
 
 	testutil.AssertEqual(t, -1, testGame.CurrentTurn().ActionsRemaining(), "Solo should still have unlimited actions")
@@ -369,23 +384,26 @@ func TestFrontOfTheLine_ExtraActionsCanBeUsed(t *testing.T) {
 
 	p.Hand().AddCard(testutil.CardID("Front of the Line"))
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 3}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 3)
 
-	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil)
+	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Front of the Line"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Front of the Line should play successfully")
 	testutil.AssertEqual(t, 2, testGame.CurrentTurn().ActionsRemaining(), "Should have 2 actions after Front of the Line")
 	testutil.AssertEqual(t, 3, testGame.CurrentTurn().TotalActions(), "Should have 3 total actions (1 + 2)")
 
 	p.Hand().AddCard(testutil.CardID("Power Plant"))
-	payment2 := cardAction.PaymentRequest{Credits: 4}
-	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Power Plant"), payment2, nil, nil, nil, nil)
+	payment2 := shared.NativePayment(shared.
+		ResourceCredit, 4)
+	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Power Plant"), payment2, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "First extra action should succeed")
 	testutil.AssertEqual(t, 1, testGame.CurrentTurn().ActionsRemaining(), "Should have 1 action remaining")
 	testutil.AssertEqual(t, playerID, testGame.CurrentTurn().PlayerID(), "Should still be current player's turn")
 
 	p.Hand().AddCard(testutil.CardID("Asteroid"))
-	payment3 := cardAction.PaymentRequest{Credits: 14}
-	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Asteroid"), payment3, nil, nil, nil, nil)
+	payment3 := shared.NativePayment(shared.
+		ResourceCredit, 14)
+	err = playAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Asteroid"), payment3, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Second extra action should succeed")
 
 	testutil.AssertEqual(t, player2ID, testGame.CurrentTurn().PlayerID(), "Turn should advance to player 2")

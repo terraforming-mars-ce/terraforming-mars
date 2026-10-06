@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"terraforming-mars-backend/internal/action"
-	colonyAction "terraforming-mars-backend/internal/action/colony"
 	"terraforming-mars-backend/internal/game"
 	"terraforming-mars-backend/internal/game/award"
 	"terraforming-mars-backend/internal/game/board"
@@ -80,8 +79,9 @@ func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID s
 		DemoGame:              settings.DemoGame,
 		AllowRandomBuy:        settings.AllowRandomBuy,
 		CardPacks:             settings.CardPacks,
-		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
-		ClaudeModel:           settings.ClaudeModel,
+		HasClaudeOAuthToken:   settings.ClaudeOAuthToken != "",
+		BotSpendCapUSD:        settings.EffectiveBotSpendCapUSD(),
+		BotSpendUSD:           g.BotSpendUSD(),
 		AvailablePlayerColors: shared.PlayerColors,
 		AvailableMaps:         registries.AvailableMaps,
 		Temperature:           settings.Temperature,
@@ -120,9 +120,10 @@ func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID s
 		}
 		if tile.OccupiedBy != nil {
 			occupant := &TileOccupantDto{
-				Type:   string(tile.OccupiedBy.Type),
-				Tags:   tile.OccupiedBy.Tags,
-				Visual: toTileVisualDto(tile.OccupiedBy.Visual),
+				DisplayName: tile.OccupiedBy.DisplayName,
+				Type:        string(tile.OccupiedBy.Type),
+				Tags:        tile.OccupiedBy.Tags,
+				Visual:      toTileVisualDto(tile.OccupiedBy.Visual),
 			}
 			tileDtos[i].OccupiedBy = occupant
 		}
@@ -159,44 +160,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID s
 		}
 	}
 
-	var initPhaseDto *InitPhaseDto
-	phase := g.CurrentPhase()
-	if phase == shared.GamePhaseInitApplyCorp || phase == shared.GamePhaseInitApplyPrelude {
-		turnOrder := g.TurnOrder()
-		idx := g.InitPhasePlayerIndex()
-		currentInitPlayerID := ""
-		if idx < len(turnOrder) {
-			currentInitPlayerID = turnOrder[idx]
-		}
-
-		activePlayers := 0
-		for _, p := range players {
-			if !p.HasExited() {
-				activePlayers++
-			}
-		}
-
-		hasPendingTiles := false
-		if currentInitPlayerID != "" {
-			hasPendingTiles = g.GetPendingTileSelection(currentInitPlayerID) != nil ||
-				g.GetPendingTileSelectionQueue(currentInitPlayerID) != nil
-			if !hasPendingTiles {
-				if initPlayer, err := g.GetPlayer(currentInitPlayerID); err == nil {
-					hasPendingTiles = initPlayer.Selection().GetPendingColonySelection() != nil
-				}
-			}
-		}
-
-		initPhaseDto = &InitPhaseDto{
-			CurrentPlayerID:    currentInitPlayerID,
-			CurrentPlayerIndex: idx,
-			TotalPlayers:       activePlayers,
-			WaitingForConfirm:  g.InitPhaseWaitingForConfirm(),
-			ConfirmVersion:     g.InitPhaseConfirmVersion(),
-			HasPreludePhase:    g.Settings().HasPrelude(),
-			HasPendingTiles:    hasPendingTiles,
-		}
-	}
+	initPhaseDto := buildInitPhaseDto(g, players, cardRegistry)
 
 	result := GameDto{
 		ID:               g.ID(),
@@ -231,10 +195,14 @@ func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID s
 
 	if g.HasColonies() && registries.ColonyRegistry != nil {
 		result.Colonies = toColonyDtos(g, registries.ColonyRegistry, cardRegistry, playerID)
-		result.TradeFleetAvailable = g.Colonies().GetTradeFleetAvailable(playerID)
-		fleets := make(map[string]bool)
+		if selection := result.CurrentPlayer.PendingColonySelection; selection != nil && selection.AddTile {
+			selection.TileOptions = unusedColonyDtos(g, registries.ColonyRegistry, cardRegistry, playerID)
+		}
+
+		fleets := make(map[string]TradeFleetDto)
 		for _, p := range players {
-			fleets[p.ID()] = g.Colonies().GetTradeFleetAvailable(p.ID())
+			fleet := g.Colonies().TradeFleet(p.ID())
+			fleets[p.ID()] = TradeFleetDto{Total: fleet.Capacity, Available: fleet.Available()}
 		}
 		result.TradeFleets = fleets
 	}
@@ -243,6 +211,9 @@ func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID s
 		result.ProjectFunding = toProjectFundingDtos(g, registries.ProjectFundingRegistry, playerID)
 	}
 
+	if viewingPlayer == nil {
+		result.CurrentPlayer.CardReceipts = nil
+	}
 	return result
 }
 
@@ -259,18 +230,28 @@ func toSpectatorDtos(g *game.Game) []SpectatorDto {
 	return dtos
 }
 
+// ToChatMessageDto maps a chat message to its DTO. Messages without a kind are plain chat.
+func ToChatMessageDto(msg shared.ChatMessage) ChatMessageDto {
+	kind := msg.Kind
+	if kind == "" {
+		kind = shared.ChatMessageKindChat
+	}
+	return ChatMessageDto{
+		SenderID:    msg.SenderID,
+		SenderName:  msg.SenderName,
+		SenderColor: msg.SenderColor,
+		Message:     msg.Message,
+		Timestamp:   msg.Timestamp.Format(time.RFC3339),
+		IsSpectator: msg.IsSpectator,
+		Kind:        string(kind),
+	}
+}
+
 func toChatMessageDtos(g *game.Game) []ChatMessageDto {
 	messages := g.GetChatMessages()
 	dtos := make([]ChatMessageDto, len(messages))
 	for i, msg := range messages {
-		dtos[i] = ChatMessageDto{
-			SenderID:    msg.SenderID,
-			SenderName:  msg.SenderName,
-			SenderColor: msg.SenderColor,
-			Message:     msg.Message,
-			Timestamp:   msg.Timestamp.Format(time.RFC3339),
-			IsSpectator: msg.IsSpectator,
-		}
+		dtos[i] = ToChatMessageDto(msg)
 	}
 	return dtos
 }
@@ -681,16 +662,23 @@ func buildGlobalParameterBonuses(venusEnabled bool) []GlobalParameterBonusDto {
 }
 
 func toColonyDtos(g *game.Game, colonyRegistry colony.ColonyRegistry, cardRegistry gamecards.CardRegistry, playerID string) []ColonyDto {
-	tileStates := g.Colonies().States()
+	return mapColonyStates(g, colonyRegistry, cardRegistry, playerID, g.Colonies().States())
+}
+
+func unusedColonyDtos(g *game.Game, colonyRegistry colony.ColonyRegistry, cardRegistry gamecards.CardRegistry, playerID string) []ColonyDto {
+	var states []*colony.ColonyState
+	for _, def := range g.Colonies().UnusedDefinitions() {
+		states = append(states, gamecards.InitializeColonyTile(g, def, cardRegistry))
+	}
+	return mapColonyStates(g, colonyRegistry, cardRegistry, playerID, states)
+}
+
+func mapColonyStates(g *game.Game, colonyRegistry colony.ColonyRegistry, cardRegistry gamecards.CardRegistry, playerID string, tileStates []*colony.ColonyState) []ColonyDto {
 	if len(tileStates) == 0 {
 		return nil
 	}
 
 	playerObj, _ := g.GetPlayer(playerID)
-	tradeStepBonus := 0
-	if playerObj != nil && cardRegistry != nil {
-		tradeStepBonus = colonyAction.CountTradeStepBonus(playerObj, cardRegistry)
-	}
 
 	dtos := make([]ColonyDto, 0, len(tileStates))
 	for _, state := range tileStates {
@@ -737,7 +725,7 @@ func toColonyDtos(g *game.Game, colonyRegistry colony.ColonyRegistry, cardRegist
 				Message: "This colony has already been traded this generation",
 			})
 		}
-		if !g.Colonies().GetTradeFleetAvailable(playerID) {
+		if g.Colonies().TradeFleet(playerID).Available() == 0 {
 			tradeAvailable = false
 			tradeErrors = append(tradeErrors, StateErrorDto{
 				Code:    StateErrorCode("fleet-unavailable"),
@@ -745,13 +733,18 @@ func toColonyDtos(g *game.Game, colonyRegistry colony.ColonyRegistry, cardRegist
 			})
 		}
 		if playerObj != nil {
-			resources := playerObj.Resources().Get()
-			canAffordAny := resources.Credits >= 9 || resources.Energy >= 3 || resources.Titanium >= 3
+			costs, _ := action.CalculateEffectiveTradeCosts(playerObj, cardRegistry)
+			canAffordAny := false
+			for rt, cost := range costs {
+				if gamecards.PaymentCapacity(playerObj, g, cardRegistry, shared.ActionColonyTrade, shared.ResourceType(rt)) >= cost {
+					canAffordAny = true
+				}
+			}
 			if !canAffordAny {
 				tradeAvailable = false
 				tradeErrors = append(tradeErrors, StateErrorDto{
 					Code:    StateErrorCode("insufficient-resources"),
-					Message: "Cannot afford trade: need 9 MC, 3 energy, or 3 titanium",
+					Message: "Cannot afford any trade payment type",
 				})
 			}
 		}
@@ -775,17 +768,33 @@ func toColonyDtos(g *game.Game, colonyRegistry colony.ColonyRegistry, cardRegist
 			})
 		}
 		if playerObj != nil {
-			resources := playerObj.Resources().Get()
-			if resources.Credits < 17 {
+			capacity := gamecards.PaymentCapacity(playerObj, g, cardRegistry, "build-colony", shared.ResourceCredit)
+			if capacity < 17 {
 				buildAvailable = false
 				buildErrors = append(buildErrors, StateErrorDto{
 					Code:    StateErrorCode("insufficient-credits"),
-					Message: fmt.Sprintf("Insufficient credits: need 17, have %d", resources.Credits),
+					Message: fmt.Sprintf("Insufficient payment: need 17, have %d", capacity),
 				})
 			}
 		}
 
+		tradeOptions := make([]ColonyTradeOptionDto, 0)
+		for _, option := range action.CalculateColonyTradeOptions(playerObj, state, def, cardRegistry) {
+			outputs := make([]ColonyOutputDto, 0, len(option.Outputs))
+			for _, output := range option.Outputs {
+				outputs = append(outputs, ColonyOutputDto{Type: output.Type, Amount: output.Amount})
+			}
+			tradeOptions = append(tradeOptions, ColonyTradeOptionDto{TrackSteps: option.TrackSteps, MarkerPosition: option.MarkerPosition, Outputs: outputs})
+		}
+		if state.AwaitingResource != "" {
+			tradeAvailable = false
+			buildAvailable = false
+			reason := StateErrorDto{Code: StateErrorCode("colony-inactive"), Message: "Requires a card that can hold " + state.AwaitingResource + " resources in play"}
+			tradeErrors = append(tradeErrors, reason)
+			buildErrors = append(buildErrors, reason)
+		}
 		dtos = append(dtos, ColonyDto{
+			Active:         state.AwaitingResource == "",
 			ID:             def.ID,
 			Name:           def.Name,
 			Location:       def.Location,
@@ -800,7 +809,7 @@ func toColonyDtos(g *game.Game, colonyRegistry colony.ColonyRegistry, cardRegist
 				Color: def.Style.Color,
 				Icon:  def.Style.Icon,
 			},
-			TradeStepBonus: tradeStepBonus,
+			TradeOptions:   tradeOptions,
 			TradeAvailable: tradeAvailable,
 			BuildAvailable: buildAvailable,
 			TradeErrors:    tradeErrors,

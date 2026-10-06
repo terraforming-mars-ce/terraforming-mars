@@ -1,3 +1,4 @@
+import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore";
 import React, {
   useState,
   useEffect,
@@ -16,6 +17,7 @@ import {
   type CardInspectionFlight,
 } from "@/utils/cardInspectionFlight.ts";
 import GameCard from "../cards/GameCard.tsx";
+import CardStatusMessages from "../display/CardStatusMessages.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import BlurredOverlay from "./BlurredOverlay.tsx";
 import { PlayerCardDto } from "@/types/generated/api-types.ts";
@@ -67,7 +69,6 @@ export interface CardFanOverlayHandle {
 
 interface CardFanOverlayProps {
   cards: PlayerCardDto[];
-  pendingPlayCardId?: string | null;
   hideWhenModalOpen?: boolean;
   inspectionStore: CardInspectionStore;
   onInspectCard: (cardId: string, source: HTMLElement) => void;
@@ -78,8 +79,7 @@ interface CardFanOverlayProps {
 const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
   (
     {
-      cards,
-      pendingPlayCardId = null,
+      cards: handCards,
       hideWhenModalOpen = false,
       inspectionStore,
       onInspectCard,
@@ -88,6 +88,13 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
     },
     ref,
   ) => {
+    const playSession = useCardPlayFlowStore((state) => state.playSession);
+    const cards = useMemo(() => {
+      if (playSession && !handCards.some((card) => card.id === playSession.card.id)) {
+        return [...handCards, playSession.card];
+      }
+      return handCards;
+    }, [handCards, playSession?.card]);
     const inspections = useStore(inspectionStore, (state) => state.inspections);
     const [scrollPos, setScrollPos] = useState(0);
     const [cardOrder, setCardOrder] = useState<string[]>([]);
@@ -100,16 +107,8 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
     const [isInThrowZone, setIsInThrowZone] = useState(false);
     const [isInspectionDragFlying, setIsInspectionDragFlying] = useState(false);
     const [returningCard, setReturningCard] = useState<string | null>(null);
-    const [submittingCardId, setSubmittingCardId] = useState<string | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
-    const [flyingAwayGhost, setFlyingAwayGhost] = useState<{
-      card: PlayerCardDto;
-      x: number;
-      y: number;
-      scale: number;
-      animating: boolean;
-    } | null>(null);
 
     const inspectionDragFlight = useRef<CardInspectionFlight | null>(null);
     const handRef = useRef<HTMLDivElement>(null);
@@ -488,7 +487,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
 
     // --- Pointer events for drag ---
     const handlePointerDown = (cardId: string, e: React.PointerEvent<HTMLDivElement>) => {
-      if (e.button !== 0) {
+      if (e.button !== 0 || useCardPlayFlowStore.getState().playSession) {
         return;
       }
       e.preventDefault();
@@ -640,45 +639,22 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         if (isThrow && onPlayCard) {
           const cardData = cardsRef.current.find((c) => c.id === cardId);
           if (cardData?.available) {
-            try {
-              setSubmittingCardId(cardId);
-              const containerRect = handRef.current?.getBoundingClientRect();
-              const releaseX = containerRect
-                ? e.clientX + dragOffset.x - (containerRect.left + containerRect.width / 2)
-                : 0;
-              const releaseY = containerRect ? e.clientY + dragOffset.y - containerRect.bottom : 0;
-
-              setFlyingAwayGhost({
-                card: cardData,
-                x: releaseX,
-                y: releaseY,
-                scale: dragScale,
-                animating: false,
-              });
+            const flow = useCardPlayFlowStore.getState();
+            if (!flow.beginPlay(cardData, e.currentTarget)) {
               setDraggedCard(null);
               setIsInThrowZone(false);
-              setHighlightedCard(null);
-
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                  setFlyingAwayGhost((prev) =>
-                    prev ? { ...prev, scale: prev.scale * 0.85, animating: true } : prev,
-                  );
-                });
-              });
-
-              setTimeout(() => {
-                setFlyingAwayGhost(null);
-              }, 400);
-
-              await onPlayCard(cardId);
               return;
-            } catch (error) {
-              console.error("Failed to play card:", error);
-              setFlyingAwayGhost(null);
-            } finally {
-              setSubmittingCardId(null);
             }
+            const sessionId = useCardPlayFlowStore.getState().playSession!.id;
+            setDraggedCard(null);
+            setIsInThrowZone(false);
+            setHighlightedCard(null);
+            try {
+              await onPlayCard(cardId);
+            } catch (error) {
+              useCardPlayFlowStore.getState().returnPlay(sessionId, error);
+            }
+            return;
           }
         }
 
@@ -778,7 +754,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
       return () => document.removeEventListener("click", handleDocumentClick);
     }, []);
 
-    if (hideWhenModalOpen || (cards.length === 0 && !flyingAwayGhost)) {
+    if ((hideWhenModalOpen && !playSession) || cards.length === 0) {
       return null;
     }
 
@@ -829,21 +805,26 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
 
             const isInspected = inspections.some((inspection) => inspection.cardId === card.id);
             const isDraggedCard = draggedCard === card.id;
-            if (flyingAwayGhost?.card.id === card.id) return null;
+            const isPlayCard = playSession?.card.id === card.id;
+            const isRaisedPlayCard = isPlayCard && playSession.phase !== "returning";
 
             const absD = Math.abs(index - scrollPos);
-            if (absD > activeCullRadius && !isDraggedCard && !isInspected) return null;
+            if (absD > activeCullRadius && !isDraggedCard && !isInspected && !isPlayCard)
+              return null;
 
             const edgeOpacity = isExpanded || isDraggedCard || absD <= activeVisibleRadius ? 1 : 0;
             const isDragging = isDraggedCard && dragIntentRef.current;
             const isArmed = armedCardId === card.id;
             const isReturning = returningCard === card.id;
             const isHighlighted = highlightedCard === card.id;
+            const enteringInspection =
+              isPlayCard &&
+              playSession.inspected &&
+              !playSession.inspectionReady &&
+              playSession.phase === "choosing";
             const isHidden =
-              card.id === pendingPlayCardId ||
-              card.id === submittingCardId ||
-              card.id === flyingAwayGhost?.card.id;
-            const isInteractive = edgeOpacity !== 0 && !isHidden && !isInspected;
+              (isPlayCard && !enteringInspection) || (hideWhenModalOpen && !isPlayCard);
+            const isInteractive = edgeOpacity !== 0 && !isHidden && !isInspected && !playSession;
 
             let finalX: number;
             let finalY: number;
@@ -920,7 +901,7 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                 tabIndex={isInteractive ? 0 : -1}
                 aria-label={`Inspect ${card.name}`}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") {
+                  if (event.key === "Enter" && !playSession) {
                     event.preventDefault();
                     if (isExpanded) {
                       handleCollapse(card.id);
@@ -935,9 +916,12 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                   translate: isExpanded
                     ? `-50% calc(50% - var(--expanded-max-requirements-height, 0px) * ${expandedScale} / 2)`
                     : undefined,
-                  transform: `translate(${finalX}px, ${finalY}px) rotate(${finalRotation}deg) scale(${finalScale})`,
-                  zIndex: finalZ,
-                  opacity: edgeOpacity,
+                  transform:
+                    isPlayCard && !playSession.inspectionReady && playSession.phase !== "returning"
+                      ? playSession.sourceTransform
+                      : `translate(${finalX}px, ${finalY}px) rotate(${finalRotation}deg) scale(${finalScale})`,
+                  zIndex: isRaisedPlayCard ? Z_INDEX.CARD_FAN_DRAGGED : finalZ,
+                  opacity: isRaisedPlayCard ? 1 : edgeOpacity,
                   visibility: isHidden ? "hidden" : undefined,
                   transitionDelay: staggerDelay,
                 }}
@@ -974,35 +958,12 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                 {!isExpanded &&
                   (!card.available || (card.warnings && card.warnings.length > 0)) && (
                     <div className={`card-fan-error-panel ${showErrors ? "is-visible" : ""}`}>
-                      {!card.available &&
-                        card.errors.map((err, i) => (
-                          <div key={i} className="card-fan-error-item">
-                            {err.message}
-                          </div>
-                        ))}
-                      {card.warnings &&
-                        card.warnings.map((warn, i) => (
-                          <div key={i} className="card-fan-warning-item">
-                            {warn.message}
-                          </div>
-                        ))}
+                      <CardStatusMessages card={card} />
                     </div>
                   )}
               </div>
             );
           })}
-
-          {flyingAwayGhost && (
-            <div
-              className={`card-fan-card card-size ${flyingAwayGhost.animating ? "is-flying-away" : "is-flying-away-start"}`}
-              style={{
-                transform: `translate(${flyingAwayGhost.x}px, ${flyingAwayGhost.y}px) scale(${flyingAwayGhost.scale})`,
-                zIndex: Z_INDEX.CARD_FAN_DRAGGED,
-              }}
-            >
-              <GameCard card={flyingAwayGhost.card} isSelected={true} moduleState="releasing" />
-            </div>
-          )}
 
           {showLeftScrollHint && (
             <div
@@ -1118,19 +1079,6 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
                       opacity 180ms ease;
         }
 
-        .card-fan-card.is-flying-away-start {
-          transition: none !important;
-          pointer-events: none !important;
-        }
-
-        .card-fan-card.is-flying-away {
-          transition: transform 350ms ease-out, opacity 350ms ease-out !important;
-          opacity: 0 !important;
-          pointer-events: none !important;
-        }
-
-
-
         .card-fan-scroll-hint {
           position: absolute;
           bottom: 0;
@@ -1152,7 +1100,8 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         .card-fan-error-panel {
           position: absolute;
           left: 100%;
-          top: 0;
+          /* Compact card bodies have a fixed height below the requirement area. */
+          top: calc(100% - var(--card-height));
           margin-left: 10px;
           width: 180px;
           display: flex;
@@ -1167,28 +1116,6 @@ const CardFanOverlay = forwardRef<CardFanOverlayHandle, CardFanOverlayProps>(
         .card-fan-error-panel.is-visible {
           opacity: 1;
           transform: translateX(0);
-        }
-
-        .card-fan-error-item {
-          background: rgba(10, 10, 15, 0.95);
-          border: 1px solid rgba(231, 76, 60, 0.6);
-          border-left: 3px solid #e74c3c;
-          color: rgba(255, 255, 255, 0.9);
-          font-size: 12px;
-          line-height: 1.4;
-          padding: 8px 10px;
-          white-space: normal;
-        }
-
-        .card-fan-warning-item {
-          background: rgba(10, 10, 15, 0.95);
-          border: 1px solid rgba(255, 193, 7, 0.6);
-          border-left: 3px solid #ffc107;
-          color: rgba(255, 255, 255, 0.9);
-          font-size: 12px;
-          line-height: 1.4;
-          padding: 8px 10px;
-          white-space: normal;
         }
 
         @media (max-width: 1200px) {

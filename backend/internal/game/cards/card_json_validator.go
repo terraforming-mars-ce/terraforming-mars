@@ -2,6 +2,7 @@ package cards
 
 import (
 	"fmt"
+	"strings"
 
 	"terraforming-mars-backend/internal/game/shared"
 )
@@ -9,10 +10,26 @@ import (
 // ValidateCardJSON validates the JSON structure of a card at load time
 // This ensures all enum values are valid and structure is correct
 func ValidateCardJSON(card *Card) []error {
+	for _, b := range card.Behaviors {
+		for _, o := range b.Outputs {
+			if c, ok := o.(*shared.PaymentSubstituteCondition); ok && c.Source.Target == "self-card" && (card.ResourceStorage == nil || card.ResourceStorage.Type != c.Source.Resource) {
+				return []error{fmt.Errorf("card %s: payment source does not match card storage", card.ID)}
+			}
+		}
+	}
 	var errors []error
 
 	if !isValidCardType(card.Type) {
 		errors = append(errors, fmt.Errorf("card %s: invalid card type: %s", card.ID, card.Type))
+	}
+
+	for i, section := range card.Description {
+		if !section.Type.IsValid() {
+			errors = append(errors, fmt.Errorf("card %s: description section %d: invalid type: %s", card.ID, i, section.Type))
+		}
+		if strings.TrimSpace(section.Text) == "" {
+			errors = append(errors, fmt.Errorf("card %s: description section %d: empty text", card.ID, i))
+		}
 	}
 
 	for _, tag := range card.Tags {
@@ -77,6 +94,53 @@ func validateRequirement(cardID string, index int, req Requirement) error {
 
 func validateBehavior(cardID string, index int, behavior shared.CardBehavior) []error {
 	var errors []error
+	contextualTrade := false
+	for _, trigger := range behavior.Triggers {
+		if trigger.Type == shared.TriggerTypeAuto && trigger.Condition != nil && trigger.Condition.Type == "before-colony-trade" {
+			contextualTrade = true
+			if trigger.Condition.Target == nil || *trigger.Condition.Target != "self-player" || len(trigger.Condition.Selectors) > 0 || len(trigger.Condition.ResourceTypes) > 0 || trigger.Condition.Location != nil || trigger.Condition.RequiredOriginalCost != nil || len(trigger.Condition.OnBonusType) > 0 || trigger.Condition.Unique {
+				errors = append(errors, fmt.Errorf("card %s: unsupported before-colony-trade trigger", cardID))
+			}
+		}
+	}
+	conditions := append([]shared.BehaviorCondition(nil), behavior.Outputs...)
+	conditions = append(conditions, behavior.Inputs...)
+	for _, choice := range behavior.Choices {
+		conditions = append(conditions, choice.Outputs...)
+		conditions = append(conditions, choice.Inputs...)
+	}
+	for _, condition := range conditions {
+		if condition.GetTarget() == "trigger-colony" && !contextualTrade {
+			errors = append(errors, fmt.Errorf("card %s: trigger-colony requires before-colony-trade", cardID))
+		}
+		if contextualTrade {
+			if condition.GetResourceType() != shared.ResourceColonyTrackStep || condition.GetTarget() != "trigger-colony" || condition.GetAmount() <= 0 {
+				errors = append(errors, fmt.Errorf("card %s: before-colony-trade requires positive contextual track outputs", cardID))
+			}
+		}
+	}
+	if contextualTrade && (len(behavior.Triggers) != 1 || len(behavior.Inputs) > 0 || len(behavior.Choices) > 0 || len(behavior.Outputs) == 0) {
+		errors = append(errors, fmt.Errorf("card %s: before-colony-trade must be a separate output behavior", cardID))
+	}
+
+	if behavior.ProductionBox != "" {
+		if behavior.ProductionBox != "evaluate" && behavior.ProductionBox != "resolved" {
+			errors = append(errors, fmt.Errorf("card %s: unknown productionBox %q", cardID, behavior.ProductionBox))
+		}
+		if len(behavior.Inputs) > 0 || len(behavior.Choices) > 0 || len(behavior.Outputs) == 0 {
+			errors = append(errors, fmt.Errorf("card %s: production box must contain only production outputs", cardID))
+		}
+		for _, output := range behavior.Outputs {
+			if !shared.IsProductionResourceType(output.GetResourceType()) {
+				errors = append(errors, fmt.Errorf("card %s: production box contains non-production output", cardID))
+			}
+		}
+		for _, trigger := range behavior.Triggers {
+			if trigger.Type == shared.TriggerTypeManual || (behavior.ProductionBox == "evaluate" && trigger.Condition != nil) {
+				errors = append(errors, fmt.Errorf("card %s: cannot copy recurring production as a production box", cardID))
+			}
+		}
+	}
 
 	for i, trigger := range behavior.Triggers {
 		if trigger.Type == "" {
@@ -122,6 +186,16 @@ func validateBehavior(cardID string, index int, behavior shared.CardBehavior) []
 }
 
 func validateBehaviorCondition(cardID string, behaviorIndex int, condType string, index int, cond shared.BehaviorCondition) error {
+	if c, ok := cond.(*shared.PaymentSubstituteCondition); ok {
+		if problems := shared.ValidateResourceCondition(c, strings.HasSuffix(condType, "input")); len(problems) > 0 {
+			return fmt.Errorf("card %s: %v", cardID, problems)
+		}
+	}
+	if reveal, ok := cond.(*shared.CardRevealCondition); ok {
+		if problems := shared.ValidateResourceCondition(reveal, strings.HasSuffix(condType, "input")); len(problems) > 0 {
+			return fmt.Errorf("card %s: %s", cardID, strings.Join(problems, "; "))
+		}
+	}
 	if cond.GetTarget() == "" {
 		return fmt.Errorf("card %s: behavior[%d].%s[%d] has empty target", cardID, behaviorIndex, condType, index)
 	}
@@ -131,6 +205,15 @@ func validateBehaviorCondition(cardID string, behaviorIndex int, condType string
 	}
 
 	if per := shared.GetPerCondition(cond); per != nil {
+		if per.Amount <= 0 {
+			return fmt.Errorf("card %s: per amount must be positive", cardID)
+		}
+		if per.Zone != "" && per.Zone != "played" {
+			return fmt.Errorf("card %s: unsupported count zone %q", cardID, per.Zone)
+		}
+		if (per.Zone != "" || len(per.Selectors) > 0) && per.ResourceType != shared.ResourceCardCount {
+			return fmt.Errorf("card %s: zone/selectors require card-count", cardID)
+		}
 		if !isValidResourceType(per.ResourceType) {
 			return fmt.Errorf("card %s: behavior[%d].%s[%d].per has invalid resource type: %s", cardID, behaviorIndex, condType, index, per.ResourceType)
 		}

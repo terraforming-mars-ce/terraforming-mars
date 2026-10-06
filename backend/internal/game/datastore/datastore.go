@@ -216,6 +216,18 @@ func (ds *DataStore) GetGameHistory(gameID string) ([]*GameStateHistoryEntry, er
 	return entries, nil
 }
 
+// DeleteGameHistory removes all history entries for a game. Sequence numbers keep
+// increasing so late asynchronous enrichments never collide with new entries.
+func (ds *DataStore) DeleteGameHistory(gameID string) error {
+	txn := ds.db.Txn(true)
+	if _, err := txn.DeleteAll("game_history", "game_id", gameID); err != nil {
+		txn.Abort()
+		return fmt.Errorf("failed to delete game history for %s: %w", gameID, err)
+	}
+	txn.Commit()
+	return nil
+}
+
 // ReadGame fetches a game inside a read-only transaction and passes it to fn.
 func (ds *DataStore) ReadGame(gameID string, fn func(state *GameState)) error {
 	txn := ds.db.Txn(false)

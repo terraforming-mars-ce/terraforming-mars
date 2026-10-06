@@ -741,3 +741,10 @@ export const createCityShowcase = () =>
   CITY_RECIPES.map((recipe, i) =>
     generateCityLayout(recipe.seed, recipe.style, `${i + 1} ${recipe.name}`),
   );
+
+export function* cityWarmupLayouts() {
+  yield generateCityLayout(6000);
+  for (const recipe of CITY_RECIPES) {
+    yield generateCityLayout(recipe.seed, recipe.style, recipe.name);
+  }
+}

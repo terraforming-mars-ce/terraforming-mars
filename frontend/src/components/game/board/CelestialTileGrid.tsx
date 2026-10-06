@@ -12,8 +12,11 @@ import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
 import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
 import { Html } from "@react-three/drei";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
+import { useVPCounting } from "../../../contexts/VPCountingContext";
+import { TileHighlightBoardContext, useTileHighlightBoard } from "./TileHighlightContext";
 
 interface CelestialTileGridProps {
+  highlightRoot: RefObject<THREE.Group | null>;
   gameState?: GameDto;
   onHexClick?: (hexCoordinate: string) => void;
   tileOpacity?: RefObject<number>;
@@ -82,6 +85,7 @@ const convertBonuses = (bonuses: TileBonusDto[] | undefined) => {
 };
 
 export default function CelestialTileGrid({
+  highlightRoot,
   gameState,
   onHexClick,
   tileOpacity,
@@ -93,13 +97,22 @@ export default function CelestialTileGrid({
   activePlanetId,
   groupInverseMatrix,
 }: CelestialTileGridProps) {
+  const highlightBoard = useTileHighlightBoard(
+    highlightRoot,
+    radius,
+    1,
+    gameState?.id,
+    coordOffset.q,
+    coordOffset.r,
+  );
+  const { state: vpCounting } = useVPCounting();
   const { activePlanet } = usePlanetFocus();
 
   const filteredTiles = useMemo(
     () => gameState?.board?.tiles?.filter((t) => t.location === location),
     [gameState?.board?.tiles, location],
   );
-  const newlyPlacedTiles = usePreviousTiles(filteredTiles);
+  const { newlyPlaced: newlyPlacedTiles } = usePreviousTiles(filteredTiles, gameState?.id);
 
   const playerColorMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -149,6 +162,7 @@ export default function CelestialTileGrid({
         setTooltipData({
           tileType: data.tileType,
           displayName: data.displayName,
+          placedName: data.placedName,
           ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
           ownerColor: data.ownerId ? playerColorMap.get(data.ownerId) : undefined,
           reservedByName: data.reservedById ? playerNameMap.get(data.reservedById) : undefined,
@@ -255,6 +269,11 @@ export default function CelestialTileGrid({
 
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
   const hoveredHexKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    hoveredHexKeyRef.current = null;
+    setHoveredHexKey(null);
+    handleTileHoverLeave();
+  }, [activePlanet, gameState?.id]);
   const isDraggingCard = useCardDragStore((s) => s.isDraggingCard);
 
   useEffect(() => {
@@ -289,6 +308,7 @@ export default function CelestialTileGrid({
               position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
               tileType: getTileType(tile),
               displayName: tile.backendTile.displayName,
+              placedName: tile.backendTile.occupiedBy?.displayName,
               ownerId,
               reservedById: tile.backendTile.reservedBy || null,
               isOceanSpace: false,
@@ -340,7 +360,7 @@ export default function CelestialTileGrid({
   );
 
   return (
-    <>
+    <TileHighlightBoardContext.Provider value={highlightBoard}>
       {activePlanet === activePlanetId && (
         <mesh
           geometry={interactionSphereGeometry}
@@ -396,9 +416,17 @@ export default function CelestialTileGrid({
             onHoverMove={handleTileHoverMove}
             onHoverLeave={handleTileHoverLeave}
             isHovered={!isDraggingCard && hoveredHexKey === hexKey}
+            vpHighlightIntensity={
+              vpCounting.highlightedTiles.has(hexKey)
+                ? 0.5
+                : Number(vpCounting.secondaryHighlightedTiles.has(hexKey)) * 0.25
+            }
+            vpHighlightColor={
+              vpCounting.secondaryHighlightedTiles.has(hexKey) ? [0.4, 0.9, 0.4] : [0.95, 0.95, 1]
+            }
           />
         );
       })}
-    </>
+    </TileHighlightBoardContext.Provider>
   );
 }

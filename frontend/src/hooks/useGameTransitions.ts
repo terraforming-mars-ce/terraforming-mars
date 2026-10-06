@@ -2,9 +2,11 @@ import { useEffect, useRef } from "react";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { useAppPhaseStore, gameIdOf, isInGameWorld } from "@/stores/appPhaseStore.ts";
-import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore.ts";
 import { audioService } from "@/services/audioService.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
+import { SHOWCASE_PLAY_STEP_MS } from "@/constants/gameConstants.ts";
+import { isShowcaseStepEnd, showcaseControllerId } from "@/utils/showcase.ts";
+import { useShowcaseTileHold } from "@/hooks/useShowcaseTileHold.ts";
 import {
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
@@ -26,17 +28,14 @@ export function useGameTransitions(
   const productionPhase = useGameStore((s) => s.currentPlayer?.productionPhase);
   const selectCorpPhase = useGameStore((s) => s.game?.currentPlayer?.selectCorporationPhase);
   const pendingCardSelection = useGameStore((s) => s.game?.currentPlayer?.pendingCardSelection);
+  const hasCardReceipts = useGameStore(
+    (s) => (s.game?.currentPlayer?.cardReceipts?.length ?? 0) > 0,
+  );
   const pendingCardDrawSelection = useGameStore(
     (s) => s.game?.currentPlayer?.pendingCardDrawSelection,
   );
-  const pendingCardDiscardSelection = useGameStore(
-    (s) => s.game?.currentPlayer?.pendingCardDiscardSelection,
-  );
-  const pendingBehaviorChoice = useGameStore(
-    (s) => s.game?.currentPlayer?.pendingBehaviorChoiceSelection,
-  );
-  const pendingStealTarget = useGameStore(
-    (s) => s.game?.currentPlayer?.pendingStealTargetSelection,
+  const pendingResourceRemoval = useGameStore(
+    (s) => s.game?.currentPlayer?.pendingResourceRemovalSelection,
   );
   const pendingColonyResource = useGameStore(
     (s) => s.game?.currentPlayer?.pendingColonyResourceSelection,
@@ -45,6 +44,12 @@ export function useGameTransitions(
   const pendingFreeTrade = useGameStore((s) => s.game?.currentPlayer?.pendingFreeTradeSelection);
   const initPhase = useGameStore((s) => s.game?.initPhase);
   const hostPlayerId = useGameStore((s) => s.game?.hostPlayerId);
+  const showcaseTileHold = useShowcaseTileHold(initPhase?.hasPendingSelection ?? false);
+  const playersConnectedKey = useGameStore((s) =>
+    [s.game?.currentPlayer, ...(s.game?.otherPlayers ?? [])]
+      .map((p) => (p?.isConnected ? "1" : "0"))
+      .join(""),
+  );
   const currentPlayerId = useGameStore((s) => s.currentPlayer?.id);
 
   const phase = useAppPhaseStore((s) => s.phase);
@@ -176,43 +181,23 @@ export function useGameTransitions(
   useEffect(() => {
     const { showCardDrawSelection, setShowCardDrawSelection } = useUIOverlayStore.getState();
 
-    if (pendingCardDrawSelection && !showCardDrawSelection) {
+    if ((pendingCardDrawSelection || hasCardReceipts) && !showCardDrawSelection) {
       setShowCardDrawSelection(true);
-    } else if (!pendingCardDrawSelection && showCardDrawSelection) {
+    } else if (!pendingCardDrawSelection && !hasCardReceipts && showCardDrawSelection) {
       setShowCardDrawSelection(false);
     }
-  }, [pendingCardDrawSelection]);
+  }, [pendingCardDrawSelection, hasCardReceipts]);
 
   useEffect(() => {
-    const { showCardDiscardSelection, setShowCardDiscardSelection } = useUIOverlayStore.getState();
+    const { showResourceRemovalSelection, setShowResourceRemovalSelection } =
+      useUIOverlayStore.getState();
 
-    if (pendingCardDiscardSelection && !showCardDiscardSelection) {
-      setShowCardDiscardSelection(true);
-    } else if (!pendingCardDiscardSelection && showCardDiscardSelection) {
-      setShowCardDiscardSelection(false);
+    if (pendingResourceRemoval && !showResourceRemovalSelection) {
+      setShowResourceRemovalSelection(true);
+    } else if (!pendingResourceRemoval && showResourceRemovalSelection) {
+      setShowResourceRemovalSelection(false);
     }
-  }, [pendingCardDiscardSelection]);
-
-  useEffect(() => {
-    const { showBehaviorChoiceSelection, setShowBehaviorChoiceSelection } =
-      useCardPlayFlowStore.getState();
-
-    if (pendingBehaviorChoice && !showBehaviorChoiceSelection) {
-      setShowBehaviorChoiceSelection(true);
-    } else if (!pendingBehaviorChoice && showBehaviorChoiceSelection) {
-      setShowBehaviorChoiceSelection(false);
-    }
-  }, [pendingBehaviorChoice]);
-
-  useEffect(() => {
-    const { showStealTargetSelection, setShowStealTargetSelection } = useUIOverlayStore.getState();
-
-    if (pendingStealTarget && !showStealTargetSelection) {
-      setShowStealTargetSelection(true);
-    } else if (!pendingStealTarget && showStealTargetSelection) {
-      setShowStealTargetSelection(false);
-    }
-  }, [pendingStealTarget]);
+  }, [pendingResourceRemoval]);
 
   useEffect(() => {
     const { showColonyResourceSelection, setShowColonyResourceSelection } =
@@ -317,9 +302,31 @@ export function useGameTransitions(
 
   useEffect(() => {
     if (phase.kind === "marsRevealed" && !isStartingSelectionPhase) {
-      useAppPhaseStore.getState().setPhase({ kind: "animateUI", gameId: phase.gameId });
+      useAppPhaseStore
+        .getState()
+        .setPhase({ kind: isInitApplyPhase ? "showcase" : "animateUI", gameId: phase.gameId });
+    }
+  }, [phase, isStartingSelectionPhase, isInitApplyPhase]);
+
+  useEffect(() => {
+    if (!isStartingSelectionPhase) {
+      return;
+    }
+    if (
+      phase.kind === "showcase" ||
+      phase.kind === "animateUI" ||
+      phase.kind === "playing" ||
+      phase.kind === "completed"
+    ) {
+      useAppPhaseStore.getState().setPhase({ kind: "marsRevealed", gameId: phase.gameId });
     }
   }, [phase, isStartingSelectionPhase]);
+
+  useEffect(() => {
+    if (phase.kind === "showcase" && !isInitApplyPhase) {
+      useAppPhaseStore.getState().setPhase({ kind: "animateUI", gameId: phase.gameId });
+    }
+  }, [phase, isInitApplyPhase]);
 
   useEffect(() => {
     const { setMarsRevealedReady } = useAppPhaseStore.getState();
@@ -417,12 +424,15 @@ export function useGameTransitions(
       phase.kind === "joining" ||
       phase.kind === "spectating"
     ) {
-      useAppPhaseStore.getState().setPhase({ kind: "playing", gameId: activeGameId });
+      useAppPhaseStore
+        .getState()
+        .setPhase({ kind: isInitApplyPhase ? "showcase" : "playing", gameId: activeGameId });
     }
   }, [
     gameStatus,
     isLobbyPhase,
     isStartingSelectionPhase,
+    isInitApplyPhase,
     isSkyboxReady,
     isGpuReady,
     gameId,
@@ -446,26 +456,27 @@ export function useGameTransitions(
     if (!isInitApplyPhase || !initPhase?.waitingForConfirm) {
       return;
     }
-    if (hostPlayerId !== currentPlayerId) {
+    const game = useGameStore.getState().game;
+    if (!game || showcaseControllerId(game) !== currentPlayerId) {
+      return;
+    }
+    if (isShowcaseStepEnd(game)) {
       return;
     }
 
-    const animationDone = phase.kind === "playing" || phase.kind === "completed";
+    const animationDone =
+      phase.kind === "showcase" || phase.kind === "playing" || phase.kind === "completed";
     if (!animationDone) {
       return;
     }
 
-    if (initPhase.hasPendingTiles) {
+    if (initPhase.hasPendingSelection || showcaseTileHold) {
       return;
     }
 
-    const now = Date.now();
-    const queueRemaining = Math.max(0, notificationQueueDoneAt.current - now);
-    const delay = queueRemaining + 750;
-
     const timer = setTimeout(() => {
       void globalWebSocketManager.confirmInitAdvance();
-    }, delay);
+    }, SHOWCASE_PLAY_STEP_MS);
 
     return () => clearTimeout(timer);
   }, [
@@ -473,10 +484,15 @@ export function useGameTransitions(
     initPhase?.waitingForConfirm,
     initPhase?.confirmVersion,
     initPhase?.currentPlayerIndex,
-    initPhase?.hasPendingTiles,
+    initPhase?.hasPendingSelection,
+    showcaseTileHold,
+    initPhase?.stage,
+    initPhase?.preludesPlayed,
+    initPhase?.preludes.length,
+    gamePhase,
     hostPlayerId,
+    playersConnectedKey,
     currentPlayerId,
     phase,
-    notificationQueueDoneAt,
   ]);
 }

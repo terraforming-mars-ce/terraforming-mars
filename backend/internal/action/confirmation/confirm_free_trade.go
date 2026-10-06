@@ -36,7 +36,7 @@ func NewConfirmFreeTradeAction(
 }
 
 // Execute performs the free trade with the selected colony
-func (a *ConfirmFreeTradeAction) Execute(ctx context.Context, gameID string, playerID string, colonyID string) error {
+func (a *ConfirmFreeTradeAction) Execute(ctx context.Context, gameID string, playerID string, colonyID string, trackSteps int) error {
 	log := a.InitLogger(gameID, playerID).With(
 		slog.String("action", "confirm_free_trade"),
 		slog.String("colony_id", colonyID),
@@ -71,7 +71,7 @@ func (a *ConfirmFreeTradeAction) Execute(ctx context.Context, gameID string, pla
 		return fmt.Errorf("colony tile already traded this generation")
 	}
 
-	if !g.Colonies().GetTradeFleetAvailable(playerID) {
+	if g.Colonies().TradeFleet(playerID).Available() == 0 {
 		return fmt.Errorf("trade fleet is not available")
 	}
 
@@ -80,16 +80,14 @@ func (a *ConfirmFreeTradeAction) Execute(ctx context.Context, gameID string, pla
 		return fmt.Errorf("colony definition not found: %w", err)
 	}
 
-	// Apply trade step bonus from cards like Trade Envoys
-	tradeStepBonus := colonyaction.CountTradeStepBonus(p, a.CardRegistry())
-	if tradeStepBonus > 0 {
-		maxStep := len(definition.Steps) - 1
-		newPosition := tileState.MarkerPosition + tradeStepBonus
-		if newPosition > maxStep {
-			newPosition = maxStep
-		}
-		tileState.MarkerPosition = newPosition
+	option, err := baseaction.ValidateColonyTradeOption(p, tileState, definition, a.CardRegistry(), trackSteps)
+	if err != nil {
+		return err
 	}
+	if err := g.Colonies().UseTradeFleet(playerID); err != nil {
+		return err
+	}
+	tileState.MarkerPosition = option.MarkerPosition
 
 	// Apply trade income based on marker position (no payment needed - it's free!)
 	var pendingResources []*colonyaction.PendingResource
@@ -135,8 +133,6 @@ func (a *ConfirmFreeTradeAction) Execute(ctx context.Context, gameID string, pla
 	tileState.MarkerPosition = len(tileState.PlayerColonies)
 	tileState.TradedThisGen = true
 	tileState.TraderID = playerID
-
-	g.Colonies().SetTradeFleetAvailable(playerID, false)
 
 	events.Publish(g.EventBus(), events.ColonyTradedEvent{
 		GameID:    g.ID(),

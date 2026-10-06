@@ -93,7 +93,7 @@ func TestSetPlayerColor_HostCanChangeBotColor(t *testing.T) {
 	ctx := testutil.TestContext()
 
 	hostPlayer := g.GetAllPlayers()[0]
-	bot := testutil.AddBotToGame(t, g, repo, testutil.CreateTestCardRegistry(), "TestBot", "normal", "fast")
+	bot := testutil.AddBotToGame(t, g, repo, testutil.CreateTestCardRegistry(), "TestBot", "rival")
 
 	var availableColor string
 	for _, c := range shared.PlayerColors {
@@ -158,7 +158,7 @@ func TestSetPlayerColor_NonHostCannotChangeBotColor(t *testing.T) {
 	ctx := testutil.TestContext()
 
 	nonHost, _ := g.GetPlayer("player-2")
-	bot := testutil.AddBotToGame(t, g, repo, testutil.CreateTestCardRegistry(), "TestBot", "normal", "fast")
+	bot := testutil.AddBotToGame(t, g, repo, testutil.CreateTestCardRegistry(), "TestBot", "rival")
 
 	action := newSetPlayerColorAction(repo)
 	err := action.Execute(ctx, g.ID(), nonHost.ID(), bot.ID(), shared.PlayerColors[5])

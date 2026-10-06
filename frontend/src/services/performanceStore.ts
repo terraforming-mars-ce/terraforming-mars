@@ -10,6 +10,15 @@ export interface PerformanceSnapshot {
   geometryCount: number;
 }
 
+export interface SceneGroupStats {
+  group: string;
+  objects: number;
+  drawCalls: number;
+  triangles: number;
+}
+
+export type StatSection = Record<string, number | string>;
+
 export interface GpuStats {
   drawCalls: number;
   triangles: number;
@@ -18,6 +27,7 @@ export interface GpuStats {
 }
 
 const SAMPLE_INTERVAL_MS = 250;
+const DETAIL_INTERVAL_MS = 500;
 const MAX_SAMPLES = 120; // ~30s at 4Hz
 
 const hasMemoryApi =
@@ -45,6 +55,10 @@ class PerformanceStoreService {
   };
 
   private refCount = 0;
+  private census: SceneGroupStats[] = [];
+  private sections = new Map<string, StatSection>();
+  private lastDetail = 0;
+  private sectionTimes = new Map<string, number>();
 
   static getInstance(): PerformanceStoreService {
     if (!PerformanceStoreService.instance) {
@@ -75,6 +89,57 @@ class PerformanceStoreService {
 
   updateGpuStats(stats: GpuStats) {
     this.latestGpu = stats;
+  }
+
+  // Detailed stats are only gathered while someone is watching, at a low rate.
+  get watching() {
+    return this.refCount > 0;
+  }
+
+  detailDue(now: number) {
+    if (!this.watching || now - this.lastDetail < DETAIL_INTERVAL_MS) {
+      return false;
+    }
+    this.lastDetail = now;
+    return true;
+  }
+
+  // True at most twice a second per section, and only while the window is open.
+  sectionDue(name: string) {
+    if (!this.watching) {
+      return false;
+    }
+    const now = performance.now();
+    if (now - (this.sectionTimes.get(name) ?? 0) < DETAIL_INTERVAL_MS) {
+      return false;
+    }
+    this.sectionTimes.set(name, now);
+    return true;
+  }
+
+  updateCensus(census: SceneGroupStats[]) {
+    this.census = census;
+  }
+
+  setSection(name: string, values: StatSection) {
+    this.sections.set(name, values);
+  }
+
+  getCensus() {
+    return this.census;
+  }
+
+  // Scene groups hidden from the performance window for A/B measurements.
+  readonly hiddenGroups = new Set<string>();
+
+  toggleGroup(group: string) {
+    if (!this.hiddenGroups.delete(group)) {
+      this.hiddenGroups.add(group);
+    }
+  }
+
+  getSections() {
+    return this.sections;
   }
 
   subscribe(listener: (snapshots: PerformanceSnapshot[]) => void): () => void {

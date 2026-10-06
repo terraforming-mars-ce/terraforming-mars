@@ -1,20 +1,60 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import CardBrowser from "../ui/CardBrowser.tsx";
-import { parseFamily } from "../ui/cardBrowser/cardCatalog.ts";
+import { parseFamily, parseSize, parseSort } from "../ui/cardBrowser/cardCatalog.ts";
 import type { CardBrowserView } from "../ui/cardBrowser/cardCatalog.ts";
+import { afterNextPaint } from "@/utils/scheduling.ts";
+
+const LIST_PARAMS = {
+  ids: "cId",
+  tags: "tag",
+  types: "type",
+  packs: "pack",
+} as const;
+type ListKey = keyof typeof LIST_PARAMS;
+const LIST_KEYS = Object.keys(LIST_PARAMS) as ListKey[];
+
+function parseView(params: URLSearchParams): CardBrowserView {
+  return {
+    query: params.get("q") ?? "",
+    family: parseFamily(params.get("family")),
+    sort: parseSort(params.get("sort")),
+    size: parseSize(params.get("size")),
+    ids: params.getAll(LIST_PARAMS.ids),
+    tags: params.getAll(LIST_PARAMS.tags),
+    types: params.getAll(LIST_PARAMS.types),
+    packs: params.getAll(LIST_PARAMS.packs),
+  };
+}
+
+function serializeView(view: CardBrowserView) {
+  const params = new URLSearchParams();
+  if (view.query) {
+    params.set("q", view.query);
+  }
+  if (view.family) {
+    params.set("family", view.family);
+  }
+  if (view.sort !== "id") {
+    params.set("sort", view.sort);
+  }
+  if (view.size !== "small") {
+    params.set("size", view.size);
+  }
+  for (const key of LIST_KEYS) {
+    view[key].forEach((value) => params.append(LIST_PARAMS[key], value));
+  }
+  return params;
+}
 
 export default function CardsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
-  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [view, setView] = useState(() => parseView(searchParams));
+  const latest = useRef(view);
+  const pendingWrite = useRef<(() => void) | null>(null);
   const writtenSearch = useRef<string | null>(null);
-  const idsKey = JSON.stringify(searchParams.getAll("cId"));
-  const ids = useMemo<string[]>(() => JSON.parse(idsKey), [idsKey]);
-  const family = parseFamily(searchParams.get("family"));
-  const view = useMemo(() => ({ query, family, ids }), [query, family, ids]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -22,58 +62,40 @@ export default function CardsPage() {
       writtenSearch.current = null;
       return;
     }
-    if (debounce.current) {
-      clearTimeout(debounce.current);
+    if (serializeView(latest.current).toString() === params.toString()) {
+      return;
     }
-    setQuery(params.get("q") ?? "");
+    pendingWrite.current?.();
+    pendingWrite.current = null;
+    const next = parseView(params);
+    latest.current = next;
+    setView(next);
   }, [location.key, location.search]);
 
-  useEffect(
-    () => () => {
-      if (debounce.current) {
-        clearTimeout(debounce.current);
-      }
-    },
-    [],
-  );
+  useEffect(() => () => pendingWrite.current?.(), []);
 
   const handleViewChange = useCallback(
     (patch: Partial<CardBrowserView>) => {
-      if (debounce.current) {
-        clearTimeout(debounce.current);
-      }
-      const nextQuery = patch.query ?? query;
-      setQuery(nextQuery);
+      pendingWrite.current?.();
+      const next = { ...latest.current, ...patch };
+      latest.current = next;
+      setView(next);
       const write = () => {
-        setSearchParams(
-          (previous) => {
-            const next = new URLSearchParams(previous);
-            if (nextQuery) {
-              next.set("q", nextQuery);
-            } else {
-              next.delete("q");
-            }
-            if (patch.family) {
-              next.set("family", patch.family);
-            }
-            if (patch.ids) {
-              next.delete("cId");
-              patch.ids.forEach((id) => next.append("cId", id));
-            }
-            writtenSearch.current = next.toString();
-            return next;
-          },
-          { replace: true },
-        );
+        pendingWrite.current = null;
+        const params = serializeView(latest.current);
+        writtenSearch.current = params.toString();
+        setSearchParams(params, { replace: true });
       };
-      if (patch.query !== undefined && patch.family === undefined && patch.ids === undefined) {
-        debounce.current = setTimeout(write, 300);
+      if (Object.keys(patch).every((key) => key === "query")) {
+        const timeout = setTimeout(write, 300);
+        pendingWrite.current = () => clearTimeout(timeout);
       } else {
-        write();
+        pendingWrite.current = afterNextPaint(write);
       }
     },
-    [query, setSearchParams],
+    [setSearchParams],
   );
+  const handleBack = useCallback(() => navigate("/"), [navigate]);
 
-  return <CardBrowser onBack={() => navigate("/")} view={view} onViewChange={handleViewChange} />;
+  return <CardBrowser onBack={handleBack} view={view} onViewChange={handleViewChange} />;
 }

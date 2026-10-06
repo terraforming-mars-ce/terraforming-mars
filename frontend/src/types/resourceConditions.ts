@@ -13,6 +13,8 @@ import type {
   ColonyConditionDto,
   TileModificationConditionDto,
   MiscConditionDto,
+  CopyConditionDto,
+  CardRevealConditionDto,
   ResourceCondition,
   PerConditionDto,
   SelectorDto,
@@ -32,6 +34,8 @@ export type {
   ColonyConditionDto,
   TileModificationConditionDto,
   MiscConditionDto,
+  CopyConditionDto,
+  CardRevealConditionDto,
   ResourceCondition,
 };
 
@@ -85,12 +89,11 @@ const cardStorageTypes: Set<string> = new Set([
   "asteroid",
   "fighter",
   "disease",
+  "camp",
   "card-resource",
 ]);
 const effectTypes: Set<string> = new Set([
   "discount",
-  "payment-substitute",
-  "storage-payment-substitute",
   "value-modifier",
   "global-parameter-lenience",
   "ignore-global-requirements",
@@ -101,10 +104,12 @@ const effectTypes: Set<string> = new Set([
   "tag",
 ]);
 const colonyTypes: Set<string> = new Set([
+  "colony-tile-add",
   "colony",
   "colony-count",
   "colony-bonus",
   "colony-track-step",
+  "trade-fleet",
 ]);
 const tileModificationTypes: Set<string> = new Set(["tile-destruction", "tile-replacement"]);
 const miscTypes: Set<string> = new Set([
@@ -198,3 +203,10 @@ export function getTileType(c: ResourceCondition): string | undefined {
   }
   return undefined;
 }
+
+export function isCopy(c: ResourceCondition): c is CopyConditionDto {
+  return c.type === "copy";
+}
+
+export const isCardReveal = (r: ResourceCondition): r is CardRevealConditionDto =>
+  r.type === "card-reveal";

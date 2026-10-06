@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"terraforming-mars-backend/internal/game"
+	"terraforming-mars-backend/internal/game/shared"
 )
 
 // SetCurrentTurnAction handles the admin action to set the current turn
@@ -40,18 +41,41 @@ func (a *SetCurrentTurnAction) Execute(ctx context.Context, gameID string, playe
 		return fmt.Errorf("game not found: %s", gameID)
 	}
 
-	_, err = game.GetPlayer(playerID)
-	if err != nil {
-		log.Error("Player not found in game", slog.Any("error", err))
-		return fmt.Errorf("player not found: %s", playerID)
+	if game.CurrentPhase() != shared.GamePhaseAction {
+		return fmt.Errorf("turns can only be moved during the action phase")
 	}
 
-	err = game.SetCurrentTurn(ctx, playerID, -1)
+	target, err := game.GetPlayer(playerID)
+	if err != nil {
+		log.Warn("Player not found in game", slog.Any("error", err))
+		return fmt.Errorf("player not found: %s", playerID)
+	}
+	if target.HasPassed() || target.HasExited() {
+		return fmt.Errorf("player %s has passed or left", target.Name())
+	}
+
+	// Same allotment as a normal turn advance: unlimited for the last player still in.
+	actions := 2
+	if activeCount(game) == 1 {
+		actions = -1
+	}
+
+	err = game.SetCurrentTurn(ctx, playerID, actions)
 	if err != nil {
 		log.Error("Failed to update current turn", slog.Any("error", err))
 		return fmt.Errorf("failed to update current turn: %w", err)
 	}
 
-	log.Info("Admin set current turn completed")
+	log.Info("Admin set current turn completed", slog.Int("actions", actions))
 	return nil
+}
+
+func activeCount(g *game.Game) int {
+	count := 0
+	for _, p := range g.GetAllPlayers() {
+		if !p.HasPassed() && !p.HasExited() {
+			count++
+		}
+	}
+	return count
 }

@@ -7,13 +7,13 @@ import (
 )
 
 type Card struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Type        string   `json:"type"`
-	Cost        int      `json:"cost"`
-	Description string   `json:"description"`
-	Pack        string   `json:"pack"`
-	Tags        []string `json:"tags,omitempty"`
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	Type        string          `json:"type"`
+	Cost        int             `json:"cost"`
+	Description json.RawMessage `json:"description"`
+	Pack        string          `json:"pack"`
+	Tags        []string        `json:"tags,omitempty"`
 	// All other fields will be preserved with RawMessage
 	Other map[string]json.RawMessage `json:"-"`
 }

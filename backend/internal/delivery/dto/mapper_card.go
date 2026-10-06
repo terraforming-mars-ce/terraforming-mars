@@ -16,7 +16,7 @@ func ToCardDto(card gamecards.Card) CardDto {
 		Name:               card.Name,
 		Type:               CardType(card.Type),
 		Cost:               card.Cost,
-		Description:        card.Description,
+		Description:        toCardDescriptionDto(card.Description),
 		Pack:               card.Pack,
 		Tags:               mapSlice(card.Tags, func(t shared.CardTag) CardTag { return CardTag(t) }),
 		Requirements:       toCardRequirementsDto(card.Requirements),
@@ -26,6 +26,22 @@ func ToCardDto(card gamecards.Card) CardDto {
 		StartingResources:  ptrCast(card.StartingResources, toResourceSetDto),
 		StartingProduction: ptrCast(card.StartingProduction, toResourceSetDto),
 	}
+}
+
+// toCardDescriptionDto converts a card description into its section DTOs
+func toCardDescriptionDto(description gamecards.CardDescription) []CardDescriptionSectionDto {
+	return mapSlice(description, func(s gamecards.DescriptionSection) CardDescriptionSectionDto {
+		return CardDescriptionSectionDto{Type: string(s.Type), Text: s.Text}
+	})
+}
+
+// CardDescriptionPlainText flattens description section DTOs into labelled lines
+func CardDescriptionPlainText(sections []CardDescriptionSectionDto) string {
+	description := make(gamecards.CardDescription, len(sections))
+	for i, s := range sections {
+		description[i] = gamecards.DescriptionSection{Type: gamecards.DescriptionSectionType(s.Type), Text: s.Text}
+	}
+	return description.PlainText()
 }
 
 // toResourceSetDto converts shared.ResourceSet to ResourceSet DTO.
@@ -104,10 +120,11 @@ func toRequirementDto(req gamecards.Requirement) RequirementDto {
 
 func toCardBehaviorDto(behavior shared.CardBehavior) CardBehaviorDto {
 	return CardBehaviorDto{
-		Description: behavior.Description,
-		Triggers:    mapSlice(behavior.Triggers, toTriggerDto),
-		Inputs:      mapSlice(behavior.Inputs, toResourceConditionDto),
-		Outputs:     mapSlice(behavior.Outputs, toResourceConditionDto),
+		ProductionBox: behavior.ProductionBox,
+		Description:   behavior.Description,
+		Triggers:      mapSlice(behavior.Triggers, toTriggerDto),
+		Inputs:        mapSlice(behavior.Inputs, toResourceConditionDto),
+		Outputs:       mapSlice(behavior.Outputs, toResourceConditionDto),
 
 		Choices:                       toChoiceDtos(behavior.Choices),
 		ChoicePolicy:                  toChoicePolicyDto(behavior.ChoicePolicy),
@@ -186,7 +203,7 @@ func toTileRestrictionsDto(tr shared.TileRestrictions) TileRestrictionsDto {
 	dto := TileRestrictionsDto{
 		BoardTags:         tr.BoardTags,
 		Adjacency:         tr.Adjacency,
-		OnTileType:        tr.OnTileType,
+		Area:              tr.Area,
 		AdjacentToType:    tr.AdjacentToType,
 		MinAdjacentOfType: tr.MinAdjacentOfType,
 	}
@@ -199,12 +216,14 @@ func toTileRestrictionsDto(tr shared.TileRestrictions) TileRestrictionsDto {
 
 func toTargetRestrictionDto(tr shared.TargetRestriction) TargetRestrictionDto {
 	return TargetRestrictionDto{
-		Adjacent: tr.Adjacent,
+		Adjacent:  tr.Adjacent,
+		Selectors: mapSlice(tr.Selectors, toSelectorDto),
 	}
 }
 
 func toSelectorDto(sel shared.Selector) SelectorDto {
 	return SelectorDto{
+		TagCount:             ptrCast(sel.TagCount, toMinMaxValueDto),
 		Tags:                 mapSlice(sel.Tags, func(t shared.CardTag) CardTag { return CardTag(t) }),
 		CardTypes:            mapSlice(sel.CardTypes, func(ct string) CardType { return CardType(ct) }),
 		Resources:            sel.Resources,
@@ -222,6 +241,12 @@ func toResourceConditionDto(bc shared.BehaviorCondition) any {
 	amount := bc.GetAmount()
 
 	switch c := bc.(type) {
+	case *shared.CardRevealCondition:
+		return CardRevealConditionDto{Type: rt, Amount: amount, Target: target, Destination: c.Destination, OnMatch: ptrCast(c.OnMatch, func(m shared.RevealMatch) RevealMatchDto {
+			return RevealMatchDto{Selectors: mapSlice(m.Selectors, toSelectorDto), Outputs: mapSlice(m.Outputs, toResourceConditionDto)}
+		})}
+	case *shared.CopyCondition:
+		return CopyConditionDto{Type: rt, Amount: amount, Target: target, Scope: c.Scope, Zone: c.Zone, Selectors: mapSlice(c.Selectors, toSelectorDto)}
 	case *shared.BasicResourceCondition:
 		dto := BasicResourceConditionDto{
 			Type: rt, Amount: amount, Target: target,
@@ -255,7 +280,9 @@ func toResourceConditionDto(bc shared.BehaviorCondition) any {
 		}
 	case *shared.CardOperationCondition:
 		dto := CardOperationConditionDto{
-			Type: rt, Amount: amount, Target: target,
+			Optional: c.Optional,
+			Per:      ptrCast(c.Per, toPerConditionDto),
+			Type:     rt, Amount: amount, Target: target,
 			Selectors: mapSlice(c.Selectors, toSelectorDto),
 		}
 		if c.VariableAmount {
@@ -272,14 +299,20 @@ func toResourceConditionDto(bc shared.BehaviorCondition) any {
 			dto.VariableAmount = &c.VariableAmount
 		}
 		return dto
+	case *shared.PaymentSubstituteCondition:
+		return PaymentSubstituteConditionDto{Type: rt, Amount: amount, Target: target, Source: toPaymentSourceDto(c.Source), TargetResource: ResourceType(c.TargetResource), Selectors: mapSlice(c.Selectors, toSelectorDto)}
 	case *shared.EffectCondition:
 		return EffectConditionDto{
-			Type: rt, Amount: amount, Target: target,
+			Temporary: c.Temporary,
+			Against:   c.Against,
+			Type:      rt, Amount: amount, Target: target,
 			Selectors: mapSlice(c.Selectors, toSelectorDto),
 		}
 	case *shared.ColonyCondition:
 		return ColonyConditionDto{
-			Type: rt, Amount: amount, Target: target,
+			SelectionGroup: c.SelectionGroup,
+			Optional:       c.Optional,
+			Type:           rt, Amount: amount, Target: target,
 		}
 	case *shared.TileModificationCondition:
 		return TileModificationConditionDto{
@@ -343,11 +376,13 @@ func toChoiceRequirementDto(req shared.ChoiceRequirement) RequirementDto {
 
 func toPerConditionDto(pc shared.PerCondition) PerConditionDto {
 	return PerConditionDto{
+		Zone: pc.Zone, Selectors: mapSlice(pc.Selectors, toSelectorDto), IncludeSource: pc.IncludeSource,
 		Type:               ResourceType(pc.ResourceType),
 		Amount:             pc.Amount,
 		Location:           ptrCast(pc.Location, func(l string) CardApplyLocation { return CardApplyLocation(l) }),
 		Target:             ptrCast(pc.Target, func(t string) TargetType { return TargetType(t) }),
 		Tag:                ptrCast(pc.Tag, func(t shared.CardTag) CardTag { return CardTag(t) }),
+		Tags:               mapSlice(pc.Tags, func(t shared.CardTag) CardTag { return CardTag(t) }),
 		AdjacentToSelfTile: pc.AdjacentToSelfTile,
 	}
 }

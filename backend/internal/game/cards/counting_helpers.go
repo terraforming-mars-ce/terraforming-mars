@@ -1,6 +1,7 @@
 package cards
 
 import (
+	"slices"
 	"terraforming-mars-backend/internal/game/board"
 	"terraforming-mars-backend/internal/game/player"
 	"terraforming-mars-backend/internal/game/shared"
@@ -32,48 +33,9 @@ func CountPlayerTiles(playerID string, b *board.Board, tileType *shared.Resource
 	return count
 }
 
-// CountPlayerTagsByType counts tags of a specific type across all played cards and corporation for a player.
-// Wild tags count toward any tag type. Event cards are excluded unless counting TagEvent.
-// Optional extraTags allows counting tags from a card not yet in played cards (e.g., the card being played).
-func CountPlayerTagsByType(p *player.Player, cardRegistry CardRegistryInterface, tagType shared.CardTag, extraTags ...[]shared.CardTag) int {
-	count := 0
-
-	for _, cardID := range p.PlayedCards().Cards() {
-		card, err := cardRegistry.GetByID(cardID)
-		if err != nil {
-			continue
-		}
-		if card.Type == CardTypeEvent && tagType != shared.TagEvent {
-			continue
-		}
-		count += countTagsInList(card.Tags, tagType)
-	}
-
-	if corpID := p.CorporationID(); corpID != "" {
-		if corp, err := cardRegistry.GetByID(corpID); err == nil {
-			count += countTagsInList(corp.Tags, tagType)
-		}
-	}
-
-	for _, tags := range extraTags {
-		count += countTagsInList(tags, tagType)
-	}
-
-	// Include bonus tags from effects like Home Schooled
-	count += p.BonusTagCount(tagType)
-
-	return count
-}
-
-// countTagsInList counts occurrences of a tag in a slice, including wild tags.
-func countTagsInList(tags []shared.CardTag, target shared.CardTag) int {
-	count := 0
-	for _, tag := range tags {
-		if tag == target || tag == shared.TagWild {
-			count++
-		}
-	}
-	return count
+// CountPlayerTagsByType counts actual tags, without interpreting wild tags.
+func CountPlayerTagsByType(p *player.Player, cardRegistry CardRegistryInterface, tagType shared.CardTag) int {
+	return PlayerTagCounts(p, cardRegistry)[tagType]
 }
 
 // HasTag checks if a card has a specific tag.
@@ -124,10 +86,10 @@ func CountAllTilesOfType(b *board.Board, tileType shared.ResourceType) int {
 	return count
 }
 
-// CountTilesOfTypeByLocation counts tiles of a specific type, optionally filtered by location.
+// CountTilesOfTypeByLocation counts tiles of a specific type, optionally filtered by location and owner.
 // If location is "mars", only counts tiles with TileLocationMars.
 // If location is nil or "anywhere", counts all tiles of that type.
-func CountTilesOfTypeByLocation(b *board.Board, tileType shared.ResourceType, location *string) int {
+func CountTilesOfTypeByLocation(b *board.Board, tileType shared.ResourceType, location *string, ownerID *string) int {
 	count := 0
 	tiles := b.Tiles()
 	for _, tile := range tiles {
@@ -137,30 +99,18 @@ func CountTilesOfTypeByLocation(b *board.Board, tileType shared.ResourceType, lo
 		if location != nil && *location == "mars" && tile.Location != board.TileLocationMars {
 			continue
 		}
+		if ownerID != nil && (tile.OwnerID == nil || *tile.OwnerID != *ownerID) {
+			continue
+		}
 		count++
 	}
 	return count
 }
 
-// CountAllPlayersTagsByType sums tag counts of a specific type across all players.
-func CountAllPlayersTagsByType(players []*player.Player, cardRegistry CardRegistryInterface, tagType shared.CardTag) int {
-	count := 0
-	for _, p := range players {
-		count += CountPlayerTagsByType(p, cardRegistry, tagType)
-	}
-	return count
-}
-
-// CountOtherPlayersTagsByType sums tag counts of a specific type across all players except the given one.
-func CountOtherPlayersTagsByType(players []*player.Player, excludePlayerID string, cardRegistry CardRegistryInterface, tagType shared.CardTag) int {
-	count := 0
-	for _, p := range players {
-		if p.ID() == excludePlayerID {
-			continue
-		}
-		count += CountPlayerTagsByType(p, cardRegistry, tagType)
-	}
-	return count
+// ColonyCounter supplies colony ownership counts without tying counters to game state.
+type ColonyCounter interface {
+	CountAllColonies() int
+	CountPlayerColonies(playerID string) int
 }
 
 // CountPerCondition is the unified counter for PerCondition evaluation.
@@ -179,9 +129,51 @@ func CountPerCondition(
 	b *board.Board,
 	cardRegistry CardRegistryInterface,
 	allPlayers []*player.Player,
+	colonies ColonyCounter,
+	tagContext TagCountContext,
 ) int {
 	if per == nil {
 		return 0
+	}
+
+	if per.ResourceType == shared.ResourceColonyCount || per.ResourceType == shared.ResourceColony {
+		if colonies == nil {
+			return 0
+		}
+		if per.Target != nil && *per.Target == "self-player" {
+			return colonies.CountPlayerColonies(p.ID())
+		}
+		if per.Target != nil && *per.Target == "other-players" {
+			return colonies.CountAllColonies() - colonies.CountPlayerColonies(p.ID())
+		}
+		return colonies.CountAllColonies()
+	}
+
+	if per.ResourceType == shared.ResourceCardCount && per.Zone == "played" && cardRegistry != nil {
+		count := 0
+		players := []*player.Player{p}
+		if per.Target != nil && (*per.Target == "any-player" || *per.Target == "other-players") {
+			players = allPlayers
+		}
+		for _, owner := range players {
+			if per.Target != nil && *per.Target == "other-players" && owner.ID() == p.ID() {
+				continue
+			}
+			ids := append([]string(nil), owner.PlayedCards().Cards()...)
+			if corp := owner.CorporationID(); corp != "" && !slices.Contains(ids, corp) {
+				ids = append(ids, corp)
+			}
+			if owner.ID() == p.ID() && per.IncludeSource && sourceCardID != "" && !slices.Contains(ids, sourceCardID) {
+				ids = append(ids, sourceCardID)
+			}
+			for _, id := range ids {
+				card, err := cardRegistry.GetByID(id)
+				if err == nil && (len(per.Selectors) == 0 || MatchesAnySelector(card, per.Selectors)) {
+					count++
+				}
+			}
+		}
+		return count
 	}
 
 	// Card storage (e.g., animals on this card)
@@ -203,24 +195,33 @@ func CountPerCondition(
 		return countAdjacentTilesOfType(p.ID(), b, per.ResourceType, *per.AdjacentToTileType)
 	}
 
-	// Multi-tag counting (e.g., Ecologist: plant + microbe + animal)
-	if len(per.Tags) > 0 && cardRegistry != nil {
+	if (len(per.Tags) > 0 || per.Tag != nil) && cardRegistry != nil {
+		tags := append([]shared.CardTag(nil), per.Tags...)
+		if per.Tag != nil {
+			tags = append(tags, *per.Tag)
+		}
+		owners := []*player.Player{p}
+		if per.Target != nil && (*per.Target == "any-player" || *per.Target == "other-players") {
+			owners = allPlayers
+		}
 		count := 0
-		for _, tag := range per.Tags {
-			count += CountPlayerTagsByType(p, cardRegistry, tag)
+		for _, owner := range owners {
+			if per.Target != nil && *per.Target == "other-players" && owner.ID() == p.ID() {
+				continue
+			}
+			count += CountPlayerTags(owner, cardRegistry, tags, tagContext)
+		}
+		if per.IncludeSource && sourceCardID != "" && (per.Target == nil || *per.Target == "self-player" || *per.Target == "any-player") {
+			source, err := cardRegistry.GetByID(sourceCardID)
+			if err == nil && (source.Type == CardTypeEvent || (!slices.Contains(p.PlayedCards().Cards(), sourceCardID) && p.CorporationID() != sourceCardID)) {
+				for _, tag := range source.Tags {
+					if tag != shared.TagWild && slices.Contains(tags, tag) {
+						count++
+					}
+				}
+			}
 		}
 		return count
-	}
-
-	// Tag counting
-	if per.Tag != nil && cardRegistry != nil {
-		if per.Target != nil && *per.Target == "any-player" && allPlayers != nil {
-			return CountAllPlayersTagsByType(allPlayers, cardRegistry, *per.Tag)
-		}
-		if per.Target != nil && *per.Target == "other-players" && allPlayers != nil {
-			return CountOtherPlayersTagsByType(allPlayers, p.ID(), cardRegistry, *per.Tag)
-		}
-		return CountPlayerTagsByType(p, cardRegistry, *per.Tag)
 	}
 
 	// Tile counting
@@ -240,21 +241,18 @@ func CountPerCondition(
 			}
 			return CountAllNonOceanTiles(b)
 		case shared.ResourceCityTile:
+			var ownerID *string
 			if per.Target != nil && *per.Target == "self-player" {
-				rt := shared.ResourceCityTile
-				return CountPlayerTiles(p.ID(), b, &rt)
+				id := p.ID()
+				ownerID = &id
 			}
-			return CountAllTilesOfType(b, shared.ResourceCityTile)
+			return CountTilesOfTypeByLocation(b, shared.ResourceCityTile, per.Location, ownerID)
 		case shared.ResourceGreeneryTile:
 			if per.Target != nil && *per.Target == "self-player" {
 				rt := shared.ResourceGreeneryTile
 				return CountPlayerTiles(p.ID(), b, &rt)
 			}
 			return CountAllTilesOfType(b, shared.ResourceGreeneryTile)
-		case shared.ResourceColony:
-			// Colonies are not board tiles; callers must handle colony counting
-			// via game.Colonies().CountAllColonies() before reaching here.
-			return 0
 		}
 	}
 
@@ -285,7 +283,7 @@ func CountPerCondition(
 
 	// Distinct tag count (Diversifier: 8 different tags)
 	if per.ResourceType == shared.ResourceDistinctTagCount && cardRegistry != nil {
-		return countDistinctTags(p, cardRegistry)
+		return countDistinctTags(p, cardRegistry, tagContext)
 	}
 
 	// Cards with requirements (Tactician: 5 cards with requirements)
@@ -315,7 +313,7 @@ func CountPerCondition(
 
 	// Fallback: try to count as a tag type
 	if cardRegistry != nil {
-		return CountPlayerTagsByType(p, cardRegistry, shared.CardTag(per.ResourceType))
+		return CountPlayerTags(p, cardRegistry, []shared.CardTag{shared.CardTag(per.ResourceType)}, tagContext)
 	}
 
 	return 0
@@ -344,10 +342,21 @@ func isCardStorageType(rt shared.ResourceType) bool {
 	switch rt {
 	case shared.ResourceFloater, shared.ResourceAnimal, shared.ResourceMicrobe,
 		shared.ResourceScience, shared.ResourceAsteroid, shared.ResourceFighter,
-		shared.ResourceDisease:
+		shared.ResourceDisease, shared.ResourceCamp:
 		return true
 	}
 	return false
+}
+
+// CountPlayerResources counts a resource in the player pool or on owned cards.
+func CountPlayerResources(p *player.Player, cardRegistry CardRegistryInterface, resourceType shared.ResourceType) int {
+	if isCardStorageType(resourceType) {
+		if cardRegistry == nil {
+			return 0
+		}
+		return CountPlayerCardStorageByType(p, cardRegistry, resourceType)
+	}
+	return p.Resources().Get().GetAmount(resourceType)
 }
 
 // CountPlayerCardStorageByType sums card storage across all played cards and corporation
@@ -371,33 +380,20 @@ func CountPlayerCardStorageByType(p *player.Player, cardRegistry CardRegistryInt
 	return total
 }
 
-func countDistinctTags(p *player.Player, cardRegistry CardRegistryInterface) int {
-	tagSet := make(map[shared.CardTag]bool)
-	for _, cardID := range p.PlayedCards().Cards() {
-		card, err := cardRegistry.GetByID(cardID)
-		if err != nil {
-			continue
-		}
-		if card.Type == CardTypeEvent {
-			continue
-		}
-		for _, tag := range card.Tags {
-			if tag == shared.TagWild {
-				continue
-			}
-			tagSet[tag] = true
+func countDistinctTags(p *player.Player, cardRegistry CardRegistryInterface, tagContext TagCountContext) int {
+	counts := PlayerTagCounts(p, cardRegistry)
+	distinct, missing := 0, 0
+	for tag, count := range counts {
+		if count > 0 && tag != shared.TagWild && tag != shared.TagEvent {
+			distinct++
 		}
 	}
-	if corpID := p.CorporationID(); corpID != "" {
-		if corp, err := cardRegistry.GetByID(corpID); err == nil {
-			for _, tag := range corp.Tags {
-				if tag != shared.TagWild {
-					tagSet[tag] = true
-				}
-			}
+	for _, tag := range []shared.CardTag{shared.TagSpace, shared.TagEarth, shared.TagScience, shared.TagPower, shared.TagBuilding, shared.TagMicrobe, shared.TagAnimal, shared.TagPlant, shared.TagCity, shared.TagVenus, shared.TagJovian} {
+		if counts[tag] == 0 {
+			missing++
 		}
 	}
-	return len(tagSet)
+	return distinct + min(missing, eligibleWildTags(p, cardRegistry, tagContext, counts))
 }
 
 func countCardsWithRequirements(p *player.Player, cardRegistry CardRegistryInterface) int {

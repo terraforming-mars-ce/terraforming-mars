@@ -4,6 +4,7 @@ import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import GameButton from "../buttons/GameButton.tsx";
 import InfoTooltip from "../display/InfoTooltip.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
+import { useBotThoughtsPreferenceStore } from "@/stores/botPresenceStore.ts";
 import {
   OVERLAY_CONTAINER_CLASS,
   OVERLAY_FOOTER_CLASS,
@@ -30,6 +31,9 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
   const [activeTab, setActiveTab] = useState<Tab>("general");
   const [claudeToken, setClaudeToken] = useState("");
   const [tokenStatus, setTokenStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [spendCapDraft, setSpendCapDraft] = useState<string | null>(null);
+  const showBotThoughts = useBotThoughtsPreferenceStore((s) => s.showBotThoughts);
+  const setShowBotThoughts = useBotThoughtsPreferenceStore((s) => s.setShowBotThoughts);
 
   if (!isOpen || !isHost) {
     return null;
@@ -47,14 +51,26 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
       return;
     }
     setTokenStatus("saving");
-    dispatch({ claudeApiKey: claudeToken.trim() });
+    dispatch({ claudeOAuthToken: claudeToken.trim() });
     setClaudeToken("");
     setTokenStatus("saved");
     window.setTimeout(() => setTokenStatus("idle"), 1500);
   };
 
   const handleClearToken = () => {
-    dispatch({ claudeApiKey: "" });
+    dispatch({ claudeOAuthToken: "" });
+  };
+
+  const commitSpendCap = () => {
+    if (spendCapDraft === null) {
+      return;
+    }
+    const value = Number(spendCapDraft);
+    setSpendCapDraft(null);
+    if (!Number.isFinite(value) || value <= 0 || value === settings.botSpendCapUsd) {
+      return;
+    }
+    dispatch({ botSpendCapUsd: value });
   };
 
   const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -159,12 +175,16 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
               <div className="max-w-xl mx-auto space-y-4">
                 <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-4">
                   <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs">
-                    Claude API Token
+                    Claude OAuth token
                   </h3>
-                  <p className="text-white/70 text-sm mb-3">
-                    {settings.hasClaudeApiKey
-                      ? "A Claude token is configured. Paste a new one to replace it, or clear to disable bots."
-                      : "Paste a Claude API token to enable bot players. Bots use this token for every action they take."}
+                  <p className="text-white/70 text-sm mb-1">
+                    {settings.hasClaudeOAuthToken
+                      ? "A Claude OAuth token is configured. Paste a new one to replace it, or clear to disable bots."
+                      : "Paste a Claude OAuth token to enable bot players. Bots use this token for every action they take."}
+                  </p>
+                  <p className="text-white/50 text-xs mb-3">
+                    Generate one by running{" "}
+                    <code className="text-white/80">claude setup-token</code> in a terminal.
                   </p>
                   <div className="flex gap-2">
                     <input
@@ -184,7 +204,7 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                     >
                       {tokenStatus === "saved" ? "Saved" : "Save"}
                     </GameButton>
-                    {settings.hasClaudeApiKey && (
+                    {settings.hasClaudeOAuthToken && (
                       <GameButton
                         emphasis="secondary"
                         tone="error"
@@ -196,10 +216,43 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                     )}
                   </div>
                 </div>
+                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-4">
+                  <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs">
+                    Bot spend cap (USD)
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={0.01}
+                      step={0.5}
+                      value={spendCapDraft ?? String(settings.botSpendCapUsd)}
+                      onChange={(e) => setSpendCapDraft(e.target.value)}
+                      onBlur={commitSpendCap}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          commitSpendCap();
+                        }
+                      }}
+                      aria-label="Bot spend cap in USD"
+                      className="w-28 bg-black/50 border border-white/20 rounded-none py-2 px-3 text-white text-sm font-orbitron outline-none focus:border-white/60 cursor-text"
+                    />
+                    <span className="text-white/70 text-sm font-orbitron">
+                      Spent so far: ${settings.botSpendUsd.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-4">
+                  <ToggleRow
+                    label="Show bot thoughts"
+                    checked={showBotThoughts}
+                    onChange={setShowBotThoughts}
+                    tooltip="Show short thought bubbles above bot player cards. This only affects your own view."
+                  />
+                </div>
                 <div className="bg-yellow-900/30 border border-yellow-600/40 rounded-lg p-3 text-yellow-200/90 text-xs leading-relaxed">
-                  Bots consume Anthropic API tokens that bill against your account. Bots will stop
-                  acting if your usage limit is hit and may behave unpredictably. Terraforming Mars
-                  CE is not responsible for charges incurred while running bots.
+                  Bots consume Claude usage that bills against your account. Bots switch to a simple
+                  autopilot if the spend cap or your usage limit is hit. Terraforming Mars CE is not
+                  responsible for charges incurred while running bots.
                 </div>
               </div>
             )}

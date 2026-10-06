@@ -1,3 +1,4 @@
+import CardPlayPresentation from "../../ui/overlay/CardPlayPresentation";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useState, useCallback, forwardRef } from "react";
 import { useStore } from "zustand";
@@ -232,10 +233,18 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
   };
 
   const phase = useAppPhaseStore((s) => s.phase);
+  const isShowcase = phase.kind === "showcase";
   const showUI =
-    phase.kind === "animateUI" || phase.kind === "playing" || phase.kind === "completed";
+    isShowcase ||
+    phase.kind === "animateUI" ||
+    phase.kind === "playing" ||
+    phase.kind === "completed";
+  const showHud = showUI && !isShowcase;
   const isAnimatingIn = phase.kind === "animateUI";
   const uiAnimationClass = isAnimatingIn ? "animate-[uiFadeIn_1200ms_ease-out_both]" : "";
+  // Elements already shown during the showcase fade in once, when the showcase starts.
+  const earlyUiAnimationClass =
+    isShowcase || isAnimatingIn ? "animate-[uiFadeIn_1200ms_ease-out_both]" : "";
   const endgameFadeClass = endgameFadeUI ? "opacity-0 pointer-events-none" : "opacity-100";
 
   return (
@@ -268,9 +277,11 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
       {/* TopMenuBar overlays on top — always visible in endgame */}
       {showUI && !showStartingSelection && (
         <div
-          className={`${uiAnimationClass} ${isEndgame ? "opacity-100" : endgameFadeClass} transition-opacity duration-700 ease-in-out`}
+          className={`${earlyUiAnimationClass} ${isEndgame ? "opacity-100" : endgameFadeClass} transition-opacity duration-700 ease-in-out`}
         >
           <TopMenuBar
+            minimal={isShowcase}
+            contentClassName={uiAnimationClass}
             gameState={gameState}
             currentPlayer={currentPlayer}
             onStandardProjectSelect={onStandardProjectSelect}
@@ -286,7 +297,7 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
       )}
 
       {/* Chat overlay - rendered before sidebars so it's behind them in z-order */}
-      {showUI && !showStartingSelection && chatMessages && onSendChatMessage && (
+      {showHud && !showStartingSelection && chatMessages && onSendChatMessage && (
         <SolarSystemFade>
           <div className={uiAnimationClass}>
             <ChatOverlay
@@ -302,6 +313,7 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
 
       {showUI && (
         <SolarSystemFade>
+          <CardPlayPresentation chatBounds={chatBounds} />
           <CardInspections
             store={inspectionStore}
             hand={inspectionHand}
@@ -315,7 +327,7 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
       {/* Player list — stays visible in solar system view */}
       {showUI && (
         <div
-          className={`${uiAnimationClass} ${endgameFadeClass} transition-opacity duration-700 ease-in-out`}
+          className={`${earlyUiAnimationClass} ${endgameFadeClass} transition-opacity duration-700 ease-in-out`}
         >
           <LeftSidebar
             ref={ref}
@@ -332,13 +344,15 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
             triggeredEffects={triggeredEffects}
             onPlayerClick={onPlayerClick}
             onKickPlayer={handleKickPlayer}
-            onConvertToBot={gameState?.settings?.hasClaudeApiKey ? handleConvertToBot : undefined}
+            onConvertToBot={
+              gameState?.settings?.hasClaudeOAuthToken ? handleConvertToBot : undefined
+            }
           />
         </div>
       )}
 
       {/* Overlay Components — fade out in solar system view */}
-      {showUI && (
+      {showHud && (
         <SolarSystemFade>
           <div
             className={`${uiAnimationClass} ${endgameFadeClass} transition-opacity duration-700 ease-in-out`}
@@ -366,7 +380,7 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
         </SolarSystemFade>
       )}
 
-      {showUI &&
+      {showHud &&
         !showStartingSelection &&
         (gameState?.currentPhase !== GamePhaseComplete ||
           (isEndgame && activeEndgamePanel === "replay")) && (

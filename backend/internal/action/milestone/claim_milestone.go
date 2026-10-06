@@ -34,7 +34,7 @@ func NewClaimMilestoneAction(
 }
 
 // Execute claims a milestone for the player
-func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playerID string, milestoneType string) error {
+func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playerID string, milestoneType string, payment shared.Payment) error {
 	log := a.InitLogger(gameID, playerID).With(slog.String("action", "claim_milestone"), slog.String("milestone", milestoneType))
 	log.Debug("Claiming milestone")
 
@@ -88,12 +88,13 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 		return fmt.Errorf("maximum milestones (%d) already claimed", game.MaxClaimedMilestones)
 	}
 
-	resources := player.Resources().Get()
-	if resources.Credits < def.ClaimCost {
-		log.Warn("Insufficient credits for milestone",
-			slog.Int("cost", def.ClaimCost),
-			slog.Int("player_credits", resources.Credits))
-		return fmt.Errorf("insufficient credits: need %d, have %d", def.ClaimCost, resources.Credits)
+	quote, err := gamecards.QuotePayment(player, g, a.CardRegistry(), gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: def.ClaimCost}, Action: "claim-milestone"})
+	if err != nil {
+		return err
+	}
+	paymentPlan, err := gamecards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
 	}
 
 	if !gamecards.CanClaimMilestone(def, player, g.Board(), a.CardRegistry()) {
@@ -106,9 +107,7 @@ func (a *ClaimMilestoneAction) Execute(ctx context.Context, gameID string, playe
 		return fmt.Errorf("requirements not met: %s (have %d, need %d)", def.Description, progress, required)
 	}
 
-	player.Resources().Add(map[shared.ResourceType]int{
-		shared.ResourceCredit: -def.ClaimCost,
-	})
+	gamecards.ApplyPayment(player, paymentPlan)
 	log.Debug("Deducted milestone cost",
 		slog.Int("cost", def.ClaimCost),
 		slog.Int("remaining_credits", player.Resources().Get().Credits))

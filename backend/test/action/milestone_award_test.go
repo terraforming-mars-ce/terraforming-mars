@@ -27,7 +27,7 @@ func TestClaimMilestone_Terraformer_LogsCorrectName(t *testing.T) {
 
 	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
 	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "terraformer")
+	err := action.Execute(ctx, testGame.ID(), playerID, "terraformer", shared.NativePayment(shared.ResourceCredit, 8))
 	testutil.AssertNoError(t, err, "Claiming terraformer milestone should succeed")
 
 	diffs, err := stateRepo.GetDiff(ctx, testGame.ID())
@@ -67,7 +67,7 @@ func TestClaimMilestone_Gardener_LogsCorrectName(t *testing.T) {
 
 	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
 	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "gardener")
+	err := action.Execute(ctx, testGame.ID(), playerID, "gardener", shared.NativePayment(shared.ResourceCredit, 8))
 	testutil.AssertNoError(t, err, "Claiming gardener milestone should succeed")
 
 	diffs, err := stateRepo.GetDiff(ctx, testGame.ID())
@@ -87,7 +87,7 @@ func TestClaimMilestone_InvalidType(t *testing.T) {
 
 	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
 	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
-	err := action.Execute(ctx, "some-game", playerID, "nonexistent")
+	err := action.Execute(ctx, "some-game", playerID, "nonexistent", shared.NativePayment(shared.ResourceCredit, 8))
 	testutil.AssertError(t, err, "Invalid milestone type should fail")
 }
 
@@ -103,7 +103,7 @@ func TestClaimMilestone_InsufficientCredits(t *testing.T) {
 
 	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
 	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "terraformer")
+	err := action.Execute(ctx, testGame.ID(), playerID, "terraformer", shared.NativePayment(shared.ResourceCredit, 8))
 	testutil.AssertError(t, err, "Claiming milestone with 0 credits should fail")
 }
 
@@ -120,7 +120,7 @@ func TestFundAward_Landlord_LogsCorrectName(t *testing.T) {
 
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "landlord")
+	err := action.Execute(ctx, testGame.ID(), playerID, "landlord", shared.NativePayment(shared.ResourceCredit, 8))
 	testutil.AssertNoError(t, err, "Funding landlord award should succeed")
 
 	diffs, err := stateRepo.GetDiff(ctx, testGame.ID())
@@ -144,7 +144,7 @@ func TestFundAward_Scientist_LogsCorrectName(t *testing.T) {
 
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "scientist")
+	err := action.Execute(ctx, testGame.ID(), playerID, "scientist", shared.NativePayment(shared.ResourceCredit, 8))
 	testutil.AssertNoError(t, err, "Funding scientist award should succeed")
 
 	diffs, err := stateRepo.GetDiff(ctx, testGame.ID())
@@ -164,7 +164,7 @@ func TestFundAward_InvalidType(t *testing.T) {
 
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
-	err := action.Execute(ctx, "some-game", playerID, "nonexistent")
+	err := action.Execute(ctx, "some-game", playerID, "nonexistent", shared.NativePayment(shared.ResourceCredit, 8))
 	testutil.AssertError(t, err, "Invalid award type should fail")
 }
 
@@ -179,7 +179,7 @@ func TestFundAward_InsufficientCredits(t *testing.T) {
 
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "landlord")
+	err := action.Execute(ctx, testGame.ID(), playerID, "landlord", shared.NativePayment(shared.ResourceCredit, 8))
 	testutil.AssertError(t, err, "Funding award with 0 credits should fail")
 }
 

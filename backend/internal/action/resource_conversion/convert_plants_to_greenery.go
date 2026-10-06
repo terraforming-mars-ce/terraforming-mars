@@ -37,7 +37,7 @@ func NewConvertPlantsToGreeneryAction(
 }
 
 // Execute performs the convert plants to greenery action
-func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID string, playerID string, storageSubstitutes map[string]int) error {
+func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID string, playerID string, payment shared.Payment) error {
 	log := a.InitLogger(gameID, playerID).With(slog.String("action", "convert_plants_to_greenery"))
 	log.Debug("Converting plants to greenery")
 
@@ -82,35 +82,15 @@ func (a *ConvertPlantsToGreeneryAction) Execute(ctx context.Context, gameID stri
 		slog.Int("discount", plantDiscount),
 		slog.Int("final_cost", requiredPlants))
 
-	storageValue, err := ValidateAndDeductStorageSubstitutes(player, storageSubstitutes, shared.ResourcePlant, log)
+	quote, err := gamecards.QuotePayment(player, g, a.cardRegistry, gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourcePlant: requiredPlants}, Action: "standard-project", StandardProject: shared.StandardProjectConvertPlantsToGreenery})
 	if err != nil {
-		return fmt.Errorf("storage substitute error: %w", err)
+		return err
 	}
-
-	remainingCost := requiredPlants - storageValue
-	if remainingCost < 0 {
-		remainingCost = 0
+	plan, err := gamecards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
 	}
-
-	resources := player.Resources().Get()
-	if resources.Plants < remainingCost {
-		log.Warn("Player cannot afford plants conversion",
-			slog.Int("required", requiredPlants),
-			slog.Int("storage_value", storageValue),
-			slog.Int("remaining_cost", remainingCost),
-			slog.Int("available_plants", resources.Plants))
-		return fmt.Errorf("insufficient plants: need %d (after %d from storage), have %d", remainingCost, storageValue, resources.Plants)
-	}
-
-	player.Resources().Add(map[shared.ResourceType]int{
-		shared.ResourcePlant: -remainingCost,
-	})
-
-	resources = player.Resources().Get()
-	log.Debug("Deducted plants",
-		slog.Int("plants_spent", remainingCost),
-		slog.Int("storage_value", storageValue),
-		slog.Int("remaining_plants", resources.Plants))
+	gamecards.ApplyPayment(player, plan)
 
 	queue := &shared.PendingTileSelectionQueue{
 		Items:  []string{"greenery"},

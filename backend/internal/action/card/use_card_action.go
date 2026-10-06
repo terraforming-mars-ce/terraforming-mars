@@ -42,8 +42,9 @@ func (a *UseCardActionAction) Execute(
 	targetPlayerID *string,
 	stealSourceCardID *string,
 	selectedAmount *int,
-	actionPayment *gamecards.CardPayment,
+	actionPayment *shared.Payment,
 	reuseSourceCardID *string,
+	cardStorageSources []string,
 ) error {
 	log := a.InitLogger(gameID, playerID).With(
 		slog.String("card_id", cardID),
@@ -95,35 +96,34 @@ func (a *UseCardActionAction) Execute(
 		return err
 	}
 
+	completion := shared.CardActionRef{CardID: cardID, BehaviorIndex: behaviorIndex}
+	var reuseAction *shared.CardAction
 	if reuseSourceCardID != nil {
-		return a.executeReuse(ctx, g, p, cardAction, cardID, behaviorIndex, choiceIndex, cardStorageTargets, targetPlayerID, stealSourceCardID, selectedAmount, actionPayment, *reuseSourceCardID, log)
-	}
-
-	if a.hasManualTrigger(cardAction.Behavior) && cardAction.TimesUsedThisGeneration >= 1 {
-		log.Warn("Action already played this generation",
-			slog.Int("times_used", cardAction.TimesUsedThisGeneration))
+		reuseAction, err = baseaction.ResolveActionReuse(p, *reuseSourceCardID, *cardAction)
+		if err != nil {
+			return err
+		}
+		completion = shared.CardActionRef{CardID: reuseAction.CardID, BehaviorIndex: reuseAction.BehaviorIndex}
+	} else if cardAction.TimesUsedThisGeneration >= 1 {
 		return fmt.Errorf("action already played this generation")
+	}
+	if !gamecards.HasManualTrigger(cardAction.Behavior) || baseaction.IsActionReuse(cardAction.Behavior) {
+		return fmt.Errorf("select a manual action to execute")
+	}
+	if err := baseaction.ValidateCardActionChoice(cardAction.Behavior, choiceIndex, p, g, a.CardRegistry()); err != nil {
+		return err
 	}
 
 	log.Debug("Found card action",
 		slog.String("card_name", cardAction.CardName),
 		slog.Int("times_used_this_generation", cardAction.TimesUsedThisGeneration))
 
-	if choiceIndex != nil && cardAction.Behavior.ChoicePolicy != nil {
-		production := p.Resources().Production()
-		if !shared.IsChoiceValidForPolicy(*choiceIndex, cardAction.Behavior.Choices, cardAction.Behavior.ChoicePolicy, production) {
-			log.Warn("Choice rejected by policy",
-				slog.String("policy_type", string(cardAction.Behavior.ChoicePolicy.Type)),
-				slog.Int("choice_index", *choiceIndex))
-			return fmt.Errorf("choice not valid: policy %q restricts available options", cardAction.Behavior.ChoicePolicy.Type)
-		}
-	}
-
 	applier := gamecards.NewBehaviorApplier(p, g, cardAction.CardName, slog.Default()).
 		WithSourceCardID(cardID).
 		WithSourceBehaviorIndex(behaviorIndex).
+		WithActionCompletion(completion).
 		WithCardRegistry(a.CardRegistry()).
-		WithSourceType(shared.SourceTypeCardAction)
+		WithSourceType(shared.SourceTypeCardAction).WithInputCardIDs(cardStorageSources)
 	if len(cardStorageTargets) > 0 {
 		applier = applier.WithTargetCardIDs(cardStorageTargets)
 	}
@@ -132,6 +132,9 @@ func (a *UseCardActionAction) Execute(
 	}
 	if stealSourceCardID != nil {
 		applier = applier.WithStealSourceCardID(*stealSourceCardID)
+	}
+	if selectedAmount != nil && *selectedAmount < 0 {
+		return fmt.Errorf("selected amount must be nonnegative")
 	}
 	if selectedAmount != nil {
 		applier = applier.WithSelectedAmount(*selectedAmount)
@@ -164,6 +167,15 @@ func (a *UseCardActionAction) Execute(
 		return err
 	}
 
+	if err := gamecards.ValidateRevealOutputs(outputs, g, a.CardRegistry()); err != nil {
+		return err
+	}
+	if err := applier.ValidateResourceOutputs(outputs); err != nil {
+		return err
+	}
+	if issues := baseaction.ValidateBehaviorTileOutputs(shared.CardBehavior{Outputs: outputs}, p, g); len(issues) > 0 {
+		return fmt.Errorf("cannot place tile: %s", issues[0].Message)
+	}
 	if err := applier.ApplyInputs(ctx, inputs); err != nil {
 		log.Error("Failed to apply inputs", slog.Any("error", err))
 		return err
@@ -188,11 +200,14 @@ func (a *UseCardActionAction) Execute(
 		return err
 	}
 
-	a.incrementUsageCounts(p, cardID, behaviorIndex, log)
+	a.incrementUsageCounts(p, completion.CardID, completion.BehaviorIndex, log)
 
 	a.ConsumePlayerAction(g, log)
 
 	description := fmt.Sprintf("Used %s action", cardAction.CardName)
+	if reuseAction != nil {
+		description = fmt.Sprintf("Used %s to reuse %s action", reuseAction.CardName, cardAction.CardName)
+	}
 	var displayData *game.LogDisplayData
 	if cardFromRegistry, err := a.CardRegistry().GetByID(cardID); err == nil {
 		displayData = baseaction.BuildCardDisplayData(cardFromRegistry, shared.SourceTypeCardAction)
@@ -247,165 +262,6 @@ func (a *UseCardActionAction) incrementUsageCounts(
 
 	// Update player actions
 	p.Actions().SetActions(actions)
-}
-
-func (a *UseCardActionAction) executeReuse(
-	ctx context.Context,
-	g *game.Game,
-	p *player.Player,
-	targetAction *shared.CardAction,
-	targetCardID string,
-	targetBehaviorIndex int,
-	choiceIndex *int,
-	cardStorageTargets []string,
-	targetPlayerID *string,
-	stealSourceCardID *string,
-	selectedAmount *int,
-	actionPayment *gamecards.CardPayment,
-	reuseSourceCardID string,
-	log *slog.Logger,
-) error {
-	log = log.With(slog.String("reuse_source_card_id", reuseSourceCardID))
-	log.Debug("Executing action reuse")
-
-	reuseAction, err := a.findActionReuseAction(p, reuseSourceCardID, log)
-	if err != nil {
-		return err
-	}
-
-	if reuseAction.TimesUsedThisGeneration >= 1 {
-		log.Warn("Reuse action already played this generation")
-		return fmt.Errorf("reuse action already played this generation")
-	}
-
-	if targetCardID == reuseSourceCardID {
-		log.Warn("Cannot reuse own action-reuse ability")
-		return fmt.Errorf("cannot reuse own action-reuse ability")
-	}
-
-	if !a.hasManualTrigger(targetAction.Behavior) {
-		log.Warn("Target action is not a manual action")
-		return fmt.Errorf("target action is not a manual action")
-	}
-
-	if targetAction.TimesUsedThisGeneration < 1 {
-		log.Warn("Target action has not been used this generation")
-		return fmt.Errorf("target action has not been used this generation")
-	}
-
-	if choiceIndex != nil && targetAction.Behavior.ChoicePolicy != nil {
-		production := p.Resources().Production()
-		if !shared.IsChoiceValidForPolicy(*choiceIndex, targetAction.Behavior.Choices, targetAction.Behavior.ChoicePolicy, production) {
-			log.Warn("Choice rejected by policy",
-				slog.String("policy_type", string(targetAction.Behavior.ChoicePolicy.Type)),
-				slog.Int("choice_index", *choiceIndex))
-			return fmt.Errorf("choice not valid: policy %q restricts available options", targetAction.Behavior.ChoicePolicy.Type)
-		}
-	}
-
-	applier := gamecards.NewBehaviorApplier(p, g, targetAction.CardName, slog.Default()).
-		WithSourceCardID(targetCardID).
-		WithSourceBehaviorIndex(targetBehaviorIndex).
-		WithCardRegistry(a.CardRegistry()).
-		WithSourceType(shared.SourceTypeCardAction)
-	if len(cardStorageTargets) > 0 {
-		applier = applier.WithTargetCardIDs(cardStorageTargets)
-	}
-	if targetPlayerID != nil {
-		applier = applier.WithTargetPlayerID(*targetPlayerID)
-	}
-	if stealSourceCardID != nil {
-		applier = applier.WithStealSourceCardID(*stealSourceCardID)
-	}
-	if selectedAmount != nil {
-		applier = applier.WithSelectedAmount(*selectedAmount)
-	}
-	if actionPayment != nil {
-		applier = applier.WithActionPayment(actionPayment)
-	}
-
-	inputs, outputs := targetAction.Behavior.ExtractInputsOutputs(choiceIndex)
-
-	if hasVariableAmount(inputs, outputs) && selectedAmount == nil {
-		log.Warn("Variable-amount action requires selectedAmount")
-		return fmt.Errorf("must select an amount for this action")
-	}
-
-	if hasStealFromAnyCard(outputs) && stealSourceCardID == nil {
-		log.Warn("Reuse steal action requires a target card")
-		return fmt.Errorf("steal action requires a target card; select a card or cancel")
-	}
-
-	if err := validateOutputAffordability(p, outputs); err != nil {
-		log.Warn("Cannot afford negative resource outputs", slog.Any("error", err))
-		return err
-	}
-
-	if err := applier.ApplyInputs(ctx, inputs); err != nil {
-		log.Error("Failed to apply inputs for reused action", slog.Any("error", err))
-		return err
-	}
-
-	hasPending, err := applier.ApplyCardDrawOutputs(ctx, outputs)
-	if err != nil {
-		log.Error("Failed to apply card draw outputs for reused action", slog.Any("error", err))
-		return err
-	}
-	if hasPending {
-		log.Debug("Card draw selection pending for reused action")
-		return nil
-	}
-
-	calculatedOutputs, err := applier.ApplyOutputsAndGetCalculated(ctx, outputs)
-	if err != nil {
-		log.Error("Failed to apply outputs for reused action", slog.Any("error", err))
-		return err
-	}
-
-	a.incrementUsageCounts(p, reuseSourceCardID, reuseAction.BehaviorIndex, log)
-
-	a.ConsumePlayerAction(g, log)
-
-	description := fmt.Sprintf("Used %s to reuse %s action", reuseAction.CardName, targetAction.CardName)
-	var displayData *game.LogDisplayData
-	if cardFromRegistry, err := a.CardRegistry().GetByID(targetCardID); err == nil {
-		displayData = baseaction.BuildCardDisplayData(cardFromRegistry, shared.SourceTypeCardAction)
-	}
-	a.WriteStateLogFull(ctx, g, targetAction.CardName, shared.SourceTypeCardAction, p.ID(), description, choiceIndex, calculatedOutputs, displayData)
-
-	log.Info("Action reused",
-		slog.String("reuse_source", reuseAction.CardName),
-		slog.String("target_action", targetAction.CardName))
-	return nil
-}
-
-func (a *UseCardActionAction) findActionReuseAction(
-	p *player.Player,
-	reuseSourceCardID string,
-	log *slog.Logger,
-) (*shared.CardAction, error) {
-	actions := p.Actions().List()
-	for i := range actions {
-		if actions[i].CardID != reuseSourceCardID {
-			continue
-		}
-		for _, output := range actions[i].Behavior.Outputs {
-			if output.GetResourceType() == shared.ResourceActionReuse {
-				return &actions[i], nil
-			}
-		}
-	}
-	log.Error("Action-reuse action not found", slog.String("card_id", reuseSourceCardID))
-	return nil, fmt.Errorf("action-reuse action not found on card %s", reuseSourceCardID)
-}
-
-func (a *UseCardActionAction) hasManualTrigger(behavior shared.CardBehavior) bool {
-	for _, trigger := range behavior.Triggers {
-		if trigger.Type == shared.TriggerTypeManual {
-			return true
-		}
-	}
-	return false
 }
 
 func hasVariableAmount(inputs, outputs []shared.BehaviorCondition) bool {

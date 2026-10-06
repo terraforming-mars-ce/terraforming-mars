@@ -75,14 +75,6 @@ const World3DSunPage: React.FC = () => {
       </div>
 
       <div style={{ marginBottom: "16px" }}>
-        <ColorSwatch
-          label="Water Color"
-          color={settings.waterColor}
-          onChange={(c) => updateSettings({ waterColor: c })}
-        />
-      </div>
-
-      <div style={{ marginBottom: "16px" }}>
         <label
           style={{
             color: "#3b82f6",

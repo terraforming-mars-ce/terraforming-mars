@@ -6,103 +6,119 @@ import (
 
 	gameAction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/game/shared"
+	"terraforming-mars-backend/internal/service/bot"
 	"terraforming-mars-backend/test/testutil"
 )
 
-func TestAddBot_Success(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
-	testGame.UpdateSettings(context.Background(), shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		ClaudeModel:  "sonnet",
-		CardPacks:    []string{"base-game"},
+type fakeBotLifecycle struct {
+	catalog  *bot.PersonaCatalog
+	prepared []string
+}
+
+func newFakeBotLifecycle(t *testing.T) *fakeBotLifecycle {
+	t.Helper()
+	catalog, err := bot.NewPersonaCatalog([]bot.Persona{
+		{ID: "rival", Label: "Rival", Voice: "competitive", Names: []string{"SHODAN", "Skynet"}},
+		{ID: "optimist", Label: "Optimist", Voice: "cheerful", Names: []string{"Wall-E", "R2-D2"}},
 	})
+	testutil.AssertNoError(t, err, "persona catalog should be valid")
+	return &fakeBotLifecycle{catalog: catalog}
+}
 
-	logger := testutil.TestLogger()
-	cardRegistry := testutil.CreateTestCardRegistry()
-	action := gameAction.NewAddBotAction(repo, cardRegistry, nil, nil, logger)
+func (f *fakeBotLifecycle) AssignIdentity(seed uint64, takenNames []string) (string, string) {
+	return f.catalog.AssignIdentity(seed, takenNames)
+}
 
-	result, err := action.Execute(context.Background(), testGame.ID(), "", "", "")
+func (f *fakeBotLifecycle) PrepareBot(_, playerID string) {
+	f.prepared = append(f.prepared, playerID)
+}
+
+func lobbyWithToken(t *testing.T, players, maxPlayers int) (*gameAction.AddBotAction, *fakeBotLifecycle, string) {
+	t.Helper()
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, players, testutil.NewMockBroadcaster())
+	testGame.UpdateSettings(context.Background(), shared.GameSettings{
+		MaxPlayers:       maxPlayers,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
+	})
+	bots := newFakeBotLifecycle(t)
+	return gameAction.NewAddBotAction(repo, testutil.CreateTestCardRegistry(), bots, testutil.TestLogger()), bots, testGame.ID()
+}
+
+func TestAddBot_Success(t *testing.T) {
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+	testGame.UpdateSettings(context.Background(), shared.GameSettings{
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
+	})
+	bots := newFakeBotLifecycle(t)
+	action := gameAction.NewAddBotAction(repo, testutil.CreateTestCardRegistry(), bots, testutil.TestLogger())
+
+	result, err := action.Execute(context.Background(), testGame.ID(), "player-1")
 	testutil.AssertNoError(t, err, "Add bot should succeed")
-	testutil.AssertTrue(t, result.PlayerID != "", "Bot player ID should not be empty")
 
-	// Verify bot is in game
-	players := testGame.GetAllPlayers()
-	testutil.AssertEqual(t, 2, len(players), "Should have 2 players")
-
-	// Find the bot player
 	botPlayer, err := testGame.GetPlayer(result.PlayerID)
 	testutil.AssertNoError(t, err, "Should find bot player")
 	testutil.AssertTrue(t, botPlayer.IsBot(), "Player should be a bot")
 	testutil.AssertTrue(t, botPlayer.Name() != "", "Bot should have a name")
+	testutil.AssertTrue(t, botPlayer.BotPersona() == "rival" || botPlayer.BotPersona() == "optimist", "Bot should have a persona from the catalog")
+	testutil.AssertEqual(t, 1, len(bots.prepared), "Bot credential check should be started")
+	testutil.AssertEqual(t, result.PlayerID, bots.prepared[0], "The new bot should be prepared")
 }
 
-func TestAddBot_NoAPIKey(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
-	_ = testGame
+func TestAddBot_RejectsNonHost(t *testing.T) {
+	action, bots, gameID := lobbyWithToken(t, 2, 4)
 
-	logger := testutil.TestLogger()
-	cardRegistry := testutil.CreateTestCardRegistry()
-	action := gameAction.NewAddBotAction(repo, cardRegistry, nil, nil, logger)
+	_, err := action.Execute(context.Background(), gameID, "player-2")
+	testutil.AssertError(t, err, "Only the host may add bots")
+	testutil.AssertEqual(t, 0, len(bots.prepared), "No bot should be prepared")
+}
 
-	_, err := action.Execute(context.Background(), testGame.ID(), "", "", "")
-	testutil.AssertError(t, err, "Add bot should fail without API key")
+func TestAddBot_NoToken(t *testing.T) {
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+	action := gameAction.NewAddBotAction(repo, testutil.CreateTestCardRegistry(), newFakeBotLifecycle(t), testutil.TestLogger())
+
+	_, err := action.Execute(context.Background(), testGame.ID(), "player-1")
+	testutil.AssertError(t, err, "Add bot should fail without a token")
 }
 
 func TestAddBot_GameNotInLobby(t *testing.T) {
 	g, repo, cardRegistry, _, _ := testutil.SetupTwoPlayerGame(t)
 	g.UpdateSettings(context.Background(), shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       4,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
+	action := gameAction.NewAddBotAction(repo, cardRegistry, newFakeBotLifecycle(t), testutil.TestLogger())
 
-	logger := testutil.TestLogger()
-	action := gameAction.NewAddBotAction(repo, cardRegistry, nil, nil, logger)
-
-	_, err := action.Execute(context.Background(), g.ID(), "", "", "")
+	_, err := action.Execute(context.Background(), g.ID(), g.HostPlayerID())
 	testutil.AssertError(t, err, "Add bot should fail when game is not in lobby")
 }
 
 func TestAddBot_GameFull(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 4, broadcaster)
-	testGame.UpdateSettings(context.Background(), shared.GameSettings{
-		MaxPlayers:   4,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
-	})
+	action, _, gameID := lobbyWithToken(t, 4, 4)
 
-	logger := testutil.TestLogger()
-	cardRegistry := testutil.CreateTestCardRegistry()
-	action := gameAction.NewAddBotAction(repo, cardRegistry, nil, nil, logger)
-
-	_, err := action.Execute(context.Background(), testGame.ID(), "", "", "")
+	_, err := action.Execute(context.Background(), gameID, "player-1")
 	testutil.AssertError(t, err, "Add bot should fail when game is full")
 }
 
 func TestAddBot_UniqueNames(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
 	testGame.UpdateSettings(context.Background(), shared.GameSettings{
-		MaxPlayers:   5,
-		ClaudeAPIKey: "test-key",
-		CardPacks:    []string{"base-game"},
+		MaxPlayers:       5,
+		ClaudeOAuthToken: "test-token",
+		CardPacks:        []string{"base-game"},
 	})
+	action := gameAction.NewAddBotAction(repo, testutil.CreateTestCardRegistry(), newFakeBotLifecycle(t), testutil.TestLogger())
 
-	logger := testutil.TestLogger()
-	cardRegistry := testutil.CreateTestCardRegistry()
-	action := gameAction.NewAddBotAction(repo, cardRegistry, nil, nil, logger)
-
-	// Add 3 bots
 	names := make(map[string]bool)
 	for i := 0; i < 3; i++ {
-		result, err := action.Execute(context.Background(), testGame.ID(), "", "", "")
-		testutil.AssertNoError(t, err, "Bot should be added successfully")
-		bot, _ := testGame.GetPlayer(result.PlayerID)
-		testutil.AssertTrue(t, !names[bot.Name()], "Bot names should be unique")
-		names[bot.Name()] = true
+		result, err := action.Execute(context.Background(), testGame.ID(), "player-1")
+		testutil.AssertNoError(t, err, "Bot should be added")
+		botPlayer, err := testGame.GetPlayer(result.PlayerID)
+		testutil.AssertNoError(t, err, "Should find bot player")
+		testutil.AssertFalse(t, names[botPlayer.Name()], "Bot names should be unique")
+		names[botPlayer.Name()] = true
 	}
 }

@@ -40,9 +40,10 @@ func TestPlayCardAction_AsteroidRemovesPlantsFromTargetPlayer(t *testing.T) {
 	})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 14}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 14)
 	targetID := target.ID()
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &targetID, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &targetID, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Asteroid")
 
 	// Target should have 5 - 3 = 2 plants
@@ -79,10 +80,11 @@ func TestPlayCardAction_AsteroidSoloMode_SkipsTargetPlayer(t *testing.T) {
 	player.Hand().AddCard(asteroidID)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 14}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 14)
 
 	// No targetPlayerID = solo mode, skip the any-player output
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), asteroidID, payment, nil, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), asteroidID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Asteroid in solo mode")
 
 	// Player's plants should be unchanged (the any-player effect does nothing in solo)
@@ -124,9 +126,10 @@ func TestPlayCardAction_AsteroidEmptyTargetID_SkipsAnyPlayer(t *testing.T) {
 	})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 14}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 14)
 	emptyTargetID := ""
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &emptyTargetID, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &emptyTargetID, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Asteroid with empty target ID")
 
 	// Empty target ID should skip the any-player effect; nobody loses plants
@@ -168,10 +171,11 @@ func TestPlayCardAction_HiredRaidersEmptyTargetID_SkipsSteal(t *testing.T) {
 	})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 1}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 1)
 	choiceIndex := 0
 	emptyTargetID := ""
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), hiredRaidersID, payment, &choiceIndex, nil, &emptyTargetID, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), hiredRaidersID, payment, &choiceIndex, nil, &emptyTargetID, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Hired Raiders with empty target ID")
 
 	// Empty target ID should skip the steal effect on both sides
@@ -210,9 +214,10 @@ func TestPlayCardAction_AsteroidPartialRemoval(t *testing.T) {
 	})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 14}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 14)
 	targetID := target.ID()
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &targetID, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &targetID, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Asteroid with partial removal")
 
 	// Target should have 0 plants (had 1, Asteroid removes up to 3)
@@ -244,9 +249,10 @@ func TestPlayCardAction_InvalidTargetPlayerID(t *testing.T) {
 	attacker.Hand().AddCard(asteroidID)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 14}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 14)
 	invalidID := "non-existent-player"
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &invalidID, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &invalidID, nil, nil)
 	testutil.AssertError(t, err, "Should fail with invalid target player ID")
 }
 
@@ -285,9 +291,10 @@ func TestPlayCardAction_AsteroidMiningConsortiumDecreasesTargetProduction(t *tes
 	})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 13}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 13)
 	targetID := target.ID()
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), amcID, payment, nil, nil, &targetID, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), amcID, payment, nil, nil, &targetID, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Asteroid Mining Consortium")
 
 	// Target's titanium production should decrease by 1 (from 2 to 1)
@@ -329,10 +336,11 @@ func TestPlayCardAction_HiredRaidersStealsSteelFromTarget(t *testing.T) {
 	})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 1}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 1)
 	targetID := target.ID()
 	choiceIndex := 0
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), hiredRaidersID, payment, &choiceIndex, nil, &targetID, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), hiredRaidersID, payment, &choiceIndex, nil, &targetID, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Hired Raiders")
 
 	targetResources := target.Resources().Get()
@@ -367,9 +375,10 @@ func TestPlayCardAction_HiredRaidersSoloMode(t *testing.T) {
 	player.Hand().AddCard(hiredRaidersID)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 1}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 1)
 	choiceIndex := 0
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), hiredRaidersID, payment, &choiceIndex, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), hiredRaidersID, payment, &choiceIndex, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Hired Raiders in solo mode")
 
 	resources := player.Resources().Get()
@@ -407,10 +416,11 @@ func TestPlayCardAction_StealPartialAmount(t *testing.T) {
 	})
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 1}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 1)
 	targetID := target.ID()
 	choiceIndex := 0
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), hiredRaidersID, payment, &choiceIndex, nil, &targetID, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), hiredRaidersID, payment, &choiceIndex, nil, &targetID, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Hired Raiders with partial steal")
 
 	targetResources := target.Resources().Get()
@@ -461,9 +471,10 @@ func TestGreatEscarpmentConsortium_StealSteelProduction(t *testing.T) {
 	targetProdBefore := target.Resources().Production().Steel
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 6}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 6)
 	targetID := target.ID()
-	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), gecID, payment, nil, nil, &targetID, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), gecID, payment, nil, nil, &targetID, nil, nil)
 	testutil.AssertNoError(t, err, "Great Escarpment Consortium should play successfully")
 
 	attackerProdAfter := attacker.Resources().Production().Steel
@@ -504,9 +515,10 @@ func TestGreatEscarpmentConsortium_SoloModeSkipsAnyPlayer(t *testing.T) {
 	steelProdBefore := p.Resources().Production().Steel
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 6}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 6)
 	// No target player ID = solo mode
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), gecID, payment, nil, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), gecID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Great Escarpment Consortium should work in solo mode")
 
 	steelProdAfter := p.Resources().Production().Steel

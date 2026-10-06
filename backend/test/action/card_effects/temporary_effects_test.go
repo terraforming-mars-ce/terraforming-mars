@@ -66,8 +66,8 @@ func TestIndenturedWorkers_DiscountAppliedToNextCard(t *testing.T) {
 
 	// Play Indentured Workers (cost 0)
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err := playAction.Execute(ctx, testGame.ID(), player.ID(), indenturedWorkersID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err := playAction.Execute(ctx, testGame.ID(), player.ID(), indenturedWorkersID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Indentured Workers")
 
 	// Verify: temporary discount effect is registered
@@ -87,8 +87,8 @@ func TestIndenturedWorkers_DiscountAppliedToNextCard(t *testing.T) {
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
 
 	// Play Power Plant (cost 4, but with 8 discount -> effective cost 0)
-	payment = cardAction.PaymentRequest{Credits: 0}
-	err = playAction.Execute(ctx, testGame.ID(), player.ID(), powerPlantID, payment, nil, nil, nil, nil)
+	payment = shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err = playAction.Execute(ctx, testGame.ID(), player.ID(), powerPlantID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Power Plant with Indentured Workers discount")
 
 	// Verify: temporary effect is removed after playing the next card
@@ -126,14 +126,12 @@ func TestIndenturedWorkers_DiscountRemovedAfterOneCard(t *testing.T) {
 
 	// Play Indentured Workers
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	err := playAction.Execute(ctx, testGame.ID(), player.ID(), indenturedWorkersID,
-		cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
+	err := playAction.Execute(ctx, testGame.ID(), player.ID(), indenturedWorkersID, shared.Payment{Allocations: []shared.PaymentAllocation{}}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Indentured Workers")
 
 	// Play Power Plant -> discount should apply
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
-	err = playAction.Execute(ctx, testGame.ID(), player.ID(), powerPlantID,
-		cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
+	err = playAction.Execute(ctx, testGame.ID(), player.ID(), powerPlantID, shared.Payment{Allocations: []shared.PaymentAllocation{}}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Power Plant with discount")
 
 	// Verify: discount is gone for the third card
@@ -187,8 +185,8 @@ func TestSpecialDesign_LenienceAppliedToNextCard(t *testing.T) {
 
 	// Play Special Design
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	err = playAction.Execute(ctx, testGame.ID(), player.ID(), specialDesignID,
-		cardAction.PaymentRequest{Credits: 4}, nil, nil, nil, nil)
+	err = playAction.Execute(ctx, testGame.ID(), player.ID(), specialDesignID, shared.NativePayment(shared.
+		ResourceCredit, 4), nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Special Design")
 
 	// Verify: lenience effect is registered
@@ -197,18 +195,18 @@ func TestSpecialDesign_LenienceAppliedToNextCard(t *testing.T) {
 
 	// Verify: lenience is calculated
 	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
-	lenience := calculator.CalculateGlobalParameterLenience(player, "temperature")
-	testutil.AssertEqual(t, 2, lenience, "Should have 2 lenience from Special Design")
+	lenience := calculator.CalculateGlobalParameterRequirementOffset(player, "temperature")
+	testutil.AssertEqual(t, 4, lenience, "Special Design should allow 4 degrees")
 
-	// Now the card should be playable: temp -26, requirement -24 with lenience 2 -> effective min -26
+	// Two temperature steps lower the effective minimum from -24 to -28 degrees.
 	state = baseaction.CalculatePlayerCardState(tempReqCard, player, testGame, cardRegistry)
 	playable := len(state.Errors) == 0
-	testutil.AssertTrue(t, playable, "Card should be playable with Special Design lenience (temp -26, need -24, lenience 2 -> effective -26)")
+	testutil.AssertTrue(t, playable, "Card should be playable with Special Design lenience (temp -26, need -24, allowance 4 -> effective -28)")
 
 	// Play the temperature requirement card
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
-	err = playAction.Execute(ctx, testGame.ID(), player.ID(), tempReqTestID,
-		cardAction.PaymentRequest{Credits: 5}, nil, nil, nil, nil)
+	err = playAction.Execute(ctx, testGame.ID(), player.ID(), tempReqTestID, shared.NativePayment(shared.
+		ResourceCredit, 5), nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should be able to play with Special Design lenience")
 
 	// Verify: temporary effect is removed after playing the next card
@@ -256,8 +254,8 @@ func TestSpecialDesign_LenienceWithMaxRequirement(t *testing.T) {
 
 	// Play Special Design
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	err = playAction.Execute(ctx, testGame.ID(), player.ID(), specialDesignID,
-		cardAction.PaymentRequest{Credits: 4}, nil, nil, nil, nil)
+	err = playAction.Execute(ctx, testGame.ID(), player.ID(), specialDesignID, shared.NativePayment(shared.
+		ResourceCredit, 4), nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Special Design")
 
 	// With lenience 2: effective max = 5 + 2 = 7. Oxygen 7 <= 7 -> playable
@@ -267,8 +265,8 @@ func TestSpecialDesign_LenienceWithMaxRequirement(t *testing.T) {
 
 	// Play the card
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
-	err = playAction.Execute(ctx, testGame.ID(), player.ID(), oxygenTestID,
-		cardAction.PaymentRequest{Credits: 5}, nil, nil, nil, nil)
+	err = playAction.Execute(ctx, testGame.ID(), player.ID(), oxygenTestID, shared.NativePayment(shared.
+		ResourceCredit, 5), nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Should be able to play with Special Design lenience")
 }
 
@@ -298,8 +296,7 @@ func TestTemporaryEffects_ClearedOnGenerationAdvance(t *testing.T) {
 
 	// Play Indentured Workers
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	err := playAction.Execute(ctx, testGame.ID(), player.ID(), indenturedWorkersID,
-		cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
+	err := playAction.Execute(ctx, testGame.ID(), player.ID(), indenturedWorkersID, shared.Payment{Allocations: []shared.PaymentAllocation{}}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Indentured Workers")
 
 	// Verify effect is registered
@@ -344,14 +341,13 @@ func TestIndenturedWorkers_WithExistingPermanentDiscount(t *testing.T) {
 
 	// Play Space Station (permanent space discount of 2)
 	playAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	err := playAction.Execute(ctx, testGame.ID(), player.ID(), spaceStationID,
-		cardAction.PaymentRequest{Credits: 10}, nil, nil, nil, nil)
+	err := playAction.Execute(ctx, testGame.ID(), player.ID(), spaceStationID, shared.NativePayment(shared.
+		ResourceCredit, 10), nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Space Station")
 
 	// Play Indentured Workers (temporary discount of 8)
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
-	err = playAction.Execute(ctx, testGame.ID(), player.ID(), indenturedWorkersID,
-		cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
+	err = playAction.Execute(ctx, testGame.ID(), player.ID(), indenturedWorkersID, shared.Payment{Allocations: []shared.PaymentAllocation{}}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Indentured Workers")
 
 	// Verify: both effects exist (1 permanent + 1 temporary)
@@ -366,8 +362,7 @@ func TestIndenturedWorkers_WithExistingPermanentDiscount(t *testing.T) {
 
 	// Play Space Mirrors -> temporary effect consumed
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player.ID(), 2), "SetCurrentTurn failed")
-	err = playAction.Execute(ctx, testGame.ID(), player.ID(), spaceMirrorsID,
-		cardAction.PaymentRequest{Credits: 0}, nil, nil, nil, nil)
+	err = playAction.Execute(ctx, testGame.ID(), player.ID(), spaceMirrorsID, shared.Payment{Allocations: []shared.PaymentAllocation{}}, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Space Mirrors")
 
 	// Verify: only permanent effect remains

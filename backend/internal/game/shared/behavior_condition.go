@@ -24,14 +24,16 @@ func (b *ConditionBase) GetAmount() int                { return b.Amount }
 func (b *ConditionBase) GetTarget() string             { return b.Target }
 func (b *ConditionBase) SetAmount(a int)               { b.Amount = a }
 
-// CopyCondition creates a deep copy of a BehaviorCondition.
-func CopyCondition(bc BehaviorCondition) BehaviorCondition {
+// CloneCondition creates a deep copy of a BehaviorCondition.
+func CloneCondition(bc BehaviorCondition) BehaviorCondition {
 	return bc.deepCopyCondition()
 }
 
 // GetPerCondition extracts the Per field from a typed condition, or nil.
 func GetPerCondition(bc BehaviorCondition) *PerCondition {
 	switch c := bc.(type) {
+	case *CardOperationCondition:
+		return c.Per
 	case *BasicResourceCondition:
 		return c.Per
 	case *ProductionCondition:
@@ -45,6 +47,20 @@ func GetPerCondition(bc BehaviorCondition) *PerCondition {
 	default:
 		return nil
 	}
+}
+
+// CalculateScaledAmount applies a per-condition divisor and caps matched groups before multiplying.
+// Conditions without a positive divisor retain their base amount.
+func CalculateScaledAmount(output BehaviorCondition, count int) int {
+	per := GetPerCondition(output)
+	if per == nil || per.Amount <= 0 {
+		return output.GetAmount()
+	}
+	groups := count / per.Amount
+	if basic, ok := output.(*BasicResourceCondition); ok && basic.MaxTrigger != nil {
+		groups = min(groups, *basic.MaxTrigger)
+	}
+	return output.GetAmount() * groups
 }
 
 // IsVariableAmount returns whether a condition has VariableAmount set.
@@ -66,6 +82,8 @@ func IsVariableAmount(bc BehaviorCondition) bool {
 // IsOptional returns whether a condition has Optional set.
 func IsOptional(bc BehaviorCondition) bool {
 	switch c := bc.(type) {
+	case *ColonyCondition:
+		return c.Optional
 	case *BasicResourceCondition:
 		return c.Optional
 	case *TilePlacementCondition:
@@ -104,6 +122,10 @@ func GetTemporary(bc BehaviorCondition) string {
 // GetSelectors extracts the Selectors field from a typed condition, or nil.
 func GetSelectors(bc BehaviorCondition) []Selector {
 	switch c := bc.(type) {
+	case *PaymentSubstituteCondition:
+		return c.Selectors
+	case *CopyCondition:
+		return c.Selectors
 	case *CardOperationCondition:
 		return c.Selectors
 	case *CardStorageCondition:

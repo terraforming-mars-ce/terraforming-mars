@@ -74,11 +74,13 @@ export const TILE_ICONS: { [key: string]: string } = {
   "city-placed": assetUrl("icons/placements/city", 128), // For triggered effects
   "volcano-tile": assetUrl("icons/placements/volcano", 128),
   "volcano-placement": assetUrl("icons/placements/volcano", 128),
+  "colony-tile-add": assetUrl("icons/placements/colony", 128),
   colony: assetUrl("icons/placements/colony", 128),
   "colony-count": assetUrl("icons/placements/colony", 128),
   "colony-bonus": assetUrl("icons/placements/colony", 128),
   greenery: assetUrl("icons/placements/greenery-no-oxygen", 128),
   trade: assetUrl("icons/placements/trade", 128),
+  "trade-fleet": assetUrl("icons/placements/trade", 128),
   "colony-track-step": assetUrl("icons/placements/colony", 128),
 };
 

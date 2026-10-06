@@ -58,11 +58,13 @@ func RegisterHandlers(
 	confirmCardDrawAction *confirmAction.ConfirmCardDrawAction,
 	confirmCardDiscardAction *confirmAction.ConfirmCardDiscardAction,
 	confirmBehaviorChoiceAction *confirmAction.ConfirmBehaviorChoiceAction,
-	confirmStealTargetAction *confirmAction.ConfirmStealTargetAction,
+	confirmResourceRemovalAction *confirmAction.ConfirmResourceRemovalAction,
 	confirmColonyResourceAction *confirmAction.ConfirmColonyResourceAction,
 	confirmAwardFundAction *confirmAction.ConfirmAwardFundAction,
 	confirmColonyPlacementAction *confirmAction.ConfirmColonyPlacementAction,
 	confirmFreeTradeAction *confirmAction.ConfirmFreeTradeAction,
+	confirmEffectSelectionAction *confirmAction.ConfirmEffectSelectionAction,
+	confirmCardRevealAction *confirmAction.ConfirmCardRevealAction,
 	playerDisconnectedAction *connAction.PlayerDisconnectedAction,
 	playerTakeoverAction *connAction.PlayerTakeoverAction,
 	kickPlayerAction *connAction.KickPlayerAction,
@@ -73,6 +75,10 @@ func RegisterHandlers(
 	kickSpectatorAction *connAction.KickSpectatorAction,
 	sendChatMessageAction *connAction.SendChatMessageAction,
 	convertToBotAction *gameAction.ConvertToBotAction,
+	bots interface {
+		game.BotRetrier
+		game.BotInspector
+	},
 	claimMilestoneAction *milestoneAction.ClaimMilestoneAction,
 	fundAwardAction *awardAction.FundAwardAction,
 	colonyTradeAction *colonyAction.TradeAction,
@@ -87,7 +93,10 @@ func RegisterHandlers(
 	adminSetCorporationAction *adminAction.SetCorporationAction,
 	adminStartTileSelectionAction *adminAction.StartTileSelectionAction,
 	adminSetTRAction *adminAction.SetTRAction,
+	adminRestartGameAction *adminAction.RestartGameAction,
+	adminSetActionsRemainingAction *adminAction.SetActionsRemainingAction,
 ) {
+	hub.RegisterHandler("quote-payment", &paymentQuoteHandler{broadcaster: broadcaster})
 	log := logger.Get()
 	log.Debug("Registering WebSocket handlers")
 
@@ -152,6 +161,7 @@ func RegisterHandlers(
 
 	confirmCardDrawHandler := confirmation.NewConfirmCardDrawHandler(confirmCardDrawAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionCardDrawConfirmed, confirmCardDrawHandler)
+	hub.RegisterHandler(dto.MessageTypeActionAcknowledgeCardReceipt, confirmCardDrawHandler)
 
 	confirmCardDiscardHandler := confirmation.NewConfirmCardDiscardHandler(confirmCardDiscardAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionCardDiscardConfirmed, confirmCardDiscardHandler)
@@ -159,8 +169,8 @@ func RegisterHandlers(
 	confirmBehaviorChoiceHandler := confirmation.NewConfirmBehaviorChoiceHandler(confirmBehaviorChoiceAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionBehaviorChoiceConfirmed, confirmBehaviorChoiceHandler)
 
-	confirmStealTargetHandler := confirmation.NewConfirmStealTargetHandler(confirmStealTargetAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeActionConfirmStealTarget, confirmStealTargetHandler)
+	confirmResourceRemovalHandler := confirmation.NewConfirmResourceRemovalHandler(confirmResourceRemovalAction, broadcaster)
+	hub.RegisterHandler(dto.MessageTypeActionConfirmResourceRemoval, confirmResourceRemovalHandler)
 
 	confirmColonyResourceHandler := confirmation.NewConfirmColonyResourceHandler(confirmColonyResourceAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConfirmColonyResource, confirmColonyResourceHandler)
@@ -170,6 +180,9 @@ func RegisterHandlers(
 
 	confirmColonyPlacementHandler := confirmation.NewConfirmColonyPlacementHandler(confirmColonyPlacementAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConfirmColonyPlacement, confirmColonyPlacementHandler)
+
+	hub.RegisterHandler(dto.MessageTypeActionConfirmCardReveal, confirmation.NewConfirmCardRevealHandler(confirmCardRevealAction, broadcaster))
+	hub.RegisterHandler(dto.MessageTypeActionConfirmEffectSelection, confirmation.NewConfirmEffectSelectionHandler(confirmEffectSelectionAction, broadcaster))
 
 	confirmFreeTradeHandler := confirmation.NewConfirmFreeTradeHandler(confirmFreeTradeAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConfirmFreeTrade, confirmFreeTradeHandler)
@@ -207,6 +220,10 @@ func RegisterHandlers(
 	convertToBotHandler := game.NewConvertToBotHandler(convertToBotAction, broadcaster, hub)
 	hub.RegisterHandler(dto.MessageTypeConvertToBot, convertToBotHandler)
 
+	hub.RegisterHandler(dto.MessageTypeBotRetry, game.NewBotRetryHandler(bots))
+	hub.RegisterHandler(dto.MessageTypeBotInspect, game.NewBotInspectHandler(bots))
+	hub.RegisterHandler(dto.MessageTypeEmoteSend, connection.NewEmoteSendHandler(broadcaster))
+
 	claimMilestoneHandler := milestone.NewClaimMilestoneHandler(claimMilestoneAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionClaimMilestone, claimMilestoneHandler)
 
@@ -232,6 +249,8 @@ func RegisterHandlers(
 		adminSetCorporationAction,
 		adminStartTileSelectionAction,
 		adminSetTRAction,
+		adminRestartGameAction,
+		adminSetActionsRemainingAction,
 		broadcaster,
 	)
 	hub.RegisterHandler(dto.MessageTypeAdminCommand, adminCommandHandler)

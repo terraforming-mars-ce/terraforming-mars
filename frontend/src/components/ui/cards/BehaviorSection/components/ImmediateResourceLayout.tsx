@@ -1,1721 +1,242 @@
+import { BehaviorArrow, BehaviorSign } from "./BehaviorIcon";
 import React from "react";
-import GameIcon from "../../../display/GameIcon.tsx";
-import ResourceDisplay from "./ResourceDisplay.tsx";
-import BehaviorIcon from "./BehaviorIcon.tsx";
-import CardIcon from "./CardIcon.tsx";
-import OrChip from "./OrChip.tsx";
-import Slash from "./Slash.tsx";
-import { getIconPath, getTagIconPath } from "@/utils/iconStore.ts";
-import { analyzeCardOutputs } from "../utils/displayAnalysis.ts";
-import ChoiceRequirementBox from "./ChoiceRequirementBox.tsx";
-import { CalculatedOutputDto, CardBehaviorDto } from "@/types/generated/api-types.ts";
+import ResourceDisplay from "./ResourceDisplay";
+import CardIcon, { TaggedCardIcon } from "./CardIcon";
+import OrChip from "./OrChip";
+import Slash from "./Slash";
+import ChoiceRequirementBox from "./ChoiceRequirementBox";
+import { useBehaviorLayout } from "./BehaviorContainer";
+import {
+  analyzeCardOutputs,
+  coordinateDisplayModes,
+  orderIndependentResources,
+} from "../utils/displayAnalysis";
+import type { IconDisplayInfo, TileScaleInfo } from "../types";
+import type { CalculatedOutputDto, CardBehaviorDto } from "@/types/generated/api-types";
 import {
   type ResourceCondition,
-  isProduction as isProductionType,
+  isProduction,
   isCardOperation,
-  isGlobalParameter,
-  isTilePlacement as isTilePlacementType,
-} from "@/types/resourceConditions.ts";
-
-interface IconDisplayInfo {
-  resourceType: string;
-  amount: number;
-  displayMode: "individual" | "number";
-  iconCount: number;
-}
-
-interface LayoutPlan {
-  rows: IconDisplayInfo[][];
-  separators: Array<{ position: number; type: string }>;
-  totalRows: number;
-}
-
-interface TileScaleInfo {
-  scale: 1 | 1.25 | 1.5 | 2;
-  tileType: string | null;
-}
+  getPer,
+  getSelectors,
+  isBasicResource,
+  getVariableAmount,
+} from "@/types/resourceConditions";
 
 interface ImmediateResourceLayoutProps {
   behavior: CardBehaviorDto;
-  layoutPlan: LayoutPlan;
   isResourceAffordable: (resource: ResourceCondition, isInput: boolean) => boolean;
-  analyzeResourceDisplayWithConstraints: (
-    resource: ResourceCondition,
-    availableSpace: number,
-    forceCompact: boolean,
-  ) => IconDisplayInfo;
   tileScaleInfo: TileScaleInfo;
-  renderIcon: (
-    resourceType: string,
-    isProduction: boolean,
-    isAttack: boolean,
-    context: "standalone" | "action" | "production" | "default",
-    isAffordable: boolean,
-  ) => React.ReactNode;
   computedOutputs?: CalculatedOutputDto[];
 }
 
-const ImmediateResourceLayout: React.FC<ImmediateResourceLayoutProps> = ({
+const productionClass =
+  "border border-[rgba(160,110,60,0.5)] bg-[linear-gradient(135deg,rgba(160,110,60,0.4),rgba(139,89,42,0.35))] px-1.5 py-[3px] max-w-full";
+
+export default function ImmediateResourceLayout({
   behavior,
-  layoutPlan: _layoutPlan,
   isResourceAffordable,
-  analyzeResourceDisplayWithConstraints,
   tileScaleInfo,
-  renderIcon,
   computedOutputs,
-}) => {
-  const isGlobalParamOrTile = (output: ResourceCondition): boolean => {
-    return isGlobalParameter(output) || isTilePlacementType(output);
-  };
+}: ImmediateResourceLayoutProps) {
+  const { compact } = useBehaviorLayout();
+  const choices = behavior.choices ?? [];
+  const numberedChoices = choices.some((choice) =>
+    choice.outputs?.some(
+      (resource) => !resource.type.startsWith("credit") && Math.abs(resource.amount ?? 1) > 3,
+    ),
+  );
 
-  const coordinateDisplayModes = (
-    resources: ResourceCondition[],
-  ): Map<ResourceCondition, IconDisplayInfo> => {
-    const displayInfos = resources.map((r) => ({
-      resource: r,
-      info: analyzeResourceDisplayWithConstraints(r, 7, false),
-    }));
+  const renderResource = (
+    resource: ResourceCondition,
+    displayInfo: IconDisplayInfo,
+    grouped = false,
+    input = false,
+  ) => (
+    <ResourceDisplay
+      resource={resource}
+      displayInfo={displayInfo}
+      isInput={input}
+      isGroupedWithOtherNegatives={grouped}
+      context="standalone"
+      isAffordable={isResourceAffordable(resource, input)}
+      tileScaleInfo={tileScaleInfo}
+      computedOutputs={computedOutputs}
+    />
+  );
 
-    const hasNumberMode = displayInfos.some((d) => d.info.displayMode === "number");
-
-    if (hasNumberMode) {
-      return new Map(
-        displayInfos.map(({ resource, info }) => {
-          const amount = Math.abs(resource.amount ?? 1);
-          if (amount === 1) {
-            return [resource, info];
-          } else {
-            return [resource, { ...info, displayMode: "number", iconCount: 1 }];
-          }
-        }),
-      );
-    }
-
-    return new Map(displayInfos.map(({ resource, info }) => [resource, info]));
-  };
-
-  const renderProductionGroup = (
-    negative: ResourceCondition[],
-    positive: ResourceCondition[],
-  ): React.ReactNode => {
-    return (
-      <div
-        className={`flex flex-col gap-[3px] justify-center ${negative.length > 0 ? "items-start" : "items-center"}`}
-      >
-        {negative.length > 0 && (
-          <div className="flex gap-[3px] items-center justify-start">
-            <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-              -
-            </span>
-            {negative.map((output, index: number) => {
-              const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-              return (
-                <React.Fragment key={`neg-prod-${index}`}>
-                  <ResourceDisplay
-                    displayInfo={displayInfo}
-                    isInput={false}
-                    resource={output}
-                    isGroupedWithOtherNegatives={true}
-                    context="standalone"
-                    isAffordable={isResourceAffordable(output, false)}
-                    tileScaleInfo={tileScaleInfo}
-                    computedOutputs={computedOutputs}
-                  />
-                </React.Fragment>
-              );
-            })}
-          </div>
-        )}
-
-        {positive.length > 0 && (
-          <>
-            {negative.length === 0 && positive.length === 2 ? (
-              positive.map((output, index: number) => {
-                const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                return (
-                  <div
-                    key={`pos-prod-row-${index}`}
-                    className="flex gap-[3px] items-center justify-center"
-                  >
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={false}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
-                  </div>
-                );
-              })
-            ) : (
-              <div className="flex gap-[3px] items-center justify-start">
-                {negative.length > 0 && (
-                  <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                    +
-                  </span>
-                )}
-                {positive.map((output, index: number) => {
-                  const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                  return (
-                    <React.Fragment key={`pos-prod-${index}`}>
-                      <ResourceDisplay
-                        displayInfo={displayInfo}
-                        isInput={false}
-                        resource={output}
-                        isGroupedWithOtherNegatives={false}
-                        context="standalone"
-                        isAffordable={isResourceAffordable(output, false)}
-                        tileScaleInfo={tileScaleInfo}
-                        computedOutputs={computedOutputs}
-                      />
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+  const renderSignedGroup = (resources: ResourceCondition[], production: boolean) => {
+    const negative = resources.filter((resource) => (resource.amount ?? 1) < 0);
+    const positive = resources.filter((resource) => (resource.amount ?? 1) >= 0);
+    const paired = negative.length > 0 && positive.length > 0;
+    const modes = coordinateDisplayModes(resources, compact, paired);
+    const numberedResources = resources.filter(
+      (resource) =>
+        !resource.type.startsWith("credit") && modes.get(resource)?.displayMode === "number",
     );
-  };
-
-  const renderNonProductionGroup = (
-    negative: ResourceCondition[],
-    positive: ResourceCondition[],
-  ): React.ReactNode => {
+    const quantityWidth =
+      paired && numberedResources.length
+        ? Math.max(
+            ...numberedResources.map(
+              (resource) =>
+                String(getVariableAmount(resource) ? "X" : Math.abs(resource.amount ?? 1)).length,
+            ),
+          )
+        : 0;
+    const quantityColumns = quantityWidth
+      ? ({
+          "--behavior-quantity-width": `${quantityWidth}ch`,
+          "--behavior-credit-inset": `calc(${quantityWidth}ch + 3px)`,
+        } as React.CSSProperties)
+      : undefined;
+    const rows = negative.length ? [negative, positive].filter((row) => row.length) : [positive];
     return (
-      <div
-        className={`flex flex-col gap-[3px] justify-center ${negative.length > 0 && positive.length > 0 ? "items-start" : "items-center"}`}
-      >
-        {negative.length > 0 && (
-          <div className="flex gap-[3px] items-center justify-start">
-            {negative.length > 1 && (
-              <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                -
-              </span>
-            )}
-            {negative.map((output, index: number) => {
-              const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-              const isGrouped = negative.length > 1;
-              return (
-                <React.Fragment key={`neg-${index}`}>
-                  <ResourceDisplay
-                    displayInfo={displayInfo}
-                    isInput={false}
-                    resource={output}
-                    isGroupedWithOtherNegatives={isGrouped}
-                    context="standalone"
-                    isAffordable={isResourceAffordable(output, false)}
-                    tileScaleInfo={tileScaleInfo}
-                    computedOutputs={computedOutputs}
-                  />
-                </React.Fragment>
-              );
-            })}
-          </div>
-        )}
-
-        {positive.length > 0 && (
-          <>
-            {negative.length === 0 && positive.length === 2 ? (
-              positive.map((output, index: number) => {
-                const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                return (
-                  <div
-                    key={`pos-row-${index}`}
-                    className="flex gap-[3px] items-center justify-center"
-                  >
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={false}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
-                  </div>
-                );
-              })
-            ) : (
-              <div className="flex gap-[3px] items-center justify-start">
-                {negative.length > 0 && (
-                  <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                    +
-                  </span>
-                )}
-                {positive.map((output, index: number) => {
-                  const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                  return (
-                    <React.Fragment key={`pos-${index}`}>
-                      <ResourceDisplay
-                        displayInfo={displayInfo}
-                        isInput={false}
-                        resource={output}
-                        isGroupedWithOtherNegatives={false}
-                        context="standalone"
-                        isAffordable={isResourceAffordable(output, false)}
-                        tileScaleInfo={tileScaleInfo}
-                        computedOutputs={computedOutputs}
-                      />
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    );
-  };
-
-  const isGlobalParameterLenience =
-    behavior.outputs?.some((output) => output.type === "global-parameter-lenience") ?? false;
-
-  if (
-    !isGlobalParameterLenience &&
-    behavior.triggers &&
-    behavior.triggers.length > 0 &&
-    behavior.triggers.some((trigger) => trigger.condition) &&
-    behavior.outputs &&
-    behavior.outputs.length > 0
-  ) {
-    return (
-      <div className="flex gap-[3px] items-center justify-center">
-        {behavior.triggers
-          .filter((trigger) => trigger.condition)
-          .map((trigger, triggerIndex: number) => {
-            const condition = trigger.condition!;
-            const selectorTags = condition.selectors?.flatMap((s) => s.tags ?? []) ?? [];
-            if (condition.type === "card-played" && selectorTags.length > 0) {
-              return (
-                <React.Fragment key={`trigger-condition-${triggerIndex}`}>
-                  {selectorTags.map((tag, tagIndex: number) => (
-                    <React.Fragment key={`trigger-tag-${triggerIndex}-${tagIndex}`}>
-                      {tagIndex > 0 && (
-                        <span className="text-white font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                          /
-                        </span>
-                      )}
-                      <BehaviorIcon
-                        resourceType={`${tag}-tag`}
-                        isProduction={false}
-                        isAttack={false}
-                        context="standalone"
-                        isAffordable={true}
-                        tileScaleInfo={tileScaleInfo}
-                      />
-                    </React.Fragment>
-                  ))}
-                </React.Fragment>
-              );
-            } else {
-              return (
-                <React.Fragment key={`trigger-condition-${triggerIndex}`}>
-                  <BehaviorIcon
-                    resourceType={condition.type}
-                    isProduction={false}
-                    isAttack={false}
-                    context="standalone"
-                    isAffordable={true}
-                    tileScaleInfo={tileScaleInfo}
-                  />
-                </React.Fragment>
-              );
-            }
-          })}
-        <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[20px] z-[1]">
-          :
-        </span>
-        {behavior.outputs.map((output, outputIndex: number) => {
-          const displayInfo = analyzeResourceDisplayWithConstraints(output, 6, false);
-          return (
-            <React.Fragment key={`trigger-output-${outputIndex}`}>
-              <ResourceDisplay
-                displayInfo={displayInfo}
-                isInput={false}
-                resource={output}
-                isGroupedWithOtherNegatives={false}
-                context="standalone"
-                isAffordable={isResourceAffordable(output, false)}
-                tileScaleInfo={tileScaleInfo}
-                computedOutputs={computedOutputs}
-              />
-            </React.Fragment>
-          );
-        })}
-      </div>
-    );
-  }
-
-  if (
-    behavior.choices &&
-    behavior.choices.length > 0 &&
-    behavior.outputs &&
-    behavior.outputs.length > 0
-  ) {
-    // Calculate total icons across all OR choices
-    const totalChoiceIcons = behavior.choices.reduce((sum: number, choice) => {
-      const choiceIcons = (choice.outputs || []).reduce((choiceSum: number, output) => {
-        return choiceSum + Math.abs(output.amount || 1);
-      }, 0);
-      return sum + choiceIcons;
-    }, 0);
-
-    const MAX_OR_CHOICE_ICONS = 5;
-    const forceNumberMode = totalChoiceIcons > MAX_OR_CHOICE_ICONS;
-
-    return (
-      <div className="flex flex-col gap-[6px] items-center justify-start w-full py-1">
-        <div className="flex gap-2 items-center justify-center flex-nowrap">
-          {behavior.choices.map((choice, choiceIndex: number) => {
-            const choiceOutputs = choice.outputs || [];
-            const allChoiceOutputsAreProduction =
-              choiceOutputs.length > 0 && choiceOutputs.every((output) => isProductionType(output));
-
-            return (
-              <React.Fragment key={`choice-compact-${choiceIndex}`}>
-                {choiceIndex > 0 && (behavior.choices!.length >= 3 ? <Slash /> : <OrChip />)}
-                <ChoiceRequirementBox requirements={choice.requirements}>
-                  {allChoiceOutputsAreProduction ? (
-                    <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-                      {choiceOutputs.map((output, outputIndex: number) => {
-                        const displayInfo = analyzeResourceDisplayWithConstraints(
-                          output,
-                          7,
-                          forceNumberMode,
-                        );
-                        return (
-                          <ResourceDisplay
-                            key={`choice-${choiceIndex}-output-${outputIndex}`}
-                            displayInfo={displayInfo}
-                            isInput={false}
-                            resource={output}
-                            isGroupedWithOtherNegatives={false}
-                            context="production"
-                            isAffordable={isResourceAffordable(output, false)}
-                            tileScaleInfo={tileScaleInfo}
-                            computedOutputs={computedOutputs}
-                          />
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="flex gap-[3px] items-center">
-                      {choiceOutputs.map((output, outputIndex: number) => {
-                        const displayInfo = analyzeResourceDisplayWithConstraints(
-                          output,
-                          7,
-                          forceNumberMode,
-                        );
-                        return (
-                          <ResourceDisplay
-                            key={`choice-${choiceIndex}-output-${outputIndex}`}
-                            displayInfo={displayInfo}
-                            isInput={false}
-                            resource={output}
-                            isGroupedWithOtherNegatives={false}
-                            context="standalone"
-                            isAffordable={isResourceAffordable(output, false)}
-                            tileScaleInfo={tileScaleInfo}
-                            computedOutputs={computedOutputs}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
-                </ChoiceRequirementBox>
-              </React.Fragment>
-            );
-          })}
-        </div>
-
-        {(() => {
-          const productionOutputs = behavior.outputs.filter((output) => isProductionType(output));
-          const nonProductionOutputs = behavior.outputs.filter(
-            (output) => !isProductionType(output),
-          );
-
-          // If all outputs are production, wrap them in brown box with row separation
-          if (productionOutputs.length > 0 && nonProductionOutputs.length === 0) {
-            const negativeProduction = productionOutputs.filter(
-              (output) => (output.amount || 0) < 0,
-            );
-            const positiveProduction = productionOutputs.filter(
-              (output) => (output.amount || 0) > 0,
-            );
-
-            return (
-              <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-                <div
-                  className={`flex flex-col gap-[3px] justify-center ${negativeProduction.length > 0 ? "items-start" : "items-center"}`}
-                >
-                  {negativeProduction.length > 0 && (
-                    <div className="flex gap-[3px] items-center">
-                      <span className="text-white font-bold text-base [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                        -
-                      </span>
-                      {negativeProduction.map((output, index: number) => {
-                        const displayInfo = analyzeResourceDisplayWithConstraints(
-                          { ...output, amount: Math.abs(output.amount) },
-                          7,
-                          false,
-                        );
-                        return (
-                          <React.Fragment key={`neg-prod-${index}`}>
-                            <ResourceDisplay
-                              displayInfo={displayInfo}
-                              isInput={false}
-                              resource={{
-                                ...output,
-                                amount: Math.abs(output.amount),
-                              }}
-                              isGroupedWithOtherNegatives={false}
-                              context="standalone"
-                              isAffordable={isResourceAffordable(output, false)}
-                              tileScaleInfo={tileScaleInfo}
-                              computedOutputs={computedOutputs}
-                            />
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {positiveProduction.length > 0 && (
-                    <div className="flex gap-[3px] items-center">
-                      {negativeProduction.length > 0 && (
-                        <span className="text-white font-bold text-base [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                          +
-                        </span>
-                      )}
-                      {positiveProduction.map((output, index: number) => {
-                        const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                        return (
-                          <React.Fragment key={`pos-prod-${index}`}>
-                            <ResourceDisplay
-                              displayInfo={displayInfo}
-                              isInput={false}
-                              resource={output}
-                              isGroupedWithOtherNegatives={false}
-                              context="standalone"
-                              isAffordable={isResourceAffordable(output, false)}
-                              tileScaleInfo={tileScaleInfo}
-                              computedOutputs={computedOutputs}
-                            />
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <div className="flex flex-wrap gap-[3px] items-center justify-center">
-              {behavior.outputs.map((output, index: number) => {
-                const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                return (
-                  <React.Fragment key={`output-${index}`}>
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={false}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
+      <div className={production ? productionClass : "max-w-full"} style={quantityColumns}>
+        <div className="flex flex-col items-stretch gap-[3px]">
+          {rows.map((row, index) => (
+            <div key={index} className="flex items-center gap-[3px] max-w-full">
+              {negative.length > 0 && <BehaviorSign positive={index > 0} />}
+              <div className="flex flex-wrap items-center gap-[3px]">
+                {orderIndependentResources(row, compact).map((resource, resourceIndex) => (
+                  <React.Fragment key={resourceIndex}>
+                    {renderResource(resource, modes.get(resource)!, negative.length > 0)}
                   </React.Fragment>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          );
-        })()}
+          ))}
+        </div>
       </div>
     );
-  }
+  };
 
-  if (
-    (!behavior.outputs || behavior.outputs.length === 0) &&
-    behavior.choices &&
-    behavior.choices.length > 0
-  ) {
-    const allChoicesAreProduction = behavior.choices.every((choice) => {
-      if (!choice.outputs || choice.outputs.length === 0) return false;
-      return choice.outputs.every((output) => isProductionType(output));
-    });
-
-    if (allChoicesAreProduction) {
-      return (
-        <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-          <div className="flex items-center gap-2">
-            {behavior.choices.map((choice, choiceIndex: number) => (
-              <React.Fragment key={`prod-choice-${choiceIndex}`}>
-                {choiceIndex > 0 && (behavior.choices!.length >= 3 ? <Slash /> : <OrChip />)}
-                <ChoiceRequirementBox requirements={choice.requirements}>
-                  <div className="flex gap-[3px] items-center">
-                    {choice.outputs!.map((output, outputIndex: number) => {
-                      const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                      return (
-                        <React.Fragment key={`prod-choice-${choiceIndex}-output-${outputIndex}`}>
-                          <ResourceDisplay
-                            displayInfo={displayInfo}
-                            isInput={false}
-                            resource={output}
-                            isGroupedWithOtherNegatives={false}
-                            context="standalone"
-                            isAffordable={isResourceAffordable(output, false)}
-                            tileScaleInfo={tileScaleInfo}
-                            computedOutputs={computedOutputs}
-                          />
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-                </ChoiceRequirementBox>
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      );
+  const renderOutputs = (outputs: ResourceCondition[]) => {
+    const production = outputs.filter((resource) => isProduction(resource) && !getPer(resource));
+    const perProduction = outputs.filter((resource) => isProduction(resource) && getPer(resource));
+    const cards = outputs.filter(
+      (resource) =>
+        isCardOperation(resource) && !getPer(resource) && !getSelectors(resource)?.length,
+    );
+    const others = outputs.filter(
+      (resource) => !isProduction(resource) && !cards.includes(resource),
+    );
+    const basic = others.filter(isBasicResource);
+    const hasResourcePair =
+      basic.some((resource) => resource.amount < 0) &&
+      basic.some((resource) => resource.amount > 0);
+    const independent = hasResourcePair
+      ? others.filter((resource) => !basic.includes(resource as (typeof basic)[number]))
+      : others;
+    const modes = coordinateDisplayModes(independent, compact);
+    if (numberedChoices && choices.some((choice) => choice.outputs === outputs)) {
+      for (const [resource, info] of modes) {
+        if (Math.abs(resource.amount ?? 1) > 1) {
+          modes.set(resource, { ...info, displayMode: "number", iconCount: 1 });
+        }
+      }
     }
-
-    // Handle non-production choices (e.g., Sabotage, Virus - attack cards)
-    // These use "OR" chip separator with grey background and red glow on icons
+    const cardGroups = analyzeCardOutputs(cards);
     return (
-      <div className="flex flex-wrap gap-2 items-center justify-center">
-        {behavior.choices.map((choice, choiceIndex: number) => (
-          <React.Fragment key={`attack-choice-${choiceIndex}`}>
-            {choiceIndex > 0 && (behavior.choices!.length >= 3 ? <Slash /> : <OrChip />)}
-            <ChoiceRequirementBox requirements={choice.requirements}>
-              {choice.outputs &&
-                choice.outputs.map((output, outputIndex: number) => {
-                  const amount = Math.abs(output.amount || 1);
-                  const resourceType = output.type;
-                  const isNegative = (output.amount || 0) < 0;
-                  const isAttack =
-                    output.target === "any-player" ||
-                    output.target === "any-card" ||
-                    output.target?.startsWith("steal-");
-
-                  if (resourceType === "credit") {
-                    return (
-                      <div
-                        key={`attack-choice-${choiceIndex}-output-${outputIndex}`}
-                        className="flex items-center gap-0.5"
-                      >
-                        {isNegative && (
-                          <span className="relative z-10 text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                            -
-                          </span>
-                        )}
-                        <GameIcon
-                          iconType="credit"
-                          amount={amount}
-                          size="small"
-                          isAttack={isAttack}
-                        />
-                      </div>
-                    );
-                  }
-
-                  // Card resources use CardIcon for proper rendering (no "1" prefix for amount=1)
-                  const isCardResourceType =
-                    resourceType === "card-draw" ||
-                    resourceType === "card-peek" ||
-                    resourceType === "card-take" ||
-                    resourceType === "card-buy" ||
-                    resourceType === "card-discard";
-
-                  if (isCardResourceType) {
-                    const badgeType =
-                      resourceType === "card-peek"
-                        ? "peek"
-                        : resourceType === "card-take"
-                          ? "take"
-                          : resourceType === "card-buy"
-                            ? "buy"
-                            : resourceType === "card-discard"
-                              ? "discard"
-                              : "none";
-                    const isCardAttack =
-                      output.target === "any-player" ||
-                      output.target === "all-opponents" ||
-                      output.target?.startsWith("steal-");
-                    return (
-                      <CardIcon
-                        key={`attack-choice-${choiceIndex}-output-${outputIndex}`}
-                        amount={amount}
-                        badgeType={badgeType}
-                        isAffordable={isResourceAffordable(output, false)}
-                        isAttack={isCardAttack}
-                        totalCardTypes={1}
-                      />
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={`attack-choice-${choiceIndex}-output-${outputIndex}`}
-                      className="flex gap-[3px] items-center"
-                    >
-                      <span className="text-[13px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
-                        {isNegative ? `-${amount}` : amount}
-                      </span>
-                      <BehaviorIcon
-                        resourceType={resourceType}
-                        isProduction={false}
-                        isAttack={isAttack}
-                        context="standalone"
-                        isAffordable={isResourceAffordable(output, false)}
-                        tileScaleInfo={tileScaleInfo}
-                      />
-                    </div>
-                  );
-                })}
-            </ChoiceRequirementBox>
+      <div className="behavior-flow flex items-center justify-center gap-x-3 gap-y-1 max-w-full">
+        {production.length > 0 && renderSignedGroup(production, true)}
+        {perProduction.map((resource, index) => (
+          <React.Fragment key={`per-${index}`}>
+            {renderResource(resource, coordinateDisplayModes([resource], compact).get(resource)!)}
+          </React.Fragment>
+        ))}
+        {hasResourcePair && renderSignedGroup(basic, false)}
+        {orderIndependentResources(independent, compact).map((resource, index) => (
+          <React.Fragment key={`resource-${index}`}>
+            {renderResource(resource, modes.get(resource)!)}
+          </React.Fragment>
+        ))}
+        {cardGroups.map((card, index) => (
+          <React.Fragment key={`cards-${index}`}>
+            {index > 0 &&
+              cardGroups[index - 1].badgeType === "discard" &&
+              card.badgeType !== "discard" && <BehaviorArrow />}
+            <CardIcon
+              {...card}
+              isAffordable={cards.every((resource) => isResourceAffordable(resource, false))}
+            />
           </React.Fragment>
         ))}
       </div>
     );
-  }
+  };
 
-  if (!behavior.outputs || behavior.outputs.length === 0) return null;
+  const sharedSelectors = choices.map((choice) => {
+    const resources = choice.outputs ?? [];
+    if (!resources.length || resources.some((resource) => resource.target !== "any-card")) {
+      return undefined;
+    }
+    const tags = getSelectors(resources[0])?.flatMap((selector) => selector.tags ?? []) ?? [];
+    if (
+      !tags.length ||
+      resources.some(
+        (resource) =>
+          JSON.stringify(getSelectors(resource)) !== JSON.stringify(getSelectors(resources[0])),
+      )
+    ) {
+      return undefined;
+    }
+    return { tags, selectors: getSelectors(resources[0]) };
+  });
+  const commonTarget = sharedSelectors[0];
+  const shareTarget =
+    !!commonTarget &&
+    sharedSelectors.every((target) => JSON.stringify(target) === JSON.stringify(commonTarget));
 
-  const consolidatedCards = analyzeCardOutputs(behavior.outputs);
-
-  const isCardResource = (output: ResourceCondition): boolean => isCardOperation(output);
-
-  const productionOutputs = behavior.outputs.filter((output) => isProductionType(output));
-  const nonProductionOutputs = behavior.outputs.filter(
-    (output) => !isProductionType(output) && !isCardResource(output),
-  );
-
-  const perConditionProduction = productionOutputs.filter((output) => output.per);
-  const regularProduction = productionOutputs.filter((output) => !output.per);
-
-  const negativeProduction = regularProduction.filter((output) => (output.amount ?? 1) < 0);
-  const positiveProduction = regularProduction.filter((output) => (output.amount ?? 1) >= 0);
-
-  const negativeOutputs = nonProductionOutputs.filter((output) => (output.amount ?? 1) < 0);
-  const positiveOutputs = nonProductionOutputs.filter((output) => (output.amount ?? 1) >= 0);
-
-  const globalParamOutputs = nonProductionOutputs.filter(isGlobalParamOrTile);
-  const regularResourceOutputs = nonProductionOutputs.filter(
-    (output) => !isGlobalParamOrTile(output),
-  );
-
-  // For the default rendering path: separate regular resources from global params/tiles
-  // so that global params are rendered neutrally without +/- grouping
-  const negativeRegular = regularResourceOutputs.filter((output) => (output.amount ?? 1) < 0);
-  const positiveRegular = regularResourceOutputs.filter((output) => (output.amount ?? 1) >= 0);
-
-  const hasGlobalParamsOrTiles = globalParamOutputs.length > 0;
-  const hasRegularResources = regularResourceOutputs.length > 0;
-  const shouldUseTwoColumnLayout =
-    nonProductionOutputs.length >= 3 &&
-    hasGlobalParamsOrTiles &&
-    hasRegularResources &&
-    regularProduction.length === 0 &&
-    perConditionProduction.length === 0;
-
-  const shouldUseTwoRowLayout =
-    shouldUseTwoColumnLayout &&
-    globalParamOutputs.length >= 1 &&
-    regularResourceOutputs.length >= 1;
-
-  if (shouldUseTwoRowLayout) {
-    const attackResources = regularResourceOutputs.filter(
-      (output) => output.target === "any-player",
-    );
-    const positiveRegular = regularResourceOutputs.filter(
-      (output) => output.target !== "any-player" && (output.amount ?? 1) >= 0,
-    );
-    const negativeRegular = regularResourceOutputs.filter(
-      (output) => output.target !== "any-player" && (output.amount ?? 1) < 0,
-    );
-
-    // Coordinate display modes for consistency across all regular resources
-    const regularDisplayModes = coordinateDisplayModes([
-      ...attackResources,
-      ...negativeRegular,
-      ...positiveRegular,
-    ]);
-
-    return (
-      <div className="flex flex-col gap-[9px] items-center justify-center max-w-full">
-        <div className="flex gap-3 items-center justify-center">
-          {attackResources.map((output, index: number) => {
-            const displayInfo = regularDisplayModes.get(output)!;
-            return (
-              <React.Fragment key={`attack-${index}`}>
-                <ResourceDisplay
-                  displayInfo={displayInfo}
-                  isInput={false}
-                  resource={output}
-                  isGroupedWithOtherNegatives={false}
-                  context="standalone"
-                  isAffordable={isResourceAffordable(output, false)}
-                  tileScaleInfo={tileScaleInfo}
-                  computedOutputs={computedOutputs}
-                />
-              </React.Fragment>
-            );
-          })}
-          {negativeRegular.length > 0 && (
-            <>
-              {negativeRegular.length > 1 && (
-                <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                  -
-                </span>
-              )}
-              {negativeRegular.map((output, index: number) => {
-                const displayInfo = regularDisplayModes.get(output)!;
-                const isGrouped = negativeRegular.length > 1;
-                return (
-                  <React.Fragment key={`neg-reg-${index}`}>
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={isGrouped}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </>
-          )}
-          {positiveRegular.map((output, index: number) => {
-            const displayInfo = regularDisplayModes.get(output)!;
-            return (
-              <React.Fragment key={`pos-reg-${index}`}>
-                <ResourceDisplay
-                  displayInfo={displayInfo}
-                  isInput={false}
-                  resource={output}
-                  isGroupedWithOtherNegatives={false}
-                  context="standalone"
-                  isAffordable={isResourceAffordable(output, false)}
-                  tileScaleInfo={tileScaleInfo}
-                  computedOutputs={computedOutputs}
-                />
-              </React.Fragment>
-            );
-          })}
-        </div>
-
-        <div className="flex gap-[3px] items-center justify-center">
-          {[...globalParamOutputs]
-            .sort((a, b) => {
-              // TR should appear last in global param group
-              const typeA = a.type || "";
-              const typeB = b.type || "";
-              if (typeA === "tr") return 1;
-              if (typeB === "tr") return -1;
-              return 0;
-            })
-            .map((output, index: number) => {
-              const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-              return (
-                <React.Fragment key={`global-${index}`}>
-                  <ResourceDisplay
-                    displayInfo={displayInfo}
-                    isInput={false}
-                    resource={output}
-                    isGroupedWithOtherNegatives={false}
-                    context="standalone"
-                    isAffordable={isResourceAffordable(output, false)}
-                    tileScaleInfo={tileScaleInfo}
-                    computedOutputs={computedOutputs}
-                  />
-                </React.Fragment>
-              );
-            })}
-        </div>
-      </div>
-    );
-  }
-
-  if (shouldUseTwoColumnLayout) {
-    const attackResources = regularResourceOutputs.filter(
-      (output) => output.target === "any-player",
-    );
-    const positiveRegular = regularResourceOutputs.filter(
-      (output) => output.target !== "any-player" && (output.amount ?? 1) >= 0,
-    );
-    const negativeRegular = regularResourceOutputs.filter(
-      (output) => output.target !== "any-player" && (output.amount ?? 1) < 0,
-    );
-
-    const regularDisplayModes = coordinateDisplayModes([
-      ...attackResources,
-      ...negativeRegular,
-      ...positiveRegular,
-    ]);
-
-    return (
-      <div className="flex gap-2 items-center justify-center max-w-full">
-        <div className="flex flex-col gap-[6px] items-center justify-center">
-          {attackResources.length > 0 && (
-            <div className="flex gap-[3px] items-center justify-center">
-              {attackResources.map((output, index: number) => {
-                const displayInfo = regularDisplayModes.get(output)!;
-                return (
-                  <React.Fragment key={`attack-${index}`}>
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={false}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          )}
-          {/* Negative resources */}
-          {negativeRegular.length > 0 && (
-            <div className="flex gap-[3px] items-center justify-center">
-              {negativeRegular.length > 1 && (
-                <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                  -
-                </span>
-              )}
-              {negativeRegular.map((output, index: number) => {
-                const displayInfo = regularDisplayModes.get(output)!;
-                const isGrouped = negativeRegular.length > 1;
-                return (
-                  <React.Fragment key={`neg-reg-${index}`}>
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={isGrouped}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          )}
-          {/* Positive resources */}
-          {positiveRegular.length > 0 && (
-            <div className="flex gap-[3px] items-center justify-center">
-              {positiveRegular.map((output, index: number) => {
-                const displayInfo = regularDisplayModes.get(output)!;
-                return (
-                  <React.Fragment key={`pos-reg-${index}`}>
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={false}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-[3px] items-center justify-center">
-          {[...globalParamOutputs]
-            .sort((a, b) => {
-              // TR should appear last in global param group
-              const typeA = a.type || "";
-              const typeB = b.type || "";
-              if (typeA === "tr") return 1;
-              if (typeB === "tr") return -1;
-              return 0;
-            })
-            .map((output, index: number) => {
-              const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-              return (
-                <React.Fragment key={`global-${index}`}>
-                  <ResourceDisplay
-                    displayInfo={displayInfo}
-                    isInput={false}
-                    resource={output}
-                    isGroupedWithOtherNegatives={false}
-                    context="standalone"
-                    isAffordable={isResourceAffordable(output, false)}
-                    tileScaleInfo={tileScaleInfo}
-                    computedOutputs={computedOutputs}
-                  />
-                </React.Fragment>
-              );
-            })}
-        </div>
-      </div>
-    );
-  }
-
-  const groups = [
-    { content: regularProduction, hasGlobalParamOrTile: false },
-    {
-      content: perConditionProduction,
-      hasGlobalParamOrTile: perConditionProduction.some(isGlobalParamOrTile),
-    },
-    {
-      content: nonProductionOutputs,
-      hasGlobalParamOrTile: nonProductionOutputs.some(isGlobalParamOrTile),
-    },
-  ].filter((group) => group.content.length > 0);
-
-  if (groups.length === 3) {
-    let rightGroupIndex = groups.findIndex((g) => g.hasGlobalParamOrTile);
-    if (rightGroupIndex === -1) rightGroupIndex = 2;
-
-    const leftGroups = groups.filter((_, i) => i !== rightGroupIndex);
-    const rightGroup = groups[rightGroupIndex];
-
-    const leftHasRegularProduction = leftGroups.some((g) => g.content === regularProduction);
-    const leftHasPerConditionProduction = leftGroups.some(
-      (g) => g.content === perConditionProduction,
-    );
-    const combineProductionInLeft = leftHasRegularProduction && leftHasPerConditionProduction;
-
-    return (
-      <div className="flex gap-2 items-center justify-center max-w-full">
-        <div className="flex flex-col gap-[3px] items-center justify-center">
-          {combineProductionInLeft ? (
-            <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-              <div
-                className={`flex flex-col gap-[3px] justify-center ${negativeProduction.length > 0 ? "items-start" : "items-center"}`}
-              >
-                {negativeProduction.length > 0 && (
-                  <div className="flex gap-[3px] items-center justify-start">
-                    <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                      -
-                    </span>
-                    {negativeProduction.map((output, index: number) => {
-                      const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                      return (
-                        <React.Fragment key={`neg-prod-${index}`}>
-                          <ResourceDisplay
-                            displayInfo={displayInfo}
-                            isInput={false}
-                            resource={output}
-                            isGroupedWithOtherNegatives={true}
-                            context="standalone"
-                            isAffordable={isResourceAffordable(output, false)}
-                            tileScaleInfo={tileScaleInfo}
-                            computedOutputs={computedOutputs}
-                          />
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {positiveProduction.length > 0 &&
-                  positiveProduction.map((output, index: number) => {
-                    const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                    return (
-                      <div
-                        key={`pos-prod-row-${index}`}
-                        className="flex gap-[3px] items-center justify-start"
-                      >
-                        {index === 0 && negativeProduction.length > 0 && (
-                          <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                            +
-                          </span>
-                        )}
-                        <ResourceDisplay
-                          displayInfo={displayInfo}
-                          isInput={false}
-                          resource={output}
-                          isGroupedWithOtherNegatives={false}
-                          context="standalone"
-                          isAffordable={isResourceAffordable(output, false)}
-                          tileScaleInfo={tileScaleInfo}
-                          computedOutputs={computedOutputs}
-                        />
-                      </div>
-                    );
-                  })}
-
-                {perConditionProduction.map((output, index: number) => {
-                  const baseResourceType = output.type.replace("-production", "");
-                  const perCond = output.per!;
-
-                  let perIcon = null;
-                  if (perCond.tag) {
-                    perIcon = getTagIconPath(perCond.tag);
-                  } else if (perCond.type) {
-                    perIcon = getIconPath(perCond.type);
-                  }
-
-                  const perAmount = perCond.amount ?? 1;
-                  const perIconEl = (
-                    <div className="flex items-center gap-px">
-                      {perAmount > 1 && (
-                        <span className="text-[13px] font-bold font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center max-md:text-[11px]">
-                          {perAmount}
-                        </span>
-                      )}
-                      <img
-                        src={perIcon!}
-                        alt={perCond.tag || perCond.type}
-                        className={`w-[26px] h-[26px] object-contain max-md:w-[22px] max-md:h-[22px] ${
-                          perCond.target !== "self-player"
-                            ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite]"
-                            : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-                        }`}
-                      />
-                    </div>
-                  );
-
-                  const showPlus =
-                    negativeProduction.length > 0 || positiveProduction.length > 0 || index > 0;
-
-                  if (baseResourceType === "credit") {
-                    return (
-                      <div
-                        key={`per-prod-${index}`}
-                        className="flex gap-[3px] items-center justify-start"
-                      >
-                        {showPlus && (
-                          <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                            +
-                          </span>
-                        )}
-                        <GameIcon
-                          iconType="credit"
-                          amount={Math.abs(output.amount ?? 1)}
-                          size="small"
-                        />
-                        <Slash />
-                        {perIconEl}
-                      </div>
-                    );
-                  } else {
-                    const productionIcon = renderIcon(
-                      baseResourceType,
-                      false,
-                      false,
-                      "production",
-                      true,
-                    );
-                    return (
-                      <div
-                        key={`per-prod-${index}`}
-                        className="flex gap-[3px] items-center justify-start"
-                      >
-                        {showPlus && (
-                          <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                            +
-                          </span>
-                        )}
-                        <div className="flex items-center gap-px relative">
-                          {(output.amount ?? 1) > 1 && (
-                            <span className="text-[20px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center ml-0.5 max-md:text-xs">
-                              {output.amount}
-                            </span>
-                          )}
-                          {productionIcon}
-                        </div>
-                        <Slash />
-                        {perIconEl}
-                      </div>
-                    );
-                  }
-                })}
-              </div>
-            </div>
-          ) : (
-            leftGroups.map((group, index) => {
-              if (group.content === regularProduction) {
-                return (
-                  <div
-                    key={`left-prod-${index}`}
-                    className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
-                  >
-                    {renderProductionGroup(negativeProduction, positiveProduction)}
-                  </div>
-                );
-              } else if (group.content === perConditionProduction) {
-                return (
-                  <div
-                    key={`left-per-${index}`}
-                    className="flex flex-wrap gap-[3px] items-center justify-center"
-                  >
-                    {perConditionProduction.map((output, idx: number) => {
-                      const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                      return (
-                        <React.Fragment key={`per-prod-left-${idx}`}>
-                          <ResourceDisplay
-                            displayInfo={displayInfo}
-                            isInput={false}
-                            resource={output}
-                            isGroupedWithOtherNegatives={false}
-                            context="standalone"
-                            isAffordable={isResourceAffordable(output, false)}
-                            tileScaleInfo={tileScaleInfo}
-                            computedOutputs={computedOutputs}
-                          />
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-                );
-              } else {
-                return (
-                  <div
-                    key={`left-nonprod-${index}`}
-                    className="flex flex-wrap gap-[3px] items-center justify-center"
-                  >
-                    {renderNonProductionGroup(negativeOutputs, positiveOutputs)}
-                  </div>
-                );
-              }
-            })
-          )}
-        </div>
-
-        <div className="flex items-center justify-center">
-          {rightGroup.content === regularProduction ? (
-            <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-              {renderProductionGroup(negativeProduction, positiveProduction)}
-            </div>
-          ) : rightGroup.content === perConditionProduction ? (
-            <div className="flex flex-wrap gap-[3px] items-center justify-center">
-              {perConditionProduction.map((output, idx: number) => {
-                const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                return (
-                  <React.Fragment key={`per-prod-right-${idx}`}>
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={false}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-[3px] items-center justify-center">
-              {renderNonProductionGroup(negativeOutputs, positiveOutputs)}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const hasAllProductionTypes = regularProduction.length > 0 && perConditionProduction.length > 0;
-
-  return (
-    <div className="flex flex-wrap gap-2 items-center justify-center max-w-full">
-      {hasAllProductionTypes ? (
-        <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-          <div
-            className={`flex flex-col gap-[3px] justify-center ${negativeProduction.length > 0 ? "items-start" : "items-center"}`}
-          >
-            {negativeProduction.length > 0 && (
-              <div className="flex gap-[3px] items-center justify-start">
-                <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                  -
-                </span>
-                {negativeProduction.map((output, index: number) => {
-                  const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                  const isGrouped = true;
-                  return (
-                    <React.Fragment key={`neg-prod-${index}`}>
-                      <ResourceDisplay
-                        displayInfo={displayInfo}
-                        isInput={false}
-                        resource={output}
-                        isGroupedWithOtherNegatives={isGrouped}
-                        context="standalone"
-                        isAffordable={isResourceAffordable(output, false)}
-                        tileScaleInfo={tileScaleInfo}
-                        computedOutputs={computedOutputs}
-                      />
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
-
-            {positiveProduction.length > 0 &&
-              positiveProduction.map((output, index: number) => {
-                const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                return (
-                  <div
-                    key={`pos-prod-row-${index}`}
-                    className="flex gap-[3px] items-center justify-start"
-                  >
-                    {index === 0 && negativeProduction.length > 0 && (
-                      <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                        +
-                      </span>
-                    )}
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={false}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
-                  </div>
-                );
-              })}
-
-            {perConditionProduction.map((output, index: number) => {
-              const baseResourceType = output.type.replace("-production", "");
-              const perCond = output.per!;
-
-              let perIcon = null;
-              if (perCond.tag) {
-                perIcon = getTagIconPath(perCond.tag);
-              } else if (perCond.type) {
-                perIcon = getIconPath(perCond.type);
-              }
-
-              const perAmount = perCond.amount ?? 1;
-              const perIconEl = (
-                <div className="flex items-center gap-px">
-                  {perAmount > 1 && (
-                    <span className="text-[13px] font-bold font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center max-md:text-[11px]">
-                      {perAmount}
-                    </span>
+  const choiceContent = (
+    <div className="behavior-flow flex items-center justify-center gap-[3px] max-w-full">
+      {choices.map((choice, index) => (
+        <div key={index} className="flex items-center gap-[3px] max-w-full">
+          {index > 0 && (choices.length >= 3 ? <Slash /> : <OrChip />)}
+          <ChoiceRequirementBox requirements={choice.requirements}>
+            <div className="flex flex-wrap items-center justify-center gap-1 max-w-full">
+              {choice.inputs?.map((resource, inputIndex) => (
+                <React.Fragment key={inputIndex}>
+                  {renderResource(
+                    resource,
+                    coordinateDisplayModes([resource], compact).get(resource)!,
+                    false,
+                    true,
                   )}
-                  <img
-                    src={perIcon!}
-                    alt={perCond.tag || perCond.type}
-                    className={`w-[26px] h-[26px] object-contain max-md:w-[22px] max-md:h-[22px] ${
-                      perCond.target !== "self-player"
-                        ? "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite]"
-                        : "[filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-                    }`}
-                  />
-                </div>
-              );
-
-              if (baseResourceType === "credit") {
-                return (
-                  <div
-                    key={`per-prod-${index}`}
-                    className="flex gap-[3px] items-center justify-center"
-                  >
-                    <GameIcon
-                      iconType="credit"
-                      amount={Math.abs(output.amount ?? 1)}
-                      size="small"
-                    />
-                    <Slash />
-                    {perIconEl}
-                  </div>
-                );
-              } else {
-                const productionIcon = renderIcon(
-                  baseResourceType,
-                  false,
-                  false,
-                  "production",
-                  true,
-                );
-                return (
-                  <div
-                    key={`per-prod-${index}`}
-                    className="flex gap-[3px] items-center justify-center"
-                  >
-                    <div className="flex items-center gap-px relative">
-                      {(output.amount ?? 1) > 1 && (
-                        <span className="text-[20px] font-black font-[Prototype,Arial_Black,Arial,sans-serif] text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none flex items-center ml-0.5 max-md:text-xs">
-                          {output.amount}
-                        </span>
-                      )}
-                      {productionIcon}
-                    </div>
-                    <Slash />
-                    {perIconEl}
-                  </div>
-                );
-              }
-            })}
-          </div>
-        </div>
-      ) : (
-        <>
-          {regularProduction.length > 0 && (
-            <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-              <div
-                className={`flex flex-col gap-[3px] justify-center ${negativeProduction.length > 0 ? "items-start" : "items-center"}`}
-              >
-                {negativeProduction.length > 0 && (
-                  <div className="flex gap-[3px] items-center justify-start">
-                    <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                      -
-                    </span>
-                    {negativeProduction.map((output, index: number) => {
-                      const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                      const isGrouped = true;
-                      return (
-                        <React.Fragment key={`neg-prod-${index}`}>
-                          <ResourceDisplay
-                            displayInfo={displayInfo}
-                            isInput={false}
-                            resource={output}
-                            isGroupedWithOtherNegatives={isGrouped}
-                            context="standalone"
-                            isAffordable={isResourceAffordable(output, false)}
-                            tileScaleInfo={tileScaleInfo}
-                            computedOutputs={computedOutputs}
-                          />
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {positiveProduction.length > 0 && (
-                  <>
-                    {negativeProduction.length === 0 && positiveProduction.length === 2 ? (
-                      positiveProduction.map((output, index: number) => {
-                        const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                        return (
-                          <div
-                            key={`pos-prod-row-${index}`}
-                            className="flex gap-[3px] items-center justify-center"
-                          >
-                            <ResourceDisplay
-                              displayInfo={displayInfo}
-                              isInput={false}
-                              resource={output}
-                              isGroupedWithOtherNegatives={false}
-                              context="standalone"
-                              isAffordable={isResourceAffordable(output, false)}
-                              tileScaleInfo={tileScaleInfo}
-                              computedOutputs={computedOutputs}
-                            />
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="flex gap-[3px] items-center justify-start flex-wrap">
-                        {(() => {
-                          // Check if any NON-CREDIT positive production will display with number mode
-                          // Credits always show number inside the icon, so they don't count as "number mode"
-                          const anyNonCreditPositiveUsesNumberMode = positiveProduction.some(
-                            (output) => {
-                              const resourceType = output.type || "";
-                              if (resourceType === "credit-production") return false;
-
-                              const displayInfo = analyzeResourceDisplayWithConstraints(
-                                output,
-                                7,
-                                false,
-                              );
-                              return displayInfo.displayMode === "number";
-                            },
-                          );
-
-                          // Show + sign if there are negatives AND no number mode in non-credit positives
-                          if (
-                            negativeProduction.length > 0 &&
-                            !anyNonCreditPositiveUsesNumberMode
-                          ) {
-                            return (
-                              <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                                +
-                              </span>
-                            );
-                          }
-                          return null;
-                        })()}
-                        {positiveProduction.map((output, index: number) => {
-                          const displayInfo = analyzeResourceDisplayWithConstraints(
-                            output,
-                            7,
-                            false,
-                          );
-                          return (
-                            <React.Fragment key={`pos-prod-${index}`}>
-                              <ResourceDisplay
-                                displayInfo={displayInfo}
-                                isInput={false}
-                                resource={output}
-                                isGroupedWithOtherNegatives={false}
-                                context="standalone"
-                                isAffordable={isResourceAffordable(output, false)}
-                                tileScaleInfo={tileScaleInfo}
-                                computedOutputs={computedOutputs}
-                              />
-                            </React.Fragment>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {perConditionProduction.length > 0 && (
-            <div className="flex flex-col gap-[3px] items-center justify-center">
-              {perConditionProduction.map((output, index: number) => {
-                const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                return (
-                  <React.Fragment key={`per-prod-${index}`}>
-                    <ResourceDisplay
-                      displayInfo={displayInfo}
-                      isInput={false}
-                      resource={output}
-                      isGroupedWithOtherNegatives={false}
-                      context="standalone"
-                      isAffordable={isResourceAffordable(output, false)}
-                      tileScaleInfo={tileScaleInfo}
-                      computedOutputs={computedOutputs}
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
-
-      {(nonProductionOutputs.length > 0 || consolidatedCards.length > 0) &&
-      negativeRegular.length === 0 &&
-      positiveRegular.length > 0 &&
-      globalParamOutputs.length > 0 &&
-      positiveRegular.length + globalParamOutputs.length <= 4 &&
-      consolidatedCards.length === 0 ? (
-        <div className="flex gap-2 items-center justify-center">
-          {positiveRegular.map((output, index: number) => {
-            const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-            return (
-              <React.Fragment key={`pos-inline-${index}`}>
-                <ResourceDisplay
-                  displayInfo={displayInfo}
-                  isInput={false}
-                  resource={output}
-                  isGroupedWithOtherNegatives={false}
-                  context="standalone"
-                  isAffordable={isResourceAffordable(output, false)}
-                  tileScaleInfo={tileScaleInfo}
-                  computedOutputs={computedOutputs}
-                />
-              </React.Fragment>
-            );
-          })}
-          {[...globalParamOutputs]
-            .sort((a, b) => {
-              const typeA = a.type || "";
-              const typeB = b.type || "";
-              if (typeA === "tr") return 1;
-              if (typeB === "tr") return -1;
-              return 0;
-            })
-            .map((output, index: number) => {
-              const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-              return (
-                <React.Fragment key={`global-inline-${index}`}>
-                  <ResourceDisplay
-                    displayInfo={displayInfo}
-                    isInput={false}
-                    resource={output}
-                    isGroupedWithOtherNegatives={false}
-                    context="standalone"
-                    isAffordable={isResourceAffordable(output, false)}
-                    tileScaleInfo={tileScaleInfo}
-                    computedOutputs={computedOutputs}
-                  />
                 </React.Fragment>
-              );
-            })}
+              ))}
+              {!!choice.inputs?.length && !!choice.outputs?.length && <BehaviorArrow />}
+              {renderOutputs(
+                shareTarget
+                  ? (choice.outputs ?? []).map((resource) => {
+                      if ("selectors" in resource) {
+                        return Object.assign({}, resource, { selectors: undefined });
+                      }
+                      return resource;
+                    })
+                  : (choice.outputs ?? []),
+              )}
+            </div>
+          </ChoiceRequirementBox>
         </div>
-      ) : (
-        (nonProductionOutputs.length > 0 || consolidatedCards.length > 0) && (
-          <div
-            className={`flex flex-col gap-[3px] justify-center ${negativeRegular.length > 0 && positiveRegular.length > 0 ? "items-start" : "items-center"}`}
-          >
-            {negativeRegular.length > 0 && (
-              <div className="flex gap-[3px] items-center justify-start">
-                {negativeRegular.length > 1 && (
-                  <span className="text-xl font-bold text-[#ffcdd2] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                    -
-                  </span>
-                )}
-                {negativeRegular.map((output, index: number) => {
-                  const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                  const isGrouped = negativeRegular.length > 1;
-                  return (
-                    <React.Fragment key={`neg-${index}`}>
-                      <ResourceDisplay
-                        displayInfo={displayInfo}
-                        isInput={false}
-                        resource={output}
-                        isGroupedWithOtherNegatives={isGrouped}
-                        context="standalone"
-                        isAffordable={isResourceAffordable(output, false)}
-                        tileScaleInfo={tileScaleInfo}
-                        computedOutputs={computedOutputs}
-                      />
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
-
-            {globalParamOutputs.length > 0 && (
-              <div className="flex gap-[3px] items-center justify-center">
-                {[...globalParamOutputs]
-                  .sort((a, b) => {
-                    const typeA = a.type || "";
-                    const typeB = b.type || "";
-                    if (typeA === "tr") return 1;
-                    if (typeB === "tr") return -1;
-                    return 0;
-                  })
-                  .map((output, index: number) => {
-                    const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                    return (
-                      <React.Fragment key={`global-default-${index}`}>
-                        <ResourceDisplay
-                          displayInfo={displayInfo}
-                          isInput={false}
-                          resource={output}
-                          isGroupedWithOtherNegatives={false}
-                          context="standalone"
-                          isAffordable={isResourceAffordable(output, false)}
-                          tileScaleInfo={tileScaleInfo}
-                          computedOutputs={computedOutputs}
-                        />
-                      </React.Fragment>
-                    );
-                  })}
-              </div>
-            )}
-
-            {positiveRegular.length > 0 && (
-              <>
-                {negativeRegular.length === 0 && positiveRegular.length === 2 ? (
-                  positiveRegular.map((output, index: number) => {
-                    const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                    return (
-                      <div
-                        key={`pos-row-${index}`}
-                        className="flex gap-[3px] items-center justify-center"
-                      >
-                        <ResourceDisplay
-                          displayInfo={displayInfo}
-                          isInput={false}
-                          resource={output}
-                          isGroupedWithOtherNegatives={false}
-                          context="standalone"
-                          isAffordable={isResourceAffordable(output, false)}
-                          tileScaleInfo={tileScaleInfo}
-                          computedOutputs={computedOutputs}
-                        />
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="flex gap-[3px] items-center justify-start">
-                    {negativeRegular.length > 0 && (
-                      <span className="text-xl font-bold text-[#c8e6c9] w-[20px] h-[24px] flex items-center justify-center leading-none [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)] -translate-y-px">
-                        +
-                      </span>
-                    )}
-                    {positiveRegular.map((output, index: number) => {
-                      const displayInfo = analyzeResourceDisplayWithConstraints(output, 7, false);
-                      return (
-                        <React.Fragment key={`pos-${index}`}>
-                          <ResourceDisplay
-                            displayInfo={displayInfo}
-                            isInput={false}
-                            resource={output}
-                            isGroupedWithOtherNegatives={false}
-                            context="standalone"
-                            isAffordable={isResourceAffordable(output, false)}
-                            tileScaleInfo={tileScaleInfo}
-                            computedOutputs={computedOutputs}
-                          />
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-
-            {consolidatedCards.length > 0 &&
-              (() => {
-                const discardCards = consolidatedCards.filter((c) => c.badgeType === "discard");
-                const drawCards = consolidatedCards.filter((c) => c.badgeType !== "discard");
-                const hasArrow = discardCards.length > 0 && drawCards.length > 0;
-
-                return (
-                  <div className="flex gap-[3px] items-center justify-start">
-                    {discardCards.map((cardItem, index) => (
-                      <CardIcon
-                        key={`discard-${index}`}
-                        amount={cardItem.amount}
-                        badgeType={cardItem.badgeType}
-                        isAffordable={true}
-                        isAttack={cardItem.isAttack}
-                        totalCardTypes={1}
-                      />
-                    ))}
-                    {hasArrow && (
-                      <span className="text-white text-sm font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] mx-1.5">
-                        →
-                      </span>
-                    )}
-                    <div className="flex flex-col gap-[6px] items-center">
-                      {drawCards.map((cardItem, index) => (
-                        <CardIcon
-                          key={`draw-${index}`}
-                          amount={cardItem.amount}
-                          badgeType={cardItem.badgeType}
-                          isAffordable={true}
-                          isAttack={cardItem.isAttack}
-                          totalCardTypes={1}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-          </div>
-        )
-      )}
+      ))}
     </div>
   );
-};
 
-export default ImmediateResourceLayout;
+  return (
+    <div className="flex flex-col items-center gap-1 max-w-full min-w-0">
+      {choices.length > 0 &&
+        (shareTarget ? (
+          <div
+            className="border border-dashed border-white/30 px-1.5 py-1 flex flex-col items-center gap-1 max-w-full"
+            aria-label={`Target a ${commonTarget.tags.join(" and ")} card`}
+          >
+            <TaggedCardIcon tags={commonTarget.tags} />
+            {choiceContent}
+          </div>
+        ) : (
+          choiceContent
+        ))}
+      {!!behavior.outputs?.length && renderOutputs(behavior.outputs)}
+    </div>
+  );
+}

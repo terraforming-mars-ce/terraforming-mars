@@ -19,7 +19,7 @@ export default function NotificationContainer() {
       {notifications.map((notification) => (
         <div
           key={notification.id}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-sm ${
+          className={`flex items-center gap-3 px-4 py-3 rounded-none border backdrop-blur-sm ${
             notification.isExiting
               ? "animate-[notificationSlideOut_0.2s_ease-out_forwards]"
               : "animate-[notificationSlideIn_0.3s_ease-out]"

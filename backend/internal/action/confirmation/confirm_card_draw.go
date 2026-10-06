@@ -31,7 +31,7 @@ func NewConfirmCardDrawAction(
 }
 
 // Execute performs the confirm card draw action
-func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, playerID string, cardsToTake []string, cardsToBuy []string) error {
+func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, playerID string, cardsToTake []string, cardsToBuy []string, payment shared.Payment) error {
 	log := a.InitLogger(gameID, playerID).With(
 		slog.String("action", "confirm_card_draw"),
 		slog.Int("cards_to_take", len(cardsToTake)),
@@ -55,6 +55,21 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		return fmt.Errorf("no pending card draw selection found")
 	}
 
+	if err := baseaction.ValidateCurrentTurnOrInitPlayer(g, playerID, log); err != nil {
+		return err
+	}
+	if len(cardsToTake) < selection.MinFreeTakeCount {
+		return fmt.Errorf("must take at least %d cards", selection.MinFreeTakeCount)
+	}
+	seen := map[string]bool{}
+	for _, group := range [][]string{cardsToTake, cardsToBuy} {
+		for _, id := range group {
+			if seen[id] {
+				return fmt.Errorf("duplicate selected card %s", id)
+			}
+			seen[id] = true
+		}
+	}
 	totalSelected := len(cardsToTake) + len(cardsToBuy)
 	maxAllowed := selection.FreeTakeCount + selection.MaxBuyCount
 
@@ -72,14 +87,6 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		return fmt.Errorf("too many free cards selected: selected %d, max %d", len(cardsToTake), selection.FreeTakeCount)
 	}
 
-	isPureCardDraw := selection.MaxBuyCount == 0 && selection.FreeTakeCount == len(selection.AvailableCards)
-	if isPureCardDraw && len(cardsToTake) != selection.FreeTakeCount {
-		log.Warn("Must take all cards for pure card-draw effect",
-			slog.Int("required", selection.FreeTakeCount),
-			slog.Int("selected", len(cardsToTake)))
-		return fmt.Errorf("must take all %d cards for card-draw effect", selection.FreeTakeCount)
-	}
-
 	if len(cardsToBuy) > selection.MaxBuyCount {
 		log.Warn("Too many cards to buy",
 			slog.Int("selected", len(cardsToBuy)),
@@ -87,7 +94,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		return fmt.Errorf("too many cards to buy: selected %d, max %d", len(cardsToBuy), selection.MaxBuyCount)
 	}
 
-	allSelectedCards := append(cardsToTake, cardsToBuy...)
+	allSelectedCards := append(append([]string(nil), cardsToTake...), cardsToBuy...)
 	for _, cardID := range allSelectedCards {
 		if !slices.Contains(selection.AvailableCards, cardID) {
 			log.Warn("Card not in available cards", slog.String("card_id", cardID))
@@ -97,25 +104,17 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 
 	totalCost := len(cardsToBuy) * selection.CardBuyCost
 
-	if totalCost > 0 {
-		resources := p.Resources().Get()
-		if resources.Credits < totalCost {
-			log.Warn("Insufficient credits to buy cards",
-				slog.Int("needed", totalCost),
-				slog.Int("available", resources.Credits))
-			return fmt.Errorf("insufficient credits to buy cards: need %d, have %d", totalCost, resources.Credits)
-		}
-
-		p.Resources().Add(map[shared.ResourceType]int{
-			shared.ResourceCredit: -totalCost,
-		})
-
-		newResources := p.Resources().Get()
-		log.Debug("Paid for bought cards",
-			slog.Int("cards_bought", len(cardsToBuy)),
-			slog.Int("cost", totalCost),
-			slog.Int("remaining_credits", newResources.Credits))
+	quote, err := cards.QuotePayment(p, g, a.CardRegistry(), cards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: totalCost}, Action: "card-buying"})
+	if err != nil {
+		return err
 	}
+	paymentPlan, err := cards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
+	}
+	cards.ApplyPayment(p, paymentPlan)
+
+	p.Selection().SetPendingCardDrawSelection(nil)
 
 	if selection.PlayAsPrelude {
 		// Play selected prelude cards instead of adding to hand
@@ -164,20 +163,14 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		}
 	}
 
-	p.Selection().SetPendingCardDrawSelection(nil)
-
-	// Clear forced first action if this was a prelude card draw selection
-	if selection.PlayAsPrelude {
-		if err := g.SetForcedFirstAction(ctx, playerID, nil); err != nil {
-			log.Error("Failed to clear forced first action", slog.Any("error", err))
-		}
-	}
-
 	// If this selection was triggered by a card action, complete the action now
-	if selection.SourceCardID != "" && !selection.PlayAsPrelude {
-		a.completeSourceCardAction(g, p, selection, log)
+	if selection.CompleteAction != nil && !selection.PlayAsPrelude {
+		a.completeCardAction(g, p, selection, log)
 	}
 
+	if phase := g.CurrentPhase(); phase != shared.GamePhaseInitApplyCorp && phase != shared.GamePhaseInitApplyPrelude {
+		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+	}
 	log.Info("Card draw confirmation completed",
 		slog.String("source", selection.Source),
 		slog.Int("cards_taken", len(cardsToTake)),
@@ -188,23 +181,23 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 	return nil
 }
 
-// completeSourceCardAction increments usage counts and consumes an action
-// for the card action that triggered this card draw selection
-func (a *ConfirmCardDrawAction) completeSourceCardAction(
+// completeCardAction increments usage counts and consumes an action
+// for the action responsible for this selection (which may differ from its effect source).
+func (a *ConfirmCardDrawAction) completeCardAction(
 	g *game.Game,
 	p *player.Player,
 	selection *shared.PendingCardDrawSelection,
 	log *slog.Logger,
 ) {
-	// Increment usage counts for the source card action
+	// Complete the stored action reference, not the effect source.
 	actions := p.Actions().List()
 	for i := range actions {
-		if actions[i].CardID == selection.SourceCardID && actions[i].BehaviorIndex == selection.SourceBehaviorIndex {
+		if actions[i].CardID == selection.CompleteAction.CardID && actions[i].BehaviorIndex == selection.CompleteAction.BehaviorIndex {
 			actions[i].TimesUsedThisTurn++
 			actions[i].TimesUsedThisGeneration++
 			log.Debug("Incremented action usage counts from card draw confirmation",
-				slog.String("card_id", selection.SourceCardID),
-				slog.Int("behavior_index", selection.SourceBehaviorIndex),
+				slog.String("card_id", selection.CompleteAction.CardID),
+				slog.Int("behavior_index", selection.CompleteAction.BehaviorIndex),
 				slog.Int("times_used_this_turn", actions[i].TimesUsedThisTurn),
 				slog.Int("times_used_this_generation", actions[i].TimesUsedThisGeneration))
 			break
@@ -214,4 +207,21 @@ func (a *ConfirmCardDrawAction) completeSourceCardAction(
 
 	// Consume the player action
 	a.ConsumePlayerAction(g, log)
+}
+
+// AcknowledgeReceipt dismisses a private receipt without granting cards or spending an action.
+func (a *ConfirmCardDrawAction) AcknowledgeReceipt(ctx context.Context, gameID, playerID, receiptID string) error {
+	if receiptID == "" {
+		return fmt.Errorf("receipt ID is required")
+	}
+	g, err := a.GameRepository().Get(ctx, gameID)
+	if err != nil {
+		return err
+	}
+	p, err := g.GetPlayer(playerID)
+	if err != nil {
+		return err
+	}
+	p.Selection().AcknowledgeCardReceipt(receiptID)
+	return nil
 }

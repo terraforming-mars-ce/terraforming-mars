@@ -1,3 +1,4 @@
+import type { MarsRelief } from "./marsRelief";
 import type { HexCoordinate } from "../../../utils/hex-grid-2d";
 import type { CityLayout } from "./cityLayout";
 
@@ -15,18 +16,21 @@ export interface LandscapeSource {
   layout?: CityLayout;
 }
 export interface LandscapeInput {
+  relief?: MarsRelief;
   seed: number;
   sources: LandscapeSource[];
 }
 export interface LandscapePlant {
   id: string;
   tileKey: string;
-  kind: "tree" | "bush" | "clover" | "flower" | "rock";
+  kind: "tree" | "pine" | "bush" | "clover" | "flower" | "rock";
   x: number;
   y: number;
   height: number;
   scale: number;
   seed: number;
+  // Position of the plant within its cell's density threshold; climate gates show plants with rank <= gate.
+  rank: number;
 }
 export interface LandscapePatch {
   key: string;
@@ -35,6 +39,8 @@ export interface LandscapePatch {
   y: number;
   terrain: Uint16Array;
   materials: Uint8Array;
+  // R: shoreline meadow, G: hummock noise, B: greenery weight, A: normalized Mars depth.
+  detail: Uint8Array;
   plants: LandscapePlant[];
   water: boolean;
 }
@@ -43,6 +49,7 @@ export interface LandscapeRequest extends LandscapeInput {
   known: Record<string, string>;
 }
 export interface LandscapeDelta {
+  relief?: MarsRelief;
   id: number;
   seed: number;
   sources: LandscapeSource[];
@@ -51,6 +58,7 @@ export interface LandscapeDelta {
   preparationMs: number;
 }
 export interface LandscapeState {
+  relief?: MarsRelief;
   id: number;
   seed: number;
   sources: LandscapeSource[];

@@ -1,7 +1,7 @@
-import { useFrame, useThree } from "@react-three/fiber";
+import { useThree } from "@react-three/fiber";
 import { useLayoutEffect } from "react";
 import type { Texture } from "three";
-import { coldStartTrace, performanceStore } from "@/services/performanceStore.ts";
+import { coldStartTrace } from "@/services/performanceStore.ts";
 
 function textureDetails(texture?: Texture | null) {
   const image = texture?.image as HTMLImageElement | undefined;
@@ -104,16 +104,6 @@ export default function PerformanceProbe() {
       gl.initTexture = initTexture;
     };
   }, [gl]);
-
-  useFrame(() => {
-    const info = gl.info;
-    performanceStore.updateGpuStats({
-      drawCalls: info.render.calls,
-      triangles: info.render.triangles,
-      textureCount: info.memory.textures,
-      geometryCount: info.memory.geometries,
-    });
-  });
 
   return null;
 }

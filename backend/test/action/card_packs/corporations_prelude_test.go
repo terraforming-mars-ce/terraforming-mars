@@ -2,12 +2,15 @@ package card_packs_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
 	"terraforming-mars-backend/internal/action/admin"
 	cardAction "terraforming-mars-backend/internal/action/card"
 	confirmAction "terraforming-mars-backend/internal/action/confirmation"
+	tileAction "terraforming-mars-backend/internal/action/tile"
+	turnAction "terraforming-mars-backend/internal/action/turn_management"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
 	"terraforming-mars-backend/test/testutil"
@@ -90,9 +93,7 @@ func TestPointLuna_StartingResources(t *testing.T) {
 	production := p.Resources().Production()
 	testutil.AssertEqual(t, 1, production.Titanium, "Point Luna should start with 1 titanium production")
 
-	if len(p.Hand().Cards()) < 1 {
-		t.Fatalf("Point Luna should draw at least 1 card at startup, but hand has %d cards", len(p.Hand().Cards()))
-	}
+	testutil.AssertEqual(t, 1, len(p.Hand().Cards()), "Point Luna draws exactly one card for its own Earth tag")
 }
 
 func TestPointLuna_DrawCardWhenPlayingEarthTag(t *testing.T) {
@@ -113,14 +114,15 @@ func TestPointLuna_DrawCardWhenPlayingEarthTag(t *testing.T) {
 	handBefore := len(p.Hand().Cards())
 
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 6}
-	err = playCard.Execute(ctx, testGame.ID(), playerID, sponsorsID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 6)
+	err = playCard.Execute(ctx, testGame.ID(), playerID, sponsorsID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Sponsors should succeed")
 
 	time.Sleep(50 * time.Millisecond)
 
 	handAfter := len(p.Hand().Cards())
-	testutil.AssertTrue(t, handAfter >= handBefore, "Point Luna should draw a card when an Earth tag is played")
+	testutil.AssertEqual(t, handBefore, handAfter, "Point Luna replaces the played Earth card with exactly one draw")
 }
 
 func TestValleyTrust_StartingResources(t *testing.T) {
@@ -221,7 +223,7 @@ func TestVitor_FundAwardForFree(t *testing.T) {
 	// Should have a forced first action
 	forcedAction := testGame.GetForcedFirstAction(playerID)
 	testutil.AssertTrue(t, forcedAction != nil, "Vitor should create forced first action")
-	testutil.AssertEqual(t, "award-fund", forcedAction.ActionType, "Forced action should be award-fund")
+	testutil.AssertEqual(t, "resolving", forcedAction.State, "First action should be resolving")
 
 	// Record credits before
 	creditsBefore := p.Resources().Get().Credits
@@ -244,6 +246,34 @@ func TestVitor_FundAwardForFree(t *testing.T) {
 
 	// Forced first action should be cleared
 	testutil.AssertTrue(t, testGame.GetForcedFirstAction(playerID) == nil, "Forced first action should be cleared")
+}
+
+func TestVitor_OnlyOffersAwardsInThisGame(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	awardRegistry := testutil.CreateTestAwardRegistry()
+
+	all := awardRegistry.GetAll()
+	testutil.AssertTrue(t, len(all) > 3, "registry has more awards than a game uses")
+	selected := []string{all[0].ID, all[1].ID}
+	notInGame := all[2].ID
+	testGame.SetSelectedAwards(selected)
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, awardRegistry, logger)
+	testutil.AssertNoError(t, setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Vitor")), "set Vitor")
+
+	p, _ := testGame.GetPlayer(playerID)
+	pending := p.Selection().GetPendingAwardFundSelection()
+	testutil.AssertTrue(t, pending != nil, "Vitor should create pending award fund selection")
+	testutil.AssertEqual(t, len(selected), len(pending.AvailableAwards), "only this game's awards are offered")
+	for _, id := range pending.AvailableAwards {
+		testutil.AssertTrue(t, slices.Contains(selected, id), "offered award is in this game: "+id)
+	}
+
+	confirm := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
+	testutil.AssertError(t, confirm.Execute(ctx, testGame.ID(), playerID, notInGame), "award outside this game is rejected")
+	testutil.AssertFalse(t, testGame.Awards().IsFunded(shared.AwardType(notInGame)), "nothing funded")
 }
 
 func TestVitor_Gain3MCWhenPlayingCardWithVP(t *testing.T) {
@@ -271,12 +301,94 @@ func TestVitor_Gain3MCWhenPlayingCardWithVP(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 8}
-	err = playCard.Execute(ctx, testGame.ID(), playerID, vpCardID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 8)
+	err = playCard.Execute(ctx, testGame.ID(), playerID, vpCardID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Colonizer Training Camp should succeed")
 
 	time.Sleep(50 * time.Millisecond)
 
 	creditsAfter := p.Resources().Get().Credits
 	testutil.AssertEqual(t, creditsBefore-8+3, creditsAfter, "Vitor should grant 3 MC when playing a card with VP")
+}
+
+func TestCorporationEffects_NormalStartingChoices(t *testing.T) {
+	for _, name := range []string{"Point Luna", "Arklight", "Saturn Systems", "Manutech"} {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			g, _, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+			p, _ := g.GetPlayer(id)
+			corpID := testutil.CardID(name)
+			p.SetCorporationID(corpID)
+			testutil.AssertNoError(t, g.SetDeferredStartingChoices(ctx, id, &shared.DeferredStartingChoices{CorporationID: corpID}), "starting choices")
+			log := testutil.TestLogger()
+			processor := gamecards.NewCorporationProcessor(registry, nil, log)
+			testutil.AssertNoError(t, turnAction.ApplyCorpForPlayer(ctx, g, id, registry, processor, log), "apply normal corporation selection")
+			switch name {
+			case "Point Luna":
+				testutil.AssertEqual(t, 1, len(p.Hand().Cards()), "one draw including own Earth tag")
+				testutil.AssertEqual(t, 38, p.Resources().Get().Credits, "starting credits")
+				testutil.AssertEqual(t, 1, p.Resources().Production().Titanium, "starting titanium production")
+			case "Arklight":
+				testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(corpID), "one animal including own animal tag")
+				testutil.AssertEqual(t, 45, p.Resources().Get().Credits, "starting credits")
+				testutil.AssertEqual(t, 2, p.Resources().Production().Credits, "starting credit production")
+			case "Saturn Systems":
+				testutil.AssertEqual(t, 42, p.Resources().Get().Credits, "starting credits")
+				testutil.AssertEqual(t, 1, p.Resources().Production().Titanium, "starting titanium production")
+				testutil.AssertEqual(t, 1, p.Resources().Production().Credits, "own Jovian tag rewards exactly once")
+			case "Manutech":
+				testutil.AssertEqual(t, 35, p.Resources().Get().Credits, "starting credits")
+				testutil.AssertEqual(t, 1, p.Resources().Production().Steel, "starting steel production")
+				testutil.AssertEqual(t, 1, p.Resources().Get().Steel, "starting production rewards exactly once")
+
+			}
+		})
+	}
+}
+
+func TestValleyTrust_FirstActionWaitsForChosenPreludePlacement(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, first, id := testutil.SetupTwoPlayerGame(t)
+	g.InitDeck([]string{"001", "002", "003"}, nil, []string{"P12", "P01", "P03"})
+	p, _ := g.GetPlayer(id)
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseInitApplyCorp), "setup")
+	setter := admin.NewSetCorporationAction(repo, registry, nil, testutil.TestLogger())
+	testutil.AssertNoError(t, setter.Execute(ctx, g.ID(), id, testutil.CardID("Valley Trust")), "queue first action")
+	testutil.AssertTrue(t, p.Selection().GetPendingCardDrawSelection() == nil, "no early prelude peek")
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseAction), "action phase")
+	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, first, 2), "first player goes first")
+	testutil.AssertTrue(t, p.Selection().GetPendingCardDrawSelection() == nil, "wait for owner's turn")
+	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, id, 2), "owner turn")
+	confirm := confirmAction.NewConfirmCardDrawAction(repo, registry, testutil.TestLogger())
+	testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), id, []string{"P12"}, nil, shared.Payment{}), "choose Experimental Forest")
+	testutil.AssertTrue(t, p.PlayedCards().Contains("P12"), "chosen prelude is played")
+	testutil.AssertTrue(t, g.GetForcedFirstAction(id) != nil, "placement still belongs to first action")
+	testutil.AssertEqual(t, 2, g.CurrentTurn().ActionsRemaining(), "action completes after placement")
+	pending := g.GetPendingTileSelection(id)
+	testutil.AssertTrue(t, pending != nil, "prelude queues greenery")
+	_, err := tileAction.NewSelectTileAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, pending.AvailableHexes[0])
+	testutil.AssertNoError(t, err, "place greenery")
+	testutil.AssertTrue(t, g.GetForcedFirstAction(id) == nil, "all first-action effects complete")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "one normal action remains")
+	testutil.AssertError(t, confirm.Execute(ctx, g.ID(), id, []string{"P12"}, nil, shared.Payment{}), "cannot confirm again")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "no duplicate consumption")
+	testutil.AssertEqual(t, 0, len(p.Selection().CardReceipts()), "selection does not create a redundant receipt")
+}
+
+func TestVitor_FirstActionWaitsForOwnerTurn(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, first, id := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	awards := testutil.CreateTestAwardRegistry()
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseInitApplyCorp), "setup")
+	testutil.AssertNoError(t, admin.NewSetCorporationAction(repo, registry, awards, testutil.TestLogger()).Execute(ctx, g.ID(), id, testutil.CardID("Vitor")), "queue Vitor")
+	testutil.AssertTrue(t, p.Selection().GetPendingAwardFundSelection() == nil, "no award selection during setup")
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseAction), "action phase")
+	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, first, 2), "first player's turn")
+	testutil.AssertTrue(t, p.Selection().GetPendingAwardFundSelection() == nil, "not owner's turn")
+	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, id, 2), "Vitor turn")
+	selected := p.Selection().GetPendingAwardFundSelection().AvailableAwards[0]
+	testutil.AssertNoError(t, confirmAction.NewConfirmAwardFundAction(repo, registry, awards, testutil.TestLogger()).Execute(ctx, g.ID(), id, selected), "fund award")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "first action consumes one action")
 }

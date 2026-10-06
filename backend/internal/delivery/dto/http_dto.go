@@ -34,8 +34,8 @@ type UpdateGameSettingsRequest struct {
 	DemoGame         *bool     `json:"demoGame,omitempty"`
 	AllowRandomBuy   *bool     `json:"allowRandomBuy,omitempty"`
 	CardPacks        *[]string `json:"cardPacks,omitempty"`
-	ClaudeAPIKey     *string   `json:"claudeApiKey,omitempty"`
-	ClaudeModel      *string   `json:"claudeModel,omitempty"`
+	ClaudeOAuthToken *string   `json:"claudeOAuthToken,omitempty"`
+	BotSpendCapUSD   *float64  `json:"botSpendCapUsd,omitempty"`
 }
 
 // CreateGameResponse represents the response for creating a game

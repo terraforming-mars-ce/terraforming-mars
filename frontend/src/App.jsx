@@ -1,5 +1,5 @@
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import { useCallback, useEffect, useState } from "react";
 import GameInterface from "./components/layout/main/GameInterface.tsx";
 import CreateGamePage from "./components/pages/CreateGamePage.tsx";
@@ -165,6 +165,7 @@ function AppWithBackground({ connectionReady }) {
           <Route path="/reconnecting" element={<ReconnectingPage />} />
           <Route path="/game/:gameId" element={<GameInterface />} />
           <Route path="/game" element={<GameInterface />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ConnectionGate>
     </>

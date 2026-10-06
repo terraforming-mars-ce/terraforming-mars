@@ -43,9 +43,9 @@ func TestFinalPhase_TransitionAfterProduction(t *testing.T) {
 	testutil.AssertEqual(t, shared.GamePhaseProductionAndCardDraw, g.CurrentPhase(), "Should be in production phase")
 
 	// Confirm production for both
-	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P1 confirm production")
-	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P2 confirm production")
 
 	// P1 has 16 plants (enough for greenery), P2 has 0 → game should be in final greenery
@@ -93,9 +93,9 @@ func TestFinalPhase_AllAutoPassGoesToScoring(t *testing.T) {
 	err = skipAction.Execute(ctx, g.ID(), p2ID)
 	testutil.AssertNoError(t, err, "P2 pass")
 
-	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P1 confirm production")
-	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P2 confirm production")
 
 	// Both have 0 plants → all auto-pass → final scoring → game complete
@@ -133,9 +133,9 @@ func TestFinalPhase_PassTriggersScoring(t *testing.T) {
 	err = skipAction.Execute(ctx, g.ID(), p2ID)
 	testutil.AssertNoError(t, err, "P2 pass")
 
-	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P1 confirm")
-	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P2 confirm")
 
 	testutil.AssertEqual(t, shared.GamePhaseFinalPhase, g.CurrentPhase(), "Should be in final phase")
@@ -176,15 +176,15 @@ func TestFinalPhase_ConvertPlantsWorks(t *testing.T) {
 	testutil.AssertNoError(t, err, "P1 pass")
 	err = skipAction.Execute(ctx, g.ID(), p2ID)
 	testutil.AssertNoError(t, err, "P2 pass")
-	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P1 confirm")
-	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P2 confirm")
 
 	testutil.AssertEqual(t, shared.GamePhaseFinalPhase, g.CurrentPhase(), "Should be in final phase")
 
 	// P1 converts plants to greenery
-	err = convertAction.Execute(ctx, g.ID(), p1ID, nil)
+	err = convertAction.Execute(ctx, g.ID(), p1ID, shared.NativePayment(shared.ResourcePlant, 8))
 	testutil.AssertNoError(t, err, "P1 convert plants to greenery")
 
 	// P1 should now have 8 plants remaining (16 - 8)
@@ -229,7 +229,7 @@ func TestFinalPhase_TwoActionsPerTurn(t *testing.T) {
 
 	// All confirm production
 	for _, pID := range playerIDs {
-		err = confirmProdAction.Execute(ctx, g.ID(), pID, []string{}, false)
+		err = confirmProdAction.Execute(ctx, g.ID(), pID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 		testutil.AssertNoError(t, err, "Player confirm production")
 	}
 
@@ -271,9 +271,9 @@ func TestFinalPhase_LastPlayerGetsUnlimitedActions(t *testing.T) {
 	testutil.AssertNoError(t, err, "P1 pass")
 	err = skipAction.Execute(ctx, g.ID(), p2ID)
 	testutil.AssertNoError(t, err, "P2 pass")
-	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p1ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P1 confirm")
-	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false)
+	err = confirmProdAction.Execute(ctx, g.ID(), p2ID, []string{}, false, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
 	testutil.AssertNoError(t, err, "P2 confirm")
 
 	testutil.AssertEqual(t, shared.GamePhaseFinalPhase, g.CurrentPhase(), "Should be in final phase")

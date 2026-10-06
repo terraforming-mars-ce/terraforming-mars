@@ -1,8 +1,10 @@
 # Broken Cards Fix Plan
 
+> **Progress source:** Use the [deduplicated progress tracker](broken_cards_verify_checklist.md) for current counts and verification status. Historical completed groups below are implementation records, not a claim of complete verification. The active baseline is 64 fix candidates after excluding Small Asteroid (Promo) and Mass Converter (already correct).
+
 > **CRITICAL: Before applying ANY fix from this plan, verify the requested change against the card's `description` field in `terraforming_mars_cards.json`. The card description is the source of truth. It is NOT allowed to change a card's description to match the planned fix. If the planned fix contradicts the card description, mark the group task as `[x]` (done) but add a note to the "Description Mismatches" section at the bottom of this file explaining the discrepancy.**
 
-66 broken cards grouped by the type of fix required. Groups are ordered from simplest (JSON-only) to most complex (new backend features + new tile types). Each group targets a **generic capability** so the fix applies to all similar cards.
+66 baseline cards grouped by the type of fix required (including one already-correct entry and one now-excluded Promo card). Groups are ordered from simplest (JSON-only) to most complex (new backend features + new tile types). Each group targets a **generic capability** so the fix applies to all similar cards.
 
 ---
 
@@ -168,6 +170,8 @@ These require changes to the frontend BehaviorSection rendering system but no ba
 ---
 
 ### [x] Group 10: Missing "Any" Red Tint on Per-Condition Icons
+
+**Verified 2026-10-04:** the shared renderer now tints city counts whose `per.target` is omitted. Small/Large browser checks and real-card tests pass for all four cards. Also corrected shared Mars-only city counting (Zeppelins and Martian Rails) and stored-resource requirement counting (Aerosport Tournament). See the progress tracker for evidence and remaining verification limits.
 
 **Root cause:** When a `per` condition counts something across ALL players or from ALL cities (not just self), the icon should have a red/any-player glow to indicate it counts globally. The frontend `TriggeredEffectLayout` and `ImmediateResourceLayout` don't apply the "any" indicator to per-condition resource icons.
 
@@ -578,7 +582,7 @@ Mars University works the same way: when the passive effect fires, instead of au
 
 **Current system:** `TileRestrictions` supports:
 - `Adjacency: "none"` (no adjacent occupied tiles)
-- `OnTileType: "ocean"` (only on ocean spaces)
+- `Area: "ocean"` (only on ocean spaces)
 - `BoardTags: []` (specific reserved spaces)
 
 **Generic capability needed:**
@@ -593,7 +597,7 @@ Extended `TileRestrictions` with:
    type TileRestrictions struct {
        BoardTags          []string `json:"boardTags,omitempty"`
        Adjacency          string   `json:"adjacency,omitempty"`        // "none"
-       OnTileType         string   `json:"onTileType,omitempty"`       // "ocean"
+       Area         string   `json:"area,omitempty"`       // "ocean"
        AdjacentToType     string   `json:"adjacentToType,omitempty"`   // "city", "greenery"
        MinAdjacentOfType  *int     `json:"minAdjacentOfType,omitempty"` // min count
        AdjacentToOwned    bool     `json:"adjacentToOwned,omitempty"`  // must own adjacent tile
@@ -869,7 +873,7 @@ All backend changes must have corresponding tests in `backend/test/`.
 | 65 | Venusian Animals | 259 | 3, 13 | Easy |
 | 66 | Venusian Plants | 261 | 13, 19 | Medium |
 
-**Summary:** 23 Easy, 21 Medium, 16 Hard, 1 Already Working (Mass Converter)
+**Baseline summary:** 66 unique cards: 64 in-scope fix candidates, 1 already correct (Mass Converter), and 1 excluded Promo card (Small Asteroid). See the progress tracker for implementation and verification status.
 
 ---
 

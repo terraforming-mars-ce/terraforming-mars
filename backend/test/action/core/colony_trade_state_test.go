@@ -74,7 +74,9 @@ func TestCalculateColonyTradeState_UnavailableWhenFleetNotAvailable(t *testing.T
 	p, _ := g.GetPlayer(playerID)
 
 	setTradeableColony(g, "luna")
-	g.Colonies().SetTradeFleetAvailable(playerID, false)
+	if g.Colonies().TradeFleet(playerID).Available() > 0 {
+		testutil.AssertNoError(t, g.Colonies().UseTradeFleet(playerID), "Use fleet")
+	}
 	p.Resources().Set(shared.Resources{Credits: 9, Energy: 3, Titanium: 3})
 
 	state := action.CalculateColonyTradeState(p, g, cardRegistry)
@@ -88,7 +90,7 @@ func TestCalculateColonyTradeState_UnavailableWhenNoTradeableColonies(t *testing
 	p, _ := g.GetPlayer(playerID)
 
 	// No colony states added -> nothing tradeable.
-	g.Colonies().SetTradeFleetAvailable(playerID, true)
+	g.Colonies().AddTradeFleets(playerID, 1)
 	p.Resources().Set(shared.Resources{Credits: 9, Energy: 3, Titanium: 3})
 
 	state := action.CalculateColonyTradeState(p, g, cardRegistry)
@@ -102,7 +104,7 @@ func TestCalculateColonyTradeState_UnavailableWhenCannotAffordAny(t *testing.T) 
 	p, _ := g.GetPlayer(playerID)
 
 	setTradeableColony(g, "luna")
-	g.Colonies().SetTradeFleetAvailable(playerID, true)
+	g.Colonies().AddTradeFleets(playerID, 1)
 	// Below every effective base cost (credits 9, energy 3, titanium 3).
 	p.Resources().Set(shared.Resources{Credits: 8, Energy: 2, Titanium: 2})
 
@@ -117,7 +119,7 @@ func TestCalculateColonyTradeState_AvailableWhenAffordableAndTradeable(t *testin
 	p, _ := g.GetPlayer(playerID)
 
 	setTradeableColony(g, "luna")
-	g.Colonies().SetTradeFleetAvailable(playerID, true)
+	g.Colonies().AddTradeFleets(playerID, 1)
 	// Cannot afford credits/titanium, but can afford energy (3).
 	p.Resources().Set(shared.Resources{Credits: 0, Energy: 3, Titanium: 0})
 
@@ -132,7 +134,7 @@ func TestCalculateColonyTradeState_DiscountsReduceEffectiveCost(t *testing.T) {
 	p, _ := g.GetPlayer(playerID)
 
 	setTradeableColony(g, "luna")
-	g.Colonies().SetTradeFleetAvailable(playerID, true)
+	g.Colonies().AddTradeFleets(playerID, 1)
 	addRimFreightersDiscount(t, g, cardRegistry, playerID)
 
 	state := action.CalculateColonyTradeState(p, g, cardRegistry)
@@ -147,5 +149,17 @@ func TestCalculateColonyTradeState_DiscountsReduceEffectiveCost(t *testing.T) {
 	state = action.CalculateColonyTradeState(p, g, cardRegistry)
 	if !state.Available() {
 		t.Fatalf("expected trade AVAILABLE at discounted energy cost, errors=%v", state.Errors)
+	}
+}
+
+func TestCalculateEffectiveTradeCosts_NeverNegative(t *testing.T) {
+	g, registry, id := setupTradeStateGame(t)
+	p, _ := g.GetPlayer(id)
+	discount := shared.NewEffectCondition(shared.ResourceDiscount, 20, "self-player")
+	discount.Selectors = []shared.Selector{{Actions: []string{shared.ActionColonyTrade}, Resources: []string{"credit", "energy", "titanium"}}}
+	p.Effects().AddEffect(shared.CardEffect{CardID: "test-discount", Behavior: shared.CardBehavior{Outputs: []shared.BehaviorCondition{discount}}})
+	costs, _ := action.CalculateEffectiveTradeCosts(p, registry)
+	for _, resource := range []string{"credit", "energy", "titanium"} {
+		testutil.AssertEqual(t, 0, costs[resource], "Cost is floored at zero")
 	}
 }

@@ -51,6 +51,7 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
       title="Reconnect to Game"
       subtitle="Select a player to reconnect as"
       onBack={onCancel}
+      backLabel="Main menu"
       visible={visible}
       onExited={onExited}
     >

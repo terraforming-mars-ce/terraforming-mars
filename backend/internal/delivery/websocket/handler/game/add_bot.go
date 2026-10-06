@@ -35,31 +35,15 @@ func (h *AddBotHandler) HandleMessage(ctx context.Context, connection *core.Conn
 
 	log.Debug("Processing add bot request")
 
-	_, gameID := connection.GetPlayer()
-	if gameID == "" {
-		if payloadMap, ok := message.Payload.(map[string]interface{}); ok {
-			gameID, _ = payloadMap["gameId"].(string)
-		}
-	}
-
-	if gameID == "" {
-		log.Error("Missing gameId")
-		h.sendError(connection, "Missing gameId")
+	playerID, gameID := connection.GetPlayer()
+	if gameID == "" || playerID == "" {
+		h.sendError(connection, "Not connected to a game")
 		return
 	}
 
-	var botName string
-	var difficulty string
-	var speed string
-	if payloadMap, ok := message.Payload.(map[string]interface{}); ok {
-		botName, _ = payloadMap["botName"].(string)
-		difficulty, _ = payloadMap["difficulty"].(string)
-		speed, _ = payloadMap["speed"].(string)
-	}
-
-	result, err := h.addBotAction.Execute(ctx, gameID, botName, difficulty, speed)
+	result, err := h.addBotAction.Execute(ctx, gameID, playerID)
 	if err != nil {
-		log.Error("Failed to add bot", slog.Any("error", err))
+		log.Warn("Failed to add bot", slog.Any("error", err))
 		h.sendError(connection, err.Error())
 		return
 	}

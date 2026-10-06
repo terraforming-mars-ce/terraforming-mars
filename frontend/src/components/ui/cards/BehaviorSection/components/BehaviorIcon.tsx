@@ -41,20 +41,20 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
   if (isScaledTile) {
     if (tileScaleInfo.scale === 2) {
       iconClass =
-        "w-[calc(var(--behavior-icon-size,26px)*2)] h-[calc(var(--behavior-icon-size,26px)*2)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*2)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*2)]";
+        "w-[calc(var(--behavior-icon-size,26px)*2)] h-[calc(var(--behavior-icon-size,26px)*2)] object-contain shrink-0 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*2)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*2)]";
     } else if (tileScaleInfo.scale === 1.5) {
       iconClass =
-        "w-[calc(var(--behavior-icon-size,26px)*1.5)] h-[calc(var(--behavior-icon-size,26px)*1.5)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.5)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.5)]";
+        "w-[calc(var(--behavior-icon-size,26px)*1.5)] h-[calc(var(--behavior-icon-size,26px)*1.5)] object-contain shrink-0 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.5)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.5)]";
     } else if (tileScaleInfo.scale === 1.25) {
       iconClass =
-        "w-[calc(var(--behavior-icon-size,26px)*1.25)] h-[calc(var(--behavior-icon-size,26px)*1.25)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.25)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.25)]";
+        "w-[calc(var(--behavior-icon-size,26px)*1.25)] h-[calc(var(--behavior-icon-size,26px)*1.25)] object-contain shrink-0 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.25)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.25)]";
     } else {
       iconClass =
-        "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
+        "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain shrink-0 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
     }
   } else {
     iconClass =
-      "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
+      "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain shrink-0 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
   }
 
   const isTag = isTagIcon(cleanType);
@@ -84,24 +84,24 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
   if (!isScaledTile) {
     if (isAttack) {
       iconClass =
-        "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
+        "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain shrink-0 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))_drop-shadow(0_0_1px_rgba(244,67,54,0.9))_drop-shadow(0_0_2px_rgba(244,67,54,0.7))] animate-[attackPulse_2s_ease-in-out_infinite] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
     } else if (shouldUseStandaloneSize) {
       const cardGlow = isStandaloneCard
         ? "_drop-shadow(0_0_1px_rgba(255,248,220,0.6))_drop-shadow(0_0_2px_rgba(255,248,220,0.4))"
         : "";
-      iconClass = `w-[calc(var(--behavior-icon-size,26px)*1.4)] h-[calc(var(--behavior-icon-size,26px)*1.4)] object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.7))${cardGlow}] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.4)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.4)]`;
+      iconClass = `w-[calc(var(--behavior-icon-size,26px)*1.4)] h-[calc(var(--behavior-icon-size,26px)*1.4)] object-contain shrink-0 [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.7))${cardGlow}] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.4)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.4)]`;
     } else if (isPlacement) {
       iconClass =
-        "w-[calc(var(--behavior-icon-size,26px)*1.15)] h-[calc(var(--behavior-icon-size,26px)*1.15)] object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.15)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.15)]";
+        "w-[calc(var(--behavior-icon-size,26px)*1.15)] h-[calc(var(--behavior-icon-size,26px)*1.15)] object-contain shrink-0 [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] max-md:w-[calc(var(--behavior-icon-small-size,22px)*1.15)] max-md:h-[calc(var(--behavior-icon-small-size,22px)*1.15)]";
     } else if (isTR) {
       iconClass =
-        "w-8 h-8 object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] max-md:w-7 max-md:h-7";
+        "w-8 h-8 object-contain shrink-0 [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] max-md:w-7 max-md:h-7";
     } else if (isCard) {
       iconClass =
-        "w-[30px] h-[30px] object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))_drop-shadow(0_0_1px_rgba(255,248,220,0.6))_drop-shadow(0_0_2px_rgba(255,248,220,0.4))] max-md:w-[26px] max-md:h-[26px]";
+        "w-[30px] h-[30px] object-contain shrink-0 [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))_drop-shadow(0_0_1px_rgba(255,248,220,0.6))_drop-shadow(0_0_2px_rgba(255,248,220,0.4))] max-md:w-[26px] max-md:h-[26px]";
     } else if (isTag) {
       iconClass =
-        "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
+        "w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain shrink-0 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]";
     }
   }
 
@@ -111,5 +111,40 @@ const BehaviorIcon: React.FC<BehaviorIconProps> = ({
 
   return <img src={icon} alt={cleanType} className={finalIconClass} />;
 };
+
+export const BehaviorSign: React.FC<{ positive?: boolean; className?: string }> = ({
+  positive = false,
+  className = "",
+}) => (
+  <svg
+    aria-label={positive ? "+" : "−"}
+    role="img"
+    viewBox="0 0 12 12"
+    className={`w-[10px] h-[10px] shrink-0 self-center ${positive ? "text-[#c8e6c9]" : "text-[#ffcdd2]"} ${className}`}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="square"
+  >
+    <path d="M2 6h8" />
+    {positive && <path d="M6 2v8" />}
+  </svg>
+);
+
+export const BehaviorArrow: React.FC = () => (
+  <svg
+    aria-label="then"
+    role="img"
+    viewBox="0 0 14 14"
+    className="w-3 h-3 shrink-0 self-center text-white"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="square"
+    strokeLinejoin="miter"
+  >
+    <path d="M1.5 7h10M7.5 3l4 4-4 4" />
+  </svg>
+);
 
 export default BehaviorIcon;

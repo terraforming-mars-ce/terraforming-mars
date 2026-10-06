@@ -28,6 +28,8 @@ type AdminCommandHandler struct {
 	setCorporationAction      *admin.SetCorporationAction
 	startTileSelectionAction  *admin.StartTileSelectionAction
 	setTRAction               *admin.SetTRAction
+	restartGameAction         *admin.RestartGameAction
+	setActionsRemainingAction *admin.SetActionsRemainingAction
 	broadcaster               Broadcaster
 	logger                    *slog.Logger
 }
@@ -43,6 +45,8 @@ func NewAdminCommandHandler(
 	setCorporationAction *admin.SetCorporationAction,
 	startTileSelectionAction *admin.StartTileSelectionAction,
 	setTRAction *admin.SetTRAction,
+	restartGameAction *admin.RestartGameAction,
+	setActionsRemainingAction *admin.SetActionsRemainingAction,
 	broadcaster Broadcaster,
 ) *AdminCommandHandler {
 	return &AdminCommandHandler{
@@ -55,6 +59,8 @@ func NewAdminCommandHandler(
 		setCorporationAction:      setCorporationAction,
 		startTileSelectionAction:  startTileSelectionAction,
 		setTRAction:               setTRAction,
+		restartGameAction:         restartGameAction,
+		setActionsRemainingAction: setActionsRemainingAction,
 		broadcaster:               broadcaster,
 		logger:                    logger.Get(),
 	}
@@ -121,6 +127,10 @@ func (h *AdminCommandHandler) HandleMessage(ctx context.Context, connection *cor
 		err = h.handleStartTileSelection(ctx, gameID, commandPayload)
 	case dto.AdminCommandTypeSetTR:
 		err = h.handleSetTR(ctx, gameID, commandPayload)
+	case dto.AdminCommandTypeRestartGame:
+		err = h.restartGameAction.Execute(ctx, gameID)
+	case dto.AdminCommandTypeSetActionsRemaining:
+		err = h.handleSetActionsRemaining(ctx, gameID, commandPayload)
 	default:
 		log.Error("Unknown admin command type", slog.String("command_type", commandType))
 		h.sendError(connection, "Unknown admin command type: "+commandType)
@@ -306,6 +316,15 @@ func (h *AdminCommandHandler) handleSetTR(ctx context.Context, gameID string, pa
 	terraformRating := getIntFromMap(payloadMap, "terraformRating")
 
 	return h.setTRAction.Execute(ctx, gameID, playerID, terraformRating)
+}
+
+func (h *AdminCommandHandler) handleSetActionsRemaining(ctx context.Context, gameID string, payload interface{}) error {
+	payloadMap, ok := payload.(map[string]interface{})
+	if !ok {
+		return &adminError{message: "Invalid set-actions-remaining payload"}
+	}
+
+	return h.setActionsRemainingAction.Execute(ctx, gameID, getIntFromMap(payloadMap, "actions"))
 }
 
 // sendError sends an error message to the client

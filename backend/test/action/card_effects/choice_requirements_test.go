@@ -22,7 +22,7 @@ func createChoiceRequirementsTestCard() gamecards.Card {
 		Pack:        "base",
 		Cost:        10,
 		Tags:        []shared.CardTag{shared.TagScience},
-		Description: "Draw 1 card, or draw 3 cards if you have 3+ venus tags.",
+		Description: gamecards.CardDescription{{Type: gamecards.DescriptionSectionGeneric, Text: "Draw 1 card, or draw 3 cards if you have 3+ venus tags."}},
 		Behaviors: []shared.CardBehavior{
 			{
 				Triggers: []shared.Trigger{{Type: shared.TriggerTypeAuto}},
@@ -77,9 +77,9 @@ func TestChoiceRequirements_Choice0AlwaysAvailable(t *testing.T) {
 
 	// Player has NO venus tags → choice 0 (no requirements) should work
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
+	payment := shared.NativePayment(shared.ResourceCredit, 10)
 	choiceIndex := 0
-	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 0 with no requirements should succeed")
 
 	// Verify card was played
@@ -113,9 +113,9 @@ func TestChoiceRequirements_Choice1RejectedWithoutEnoughTags(t *testing.T) {
 
 	// Player has 0 venus tags → choice 1 (requires 3+ venus tags) should fail
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
+	payment := shared.NativePayment(shared.ResourceCredit, 10)
 	choiceIndex := 1
-	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Choice 1 should fail without venus tags")
 
 	// Card should still be in hand since the play failed
@@ -169,9 +169,9 @@ func TestChoiceRequirements_Choice1SucceedsWithEnoughTags(t *testing.T) {
 
 	// Player has 3 venus tags → choice 1 (requires 3+ venus tags) should succeed
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
+	payment := shared.NativePayment(shared.ResourceCredit, 10)
 	choiceIndex := 1
-	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 1 should succeed with 3 venus tags")
 
 	// Verify card was played
@@ -206,9 +206,9 @@ func TestChoiceRequirements_Choice0DrawsCard(t *testing.T) {
 	handBefore := player.Hand().CardCount()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
+	payment := shared.NativePayment(shared.ResourceCredit, 10)
 	choiceIndex := 0
-	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 0 should succeed")
 
 	// The test card was removed from hand (-1), and choice 0 should draw 1 card (+1)
@@ -264,9 +264,9 @@ func TestChoiceRequirements_Choice1DrawsThreeCards(t *testing.T) {
 	handBefore := player.Hand().CardCount()
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
+	payment := shared.NativePayment(shared.ResourceCredit, 10)
 	choiceIndex := 1
-	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Choice 1 should succeed with 3 venus tags")
 
 	// The test card was removed from hand (-1), and choice 1 should draw 3 cards (+3)
@@ -316,8 +316,8 @@ func TestChoiceRequirements_Choice1FailsWithTwoTags(t *testing.T) {
 
 	// Player has 2 venus tags → choice 1 (requires 3+) should fail
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
+	payment := shared.NativePayment(shared.ResourceCredit, 10)
 	choiceIndex := 1
-	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil, nil)
 	testutil.AssertError(t, err, "Choice 1 should fail with only 2 venus tags")
 }

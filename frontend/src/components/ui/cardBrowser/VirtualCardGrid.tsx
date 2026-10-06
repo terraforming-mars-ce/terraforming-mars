@@ -1,27 +1,40 @@
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import type { KeyboardEvent } from "react";
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import type { Range } from "@tanstack/react-virtual";
 import type { CardDto } from "@/types/generated/api-types.ts";
+import { whenIdle } from "@/utils/scheduling.ts";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 import GameCard from "../cards/GameCard.tsx";
 import CorporationCard from "../cards/CorporationCard.tsx";
-import type { CardFamily } from "./cardCatalog.ts";
+import type { CardDisplaySize, CardFamily } from "./cardCatalog.ts";
 
 const noop = () => {};
 
 const CatalogCard = memo(function CatalogCard({
   card,
+  size,
   selected,
   tabIndex,
   onSelect,
 }: {
   card: CardDto;
+  size: CardDisplaySize;
   selected: boolean;
   tabIndex: number;
   onSelect: (id: string) => void;
 }) {
   const corporation = card.type === "corporation";
+  const projectWidth = size === "large" ? "var(--card-inspection-width)" : "var(--card-width)";
   return (
     <div
       role="checkbox"
@@ -29,8 +42,8 @@ const CatalogCard = memo(function CatalogCard({
       aria-label={`${card.name} (${card.id})`}
       tabIndex={tabIndex}
       data-card-id={card.id}
-      className="mx-auto w-full pb-3 cursor-pointer rounded-sm outline-none motion-reduce:[&_*]:animate-none motion-reduce:[&_*]:transition-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-4 focus-visible:ring-offset-black"
-      style={{ maxWidth: corporation ? 400 : "var(--card-width)" }}
+      className={`mx-auto w-full pb-3 cursor-pointer rounded-sm outline-none motion-reduce:[&_*]:animate-none motion-reduce:[&_*]:transition-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-4 focus-visible:ring-offset-black ${corporation ? "" : "grid row-span-2 grid-rows-subgrid"}`}
+      style={{ maxWidth: corporation ? 400 : projectWidth }}
       onClick={() => onSelect(card.id)}
     >
       {corporation ? (
@@ -43,7 +56,12 @@ const CatalogCard = memo(function CatalogCard({
           borderColor={getCorporationBorderColor(card.name)}
         />
       ) : (
-        <GameCard card={card} isSelected={selected} showCheckbox />
+        <GameCard
+          card={card}
+          isSelected={selected}
+          showCheckbox
+          presentation={size === "large" ? "inspection" : "compact"}
+        />
       )}
     </div>
   );
@@ -52,6 +70,7 @@ const CatalogCard = memo(function CatalogCard({
 interface VirtualCardGridProps {
   cards: CardDto[];
   family: CardFamily;
+  size: CardDisplaySize;
   selected: ReadonlySet<string>;
   onSelect: (id: string) => void;
 }
@@ -59,6 +78,7 @@ interface VirtualCardGridProps {
 const VirtualCardGrid = memo(function VirtualCardGrid({
   cards,
   family,
+  size,
   selected,
   onSelect,
 }: VirtualCardGridProps) {
@@ -69,7 +89,8 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
   const pendingFocus = useRef<string | null>(null);
   const anchorId = useRef<string | null>(null);
   const cardWidth = family === "corporation" ? 400 : projectCardWidth;
-  const columns = Math.max(1, Math.floor((width + 24) / (cardWidth + 24)));
+  const columns = Math.max(1, Math.floor((width - 8 + 24) / (cardWidth + 24)));
+  const projectRowHeight = size === "large" ? 572 : 348;
   const rows = useMemo(() => {
     const result: CardDto[][] = [];
     for (let i = 0; i < cards.length; i += columns) {
@@ -97,7 +118,7 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
   const virtualizer = useVirtualizer({
     count: width > 0 ? rows.length : 0,
     getScrollElement: () => viewportRef.current,
-    estimateSize: () => (family === "corporation" ? 450 : 348),
+    estimateSize: () => (family === "corporation" ? 450 : projectRowHeight),
     getItemKey,
     overscan: 2,
     gap: 24,
@@ -106,7 +127,7 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
     rangeExtractor,
   });
   const virtualRows = virtualizer.getVirtualItems();
-  const previous = useRef({ cards, columns });
+  const previous = useRef({ cards, columns, cardWidth });
 
   useLayoutEffect(() => {
     const content = contentRef.current;
@@ -116,7 +137,11 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
     const measure = () => {
       const dimensions = {
         width: content.clientWidth,
-        projectCardWidth: parseFloat(getComputedStyle(content).getPropertyValue("--card-width")),
+        projectCardWidth: parseFloat(
+          getComputedStyle(content).getPropertyValue(
+            size === "large" ? "--card-inspection-width" : "--card-width",
+          ),
+        ),
       };
       setDimensions((previous) =>
         previous.width === dimensions.width &&
@@ -133,13 +158,14 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
       observer.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, []);
+  }, [size]);
 
   useLayoutEffect(() => {
     const changedResults = previous.current.cards !== cards;
     const changedColumns = previous.current.columns !== columns;
-    previous.current = { cards, columns };
-    if (!changedResults && !changedColumns) {
+    const changedSize = previous.current.cardWidth !== cardWidth;
+    previous.current = { cards, columns, cardWidth };
+    if (!changedResults && !changedColumns && !changedSize) {
       return;
     }
     virtualizer.measure();
@@ -157,7 +183,7 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
       );
       virtualizer.scrollToIndex(Math.floor(index / columns), { align: "start" });
     }
-  }, [cards, columns, virtualizer]);
+  }, [cards, columns, cardWidth, virtualizer]);
 
   useLayoutEffect(() => {
     if (pendingFocus.current) {
@@ -249,16 +275,18 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
             ref={virtualizer.measureElement}
             data-index={row.index}
             data-card-row
-            className="absolute left-0 top-0 grid w-full items-start gap-6 px-1"
+            className="absolute left-0 top-0 grid w-full gap-x-6 px-1"
             style={{
               transform: `translateY(${row.start}px)`,
               gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+              gridTemplateRows: family === "corporation" ? undefined : "auto auto",
             }}
           >
             {rows[row.index].map((card) => (
               <CatalogCard
                 key={card.id}
                 card={card}
+                size={size}
                 selected={selected.has(card.id)}
                 tabIndex={card.id === (focusedId ?? cards[0]?.id) ? 0 : -1}
                 onSelect={onSelect}
@@ -271,18 +299,47 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
   );
 });
 
-export default memo(
-  function CachedCardFamily({ active, ...props }: VirtualCardGridProps & { active: boolean }) {
-    return (
-      <div
-        className={`absolute inset-0 ${active ? "visible opacity-100" : "invisible opacity-0 pointer-events-none"}`}
-        aria-hidden={!active}
-        inert={!active}
-        data-card-family={props.family}
-      >
-        <VirtualCardGrid {...props} />
-      </div>
-    );
-  },
-  (previous, next) => !previous.active && !next.active,
-);
+function sameGridProps(a: VirtualCardGridProps, b: VirtualCardGridProps) {
+  return (
+    a.cards === b.cards &&
+    a.family === b.family &&
+    a.size === b.size &&
+    a.selected === b.selected &&
+    a.onSelect === b.onSelect
+  );
+}
+
+export default memo(function CachedCardFamily({
+  active,
+  cards,
+  family,
+  size,
+  selected,
+  onSelect,
+}: VirtualCardGridProps & { active: boolean }) {
+  const latest = { cards, family, size, selected, onSelect };
+  const shown = useRef(latest);
+  const [, refresh] = useReducer((count: number) => count + 1, 0);
+  if (active) {
+    shown.current = latest;
+  }
+  const stale = !sameGridProps(shown.current, latest);
+  useEffect(() => {
+    if (!stale) {
+      return;
+    }
+    return whenIdle(() => {
+      shown.current = { cards, family, size, selected, onSelect };
+      refresh();
+    });
+  }, [stale, cards, family, size, selected, onSelect]);
+  return (
+    <div
+      className={`absolute inset-0 ${active ? "" : "[content-visibility:hidden] pointer-events-none"}`}
+      inert={!active}
+      data-card-family={family}
+    >
+      <VirtualCardGrid {...shown.current} />
+    </div>
+  );
+});

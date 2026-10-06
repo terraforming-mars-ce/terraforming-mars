@@ -63,6 +63,9 @@ type GameState struct {
 	Spectators   map[string]*shared.SpectatorState
 	ChatMessages []shared.ChatMessage
 
+	// BotSpendUSD is the total LLM spend of all bots in this game.
+	BotSpendUSD float64
+
 	PendingTileSelections      map[string]*shared.PendingTileSelection
 	PendingTileSelectionQueues map[string]*shared.PendingTileSelectionQueue
 	ForcedFirstActions         map[string]*shared.ForcedFirstAction
@@ -75,11 +78,12 @@ type GameState struct {
 	InitPhasePlayerIndex       int
 	InitPhaseWaitingForConfirm bool
 	InitPhaseConfirmVersion    int
+	InitPhaseRoster            bool
 
 	NextGenTurnOrderFrozen bool
 
 	ColonyStates         []*colony.ColonyState
-	TradeFleets          map[string]bool
+	TradeFleets          map[string]colony.TradeFleet
 	ProjectFundingStates []*projectfunding.ProjectState
 
 	TriggeredEffects []shared.TriggeredEffect
@@ -96,13 +100,16 @@ type GameStateHistoryEntry struct {
 
 // PlayerState holds a single player's data.
 type PlayerState struct {
-	ID            string
-	Name          string
-	Connected     bool
-	PlayerType    string
-	BotStatus     string
-	BotDifficulty string
-	BotSpeed      string
+	PendingEffectSelection  *shared.PendingEffectSelection
+	PendingCardReveal       *shared.PendingCardReveal
+	ResolvedProductionBoxes map[string][]shared.ProductionCondition
+	ID                      string
+	Name                    string
+	Connected               bool
+	PlayerType              string
+	BotStatus               string
+	BotPersona              string
+	BotError                string
 
 	CorporationID      string
 	Color              string
@@ -119,23 +126,22 @@ type PlayerState struct {
 
 	ResourceStorage map[string]int
 
-	PaymentSubstitutes        []shared.PaymentSubstitute
-	StoragePaymentSubstitutes []shared.StoragePaymentSubstitute
-	ValueModifiers            map[shared.ResourceType]int
+	PaymentSubstitutes []shared.PaymentSubstitute
+	ValueModifiers     map[shared.ResourceType]int
 
-	SelectCorporationPhase         *shared.SelectCorporationPhase
-	SelectStartingCardsPhase       *shared.SelectStartingCardsPhase
-	SelectPreludeCardsPhase        *shared.SelectPreludeCardsPhase
-	PendingCardSelection           *shared.PendingCardSelection
-	PendingCardDrawSelection       *shared.PendingCardDrawSelection
-	PendingCardDiscardSelection    *shared.PendingCardDiscardSelection
-	PendingBehaviorChoiceSelection *shared.PendingBehaviorChoiceSelection
-	PendingStealTargetSelection    *shared.PendingStealTargetSelection
-	PendingColonyResourceSelection *shared.PendingColonyResourceSelection
-	PendingColonyResourceQueue     []shared.PendingColonyResourceSelection
-	PendingAwardFundSelection      *shared.PendingAwardFundSelection
-	PendingColonySelection         *shared.PendingColonySelection
-	PendingFreeTradeSelection      *shared.PendingFreeTradeSelection
+	SelectCorporationPhase          *shared.SelectCorporationPhase
+	SelectStartingCardsPhase        *shared.SelectStartingCardsPhase
+	SelectPreludeCardsPhase         *shared.SelectPreludeCardsPhase
+	PendingCardSelection            *shared.PendingCardSelection
+	CardReceipts                    []shared.CardReceipt
+	PendingCardDrawSelection        *shared.PendingCardDrawSelection
+	PendingBehaviorResolutions      []*shared.PendingBehaviorResolution
+	PendingResourceRemovalSelection *shared.PendingResourceRemovalSelection
+	PendingColonyResourceSelection  *shared.PendingColonyResourceSelection
+	PendingColonyResourceQueue      []shared.PendingColonyResourceSelection
+	PendingAwardFundSelection       *shared.PendingAwardFundSelection
+	PendingColonySelection          *shared.PendingColonySelection
+	PendingFreeTradeSelection       *shared.PendingFreeTradeSelection
 
 	Actions []shared.CardAction
 

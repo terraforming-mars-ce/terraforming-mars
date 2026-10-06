@@ -74,6 +74,7 @@ function createHoverSmokeMaterial(smokeTexture: THREE.Texture | undefined): THRE
     transparent: true,
     depthWrite: false,
     side: THREE.DoubleSide,
+    forceSinglePass: true,
   });
 }
 

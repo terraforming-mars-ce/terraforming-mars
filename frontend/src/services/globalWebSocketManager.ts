@@ -1,7 +1,7 @@
 import { webSocketService } from "./webSocketService.ts";
 import { WebSocketConnection } from "../types/webSocketTypes.ts";
 import type {
-  CardPaymentDto,
+  PaymentDto,
   ChatMessageDto,
   SelectDemoChoicesRequest,
   GameDto,
@@ -9,6 +9,11 @@ import type {
   FullStatePayload,
   LogUpdatePayload,
   UpdateGameSettingsRequest,
+  EmotePayload,
+  EmoteSendPayload,
+  BotThoughtPayload,
+  BotTraceDto,
+  BotTraceEventDto,
 } from "../types/generated/api-types.ts";
 
 class GlobalWebSocketManager implements WebSocketConnection {
@@ -119,6 +124,22 @@ class GlobalWebSocketManager implements WebSocketConnection {
       this.emit("spectator-kicked", payload);
     });
 
+    webSocketService.on("emote", (payload: EmotePayload) => {
+      this.emit("emote", payload);
+    });
+
+    webSocketService.on("bot-thought", (payload: BotThoughtPayload) => {
+      this.emit("bot-thought", payload);
+    });
+
+    webSocketService.on("bot-trace-snapshot", (payload: BotTraceDto) => {
+      this.emit("bot-trace-snapshot", payload);
+    });
+
+    webSocketService.on("bot-trace-event", (payload: BotTraceEventDto) => {
+      this.emit("bot-trace-event", payload);
+    });
+
     webSocketService.on("error", (error: any) => {
       console.error("WebSocket error:", error);
       this.emit("error", error);
@@ -183,14 +204,14 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.standardProject(projectId);
   }
 
-  async convertPlantsToGreenery(storageSubstitutes?: Record<string, number>): Promise<string> {
+  async convertPlantsToGreenery(payment?: PaymentDto): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.convertPlantsToGreenery(storageSubstitutes);
+    return webSocketService.convertPlantsToGreenery(payment);
   }
 
-  async convertHeatToTemperature(storageSubstitutes?: Record<string, number>): Promise<string> {
+  async convertHeatToTemperature(payment?: PaymentDto): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.convertHeatToTemperature(storageSubstitutes);
+    return webSocketService.convertHeatToTemperature(payment);
   }
 
   async startGame(): Promise<string> {
@@ -205,11 +226,12 @@ class GlobalWebSocketManager implements WebSocketConnection {
 
   async playCard(
     cardId: string,
-    payment: CardPaymentDto,
+    payment: PaymentDto | undefined,
     choiceIndex?: number,
     cardStorageTargets?: string[],
     targetPlayerId?: string,
     selectedAmount?: number,
+    cardStorageSources?: string[],
   ): Promise<string> {
     await this.ensureConnected();
     return webSocketService.playCard(
@@ -219,6 +241,7 @@ class GlobalWebSocketManager implements WebSocketConnection {
       cardStorageTargets,
       targetPlayerId,
       selectedAmount,
+      cardStorageSources,
     );
   }
 
@@ -230,8 +253,9 @@ class GlobalWebSocketManager implements WebSocketConnection {
     targetPlayerId?: string,
     sourceCardForInput?: string,
     selectedAmount?: number,
-    payment?: CardPaymentDto,
+    payment?: PaymentDto,
     reuseSourceCardId?: string,
+    cardStorageSources?: string[],
   ): Promise<string> {
     await this.ensureConnected();
     return webSocketService.playCardAction(
@@ -244,6 +268,7 @@ class GlobalWebSocketManager implements WebSocketConnection {
       selectedAmount,
       payment,
       reuseSourceCardId,
+      cardStorageSources,
     );
   }
 
@@ -274,6 +299,11 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.confirmProductionCards(cardIds, options);
   }
 
+  async acknowledgeCardReceipt(receiptId: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.acknowledgeCardReceipt(receiptId);
+  }
+
   async confirmCardDraw(cardsToTake: string[], cardsToBuy: string[]): Promise<string> {
     await this.ensureConnected();
     return webSocketService.confirmCardDraw(cardsToTake, cardsToBuy);
@@ -300,19 +330,27 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.playerTakeover(targetPlayerId, gameId);
   }
 
-  async confirmCardDiscard(cardsToDiscard: string[]): Promise<string> {
+  async confirmCardDiscard(resolutionId: string, cardsToDiscard: string[]): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.confirmCardDiscard(cardsToDiscard);
+    return webSocketService.confirmCardDiscard(resolutionId, cardsToDiscard);
   }
 
-  async confirmBehaviorChoice(choiceIndex: number, cardStorageTargets?: string[]): Promise<string> {
+  async confirmBehaviorChoice(
+    resolutionId: string,
+    choiceIndex: number,
+    cardStorageTargets?: string[],
+  ): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.confirmBehaviorChoice(choiceIndex, cardStorageTargets);
+    return webSocketService.confirmBehaviorChoice(resolutionId, choiceIndex, cardStorageTargets);
   }
 
-  async confirmStealTarget(targetPlayerId: string): Promise<string> {
+  async confirmResourceRemoval(
+    selectionId: string,
+    targetPlayerId: string,
+    amount: number,
+  ): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.confirmStealTarget(targetPlayerId);
+    return webSocketService.confirmResourceRemoval(selectionId, targetPlayerId, amount);
   }
 
   async confirmColonyResource(cardId: string): Promise<string> {
@@ -325,14 +363,28 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.confirmColonyPlacement(colonyId);
   }
 
-  async confirmFreeTrade(colonyId: string): Promise<string> {
+  async confirmCardReveal(): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.confirmFreeTrade(colonyId);
+    return webSocketService.confirmCardReveal();
   }
 
-  async tradeWithColony(colonyId: string, paymentType: string): Promise<string> {
+  async confirmEffectSelection(optionIndex: number): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.tradeWithColony(colonyId, paymentType);
+    return webSocketService.confirmEffectSelection(optionIndex);
+  }
+
+  async confirmFreeTrade(colonyId: string, trackSteps: number): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.confirmFreeTrade(colonyId, trackSteps);
+  }
+
+  async tradeWithColony(
+    colonyId: string,
+    paymentType: string,
+    trackSteps: number,
+  ): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.tradeWithColony(colonyId, paymentType, trackSteps);
   }
 
   async buildColony(colonyId: string): Promise<string> {
@@ -340,9 +392,24 @@ class GlobalWebSocketManager implements WebSocketConnection {
     return webSocketService.buildColony(colonyId);
   }
 
-  async addBot(botName?: string, difficulty?: string, speed?: string): Promise<string> {
+  async addBot(): Promise<string> {
     await this.ensureConnected();
-    return webSocketService.addBot(botName, difficulty, speed);
+    return webSocketService.addBot();
+  }
+
+  async retryBot(playerId: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.retryBot(playerId);
+  }
+
+  async inspectBot(playerId: string): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.inspectBot(playerId);
+  }
+
+  async sendEmote(emote: EmoteSendPayload["emote"]): Promise<string> {
+    await this.ensureConnected();
+    return webSocketService.sendEmote(emote);
   }
 
   async kickPlayer(targetPlayerId: string): Promise<string> {

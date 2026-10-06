@@ -1,5 +1,7 @@
 package action_test
 
+import "terraforming-mars-backend/internal/game/shared"
+
 import (
 	"context"
 	"path/filepath"
@@ -96,7 +98,7 @@ func TestStandardProject_PowerPlant(t *testing.T) {
 	initialEnergyProd := p.Resources().Production().Energy
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "power-plant")
+	err := action.Execute(ctx, testGame.ID(), playerID, "power-plant", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("power-plant")]))
 	testutil.AssertNoError(t, err, "Power Plant should succeed")
 
 	afterCredits := testutil.GetPlayerCredits(p)
@@ -119,7 +121,7 @@ func TestStandardProject_Asteroid(t *testing.T) {
 	initialTR := p.Resources().TerraformRating()
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "asteroid")
+	err := action.Execute(ctx, testGame.ID(), playerID, "asteroid", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("asteroid")]))
 	testutil.AssertNoError(t, err, "Asteroid should succeed")
 
 	afterCredits := testutil.GetPlayerCredits(p)
@@ -142,7 +144,7 @@ func TestStandardProject_Aquifer(t *testing.T) {
 	initialCredits := testutil.GetPlayerCredits(p)
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "aquifer")
+	err := action.Execute(ctx, testGame.ID(), playerID, "aquifer", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("aquifer")]))
 	testutil.AssertNoError(t, err, "Aquifer should succeed")
 
 	afterCredits := testutil.GetPlayerCredits(p)
@@ -164,7 +166,7 @@ func TestStandardProject_Greenery(t *testing.T) {
 	initialCredits := testutil.GetPlayerCredits(p)
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "greenery")
+	err := action.Execute(ctx, testGame.ID(), playerID, "greenery", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("greenery")]))
 	testutil.AssertNoError(t, err, "Greenery should succeed")
 
 	afterCredits := testutil.GetPlayerCredits(p)
@@ -187,7 +189,7 @@ func TestStandardProject_City(t *testing.T) {
 	initialCreditProd := p.Resources().Production().Credits
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "city")
+	err := action.Execute(ctx, testGame.ID(), playerID, "city", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("city")]))
 	testutil.AssertNoError(t, err, "City should succeed")
 
 	afterCredits := testutil.GetPlayerCredits(p)
@@ -213,7 +215,7 @@ func TestStandardProject_SellPatents(t *testing.T) {
 	initialActions := testGame.CurrentTurn().ActionsRemaining()
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "sell-patents")
+	err := action.Execute(ctx, testGame.ID(), playerID, "sell-patents", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("sell-patents")]))
 	testutil.AssertNoError(t, err, "Sell Patents should succeed")
 
 	pendingSel := p.Selection().GetPendingCardSelection()
@@ -231,7 +233,7 @@ func TestStandardProject_SellPatentsNoCards(t *testing.T) {
 	ctx := context.Background()
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "sell-patents")
+	err := action.Execute(ctx, testGame.ID(), playerID, "sell-patents", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("sell-patents")]))
 	testutil.AssertError(t, err, "Sell Patents with no cards should fail")
 }
 
@@ -260,7 +262,7 @@ func TestStandardProject_InsufficientCredits(t *testing.T) {
 			testutil.SetPlayerCredits(ctx, p, tt.credits)
 
 			action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-			err := action.Execute(ctx, testGame.ID(), playerID, tt.projectID)
+			err := action.Execute(ctx, testGame.ID(), playerID, tt.projectID, shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject(tt.projectID)]))
 			testutil.AssertError(t, err, "Should reject with insufficient credits")
 		})
 	}
@@ -289,7 +291,7 @@ func TestStandardProject_ExactCreditsSucceeds(t *testing.T) {
 			testutil.SetPlayerCredits(ctx, p, tt.credits)
 
 			action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-			err := action.Execute(ctx, testGame.ID(), playerID, tt.projectID)
+			err := action.Execute(ctx, testGame.ID(), playerID, tt.projectID, shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject(tt.projectID)]))
 			testutil.AssertNoError(t, err, "Should succeed with exact credits")
 
 			afterCredits := testutil.GetPlayerCredits(p)
@@ -309,7 +311,7 @@ func TestStandardProject_UnknownProjectID(t *testing.T) {
 	testutil.SetPlayerCredits(ctx, p, 100)
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "nonexistent-project")
+	err := action.Execute(ctx, testGame.ID(), playerID, "nonexistent-project", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("nonexistent-project")]))
 	testutil.AssertError(t, err, "Should reject unknown project ID")
 }
 
@@ -327,7 +329,7 @@ func TestStandardProject_ConsumesAction(t *testing.T) {
 	testutil.AssertEqual(t, 2, initialActions, "Should start with 2 actions")
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "power-plant")
+	err := action.Execute(ctx, testGame.ID(), playerID, "power-plant", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("power-plant")]))
 	testutil.AssertNoError(t, err, "Power Plant should succeed")
 
 	afterActions := testGame.CurrentTurn().ActionsRemaining()
@@ -345,7 +347,7 @@ func TestStandardProject_SellPatentsDoesNotConsumeAction(t *testing.T) {
 	initialActions := testGame.CurrentTurn().ActionsRemaining()
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
-	err := action.Execute(ctx, testGame.ID(), playerID, "sell-patents")
+	err := action.Execute(ctx, testGame.ID(), playerID, "sell-patents", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("sell-patents")]))
 	testutil.AssertNoError(t, err, "Sell Patents should succeed")
 
 	afterActions := testGame.CurrentTurn().ActionsRemaining()

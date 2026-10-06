@@ -1,5 +1,10 @@
 import React from "react";
-import { ResourceType, ResourcesDto, ProductionDto } from "@/types/generated/api-types.ts";
+import {
+  ResourceType,
+  ResourcesDto,
+  ProductionDto,
+  ResourceRemovalTargetDto,
+} from "@/types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import {
@@ -17,6 +22,7 @@ interface TargetPlayer {
 }
 
 interface TargetPlayerSelectionPopoverProps {
+  removalTargets: ResourceRemovalTargetDto[];
   resourceType: ResourceType;
   amount: number;
   isSteal?: boolean;
@@ -61,10 +67,10 @@ function getPlayerResourceAmount(player: TargetPlayer, resourceType: ResourceTyp
 
 const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> = ({
   resourceType,
+  removalTargets,
   amount,
   isSteal,
   players,
-  currentPlayerId,
   onPlayerSelect,
   onCancel,
   isVisible,
@@ -72,14 +78,18 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
 }) => {
   const isProduction = resourceType.endsWith("-production");
   const displayIconType = resourceType;
-  const eligiblePlayers = players.filter(
-    (player) => getPlayerResourceAmount(player, resourceType) > 0,
+  const eligiblePlayers = players.filter((player) =>
+    isProduction
+      ? getPlayerResourceAmount(player, resourceType) > 0
+      : removalTargets.some(
+          (t) =>
+            t.playerId === player.id &&
+            !t.cardId &&
+            t.resourceType === resourceType &&
+            t.amount > 0,
+        ),
   );
   const hasNoTargets = eligiblePlayers.length === 0;
-  const eligibleOthers = currentPlayerId
-    ? eligiblePlayers.filter((p) => p.id !== currentPlayerId)
-    : eligiblePlayers;
-  const onlySelfEligible = !hasNoTargets && eligibleOthers.length === 0;
   const canDismiss = !mandatory || hasNoTargets;
 
   const handleContinueAnyway = () => {
@@ -117,7 +127,7 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
               <GameIcon iconType={displayIconType} size="large" />
             </div>
             <div className="text-white/70 text-xs mb-4 max-w-[280px]">
-              No other players have {isProduction ? `${resourceType} production` : resourceType}{" "}
+              No eligible players have {isProduction ? `${resourceType} production` : resourceType}{" "}
               available. You can continue without targeting anyone.
             </div>
           </div>
@@ -170,7 +180,7 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
             </>
           ) : (
             <>
-              {onlySelfEligible && (
+              {!isProduction && (
                 <GameButton
                   emphasis="primary"
                   tone="warn"

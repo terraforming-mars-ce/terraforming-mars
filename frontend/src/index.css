@@ -248,6 +248,47 @@ code {
   }
 }
 
+@keyframes botThoughtBubble {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% + 6px));
+  }
+  8% {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+  88% {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 4px));
+  }
+}
+
+@keyframes emotePop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+  22% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -80%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -130%) scale(0.9);
+  }
+}
+
 @keyframes stripeMove {
   from {
     background-position: 0 0;
@@ -1345,6 +1386,7 @@ code {
   }
 
   .game-card-body {
+    min-width: 0;
     position: relative;
     isolation: isolate;
     display: flex;
@@ -1519,7 +1561,7 @@ code {
     flex: 1;
     align-items: center;
     justify-content: center;
-    padding: 12px 8px 0;
+    padding: 16px 16px 8px;
     min-width: 0;
   }
 
@@ -1629,6 +1671,8 @@ code {
     --card-title-size: 22px;
     --behavior-icon-size: 36px;
     --behavior-icon-small-size: 36px;
+    --behavior-arrow-size: 22px;
+    --behavior-section-gap: 8px;
   }
 
   .game-card[data-presentation="inspection"] .game-card-cost > div,
@@ -1643,11 +1687,20 @@ code {
 
   .game-card[data-presentation="inspection"] .game-card-behaviors {
     flex: 0 0 auto;
-    padding-top: 16px;
   }
 
   .game-card[data-presentation="inspection"] .game-card-requirements:empty {
     min-height: 0;
+  }
+
+  [data-card-family] .game-card[data-presentation="inspection"] .game-card-requirements {
+    min-height: calc(36px * var(--card-badge-scale));
+  }
+
+  [data-card-family] .game-card {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
   }
 
   .game-card[data-presentation="compact"] .game-card-body {
@@ -1658,6 +1711,28 @@ code {
     max-height: 100%;
     overflow-y: auto;
     scrollbar-width: thin;
+  }
+
+  .behavior-section {
+    overflow-anchor: none;
+  }
+
+  .behavior-fitting img {
+    flex-shrink: 0;
+  }
+
+  .behavior-fitting .behavior-flow {
+    min-width: 0;
+    flex-wrap: nowrap;
+  }
+
+  .behavior-fitting .behavior-flow > * {
+    flex-shrink: 0;
+    max-width: 100%;
+  }
+
+  .behavior-fitting[data-compact="true"] .behavior-flow {
+    flex-wrap: wrap;
   }
 
   .game-card-behaviors > div > div {

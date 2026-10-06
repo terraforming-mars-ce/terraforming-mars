@@ -40,7 +40,11 @@ func (ctx *gameVPRecalculationContext) CountPlayerTagsByType(playerID string, ta
 	if ctx.game.vpCardLookup == nil {
 		return 0
 	}
-	for _, cardID := range p.PlayedCards().Cards() {
+	ids := append([]string(nil), p.PlayedCards().Cards()...)
+	if id := p.CorporationID(); id != "" && !slices.Contains(ids, id) {
+		ids = append(ids, id)
+	}
+	for _, cardID := range ids {
 		cardInfo, err := ctx.game.vpCardLookup.LookupVPCard(cardID)
 		if err != nil {
 			continue
@@ -49,12 +53,12 @@ func (ctx *gameVPRecalculationContext) CountPlayerTagsByType(playerID string, ta
 			continue
 		}
 		for _, tag := range cardInfo.Tags {
-			if tag == tagType || tag == shared.TagWild {
+			if tag == tagType {
 				count++
 			}
 		}
 	}
-	return count
+	return count + p.BonusTagCount(tagType)
 }
 
 func (ctx *gameVPRecalculationContext) CountAllTilesOfType(tileType shared.ResourceType) int {

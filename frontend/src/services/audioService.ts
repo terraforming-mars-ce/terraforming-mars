@@ -10,6 +10,7 @@ interface AudioFileEntry {
 const CONSTRUCTION_SOUNDS = ["construction-1", "construction-2"] as const;
 
 class AudioService {
+  private nuclearPlayback = new Set<HTMLAudioElement>();
   private audioCache: Map<string, HTMLAudioElement> = new Map();
   private ambientAudio: HTMLAudioElement | null = null;
   private isEnabled: boolean = true;
@@ -103,6 +104,11 @@ class AudioService {
         path: assetUrl(`audio/effects/${key}`),
         volumeMultiplier: 1.0,
       })),
+      {
+        key: "nuclear-blast",
+        path: assetUrl("audio/effects/nuclear-blast"),
+        volumeMultiplier: 0.8,
+      },
       { key: "your-turn", path: assetUrl("audio/effects/your-turn"), volumeMultiplier: 1.0 },
       { key: "award-funded", path: assetUrl("audio/effects/award-funded"), volumeMultiplier: 1.0 },
       { key: "game-start", path: assetUrl("audio/effects/game-start"), volumeMultiplier: 1.0 },
@@ -209,6 +215,23 @@ class AudioService {
 
   public async playCardPlayedSound(): Promise<void> {
     return this.playSound("card-played");
+  }
+
+  public playNuclearBlastSound(): HTMLAudioElement | null {
+    const audio = this.playSoundWithHandle("nuclear-blast");
+    if (audio) {
+      this.nuclearPlayback.add(audio);
+      audio.addEventListener("ended", () => this.nuclearPlayback.delete(audio), { once: true });
+      audio.addEventListener("error", () => this.nuclearPlayback.delete(audio), { once: true });
+    }
+    return audio;
+  }
+
+  public stopNuclearBlastSound(audio: HTMLAudioElement | null): void {
+    if (audio) {
+      audio.pause();
+      this.nuclearPlayback.delete(audio);
+    }
   }
 
   public async playConstructionSound(): Promise<void> {
@@ -405,10 +428,16 @@ class AudioService {
 
   public setEnabled(enabled: boolean): void {
     this.isEnabled = enabled;
+    this.nuclearPlayback.forEach((audio) => {
+      audio.muted = !enabled;
+    });
   }
 
   public setVolume(volume: number): void {
     this.volume = Math.max(0, Math.min(1, volume));
+    this.nuclearPlayback.forEach((audio) => {
+      audio.volume = this.volume * 0.8;
+    });
 
     this.audioCache.forEach((audio, key) => {
       const multiplier = this.volumeMultipliers.get(key) ?? 1.0;

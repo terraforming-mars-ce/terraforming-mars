@@ -38,37 +38,73 @@ func TestCountPlayerTagsByType_ExcludesEventCards(t *testing.T) {
 	}
 }
 
-// TestCountPlayerTagsByType_WildTagCountsForAny verifies that wild tags
-// count toward any tag type.
-func TestCountPlayerTagsByType_WildTagCountsForAny(t *testing.T) {
-	g, _, _, playerID, _ := testutil.SetupTwoPlayerGame(t)
-	p, _ := g.GetPlayer(playerID)
-
-	testCards := []gamecards.Card{
-		{ID: "wild-card", Name: "Wild Card", Type: gamecards.CardTypeAutomated, Tags: []shared.CardTag{shared.TagWild}},
-		{ID: "science-card", Name: "Lab", Type: gamecards.CardTypeAutomated, Tags: []shared.CardTag{shared.TagScience}},
+func TestTagCounts_ExplicitActionContext(t *testing.T) {
+	g, _, registry, id, opponentID := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	p.SetCorporationID("")
+	for _, name := range []string{"Research Coordination", "Research Network", "Search For Life"} {
+		card := testutil.GetCardByName(name)
+		p.PlayedCards().AddCard(card.ID, card.Name, string(card.Type), nil)
 	}
-	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(testCards)
-
-	// Measure baseline from corporation (Tharsis Republic has building tag)
-	baselineScience := gamecards.CountPlayerTagsByType(p, cardRegistry, shared.TagScience)
-	baselineBuilding := gamecards.CountPlayerTagsByType(p, cardRegistry, shared.TagBuilding)
-
-	// Now add a wild card and a science card
-	p.PlayedCards().AddCard("wild-card", "Wild Card", "automated", []string{"wild"})
-	p.PlayedCards().AddCard("science-card", "Lab", "automated", []string{"science"})
-
-	// Science should increase by 2: 1 direct + 1 wild
-	scienceCount := gamecards.CountPlayerTagsByType(p, cardRegistry, shared.TagScience)
-	scienceDelta := scienceCount - baselineScience
-	if scienceDelta != 2 {
-		t.Fatalf("expected science tags to increase by 2 (1 + 1 wild), increased by %d", scienceDelta)
+	p.AddBonusTags(shared.TagScience, 1)
+	for _, tc := range []struct {
+		name    string
+		tags    []shared.CardTag
+		context gamecards.TagCountContext
+		want    int
+	}{
+		{"actual", []shared.CardTag{shared.TagScience}, gamecards.TagCountContext{}, 2},
+		{"owner action", []shared.CardTag{shared.TagScience}, gamecards.TagCountContext{ActorID: id}, 4},
+		{"opponent action", []shared.CardTag{shared.TagScience}, gamecards.TagCountContext{ActorID: opponentID}, 2},
+		{"union", []shared.CardTag{shared.TagScience, shared.TagPlant, shared.TagScience}, gamecards.TagCountContext{ActorID: id}, 4},
+		{"new wild excluded", []shared.CardTag{shared.TagScience}, gamecards.TagCountContext{ActorID: id, ExcludeWildCardID: testutil.CardID("Research Coordination")}, 3},
+		{"not event", []shared.CardTag{shared.TagEvent}, gamecards.TagCountContext{ActorID: id}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			testutil.AssertEqual(t, tc.want, gamecards.CountPlayerTags(p, registry, tc.tags, tc.context), "count")
+		})
 	}
+	testutil.AssertEqual(t, 2, gamecards.CountPlayerTagsByType(p, registry, shared.TagScience), "raw helper never uses wilds")
+}
 
-	// Building should increase by 1: just the wild
-	buildingCount := gamecards.CountPlayerTagsByType(p, cardRegistry, shared.TagBuilding)
-	buildingDelta := buildingCount - baselineBuilding
-	if buildingDelta != 1 {
-		t.Fatalf("expected building tags to increase by 1 (wild), increased by %d", buildingDelta)
+func TestTagRequirements_AllocateSharedWildPool(t *testing.T) {
+	one, two, three, zero := 1, 2, 3, 0
+	plant, microbe, science := shared.TagPlant, shared.TagMicrobe, shared.TagScience
+	for _, tc := range []struct {
+		name         string
+		counts       gamecards.TagCounts
+		requirements []gamecards.Requirement
+		valid        bool
+	}{
+		{"two missing one wild", gamecards.TagCounts{shared.TagWild: 1}, []gamecards.Requirement{{Type: gamecards.RequirementTags, Tag: &plant, Min: &one}, {Type: gamecards.RequirementTags, Tag: &microbe, Min: &one}}, false},
+		{"two missing two wilds", gamecards.TagCounts{shared.TagWild: 2}, []gamecards.Requirement{{Type: gamecards.RequirementTags, Tag: &plant, Min: &one}, {Type: gamecards.RequirementTags, Tag: &microbe, Min: &one}}, true},
+		{"science threshold", gamecards.TagCounts{science: 2, shared.TagWild: 1}, []gamecards.Requirement{{Type: gamecards.RequirementTags, Tag: &science, Min: &three}}, true},
+		{"repeated type uses highest minimum", gamecards.TagCounts{science: 1, shared.TagWild: 2}, []gamecards.Requirement{{Type: gamecards.RequirementTags, Tag: &science, Min: &two}, {Type: gamecards.RequirementTags, Tag: &science, Min: &three}}, true},
+		{"unassigned wild respects maximum", gamecards.TagCounts{shared.TagWild: 2}, []gamecards.Requirement{{Type: gamecards.RequirementTags, Tag: &science, Max: &zero}}, true},
+		{"actual tag cannot be hidden", gamecards.TagCounts{science: 1, shared.TagWild: 2}, []gamecards.Requirement{{Type: gamecards.RequirementTags, Tag: &science, Max: &zero}}, false},
+		{"conflicting bounds", gamecards.TagCounts{shared.TagWild: 2}, []gamecards.Requirement{{Type: gamecards.RequirementTags, Tag: &science, Min: &two}, {Type: gamecards.RequirementTags, Tag: &science, Max: &one}}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := gamecards.ValidateTagRequirements(tc.requirements, tc.counts)
+			testutil.AssertEqual(t, tc.valid, err == nil, "requirements")
+		})
+	}
+}
+
+func TestWildTags_MilestonesVersusAwards(t *testing.T) {
+	g, _, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	p.SetCorporationID("")
+	wild := testutil.GetCardByName("Research Coordination")
+	p.PlayedCards().AddCard(wild.ID, wild.Name, string(wild.Type), nil)
+	for _, name := range []string{"builder", "ecologist", "diversifier"} {
+		definition, err := testutil.CreateTestMilestoneRegistry().GetByID(name)
+		testutil.AssertNoError(t, err, "milestone")
+		testutil.AssertEqual(t, 1, gamecards.CalculateMilestoneProgress(definition, p, g.Board(), registry), "one wild contributes once")
+	}
+	for _, name := range []string{"scientist", "space-baron"} {
+		definition, err := testutil.CreateTestAwardRegistry().GetByID(name)
+		testutil.AssertNoError(t, err, "award")
+		testutil.AssertEqual(t, 0, gamecards.CalculateAwardScore(definition, p, g.Board(), registry), "wild grants no award score")
 	}
 }

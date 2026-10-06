@@ -297,7 +297,11 @@ export default function SpaceshipRenderer({
   }, [animateEntrance]);
 
   const primitive = useMemo(() => {
-    return extractSpaceshipPrimitive(spaceshipScene);
+    const result = extractSpaceshipPrimitive(spaceshipScene);
+    if (result) {
+      result.material.userData.tileHighlights = false;
+    }
+    return result;
   }, [spaceshipScene]);
 
   const padGeometry = useMemo(() => {
@@ -321,6 +325,7 @@ export default function SpaceshipRenderer({
       roughness: 0.95,
       metalness: 0.05,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
       transparent: true,
       alphaTest: 0.01,
       depthWrite: false,
@@ -459,6 +464,7 @@ export default function SpaceshipRenderer({
   }, [shipCount]);
 
   const shipsRef = useRef<ShipState[]>([]);
+  const frameMatrices = useRef<THREE.Matrix4[]>([]);
 
   useEffect(() => {
     if (parkedMatrices.length === 0 || players.length === 0) {
@@ -587,7 +593,8 @@ export default function SpaceshipRenderer({
     }
 
     let needsUpdate = false;
-    const matrices: THREE.Matrix4[] = [];
+    const matrices = frameMatrices.current;
+    matrices.length = 0;
 
     for (let i = 0; i < ships.length; i++) {
       const ship = ships[i];
@@ -683,7 +690,7 @@ export default function SpaceshipRenderer({
           matrices[j] = new THREE.Matrix4().compose(pos, rot, scaleVec);
         }
       }
-      setTransforms(matrices);
+      setTransforms([...matrices]);
     }
   });
 

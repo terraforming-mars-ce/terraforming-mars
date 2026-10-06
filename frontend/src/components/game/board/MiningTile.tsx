@@ -1,3 +1,4 @@
+import { useNuclearImpacted } from "./NuclearCollapse";
 import { useRef, useState, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -135,6 +136,7 @@ export default function MiningTile({
   const oreGroupRef = useRef<THREE.Group>(null);
   const emergenceStartRef = useRef<number | null>(null);
   const isEmergingRef = useRef(isNewlyPlaced);
+  const nuclearImpacted = useNuclearImpacted();
   const [showDust, setShowDust] = useState(isNewlyPlaced);
   const [emergenceComplete, setEmergenceComplete] = useState(!isNewlyPlaced);
 
@@ -171,6 +173,7 @@ export default function MiningTile({
       roughness: 0.95,
       metalness: 0.0,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
       transparent: true,
       alphaTest: 0.01,
       depthWrite: false,
@@ -192,6 +195,9 @@ export default function MiningTile({
   const goingDownRef = useRef(false);
 
   useFrame((state) => {
+    if (nuclearImpacted) {
+      return;
+    }
     if (isEmergingRef.current) {
       if (!groupRef.current) return;
 
@@ -451,7 +457,7 @@ export default function MiningTile({
 
       {emergenceComplete && <MiningDust />}
 
-      {showDust && surfaceNormal && worldPosition && (
+      {!nuclearImpacted && showDust && surfaceNormal && worldPosition && (
         <DustEffect
           duration={2500}
           particleColor={new THREE.Color(0.45, 0.3, 0.15)}

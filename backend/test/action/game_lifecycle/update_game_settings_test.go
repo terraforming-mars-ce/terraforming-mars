@@ -185,12 +185,26 @@ func TestUpdateGameSettings_DevelopmentModeAndClaudeTokenSet(t *testing.T) {
 	rig := newUpdateSettingsRig(t, 1)
 
 	err := rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{
-		DevelopmentMode: boolPtr(false),
-		ClaudeAPIKey:    strPtr("sk-ant-test"),
+		DevelopmentMode:  boolPtr(false),
+		ClaudeOAuthToken: strPtr("sk-ant-oat-test"),
 	})
 	testutil.AssertNoError(t, err, "update dev + token")
 
 	s := rig.game(t).Settings()
 	testutil.AssertFalse(t, s.DevelopmentMode, "dev mode should be off")
-	testutil.AssertEqual(t, "sk-ant-test", s.ClaudeAPIKey, "claude token should be set")
+	testutil.AssertEqual(t, "sk-ant-oat-test", s.ClaudeOAuthToken, "claude token should be set")
+}
+
+func TestUpdateGameSettings_BotSpendCap(t *testing.T) {
+	rig := newUpdateSettingsRig(t, 1)
+	testutil.AssertEqual(t, shared.DefaultBotSpendCapUSD, rig.game(t).Settings().EffectiveBotSpendCapUSD(), "unset cap uses the default")
+
+	cap := 2.5
+	err := rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{BotSpendCapUSD: &cap})
+	testutil.AssertNoError(t, err, "cap should be set")
+	testutil.AssertEqual(t, 2.5, rig.game(t).Settings().EffectiveBotSpendCapUSD(), "cap should apply")
+
+	zero := 0.0
+	err = rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{BotSpendCapUSD: &zero})
+	testutil.AssertError(t, err, "cap must be positive")
 }

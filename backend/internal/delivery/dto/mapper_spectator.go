@@ -27,8 +27,9 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegi
 		DemoGame:              settings.DemoGame,
 		AllowRandomBuy:        settings.AllowRandomBuy,
 		CardPacks:             settings.CardPacks,
-		HasClaudeAPIKey:       settings.ClaudeAPIKey != "",
-		ClaudeModel:           settings.ClaudeModel,
+		HasClaudeOAuthToken:   settings.ClaudeOAuthToken != "",
+		BotSpendCapUSD:        settings.EffectiveBotSpendCapUSD(),
+		BotSpendUSD:           g.BotSpendUSD(),
 		AvailablePlayerColors: shared.PlayerColors,
 	}
 
@@ -61,9 +62,10 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegi
 		}
 		if tile.OccupiedBy != nil {
 			tileDtos[i].OccupiedBy = &TileOccupantDto{
-				Type:   string(tile.OccupiedBy.Type),
-				Tags:   tile.OccupiedBy.Tags,
-				Visual: toTileVisualDto(tile.OccupiedBy.Visual),
+				DisplayName: tile.OccupiedBy.DisplayName,
+				Type:        string(tile.OccupiedBy.Type),
+				Tags:        tile.OccupiedBy.Tags,
+				Visual:      toTileVisualDto(tile.OccupiedBy.Visual),
 			}
 		}
 	}
@@ -90,44 +92,7 @@ func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegi
 		}
 	}
 
-	var initPhaseDto *InitPhaseDto
-	phase := g.CurrentPhase()
-	if phase == shared.GamePhaseInitApplyCorp || phase == shared.GamePhaseInitApplyPrelude {
-		turnOrder := g.TurnOrder()
-		idx := g.InitPhasePlayerIndex()
-		currentInitPlayerID := ""
-		if idx < len(turnOrder) {
-			currentInitPlayerID = turnOrder[idx]
-		}
-
-		activePlayers := 0
-		for _, p := range players {
-			if !p.HasExited() {
-				activePlayers++
-			}
-		}
-
-		hasPendingTiles := false
-		if currentInitPlayerID != "" {
-			hasPendingTiles = g.GetPendingTileSelection(currentInitPlayerID) != nil ||
-				g.GetPendingTileSelectionQueue(currentInitPlayerID) != nil
-			if !hasPendingTiles {
-				if initPlayer, err := g.GetPlayer(currentInitPlayerID); err == nil {
-					hasPendingTiles = initPlayer.Selection().GetPendingColonySelection() != nil
-				}
-			}
-		}
-
-		initPhaseDto = &InitPhaseDto{
-			CurrentPlayerID:    currentInitPlayerID,
-			CurrentPlayerIndex: idx,
-			TotalPlayers:       activePlayers,
-			WaitingForConfirm:  g.InitPhaseWaitingForConfirm(),
-			ConfirmVersion:     g.InitPhaseConfirmVersion(),
-			HasPreludePhase:    g.Settings().HasPrelude(),
-			HasPendingTiles:    hasPendingTiles,
-		}
-	}
+	initPhaseDto := buildInitPhaseDto(g, players, cardRegistry)
 
 	triggeredEffects := g.GetTriggeredEffects()
 	var triggeredEffectDtos []TriggeredEffectDto

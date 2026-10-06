@@ -29,12 +29,12 @@ export interface ClassifiedBehavior {
     | "auto-no-background"
     | "discount"
     | "payment-substitute"
-    | "storage-payment-substitute"
     | "value-modifier"
     | "defense";
   description?: string;
   mergedBehaviors?: CardBehaviorDto[];
   originalIndex?: number;
+  originalIndices?: number[];
 }
 
 export interface LayoutRequirement {

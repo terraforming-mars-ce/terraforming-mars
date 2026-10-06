@@ -1,6 +1,9 @@
 package action
 
 import (
+	"fmt"
+	"slices"
+	"terraforming-mars-backend/internal/game/colony"
 	"time"
 
 	"terraforming-mars-backend/internal/game"
@@ -56,7 +59,7 @@ func CalculateColonyTradeState(
 		metadata["discounts"] = discounts
 	}
 
-	if !g.Colonies().GetTradeFleetAvailable(p.ID()) {
+	if g.Colonies().TradeFleet(p.ID()).Available() == 0 {
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeNoActionsRemaining,
 			Category: player.ErrorCategoryAvailability,
@@ -72,7 +75,7 @@ func CalculateColonyTradeState(
 		})
 	}
 
-	if !canAffordAnyTrade(p, effectiveCosts) {
+	if !canAffordAnyTrade(p, g, cardRegistry, effectiveCosts) {
 		errors = append(errors, player.StateError{
 			Code:     player.ErrorCodeInsufficientResources,
 			Category: player.ErrorCategoryCost,
@@ -117,17 +120,101 @@ func CalculateEffectiveTradeCosts(
 
 // canAffordAnyTrade reports whether the player can pay at least one payment type
 // at its effective cost.
-func canAffordAnyTrade(p *player.Player, effectiveCosts map[string]int) bool {
-	resources := p.Resources().Get()
-	available := map[shared.ResourceType]int{
-		shared.ResourceCredit:   resources.Credits,
-		shared.ResourceEnergy:   resources.Energy,
-		shared.ResourceTitanium: resources.Titanium,
-	}
-	for _, pc := range tradePaymentCosts {
-		if available[pc.resource] >= effectiveCosts[string(pc.resource)] {
+func canAffordAnyTrade(p *player.Player, g *game.Game, registry gamecards.CardRegistry, costs map[string]int) bool {
+	for rt, cost := range costs {
+		if gamecards.PaymentCapacity(p, g, registry, shared.ActionColonyTrade, shared.ResourceType(rt)) >= cost {
 			return true
 		}
 	}
 	return false
+}
+
+// ColonyTradeOption is one legal track increase and the resulting gains for the trader.
+type ColonyTradeOption struct {
+	TrackSteps     int
+	MarkerPosition int
+	Outputs        []colony.Output
+}
+
+// CalculateColonyTradeOptions resolves contextual track effects without mutating state.
+func CalculateColonyTradeOptions(p *player.Player, state *colony.ColonyState, definition *colony.ColonyDefinition, registry gamecards.CardRegistryInterface) []ColonyTradeOption {
+	if p == nil || state == nil || definition == nil || state.AwaitingResource != "" || state.MarkerPosition < 0 || state.MarkerPosition >= len(definition.Steps) {
+		return nil
+	}
+	advances := map[int]bool{0: true}
+	headroom := len(definition.Steps) - 1 - state.MarkerPosition
+	ids := append([]string(nil), p.PlayedCards().Cards()...)
+	if corp := p.CorporationID(); corp != "" && !slices.Contains(ids, corp) {
+		ids = append(ids, corp)
+	}
+	if registry != nil {
+		for _, id := range ids {
+			card, err := registry.GetByID(id)
+			if err != nil {
+				continue
+			}
+			for _, behavior := range card.Behaviors {
+				matched := false
+				for _, trigger := range behavior.Triggers {
+					if trigger.Type == shared.TriggerTypeAuto && trigger.Condition != nil && trigger.Condition.Type == "before-colony-trade" && trigger.Condition.Target != nil && *trigger.Condition.Target == "self-player" {
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					continue
+				}
+				for _, output := range behavior.Outputs {
+					step, ok := output.(*shared.ColonyCondition)
+					if !ok || step.ResourceType != shared.ResourceColonyTrackStep || step.Target != "trigger-colony" || step.Amount <= 0 {
+						continue
+					}
+					next := map[int]bool{}
+					for amount := range advances {
+						if step.Optional {
+							next[amount] = true
+						}
+						next[min(headroom, amount+step.Amount)] = true
+					}
+					advances = next
+				}
+			}
+		}
+	}
+	amounts := make([]int, 0, len(advances))
+	for amount := range advances {
+		amounts = append(amounts, amount)
+	}
+	slices.Sort(amounts)
+	options := make([]ColonyTradeOption, 0, len(amounts))
+	for _, amount := range amounts {
+		position := state.MarkerPosition + amount
+		outputs := append([]colony.Output(nil), definition.Steps[position].Outputs...)
+		for _, owner := range state.PlayerColonies {
+			if owner == p.ID() {
+				outputs = append(outputs, definition.ColonyBonus...)
+			}
+		}
+		combined := make([]colony.Output, 0, len(outputs))
+		for _, output := range outputs {
+			index := slices.IndexFunc(combined, func(o colony.Output) bool { return o.Type == output.Type })
+			if index < 0 {
+				combined = append(combined, output)
+			} else {
+				combined[index].Amount += output.Amount
+			}
+		}
+		options = append(options, ColonyTradeOption{TrackSteps: amount, MarkerPosition: position, Outputs: combined})
+	}
+	return options
+}
+
+// ValidateColonyTradeOption rejects stale or forged increases before any trade cost is spent.
+func ValidateColonyTradeOption(p *player.Player, state *colony.ColonyState, definition *colony.ColonyDefinition, registry gamecards.CardRegistryInterface, trackSteps int) (ColonyTradeOption, error) {
+	for _, option := range CalculateColonyTradeOptions(p, state, definition, registry) {
+		if option.TrackSteps == trackSteps {
+			return option, nil
+		}
+	}
+	return ColonyTradeOption{}, fmt.Errorf("invalid trade track increase: %d", trackSteps)
 }

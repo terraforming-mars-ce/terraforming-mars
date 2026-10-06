@@ -4,12 +4,29 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"terraforming-mars-backend/internal/game/shared"
 )
 
 func (a *BehaviorApplier) applyColonyOutput(ctx context.Context, o *shared.ColonyCondition, amount int, log *slog.Logger) error {
 	switch o.ResourceType {
+	case shared.ResourceTradeFleet:
+		if a.game == nil || a.player == nil || !a.game.HasColonies() {
+			return fmt.Errorf("trade fleet requires colonies and player context")
+		}
+		a.game.Colonies().AddTradeFleets(a.player.ID(), amount)
+	case shared.ResourceColonyTileAdd:
+		if a.game == nil || a.player == nil || !a.game.HasColonies() {
+			return fmt.Errorf("adding a colony tile requires colonies and player context")
+		}
+		ids := []string{}
+		for _, def := range a.game.Colonies().UnusedDefinitions() {
+			ids = append(ids, def.ID)
+		}
+		if len(ids) > 0 {
+			a.player.Selection().SetPendingColonySelection(&shared.PendingColonySelection{Remaining: amount, AddTile: true, AvailableColonyIDs: ids, Source: a.source, SourceCardID: a.sourceCardID})
+		}
 	case shared.ResourceColony:
 		if a.game == nil || a.player == nil {
 			return fmt.Errorf("cannot apply colony tile: missing game or player context")
@@ -45,8 +62,10 @@ func (a *BehaviorApplier) applyColonyOutput(ctx context.Context, o *shared.Colon
 		}
 		a.applyColonyBonuses(ctx, log)
 
-	case shared.ResourceColonyCount, shared.ResourceColonyTrackStep:
-		log.Debug("Colony count/track output (informational)", slog.String("type", string(o.ResourceType)), slog.Int("amount", amount))
+	case shared.ResourceColonyCount:
+		return fmt.Errorf("colony-count is a count specification, not an effect")
+	case shared.ResourceColonyTrackStep:
+		return fmt.Errorf("colony track movement requires a complete effect selection")
 
 	default:
 		log.Warn("Unhandled colony type", slog.String("type", string(o.ResourceType)))
@@ -78,7 +97,7 @@ func (a *BehaviorApplier) applyMiscOutput(ctx context.Context, o *shared.MiscCon
 			}
 			var tagCount int
 			if a.cardRegistry != nil {
-				tagCount = CountPlayerTagsByType(a.player, a.cardRegistry, tagToCount)
+				tagCount = CountPlayerTags(a.player, a.cardRegistry, []shared.CardTag{tagToCount}, a.tagCountContext())
 			}
 			bonusCount := tagCount * amount
 			if bonusCount > 0 {
@@ -97,7 +116,7 @@ func (a *BehaviorApplier) applyMiscOutput(ctx context.Context, o *shared.MiscCon
 			log.Warn("Free trade output ignored: colonies expansion not enabled")
 			return nil
 		}
-		if !a.game.Colonies().GetTradeFleetAvailable(a.player.ID()) {
+		if a.game.Colonies().TradeFleet(a.player.ID()).Available() == 0 {
 			log.Warn("Free trade output ignored: no trade fleet available")
 			return nil
 		}
@@ -117,7 +136,22 @@ func (a *BehaviorApplier) applyMiscOutput(ctx context.Context, o *shared.MiscCon
 		log.Debug("World tree tile output", slog.Int("amount", amount))
 
 	case shared.ResourceAwardFund:
-		log.Debug("Award fund output", slog.Int("amount", amount))
+		if a.awardRegistry == nil || a.game == nil || a.player == nil {
+			return fmt.Errorf("award funding requires registry and player context")
+		}
+		selected := a.game.SelectedAwards()
+		var ids []string
+		for _, def := range a.awardRegistry.GetAll() {
+			if len(selected) > 0 && !slices.Contains(selected, def.ID) {
+				continue
+			}
+			if !a.game.Awards().IsFunded(shared.AwardType(def.ID)) {
+				ids = append(ids, def.ID)
+			}
+		}
+		if len(ids) > 0 {
+			a.player.Selection().SetPendingAwardFundSelection(&shared.PendingAwardFundSelection{AvailableAwards: ids, Source: a.source})
+		}
 
 	default:
 		log.Warn("Unhandled misc output type", slog.String("type", string(o.ResourceType)))

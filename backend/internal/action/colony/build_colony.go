@@ -43,7 +43,7 @@ func NewBuildColonyAction(
 }
 
 // Execute performs the build colony action
-func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID string, colonyID string) error {
+func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID string, colonyID string, payment shared.Payment) error {
 	log := a.InitLogger(gameID, playerID).With(
 		slog.String("action", "build_colony"),
 		slog.String("colony_id", colonyID),
@@ -81,6 +81,9 @@ func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID
 	}
 
 	tileState := g.Colonies().GetState(colonyID)
+	if tileState != nil && tileState.AwaitingResource != "" {
+		return fmt.Errorf("colony is not active")
+	}
 	if tileState == nil {
 		return fmt.Errorf("colony tile not found: %s", colonyID)
 	}
@@ -99,18 +102,15 @@ func (a *BuildColonyAction) Execute(ctx context.Context, gameID string, playerID
 		return fmt.Errorf("player already has a colony on this tile")
 	}
 
-	resources := player.Resources().Get()
-	if resources.Credits < BuildColonyCost {
-		log.Warn("Insufficient credits for colony",
-			slog.Int("cost", BuildColonyCost),
-			slog.Int("player_credits", resources.Credits))
-		return fmt.Errorf("insufficient credits: need %d, have %d", BuildColonyCost, resources.Credits)
+	quote, err := cards.QuotePayment(player, g, a.cardRegistry, cards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: BuildColonyCost}, Action: "build-colony"})
+	if err != nil {
+		return err
 	}
-
-	// Deduct cost
-	player.Resources().Add(map[shared.ResourceType]int{
-		shared.ResourceCredit: -BuildColonyCost,
-	})
+	paymentPlan, err := cards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
+	}
+	cards.ApplyPayment(player, paymentPlan)
 
 	// Place colony
 	slotIndex := len(tileState.PlayerColonies)

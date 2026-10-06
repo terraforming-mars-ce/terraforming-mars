@@ -32,9 +32,10 @@ func TestInsulation_DecreaseHeatProductionIncreaseCreditProduction(t *testing.T)
 
 	// Play Insulation with selectedAmount=3 (decrease 3 heat production, increase 3 credit production)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 2}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 2)
 	selectedAmount := 3
-	err := playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Insulation"), payment, nil, nil, nil, &selectedAmount)
+	err := playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Insulation"), payment, nil, nil, nil, &selectedAmount, nil)
 	testutil.AssertNoError(t, err, "Insulation should play successfully")
 
 	// Verify production changes
@@ -61,9 +62,10 @@ func TestInsulation_SelectAmountZero(t *testing.T) {
 
 	// Play Insulation with selectedAmount=0 (no change)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 2}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 2)
 	selectedAmount := 0
-	err := playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Insulation"), payment, nil, nil, nil, &selectedAmount)
+	err := playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Insulation"), payment, nil, nil, nil, &selectedAmount, nil)
 	testutil.AssertNoError(t, err, "Insulation with 0 amount should play successfully")
 
 	// Verify no production changes
@@ -90,9 +92,10 @@ func TestInsulation_SelectMaxAmount(t *testing.T) {
 
 	// Play Insulation with selectedAmount=3 (all heat production)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 2}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 2)
 	selectedAmount := 3
-	err := playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Insulation"), payment, nil, nil, nil, &selectedAmount)
+	err := playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Insulation"), payment, nil, nil, nil, &selectedAmount, nil)
 	testutil.AssertNoError(t, err, "Insulation with max amount should play successfully")
 
 	production := p.Resources().Production()
@@ -139,7 +142,7 @@ func TestPowerInfrastructure_SpendEnergyGainCredits(t *testing.T) {
 	// Use action with selectedAmount=3 (spend 3 energy, gain 3 credits)
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 3
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Power Infrastructure action should succeed")
 
 	resources := p.Resources().Get()
@@ -183,7 +186,7 @@ func TestPowerInfrastructure_SpendZeroEnergy(t *testing.T) {
 	// Use action with selectedAmount=0 (spend 0, gain 0)
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 0
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Power Infrastructure with 0 amount should succeed")
 
 	resources := p.Resources().Get()
@@ -227,7 +230,7 @@ func TestPowerInfrastructure_SpendAllEnergy(t *testing.T) {
 	// Use action with selectedAmount=5 (spend all energy)
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 5
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Power Infrastructure with max amount should succeed")
 
 	resources := p.Resources().Get()
@@ -271,7 +274,7 @@ func TestPowerInfrastructure_FailsWhenInsufficientEnergy(t *testing.T) {
 	// Try to spend more energy than available
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 5
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil)
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil, nil)
 	testutil.AssertError(t, err, "Should fail when trying to spend more energy than available")
 
 	// Verify resources unchanged

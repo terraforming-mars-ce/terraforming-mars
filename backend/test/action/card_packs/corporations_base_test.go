@@ -1,12 +1,24 @@
 package card_packs_test
 
 import (
+	"terraforming-mars-backend/internal/delivery/dto"
+	"terraforming-mars-backend/internal/game/datastore"
+
 	"context"
+	baseaction "terraforming-mars-backend/internal/action"
+	awardaction "terraforming-mars-backend/internal/action/award"
+	colonyaction "terraforming-mars-backend/internal/action/colony"
+	"terraforming-mars-backend/internal/action/confirmation"
+	milestoneaction "terraforming-mars-backend/internal/action/milestone"
+	"terraforming-mars-backend/internal/action/standard_project"
+	"terraforming-mars-backend/internal/game/colony"
+	"terraforming-mars-backend/internal/game/standardproject"
 	"testing"
 	"time"
 
 	"terraforming-mars-backend/internal/action/admin"
 	cardAction "terraforming-mars-backend/internal/action/card"
+	tileAction "terraforming-mars-backend/internal/action/tile"
 	"terraforming-mars-backend/internal/events"
 	gamecards "terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/shared"
@@ -55,8 +67,9 @@ func TestCrediCor_Gain4MCWhenPlayingExpensiveCard(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 21}
-	err = playCard.Execute(ctx, testGame.ID(), playerID, cardID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 21)
+	err = playCard.Execute(ctx, testGame.ID(), playerID, cardID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "PlayCard should succeed for Comet")
 
 	time.Sleep(50 * time.Millisecond)
@@ -154,13 +167,11 @@ func TestHelion_CanPayWithHeat(t *testing.T) {
 	p.Hand().AddCard(testutil.CardID("Virus"))
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{
-		Credits: 0,
-		Substitutes: map[shared.ResourceType]int{
-			shared.ResourceHeat: 1,
-		},
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{
+		Target:   "self-player",
+		Resource: shared.ResourceHeat}, TargetResource: shared.ResourceCredit, Amount: 1}},
 	}
-	err = playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Virus"), payment, nil, nil, nil, nil)
+	err = playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Virus"), payment, testutil.IntPtr(1), nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Virus with heat payment should succeed")
 
 	resources := p.Resources().Get()
@@ -201,8 +212,9 @@ func TestInterplanetaryCinematics_Gain2MCWhenPlayingEvent(t *testing.T) {
 	creditsBefore := p.Resources().Get().Credits
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 1}
-	err = playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Virus"), payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 1)
+	err = playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Virus"), payment, testutil.IntPtr(1), nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Virus should succeed")
 
 	time.Sleep(50 * time.Millisecond)
@@ -236,8 +248,8 @@ func TestInventrix_GlobalParameterLenienceRegistered(t *testing.T) {
 
 	p, _ := testGame.GetPlayer(playerID)
 	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
-	lenience := calculator.CalculateGlobalParameterLenience(p, "temperature")
-	testutil.AssertEqual(t, 2, lenience, "Inventrix should provide global parameter lenience of 2")
+	lenience := calculator.CalculateGlobalParameterRequirementOffset(p, "temperature")
+	testutil.AssertEqual(t, 4, lenience, "Inventrix should allow 4 degrees")
 }
 
 func TestInventrix_LenienceStacksWithSpecialDesign(t *testing.T) {
@@ -252,8 +264,8 @@ func TestInventrix_LenienceStacksWithSpecialDesign(t *testing.T) {
 	p, _ := testGame.GetPlayer(playerID)
 
 	calculator := gamecards.NewRequirementModifierCalculator(cardRegistry)
-	lenienceBefore := calculator.CalculateGlobalParameterLenience(p, "temperature")
-	testutil.AssertEqual(t, 2, lenienceBefore, "Inventrix alone should provide lenience of 2")
+	lenienceBefore := calculator.CalculateGlobalParameterRequirementOffset(p, "temperature")
+	testutil.AssertEqual(t, 4, lenienceBefore, "Inventrix alone should allow 4 degrees")
 
 	specialDesignID := testutil.CardID("Special Design")
 	p.Hand().AddCard(specialDesignID)
@@ -262,12 +274,13 @@ func TestInventrix_LenienceStacksWithSpecialDesign(t *testing.T) {
 	})
 
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 4}
-	err = playCard.Execute(ctx, testGame.ID(), playerID, specialDesignID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 4)
+	err = playCard.Execute(ctx, testGame.ID(), playerID, specialDesignID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Special Design should play successfully")
 
-	lenienceAfter := calculator.CalculateGlobalParameterLenience(p, "temperature")
-	testutil.AssertEqual(t, 4, lenienceAfter, "Inventrix (2) + Special Design (2) should stack to lenience of 4")
+	lenienceAfter := calculator.CalculateGlobalParameterRequirementOffset(p, "temperature")
+	testutil.AssertEqual(t, 8, lenienceAfter, "Inventrix and Special Design should allow 8 degrees")
 }
 
 func TestMiningGuild_StartingResources(t *testing.T) {
@@ -350,8 +363,13 @@ func TestPhoboLog_TitaniumWorthExtra(t *testing.T) {
 	titaniumBefore := p.Resources().Get().Titanium
 
 	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Titanium: 2}
-	err = playCard.Execute(ctx, testGame.ID(), playerID, transNeptuneProbeID, payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{
+		Target: "self-player",
+
+		Resource:               "titanium"}, TargetResource: shared.
+		ResourceCredit, Amount: 2}},
+	}
+	err = playCard.Execute(ctx, testGame.ID(), playerID, transNeptuneProbeID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Trans-Neptune Probe with 2 titanium should succeed (4 M€ each = 8 M€ covers 6-cost card)")
 
 	titaniumAfter := p.Resources().Get().Titanium
@@ -383,8 +401,29 @@ func TestTharsisRepublic_ForcedFirstActionSetup(t *testing.T) {
 
 	forcedAction := testGame.GetForcedFirstAction(playerID)
 	testutil.AssertTrue(t, forcedAction != nil, "Tharsis Republic should create a forced first action")
-	testutil.AssertEqual(t, "city-placement", forcedAction.ActionType, "Forced first action should be city-placement")
+	testutil.AssertEqual(t, "resolving", forcedAction.State, "First action should be resolving")
 	testutil.AssertEqual(t, testutil.CardID("Tharsis Republic"), forcedAction.CorporationID, "Forced first action should reference Tharsis Republic")
+
+	err = testGame.ProcessNextTile(ctx, playerID)
+	testutil.AssertNoError(t, err, "Starting city should become selectable")
+	selection := testGame.GetPendingTileSelection(playerID)
+	if selection == nil || len(selection.AvailableHexes) == 0 {
+		t.Fatal("Starting city has no placement selection")
+	}
+	testutil.AssertEqual(t, testutil.CardID("Tharsis Republic"), selection.SourceCardID, "Starting city should retain its source card")
+	place := tileAction.NewSelectTileAction(repo, cardRegistry, nil, logger)
+	_, err = place.Execute(ctx, testGame.ID(), playerID, selection.AvailableHexes[0])
+	testutil.AssertNoError(t, err, "Starting city should be placed")
+	for _, tile := range testGame.Board().Tiles() {
+		if tile.Coordinates.String() == selection.AvailableHexes[0] {
+			if tile.OccupiedBy == nil {
+				t.Fatal("Starting city is missing")
+			}
+			testutil.AssertEqual(t, "Tharsis Republic", tile.OccupiedBy.DisplayName, "Starting city should display its corporation name")
+			return
+		}
+	}
+	t.Fatal("Starting city space is missing")
 }
 
 func TestTharsisRepublic_GainCreditsAndProductionOnCityPlacement(t *testing.T) {
@@ -505,9 +544,180 @@ func TestUNMI_Pay3MCToRaiseTR(t *testing.T) {
 
 	cardID := testutil.CardID("United Nations Mars Initiative")
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err = useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, nil, nil, nil, nil, nil, nil)
+	err = useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, nil, nil, nil, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "UNMI action should succeed")
 
 	testutil.AssertEqual(t, creditsBefore-3, p.Resources().Get().Credits, "UNMI action should cost 3 credits")
 	testutil.AssertEqual(t, trBefore+1, p.Resources().TerraformRating(), "UNMI action should raise TR by 1")
+}
+
+func TestInventrix_RequirementStepBoundaries(t *testing.T) {
+	checkRequirementStepBoundaries(t, []string{"Inventrix"}, [4]int{2, 2, 2, 2})
+}
+
+func TestInventrix_StacksWithSpecialDesignAtStepBoundaries(t *testing.T) {
+	checkRequirementStepBoundaries(t, []string{"Inventrix", "Special Design"}, [4]int{4, 4, 4, 4})
+}
+
+func TestHelion_AllCreditPaymentContexts(t *testing.T) {
+	for _, kind := range []string{"play-card", "card-action", "standard-project", "confirm-production-cards", "confirm-card-draw", "build-colony", "colony-trade", "claim-milestone", "fund-award"} {
+		t.Run(kind, func(t *testing.T) {
+			ctx := context.Background()
+			g, repo, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+			p, _ := g.GetPlayer(id)
+			log := testutil.TestLogger()
+			testutil.AssertNoError(t, admin.NewSetCorporationAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, "B03"), "Helion")
+			p.Resources().Set(shared.Resources{Heat: 50})
+			projects, err := standardproject.LoadStandardProjectsFromJSON("../../../assets/terraforming_mars_standard_projects.json")
+			testutil.AssertNoError(t, err, "projects")
+			projectRegistry := standardproject.NewInMemoryStandardProjectRegistry(projects)
+			milestones := testutil.CreateTestMilestoneRegistry()
+			awards := testutil.CreateTestAwardRegistry()
+			colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+			testutil.AssertNoError(t, err, "colonies")
+			colonyRegistry := colony.NewInMemoryColonyRegistry(colonyDefs)
+			intent := baseaction.PaymentIntent{Action: kind}
+			switch kind {
+			case "play-card":
+				intent.CardID = testutil.CardID("Power Plant")
+				p.Hand().AddCard(intent.CardID)
+			case "card-action":
+				card := testutil.GetCardByName("Search For Life")
+				intent.CardID = card.ID
+				p.PlayedCards().AddCard(card.ID, card.Name, string(card.Type), []string{"science"})
+				for i, b := range card.Behaviors {
+					if gamecards.HasManualTrigger(b) {
+						intent.BehaviorIndex = i
+						p.Actions().AddAction(shared.CardAction{CardID: card.ID, CardName: card.Name, BehaviorIndex: i, Behavior: b})
+					}
+				}
+			case "standard-project":
+				intent.ProjectID = "power-plant"
+			case "confirm-production-cards":
+				intent.CardIDs = []string{testutil.CardID("Power Plant")}
+				testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseProductionAndCardDraw), "research")
+				testutil.AssertNoError(t, g.SetProductionPhase(ctx, id, &shared.ProductionPhase{AvailableCards: intent.CardIDs}), "research cards")
+			case "confirm-card-draw":
+				intent.CardsToBuy = []string{testutil.CardID("Power Plant")}
+				p.Selection().SetPendingCardDrawSelection(&shared.PendingCardDrawSelection{AvailableCards: intent.CardsToBuy, MaxBuyCount: 1, CardBuyCost: 3})
+			case "build-colony", "colony-trade":
+				settings := g.Settings()
+				settings.CardPacks = append(settings.CardPacks, shared.PackColonies)
+				g.UpdateSettings(ctx, settings)
+				g.Colonies().SetStates([]*colony.ColonyState{{DefinitionID: "ganymede", MarkerPosition: 0}})
+				g.Colonies().AddTradeFleets(id, 1)
+				intent.PaymentType = "credits"
+			case "claim-milestone":
+				intent.MilestoneType = "terraformer"
+				p.Resources().SetTerraformRating(35)
+			case "fund-award":
+				intent.AwardType = "landlord"
+			}
+			quote, err := baseaction.QuoteActionPayment(g, p, registry, projectRegistry, milestones, awards, intent)
+			testutil.AssertNoError(t, err, "quote")
+			cost := quote.Costs[shared.ResourceCredit]
+			payment := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-player", Resource: shared.ResourceHeat}, TargetResource: shared.ResourceCredit, Amount: cost}}}
+			_, err = gamecards.ValidatePayment(quote, payment)
+			testutil.AssertNoError(t, err, "heat eligible")
+			testutil.AssertEqual(t, 50, p.Resources().Get().Heat, "quote must not spend")
+			switch kind {
+			case "play-card":
+				err = cardAction.NewPlayCardAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, intent.CardID, payment, nil, nil, nil, nil, nil)
+			case "card-action":
+				err = cardAction.NewUseCardActionAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, intent.CardID, intent.BehaviorIndex, nil, nil, nil, nil, nil, &payment, nil, nil)
+			case "standard-project":
+				err = standard_project.NewExecuteStandardProjectAction(repo, registry, projectRegistry, nil, log).Execute(ctx, g.ID(), id, intent.ProjectID, payment)
+			case "confirm-production-cards":
+				err = confirmation.NewConfirmProductionCardsAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, intent.CardIDs, false, payment)
+			case "confirm-card-draw":
+				err = confirmation.NewConfirmCardDrawAction(repo, registry, log).Execute(ctx, g.ID(), id, nil, intent.CardsToBuy, payment)
+			case "build-colony":
+				err = colonyaction.NewBuildColonyAction(repo, colonyRegistry, registry, nil, log).Execute(ctx, g.ID(), id, "ganymede", payment)
+			case "colony-trade":
+				err = colonyaction.NewTradeAction(repo, colonyRegistry, registry, nil, log).Execute(ctx, g.ID(), id, "ganymede", colonyaction.TradePaymentCredits, 0, payment)
+			case "claim-milestone":
+				err = milestoneaction.NewClaimMilestoneAction(repo, registry, nil, milestones, log).Execute(ctx, g.ID(), id, intent.MilestoneType, payment)
+			case "fund-award":
+				err = awardaction.NewFundAwardAction(repo, registry, nil, awards, log).Execute(ctx, g.ID(), id, intent.AwardType, payment)
+			}
+			testutil.AssertNoError(t, err, "execute with heat")
+			testutil.AssertEqual(t, 50-cost, p.Resources().Get().Heat, "spend heat once")
+			testutil.AssertEqual(t, 0, p.Resources().Get().Credits, "no credits created or consumed")
+		})
+	}
+}
+
+func TestHelion_CorporationChangePreservesProjectPaymentRules(t *testing.T) {
+	ctx := context.Background()
+	g, repo, registry, id, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := g.GetPlayer(id)
+	log := testutil.TestLogger()
+	setCorp := admin.NewSetCorporationAction(repo, registry, nil, log)
+	testutil.AssertNoError(t, setCorp.Execute(ctx, g.ID(), id, "B03"), "Helion")
+	card := testutil.GetCardByName("Psychrophiles")
+	p.Hand().AddCard(card.ID)
+	testutil.AssertNoError(t, cardAction.NewPlayCardAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, card.ID, shared.NativePayment(shared.ResourceCredit, card.Cost), nil, nil, nil, nil, nil), "project grant")
+	testutil.AssertEqual(t, 2, len(p.Resources().PaymentSubstitutes()), "corporation and project grants")
+	testutil.AssertNoError(t, setCorp.Execute(ctx, g.ID(), id, "B01"), "change corporation")
+	rules := p.Resources().PaymentSubstitutes()
+	testutil.AssertEqual(t, 1, len(rules), "only Helion grant removed")
+	testutil.AssertEqual(t, card.ID, rules[0].GrantedByCardID, "keep project grant")
+}
+
+func TestInventrix_DeferredDrawReceipt(t *testing.T) {
+	assertCorporationDrawReceipt(t, "Inventrix", []string{"001", "002", "003"}, 3, 0)
+}
+
+func assertCorporationDrawReceipt(t *testing.T, name string, deck []string, count, discards int) {
+	t.Helper()
+	ctx := context.Background()
+	g, repo, registry, first, owner := testutil.SetupTwoPlayerGame(t)
+	g.InitDeck(deck, nil, nil)
+	testutil.AssertNoError(t, repo.DataStore().UpdateGame(g.ID(), func(s *datastore.GameState) { s.ProjectCards = append([]string{}, deck...) }), "fix draw order")
+	p, _ := g.GetPlayer(owner)
+	before := len(p.Hand().Cards())
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseInitApplyCorp), "enter setup")
+	setter := admin.NewSetCorporationAction(repo, registry, testutil.CreateTestAwardRegistry(), testutil.TestLogger())
+	testutil.AssertNoError(t, setter.Execute(ctx, g.ID(), owner, testutil.CardID(name)), "set corporation")
+	testutil.AssertEqual(t, before, len(p.Hand().Cards()), "setup does not draw")
+	testutil.AssertEqual(t, 0, len(p.Selection().CardReceipts()), "setup creates no receipt")
+	testutil.AssertEqual(t, "queued", g.GetForcedFirstAction(owner).State, "first action queued")
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseInitApplyPrelude), "prelude phase")
+	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, owner, 2), "prelude phase cannot run first action")
+	testutil.AssertEqual(t, before, len(p.Hand().Cards()), "preludes precede first action")
+	testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseAction), "enter actions")
+	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, first, 2), "other player goes first")
+	testutil.AssertEqual(t, before, len(p.Hand().Cards()), "wait for owner's turn")
+	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, owner, 2), "owner starts turn")
+	testutil.AssertEqual(t, before+count, len(p.Hand().Cards()), "cards received immediately")
+	testutil.AssertEqual(t, discards, len(g.Deck().DiscardPile()), "nonmatches discarded")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "first action spends one action")
+	testutil.AssertTrue(t, g.GetForcedFirstAction(owner) == nil, "draw action complete")
+	receipts := p.Selection().CardReceipts()
+	testutil.AssertEqual(t, 1, len(receipts), "one draw receipt")
+	testutil.AssertEqual(t, count, len(receipts[0].Cards), "receipt contains only received cards")
+	testutil.AssertEqual(t, 1, len(dto.ToGameDto(g, registry, owner).CurrentPlayer.CardReceipts), "owner receives receipt after reconnect")
+	testutil.AssertEqual(t, 0, len(dto.ToGameDto(g, registry, first).CurrentPlayer.CardReceipts), "other player sees no receipt")
+	testutil.AssertEqual(t, 0, len(dto.ToGameDto(g, registry, "").CurrentPlayer.CardReceipts), "spectator sees no receipt")
+	ack := confirmation.NewConfirmCardDrawAction(repo, registry, testutil.TestLogger())
+	testutil.AssertNoError(t, ack.AcknowledgeReceipt(ctx, g.ID(), first, receipts[0].ID), "other player cannot dismiss owner's receipt")
+	testutil.AssertEqual(t, 1, len(p.Selection().CardReceipts()), "owner receipt preserved")
+	for range 2 {
+		testutil.AssertNoError(t, ack.AcknowledgeReceipt(ctx, g.ID(), owner, receipts[0].ID), "close is idempotent")
+	}
+	testutil.AssertEqual(t, 0, len(p.Selection().CardReceipts()), "receipt dismissed")
+	testutil.AssertEqual(t, before+count, len(p.Hand().Cards()), "close grants nothing")
+	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "close consumes nothing")
+	testutil.AssertNoError(t, g.ExecuteFirstActionIfNeeded(ctx, owner), "repeated execution request")
+	testutil.AssertEqual(t, before+count, len(p.Hand().Cards()), "first action cannot repeat")
+}
+
+func TestInventrix_SoloFirstActionRetainsUnlimitedActions(t *testing.T) {
+	g, repo, registry, id := testutil.SetupSoloGame(t)
+	ctx := context.Background()
+	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, id, -1), "unlimited turn")
+	counter := g.CurrentTurn().GlobalActionCounter()
+	testutil.AssertNoError(t, admin.NewSetCorporationAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, testutil.CardID("Inventrix")), "first action")
+	testutil.AssertEqual(t, -1, g.CurrentTurn().ActionsRemaining(), "solo remains unlimited")
+	testutil.AssertEqual(t, counter+1, g.CurrentTurn().GlobalActionCounter(), "first action recorded once")
 }

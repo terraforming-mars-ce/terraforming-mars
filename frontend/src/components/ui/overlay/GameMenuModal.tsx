@@ -10,6 +10,7 @@ interface GameMenuModalProps {
   subtitle?: string;
   children: React.ReactNode;
   onBack?: () => void;
+  backLabel?: string;
   visible?: boolean;
   onExited?: () => void;
   showBackdrop?: boolean;
@@ -24,6 +25,7 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
   subtitle,
   children,
   onBack,
+  backLabel,
   visible,
   onExited,
   showBackdrop = false,
@@ -96,7 +98,7 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
 
       {onBack && (
         <div className="fixed top-[30px] left-[30px]" style={{ zIndex: Z_INDEX.POPOVER }}>
-          <BackButton onClick={onBack} />
+          <BackButton onClick={onBack}>{backLabel ?? "Back"}</BackButton>
         </div>
       )}
       <div

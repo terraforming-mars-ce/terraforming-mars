@@ -52,6 +52,9 @@ func (a *ConfirmColonyPlacementAction) Execute(ctx context.Context, gameID strin
 		return err
 	}
 
+	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
+		return err
+	}
 	pending := p.Selection().GetPendingColonySelection()
 	if pending == nil {
 		return fmt.Errorf("no pending colony selection")
@@ -61,7 +64,35 @@ func (a *ConfirmColonyPlacementAction) Execute(ctx context.Context, gameID strin
 		return fmt.Errorf("colony %s is not available for selection", colonyID)
 	}
 
+	if pending.AddTile {
+		if g.Colonies().GetState(colonyID) != nil {
+			return fmt.Errorf("colony tile is already in play")
+		}
+		definition, err := a.colonyRegistry.GetByID(colonyID)
+		if err != nil {
+			return err
+		}
+		if err := g.Colonies().AddTile(cards.InitializeColonyTile(g, *definition, a.CardRegistry())); err != nil {
+			return err
+		}
+		p.Selection().SetPendingColonySelection(nil)
+		if pending.Remaining > 1 {
+			pending.Remaining--
+			pending.AvailableColonyIDs = nil
+			for _, def := range g.Colonies().UnusedDefinitions() {
+				pending.AvailableColonyIDs = append(pending.AvailableColonyIDs, def.ID)
+			}
+			if len(pending.AvailableColonyIDs) > 0 {
+				p.Selection().SetPendingColonySelection(pending)
+			}
+		}
+		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+		return nil
+	}
 	tileState := g.Colonies().GetState(colonyID)
+	if tileState != nil && tileState.AwaitingResource != "" {
+		return fmt.Errorf("colony is not active")
+	}
 	if tileState == nil {
 		return fmt.Errorf("colony tile not found: %s", colonyID)
 	}
@@ -90,6 +121,7 @@ func (a *ConfirmColonyPlacementAction) Execute(ctx context.Context, gameID strin
 	}
 
 	p.Selection().SetPendingColonySelection(nil)
+	baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
 
 	log.Info("Colony placed from card effect",
 		slog.String("colony_id", colonyID))

@@ -16,7 +16,7 @@ import {
 import { getCorporationLogo } from "@/utils/corporationLogos.tsx";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 import { getTagIconPath } from "@/utils/iconStore.ts";
-import { FormattedDescription } from "../display/FormattedDescription";
+import { CardDescriptionSections } from "../display/CardDescriptionSections.tsx";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { CardChassis, CardPanelCircuit } from "./GameCard.tsx";
@@ -325,9 +325,9 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
         )}
 
         {/* Description */}
-        {card.description && (
+        {card.description.length > 0 && (
           <div className="corporation-card-description text-xs text-white/80 leading-[1.4] text-center mt-1 px-2">
-            <FormattedDescription text={card.description} />
+            <CardDescriptionSections sections={card.description} />
           </div>
         )}
       </div>

@@ -11,11 +11,14 @@ import (
 func (a *BehaviorApplier) applyBasicResourceOutput(ctx context.Context, o *shared.BasicResourceCondition, amount int, log *slog.Logger) error {
 	rt := o.ResourceType
 
-	// Special case: credit steal with adjacency restriction (deferred for post-tile-placement)
-	if rt == shared.ResourceCredit && o.Target == "steal-any-player" && o.TargetRestriction != nil && o.TargetRestriction.Adjacent == "self-card" {
-		a.deferredSteal = o
-		log.Debug("Deferred adjacent steal for post-tile-placement", slog.Int("amount", amount))
-		return nil
+	if o.Target == "any-player" && amount < 0 && o.TargetRestriction != nil {
+		output := shared.CloneCondition(o).(*shared.BasicResourceCondition)
+		output.Amount = amount
+		if output.TargetRestriction.Adjacent != "" {
+			a.deferredRemoval = output
+			return nil
+		}
+		return QueueResourceRemoval(a.game, a.player, output, nil, a.sourceCardID, a.source, a.cardRegistry)
 	}
 
 	if o.Target == "steal-any-player" {
@@ -34,6 +37,9 @@ func (a *BehaviorApplier) applyBasicResourceOutput(ctx context.Context, o *share
 
 func (a *BehaviorApplier) applyProductionOutput(ctx context.Context, o *shared.ProductionCondition, amount int, log *slog.Logger) error {
 	rt := o.ResourceType
+	if a.productionBox == "resolved" && a.player != nil {
+		a.player.Resources().RecordProductionBox(a.sourceCardID, *shared.NewProductionCondition(rt, amount, o.Target))
+	}
 	if o.Target == "any-player" {
 		return a.applyAnyPlayerProduction(rt, amount, log)
 	}

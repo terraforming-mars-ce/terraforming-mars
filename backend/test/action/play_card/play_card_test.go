@@ -43,8 +43,9 @@ func TestPlayCardAction_DiscountEffectRegistered(t *testing.T) {
 
 	// Play Space Station
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), testutil.CardID("Space Station"), payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 10)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), testutil.CardID("Space Station"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Space Station")
 
 	// Verify: effect should be registered
@@ -93,9 +94,10 @@ func TestPlayCardAction_ChoiceCardPlantProduction(t *testing.T) {
 
 	// Play Artificial Photosynthesis with choice index 0 (plant production +1)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 12}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 12)
 	choiceIndex := 0
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), testutil.CardID("Artificial Photosynthesis"), payment, &choiceIndex, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), testutil.CardID("Artificial Photosynthesis"), payment, &choiceIndex, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Artificial Photosynthesis with choice 0")
 
 	// Verify: plant production increased by 1, energy unchanged
@@ -138,9 +140,10 @@ func TestPlayCardAction_ChoiceCardEnergyProduction(t *testing.T) {
 
 	// Play Artificial Photosynthesis with choice index 1 (energy production +2)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 12}
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 12)
 	choiceIndex := 1
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), testutil.CardID("Artificial Photosynthesis"), payment, &choiceIndex, nil, nil, nil)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), testutil.CardID("Artificial Photosynthesis"), payment, &choiceIndex, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Artificial Photosynthesis with choice 1")
 
 	// Verify: energy production increased by 2, plants unchanged
@@ -178,8 +181,9 @@ func TestPlayCardAction_DiscountCalculatedOnDemand(t *testing.T) {
 
 	// Play Space Station to register the discount effect
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
-	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), testutil.CardID("Space Station"), payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 10)
+	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), testutil.CardID("Space Station"), payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Failed to play Space Station")
 
 	// Verify: effect registered
@@ -259,8 +263,9 @@ func TestPlayCardAction_WithSingleDiscount(t *testing.T) {
 	// Play Sponsors with only 3 credits (effective cost after discount)
 	// This should SUCCEED because the fix applies discounts during payment validation
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 3}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), testutil.CardID("Sponsors"), payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 3)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), testutil.CardID("Sponsors"), payment, nil, nil, nil, nil, nil)
 
 	testutil.AssertNoError(t, err, "Should be able to play Sponsors for 3 credits with Teractor discount")
 
@@ -314,8 +319,8 @@ func TestPlayCardAction_WithDoubleDiscount(t *testing.T) {
 
 	// Play Earth Office (cost 1, but free with 3 credit discount from Teractor)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 0}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), testutil.CardID("Earth Office"), payment, nil, nil, nil, nil)
+	payment := shared.Payment{Allocations: []shared.PaymentAllocation{}}
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), testutil.CardID("Earth Office"), payment, nil, nil, nil, nil, nil)
 
 	testutil.AssertNoError(t, err, "Should be able to play Earth Office for free with Teractor discount")
 	testutil.AssertFalse(t, p.Hand().HasCard(testutil.CardID("Earth Office")), "Earth Office should no longer be in hand")
@@ -343,8 +348,9 @@ func TestPlayCardAction_WithDoubleDiscount(t *testing.T) {
 	testutil.AssertEqual(t, 17, p.Resources().Get().Credits, "Should have exactly 17 credits")
 
 	// Play Earth Catapult with 17 credits (effective cost after double discount)
-	payment = cardAction.PaymentRequest{Credits: 17}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), testutil.CardID("Earth Catapult"), payment, nil, nil, nil, nil)
+	payment = shared.NativePayment(shared.
+		ResourceCredit, 17)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), testutil.CardID("Earth Catapult"), payment, nil, nil, nil, nil, nil)
 
 	testutil.AssertNoError(t, err, "Should be able to play Earth Catapult for 17 credits with double discount")
 	testutil.AssertFalse(t, p.Hand().HasCard(testutil.CardID("Earth Catapult")), "Earth Catapult should no longer be in hand")
@@ -403,8 +409,9 @@ func TestPlayCardAction_DiscountDoesNotApplyToNonMatchingCard(t *testing.T) {
 
 	// Try to play Arctic Algae with insufficient credits (9 credits, but card costs 12)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 9}
-	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), testutil.CardID("Arctic Algae"), payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 9)
+	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), testutil.CardID("Arctic Algae"), payment, nil, nil, nil, nil, nil)
 
 	// Should FAIL because discount doesn't apply and player doesn't have enough credits
 	testutil.AssertError(t, err, "Should NOT be able to play Arctic Algae with only 9 credits (no discount applies)")

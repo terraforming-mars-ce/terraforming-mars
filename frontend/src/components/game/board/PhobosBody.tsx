@@ -74,6 +74,7 @@ export default function PhobosBody({ gameState, onHexClick }: PhobosBodyProps) {
         profile={PHOBOS_CONFIG.atmosphere}
       />
       <CelestialTileGrid
+        highlightRoot={groupRef}
         gameState={gameState}
         onHexClick={onHexClick}
         tileOpacity={tileOpacity}

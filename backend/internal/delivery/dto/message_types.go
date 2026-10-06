@@ -4,6 +4,11 @@ package dto
 type MessageType string
 
 const (
+	MessageTypeQuotePayment MessageType = "quote-payment"
+	MessageTypePaymentQuote MessageType = "payment-quote"
+)
+
+const (
 	MessageTypePlayerConnect MessageType = "player-connect"
 	MessageTypeJoinGame      MessageType = "join-game"
 
@@ -50,14 +55,17 @@ const (
 	MessageTypeActionCardDrawConfirmed       MessageType = "action.card.card-draw-confirmed"
 	MessageTypeActionCardDiscardConfirmed    MessageType = "action.card.card-discard-confirmed"
 	MessageTypeActionBehaviorChoiceConfirmed MessageType = "action.card.behavior-choice-confirmed"
-	MessageTypeActionConfirmStealTarget      MessageType = "action.card.confirm-steal-target"
+	MessageTypeActionConfirmResourceRemoval  MessageType = "action.card.confirm-resource-removal"
 
 	MessageTypeActionColonyTrade            MessageType = "action.colony.trade"
 	MessageTypeActionColonyBuild            MessageType = "action.colony.build"
 	MessageTypeActionProjectFundingSeat     MessageType = "action.project-funding.buy-seat"
 	MessageTypeActionConfirmColonyResource  MessageType = "action.confirm-colony-resource"
 	MessageTypeActionConfirmAwardFund       MessageType = "action.confirm-award-fund"
+	MessageTypeActionAcknowledgeCardReceipt MessageType = "action.acknowledge-card-receipt"
 	MessageTypeActionConfirmColonyPlacement MessageType = "action.confirm-colony-placement"
+	MessageTypeActionConfirmCardReveal      MessageType = "action.confirm-card-reveal"
+	MessageTypeActionConfirmEffectSelection MessageType = "action.confirm-effect-selection"
 	MessageTypeActionConfirmFreeTrade       MessageType = "action.confirm-free-trade"
 
 	MessageTypeAdminCommand MessageType = "admin-command"
@@ -78,6 +86,13 @@ const (
 	MessageTypeSpectatorDisconnected MessageType = "spectator-disconnected"
 	MessageTypeChatMessage           MessageType = "chat-message"
 	MessageTypeChatUpdate            MessageType = "chat-update"
+	MessageTypeEmoteSend             MessageType = "emote-send"
+	MessageTypeEmote                 MessageType = "emote"
+	MessageTypeBotThought            MessageType = "bot-thought"
+	MessageTypeBotRetry              MessageType = "bot-retry"
+	MessageTypeBotInspect            MessageType = "bot-inspect"
+	MessageTypeBotTraceSnapshot      MessageType = "bot-trace-snapshot"
+	MessageTypeBotTraceEvent         MessageType = "bot-trace-event"
 	MessageTypeKickSpectator         MessageType = "kick-spectator"
 	MessageTypeSpectatorKicked       MessageType = "spectator-kicked"
 )

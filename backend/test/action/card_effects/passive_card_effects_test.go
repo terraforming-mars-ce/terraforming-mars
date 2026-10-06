@@ -406,7 +406,7 @@ func TestOlympusConference_TriggeredChoice_CreatesPendingSelection(t *testing.T)
 	owner.Effects().AddEffect(effect)
 	action.SubscribePassiveEffectToEvents(ctx, testGame, owner, effect, logger, cardRegistry)
 
-	testutil.AssertTrue(t, owner.Selection().GetPendingBehaviorChoiceSelection() == nil,
+	testutil.AssertTrue(t, len(owner.Selection().GetPendingBehaviorResolutions()) == 0,
 		"Should have no pending selection before event")
 
 	events.Publish(testGame.EventBus(), events.TagPlayedEvent{
@@ -417,7 +417,7 @@ func TestOlympusConference_TriggeredChoice_CreatesPendingSelection(t *testing.T)
 
 	time.Sleep(20 * time.Millisecond)
 
-	selection := owner.Selection().GetPendingBehaviorChoiceSelection()
+	selection := owner.Selection().GetPendingBehaviorResolutions()[0]
 	testutil.AssertTrue(t, selection != nil, "Should have a pending behavior choice selection")
 	testutil.AssertEqual(t, 2, len(selection.Choices), "Should have 2 choices")
 	testutil.AssertEqual(t, "Olympus Conference", selection.Source, "Source should be Olympus Conference")
@@ -470,15 +470,15 @@ func TestOlympusConference_Choice0_AddScience(t *testing.T) {
 
 	storageBefore := owner.Resources().GetCardStorage("card-olympus-conference")
 
-	confirmBehaviorChoice := confirmAction.NewConfirmBehaviorChoiceAction(repo, cardRegistry, logger)
-	err := confirmBehaviorChoice.Execute(ctx, testGame.ID(), owner.ID(), 0, nil)
+	confirmBehaviorChoice := confirmAction.NewConfirmBehaviorChoiceAction(repo, cardRegistry, nil, logger)
+	err := confirmBehaviorChoice.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, 0, nil)
 	testutil.AssertNoError(t, err, "Choice 0 (add science) should succeed")
 
 	storageAfter := owner.Resources().GetCardStorage("card-olympus-conference")
 	testutil.AssertEqual(t, storageBefore+1, storageAfter,
 		"Should have 1 more science resource on card after choice 0")
 
-	testutil.AssertTrue(t, owner.Selection().GetPendingBehaviorChoiceSelection() == nil,
+	testutil.AssertTrue(t, len(owner.Selection().GetPendingBehaviorResolutions()) == 0,
 		"Pending selection should be cleared after confirming")
 }
 
@@ -528,8 +528,8 @@ func TestOlympusConference_Choice1_RemoveScienceToDrawCard(t *testing.T) {
 
 	time.Sleep(20 * time.Millisecond)
 
-	confirmBehaviorChoice := confirmAction.NewConfirmBehaviorChoiceAction(repo, cardRegistry, logger)
-	err := confirmBehaviorChoice.Execute(ctx, testGame.ID(), owner.ID(), 1, nil)
+	confirmBehaviorChoice := confirmAction.NewConfirmBehaviorChoiceAction(repo, cardRegistry, nil, logger)
+	err := confirmBehaviorChoice.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, 1, nil)
 	testutil.AssertNoError(t, err, "Choice 1 (remove science, draw card) should succeed")
 
 	storageAfter := owner.Resources().GetCardStorage("card-olympus-conference")
@@ -540,7 +540,7 @@ func TestOlympusConference_Choice1_RemoveScienceToDrawCard(t *testing.T) {
 	testutil.AssertEqual(t, handBefore+1, handAfter,
 		"Should have drawn 1 card")
 
-	testutil.AssertTrue(t, owner.Selection().GetPendingBehaviorChoiceSelection() == nil,
+	testutil.AssertTrue(t, len(owner.Selection().GetPendingBehaviorResolutions()) == 0,
 		"Pending selection should be cleared after confirming")
 }
 
@@ -588,8 +588,8 @@ func TestOlympusConference_Choice1_FailsWithoutScience(t *testing.T) {
 
 	time.Sleep(20 * time.Millisecond)
 
-	confirmBehaviorChoice := confirmAction.NewConfirmBehaviorChoiceAction(repo, cardRegistry, logger)
-	err := confirmBehaviorChoice.Execute(ctx, testGame.ID(), owner.ID(), 1, nil)
+	confirmBehaviorChoice := confirmAction.NewConfirmBehaviorChoiceAction(repo, cardRegistry, nil, logger)
+	err := confirmBehaviorChoice.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, 1, nil)
 	testutil.AssertError(t, err, "Choice 1 should fail with 0 science resources on card")
 }
 
@@ -1329,8 +1329,9 @@ func TestPets_EndToEnd_PassiveEffectRegisteredOnPlay(t *testing.T) {
 	owner.Hand().AddCard(card.ID)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
-	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 10)
+	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Pets should play successfully")
 
 	// Verify 1 initial animal from auto trigger
@@ -1370,8 +1371,9 @@ func TestPets_EndToEnd_MultipleCityPlacements(t *testing.T) {
 	owner.Hand().AddCard(card.ID)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
-	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 10)
+	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Pets should play successfully")
 
 	// Place 3 cities: 1 by owner, 2 by other player
@@ -1416,8 +1418,9 @@ func TestPets_EndToEnd_DoesNotTriggerOnOcean(t *testing.T) {
 	owner.Hand().AddCard(card.ID)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
-	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 10)
+	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Pets should play successfully")
 
 	storageBefore := owner.Resources().GetCardStorage(card.ID)
@@ -1467,8 +1470,9 @@ func TestPets_DoesNotGainAnimalsForPreexistingCities(t *testing.T) {
 	owner.Hand().AddCard(card.ID)
 
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
-	payment := cardAction.PaymentRequest{Credits: 10}
-	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil)
+	payment := shared.NativePayment(shared.
+		ResourceCredit, 10)
+	err := playCardAction.Execute(ctx, testGame.ID(), owner.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Pets should play successfully")
 
 	// Only 1 initial animal — no retroactive animals from preexisting cities

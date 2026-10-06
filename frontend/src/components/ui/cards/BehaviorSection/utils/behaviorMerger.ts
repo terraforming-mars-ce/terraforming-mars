@@ -1,5 +1,21 @@
 import { ClassifiedBehavior } from "../types.ts";
 
+function mergedMetadata(behaviors: ClassifiedBehavior[]) {
+  const description = [
+    ...new Set(behaviors.map((behavior) => behavior.description).filter(Boolean)),
+  ].join(" ");
+  const originalIndices = [
+    ...new Set(
+      behaviors.flatMap(
+        (behavior) =>
+          behavior.originalIndices ??
+          (behavior.originalIndex === undefined ? [] : [behavior.originalIndex]),
+      ),
+    ),
+  ];
+  return { description: description || undefined, originalIndices };
+}
+
 /**
  * Gets a unique key for a behavior's trigger condition.
  * Combines condition type, target, and location to ensure effects with different
@@ -64,12 +80,10 @@ export const mergeTriggeredEffects = (
   groupedByCondition.forEach((effects) => {
     if (effects.length > 1) {
       // Create merged behavior using first behavior as primary, storing others in mergedBehaviors
-      // Use the first available description from any behavior in the group
-      const groupDescription = effects.find((e) => e.description)?.description;
       const mergedBehavior: ClassifiedBehavior = {
         behavior: effects[0].behavior,
         type: "triggered-effect",
-        description: groupDescription,
+        ...mergedMetadata(effects),
         mergedBehaviors: effects.slice(1).map((e) => e.behavior),
       };
       mergedEffects.push(mergedBehavior);
@@ -94,6 +108,26 @@ export const mergeTriggeredEffects = (
  * @returns Array with merged behaviors where applicable
  */
 export const mergeAutoProductionBehaviors = (
+  classifiedBehaviors: ClassifiedBehavior[],
+): ClassifiedBehavior[] => {
+  const groups: ClassifiedBehavior[][] = [];
+  for (const behavior of classifiedBehaviors) {
+    const previous = groups[groups.length - 1];
+    if (
+      previous &&
+      !previous[0].behavior.choices?.length &&
+      !behavior.behavior.choices?.length &&
+      previous[0].description === behavior.description
+    ) {
+      previous.push(behavior);
+    } else {
+      groups.push([behavior]);
+    }
+  }
+  return groups.flatMap(mergeAutoProductionGroup);
+};
+
+const mergeAutoProductionGroup = (
   classifiedBehaviors: ClassifiedBehavior[],
 ): ClassifiedBehavior[] => {
   const autoProductionBehaviors: ClassifiedBehavior[] = [];
@@ -147,6 +181,7 @@ export const mergeAutoProductionBehaviors = (
     });
 
     mergedAutoProduction = {
+      ...mergedMetadata(autoProductionBehaviors),
       behavior: {
         triggers: [{ type: "auto" }],
         outputs: mergedOutputs,
@@ -168,6 +203,7 @@ export const mergeAutoProductionBehaviors = (
     });
 
     mergedAutoNoBackground = {
+      ...mergedMetadata(autoNoBackgroundBehaviors),
       behavior: {
         triggers: [{ type: "auto" }],
         outputs: mergedOutputs,
@@ -184,6 +220,7 @@ export const mergeAutoProductionBehaviors = (
   // If both production and immediate resources exist, merge them into a single behavior
   if (mergedAutoProduction && mergedAutoNoBackground) {
     const combinedBehavior: ClassifiedBehavior = {
+      ...mergedMetadata([mergedAutoProduction, mergedAutoNoBackground]),
       behavior: {
         triggers: [{ type: "auto" }],
         outputs: [

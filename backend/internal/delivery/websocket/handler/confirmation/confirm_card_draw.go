@@ -2,7 +2,9 @@ package confirmation
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+	"terraforming-mars-backend/internal/game/shared"
 
 	confirmaction "terraforming-mars-backend/internal/action/confirmation"
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -53,6 +55,16 @@ func (h *ConfirmCardDrawHandler) HandleMessage(ctx context.Context, connection *
 		return
 	}
 
+	if message.Type == dto.MessageTypeActionAcknowledgeCardReceipt {
+		id, _ := payloadMap["receiptId"].(string)
+		if err := h.action.AcknowledgeReceipt(ctx, connection.GameID, connection.PlayerID, id); err != nil {
+			h.sendError(connection, err.Error())
+			return
+		}
+		h.broadcaster.BroadcastGameState(connection.GameID, []string{connection.PlayerID})
+		connection.Send <- dto.WebSocketMessage{Type: "action-success", GameID: connection.GameID, Payload: map[string]interface{}{"action": "acknowledge-card-receipt", "success": true}}
+		return
+	}
 	var cardsToTake []string
 	if cardsInterface, ok := payloadMap["cardsToTake"].([]interface{}); ok {
 		cardsToTake = make([]string, len(cardsInterface))
@@ -77,7 +89,20 @@ func (h *ConfirmCardDrawHandler) HandleMessage(ctx context.Context, connection *
 		slog.Any("cards_to_take", cardsToTake),
 		slog.Any("cards_to_buy", cardsToBuy))
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardsToTake, cardsToBuy)
+	var paymentEnvelope struct {
+		Payment shared.Payment `json:"payment"`
+	}
+	paymentBytes, paymentErr := json.Marshal(message.Payload)
+	if paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardsToTake, cardsToBuy, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute confirm card draw action", slog.Any("error", err))
 		h.sendError(connection, err.Error())

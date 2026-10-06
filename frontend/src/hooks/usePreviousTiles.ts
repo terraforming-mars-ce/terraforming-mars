@@ -1,50 +1,53 @@
-import { useRef, useMemo } from "react";
-import { TileDto } from "../types/generated/api-types";
+import { useRef, useMemo, useLayoutEffect } from "react";
+import type { TileDto } from "../types/generated/api-types";
 
-/**
- * Hook to detect newly placed tiles by comparing current tiles with previous state.
- * Returns a Set of coordinate keys for tiles that were just occupied.
- */
-export function usePreviousTiles(tiles: TileDto[] | undefined): Set<string> {
-  const previousTilesRef = useRef<Map<string, TileDto>>(new Map());
-  const isInitializedRef = useRef(false);
-
-  const newlyPlacedTiles = useMemo(() => {
-    const placed = new Set<string>();
-
-    if (!tiles) {
-      return placed;
-    }
-
-    const currentTilesMap = new Map<string, TileDto>();
-
-    for (const tile of tiles) {
-      const key = `${tile.coordinates.q},${tile.coordinates.r},${tile.coordinates.s}`;
-      currentTilesMap.set(key, tile);
-
-      // Skip detection on first render to avoid triggering for existing tiles
-      if (isInitializedRef.current) {
-        const previousTile = previousTilesRef.current.get(key);
-        const isOccupiedNow = tile.occupiedBy != null;
-        const wasOccupiedBefore = previousTile?.occupiedBy != null;
-
-        if (isOccupiedNow && !wasOccupiedBefore) {
-          placed.add(key);
-        } else if (
-          isOccupiedNow &&
-          wasOccupiedBefore &&
-          tile.occupiedBy!.type !== previousTile!.occupiedBy!.type
-        ) {
-          placed.add(key);
-        }
+export function changedOccupants(
+  previous: Map<string, string> | null,
+  current: Map<string, string>,
+) {
+  const placed = new Set<string>();
+  if (previous) {
+    for (const [key, occupant] of current) {
+      if (occupant && previous.get(key) !== occupant) {
+        placed.add(key);
       }
     }
+  }
+  return placed;
+}
 
-    previousTilesRef.current = currentTilesMap;
-    isInitializedRef.current = true;
-
-    return placed;
-  }, [tiles]);
-
-  return newlyPlacedTiles;
+export function usePreviousTiles(tiles: TileDto[] | undefined, gameId: string | undefined) {
+  const previous = useRef<{ gameId: string | undefined; tiles: Map<string, TileDto> } | null>(null);
+  const current = useMemo(
+    () =>
+      new Map(
+        (tiles ?? []).map((tile) => [
+          `${tile.coordinates.q},${tile.coordinates.r},${tile.coordinates.s}`,
+          tile,
+        ]),
+      ),
+    [tiles],
+  );
+  const changes = useMemo(() => {
+    const prior =
+      previous.current && previous.current.gameId === gameId ? previous.current.tiles : null;
+    const newlyPlaced = changedOccupants(
+      prior ? new Map([...prior].map(([key, tile]) => [key, tile.occupiedBy?.type ?? ""])) : null,
+      new Map([...current].map(([key, tile]) => [key, tile.occupiedBy?.type ?? ""])),
+    );
+    const replacedTiles = new Map<string, TileDto>();
+    for (const key of newlyPlaced) {
+      const tile = prior?.get(key);
+      if (tile) {
+        replacedTiles.set(key, tile);
+      }
+    }
+    return { newlyPlaced, replacedTiles };
+  }, [current, gameId]);
+  useLayoutEffect(() => {
+    if (tiles) {
+      previous.current = { gameId, tiles: current };
+    }
+  }, [current, tiles, gameId]);
+  return changes;
 }

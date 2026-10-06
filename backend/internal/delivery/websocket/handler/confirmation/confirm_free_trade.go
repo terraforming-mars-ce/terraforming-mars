@@ -2,6 +2,7 @@ package confirmation
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 
 	confirmaction "terraforming-mars-backend/internal/action/confirmation"
@@ -40,19 +41,27 @@ func (h *ConfirmFreeTradeHandler) HandleMessage(ctx context.Context, connection 
 		return
 	}
 
-	payloadMap, ok := message.Payload.(map[string]interface{})
-	if !ok {
+	payloadBytes, err := json.Marshal(message.Payload)
+	if err != nil {
 		h.sendError(connection, "Invalid payload format")
 		return
 	}
-
-	colonyID, _ := payloadMap["colonyId"].(string)
+	var payload dto.FreeTradeRequest
+	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
+		h.sendError(connection, "Invalid payload format")
+		return
+	}
+	colonyID := payload.ColonyID
 	if colonyID == "" {
 		h.sendError(connection, "Missing colonyId in payload")
 		return
 	}
+	if payload.TrackSteps == nil {
+		h.sendError(connection, "trackSteps is required")
+		return
+	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, colonyID)
+	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, colonyID, *payload.TrackSteps)
 	if err != nil {
 		log.Error("Failed to execute confirm free trade action", slog.Any("error", err))
 		h.sendError(connection, err.Error())

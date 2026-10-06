@@ -2,7 +2,9 @@ package confirmation
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+	"terraforming-mars-backend/internal/game/shared"
 
 	confirmaction "terraforming-mars-backend/internal/action/confirmation"
 	"terraforming-mars-backend/internal/delivery/dto"
@@ -64,7 +66,20 @@ func (h *ConfirmProductionCardsHandler) HandleMessage(ctx context.Context, conne
 		slog.Any("selected_card_ids", selectedCardIDs),
 		slog.Bool("random_buy", randomBuy))
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, selectedCardIDs, randomBuy)
+	var paymentEnvelope struct {
+		Payment shared.Payment `json:"payment"`
+	}
+	paymentBytes, paymentErr := json.Marshal(message.Payload)
+	if paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
+		h.sendError(connection, "Invalid payment")
+		return
+	}
+
+	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, selectedCardIDs, randomBuy, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute confirm production cards action", slog.Any("error", err))
 		h.sendError(connection, err.Error())

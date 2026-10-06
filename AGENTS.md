@@ -94,8 +94,8 @@ Cube coordinates (q, r, s) where q + r + s = 0. Utilities in `frontend/src/utils
 ### Energy/Power Reference
 When working with energy, it's referenced as `power.png` in assets.
 
-### MCP Server
-An MCP server at `mcp-server/` lets Claude Code play the game via WebSocket. Run `make mcp-setup` to install, then restart Claude Code to pick up `.mcp.json`. Exposes tools: `connect_to_game`, `get_game_state`, `play_card`, `use_card_action`, `standard_project`, `convert_resources`, `skip_action`, `select_tile`, `select_starting_choices`, `confirm_cards`, `claim_milestone`, `fund_award`, `start_game`, `wait_for_turn`.
+### Bots
+In-app bot players live in `backend/internal/service/bot/`. A bot plays through typed MCP tools served in-process on a loopback port (no shell access): an Opus planner thinks ahead between turns, Sonnet plays the turn, and Haiku writes reactions and the end-game recap. Bot game access runs on the WebSocket hub goroutine via `Hub.Do`. Personas and the strategy guide are in `backend/assets/bot/`.
 
 ## Important Instruction Reminders
 

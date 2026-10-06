@@ -22,11 +22,20 @@ type HubMessage struct {
 type EventHandler interface {
 }
 
-// Hub manages WebSocket connections and message routing
+// hubJob is work from outside the hub, such as a bot, that must run on the hub goroutine.
+type hubJob struct {
+	ctx  context.Context
+	fn   func()
+	done chan struct{}
+}
+
+// Hub manages WebSocket connections and message routing. All game reads and writes
+// happen on its single goroutine, so actions never run concurrently.
 type Hub struct {
 	Register   chan *Connection
 	Unregister chan *Connection
 	Messages   chan HubMessage
+	jobs       chan hubJob
 
 	manager  *Manager
 	logger   *slog.Logger
@@ -41,6 +50,7 @@ func NewHub() *Hub {
 		Register:   make(chan *Connection),
 		Unregister: make(chan *Connection),
 		Messages:   make(chan HubMessage),
+		jobs:       make(chan hubJob),
 		manager:    manager,
 		logger:     logger.Get(),
 		handlers:   make(map[dto.MessageType]MessageHandler),
@@ -100,6 +110,9 @@ func (h *Hub) Run(ctx context.Context) {
 		case hubMessage := <-h.Messages:
 			// Route message to appropriate handler
 			h.routeMessage(ctx, hubMessage)
+
+		case job := <-h.jobs:
+			h.runJob(job)
 		}
 	}
 }
@@ -151,6 +164,36 @@ func (h *Hub) RegisterConnectionWithGame(connection *Connection, gameID string) 
 		slog.String("connection_id", connection.ID),
 		slog.String("game_id", gameID),
 		slog.String("player_id", connection.PlayerID))
+}
+
+// Do runs fn on the hub goroutine and waits for it, so callers outside the hub can read
+// and change game state without racing player actions. It must not be called from the
+// hub goroutine itself. fn is skipped if ctx ends before the hub reaches it.
+func (h *Hub) Do(ctx context.Context, fn func()) error {
+	job := hubJob{ctx: ctx, fn: fn, done: make(chan struct{})}
+	select {
+	case h.jobs <- job:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	select {
+	case <-job.done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (h *Hub) runJob(job hubJob) {
+	defer close(job.done)
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("Hub job panicked", slog.Any("panic", r))
+		}
+	}()
+	if job.ctx.Err() == nil {
+		job.fn()
+	}
 }
 
 // routeMessage routes incoming messages to appropriate handlers

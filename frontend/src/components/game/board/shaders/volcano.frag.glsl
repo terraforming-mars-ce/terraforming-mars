@@ -11,6 +11,8 @@ uniform float uCraterDepth;
 uniform sampler2D uGrassTexture;
 uniform sampler2D uFlowTex;
 uniform float uSeed;
+uniform float uVegetation;
+uniform float uFrost;
 uniform int uDebugMode;  // 0=normal, 1=height, 2=slope, 3=gully, 4=flow
 
 varying vec2 vUv;
@@ -143,7 +145,16 @@ void main() {
   // === Grass at base/apron only ===
   vec3 grassColor = texture2D(uGrassTexture, vUv * 3.0).rgb * vec3(0.55, 0.62, 0.48);
   float grassEdge = snoise(centered * 6.0 + seedOff + 7.7) * 0.08;
-  float grassMask = smoothstep(0.55, 0.85 + grassEdge, rawDist);
+  float grassMask = smoothstep(0.55, 0.85 + grassEdge, rawDist) * uVegetation;
+
+  // === Snow creeping up from the base: patchy like the ground frost, gone towards the hot peak ===
+  float snowPatch = snoise(centered * 9.0 + seedOff + 3.1) * 0.5 + 0.5;
+  float snowLine = 0.22 + snoise(centered * 4.0 + seedOff + 11.3) * 0.06;
+  float snowThreshold = 1.0 - uFrost * 0.8;
+  float snowMask = smoothstep(snowThreshold, snowThreshold + 0.3, snowPatch)
+                 * (1.0 - smoothstep(snowLine - 0.1, snowLine, normHeight))
+                 * (1.0 - grassMask);
+  vec3 snowColor = vec3(0.9, 0.94, 1.0);
 
   // === Lighting: wrap diffuse + AO ===
   vec3 sunDir = normalize(uSunDirection);
@@ -160,6 +171,7 @@ void main() {
 
   // === Combine ===
   vec3 surfaceColor = mix(rockColor, grassColor, grassMask);
+  surfaceColor = mix(surfaceColor, snowColor, snowMask);
   vec3 color = surfaceColor * lighting * ao;
 
   // Scale emissive effects by emergence (lava fades in as volcano rises)

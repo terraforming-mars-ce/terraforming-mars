@@ -41,26 +41,18 @@ func NewPlayCardAction(
 	}
 }
 
-// PaymentRequest represents the payment resources provided by the player
-type PaymentRequest struct {
-	Credits            int                         `json:"credits"`
-	Steel              int                         `json:"steel"`
-	Titanium           int                         `json:"titanium"`
-	Substitutes        map[shared.ResourceType]int `json:"substitutes"`
-	StorageSubstitutes map[string]int              `json:"storageSubstitutes"` // cardID -> amount of storage resources to use as payment
-}
-
 // Execute performs the play card action
 func (a *PlayCardAction) Execute(
 	ctx context.Context,
 	gameID string,
 	playerID string,
 	cardID string,
-	payment PaymentRequest,
+	payment shared.Payment,
 	choiceIndex *int,
 	cardStorageTargets []string,
 	targetPlayerID *string,
 	selectedAmount *int,
+	cardStorageSources []string,
 ) error {
 	log := a.InitLogger(gameID, playerID).With(
 		slog.String("card_id", cardID),
@@ -129,6 +121,48 @@ func (a *PlayCardAction) Execute(
 		return fmt.Errorf("cannot play card: %w", err)
 	}
 
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) {
+			continue
+		}
+		effectiveChoice := choiceIndex
+		if behavior.ChoicePolicy != nil && behavior.ChoicePolicy.Type == shared.ChoicePolicyTypeAuto {
+			index := shared.AutoSelectChoiceIndex(behavior.ChoicePolicy, resolveChoicePolicyCount(behavior.ChoicePolicy, player, a.CardRegistry()))
+			if index >= 0 {
+				effectiveChoice = &index
+			}
+		}
+		if len(behavior.Choices) > 0 {
+			if effectiveChoice == nil || *effectiveChoice < 0 || *effectiveChoice >= len(behavior.Choices) {
+				return fmt.Errorf("select a valid card choice")
+			}
+			if !shared.IsChoiceValidForPolicy(*effectiveChoice, behavior.Choices, behavior.ChoicePolicy, player.Resources().Production()) {
+				return fmt.Errorf("card choice is not available")
+			}
+		}
+		_, revealOutputs := behavior.ExtractInputsOutputs(effectiveChoice)
+		validator := gamecards.NewBehaviorApplier(player, g, card.Name, log).WithSourceCardID(card.ID).WithCardRegistry(a.CardRegistry()).WithTargetCardIDs(cardStorageTargets).WithSourceType(shared.SourceTypeCardPlay)
+		if targetPlayerID != nil {
+			validator.WithTargetPlayerID(*targetPlayerID)
+		}
+		if selectedAmount != nil {
+			validator.WithSelectedAmount(*selectedAmount)
+		}
+		if err := validator.ValidateResourceOutputs(revealOutputs); err != nil {
+			return err
+		}
+		if err := gamecards.ValidateRevealOutputs(revealOutputs, g, a.CardRegistry()); err != nil {
+			return err
+		}
+		options, deferred, err := gamecards.EffectSelectionOptions(behavior.Outputs, player, g, a.CardRegistry(), a.colonyBonusLookup)
+		if err != nil {
+			return err
+		}
+		if deferred && len(options) == 0 {
+			return fmt.Errorf("cannot play card: no legal effect selection")
+		}
+	}
+
 	log.Debug("Card requirements validated")
 
 	if tileErrors := baseaction.ValidateTileOutputs(card, player, g); len(tileErrors) > 0 {
@@ -175,53 +209,43 @@ func (a *PlayCardAction) Execute(
 			slog.Int("effective_cost", effectiveCost))
 	}
 
-	playerSubstitutes := player.Resources().PaymentSubstitutes()
+	quote, err := gamecards.QuotePayment(player, g, a.CardRegistry(), gamecards.PaymentContext{Costs: map[shared.ResourceType]int{shared.ResourceCredit: effectiveCost}, Action: shared.ActionCardPlaying, Card: card})
+	if err != nil {
+		return err
+	}
+	paymentPlan, err := gamecards.ValidatePayment(quote, payment)
+	if err != nil {
+		return err
+	}
+	totalValue := effectiveCost
 
-	// Get storage payment substitutes applicable to this card (filtered by selectors)
-	allStorageSubs := player.Resources().StoragePaymentSubstitutes()
-	var applicableStorageSubs []shared.StoragePaymentSubstitute
-	for _, sub := range allStorageSubs {
-		if len(sub.Selectors) == 0 || gamecards.MatchesAnySelector(card, sub.Selectors) {
-			applicableStorageSubs = append(applicableStorageSubs, sub)
+	var immediateInputs []shared.BehaviorCondition
+	for _, behavior := range card.Behaviors {
+		if !gamecards.HasAutoTrigger(behavior) || gamecards.HasCardDiscardInput(behavior) {
+			continue
 		}
+		effectiveChoice := choiceIndex
+		if behavior.ChoicePolicy != nil && len(behavior.Choices) > 0 {
+			index := shared.AutoSelectChoiceIndex(behavior.ChoicePolicy, resolveChoicePolicyCount(behavior.ChoicePolicy, player, a.CardRegistry()))
+			if index >= 0 {
+				effectiveChoice = &index
+			}
+		}
+		inputs, outputs := behavior.ExtractInputsOutputs(effectiveChoice)
+		if hasVariableAmount(inputs, outputs) && selectedAmount == nil {
+			return fmt.Errorf("must select an amount")
+		}
+		immediateInputs = append(immediateInputs, inputs...)
 	}
-
-	allowSteel := gamecards.HasTag(card, shared.TagBuilding)
-	allowTitanium := gamecards.HasTag(card, shared.TagSpace)
-
-	adjustedPayment := adjustPaymentToEffectiveCost(payment, effectiveCost, allowSteel, allowTitanium, playerSubstitutes, applicableStorageSubs, player)
-
-	cardPayment := gamecards.CardPayment{
-		Credits:            adjustedPayment.Credits,
-		Steel:              adjustedPayment.Steel,
-		Titanium:           adjustedPayment.Titanium,
-		Substitutes:        adjustedPayment.Substitutes,
-		StorageSubstitutes: adjustedPayment.StorageSubstitutes,
+	inputApplier := gamecards.NewBehaviorApplier(player, g, card.Name, log).WithSourceCardID(card.ID).WithCardRegistry(a.CardRegistry()).WithInputCardIDs(cardStorageSources)
+	if selectedAmount != nil {
+		inputApplier.WithSelectedAmount(*selectedAmount)
 	}
-
-	if err := cardPayment.CoversCardCost(effectiveCost, allowSteel, allowTitanium, playerSubstitutes, applicableStorageSubs); err != nil {
-		log.Error("Payment validation failed", slog.Any("error", err))
+	inputApplier.WithReservedInputs(paymentPlan.Resources, paymentPlan.Storage)
+	if err := inputApplier.ValidateInputs(immediateInputs); err != nil {
 		return err
 	}
-
-	totalValue := cardPayment.TotalValue(playerSubstitutes, applicableStorageSubs)
-	log.Debug("Payment validated",
-		slog.Int("effective_cost", effectiveCost),
-		slog.Int("payment_value", totalValue),
-		slog.Int("credits", adjustedPayment.Credits),
-		slog.Int("steel", adjustedPayment.Steel),
-		slog.Int("titanium", adjustedPayment.Titanium),
-		slog.Any("substitutes", adjustedPayment.Substitutes),
-		slog.Any("storageSubstitutes", adjustedPayment.StorageSubstitutes))
-
-	resources := player.Resources().Get()
-	storageGetter := func(cardID string) int {
-		return player.Resources().GetCardStorage(cardID)
-	}
-	if err := cardPayment.CanAfford(resources, storageGetter); err != nil {
-		log.Error("Player can't afford payment", slog.Any("error", err))
-		return err
-	}
+	inputApplier.WithReservedInputs(nil, nil)
 
 	if !player.Hand().RemoveCard(cardID) {
 		log.Error("Failed to remove card from hand - card not found")
@@ -240,6 +264,7 @@ func (a *PlayCardAction) Execute(
 	log.Debug("Card added to played cards")
 
 	if card.ResourceStorage != nil {
+		g.Colonies().ActivateResource(string(card.ResourceStorage.Type))
 		player.Resources().AddToStorage(cardID, card.ResourceStorage.Starting)
 		log.Debug("Initialized resource storage",
 			slog.String("card_id", cardID),
@@ -247,40 +272,19 @@ func (a *PlayCardAction) Execute(
 			slog.Int("starting_amount", card.ResourceStorage.Starting))
 	}
 
-	deductions := map[shared.ResourceType]int{
-		shared.ResourceCredit:   -adjustedPayment.Credits,
-		shared.ResourceSteel:    -adjustedPayment.Steel,
-		shared.ResourceTitanium: -adjustedPayment.Titanium,
+	gamecards.ApplyPayment(player, paymentPlan)
+
+	if err := inputApplier.ApplyInputs(ctx, immediateInputs); err != nil {
+		return err
 	}
-
-	for resourceType, amount := range adjustedPayment.Substitutes {
-		deductions[resourceType] = -amount
-	}
-
-	player.Resources().Add(deductions)
-
-	// Deduct storage payment substitutes (e.g., Dirigibles floaters)
-	for cardID, amount := range adjustedPayment.StorageSubstitutes {
-		if amount > 0 {
-			player.Resources().AddToStorage(cardID, -amount)
-			log.Debug("Deducted storage payment",
-				slog.String("card_id", cardID),
-				slog.Int("amount", amount))
-		}
-	}
-
-	log.Debug("Payment deducted",
-		slog.Int("credits", adjustedPayment.Credits),
-		slog.Int("steel", adjustedPayment.Steel),
-		slog.Int("titanium", adjustedPayment.Titanium),
-		slog.Any("substitutes", adjustedPayment.Substitutes),
-		slog.Any("storageSubstitutes", adjustedPayment.StorageSubstitutes))
 
 	calculatedOutputs, err := a.applyCardBehaviors(ctx, g, card, player, choiceIndex, cardStorageTargets, targetPlayerID, selectedAmount, log)
 	if err != nil {
 		log.Error("Failed to apply card behaviors", slog.Any("error", err))
 		return fmt.Errorf("failed to apply card behaviors: %w", err)
 	}
+
+	baseaction.ActivateSelfTagTriggers(g, player, card, a.CardRegistry(), log)
 
 	// Clean up temporary "next-card" effects that existed before this card was played
 	removePrePlayTemporaryEffects(player, prePlayTemporaryCardIDs, log)
@@ -306,6 +310,10 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 		return nil // No requirements to validate
 	}
 
+	if err := gamecards.ValidateTagRequirements(card.Requirements.Items, gamecards.PlayerTagCounts(player, cardRegistry)); err != nil {
+		return err
+	}
+
 	if calculator.HasIgnoreGlobalRequirements(player) {
 		return nil
 	}
@@ -313,7 +321,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 	for _, req := range card.Requirements.Items {
 		switch req.Type {
 		case gamecards.RequirementTemperature:
-			lenience := calculator.CalculateGlobalParameterLenience(player, "temperature")
+			lenience := calculator.CalculateGlobalParameterRequirementOffset(player, "temperature")
 			temp := g.GlobalParameters().Temperature()
 			if req.Min != nil && temp < *req.Min-lenience {
 				return fmt.Errorf("temperature requirement not met: need %d°C, current %d°C", *req.Min, temp)
@@ -323,7 +331,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			}
 
 		case gamecards.RequirementOxygen:
-			lenience := calculator.CalculateGlobalParameterLenience(player, "oxygen")
+			lenience := calculator.CalculateGlobalParameterRequirementOffset(player, "oxygen")
 			oxygen := g.GlobalParameters().Oxygen()
 			if req.Min != nil && oxygen < *req.Min-lenience {
 				return fmt.Errorf("oxygen requirement not met: need %d%%, current %d%%", *req.Min, oxygen)
@@ -333,7 +341,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			}
 
 		case gamecards.RequirementOceans:
-			lenience := calculator.CalculateGlobalParameterLenience(player, "ocean")
+			lenience := calculator.CalculateGlobalParameterRequirementOffset(player, "ocean")
 			oceans := g.GlobalParameters().Oceans()
 			if req.Min != nil && oceans < *req.Min-lenience {
 				return fmt.Errorf("ocean requirement not met: need %d, current %d", *req.Min, oceans)
@@ -352,19 +360,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			}
 
 		case gamecards.RequirementTags:
-			if req.Tag == nil {
-				return fmt.Errorf("tag requirement missing tag specification")
-			}
-
-			// Count the card's own tags toward requirements (per TM rules, the card being played counts)
-			tagCount := gamecards.CountPlayerTagsByType(player, cardRegistry, *req.Tag, card.Tags)
-
-			if req.Min != nil && tagCount < *req.Min {
-				return fmt.Errorf("tag requirement not met: need %d %s tags, have %d", *req.Min, *req.Tag, tagCount)
-			}
-			if req.Max != nil && tagCount > *req.Max {
-				return fmt.Errorf("tag requirement not met: max %d %s tags, have %d", *req.Max, *req.Tag, tagCount)
-			}
+			continue
 
 		case gamecards.RequirementProduction:
 			if req.Resource == nil {
@@ -397,23 +393,7 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			if req.Resource == nil {
 				return fmt.Errorf("resource requirement missing resource specification")
 			}
-			resources := player.Resources().Get()
-			var currentAmount int
-
-			switch *req.Resource {
-			case shared.ResourceCredit:
-				currentAmount = resources.Credits
-			case shared.ResourceSteel:
-				currentAmount = resources.Steel
-			case shared.ResourceTitanium:
-				currentAmount = resources.Titanium
-			case shared.ResourcePlant:
-				currentAmount = resources.Plants
-			case shared.ResourceEnergy:
-				currentAmount = resources.Energy
-			case shared.ResourceHeat:
-				currentAmount = resources.Heat
-			}
+			currentAmount := gamecards.CountPlayerResources(player, cardRegistry, *req.Resource)
 
 			if req.Min != nil && currentAmount < *req.Min {
 				return fmt.Errorf("resource requirement not met: need %d %s, have %d", *req.Min, *req.Resource, currentAmount)
@@ -423,11 +403,12 @@ func validateCardRequirements(card *gamecards.Card, g *game.Game, player *player
 			}
 
 		case gamecards.RequirementCities, gamecards.RequirementGreeneries:
-			// TODO: Implement tile-based requirements when Board tile counting is ready
-			// For now, skip these validations
+			if err := gamecards.ValidateTileRequirement(req, player, g.Board()); err != nil {
+				return err
+			}
 
 		case gamecards.RequirementVenus:
-			lenience := calculator.CalculateGlobalParameterLenience(player, "venus")
+			lenience := calculator.CalculateGlobalParameterRequirementOffset(player, "venus")
 			venus := g.GlobalParameters().Venus()
 			if req.Min != nil && venus < *req.Min-lenience {
 				return fmt.Errorf("venus requirement not met: need %d%%, current %d%%", *req.Min, venus)
@@ -490,13 +471,13 @@ func (a *PlayCardAction) applyCardBehaviors(
 
 			// Check for card-discard inputs — these defer output application
 			if gamecards.HasCardDiscardInput(behavior) {
-				a.createPendingCardDiscard(p, card, inputs, outputs, log)
+				a.createPendingCardDiscard(p, card, behaviorIndex, inputs, outputs, log)
 				continue
 			}
 
 			// Check for card-discard outputs — player must choose cards to discard first
 			if gamecards.HasCardDiscardOutput(behavior) {
-				a.createPendingCardDiscardFromOutputs(p, card, outputs, log)
+				a.createPendingCardDiscardFromOutputs(p, card, behaviorIndex, outputs, log)
 				continue
 			}
 
@@ -507,7 +488,8 @@ func (a *PlayCardAction) applyCardBehaviors(
 			applier := gamecards.NewBehaviorApplier(p, g, card.Name, slog.Default()).
 				WithSourceCardID(card.ID).
 				WithCardRegistry(a.CardRegistry()).
-				WithSourceType(shared.SourceTypeCardPlay)
+				WithSourceType(shared.SourceTypeCardPlay).
+				WithProductionBox(behavior.ProductionBox)
 			if a.colonyBonusLookup != nil {
 				applier = applier.WithColonyBonusLookup(a.colonyBonusLookup)
 			}
@@ -528,12 +510,11 @@ func (a *PlayCardAction) applyCardBehaviors(
 
 			allCalculatedOutputs = append(allCalculatedOutputs, calculatedOutputs...)
 
-			if deferred := applier.DeferredSteal(); deferred != nil {
+			if deferred := applier.DeferredRemoval(); deferred != nil {
 				callback := &shared.TileCompletionCallback{
-					Type: "adjacent-steal",
+					Type: "adjacent-removal",
 					Data: map[string]interface{}{
-						"resourceType": string(deferred.GetResourceType()),
-						"amount":       deferred.GetAmount(),
+						"output":       deferred,
 						"sourceCardID": card.ID,
 						"source":       card.Name,
 					},
@@ -664,11 +645,12 @@ func (a *PlayCardAction) applyCardBehaviors(
 	return allCalculatedOutputs, nil
 }
 
-// createPendingCardDiscard creates a PendingCardDiscardSelection for behaviors with card-discard inputs.
+// createPendingCardDiscard creates a pending discard resolution for behaviors with card-discard inputs.
 // The player must select cards to discard before outputs are applied.
 func (a *PlayCardAction) createPendingCardDiscard(
 	p *player.Player,
 	card *gamecards.Card,
+	behaviorIndex int,
 	inputs []shared.BehaviorCondition,
 	outputs []shared.BehaviorCondition,
 	log *slog.Logger,
@@ -694,15 +676,16 @@ func (a *PlayCardAction) createPendingCardDiscard(
 		return
 	}
 
-	selection := &shared.PendingCardDiscardSelection{
-		MinCards:       minCards,
-		MaxCards:       maxCards,
-		Source:         card.Name,
-		SourceCardID:   card.ID,
-		PendingOutputs: outputs,
+	selection := &shared.PendingBehaviorResolution{Kind: "card-discard",
+		MinCards:            minCards,
+		MaxCards:            maxCards,
+		Source:              card.Name,
+		SourceCardID:        card.ID,
+		SourceBehaviorIndex: behaviorIndex,
+		PendingOutputs:      outputs,
 	}
 
-	p.Selection().SetPendingCardDiscardSelection(selection)
+	p.Selection().AddPendingBehaviorResolution(selection)
 
 	log.Debug("Created pending card discard selection",
 		slog.String("card_name", card.Name),
@@ -712,11 +695,12 @@ func (a *PlayCardAction) createPendingCardDiscard(
 		slog.Int("pending_outputs", len(outputs)))
 }
 
-// createPendingCardDiscardFromOutputs creates a PendingCardDiscardSelection for behaviors with card-discard outputs.
+// createPendingCardDiscardFromOutputs creates a pending discard resolution for behaviors with card-discard outputs.
 // The player must select cards to discard before remaining outputs (draws, etc.) are applied.
 func (a *PlayCardAction) createPendingCardDiscardFromOutputs(
 	p *player.Player,
 	card *gamecards.Card,
+	behaviorIndex int,
 	outputs []shared.BehaviorCondition,
 	log *slog.Logger,
 ) {
@@ -733,15 +717,16 @@ func (a *PlayCardAction) createPendingCardDiscardFromOutputs(
 		}
 	}
 
-	selection := &shared.PendingCardDiscardSelection{
-		MinCards:       minCards,
-		MaxCards:       maxCards,
-		Source:         card.Name,
-		SourceCardID:   card.ID,
-		PendingOutputs: pendingOutputs,
+	selection := &shared.PendingBehaviorResolution{Kind: "card-discard",
+		MinCards:            minCards,
+		MaxCards:            maxCards,
+		Source:              card.Name,
+		SourceCardID:        card.ID,
+		SourceBehaviorIndex: behaviorIndex,
+		PendingOutputs:      pendingOutputs,
 	}
 
-	p.Selection().SetPendingCardDiscardSelection(selection)
+	p.Selection().AddPendingBehaviorResolution(selection)
 
 	log.Debug("Created pending card discard selection from outputs",
 		slog.String("card_name", card.Name),
@@ -750,96 +735,6 @@ func (a *PlayCardAction) createPendingCardDiscardFromOutputs(
 		slog.Int("pending_outputs", len(pendingOutputs)))
 }
 
-func adjustPaymentToEffectiveCost(
-	payment PaymentRequest,
-	effectiveCost int,
-	allowSteel bool,
-	allowTitanium bool,
-	playerSubstitutes []shared.PaymentSubstitute,
-	storageSubstitutes []shared.StoragePaymentSubstitute,
-	p *player.Player,
-) PaymentRequest {
-	if effectiveCost <= 0 {
-		return PaymentRequest{}
-	}
-
-	steelRate := 2
-	titaniumRate := 3
-	for _, sub := range playerSubstitutes {
-		if sub.ResourceType == shared.ResourceSteel {
-			steelRate = sub.ConversionRate
-		}
-		if sub.ResourceType == shared.ResourceTitanium {
-			titaniumRate = sub.ConversionRate
-		}
-	}
-
-	nonCreditValue := 0
-	if allowSteel {
-		nonCreditValue += payment.Steel * steelRate
-	}
-	if allowTitanium {
-		nonCreditValue += payment.Titanium * titaniumRate
-	}
-
-	for resourceType, amount := range payment.Substitutes {
-		for _, sub := range playerSubstitutes {
-			if sub.ResourceType == resourceType {
-				nonCreditValue += amount * sub.ConversionRate
-				break
-			}
-		}
-	}
-
-	// Clamp storage substitute amounts to what's actually available on the card
-	clampedStorageSubs := make(map[string]int)
-	for cardID, amount := range payment.StorageSubstitutes {
-		available := p.Resources().GetCardStorage(cardID)
-		clamped := amount
-		if clamped > available {
-			clamped = available
-		}
-		if clamped > 0 {
-			clampedStorageSubs[cardID] = clamped
-		}
-	}
-
-	// Add storage substitute values
-	storageSubValues := make(map[string]int)
-	for _, sub := range storageSubstitutes {
-		storageSubValues[sub.CardID] = sub.ConversionRate
-	}
-	for cardID, amount := range clampedStorageSubs {
-		if rate, ok := storageSubValues[cardID]; ok {
-			nonCreditValue += amount * rate
-		}
-	}
-
-	if nonCreditValue >= effectiveCost {
-		return PaymentRequest{
-			Credits:            0,
-			Steel:              payment.Steel,
-			Titanium:           payment.Titanium,
-			Substitutes:        payment.Substitutes,
-			StorageSubstitutes: clampedStorageSubs,
-		}
-	}
-
-	creditsNeeded := effectiveCost - nonCreditValue
-	if creditsNeeded > payment.Credits {
-		creditsNeeded = payment.Credits
-	}
-
-	return PaymentRequest{
-		Credits:            creditsNeeded,
-		Steel:              payment.Steel,
-		Titanium:           payment.Titanium,
-		Substitutes:        payment.Substitutes,
-		StorageSubstitutes: clampedStorageSubs,
-	}
-}
-
-// collectTemporaryEffectCardIDs returns the card IDs of all effects with the given temporary type.
 func collectTemporaryEffectCardIDs(p *player.Player, temporaryType string) []string {
 	var cardIDs []string
 	for _, effect := range p.Effects().List() {
@@ -868,6 +763,10 @@ func validateChoiceRequirements(reqs *shared.ChoiceRequirements, p *player.Playe
 		return nil
 	}
 
+	if err := gamecards.ValidateChoiceTagRequirements(reqs.Items, gamecards.PlayerTagCounts(p, cardRegistry)); err != nil {
+		return err
+	}
+
 	for _, req := range reqs.Items {
 		if err := checkChoiceRequirement(req, p, g, cardRegistry); err != nil {
 			return err
@@ -880,16 +779,7 @@ func validateChoiceRequirements(reqs *shared.ChoiceRequirements, p *player.Playe
 func checkChoiceRequirement(req shared.ChoiceRequirement, p *player.Player, g *game.Game, cardRegistry gamecards.CardRegistry) error {
 	switch req.Type {
 	case "tags":
-		if req.Tag == nil {
-			return fmt.Errorf("tag requirement missing tag specification")
-		}
-		tagCount := gamecards.CountPlayerTagsByType(p, cardRegistry, *req.Tag)
-		if req.Min != nil && tagCount < *req.Min {
-			return fmt.Errorf("need %d %s tags, have %d", *req.Min, *req.Tag, tagCount)
-		}
-		if req.Max != nil && tagCount > *req.Max {
-			return fmt.Errorf("max %d %s tags, have %d", *req.Max, *req.Tag, tagCount)
-		}
+		return nil
 
 	case "temperature":
 		temp := g.GlobalParameters().Temperature()
@@ -1054,7 +944,7 @@ func resolveChoicePolicyCount(policy *shared.ChoicePolicy, p *player.Player, reg
 	}
 	sel := policy.Select
 	if sel.ResourceType == "tag" && sel.Tag != nil {
-		return gamecards.CountPlayerTagsByType(p, registry, *sel.Tag)
+		return gamecards.CountPlayerTags(p, registry, []shared.CardTag{*sel.Tag}, gamecards.TagCountContext{ActorID: p.ID()})
 	}
 	return 0
 }

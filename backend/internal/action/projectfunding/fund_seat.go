@@ -289,7 +289,7 @@ func (a *FundSeatAction) applyGlobalEffects(ctx context.Context, g *game.Game, d
 			}
 			choices := buildProductionChoices(amount)
 			for _, p := range allPlayers {
-				p.Selection().SetPendingBehaviorChoiceSelection(&shared.PendingBehaviorChoiceSelection{
+				p.Selection().AddPendingBehaviorResolution(&shared.PendingBehaviorResolution{Kind: "choice",
 					Choices:      choices,
 					Source:       "project-funding-completion",
 					SourceCardID: def.ID,
