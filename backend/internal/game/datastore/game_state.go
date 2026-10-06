@@ -75,6 +75,7 @@ type GameState struct {
 	InitPhasePlayerIndex       int
 	InitPhaseWaitingForConfirm bool
 	InitPhaseConfirmVersion    int
+	InitPhaseRoster            bool
 
 	NextGenTurnOrderFrozen bool
 

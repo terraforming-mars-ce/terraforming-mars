@@ -448,6 +448,72 @@ func (g *Game) AddNewBotPlayer(ctx context.Context, botID, botName string, diffi
 	return p, nil
 }
 
+// PlayerIdentity is the part of a player that is kept when a game is rebuilt.
+type PlayerIdentity struct {
+	ID                 string
+	Name               string
+	Color              string
+	PlayerType         string
+	BotStatus          string
+	BotDifficulty      string
+	BotSpeed           string
+	Connected          bool
+	PendingDemoChoices *shared.PendingDemoChoices
+}
+
+// IdentityOf returns the identity of a player state.
+func IdentityOf(s *datastore.PlayerState) PlayerIdentity {
+	return PlayerIdentity{
+		ID:                 s.ID,
+		Name:               s.Name,
+		Color:              s.Color,
+		PlayerType:         s.PlayerType,
+		BotStatus:          s.BotStatus,
+		BotDifficulty:      s.BotDifficulty,
+		BotSpeed:           s.BotSpeed,
+		Connected:          s.Connected,
+		PendingDemoChoices: s.PendingDemoChoices,
+	}
+}
+
+// AddRestoredPlayer adds a fresh player that keeps the given identity.
+func (g *Game) AddRestoredPlayer(ctx context.Context, identity PlayerIdentity) (*player.Player, error) {
+	if err := g.ds.UpdateGame(g.id, func(s *datastore.GameState) {
+		s.Players[identity.ID] = &datastore.PlayerState{
+			ID:                 identity.ID,
+			Name:               identity.Name,
+			Color:              identity.Color,
+			Connected:          identity.Connected,
+			PlayerType:         identity.PlayerType,
+			BotStatus:          identity.BotStatus,
+			BotDifficulty:      identity.BotDifficulty,
+			BotSpeed:           identity.BotSpeed,
+			PendingDemoChoices: identity.PendingDemoChoices,
+			TerraformRating:    20,
+			HandCardIDs:        []string{},
+			PlayedCardIDs:      []string{},
+			ResourceStorage:    make(map[string]int),
+			BonusTags:          make(map[shared.CardTag]int),
+			GenerationalEvents: make(map[shared.GenerationalEvent]int),
+		}
+	}); err != nil {
+		return nil, fmt.Errorf("failed to restore player %s: %w", identity.ID, err)
+	}
+	p := player.NewPlayer(g.ds, g.id, identity.ID, g.eventBus)
+	if err := g.AddPlayer(ctx, p); err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// RestoreSocial copies spectators and chat from a previous state of this game.
+func (g *Game) RestoreSocial(spectators map[string]*shared.SpectatorState, chat []shared.ChatMessage) {
+	g.update(func(s *datastore.GameState) {
+		s.Spectators = spectators
+		s.ChatMessages = chat
+	})
+}
+
 func (g *Game) AddPlayer(ctx context.Context, p *player.Player) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -773,6 +839,28 @@ func (g *Game) SetCurrentTurn(ctx context.Context, playerID string, actionsRemai
 	if err := g.ExecuteFirstActionIfNeeded(ctx, playerID); err != nil {
 		return err
 	}
+
+	if g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{
+			GameID:    g.id,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return nil
+}
+
+// SetCurrentTurnActions replaces the current turn's remaining and total actions.
+func (g *Game) SetCurrentTurnActions(ctx context.Context, actions int) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.update(func(s *datastore.GameState) {
+		s.CurrentTurnActions = actions
+		s.CurrentTurnTotalActions = actions
+		s.UpdatedAt = time.Now()
+	})
 
 	if g.eventBus != nil {
 		events.Publish(g.eventBus, events.GameStateChangedEvent{
@@ -1838,10 +1926,10 @@ func (g *Game) MarkCorpApplied(playerID string) {
 	})
 }
 
-func (g *Game) MarkPreludesApplied(playerID string) {
+func (g *Game) MarkPreludeApplied(playerID string) {
 	g.update(func(s *datastore.GameState) {
 		if choices, ok := s.DeferredStartingChoices[playerID]; ok && choices != nil {
-			choices.PreludesApplied = true
+			choices.PreludesAppliedCount++
 		}
 	})
 }
@@ -1882,6 +1970,34 @@ func (g *Game) InitPhaseConfirmVersion() int {
 	var v int
 	g.read(func(s *datastore.GameState) { v = s.InitPhaseConfirmVersion })
 	return v
+}
+
+// InitPhaseRoster reports whether the init phase is showing the final roster of all players
+// before the action phase begins.
+func (g *Game) InitPhaseRoster() bool {
+	var v bool
+	g.read(func(s *datastore.GameState) { v = s.InitPhaseRoster })
+	return v
+}
+
+func (g *Game) SetInitPhaseRoster(ctx context.Context, roster bool) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	g.update(func(s *datastore.GameState) {
+		s.InitPhaseRoster = roster
+		s.UpdatedAt = time.Now()
+	})
+
+	if g.eventBus != nil {
+		events.Publish(g.eventBus, events.GameStateChangedEvent{
+			GameID:    g.id,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return nil
 }
 
 func (g *Game) SetInitPhaseWaitingForConfirm(ctx context.Context, waiting bool) error {

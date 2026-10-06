@@ -17,7 +17,11 @@ import type {
   PlayerDisconnectedPayload,
   LogUpdatePayload,
 } from "@/types/generated/api-types.ts";
-import { GamePhaseAction } from "@/types/generated/api-types.ts";
+import {
+  GamePhaseAction,
+  GamePhaseInitApplyCorp,
+  GamePhaseInitApplyPrelude,
+} from "@/types/generated/api-types.ts";
 import type { GameEvent } from "@/hooks/useGameEvent.ts";
 import type { PlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 
@@ -238,7 +242,11 @@ export function useWebSocketConnection(
 
       previousGameRef.current = deepClone(updatedGame);
 
-      if (updatedGame.triggeredEffects && updatedGame.triggeredEffects.length > 0) {
+      // The corporation showcase presents corp and prelude effects itself.
+      const isInitApply =
+        updatedGame.currentPhase === GamePhaseInitApplyCorp ||
+        updatedGame.currentPhase === GamePhaseInitApplyPrelude;
+      if (!isInitApply && updatedGame.triggeredEffects && updatedGame.triggeredEffects.length > 0) {
         const store = useGameStore.getState();
         store.setTriggeredEffects(updatedGame.triggeredEffects);
         const notificationCount = updatedGame.triggeredEffects.length;
@@ -283,6 +291,10 @@ export function useWebSocketConnection(
         return;
       }
       const allPlayers = [latestGame.currentPlayer, ...(latestGame.otherPlayers ?? [])];
+      // Corps and preludes played during setup are presented by the corporation showcase.
+      const isInitApply =
+        latestGame.currentPhase === GamePhaseInitApplyCorp ||
+        latestGame.currentPhase === GamePhaseInitApplyPrelude;
       for (const log of logs) {
         if (
           log.playerId === myPlayerId &&
@@ -302,7 +314,7 @@ export function useWebSocketConnection(
           });
         }
 
-        if (log.sourceType !== "card_play") {
+        if (log.sourceType !== "card_play" || isInitApply) {
           continue;
         }
 

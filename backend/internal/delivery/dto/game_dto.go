@@ -1156,15 +1156,28 @@ type PlaceableTileTypeDto struct {
 	Group string `json:"group"`
 }
 
+// InitPhaseStage is the showcase stage of the current init player
+type InitPhaseStage string
+
+const (
+	InitPhaseStageReveal  InitPhaseStage = "reveal"
+	InitPhaseStageApplied InitPhaseStage = "applied"
+	InitPhaseStageRoster  InitPhaseStage = "roster"
+)
+
 // InitPhaseDto represents the state of the init_apply_corp or init_apply_prelude phase
 type InitPhaseDto struct {
-	CurrentPlayerID    string `json:"currentPlayerId"`
-	CurrentPlayerIndex int    `json:"currentPlayerIndex"`
-	TotalPlayers       int    `json:"totalPlayers"`
-	WaitingForConfirm  bool   `json:"waitingForConfirm"`
-	ConfirmVersion     int    `json:"confirmVersion"`
-	HasPreludePhase    bool   `json:"hasPreludePhase"`
-	HasPendingTiles    bool   `json:"hasPendingTiles"`
+	CurrentPlayerID     string         `json:"currentPlayerId"`
+	CurrentPlayerIndex  int            `json:"currentPlayerIndex"`
+	TotalPlayers        int            `json:"totalPlayers"`
+	WaitingForConfirm   bool           `json:"waitingForConfirm"`
+	ConfirmVersion      int            `json:"confirmVersion"`
+	HasPreludePhase     bool           `json:"hasPreludePhase"`
+	Stage               InitPhaseStage `json:"stage" tstype:"'reveal' | 'applied' | 'roster'"`
+	Preludes            []CardDto      `json:"preludes"`
+	PreludesPlayed      int            `json:"preludesPlayed"`
+	HasPendingSelection bool           `json:"hasPendingSelection"`
+	PendingSourceCardID string         `json:"pendingSourceCardId"`
 }
 
 // Colony-related DTOs

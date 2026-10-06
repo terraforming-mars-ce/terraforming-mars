@@ -29,3 +29,13 @@ export const PHASE_DISPLAY_NAMES: Record<string, string> = {
 export function getPhaseDisplayName(phase: string): string {
   return PHASE_DISPLAY_NAMES[phase] ?? phase;
 }
+
+/**
+ * Corporation showcase pacing after the controller's Next: the 350ms card-play animation
+ * plus a 300ms gap before the next card plays or the next player is revealed.
+ */
+export const SHOWCASE_PLAY_STEP_MS = 650;
+
+/** How long the board stays in view after a card's last tile placement before the showcase returns. */
+export const SHOWCASE_TILE_HOLD_MS = 2000;
+export const SHOWCASE_FADE_MS = 400;

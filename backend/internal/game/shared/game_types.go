@@ -265,10 +265,15 @@ type PendingDemoChoices struct {
 
 // DeferredStartingChoices holds choices that are applied after init
 type DeferredStartingChoices struct {
-	Payment         Payment
-	CorporationID   string
-	PreludeIDs      []string
-	CardIDs         []string
-	CorpApplied     bool
-	PreludesApplied bool
+	Payment              Payment
+	CorporationID        string
+	PreludeIDs           []string
+	CardIDs              []string
+	CorpApplied          bool
+	PreludesAppliedCount int
+}
+
+// PreludesDone reports whether every chosen prelude has been applied.
+func (c *DeferredStartingChoices) PreludesDone() bool {
+	return c.PreludesAppliedCount >= len(c.PreludeIDs)
 }

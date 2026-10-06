@@ -931,20 +931,22 @@ func TestPoseidon_ForcedColonyDoesNotBlockInitAdvance_Repro568(t *testing.T) {
 	confirmAction := turnAction.NewConfirmInitAdvanceAction(repo, cardRegistry, nil, nil, logger)
 	confirmColony := confirmation.NewConfirmColonyPlacementAction(repo, cardRegistry, colonyRegistry, logger)
 
-	err = confirmAction.Execute(ctx, testGame.ID(), playerID1)
+	err = confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID())
 	testutil.AssertNoError(t, err, "Apply player 1 corp")
 
-	err = confirmAction.Execute(ctx, testGame.ID(), playerID1)
+	err = confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID())
 	testutil.AssertNoError(t, err, "Advance to player 2")
 
-	err = confirmAction.Execute(ctx, testGame.ID(), playerID2)
+	err = confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID())
 	testutil.AssertNoError(t, err, "Apply player 2 corp (Poseidon)")
 
 	forcedAction := testGame.GetForcedFirstAction(playerID2)
 	testutil.AssertTrue(t, forcedAction != nil, "Poseidon first action is queued")
 	testutil.AssertEqual(t, "queued", forcedAction.State, "setup does not run first action")
 	testutil.AssertTrue(t, players[1].Selection().GetPendingColonySelection() == nil, "no colony selection during setup")
-	testutil.AssertNoError(t, confirmAction.Execute(ctx, testGame.ID(), playerID2), "finish setup with first action queued")
+	testutil.AssertNoError(t, confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "finish setup with first action queued")
+	testutil.AssertTrue(t, testGame.InitPhaseRoster(), "setup shows roster")
+	testutil.AssertNoError(t, confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "finish roster")
 	testutil.AssertEqual(t, shared.GamePhaseAction, testGame.CurrentPhase(), "setup can advance")
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID2, 2), "start Poseidon's turn")
 	selection := players[1].Selection().GetPendingColonySelection()
@@ -1028,7 +1030,7 @@ func TestPoseidon_ForcedColonyInitAdvance_FourPlayerPrelude_Repro568(t *testing.
 
 	turnOrder := testGame.TurnOrder()
 	for _, pid := range turnOrder {
-		err = confirmAction.Execute(ctx, testGame.ID(), pid)
+		err = confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID())
 		testutil.AssertNoError(t, err, "apply corp for "+pid)
 
 		if sel := players[indexOf(ids, pid)].Selection().GetPendingColonySelection(); sel != nil {
@@ -1037,7 +1039,7 @@ func TestPoseidon_ForcedColonyInitAdvance_FourPlayerPrelude_Repro568(t *testing.
 			continue
 		}
 
-		err = confirmAction.Execute(ctx, testGame.ID(), pid)
+		err = confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID())
 		testutil.AssertNoError(t, err, "advance past "+pid)
 	}
 

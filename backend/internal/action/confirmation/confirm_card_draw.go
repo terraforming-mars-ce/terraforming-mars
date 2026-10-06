@@ -55,7 +55,7 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		return fmt.Errorf("no pending card draw selection found")
 	}
 
-	if err := baseaction.ValidateCurrentTurn(g, playerID, log); err != nil {
+	if err := baseaction.ValidateCurrentTurnOrInitPlayer(g, playerID, log); err != nil {
 		return err
 	}
 	if len(cardsToTake) < selection.MinFreeTakeCount {
@@ -168,7 +168,9 @@ func (a *ConfirmCardDrawAction) Execute(ctx context.Context, gameID string, play
 		a.completeCardAction(g, p, selection, log)
 	}
 
-	baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+	if phase := g.CurrentPhase(); phase != shared.GamePhaseInitApplyCorp && phase != shared.GamePhaseInitApplyPrelude {
+		baseaction.AutoAdvanceTurnIfNeeded(g, playerID, log)
+	}
 	log.Info("Card draw confirmation completed",
 		slog.String("source", selection.Source),
 		slog.Int("cards_taken", len(cardsToTake)),

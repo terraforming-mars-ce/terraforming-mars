@@ -283,6 +283,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <div
       ref={cardRef}
+      data-player-id={player.id}
       className={`relative w-[260px] max-w-[calc(100vw-16px)] h-[66px] overflow-visible pointer-events-auto ${isCurrentTurn ? "mb-1.5" : "mb-2"} ${onPlayerClick ? "cursor-pointer" : ""}`}
       onClick={() => onPlayerClick?.(player)}
       onContextMenu={handleContextMenu}
@@ -310,7 +311,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           />
         )}
         <div className="flex min-w-0 flex-1 flex-col items-start justify-center gap-1">
-          <div className="player-chip-group">
+          <div className="player-chip-group flex-nowrap gap-1">
             {isCurrentPlayer && (
               <PlayerChip className="text-[8px] tracking-[0.5px] bg-[rgba(60,100,150,0.8)] text-white border border-[rgba(80,130,180,0.7)] [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
                 YOU
@@ -399,6 +400,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
               </span>
             )}
           </div>
+          {player.corporation && (
+            <span className="-mt-1 max-w-full truncate text-[9px] font-orbitron uppercase tracking-[0.5px] text-white/50 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+              {player.corporation.name}
+            </span>
+          )}
         </div>
         {/* TR Display */}
         <div className="flex items-center bg-[rgba(30,50,80,0.9)] border border-[rgba(60,100,150,0.6)] px-2.5 py-1 shrink-0 ml-3">

@@ -425,15 +425,15 @@ func ApplyCorpForPlayer(ctx context.Context, g *game.Game, playerID string, card
 	return nil
 }
 
-// ApplyPreludesForPlayer applies all prelude card effects for a single player
-// during the init_apply_prelude phase.
-func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, cardRegistry gamecards.CardRegistry, stateRepo game.GameStateRepository, log *slog.Logger) error {
+// ApplyNextPreludeForPlayer applies the player's next unapplied prelude during the
+// init_apply_prelude phase. Preludes are applied one at a time so each card's tile
+// placements and selections resolve before the next card is played.
+func ApplyNextPreludeForPlayer(ctx context.Context, g *game.Game, playerID string, cardRegistry gamecards.CardRegistry, stateRepo game.GameStateRepository, log *slog.Logger) error {
 	choices := g.GetDeferredStartingChoices(playerID)
 	if choices == nil {
 		return fmt.Errorf("no deferred starting choices for player %s", playerID)
 	}
-
-	if len(choices.PreludeIDs) == 0 {
+	if choices.PreludesDone() {
 		return nil
 	}
 
@@ -442,19 +442,15 @@ func ApplyPreludesForPlayer(ctx context.Context, g *game.Game, playerID string, 
 		return fmt.Errorf("player not found: %s", playerID)
 	}
 
-	log.Debug("Applying prelude effects",
-		slog.String("player_id", playerID),
-		slog.Any("preludes", choices.PreludeIDs))
-
-	for _, preludeID := range choices.PreludeIDs {
-		if err := ApplyPreludeCard(ctx, g, p, preludeID, cardRegistry, stateRepo, log); err != nil {
-			return fmt.Errorf("failed to apply prelude %s: %w", preludeID, err)
-		}
+	preludeID := choices.PreludeIDs[choices.PreludesAppliedCount]
+	if err := ApplyPreludeCard(ctx, g, p, preludeID, cardRegistry, stateRepo, log); err != nil {
+		return fmt.Errorf("failed to apply prelude %s: %w", preludeID, err)
 	}
+	g.MarkPreludeApplied(playerID)
 
-	g.MarkPreludesApplied(playerID)
-
-	log.Debug("Prelude effects complete", slog.String("player_id", playerID))
+	log.Debug("Prelude applied",
+		slog.String("player_id", playerID),
+		slog.String("prelude_id", preludeID))
 	return nil
 }
 

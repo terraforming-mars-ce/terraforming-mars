@@ -43,7 +43,8 @@ func NewConfirmInitAdvanceAction(
 
 // Execute applies the current player's effects and advances to the next player.
 // The confirm flow is: enter phase (no effects applied) → confirm → apply current → wait →
-// confirm → apply next → wait → ... → confirm → apply last → wait → confirm → transition.
+// confirm → apply next → wait → ... → confirm → apply last → wait → confirm → roster →
+// confirm → action phase. The roster step only follows the final init phase.
 func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, playerID string) error {
 	log := a.logger.With(
 		slog.String("game_id", gameID),
@@ -61,8 +62,16 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 		return fmt.Errorf("game not in init apply phase, current: %s", phase)
 	}
 
+	if !mayAdvanceShowcase(g, playerID) {
+		return fmt.Errorf("only the host can advance the showcase")
+	}
+
 	if !g.InitPhaseWaitingForConfirm() {
 		return fmt.Errorf("init phase not waiting for confirmation")
+	}
+
+	if g.InitPhaseRoster() {
+		return finishInitRoster(ctx, g, log)
 	}
 
 	turnOrder := g.TurnOrder()
@@ -80,19 +89,7 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 		return fmt.Errorf("current player has pending tile queue")
 	}
 
-	// Check if the current player's effects have already been applied.
-	choices := g.GetDeferredStartingChoices(currentPlayerID)
-	needsApply := false
-	if choices != nil {
-		switch phase {
-		case shared.GamePhaseInitApplyCorp:
-			needsApply = !choices.CorpApplied
-		case shared.GamePhaseInitApplyPrelude:
-			needsApply = !choices.PreludesApplied
-		}
-	}
-
-	if needsApply {
+	if needsInitApply(g, phase, currentPlayerID) {
 		if err := g.SetInitPhaseWaitingForConfirm(ctx, false); err != nil {
 			return fmt.Errorf("failed to clear waiting for confirm: %w", err)
 		}
@@ -113,15 +110,15 @@ func (a *ConfirmInitAdvanceAction) Execute(ctx context.Context, gameID string, p
 // It returns (true, nil) when it cleared the waiting-for-confirm flag and advanced.
 // It returns (false, nil) without mutating state when advancement is not applicable:
 // when the phase is not an init-apply phase, when not waiting for confirm, when the
-// init player index is out of range, or when the current init player still has a pending
-// selection or a pending tile queue.
+// roster is showing, when the init player index is out of range, or when the current init
+// player still has a pending selection or a pending tile queue.
 func AdvanceInitPhaseAfterForcedAction(ctx context.Context, g *game.Game, log *slog.Logger) (bool, error) {
 	phase := g.CurrentPhase()
 	if phase != shared.GamePhaseInitApplyCorp && phase != shared.GamePhaseInitApplyPrelude {
 		return false, nil
 	}
 
-	if !g.InitPhaseWaitingForConfirm() {
+	if !g.InitPhaseWaitingForConfirm() || g.InitPhaseRoster() {
 		return false, nil
 	}
 
@@ -137,6 +134,9 @@ func AdvanceInitPhaseAfterForcedAction(ctx context.Context, g *game.Game, log *s
 		return false, nil
 	}
 	if g.GetPendingTileSelectionQueue(currentPlayerID) != nil {
+		return false, nil
+	}
+	if needsInitApply(g, phase, currentPlayerID) {
 		return false, nil
 	}
 
@@ -159,10 +159,9 @@ func (a *ConfirmInitAdvanceAction) applyCurrentPlayer(ctx context.Context, g *ga
 		log.Debug("Applied corp effects", slog.String("player_id", currentPlayerID))
 
 	case shared.GamePhaseInitApplyPrelude:
-		if err := ApplyPreludesForPlayer(ctx, g, currentPlayerID, a.cardRegistry, a.stateRepo, log); err != nil {
-			return fmt.Errorf("failed to apply preludes for player %s: %w", currentPlayerID, err)
+		if err := ApplyNextPreludeForPlayer(ctx, g, currentPlayerID, a.cardRegistry, a.stateRepo, log); err != nil {
+			return fmt.Errorf("failed to apply prelude for player %s: %w", currentPlayerID, err)
 		}
-		log.Debug("Applied prelude effects", slog.String("player_id", currentPlayerID))
 	}
 
 	// After applying, wait for the frontend to display the effects
@@ -211,14 +210,66 @@ func advanceToNextPlayer(ctx context.Context, g *game.Game, phase shared.GamePha
 			return nil
 		}
 
-		log.Info("All corps applied (no prelude), advancing to action phase")
-		AdvanceToActionPhase(ctx, g, allPlayers, log)
+		log.Debug("All corps applied (no prelude), showing roster")
+		return startInitRoster(ctx, g)
 
 	case shared.GamePhaseInitApplyPrelude:
-		log.Info("All preludes applied, advancing to action phase")
-		AdvanceToActionPhase(ctx, g, allPlayers, log)
+		log.Debug("All preludes applied, showing roster")
+		return startInitRoster(ctx, g)
 	}
 
+	return nil
+}
+
+// mayAdvanceShowcase reports whether the player may advance the init phase: the host,
+// or anyone while the host is disconnected or gone so setup cannot stall.
+func mayAdvanceShowcase(g *game.Game, playerID string) bool {
+	hostID := g.HostPlayerID()
+	if playerID == hostID {
+		return true
+	}
+	host, err := g.GetPlayer(hostID)
+	if err != nil {
+		return true
+	}
+	return host.HasExited() || !host.IsConnected()
+}
+
+// needsInitApply reports whether the player still has a corp or prelude to apply in
+// the current init phase.
+func needsInitApply(g *game.Game, phase shared.GamePhase, playerID string) bool {
+	choices := g.GetDeferredStartingChoices(playerID)
+	if choices == nil {
+		return false
+	}
+	switch phase {
+	case shared.GamePhaseInitApplyCorp:
+		return !choices.CorpApplied
+	case shared.GamePhaseInitApplyPrelude:
+		return !choices.PreludesDone()
+	}
+	return false
+}
+
+func startInitRoster(ctx context.Context, g *game.Game) error {
+	if err := g.SetInitPhaseRoster(ctx, true); err != nil {
+		return fmt.Errorf("failed to set init roster: %w", err)
+	}
+	if err := g.SetInitPhaseWaitingForConfirm(ctx, true); err != nil {
+		return fmt.Errorf("failed to set waiting for confirm: %w", err)
+	}
+	return nil
+}
+
+func finishInitRoster(ctx context.Context, g *game.Game, log *slog.Logger) error {
+	if err := g.SetInitPhaseRoster(ctx, false); err != nil {
+		return fmt.Errorf("failed to clear init roster: %w", err)
+	}
+	if err := g.SetInitPhaseWaitingForConfirm(ctx, false); err != nil {
+		return fmt.Errorf("failed to clear waiting for confirm: %w", err)
+	}
+	log.Info("Init roster shown, advancing to action phase")
+	AdvanceToActionPhase(ctx, g, g.GetAllPlayers(), log)
 	return nil
 }
 

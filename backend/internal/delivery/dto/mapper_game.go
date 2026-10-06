@@ -159,44 +159,7 @@ func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID s
 		}
 	}
 
-	var initPhaseDto *InitPhaseDto
-	phase := g.CurrentPhase()
-	if phase == shared.GamePhaseInitApplyCorp || phase == shared.GamePhaseInitApplyPrelude {
-		turnOrder := g.TurnOrder()
-		idx := g.InitPhasePlayerIndex()
-		currentInitPlayerID := ""
-		if idx < len(turnOrder) {
-			currentInitPlayerID = turnOrder[idx]
-		}
-
-		activePlayers := 0
-		for _, p := range players {
-			if !p.HasExited() {
-				activePlayers++
-			}
-		}
-
-		hasPendingTiles := false
-		if currentInitPlayerID != "" {
-			hasPendingTiles = g.GetPendingTileSelection(currentInitPlayerID) != nil ||
-				g.GetPendingTileSelectionQueue(currentInitPlayerID) != nil
-			if !hasPendingTiles {
-				if initPlayer, err := g.GetPlayer(currentInitPlayerID); err == nil {
-					hasPendingTiles = initPlayer.Selection().GetPendingColonySelection() != nil
-				}
-			}
-		}
-
-		initPhaseDto = &InitPhaseDto{
-			CurrentPlayerID:    currentInitPlayerID,
-			CurrentPlayerIndex: idx,
-			TotalPlayers:       activePlayers,
-			WaitingForConfirm:  g.InitPhaseWaitingForConfirm(),
-			ConfirmVersion:     g.InitPhaseConfirmVersion(),
-			HasPreludePhase:    g.Settings().HasPrelude(),
-			HasPendingTiles:    hasPendingTiles,
-		}
-	}
+	initPhaseDto := buildInitPhaseDto(g, players, cardRegistry)
 
 	result := GameDto{
 		ID:               g.ID(),

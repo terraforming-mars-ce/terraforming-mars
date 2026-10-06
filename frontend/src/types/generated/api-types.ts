@@ -268,6 +268,8 @@ export const AdminCommandTypeStartTileSelection: AdminCommandType = "start-tile-
 export const AdminCommandTypeSetCurrentTurn: AdminCommandType = "set-current-turn";
 export const AdminCommandTypeSetCorporation: AdminCommandType = "set-corporation";
 export const AdminCommandTypeSetTR: AdminCommandType = "set-tr";
+export const AdminCommandTypeRestartGame: AdminCommandType = "restart-game";
+export const AdminCommandTypeSetActionsRemaining: AdminCommandType = "set-actions-remaining";
 /**
  * AdminCommandRequest contains the admin command data
  */
@@ -321,6 +323,12 @@ export interface StartTileSelectionAdminCommand {
 export interface SetCorporationAdminCommand {
   playerId: string;
   corporationId: string;
+}
+/**
+ * SetActionsRemainingAdminCommand represents setting the current player's remaining actions
+ */
+export interface SetActionsRemainingAdminCommand {
+  actions: number /* int */;
 }
 /**
  * SetTRAdminCommand represents setting a player's terraform rating
@@ -1510,6 +1518,13 @@ export interface PlaceableTileTypeDto {
   group: string;
 }
 /**
+ * InitPhaseStage is the showcase stage of the current init player
+ */
+export type InitPhaseStage = string;
+export const InitPhaseStageReveal: InitPhaseStage = "reveal";
+export const InitPhaseStageApplied: InitPhaseStage = "applied";
+export const InitPhaseStageRoster: InitPhaseStage = "roster";
+/**
  * InitPhaseDto represents the state of the init_apply_corp or init_apply_prelude phase
  */
 export interface InitPhaseDto {
@@ -1519,7 +1534,11 @@ export interface InitPhaseDto {
   waitingForConfirm: boolean;
   confirmVersion: number /* int */;
   hasPreludePhase: boolean;
-  hasPendingTiles: boolean;
+  stage: "reveal" | "applied" | "roster";
+  preludes: CardDto[];
+  preludesPlayed: number /* int */;
+  hasPendingSelection: boolean;
+  pendingSourceCardId: string;
 }
 /**
  * ColonyDto represents a colony in the game

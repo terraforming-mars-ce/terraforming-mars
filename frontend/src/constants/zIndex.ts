@@ -26,6 +26,8 @@ export const Z_INDEX = {
   PLAYER_OVERLAY: 90,
 
   // Navigation Layer (100-199)
+  // Pre-game corporation showcase: above the board, below selection popovers and the hamburger
+  SHOWCASE: 105,
   TOP_MENU_BAR: 100,
   BOTTOM_RESOURCE_BAR: 100,
   LEFT_SIDEBAR: 110,

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useCardPlayFlowStore, type CardPlaySession } from "@/stores/cardPlayFlowStore";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { Z_INDEX } from "@/constants/zIndex";
+import { CARD_RELEASE_KEYFRAMES, CARD_RELEASE_TIMING } from "@/utils/cardReleaseAnimation";
 import CardInspection from "./CardInspection";
 import GameCard from "../cards/GameCard";
 
@@ -67,10 +68,7 @@ function Presentation({
       finish();
       return;
     }
-    const frames: Keyframe[] = [
-      { transform: "scale(1)", opacity: 1 },
-      { transform: "scale(0.85)", opacity: 0 },
-    ];
+    const frames: Keyframe[] = [...CARD_RELEASE_KEYFRAMES];
     if (returning) {
       const bounds = session.source.getBoundingClientRect();
       frames[1] = {
@@ -78,11 +76,7 @@ function Presentation({
         opacity: 0,
       };
     }
-    const animation = element.animate(frames, {
-      duration: 350,
-      easing: "ease-out",
-      fill: "forwards",
-    });
+    const animation = element.animate(frames, CARD_RELEASE_TIMING);
     animation.onfinish = finish;
     return () => {
       animation.onfinish = null;

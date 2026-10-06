@@ -303,15 +303,17 @@ type ConvertHeatToTemperatureAction struct {
 type AdminCommandType string
 
 const (
-	AdminCommandTypeGiveCard           AdminCommandType = "give-card"
-	AdminCommandTypeSetPhase           AdminCommandType = "set-phase"
-	AdminCommandTypeSetResources       AdminCommandType = "set-resources"
-	AdminCommandTypeSetProduction      AdminCommandType = "set-production"
-	AdminCommandTypeSetGlobalParams    AdminCommandType = "set-global-params"
-	AdminCommandTypeStartTileSelection AdminCommandType = "start-tile-selection"
-	AdminCommandTypeSetCurrentTurn     AdminCommandType = "set-current-turn"
-	AdminCommandTypeSetCorporation     AdminCommandType = "set-corporation"
-	AdminCommandTypeSetTR              AdminCommandType = "set-tr"
+	AdminCommandTypeGiveCard            AdminCommandType = "give-card"
+	AdminCommandTypeSetPhase            AdminCommandType = "set-phase"
+	AdminCommandTypeSetResources        AdminCommandType = "set-resources"
+	AdminCommandTypeSetProduction       AdminCommandType = "set-production"
+	AdminCommandTypeSetGlobalParams     AdminCommandType = "set-global-params"
+	AdminCommandTypeStartTileSelection  AdminCommandType = "start-tile-selection"
+	AdminCommandTypeSetCurrentTurn      AdminCommandType = "set-current-turn"
+	AdminCommandTypeSetCorporation      AdminCommandType = "set-corporation"
+	AdminCommandTypeSetTR               AdminCommandType = "set-tr"
+	AdminCommandTypeRestartGame         AdminCommandType = "restart-game"
+	AdminCommandTypeSetActionsRemaining AdminCommandType = "set-actions-remaining"
 )
 
 // AdminCommandRequest contains the admin command data
@@ -358,6 +360,11 @@ type StartTileSelectionAdminCommand struct {
 type SetCorporationAdminCommand struct {
 	PlayerID      string `json:"playerId"`
 	CorporationID string `json:"corporationId"`
+}
+
+// SetActionsRemainingAdminCommand represents setting the current player's remaining actions
+type SetActionsRemainingAdminCommand struct {
+	Actions int `json:"actions"`
 }
 
 // SetTRAdminCommand represents setting a player's terraform rating

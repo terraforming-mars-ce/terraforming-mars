@@ -4,6 +4,9 @@ import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { useAppPhaseStore, gameIdOf, isInGameWorld } from "@/stores/appPhaseStore.ts";
 import { audioService } from "@/services/audioService.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
+import { SHOWCASE_PLAY_STEP_MS } from "@/constants/gameConstants.ts";
+import { isShowcaseStepEnd, showcaseControllerId } from "@/utils/showcase.ts";
+import { useShowcaseTileHold } from "@/hooks/useShowcaseTileHold.ts";
 import {
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
@@ -41,6 +44,12 @@ export function useGameTransitions(
   const pendingFreeTrade = useGameStore((s) => s.game?.currentPlayer?.pendingFreeTradeSelection);
   const initPhase = useGameStore((s) => s.game?.initPhase);
   const hostPlayerId = useGameStore((s) => s.game?.hostPlayerId);
+  const showcaseTileHold = useShowcaseTileHold(initPhase?.hasPendingSelection ?? false);
+  const playersConnectedKey = useGameStore((s) =>
+    [s.game?.currentPlayer, ...(s.game?.otherPlayers ?? [])]
+      .map((p) => (p?.isConnected ? "1" : "0"))
+      .join(""),
+  );
   const currentPlayerId = useGameStore((s) => s.currentPlayer?.id);
 
   const phase = useAppPhaseStore((s) => s.phase);
@@ -293,9 +302,31 @@ export function useGameTransitions(
 
   useEffect(() => {
     if (phase.kind === "marsRevealed" && !isStartingSelectionPhase) {
-      useAppPhaseStore.getState().setPhase({ kind: "animateUI", gameId: phase.gameId });
+      useAppPhaseStore
+        .getState()
+        .setPhase({ kind: isInitApplyPhase ? "showcase" : "animateUI", gameId: phase.gameId });
+    }
+  }, [phase, isStartingSelectionPhase, isInitApplyPhase]);
+
+  useEffect(() => {
+    if (!isStartingSelectionPhase) {
+      return;
+    }
+    if (
+      phase.kind === "showcase" ||
+      phase.kind === "animateUI" ||
+      phase.kind === "playing" ||
+      phase.kind === "completed"
+    ) {
+      useAppPhaseStore.getState().setPhase({ kind: "marsRevealed", gameId: phase.gameId });
     }
   }, [phase, isStartingSelectionPhase]);
+
+  useEffect(() => {
+    if (phase.kind === "showcase" && !isInitApplyPhase) {
+      useAppPhaseStore.getState().setPhase({ kind: "animateUI", gameId: phase.gameId });
+    }
+  }, [phase, isInitApplyPhase]);
 
   useEffect(() => {
     const { setMarsRevealedReady } = useAppPhaseStore.getState();
@@ -393,12 +424,15 @@ export function useGameTransitions(
       phase.kind === "joining" ||
       phase.kind === "spectating"
     ) {
-      useAppPhaseStore.getState().setPhase({ kind: "playing", gameId: activeGameId });
+      useAppPhaseStore
+        .getState()
+        .setPhase({ kind: isInitApplyPhase ? "showcase" : "playing", gameId: activeGameId });
     }
   }, [
     gameStatus,
     isLobbyPhase,
     isStartingSelectionPhase,
+    isInitApplyPhase,
     isSkyboxReady,
     isGpuReady,
     gameId,
@@ -422,26 +456,27 @@ export function useGameTransitions(
     if (!isInitApplyPhase || !initPhase?.waitingForConfirm) {
       return;
     }
-    if (hostPlayerId !== currentPlayerId) {
+    const game = useGameStore.getState().game;
+    if (!game || showcaseControllerId(game) !== currentPlayerId) {
+      return;
+    }
+    if (isShowcaseStepEnd(game)) {
       return;
     }
 
-    const animationDone = phase.kind === "playing" || phase.kind === "completed";
+    const animationDone =
+      phase.kind === "showcase" || phase.kind === "playing" || phase.kind === "completed";
     if (!animationDone) {
       return;
     }
 
-    if (initPhase.hasPendingTiles) {
+    if (initPhase.hasPendingSelection || showcaseTileHold) {
       return;
     }
 
-    const now = Date.now();
-    const queueRemaining = Math.max(0, notificationQueueDoneAt.current - now);
-    const delay = queueRemaining + 750;
-
     const timer = setTimeout(() => {
       void globalWebSocketManager.confirmInitAdvance();
-    }, delay);
+    }, SHOWCASE_PLAY_STEP_MS);
 
     return () => clearTimeout(timer);
   }, [
@@ -449,10 +484,15 @@ export function useGameTransitions(
     initPhase?.waitingForConfirm,
     initPhase?.confirmVersion,
     initPhase?.currentPlayerIndex,
-    initPhase?.hasPendingTiles,
+    initPhase?.hasPendingSelection,
+    showcaseTileHold,
+    initPhase?.stage,
+    initPhase?.preludesPlayed,
+    initPhase?.preludes.length,
+    gamePhase,
     hostPlayerId,
+    playersConnectedKey,
     currentPlayerId,
     phase,
-    notificationQueueDoneAt,
   ]);
 }

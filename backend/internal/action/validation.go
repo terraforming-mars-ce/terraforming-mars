@@ -127,6 +127,27 @@ func ValidateCurrentTurn(
 	return nil
 }
 
+// ValidateCurrentTurnOrInitPlayer validates that the player may act now: during the
+// init_apply phases that is the player whose corp or preludes are being applied,
+// otherwise it is the current turn's player.
+func ValidateCurrentTurnOrInitPlayer(
+	gameInstance *game.Game,
+	playerID string,
+	log *slog.Logger,
+) error {
+	phase := gameInstance.CurrentPhase()
+	if phase != shared.GamePhaseInitApplyCorp && phase != shared.GamePhaseInitApplyPrelude {
+		return ValidateCurrentTurn(gameInstance, playerID, log)
+	}
+	turnOrder := gameInstance.TurnOrder()
+	idx := gameInstance.InitPhasePlayerIndex()
+	if idx >= len(turnOrder) || turnOrder[idx] != playerID {
+		log.Warn("Not the init player", slog.String("player_id", playerID))
+		return fmt.Errorf("not your turn")
+	}
+	return nil
+}
+
 // ValidateActionsRemaining validates that the current player has actions remaining
 // Returns error if actionsRemaining == 0; allows -1 (unlimited) and >0
 func ValidateActionsRemaining(

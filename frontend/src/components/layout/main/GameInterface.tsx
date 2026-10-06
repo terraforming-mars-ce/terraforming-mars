@@ -33,6 +33,7 @@ import {
   GameFlowFooter,
 } from "../../ui/popover/GameFlowPopover.tsx";
 import CorporationOverlay from "../../ui/overlay/CorporationOverlay.tsx";
+import CorporationShowcaseOverlay from "../../ui/overlay/CorporationShowcaseOverlay.tsx";
 import LoadingOverlay from "../../game/view/LoadingOverlay.tsx";
 import GameEventBanner from "../../ui/overlay/GameEventBanner.tsx";
 import { useCardInspection, type CardInspectionDrag } from "@/hooks/useCardInspection.ts";
@@ -629,6 +630,9 @@ export default function GameInterface() {
     ) {
       return "opacity-0";
     }
+    if (phase.kind === "showcase") {
+      return "opacity-0 pointer-events-none";
+    }
     return "";
   })();
 
@@ -693,6 +697,7 @@ export default function GameInterface() {
               showStartingSelection={showStartingSelection}
               animateHexEntrance={
                 phase.kind === "marsRevealed" ||
+                phase.kind === "showcase" ||
                 phase.kind === "animateUI" ||
                 phase.kind === "playing" ||
                 phase.kind === "completed"
@@ -1425,6 +1430,10 @@ export default function GameInterface() {
               </GameButton>
             </GameFlowFooter>
           </GameFlowPopover>
+        )}
+
+        {phase.kind === "showcase" && game?.initPhase && (
+          <CorporationShowcaseOverlay game={game} initPhase={game.initPhase} />
         )}
 
         {game?.currentPlayer?.pendingAwardFundSelection && (
