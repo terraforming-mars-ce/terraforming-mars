@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"terraforming-mars-backend/internal/game/shared"
 )
@@ -138,8 +139,12 @@ func (a *BehaviorApplier) applyMiscOutput(ctx context.Context, o *shared.MiscCon
 		if a.awardRegistry == nil || a.game == nil || a.player == nil {
 			return fmt.Errorf("award funding requires registry and player context")
 		}
+		selected := a.game.SelectedAwards()
 		var ids []string
 		for _, def := range a.awardRegistry.GetAll() {
+			if len(selected) > 0 && !slices.Contains(selected, def.ID) {
+				continue
+			}
 			if !a.game.Awards().IsFunded(shared.AwardType(def.ID)) {
 				ids = append(ids, def.ID)
 			}

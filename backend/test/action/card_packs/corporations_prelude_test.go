@@ -2,6 +2,7 @@ package card_packs_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -245,6 +246,34 @@ func TestVitor_FundAwardForFree(t *testing.T) {
 
 	// Forced first action should be cleared
 	testutil.AssertTrue(t, testGame.GetForcedFirstAction(playerID) == nil, "Forced first action should be cleared")
+}
+
+func TestVitor_OnlyOffersAwardsInThisGame(t *testing.T) {
+	testGame, repo, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	logger := testutil.TestLogger()
+	ctx := context.Background()
+	awardRegistry := testutil.CreateTestAwardRegistry()
+
+	all := awardRegistry.GetAll()
+	testutil.AssertTrue(t, len(all) > 3, "registry has more awards than a game uses")
+	selected := []string{all[0].ID, all[1].ID}
+	notInGame := all[2].ID
+	testGame.SetSelectedAwards(selected)
+
+	setCorp := admin.NewSetCorporationAction(repo, cardRegistry, awardRegistry, logger)
+	testutil.AssertNoError(t, setCorp.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Vitor")), "set Vitor")
+
+	p, _ := testGame.GetPlayer(playerID)
+	pending := p.Selection().GetPendingAwardFundSelection()
+	testutil.AssertTrue(t, pending != nil, "Vitor should create pending award fund selection")
+	testutil.AssertEqual(t, len(selected), len(pending.AvailableAwards), "only this game's awards are offered")
+	for _, id := range pending.AvailableAwards {
+		testutil.AssertTrue(t, slices.Contains(selected, id), "offered award is in this game: "+id)
+	}
+
+	confirm := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
+	testutil.AssertError(t, confirm.Execute(ctx, testGame.ID(), playerID, notInGame), "award outside this game is rejected")
+	testutil.AssertFalse(t, testGame.Awards().IsFunded(shared.AwardType(notInGame)), "nothing funded")
 }
 
 func TestVitor_Gain3MCWhenPlayingCardWithVP(t *testing.T) {

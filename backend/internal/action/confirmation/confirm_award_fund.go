@@ -61,6 +61,9 @@ func (a *ConfirmAwardFundAction) Execute(ctx context.Context, gameID string, pla
 	if !slices.Contains(pending.AvailableAwards, awardType) {
 		return fmt.Errorf("award %s is not available for selection", awardType)
 	}
+	if selected := g.SelectedAwards(); len(selected) > 0 && !slices.Contains(selected, awardType) {
+		return fmt.Errorf("award %s is not available in this game", awardType)
+	}
 
 	def, err := a.awardRegistry.GetByID(awardType)
 	if err != nil {
