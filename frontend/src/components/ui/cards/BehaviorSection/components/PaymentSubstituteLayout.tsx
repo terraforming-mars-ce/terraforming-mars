@@ -1,3 +1,4 @@
+import { BehaviorArrow } from "./BehaviorIcon";
 import GameIcon from "../../../display/GameIcon";
 import type { CardBehaviorDto } from "@/types/generated/api-types";
 
@@ -10,9 +11,7 @@ export default function PaymentSubstituteLayout({ behavior }: { behavior: CardBe
   return (
     <div className="flex gap-1 items-center justify-center font-orbitron font-bold">
       <GameIcon iconType={output.source.resource} size="behavior" />
-      <span className="inline-flex items-center leading-none text-[length:var(--behavior-arrow-size,16px)]">
-        →
-      </span>
+      <BehaviorArrow />
       {output.targetResource !== "credit" && output.amount > 1 && <span>{output.amount}</span>}
       <GameIcon
         iconType={output.targetResource}
@@ -20,7 +19,7 @@ export default function PaymentSubstituteLayout({ behavior }: { behavior: CardBe
         size="behavior"
       />
       {tags.map((tag) => (
-        <span key={tag} className="ml-1">
+        <span key={tag} className="ml-1 inline-flex items-center">
           <GameIcon iconType={`${tag}-tag`} size="behavior" />
         </span>
       ))}
