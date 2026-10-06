@@ -8,10 +8,19 @@ interface Props {
   value: string;
   options: { id: string; name: string }[];
   disabled?: boolean;
+  className?: string;
   onChange: (value: string) => void;
 }
 
-export default function GameSelect({ id, label, value, options, disabled, onChange }: Props) {
+export default function GameSelect({
+  id,
+  label,
+  value,
+  options,
+  disabled,
+  className = "w-60",
+  onChange,
+}: Props) {
   const listId = useId();
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -69,7 +78,7 @@ export default function GameSelect({ id, label, value, options, disabled, onChan
   return (
     <div
       ref={root}
-      className="relative min-w-0 w-60 max-w-full"
+      className={`relative min-w-0 max-w-full ${className}`}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
           setOpen(false);

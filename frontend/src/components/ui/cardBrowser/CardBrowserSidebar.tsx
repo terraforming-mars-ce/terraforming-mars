@@ -1,9 +1,11 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
+import { useHoverSound } from "@/hooks/useHoverSound.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import BackButton from "../buttons/BackButton.tsx";
 import GameButton from "../buttons/GameButton.tsx";
+import GameSelect from "../GameSelect.tsx";
 import CopyLinkButton from "../buttons/CopyLinkButton.tsx";
 import { CARD_FAMILIES, FAMILY_LABELS, labelFor } from "./cardCatalog.ts";
 import type { CardDisplaySize, CardFamily, CardSort } from "./cardCatalog.ts";
@@ -46,6 +48,8 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
   const panel = useRef<HTMLElement>(null);
   const [copyError, setCopyError] = useState(false);
   const { open, onClose } = props;
+  const searchInput = useRef<HTMLInputElement>(null);
+  const clearSound = useHoverSound();
   useEffect(() => {
     if (!open) {
       return;
@@ -145,13 +149,31 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
           </fieldset>
           <label className="block space-y-2">
             <span className="font-orbitron text-xs text-white/70">Search cards</span>
-            <input
-              type="search"
-              value={props.query}
-              onChange={(event) => props.onQuery(event.target.value)}
-              placeholder="ID, name, text, or tag"
-              className={`${fieldClass} cursor-text`}
-            />
+            <span className="relative block">
+              <input
+                ref={searchInput}
+                type="search"
+                value={props.query}
+                onChange={(event) => props.onQuery(event.target.value)}
+                placeholder="ID, name, text, or tag"
+                className={`${fieldClass} cursor-text pr-9 [&::-webkit-search-cancel-button]:appearance-none`}
+              />
+              {props.query && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onMouseEnter={clearSound.onMouseEnter}
+                  onClick={() => {
+                    clearSound.onClick?.();
+                    props.onQuery("");
+                    searchInput.current?.focus();
+                  }}
+                  className="absolute inset-y-0 right-0 flex w-9 cursor-pointer items-center justify-center text-sm text-blue-300/80 hover:text-white focus-visible:outline-2 focus-visible:outline-blue-400"
+                >
+                  ✕
+                </button>
+              )}
+            </span>
           </label>
         </div>
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain border-y border-white/10 px-5 py-4">
@@ -184,29 +206,34 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
               </div>
             </fieldset>
           )}
-          <label className="block space-y-2">
-            <span className="font-orbitron text-xs text-white/70">Sort by</span>
-            <select
-              className={`${fieldClass} cursor-pointer`}
+          <div className="space-y-2">
+            <label
+              htmlFor="card-browser-sort"
+              className="block font-orbitron text-xs text-white/70"
+            >
+              Sort by
+            </label>
+            <GameSelect
+              id="card-browser-sort"
+              label="Sort by"
+              className="w-full"
               value={
                 props.family !== "project" && props.sort.startsWith("type") ? "id" : props.sort
               }
-              onChange={(event) => {
-                void playButtonClickSound();
-                props.onSort(event.target.value as CardSort);
-              }}
-            >
-              <option value="id">{props.shared ? "Link order" : "Card ID"}</option>
-              <option value="name-asc">Name (A–Z)</option>
-              <option value="name-desc">Name (Z–A)</option>
-              {props.family === "project" && (
-                <>
-                  <option value="type-asc">Type (A–Z)</option>
-                  <option value="type-desc">Type (Z–A)</option>
-                </>
-              )}
-            </select>
-          </label>
+              options={[
+                { id: "id", name: props.shared ? "Link order" : "Card ID" },
+                { id: "name-asc", name: "Name (A–Z)" },
+                { id: "name-desc", name: "Name (Z–A)" },
+                ...(props.family === "project"
+                  ? [
+                      { id: "type-asc", name: "Type (A–Z)" },
+                      { id: "type-desc", name: "Type (Z–A)" },
+                    ]
+                  : []),
+              ]}
+              onChange={(value) => props.onSort(value as CardSort)}
+            />
+          </div>
           {props.family === "project" && (
             <FilterGroup
               label="Project type"
@@ -278,8 +305,13 @@ function FilterGroup({
   onToggle: SidebarProps["onToggle"];
 }) {
   const { playButtonClickSound } = useSoundEffects();
+  const [expanded, setExpanded] = useState(() => selected.size > 0);
   return (
-    <details className="group">
+    <details
+      className="group"
+      open={expanded}
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+    >
       <summary
         onClick={() => void playButtonClickSound()}
         className="cursor-pointer font-orbitron text-xs text-white/80 focus-visible:outline-blue-400"
