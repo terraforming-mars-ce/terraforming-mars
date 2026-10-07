@@ -158,7 +158,7 @@ export default function CreateGamePage() {
                 disabled={playerName.trim().length < 2}
                 className="mt-auto self-start"
               >
-                {created ? "Join lobby" : "Create lobby"}
+                {created && !busy ? "Join lobby" : "Create lobby"}
               </GameButton>
             </div>
             <GameSetupControls
