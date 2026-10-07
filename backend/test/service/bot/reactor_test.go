@@ -84,3 +84,16 @@ func TestParseReaction(t *testing.T) {
 		testutil.AssertEqual(t, tt.want, bot.ParseReaction(tt.reply), "reply: "+tt.reply)
 	}
 }
+
+func TestAssessHappenings_RecordsHostileActs(t *testing.T) {
+	plan := bot.Plan{WantedHexes: []string{"1,-1,0"}, TargetMilestones: []string{"mayor"}}
+	a := bot.AssessHappenings(plan, "bot", "Wall-E", false, []bot.Happening{
+		{Kind: bot.HappeningResourceLoss, ActorID: "h1", Target: "plants", Amount: 6},
+		{Kind: bot.HappeningTile, ActorID: "h1", Target: "1,-1,0", Detail: "city"},
+		{Kind: bot.HappeningMilestone, ActorID: "h2", Target: "mayor"},
+		{Kind: bot.HappeningMilestone, ActorID: "h2", Target: "gardener"},
+	}, nameOf)
+	testutil.AssertEqual(t, 3, len(a.Hostile), "loss, wanted hex and targeted milestone are hostile; an untargeted milestone is not")
+	testutil.AssertEqual(t, "took away 6 of your plants", a.Hostile[0].What, "loss is described from the bot's side")
+	testutil.AssertEqual(t, "h2", a.Hostile[2].ActorID, "the actor is kept")
+}

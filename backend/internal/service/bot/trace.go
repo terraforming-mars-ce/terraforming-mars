@@ -24,10 +24,11 @@ type trace struct {
 	planAt    string
 	calls     []*dto.BotCallDto
 	reactions []dto.BotReactionDto
+	grudges   []dto.BotGrudgeDto
 }
 
 func newTrace(playerID string) *trace {
-	return &trace{playerID: playerID, calls: []*dto.BotCallDto{}, reactions: []dto.BotReactionDto{}}
+	return &trace{playerID: playerID, calls: []*dto.BotCallDto{}, reactions: []dto.BotReactionDto{}, grudges: []dto.BotGrudgeDto{}}
 }
 
 func traceTime(t time.Time) string {
@@ -110,6 +111,13 @@ func (t *trace) addReaction(r dto.BotReactionDto) dto.BotTraceEventDto {
 	return dto.BotTraceEventDto{PlayerID: t.playerID, Kind: "reaction", Reaction: &r}
 }
 
+func (t *trace) setGrudges(grudges []dto.BotGrudgeDto) dto.BotTraceEventDto {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.grudges = grudges
+	return dto.BotTraceEventDto{PlayerID: t.playerID, Kind: "grudges", Grudges: append([]dto.BotGrudgeDto{}, grudges...)}
+}
+
 func (t *trace) snapshot() dto.BotTraceDto {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -125,6 +133,7 @@ func (t *trace) snapshot() dto.BotTraceDto {
 		PlanUpdatedAt: t.planAt,
 		Calls:         calls,
 		Reactions:     append([]dto.BotReactionDto{}, t.reactions...),
+		Grudges:       append([]dto.BotGrudgeDto{}, t.grudges...),
 	}
 }
 

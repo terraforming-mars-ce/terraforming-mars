@@ -48,6 +48,10 @@ type Config struct {
 	BigCardCost int
 	// ThoughtInterval is the minimum time between two thought bubbles of one bot.
 	ThoughtInterval time.Duration
+	// IntentThoughtChance is how often a turn opens with the plan's intent as a thought bubble.
+	IntentThoughtChance float64
+	// RemarkThoughtChance is how often a turn ends with the bot's closing remark as a thought bubble.
+	RemarkThoughtChance float64
 
 	ExecutorBudgetUSD float64
 	PlannerBudgetUSD  float64
@@ -59,24 +63,26 @@ type Config struct {
 // DefaultConfig returns production settings.
 func DefaultConfig(strategy string) Config {
 	return Config{
-		ExecutorModel:     "sonnet",
-		PlannerModel:      "opus",
-		ReactorModel:      "haiku",
-		TurnTimeout:       3 * time.Minute,
-		PlanTimeout:       4 * time.Minute,
-		ReactTimeout:      45 * time.Second,
-		ActionGap:         1500 * time.Millisecond,
-		RetryBackoff:      []time.Duration{5 * time.Second, 15 * time.Second},
-		MaxStepsPerTurn:   40,
-		ReactionBatch:     2 * time.Second,
-		ReactionCooldown:  30 * time.Second,
-		BigEventChance:    0.25,
-		BigCardCost:       20,
-		ThoughtInterval:   10 * time.Second,
-		ExecutorBudgetUSD: 1.0,
-		PlannerBudgetUSD:  1.5,
-		ReactorBudgetUSD:  0.05,
-		Strategy:          strategy,
+		ExecutorModel:       "sonnet",
+		PlannerModel:        "opus",
+		ReactorModel:        "haiku",
+		TurnTimeout:         3 * time.Minute,
+		PlanTimeout:         4 * time.Minute,
+		ReactTimeout:        45 * time.Second,
+		ActionGap:           1500 * time.Millisecond,
+		RetryBackoff:        []time.Duration{5 * time.Second, 15 * time.Second},
+		MaxStepsPerTurn:     40,
+		ReactionBatch:       2 * time.Second,
+		ReactionCooldown:    30 * time.Second,
+		BigEventChance:      0.25,
+		BigCardCost:         20,
+		ThoughtInterval:     10 * time.Second,
+		IntentThoughtChance: 0.5,
+		RemarkThoughtChance: 0.5,
+		ExecutorBudgetUSD:   1.0,
+		PlannerBudgetUSD:    1.5,
+		ReactorBudgetUSD:    0.05,
+		Strategy:            strategy,
 	}
 }
 

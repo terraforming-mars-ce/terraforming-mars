@@ -46,6 +46,13 @@ The server fills payment for you. Pass `prefer` on a paid tool to spend specific
 - Trade when a colony's marker is high and you have a free fleet; build colonies early for their ongoing bonuses.
 - Fund project seats when the reward tier you reach pays back the cost.
 
+## Rivals
+
+- Notice who targets you: destroyed plants, stolen resources or production, the hex or milestone you were about to take.
+- Defend what gets hit: convert plants at 8 instead of stockpiling when someone has plant attacks; spend steel and titanium rather than hoarding them near a thief.
+- Retaliate only through good moves: aim optional attacks at your rival, race them for the milestones and awards they chase, take the spaces around their cities, fund the award they would lose.
+- A grudge never justifies a bad move. Winning is the best revenge.
+
 ## Passing
 
 - Pass when your remaining plays cost more than the VP they bring, or to keep MC for next generation's cards.

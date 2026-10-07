@@ -63,6 +63,14 @@ type BotReactionDto struct {
 	Output   string   `json:"output,omitempty"`
 }
 
+// BotGrudgeDto is what one opponent has done against a bot this game.
+type BotGrudgeDto struct {
+	PlayerID string   `json:"playerId"`
+	Name     string   `json:"name"`
+	Hits     int      `json:"hits"`
+	Recent   []string `json:"recent"`
+}
+
 // BotTraceDto is everything recorded about one bot.
 type BotTraceDto struct {
 	PlayerID      string           `json:"playerId"`
@@ -70,18 +78,21 @@ type BotTraceDto struct {
 	PlanUpdatedAt string           `json:"planUpdatedAt,omitempty"`
 	Calls         []BotCallDto     `json:"calls"`
 	Reactions     []BotReactionDto `json:"reactions"`
+	Grudges       []BotGrudgeDto   `json:"grudges"`
 }
 
 // BotTraceEventDto is one change to a bot's trace. call-start carries the new call;
 // call-step carries callId and step; call-end carries the finished call without prompt
-// and steps; plan carries plan and planUpdatedAt; reaction carries reaction.
+// and steps; plan carries plan and planUpdatedAt; reaction carries reaction; grudges
+// carries the full grudge list.
 type BotTraceEventDto struct {
 	PlayerID      string          `json:"playerId"`
-	Kind          string          `json:"kind" tstype:"'call-start' | 'call-step' | 'call-end' | 'plan' | 'reaction'"`
+	Kind          string          `json:"kind" tstype:"'call-start' | 'call-step' | 'call-end' | 'plan' | 'reaction' | 'grudges'"`
 	Call          *BotCallDto     `json:"call,omitempty"`
 	CallID        string          `json:"callId,omitempty"`
 	Step          *BotCallStepDto `json:"step,omitempty"`
 	Plan          *BotPlanDto     `json:"plan,omitempty"`
 	PlanUpdatedAt string          `json:"planUpdatedAt,omitempty"`
 	Reaction      *BotReactionDto `json:"reaction,omitempty"`
+	Grudges       []BotGrudgeDto  `json:"grudges,omitempty"`
 }

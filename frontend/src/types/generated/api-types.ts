@@ -411,6 +411,15 @@ export interface BotReactionDto {
   output?: string;
 }
 /**
+ * BotGrudgeDto is what one opponent has done against a bot this game.
+ */
+export interface BotGrudgeDto {
+  playerId: string;
+  name: string;
+  hits: number /* int */;
+  recent: string[];
+}
+/**
  * BotTraceDto is everything recorded about one bot.
  */
 export interface BotTraceDto {
@@ -419,21 +428,24 @@ export interface BotTraceDto {
   planUpdatedAt?: string;
   calls: BotCallDto[];
   reactions: BotReactionDto[];
+  grudges: BotGrudgeDto[];
 }
 /**
  * BotTraceEventDto is one change to a bot's trace. call-start carries the new call;
  * call-step carries callId and step; call-end carries the finished call without prompt
- * and steps; plan carries plan and planUpdatedAt; reaction carries reaction.
+ * and steps; plan carries plan and planUpdatedAt; reaction carries reaction; grudges
+ * carries the full grudge list.
  */
 export interface BotTraceEventDto {
   playerId: string;
-  kind: "call-start" | "call-step" | "call-end" | "plan" | "reaction";
+  kind: "call-start" | "call-step" | "call-end" | "plan" | "reaction" | "grudges";
   call?: BotCallDto;
   callId?: string;
   step?: BotCallStepDto;
   plan?: BotPlanDto;
   planUpdatedAt?: string;
   reaction?: BotReactionDto;
+  grudges?: BotGrudgeDto[];
 }
 
 //////////

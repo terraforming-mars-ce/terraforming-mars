@@ -47,6 +47,15 @@ type Assessment struct {
 	// Directed means a chat message was addressed to the bot, which bypasses the cooldown.
 	Directed bool
 	Big      bool
+	// Hostile lists what opponents did against the bot in this batch, for its grudges.
+	Hostile []Hostility
+}
+
+// Hostility is one act by an opponent against the bot.
+type Hostility struct {
+	ActorID string
+	// What describes the act from the bot's side, e.g. "destroyed 6 of your plants".
+	What string
 }
 
 // Relevant reports whether anything in the batch is worth a reaction before chance is applied.
@@ -68,16 +77,18 @@ func AssessHappenings(plan Plan, botID, botName string, soleOpponent bool, happe
 			if slices.Contains(plan.WantedHexes, h.Target) {
 				a.PlanHit = true
 				a.Lines = append(a.Lines, fmt.Sprintf("%s placed a %s on %s, a hex you wanted.", actor, h.Detail, h.Target))
+				a.Hostile = append(a.Hostile, Hostility{ActorID: h.ActorID, What: fmt.Sprintf("took hex %s you wanted", h.Target)})
 			}
 		case HappeningMilestone:
-			a.addRace(plan.TargetMilestones, h, fmt.Sprintf("%s claimed the %s milestone", actor, h.Target))
+			a.addRace(plan.TargetMilestones, h, fmt.Sprintf("%s claimed the %s milestone", actor, h.Target), "claimed the "+h.Target+" milestone you were going for")
 		case HappeningAward:
-			a.addRace(plan.TargetAwards, h, fmt.Sprintf("%s funded the %s award", actor, h.Target))
+			a.addRace(plan.TargetAwards, h, fmt.Sprintf("%s funded the %s award", actor, h.Target), "funded the "+h.Target+" award you were going for")
 		case HappeningColony:
-			a.addRace(plan.TargetColonies, h, fmt.Sprintf("%s built a colony on %s", actor, h.Target))
+			a.addRace(plan.TargetColonies, h, fmt.Sprintf("%s built a colony on %s", actor, h.Target), "built on the "+h.Target+" colony you wanted")
 		case HappeningResourceLoss:
 			a.Personal = true
 			a.Lines = append(a.Lines, fmt.Sprintf("%s took away %d of your %s.", actor, h.Amount, h.Target))
+			a.Hostile = append(a.Hostile, Hostility{ActorID: h.ActorID, What: fmt.Sprintf("took away %d of your %s", h.Amount, h.Target)})
 		case HappeningCard:
 			if h.Big {
 				a.Big = true
@@ -94,10 +105,11 @@ func AssessHappenings(plan Plan, botID, botName string, soleOpponent bool, happe
 	return a
 }
 
-func (a *Assessment) addRace(targets []string, h Happening, line string) {
+func (a *Assessment) addRace(targets []string, h Happening, line, hostile string) {
 	if slices.Contains(targets, h.Target) {
 		a.PlanHit = true
 		a.Lines = append(a.Lines, line+", which you were going for.")
+		a.Hostile = append(a.Hostile, Hostility{ActorID: h.ActorID, What: hostile})
 		return
 	}
 	a.Big = true
