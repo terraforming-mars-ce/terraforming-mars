@@ -1,5 +1,68 @@
 import { useEffect, useRef, useState } from "react";
+import { useProgress } from "@react-three/drei";
 import { Z_INDEX } from "@/constants/zIndex";
+
+/** Real asset progress fills this much of the bar; the rest covers scene build and GPU work. */
+const ASSET_SHARE = 90;
+/** The time-based estimate approaches ESTIMATE_CEILING with this time constant. */
+const ESTIMATE_TIME_CONSTANT_MS = 6000;
+const ESTIMATE_CEILING = 95;
+const TICK_MS = 100;
+
+/**
+ * Percentage for the loading screen: the larger of three.js loader progress and a
+ * time-based estimate, eased so it keeps creeping forward and never goes back.
+ * Holds below 100 until the load is done.
+ */
+function useEstimatedProgress(done: boolean) {
+  const [shown, setShown] = useState(0);
+
+  useEffect(() => {
+    if (done) {
+      setShown(100);
+      return;
+    }
+    const startedAt = performance.now();
+    const id = window.setInterval(() => {
+      const { loaded, total } = useProgress.getState();
+      const assets = total > 0 ? (loaded / total) * ASSET_SHARE : 0;
+      const elapsed = performance.now() - startedAt;
+      const estimate = ESTIMATE_CEILING * (1 - Math.exp(-elapsed / ESTIMATE_TIME_CONSTANT_MS));
+      const target = Math.min(99, Math.max(assets, estimate));
+      setShown((previous) => Math.max(previous, previous + (target - previous) * 0.25));
+    }, TICK_MS);
+    return () => window.clearInterval(id);
+  }, [done]);
+
+  return shown;
+}
+
+function ProgressReadout({ done }: { done: boolean }) {
+  const progress = useEstimatedProgress(done);
+  return (
+    <div style={{ width: "220px", marginBottom: "16px", textAlign: "center" }}>
+      <div style={{ fontSize: "32px", fontWeight: 700, marginBottom: "10px" }}>
+        {Math.floor(progress)}%
+      </div>
+      <div
+        style={{
+          height: "3px",
+          backgroundColor: "rgba(255, 255, 255, 0.1)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${progress}%`,
+            backgroundColor: "white",
+            transition: `width ${TICK_MS}ms linear`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 interface LoadingOverlayProps {
   message?: string;
@@ -18,6 +81,11 @@ interface LoadingOverlayProps {
    */
   minDurationMs?: number;
   fadeDurationMs?: number;
+  /**
+   * Show an estimated percentage and bar instead of the spinner, with a single detail line
+   * below it: the subtitle, or the message when there is no subtitle.
+   */
+  showProgress?: boolean;
 }
 
 type Phase = "waiting" | "showing" | "fading" | "done";
@@ -30,6 +98,7 @@ export default function LoadingOverlay({
   showDelayMs = 500,
   minDurationMs = 200,
   fadeDurationMs = 800,
+  showProgress = false,
 }: LoadingOverlayProps) {
   const [phase, setPhase] = useState<Phase>(() => (showDelayMs === 0 ? "showing" : "waiting"));
   const shownAtRef = useRef<number | null>(showDelayMs === 0 ? Date.now() : null);
@@ -121,27 +190,33 @@ export default function LoadingOverlay({
         fontFamily: "Orbitron, sans-serif",
       }}
     >
-      <div
-        style={{
-          width: "40px",
-          height: "40px",
-          border: "4px solid rgba(255, 255, 255, 0.1)",
-          borderTop: "4px solid white",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite",
-          marginBottom: "16px",
-        }}
-      />
-      <style>
-        {`
+      {showProgress ? (
+        <ProgressReadout done={isLoaded} />
+      ) : (
+        <>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              border: "4px solid rgba(255, 255, 255, 0.1)",
+              borderTop: "4px solid white",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+              marginBottom: "16px",
+            }}
+          />
+          <style>
+            {`
           @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
         `}
-      </style>
-      {message}
-      {subtitle && (
+          </style>
+        </>
+      )}
+      {!showProgress && message}
+      {(subtitle || (showProgress && message)) && (
         <div
           style={{
             marginTop: "8px",
@@ -150,7 +225,7 @@ export default function LoadingOverlay({
             fontFamily: "Orbitron, sans-serif",
           }}
         >
-          {subtitle}
+          {subtitle || message}
         </div>
       )}
     </div>

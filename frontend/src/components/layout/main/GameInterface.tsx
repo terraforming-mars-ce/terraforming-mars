@@ -78,7 +78,7 @@ import {
   GameStatusLobby,
   ResourceType,
 } from "@/types/generated/api-types.ts";
-import type { PlayerDto, OtherPlayerDto, CardDto } from "@/types/generated/api-types.ts";
+import type { PlayerDto, OtherPlayerDto, CardDto, GameDto } from "@/types/generated/api-types.ts";
 import { PlayerListHandle } from "../../ui/list/PlayerList.tsx";
 
 import { useGameStore } from "@/stores/gameStore.ts";
@@ -92,6 +92,8 @@ import { useGameInitialization } from "@/hooks/useGameInitialization.ts";
 import { useGameTransitions } from "@/hooks/useGameTransitions.ts";
 import { useGameHotkeys } from "@/hooks/useGameHotkeys.ts";
 import { PlanetFocusProvider } from "../../../contexts/PlanetFocusContext.tsx";
+
+const ARRIVAL_LOADING_DELAY_MS = 600;
 
 export default function GameInterface() {
   const location = useLocation();
@@ -502,6 +504,13 @@ export default function GameInterface() {
   }, []);
 
   const handleLoadingTransitionEnd = useCallback(() => {}, []);
+
+  // Create/join already confirmed the game, so the quick re-check on arrival gets a grace
+  // period: if it finishes in time the lobby fades in with no loading screen at all.
+  const arrivedWithGame = !!(location.state as { game?: GameDto } | null)?.game;
+  const beforeLobby =
+    phase.kind === "menu" || phase.kind === "checking" || phase.kind === "connecting";
+  const loadingShowDelayMs = arrivedWithGame && beforeLobby ? ARRIVAL_LOADING_DELAY_MS : 0;
 
   // --- Backdrop ---
   const hasPendingActionSelection =
@@ -1524,8 +1533,9 @@ export default function GameInterface() {
           message={loadingMessage}
           subtitle={loadingSubtitle}
           onTransitionEnd={handleLoadingTransitionEnd}
-          showDelayMs={0}
+          showDelayMs={loadingShowDelayMs}
           minDurationMs={200}
+          showProgress
         />
       </VPCountingProvider>
     </PlanetFocusProvider>
