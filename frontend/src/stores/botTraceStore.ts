@@ -78,6 +78,9 @@ function reduceTrace(trace: BotTraceDto, event: BotTraceEventDto): BotTraceDto {
       }
       return { ...trace, reactions: [...trace.reactions, event.reaction].slice(-MAX_REACTIONS) };
     }
+    case "grudges": {
+      return { ...trace, grudges: event.grudges ?? [] };
+    }
     default:
       return trace;
   }
@@ -99,6 +102,7 @@ export const useBotTraceStore = create<BotTraceState>((set) => ({
           ...snapshot,
           calls: (snapshot.calls ?? []).slice(-MAX_CALLS),
           reactions: (snapshot.reactions ?? []).slice(-MAX_REACTIONS),
+          grudges: snapshot.grudges ?? [],
         },
       };
     }),
