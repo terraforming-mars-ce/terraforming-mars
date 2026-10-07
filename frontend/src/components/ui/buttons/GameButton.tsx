@@ -162,6 +162,13 @@ const GameButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, GameButtonP
         <span className="game-button-label" style={{ zIndex: Z_INDEX.GAME_BOARD_BASE }}>
           {children}
         </span>
+        {loading && (
+          <span
+            className="game-button-spinner"
+            style={{ zIndex: Z_INDEX.GAME_BOARD_BASE }}
+            aria-hidden="true"
+          />
+        )}
       </>
     );
     if (rest.as === "link") {
