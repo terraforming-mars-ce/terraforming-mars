@@ -272,31 +272,8 @@ function useCardPlay(played: boolean, animate: boolean) {
   return { ref, state };
 }
 
-/** The flip-in starts after this delay and lasts FLIP_MS; the card activates when it lands. */
 const FLIP_DELAY_MS = 150;
 const FLIP_STAGGER_MS = 200;
-const FLIP_MS = 700;
-
-/**
- * Activates a revealed showcase card once its flip-in has finished: the card's armed
- * look plus the card activation sound. Cards already played on mount never activate.
- */
-function useCardActivation(delayMs: number, skip: boolean) {
-  const [active, setActive] = useState(false);
-
-  useEffect(() => {
-    if (skip) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      setActive(true);
-      void audioService.playSound("card-hover");
-    }, delayMs);
-    return () => window.clearTimeout(timer);
-  }, [delayMs, skip]);
-
-  return active;
-}
 
 const FLIP_CLASS = "animate-[showcaseFlipIn_700ms_cubic-bezier(0.2,0.8,0.2,1)_both]";
 
@@ -314,7 +291,6 @@ function CorpSlide({
   animate: boolean;
 }) {
   const { ref, state } = useCardPlay(played, animate);
-  const active = useCardActivation(animate ? FLIP_DELAY_MS + FLIP_MS : 0, state === "gone");
   const scale = Math.min(
     CORP_MAX_SCALE,
     (viewport.width - 64) / CORP_CARD_WIDTH,
@@ -330,7 +306,7 @@ function CorpSlide({
       >
         <div ref={ref} style={{ visibility: state === "gone" ? "hidden" : "visible" }}>
           <ScaledBox width={CORP_CARD_WIDTH} scale={scale} estimatedHeight={CORP_CARD_HEIGHT}>
-            <CorpCard card={corporation} active={active} />
+            <CorpCard card={corporation} />
           </ScaledBox>
         </div>
       </div>
@@ -393,13 +369,6 @@ function PreludeCard({
 }) {
   const { ref, state } = useCardPlay(played, animate);
   const flipDelay = FLIP_DELAY_MS + index * FLIP_STAGGER_MS;
-  const active = useCardActivation(animate ? flipDelay + FLIP_MS : 0, state === "gone");
-  let moduleState: "idle" | "armed" | "releasing" = "idle";
-  if (state === "releasing") {
-    moduleState = "releasing";
-  } else if (active) {
-    moduleState = "armed";
-  }
   return (
     <div
       className={animate ? FLIP_CLASS : ""}
@@ -410,8 +379,7 @@ function PreludeCard({
           <GameCard
             card={card}
             presentation="inspection"
-            isSelected={active}
-            moduleState={moduleState}
+            moduleState={state === "releasing" ? "releasing" : "idle"}
           />
         </ScaledBox>
       </div>
@@ -461,11 +429,11 @@ function PlayerSummary({
   );
 }
 
-function CorpCard({ card, active = false }: { card: CardDto; active?: boolean }) {
+function CorpCard({ card }: { card: CardDto }) {
   return (
     <CorporationCard
       card={card}
-      isSelected={active}
+      isSelected={false}
       onSelect={noop}
       disableInteraction={true}
       borderColor={getCorporationBorderColor(card.name)}
