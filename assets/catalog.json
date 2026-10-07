@@ -3491,6 +3491,11 @@
       "profile": "copy"
     },
     {
+      "id": "audio/effects/player-joined",
+      "source": "audio/effects/player-joined.mp3",
+      "profile": "copy"
+    },
+    {
       "id": "audio/music/dreams",
       "source": "audio/music/dreams.mp3",
       "profile": "copy"
