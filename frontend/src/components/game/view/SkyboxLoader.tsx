@@ -5,12 +5,25 @@ import { skyboxCache } from "../../../services/SkyboxCache.ts";
 import { useWorld3DSettings, SKYBOX_OPTIONS } from "../../../contexts/World3DSettingsContext.tsx";
 import skyboxVertex from "../board/shaders/skybox.vert.glsl?raw";
 import skyboxFragment from "../board/shaders/skybox.frag.glsl?raw";
+import { QUICK_MODE } from "../../../utils/quickMode.ts";
 
 interface SkyboxLoaderProps {
   onReady?: () => void;
 }
 
 export default function SkyboxLoader({ onReady }: SkyboxLoaderProps) {
+  return QUICK_MODE ? <SkippedSkybox onReady={onReady} /> : <LoadedSkybox onReady={onReady} />;
+}
+
+/** Quick mode: report ready straight away and leave the plain black background. */
+function SkippedSkybox({ onReady }: SkyboxLoaderProps) {
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
+  return null;
+}
+
+function LoadedSkybox({ onReady }: SkyboxLoaderProps) {
   const { scene, invalidate } = useThree();
   const { settings } = useWorld3DSettings();
   const [texture, setTexture] = useState<THREE.Texture | null>(null);

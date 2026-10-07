@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { skyboxCache, SkyboxLoadingState } from "../services/SkyboxCache.ts";
+import { QUICK_MODE } from "../utils/quickMode.ts";
 
 interface SpaceBackgroundContextType {
   isLoading: boolean;
@@ -41,7 +42,8 @@ export function SpaceBackgroundProvider({ children }: { children: React.ReactNod
 
   const contextValue: SpaceBackgroundContextType = {
     isLoading: loadingState.isLoading,
-    isLoaded: loadingState.isLoaded,
+    // Quick mode never mounts the menu scene, so nothing would load the skybox here.
+    isLoaded: QUICK_MODE || loadingState.isLoaded,
     error: loadingState.error,
     preloadSkybox,
   };

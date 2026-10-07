@@ -3,21 +3,44 @@ import { useMemo } from "react";
 import { useTexture } from "@react-three/drei";
 import { useLoader } from "@react-three/fiber";
 import * as THREE from "three";
+import { QUICK_MODE } from "@/utils/quickMode.ts";
+
+type PlanetName =
+  | "mars"
+  | "venus"
+  | "earth"
+  | "earth-clouds"
+  | "jupiter"
+  | "mercury"
+  | "saturn"
+  | "neptune"
+  | "uranus"
+  | "ceres"
+  | "moon"
+  | "ganymede"
+  | "sun";
+
+/** Quick mode swaps the 8K planet surfaces for their 512px overview maps. */
+function planetSurface(name: PlanetName) {
+  return QUICK_MODE
+    ? assetUrl(`textures/planets/${name}/overview`)
+    : assetUrl(`textures/planets/${name}/surface`);
+}
 
 const TEXTURE_PATHS = {
-  mars: assetUrl("textures/planets/mars/surface"),
-  venus: assetUrl("textures/planets/venus/surface"),
-  earth: assetUrl("textures/planets/earth/surface"),
-  earthClouds: assetUrl("textures/planets/earth-clouds/surface"),
-  jupiter: assetUrl("textures/planets/jupiter/surface"),
-  mercury: assetUrl("textures/planets/mercury/surface"),
-  saturn: assetUrl("textures/planets/saturn/surface"),
-  neptune: assetUrl("textures/planets/neptune/surface"),
-  uranus: assetUrl("textures/planets/uranus/surface"),
-  ceres: assetUrl("textures/planets/ceres/surface"),
-  moon: assetUrl("textures/planets/moon/surface"),
-  ganymede: assetUrl("textures/planets/ganymede/surface"),
-  sun: assetUrl("textures/planets/sun/surface"),
+  mars: planetSurface("mars"),
+  venus: planetSurface("venus"),
+  earth: planetSurface("earth"),
+  earthClouds: planetSurface("earth-clouds"),
+  jupiter: planetSurface("jupiter"),
+  mercury: planetSurface("mercury"),
+  saturn: planetSurface("saturn"),
+  neptune: planetSurface("neptune"),
+  uranus: planetSurface("uranus"),
+  ceres: planetSurface("ceres"),
+  moon: planetSurface("moon"),
+  ganymede: planetSurface("ganymede"),
+  sun: planetSurface("sun"),
   grass: assetUrl("textures/terrain/grass"),
   rock: assetUrl("textures/terrain/rock"),
   sand: assetUrl("textures/terrain/sand"),
@@ -58,9 +81,10 @@ const CITY_FACADE_PATHS = [
     assetUrl("textures/terrain/ribbed-concrete-wall-roughness"),
   ],
 ];
-for (const paths of CITY_FACADE_PATHS) {
-  paths.forEach((path) => useTexture.preload(path));
-}
+// The loader cache is keyed by the whole URL list, so each preload must pass exactly the
+// array that useTextures later requests; per-URL preloads would never be reused.
+const CITY_FACADE_URLS = CITY_FACADE_PATHS.flat();
+useTexture.preload(CITY_FACADE_URLS);
 
 // Layer order of the landscape's ground texture array; shaders index layers by position.
 const GROUND_LAYER_NAMES = [
@@ -80,7 +104,8 @@ const ICE_LAYER_PATHS = {
   detail: ICE_LAYER_NAMES.map((name) => assetUrl(`textures/terrain/${name}-detail` as const)),
 };
 for (const paths of [GROUND_LAYER_PATHS, ICE_LAYER_PATHS]) {
-  [...paths.color, ...paths.detail].forEach((path) => useTexture.preload(path));
+  useTexture.preload(paths.color);
+  useTexture.preload(paths.detail);
 }
 
 export interface TextureLayers {
@@ -223,7 +248,7 @@ interface TextureAssets {
 }
 
 export function useTextures(): TextureAssets {
-  const facadeTextures = useTexture(CITY_FACADE_PATHS.flat());
+  const facadeTextures = useTexture(CITY_FACADE_URLS);
   const cityFacades = useMemo(
     () =>
       CITY_FACADE_PATHS.map((_, i) => {

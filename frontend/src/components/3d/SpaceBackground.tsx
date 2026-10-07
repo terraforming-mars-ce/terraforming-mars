@@ -4,13 +4,14 @@ import CanvasClock from "./CanvasClock.tsx";
 import MenuMars from "./MenuMars.tsx";
 import { useReducedMotion } from "@/hooks/useReducedMotion.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
+import { QUICK_MODE } from "@/utils/quickMode.ts";
 
 export default function SpaceBackground({ active = true }: { active?: boolean }) {
   const reduced = useReducedMotion();
-  const [loadScene, setLoadScene] = useState(active);
+  const [loadScene, setLoadScene] = useState(active && !QUICK_MODE);
   const [visible, setVisible] = useState(() => !document.hidden);
   useEffect(() => {
-    if (active) {
+    if (active && !QUICK_MODE) {
       setLoadScene(true);
     }
   }, [active]);

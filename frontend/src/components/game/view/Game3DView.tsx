@@ -28,6 +28,7 @@ import {
 } from "../board/shaders";
 import GpuWarmup from "../board/GpuWarmup.tsx";
 import PerformanceProbe from "../board/PerformanceProbe.tsx";
+import { QUICK_MODE } from "@/utils/quickMode.ts";
 import SolarSystemOverview from "../board/SolarSystemOverview.tsx";
 import {
   PLANET_CONFIGS,
@@ -306,12 +307,10 @@ export default function Game3DView({
     }));
   }, [gameState.id]);
   useEffect(() => {
-    if (
-      warmup.gameId === gameState.id &&
-      warmup.general &&
-      warmup.cities &&
-      notifiedGame.current !== gameState.id
-    ) {
+    // Quick mode skips the warmup and accepts first-use shader hitches.
+    const warmedUp =
+      QUICK_MODE || (warmup.gameId === gameState.id && warmup.general && warmup.cities);
+    if (warmedUp && notifiedGame.current !== gameState.id) {
       notifiedGame.current = gameState.id;
       onGpuReady?.();
     }
@@ -506,9 +505,11 @@ export default function Game3DView({
 
               <AsteroidImpact />
 
-              <group userData={{ perfGroup: "gpu warmup" }}>
-                <GpuWarmup key={gameState.id} onReady={handleGeneralReady} />
-              </group>
+              {!QUICK_MODE && (
+                <group userData={{ perfGroup: "gpu warmup" }}>
+                  <GpuWarmup key={gameState.id} onReady={handleGeneralReady} />
+                </group>
+              )}
               <PerformanceProbe />
 
               <PanControls />

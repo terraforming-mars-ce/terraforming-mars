@@ -23,6 +23,7 @@ import { WindowManagerProvider } from "./components/ui/debug/WindowManager.tsx";
 import { useUIOverlayStore } from "./stores/uiOverlayStore.ts";
 import { Z_INDEX } from "./constants/zIndex.ts";
 import { APP_VERSION } from "./config.ts";
+import { useKeepQuickParam } from "./utils/quickMode.ts";
 import "./App.css";
 
 function App() {
@@ -85,6 +86,7 @@ function routeForPathname(pathname) {
 }
 
 function AppWithBackground({ connectionReady }) {
+  useKeepQuickParam();
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--surface-layer",
@@ -152,6 +154,7 @@ function AppWithBackground({ connectionReady }) {
           onTransitionEnd={finishBackgroundLoading}
           showDelayMs={0}
           minDurationMs={500}
+          showProgress
         />
       )}
       {showMenuChrome && !showBackgroundLoading && <MainMenuHamburger />}
