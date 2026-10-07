@@ -93,7 +93,9 @@ Selector helpers live next to the type in `appPhaseStore.ts`, so adding a phase 
 Two call sites override the defaults for guaranteed-visible feedback:
 
 - App-level menu overlay: `showDelayMs={0}` + `minDurationMs={500}` — cold app boot always shows the spinner.
-- In-game overlay: `showDelayMs={0}` + `minDurationMs={200}` — every `loading` phase entry shows the spinner.
+- In-game overlay: `showDelayMs={0}` + `minDurationMs={200}` — every `loading` phase entry shows the spinner. The one exception is arriving at `/game` from create/join with the game in route state: before the lobby, the delay is 600ms, so the quick re-check finishes behind the still-visible space background and no loading screen appears.
+
+Both of those also pass `showProgress`, which replaces the spinner with a percentage and bar, and drops the `message` title in favour of one small detail line (the `subtitle`, or `message` when there is no subtitle). The value is the larger of three.js loader progress (drei `useProgress`, scaled to 90%) and a time-based estimate that keeps creeping toward 95%. It never goes backwards and holds at 99% until `isLoaded`.
 
 ## Key Development Patterns
 
@@ -274,6 +276,8 @@ Use Playwright MCP tools for live debugging:
 - `mcp__playwright__browser_snapshot`: Capture page state
 - `mcp__playwright__browser_click`: Click elements
 - `mcp__playwright__browser_take_screenshot`: Capture visuals
+
+**Always add `?quick` to the URL** when opening the app in a browser to inspect it (e.g. `http://localhost:3000/?quick`, `http://localhost:3000/game/abc?quick`). Quick mode skips the menu's 3D background, the skybox and the GPU warmup, and loads low-res planet textures, so pages load much faster. The param stays in the URL on its own as you navigate in the app (`src/utils/quickMode.ts`). Leave it out only when the task is about how those visuals look or perform.
 
 ## Important Notes
 
