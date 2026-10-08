@@ -7,6 +7,7 @@ import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useBotThoughtsPreferenceStore } from "@/stores/botPresenceStore.ts";
 import {
   OVERLAY_CONTAINER_CLASS,
+  OVERLAY_CONTAINER_STYLE,
   OVERLAY_FOOTER_CLASS,
   OVERLAY_HEADER_CLASS,
   OVERLAY_TITLE_CLASS,
@@ -84,9 +85,9 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
   };
 
   const tabClass = (tab: Tab) =>
-    `text-left px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors cursor-pointer ${
+    `text-left px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors cursor-pointer max-[640px]:shrink-0 ${
       activeTab === tab
-        ? "text-white bg-space-blue-600/30 border-r-2 border-space-blue-400"
+        ? "text-white bg-space-blue-600/30 border-r-2 border-space-blue-400 max-[640px]:border-r-0 max-[640px]:border-b-2"
         : "text-white/50 hover:text-white/80 hover:bg-white/5"
     }`;
 
@@ -94,16 +95,21 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-[fadeIn_0.3s_ease]"
+      className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-[fadeIn_0.3s_ease] pt-[var(--safe-top)] pr-[var(--safe-right)] pb-[var(--safe-bottom)] pl-[var(--safe-left)]"
       style={{ zIndex: Z_INDEX.LOBBY_SETTINGS_MODAL }}
     >
-      <div className={`${OVERLAY_CONTAINER_CLASS} max-w-[1100px] h-[80vh]`}>
-        <div className={OVERLAY_HEADER_CLASS}>
-          <h2 className={OVERLAY_TITLE_CLASS}>Lobby Settings</h2>
+      <div
+        className={`${OVERLAY_CONTAINER_CLASS} max-w-[1100px] h-[80dvh] max-[640px]:h-full max-[640px]:max-h-full [@media(max-height:500px)]:w-full [@media(max-height:500px)]:h-full [@media(max-height:500px)]:max-h-full`}
+        style={OVERLAY_CONTAINER_STYLE}
+      >
+        <div className={`${OVERLAY_HEADER_CLASS} [@media(max-height:500px)]:py-3`}>
+          <h2 className={`${OVERLAY_TITLE_CLASS} [@media(max-height:500px)]:text-xl`}>
+            Lobby Settings
+          </h2>
         </div>
 
-        <div className="flex-1 flex min-h-0">
-          <div className="w-44 shrink-0 bg-black/30 border-r border-space-blue-600/50 flex flex-col py-2">
+        <div className="flex-1 flex min-h-0 max-[640px]:flex-col">
+          <div className="w-44 shrink-0 bg-black/30 border-r border-space-blue-600/50 flex flex-col py-2 max-[640px]:w-full max-[640px]:flex-row max-[640px]:overflow-x-auto max-[640px]:py-0 max-[640px]:border-r-0 max-[640px]:border-b [@media(max-height:500px)_and_(min-width:641px)]:w-32">
             <GameButton
               emphasis="quiet"
               onClick={() => setActiveTab("general")}
@@ -120,14 +126,14 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
             </GameButton>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 min-h-0">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-6 min-h-0 max-[640px]:p-4 [@media(max-height:500px)]:p-4">
             {activeTab === "general" && (
               <div className="max-w-xl mx-auto space-y-4">
                 <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-4">
                   <h3 className="text-white font-semibold mb-3 uppercase tracking-wide text-xs">
                     Lobby
                   </h3>
-                  <label className="flex items-center justify-between gap-3 py-2 px-1">
+                  <label className="flex items-center justify-between gap-3 py-2 px-1 compact:min-h-11">
                     <span className="text-white text-sm font-medium flex items-center gap-2">
                       Max Players
                       <InfoTooltip size="small">
@@ -140,7 +146,7 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                       max={10}
                       value={settings.maxPlayers}
                       onChange={(e) => handleMaxPlayersChange(parseInt(e.target.value, 10) || 0)}
-                      className="game-input w-16 !py-1 !px-2 text-sm text-center"
+                      className="game-input w-16 !py-1 !px-2 text-sm text-center pointer-coarse:text-base"
                     />
                   </label>
                 </div>
@@ -194,7 +200,7 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                       placeholder="sk-ant-..."
                       spellCheck={false}
                       autoComplete="off"
-                      className="flex-1 bg-black/50 border border-white/20 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-white/60 placeholder:text-white/30"
+                      className="flex-1 min-w-0 bg-black/50 border border-white/20 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-white/60 placeholder:text-white/30 pointer-coarse:text-base"
                     />
                     <GameButton
                       emphasis="primary"
@@ -234,7 +240,7 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                         }
                       }}
                       aria-label="Bot spend cap in USD"
-                      className="w-28 bg-black/50 border border-white/20 rounded-none py-2 px-3 text-white text-sm font-orbitron outline-none focus:border-white/60 cursor-text"
+                      className="w-28 shrink-0 bg-black/50 border border-white/20 rounded-none py-2 px-3 text-white text-sm font-orbitron outline-none focus:border-white/60 cursor-text pointer-coarse:text-base"
                     />
                     <span className="text-white/70 text-sm font-orbitron">
                       Spent so far: ${settings.botSpendUsd.toFixed(2)}
@@ -259,7 +265,7 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
           </div>
         </div>
 
-        <div className={OVERLAY_FOOTER_CLASS}>
+        <div className={`${OVERLAY_FOOTER_CLASS} [@media(max-height:500px)]:py-3`}>
           <div className="text-white/60 text-sm">All changes save automatically.</div>
           <GameButton emphasis="primary" size="md" onClick={onClose}>
             Close
@@ -278,7 +284,7 @@ interface ToggleRowProps {
 }
 
 const ToggleRow: React.FC<ToggleRowProps> = ({ label, checked, onChange, tooltip }) => (
-  <label className="flex items-center gap-3 cursor-pointer py-2 px-1 rounded hover:bg-white/5 transition-all duration-200">
+  <label className="flex items-center gap-3 cursor-pointer py-2 px-1 rounded hover:bg-white/5 transition-all duration-200 compact:min-h-11">
     <input
       type="checkbox"
       checked={checked}
