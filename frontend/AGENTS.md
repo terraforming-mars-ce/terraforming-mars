@@ -83,6 +83,8 @@ Selector helpers live next to the type in `appPhaseStore.ts`, so adding a phase 
 - The outer wrapper of `GameLayout` MUST stay transparent. The black background of the in-game world goes on the **inner** content div, gated by `phase.kind !== "lobby"`. Adding `bg-*` to the outer `GameLayout` div hides `<SpaceBackground>` during the lobby — don't.
 - The skybox cache (`SkyboxCache.ts`) is a singleton; once loaded it stays in GPU memory across phases. `MainContentDisplay`'s separate `<SkyboxLoader>` gets it instantly from the cache when the in-game canvas mounts.
 
+Low graphics tier exception (`GRAPHICS.tier === "low"` from `utils/graphicsQuality.ts`, picked automatically on phones): `<SpaceBackground>` unmounts its `<Canvas>` while `isInGameWorld(phase)` is true, so the menu scene's WebGL context and textures are released during play. The wrapper stays mounted and the canvas is rebuilt when the player returns to the menus. The low tier also replaces the EXR skybox with `ProceduralStarfield`, so there is nothing to reload.
+
 #### LoadingOverlay (useSpinDelay semantics)
 
 `LoadingOverlay` (`src/components/game/view/LoadingOverlay.tsx`) follows the `useSpinDelay` pattern:
@@ -219,6 +221,22 @@ Uses React Three Fiber for Three.js integration. Hex coordinates use cube system
 
 **Controls**: Custom pan/zoom (no orbital rotation), parallax background for depth.
 
+### Mobile / compact layout
+
+Phones get a separate "compact" layout. Keep it working whenever you touch UI code.
+
+- **One switch**: `useLayoutMode()` (`hooks/useLayoutMode.ts`) is the only source of truth; non-React code uses `getLayoutMode()`. Compact = `(pointer: coarse)` and the physical screen's short side < 600px (`screen.width/height`; mobile browsers inflate `innerWidth` when zoomed out or when content overflows), or the `?compact` URL flag. Never read `window.innerWidth` to choose a layout (clamping/positioning math is fine). Tablets keep the desktop layout.
+- **Landscape only**: on a phone in portrait, `RotateDeviceOverlay` covers every page (menus, lobby and game); the manifest asks installed apps for landscape too. Design every phone screen for landscape only.
+- **Separate shell**: in compact mode `GameInterface` renders `MobileGameLayout` (`components/mobile/`) instead of `GameLayout`. Desktop HUD components (`TopMenuBar`, `BottomResourceBar`, `CardFanOverlay`, `LeftSidebar`, `RightSidebar`) get **no** compact branches. Shared overlays and prompts (selection overlays, `GameFlowPopover`, `CardInspection`, `ProductionPhaseModal`, endgame) get a compact presentation.
+- **Mobile building blocks**: `MobileScreen` (full-screen view opened from the dock; pauses the 3D canvas), `MobileCardDetail` (one card in inspection presentation with optional notice/actions column; `CardDetailPortal` mounts it from shared components), `mobileUiStore` (open screen and its params), `useMobileGame()` (game data and handlers for screens).
+- **Styling**: use the `compact:` Tailwind variant (matches `<html data-layout="compact">`) instead of width breakpoints like `max-[768px]:`, which miss landscape phones. Use `useLayoutMode()` only when behavior differs. Position anything over the board with `--hud-top-h`, `--hud-dock-h`, `--hud-rail-left-w`, `--hud-rail-right-w` (0px on desktop) and `--safe-top|right|bottom|left`.
+- **No hover, right-click or keyboard-only features**: hover info goes through `RevealTrigger` / `useTapReveal` (tap to reveal), context menus through `useLongPress` plus a visible button, hotkeys need an on-screen control.
+- **Graphics tier**: `GRAPHICS` from `utils/graphicsQuality.ts` is `low` on phones (override with `?gfx=low|high`); low tier means smaller textures, fewer particles and no EXR skybox. Pause rendering with `useRenderPause(reason, active)` from `stores/renderPauseStore.ts` while something covers the canvas.
+- **Sizes**: touch targets at least 44×44px, text inputs at least 16px (prevents iOS focus zoom), text at least 11px, and `dvh` for anything viewport-tall (never `vh` or `h-screen`).
+- **Testing**: append `?compact` to any URL, or use DevTools device emulation in landscape. `tests/mobile-*.spec.ts` check this automatically (see "Testing with Playwright").
+- **Install bar**: `InstallAppBar` offers "Play full screen as an app" on the compact landing page 2s after load; "Not now" hides it for 30 days (`tm.installBar.dismissedUntil` in `localStorage`). `utils/installApp.ts` keeps Chromium's `beforeinstallprompt` (registered from `index.jsx`) and picks the install path: the real prompt, or the how-to sheet (`InstallHowToSheet`) on iOS and Firefox Android. The menus show "Install app" whenever installing is possible.
+- **Testing install**: Chrome only offers install on HTTPS or `localhost`. On an Android phone, run `adb reverse tcp:3000 tcp:3000` and open `http://localhost:3000`, or allow the dev origin with `chrome://flags/#unsafely-treat-insecure-origin-as-secure`. iOS Add to Home Screen works over plain HTTP. Clear site data to bring a dismissed bar back.
+
 
 ### Sound System
 
@@ -233,10 +251,10 @@ Add new sounds to `public/assets/audio/` and register in the audio service prelo
 
 ### Notifications
 
-Use `useNotifications()` from `contexts/NotificationContext.tsx` for error and warning messages. Notifications are displayed by `NotificationContainer` at the bottom-left of the screen.
+Use `useNotifications()` from `contexts/NotificationContext.tsx` for error and warning messages. Notifications are displayed by `NotificationContainer` at the bottom-left of the screen (top centre on phones).
 
 - **Only shown outside game pages**: `NotificationContainer` returns `null` on `/game/*` routes, so notifications fired during gameplay are silently ignored. Use in-game UI (modals, overlays) for in-game feedback instead.
-- **Types**: `"error"` (red) and `"warning"` (yellow).
+- **Types**: `"error"` (red), `"warning"` (yellow) and `"info"` (dark panel).
 - **Auto-dismiss**: Default 3000ms. Pass `duration: 0` for persistent notifications that require manual dismiss (e.g. "Server is down").
 
 ```tsx
@@ -255,13 +273,12 @@ WebSocket service in `services/` handles real-time game state sync.
 
 ## Testing & Pre-Commit Gate
 
-**CRITICAL**: There is NO frontend unit-test runner. `package.json` exposes only
-`dev`, `build`, `lint` (oxlint), `typecheck` (tsc --noEmit), and `format`/`format:write`
-(oxfmt) — there is no `test` script. The authoritative gate for any frontend-only
-change is, all four passing:
+**CRITICAL**: There is NO frontend unit-test runner — there is no `test` recipe or
+script. The authoritative gate for any frontend-only change is, both passing:
 
 ```bash
-bun run typecheck && bun run lint && bun run format && bun run build
+just frontend check   # format-check, oxlint, typecheck, asset checks
+just frontend build
 ```
 
 Do NOT look for or invent a `bun run test` / `vitest` / `jest` command. The end-to-end
@@ -278,6 +295,20 @@ Use Playwright MCP tools for live debugging:
 - `mcp__playwright__browser_take_screenshot`: Capture visuals
 
 **Always add `?quick` to the URL** when opening the app in a browser to inspect it (e.g. `http://localhost:3000/?quick`, `http://localhost:3000/game/abc?quick`). Quick mode skips the menu's 3D background, the skybox and the GPU warmup, and loads low-res planet textures, so pages load much faster. The param stays in the URL on its own as you navigate in the app (`src/utils/quickMode.ts`). Leave it out only when the task is about how those visuals look or perform.
+
+### Playwright test suite
+
+`tests/` holds Playwright specs (`playwright.config.ts`). They are type-checked, linted and formatted by the normal gate but are not part of it; run them explicitly:
+
+```bash
+just frontend e2e                          # mobile Chromium projects
+E2E_BACKEND=1 just frontend e2e            # also the in-game spec (backend on :3001)
+```
+
+- Projects: `firefox` (desktop), `mobile-landscape-ios` (iPhone 14 landscape size), `mobile-landscape-android` (Pixel 7 landscape), `mobile-portrait` (iPhone 14 portrait; checks that the rotate overlay covers the menus). The mobile projects run on Chromium with the device's viewport, scale factor, `isMobile` and `hasTouch` (no WebKit).
+- Playwright starts its own Vite server on port 3100 (`E2E_PORT` to change it, `E2E_REUSE_SERVER=1` to reuse one already running there); it never touches the dev server on 3000. The bundled browser revision must match `@playwright/test` (pinned in `package.json`).
+- `mobile-menus.spec.ts`: no horizontal overflow, touch targets ≥ 44×32px, inputs ≥ 16px, fixed menu chrome never permanently covers a button, `<html data-layout>` matches the device. Routes other than `/cards` skip when the Go backend isn't reachable.
+- `mobile-game.spec.ts`: creates a base-game solo match, plays through starting selection and checks the compact HUD (no overlap, nothing outside the viewport, every dock screen opens and closes, rotate overlay in portrait). Skipped unless `E2E_BACKEND=1` and the backend runs on port 3001.
 
 ## Important Notes
 

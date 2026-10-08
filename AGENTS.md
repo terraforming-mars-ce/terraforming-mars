@@ -2,50 +2,51 @@
 
 Digital implementation of Terraforming Mars board game with real-time multiplayer and 3D game view. WebSocket multiplayer with Go backend and React frontend.
 
-## Quick Start
+## Commands
 
-```bash
-make run         # Run both frontend (3000) and backend (3001) with hot reload
-make help        # Show all available commands
-```
-
-## Essential Commands
+Tasks run through [just](https://just.systems). The root `justfile` loads two modules: `backend/justfile` and `frontend/justfile`. Run `just` to list every recipe. Call a module recipe as `just backend test` or `just frontend lint`; inside `backend/` or `frontend/`, plain `just <recipe>` runs that module's recipe.
 
 ### Development
 ```bash
-make frontend    # React dev server (port 3000)
-make backend     # Go backend with Air hot reload (port 3001)
-make dev-setup   # Set up environment (go mod tidy + bun install)
+just deps          # Install Go modules and frontend dependencies
+just dev           # Run backend (3001, Air hot reload) and frontend (3000) together
+just backend dev   # Backend only
+just frontend dev  # Frontend only
+just kill          # Stop stray dev servers on 3000/3001
 ```
 
 ### Testing
 ```bash
-make test         # Run all backend tests
-make test-verbose # Verbose test output
-make test-coverage# Generate coverage report
+just test                                          # Run all backend tests
+just backend test -v -run TestKick ./test/action/... # Args replace the default ./test/... pattern
+just backend coverage                              # Coverage report (backend/coverage.html)
+just backend test-race                             # Race detector
 ```
 
 ### Code Quality
 ```bash
-make lint         # Run all linters (Go fmt + oxlint)
-make format       # Format all code (Go + TypeScript)
-make generate     # Generate TypeScript types from Go structs
+just check         # Everything CI runs; never modifies files
+just lint          # go vet + errcheck + golangci-lint, and oxlint
+just format        # Format Go and TypeScript
+just generate      # Generate TypeScript types from Go structs (formats the output)
 ```
+
+Go tools (air, tygo, errcheck, golangci-lint) are pinned in `backend/go.mod` and `backend/golangci-lint.mod` and run through `go tool`, so nothing needs installing globally.
 
 ### Pre-Commit
 
 **CRITICAL**: Before any `git add`, `git commit`, `git push`, or creating a PR, run:
 
 ```bash
-make prepare-for-commit
+just prepare-for-commit
 ```
 
-Fix all errors before proceeding with git operations. **Always run this before `make pr` or `gh pr create`.**
+It formats, regenerates types, then runs `just check` — the same checks CI runs. Fix all errors before proceeding with git operations, including before `gh pr create`.
 
 ### Build
 ```bash
-make build        # Build both frontend and backend
-make clean        # Clean build artifacts
+just build         # Build the backend binary and the frontend bundle
+just clean         # Remove build output
 ```
 
 ## Adding New Game Features
@@ -55,16 +56,16 @@ make clean        # Clean build artifacts
 1. **Define domain types** in `backend/internal/game/` with `json:` and `ts:` tags
 2. **Create action** in `backend/internal/action/` extending BaseAction
 3. **Wire handlers** (HTTP or WebSocket) to delegate to action
-4. **Generate types**: Run `make generate`
+4. **Generate types**: Run `just generate`
 5. **Frontend**: Import generated types, implement UI
-6. **Format and lint**: Run `make format` and `make lint`
+6. **Check**: Run `just prepare-for-commit`
 
 ## Type Safety Bridge
 
 Go structs generate TypeScript interfaces via `tygo`. Use `tstype:` tags to override generated types (e.g., string literal unions for discriminated unions). Note: `ts:` tags are **ignored** by tygo.
 
 ```bash
-make generate     # After any Go type changes
+just generate     # After any Go type changes
 ```
 
 See `backend/CLAUDE.md` for Go type tagging and `frontend/CLAUDE.md` for consuming generated types.
@@ -72,14 +73,17 @@ See `backend/CLAUDE.md` for Go type tagging and `frontend/CLAUDE.md` for consumi
 ## Important Notes
 
 ### Development Workflow
-- Both servers run with hot reload (`make run`)
-- Type generation: Go changes → `make generate` → React implementation
+- Both servers run with hot reload (`just dev`)
+- Type generation: Go changes → `just generate` → React implementation
 - State flow: All changes originate from Go backend via WebSocket
 - No client-side game logic (prevents desync)
 
 ### Frontend App-Phase State Machine
 
 The frontend tracks "what screen the user is on" in a single discriminated-union `AppPhase` (`frontend/src/stores/appPhaseStore.ts`) rather than composing multiple boolean / enum flags across stores. Only `useGameInitialization` (bootstrapping) and `useGameTransitions` (lifecycle) write to it; components read `phase.kind` and selector helpers. See `frontend/CLAUDE.md` § "App Phase State Machine" for the legal transitions, the persistent `<SpaceBackground>` invariant, and the rules around resetting world-ready flags between games.
+
+### Mobile Layout
+Phones use a separate compact layout (landscape-only in-game). Any UI change must keep it working: see `frontend/CLAUDE.md` § "Mobile / compact layout".
 
 ### Test Creation
 - Always write tests for new backend features
