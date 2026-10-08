@@ -6,17 +6,9 @@ interface DecorBoxProps {
   corner?: CornerPosition;
   children: React.ReactNode;
   className?: string;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
 }
 
-const DecorBox: React.FC<DecorBoxProps> = ({
-  corner = "bottom-right",
-  children,
-  className,
-  onMouseEnter,
-  onMouseLeave,
-}) => {
+const DecorBox: React.FC<DecorBoxProps> = ({ corner = "bottom-right", children, className }) => {
   const isTopLeft = corner === "top-left";
 
   const clipPath = isTopLeft
@@ -34,8 +26,6 @@ const DecorBox: React.FC<DecorBoxProps> = ({
       <div
         className={`inline-flex items-center gap-1 px-1.5 py-px bg-[rgba(5,5,10,0.95)] ${borderClass} text-white font-orbitron ${className ?? ""}`}
         style={{ clipPath }}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
       >
         {children}
       </div>

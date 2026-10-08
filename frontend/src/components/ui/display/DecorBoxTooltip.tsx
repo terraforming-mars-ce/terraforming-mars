@@ -9,6 +9,7 @@ interface DecorBoxTooltipProps {
   children?: ReactNode;
   position: { x: number; y: number } | null;
   placement?: "below" | "above";
+  flipY?: number;
   cornerSize?: number;
   maxWidth?: number | string;
 }
@@ -19,6 +20,7 @@ const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({
   children,
   position,
   placement = "below",
+  flipY,
   cornerSize = 14,
   maxWidth,
 }) => {
@@ -37,11 +39,21 @@ const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({
     if (placement === "above") {
       top -= rect.height;
     }
+    if (flipY !== undefined && placement === "above" && top < 12) {
+      top = flipY;
+    }
+    if (
+      flipY !== undefined &&
+      placement === "below" &&
+      top + rect.height > window.innerHeight - 12
+    ) {
+      top = flipY - rect.height;
+    }
     top = Math.max(12, Math.min(top, window.innerHeight - rect.height - 12));
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
     tooltip.style.transform = "none";
-  }, [position, placement, children]);
+  }, [position, placement, flipY, children]);
   const [dismissedPosition, setDismissedPosition] = useState<typeof position>(null);
   useEffect(() => {
     if (!position) {
@@ -74,7 +86,7 @@ const DecorBoxTooltip: React.FC<DecorBoxTooltipProps> = ({
         left: position.x,
         top: position.y,
         transform: `translate(-50%, ${translateY})`,
-        zIndex: Z_INDEX.LOADING_OVERLAY,
+        zIndex: Z_INDEX.FLOATING_TOOLTIP,
         maxWidth: maxWidth ?? "min(160px, calc(100vw - 24px))",
       }}
     >

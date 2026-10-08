@@ -5,49 +5,29 @@ import DecorBox from "./DecorBox.tsx";
 interface VictoryPointIconProps {
   value?: number | string;
   vpConditions?: any[];
-  onHoverDescription?: (description: string | null) => void;
   corner?: "bottom-right" | "top-left";
   bare?: boolean;
 }
 
+const renderContent = (content: React.ReactNode) => (
+  <div className="inline-flex items-center gap-1">
+    {content}
+    <span className="text-[9px] text-white/50 font-semibold tracking-wider">VP</span>
+  </div>
+);
+
 const VictoryPointIcon: React.FC<VictoryPointIconProps> = ({
   value,
   vpConditions,
-  onHoverDescription,
   corner = "bottom-right",
   bare = false,
 }) => {
-  const vpDescription = vpConditions?.find((c: any) => c.description)?.description ?? null;
-
-  const handleMouseEnter = () => {
-    if (onHoverDescription && vpDescription) {
-      onHoverDescription(vpDescription);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (onHoverDescription) {
-      onHoverDescription(null);
-    }
-  };
-
-  const renderContent = (content: React.ReactNode) => (
-    <div
-      className="inline-flex items-center gap-1"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {content}
-      <span className="text-[9px] text-white/50 font-semibold tracking-wider">VP</span>
-    </div>
-  );
-
   const renderBox = (content: React.ReactNode) => {
     if (bare) {
       return renderContent(content);
     }
     return (
-      <DecorBox corner={corner} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <DecorBox corner={corner}>
         {content}
         <span className="text-[9px] text-white/50 font-semibold tracking-wider">VP</span>
       </DecorBox>

@@ -1,15 +1,9 @@
-import React, {
-  createContext,
-  useContext,
-  useLayoutEffect,
-  useRef,
-  useEffect,
-  useState,
-} from "react";
+import React, { createContext, useContext, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { FormattedDescription } from "../../../display/FormattedDescription.tsx";
 import { ClassifiedBehavior } from "../types.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
+import { useTapReveal } from "@/hooks/useTapReveal.ts";
 
 const BehaviorLayoutContext = createContext({
   compact: false,
@@ -21,8 +15,7 @@ interface BehaviorContainerProps {
   classifiedBehavior: ClassifiedBehavior;
   index: number;
   description?: string;
-  isHovered?: boolean;
-  onHover?: (index: number | null) => void;
+  showTooltip?: boolean;
   noContainer?: boolean;
   cardId?: string;
   children: React.ReactNode;
@@ -68,8 +61,8 @@ const DescriptionPortal: React.FC<{
   return createPortal(
     <div
       role="tooltip"
-      className="font-sans fixed w-[184px] max-md:w-[148px] -translate-x-1/2 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
-      style={{ left: pos.x, top: pos.y, zIndex: Z_INDEX.LOADING_OVERLAY }}
+      className="font-sans fixed w-[184px] -translate-x-1/2 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
+      style={{ left: pos.x, top: pos.y, zIndex: Z_INDEX.FLOATING_TOOLTIP }}
     >
       <div
         className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
@@ -101,15 +94,18 @@ const BehaviorContainer: React.FC<BehaviorContainerProps> = ({
   classifiedBehavior,
   index,
   description,
-  isHovered = false,
-  onHover,
+  showTooltip = false,
   noContainer = false,
   cardId,
   children,
 }) => {
   const { type: rawType } = classifiedBehavior;
   const type = noContainer ? ("auto-no-background" as const) : rawType;
-  const containerRef = useRef<HTMLDivElement>(null);
+  const {
+    open: isRevealed,
+    triggerRef: containerRef,
+    triggerProps,
+  } = useTapReveal<HTMLDivElement>({ enabled: showTooltip && !!description });
   const [compact, setCompact] = useState(false);
 
   useLayoutEffect(() => {
@@ -155,28 +151,16 @@ const BehaviorContainer: React.FC<BehaviorContainerProps> = ({
     </BehaviorLayoutContext.Provider>
   );
 
-  const handleMouseEnter = () => onHover?.(index);
-  const handleMouseLeave = () => onHover?.(null);
-
-  useEffect(() => {
-    if (!isHovered) return;
-    const dismiss = () => onHover?.(null);
-    window.addEventListener("scroll", dismiss, true);
-    return () => window.removeEventListener("scroll", dismiss, true);
-  }, [isHovered, onHover]);
-
   if (type === "auto-no-background") {
     return (
       <div
-        ref={containerRef}
+        {...triggerProps}
         key={index}
-        className="behavior-fitting relative flex items-center justify-center my-px p-[3px] min-h-8 max-w-full min-w-0 font-orbitron max-md:p-px max-md:my-px"
+        className="behavior-fitting relative flex items-center justify-center my-px p-[3px] min-h-8 max-w-full min-w-0 font-orbitron"
         data-compact={compact}
-        onMouseEnter={onHover ? handleMouseEnter : undefined}
-        onMouseLeave={onHover ? handleMouseLeave : undefined}
       >
         {content}
-        {isHovered && description && (
+        {isRevealed && description && (
           <DescriptionPortal description={description} anchorRef={containerRef} />
         )}
       </div>
@@ -207,17 +191,13 @@ const BehaviorContainer: React.FC<BehaviorContainerProps> = ({
 
     return (
       <div
-        ref={containerRef}
+        {...triggerProps}
         key={index}
-        className={`behavior-fitting relative px-2 py-1 min-h-8 my-px border border-white/10 backdrop-blur-[2px] flex items-center max-w-full min-w-0 font-orbitron ${widthClass} ${typeStyles[type] || ""} max-md:px-1.5 max-md:py-[3px] max-md:min-h-7 max-md:my-px`}
+        className={`behavior-fitting relative px-2 py-1 min-h-8 my-px border border-white/10 backdrop-blur-[2px] flex items-center max-w-full min-w-0 font-orbitron ${widthClass} ${typeStyles[type] || ""}`}
         data-compact={compact}
-        onMouseEnter={onHover ? handleMouseEnter : undefined}
-        onMouseLeave={onHover ? handleMouseLeave : undefined}
       >
-        <div className="flex items-center gap-1.5 min-w-0 w-full justify-center max-md:gap-1">
-          {content}
-        </div>
-        {isHovered && description && (
+        <div className="flex items-center gap-1.5 min-w-0 w-full justify-center">{content}</div>
+        {isRevealed && description && (
           <DescriptionPortal description={description} anchorRef={containerRef} />
         )}
       </div>

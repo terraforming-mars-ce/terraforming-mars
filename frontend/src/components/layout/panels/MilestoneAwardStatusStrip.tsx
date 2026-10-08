@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo } from "react";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { AwardDto, MilestoneDto } from "@/types/generated/api-types.ts";
 import GameIcon from "../../ui/display/GameIcon.tsx";
-import DecorBoxTooltip from "../../ui/display/DecorBoxTooltip.tsx";
+import RevealTrigger from "../../ui/display/RevealTrigger.tsx";
 import AwardScoreboard from "../../ui/display/AwardScoreboard.tsx";
 import { FormattedDescription } from "../../ui/display/FormattedDescription.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -23,23 +23,9 @@ interface PlayerInfo {
 }
 
 type ChipKind = "milestone" | "award";
-type HoverTarget = { kind: ChipKind; slot: number } | null;
-
-const useSlotRefs = () => {
-  const ref0 = useRef<HTMLButtonElement>(null);
-  const ref1 = useRef<HTMLButtonElement>(null);
-  const ref2 = useRef<HTMLButtonElement>(null);
-  return useMemo(() => [ref0, ref1, ref2] as const, [ref0, ref1, ref2]);
-};
 
 const MilestoneAwardStatusStrip: React.FC = () => {
   const game = useGameStore((state) => state.game);
-
-  const milestoneRefs = useSlotRefs();
-  const awardRefs = useSlotRefs();
-
-  const [hovered, setHovered] = useState<HoverTarget>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
   const allPlayers: PlayerInfo[] = useMemo(() => {
     if (!game) {
@@ -68,40 +54,41 @@ const MilestoneAwardStatusStrip: React.FC = () => {
     [game?.awards],
   );
 
-  useEffect(() => {
-    if (!hovered) {
-      setTooltipPos(null);
-      return;
-    }
-    const refList = hovered.kind === "milestone" ? milestoneRefs : awardRefs;
-    const el = refList[hovered.slot].current;
-    if (!el) {
-      setTooltipPos(null);
-      return;
-    }
-    const rect = el.getBoundingClientRect();
-    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.bottom });
-  }, [hovered, milestoneRefs, awardRefs]);
-
   if (!game) {
     return null;
   }
 
-  const hoveredItem = (() => {
-    if (!hovered) {
-      return null;
-    }
-    return hovered.kind === "milestone"
-      ? (claimedMilestones[hovered.slot] ?? null)
-      : (fundedAwards[hovered.slot] ?? null);
-  })();
-  const hoveredPlayerId = hoveredItem
-    ? hovered?.kind === "milestone"
-      ? (hoveredItem as MilestoneDto).claimedBy
-      : (hoveredItem as AwardDto).fundedBy
-    : undefined;
-  const hoveredPlayer = allPlayers.find((p) => p.id === hoveredPlayerId);
-  const hoveredLabel = hovered?.kind === "milestone" ? "Claimed by " : "Funded by ";
+  const renderTooltip = (kind: ChipKind, item: MilestoneDto | AwardDto) => {
+    const playerId =
+      kind === "milestone" ? (item as MilestoneDto).claimedBy : (item as AwardDto).fundedBy;
+    const player = allPlayers.find((p) => p.id === playerId);
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <div className="font-orbitron font-bold text-white text-[12px] leading-tight">
+              {item.name}
+            </div>
+            <div className="text-white/70 text-[10px] leading-tight text-right shrink-0">
+              {kind === "milestone" ? "Claimed by " : "Funded by "}
+              <span style={{ color: player?.color ?? "#ffffff" }}>{player?.name ?? "Unknown"}</span>
+            </div>
+          </div>
+          {item.description && (
+            <div className="text-white/70 text-[10px] leading-tight">
+              <FormattedDescription text={item.description} />
+            </div>
+          )}
+        </div>
+        {kind === "award" && (
+          <AwardScoreboard
+            players={allPlayers}
+            playerProgress={(item as AwardDto).playerProgress ?? {}}
+          />
+        )}
+      </div>
+    );
+  };
 
   // Slot index meaning: 0 = innermost (next to where the two groups meet), SLOTS_PER_SIDE-1 = outermost.
   // Render order for milestones: outermost first (left-to-right places slot 2 → slot 0).
@@ -110,7 +97,6 @@ const MilestoneAwardStatusStrip: React.FC = () => {
   const renderSlot = (kind: ChipKind, slot: number, connect: Connect) => {
     const isMilestone = kind === "milestone";
     const filled = isMilestone ? (claimedMilestones[slot] ?? null) : (fundedAwards[slot] ?? null);
-    const ref = isMilestone ? milestoneRefs[slot] : awardRefs[slot];
     const isFilled = filled !== null;
     const isInnermost = slot === 0;
 
@@ -128,38 +114,22 @@ const MilestoneAwardStatusStrip: React.FC = () => {
     const overlapMargin = -ANGLE_INDENT + BUTTON_SPACING;
     const marginLeft = connect === "none" ? 0 : connect === "gap" ? BUTTON_SPACING : overlapMargin;
 
-    const handleEnter = () => {
-      if (!isFilled) {
-        return;
-      }
-      setHovered({ kind, slot });
-    };
-    const handleLeave = () => {
-      setHovered((current) => {
-        if (!current) {
-          return current;
-        }
-        if (current.kind === kind && current.slot === slot) {
-          return null;
-        }
-        return current;
-      });
-    };
-
     const wrapperClass = isFilled ? "" : "pointer-events-none";
     const iconType = filled?.style?.icon;
     const slotLayer = isMilestone ? slot + 1 : SLOTS_PER_SIDE - slot;
 
     return (
-      <div
+      <RevealTrigger
         key={`${kind}-${slot}`}
+        as="div"
         className={`relative flex items-center ${wrapperClass}`}
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
         style={{
           marginLeft,
           zIndex: Z_INDEX.UI_BASE + slotLayer,
         }}
+        content={filled ? renderTooltip(kind, filled) : null}
+        placement="below"
+        maxWidth={isMilestone ? 260 : 320}
       >
         <GameButton
           shape="toolbar"
@@ -169,10 +139,7 @@ const MilestoneAwardStatusStrip: React.FC = () => {
           data-occupied={isFilled || undefined}
           tabIndex={isFilled ? 0 : -1}
           aria-label={filled?.name}
-          onFocus={handleEnter}
-          onBlur={handleLeave}
           emphasis="secondary"
-          ref={ref}
           width={isInnermost ? INNER_CHIP_WIDTH : CHIP_WIDTH}
           height={CHIP_HEIGHT}
           accent={chipColor}
@@ -181,7 +148,7 @@ const MilestoneAwardStatusStrip: React.FC = () => {
         >
           {iconType ? <GameIcon iconType={iconType} size="small" /> : null}
         </GameButton>
-      </div>
+      </RevealTrigger>
     );
   };
 
@@ -189,44 +156,10 @@ const MilestoneAwardStatusStrip: React.FC = () => {
   const awardOrder = [0, 1, 2];
 
   return (
-    <>
-      <div className="flex items-center pointer-events-auto">
-        {milestoneOrder.map((slot, i) =>
-          renderSlot("milestone", slot, i === 0 ? "none" : "overlap"),
-        )}
-        {awardOrder.map((slot, i) => renderSlot("award", slot, i === 0 ? "gap" : "overlap"))}
-      </div>
-      <DecorBoxTooltip position={tooltipPos} maxWidth={hovered?.kind === "award" ? 320 : 260}>
-        {hoveredItem ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between gap-3">
-                <div className="font-orbitron font-bold text-white text-[12px] leading-tight">
-                  {hoveredItem.name}
-                </div>
-                <div className="text-white/70 text-[10px] leading-tight text-right shrink-0">
-                  {hoveredLabel}
-                  <span style={{ color: hoveredPlayer?.color ?? "#ffffff" }}>
-                    {hoveredPlayer?.name ?? "Unknown"}
-                  </span>
-                </div>
-              </div>
-              {hoveredItem.description && (
-                <div className="text-white/70 text-[10px] leading-tight">
-                  <FormattedDescription text={hoveredItem.description} />
-                </div>
-              )}
-            </div>
-            {hovered?.kind === "award" && (
-              <AwardScoreboard
-                players={allPlayers}
-                playerProgress={(hoveredItem as AwardDto).playerProgress ?? {}}
-              />
-            )}
-          </div>
-        ) : null}
-      </DecorBoxTooltip>
-    </>
+    <div className="flex items-center pointer-events-auto">
+      {milestoneOrder.map((slot, i) => renderSlot("milestone", slot, i === 0 ? "none" : "overlap"))}
+      {awardOrder.map((slot, i) => renderSlot("award", slot, i === 0 ? "gap" : "overlap"))}
+    </div>
   );
 };
 

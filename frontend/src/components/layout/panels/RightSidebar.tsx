@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { PlayerDto, OtherPlayerDto, GlobalParameterBonusDto } from "@/types/generated/api-types.ts";
 import GameIcon from "../../ui/display/GameIcon.tsx";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
+import { useTapReveal } from "@/hooks/useTapReveal.ts";
 
 interface GlobalParameters {
   temperature: number;
@@ -64,7 +66,10 @@ const GenerationPanel: React.FC<GenerationPanelProps> = ({ generation, width, he
         />
         <line x1={0} y1={height} x2={0} y2={ANGLE_INDENT} stroke={BORDER_COLOR} strokeWidth="2" />
       </svg>
-      <div className="relative z-10 h-full flex flex-col items-center justify-center">
+      <div
+        className="relative h-full flex flex-col items-center justify-center"
+        style={{ zIndex: getZIndex("LOCAL", 10) }}
+      >
         <div className="text-[10px] font-orbitron font-bold text-white/70 uppercase tracking-[1px]">
           GEN
         </div>
@@ -190,7 +195,7 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({
         />
       </svg>
 
-      <div className="relative z-10 h-full flex">
+      <div className="relative h-full flex" style={{ zIndex: getZIndex("LOCAL", 10) }}>
         {/* Oxygen Gauge */}
         <div
           className="relative h-full bg-black overflow-hidden transition-[width] duration-300 ease-out"
@@ -233,7 +238,8 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({
           </div>
           {/* Current value indicator */}
           <div
-            className={`absolute inset-0 w-full z-20 flex items-center justify-center text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 w-full flex items-center justify-center text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+            style={{ zIndex: getZIndex("LOCAL", 20) }}
           >
             {oxygen}%
           </div>
@@ -284,7 +290,8 @@ const GaugesSection: React.FC<GaugesSectionProps> = ({
           </div>
           {/* Current value indicator */}
           <div
-            className={`absolute inset-0 w-full z-20 flex items-center justify-center text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 w-full flex items-center justify-center text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+            style={{ zIndex: getZIndex("LOCAL", 20) }}
           >
             {temperature}°
           </div>
@@ -341,7 +348,10 @@ const VenusBottomCap: React.FC<VenusCapProps> = ({ width }) => {
         <line x1={width} y1={h} x2={0} y2={h - a} stroke={BORDER_COLOR} strokeWidth="2" />
         <line x1={0} y1={h - a} x2={0} y2={0} stroke={BORDER_COLOR} strokeWidth="2" />
       </svg>
-      <div className="relative z-10 h-full flex items-center justify-center">
+      <div
+        className="relative h-full flex items-center justify-center"
+        style={{ zIndex: getZIndex("LOCAL", 10) }}
+      >
         <div style={{ transform: "translateY(2px) scale(0.7)" }}>
           <GameIcon iconType="venus" size="small" />
         </div>
@@ -412,8 +422,11 @@ const VenusGaugeSection: React.FC<VenusGaugeSectionProps> = ({
       </svg>
 
       <div
-        className="relative z-10 h-full bg-black overflow-hidden"
-        style={{ borderLeft: `${GAUGE_GAP}px solid ${BORDER_COLOR}` }}
+        className="relative h-full bg-black overflow-hidden"
+        style={{
+          borderLeft: `${GAUGE_GAP}px solid ${BORDER_COLOR}`,
+          zIndex: getZIndex("LOCAL", 10),
+        }}
       >
         <div
           className="absolute bottom-0 left-0 right-0 bg-[linear-gradient(to_top,#8B6914_0%,#DAA520_50%,#FFD700_100%)] transition-[height] duration-500 ease-[ease] shadow-[0_0_8px_rgba(255,215,0,1),0_0_15px_rgba(218,165,32,0.8),inset_0_1px_2px_rgba(255,255,255,0.3)]"
@@ -451,7 +464,8 @@ const VenusGaugeSection: React.FC<VenusGaugeSectionProps> = ({
           })}
         </div>
         <div
-          className={`absolute inset-0 w-full z-20 flex items-center justify-center text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 w-full flex items-center justify-center text-sm font-orbitron font-bold text-white [text-shadow:0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)] pointer-events-none transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+          style={{ zIndex: getZIndex("LOCAL", 20) }}
         >
           {venus}%
         </div>
@@ -513,7 +527,10 @@ const GaugeLegendPanel: React.FC<GaugeLegendPanelProps> = ({ width, height }) =>
           strokeWidth="2"
         />
       </svg>
-      <div className="relative z-10 h-full flex items-center justify-center">
+      <div
+        className="relative h-full flex items-center justify-center"
+        style={{ zIndex: getZIndex("LOCAL", 10) }}
+      >
         <div
           className="flex items-center transition-[width] duration-300 ease-out"
           style={{
@@ -587,7 +604,10 @@ const OceansPanel: React.FC<OceansPanelProps> = ({ oceans, maxOceans, width, hei
           strokeWidth="2"
         />
       </svg>
-      <div className="relative z-10 h-full flex flex-col items-center justify-center gap-1">
+      <div
+        className="relative h-full flex flex-col items-center justify-center gap-1"
+        style={{ zIndex: getZIndex("LOCAL", 10) }}
+      >
         <div className="flex items-center justify-center w-6 h-6 brightness-[1.2]">
           <GameIcon iconType="ocean" size="small" />
         </div>
@@ -607,21 +627,20 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   currentPlayer: _currentPlayer,
   showVenus = false,
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
+  const { open: isExpanded, triggerProps } = useTapReveal<HTMLDivElement>();
 
   const GEN_PANEL_HEIGHT = 80;
   const LEGEND_PANEL_HEIGHT = 60;
   const OCEANS_PANEL_HEIGHT = 80;
 
-  const currentWidth = isHovered ? Math.round(SIDEBAR_WIDTH * 1.5) : SIDEBAR_WIDTH;
+  const currentWidth = isExpanded ? Math.round(SIDEBAR_WIDTH * 1.5) : SIDEBAR_WIDTH;
   const venusWidth = (currentWidth - GAUGE_GAP) / 2;
 
   return (
     <div
-      className="fixed right-0 z-10 flex flex-row items-center pointer-events-auto top-1/2 -translate-y-1/2 transition-all duration-300 ease-out"
-      style={{ height: "70vh" }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      {...triggerProps}
+      className="fixed right-0 flex flex-row items-center pointer-events-auto top-1/2 -translate-y-1/2 transition-all duration-300 ease-out"
+      style={{ height: "70dvh", zIndex: Z_INDEX.RIGHT_SIDEBAR }}
     >
       {showVenus && (
         <div
@@ -632,12 +651,18 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             marginTop: (-(GEN_PANEL_HEIGHT - ANGLE_INDENT) * 2) / 3,
           }}
         >
-          <div style={{ marginBottom: -VENUS_ANGLE, zIndex: 2, position: "relative" }}>
+          <div
+            style={{
+              marginBottom: -VENUS_ANGLE,
+              zIndex: getZIndex("LOCAL", 2),
+              position: "relative",
+            }}
+          >
             <VenusTopCap width={venusWidth} />
           </div>
           <div
             style={{
-              zIndex: 1,
+              zIndex: getZIndex("LOCAL", 1),
               position: "relative",
               flex: 1,
               display: "flex",
@@ -647,18 +672,26 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             <VenusGaugeSection
               venus={globalParameters?.venus ?? 0}
               width={venusWidth}
-              isHovered={isHovered}
+              isHovered={isExpanded}
               bonuses={globalParameters?.bonuses}
             />
           </div>
-          <div style={{ marginTop: -VENUS_ANGLE, zIndex: 2, position: "relative" }}>
+          <div
+            style={{ marginTop: -VENUS_ANGLE, zIndex: getZIndex("LOCAL", 2), position: "relative" }}
+          >
             <VenusBottomCap width={venusWidth} />
           </div>
         </div>
       )}
 
       <div className="flex flex-col h-full">
-        <div style={{ marginBottom: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
+        <div
+          style={{
+            marginBottom: -ANGLE_INDENT,
+            zIndex: getZIndex("LOCAL", 2),
+            position: "relative",
+          }}
+        >
           <GenerationPanel
             generation={generation || 1}
             width={currentWidth}
@@ -667,7 +700,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
         <div
           style={{
-            zIndex: 1,
+            zIndex: getZIndex("LOCAL", 1),
             position: "relative",
             flex: 1,
             display: "flex",
@@ -678,14 +711,18 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             oxygen={globalParameters?.oxygen ?? 0}
             temperature={globalParameters?.temperature ?? -30}
             width={currentWidth}
-            isHovered={isHovered}
+            isHovered={isExpanded}
             bonuses={globalParameters?.bonuses}
           />
         </div>
-        <div style={{ marginTop: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
+        <div
+          style={{ marginTop: -ANGLE_INDENT, zIndex: getZIndex("LOCAL", 2), position: "relative" }}
+        >
           <GaugeLegendPanel width={currentWidth} height={LEGEND_PANEL_HEIGHT} />
         </div>
-        <div style={{ marginTop: -ANGLE_INDENT, zIndex: 2, position: "relative" }}>
+        <div
+          style={{ marginTop: -ANGLE_INDENT, zIndex: getZIndex("LOCAL", 2), position: "relative" }}
+        >
           <OceansPanel
             oceans={globalParameters?.oceans ?? 0}
             maxOceans={globalParameters?.maxOceans ?? 9}

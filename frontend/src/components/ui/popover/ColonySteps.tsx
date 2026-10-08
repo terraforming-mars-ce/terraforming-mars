@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { createPortal } from "react-dom";
+import React from "react";
 import { ColonyStepDto, ColonyOutputDto } from "@/types/generated/api-types.ts";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { getZIndex } from "@/constants/zIndex.ts";
 import GameIcon from "../display/GameIcon.tsx";
+import RevealTrigger from "../display/RevealTrigger.tsx";
 
 interface ColonyStepsProps {
   steps: ColonyStepDto[];
@@ -80,28 +80,6 @@ function isCreditType(type: string): boolean {
   return type === "credit" || type === "credit-production";
 }
 
-const ColonySlotTooltip: React.FC<{
-  data: { x: number; y: number; label: string; color?: string } | null;
-}> = ({ data }) => {
-  if (!data) {
-    return null;
-  }
-  return createPortal(
-    <div
-      className="fixed pointer-events-none animate-[fadeIn_150ms_ease-in]"
-      style={{ left: data.x + 12, top: data.y + 12, zIndex: Z_INDEX.LOADING_OVERLAY }}
-    >
-      <div className="bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.5)] rounded-sm flex items-center gap-1.5">
-        {data.color && (
-          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: data.color }} />
-        )}
-        <span className="font-orbitron font-bold text-[10px]">{data.label}</span>
-      </div>
-    </div>,
-    document.body,
-  );
-};
-
 const ColonySteps: React.FC<ColonyStepsProps> = ({
   steps,
   markerPosition,
@@ -112,12 +90,6 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
   getPlayerName,
 }) => {
   const { pattern, sameType } = analyzeSteps(steps);
-  const [slotTooltip, setSlotTooltip] = useState<{
-    x: number;
-    y: number;
-    label: string;
-    color?: string;
-  } | null>(null);
 
   const stepCount = steps.length;
   const markerLeftPercent = (markerPosition / stepCount) * 100;
@@ -129,8 +101,9 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
         {steps.map((_, i) => (
           <div key={i} className="flex-1 flex justify-center">
             {i < maxSlots && (
-              <div
-                className={`w-4 h-4 rounded-sm cursor-default ${
+              <RevealTrigger
+                as="div"
+                className={`relative w-4 h-4 rounded-sm cursor-default pointer-coarse:before:absolute pointer-coarse:before:-inset-2 pointer-coarse:before:content-[''] ${
                   playerColonies[i] ? "" : "border border-white/20"
                 }`}
                 style={{
@@ -138,19 +111,21 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
                     ? getPlayerColor(playerColonies[i])
                     : "transparent",
                 }}
-                onMouseEnter={(e) => {
-                  const playerId = playerColonies[i];
-                  setSlotTooltip({
-                    x: e.clientX,
-                    y: e.clientY,
-                    label: playerId ? getPlayerName(playerId) : "Empty colony slot",
-                    color: playerId ? getPlayerColor(playerId) : undefined,
-                  });
-                }}
-                onMouseMove={(e) => {
-                  setSlotTooltip((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY } : null));
-                }}
-                onMouseLeave={() => setSlotTooltip(null)}
+                content={
+                  <div className="flex items-center gap-1.5">
+                    {playerColonies[i] && (
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: getPlayerColor(playerColonies[i]) }}
+                      />
+                    )}
+                    <span className="font-orbitron font-bold text-[10px]">
+                      {playerColonies[i] ? getPlayerName(playerColonies[i]) : "Empty colony slot"}
+                    </span>
+                  </div>
+                }
+                cornerSize={8}
+                maxWidth={220}
               />
             )}
             {i === steps.length - 1 && markerPosition === steps.length - 1 && (
@@ -159,14 +134,14 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
           </div>
         ))}
       </div>
-      <ColonySlotTooltip data={slotTooltip} />
 
       {/* Step boxes with sliding marker overlay */}
       <div className="relative flex w-full">
         {/* Animated light region covering steps up to marker */}
         <div
-          className="absolute top-0 h-full pointer-events-none z-[5] bg-white/5 rounded-l"
+          className="absolute top-0 h-full pointer-events-none bg-white/5 rounded-l"
           style={{
+            zIndex: getZIndex("LOCAL", 5),
             width: `${((markerPosition + 1) / stepCount) * 100}%`,
             transition: "width 500ms cubic-bezier(0.4, 0, 0.2, 1)",
           }}
@@ -174,8 +149,9 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
 
         {/* Sliding marker highlight */}
         <div
-          className="absolute top-0 h-full pointer-events-none z-10 ring-1 ring-white bg-white/25 rounded-sm"
+          className="absolute top-0 h-full pointer-events-none ring-1 ring-white bg-white/25 rounded-sm"
           style={{
+            zIndex: getZIndex("LOCAL", 10),
             width: `${100 / stepCount}%`,
             left: `${markerLeftPercent}%`,
             transition: "left 500ms cubic-bezier(0.4, 0, 0.2, 1)",
@@ -185,8 +161,9 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
         {/* Boosted marker from Trade Envoys */}
         {previewPosition !== undefined && previewPosition !== markerPosition && (
           <div
-            className="absolute top-0 h-full pointer-events-none z-[8] ring-1 ring-amber-400/60 bg-amber-400/15 rounded-sm"
+            className="absolute top-0 h-full pointer-events-none ring-1 ring-amber-400/60 bg-amber-400/15 rounded-sm"
             style={{
+              zIndex: getZIndex("LOCAL", 8),
               width: `${100 / stepCount}%`,
               left: `${(previewPosition / stepCount) * 100}%`,
               transition: "left 500ms cubic-bezier(0.4, 0, 0.2, 1)",
@@ -202,7 +179,8 @@ const ColonySteps: React.FC<ColonyStepsProps> = ({
           return (
             <div
               key={i}
-              className={`flex-1 flex items-center justify-center py-1 text-[10px] font-orbitron font-bold min-h-[24px] ${roundingClass} bg-white/[0.02] text-white/50 relative z-20`}
+              className={`flex-1 flex items-center justify-center py-1 text-[10px] font-orbitron font-bold min-h-[24px] ${roundingClass} bg-white/[0.02] text-white/50 relative`}
+              style={{ zIndex: getZIndex("LOCAL", 20) }}
             >
               {pattern === "same-resource-all-one" && sameType && (
                 <GameIcon
