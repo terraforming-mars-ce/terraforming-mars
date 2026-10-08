@@ -11,6 +11,8 @@ import {
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 import { useModels } from "../../../hooks/useModels";
 import { getMarsOrbitalPosition } from "./solarSystemConfig";
+import { isDragClick } from "../controls/PanControls";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
 interface OrbitalStationProps {
   filledSeats: number;
@@ -47,7 +49,7 @@ function OrbitalStationTooltip({
           }}
         >
           <div className="font-orbitron font-bold text-xs text-white mb-1">{name}</div>
-          <div className="text-white/60 text-[10px]">
+          <div className="text-white/60 text-[10px] compact:text-[11px]">
             {isCompleted ? (
               <span className="text-emerald-400">Completed</span>
             ) : (
@@ -85,6 +87,8 @@ export default function OrbitalStation({
   const spawnProgress = useRef(isCompleted ? 1 : 0);
   const wasCompleted = useRef(isCompleted);
   const [hovered, setHovered] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const { isCompact } = useLayoutMode();
   const { gl } = useThree();
   const { activePlanet, setActivePlanet } = usePlanetFocus();
   const { satelliteScene } = useModels();
@@ -129,12 +133,29 @@ export default function OrbitalStation({
   const handleClick = useCallback(
     (e: ThreeEvent<MouseEvent>) => {
       e.stopPropagation();
+      if (isDragClick()) {
+        return;
+      }
+      if (isCompact && !revealed) {
+        setRevealed(true);
+        return;
+      }
       if (activePlanet !== "orbital-station") {
         setActivePlanet("orbital-station");
       }
     },
-    [activePlanet, setActivePlanet],
+    [activePlanet, setActivePlanet, isCompact, revealed],
   );
+
+  const handlePointerMissed = useCallback(() => {
+    if (!isDragClick()) {
+      setRevealed(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setRevealed(false);
+  }, [activePlanet, isCompact]);
 
   const hitSphereGeometry = useMemo(() => new THREE.SphereGeometry(HIT_SPHERE_RADIUS, 8, 8), []);
   const hitSphereMaterial = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
@@ -188,9 +209,10 @@ export default function OrbitalStation({
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
         onClick={handleClick}
+        onPointerMissed={handlePointerMissed}
       />
 
-      {hovered && (
+      {(hovered || revealed) && (
         <OrbitalStationTooltip
           name={name}
           filledSeats={filledSeats}

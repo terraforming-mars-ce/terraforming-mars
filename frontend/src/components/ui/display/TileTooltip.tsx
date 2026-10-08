@@ -1,33 +1,19 @@
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import GameIcon from "./GameIcon.tsx";
+import TileInfoContent, { type TileTooltipData } from "./TileInfoContent.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 
-export interface TileTooltipData {
-  tileType: string;
-  displayName?: string;
-  placedName?: string;
-  ownerName?: string;
-  ownerColor?: string;
-  reservedByName?: string;
-  isOceanSpace: boolean;
-  isVolcanic: boolean;
-  bonuses: { [key: string]: number };
-}
+const POINTER_OFFSET = 12;
+const VIEWPORT_MARGIN = 8;
 
-const TILE_TYPE_LABELS: Record<string, string> = {
-  empty: "Land Space",
-  ocean: "Ocean",
-  city: "City",
-  greenery: "Greenery",
-  volcano: "Volcano",
-  "nuclear-zone": "Nuclear Zone",
-  mining: "Mining Area",
-  restricted: "Reserved Area",
-  special: "Special",
-  "ecological-zone": "Ecological Zone",
-  "natural-preserve": "Natural Preserve",
-};
+function clampToViewport(pointer: number, size: number, viewport: number): number {
+  const after = pointer + POINTER_OFFSET;
+  if (after + size + VIEWPORT_MARGIN <= viewport) {
+    return after;
+  }
+  const before = pointer - POINTER_OFFSET - size;
+  return Math.max(VIEWPORT_MARGIN, Math.min(before, viewport - size - VIEWPORT_MARGIN));
+}
 
 interface TileTooltipProps {
   data: TileTooltipData | null;
@@ -38,18 +24,42 @@ const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!data || !containerRef.current) return;
+    if (!data || !containerRef.current) {
+      return;
+    }
 
     let rafId: number;
     let lastX = NaN;
     let lastY = NaN;
+    let lastWidth = NaN;
+    let lastHeight = NaN;
+    let lastViewportWidth = NaN;
+    let lastViewportHeight = NaN;
     const update = () => {
-      if (containerRef.current && positionRef.current) {
+      const container = containerRef.current;
+      if (container && positionRef.current) {
         const { x, y } = positionRef.current;
-        if (x !== lastX || y !== lastY) {
-          containerRef.current.style.transform = `translate3d(${x + 12}px, ${y + 12}px, 0)`;
+        const width = container.offsetWidth;
+        const height = container.offsetHeight;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        if (
+          x !== lastX ||
+          y !== lastY ||
+          width !== lastWidth ||
+          height !== lastHeight ||
+          viewportWidth !== lastViewportWidth ||
+          viewportHeight !== lastViewportHeight
+        ) {
+          const left = clampToViewport(x, width, viewportWidth);
+          const top = clampToViewport(y, height, viewportHeight);
+          container.style.transform = `translate3d(${left}px, ${top}px, 0)`;
           lastX = x;
           lastY = y;
+          lastWidth = width;
+          lastHeight = height;
+          lastViewportWidth = viewportWidth;
+          lastViewportHeight = viewportHeight;
         }
       }
       rafId = requestAnimationFrame(update);
@@ -58,63 +68,22 @@ const TileTooltip: React.FC<TileTooltipProps> = ({ data, positionRef }) => {
     return () => cancelAnimationFrame(rafId);
   }, [data, positionRef]);
 
-  if (!data) return null;
-
-  const isCity = data.tileType === "city";
-  const label = isCity
-    ? "City"
-    : data.displayName || TILE_TYPE_LABELS[data.tileType] || data.tileType;
-  const isEmptySpace = data.tileType === "empty";
-  const spaceLabel = data.isOceanSpace ? "Ocean Space" : "Land Space";
-  const bonusEntries = Object.entries(data.bonuses);
+  if (!data) {
+    return null;
+  }
 
   return createPortal(
     <div
       ref={containerRef}
       role="tooltip"
       className="fixed w-max max-w-52 pt-1 pointer-events-none animate-[fadeIn_150ms_ease-in]"
-      style={{ left: 0, top: 0, zIndex: Z_INDEX.LOADING_OVERLAY }}
+      style={{ left: 0, top: 0, zIndex: Z_INDEX.FLOATING_TOOLTIP }}
     >
       <div
         className="game-panel text-white/90 text-[11px] leading-tight px-3 py-2"
         style={{ "--panel-cut": "14px" } as React.CSSProperties}
       >
-        <div className="font-orbitron font-bold text-xs text-white mb-1">
-          {isEmptySpace && !data.displayName ? spaceLabel : label}
-        </div>
-
-        {isCity && data.placedName && (
-          <div className="font-orbitron text-[10px] text-white/60 mb-1 break-words">
-            {data.placedName}
-          </div>
-        )}
-
-        {data.isVolcanic && isEmptySpace && (
-          <div className="text-[10px] text-orange-400 mb-1">Volcanic</div>
-        )}
-
-        {data.ownerName && (
-          <div className="flex items-center gap-1.5 mb-1">
-            <div
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: data.ownerColor || "#888" }}
-            />
-            <span className="text-white/70">{data.ownerName}</span>
-          </div>
-        )}
-
-        {data.reservedByName && !data.ownerName && (
-          <div className="text-white/50 text-[10px] mb-1">Reserved by {data.reservedByName}</div>
-        )}
-
-        {bonusEntries.length > 0 && (
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className="text-white/50 text-[10px]">Bonus:</span>
-            {bonusEntries.map(([type, amount]) => (
-              <GameIcon key={type} iconType={type} amount={amount} size="small" />
-            ))}
-          </div>
-        )}
+        <TileInfoContent data={data} />
       </div>
     </div>,
     document.body,

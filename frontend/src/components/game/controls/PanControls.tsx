@@ -4,82 +4,100 @@ import * as THREE from "three";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 import {
-  ORBITAL_STATION_ORBIT_RADIUS,
-  ORBITAL_STATION_ORBIT_SPEED,
-  ORBITAL_STATION_TILT,
-} from "../board/boardConstants";
-import {
-  getPlanetCenter,
-  getPlanetCameraTargetOffset,
   getPlanetCameraDefaultSpherical,
   getPlanetOrbit,
   getMarsOrbitalPosition,
 } from "../board/solarSystemConfig";
+import {
+  MAX_POLAR_ANGLE,
+  MIN_POLAR_ANGLE,
+  computePlanetCenter,
+  getBodyRadius,
+  getOrbitLimits,
+  getSurfaceDistance,
+  sphericalToWorldOffset,
+} from "./orbitFrame";
 import { audioService } from "../../../services/audioService";
+import { slopFor } from "./tapGesture";
+import { useCameraFocusStore } from "@/stores/cameraFocusStore.ts";
+import { useTileInspectStore } from "@/stores/tileInspectStore.ts";
 
-export const panState = { isPanning: false, hasDragged: false };
+export const panState = { isPanning: false, lastGestureWasDrag: false };
 
-const ORBITAL_STATION_ORBIT_CONFIG = { minDistance: 0.3, maxDistance: 5, defaultRadius: 0.8 };
-const MIN_POLAR_ANGLE = Math.PI / 36;
-const MAX_POLAR_ANGLE = Math.PI - MIN_POLAR_ANGLE;
+export function isDragClick(): boolean {
+  return panState.lastGestureWasDrag;
+}
 
-function getOrbitalStationPosition(elapsedTime: number): THREE.Vector3 {
-  const angle = elapsedTime * ORBITAL_STATION_ORBIT_SPEED;
-  const r = ORBITAL_STATION_ORBIT_RADIUS;
-  const tiltY = Math.sin(ORBITAL_STATION_TILT) * r * 0.3;
-  const marsPos = getMarsOrbitalPosition(elapsedTime);
-  return new THREE.Vector3(
-    marsPos[0] + Math.cos(angle) * r,
-    marsPos[1] + Math.sin(angle) * tiltY,
-    marsPos[2] + Math.sin(angle) * r,
+const MOUSE_ORBIT_SPEED = 0.0003;
+const WHEEL_ZOOM_SPEED = 0.005;
+// Upper bound for a full-width one-finger swipe: roughly the width of the Mars board
+const TOUCH_MAX_SWIPE_ARC = 1.5;
+const MAJOR_RESIZE_AREA_CHANGE = 0.3;
+const FOCUS_DURATION = 0.4;
+
+interface FocusAnimation {
+  start: number;
+  fromTheta: number;
+  fromPhi: number;
+  fromRadius: number;
+  toTheta: number;
+  toPhi: number;
+  toRadius: number;
+}
+
+function nearestEquivalentAngle(from: number, to: number): number {
+  const turn = Math.PI * 2;
+  const delta = ((((to - from) % turn) + turn * 1.5) % turn) - Math.PI;
+  return from + delta;
+}
+
+interface TrackedPointer {
+  x: number;
+  y: number;
+  originX: number;
+  originY: number;
+}
+
+function measurePointers(pointers: Map<number, TrackedPointer>) {
+  let x = 0;
+  let y = 0;
+  for (const pointer of pointers.values()) {
+    x += pointer.x;
+    y += pointer.y;
+  }
+  const count = Math.max(pointers.size, 1);
+  x /= count;
+  y /= count;
+  let spread = 0;
+  if (pointers.size >= 2) {
+    for (const pointer of pointers.values()) {
+      spread += Math.hypot(pointer.x - x, pointer.y - y);
+    }
+    spread /= pointers.size;
+  }
+  return { x, y, spread };
+}
+
+function isMajorResize(
+  previous: { width: number; height: number },
+  next: { width: number; height: number },
+): boolean {
+  const wasPortrait = previous.height > previous.width;
+  const isPortrait = next.height > next.width;
+  if (wasPortrait !== isPortrait) {
+    return true;
+  }
+  const previousArea = previous.width * previous.height;
+  if (previousArea <= 0) {
+    return true;
+  }
+  return (
+    Math.abs(next.width * next.height - previousArea) / previousArea > MAJOR_RESIZE_AREA_CHANGE
   );
 }
 
-function computePlanetCenter(
-  planet: string,
-  elapsedTime: number,
-  toSun: THREE.Vector3,
-  quat: THREE.Quaternion,
-  zAxis: THREE.Vector3,
-  camOffset: THREE.Vector3,
-): THREE.Vector3 {
-  let center: THREE.Vector3;
-  if (planet === "orbital-station") {
-    center = getOrbitalStationPosition(elapsedTime);
-  } else if (planet === "solar-system") {
-    center = new THREE.Vector3(0, 0, 0);
-  } else {
-    center = getPlanetCenter(planet, elapsedTime);
-  }
-
-  const offset = getPlanetCameraTargetOffset(planet);
-  if (offset && planet !== "solar-system") {
-    toSun.copy(center).negate().normalize();
-    quat.setFromUnitVectors(zAxis, toSun);
-    camOffset.set(offset[0], offset[1], offset[2]);
-    camOffset.applyQuaternion(quat);
-    center.add(camOffset);
-  }
-
-  return center;
-}
-
-function sphericalToWorldOffset(
-  sph: THREE.Spherical,
-  planet: string,
-  center: THREE.Vector3,
-  toSun: THREE.Vector3,
-  quat: THREE.Quaternion,
-  zAxis: THREE.Vector3,
-  out: THREE.Vector3,
-): THREE.Vector3 {
-  out.setFromSpherical(sph);
-  if (planet !== "solar-system") {
-    toSun.copy(center).negate().normalize();
-    quat.setFromUnitVectors(zAxis, toSun);
-    out.applyQuaternion(quat);
-  }
-  return out;
+function getVerticalFov(camera: THREE.Camera): number {
+  return camera instanceof THREE.PerspectiveCamera ? camera.fov : 50;
 }
 
 export function PanControls() {
@@ -92,10 +110,6 @@ export function PanControls() {
     pendingCameraTransformRef,
   } = useWorld3DSettings();
   const { activePlanet } = usePlanetFocus();
-  const isPointerDown = useRef(false);
-  const previousPointer = useRef({ x: 0, y: 0 });
-  const pointerDownOrigin = useRef({ x: 0, y: 0 });
-  const [shouldRecenter, setShouldRecenter] = useState(false);
   const previousSize = useRef({ width: size.width, height: size.height });
 
   const marsInitPos = getMarsOrbitalPosition(0);
@@ -112,6 +126,9 @@ export function PanControls() {
   activePlanetRef.current = activePlanet;
 
   const wasFreeCameraEnabled = useRef(settings.freeCameraEnabled);
+  const focusAnimation = useRef<FocusAnimation | null>(null);
+  const focusSpherical = useMemo(() => new THREE.Spherical(), []);
+  const focusDirection = useMemo(() => new THREE.Vector3(), []);
 
   // Reusable temp vectors
   const _toSun = useMemo(() => new THREE.Vector3(), []);
@@ -153,10 +170,7 @@ export function PanControls() {
       void audioService.playTravelSound();
       lastPlanetRef.current = activePlanet;
 
-      const orbit =
-        activePlanet === "orbital-station"
-          ? ORBITAL_STATION_ORBIT_CONFIG
-          : getPlanetOrbit(activePlanet);
+      const orbit = getOrbitLimits(activePlanet);
       const defaultSpherical = getPlanetCameraDefaultSpherical(activePlanet);
       targetSpherical.current.radius = defaultSpherical?.radius ?? orbit.defaultRadius;
       targetSpherical.current.phi =
@@ -197,22 +211,65 @@ export function PanControls() {
     orbitCenter.current.copy(targetCenter);
 
     if (size.width !== previousSize.current.width || size.height !== previousSize.current.height) {
-      setShouldRecenter(true);
+      if (isMajorResize(previousSize.current, size)) {
+        targetSpherical.current.theta = 0;
+        targetSpherical.current.phi = Math.PI / 2;
+      } else {
+        const limits = getOrbitLimits(activePlanet);
+        targetSpherical.current.phi = THREE.MathUtils.clamp(
+          targetSpherical.current.phi,
+          MIN_POLAR_ANGLE,
+          MAX_POLAR_ANGLE,
+        );
+        targetSpherical.current.radius = THREE.MathUtils.clamp(
+          targetSpherical.current.radius,
+          limits.minDistance,
+          limits.maxDistance,
+        );
+      }
       previousSize.current = { width: size.width, height: size.height };
     }
 
-    if (shouldRecenter) {
-      targetSpherical.current.theta = 0;
-      targetSpherical.current.phi = Math.PI / 2;
-      setShouldRecenter(false);
+    const focusRequest = useCameraFocusStore.getState().consume();
+    if (focusRequest) {
+      const [x, y, z] = focusRequest.direction;
+      focusSpherical.setFromVector3(focusDirection.set(x, y, z));
+      focusAnimation.current = {
+        start: state.clock.elapsedTime,
+        fromTheta: spherical.theta,
+        fromPhi: spherical.phi,
+        fromRadius: spherical.radius,
+        toTheta: nearestEquivalentAngle(spherical.theta, focusSpherical.theta),
+        toPhi: THREE.MathUtils.clamp(focusSpherical.phi, MIN_POLAR_ANGLE, MAX_POLAR_ANGLE),
+        toRadius: focusRequest.distance,
+      };
     }
 
-    const radiusDelta = Math.abs(targetSpherical.current.radius - spherical.radius);
-    const panLerp = radiusDelta > 50 ? 0.02 : 0.1;
+    const focus = focusAnimation.current;
+    if (focus) {
+      const t = Math.min((state.clock.elapsedTime - focus.start) / FOCUS_DURATION, 1);
+      const eased = 1 - (1 - t) ** 3;
+      targetSpherical.current.theta = THREE.MathUtils.lerp(focus.fromTheta, focus.toTheta, eased);
+      targetSpherical.current.phi = THREE.MathUtils.lerp(focus.fromPhi, focus.toPhi, eased);
+      targetSpherical.current.radius = THREE.MathUtils.lerp(
+        focus.fromRadius,
+        focus.toRadius,
+        eased,
+      );
+      spherical.theta = targetSpherical.current.theta;
+      spherical.phi = targetSpherical.current.phi;
+      spherical.radius = targetSpherical.current.radius;
+      if (t >= 1) {
+        focusAnimation.current = null;
+      }
+    } else {
+      const radiusDelta = Math.abs(targetSpherical.current.radius - spherical.radius);
+      const panLerp = radiusDelta > 50 ? 0.02 : 0.1;
 
-    spherical.theta += (targetSpherical.current.theta - spherical.theta) * panLerp;
-    spherical.phi += (targetSpherical.current.phi - spherical.phi) * panLerp;
-    spherical.radius += (targetSpherical.current.radius - spherical.radius) * panLerp;
+      spherical.theta += (targetSpherical.current.theta - spherical.theta) * panLerp;
+      spherical.phi += (targetSpherical.current.phi - spherical.phi) * panLerp;
+      spherical.radius += (targetSpherical.current.radius - spherical.radius) * panLerp;
+    }
 
     const pending = pendingCameraTransformRef.current;
     if (pending) {
@@ -256,60 +313,152 @@ export function PanControls() {
       camera.lookAt(orbitCenter.current);
     }
 
-    const handleWindowResize = () => {
-      setShouldRecenter(true);
+    const domElement = gl.domElement;
+    const pointers = new Map<number, TrackedPointer>();
+    const gesture = {
+      pointerType: "mouse",
+      maxPointers: 0,
+      moved: false,
+      centroidX: 0,
+      centroidY: 0,
+      spread: 0,
+    };
+
+    const rebaseline = () => {
+      const { x, y, spread } = measurePointers(pointers);
+      gesture.centroidX = x;
+      gesture.centroidY = y;
+      gesture.spread = spread;
+    };
+
+    const rotateBy = (radiansX: number, radiansY: number) => {
+      targetSpherical.current.theta -= radiansX;
+      targetSpherical.current.phi = THREE.MathUtils.clamp(
+        targetSpherical.current.phi - radiansY,
+        MIN_POLAR_ANGLE,
+        MAX_POLAR_ANGLE,
+      );
+    };
+
+    const zoomTo = (radius: number, anchor: { x: number; y: number } | null) => {
+      const planet = activePlanetRef.current;
+      if (planet === "solar-system") {
+        return;
+      }
+      const limits = getOrbitLimits(planet);
+      const previous = targetSpherical.current.radius;
+      const next = THREE.MathUtils.clamp(radius, limits.minDistance, limits.maxDistance);
+      targetSpherical.current.radius = next;
+
+      const bodyRadius = getBodyRadius(planet);
+      if (!anchor || bodyRadius <= 0) {
+        return;
+      }
+      const rect = domElement.getBoundingClientRect();
+      if (rect.height <= 0) {
+        return;
+      }
+      const halfFovTan = Math.tan(THREE.MathUtils.degToRad(getVerticalFov(camera)) / 2);
+      const surfaceShift =
+        getSurfaceDistance(previous, bodyRadius) - getSurfaceDistance(next, bodyRadius);
+      const radiansPerPixel = (2 * halfFovTan * surfaceShift) / (rect.height * bodyRadius);
+      const view = camera instanceof THREE.PerspectiveCamera ? camera.view : null;
+      const viewShiftX = view?.enabled ? view.offsetX : 0;
+      const viewShiftY = view?.enabled ? view.offsetY : 0;
+      const offsetX = anchor.x - (rect.left + rect.width / 2 - viewShiftX);
+      const offsetY = anchor.y - (rect.top + rect.height / 2 - viewShiftY);
+      rotateBy(-offsetX * radiansPerPixel, -offsetY * radiansPerPixel);
+    };
+
+    const radiansPerPixel = () => {
+      if (gesture.pointerType !== "touch") {
+        return MOUSE_ORBIT_SPEED;
+      }
+      const planet = activePlanetRef.current;
+      const radius = targetSpherical.current.radius;
+      const width = Math.max(domElement.clientWidth, 1);
+      const height = Math.max(domElement.clientHeight, 1);
+      const swipeCap = TOUCH_MAX_SWIPE_ARC / width;
+      const bodyRadius = getBodyRadius(planet);
+      if (bodyRadius <= 0) {
+        return (swipeCap * radius) / getOrbitLimits(planet).defaultRadius;
+      }
+      const halfFovTan = Math.tan(THREE.MathUtils.degToRad(getVerticalFov(camera)) / 2);
+      const worldPerPixel = (2 * getSurfaceDistance(radius, bodyRadius) * halfFovTan) / height;
+      return Math.min(worldPerPixel / bodyRadius, swipeCap);
     };
 
     const handlePointerDown = (event: PointerEvent) => {
       if (settings.freeCameraEnabled) {
+        panState.lastGestureWasDrag = false;
         return;
       }
-      isPointerDown.current = true;
-      panState.isPanning = true;
-      panState.hasDragged = false;
-      previousPointer.current = { x: event.clientX, y: event.clientY };
-      pointerDownOrigin.current = { x: event.clientX, y: event.clientY };
-      gl.domElement.style.cursor = "grabbing";
-
-      document.addEventListener("pointermove", handlePointerMove);
-      document.addEventListener("pointerup", handlePointerUp);
+      if (pointers.size === 0) {
+        focusAnimation.current = null;
+        gesture.pointerType = event.pointerType;
+        gesture.maxPointers = 0;
+        gesture.moved = false;
+        panState.isPanning = true;
+        domElement.style.cursor = "grabbing";
+      }
+      pointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+        originX: event.clientX,
+        originY: event.clientY,
+      });
+      gesture.maxPointers = Math.max(gesture.maxPointers, pointers.size);
+      rebaseline();
     };
 
     const handlePointerMove = (event: PointerEvent) => {
-      if (!isPointerDown.current) {
+      const pointer = pointers.get(event.pointerId);
+      if (!pointer) {
         return;
       }
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
 
-      if (!panState.hasDragged) {
-        const dx = event.clientX - pointerDownOrigin.current.x;
-        const dy = event.clientY - pointerDownOrigin.current.y;
-        if (dx * dx + dy * dy > 9) {
-          panState.hasDragged = true;
+      if (!gesture.moved) {
+        const dx = pointer.x - pointer.originX;
+        const dy = pointer.y - pointer.originY;
+        const slop = slopFor(gesture.pointerType);
+        if (dx * dx + dy * dy > slop * slop) {
+          if (!gesture.moved) {
+            useTileInspectStore.getState().clear();
+          }
+          gesture.moved = true;
         }
       }
 
-      const deltaX = event.clientX - previousPointer.current.x;
-      const deltaY = event.clientY - previousPointer.current.y;
+      const { x, y, spread } = measurePointers(pointers);
+      const speed = radiansPerPixel();
+      rotateBy((x - gesture.centroidX) * speed, (y - gesture.centroidY) * speed);
 
-      const orbitSpeed = 0.0003;
+      if (pointers.size >= 2 && gesture.spread > 0 && spread > 0) {
+        const radius = targetSpherical.current.radius;
+        const bodyRadius = getBodyRadius(activePlanetRef.current);
+        const surfaceDistance = getSurfaceDistance(radius, bodyRadius);
+        const nextSurfaceDistance = (surfaceDistance * gesture.spread) / spread;
+        zoomTo(radius + nextSurfaceDistance - surfaceDistance, { x, y });
+      }
 
-      targetSpherical.current.theta -= deltaX * orbitSpeed;
-      targetSpherical.current.phi = THREE.MathUtils.clamp(
-        targetSpherical.current.phi - deltaY * orbitSpeed,
-        MIN_POLAR_ANGLE,
-        MAX_POLAR_ANGLE,
-      );
-
-      previousPointer.current = { x: event.clientX, y: event.clientY };
+      gesture.centroidX = x;
+      gesture.centroidY = y;
+      gesture.spread = spread;
     };
 
-    const handlePointerUp = () => {
-      isPointerDown.current = false;
+    const handlePointerEnd = (event: PointerEvent) => {
+      if (!pointers.delete(event.pointerId)) {
+        return;
+      }
+      panState.lastGestureWasDrag = gesture.moved || gesture.maxPointers > 1;
+      if (pointers.size > 0) {
+        rebaseline();
+        return;
+      }
       panState.isPanning = false;
-      gl.domElement.style.cursor = "grab";
-
-      document.removeEventListener("pointermove", handlePointerMove);
-      document.removeEventListener("pointerup", handlePointerUp);
+      domElement.style.cursor = "grab";
     };
 
     const handleWheel = (event: WheelEvent) => {
@@ -317,39 +466,31 @@ export function PanControls() {
         return;
       }
       event.preventDefault();
-      const planet = activePlanetRef.current;
-      if (planet === "solar-system") {
-        return;
-      }
-      const orbit =
-        planet === "orbital-station" ? ORBITAL_STATION_ORBIT_CONFIG : getPlanetOrbit(planet);
-      const zoomSpeed = 0.5;
-      const zoomDelta = event.deltaY * zoomSpeed * 0.01;
-
-      targetSpherical.current.radius += zoomDelta;
-      targetSpherical.current.radius = Math.max(
-        orbit.minDistance,
-        Math.min(orbit.maxDistance, targetSpherical.current.radius),
-      );
+      focusAnimation.current = null;
+      zoomTo(targetSpherical.current.radius + event.deltaY * WHEEL_ZOOM_SPEED, null);
     };
-
-    const domElement = gl.domElement;
 
     if (!settings.freeCameraEnabled) {
       domElement.style.cursor = "grab";
     }
+    domElement.style.touchAction = "none";
 
     domElement.addEventListener("pointerdown", handlePointerDown);
+    domElement.addEventListener("lostpointercapture", handlePointerEnd);
     domElement.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("resize", handleWindowResize);
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerEnd);
+    document.addEventListener("pointercancel", handlePointerEnd);
 
     return () => {
       domElement.removeEventListener("pointerdown", handlePointerDown);
+      domElement.removeEventListener("lostpointercapture", handlePointerEnd);
       domElement.removeEventListener("wheel", handleWheel);
-
       document.removeEventListener("pointermove", handlePointerMove);
-      document.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("resize", handleWindowResize);
+      document.removeEventListener("pointerup", handlePointerEnd);
+      document.removeEventListener("pointercancel", handlePointerEnd);
+      pointers.clear();
+      panState.isPanning = false;
     };
   }, [camera, gl, spherical, settings.freeCameraEnabled]);
 
