@@ -3,23 +3,30 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { assetWatcher } from "./scripts/assets/vite.ts";
 
+const backendProxy = {
+  "/api": {
+    target: "http://localhost:3001",
+    changeOrigin: true,
+    secure: false,
+  },
+  "/ws": {
+    target: "http://localhost:3001",
+    ws: true,
+    changeOrigin: true,
+  },
+};
+
 export default defineConfig({
   plugins: [react(), assetWatcher()],
   server: {
+    host: true,
     port: 3000,
     open: true,
-    proxy: {
-      "/api": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-        secure: false,
-      },
-      "/ws": {
-        target: "http://localhost:3001",
-        ws: true,
-        changeOrigin: true,
-      },
-    },
+    proxy: backendProxy,
+  },
+  preview: {
+    host: true,
+    proxy: backendProxy,
   },
   resolve: {
     alias: {
