@@ -156,7 +156,7 @@ playwright-cli open http://localhost:3000 --headed
 ## Troubleshooting
 
 - **Browser not installed**: Run `playwright-cli install-browser`
-- **Connection refused**: Frontend is not running - inform the user they need to start it with `make frontend` or `make run`
+- **Connection refused**: Frontend is not running - inform the user they need to start it with `just frontend dev` or `just dev`
 - **Page not found**: Check if the route exists in the known pages table
 - **Session issues**: Use `playwright-cli kill-all` to reset all sessions
 

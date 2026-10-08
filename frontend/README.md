@@ -18,7 +18,7 @@ React frontend for the digital implementation of Terraforming Mars board game wi
 ### Development Mode
 
 ```bash
-npm start
+just frontend dev
 ```
 
 Runs the app in development mode. Opens [http://localhost:3000](http://localhost:3000) to view it in your browser.
@@ -26,24 +26,16 @@ Runs the app in development mode. Opens [http://localhost:3000](http://localhost
 ### Production Build
 
 ```bash
-npm run build
+just frontend build
 ```
 
 Builds the app for production to the `build` folder with optimizations.
 
-### Testing
-
-```bash
-npm test
-```
-
-Launches the test runner in interactive watch mode.
-
 ### Code Quality
 
 ```bash
-npm run lint          # Check for oxlint errors
-npm run format:write  # Format code with Prettier
+just frontend check   # format-check, oxlint, typecheck and asset checks
+just frontend format  # Format code with oxfmt
 ```
 
 ## Architecture
@@ -185,7 +177,7 @@ This updates `src/types/generated/` with latest backend types.
 2. **Maintain 3D performance**: Keep 60fps in 3D views
 3. **Test WebSocket integration**: Verify real-time functionality
 4. **Use existing UI components**: Leverage CostDisplay, ProductionDisplay
-5. **Run quality checks**: `npm run lint` and `npm run format:write`
+5. **Run quality checks**: `just frontend check` (or `just prepare-for-commit` from the root)
 
 ## Troubleshooting
 

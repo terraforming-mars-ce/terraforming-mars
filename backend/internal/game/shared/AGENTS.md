@@ -53,7 +53,7 @@ All structs embed `ConditionBase` (ResourceType, Amount, Target).
 8. Add DTO struct in `internal/delivery/dto/game_dto.go` with `tstype:` literal union on `type` field
 9. Update the `tygo:emit` union type alias and `toResourceConditionDto` mapper
 10. Update frontend type guards in `frontend/src/types/resourceConditions.ts`
-11. Run `make generate` and `make test`
+11. Run `just generate` and `just test`
 
 ## Adding a New Field to an Existing Category
 
@@ -63,7 +63,7 @@ All structs embed `ConditionBase` (ResourceType, Amount, Target).
 4. Add to the corresponding DTO struct in `game_dto.go`
 5. Update `toResourceConditionDto` mapper in `mapper_card.go`
 6. Update validation profile in `resource_condition_rules.go` if needed
-7. Run `make generate` and `make test`
+7. Run `just generate` and `just test`
 
 ## Accessing Fields
 

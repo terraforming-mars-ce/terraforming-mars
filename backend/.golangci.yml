@@ -1,7 +1,7 @@
 version: "2"
 
 # Architecture guardrail. This config intentionally enables ONLY depguard so it can
-# be wired into `make lint`/CI without surfacing unrelated lint findings. It encodes
+# be wired into `just backend lint`/CI without surfacing unrelated lint findings. It encodes
 # the layer dependency direction the codebase already follows, so the compiler's
 # native cycle rejection is backed by a machine-checked direction rule.
 #

@@ -27,7 +27,7 @@ For detailed guidance on naming, error handling, concurrency, API design, testin
 
 **CRITICAL**: NEVER restart the backend server yourself. ALWAYS ask the user if you think a restart is needed.
 
-- **Normal Mode**: User runs `make backend` or `make run` with **Air hot reload** - server automatically restarts on code changes
+- **Normal Mode**: User runs `just dev` or `just backend dev` with **Air hot reload** - server automatically restarts on code changes
 - **Watch Mode Active**: Code changes (Go files, JSON assets) trigger instant automatic reload
 - **No Manual Restarts**: You should NEVER execute restart commands
 - **If Restart Seems Needed**: Ask user "Should I restart the backend?" (they'll confirm or explain why it's not needed)
@@ -124,53 +124,42 @@ backend/
 ### Running the Server
 
 ```bash
-# From project root
-make backend              # Hot reload via Air (port 3001)
-make run                  # Run both frontend and backend
-
-# Direct commands (from backend/)
-go run cmd/server/main.go
-air                       # Hot reload with Air
+just dev                  # Backend and frontend together (from project root)
+just backend dev          # Backend only, hot reload via Air (port 3001)
+just backend run          # Build and run without hot reload
 ```
 
 ### Testing
 
 ```bash
-# From project root
-make test                 # Run all backend tests
-make test-verbose         # Detailed test output
-make test-coverage        # Generate coverage report
-
-# From backend/
-go test ./test/...        # All tests
-go test ./test/action/    # Specific package
-go test -json ./test/...  # JSON output for parsing
+just backend test                                   # All tests (./test/...)
+just backend test -v -run TestKick ./test/action/... # Args replace the default package pattern
+just backend test -json ./test/...                  # JSON output for parsing
+just backend coverage                               # Coverage report (coverage.html)
+just backend test-race                              # Race detector
 ```
+
+Inside `backend/`, drop the `backend` prefix (`just test`).
 
 **Test Location**: Tests live in `test/` directory, mirroring `internal/` structure. Example: `test/action/confirm_production_cards_test.go` tests `internal/action/confirm_production_cards.go`.
 
 ### Code Quality
 
 ```bash
-# From project root
-make lint-backend         # Run Go formatting
-make format               # Format all code
-
-# From backend/
-make format               # Run gofmt
-go fmt ./...              # Direct formatting
+just backend lint         # go vet + errcheck + golangci-lint (depguard architecture rules)
+just backend format       # gofmt -s
+just backend check        # format-check, lint, tests and generate-check — what CI runs
 ```
+
+errcheck, air and tygo are pinned as `tool` dependencies in `go.mod`; golangci-lint is pinned in `golangci-lint.mod`. All run via `go tool`, so no global installs are needed.
 
 ### Type Generation
 
 Generate TypeScript types for frontend consumption:
 
 ```bash
-# From project root
-make generate             # Generate types from Go structs
-
-# From backend/
-tygo generate             # Direct tygo command
+just generate             # Generate types from Go structs and format the output
+just generate-check       # Fail if the committed types are stale (part of `just check` and CI)
 ```
 
 Add `ts:` tags to structs for type generation:
@@ -317,12 +306,10 @@ DTO structs in `internal/delivery/dto/` generate TypeScript interfaces via `tygo
 - `//tygo:emit <code>` — emits literal TypeScript before a struct (used for union type aliases)
 - `ts:"..."` — **ignored by tygo**, do not use
 
-**ALWAYS run `make format` after `make generate`.** `make generate` runs only
-`tygo generate`, which emits UNFORMATTED `frontend/src/types/generated/api-types.ts`
-(e.g. `int */}` vs the committed `int */ }`, unwrapped long literals). The committed
-file is the post-`make format` version, so a bare `make generate` produces a large
-whitespace-only diff even when no Go DTO changed. Never commit that raw drift —
-`make format`, then verify the remaining diff reflects only your actual DTO change.
+`just generate` runs `tygo generate` and then formats `frontend/src/types/generated/api-types.ts`
+with oxfmt, so its output matches the committed file. Never run bare `tygo generate`:
+its unformatted output produces a large whitespace-only diff. `just generate-check`
+fails when the committed file differs from a fresh `just generate`.
 
 ### Behavior Condition System
 
@@ -335,7 +322,7 @@ The DTO layer maps typed Go conditions to category-specific DTO structs (`BasicR
 1. Modify Go structs in `internal/game/` or subpackages
 2. Update corresponding DTOs in `internal/delivery/dto/`
 3. Update DTO mappers in `internal/delivery/dto/mapper_*.go`
-4. Run `make generate` from project root
+4. Run `just generate`
 5. Frontend automatically gets updated types
 
 ## Important Notes
@@ -624,7 +611,7 @@ func TestPlayerService_DoAction(t *testing.T) {
 4. Create action in `internal/action/` extending BaseAction
 5. Add DTOs in `internal/delivery/dto/`
 6. Add mappers in `internal/delivery/dto/mapper.go`
-7. Run `make generate` to sync TypeScript types
+7. Run `just generate` to sync TypeScript types
 
 ### Adding a New Game Rule
 
