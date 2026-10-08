@@ -4,7 +4,9 @@ import CardRevealOverlay from "@/components/ui/overlay/CardRevealOverlay.tsx";
 import EffectSelectionOverlay from "@/components/ui/overlay/EffectSelectionOverlay.tsx";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import GameLayout, { SolarSystemFade } from "./GameLayout.tsx";
+import GameLayout, { SolarSystemFade, type GameLayoutProps } from "./GameLayout.tsx";
+import MobileGameLayout from "../../mobile/MobileGameLayout.tsx";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 import CardsPlayedModal from "../../ui/modals/CardsPlayedModal.tsx";
 import ProductionPhaseModal from "../../ui/modals/ProductionPhaseModal.tsx";
 import PaymentSelectionPopover from "../../ui/popover/PaymentSelectionPopover.tsx";
@@ -44,7 +46,7 @@ import GameButton from "../../ui/buttons/GameButton.tsx";
 import { BotPersonaChip, PlayerChip } from "../../ui/display/BotChips.tsx";
 import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
 import CardBrowserOverlay from "../../ui/overlay/CardBrowserOverlay.tsx";
-import MainMenuHamburger from "../../ui/buttons/MainMenuHamburger.tsx";
+import MainMenuHamburger, { CurrentGameMenuButton } from "../../ui/buttons/MainMenuHamburger.tsx";
 import EndGameBottomBar from "../../ui/endgame/EndGameBottomBar.tsx";
 import { VPCountingProvider } from "../../../contexts/VPCountingContext.tsx";
 import { useVPCountingAnimation } from "@/hooks/useVPCountingAnimation.ts";
@@ -94,6 +96,97 @@ import { useGameHotkeys } from "@/hooks/useGameHotkeys.ts";
 import { PlanetFocusProvider } from "../../../contexts/PlanetFocusContext.tsx";
 
 const ARRIVAL_LOADING_DELAY_MS = 600;
+
+function WaitingPlayerList({ game }: { game: GameDto }) {
+  const allPlayers: {
+    id: string;
+    name: string;
+    isReady: boolean;
+    isSelf: boolean;
+    playerType: string;
+    botPersona?: string;
+    botStatus?: string;
+  }[] = [];
+
+  if (game.currentPlayer) {
+    allPlayers.push({
+      id: game.currentPlayer.id,
+      name: game.currentPlayer.name,
+      isReady:
+        !game.currentPlayer.selectCorporationPhase &&
+        !game.currentPlayer.selectPreludeCardsPhase &&
+        !game.currentPlayer.selectStartingCardsPhase &&
+        !!game.currentPlayer.corporation,
+      isSelf: true,
+      playerType: game.currentPlayer.playerType,
+      botPersona: game.currentPlayer.botPersona || undefined,
+      botStatus: game.currentPlayer.botStatus || undefined,
+    });
+  }
+
+  game.otherPlayers?.forEach((other) => {
+    allPlayers.push({
+      id: other.id,
+      name: other.name,
+      isReady:
+        !other.selectStartingCardsPhase &&
+        !other.selectCorporationPhase &&
+        !other.selectPreludeCardsPhase &&
+        !!other.corporation,
+      isSelf: false,
+      playerType: other.playerType,
+      botPersona: other.botPersona || undefined,
+      botStatus: other.botStatus || undefined,
+    });
+  });
+
+  const ordered = game.turnOrder?.length
+    ? game.turnOrder
+        .map((pid) => allPlayers.find((p) => p.id === pid))
+        .filter((p) => p !== undefined)
+    : allPlayers;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {ordered.map((player) => (
+        <div
+          key={player.id}
+          className="flex flex-wrap justify-between items-center gap-2 py-2 px-3 bg-black/40 border border-space-blue-600/50"
+        >
+          <span className="text-white text-sm font-medium">{player.name}</span>
+          <div className="player-chip-group">
+            {player.isSelf && <PlayerChip className="bg-space-blue-800 text-white">You</PlayerChip>}
+            {player.playerType === "bot" && (
+              <BotPersonaChip persona={player.botPersona} botStatus={player.botStatus} />
+            )}
+            {player.isReady ? (
+              <PlayerChip className="bg-emerald-700/80 text-white">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Ready
+              </PlayerChip>
+            ) : (
+              <PlayerChip className="bg-white/10 text-white/70">
+                <div className="w-2.5 h-2.5 border border-white/50 border-t-transparent rounded-full animate-spin" />
+                Selecting...
+              </PlayerChip>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function GameInterface() {
   const location = useLocation();
@@ -204,6 +297,7 @@ export default function GameInterface() {
   const replaySpectatePlayerId = useSpectateStore((s) => s.replaySpectatePlayerId);
 
   // --- Hooks ---
+  const { isCompact } = useLayoutMode();
   const flow = useCardPlayFlow();
   const { attemptReconnection: _attemptReconnection } = useWebSocketConnection(
     navigate,
@@ -397,10 +491,7 @@ export default function GameInterface() {
   }, []);
 
   // --- Leave/end game handlers ---
-  const handleLeaveGame = useCallback(() => {
-    useUIOverlayStore.getState().setShowEndGameConfirm(false);
-    useUIOverlayStore.getState().setShowLeaveGameConfirm(true);
-  }, []);
+  const handleLeaveGame = useUIOverlayStore((s) => s.requestLeaveGame);
 
   const handleConfirmLeaveGame = useCallback(() => {
     useUIOverlayStore.getState().setShowLeaveGameConfirm(false);
@@ -412,10 +503,7 @@ export default function GameInterface() {
     }, 100);
   }, [navigate]);
 
-  const handleEndGame = useCallback(() => {
-    useUIOverlayStore.getState().setShowLeaveGameConfirm(false);
-    useUIOverlayStore.getState().setShowEndGameConfirm(true);
-  }, []);
+  const handleEndGame = useUIOverlayStore((s) => s.requestEndGame);
 
   const handleConfirmEndGame = useCallback(() => {
     useUIOverlayStore.getState().setShowEndGameConfirm(false);
@@ -625,6 +713,67 @@ export default function GameInterface() {
     }
   }, [inspectionBlocked, inspectionHand, inspectionStore, clearInspection, finishInspection]);
 
+  const handleMobilePlayCard = useCallback(
+    (cardId: string) => {
+      void flow.handlePlayCard(cardId);
+    },
+    [flow.handlePlayCard],
+  );
+
+  const handleSendChatMessage = useCallback((message: string) => {
+    void globalWebSocketManager.sendChatMessage(message);
+  }, []);
+
+  const layoutProps: GameLayoutProps | null = game
+    ? {
+        inspectionStore,
+        inspectionHand,
+        inspectionBlocked,
+        onInspectionDrag: dragInspectionCard,
+        gameState: replayGameState ?? game,
+        currentPlayer: replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer),
+        playedCards: replayViewAsPlayer?.playedCards ?? currentPlayer?.playedCards ?? [],
+        corporationCard: replayViewAsPlayer?.corporation ?? corporationData,
+        initTurnPlayerId: displayedInitPlayerId,
+        showStartingSelection,
+        animateHexEntrance:
+          phase.kind === "marsRevealed" ||
+          phase.kind === "showcase" ||
+          phase.kind === "animateUI" ||
+          phase.kind === "playing" ||
+          phase.kind === "completed",
+        startDark: phase.kind === "loading" || phase.kind === "lobby",
+        tilesHidden:
+          phase.kind === "loading" || phase.kind === "lobby" || phase.kind === "fadeOutLobby",
+        changedPaths,
+        triggeredEffects,
+        bottomBarCallbacks,
+        onStandardProjectSelect: flow.handleStandardProjectSelect,
+        onLeaveGame: handleLeaveGame,
+        onEndGame: handleEndGame,
+        onSkyboxReady: handleSkyboxReady,
+        onGpuReady: handleGpuReady,
+        onPlayerClick: handlePlayerClick,
+        spectatingPlayer: spectatePlayer,
+        spectatingCorporation: spectatePlayer?.corporation ?? null,
+        spectatePlayerColor,
+        onStopSpectating: handleStopSpectating,
+        isGameSpectator: isSpectator,
+        chatMessages,
+        onSendChatMessage: handleSendChatMessage,
+        playerColorMap,
+        endgameFadeUI,
+        isEndgame: isGameComplete,
+        activeEndgamePanel: endgamePanel,
+        onEndgamePanelChange: handleEndgamePanelChange,
+        hasHistory,
+        playedCardNotification: playedCardNotification.currentNotification,
+        isPlayedCardPinned: playedCardNotification.isPinned,
+        onPlayedCardTogglePin: playedCardNotification.togglePin,
+        onPlayedCardAdvance: playedCardNotification.advance,
+      }
+    : null;
+
   const cardFanTransitionClass = (() => {
     if (spectatePlayerId) {
       return "opacity-0 pointer-events-none";
@@ -688,61 +837,20 @@ export default function GameInterface() {
         }
       `}</style>
 
-        {game &&
+        {layoutProps &&
           phase.kind !== "selecting" &&
           phase.kind !== "joining" &&
-          phase.kind !== "spectating" && (
-            <GameLayout
-              ref={playerListRef}
-              inspectionStore={inspectionStore}
-              inspectionHand={inspectionHand}
-              inspectionBlocked={inspectionBlocked}
-              onInspectionDrag={dragInspectionCard}
-              gameState={replayGameState ?? game}
-              currentPlayer={replayViewAsPlayer ?? (replay.isActive ? null : currentPlayer)}
-              playedCards={replayViewAsPlayer?.playedCards ?? currentPlayer?.playedCards ?? []}
-              corporationCard={replayViewAsPlayer?.corporation ?? corporationData}
-              initTurnPlayerId={displayedInitPlayerId}
-              showStartingSelection={showStartingSelection}
-              animateHexEntrance={
-                phase.kind === "marsRevealed" ||
-                phase.kind === "showcase" ||
-                phase.kind === "animateUI" ||
-                phase.kind === "playing" ||
-                phase.kind === "completed"
-              }
-              startDark={phase.kind === "loading" || phase.kind === "lobby"}
-              tilesHidden={
-                phase.kind === "loading" || phase.kind === "lobby" || phase.kind === "fadeOutLobby"
-              }
-              changedPaths={changedPaths}
-              triggeredEffects={triggeredEffects}
-              bottomBarCallbacks={bottomBarCallbacks}
-              onStandardProjectSelect={flow.handleStandardProjectSelect}
-              onLeaveGame={handleLeaveGame}
-              onEndGame={handleEndGame}
-              onSkyboxReady={handleSkyboxReady}
-              onGpuReady={handleGpuReady}
-              onPlayerClick={handlePlayerClick}
-              spectatingPlayer={spectatePlayer}
-              spectatingCorporation={spectatePlayer?.corporation ?? null}
-              spectatePlayerColor={spectatePlayerColor}
-              onStopSpectating={handleStopSpectating}
-              isGameSpectator={isSpectator}
-              chatMessages={chatMessages}
-              onSendChatMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
-              playerColorMap={playerColorMap}
-              endgameFadeUI={endgameFadeUI}
-              isEndgame={isGameComplete}
-              activeEndgamePanel={endgamePanel}
-              onEndgamePanelChange={handleEndgamePanelChange}
-              hasHistory={hasHistory}
-              playedCardNotification={playedCardNotification.currentNotification}
-              isPlayedCardPinned={playedCardNotification.isPinned}
-              onPlayedCardTogglePin={playedCardNotification.togglePin}
-              onPlayedCardAdvance={playedCardNotification.advance}
+          phase.kind !== "spectating" &&
+          (isCompact ? (
+            <MobileGameLayout
+              {...layoutProps}
+              onPlayCard={handleMobilePlayCard}
+              onInspectCard={inspectCard}
+              isReplay={replay.isActive}
             />
-          )}
+          ) : (
+            <GameLayout ref={playerListRef} {...layoutProps} />
+          ))}
 
         <CardsPlayedModal
           isVisible={showCardsPlayedModal}
@@ -803,6 +911,7 @@ export default function GameInterface() {
                     messages={chatMessages}
                     onSendMessage={(msg) => void globalWebSocketManager.sendChatMessage(msg)}
                     embedded
+                    fill={isCompact}
                     playerColorMap={playerColorMap}
                   />
                 ) : null
@@ -912,7 +1021,7 @@ export default function GameInterface() {
           </GameMenuModal>
         )}
 
-        {showStartingSelection && !isStartingSelectionHidden && game && (
+        {showStartingSelection && !isStartingSelectionHidden && game && !isCompact && (
           <MainMenuHamburger
             gameId={game.id}
             onLeaveGame={handleLeaveGame}
@@ -939,7 +1048,7 @@ export default function GameInterface() {
 
         {showStartingSelection && isStartingSelectionHidden && marsRevealedReady && (
           <GameButton
-            className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
+            className="fixed top-[80px] left-[70%] compact:top-[calc(var(--safe-top)+8px)] compact:left-auto compact:right-[calc(var(--safe-right)+8px)] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
             style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
             onClick={() => useUIOverlayStore.getState().setIsStartingSelectionHidden(false)}
           >
@@ -949,122 +1058,55 @@ export default function GameInterface() {
 
         {showWaitingForPlayers && game && (
           <>
-            <MainMenuHamburger
-              gameId={game.id}
-              onLeaveGame={handleLeaveGame}
-              onEndGame={playerId === game.hostPlayerId ? handleEndGame : undefined}
-            />
-            <div
-              className="fixed inset-0 flex items-center justify-center"
-              style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
-            >
-              <div className="w-[450px] max-w-[90vw] game-panel game-panel-clipped game-window p-8 animate-[modalFadeIn_0.3s_ease-out]">
-                <div className="text-center mb-6">
-                  <h2 className="font-orbitron text-white text-[24px] m-0 mb-2 text-shadow-glow font-bold tracking-wider">
-                    Waiting for players...
+            {!isCompact && (
+              <MainMenuHamburger
+                gameId={game.id}
+                onLeaveGame={handleLeaveGame}
+                onEndGame={playerId === game.hostPlayerId ? handleEndGame : undefined}
+              />
+            )}
+            {isCompact ? (
+              <div
+                data-testid="mobile-waiting-for-players"
+                className="fixed inset-0 flex flex-col text-white bg-[rgba(3,3,4,0.98)] animate-[modalFadeIn_0.3s_ease-out]"
+                style={{
+                  zIndex: Z_INDEX.CORPORATION_SELECTION,
+                  paddingTop: "var(--safe-top)",
+                  paddingRight: "var(--safe-right)",
+                  paddingBottom: "var(--safe-bottom)",
+                  paddingLeft: "var(--safe-left)",
+                }}
+              >
+                <header className="shrink-0 h-11 flex items-center gap-2 pr-3 border-b border-white/15">
+                  <CurrentGameMenuButton />
+                  <h2 className="m-0 font-orbitron text-[13px] font-bold uppercase tracking-wider text-white">
+                    Waiting for players
                   </h2>
+                </header>
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3">
+                  <WaitingPlayerList game={game} />
                 </div>
-
-                <div className="mb-6">
-                  <h3 className="font-orbitron text-white text-sm font-semibold mb-2 uppercase tracking-wide">
-                    Players
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                    {(() => {
-                      const allPlayers: {
-                        id: string;
-                        name: string;
-                        isReady: boolean;
-                        isSelf: boolean;
-                        playerType: string;
-                        botPersona?: string;
-                        botStatus?: string;
-                      }[] = [];
-
-                      if (game.currentPlayer) {
-                        allPlayers.push({
-                          id: game.currentPlayer.id,
-                          name: game.currentPlayer.name,
-                          isReady:
-                            !game.currentPlayer.selectCorporationPhase &&
-                            !game.currentPlayer.selectPreludeCardsPhase &&
-                            !game.currentPlayer.selectStartingCardsPhase &&
-                            !!game.currentPlayer.corporation,
-                          isSelf: true,
-                          playerType: game.currentPlayer.playerType,
-                          botPersona: game.currentPlayer.botPersona || undefined,
-                          botStatus: game.currentPlayer.botStatus || undefined,
-                        });
-                      }
-
-                      game.otherPlayers?.forEach((other) => {
-                        allPlayers.push({
-                          id: other.id,
-                          name: other.name,
-                          isReady:
-                            !other.selectStartingCardsPhase &&
-                            !other.selectCorporationPhase &&
-                            !other.selectPreludeCardsPhase &&
-                            !!other.corporation,
-                          isSelf: false,
-                          playerType: other.playerType,
-                          botPersona: other.botPersona || undefined,
-                          botStatus: other.botStatus || undefined,
-                        });
-                      });
-
-                      const ordered = game.turnOrder?.length
-                        ? game.turnOrder
-                            .map((pid) => allPlayers.find((p) => p.id === pid))
-                            .filter((p) => p !== undefined)
-                        : allPlayers;
-
-                      return ordered.map((player) => (
-                        <div
-                          key={player.id}
-                          className="flex flex-wrap justify-between items-center gap-2 py-2 px-3 bg-black/40 border border-space-blue-600/50"
-                        >
-                          <span className="text-white text-sm font-medium">{player.name}</span>
-                          <div className="player-chip-group">
-                            {player.isSelf && (
-                              <PlayerChip className="bg-space-blue-800 text-white">You</PlayerChip>
-                            )}
-                            {player.playerType === "bot" && (
-                              <BotPersonaChip
-                                persona={player.botPersona}
-                                botStatus={player.botStatus}
-                              />
-                            )}
-                            {player.isReady ? (
-                              <PlayerChip className="bg-emerald-700/80 text-white">
-                                <svg
-                                  width="10"
-                                  height="10"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="3"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                                Ready
-                              </PlayerChip>
-                            ) : (
-                              <PlayerChip className="bg-white/10 text-white/70">
-                                <div className="w-2.5 h-2.5 border border-white/50 border-t-transparent rounded-full animate-spin" />
-                                Selecting...
-                              </PlayerChip>
-                            )}
-                          </div>
-                        </div>
-                      ));
-                    })()}
+              </div>
+            ) : (
+              <div
+                className="fixed inset-0 flex items-center justify-center"
+                style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
+              >
+                <div className="w-[450px] max-w-[90vw] game-panel game-panel-clipped game-window p-8 animate-[modalFadeIn_0.3s_ease-out]">
+                  <div className="text-center mb-6">
+                    <h2 className="font-orbitron text-white text-[24px] m-0 mb-2 text-shadow-glow font-bold tracking-wider">
+                      Waiting for players...
+                    </h2>
+                  </div>
+                  <div className="mb-6">
+                    <h3 className="font-orbitron text-white text-sm font-semibold mb-2 uppercase tracking-wide">
+                      Players
+                    </h3>
+                    <WaitingPlayerList game={game} />
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </>
         )}
 
@@ -1117,6 +1159,7 @@ export default function GameInterface() {
         )}
 
         {game &&
+          !isCompact &&
           isInGameWorld(phase) &&
           (currentPlayer || replayViewAsPlayer) &&
           (game.currentPhase !== GamePhaseComplete || !!replayViewAsPlayer) && (
@@ -1135,12 +1178,14 @@ export default function GameInterface() {
             </SolarSystemFade>
           )}
 
-        <CorporationOverlay
-          visible={showCorporationOverlay}
-          onClose={() => useUIOverlayStore.getState().setShowCorporationOverlay(false)}
-          currentPlayer={replayViewAsPlayer ?? currentPlayer}
-          otherPlayers={game?.otherPlayers ?? []}
-        />
+        {!isCompact && (
+          <CorporationOverlay
+            visible={showCorporationOverlay}
+            onClose={() => useUIOverlayStore.getState().setShowCorporationOverlay(false)}
+            currentPlayer={replayViewAsPlayer ?? currentPlayer}
+            otherPlayers={game?.otherPlayers ?? []}
+          />
+        )}
 
         {game &&
           playerId &&
@@ -1511,7 +1556,7 @@ export default function GameInterface() {
 
         {showProductionPhaseModal && isProductionModalHidden && (
           <GameButton
-            className="fixed top-[80px] left-[70%] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
+            className="fixed top-[80px] left-[70%] compact:top-[calc(var(--hud-top-h)+var(--safe-top)+8px)] compact:left-auto compact:right-[calc(var(--hud-rail-right-w)+var(--safe-right)+8px)] !py-3.5 !px-7 !text-base !border-space-blue-400 text-shadow-glow shadow-[0_4px_15px_rgba(0,0,0,0.5),0_0_20px_rgba(30,60,150,0.4)] whitespace-nowrap hover:!border-space-blue-500 hover:shadow-[0_6px_20px_rgba(0,0,0,0.6),0_0_35px_rgba(30,60,150,0.6)] active:shadow-[0_2px_10px_rgba(0,0,0,0.4),0_0_20px_rgba(30,60,150,0.4)]"
             style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
             onClick={() => {
               useUIOverlayStore.getState().setIsProductionModalHidden(false);
