@@ -19,6 +19,11 @@ import CorporationCard from "../cards/CorporationCard.tsx";
 import type { CardDisplaySize, CardFamily } from "./cardCatalog.ts";
 
 const noop = () => {};
+const CORPORATION_CARD_WIDTH = 400;
+const CORPORATION_ROW_HEIGHT = 450;
+const PROJECT_ROW_HEIGHT = 348;
+const INSPECTION_ROW_HEIGHT = 572;
+const PROJECT_ROW_EXTRA_HEIGHT = 68;
 
 const CatalogCard = memo(function CatalogCard({
   card,
@@ -43,7 +48,7 @@ const CatalogCard = memo(function CatalogCard({
       tabIndex={tabIndex}
       data-card-id={card.id}
       className={`mx-auto w-full pb-3 cursor-pointer rounded-sm outline-none motion-reduce:[&_*]:animate-none motion-reduce:[&_*]:transition-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-4 focus-visible:ring-offset-black ${corporation ? "" : "grid row-span-2 grid-rows-subgrid"}`}
-      style={{ maxWidth: corporation ? 400 : projectWidth }}
+      style={{ maxWidth: corporation ? `min(${CORPORATION_CARD_WIDTH}px, 100%)` : projectWidth }}
       onClick={() => onSelect(card.id)}
     >
       {corporation ? (
@@ -84,13 +89,23 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
 }: VirtualCardGridProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [{ width, projectCardWidth }, setDimensions] = useState({ width: 0, projectCardWidth: 0 });
+  const [{ width, projectCardWidth, projectCardHeight }, setDimensions] = useState({
+    width: 0,
+    projectCardWidth: 0,
+    projectCardHeight: 0,
+  });
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const pendingFocus = useRef<string | null>(null);
   const anchorId = useRef<string | null>(null);
-  const cardWidth = family === "corporation" ? 400 : projectCardWidth;
+  const cardWidth =
+    family === "corporation" ? Math.min(CORPORATION_CARD_WIDTH, width) : projectCardWidth;
   const columns = Math.max(1, Math.floor((width - 8 + 24) / (cardWidth + 24)));
-  const projectRowHeight = size === "large" ? 572 : 348;
+  let projectRowHeight = PROJECT_ROW_HEIGHT;
+  if (size === "large") {
+    projectRowHeight = INSPECTION_ROW_HEIGHT;
+  } else if (projectCardHeight > 0) {
+    projectRowHeight = Math.min(PROJECT_ROW_HEIGHT, projectCardHeight + PROJECT_ROW_EXTRA_HEIGHT);
+  }
   const rows = useMemo(() => {
     const result: CardDto[][] = [];
     for (let i = 0; i < cards.length; i += columns) {
@@ -118,7 +133,7 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
   const virtualizer = useVirtualizer({
     count: width > 0 ? rows.length : 0,
     getScrollElement: () => viewportRef.current,
-    estimateSize: () => (family === "corporation" ? 450 : projectRowHeight),
+    estimateSize: () => (family === "corporation" ? CORPORATION_ROW_HEIGHT : projectRowHeight),
     getItemKey,
     overscan: 2,
     gap: 24,
@@ -135,17 +150,18 @@ const VirtualCardGrid = memo(function VirtualCardGrid({
       return;
     }
     const measure = () => {
+      const style = getComputedStyle(content);
       const dimensions = {
         width: content.clientWidth,
         projectCardWidth: parseFloat(
-          getComputedStyle(content).getPropertyValue(
-            size === "large" ? "--card-inspection-width" : "--card-width",
-          ),
+          style.getPropertyValue(size === "large" ? "--card-inspection-width" : "--card-width"),
         ),
+        projectCardHeight: parseFloat(style.getPropertyValue("--card-height")) || 0,
       };
       setDimensions((previous) =>
         previous.width === dimensions.width &&
-        previous.projectCardWidth === dimensions.projectCardWidth
+        previous.projectCardWidth === dimensions.projectCardWidth &&
+        previous.projectCardHeight === dimensions.projectCardHeight
           ? previous
           : dimensions,
       );

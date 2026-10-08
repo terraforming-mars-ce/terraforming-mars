@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GamePopover } from "../GamePopover";
 import GameButton from "../buttons/GameButton.tsx";
+import { MENU_POPOVER_WIDTH, useMenuPopoverPosition } from "./useMenuPopoverPosition.ts";
 
 interface SpectatePopoverProps {
   isVisible: boolean;
@@ -16,6 +17,7 @@ const SpectatePopover: React.FC<SpectatePopoverProps> = ({
   gameId,
   anchorRef,
 }) => {
+  const position = useMenuPopoverPosition(anchorRef);
   const navigate = useNavigate();
   const [name, setName] = useState("");
 
@@ -35,10 +37,10 @@ const SpectatePopover: React.FC<SpectatePopoverProps> = ({
     <GamePopover
       isVisible={isVisible}
       onClose={onClose}
-      position={{ type: "anchor", anchorRef, placement: "below" }}
+      position={position}
       theme="menu"
       header={{ title: "Spectate game", showCloseButton: true }}
-      width={360}
+      width={MENU_POPOVER_WIDTH}
       maxHeight="none"
       animation="slideDown"
     >

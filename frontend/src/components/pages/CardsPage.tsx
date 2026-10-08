@@ -1,3 +1,4 @@
+import { MainMenuDrawerButton } from "../ui/buttons/MainMenuHamburger.tsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import CardBrowser from "../ui/CardBrowser.tsx";
@@ -97,5 +98,12 @@ export default function CardsPage() {
   );
   const handleBack = useCallback(() => navigate("/"), [navigate]);
 
-  return <CardBrowser onBack={handleBack} view={view} onViewChange={handleViewChange} />;
+  return (
+    <CardBrowser
+      onBack={handleBack}
+      view={view}
+      onViewChange={handleViewChange}
+      headerStart={<MainMenuDrawerButton />}
+    />
+  );
 }

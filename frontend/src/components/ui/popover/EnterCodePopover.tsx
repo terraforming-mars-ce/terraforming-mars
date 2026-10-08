@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GamePopover } from "../GamePopover";
 import GameButton from "../buttons/GameButton.tsx";
+import { MENU_POPOVER_WIDTH, useMenuPopoverPosition } from "./useMenuPopoverPosition.ts";
 import { apiService } from "@/services/apiService";
 import { GameDto } from "@/types/generated/api-types";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -23,6 +24,7 @@ const EnterCodePopover: React.FC<EnterCodePopoverProps> = ({
   initialCode,
   anchorRef,
 }) => {
+  const position = useMenuPopoverPosition(anchorRef);
   const navigate = useNavigate();
   const { showNotification } = useNotifications();
   const [gameId, setGameId] = useState(initialCode || "");
@@ -107,10 +109,10 @@ const EnterCodePopover: React.FC<EnterCodePopoverProps> = ({
     <GamePopover
       isVisible={isVisible}
       onClose={onClose}
-      position={{ type: "anchor", anchorRef, placement: "below" }}
+      position={position}
       theme="menu"
       header={{ title: "Enter game code", showCloseButton: true }}
-      width={360}
+      width={MENU_POPOVER_WIDTH}
       maxHeight="none"
       animation="slideDown"
     >
