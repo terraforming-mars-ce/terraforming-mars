@@ -2,8 +2,12 @@ import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Z_INDEX } from "@/constants/zIndex";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
 
 type GameFlowType = "immediate" | "interactive" | "interactive-mandatory";
+
+const COMPACT_PROMPT_PADDING =
+  "calc(var(--safe-top) + 8px) calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 8px) calc(var(--safe-left) + 16px)";
 
 interface GameFlowPopoverProps {
   isVisible: boolean;
@@ -13,6 +17,7 @@ interface GameFlowPopoverProps {
   outerClassName?: string;
   renderSiblings?: React.ReactNode;
   handleEscapeKey?: boolean;
+  compactFill?: boolean;
   children: React.ReactNode;
 }
 
@@ -24,11 +29,16 @@ export function GameFlowPopover({
   outerClassName = "",
   renderSiblings,
   handleEscapeKey = true,
+  compactFill = false,
   children,
 }: GameFlowPopoverProps) {
-  const host = useCardPlayFlowStore((state) =>
-    state.playSession?.phase === "choosing" ? state.playPromptHost : null,
-  );
+  const { isCompact } = useLayoutMode();
+  const host = useCardPlayFlowStore((state) => {
+    if (isCompact || state.playSession?.phase === "choosing") {
+      return state.playPromptHost;
+    }
+    return null;
+  });
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -54,7 +64,8 @@ export function GameFlowPopover({
   useEffect(() => {
     const preventScroll = (event: WheelEvent | TouchEvent) => {
       if (
-        (event.target instanceof Element && event.target.closest("[data-card-play-stage]")) ||
+        (event.target instanceof Element &&
+          event.target.closest("[data-card-play-stage], [data-overlay-layer]")) ||
         (popoverRef.current && popoverRef.current.contains(event.target as Node))
       ) {
         return;
@@ -87,7 +98,7 @@ export function GameFlowPopover({
       }
     };
 
-    const handleClickOutside = (event: MouseEvent) => {
+    const handlePointerOutside = (event: PointerEvent) => {
       if ((event.target as HTMLElement).closest?.("[data-overlay-layer]")) {
         return;
       }
@@ -104,12 +115,12 @@ export function GameFlowPopover({
       if (handleEscapeKey) {
         document.addEventListener("keydown", handleEscape);
       }
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("pointerdown", handlePointerOutside);
     }
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", handlePointerOutside);
     };
   }, [isVisible, isDismissible, type, requestClose, handleEscapeKey]);
 
@@ -118,15 +129,26 @@ export function GameFlowPopover({
   }
 
   const animationClass = isClosing ? "animate-fadeOut" : "animate-popIn";
+  let compactContentClass = "";
+  let compactPanelClass = "";
+  if (isCompact && compactFill) {
+    compactContentClass = "w-full h-full flex flex-col";
+    compactPanelClass = "w-full! min-w-0! flex-1 min-h-0 max-h-none!";
+  } else if (isCompact) {
+    compactContentClass = host
+      ? "w-full max-h-full flex flex-col"
+      : "w-full max-w-[560px] max-h-full flex flex-col";
+    compactPanelClass = "w-full! min-w-0! min-h-0 max-h-none!";
+  }
 
   const content = (
     <div
       ref={popoverRef}
-      className={`relative pointer-events-auto ${animationClass}`}
+      className={`relative pointer-events-auto ${animationClass} ${compactContentClass}`}
       style={host ? { maxWidth: "100%" } : undefined}
     >
       <div
-        className={`min-w-[240px] w-fit max-w-[90vw] max-h-[500px] game-panel game-panel-clipped game-window flex flex-col overflow-hidden pointer-events-auto ${className} ${host ? "max-w-full! min-w-0!" : ""}`}
+        className={`min-w-[240px] w-fit max-w-[90vw] max-h-[min(500px,100dvh_-_32px)] game-panel game-panel-clipped game-window flex flex-col overflow-hidden pointer-events-auto ${className} ${host ? "max-w-full! min-w-0!" : ""} ${compactPanelClass}`}
       >
         {children}
       </div>
@@ -156,15 +178,16 @@ export function GameFlowPopover({
           className={`
           fixed top-0 left-0 right-0 bottom-0
           flex items-center justify-center
-          pointer-events-none overflow-hidden
+          pointer-events-none
           ${outerClassName}
         `}
           style={{
             zIndex:
               type === "immediate" ? Z_INDEX.IMMEDIATE_POPOVER : Z_INDEX.SELECTION_POPOVER + 1,
+            padding: isCompact ? COMPACT_PROMPT_PADDING : undefined,
           }}
         >
-          <div className="pointer-events-auto">{content}</div>
+          {isCompact ? content : <div className="pointer-events-auto">{content}</div>}
         </div>
       )}
 
@@ -250,7 +273,7 @@ interface GameFlowBodyProps {
 export function GameFlowBody({ children, className = "" }: GameFlowBodyProps) {
   return (
     <div
-      className={`min-h-0 flex-1 overflow-y-auto p-2.5 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-white/5 ${className}`}
+      className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-2.5 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-white/5 ${className}`}
     >
       {children}
     </div>
@@ -265,7 +288,7 @@ interface GameFlowFooterProps {
 export function GameFlowFooter({ children, className = "" }: GameFlowFooterProps) {
   return (
     <div
-      className={`shrink-0 px-4 py-3 bg-black/40 border-t border-white/15 flex justify-center ${className}`}
+      className={`shrink-0 px-4 py-3 compact:py-2 bg-black/40 border-t border-white/15 flex justify-center compact:[&_.game-button]:min-h-11 ${className}`}
     >
       {children}
     </div>

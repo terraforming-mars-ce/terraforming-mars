@@ -1,8 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { CardDto, ResourceType, ResourceRemovalTargetDto } from "@/types/generated/api-types.ts";
 import { getResourceName } from "@/utils/resourceColors.ts";
 import GameIcon from "../display/GameIcon.tsx";
-import CardPreviewPanel from "./CardPreviewPanel.tsx";
+import CardTagList from "../cards/CardTagList.tsx";
+import CardPreviewPanel, {
+  CardPreviewButton,
+  CardPreviewOverlay,
+  CardPreviewThumbnail,
+} from "./CardPreviewPanel.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import {
   GameFlowPopover,
@@ -43,10 +48,13 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
 }) => {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<CardDto | null>(null);
+  const [previewCard, setPreviewCard] = useState<CardDto | null>(null);
+  const closePreview = useCallback(() => setPreviewCard(null), []);
 
   const handleBackClick = () => {
     setSelectedPlayerId(null);
     setHoveredCard(null);
+    setPreviewCard(null);
   };
 
   const handleCardClick = (cardId: string) => {
@@ -63,6 +71,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
     if (!isVisible) {
       setSelectedPlayerId(null);
       setHoveredCard(null);
+      setPreviewCard(null);
     }
   }, [isVisible]);
 
@@ -124,7 +133,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
               emphasis="quiet"
               size="sm"
               onClick={handleBackClick}
-              className="!py-0 !px-0 flex items-center gap-1"
+              className="!py-0 !px-0 compact:min-h-11 flex items-center gap-1"
             >
               <svg
                 width="12"
@@ -144,7 +153,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
               {selectedPlayer.name}&apos;s Cards
             </h3>
           </div>
-          <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
+          <div className="text-white/60 text-xs compact:text-[13px] text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
             <span>Select card to remove {amount}</span>
             <GameIcon iconType={resourceType} size="small" />
             <span>from</span>
@@ -159,7 +168,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
           <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
             Select Target
           </h3>
-          <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
+          <div className="text-white/60 text-xs compact:text-[13px] text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
             <span>Remove {amount}</span>
             <GameIcon iconType={resourceType} size="small" />
             <span>from any card</span>
@@ -174,7 +183,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
       <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
         Select Card
       </h3>
-      <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
+      <div className="text-white/60 text-xs compact:text-[13px] text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
         <span>
           Select a card to spend {amount} {getResourceName(resourceType, amount).toLowerCase()}
         </span>
@@ -189,7 +198,12 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
       onClose={onCancel}
       handleEscapeKey={false}
       className="min-w-[280px]"
-      renderSiblings={<CardPreviewPanel card={hoveredCard} />}
+      renderSiblings={
+        <>
+          <CardPreviewPanel card={hoveredCard} />
+          <CardPreviewOverlay card={previewCard} onClose={closePreview} />
+        </>
+      }
     >
       <GameFlowTitle>{selection.kind === "spend" ? spendingTitle : removalTitle}</GameFlowTitle>
 
@@ -203,7 +217,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
                 className="
                   game-panel game-panel-clipped game-choice
                     px-3.5 py-3
-                  mb-2
+                  mb-2 compact:min-h-11
                   transition-all duration-[250ms] ease-out
                   animate-choiceSlideIn
                   flex items-center justify-between gap-3
@@ -211,13 +225,30 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
                 "
                 style={{ animationDelay: `${delay}s` }}
                 onClick={() => handleCardClick(card.id)}
-                onMouseEnter={() => setHoveredCard(card)}
-                onMouseLeave={() => setHoveredCard(null)}
+                onPointerEnter={(event) => {
+                  if (event.pointerType === "mouse") {
+                    setHoveredCard(card);
+                  }
+                }}
+                onPointerLeave={() => setHoveredCard(null)}
               >
-                <div className="text-white font-semibold text-sm">{card.name}</div>
+                <div className="flex items-center gap-3 min-w-0">
+                  <CardPreviewThumbnail cardId={card.id} />
+                  <div className="text-white font-semibold text-sm compact:min-w-0 compact:truncate">
+                    {card.name}
+                  </div>
+                  <CardTagList
+                    card={card}
+                    size="sm"
+                    className="hidden compact:flex items-center gap-1 shrink-0"
+                  />
+                </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="text-white/60 text-xs font-medium">{count}</span>
+                  <span className="text-white/60 text-xs compact:text-[13px] font-medium">
+                    {count}
+                  </span>
                   <GameIcon iconType={resourceType} size="small" />
+                  <CardPreviewButton card={card} onPreview={setPreviewCard} />
                 </div>
               </div>
             );
@@ -227,7 +258,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
             <div className="flex items-center justify-center gap-3 mb-4">
               <GameIcon iconType={resourceType} size="large" />
             </div>
-            <div className="text-white/70 text-xs mb-4 max-w-[280px]">
+            <div className="text-white/70 text-xs compact:text-[13px] mb-4 max-w-[280px]">
               No cards have removable {resourceType} resources available.
               {optional ? " You may skip this removal." : " This action needs a valid source."}
             </div>
@@ -243,7 +274,7 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
                 className="
                   game-panel game-panel-clipped game-choice
                     px-3.5 py-3
-                  mb-2
+                  mb-2 compact:min-h-11
                   transition-all duration-[250ms] ease-out
                   animate-choiceSlideIn
                   flex items-center justify-between gap-3
@@ -254,7 +285,9 @@ const CardResourceSelectionPopover: React.FC<CardResourceSelectionPopoverProps> 
               >
                 <div className="text-white font-semibold text-sm">{player.name}</div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="text-white/60 text-xs font-medium">{totalResources}</span>
+                  <span className="text-white/60 text-xs compact:text-[13px] font-medium">
+                    {totalResources}
+                  </span>
                   <GameIcon iconType={resourceType} size="small" />
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { coldStartTrace } from "@/services/performanceStore.ts";
 import { createPortal, flushSync } from "react-dom";
 import type { PlayerCardDto } from "@/types/generated/api-types.ts";
 import { useReducedMotion } from "@/hooks/useReducedMotion.ts";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 import type { CardInspectionSession, CardInspectionDrag } from "@/hooks/useCardInspection.ts";
 import {
   createCardInspectionFlight,
@@ -17,7 +18,7 @@ import CardStatusMessages from "../display/CardStatusMessages.tsx";
 interface CardInspectionProps {
   card: PlayerCardDto;
   playSession?: CardPlaySession;
-  compact?: boolean;
+  sheet?: boolean;
   inspection: CardInspectionSession;
   onReturned: (inspection: CardInspectionSession) => void;
   chatBounds: DOMRectReadOnly | null;
@@ -39,7 +40,7 @@ export default function CardInspection(props: CardInspectionProps) {
 function CardInspectionContent({
   card,
   playSession,
-  compact,
+  sheet: forcedSheet,
   inspection,
   onReturned,
   chatBounds,
@@ -56,6 +57,7 @@ function CardInspectionContent({
   const releaseRef = useRef<Animation | null>(null);
   const releasingRef = useRef(false);
   const reducedMotion = useReducedMotion();
+  const { isCompact } = useLayoutMode();
   const [motionReady, setMotionReady] = useState(false);
   const [viewport, setViewport] = useState(() => ({
     width: window.innerWidth,
@@ -86,7 +88,7 @@ function CardInspectionContent({
     ? Math.min(chatBounds.top - 16, viewport.height - 106)
     : viewport.height - 106;
   const desktopHeight = desktopBottom - topInset;
-  const sheet = compact ?? (viewport.width < 1024 || desktopHeight < 540 * desktopScale);
+  const sheet = forcedSheet ?? (viewport.width < 1024 || desktopHeight < 540 * desktopScale);
   const scale = sheet ? 1 : desktopScale;
   const top = Math.max(
     topInset,
@@ -97,6 +99,9 @@ function CardInspectionContent({
     ? Math.max(100, Math.min(viewport.height * sheetRatio, viewport.height - 122))
     : desktopHeight;
   const contentMaxHeight = maxHeight / scale;
+  const sheetBottom = isCompact
+    ? "calc(var(--hud-dock-h) + var(--safe-bottom) + 12px)"
+    : "calc(90px + var(--safe-bottom) + 12px)";
 
   useLayoutEffect(() => {
     const panel = panelRef.current;
@@ -364,6 +369,7 @@ function CardInspectionContent({
       onPointerDown={(event) => {
         if (
           !!playSession ||
+          isCompact ||
           event.button !== 0 ||
           inspection.closing ||
           !motionReady ||
@@ -425,8 +431,7 @@ function CardInspectionContent({
         right: sheet ? undefined : right,
         top: sheet ? undefined : top,
         left: sheet && !playSession ? "50%" : undefined,
-        bottom:
-          sheet && !playSession ? "calc(90px + env(safe-area-inset-bottom) + 12px)" : undefined,
+        bottom: sheet && !playSession ? sheetBottom : undefined,
         transform: sheet && !playSession ? "translateX(-50%)" : undefined,
       }}
     >

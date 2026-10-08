@@ -121,7 +121,9 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
         <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
           {isAction ? "Choose Action" : "Choose One Effect"}
         </h3>
-        <div className="text-white/60 text-xs text-shadow-glow mt-1">{cardName}</div>
+        <div className="text-white/60 text-xs compact:text-[13px] text-shadow-glow mt-1">
+          {cardName}
+        </div>
       </GameFlowTitle>
 
       <GameFlowBody>
@@ -139,13 +141,15 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
           const isSelectable = isAffordable && !hasBackendErrors;
 
           return (
-            <div
+            <button
+              type="button"
               key={index}
+              disabled={!isSelectable}
               className={`
-                relative
+                relative block w-full text-left
                 game-panel game-panel-clipped game-choice
                 px-3.5 py-3
-                mb-2
+                mb-2 compact:min-h-11
                 transition-all duration-[250ms] ease-out
                 animate-choiceSlideIn
                 ${
@@ -153,21 +157,21 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
                 }
               `}
               style={{ animationDelay: `${delay}s` }}
-              onClick={() => isSelectable && handleChoiceClick(index)}
+              onClick={() => handleChoiceClick(index)}
             >
               {hasBackendErrors && (
                 <div className="popover-status popover-status-error absolute top-2 right-2">
                   <span className="max-w-[140px] truncate">{choice.errors[0].message}</span>
                 </div>
               )}
-              <div className="text-white/60 text-[11px] font-semibold uppercase tracking-wider mb-1 text-shadow-glow">
+              <div className="text-white/60 text-[11px] compact:text-[13px] font-semibold uppercase tracking-wider mb-1 text-shadow-glow">
                 Choice {index + 1}
               </div>
               {choice.requirements &&
                 choice.requirements.items &&
                 choice.requirements.items.length > 0 && (
                   <div
-                    className={`flex items-center gap-1 mb-2 text-[11px] font-semibold ${isSelectable ? "text-white/70" : "text-red-400/80"}`}
+                    className={`flex items-center gap-1 mb-2 text-[11px] compact:text-[13px] font-semibold ${isSelectable ? "text-white/70" : "text-red-400/80"}`}
                   >
                     <span>Requires:</span>
                     {renderRequirementItems(choice.requirements.items)}
@@ -184,7 +188,7 @@ const ChoiceSelectionPopover: React.FC<ChoiceSelectionPopoverProps> = ({
                   noContainer
                 />
               </div>
-            </div>
+            </button>
           );
         })}
       </GameFlowBody>

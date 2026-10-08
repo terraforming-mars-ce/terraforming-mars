@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   CardDto,
   ResourceType,
@@ -9,7 +9,12 @@ import {
   ColonyResourceReasonColonyBonus,
 } from "@/types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
-import CardPreviewPanel from "./CardPreviewPanel.tsx";
+import CardTagList from "../cards/CardTagList.tsx";
+import CardPreviewPanel, {
+  CardPreviewButton,
+  CardPreviewOverlay,
+  CardPreviewThumbnail,
+} from "./CardPreviewPanel.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import {
   GameFlowPopover,
@@ -51,6 +56,8 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
   isVisible,
 }) => {
   const [hoveredCard, setHoveredCard] = useState<CardDto | null>(null);
+  const [previewCard, setPreviewCard] = useState<CardDto | null>(null);
+  const closePreview = useCallback(() => setPreviewCard(null), []);
 
   const allCandidateCards = [
     ...(corporationCard?.resourceStorage ? [corporationCard] : []),
@@ -103,14 +110,19 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
       isVisible={isVisible}
       onClose={onCancel}
       type={canDismiss ? "interactive" : "interactive-mandatory"}
-      renderSiblings={<CardPreviewPanel card={hoveredCard} />}
+      renderSiblings={
+        <>
+          <CardPreviewPanel card={hoveredCard} />
+          <CardPreviewOverlay card={previewCard} onClose={closePreview} />
+        </>
+      }
     >
       <GameFlowTitle>
         <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
           {title}
         </h3>
         {!hasNoStorage && (
-          <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
+          <div className="text-white/60 text-xs compact:text-[13px] text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
             <span>
               Place {amount} resource{amount !== 1 ? "s" : ""}
             </span>
@@ -137,7 +149,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
             <div className="text-white text-sm mb-3 font-semibold">
               No {resourceType === "card-resource" ? "matching" : resourceType} storage available
             </div>
-            <div className="text-white/70 text-xs max-w-[280px]">
+            <div className="text-white/70 text-xs compact:text-[13px] max-w-[280px]">
               If you continue, the {resourceType === "card-resource" ? "resource" : resourceType}{" "}
               will be lost.
             </div>
@@ -152,7 +164,7 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
                 className="
                   game-panel game-panel-clipped game-choice
                     px-3.5 py-3
-                  mb-2 cursor-pointer
+                  mb-2 compact:min-h-11 cursor-pointer
                   transition-all duration-[250ms] ease-out
                   hover:brightness-125
 
@@ -162,13 +174,30 @@ const CardStorageSelectionPopover: React.FC<CardStorageSelectionPopoverProps> = 
                 "
                 style={{ animationDelay: `${delay}s` }}
                 onClick={() => onCardSelect(card.id)}
-                onMouseEnter={() => setHoveredCard(card)}
-                onMouseLeave={() => setHoveredCard(null)}
+                onPointerEnter={(event) => {
+                  if (event.pointerType === "mouse") {
+                    setHoveredCard(card);
+                  }
+                }}
+                onPointerLeave={() => setHoveredCard(null)}
               >
-                <div className="text-white font-semibold text-sm">{card.name}</div>
+                <div className="flex items-center gap-3 min-w-0">
+                  <CardPreviewThumbnail cardId={card.id} />
+                  <div className="text-white font-semibold text-sm compact:min-w-0 compact:truncate">
+                    {card.name}
+                  </div>
+                  <CardTagList
+                    card={card}
+                    size="sm"
+                    className="hidden compact:flex items-center gap-1 shrink-0"
+                  />
+                </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="text-white/60 text-xs font-medium">{currentStorage}</span>
+                  <span className="text-white/60 text-xs compact:text-[13px] font-medium">
+                    {currentStorage}
+                  </span>
                   <GameIcon iconType={card.resourceStorage?.type || resourceType} size="small" />
+                  <CardPreviewButton card={card} onPreview={setPreviewCard} />
                 </div>
               </div>
             );
