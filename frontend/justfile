@@ -33,7 +33,7 @@ format-check:
 
 [group('check')]
 [doc('Validate asset sources, card identities and generated outputs')]
-assets-check:
+assets-check: assets
     bun run assets:check
 
 [group('check')]
