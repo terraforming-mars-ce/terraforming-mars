@@ -18,8 +18,9 @@ import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import ProductionCardSelectionOverlay from "@/components/ui/overlay/ProductionCardSelectionOverlay.tsx";
 import GameIcon from "@/components/ui/display/GameIcon.tsx";
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
 import { audioService } from "@/services/audioService.ts";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 import {
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
@@ -113,6 +114,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   onHide,
   openDirectlyToCardSelection = false,
 }) => {
+  const { isCompact } = useLayoutMode();
   const soundHandlesRef = useRef<HTMLAudioElement[]>([]);
   const [hasSubmittedCardSelection, setHasSubmittedCardSelection] = useState(false);
   const persistedSelectionRef = useRef<string[]>([]);
@@ -361,9 +363,25 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
 
   const effectivePhase: AnimationPhase = currentPlayerIndex === 0 ? animationPhase : "final";
 
+  const showNextButton = !hasSubmittedCardSelection && !showCardSelection;
+
   return (
     <>
-      {isOpen && !showCardSelection && (
+      {!showCardSelection && isCompact && (
+        <CompactProductionPanel
+          generation={modalProductionData.generation}
+          players={modalProductionData.playersData}
+          currentPlayerIndex={currentPlayerIndex}
+          onPlayerSelect={handlePlayerSelect}
+          animationPhase={effectivePhase}
+          showNextButton={showNextButton}
+          nextLabel={isLastRound ? "Continue" : "Buy cards"}
+          onNext={handleNextClick}
+          onHide={isLastRound ? undefined : onHide}
+        />
+      )}
+
+      {!showCardSelection && !isCompact && (
         <div
           className="fixed inset-0 flex items-center justify-center"
           style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
@@ -371,7 +389,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
           <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
           <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 
-          <div className="relative z-[1]">
+          <div className="relative" style={{ zIndex: getZIndex("LOCAL", 1) }}>
             <div className="max-w-[1050px] min-w-[850px] flex flex-col game-panel game-panel-clipped game-window overflow-hidden">
               <div className={OVERLAY_HEADER_CLASS}>
                 <h2 className={`${OVERLAY_TITLE_CLASS} text-center`}>Production</h2>
@@ -401,13 +419,13 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
                 </div>
               )}
 
-              <div className="px-8 pt-2 pb-14">
+              <div className="px-8 pt-2 pb-14 max-[1100px]:pb-20">
                 <ResourceGrid playerData={currentPlayerData} animationPhase={effectivePhase} />
               </div>
             </div>
 
-            {!hasSubmittedCardSelection && !showCardSelection && (
-              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-5">
+            {showNextButton && (
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-5 max-[1100px]:left-auto max-[1100px]:right-6 max-[1100px]:top-auto max-[1100px]:bottom-4 max-[1100px]:translate-y-0 max-[1100px]:ml-0">
                 <GameButton
                   emphasis="secondary"
                   size="lg"
@@ -415,18 +433,7 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
                   className="whitespace-nowrap"
                 >
                   Buy cards
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    className="inline-block ml-2"
-                  >
-                    <path
-                      fill="currentColor"
-                      d="m15.06 5.283l5.657 5.657a1.5 1.5 0 0 1 0 2.12l-5.656 5.658a1.5 1.5 0 0 1-2.122-2.122l3.096-3.096H4.5a1.5 1.5 0 0 1 0-3h11.535L12.94 7.404a1.5 1.5 0 0 1 2.122-2.121Z"
-                    />
-                  </svg>
+                  <NextArrowIcon />
                 </GameButton>
               </div>
             )}
@@ -460,20 +467,55 @@ const ProductionPhaseModal: React.FC<ProductionPhaseModalProps> = ({
   );
 };
 
-interface ResourceGridProps {
-  playerData: {
-    beforeResources: ResourcesDto;
-    afterResources: ResourcesDto;
-    production: ProductionDto;
-    energyConverted: number;
-    creditsIncome: number;
-    terraformRating: number;
+interface PlayerProductionData {
+  beforeResources: ResourcesDto;
+  afterResources: ResourcesDto;
+  production: ProductionDto;
+  energyConverted: number;
+  creditsIncome: number;
+  terraformRating: number;
+}
+
+interface ResourceFlow {
+  startForEnergy: number;
+  endForEnergy: number;
+  startForProduction: number;
+  endForProduction: number;
+}
+
+function resourceFlow(
+  playerData: PlayerProductionData,
+  key: ResourceType,
+  resField: keyof ResourcesDto,
+): ResourceFlow {
+  const { beforeResources, afterResources, energyConverted } = playerData;
+  const beforeVal = beforeResources[resField];
+
+  let afterEnergyVal = beforeVal;
+  let startForProduction = beforeVal;
+  if (key === "energy") {
+    afterEnergyVal = 0;
+    startForProduction = 0;
+  } else if (key === "heat") {
+    afterEnergyVal = beforeResources.heat + energyConverted;
+    startForProduction = afterEnergyVal;
+  }
+
+  return {
+    startForEnergy: beforeVal,
+    endForEnergy: afterEnergyVal,
+    startForProduction,
+    endForProduction: afterResources[resField],
   };
+}
+
+interface ResourceGridProps {
+  playerData: PlayerProductionData;
   animationPhase: AnimationPhase;
 }
 
 const ResourceGrid: React.FC<ResourceGridProps> = ({ playerData, animationPhase }) => {
-  const { beforeResources, afterResources, production, energyConverted } = playerData;
+  const { beforeResources, production, energyConverted } = playerData;
 
   const isEnergyPhaseActive = animationPhase === "energyTransfer";
   const hasEnergy = beforeResources.energy > 0;
@@ -486,47 +528,22 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({ playerData, animationPhase 
   );
   const energyTransferDone = energyDrainCounter.done;
 
-  const getResourceValues = (resField: keyof ResourcesDto, key: ResourceType) => {
-    const beforeVal = beforeResources[resField];
-
-    let afterEnergyVal: number;
-    if (key === "energy") {
-      afterEnergyVal = 0;
-    } else if (key === "heat") {
-      afterEnergyVal = beforeResources.heat + energyConverted;
-    } else {
-      afterEnergyVal = beforeVal;
-    }
-
-    const afterProdVal = afterResources[resField];
-
-    return { beforeVal, afterEnergyVal, afterProdVal };
-  };
-
   return (
     <div className="flex flex-col items-center gap-2 py-4 scale-125 my-4">
       <div className="flex items-start justify-center gap-3 relative">
         {RESOURCE_KEYS.map(({ key, resField }, index) => {
-          const { beforeVal, afterEnergyVal, afterProdVal } = getResourceValues(resField, key);
-          const prodVal = production[resField];
-
-          const startForEnergy = beforeVal;
-          const endForEnergy = afterEnergyVal;
-
-          const startForProduction =
-            key === "energy" ? 0 : key === "heat" ? afterEnergyVal : beforeVal;
-          const endForProduction = afterProdVal;
+          const flow = resourceFlow(playerData, key, resField);
 
           return (
             <React.Fragment key={key}>
               <div className="relative">
                 <ResourceColumn
                   resourceKey={key}
-                  productionValue={prodVal}
-                  startForEnergy={startForEnergy}
-                  endForEnergy={endForEnergy}
-                  startForProduction={startForProduction}
-                  endForProduction={endForProduction}
+                  productionValue={production[resField]}
+                  startForEnergy={flow.startForEnergy}
+                  endForEnergy={flow.endForEnergy}
+                  startForProduction={flow.startForProduction}
+                  endForProduction={flow.endForProduction}
                   animationPhase={animationPhase}
                   energyConverted={energyConverted}
                   terraformRating={key === "credit" ? playerData.terraformRating : undefined}
@@ -551,29 +568,13 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({ playerData, animationPhase 
   );
 };
 
-interface ResourceColumnProps {
-  resourceKey: ResourceType;
-  productionValue: number;
-  startForEnergy: number;
-  endForEnergy: number;
-  startForProduction: number;
-  endForProduction: number;
-  animationPhase: AnimationPhase;
-  energyConverted: number;
-  terraformRating?: number;
-}
-
-const ResourceColumn: React.FC<ResourceColumnProps> = ({
-  resourceKey,
-  productionValue,
-  startForEnergy,
-  endForEnergy,
-  startForProduction,
-  endForProduction,
-  animationPhase,
-  energyConverted,
-  terraformRating,
-}) => {
+function useResourceDisplay(
+  resourceKey: ResourceType,
+  flow: ResourceFlow,
+  animationPhase: AnimationPhase,
+  energyConverted: number,
+) {
+  const { startForEnergy, endForEnergy, startForProduction, endForProduction } = flow;
   const isEnergyPhaseActive = animationPhase === "energyTransfer";
   const isProductionPhaseActive = animationPhase === "productionTransfer";
 
@@ -609,7 +610,50 @@ const ResourceColumn: React.FC<ResourceColumnProps> = ({
     return endForProduction;
   };
 
-  const displayedValue = getDisplayedResourceValue();
+  return {
+    displayedValue: getDisplayedResourceValue(),
+    isEnergyPhaseActive,
+    isProductionPhaseActive,
+    isEnergyResource,
+    productionCounter,
+  };
+}
+
+interface ResourceColumnProps {
+  resourceKey: ResourceType;
+  productionValue: number;
+  startForEnergy: number;
+  endForEnergy: number;
+  startForProduction: number;
+  endForProduction: number;
+  animationPhase: AnimationPhase;
+  energyConverted: number;
+  terraformRating?: number;
+}
+
+const ResourceColumn: React.FC<ResourceColumnProps> = ({
+  resourceKey,
+  productionValue,
+  startForEnergy,
+  endForEnergy,
+  startForProduction,
+  endForProduction,
+  animationPhase,
+  energyConverted,
+  terraformRating,
+}) => {
+  const {
+    displayedValue,
+    isEnergyPhaseActive,
+    isProductionPhaseActive,
+    isEnergyResource,
+    productionCounter,
+  } = useResourceDisplay(
+    resourceKey,
+    { startForEnergy, endForEnergy, startForProduction, endForProduction },
+    animationPhase,
+    energyConverted,
+  );
 
   const isDimmedDuringEnergy = isEnergyPhaseActive && !isEnergyResource;
 
@@ -706,6 +750,210 @@ const EnergyToHeatArrows: React.FC<EnergyToHeatArrowsProps> = ({ active }) => {
         </span>
         <span className="text-[10px] text-white/30 font-bold absolute top-1/2 -translate-y-1/2 left-0 animate-[slideRight_0.6s_linear_0.4s_infinite]">
           ▶
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const NextArrowIcon: React.FC = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    className="inline-block ml-2"
+  >
+    <path
+      fill="currentColor"
+      d="m15.06 5.283l5.657 5.657a1.5 1.5 0 0 1 0 2.12l-5.656 5.658a1.5 1.5 0 0 1-2.122-2.122l3.096-3.096H4.5a1.5 1.5 0 0 1 0-3h11.535L12.94 7.404a1.5 1.5 0 0 1 2.122-2.121Z"
+    />
+  </svg>
+);
+
+interface CompactPlayerProduction extends PlayerProductionData {
+  playerId: string;
+  playerName: string;
+  playerColor: string;
+}
+
+interface CompactProductionPanelProps {
+  generation: number;
+  players: CompactPlayerProduction[];
+  currentPlayerIndex: number;
+  onPlayerSelect: (index: number) => void;
+  animationPhase: AnimationPhase;
+  showNextButton: boolean;
+  nextLabel: string;
+  onNext: () => void;
+  onHide?: () => void;
+}
+
+const CompactProductionPanel: React.FC<CompactProductionPanelProps> = ({
+  generation,
+  players,
+  currentPlayerIndex,
+  onPlayerSelect,
+  animationPhase,
+  showNextButton,
+  nextLabel,
+  onNext,
+  onHide,
+}) => {
+  const playerData = players[currentPlayerIndex];
+  if (!playerData) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 h-dvh" style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}>
+      <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
+      <div className={OVERLAY_BACKDROP_TINT_CLASS} />
+
+      <div
+        className="relative flex h-full w-full flex-col game-panel game-window overflow-hidden"
+        style={{
+          zIndex: getZIndex("LOCAL", 1),
+          paddingTop: "var(--safe-top)",
+          paddingBottom: "var(--safe-bottom)",
+          paddingLeft: "var(--safe-left)",
+          paddingRight: "var(--safe-right)",
+        }}
+      >
+        <header className="flex shrink-0 items-center gap-4 border-b border-white/15 bg-black/40 px-3 py-1">
+          <div className="shrink-0">
+            <h2 className="m-0 font-orbitron text-base font-bold tracking-wider text-white text-shadow-glow">
+              Production
+            </h2>
+            <p className="m-0 font-orbitron text-[11px] text-white/60">Generation {generation}</p>
+          </div>
+          {players.length > 1 && (
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-contain py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {players.map((player, index) => (
+                <GameButton
+                  key={player.playerId}
+                  emphasis="secondary"
+                  size="sm"
+                  height={44}
+                  selected={index === currentPlayerIndex}
+                  className={`shrink-0 whitespace-nowrap ${index === currentPlayerIndex ? "" : "opacity-60"}`}
+                  onClick={() => onPlayerSelect(index)}
+                >
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0"
+                    style={{ backgroundColor: player.playerColor }}
+                  />
+                  {player.playerName}
+                </GameButton>
+              ))}
+            </div>
+          )}
+        </header>
+
+        <main className="flex min-h-0 flex-1 flex-col justify-center gap-3 overflow-y-auto overscroll-contain px-4 py-2">
+          <div className="grid grid-cols-3 gap-2">
+            {RESOURCE_KEYS.map(({ key, resField }) => (
+              <CompactResourceCell
+                key={key}
+                resourceKey={key}
+                before={playerData.beforeResources[resField]}
+                productionValue={playerData.production[resField]}
+                flow={resourceFlow(playerData, key, resField)}
+                animationPhase={animationPhase}
+                energyConverted={playerData.energyConverted}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 font-orbitron text-[13px] text-white/80">
+            <span className="flex items-center gap-1.5">
+              <GameIcon iconType={ResourceTypeEnergy} size="small" />
+              <span className="text-white/50">to</span>
+              <GameIcon iconType={ResourceTypeHeat} size="small" />
+              <span className="font-bold tabular-nums text-white">
+                {playerData.energyConverted}
+              </span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-white/50">TR income</span>
+              <span className="font-bold tabular-nums text-white">
+                +{playerData.terraformRating}
+              </span>
+            </span>
+          </div>
+        </main>
+
+        <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-white/15 bg-black/40 px-3 py-1.5">
+          {onHide ? (
+            <GameButton emphasis="quiet" size="sm" height={44} onClick={onHide}>
+              Hide
+            </GameButton>
+          ) : (
+            <span />
+          )}
+          {showNextButton ? (
+            <GameButton
+              emphasis="secondary"
+              size="sm"
+              height={44}
+              onClick={onNext}
+              className="whitespace-nowrap"
+            >
+              {nextLabel}
+              <NextArrowIcon />
+            </GameButton>
+          ) : (
+            <span className="font-orbitron text-[12px] uppercase tracking-wider text-white/60">
+              Waiting for other players
+            </span>
+          )}
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+interface CompactResourceCellProps {
+  resourceKey: ResourceType;
+  before: number;
+  productionValue: number;
+  flow: ResourceFlow;
+  animationPhase: AnimationPhase;
+  energyConverted: number;
+}
+
+const CompactResourceCell: React.FC<CompactResourceCellProps> = ({
+  resourceKey,
+  before,
+  productionValue,
+  flow,
+  animationPhase,
+  energyConverted,
+}) => {
+  const { displayedValue, isEnergyPhaseActive, isEnergyResource } = useResourceDisplay(
+    resourceKey,
+    flow,
+    animationPhase,
+    energyConverted,
+  );
+  const dimmed = isEnergyPhaseActive && !isEnergyResource;
+  const deltaPrefix = productionValue > 0 ? "+" : "";
+
+  return (
+    <div
+      className={`flex items-center gap-2.5 border border-white/10 bg-black/30 px-3 py-2 transition-opacity duration-300 ${dimmed ? "opacity-30" : "opacity-100"}`}
+    >
+      <GameIcon iconType={RESOURCE_ICON_TYPES[resourceKey]} size="medium" />
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex items-baseline gap-1.5 font-orbitron tabular-nums">
+          <span className="text-[13px] text-white/60">{before}</span>
+          <span className="text-[12px] text-white/40" aria-hidden="true">
+            &rarr;
+          </span>
+          <span className="text-[16px] font-bold text-white">{displayedValue}</span>
+        </div>
+        <span className="self-start border border-[rgba(160,110,60,0.6)] bg-[linear-gradient(135deg,rgba(160,110,60,0.5)_0%,rgba(139,89,42,0.45)_100%)] px-1.5 font-orbitron text-[13px] font-bold leading-snug tabular-nums text-white">
+          {deltaPrefix}
+          {productionValue}
         </span>
       </div>
     </div>
