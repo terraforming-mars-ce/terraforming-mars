@@ -36,7 +36,7 @@ const LeftSidebar = forwardRef<PlayerListHandle, LeftSidebarProps>(function Left
 ) {
   return (
     <div
-      className="absolute top-[15%] left-0 h-[calc(85vh-120px)] bg-transparent py-[15px] flex flex-col overflow-visible pointer-events-none"
+      className="absolute top-[15%] left-0 h-[calc(85dvh-120px)] bg-transparent py-[15px] flex flex-col overflow-visible pointer-events-none"
       style={{ zIndex: Z_INDEX.PLAYER_LIST }}
     >
       <PlayerList

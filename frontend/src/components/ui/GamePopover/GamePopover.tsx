@@ -1,10 +1,104 @@
 import CloseButton from "@/components/ui/buttons/CloseButton.tsx";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { GamePopoverProps } from "./types";
+import { GamePopoverProps, PopoverPosition } from "./types";
 import { getThemeStyles } from "./themes";
 import { usePopover } from "./usePopover";
 import { Z_INDEX } from "@/constants/zIndex";
+
+const VIEWPORT_MARGIN = 8;
+const ANCHOR_GAP = 15;
+const ANCHOR_EDGE_PADDING = 30;
+
+interface PopoverLayout {
+  top?: number;
+  bottom?: number;
+  left?: number;
+  width: number;
+  maxHeight?: number;
+}
+
+function resolveMaxHeight(maxHeight: number | string): number {
+  if (typeof maxHeight === "number") {
+    return maxHeight;
+  }
+  if (maxHeight.endsWith("vh")) {
+    return (parseFloat(maxHeight) / 100) * window.innerHeight;
+  }
+  return Infinity;
+}
+
+function clampLeft(left: number, width: number): number {
+  const maxLeft = window.innerWidth - width - VIEWPORT_MARGIN;
+  return Math.min(Math.max(left, VIEWPORT_MARGIN), maxLeft);
+}
+
+function fitHeight(requested: number, availableSpace: number): number {
+  return Math.max(0, Math.min(requested, availableSpace - VIEWPORT_MARGIN));
+}
+
+function computeLayout(
+  position: PopoverPosition,
+  requestedWidth: number,
+  requestedMaxHeight: number | string,
+): PopoverLayout {
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const width = Math.min(requestedWidth, viewportWidth - 2 * VIEWPORT_MARGIN);
+  const maxHeight = resolveMaxHeight(requestedMaxHeight);
+
+  if (position.type === "anchor") {
+    const anchor = position.anchorRef.current;
+    if (!anchor) {
+      return { width, maxHeight: fitHeight(maxHeight, viewportHeight) };
+    }
+    const rect = anchor.getBoundingClientRect();
+    const rightAlignedLeft =
+      viewportWidth - Math.max(ANCHOR_EDGE_PADDING, viewportWidth - rect.right) - width;
+
+    if (position.placement === "above") {
+      const bottom = viewportHeight - rect.top + ANCHOR_GAP;
+      return {
+        bottom,
+        left: clampLeft(rightAlignedLeft, width),
+        width,
+        maxHeight: fitHeight(maxHeight, viewportHeight - bottom),
+      };
+    }
+
+    const top = rect.bottom + ANCHOR_GAP;
+    const wouldOverflowRight = rect.left + width > viewportWidth - ANCHOR_EDGE_PADDING;
+    const left = wouldOverflowRight ? rightAlignedLeft : Math.max(ANCHOR_EDGE_PADDING, rect.left);
+    return {
+      top,
+      left: clampLeft(left, width),
+      width,
+      maxHeight: fitHeight(maxHeight, viewportHeight - top),
+    };
+  }
+
+  let left: number | undefined;
+  if (position.left !== undefined) {
+    left = clampLeft(position.left, width);
+  } else if (position.right !== undefined) {
+    left = clampLeft(viewportWidth - position.right - width, width);
+  }
+
+  let availableHeight = viewportHeight;
+  if (position.top !== undefined) {
+    availableHeight = viewportHeight - position.top;
+  } else if (position.bottom !== undefined) {
+    availableHeight = viewportHeight - position.bottom;
+  }
+
+  return {
+    top: position.top,
+    bottom: position.bottom,
+    left,
+    width,
+    maxHeight: fitHeight(maxHeight, availableHeight),
+  };
+}
 
 const GamePopover: React.FC<GamePopoverProps> = ({
   isVisible,
@@ -24,12 +118,7 @@ const GamePopover: React.FC<GamePopoverProps> = ({
   overlayLayer,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [computedPosition, setComputedPosition] = useState<{
-    top?: number;
-    left?: number;
-    right?: number;
-    bottom?: number;
-  }>({});
+  const [layout, setLayout] = useState<PopoverLayout | null>(null);
 
   const anchorRef = position.type === "anchor" ? position.anchorRef : excludeRef;
 
@@ -40,50 +129,35 @@ const GamePopover: React.FC<GamePopoverProps> = ({
     anchorRef,
   });
 
-  useEffect(() => {
-    if (!isVisible) return;
-
-    if (position.type === "anchor" && position.anchorRef.current) {
-      const rect = position.anchorRef.current.getBoundingClientRect();
-      const padding = 30;
-      const popoverWidth = typeof width === "number" ? width : 320;
-
-      if (position.placement === "above") {
-        const bottom = window.innerHeight - rect.top + 15;
-        const right = Math.max(padding, window.innerWidth - rect.right);
-        setComputedPosition({ bottom, right });
-      } else {
-        const top = rect.bottom + 15;
-        const wouldOverflowRight = rect.left + popoverWidth > window.innerWidth - padding;
-
-        if (wouldOverflowRight) {
-          const right = Math.max(padding, window.innerWidth - rect.right);
-          setComputedPosition({ top, right });
-        } else {
-          const left = Math.max(padding, rect.left);
-          setComputedPosition({ top, left });
-        }
-      }
-    } else if (position.type === "fixed") {
-      setComputedPosition({
-        top: position.top,
-        left: position.left,
-        right: position.right,
-        bottom: position.bottom,
-      });
+  useLayoutEffect(() => {
+    if (!isVisible) {
+      return;
     }
-  }, [isVisible, position, width]);
 
-  if (!isVisible) return null;
+    const update = () => {
+      setLayout(computeLayout(position, width, maxHeight));
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, [isVisible, position, width, maxHeight]);
+
+  if (!isVisible) {
+    return null;
+  }
+
+  const resolvedLayout = layout ?? { width };
 
   const themeStyles = getThemeStyles(theme);
   const animationClass =
     animation === "slideUp"
       ? "animate-[popoverSlideUp_0.3s_ease-out]"
       : "animate-[popoverSlideDown_0.3s_ease-out]";
-
-  const widthStyle = typeof width === "number" ? `${width}px` : width;
-  const maxHeightStyle = typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight;
 
   const getArrowPosition = () => {
     if (!arrow?.enabled) return "";
@@ -102,12 +176,14 @@ const GamePopover: React.FC<GamePopoverProps> = ({
   return createPortal(
     <div
       ref={popoverRef}
-      className={`fixed game-panel game-panel-clipped ${animationClass} flex flex-col overflow-hidden isolate pointer-events-auto max-[768px]:w-[280px] ${className}`}
+      className={`fixed game-panel game-panel-clipped ${animationClass} flex flex-col overflow-hidden isolate pointer-events-auto ${className}`}
       style={{
         ...themeStyles,
-        ...computedPosition,
-        width: widthStyle,
-        maxHeight: maxHeightStyle,
+        top: resolvedLayout.top,
+        bottom: resolvedLayout.bottom,
+        left: resolvedLayout.left,
+        width: resolvedLayout.width,
+        maxHeight: resolvedLayout.maxHeight,
         zIndex,
       }}
       {...(overlayLayer ? { "data-overlay-layer": true } : {})}

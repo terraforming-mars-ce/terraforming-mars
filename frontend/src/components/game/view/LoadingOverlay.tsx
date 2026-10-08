@@ -176,7 +176,7 @@ export default function LoadingOverlay({
         top: 0,
         left: 0,
         width: "100vw",
-        height: "100vh",
+        height: "100dvh",
         backgroundColor: "#000000",
         zIndex: Z_INDEX.LOADING_OVERLAY,
         opacity: 1,

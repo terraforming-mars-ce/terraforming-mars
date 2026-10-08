@@ -53,7 +53,7 @@ export interface GamePopoverProps {
     position?: "left" | "center" | "right";
     offset?: number;
   };
-  width?: number | string;
+  width?: number;
   maxHeight?: number | string;
   zIndex?: number;
   animation?: "slideUp" | "slideDown";

@@ -1,7 +1,7 @@
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { createPortal } from "react-dom";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
 
 interface StorageWarningDialogProps {
   message: string;
@@ -21,7 +21,10 @@ const StorageWarningDialog: React.FC<StorageWarningDialogProps> = ({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
-      <div className="relative z-[1] game-panel game-panel-clipped game-window p-5 max-w-[340px]">
+      <div
+        className="relative game-panel game-panel-clipped game-window p-5 max-w-[340px]"
+        style={{ zIndex: getZIndex("LOCAL", 1) }}
+      >
         <h3 className="font-orbitron text-sm font-bold text-amber-400 m-0 mb-2">
           No Storage Available
         </h3>
