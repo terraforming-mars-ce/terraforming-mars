@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { NodeIO, VERSION as gltfVersion } from "@gltf-transform/core";
+import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
+import { dedup, prune, textureCompress } from "@gltf-transform/functions";
 import sharp from "sharp";
 
 export interface Profile {
@@ -9,6 +12,7 @@ export interface Profile {
   lossless?: boolean;
   quality?: number;
   copyMatchingWebp?: boolean;
+  gltf?: { maxTextureSize: number };
 }
 export interface Entry {
   id: string;
@@ -121,9 +125,18 @@ export async function loadCatalog(root: string) {
     if (
       !profile ||
       (!profile.copy &&
+        !profile.gltf &&
         (!profile.sizes?.length || profile.sizes.some((n) => !Number.isInteger(n) || n < 1)))
     ) {
       throw new Error(`Invalid profile for ${entry.id}`);
+    }
+    if (
+      profile.gltf &&
+      (!/\.glb$/i.test(entry.source) ||
+        !Number.isInteger(profile.gltf.maxTextureSize) ||
+        profile.gltf.maxTextureSize < 1)
+    ) {
+      throw new Error(`Invalid model profile for ${entry.id}`);
     }
     if (profile.quality !== undefined && (profile.quality < 1 || profile.quality > 100)) {
       throw new Error(`Invalid quality for ${entry.id}`);
@@ -171,6 +184,24 @@ async function preparedImage(data: Buffer, entry: Entry): Promise<Buffer> {
   const height = Math.min(info.height - top, Math.round(h * info.height));
   return sharp(pixels, { raw: info }).extract({ left, top, width, height }).png().toBuffer();
 }
+async function optimizedModel(data: Buffer, profile: Profile): Promise<Buffer> {
+  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+  const document = await io.readBinary(new Uint8Array(data));
+  const max = profile.gltf!.maxTextureSize;
+  // Renderers look up nodes by name, merge primitives on the CPU and read texture maps, so the
+  // scene graph, vertex attributes and geometry precision stay exactly as authored.
+  await document.transform(
+    dedup(),
+    prune({ keepLeaves: true, keepAttributes: true, keepSolidTextures: true }),
+    textureCompress({
+      encoder: sharp,
+      targetFormat: "webp",
+      resize: [max, max],
+      quality: profile.quality ?? 90,
+    }),
+  );
+  return Buffer.from(await io.writeBinary(document));
+}
 function outputName(
   entry: Entry,
   width: number,
@@ -199,7 +230,8 @@ export async function buildAssets(root = repoRoot, verifyOnly = false) {
     const registry: Record<string, Asset> = {};
     const toolVersion =
       hash(await fs.readFile(path.join(repoRoot, "frontend/scripts/assets/pipeline.ts"))) +
-      JSON.stringify(sharp.versions);
+      JSON.stringify(sharp.versions) +
+      gltfVersion;
     let built = 0;
     let cursor = 0;
     const fixedOutputs: Array<[string, Buffer]> = [];
@@ -264,6 +296,8 @@ export async function buildAssets(root = repoRoot, verifyOnly = false) {
         }
         const isPlanet = entry.id.startsWith("textures/planets/");
         await publish(bytes, width, height, path.extname(entry.source), width, isPlanet);
+      } else if (profile.gltf) {
+        await publish(await optimizedModel(bytes, profile), 0, 0, ".glb", 0, false);
       } else {
         const prepared = await preparedImage(bytes, entry);
         const metadata = await sharp(prepared).metadata();

@@ -24,10 +24,25 @@
     "quality": 90,
     "copyMatchingWebp": true
   },
-  "ganymede": {
+  "planet": {
     "sizes": [
-      4096
+      1024,
+      2048,
+      4096,
+      8192
     ],
+    "quality": 90
+  },
+  "model": {
+    "gltf": {
+      "maxTextureSize": 1024
+    },
+    "quality": 90
+  },
+  "model-detail": {
+    "gltf": {
+      "maxTextureSize": 2048
+    },
     "quality": 90
   },
   "copy": {

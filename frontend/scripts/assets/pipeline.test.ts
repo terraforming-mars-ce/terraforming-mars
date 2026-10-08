@@ -1,4 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
+import { Document, NodeIO } from "@gltf-transform/core";
+import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -217,4 +219,70 @@ test("preserves case-sensitive card IDs in the registry and output paths", async
   expect(
     await fs.readFile(path.join(root, "frontend/src/assets/generated/registry.ts"), "utf8"),
   ).toContain('"cards/C01"');
+});
+
+test("model profiles shrink GLB textures and keep the scene graph and geometry", async () => {
+  const root = await fixture();
+  const document = new Document();
+  const buffer = document.createBuffer();
+  const positions = new Float32Array([0, 0, 0, 1.5, 0, 0, 0, 2.25, 0]);
+  const position = document.createAccessor().setType("VEC3").setArray(positions).setBuffer(buffer);
+  const uv = document
+    .createAccessor()
+    .setType("VEC2")
+    .setArray(new Float32Array([0, 0, 1, 0, 0, 1]))
+    .setBuffer(buffer);
+  const pixels = Buffer.alloc(256 * 256 * 3);
+  for (let i = 0; i < pixels.length; i++) {
+    pixels[i] = (i * 7919) % 251;
+  }
+  const image = await sharp(pixels, { raw: { width: 256, height: 256, channels: 3 } })
+    .png()
+    .toBuffer();
+  const texture = document.createTexture("color").setImage(image).setMimeType("image/png");
+  const material = document.createMaterial("leaf").setBaseColorTexture(texture);
+  const primitive = document
+    .createPrimitive()
+    .setAttribute("POSITION", position)
+    .setAttribute("TEXCOORD_0", uv)
+    .setMaterial(material);
+  const mesh = document.createMesh("Tree").addPrimitive(primitive);
+  const node = document.createNode("Tree-01-1").setMesh(mesh).setTranslation([1, 2, 3]);
+  document.createScene().addChild(node).addChild(document.createNode("Marker"));
+  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+  const source = Buffer.from(await io.writeBinary(document));
+  await fs.writeFile(path.join(root, "assets/original/test.glb"), source);
+  await fs.writeFile(
+    path.join(root, "assets/catalog.json"),
+    JSON.stringify({
+      version: 1,
+      assets: [{ id: "models/test", source: "test.glb", profile: "model" }],
+    }),
+  );
+  await fs.writeFile(
+    path.join(root, "assets/profiles.json"),
+    JSON.stringify({ model: { gltf: { maxTextureSize: 64 }, quality: 90 } }),
+  );
+  await buildAssets(root);
+  const asset = (await state(root)).entries["models/test"].asset;
+  expect(asset.variants[0].url).toMatch(/^\/assets\/models\/test\.[0-9a-f]{16}\.glb$/);
+  const output = await fs.readFile(path.join(root, "frontend/public", asset.variants[0].url));
+  expect(output.length).toBeLessThan(source.length);
+  const optimized = (await io.readBinary(new Uint8Array(output))).getRoot();
+  expect(optimized.listNodes().map((n) => n.getName())).toEqual(["Tree-01-1", "Marker"]);
+  expect(optimized.listNodes()[0].getTranslation()).toEqual([1, 2, 3]);
+  const [optimizedTexture] = optimized.listTextures();
+  expect(optimizedTexture.getMimeType()).toBe("image/webp");
+  expect(optimizedTexture.getSize()).toEqual([64, 64]);
+  const optimizedPosition = optimized.listMeshes()[0].listPrimitives()[0].getAttribute("POSITION")!;
+  expect(optimizedPosition.getComponentType()).toBe(5126);
+  expect(Array.from(optimizedPosition.getArray()!)).toEqual(Array.from(positions));
+  await fs.writeFile(
+    path.join(root, "assets/catalog.json"),
+    JSON.stringify({
+      version: 1,
+      assets: [{ id: "models/test", source: "test.png", profile: "model" }],
+    }),
+  );
+  await expect(buildAssets(root)).rejects.toThrow("Invalid model profile");
 });
