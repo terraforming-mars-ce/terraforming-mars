@@ -1,9 +1,11 @@
-import { FC } from "react";
+import { FC, useEffect, useRef } from "react";
 import type { VPPhase } from "../../../contexts/VPCountingContext";
 import { Z_INDEX } from "@/constants/zIndex.ts";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
 const ANGLE_INDENT = 14;
 const TAB_WIDTH = 110;
+const COMPACT_TAB_MIN_WIDTH = 96;
 const TAB_HEIGHT = 32;
 const TAB_SPACING = 4;
 const BORDER_COLOR = "rgba(60,60,70,0.7)";
@@ -19,12 +21,32 @@ const VPPhaseTabsOverlay: FC<VPPhaseTabsOverlayProps> = ({
   currentPhaseIndex,
   isActive,
 }) => {
+  const { isCompact } = useLayoutMode();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isCompact || currentPhaseIndex < 0) {
+      return;
+    }
+    const tab = containerRef.current?.children[currentPhaseIndex];
+    if (tab instanceof HTMLElement) {
+      tab.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [isCompact, currentPhaseIndex]);
+
   if (!isActive && currentPhaseIndex < 0) {
     return null;
   }
 
   return (
-    <div className="flex items-center justify-center pb-1">
+    <div
+      ref={containerRef}
+      className={
+        isCompact
+          ? "flex items-center overflow-x-auto overscroll-contain pb-1 px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          : "flex items-center justify-center pb-1"
+      }
+    >
       {phases.map((phase, index) => (
         <PhaseTab
           key={phase.id}
@@ -32,6 +54,7 @@ const VPPhaseTabsOverlay: FC<VPPhaseTabsOverlayProps> = ({
           index={index}
           currentPhaseIndex={currentPhaseIndex}
           glow={index === currentPhaseIndex}
+          isCompact={isCompact}
         />
       ))}
     </div>
@@ -43,9 +66,10 @@ interface PhaseTabProps {
   index: number;
   currentPhaseIndex: number;
   glow: boolean;
+  isCompact: boolean;
 }
 
-const PhaseTab: FC<PhaseTabProps> = ({ phase, index, currentPhaseIndex, glow }) => {
+const PhaseTab: FC<PhaseTabProps> = ({ phase, index, currentPhaseIndex, glow, isCompact }) => {
   const isCurrent = index === currentPhaseIndex;
 
   const w = TAB_WIDTH;
@@ -62,9 +86,10 @@ const PhaseTab: FC<PhaseTabProps> = ({ phase, index, currentPhaseIndex, glow }) 
 
   return (
     <div
-      className="relative"
+      className={isCompact ? "relative shrink-0" : "relative"}
       style={{
-        width: w,
+        width: isCompact ? "auto" : w,
+        minWidth: isCompact ? COMPACT_TAB_MIN_WIDTH : undefined,
         height: h,
         marginLeft: index === 0 ? 0 : -ANGLE_INDENT + TAB_SPACING,
         zIndex: Z_INDEX.UI_BASE - index,
@@ -122,12 +147,12 @@ const PhaseTab: FC<PhaseTabProps> = ({ phase, index, currentPhaseIndex, glow }) 
         <line x1={0} y1={0} x2={ANGLE_INDENT} y2={h} stroke={BORDER_COLOR} strokeWidth="1" />
       </svg>
       <div
-        className="absolute inset-0 flex items-center justify-center font-orbitron text-xs tracking-wider"
+        className={`flex items-center justify-center font-orbitron text-xs tracking-wider ${isCompact ? "relative h-full whitespace-nowrap" : "absolute inset-0"}`}
         style={{
           color: "rgba(255,255,255,0.8)",
           opacity: textOpacity,
-          paddingLeft: ANGLE_INDENT / 2,
-          paddingRight: ANGLE_INDENT / 2,
+          paddingLeft: isCompact ? ANGLE_INDENT + 4 : ANGLE_INDENT / 2,
+          paddingRight: isCompact ? ANGLE_INDENT + 4 : ANGLE_INDENT / 2,
         }}
       >
         {phase.label}
