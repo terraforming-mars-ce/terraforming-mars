@@ -9,7 +9,9 @@ export interface HighlightTile {
 }
 export interface HighlightState {
   hovered: boolean;
+  inspected: boolean;
   available: boolean;
+  selected: boolean;
   vpIntensity: number;
   vpColor: readonly number[];
 }
@@ -131,7 +133,7 @@ export class TileHighlightBoard {
       if (!hoverAllowed) {
         record.state.hovered = false;
       }
-      const hover = record.state.hovered ? 0.3 : 0;
+      const hover = record.state.hovered || record.state.inspected ? 0.3 : 0;
       record.hover = fade(record.hover, hover, delta, 9.75);
       record.vp = fade(
         record.vp,
@@ -141,7 +143,9 @@ export class TileHighlightBoard {
       );
       const slot = record.slot;
       dirty = write(data, slot, record.hover) || dirty;
-      dirty = write(data, slot + 1, Number(record.state.available)) || dirty;
+      const placement =
+        Number(record.state.available) + Number(record.state.available && record.state.selected);
+      dirty = write(data, slot + 1, placement) || dirty;
       dirty = write(data, slot + 2, record.vp) || dirty;
       dirty = write(data, slot + 3, record.visibility) || dirty;
       for (let i = 0; i < 3; i++) {

@@ -9,11 +9,17 @@ import { generateCityLayout, type CityPlot } from "./cityLayout";
 import { BOARD_SCALE, hashSeed } from "./landscapeGeometry";
 import { GameDto, TileDto, TileBonusDto } from "../../../types/generated/api-types";
 import { usePreviousTiles } from "../../../hooks/usePreviousTiles";
-import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
+import TileTooltip from "../../ui/display/TileTooltip";
+import type { TileTooltipData } from "../../ui/display/TileInfoContent";
+import { toggleInspectedHex, useTileInspectStore } from "@/stores/tileInspectStore.ts";
+import { usePlacementSelectionStore } from "@/stores/placementSelectionStore.ts";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 import { Html } from "@react-three/drei";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 import { useVPCounting } from "../../../contexts/VPCountingContext";
 import { TileHighlightBoardContext, useTileHighlightBoard } from "./TileHighlightContext";
+import { isDragClick } from "../controls/PanControls";
+import { useAutoFramePlacement } from "../controls/useAutoFramePlacement";
 
 interface CelestialTileGridProps {
   highlightRoot: RefObject<THREE.Group | null>;
@@ -147,32 +153,16 @@ export default function CelestialTileGrid({
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTileHoverInfo = useCallback(
-    (
-      data: Omit<TileTooltipData, "ownerName" | "ownerColor" | "reservedByName"> & {
-        position: { x: number; y: number };
-        ownerId: string | null;
-        reservedById: string | null;
-      },
-    ) => {
-      tooltipPositionRef.current = data.position;
+    (info: TileTooltipData, position: { x: number; y: number }) => {
+      tooltipPositionRef.current = position;
       if (hoverTimerRef.current) {
         clearTimeout(hoverTimerRef.current);
       }
       hoverTimerRef.current = setTimeout(() => {
-        setTooltipData({
-          tileType: data.tileType,
-          displayName: data.displayName,
-          placedName: data.placedName,
-          ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
-          ownerColor: data.ownerId ? playerColorMap.get(data.ownerId) : undefined,
-          reservedByName: data.reservedById ? playerNameMap.get(data.reservedById) : undefined,
-          isOceanSpace: data.isOceanSpace,
-          isVolcanic: data.isVolcanic,
-          bonuses: data.bonuses,
-        });
+        setTooltipData(info);
       }, 200);
     },
-    [playerNameMap, playerColorMap],
+    [],
   );
 
   const handleTileHoverMove = useCallback((position: { x: number; y: number }) => {
@@ -245,6 +235,45 @@ export default function CelestialTileGrid({
     return "empty";
   };
 
+  const describeHex = useCallback(
+    (key: string): TileTooltipData | null => {
+      const tile = projectedTiles.find((t) => HexGrid2D.coordinateToKey(t.coordinate) === key);
+      if (!tile) {
+        return null;
+      }
+      const ownerId = tile.backendTile.ownerId || null;
+      const reservedById = tile.backendTile.reservedBy || null;
+      return {
+        tileType: getTileType(tile),
+        displayName: tile.backendTile.displayName,
+        placedName: tile.backendTile.occupiedBy?.displayName,
+        ownerName: ownerId ? playerNameMap.get(ownerId) : undefined,
+        ownerColor: ownerId ? playerColorMap.get(ownerId) : undefined,
+        reservedByName: reservedById ? playerNameMap.get(reservedById) : undefined,
+        isOceanSpace: false,
+        isVolcanic: false,
+        bonuses: tile.bonuses,
+      };
+    },
+    [projectedTiles, playerNameMap, playerColorMap],
+  );
+
+  const { isCompact } = useLayoutMode();
+  const inspectedHex = useTileInspectStore((s) => s.inspectedHex);
+  const selectedPlacementHex = usePlacementSelectionStore((s) => s.selectedHex);
+  const hasPendingPlacement = Boolean(gameState?.currentPlayer?.pendingTileSelection);
+
+  useEffect(() => {
+    const { inspectedHex: hex, position, inspect } = useTileInspectStore.getState();
+    if (!hex || !position) {
+      return;
+    }
+    const info = describeHex(hex);
+    if (info) {
+      inspect(hex, info, position);
+    }
+  }, [describeHex]);
+
   const interactionSphereGeometry = useMemo(
     () => new THREE.SphereGeometry(radius + 0.02, 32, 32),
     [radius],
@@ -276,6 +305,15 @@ export default function CelestialTileGrid({
   }, [activePlanet, gameState?.id]);
   const isDraggingCard = useCardDragStore((s) => s.isDraggingCard);
 
+  const availableSignature = availableHexes.join("|");
+  const availablePoints = useMemo(() => {
+    const available = new Set(availableSignature ? availableSignature.split("|") : []);
+    return projectedTiles
+      .filter((tile) => available.has(HexGrid2D.coordinateToKey(tile.coordinate)))
+      .map((tile) => tile.spherePosition);
+  }, [projectedTiles, availableSignature]);
+  useAutoFramePlacement(availablePoints, highlightRoot, activePlanetId);
+
   useEffect(() => {
     if (isDraggingCard) {
       hoveredHexKeyRef.current = null;
@@ -292,6 +330,9 @@ export default function CelestialTileGrid({
         object: THREE.Object3D;
       },
     ) => {
+      if (isCompact && event.nativeEvent.pointerType === "touch") {
+        return;
+      }
       if (useCardDragStore.getState().isDraggingCard) {
         return;
       }
@@ -301,19 +342,11 @@ export default function CelestialTileGrid({
         hoveredHexKeyRef.current = key;
         setHoveredHexKey(key);
         if (key) {
-          const tile = projectedTiles.find((t) => HexGrid2D.coordinateToKey(t.coordinate) === key);
-          if (tile) {
-            const ownerId = tile.backendTile.ownerId || null;
-            handleTileHoverInfo({
-              position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
-              tileType: getTileType(tile),
-              displayName: tile.backendTile.displayName,
-              placedName: tile.backendTile.occupiedBy?.displayName,
-              ownerId,
-              reservedById: tile.backendTile.reservedBy || null,
-              isOceanSpace: false,
-              isVolcanic: false,
-              bonuses: tile.bonuses,
+          const info = describeHex(key);
+          if (info) {
+            handleTileHoverInfo(info, {
+              x: event.nativeEvent.clientX,
+              y: event.nativeEvent.clientY,
             });
           }
         } else {
@@ -324,8 +357,9 @@ export default function CelestialTileGrid({
       }
     },
     [
-      projectedTiles,
+      isCompact,
       findNearestHex,
+      describeHex,
       handleTileHoverInfo,
       handleTileHoverMove,
       handleTileHoverLeave,
@@ -344,20 +378,34 @@ export default function CelestialTileGrid({
         point: THREE.Vector3;
         object: THREE.Object3D;
         stopPropagation: () => void;
+        nativeEvent: MouseEvent;
       },
     ) => {
       event.stopPropagation();
-      if (useCardDragStore.getState().isDraggingCard) {
+      if (isDragClick() || useCardDragStore.getState().isDraggingCard) {
         return;
       }
       const localPoint = event.object.worldToLocal(event.point.clone());
       const key = findNearestHex(localPoint);
+      if (isCompact && !hasPendingPlacement) {
+        toggleInspectedHex(key, describeHex, {
+          x: event.nativeEvent.clientX,
+          y: event.nativeEvent.clientY,
+        });
+        return;
+      }
       if (key) {
         onHexClick?.(key);
       }
     },
-    [findNearestHex, onHexClick],
+    [findNearestHex, onHexClick, isCompact, hasPendingPlacement, describeHex],
   );
+
+  const handleSpherePointerMissed = useCallback(() => {
+    if (isCompact && !isDragClick()) {
+      useTileInspectStore.getState().clear();
+    }
+  }, [isCompact]);
 
   return (
     <TileHighlightBoardContext.Provider value={highlightBoard}>
@@ -368,6 +416,7 @@ export default function CelestialTileGrid({
           onPointerMove={handleSpherePointerMove}
           onPointerLeave={handleSpherePointerLeave}
           onClick={handleSphereClick}
+          onPointerMissed={handleSpherePointerMissed}
           visible={false}
         />
       )}
@@ -407,15 +456,15 @@ export default function CelestialTileGrid({
               onHexClick?.(hexKey);
             }}
             isAvailableForPlacement={isAvailable}
+            hideLabels={isCompact}
+            isSelectedForPlacement={isAvailable && selectedPlacementHex === hexKey}
             isNewlyPlaced={newlyPlacedTiles.has(hexKey)}
             sphereRadius={radius}
             sphereCenter={worldCenter}
             groupInverseMatrix={groupInverseMatrix}
             tileOpacity={tileOpacity}
-            onHoverInfo={handleTileHoverInfo}
-            onHoverMove={handleTileHoverMove}
-            onHoverLeave={handleTileHoverLeave}
             isHovered={!isDraggingCard && hoveredHexKey === hexKey}
+            isInspected={isCompact && inspectedHex === hexKey}
             vpHighlightIntensity={
               vpCounting.highlightedTiles.has(hexKey)
                 ? 0.5

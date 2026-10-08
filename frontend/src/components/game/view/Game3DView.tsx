@@ -1,11 +1,22 @@
 import { Suspense, useEffect, useMemo, useState, useRef, useCallback, type RefObject } from "react";
 import CanvasClock from "../../3d/CanvasClock.tsx";
-import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
+import {
+  isRenderPaused,
+  usePauseWhileDocumentHidden,
+  useRenderPause,
+  useRenderPauseStore,
+} from "@/stores/renderPauseStore.ts";
+import WebGLContextLossHandler from "../../3d/WebGLContextLossHandler.tsx";
+import { invalidateGroundBakesAfterContextRestore } from "../board/groundBake.ts";
+import { invalidatePlantShadesAfterContextRestore } from "../board/plantShade.ts";
+import { invalidateGpuTimersAfterContextRestore } from "../board/gpuTimer.ts";
+import { restoreTextureArraysAfterContextRestore } from "../board/textureArray.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { PanControls } from "../controls/PanControls.tsx";
 import { FreeCamera, CameraFrustumHelper } from "../controls/FreeCamera.tsx";
+import { CameraFraming, DESKTOP_FOV, useCameraFraming } from "../controls/CameraFraming.tsx";
 import AtmosphereRenderer from "../board/AtmosphereRenderer.tsx";
 import MarsSphere from "../board/MarsSphere.tsx";
 import CelestialBody from "../board/CelestialBody.tsx";
@@ -18,9 +29,11 @@ import GameIcon from "../../ui/display/GameIcon.tsx";
 import { GameDto } from "@/types/generated/api-types.ts";
 import { MarsRotationProvider } from "../../../contexts/MarsRotationContext.tsx";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext.tsx";
-import { webSocketService } from "../../../services/webSocketService.ts";
+import { getLayoutMode, useLayoutMode } from "@/hooks/useLayoutMode.ts";
+import { sendTileSelection, usePlacementSelectionStore } from "@/stores/placementSelectionStore.ts";
+import { getTileIconType } from "@/utils/boardOverlay.ts";
 import { useWorld3DSettings } from "../../../contexts/World3DSettingsContext.tsx";
-import { useTextures } from "../../../hooks/useTextures.ts";
+import { usePlanetSurface } from "../../../hooks/useTextures.ts";
 import {
   createSunSurfaceMaterial,
   createSunCoronaMaterial,
@@ -29,6 +42,7 @@ import {
 import GpuWarmup from "../board/GpuWarmup.tsx";
 import PerformanceProbe from "../board/PerformanceProbe.tsx";
 import { QUICK_MODE } from "@/utils/quickMode.ts";
+import { GRAPHICS } from "@/utils/graphicsQuality.ts";
 import SolarSystemOverview from "../board/SolarSystemOverview.tsx";
 import {
   PLANET_CONFIGS,
@@ -38,11 +52,25 @@ import {
   getPlanetOrbit,
 } from "../board/solarSystemConfig.ts";
 
-// The 3D view is pixel-bound (dense foliage); beyond 1.5x the extra pixels cost more than they show.
-const MAX_PIXEL_RATIO = 1.5;
+const HIGH_TIER_SHADOWS = { type: THREE.PCFShadowMap };
 
-function FreeCameraFrustum({ fov }: { fov: number }) {
+function ContextLossRecovery() {
+  const [contextLost, setContextLost] = useState(false);
+  useRenderPause("context-lost", contextLost);
+  const handleLost = useCallback(() => setContextLost(true), []);
+  const handleRestored = useCallback((gl: THREE.WebGLRenderer) => {
+    invalidateGroundBakesAfterContextRestore();
+    invalidatePlantShadesAfterContextRestore();
+    invalidateGpuTimersAfterContextRestore();
+    restoreTextureArraysAfterContextRestore(gl);
+    setContextLost(false);
+  }, []);
+  return <WebGLContextLossHandler onLost={handleLost} onRestored={handleRestored} />;
+}
+
+function FreeCameraFrustum() {
   const { size } = useThree();
+  const { fov } = useCameraFraming();
   const { storedCameraState } = useWorld3DSettings();
 
   if (!storedCameraState) return null;
@@ -117,8 +145,8 @@ function CentralSunLight({
 }
 
 function SunMesh() {
-  const { sun: sunTexture } = useTextures();
-  const geometry = useMemo(() => new THREE.SphereGeometry(22, 96, 64), []);
+  const sunTexture = usePlanetSurface("sun", true);
+  const geometry = useMemo(() => new THREE.SphereGeometry(22, ...GRAPHICS.sphereSegments), []);
   const material = useMemo(() => createSunSurfaceMaterial(sunTexture), [sunTexture]);
   const corona = useMemo(() => createSunCoronaMaterial(), []);
   const prominence = useMemo(() => createSunProminenceMaterial(), []);
@@ -332,79 +360,33 @@ export default function Game3DView({
     return [center.x + offset.x, center.y + offset.y, center.z + offset.z];
   }, []);
 
-  const [cameraConfig, setCameraConfig] = useState({
-    position: initialCameraPos,
-    fov: 50,
-  });
-
-  const updateCameraConfig = useCallback(() => {
-    const width = window.innerWidth;
-    let fov = 50;
-
-    if (width <= 768) {
-      fov = 60;
-    } else if (width <= 1200) {
-      fov = 55;
-    }
-
-    setCameraConfig({ position: initialCameraPos, fov });
-  }, [initialCameraPos]);
-
-  useEffect(() => {
-    updateCameraConfig();
-    window.addEventListener("resize", updateCameraConfig);
-
-    return () => window.removeEventListener("resize", updateCameraConfig);
-  }, [updateCameraConfig]);
-
   const handleHexClick = useCallback(
     (hexCoordinate: string) => {
-      // Parse hexCoordinate string (format: "q,r,s") back to coordinate object
-      const [q, r, s] = hexCoordinate.split(",").map(Number);
-      const coordinate = { q, r, s };
-
-      // Check if current player has a pending tile selection (from cards OR standard projects)
-      const currentPlayer = gameState.currentPlayer;
-      if (!currentPlayer?.pendingTileSelection) {
+      const pendingTileSelection = gameState.currentPlayer?.pendingTileSelection;
+      if (!pendingTileSelection?.availableHexes.includes(hexCoordinate)) {
         return;
       }
 
-      const { pendingTileSelection } = currentPlayer;
-
-      // Validate that the clicked hex is in the available positions provided by backend
-      if (!pendingTileSelection.availableHexes.includes(hexCoordinate)) {
+      if (getLayoutMode().isCompact) {
+        const { selectedHex, select } = usePlacementSelectionStore.getState();
+        if (selectedHex === hexCoordinate) {
+          sendTileSelection(hexCoordinate);
+        } else {
+          select(hexCoordinate);
+        }
         return;
       }
 
-      // Send tile selection to backend (works for both cards and standard projects)
-      try {
-        webSocketService.selectTile(coordinate);
-      } catch (error) {
-        console.error("❌ Failed to send tile selection:", error);
-      }
+      sendTileSelection(hexCoordinate);
     },
     [gameState.currentPlayer],
   );
 
-  // Determine tile icon type from tileType string
-  const getTileIconType = (tileType: string): string => {
-    switch (tileType) {
-      case "city":
-        return "city-tile";
-      case "greenery":
-        return "greenery-tile";
-      case "ocean":
-        return "ocean-tile";
-      case "volcano":
-        return "volcano-tile";
-      default:
-        return "tile-placement";
-    }
-  };
-
-  const browserOpen = useUIOverlayStore((state) => state.showCardBrowser);
+  const renderPaused = useRenderPauseStore(isRenderPaused);
+  usePauseWhileDocumentHidden("game-hidden");
 
   const pendingTileSelection = gameState.currentPlayer?.pendingTileSelection;
+  const { isCompact } = useLayoutMode();
 
   return (
     <div
@@ -417,7 +399,7 @@ export default function Game3DView({
         position: "relative",
       }}
     >
-      {showUI && pendingTileSelection && (
+      {showUI && pendingTileSelection && !isCompact && (
         <div
           className={`absolute top-[66px] left-1/2 -translate-x-1/2 game-panel game-panel-clipped game-window px-6 py-3 ${uiAnimationClass}`}
           style={{ zIndex: Z_INDEX.TILE_PLACEMENT_PROMPT }}
@@ -433,10 +415,10 @@ export default function Game3DView({
       <TravelFade />
 
       <Canvas
-        frameloop={browserOpen ? "never" : "always"}
+        frameloop={renderPaused ? "never" : "always"}
         camera={{
-          position: cameraConfig.position,
-          fov: cameraConfig.fov,
+          position: initialCameraPos,
+          fov: DESKTOP_FOV,
           near: 0.1,
           far: 5000,
         }}
@@ -448,11 +430,16 @@ export default function Game3DView({
           zIndex: 0,
         }}
         resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
-        gl={{ stencil: true }}
-        dpr={typeof window !== "undefined" ? Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO) : 1}
-        shadows={{ type: THREE.PCFShadowMap }}
+        gl={{
+          stencil: true,
+          antialias: GRAPHICS.antialias,
+          powerPreference: "high-performance",
+        }}
+        dpr={typeof window !== "undefined" ? Math.min(window.devicePixelRatio, GRAPHICS.maxDpr) : 1}
+        shadows={GRAPHICS.tier === "high" ? HIGH_TIER_SHADOWS : false}
       >
         <CanvasClock />
+        <ContextLossRecovery />
         <MarsRotationProvider>
           <Suspense fallback={null}>
             <AtmosphereRenderer
@@ -512,9 +499,10 @@ export default function Game3DView({
               )}
               <PerformanceProbe />
 
+              <CameraFraming />
               <PanControls />
               <FreeCamera />
-              <FreeCameraFrustum fov={cameraConfig.fov} />
+              <FreeCameraFrustum />
             </AtmosphereRenderer>
           </Suspense>
         </MarsRotationProvider>

@@ -1,5 +1,7 @@
 import React from "react";
 import Game3DView from "../../game/view/Game3DView.tsx";
+import TileInspectTooltip from "./TileInspectTooltip.tsx";
+import PlacementConfirmBar from "../overlay/PlacementConfirmBar.tsx";
 import { GameDto } from "@/types/generated/api-types.ts";
 
 interface MainContentDisplayProps {
@@ -24,16 +26,20 @@ const MainContentDisplay: React.FC<MainContentDisplayProps> = ({
   uiAnimationClass = "",
 }) => {
   return (
-    <Game3DView
-      gameState={gameState}
-      animateHexEntrance={animateHexEntrance}
-      startDark={startDark}
-      tilesHidden={tilesHidden}
-      onSkyboxReady={onSkyboxReady}
-      onGpuReady={onGpuReady}
-      showUI={showUI}
-      uiAnimationClass={uiAnimationClass}
-    />
+    <>
+      <Game3DView
+        gameState={gameState}
+        animateHexEntrance={animateHexEntrance}
+        startDark={startDark}
+        tilesHidden={tilesHidden}
+        onSkyboxReady={onSkyboxReady}
+        onGpuReady={onGpuReady}
+        showUI={showUI}
+        uiAnimationClass={uiAnimationClass}
+      />
+      <TileInspectTooltip gameState={gameState} visible={showUI} />
+      <PlacementConfirmBar gameState={gameState} visible={showUI} />
+    </>
   );
 };
 

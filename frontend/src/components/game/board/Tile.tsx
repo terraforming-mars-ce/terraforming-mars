@@ -251,17 +251,6 @@ function ClampedBillboard({
   );
 }
 
-interface TileHoverInfo {
-  position: { x: number; y: number };
-  tileType: string;
-  displayName?: string;
-  ownerId: string | null;
-  reservedById: string | null;
-  isOceanSpace: boolean;
-  isVolcanic: boolean;
-  bonuses: { [key: string]: number };
-}
-
 interface TileProps {
   nuclearSite?: NuclearSite;
   nuclearTransition?: NuclearTransition;
@@ -291,6 +280,8 @@ interface TileProps {
   bonuses?: { [key: string]: number };
   onClick: () => void;
   isAvailableForPlacement?: boolean;
+  isSelectedForPlacement?: boolean;
+  hideLabels?: boolean;
   animateEntrance?: boolean;
   startHidden?: boolean;
   entranceDelay?: number;
@@ -298,9 +289,7 @@ interface TileProps {
   visualSeed?: number;
   isVolcanic?: boolean;
   isHovered?: boolean;
-  onHoverInfo?: (data: TileHoverInfo) => void;
-  onHoverMove?: (position: { x: number; y: number }) => void;
-  onHoverLeave?: () => void;
+  isInspected?: boolean;
   sphereRadius?: number;
   sphereCenter?: THREE.Vector3;
   groupInverseMatrix?: THREE.Matrix4;
@@ -322,6 +311,8 @@ function Tile({
   bonuses = tileData.bonuses,
   onClick: _onClick,
   isAvailableForPlacement = false,
+  isSelectedForPlacement = false,
+  hideLabels = false,
   animateEntrance = false,
   startHidden = false,
   entranceDelay = 0,
@@ -332,6 +323,7 @@ function Tile({
   outgoingOwnerColor,
   isVolcanic = false,
   isHovered: isHoveredProp = false,
+  isInspected = false,
   sphereRadius = SPHERE_RADIUS,
   sphereCenter = ORIGIN,
   groupInverseMatrix,
@@ -340,6 +332,7 @@ function Tile({
   vpHighlightColor = [0.95, 0.95, 1.0],
 }: TileProps) {
   const contentType = outgoingType ?? tileType;
+  const shownName = hideLabels ? undefined : displayName;
   const contentNewlyPlaced = nuclearTransition?.outgoing ? false : isNewlyPlaced;
   const tileGroupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -349,7 +342,9 @@ function Tile({
   const highlight = useTileHighlight(
     tileData,
     hovered,
+    isInspected,
     isAvailableForPlacement,
+    isSelectedForPlacement,
     vpHighlightIntensity,
     vpHighlightColor,
   );
@@ -442,7 +437,7 @@ function Tile({
     }
 
     // Update colors for hover state (avoids recreating materials)
-    if (hovered) {
+    if (hovered || isInspected) {
       borderMaterial.uniforms.uColor.value.copy(HOVER_BORDER_COLOR);
     } else {
       borderMaterial.uniforms.uColor.value.copy(baseBorderColor);
@@ -806,14 +801,14 @@ function Tile({
 
       {/* Billboard display name and/or bonus icons */}
       {!nuclearTransition?.impacted &&
-        (displayName ||
+        (shownName ||
           (tileType !== "greenery" &&
             tileType !== "ecological-zone" &&
             tileType !== "natural-preserve" &&
             tileType !== "world-tree" &&
             bonusIconGroups.length > 0)) && (
           <ClampedBillboard position={[0, 0, 0.02]} renderOrder={110} sphereCenter={sphereCenter}>
-            {displayName && (
+            {shownName && (
               <Text
                 fontSize={0.045}
                 font={assetUrl("fonts/prototype")}
@@ -826,7 +821,7 @@ function Tile({
                 maxWidth={0.18}
                 renderOrder={110}
               >
-                {displayName}
+                {shownName}
               </Text>
             )}
             {tileType !== "greenery" &&
@@ -834,14 +829,16 @@ function Tile({
               tileType !== "natural-preserve" &&
               tileType !== "world-tree" &&
               bonusIconGroups.length > 0 && (
-                <group position={[0, displayName ? -0.08 : 0, 0]}>
+                <group position={[0, shownName ? -0.08 : 0, 0]}>
                   {calculateIconPositions(bonusIconGroups).map((pos) => (
                     <BonusIcon
                       key={`${pos.group.type}-${pos.indexInGroup}`}
                       texture={pos.group.texture}
                       position={[pos.x, 0, 0]}
                       isCredits={pos.group.isCredits}
-                      creditAmount={pos.group.isCredits ? pos.group.count : undefined}
+                      creditAmount={
+                        pos.group.isCredits && !hideLabels ? pos.group.count : undefined
+                      }
                     />
                   ))}
                 </group>
