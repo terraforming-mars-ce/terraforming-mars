@@ -1,6 +1,8 @@
 {
+  "id": "/",
   "short_name": "Terraforming Mars",
   "name": "Terraforming Mars",
+  "description": "Play Terraforming Mars online with friends or bots.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -16,10 +18,18 @@
       "src": "android-chrome-512x512.png",
       "type": "image/png",
       "sizes": "512x512"
+    },
+    {
+      "src": "maskable-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "landscape",
   "theme_color": "#000000",
   "background_color": "#000000"
 }
