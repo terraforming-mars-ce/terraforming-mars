@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTextures } from "../../../../hooks/useTextures";
 import { usePrimitiveInstances } from "../PrimitiveManager";
+import { scaledParticleCount } from "@/utils/graphicsQuality.ts";
 
 interface HoverSmokeProps {
   position: THREE.Vector3;
@@ -21,7 +22,7 @@ interface SmokeParticle {
   alive: boolean;
 }
 
-const POOL_SIZE = 100;
+const POOL_SIZE = scaledParticleCount(100);
 const PARTICLES_PER_FRAME = 2;
 
 function createHoverSmokeMaterial(smokeTexture: THREE.Texture | undefined): THREE.ShaderMaterial {

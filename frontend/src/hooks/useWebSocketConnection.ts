@@ -30,6 +30,7 @@ import {
 import type { GameEvent } from "@/hooks/useGameEvent.ts";
 import type { PlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 import { QUICK_MODE } from "@/utils/quickMode.ts";
+import { GRAPHICS } from "@/utils/graphicsQuality.ts";
 
 // Bots count as joined once their session is ready, not when they are added.
 function isPresent(player: OtherPlayerDto): boolean {
@@ -94,7 +95,7 @@ export function useWebSocketConnection(
       const player = gameData.game.currentPlayer;
       store.setCurrentPlayer(player || null);
 
-      if (!QUICK_MODE && !skyboxCache.isReady()) {
+      if (!QUICK_MODE && GRAPHICS.skybox === "exr" && !skyboxCache.isReady()) {
         useGameStore.getState().setReconnectionStep("environment");
         await skyboxCache.preload();
       }

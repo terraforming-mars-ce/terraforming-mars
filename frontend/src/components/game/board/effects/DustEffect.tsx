@@ -2,6 +2,9 @@ import { useRef, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTextures } from "../../../../hooks/useTextures";
+import { scaledParticleCount } from "@/utils/graphicsQuality.ts";
+
+const DUST_SPRITE_COUNT = scaledParticleCount(45);
 
 interface DustEffectProps {
   duration?: number;
@@ -34,7 +37,7 @@ export default function DustEffect({
     const particles: SmokeParticle[] = [];
     startTimeRef.current = null;
     completedRef.current = false;
-    for (let i = 0; i < 45; i++) {
+    for (let i = 0; i < DUST_SPRITE_COUNT; i++) {
       const material = new THREE.SpriteMaterial({
         map: smokeTexture,
         transparent: true,

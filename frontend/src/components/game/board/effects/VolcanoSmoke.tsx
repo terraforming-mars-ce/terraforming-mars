@@ -2,6 +2,7 @@ import { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTextures } from "../../../../hooks/useTextures";
+import { scaledParticleCount } from "@/utils/graphicsQuality.ts";
 
 interface VolcanoSmokeProps {
   craterHeight: number;
@@ -47,7 +48,7 @@ export default function VolcanoSmoke({ craterHeight }: VolcanoSmokeProps) {
     if (!group) return;
 
     const particles: SmokeParticle[] = [];
-    const particleCount = 28;
+    const particleCount = scaledParticleCount(28);
 
     for (let i = 0; i < particleCount; i++) {
       const material = new THREE.SpriteMaterial({

@@ -6,13 +6,21 @@ import { useWorld3DSettings, SKYBOX_OPTIONS } from "../../../contexts/World3DSet
 import skyboxVertex from "../board/shaders/skybox.vert.glsl?raw";
 import skyboxFragment from "../board/shaders/skybox.frag.glsl?raw";
 import { QUICK_MODE } from "../../../utils/quickMode.ts";
+import { GRAPHICS } from "../../../utils/graphicsQuality.ts";
+import ProceduralStarfield from "../../3d/ProceduralStarfield.tsx";
 
 interface SkyboxLoaderProps {
   onReady?: () => void;
 }
 
 export default function SkyboxLoader({ onReady }: SkyboxLoaderProps) {
-  return QUICK_MODE ? <SkippedSkybox onReady={onReady} /> : <LoadedSkybox onReady={onReady} />;
+  if (QUICK_MODE) {
+    return <SkippedSkybox onReady={onReady} />;
+  }
+  if (GRAPHICS.skybox === "procedural") {
+    return <ProceduralSkybox onReady={onReady} />;
+  }
+  return <LoadedSkybox onReady={onReady} />;
 }
 
 /** Quick mode: report ready straight away and leave the plain black background. */
@@ -21,6 +29,13 @@ function SkippedSkybox({ onReady }: SkyboxLoaderProps) {
     onReady?.();
   }, [onReady]);
   return null;
+}
+
+function ProceduralSkybox({ onReady }: SkyboxLoaderProps) {
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
+  return <ProceduralStarfield />;
 }
 
 function LoadedSkybox({ onReady }: SkyboxLoaderProps) {

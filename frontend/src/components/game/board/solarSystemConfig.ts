@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { PlanetSurfaceKey } from "../../../hooks/useTextures";
 
 export interface MoonConfig {
   id: string;
@@ -7,7 +8,7 @@ export interface MoonConfig {
   position: [number, number, number];
   renderType: "sphere" | "glb";
   atmosphere: AtmosphereProfile;
-  textureKey?: string;
+  textureKey?: PlanetSurfaceKey;
   modelKey?: string;
   tileLocation?: string;
   coordOffset: { q: number; r: number; s: number };
@@ -25,8 +26,8 @@ export interface PlanetConfig {
   id: string;
   name: string;
   radius: number;
-  textureKey: string;
-  cloudTextureKey?: string;
+  textureKey: PlanetSurfaceKey;
+  cloudTextureKey?: PlanetSurfaceKey;
   atmosphere: AtmosphereProfile;
   tileLocation: string;
   coordOffset: { q: number; r: number; s: number };

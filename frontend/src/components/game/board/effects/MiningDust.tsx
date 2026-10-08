@@ -2,6 +2,7 @@ import { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTextures } from "../../../../hooks/useTextures";
+import { scaledParticleCount } from "@/utils/graphicsQuality.ts";
 
 interface MiningDustProps {
   count?: number;
@@ -46,7 +47,8 @@ export default function MiningDust({ count = 18 }: MiningDustProps) {
 
     const particles: DustParticle[] = [];
 
-    for (let i = 0; i < count; i++) {
+    const spriteCount = scaledParticleCount(count);
+    for (let i = 0; i < spriteCount; i++) {
       const material = new THREE.SpriteMaterial({
         map: smokeTexture,
         transparent: true,
@@ -66,11 +68,11 @@ export default function MiningDust({ count = 18 }: MiningDustProps) {
         age: 0,
         maxAge: 3,
         initialScale: 0.02,
-        delay: (i / count) * 6.0,
+        delay: (i / spriteCount) * 6.0,
       };
 
       resetParticle(p);
-      p.delay = (i / count) * 8.0;
+      p.delay = (i / spriteCount) * 8.0;
       particles.push(p);
     }
 
