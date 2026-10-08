@@ -1,15 +1,8 @@
 import React from "react";
-import {
-  GameDto,
-  GameStatusActive,
-  PlayerStandardProjectDto,
-} from "@/types/generated/api-types.ts";
+import { GameDto } from "@/types/generated/api-types.ts";
 import { StandardProject } from "@/types/cards.tsx";
-import GameIcon from "../display/GameIcon.tsx";
-import { canPerformActions, isPlayerActionPhase } from "@/utils/actionUtils.ts";
-import { GamePopover, GamePopoverItem } from "../GamePopover";
-import { FormattedDescription } from "../display/FormattedDescription";
-import BehaviorSection from "../cards/BehaviorSection/BehaviorSection.tsx";
+import { GamePopover } from "../GamePopover";
+import StandardProjectList from "./content/StandardProjectList.tsx";
 
 interface StandardProjectsPopoverProps {
   isVisible: boolean;
@@ -26,21 +19,6 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
   gameState,
   anchorRef,
 }) => {
-  const isGameActive = gameState?.status === GameStatusActive;
-  const isActionPhase = isPlayerActionPhase(gameState?.currentPhase);
-  const isCurrentPlayerTurn = gameState?.currentTurn === gameState?.viewingPlayerId;
-  const canExecuteProjects =
-    isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
-
-  const playerProjects: PlayerStandardProjectDto[] = [
-    ...(gameState?.currentPlayer?.standardProjects ?? []),
-  ].sort((a, b) => (a.effectiveCost["credit"] ?? 0) - (b.effectiveCost["credit"] ?? 0));
-
-  const handleProjectClick = (project: PlayerStandardProjectDto) => {
-    if (!canExecuteProjects || !project.available) return;
-    onProjectSelect(project.projectType as StandardProject);
-  };
-
   return (
     <GamePopover
       isVisible={isVisible}
@@ -50,68 +28,15 @@ const StandardProjectPopover: React.FC<StandardProjectsPopoverProps> = ({
       excludeRef={anchorRef}
       header={undefined}
       width={500}
-      maxHeight="80vh"
+      maxHeight="80dvh"
       animation="slideDown"
       className="game-popover-list"
     >
-      <div className="popover-list p-2 flex flex-col gap-2">
-        {playerProjects.map((project) => {
-          const isExecutable = canExecuteProjects && project.available;
-          const styleColor = project.style?.color ?? "#6b7280";
-
-          return (
-            <GamePopoverItem
-              key={project.projectType}
-              className="popover-list-item"
-              state={project.available ? "available" : "disabled"}
-              onClick={isExecutable ? () => handleProjectClick(project) : undefined}
-              clickSound={false}
-              borderColor={styleColor}
-              error={
-                !project.available && project.errors?.length
-                  ? { message: project.errors[0].message, count: project.errors.length }
-                  : undefined
-              }
-              warning={
-                project.available && project.warnings?.length
-                  ? { message: project.warnings[0].message }
-                  : undefined
-              }
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  {project.style?.icon && (
-                    <div className="opacity-70 flex items-center">
-                      <GameIcon iconType={project.style.icon} size="small" />
-                    </div>
-                  )}
-                  <h3 className="text-white text-sm font-bold font-orbitron m-0">{project.name}</h3>
-                  {project.behaviors?.[0]?.outputs?.some((o) =>
-                    (o.type as string).includes("-tile"),
-                  ) && (
-                    <span
-                      className="text-[10px] text-white/60 px-1.5 py-0.5 rounded"
-                      style={{ background: `${styleColor}33` }}
-                    >
-                      Tile
-                    </span>
-                  )}
-                </div>
-
-                {project.behaviors && project.behaviors.length > 0 && (
-                  <div className="[&>div]:items-start [&_div]:justify-start mb-2">
-                    <BehaviorSection behaviors={project.behaviors} noContainer />
-                  </div>
-                )}
-
-                <p className="text-white/70 text-xs leading-relaxed m-0 text-left">
-                  <FormattedDescription text={project.description ?? ""} />
-                </p>
-              </div>
-            </GamePopoverItem>
-          );
-        })}
-      </div>
+      <StandardProjectList
+        gameState={gameState}
+        onProjectSelect={onProjectSelect}
+        density="popover"
+      />
     </GamePopover>
   );
 };
