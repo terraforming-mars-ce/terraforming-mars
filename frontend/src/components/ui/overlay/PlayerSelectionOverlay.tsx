@@ -84,15 +84,15 @@ const PlayerSelectionOverlay: React.FC<PlayerSelectionOverlayProps> = ({
                   <span className="text-white text-sm font-medium">{player.name}</span>
                 </div>
                 {isExited ? (
-                  <span className="px-1.5 py-px rounded-none text-[8px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white border border-[rgba(231,76,60,0.5)]">
+                  <span className="px-1.5 py-px rounded-none text-[8px] compact:text-[11px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white border border-[rgba(231,76,60,0.5)]">
                     EXITED
                   </span>
                 ) : !isConnected ? (
-                  <span className="px-1.5 py-px rounded-none text-[8px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white border border-[rgba(231,76,60,0.5)]">
+                  <span className="px-1.5 py-px rounded-none text-[8px] compact:text-[11px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#e74c3c,#c0392b)] text-white border border-[rgba(231,76,60,0.5)]">
                     DISCONNECTED
                   </span>
                 ) : (
-                  <span className="px-1.5 py-px rounded-none text-[8px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#3498db,#2980b9)] text-white border border-[rgba(52,152,219,0.5)]">
+                  <span className="px-1.5 py-px rounded-none text-[8px] compact:text-[11px] font-semibold uppercase tracking-[0.3px] shadow-[0_1px_2px_rgba(0,0,0,0.2)] bg-[linear-gradient(135deg,#3498db,#2980b9)] text-white border border-[rgba(52,152,219,0.5)]">
                     CONNECTED
                   </span>
                 )}

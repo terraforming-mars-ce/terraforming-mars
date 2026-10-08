@@ -20,14 +20,13 @@ const DEFAULT_API_URL = "/api/v1";
  * Get the runtime configuration.
  * Priority:
  * 1. window.__RUNTIME_CONFIG__ (set by runtime-config.js at container startup)
- * 2. import.meta.env.VITE_API_URL (build-time env var, for development)
- * 3. Default fallback
+ * 2. Same-origin `/api/v1`, which the Vite dev server proxies to the backend
  */
 function getConfig(): RuntimeConfig {
   const runtimeConfig = window.__RUNTIME_CONFIG__;
 
   return {
-    apiUrl: runtimeConfig?.apiUrl || import.meta.env.VITE_API_URL || DEFAULT_API_URL,
+    apiUrl: runtimeConfig?.apiUrl || DEFAULT_API_URL,
   };
 }
 

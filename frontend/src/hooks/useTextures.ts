@@ -1,23 +1,64 @@
 import { assetUrl } from "@/assets";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTexture } from "@react-three/drei";
-import { useLoader } from "@react-three/fiber";
+import { useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { QUICK_MODE } from "@/utils/quickMode.ts";
+import { GRAPHICS } from "@/utils/graphicsQuality.ts";
+
+type PlanetName =
+  | "mars"
+  | "venus"
+  | "earth"
+  | "earth-clouds"
+  | "jupiter"
+  | "mercury"
+  | "saturn"
+  | "neptune"
+  | "uranus"
+  | "ceres"
+  | "moon"
+  | "ganymede"
+  | "sun";
+
+/** Quick mode swaps the planet surfaces for their 512px overview maps. */
+function planetSurface(name: PlanetName) {
+  return QUICK_MODE
+    ? assetUrl(`textures/planets/${name}/overview`)
+    : assetUrl(`textures/planets/${name}/surface`, GRAPHICS.planetTexturePixels(name));
+}
+
+export type PlanetSurfaceKey =
+  | "venus"
+  | "earth"
+  | "earthClouds"
+  | "jupiter"
+  | "mercury"
+  | "saturn"
+  | "neptune"
+  | "uranus"
+  | "ceres"
+  | "moon"
+  | "ganymede"
+  | "sun";
+
+const PLANET_SURFACE_PATHS: Record<PlanetSurfaceKey, string> = {
+  venus: planetSurface("venus"),
+  earth: planetSurface("earth"),
+  earthClouds: planetSurface("earth-clouds"),
+  jupiter: planetSurface("jupiter"),
+  mercury: planetSurface("mercury"),
+  saturn: planetSurface("saturn"),
+  neptune: planetSurface("neptune"),
+  uranus: planetSurface("uranus"),
+  ceres: planetSurface("ceres"),
+  moon: planetSurface("moon"),
+  ganymede: planetSurface("ganymede"),
+  sun: planetSurface("sun"),
+};
 
 const TEXTURE_PATHS = {
-  mars: assetUrl("textures/planets/mars/surface"),
-  venus: assetUrl("textures/planets/venus/surface"),
-  earth: assetUrl("textures/planets/earth/surface"),
-  earthClouds: assetUrl("textures/planets/earth-clouds/surface"),
-  jupiter: assetUrl("textures/planets/jupiter/surface"),
-  mercury: assetUrl("textures/planets/mercury/surface"),
-  saturn: assetUrl("textures/planets/saturn/surface"),
-  neptune: assetUrl("textures/planets/neptune/surface"),
-  uranus: assetUrl("textures/planets/uranus/surface"),
-  ceres: assetUrl("textures/planets/ceres/surface"),
-  moon: assetUrl("textures/planets/moon/surface"),
-  ganymede: assetUrl("textures/planets/ganymede/surface"),
-  sun: assetUrl("textures/planets/sun/surface"),
+  mars: planetSurface("mars"),
   grass: assetUrl("textures/terrain/grass"),
   rock: assetUrl("textures/terrain/rock"),
   sand: assetUrl("textures/terrain/sand"),
@@ -58,9 +99,10 @@ const CITY_FACADE_PATHS = [
     assetUrl("textures/terrain/ribbed-concrete-wall-roughness"),
   ],
 ];
-for (const paths of CITY_FACADE_PATHS) {
-  paths.forEach((path) => useTexture.preload(path));
-}
+// The loader cache is keyed by the whole URL list, so each preload must pass exactly the
+// array that useTextures later requests; per-URL preloads would never be reused.
+const CITY_FACADE_URLS = CITY_FACADE_PATHS.flat();
+useTexture.preload(CITY_FACADE_URLS);
 
 // Layer order of the landscape's ground texture array; shaders index layers by position.
 const GROUND_LAYER_NAMES = [
@@ -80,7 +122,8 @@ const ICE_LAYER_PATHS = {
   detail: ICE_LAYER_NAMES.map((name) => assetUrl(`textures/terrain/${name}-detail` as const)),
 };
 for (const paths of [GROUND_LAYER_PATHS, ICE_LAYER_PATHS]) {
-  [...paths.color, ...paths.detail].forEach((path) => useTexture.preload(path));
+  useTexture.preload(paths.color);
+  useTexture.preload(paths.detail);
 }
 
 export interface TextureLayers {
@@ -108,6 +151,10 @@ const RESOURCE_ICON_PATHS = {
 
 type ResourceIconName = keyof typeof RESOURCE_ICON_PATHS;
 
+// The high tier loads every planet surface up front so travel never shows a placeholder; the low
+// tier loads a surface only when its body is viewed close up.
+const EAGER_PLANET_SURFACES = GRAPHICS.warmupAllPlanets;
+
 const BONUS_TYPE_TO_ICON: Record<string, ResourceIconName> = {
   steel: "steel",
   titanium: "titanium",
@@ -131,18 +178,11 @@ const BONUS_TYPE_TO_ICON: Record<string, ResourceIconName> = {
 
 // Module-level preloads
 useTexture.preload(TEXTURE_PATHS.mars);
-useTexture.preload(TEXTURE_PATHS.venus);
-useTexture.preload(TEXTURE_PATHS.earth);
-useTexture.preload(TEXTURE_PATHS.earthClouds);
-useTexture.preload(TEXTURE_PATHS.jupiter);
-useTexture.preload(TEXTURE_PATHS.mercury);
-useTexture.preload(TEXTURE_PATHS.saturn);
-useTexture.preload(TEXTURE_PATHS.neptune);
-useTexture.preload(TEXTURE_PATHS.uranus);
-useTexture.preload(TEXTURE_PATHS.ceres);
-useTexture.preload(TEXTURE_PATHS.moon);
-useTexture.preload(TEXTURE_PATHS.ganymede);
-useTexture.preload(TEXTURE_PATHS.sun);
+if (EAGER_PLANET_SURFACES) {
+  for (const url of Object.values(PLANET_SURFACE_PATHS)) {
+    useTexture.preload(url);
+  }
+}
 useTexture.preload(TEXTURE_PATHS.marsLod);
 useTexture.preload(TEXTURE_PATHS.venusLod);
 useTexture.preload(TEXTURE_PATHS.earthLod);
@@ -185,18 +225,6 @@ interface TextureAssets {
   groundLayers: TextureLayers;
   iceLayers: TextureLayers;
   mars: THREE.Texture;
-  venus: THREE.Texture;
-  earth: THREE.Texture;
-  earthClouds: THREE.Texture;
-  jupiter: THREE.Texture;
-  mercury: THREE.Texture;
-  saturn: THREE.Texture;
-  neptune: THREE.Texture;
-  uranus: THREE.Texture;
-  ceres: THREE.Texture;
-  moon: THREE.Texture;
-  ganymede: THREE.Texture;
-  sun: THREE.Texture;
   grass: THREE.Texture;
   rock: THREE.Texture;
   sand: THREE.Texture;
@@ -223,7 +251,7 @@ interface TextureAssets {
 }
 
 export function useTextures(): TextureAssets {
-  const facadeTextures = useTexture(CITY_FACADE_PATHS.flat());
+  const facadeTextures = useTexture(CITY_FACADE_URLS);
   const cityFacades = useMemo(
     () =>
       CITY_FACADE_PATHS.map((_, i) => {
@@ -251,18 +279,6 @@ export function useTextures(): TextureAssets {
     [iceColors, iceDetails],
   );
   const mars = useTexture(TEXTURE_PATHS.mars);
-  const venus = useTexture(TEXTURE_PATHS.venus);
-  const earth = useTexture(TEXTURE_PATHS.earth);
-  const earthClouds = useTexture(TEXTURE_PATHS.earthClouds);
-  const jupiter = useTexture(TEXTURE_PATHS.jupiter);
-  const mercury = useTexture(TEXTURE_PATHS.mercury);
-  const saturn = useTexture(TEXTURE_PATHS.saturn);
-  const neptune = useTexture(TEXTURE_PATHS.neptune);
-  const uranus = useTexture(TEXTURE_PATHS.uranus);
-  const ceres = useTexture(TEXTURE_PATHS.ceres);
-  const moonTex = useTexture(TEXTURE_PATHS.moon);
-  const ganymede = useTexture(TEXTURE_PATHS.ganymede);
-  const sun = useTexture(TEXTURE_PATHS.sun);
   const grass = useTexture(TEXTURE_PATHS.grass);
   const rock = useTexture(TEXTURE_PATHS.rock);
   const sand = useTexture(TEXTURE_PATHS.sand);
@@ -307,20 +323,7 @@ export function useTextures(): TextureAssets {
     mars.colorSpace = THREE.SRGBColorSpace;
     mars.wrapS = mars.wrapT = THREE.ClampToEdgeWrapping;
 
-    venus.colorSpace = THREE.SRGBColorSpace;
-    venus.wrapS = venus.wrapT = THREE.ClampToEdgeWrapping;
-
     for (const tex of [
-      earth,
-      earthClouds,
-      jupiter,
-      mercury,
-      saturn,
-      neptune,
-      uranus,
-      ceres,
-      moonTex,
-      ganymede,
       marsLod,
       venusLod,
       earthLod,
@@ -333,7 +336,6 @@ export function useTextures(): TextureAssets {
       ceresLod,
       moonLod,
       ganymedeLod,
-      sun,
       sunLod,
     ]) {
       tex.colorSpace = THREE.SRGBColorSpace;
@@ -355,17 +357,6 @@ export function useTextures(): TextureAssets {
     concrete.colorSpace = THREE.SRGBColorSpace;
   }, [
     mars,
-    venus,
-    earth,
-    earthClouds,
-    jupiter,
-    mercury,
-    saturn,
-    neptune,
-    uranus,
-    ceres,
-    moonTex,
-    ganymede,
     marsLod,
     venusLod,
     earthLod,
@@ -378,7 +369,6 @@ export function useTextures(): TextureAssets {
     ceresLod,
     moonLod,
     ganymedeLod,
-    sun,
     sunLod,
     grass,
     sand,
@@ -439,18 +429,6 @@ export function useTextures(): TextureAssets {
     groundLayers,
     iceLayers,
     mars,
-    venus,
-    earth,
-    earthClouds,
-    jupiter,
-    mercury,
-    saturn,
-    neptune,
-    uranus,
-    ceres,
-    moon: moonTex,
-    ganymede,
-    sun,
     grass,
     rock,
     sand,
@@ -475,4 +453,141 @@ export function useTextures(): TextureAssets {
     resourceIcons,
     getResourceIcon,
   };
+}
+
+const PLANET_LOD_PATHS: Record<PlanetSurfaceKey, string> = {
+  venus: TEXTURE_PATHS.venusLod,
+  earth: TEXTURE_PATHS.earthLod,
+  earthClouds: TEXTURE_PATHS.earthCloudsLod,
+  jupiter: TEXTURE_PATHS.jupiterLod,
+  mercury: TEXTURE_PATHS.mercuryLod,
+  saturn: TEXTURE_PATHS.saturnLod,
+  neptune: TEXTURE_PATHS.neptuneLod,
+  uranus: TEXTURE_PATHS.uranusLod,
+  ceres: TEXTURE_PATHS.ceresLod,
+  moon: TEXTURE_PATHS.moonLod,
+  ganymede: TEXTURE_PATHS.ganymedeLod,
+  sun: TEXTURE_PATHS.sunLod,
+};
+
+function configurePlanetTexture(texture: THREE.Texture) {
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+}
+
+const lazySurfaceLoads = new Map<PlanetSurfaceKey, Promise<THREE.Texture>>();
+const lazySurfaces = new Map<PlanetSurfaceKey, THREE.Texture>();
+
+function loadLazySurface(key: PlanetSurfaceKey): Promise<THREE.Texture> {
+  let load = lazySurfaceLoads.get(key);
+  if (!load) {
+    load = new THREE.TextureLoader().loadAsync(PLANET_SURFACE_PATHS[key]).then(
+      (texture) => {
+        configurePlanetTexture(texture);
+        lazySurfaces.set(key, texture);
+        return texture;
+      },
+      (error: unknown) => {
+        lazySurfaceLoads.delete(key);
+        throw error;
+      },
+    );
+    lazySurfaceLoads.set(key, load);
+  }
+  return load;
+}
+
+/**
+ * Surface texture of a body other than Mars. On the high tier this is the preloaded surface. On
+ * the low tier it is the overview texture until `closeUp` is true and the surface has loaded; the
+ * surface is released from the GPU again when the body leaves close-up view.
+ */
+export function usePlanetSurface(key: PlanetSurfaceKey, closeUp: boolean): THREE.Texture {
+  const gl = useThree((state) => state.gl);
+  const base = useTexture(
+    EAGER_PLANET_SURFACES ? PLANET_SURFACE_PATHS[key] : PLANET_LOD_PATHS[key],
+  );
+  useMemo(() => configurePlanetTexture(base), [base]);
+  const lazy = !EAGER_PLANET_SURFACES && PLANET_SURFACE_PATHS[key] !== PLANET_LOD_PATHS[key];
+  const [surface, setSurface] = useState<THREE.Texture | null>(() => lazySurfaces.get(key) ?? null);
+
+  useEffect(() => {
+    if (!lazy || !closeUp) {
+      return;
+    }
+    let current = true;
+    loadLazySurface(key).then(
+      (texture) => {
+        if (current) {
+          gl.initTexture(texture);
+          setSurface(texture);
+        }
+      },
+      (error: unknown) => console.error(`Failed to load ${key} surface`, error),
+    );
+    return () => {
+      current = false;
+    };
+  }, [lazy, closeUp, key, gl]);
+
+  useEffect(() => {
+    if (closeUp || !surface) {
+      return;
+    }
+    surface.dispose();
+  }, [closeUp, surface]);
+
+  if (closeUp && surface) {
+    return surface;
+  }
+  return base;
+}
+
+/** Every non-Mars planet surface, suspending until loaded. Only for the high tier's GPU warmup. */
+export function usePlanetSurfaces(): Record<PlanetSurfaceKey, THREE.Texture> {
+  const venus = useTexture(PLANET_SURFACE_PATHS.venus);
+  const earth = useTexture(PLANET_SURFACE_PATHS.earth);
+  const earthClouds = useTexture(PLANET_SURFACE_PATHS.earthClouds);
+  const jupiter = useTexture(PLANET_SURFACE_PATHS.jupiter);
+  const mercury = useTexture(PLANET_SURFACE_PATHS.mercury);
+  const saturn = useTexture(PLANET_SURFACE_PATHS.saturn);
+  const neptune = useTexture(PLANET_SURFACE_PATHS.neptune);
+  const uranus = useTexture(PLANET_SURFACE_PATHS.uranus);
+  const ceres = useTexture(PLANET_SURFACE_PATHS.ceres);
+  const moon = useTexture(PLANET_SURFACE_PATHS.moon);
+  const ganymede = useTexture(PLANET_SURFACE_PATHS.ganymede);
+  const sun = useTexture(PLANET_SURFACE_PATHS.sun);
+  return useMemo(() => {
+    const surfaces = {
+      venus,
+      earth,
+      earthClouds,
+      jupiter,
+      mercury,
+      saturn,
+      neptune,
+      uranus,
+      ceres,
+      moon,
+      ganymede,
+      sun,
+    };
+    for (const texture of Object.values(surfaces)) {
+      configurePlanetTexture(texture);
+    }
+    return surfaces;
+  }, [
+    venus,
+    earth,
+    earthClouds,
+    jupiter,
+    mercury,
+    saturn,
+    neptune,
+    uranus,
+    ceres,
+    moon,
+    ganymede,
+    sun,
+  ]);
 }

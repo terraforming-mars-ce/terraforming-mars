@@ -16,6 +16,15 @@ export interface PlantShadeBlob {
   length: number;
 }
 
+const liveShadeMaps = new Set<PlantShadeMap>();
+
+// A restored context has an empty shade target; owners rebake when `contentLost` is set.
+export function invalidatePlantShadesAfterContextRestore() {
+  for (const shade of liveShadeMaps) {
+    shade.contentLost = true;
+  }
+}
+
 // A top-down shade map of every visible plant, baked on the GPU whenever the plant set, sizes or
 // sun change. Each plant gets a soft contact patch plus a cast shadow stretched away from the
 // fixed sun. The ground samples it, so shade follows terrain relief and overlapping shadows
@@ -53,6 +62,7 @@ export class PlantShadeMap {
   private readonly matrix = new THREE.Matrix4();
   private readonly clearColor = new THREE.Color();
   private bakes = 0;
+  contentLost = false;
 
   // Changes on every bake, so consumers can tell when the map content changed.
   get revision() {
@@ -68,6 +78,7 @@ export class PlantShadeMap {
     this.scene.add(this.mesh);
     this.camera.position.set(0, 0, 1);
     this.camera.lookAt(0, 0, 0);
+    liveShadeMaps.add(this);
   }
 
   // `shadowX`/`shadowY` is the unit board-plane direction shadows fall in.
@@ -123,6 +134,7 @@ export class PlantShadeMap {
     gl.setClearColor(this.clearColor, previousAlpha);
     gl.setRenderTarget(previousTarget);
     this.bakes++;
+    this.contentLost = false;
     performanceStore.setSection("Plant shade", {
       bakes: this.bakes,
       "last bake (CPU ms)": Number((performance.now() - started).toFixed(2)),
@@ -150,6 +162,7 @@ export class PlantShadeMap {
   }
 
   dispose() {
+    liveShadeMaps.delete(this);
     this.target.dispose();
     this.geometry.dispose();
     this.material.dispose();

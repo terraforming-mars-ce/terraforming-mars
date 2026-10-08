@@ -112,7 +112,7 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
           {hasNoTargets ? "No Valid Targets" : "Select Target Player"}
         </h3>
         {!hasNoTargets && (
-          <div className="text-white/60 text-xs text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
+          <div className="text-white/60 text-xs compact:text-[13px] text-shadow-glow mt-1 flex items-center justify-center gap-1.5">
             <span>{isSteal ? "Steal" : "Remove"} up to</span>
             <GameIcon iconType={displayIconType} amount={amount} size="small" />
             <span>{isProduction ? "production" : ""}</span>
@@ -126,7 +126,7 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
             <div className="flex items-center justify-center gap-3 mb-4">
               <GameIcon iconType={displayIconType} size="large" />
             </div>
-            <div className="text-white/70 text-xs mb-4 max-w-[280px]">
+            <div className="text-white/70 text-xs compact:text-[13px] mb-4 max-w-[280px]">
               No eligible players have {isProduction ? `${resourceType} production` : resourceType}{" "}
               available. You can continue without targeting anyone.
             </div>
@@ -142,7 +142,7 @@ const TargetPlayerSelectionPopover: React.FC<TargetPlayerSelectionPopoverProps> 
                 className="
                   game-panel game-panel-clipped game-choice
                     px-3.5 py-3
-                  mb-2
+                  mb-2 compact:min-h-11
                   transition-all duration-[250ms] ease-out
                   animate-choiceSlideIn
                   flex items-center justify-between gap-3

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { BehaviorSectionProps, ClassifiedBehavior, BehaviorPresentation } from "./types.ts";
 import { CalculatedOutputDto } from "@/types/generated/api-types.ts";
 import { classifyBehaviors } from "./utils/behaviorClassifier.ts";
@@ -85,14 +85,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
   presentation = "compact",
   showTooltips = true,
 }) => {
-  const [hoveredBehaviorIndex, setHoveredBehaviorIndex] = useState<number | null>(null);
   const tooltipsEnabled = showTooltips && presentation === "compact";
-  useEffect(() => {
-    setHoveredBehaviorIndex(null);
-  }, [tooltipsEnabled]);
-  const handleBehaviorHover = useCallback((index: number | null) => {
-    setHoveredBehaviorIndex(index);
-  }, []);
 
   const computedValuesByIndex = useMemo(() => {
     const map = new Map<number, CalculatedOutputDto[]>();
@@ -209,8 +202,7 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
         classifiedBehavior={classifiedBehavior}
         index={index}
         description={classifiedBehavior.description}
-        isHovered={tooltipsEnabled && hoveredBehaviorIndex === index}
-        onHover={tooltipsEnabled ? handleBehaviorHover : undefined}
+        showTooltip={tooltipsEnabled}
         noContainer={noContainer}
         cardId={cardId}
       >
@@ -221,8 +213,8 @@ const BehaviorSection: React.FC<BehaviorSectionProps> = ({
 
   // Render behaviors with overflow handling if needed
   const containerClass = cardLayoutPlan.needsOverflowHandling
-    ? "flex flex-col gap-[var(--behavior-section-gap,3px)] items-center w-full max-h-[120px] overflow-y-auto overflow-x-hidden scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-0.5 [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-track]:rounded-px [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-thumb]:rounded-px max-md:gap-[var(--behavior-section-gap,1px)]"
-    : "flex flex-col gap-[var(--behavior-section-gap,3px)] items-center w-full max-md:gap-[var(--behavior-section-gap,1px)]";
+    ? "flex flex-col gap-[var(--behavior-section-gap,3px)] items-center w-full max-h-[120px] overflow-y-auto overflow-x-hidden scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-0.5 [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-track]:rounded-px [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-thumb]:rounded-px"
+    : "flex flex-col gap-[var(--behavior-section-gap,3px)] items-center w-full";
 
   return (
     <div className={`behavior-section ${containerClass}`}>

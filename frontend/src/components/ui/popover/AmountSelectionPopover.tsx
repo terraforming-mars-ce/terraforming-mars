@@ -3,7 +3,12 @@ import type { ResourceType } from "@/types/generated/api-types.ts";
 import { getResourceName } from "@/utils/resourceColors.ts";
 import GameIcon from "../display/GameIcon.tsx";
 import GameButton from "../buttons/GameButton.tsx";
-import { GameFlowPopover, GameFlowTitle, GameFlowFooter } from "./GameFlowPopover.tsx";
+import {
+  GameFlowPopover,
+  GameFlowTitle,
+  GameFlowBody,
+  GameFlowFooter,
+} from "./GameFlowPopover.tsx";
 
 interface AmountSelectionPopoverProps {
   resourceType: ResourceType;
@@ -40,7 +45,7 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
         </h3>
       </GameFlowTitle>
 
-      <div className="p-5 flex flex-col items-center gap-4">
+      <GameFlowBody className="p-5! flex flex-col items-center gap-4">
         <div className="text-white/80 text-sm text-center flex items-center justify-center gap-1.5">
           <span>Select the amount of {getResourceName(resourceType).toLowerCase()}</span>
           <GameIcon iconType={resourceType} size="small" />
@@ -49,7 +54,7 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
         <div className="flex items-center gap-4">
           <GameButton
             emphasis="quiet"
-            className="w-9 h-9 rounded-none bg-space-blue-600/50 border border-space-blue-500/60 text-white text-lg font-bold cursor-pointer transition-all duration-200 hover:bg-space-blue-500/60 disabled:opacity-30 disabled:cursor-default"
+            className="w-9 h-9 compact:size-11 rounded-none bg-space-blue-600/50 border border-space-blue-500/60 text-white text-lg font-bold cursor-pointer transition-all duration-200 hover:bg-space-blue-500/60 disabled:opacity-30 disabled:cursor-default"
             onClick={() => setAmount((a) => Math.max(0, a - 1))}
             disabled={amount <= 0}
           >
@@ -65,7 +70,7 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
 
           <GameButton
             emphasis="quiet"
-            className="w-9 h-9 rounded-none bg-space-blue-600/50 border border-space-blue-500/60 text-white text-lg font-bold cursor-pointer transition-all duration-200 hover:bg-space-blue-500/60 disabled:opacity-30 disabled:cursor-default"
+            className="w-9 h-9 compact:size-11 rounded-none bg-space-blue-600/50 border border-space-blue-500/60 text-white text-lg font-bold cursor-pointer transition-all duration-200 hover:bg-space-blue-500/60 disabled:opacity-30 disabled:cursor-default"
             onClick={() => setAmount((a) => Math.min(maxAmount, a + 1))}
             disabled={amount >= maxAmount}
           >
@@ -80,10 +85,10 @@ const AmountSelectionPopover: React.FC<AmountSelectionPopoverProps> = ({
             max={maxAmount}
             value={amount}
             onChange={(e) => setAmount(parseInt(e.target.value))}
-            className="w-full accent-space-blue-500"
+            className="w-full compact:h-11 accent-space-blue-500"
           />
         )}
-      </div>
+      </GameFlowBody>
 
       <GameFlowFooter className="gap-3">
         <GameButton emphasis="secondary" tone="info" size="sm" onClick={onCancel}>

@@ -42,13 +42,22 @@ export function useTileHighlightBoard(
 export function useTileHighlight(
   tile: HighlightTile,
   hovered: boolean,
+  inspected: boolean,
   available: boolean,
+  selected: boolean,
   vpIntensity: number,
   vpColor: readonly number[],
 ) {
   const board = useContext(TileHighlightBoardContext);
   const record = useRef<HighlightRecord | null>(null);
-  const state = useRef<HighlightState>({ hovered, available, vpIntensity, vpColor });
+  const state = useRef<HighlightState>({
+    hovered,
+    inspected,
+    available,
+    selected,
+    vpIntensity,
+    vpColor,
+  });
   useLayoutEffect(() => {
     if (!board) {
       return;
@@ -66,7 +75,7 @@ export function useTileHighlight(
     }
   }, [board, tile]);
   useLayoutEffect(() => {
-    Object.assign(state.current, { hovered, available, vpIntensity, vpColor });
-  }, [hovered, available, vpIntensity, vpColor]);
+    Object.assign(state.current, { hovered, inspected, available, selected, vpIntensity, vpColor });
+  }, [hovered, inspected, available, selected, vpIntensity, vpColor]);
   return record;
 }

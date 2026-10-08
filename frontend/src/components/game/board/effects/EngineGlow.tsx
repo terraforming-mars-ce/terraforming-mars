@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTextures } from "../../../../hooks/useTextures";
 import { usePrimitiveInstances } from "../PrimitiveManager";
+import { scaledParticleCount } from "@/utils/graphicsQuality.ts";
 
 interface EngineGlowProps {
   getShipPosition: () => THREE.Vector3 | null;
@@ -22,7 +23,7 @@ interface FlameParticle {
   alive: boolean;
 }
 
-const POOL_SIZE = 60;
+const POOL_SIZE = scaledParticleCount(60);
 const PARTICLES_PER_FRAME = 4;
 const GLOW_OFFSET = 0.035;
 

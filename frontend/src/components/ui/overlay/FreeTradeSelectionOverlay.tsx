@@ -11,7 +11,12 @@ import GameButton from "../buttons/GameButton.tsx";
 import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
 import StorageWarningDialog from "../display/StorageWarningDialog.tsx";
 import { PlayerInfo, getStorageWarning } from "@/utils/colonyUtils.ts";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
+import {
+  COLONY_TRACK_INNER_CLASS,
+  COLONY_TRACK_SCROLL_CLASS,
+  OVERLAY_ROOT_SAFE_AREA_CLASS,
+} from "./overlayStyles.ts";
 
 interface FreeTradeSelectionOverlayProps {
   isOpen: boolean;
@@ -73,13 +78,16 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className={`fixed inset-0 flex items-center justify-center ${OVERLAY_ROOT_SAFE_AREA_CLASS}`}
       style={{ zIndex: Z_INDEX.SELECTION_POPOVER }}
     >
       <div className="absolute inset-0 backdrop-blur-sm" />
       <div className="absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]" />
 
-      <div className="relative z-[1] w-[480px] max-h-[80vh] flex flex-col game-panel game-panel-clipped game-window overflow-hidden">
+      <div
+        className="relative w-[min(480px,calc(100%-32px))] max-h-[80dvh] compact:h-full compact:max-h-full flex flex-col game-panel game-panel-clipped game-window overflow-hidden"
+        style={{ zIndex: getZIndex("LOCAL", 1) }}
+      >
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
           <h2 className="font-orbitron text-base font-bold text-white tracking-wider m-0">
             Free Trade
@@ -94,13 +102,13 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
         )}
 
         <div className="px-4 py-2 border-b border-white/10 flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-orbitron text-white/50 uppercase tracking-wider">
+          <span className="text-[10px] font-orbitron text-white/50 uppercase tracking-wider compact:text-[11px]">
             Ships:
           </span>
           {allPlayers.map((player) => (
             <div key={player.id} className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: player.color }} />
-              <span className="text-[10px] font-orbitron text-white/60">
+              <span className="text-[10px] font-orbitron text-white/60 compact:text-[11px]">
                 {player.name} {tradeFleets[player.id]?.available ?? 0}/
                 {tradeFleets[player.id]?.total ?? 0}
               </span>
@@ -142,7 +150,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
                         {colony.name}
                       </h3>
                       {colony.tradedThisGen && (
-                        <span className="text-[9px] font-orbitron text-white/30 uppercase">
+                        <span className="text-[9px] font-orbitron text-white/30 uppercase compact:text-[11px]">
                           Traded
                         </span>
                       )}
@@ -155,17 +163,21 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
                     )}
                   </div>
 
-                  <ColonySteps
-                    steps={colony.steps}
-                    markerPosition={colony.markerPosition}
-                    previewPosition={tradeOption?.markerPosition}
-                    playerColonies={colony.playerColonies}
-                    maxSlots={colony.colonies.length}
-                    getPlayerColor={getPlayerColor}
-                    getPlayerName={getPlayerName}
-                  />
+                  <div className={COLONY_TRACK_SCROLL_CLASS}>
+                    <div className={COLONY_TRACK_INNER_CLASS}>
+                      <ColonySteps
+                        steps={colony.steps}
+                        markerPosition={colony.markerPosition}
+                        previewPosition={tradeOption?.markerPosition}
+                        playerColonies={colony.playerColonies}
+                        maxSlots={colony.colonies.length}
+                        getPlayerColor={getPlayerColor}
+                        getPlayerName={getPlayerName}
+                      />
+                    </div>
+                  </div>
 
-                  <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40">
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40 compact:text-[11px]">
                     <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
                     <ColonyOutputDisplay outputs={colony.colonyBonus} />
                   </div>
@@ -187,6 +199,7 @@ const FreeTradeSelectionOverlay: React.FC<FreeTradeSelectionOverlayProps> = ({
         <div className="px-4 py-3 border-t border-white/10 flex items-center justify-end">
           <GameButton
             size="sm"
+            className="compact:min-h-11 compact:px-5"
             onClick={() => {
               if (!selectedColony || !selectedOption || !isColonyTradeable(selectedColony)) {
                 return;

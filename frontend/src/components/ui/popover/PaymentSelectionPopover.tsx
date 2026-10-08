@@ -119,12 +119,12 @@ export function PaymentPicker({
     <GameFlowPopover
       isVisible
       onClose={onCancel}
-      className="min-w-[360px] max-h-[650px] text-white"
+      className="min-w-[360px] compact:min-w-0 max-h-[min(650px,100dvh_-_32px)] text-white"
     >
       <GameFlowTitle>
         <h3 className="m-0 font-orbitron text-white text-base font-bold">Select payment</h3>
       </GameFlowTitle>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 space-y-3">
         {quote.options
           .filter((o) => !native(o) && o.available > 0)
           .map((o) => {
@@ -140,12 +140,12 @@ export function PaymentPicker({
                   <GameIcon iconType={o.source.resource} size="small" />
                   <span>→</span>
                   <GameIcon iconType={o.targetResource} amount={o.conversionRate} size="small" />
-                  <span className="font-orbitron text-xs text-gray-400 mr-auto">
+                  <span className="font-orbitron text-xs compact:text-[13px] text-gray-400 mr-auto">
                     {o.available} available
                   </span>
                   <GameButton
                     size="sm"
-                    className="w-9 h-9 p-0"
+                    className="w-9 h-9 compact:size-11 p-0"
                     onClick={() => setCounts({ ...counts, [key(o)]: Math.max(0, n - 1) })}
                     aria-label={`Use less ${o.source.resource}`}
                     disabled={!n}
@@ -157,7 +157,7 @@ export function PaymentPicker({
                   <span className="font-orbitron min-w-5 text-center">{n}</span>
                   <GameButton
                     size="sm"
-                    className="w-9 h-9 p-0"
+                    className="w-9 h-9 compact:size-11 p-0"
                     onClick={() => setCounts({ ...counts, [key(o)]: n + 1 })}
                     aria-label={`Use more ${o.source.resource}`}
                     disabled={

@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
 
-type NotificationSeverity = "error" | "warning" | "info";
+export type NotificationSeverity = "error" | "warning" | "info";
 
 interface Notification {
   id: string;

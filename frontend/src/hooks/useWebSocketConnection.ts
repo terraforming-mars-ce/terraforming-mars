@@ -19,14 +19,23 @@ import type {
   FullStatePayload,
   PlayerDisconnectedPayload,
   LogUpdatePayload,
+  OtherPlayerDto,
 } from "@/types/generated/api-types.ts";
 import {
   GamePhaseAction,
   GamePhaseInitApplyCorp,
   GamePhaseInitApplyPrelude,
+  GameStatusLobby,
 } from "@/types/generated/api-types.ts";
 import type { GameEvent } from "@/hooks/useGameEvent.ts";
 import type { PlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
+import { QUICK_MODE } from "@/utils/quickMode.ts";
+import { GRAPHICS } from "@/utils/graphicsQuality.ts";
+
+// Bots count as joined once their session is ready, not when they are added.
+function isPresent(player: OtherPlayerDto): boolean {
+  return player.playerType === "bot" ? player.botStatus === "ready" : player.isConnected;
+}
 
 type GameEventInput = Omit<GameEvent, "id">;
 type PlayedCardNotificationInput = Omit<PlayedCardNotification, "id">;
@@ -54,6 +63,7 @@ export function useWebSocketConnection(
     playYourTurnSound,
     playAwardFundedSound,
     playCardPlayedSound,
+    playPlayerJoinedSound,
   } = useSoundEffects();
 
   const attemptReconnection = async () => {
@@ -85,7 +95,7 @@ export function useWebSocketConnection(
       const player = gameData.game.currentPlayer;
       store.setCurrentPlayer(player || null);
 
-      if (!skyboxCache.isReady()) {
+      if (!QUICK_MODE && GRAPHICS.skybox === "exr" && !skyboxCache.isReady()) {
         useGameStore.getState().setReconnectionStep("environment");
         await skyboxCache.preload();
       }
@@ -151,6 +161,18 @@ export function useWebSocketConnection(
         const newVenus = updatedGame.globalParameters?.venus;
         if (prevVenus !== undefined && newVenus !== undefined && newVenus > prevVenus) {
           void playVenusSound();
+        }
+
+        if (updatedGame.status === GameStatusLobby) {
+          const prevPresent = new Set(
+            (previousGameRef.current.otherPlayers ?? []).filter(isPresent).map((p) => p.id),
+          );
+          const someoneJoined = (updatedGame.otherPlayers ?? []).some(
+            (p) => isPresent(p) && !prevPresent.has(p.id),
+          );
+          if (someoneJoined) {
+            void playPlayerJoinedSound();
+          }
         }
 
         const prevTurn = previousGameRef.current.currentTurn;

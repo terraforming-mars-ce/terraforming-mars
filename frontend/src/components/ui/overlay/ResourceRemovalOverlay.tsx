@@ -84,7 +84,7 @@ export default function ResourceRemovalOverlay({ selection, players, currentPlay
           .map((player) => (
             <GameButton
               key={player.id}
-              className="w-full mb-2"
+              className="w-full mb-2 compact:min-h-11"
               emphasis={target === player.id ? "primary" : "secondary"}
               disabled={submitting}
               onClick={() => {
@@ -97,11 +97,11 @@ export default function ResourceRemovalOverlay({ selection, players, currentPlay
             </GameButton>
           ))}
         {target && (
-          <label className="flex items-center justify-between gap-3 text-white text-sm">
+          <label className="flex items-center justify-between gap-3 text-white text-sm compact:min-h-11">
             Amount
             <input
               aria-label="Amount to remove"
-              className="w-20 rounded border border-white/30 bg-black/40 p-2"
+              className="w-20 compact:w-24 compact:min-h-11 rounded border border-white/30 bg-black/40 p-2"
               type="number"
               min={1}
               max={maximum}
@@ -118,7 +118,7 @@ export default function ResourceRemovalOverlay({ selection, players, currentPlay
           </p>
         )}
       </GameFlowBody>
-      <GameFlowFooter>
+      <GameFlowFooter className="compact:gap-3">
         <GameButton
           emphasis="primary"
           disabled={

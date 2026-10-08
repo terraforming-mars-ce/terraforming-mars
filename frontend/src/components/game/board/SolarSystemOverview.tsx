@@ -1,4 +1,4 @@
-import { Profiler, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Profiler, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { coldStartTrace } from "@/services/performanceStore.ts";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
@@ -14,6 +14,8 @@ import {
   getPlanetOrbitalAngle,
   type PlanetConfig,
 } from "./solarSystemConfig";
+import { isDragClick } from "../controls/PanControls";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
 const ORBIT_SEGMENTS = 1024;
 const ORBIT_COLOR = new THREE.Color(0.25, 0.35, 0.5);
@@ -21,6 +23,7 @@ const MARS_RING_COLOR = new THREE.Color(0.8, 0.3, 0.2);
 const TRAIL_LENGTH_RAD = Math.PI * 0.8;
 const BASE_BRIGHTNESS = 0.08;
 const DEG_TO_RAD = Math.PI / 180;
+const MARS_LABEL_COLOR = "#ff6b4a";
 
 function OrbitRing({
   radius,
@@ -78,7 +81,85 @@ function OrbitRing({
   return <primitive object={lineObj} />;
 }
 
-function PlanetMarker({ config, onSelect }: { config: PlanetConfig; onSelect: () => void }) {
+interface MarkerProps {
+  selected: boolean;
+  compact: boolean;
+  onSelect: () => void;
+}
+
+function MarkerLabel({
+  name,
+  color,
+  hovered,
+  selected,
+  compact,
+  onHoverChange,
+  onSelect,
+}: {
+  name: string;
+  color?: string;
+  hovered: boolean;
+  selected: boolean;
+  compact: boolean;
+  onHoverChange: (hovered: boolean) => void;
+  onSelect: () => void;
+}) {
+  const { gl } = useThree();
+  const emphasized = compact ? selected : hovered;
+  let hint = "Click to travel";
+  let frameClass = "";
+  if (compact) {
+    hint = "Tap again to travel";
+    frameClass = selected
+      ? "px-3 py-2 bg-black/60 outline outline-1 outline-white/50"
+      : "px-3 py-2";
+  }
+
+  return (
+    <Html center>
+      <div
+        onPointerEnter={() => {
+          onHoverChange(true);
+          gl.domElement.style.cursor = "pointer";
+        }}
+        onPointerLeave={() => {
+          onHoverChange(false);
+          gl.domElement.style.cursor = "grab";
+        }}
+        onClick={() => onSelect()}
+        className={frameClass}
+        style={{
+          transform: compact ? "translateY(-24px)" : "translateY(-14px)",
+          opacity: emphasized || compact ? 1 : 0.7,
+          transition: "opacity 0.2s",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+          textShadow: "0 0 8px rgba(0,0,0,0.9)",
+        }}
+      >
+        <div
+          className={`font-orbitron font-bold tracking-wider text-center ${compact ? "text-[13px]" : "text-[11px]"} ${color ? "" : "text-white"}`}
+          style={{ color }}
+        >
+          {name}
+        </div>
+        <div
+          className={`text-center mt-0.5 ${compact ? "text-[11px] text-white/80" : "text-[9px] text-white/50"}`}
+          style={{ opacity: emphasized ? 1 : 0, transition: "opacity 0.15s" }}
+        >
+          {hint}
+        </div>
+      </div>
+    </Html>
+  );
+}
+
+function PlanetMarker({
+  config,
+  selected,
+  compact,
+  onSelect,
+}: MarkerProps & { config: PlanetConfig }) {
   const textures = useTextures();
   const { gl } = useThree();
   const [hovered, setHovered] = useState(false);
@@ -125,46 +206,26 @@ function PlanetMarker({ config, onSelect }: { config: PlanetConfig; onSelect: ()
         }}
         onClick={(e) => {
           e.stopPropagation();
+          if (isDragClick()) {
+            return;
+          }
           gl.domElement.style.cursor = "grab";
           onSelect();
         }}
       />
-      <Html center>
-        <div
-          onPointerEnter={() => {
-            setHovered(true);
-            gl.domElement.style.cursor = "pointer";
-          }}
-          onPointerLeave={() => {
-            setHovered(false);
-            gl.domElement.style.cursor = "grab";
-          }}
-          onClick={() => onSelect()}
-          style={{
-            transform: "translateY(-14px)",
-            opacity: hovered ? 1 : 0.7,
-            transition: "opacity 0.2s",
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-            textShadow: "0 0 8px rgba(0,0,0,0.9)",
-          }}
-        >
-          <div className="font-orbitron font-bold text-white text-[11px] tracking-wider text-center">
-            {config.name}
-          </div>
-          <div
-            className="text-white/50 text-[9px] text-center mt-0.5"
-            style={{ opacity: hovered ? 1 : 0, transition: "opacity 0.15s" }}
-          >
-            Click to travel
-          </div>
-        </div>
-      </Html>
+      <MarkerLabel
+        name={config.name}
+        hovered={hovered}
+        selected={selected}
+        compact={compact}
+        onHoverChange={setHovered}
+        onSelect={onSelect}
+      />
     </group>
   );
 }
 
-function MarsMarker({ onSelect }: { onSelect: () => void }) {
+function MarsMarker({ selected, compact, onSelect }: MarkerProps) {
   const { marsLod: texture } = useTextures();
   const { gl } = useThree();
   const [hovered, setHovered] = useState(false);
@@ -209,44 +270,22 @@ function MarsMarker({ onSelect }: { onSelect: () => void }) {
         }}
         onClick={(e) => {
           e.stopPropagation();
+          if (isDragClick()) {
+            return;
+          }
           gl.domElement.style.cursor = "grab";
           onSelect();
         }}
       />
-      <Html center>
-        <div
-          onPointerEnter={() => {
-            setHovered(true);
-            gl.domElement.style.cursor = "pointer";
-          }}
-          onPointerLeave={() => {
-            setHovered(false);
-            gl.domElement.style.cursor = "grab";
-          }}
-          onClick={() => onSelect()}
-          style={{
-            transform: "translateY(-14px)",
-            opacity: hovered ? 1 : 0.7,
-            transition: "opacity 0.2s",
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-            textShadow: "0 0 8px rgba(0,0,0,0.9)",
-          }}
-        >
-          <div
-            className="font-orbitron font-bold text-[11px] tracking-wider text-center"
-            style={{ color: "#ff6b4a" }}
-          >
-            MARS
-          </div>
-          <div
-            className="text-white/50 text-[9px] text-center mt-0.5"
-            style={{ opacity: hovered ? 1 : 0, transition: "opacity 0.15s" }}
-          >
-            Click to travel
-          </div>
-        </div>
-      </Html>
+      <MarkerLabel
+        name="MARS"
+        color={MARS_LABEL_COLOR}
+        hovered={hovered}
+        selected={selected}
+        compact={compact}
+        onHoverChange={setHovered}
+        onSelect={onSelect}
+      />
     </group>
   );
 }
@@ -264,6 +303,20 @@ export default function SolarSystemOverview() {
 
 function SolarSystemOverviewContent() {
   const { activePlanet, setActivePlanet } = usePlanetFocus();
+  const { isCompact } = useLayoutMode();
+  const [selectedBody, setSelectedBody] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedBody(null);
+  }, [activePlanet, isCompact]);
+
+  const handleBodyTap = (bodyId: string) => {
+    if (isCompact && selectedBody !== bodyId) {
+      setSelectedBody(bodyId);
+      return;
+    }
+    setActivePlanet(bodyId as Parameters<typeof setActivePlanet>[0]);
+  };
 
   useLayoutEffect(() => {
     coldStartTrace.mark("solar-system:commit", { activePlanet });
@@ -300,12 +353,18 @@ function SolarSystemOverviewContent() {
         />
       ))}
 
-      <MarsMarker onSelect={() => setActivePlanet("mars")} />
+      <MarsMarker
+        selected={selectedBody === "mars"}
+        compact={isCompact}
+        onSelect={() => handleBodyTap("mars")}
+      />
       {PLANET_CONFIGS.map((config) => (
         <PlanetMarker
           key={config.id}
           config={config}
-          onSelect={() => setActivePlanet(config.id as Parameters<typeof setActivePlanet>[0])}
+          selected={selectedBody === config.id}
+          compact={isCompact}
+          onSelect={() => handleBodyTap(config.id)}
         />
       ))}
     </group>

@@ -1,6 +1,7 @@
 import React from "react";
 import { GamePopover } from "../GamePopover";
 import GameButton from "../buttons/GameButton.tsx";
+import { MENU_POPOVER_WIDTH, useMenuPopoverPosition } from "./useMenuPopoverPosition.ts";
 import { GameDto } from "@/types/generated/api-types";
 import { useJoinGame } from "@/hooks/useJoinGame";
 import LoadingOverlay from "../../game/view/LoadingOverlay";
@@ -19,6 +20,7 @@ const JoinGamePopover: React.FC<JoinGamePopoverProps> = ({
   game,
   anchorRef,
 }) => {
+  const position = useMenuPopoverPosition(anchorRef);
   const { playerName, setPlayerName, isLoading, handleJoin, handleKeyDown, loadingMessage } =
     useJoinGame({ game });
 
@@ -27,10 +29,10 @@ const JoinGamePopover: React.FC<JoinGamePopoverProps> = ({
       <GamePopover
         isVisible={isVisible}
         onClose={onClose}
-        position={{ type: "anchor", anchorRef, placement: "below" }}
+        position={position}
         theme="menu"
         header={{ title: "Join game", showCloseButton: true }}
-        width={360}
+        width={MENU_POPOVER_WIDTH}
         maxHeight="none"
         animation="slideDown"
       >

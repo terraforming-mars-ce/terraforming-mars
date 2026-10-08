@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import BlurredOverlay from "./BlurredOverlay.tsx";
+import { Z_INDEX } from "@/constants/zIndex.ts";
 import CorporationCard from "../cards/CorporationCard.tsx";
 import { PlayerDto, OtherPlayerDto, CardDto } from "@/types/generated/api-types.ts";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
@@ -74,7 +75,7 @@ export default function CorporationOverlay({
   }, [entries.length, windowWidth]);
 
   return (
-    <BlurredOverlay visible={visible} onClose={onClose} zIndex={20200}>
+    <BlurredOverlay visible={visible} onClose={onClose} zIndex={Z_INDEX.CORPORATION_OVERLAY}>
       <div
         className="flex items-center justify-center h-full w-full gap-8"
         style={{

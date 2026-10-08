@@ -1,7 +1,7 @@
 import React from "react";
 import { GamePopoverItemProps } from "./types";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
 
 const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
   state,
@@ -97,7 +97,7 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
     >
       {hasError && (
         <span
-          className="popover-status popover-status-error absolute top-2 right-2 pointer-events-none"
+          className="popover-status popover-status-error absolute top-2 right-2 pointer-events-none compact:text-[11px]"
           style={{ zIndex: Z_INDEX.UI_BASE }}
         >
           {error.message}
@@ -106,20 +106,26 @@ const GamePopoverItem: React.FC<GamePopoverItemProps> = ({
       )}
 
       {warning && state === "available" && (
-        <div className="absolute top-2 right-2 z-[4] bg-[linear-gradient(135deg,#f39c12,#e67e22)] text-white text-[9px] font-bold px-2 py-1 rounded border border-[rgba(243,156,18,0.8)] shadow-[0_2px_8px_rgba(243,156,18,0.4)] flex items-center gap-1">
+        <div
+          className="absolute top-2 right-2 bg-[linear-gradient(135deg,#f39c12,#e67e22)] text-white text-[9px] compact:text-[11px] font-bold px-2 py-1 rounded border border-[rgba(243,156,18,0.8)] shadow-[0_2px_8px_rgba(243,156,18,0.4)] flex items-center gap-1"
+          style={{ zIndex: getZIndex("LOCAL", 4) }}
+        >
           <span>{warning.message}</span>
         </div>
       )}
 
       {info && state === "disabled" && !error && (
-        <div className="absolute top-2 right-2 z-[4] bg-space-black-darker/90 text-white/60 text-[9px] font-bold px-2 py-1 rounded border border-white/20 flex items-center gap-1">
+        <div
+          className="absolute top-2 right-2 bg-space-black-darker/90 text-white/60 text-[9px] compact:text-[11px] font-bold px-2 py-1 rounded border border-white/20 flex items-center gap-1"
+          style={{ zIndex: getZIndex("LOCAL", 4) }}
+        >
           <span>{info.message}</span>
         </div>
       )}
 
       {statusBadge && (
         <span
-          className="popover-status absolute top-2 right-2 pointer-events-none"
+          className="popover-status absolute top-2 right-2 pointer-events-none compact:text-[11px]"
           style={{ zIndex: Z_INDEX.UI_BASE }}
         >
           {statusBadge}

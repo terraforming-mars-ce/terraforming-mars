@@ -31,6 +31,7 @@ import {
 } from "./landscapeFields";
 
 import { projectBoardPoint } from "./landscapeGeometry";
+import { GRAPHICS } from "@/utils/graphicsQuality.ts";
 export const TREE_NAMES = ["Tree-01-1", "Tree-01-2", "Tree-01-3", "Tree-01-4"];
 export const PINE_NAMES = ["Pine4m"];
 export const BUSH_NAMES = ["Bush-01", "Bush-02", "Bush-03", "Bush-04", "Bush-05"];
@@ -103,7 +104,7 @@ export function createFoliageMaterial(
     map,
     side,
     alphaTest: 0.15,
-    alphaToCoverage: true,
+    alphaToCoverage: GRAPHICS.antialias,
     colorWrite: false,
     polygonOffset: true,
     polygonOffsetFactor: 1,
@@ -406,6 +407,9 @@ function GreeneryRenderer({
       if (p.rank > gates[p.kind]) {
         continue;
       }
+      if (!keptAtFoliageDensity(p.seed)) {
+        continue;
+      }
       const counts = {
         tree: TREE_NAMES.length,
         pine: PINE_NAMES.length,
@@ -429,6 +433,7 @@ function GreeneryRenderer({
     const last = baked.current;
     const { sunDirectionX: sx, sunDirectionY: sy, sunDirectionZ: sz } = settings;
     if (
+      !shade.contentLost &&
       last.groups === groups &&
       last.tiles === nuclearTiles &&
       last.sx === sx &&
@@ -499,6 +504,16 @@ function GreeneryRenderer({
       )}
     </group>
   );
+}
+// Thins plants by a hash of their seed, so the same plants are kept on every render.
+function keptAtFoliageDensity(seed: number) {
+  if (GRAPHICS.foliageDensity >= 1) {
+    return true;
+  }
+  let h = Math.imul(seed ^ (seed >>> 16), 0x45d9f3b);
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296 < GRAPHICS.foliageDensity;
 }
 const EMPTY_NUCLEAR_TRANSITIONS: NuclearTransitions = new Map();
 const EMPTY_NUCLEAR_TILES: ReadonlySet<string> = new Set();

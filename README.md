@@ -58,9 +58,11 @@ This is not a simplified clone. It implements the complete rule set across six e
 ```bash
 git clone https://github.com/terraforming-mars-ce/terraforming-mars.git
 cd terraforming-mars
-make dev-setup   # Install dependencies
-make run         # Launch frontend (3000) + backend (3001)
+just deps        # Install dependencies
+just dev         # Launch frontend (3000) + backend (3001)
 ```
+
+Requires [Go](https://go.dev), [Bun](https://bun.sh), [Node](https://nodejs.org) 24+ and [just](https://just.systems).
 
 Open `http://localhost:3000`, create a game, and invite friends with the game code.
 
@@ -77,12 +79,13 @@ Open `http://localhost:3000`, create a game, and invite friends with the game co
 Contributions are welcome. The codebase is split into a Go backend (`backend/`) and a React frontend (`frontend/`), connected by auto-generated TypeScript types.
 
 ```bash
-make test        # Run backend tests
-make lint        # Lint Go + TypeScript
-make format      # Format everything
+just test               # Run backend tests
+just lint               # Lint Go + TypeScript
+just format             # Format everything
+just prepare-for-commit # Format, regenerate types and run every CI check
 ```
 
-See the `Makefile` for the full command reference.
+Run `just` for the full command reference.
 
 ## License
 

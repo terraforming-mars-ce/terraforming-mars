@@ -26,11 +26,17 @@ import { hashSeed } from "./landscapeGeometry";
 import LandscapeRenderer from "./LandscapeRenderer";
 import PrimitiveRenderer from "./PrimitiveManager";
 import BirdRenderer from "./BirdRenderer";
+import { GRAPHICS } from "@/utils/graphicsQuality.ts";
 import SpaceshipRenderer from "./SpaceshipRenderer";
 import { SPHERE_RADIUS } from "./boardConstants";
-import TileTooltip, { TileTooltipData } from "../../ui/display/TileTooltip";
+import TileTooltip from "../../ui/display/TileTooltip";
+import type { TileTooltipData } from "../../ui/display/TileInfoContent";
+import { toggleInspectedHex, useTileInspectStore } from "../../../stores/tileInspectStore";
+import { usePlacementSelectionStore } from "../../../stores/placementSelectionStore";
+import { useLayoutMode } from "../../../hooks/useLayoutMode";
 import { Html } from "@react-three/drei";
-import { panState } from "../controls/PanControls";
+import { isDragClick, panState } from "../controls/PanControls";
+import { useAutoFramePlacement } from "../controls/useAutoFramePlacement";
 import { useVPCounting } from "../../../contexts/VPCountingContext";
 import { usePlanetFocus } from "../../../contexts/PlanetFocusContext";
 import { coldStartTrace } from "../../../services/performanceStore";
@@ -150,6 +156,7 @@ export default function TileGrid({
         case "commercial-district-tile":
         case "industrial-center-tile":
         case "mining-tile":
+        case "mohole-tile":
         case "restricted-tile":
           void playConstructionSound();
           break;
@@ -193,30 +200,6 @@ export default function TileGrid({
 
   const [tooltipData, setTooltipData] = useState<TileTooltipData | null>(null);
   const tooltipPositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  const handleTileHoverInfo = useCallback(
-    (
-      data: Omit<TileTooltipData, "ownerName" | "ownerColor" | "reservedByName"> & {
-        position: { x: number; y: number };
-        ownerId: string | null;
-        reservedById: string | null;
-      },
-    ) => {
-      tooltipPositionRef.current = data.position;
-      setTooltipData({
-        tileType: data.tileType,
-        displayName: data.displayName,
-        placedName: data.placedName,
-        ownerName: data.ownerId ? playerNameMap.get(data.ownerId) : undefined,
-        ownerColor: data.ownerId ? playerColorMap.get(data.ownerId) : undefined,
-        reservedByName: data.reservedById ? playerNameMap.get(data.reservedById) : undefined,
-        isOceanSpace: data.isOceanSpace,
-        isVolcanic: data.isVolcanic,
-        bonuses: data.bonuses,
-      });
-    },
-    [playerNameMap, playerColorMap],
-  );
 
   const handleTileHoverMove = useCallback((position: { x: number; y: number }) => {
     tooltipPositionRef.current = position;
@@ -650,6 +633,47 @@ export default function TileGrid({
       }));
   }, [projectedHexGrid]);
 
+  const describeHex = useCallback(
+    (key: string): TileTooltipData | null => {
+      const tile = projectedHexGrid.find((t) => HexGrid2D.coordinateToKey(t.coordinate) === key);
+      if (!tile) {
+        return null;
+      }
+      const tileData = getTileData(tile);
+      const cityPlot = cityPlots.find((plot) => HexGrid2D.coordinateToKey(plot.coordinate) === key);
+      const ownerId = cityPlot && SHOWCASE ? showcaseOwnerId : tileData.ownerId;
+      const reservedById = tile.backendTile?.reservedBy || null;
+      return {
+        tileType: cityPlot ? "city" : tileData.type,
+        displayName: tileData.specialLabel || tile.backendTile?.displayName,
+        placedName: SHOWCASE ? cityPlot?.layout.name : tile.backendTile?.occupiedBy?.displayName,
+        ownerName: ownerId ? playerNameMap.get(ownerId) : undefined,
+        ownerColor: ownerId ? playerColorMap.get(ownerId) : undefined,
+        reservedByName: reservedById ? playerNameMap.get(reservedById) : undefined,
+        isOceanSpace: tile.isOceanSpace,
+        isVolcanic: tile.backendTile?.tags?.includes("volcanic") ?? false,
+        bonuses: cityPlot ? {} : tile.bonuses,
+      };
+    },
+    [projectedHexGrid, cityPlots, showcaseOwnerId, playerNameMap, playerColorMap],
+  );
+
+  const { isCompact } = useLayoutMode();
+  const inspectedHex = useTileInspectStore((s) => s.inspectedHex);
+  const selectedPlacementHex = usePlacementSelectionStore((s) => s.selectedHex);
+  const hasPendingPlacement = Boolean(gameState?.currentPlayer?.pendingTileSelection);
+
+  useEffect(() => {
+    const { inspectedHex: hex, position, inspect } = useTileInspectStore.getState();
+    if (!hex || !position) {
+      return;
+    }
+    const info = describeHex(hex);
+    if (info) {
+      inspect(hex, info, position);
+    }
+  }, [describeHex]);
+
   // --- Centralized interaction sphere (single raycast target) ---
   const [hoveredHexKey, setHoveredHexKey] = useState<string | null>(null);
   const hoveredHexKeyRef = useRef<string | null>(null);
@@ -683,6 +707,15 @@ export default function TileGrid({
 
   const isDraggingCard = useCardDragStore((s) => s.isDraggingCard);
 
+  const availableSignature = availableHexes.join("|");
+  const availablePoints = useMemo(() => {
+    const available = new Set(availableSignature ? availableSignature.split("|") : []);
+    return projectedHexGrid
+      .filter((tile) => available.has(HexGrid2D.coordinateToKey(tile.coordinate)))
+      .map((tile) => tile.spherePosition);
+  }, [projectedHexGrid, availableSignature]);
+  useAutoFramePlacement(availablePoints, highlightRoot, "mars");
+
   useEffect(() => {
     if (isDraggingCard) {
       hoveredHexKeyRef.current = null;
@@ -699,6 +732,9 @@ export default function TileGrid({
         object: THREE.Object3D;
       },
     ) => {
+      if (isCompact && event.nativeEvent.pointerType === "touch") {
+        return;
+      }
       if (panState.isPanning || useCardDragStore.getState().isDraggingCard) {
         if (hoveredHexKeyRef.current) {
           hoveredHexKeyRef.current = null;
@@ -713,31 +749,16 @@ export default function TileGrid({
         hoveredHexKeyRef.current = key;
         setHoveredHexKey(key);
         if (key) {
-          const tile = projectedHexGrid.find(
-            (t) => HexGrid2D.coordinateToKey(t.coordinate) === key,
-          );
-          if (tile) {
-            const tileData = getTileData(tile);
-            const cityPlot = cityPlots.find(
-              (plot) => HexGrid2D.coordinateToKey(plot.coordinate) === key,
-            );
-            const isAvailable = availableHexes.includes(key);
-            if (isAvailable) {
+          const info = describeHex(key);
+          if (info) {
+            if (availableHexes.includes(key)) {
               hoverSound.onMouseEnter?.();
             }
-            handleTileHoverInfo({
-              position: { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY },
-              tileType: cityPlot ? "city" : tileData.type,
-              displayName: tileData.specialLabel || tile.backendTile?.displayName,
-              placedName: SHOWCASE
-                ? cityPlot?.layout.name
-                : tile.backendTile?.occupiedBy?.displayName,
-              ownerId: cityPlot && SHOWCASE ? showcaseOwnerId : tileData.ownerId,
-              reservedById: tile.backendTile?.reservedBy || null,
-              isOceanSpace: tile.isOceanSpace,
-              isVolcanic: tile.backendTile?.tags?.includes("volcanic") ?? false,
-              bonuses: cityPlot ? {} : tile.bonuses,
-            });
+            tooltipPositionRef.current = {
+              x: event.nativeEvent.clientX,
+              y: event.nativeEvent.clientY,
+            };
+            setTooltipData(info);
           }
         } else {
           handleTileHoverLeave();
@@ -747,12 +768,10 @@ export default function TileGrid({
       }
     },
     [
-      projectedHexGrid,
-      cityPlots,
-      showcaseOwnerId,
+      isCompact,
       availableHexes,
       findNearestHex,
-      handleTileHoverInfo,
+      describeHex,
       handleTileHoverMove,
       handleTileHoverLeave,
       hoverSound,
@@ -766,12 +785,25 @@ export default function TileGrid({
   }, [handleTileHoverLeave]);
 
   const handleSphereClick = useCallback(
-    (event: THREE.Event & { point: THREE.Vector3; object: THREE.Object3D }) => {
-      if (panState.isPanning || panState.hasDragged || useCardDragStore.getState().isDraggingCard) {
+    (
+      event: THREE.Event & {
+        point: THREE.Vector3;
+        object: THREE.Object3D;
+        nativeEvent: MouseEvent;
+      },
+    ) => {
+      if (isDragClick() || useCardDragStore.getState().isDraggingCard) {
         return;
       }
       const localPoint = event.object.worldToLocal(event.point.clone());
       const key = findNearestHex(localPoint);
+      if (isCompact && !hasPendingPlacement) {
+        toggleInspectedHex(key, describeHex, {
+          x: event.nativeEvent.clientX,
+          y: event.nativeEvent.clientY,
+        });
+        return;
+      }
       if (key) {
         const isAvailable = availableHexes.includes(key);
         if (isAvailable) {
@@ -780,8 +812,22 @@ export default function TileGrid({
         onHexClick?.(key);
       }
     },
-    [findNearestHex, availableHexes, onHexClick, hoverSound],
+    [
+      findNearestHex,
+      availableHexes,
+      onHexClick,
+      hoverSound,
+      isCompact,
+      hasPendingPlacement,
+      describeHex,
+    ],
   );
+
+  const handleSpherePointerMissed = useCallback(() => {
+    if (isCompact && !isDragClick()) {
+      useTileInspectStore.getState().clear();
+    }
+  }, [isCompact]);
 
   return (
     <TileHighlightBoardContext.Provider value={highlightBoard}>
@@ -793,6 +839,7 @@ export default function TileGrid({
           onPointerMove={handleSpherePointerMove}
           onPointerLeave={handleSpherePointerLeave}
           onClick={handleSphereClick}
+          onPointerMissed={handleSpherePointerMissed}
           visible={false}
         />
       )}
@@ -849,7 +896,7 @@ export default function TileGrid({
       </group>
       <NuclearDebrisRenderer sites={nuclearSites} transitions={nuclearTransitions} />
       <PrimitiveRenderer />
-      <BirdRenderer livingGreeneryTiles={livingGreeneryTiles} />
+      {GRAPHICS.birds && <BirdRenderer livingGreeneryTiles={livingGreeneryTiles} />}
       {gameState?.settings?.cardPacks?.includes("colonies") && (
         <SpaceshipRenderer
           gameState={gameState}
@@ -920,7 +967,10 @@ export default function TileGrid({
             bonuses={isCityRenderer || isShowcaseGreen ? EMPTY_BONUSES : tile.bonuses}
             onClick={noop}
             isHovered={isHovered}
+            isInspected={isCompact && inspectedHex === hexKey}
             isAvailableForPlacement={isAvailable}
+            hideLabels={isCompact}
+            isSelectedForPlacement={isAvailable && selectedPlacementHex === hexKey}
             animateEntrance={animateHexEntrance}
             startHidden={startHidden}
             entranceDelay={index * 15}

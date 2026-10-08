@@ -17,6 +17,9 @@ interface GameMenuModalProps {
   zIndex?: number;
   onClose?: () => void;
   showCloseButton?: boolean;
+  headerStart?: React.ReactNode;
+  headerEnd?: React.ReactNode;
+  footer?: React.ReactNode;
 }
 
 const GameMenuModal: React.FC<GameMenuModalProps> = ({
@@ -32,8 +35,12 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
   zIndex = Z_INDEX.MENU_DROPDOWN,
   onClose,
   showCloseButton = false,
+  headerStart,
+  headerEnd,
+  footer,
 }) => {
   const [animState, setAnimState] = useState<"entering" | "visible" | "exiting">("entering");
+  const isLobby = layout === "lobby";
 
   useEffect(() => {
     if (visible === false) {
@@ -97,29 +104,38 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
       )}
 
       {onBack && (
-        <div className="fixed top-[30px] left-[30px]" style={{ zIndex: Z_INDEX.POPOVER }}>
+        <div className="menu-chrome-top-left menu-chrome-back" style={{ zIndex: Z_INDEX.POPOVER }}>
           <BackButton onClick={onBack}>{backLabel ?? "Back"}</BackButton>
         </div>
       )}
       <div
         data-overlay-layer={showBackdrop || undefined}
-        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${layout === "lobby" ? "w-[1100px]" : "w-[450px]"} max-w-[calc(100vw-32px)] ${animationClass}`}
+        className={`menu-modal-frame ${isLobby ? "menu-modal-lobby" : ""} ${animationClass}`}
         style={{ zIndex }}
         onAnimationEnd={handleAnimationEnd}
       >
-        <div className="relative game-panel p-6 sm:p-8 max-h-[calc(100dvh-100px)] overflow-y-auto">
+        <div className="menu-modal-panel game-panel">
           {showCloseButton && onClose && (
             <div className="absolute top-3 right-3">
               <CloseButton onClick={onClose} />
             </div>
           )}
-          <div className="text-center mb-6">
-            <h2 className="font-orbitron text-white text-[24px] m-0 mb-2 text-shadow-glow font-bold tracking-wider">
-              {title}
-            </h2>
-            {subtitle && <p className="text-white/60 text-sm m-0">{subtitle}</p>}
+          <div
+            className={`min-h-0 overflow-y-auto overscroll-contain p-6 sm:p-8 compact:p-4 ${footer ? "!pb-0" : ""}`}
+          >
+            <div className="relative mb-6 text-center compact:mb-3">
+              {headerStart && <div className="absolute top-0 left-0">{headerStart}</div>}
+              <div>
+                <h2 className="font-orbitron text-white text-[24px] m-0 mb-2 text-shadow-glow font-bold tracking-wider compact:text-[20px] compact:mb-1">
+                  {title}
+                </h2>
+                {subtitle && <p className="text-white/60 text-sm m-0">{subtitle}</p>}
+              </div>
+              {headerEnd && <div className="absolute top-0 right-0">{headerEnd}</div>}
+            </div>
+            {children}
           </div>
-          {children}
+          {footer && <div className="shrink-0 px-6 pb-6 sm:px-8 sm:pb-8">{footer}</div>}
         </div>
       </div>
     </>

@@ -62,6 +62,10 @@ export function useSoundEffects() {
     return audioService.playGameStartSound();
   }, []);
 
+  const playPlayerJoinedSound = useCallback(() => {
+    return audioService.playPlayerJoinedSound();
+  }, []);
+
   const playProductionScoreSound = useCallback(() => {
     return audioService.playProductionScoreSound();
   }, []);
@@ -81,6 +85,7 @@ export function useSoundEffects() {
     playYourTurnSound,
     playAwardFundedSound,
     playGameStartSound,
+    playPlayerJoinedSound,
     playProductionScoreSound,
   };
 }

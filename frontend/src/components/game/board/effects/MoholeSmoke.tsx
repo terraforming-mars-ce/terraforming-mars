@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTextures } from "../../../../hooks/useTextures";
 import { usePrimitiveInstances } from "../PrimitiveManager";
+import { scaledParticleCount } from "@/utils/graphicsQuality.ts";
 
 interface MoholeSmokeProps {
   isNewlyPlaced?: boolean;
@@ -21,7 +22,7 @@ interface SmokeParticle {
   wavePhase: number;
 }
 
-const PARTICLE_COUNT = 25;
+const PARTICLE_COUNT = scaledParticleCount(25);
 
 function createSmokeMaterial(smokeTexture: THREE.Texture | undefined): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({

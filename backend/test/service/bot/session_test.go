@@ -88,6 +88,9 @@ func testConfig() bot.Config {
 	cfg.ReactionBatch = 10 * time.Millisecond
 	cfg.ReactionCooldown = 0
 	cfg.BigEventChance = 1
+	cfg.ThoughtInterval = 0
+	cfg.IntentThoughtChance = 1
+	cfg.RemarkThoughtChance = 1
 	return cfg
 }
 
@@ -162,14 +165,24 @@ func TestSession_ModelActsThroughTools(t *testing.T) {
 				return bot.Result{}, err
 			}
 		}
-		return bot.Result{Text: "done", CostUSD: 0.02}, nil
+		return bot.Result{Text: "That went nicely.", CostUSD: 0.02}, nil
 	}}
-	bc, _ := newController(t, fx, runner)
+	bc, broadcaster := newController(t, fx, runner)
 
 	startBot(t, fx, bc)
 
 	eventually(t, "the turn to pass to the human", func() bool { return fx.currentTurn() == fx.humanID })
 	eventually(t, "the planner to run after the turn", func() bool { return runner.callsFor(plannerModel) == 1 })
+	eventually(t, "the closing remark as a thought bubble", func() bool {
+		broadcaster.mu.Lock()
+		defer broadcaster.mu.Unlock()
+		for _, thought := range broadcaster.thoughts {
+			if thought == "That went nicely." {
+				return true
+			}
+		}
+		return false
+	})
 	eventually(t, "the bot to be ready with spend recorded", func() bool {
 		v := readBot(t, fx)
 		return v.status == playerPkg.BotStatusReady && v.spend >= 0.04
@@ -287,8 +300,13 @@ func TestSession_ReactsWhenAnotherPlayerDestroysItsPlants(t *testing.T) {
 	testutil.AssertNoError(t, err, "baseline log entry")
 
 	var mu sync.Mutex
-	var reactorPrompt string
+	var reactorPrompt, plannerPrompt string
 	runner := &fakeRunner{fn: func(_ context.Context, inv bot.Invocation) (bot.Result, error) {
+		if inv.Model == plannerModel {
+			mu.Lock()
+			plannerPrompt = inv.Prompt
+			mu.Unlock()
+		}
 		if inv.Model == reactorModel {
 			mu.Lock()
 			reactorPrompt = inv.Prompt
@@ -309,12 +327,16 @@ func TestSession_ReactsWhenAnotherPlayerDestroysItsPlants(t *testing.T) {
 		_, emotes := broadcaster.snapshot()
 		return len(emotes) == 1 && emotes[0] == "angry"
 	})
-	mu.Lock()
-	defer mu.Unlock()
 	humanName := ""
 	fx.read(func() {
 		h, _ := fx.game.GetPlayer(fx.humanID)
 		humanName = h.Name()
 	})
+	eventually(t, "the planner to replan after the hit", func() bool { return runner.callsFor(plannerModel) >= 1 })
+	mu.Lock()
+	defer mu.Unlock()
 	testutil.AssertTrue(t, strings.Contains(reactorPrompt, humanName+" took away 6 of your plants"), "the reactor is told who destroyed the plants: "+reactorPrompt)
+	testutil.AssertTrue(t, strings.Contains(reactorPrompt, humanName+" has acted against you once"), "the reactor sees the grudge: "+reactorPrompt)
+	testutil.AssertTrue(t, strings.Contains(plannerPrompt, "YOU WERE JUST TARGETED"), "the replan knows why it runs")
+	testutil.AssertTrue(t, strings.Contains(plannerPrompt, "took away 6 of your plants"), "the replan sees the hit")
 }

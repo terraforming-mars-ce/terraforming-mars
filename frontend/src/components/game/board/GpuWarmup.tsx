@@ -27,7 +27,8 @@ import {
   type TreeVariant,
 } from "./GreeneryRenderer";
 import { useModels } from "../../../hooks/useModels";
-import { useTextures } from "../../../hooks/useTextures";
+import { usePlanetSurface, usePlanetSurfaces, useTextures } from "../../../hooks/useTextures";
+import { GRAPHICS } from "@/utils/graphicsQuality.ts";
 import { coldStartTrace } from "@/services/performanceStore.ts";
 
 import { CityGroundPatch, getMaterials } from "./CityRenderer";
@@ -50,6 +51,58 @@ const landscapeWarmup: LandscapeState = {
 const WARMUP_SCALE = 0.001;
 const WARMUP_FRAMES = 3;
 const ORIGIN = new THREE.Vector3();
+
+const PLANET_WARMUP_KEYS = [
+  "venus",
+  "earth",
+  "jupiter",
+  "mercury",
+  "saturn",
+  "neptune",
+  "uranus",
+  "ceres",
+  "moon",
+  "ganymede",
+  "earthClouds",
+] as const;
+
+type PlanetWarmupTextures = Record<(typeof PLANET_WARMUP_KEYS)[number], THREE.Texture>;
+
+function PlanetWarmupMeshes({
+  geometry,
+  textures,
+}: {
+  geometry: THREE.BufferGeometry;
+  textures: PlanetWarmupTextures;
+}) {
+  const materials = useMemo(
+    () =>
+      PLANET_WARMUP_KEYS.map(
+        (key) =>
+          new THREE.MeshStandardMaterial({
+            map: textures[key],
+            roughness: 0.8,
+            metalness: 0.05,
+            fog: false,
+            transparent: key === "earthClouds",
+            depthWrite: key !== "earthClouds",
+          }),
+      ),
+    [textures],
+  );
+  return (
+    <>
+      {materials.map((mat, i) => (
+        <mesh key={`planet-warmup-${i}`} geometry={geometry} material={mat} frustumCulled={false} />
+      ))}
+    </>
+  );
+}
+
+function PlanetSurfaceWarmup({ geometry }: { geometry: THREE.BufferGeometry }) {
+  const surfaces = usePlanetSurfaces();
+  return <PlanetWarmupMeshes geometry={geometry} textures={surfaces} />;
+}
 
 interface GpuWarmupProps {
   onReady?: () => void;
@@ -217,39 +270,50 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
   // --- Solar system warmup materials ---
   const solarSphereGeometry = useMemo(() => new THREE.SphereGeometry(WARMUP_SCALE, 8, 4), []);
 
-  const sunSurfaceMaterial = useMemo(() => createSunSurfaceMaterial(textures.sun), [textures.sun]);
+  const sunTexture = usePlanetSurface("sun", true);
+  const sunSurfaceMaterial = useMemo(() => createSunSurfaceMaterial(sunTexture), [sunTexture]);
   const sunCoronaMaterial = useMemo(() => createSunCoronaMaterial(), []);
   const sunProminenceMaterial = useMemo(() => createSunProminenceMaterial(), []);
-
-  const planetTextureKeys = [
-    "venus",
-    "earth",
-    "jupiter",
-    "mercury",
-    "saturn",
-    "neptune",
-    "uranus",
-    "ceres",
-    "moon",
-    "ganymede",
-    "earthClouds",
-  ] as const;
-
-  const planetMaterials = useMemo(
-    () =>
-      planetTextureKeys.map(
-        (key) =>
-          new THREE.MeshStandardMaterial({
-            map: (textures as unknown as Record<string, THREE.Texture>)[key],
-            roughness: 0.8,
-            metalness: 0.05,
-            fog: false,
-            transparent: key === "earthClouds",
-            depthWrite: key !== "earthClouds",
-          }),
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    planetTextureKeys.map((key) => (textures as unknown as Record<string, THREE.Texture>)[key]),
+  const {
+    venusLod,
+    earthLod,
+    jupiterLod,
+    mercuryLod,
+    saturnLod,
+    neptuneLod,
+    uranusLod,
+    ceresLod,
+    moonLod,
+    ganymedeLod,
+    earthCloudsLod,
+  } = textures;
+  const planetLods = useMemo(
+    () => ({
+      venus: venusLod,
+      earth: earthLod,
+      jupiter: jupiterLod,
+      mercury: mercuryLod,
+      saturn: saturnLod,
+      neptune: neptuneLod,
+      uranus: uranusLod,
+      ceres: ceresLod,
+      moon: moonLod,
+      ganymede: ganymedeLod,
+      earthClouds: earthCloudsLod,
+    }),
+    [
+      venusLod,
+      earthLod,
+      jupiterLod,
+      mercuryLod,
+      saturnLod,
+      neptuneLod,
+      uranusLod,
+      ceresLod,
+      moonLod,
+      ganymedeLod,
+      earthCloudsLod,
+    ],
   );
 
   const orbitLineMaterial = useMemo(
@@ -453,14 +517,11 @@ export default function GpuWarmup({ onReady }: GpuWarmupProps) {
       <mesh geometry={solarSphereGeometry} material={sunSurfaceMaterial} frustumCulled={false} />
       <mesh geometry={solarSphereGeometry} material={sunCoronaMaterial} frustumCulled={false} />
       <mesh geometry={solarSphereGeometry} material={sunProminenceMaterial} frustumCulled={false} />
-      {planetMaterials.map((mat, i) => (
-        <mesh
-          key={`planet-warmup-${i}`}
-          geometry={solarSphereGeometry}
-          material={mat}
-          frustumCulled={false}
-        />
-      ))}
+      {GRAPHICS.warmupAllPlanets ? (
+        <PlanetSurfaceWarmup geometry={solarSphereGeometry} />
+      ) : (
+        <PlanetWarmupMeshes geometry={solarSphereGeometry} textures={planetLods} />
+      )}
       <primitive object={orbitLineObj} />
     </group>
   );

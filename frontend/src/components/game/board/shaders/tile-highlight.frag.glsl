@@ -36,8 +36,11 @@ vec3 applyTileHighlight(vec3 color) {
   float edge=max(abs(p.x),max(abs(0.5*p.x+0.86602540378*p.y),abs(-0.5*p.x+0.86602540378*p.y)));
   float mask=1.0-smoothstep(0.14176021702,0.14376021702,edge);
   float gradient=0.25+0.75*smoothstep(0.15,0.45,length(p)/0.332);
-  float placement=state.g*(0.5+0.3*sin(uTileHighlightTime*2.0))*0.6;
+  float selected=step(1.5,state.g);
+  float pulse=mix(0.5+0.3*sin(uTileHighlightTime*2.0),0.8+0.2*sin(uTileHighlightTime*6.0),selected);
+  float placement=min(state.g,1.0)*pulse*mix(0.6,1.0,selected);
   float strength=state.r+placement+state.b;
-  vec3 tint=(vec3(0.95,0.95,1.0)*state.r+vec3(0.4,1.0,0.4)*placement+vp.rgb*state.b)/max(strength,0.00001);
-  return mix(color,tint,min(0.55,strength*gradient)*mask*state.a);
+  vec3 placementTint=mix(vec3(0.4,1.0,0.4),vec3(0.8,1.0,0.8),selected);
+  vec3 tint=(vec3(0.95,0.95,1.0)*state.r+placementTint*placement+vp.rgb*state.b)/max(strength,0.00001);
+  return mix(color,tint,min(mix(0.55,0.75,selected),strength*gradient)*mask*state.a);
 }

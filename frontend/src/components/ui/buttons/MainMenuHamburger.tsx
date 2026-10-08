@@ -10,60 +10,187 @@ import {
   FeedbackIcon,
   LeaveIcon,
   EndGameIcon,
+  HamburgerIcon,
+  InstallIcon,
+  HomeIcon,
 } from "../menuIcons.tsx";
+import MobileMenuDrawer, { MobileMenuButton } from "../../mobile/MobileMenuDrawer.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
+import { useGameStore } from "@/stores/gameStore.ts";
+import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
+import {
+  isFullscreen as readIsFullscreen,
+  isFullscreenSupported,
+  toggleFullscreen,
+} from "@/utils/fullscreen.ts";
+import { useInstallOffer } from "@/utils/installApp.ts";
+import { useLocation, useNavigate } from "react-router-dom";
 
-interface MainMenuHamburgerProps {
+interface MainMenuProps {
   gameId?: string;
   onLeaveGame?: () => void;
   onEndGame?: () => void;
 }
 
-const MainMenuHamburger: React.FC<MainMenuHamburgerProps> = ({
+export const MainMenuItems: React.FC<MainMenuProps & { onClose: () => void }> = ({
   gameId,
   onLeaveGame,
   onEndGame,
+  onClose,
 }) => {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(readIsFullscreen);
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const showMainMenuLink = !gameId && pathname !== "/";
+  const fullscreenSupported = isFullscreenSupported();
+  const { platform: installPlatform, install } = useInstallOffer();
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      setIsFullscreen(readIsFullscreen());
     };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   const handleToggleFullscreen = useCallback(() => {
-    if (isFullscreen) {
-      void document.exitFullscreen();
-    } else {
-      void document.documentElement.requestFullscreen();
-    }
-    setMenuOpen(false);
-  }, [isFullscreen]);
+    void toggleFullscreen();
+    onClose();
+  }, [onClose]);
 
   const handleFeedback = useCallback(() => {
-    setMenuOpen(false);
+    onClose();
     window.dispatchEvent(new CustomEvent("toggle-feedback-window"));
-  }, []);
+  }, [onClose]);
 
   const handleCopyGameLink = useCallback(async () => {
     if (gameId) {
       const url = `${window.location.origin}/game/${gameId}`;
       await navigator.clipboard.writeText(url);
-      setMenuOpen(false);
+      onClose();
     }
-  }, [gameId]);
+  }, [gameId, onClose]);
 
   return (
-    <div
-      className="fixed top-[30px] right-[30px]"
-      data-overlay-layer
-      style={{ zIndex: Z_INDEX.POPOVER }}
-    >
+    <>
+      {gameId && (
+        <>
+          <MenuPopoverItem
+            icon={<CopyIcon />}
+            label="Copy game link"
+            onClick={() => void handleCopyGameLink()}
+          />
+          <MenuPopoverDivider />
+        </>
+      )}
+      {showMainMenuLink && (
+        <>
+          <MenuPopoverItem
+            icon={<HomeIcon />}
+            label="Main menu"
+            onClick={() => {
+              onClose();
+              navigate("/");
+            }}
+          />
+          <MenuPopoverDivider />
+        </>
+      )}
+      <SoundToggleButton />
+      {fullscreenSupported && (
+        <>
+          <MenuPopoverDivider />
+          <MenuPopoverItem
+            icon={isFullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}
+            label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            onClick={handleToggleFullscreen}
+          />
+        </>
+      )}
+      {installPlatform && (
+        <>
+          <MenuPopoverDivider />
+          <MenuPopoverItem
+            icon={<InstallIcon />}
+            label="Install app"
+            onClick={() => {
+              onClose();
+              void install();
+            }}
+          />
+        </>
+      )}
+      <MenuPopoverDivider />
+      <MenuPopoverItem icon={<FeedbackIcon />} label="Feedback" onClick={handleFeedback} />
+      {onLeaveGame && (
+        <>
+          <MenuPopoverDivider />
+          <MenuPopoverItem
+            icon={<LeaveIcon />}
+            label="Leave game"
+            variant="danger"
+            onClick={() => {
+              onClose();
+              onLeaveGame();
+            }}
+          />
+        </>
+      )}
+      {onEndGame && (
+        <>
+          <MenuPopoverDivider />
+          <MenuPopoverItem
+            icon={<EndGameIcon />}
+            label="End game"
+            variant="danger"
+            onClick={() => {
+              onClose();
+              onEndGame();
+            }}
+          />
+        </>
+      )}
+      <MenuPopoverDivider />
+      <MenuPopoverVersion />
+    </>
+  );
+};
+
+export const MainMenuDrawerButton: React.FC<MainMenuProps> = (props) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const close = useCallback(() => setMenuOpen(false), []);
+  return (
+    <>
+      <MobileMenuButton isOpen={menuOpen} onClick={() => setMenuOpen((open) => !open)} />
+      <MobileMenuDrawer isOpen={menuOpen} onClose={close}>
+        <MainMenuItems {...props} onClose={close} />
+      </MobileMenuDrawer>
+    </>
+  );
+};
+
+export const CurrentGameMenuButton: React.FC = () => {
+  const gameId = useGameStore((s) => s.game?.id);
+  const isHost = useGameStore((s) => !!s.game && s.playerId === s.game.hostPlayerId);
+  const requestLeaveGame = useUIOverlayStore((s) => s.requestLeaveGame);
+  const requestEndGame = useUIOverlayStore((s) => s.requestEndGame);
+  return (
+    <MainMenuDrawerButton
+      gameId={gameId}
+      onLeaveGame={requestLeaveGame}
+      onEndGame={isHost ? requestEndGame : undefined}
+    />
+  );
+};
+
+const MainMenuPopover: React.FC<MainMenuProps> = (props) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const close = useCallback(() => setMenuOpen(false), []);
+
+  return (
+    <div className="menu-chrome-top-right" data-overlay-layer style={{ zIndex: Z_INDEX.POPOVER }}>
       <GameButton
         ref={buttonRef}
         aria-label="Menu"
@@ -72,25 +199,13 @@ const MainMenuHamburger: React.FC<MainMenuHamburgerProps> = ({
         onClick={() => setMenuOpen(!menuOpen)}
         className="p-2.5"
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        >
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
+        <HamburgerIcon />
       </GameButton>
 
       <GamePopover
         className="game-popover-list"
         isVisible={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={close}
         position={{ type: "anchor", anchorRef: buttonRef, placement: "below" }}
         theme="menu"
         width={200}
@@ -98,58 +213,22 @@ const MainMenuHamburger: React.FC<MainMenuHamburgerProps> = ({
         animation="slideDown"
         excludeRef={buttonRef}
       >
-        {gameId && (
-          <>
-            <MenuPopoverItem
-              icon={<CopyIcon />}
-              label="Copy game link"
-              onClick={() => void handleCopyGameLink()}
-            />
-            <MenuPopoverDivider />
-          </>
-        )}
-        <SoundToggleButton />
-        <MenuPopoverDivider />
-        <MenuPopoverItem
-          icon={isFullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}
-          label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-          onClick={handleToggleFullscreen}
-        />
-        <MenuPopoverDivider />
-        <MenuPopoverItem icon={<FeedbackIcon />} label="Feedback" onClick={handleFeedback} />
-        {onLeaveGame && (
-          <>
-            <MenuPopoverDivider />
-            <MenuPopoverItem
-              icon={<LeaveIcon />}
-              label="Leave game"
-              variant="danger"
-              onClick={() => {
-                setMenuOpen(false);
-                onLeaveGame();
-              }}
-            />
-          </>
-        )}
-        {onEndGame && (
-          <>
-            <MenuPopoverDivider />
-            <MenuPopoverItem
-              icon={<EndGameIcon />}
-              label="End game"
-              variant="danger"
-              onClick={() => {
-                setMenuOpen(false);
-                onEndGame();
-              }}
-            />
-          </>
-        )}
-        <MenuPopoverDivider />
-        <MenuPopoverVersion />
+        <MainMenuItems {...props} onClose={close} />
       </GamePopover>
     </div>
   );
+};
+
+const MainMenuHamburger: React.FC<MainMenuProps> = (props) => {
+  const { isCompact } = useLayoutMode();
+  if (isCompact) {
+    return (
+      <div className="menu-chrome-top-left" style={{ zIndex: Z_INDEX.POPOVER }}>
+        <MainMenuDrawerButton {...props} />
+      </div>
+    );
+  }
+  return <MainMenuPopover {...props} />;
 };
 
 export default MainMenuHamburger;

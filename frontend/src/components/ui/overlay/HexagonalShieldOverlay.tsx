@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { PlayerCardDto } from "@/types/generated/api-types.ts";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
 
 interface HexagonalShieldOverlayProps {
   card: PlayerCardDto | null;
@@ -130,7 +130,7 @@ const HexagonalShieldOverlay: React.FC<HexagonalShieldOverlayProps> = ({
 
   return (
     <div
-      className={`hexagonal-shield-overlay fixed top-[calc(50%+10px)] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[108vw] h-[96vh] pointer-events-none flex justify-center items-center transition-opacity duration-300 ${overlayClass === "visible" ? "opacity-100" : "opacity-0"}`}
+      className={`hexagonal-shield-overlay fixed top-[calc(50%+10px)] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[108vw] h-[96dvh] pointer-events-none flex justify-center items-center transition-opacity duration-300 ${overlayClass === "visible" ? "opacity-100" : "opacity-0"}`}
       style={{ zIndex: Z_INDEX.STANDARD_MODAL }}
     >
       <div className="relative w-full h-full flex justify-center items-center max-w-[800px] max-h-[600px]">
@@ -141,7 +141,10 @@ const HexagonalShieldOverlay: React.FC<HexagonalShieldOverlayProps> = ({
           {generateHexagonPattern()}
         </svg>
 
-        <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center z-[3] pointer-events-none">
+        <div
+          className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none"
+          style={{ zIndex: getZIndex("LOCAL", 3) }}
+        >
           <div
             className={`text-center max-w-[80%] transition-all duration-300 ${overlayClass === "visible" ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}
           >

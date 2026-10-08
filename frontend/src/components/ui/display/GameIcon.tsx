@@ -101,9 +101,7 @@ const GameIcon: React.FC<GameIconProps> = ({
 
   const dimensions = sizeMap[size === "behavior" ? "small" : size];
   const behaviorClass =
-    size === "behavior"
-      ? "[--game-icon-size:var(--behavior-icon-size,26px)] max-md:[--game-icon-size:var(--behavior-icon-small-size,22px)] shrink-0"
-      : "";
+    size === "behavior" ? "[--game-icon-size:var(--behavior-icon-size,26px)] shrink-0" : "";
   const iconSize = size === "behavior" ? "var(--game-icon-size)" : `${dimensions.icon}px`;
   const creditFontSize = () => {
     if (size !== "behavior") {

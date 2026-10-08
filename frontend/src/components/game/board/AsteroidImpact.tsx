@@ -7,12 +7,13 @@ import { SkeletonUtils } from "three-stdlib";
 import { useTextures } from "../../../hooks/useTextures";
 import { SPHERE_RADIUS, easeOutCubic } from "./boardConstants";
 import { useAsteroidEventStore } from "../../../stores/asteroidEventStore";
+import { scaledParticleCount } from "@/utils/graphicsQuality.ts";
 
 const ASTEROID_MODEL_PATH = assetUrl("models/asteroid");
 const ASTEROID_SCALE = 0.15;
 const FLIGHT_DURATION = 1.8;
 const IMPACT_DUST_DURATION = 3000;
-const DUST_PARTICLE_COUNT = 60;
+const DUST_PARTICLE_COUNT = scaledParticleCount(60);
 
 interface DustParticle {
   mesh: THREE.Mesh;

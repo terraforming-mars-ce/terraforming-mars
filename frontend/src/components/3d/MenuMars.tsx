@@ -4,6 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useAppPhaseStore } from "@/stores/appPhaseStore";
+import { GRAPHICS } from "@/utils/graphicsQuality.ts";
 import SkyboxLoader from "../game/view/SkyboxLoader";
 import AtmosphereRenderer from "../game/board/AtmosphereRenderer";
 import PlanetAtmosphere from "../game/board/PlanetAtmosphere";
@@ -22,7 +23,9 @@ class DecorativeAsset extends Component<{ children: ReactNode }, { failed: boole
 }
 
 function Planet({ reduced }: { reduced: boolean }) {
-  const texture = useTexture(assetUrl("textures/planets/mars/surface"));
+  const texture = useTexture(
+    assetUrl("textures/planets/mars/surface", GRAPHICS.planetTexturePixels("mars")),
+  );
   const sphere = useRef<THREE.Mesh>(null);
   useEffect(() => {
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -96,11 +99,15 @@ export default function MenuMars({ reduced }: { reduced: boolean }) {
   const currentPointer = useRef(new THREE.Vector2());
   const target = useMemo(() => new THREE.Vector3(), []);
   const compact = size.width < 1024;
+  const landscape = size.width > size.height;
   const landing = phase.kind === "menu" && phase.route === "landing";
   const lobby = phase.kind !== "menu";
   const pose = useMemo(() => {
+    if (compact && landscape) {
+      return { x: 4.6, y: -1.4, z: -1.5 };
+    }
     if (compact) {
-      return { x: 0.8, y: -2.8, z: -1.5 };
+      return { x: 2.6, y: -3.2, z: -1.5 };
     }
     if (lobby) {
       return { x: 3.9, y: -3.7, z: 1.4 };
@@ -109,7 +116,7 @@ export default function MenuMars({ reduced }: { reduced: boolean }) {
       return { x: 3.9, y: 0, z: 0 };
     }
     return { x: 5.4, y: -0.8, z: -0.5 };
-  }, [compact, landing, lobby]);
+  }, [compact, landscape, landing, lobby]);
   const initialized = useRef(false);
   useEffect(() => {
     const move = (event: PointerEvent) => {

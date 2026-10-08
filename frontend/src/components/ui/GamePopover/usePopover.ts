@@ -12,19 +12,35 @@ export function usePopover({
   anchorRef?: RefObject<HTMLElement | null>;
 }) {
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      return;
+    }
 
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest?.("[data-overlay-layer]")) return;
+      if (target.closest?.("[data-overlay-layer]")) {
+        return;
+      }
       const outsidePopover = popoverRef.current && !popoverRef.current.contains(target);
       const outsideAnchor = !anchorRef?.current || !anchorRef.current.contains(target);
-      if (outsidePopover && outsideAnchor) onClose();
+      if (outsidePopover && outsideAnchor) {
+        onClose();
+      }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) {
+        return;
+      }
+      e.preventDefault();
+      onClose();
+    };
+
+    document.addEventListener("pointerdown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isVisible, onClose, popoverRef, anchorRef]);
 }

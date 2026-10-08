@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { afterNextPaint, whenIdle } from "@/utils/scheduling.ts";
@@ -24,6 +26,7 @@ interface CardBrowserProps {
   backLabel?: string;
   view?: CardBrowserView;
   onViewChange?: (patch: Partial<CardBrowserView>) => void;
+  headerStart?: ReactNode;
 }
 
 type ContentView = Pick<CardBrowserView, "sort" | "size" | "tags" | "types" | "packs"> & {
@@ -54,7 +57,9 @@ export default function CardBrowser({
   backLabel = "Back to Home",
   view: controlledView,
   onViewChange,
+  headerStart,
 }: CardBrowserProps) {
+  const { isCompact } = useLayoutMode();
   const [localView, setLocalView] = useState(EMPTY_VIEW);
   const view = controlledView ?? localView;
   const updateView = useCallback(
@@ -245,7 +250,9 @@ export default function CardBrowser({
         selectedCount={selected.size}
         shareUrl={shareUrl}
         shared={view.ids.length > 0}
-        open={drawerOpen}
+        open={drawerOpen && !isCompact}
+        persistent={isCompact}
+        headerStart={headerStart}
         backLabel={backLabel}
         onBack={onBack}
         onClose={closeDrawer}
@@ -257,12 +264,21 @@ export default function CardBrowser({
         onClearSelection={clearSelection}
         onExitShared={exitShared}
       />
-      <main className="relative min-h-0 min-w-0 flex-1 pt-16 lg:pt-0" inert={drawerOpen}>
-        <div className="absolute left-4 top-3 lg:hidden">
-          <GameButton size="sm" emphasis="secondary" onClick={() => setDrawerOpen(true)}>
-            Browse cards
-          </GameButton>
-        </div>
+      <main
+        className={
+          isCompact
+            ? "relative min-h-0 min-w-0 flex-1 pt-[var(--safe-top)] pr-[var(--safe-right)] pb-[var(--safe-bottom)]"
+            : "relative min-h-0 min-w-0 flex-1 pt-[calc(4rem+var(--safe-top))] pr-[var(--safe-right)] pb-[var(--safe-bottom)] max-lg:pl-[var(--safe-left)] lg:pt-[var(--safe-top)]"
+        }
+        inert={drawerOpen && !isCompact}
+      >
+        {!isCompact && (
+          <div className="absolute left-[calc(1rem+var(--safe-left))] top-[calc(0.75rem+var(--safe-top))] lg:hidden">
+            <GameButton size="sm" emphasis="secondary" onClick={() => setDrawerOpen(true)}>
+              Browse cards
+            </GameButton>
+          </div>
+        )}
         {(status === "idle" || status === "loading") && (
           <div role="status" className="p-8 text-left text-white/60">
             Loading cards…

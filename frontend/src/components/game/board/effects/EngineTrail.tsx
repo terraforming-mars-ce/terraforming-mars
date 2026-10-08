@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTextures } from "../../../../hooks/useTextures";
 import { usePrimitiveInstances } from "../PrimitiveManager";
+import { scaledParticleCount } from "@/utils/graphicsQuality.ts";
 
 interface EngineTrailProps {
   getShipPosition: () => THREE.Vector3 | null;
@@ -23,7 +24,7 @@ interface TrailParticle {
   alive: boolean;
 }
 
-const POOL_SIZE = 600;
+const POOL_SIZE = scaledParticleCount(600);
 // Distance between emission points — uniform spacing regardless of speed
 const EMIT_SPACING = 0.03;
 // Particles spawned per emission point (more during backward exhaust)

@@ -40,20 +40,23 @@ type botSession struct {
 	bus  *events.EventBusImpl
 	subs []events.SubscriptionID
 
-	mu           sync.Mutex
-	plan         Plan
-	lastPlanRun  time.Time
-	lastThought  string
-	thoughtAt    time.Time
-	lastActionAt time.Time
-	actionCount  int
-	chatsLeft    int
-	failed       bool
-	failures     int
-	planCancel   context.CancelFunc
-	reacting     bool
-	gate         ReactionGate
-	trace        *trace
+	mu          sync.Mutex
+	plan        Plan
+	lastPlanRun time.Time
+	// pendingTrigger is a replan reason that arrived while the planner was busy.
+	pendingTrigger string
+	lastThought    string
+	thoughtAt      time.Time
+	lastActionAt   time.Time
+	actionCount    int
+	chatsLeft      int
+	failed         bool
+	failures       int
+	planCancel     context.CancelFunc
+	reacting       bool
+	gate           ReactionGate
+	trace          *trace
+	grudges        grudgeLedger
 	// seenLogSeq is the last game log entry already checked for losses; touched only by the run loop.
 	seenLogSeq int64
 	// leftAfterGame marks a session that ended because the game ended; it announces leaving.
@@ -78,6 +81,7 @@ func newBotSession(bc *BotController, g *game.Game, bot *playerPkg.Player) *botS
 		happen:   make(chan Happening, 64),
 		bus:      g.EventBus(),
 		trace:    newTrace(bot.ID()),
+		grudges:  grudgeLedger{},
 		gate:     ReactionGate{Cooldown: bc.cfg.ReactionCooldown, BigChance: bc.cfg.BigEventChance},
 	}
 }
@@ -229,12 +233,15 @@ func (s *botSession) takeTurnIfMine() {
 		return
 	}
 	s.cancelPlanner()
-	s.playTurn()
+	remark := s.playTurn()
 	if s.ctx.Err() != nil {
 		return
 	}
 	s.setStatus(playerPkg.BotStatusReady)
-	s.startPlanner(true)
+	if remark != "" && rand.Float64() < s.bc.cfg.RemarkThoughtChance {
+		s.onGame(func() { s.Think(remark) })
+	}
+	s.startPlanner(true, "")
 }
 
 // turnState is what the turn loop needs from one look at the game.
@@ -262,7 +269,7 @@ func (s *botSession) readTurn() (turnState, bool) {
 		st.invocation = Invocation{
 			Model:        cfg.ExecutorModel,
 			SystemPrompt: executorSystemPrompt(s.name, s.persona, cfg.Strategy),
-			Prompt:       executorPrompt(snap, plan),
+			Prompt:       executorPrompt(snap, plan, s.grudgeText()),
 			Token:        snap.Game.Settings().ClaudeOAuthToken,
 			MaxBudgetUSD: s.budget(snap.Game, cfg.ExecutorBudgetUSD),
 		}
@@ -270,17 +277,20 @@ func (s *botSession) readTurn() (turnState, bool) {
 	return st, ran
 }
 
-func (s *botSession) playTurn() {
+// playTurn plays until the turn is over and returns the model's closing remark, if any.
+func (s *botSession) playTurn() string {
 	cfg := s.bc.cfg
+	remark := ""
+	introduced := false
 	for step := 0; s.ctx.Err() == nil; step++ {
 		st, ran := s.readTurn()
 		if !ran || !st.mine {
-			return
+			return remark
 		}
 		if step >= cfg.MaxStepsPerTurn {
 			s.log.Error("Bot exceeded its step limit for one turn")
 			s.markFailed("the bot got stuck and stopped acting this turn")
-			return
+			return remark
 		}
 
 		if st.reason != "" {
@@ -288,14 +298,19 @@ func (s *botSession) playTurn() {
 			if err := s.autopilotStep(); err != nil {
 				s.log.Error("Autopilot could not act", slog.Any("error", err))
 				s.markFailed("autopilot could not act: " + truncate(err.Error(), 150))
-				return
+				return remark
 			}
 			continue
 		}
 
 		s.setStatus(playerPkg.BotStatusThinking)
 		before := s.actions()
-		err := s.runExecutor(st)
+		showIntent := !introduced && rand.Float64() < cfg.IntentThoughtChance
+		introduced = true
+		text, err := s.runExecutor(st, showIntent)
+		if err == nil {
+			remark = text
+		}
 		if err == nil && s.actions() == before {
 			err = errors.New("the model ended its turn without acting")
 		}
@@ -317,10 +332,11 @@ func (s *botSession) playTurn() {
 		}
 		select {
 		case <-s.ctx.Done():
-			return
+			return remark
 		case <-time.After(cfg.RetryBackoff[failures-1]):
 		}
 	}
+	return remark
 }
 
 func (s *botSession) autopilotStep() error {
@@ -379,8 +395,9 @@ func (s *botSession) addSpend(cost float64) {
 	})
 }
 
-func (s *botSession) runExecutor(st turnState) error {
-	if st.intent != "" {
+// runExecutor plays one model call of the turn and returns its closing remark.
+func (s *botSession) runExecutor(st turnState, showIntent bool) (string, error) {
+	if showIntent && st.intent != "" {
 		s.onGame(func() { s.Think(st.intent) })
 	}
 	s.mu.Lock()
@@ -389,8 +406,8 @@ func (s *botSession) runExecutor(st turnState) error {
 
 	ctx, cancel := context.WithTimeout(s.ctx, s.bc.cfg.TurnTimeout)
 	defer cancel()
-	_, err := s.call(ctx, "executor", st.invocation, RoleExecutor)
-	return err
+	result, err := s.call(ctx, "executor", st.invocation, RoleExecutor)
+	return result.Text, err
 }
 
 // call runs one traced model call. With a tool role it gets its own tool grant whose
@@ -478,6 +495,48 @@ func lossesFromLog(diffs []game.StateDiff, botID string, seenSeq int64) ([]Happe
 	return losses, last
 }
 
+// hostileTrigger says why a hostile batch triggers a replan, or "" when nothing hostile happened.
+func hostileTrigger(a Assessment) string {
+	if len(a.Hostile) == 0 {
+		return ""
+	}
+	return strings.Join(a.Lines, "\n")
+}
+
+// grudgeText renders who has targeted the bot, for prompts.
+func (s *botSession) grudgeText() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.grudges.describe()
+}
+
+// grudgeTextWith renders the grudges as they will be once the given acts are recorded, so a
+// reaction already knows "that's the second time".
+func (s *botSession) grudgeTextWith(hostile []Hostility, nameOf func(string) string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	preview := grudgeLedger{}
+	for id, g := range s.grudges {
+		copied := *g
+		copied.recent = append([]string{}, g.recent...)
+		preview[id] = &copied
+	}
+	for _, h := range hostile {
+		preview.record(h, nameOf(h.ActorID), time.Now())
+	}
+	return preview.describe()
+}
+
+func (s *botSession) recordGrudges(hostile []Hostility, names map[string]string) {
+	s.mu.Lock()
+	for _, h := range hostile {
+		s.grudges.record(h, names[h.ActorID], time.Now())
+	}
+	grudges := s.grudges.dtos()
+	s.mu.Unlock()
+	s.bc.publishTrace(s.gameID, s.trace.setGrudges(grudges))
+}
+
 // reactionMaxAge drops events too old to react to naturally.
 const reactionMaxAge = time.Minute
 
@@ -486,9 +545,22 @@ const minReplanInterval = 30 * time.Second
 
 // startPlanner plans ahead in the background. Without force it only replans when the
 // last planning run is old enough, so a busy table does not trigger a stream of calls.
-func (s *botSession) startPlanner(force bool) {
+// A trigger says why the bot is replanning (it was just targeted); a triggered replan that
+// arrives while another is running is queued and runs right after it.
+func (s *botSession) startPlanner(force bool, trigger string) {
 	s.mu.Lock()
-	if s.failed || s.planCancel != nil || (!force && time.Since(s.lastPlanRun) < minReplanInterval) {
+	if s.failed {
+		s.mu.Unlock()
+		return
+	}
+	if s.planCancel != nil {
+		if trigger != "" {
+			s.pendingTrigger = strings.TrimSpace(s.pendingTrigger + "\n" + trigger)
+		}
+		s.mu.Unlock()
+		return
+	}
+	if trigger == "" && !force && time.Since(s.lastPlanRun) < minReplanInterval {
 		s.mu.Unlock()
 		return
 	}
@@ -499,13 +571,13 @@ func (s *botSession) startPlanner(force bool) {
 	ok := false
 	s.onGame(func() {
 		snap, err := s.snapshot(s.ctx)
-		if err != nil || snap.Game.Status() != shared.GameStatusActive || s.overBudget(snap.Game) {
+		if err != nil || snap.Game.Status() != shared.GameStatusActive || s.overBudget(snap.Game) || IsMyTurn(&snap.View, s.playerID) {
 			return
 		}
 		inv = Invocation{
 			Model:        cfg.PlannerModel,
 			SystemPrompt: plannerSystemPrompt(s.name, s.persona, cfg.Strategy),
-			Prompt:       plannerPrompt(snap, s.Plan()),
+			Prompt:       plannerPrompt(snap, s.Plan(), s.grudgeText(), trigger),
 			Token:        snap.Game.Settings().ClaudeOAuthToken,
 			MaxBudgetUSD: s.budget(snap.Game, cfg.PlannerBudgetUSD),
 		}
@@ -530,7 +602,12 @@ func (s *botSession) startPlanner(force bool) {
 			cancel()
 			s.mu.Lock()
 			s.planCancel = nil
+			pending := s.pendingTrigger
+			s.pendingTrigger = ""
 			s.mu.Unlock()
+			if pending != "" && s.ctx.Err() == nil {
+				s.startPlanner(true, pending)
+			}
 		}()
 		_, err := s.call(ctx, "planner", inv, RolePlanner)
 		if err != nil && ctx.Err() == nil {
@@ -551,6 +628,7 @@ func (s *botSession) cancelPlanner() {
 // reactionInput is what a reaction needs, read from the game in one go.
 type reactionInput struct {
 	assessment Assessment
+	names      map[string]string
 	invocation Invocation
 	myTurn     bool
 	blocked    bool
@@ -593,12 +671,16 @@ func (s *botSession) readReaction(batch []Happening) (reactionInput, bool) {
 		nameOf := func(id string) string { return findPlayerName(&snap.View, id) }
 		plan := s.Plan()
 		in.assessment = AssessHappenings(plan, s.playerID, s.name, soleOpponent, happenings, nameOf)
+		in.names = map[string]string{}
+		for _, h := range in.assessment.Hostile {
+			in.names[h.ActorID] = nameOf(h.ActorID)
+		}
 		in.blocked = s.overBudget(snap.Game) || !presencePhase(snap.Game.CurrentPhase())
 		cfg := s.bc.cfg
 		in.invocation = Invocation{
 			Model:        cfg.ReactorModel,
 			SystemPrompt: reactorSystemPrompt(s.name, s.persona),
-			Prompt:       reactorPrompt(in.assessment.Lines, plan, snap.Chat),
+			Prompt:       reactorPrompt(in.assessment.Lines, plan, s.grudgeTextWith(in.assessment.Hostile, nameOf), snap.Chat),
 			Token:        snap.Game.Settings().ClaudeOAuthToken,
 			MaxBudgetUSD: s.budget(snap.Game, cfg.ReactorBudgetUSD),
 		}
@@ -608,14 +690,17 @@ func (s *botSession) readReaction(batch []Happening) (reactionInput, bool) {
 
 func (s *botSession) considerReaction(batch []Happening) {
 	in, ran := s.readReaction(batch)
+	if ran && len(in.assessment.Hostile) > 0 {
+		s.recordGrudges(in.assessment.Hostile, in.names)
+	}
 	s.mu.Lock()
 	failed := s.failed
 	s.mu.Unlock()
 	if !ran || in.blocked || failed {
 		return
 	}
-	if in.assessment.PlanHit && !in.myTurn {
-		s.startPlanner(false)
+	if (in.assessment.PlanHit || len(in.assessment.Hostile) > 0) && !in.myTurn {
+		s.startPlanner(false, hostileTrigger(in.assessment))
 	}
 	if !in.assessment.Relevant() {
 		return

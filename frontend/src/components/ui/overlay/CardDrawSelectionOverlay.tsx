@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import GameCard from "../cards/GameCard.tsx";
+import FittedCard from "../cards/FittedCard.tsx";
+import { CardFitHeightContext, GAME_CARD_NATURAL_WIDTH } from "../cards/CardFitHeightContext.ts";
 import CardChoice from "../cards/CardChoice.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import {
@@ -7,20 +9,27 @@ import {
   CardReceiptDto,
   ResourceTypeCredit,
 } from "../../../types/generated/api-types.ts";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
 import {
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_CONTAINER_CLASS,
+  OVERLAY_CONTAINER_STYLE,
   OVERLAY_HEADER_CLASS,
   OVERLAY_TITLE_CLASS,
-  OVERLAY_DESCRIPTION_CLASS,
-  OVERLAY_CARDS_CONTAINER_CLASS,
-  OVERLAY_CARDS_INNER_CLASS,
   OVERLAY_FOOTER_CLASS,
   RESOURCE_LABEL_CLASS,
+  OVERLAY_ACTION_BUTTON_CLASS,
+  OVERLAY_FOOTER_LEFT_CLASS,
+  OVERLAY_FOOTER_RIGHT_CLASS,
+  OVERLAY_ROOT_SAFE_AREA_CLASS,
 } from "./overlayStyles.ts";
+import CardSelectionRow from "./CardSelectionRow.tsx";
+import OverlayDescription from "./OverlayDescription.tsx";
 import GameButton from "../buttons/GameButton.tsx";
+import PlayabilityBadge, { PlayabilityErrorList } from "./PlayabilityBadge.tsx";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
+import CardDetailPortal from "./CardDetailPortal.tsx";
 
 interface CardSelectionProps {
   mode: "selection";
@@ -40,6 +49,7 @@ const CardSelection: React.FC<CardSelectionProps> = ({
   const [cardsToBuy, setCardsToBuy] = useState<string[]>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showPlayability, setShowPlayability] = useState(false);
+  const { isCompact } = useLayoutMode();
 
   // Initialize selection when overlay opens
   useEffect(() => {
@@ -184,6 +194,7 @@ const CardSelection: React.FC<CardSelectionProps> = ({
   };
 
   const titleInfo = getTitleAndDescription();
+  const iconSize = isCompact ? "medium" : "large";
   const totalBuyCost = cardsToBuy.length * selection.cardBuyCost;
   const totalSelected = cardsToTake.length + cardsToBuy.length;
   // For peek scenarios, allow any selection from 0 to max (including discarding all)
@@ -197,24 +208,24 @@ const CardSelection: React.FC<CardSelectionProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className={`fixed inset-0 flex items-center justify-center ${OVERLAY_ROOT_SAFE_AREA_CLASS}`}
       style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
     >
       <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
       <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 
       {/* Content container */}
-      <div className={OVERLAY_CONTAINER_CLASS}>
+      <div className={OVERLAY_CONTAINER_CLASS} style={OVERLAY_CONTAINER_STYLE}>
         {/* Header */}
         <div className={OVERLAY_HEADER_CLASS}>
           <div className="flex items-center justify-between w-full">
             <div>
               <h2 className={OVERLAY_TITLE_CLASS}>{titleInfo.title}</h2>
               {titleInfo.description && (
-                <p className={OVERLAY_DESCRIPTION_CLASS}>{titleInfo.description}</p>
+                <OverlayDescription>{titleInfo.description}</OverlayDescription>
               )}
             </div>
-            {!isCardDraw && (
+            {!isCardDraw && !isCompact && (
               <GameButton
                 emphasis="secondary"
                 size="sm"
@@ -227,57 +238,65 @@ const CardSelection: React.FC<CardSelectionProps> = ({
         </div>
 
         {/* Cards display */}
-        <div className={OVERLAY_CARDS_CONTAINER_CLASS}>
-          <div className={OVERLAY_CARDS_INNER_CLASS}>
-            {selection.availableCards.map((card, index) => {
-              const isSelected = cardsToTake.includes(card.id) || cardsToBuy.includes(card.id);
+        <CardSelectionRow>
+          {selection.availableCards.map((card, index) => {
+            const isSelected = cardsToTake.includes(card.id) || cardsToBuy.includes(card.id);
+            const hasErrors = !isCardDraw && !card.available && card.errors.length > 0;
 
-              return (
-                <div key={card.id} className="relative">
-                  <CardChoice
-                    card={card}
-                    isSelected={isSelected}
-                    onSelect={handleCardSelect}
-                    animationDelay={index * 100}
-                    showCheckbox={!isCardDraw}
-                  />
-                  {showPlayability && !card.available && card.errors.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 flex flex-col gap-0.5 z-10 max-h-24 overflow-y-auto">
-                      {card.errors.map((err, i) => (
-                        <div
-                          key={i}
-                          className="bg-[rgba(10,10,15,0.95)] border border-[rgba(231,76,60,0.6)] border-l-[3px] border-l-[#e74c3c] text-white/90 text-[10px] leading-tight px-1.5 py-1 rounded-sm"
-                        >
-                          {err.message}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+            return (
+              <div key={card.id} className="relative">
+                <CardChoice
+                  card={card}
+                  isSelected={isSelected}
+                  onSelect={handleCardSelect}
+                  animationDelay={index * 100}
+                  showCheckbox={!isCardDraw}
+                  detailNotice={
+                    hasErrors ? <PlayabilityErrorList errors={card.errors} /> : undefined
+                  }
+                />
+                {isCompact && hasErrors && <PlayabilityBadge errors={card.errors} />}
+                {showPlayability && hasErrors && !isCompact && (
+                  <div
+                    className="absolute top-full left-0 right-0 mt-1 flex flex-col gap-0.5 max-h-24 overflow-y-auto"
+                    style={{ zIndex: getZIndex("LOCAL", 10) }}
+                  >
+                    {card.errors.map((err, i) => (
+                      <div
+                        key={i}
+                        className="bg-[rgba(10,10,15,0.95)] border border-[rgba(231,76,60,0.6)] border-l-[3px] border-l-[#e74c3c] text-white/90 text-[10px] leading-tight px-1.5 py-1 rounded-sm"
+                      >
+                        {err.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </CardSelectionRow>
 
         {/* Footer with cost and confirm button */}
         <div className={OVERLAY_FOOTER_CLASS}>
           {!selection.playAsPrelude && (
-            <div className="flex gap-8 items-center max-[768px]:w-full max-[768px]:justify-between max-[768px]:flex-wrap">
+            <div className={OVERLAY_FOOTER_LEFT_CLASS}>
               <div className="flex items-center gap-3">
-                <span className={RESOURCE_LABEL_CLASS}>Available payment:</span>
-                <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size="large" />
+                <span className={RESOURCE_LABEL_CLASS}>
+                  {isCompact ? "Credits" : "Available payment:"}
+                </span>
+                <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size={iconSize} />
               </div>
               {totalBuyCost > 0 && (
                 <div className="flex items-center gap-3">
                   <span className={RESOURCE_LABEL_CLASS}>Buy Cost:</span>
-                  <GameIcon iconType={ResourceTypeCredit} amount={totalBuyCost} size="large" />
+                  <GameIcon iconType={ResourceTypeCredit} amount={totalBuyCost} size={iconSize} />
                 </div>
               )}
             </div>
           )}
 
-          <div className="flex items-center gap-6 ml-auto max-[768px]:w-full max-[768px]:flex-col max-[768px]:gap-3">
-            <div className="text-sm">
+          <div className={`${OVERLAY_FOOTER_RIGHT_CLASS} ml-auto`}>
+            <div className="text-sm compact:text-xs compact:leading-tight compact:max-w-56">
               {isCardDraw ? (
                 <span className="text-white/70">
                   Drawing {selection.freeTakeCount} card
@@ -309,7 +328,7 @@ const CardSelection: React.FC<CardSelectionProps> = ({
                 size="lg"
                 onClick={handleConfirm}
                 disabled={!isValidSelection || totalBuyCost > playerCredits}
-                className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
+                className={OVERLAY_ACTION_BUTTON_CLASS}
               >
                 {getButtonText()}
               </GameButton>
@@ -320,6 +339,27 @@ const CardSelection: React.FC<CardSelectionProps> = ({
     </div>
   );
 };
+
+function ReceivedCard({ card }: { card: CardReceiptDto["cards"][number] }) {
+  const { isCompact } = useLayoutMode();
+  const fitHeight = useContext(CardFitHeightContext);
+  const [inspecting, setInspecting] = useState(false);
+  if (!isCompact) {
+    return (
+      <div className="card-size">
+        <GameCard card={card} />
+      </div>
+    );
+  }
+  return (
+    <div className="relative cursor-pointer" onClick={() => setInspecting(true)}>
+      <FittedCard naturalWidth={GAME_CARD_NATURAL_WIDTH} height={fitHeight ?? undefined}>
+        <GameCard card={card} />
+      </FittedCard>
+      {inspecting && <CardDetailPortal card={card} onClose={() => setInspecting(false)} />}
+    </div>
+  );
+}
 
 type CardDrawSelectionOverlayProps =
   | CardSelectionProps
@@ -338,27 +378,27 @@ function CardDrawSelectionOverlay(props: CardDrawSelectionOverlayProps) {
       role="dialog"
       aria-modal="true"
       aria-label="Cards received"
-      className="fixed inset-0 flex items-center justify-center"
+      className={`fixed inset-0 flex items-center justify-center ${OVERLAY_ROOT_SAFE_AREA_CLASS}`}
       style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
     >
       <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
       <div className={OVERLAY_BACKDROP_TINT_CLASS} />
-      <div className={OVERLAY_CONTAINER_CLASS}>
+      <div className={OVERLAY_CONTAINER_CLASS} style={OVERLAY_CONTAINER_STYLE}>
         <div className={OVERLAY_HEADER_CLASS}>
           <h2 className={OVERLAY_TITLE_CLASS}>Cards received</h2>
-          <p className={OVERLAY_DESCRIPTION_CLASS}>{props.receipt.source}</p>
+          <OverlayDescription>{props.receipt.source}</OverlayDescription>
         </div>
-        <div className={OVERLAY_CARDS_CONTAINER_CLASS}>
-          <div className={OVERLAY_CARDS_INNER_CLASS}>
-            {props.receipt.cards.map((card) => (
-              <div className="card-size" key={card.id}>
-                <GameCard card={card} />
-              </div>
-            ))}
-          </div>
-        </div>
+        <CardSelectionRow>
+          {props.receipt.cards.map((card) => (
+            <ReceivedCard key={card.id} card={card} />
+          ))}
+        </CardSelectionRow>
         <div className={OVERLAY_FOOTER_CLASS}>
-          <GameButton size="lg" className="ml-auto" onClick={props.onClose}>
+          <GameButton
+            size="lg"
+            className={`${OVERLAY_ACTION_BUTTON_CLASS} ml-auto`}
+            onClick={props.onClose}
+          >
             Close
           </GameButton>
         </div>

@@ -6,10 +6,19 @@ interface TimerQueryExtension {
   GPU_DISJOINT_EXT: number;
 }
 
+const liveTimers = new Set<GpuTimer>();
+
+// Queries and extension objects from a lost context are dead; restored timers start over.
+export function invalidateGpuTimersAfterContextRestore() {
+  for (const timer of liveTimers) {
+    timer.invalidateAfterContextRestore();
+  }
+}
+
 // Measures GPU time of the scene render with EXT_disjoint_timer_query_webgl2. Results arrive a few
 // frames late, so queries rotate through a small ring and are read without stalling.
 export class GpuTimer {
-  private readonly ext: TimerQueryExtension | null;
+  private ext: TimerQueryExtension | null = null;
   private readonly queries: WebGLQuery[] = [];
   private readonly pending = new Uint8Array(RING);
   private readonly samples = new Float32Array(WINDOW);
@@ -18,10 +27,25 @@ export class GpuTimer {
   private active = false;
 
   constructor(private readonly gl: WebGL2RenderingContext) {
-    this.ext = gl.getExtension("EXT_disjoint_timer_query_webgl2") as TimerQueryExtension | null;
+    this.createQueries();
+    liveTimers.add(this);
+  }
+
+  invalidateAfterContextRestore() {
+    this.queries.length = 0;
+    this.pending.fill(0);
+    this.active = false;
+    this.next = 0;
+    this.createQueries();
+  }
+
+  private createQueries() {
+    this.ext = this.gl.getExtension(
+      "EXT_disjoint_timer_query_webgl2",
+    ) as TimerQueryExtension | null;
     if (this.ext) {
       for (let i = 0; i < RING; i++) {
-        this.queries.push(gl.createQuery()!);
+        this.queries.push(this.gl.createQuery()!);
       }
     }
   }
@@ -65,6 +89,7 @@ export class GpuTimer {
   }
 
   dispose() {
+    liveTimers.delete(this);
     for (const query of this.queries) {
       this.gl.deleteQuery(query);
     }

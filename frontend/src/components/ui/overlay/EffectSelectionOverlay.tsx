@@ -3,6 +3,7 @@ import { CardDto, ColonyDto, PendingEffectSelectionDto } from "@/types/generated
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import GameButton from "../buttons/GameButton.tsx";
 import BehaviorSection from "../cards/BehaviorSection";
+import { OVERLAY_ROOT_SAFE_AREA_CLASS } from "./overlayStyles.ts";
 
 interface Props {
   selection: PendingEffectSelectionDto;
@@ -24,16 +25,16 @@ export default function EffectSelectionOverlay({
   const [error, setError] = useState<string | null>(null);
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className={`fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm ${OVERLAY_ROOT_SAFE_AREA_CLASS}`}
       style={{ zIndex: Z_INDEX.SELECTION_POPOVER }}
     >
       <div
-        className="game-panel game-panel-clipped game-window w-[540px] max-w-[95vw] max-h-[80vh] flex flex-col overflow-hidden"
+        className="game-panel game-panel-clipped game-window w-[540px] max-w-[95vw] max-h-[80dvh] compact:max-h-[calc(100%-16px)] flex flex-col overflow-hidden"
         role="dialog"
         aria-modal="true"
         aria-label={selection.source}
       >
-        <h2 className="font-orbitron text-white text-base px-4 py-3 border-b border-white/10">
+        <h2 className="font-orbitron text-white text-base px-4 py-3 border-b border-white/10 compact:shrink-0 compact:py-2.5 compact:m-0">
           {selection.source}
         </h2>
         <div className="overflow-y-auto flex-1 p-3 space-y-2">
@@ -82,8 +83,9 @@ export default function EffectSelectionOverlay({
             {error}
           </p>
         )}
-        <div className="flex justify-end p-3 border-t border-white/10">
+        <div className="flex justify-end p-3 border-t border-white/10 compact:shrink-0 compact:py-1.5">
           <GameButton
+            className="compact:min-h-11 compact:px-6"
             disabled={selected === null || submitting}
             onClick={() => {
               if (selected === null) {

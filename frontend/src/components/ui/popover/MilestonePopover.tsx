@@ -1,17 +1,7 @@
-import React, { useMemo } from "react";
-import {
-  AwardRewardDto,
-  GameDto,
-  GameStatusActive,
-  GamePhaseAction,
-  ResourceTypeCredit,
-} from "@/types/generated/api-types.ts";
-import GameIcon from "../display/GameIcon.tsx";
-import { webSocketService } from "@/services/webSocketService.ts";
-import { canPerformActions } from "@/utils/actionUtils.ts";
-import { GamePopover, GamePopoverItem } from "../GamePopover";
-import { FormattedDescription } from "../display/FormattedDescription";
-import BehaviorSection from "../cards/BehaviorSection/BehaviorSection.tsx";
+import React from "react";
+import { GameDto } from "@/types/generated/api-types.ts";
+import { GamePopover } from "../GamePopover";
+import MilestoneList from "./content/MilestoneList.tsx";
 
 interface MilestonePopoverProps {
   isVisible: boolean;
@@ -20,73 +10,12 @@ interface MilestonePopoverProps {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
 }
 
-interface PlayerInfo {
-  id: string;
-  name: string;
-  color: string;
-}
-
 const MilestonePopover: React.FC<MilestonePopoverProps> = ({
   isVisible,
   onClose,
   gameState,
   anchorRef,
 }) => {
-  const isGameActive = gameState?.status === GameStatusActive;
-  const isActionPhase = gameState?.currentPhase === GamePhaseAction;
-  const isCurrentPlayerTurn = gameState?.currentTurn === gameState?.viewingPlayerId;
-  const canClaimMilestones =
-    isGameActive && isActionPhase && isCurrentPlayerTurn && canPerformActions(gameState);
-
-  const playerMilestones = gameState?.currentPlayer?.milestones ?? [];
-  const globalMilestones = gameState?.milestones ?? [];
-
-  const milestones =
-    playerMilestones.length > 0
-      ? playerMilestones
-      : globalMilestones.map((m) => ({
-          type: m.type,
-          name: m.name,
-          description: m.description,
-          claimCost: m.claimCost,
-          isClaimed: m.isClaimed,
-          claimedBy: m.claimedBy,
-          available: false,
-          progress: 0,
-          required: m.required,
-          errors: [] as import("@/types/generated/api-types.ts").StateErrorDto[],
-        }));
-
-  const allPlayers: PlayerInfo[] = useMemo(() => {
-    if (!gameState) return [];
-    const players: PlayerInfo[] = [];
-    if (gameState.currentPlayer?.id) {
-      players.push({
-        id: gameState.currentPlayer.id,
-        name: gameState.currentPlayer.name,
-        color: gameState.currentPlayer.color,
-      });
-    }
-    for (const p of gameState.otherPlayers) {
-      players.push({ id: p.id, name: p.name, color: p.color });
-    }
-    return players;
-  }, [gameState]);
-
-  const longestNameLength = useMemo(() => {
-    return allPlayers.reduce((max, p) => Math.max(max, p.name.length), 0);
-  }, [allPlayers]);
-
-  const getPlayerName = (playerId: string | undefined): string => {
-    if (!playerId) return "Unknown";
-    return allPlayers.find((p) => p.id === playerId)?.name ?? "Unknown";
-  };
-
-  const handleClaimMilestone = (milestoneId: string) => {
-    if (!canClaimMilestones) return;
-    void webSocketService.claimMilestone(milestoneId);
-  };
-
   return (
     <GamePopover
       isVisible={isVisible}
@@ -96,222 +25,11 @@ const MilestonePopover: React.FC<MilestonePopoverProps> = ({
       excludeRef={anchorRef}
       header={undefined}
       width={500}
-      maxHeight="80vh"
+      maxHeight="80dvh"
       animation="slideDown"
       className="game-popover-list"
     >
-      <div className="popover-list p-2 flex flex-col gap-2">
-        {milestones.map((milestone) => {
-          const isClaimed = milestone.isClaimed;
-          const isAvailable = milestone.available && !isClaimed;
-          const isExecutable = canClaimMilestones && isAvailable;
-          const meetsRequirement =
-            canClaimMilestones &&
-            !isClaimed &&
-            !(milestone.errors ?? []).some((e) => e.category === "requirement");
-
-          const globalData = globalMilestones.find((m) => m.type === milestone.type);
-          const styleColor = globalData?.style?.color ?? "#ff6b35";
-          const playerProgress = globalData?.playerProgress ?? {};
-          const required = globalData?.required ?? 0;
-
-          const sortedPlayers = [...allPlayers].sort(
-            (a, b) => (playerProgress[b.id] ?? 0) - (playerProgress[a.id] ?? 0),
-          );
-
-          const getState = () => {
-            if (isClaimed) return "claimed" as const;
-            if (isAvailable) return "available" as const;
-            return "disabled" as const;
-          };
-
-          return (
-            <GamePopoverItem
-              key={milestone.type}
-              state={getState()}
-              className={`popover-list-item ${meetsRequirement ? "milestone-eligible-glow" : ""}`}
-              onClick={isExecutable ? () => handleClaimMilestone(milestone.type) : undefined}
-              clickSound={false}
-              hoverSound={false}
-              error={(() => {
-                if (isAvailable || isClaimed || !milestone.errors?.length) {
-                  return undefined;
-                }
-                const hasRequirementError = milestone.errors.some(
-                  (e) => e.category === "requirement",
-                );
-                if (hasRequirementError) {
-                  return undefined;
-                }
-                const realErrors = milestone.errors.filter((e) => e.category !== "requirement");
-                if (realErrors.length > 0) {
-                  return { message: realErrors[0].message, count: realErrors.length };
-                }
-                return undefined;
-              })()}
-              info={(() => {
-                if (isAvailable || isClaimed || !milestone.errors?.length) {
-                  return undefined;
-                }
-                const reqError = milestone.errors.find((e) => e.category === "requirement");
-                if (reqError) {
-                  return { message: reqError.message };
-                }
-                return undefined;
-              })()}
-              statusBadge={isClaimed ? "Claimed" : undefined}
-              borderColor={styleColor}
-              style={
-                {
-                  ...(isClaimed
-                    ? {
-                        borderColor: styleColor + "BB",
-                        background: "#141415",
-                      }
-                    : {}),
-                  "--milestone-glow-rgb": `${parseInt(styleColor.slice(1, 3), 16)}, ${parseInt(styleColor.slice(3, 5), 16)}, ${parseInt(styleColor.slice(5, 7), 16)}`,
-                } as React.CSSProperties
-              }
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  {globalData?.style?.icon && (
-                    <div className="opacity-70 flex items-center">
-                      {globalData.style.icon === "production-all" ? (
-                        <div className="inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-                          <span className="text-[10px] font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-                            ALL
-                          </span>
-                        </div>
-                      ) : globalData.style.icon === "requirement-badge" ? (
-                        <div
-                          className="relative px-2 py-0.5 border border-[rgba(60,60,70,0.7)]"
-                          style={{
-                            clipPath:
-                              "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%)",
-                            background:
-                              "linear-gradient(-45deg, #5a2a10 25%, #2d1508 25%, #2d1508 50%, #5a2a10 50%, #5a2a10 75%, #2d1508 75%)",
-                            backgroundSize: "12px 12px",
-                          }}
-                        >
-                          <div
-                            className="absolute inset-0 bg-black/40 pointer-events-none"
-                            style={{
-                              clipPath:
-                                "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%)",
-                            }}
-                          />
-                          <span className="relative text-[9px] font-orbitron font-bold text-white/50">
-                            REQ
-                          </span>
-                        </div>
-                      ) : globalData.style.icon === "green-card-plus-event" ? (
-                        <div className="flex items-center gap-0.5">
-                          <div className="relative">
-                            <GameIcon iconType="card-draw" size="small" />
-                            <div className="absolute inset-0 rounded bg-green-500/30 pointer-events-none" />
-                          </div>
-                          <span className="text-white/60 text-[10px] font-bold">+</span>
-                          <GameIcon iconType="event" size="small" />
-                        </div>
-                      ) : globalData.style.icon === "production-threshold" ? (
-                        <div className="inline-flex items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] rounded px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
-                          <span className="text-[10px] font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
-                            &ge;{milestone.required}
-                          </span>
-                        </div>
-                      ) : (
-                        <GameIcon iconType={globalData.style.icon} size="small" />
-                      )}
-                    </div>
-                  )}
-                  <h3 className="text-white text-sm font-bold font-orbitron m-0">
-                    {milestone.name}
-                  </h3>
-                  {isClaimed && milestone.claimedBy && (
-                    <span className="text-white/50 text-xs">
-                      Claimed by{" "}
-                      <span
-                        style={{
-                          color: allPlayers.find((p) => p.id === milestone.claimedBy)?.color,
-                        }}
-                      >
-                        {getPlayerName(milestone.claimedBy)}
-                      </span>
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div
-                        className="flex items-center gap-2 overflow-hidden transition-all duration-700 ease-in-out"
-                        style={
-                          isClaimed
-                            ? { maxWidth: 0, opacity: 0, gap: 0 }
-                            : { maxWidth: "100px", opacity: 1 }
-                        }
-                      >
-                        <GameIcon
-                          iconType={ResourceTypeCredit}
-                          amount={milestone.claimCost}
-                          size="small"
-                        />
-                        <span className="text-white/60 text-xs">→</span>
-                      </div>
-                      {(globalData?.rewards ?? []).map((reward: AwardRewardDto, idx: number) => (
-                        <div key={idx} className="[&>div]:items-center [&_div]:justify-start">
-                          <BehaviorSection
-                            behaviors={[
-                              {
-                                triggers: [],
-                                inputs: [],
-                                outputs: reward.outputs,
-                              },
-                            ]}
-                            noContainer
-                          />
-                        </div>
-                      ))}
-                    </div>
-
-                    <p className="text-white/70 text-xs leading-relaxed m-0 text-left">
-                      <FormattedDescription text={milestone.description} />
-                    </p>
-                  </div>
-
-                  <div
-                    className="flex-shrink-0 grid grid-cols-[auto_auto] gap-x-3 gap-y-1"
-                    style={{ minWidth: `${longestNameLength + 5}ch` }}
-                  >
-                    {sortedPlayers.map((player) => {
-                      const progress = playerProgress[player.id] ?? 0;
-                      const met = required > 0 && progress >= required;
-                      return (
-                        <React.Fragment key={player.id}>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span
-                              className="w-2 h-2 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: player.color }}
-                            />
-                            <span className="text-white/80">{player.name}</span>
-                          </div>
-                          <span
-                            className={`text-sm font-orbitron font-semibold ${met ? "text-green-400" : "text-white/50"}`}
-                          >
-                            {progress}/{required}
-                          </span>
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </GamePopoverItem>
-          );
-        })}
-      </div>
+      <MilestoneList gameState={gameState} density="popover" />
     </GamePopover>
   );
 };

@@ -112,6 +112,11 @@ class AudioService {
       { key: "your-turn", path: assetUrl("audio/effects/your-turn"), volumeMultiplier: 1.0 },
       { key: "award-funded", path: assetUrl("audio/effects/award-funded"), volumeMultiplier: 1.0 },
       { key: "game-start", path: assetUrl("audio/effects/game-start"), volumeMultiplier: 1.0 },
+      {
+        key: "player-joined",
+        path: assetUrl("audio/effects/player-joined"),
+        volumeMultiplier: 1.0,
+      },
       { key: "travel", path: assetUrl("audio/effects/travel"), volumeMultiplier: 0.8 },
       {
         key: "production-score",
@@ -249,6 +254,10 @@ class AudioService {
 
   public async playGameStartSound(): Promise<void> {
     return this.playSound("game-start");
+  }
+
+  public async playPlayerJoinedSound(): Promise<void> {
+    return this.playSound("player-joined");
   }
 
   public async playTravelSound(): Promise<void> {

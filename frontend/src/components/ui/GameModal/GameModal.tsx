@@ -64,7 +64,7 @@ const GameModal: React.FC<GameModalProps> = ({
       role="dialog"
       aria-modal="true"
       tabIndex={-1}
-      className={`relative text-white w-full ${sizeClasses[size]} max-h-[90vh] game-panel game-panel-clipped overflow-hidden ${animationClass} flex flex-col ${className}`}
+      className={`relative text-white w-full ${sizeClasses[size]} max-h-[90dvh] game-panel game-panel-clipped overflow-hidden ${animationClass} flex flex-col ${className}`}
       style={themeStyles}
     >
       {children}

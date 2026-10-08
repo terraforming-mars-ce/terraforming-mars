@@ -4,14 +4,8 @@ import GameIcon from "../display/GameIcon.tsx";
 import CardDecorBar from "../display/CardDecorBar.tsx";
 import BehaviorSection, { hasBehaviorVisuals } from "./BehaviorSection";
 import RequirementsBox from "./RequirementsBox.tsx";
-import { getTagIconPath } from "@/utils/iconStore.ts";
-import {
-  CardDto,
-  PlayerCardDto,
-  ResourceTypeCredit,
-  TagWild,
-} from "@/types/generated/api-types.ts";
-import DecorBoxTooltip from "../display/DecorBoxTooltip.tsx";
+import CardTagList from "./CardTagList.tsx";
+import { CardDto, PlayerCardDto, ResourceTypeCredit } from "@/types/generated/api-types.ts";
 import { CardDescriptionSections } from "../display/CardDescriptionSections.tsx";
 import { CARD_TYPE_COLORS } from "@/utils/cardTypeColors.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -25,45 +19,6 @@ export interface GameCardProps {
   moduleState?: "idle" | "armed" | "releasing";
   description?: ReactNode;
 }
-
-const TagIcon: React.FC<{ tagIcon: string; tag: string; isWild: boolean }> = ({
-  tagIcon,
-  tag,
-  isWild,
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
-
-  const handleMouseEnter = () => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
-    }
-  };
-
-  return (
-    <div
-      ref={isWild ? ref : undefined}
-      className="flex items-center justify-center shrink-0 [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.7))]"
-      onMouseEnter={isWild ? handleMouseEnter : undefined}
-      onMouseLeave={isWild ? () => setTooltipPos(null) : undefined}
-    >
-      <img
-        src={tagIcon}
-        alt={tag}
-        className="w-8 h-8 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-      />
-      {isWild && (
-        <DecorBoxTooltip
-          description="A wild tag counts as any tag"
-          position={tooltipPos}
-          placement="above"
-          cornerSize={10}
-        />
-      )}
-    </div>
-  );
-};
 
 export default function GameCard({
   card,
@@ -118,16 +73,21 @@ export default function GameCard({
               <div
                 className={
                   discounted
-                    ? "animate-[goldenPulse_2.5s_ease-in-out_infinite] transition-opacity duration-400 group-hover/cost:opacity-0"
+                    ? "animate-[goldenPulse_2.5s_ease-in-out_infinite] transition-opacity duration-400 pointer-fine:group-hover/cost:opacity-0"
                     : ""
                 }
               >
                 <GameIcon iconType={ResourceTypeCredit} amount={effectiveCost} size="medium" />
               </div>
               {discounted && (
-                <div className="absolute inset-0 opacity-0 transition-opacity duration-400 group-hover/cost:opacity-100">
+                <div className="absolute inset-0 opacity-0 transition-opacity duration-400 pointer-fine:group-hover/cost:opacity-100 pointer-coarse:hidden">
                   <GameIcon iconType={ResourceTypeCredit} amount={card.cost} size="medium" />
                 </div>
+              )}
+              {discounted && (
+                <span className="hidden pointer-coarse:block absolute left-1/2 top-full -translate-x-1/2 font-orbitron text-[12px] font-bold leading-none text-white/70 line-through [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)]">
+                  {card.cost}
+                </span>
               )}
             </div>
           )}
@@ -136,23 +96,12 @@ export default function GameCard({
           </h3>
           <CircuitTrace position="title" />
           {hasTags && (
-            <div className="game-card-tags" style={{ zIndex: Z_INDEX.GAME_BOARD_EFFECTS }}>
-              {card.tags?.slice(0, card.type === "event" ? 2 : 3).map((tag, index) => {
-                const tagIcon = getTagIconPath(tag.toLowerCase());
-                if (!tagIcon) {
-                  return null;
-                }
-                return (
-                  <TagIcon
-                    key={`${tag}-${index}`}
-                    tagIcon={tagIcon}
-                    tag={tag}
-                    isWild={tag.toLowerCase() === TagWild}
-                  />
-                );
-              })}
-              {card.type === "event" && <GameIcon iconType="event" size="medium" />}
-            </div>
+            <CardTagList
+              card={card}
+              size="card"
+              className="game-card-tags"
+              style={{ zIndex: Z_INDEX.GAME_BOARD_EFFECTS }}
+            />
           )}
         </div>
         <div className="game-card-labels">

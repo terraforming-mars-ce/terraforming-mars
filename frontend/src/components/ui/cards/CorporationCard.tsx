@@ -1,3 +1,4 @@
+import CardTagList from "./CardTagList.tsx";
 import React, { useRef, useEffect, useCallback } from "react";
 import GameIcon from "../display/GameIcon.tsx";
 import CardDecorBar from "../display/CardDecorBar.tsx";
@@ -15,7 +16,6 @@ import {
 } from "../../../types/generated/api-types.ts";
 import { getCorporationLogo } from "@/utils/corporationLogos.tsx";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
-import { getTagIconPath } from "@/utils/iconStore.ts";
 import { CardDescriptionSections } from "../display/CardDescriptionSections.tsx";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -244,34 +244,17 @@ const CorporationCard: React.FC<CorporationCardProps> = ({
 
       {/* Corporation logo area */}
       <div className="corporation-card-logo relative mb-1 px-[34px] py-[22px] flex justify-center items-center h-[152px]">
-        {getCorporationLogo(card.name, "w-full max-w-[240px] md:max-w-[264px] h-[108px]")}
+        {getCorporationLogo(card.name, "w-full max-w-[264px] h-[108px]")}
       </div>
 
       {/* Tags on right side */}
       {hasTags && (
-        <div
+        <CardTagList
+          card={card}
+          size="card"
           className="corporation-card-tags absolute top-[38%] right-3 flex flex-col gap-1 items-center pointer-events-auto"
           style={{ zIndex: Z_INDEX.GAME_BOARD_EFFECTS }}
-        >
-          {card.tags!.slice(0, 3).map((tag, index) => {
-            const tagIcon = getTagIconPath(tag.toLowerCase());
-            if (!tagIcon) {
-              return null;
-            }
-            return (
-              <div
-                key={index}
-                className="flex items-center justify-center shrink-0 [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.7))]"
-              >
-                <img
-                  src={tagIcon}
-                  alt={tag}
-                  className="w-8 h-8 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]"
-                />
-              </div>
-            );
-          })}
-        </div>
+        />
       )}
 
       {/* Content sections */}

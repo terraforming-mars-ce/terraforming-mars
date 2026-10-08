@@ -1,0 +1,81 @@
+# Frontend tasks. Run `just` here for frontend recipes, or `just frontend <recipe>` from the repo root.
+
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+[private]
+default:
+    @just --list --unsorted
+
+[group('setup')]
+[doc('Install frontend dependencies')]
+deps:
+    bun install
+
+[group('dev')]
+[doc('Run the Vite dev server on :3000 (builds assets first)')]
+dev:
+    bun run dev
+
+[group('check')]
+[doc('Run oxlint')]
+lint:
+    bun run lint
+
+[group('check')]
+[doc('Type-check the app and the asset scripts')]
+typecheck:
+    bun run typecheck
+
+[group('check')]
+[doc('Fail if any source file is not oxfmt-formatted')]
+format-check:
+    bun run format
+
+[group('check')]
+[doc('Validate asset sources, card identities and generated outputs')]
+assets-check:
+    bun run assets:check
+
+[group('check')]
+[doc('Run the asset pipeline tests')]
+assets-test:
+    bun run assets:test
+
+[group('check')]
+[doc('Run the Playwright suite on the mobile Chromium projects; args replace the project list. The in-game spec needs E2E_BACKEND=1 and the backend on :3001')]
+e2e *args="--project=mobile-landscape-android --project=mobile-landscape-ios --project=mobile-portrait":
+    bunx playwright test {{ args }}
+
+[group('check')]
+[doc('Run format-check, lint, typecheck and the asset checks')]
+check: format-check lint typecheck assets-check assets-test
+
+[group('fix')]
+[doc('Format source with oxfmt')]
+format:
+    bun run format:write
+
+[group('build')]
+[doc('Generate runtime assets from the approved originals')]
+assets:
+    bun run assets
+
+[group('build')]
+[doc('Build the production bundle to build/')]
+build:
+    bun run build
+
+[group('build')]
+[doc('Remove build output')]
+clean:
+    rm -rf build dist
+
+[group('tools')]
+[doc('Generate the asset review gallery at output/asset-preview/index.html')]
+assets-preview:
+    bun run assets:preview
+
+[group('tools')]
+[doc('Run a visual verification script: landscape, nuclear or tile-highlights')]
+verify name:
+    bun scripts/{{ name }}/verify.ts

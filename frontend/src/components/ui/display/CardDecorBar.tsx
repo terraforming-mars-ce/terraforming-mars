@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef } from "react";
 import DecorBox from "./DecorBox.tsx";
-import DecorBoxTooltip from "./DecorBoxTooltip.tsx";
+import RevealTrigger from "./RevealTrigger.tsx";
 import VictoryPointIcon from "./VictoryPointIcon.tsx";
 import ResourceStorageIcon from "./ResourceStorageIcon.tsx";
 import { ResourceStorageDto } from "@/types/generated/api-types.ts";
@@ -16,18 +16,7 @@ const CardDecorBar: React.FC<CardDecorBarProps> = ({
   resourceStorage,
   corner = "bottom-right",
 }) => {
-  const [vpDescription, setVpDescription] = useState<string | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (vpDescription && ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      setTooltipPos({ x: rect.left + rect.width / 2, y: rect.bottom });
-    } else {
-      setTooltipPos(null);
-    }
-  }, [vpDescription]);
 
   const hasVp = vpConditions && vpConditions.length > 0;
   const hasStorage = !!resourceStorage;
@@ -36,20 +25,25 @@ const CardDecorBar: React.FC<CardDecorBarProps> = ({
     return null;
   }
 
+  const vpDescription: string | null =
+    vpConditions?.find((condition: any) => condition.description)?.description ?? null;
+
   return (
     <div className="relative w-fit" ref={ref}>
       <DecorBox corner={corner}>
         {hasVp && (
-          <VictoryPointIcon
-            vpConditions={vpConditions}
-            onHoverDescription={setVpDescription}
-            bare
-          />
+          <RevealTrigger
+            className="inline-flex"
+            content={vpDescription}
+            placement="below"
+            anchorRef={ref}
+          >
+            <VictoryPointIcon vpConditions={vpConditions} bare />
+          </RevealTrigger>
         )}
         {hasVp && hasStorage && <div className="w-px h-3 bg-white/20 mx-1" />}
         {hasStorage && <ResourceStorageIcon resourceStorage={resourceStorage} bare />}
       </DecorBox>
-      <DecorBoxTooltip description={vpDescription} position={tooltipPos} />
     </div>
   );
 };

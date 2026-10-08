@@ -7,6 +7,7 @@ import { useDebugHexHighlightStore } from "@/stores/debugHexHighlightStore.ts";
 import type {
   BotCallDto,
   BotCallStepDto,
+  BotGrudgeDto,
   BotPlanDto,
   BotReactionDto,
   BotTraceDto,
@@ -346,12 +347,36 @@ const ListBlock: React.FC<{ label: string; items: string[] }> = ({ label, items 
   </div>
 );
 
+const GrudgeList: React.FC<{ grudges: BotGrudgeDto[] }> = ({ grudges }) => (
+  <div>
+    <SectionLabel>Targeted by</SectionLabel>
+    {grudges.length === 0 ? (
+      <div className="text-xs text-white/40">Nobody yet</div>
+    ) : (
+      <ul className="flex flex-col gap-1.5 m-0 p-0 list-none">
+        {grudges.map((grudge) => (
+          <li key={grudge.playerId} className="text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-white/90">{grudge.name}</span>
+              <span className="font-orbitron text-[10px] bg-red-500/20 text-red-300 rounded px-1.5 py-0.5">
+                {grudge.hits}x
+              </span>
+            </div>
+            <div className="text-white/55">{(grudge.recent ?? []).join("; ")}</div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+);
+
 const PlanTab: React.FC<{
   plan: BotPlanDto;
   planUpdatedAt?: string;
+  grudges: BotGrudgeDto[];
   showOnBoard: boolean;
   onShowOnBoardChange: (value: boolean) => void;
-}> = ({ plan, planUpdatedAt, showOnBoard, onShowOnBoardChange }) => {
+}> = ({ plan, planUpdatedAt, grudges, showOnBoard, onShowOnBoardChange }) => {
   const nextMoves = plan.nextMoves ?? [];
   return (
     <div className="flex flex-col gap-3">
@@ -384,6 +409,7 @@ const PlanTab: React.FC<{
         <ListBlock label="Colonies" items={plan.targetColonies ?? []} />
         <ListBlock label="Rivals" items={plan.rivals ?? []} />
       </div>
+      <GrudgeList grudges={grudges} />
       <div>
         <SectionLabel>Next moves</SectionLabel>
         {nextMoves.length === 0 ? (
@@ -642,6 +668,7 @@ const BotInspectorPage: React.FC<BotInspectorPageProps> = ({ gameState }) => {
         <PlanTab
           plan={trace.plan}
           planUpdatedAt={trace.planUpdatedAt}
+          grudges={trace.grudges ?? []}
           showOnBoard={showOnBoard}
           onShowOnBoardChange={setShowOnBoard}
         />

@@ -4,7 +4,12 @@ import ColonySteps from "../popover/ColonySteps.tsx";
 import GameButton from "../buttons/GameButton.tsx";
 import ColonyOutputDisplay from "../display/ColonyOutputDisplay.tsx";
 import { PlayerInfo } from "@/utils/colonyUtils.ts";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
+import {
+  COLONY_TRACK_INNER_CLASS,
+  COLONY_TRACK_SCROLL_CLASS,
+  OVERLAY_ROOT_SAFE_AREA_CLASS,
+} from "./overlayStyles.ts";
 
 interface ColonySelectionOverlayProps {
   isOpen: boolean;
@@ -42,13 +47,16 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className={`fixed inset-0 flex items-center justify-center ${OVERLAY_ROOT_SAFE_AREA_CLASS}`}
       style={{ zIndex: Z_INDEX.SELECTION_POPOVER }}
     >
       <div className="absolute inset-0 backdrop-blur-sm" />
       <div className="absolute inset-0 bg-black/60 animate-[fadeIn_0.3s_ease]" />
 
-      <div className="relative z-[1] w-[640px] max-w-[calc(100vw-32px)] max-h-[80vh] flex flex-col game-panel game-panel-clipped game-window overflow-hidden">
+      <div
+        className="relative w-[640px] max-w-[calc(100vw-32px)] max-h-[80dvh] compact:max-h-full flex flex-col game-panel game-panel-clipped game-window overflow-hidden"
+        style={{ zIndex: getZIndex("LOCAL", 1) }}
+      >
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
           <h2 className="font-orbitron text-base font-bold text-white tracking-wider m-0">
             {pendingSelection.addTile ? "Add colony tile" : "Place Colony"}
@@ -91,7 +99,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
                     </h3>
                     {!pendingSelection.addTile && reward.length > 0 && (
                       <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-orbitron text-white/40 uppercase">
+                        <span className="text-[9px] font-orbitron text-white/40 uppercase compact:text-[11px]">
                           Reward
                         </span>
                         <ColonyOutputDisplay outputs={reward} />
@@ -99,16 +107,20 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
                     )}
                   </div>
 
-                  <ColonySteps
-                    steps={colony.steps}
-                    markerPosition={colony.markerPosition}
-                    playerColonies={colony.playerColonies}
-                    maxSlots={colony.colonies.length}
-                    getPlayerColor={getPlayerColor}
-                    getPlayerName={getPlayerName}
-                  />
+                  <div className={COLONY_TRACK_SCROLL_CLASS}>
+                    <div className={COLONY_TRACK_INNER_CLASS}>
+                      <ColonySteps
+                        steps={colony.steps}
+                        markerPosition={colony.markerPosition}
+                        playerColonies={colony.playerColonies}
+                        maxSlots={colony.colonies.length}
+                        getPlayerColor={getPlayerColor}
+                        getPlayerName={getPlayerName}
+                      />
+                    </div>
+                  </div>
 
-                  <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40">
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40 compact:text-[11px]">
                     <span className="font-orbitron uppercase tracking-wider">Colony Bonus</span>
                     <ColonyOutputDisplay outputs={colony.colonyBonus} />
                   </div>
@@ -121,6 +133,7 @@ const ColonySelectionOverlay: React.FC<ColonySelectionOverlayProps> = ({
         <div className="px-4 py-3 border-t border-white/10 flex items-center justify-end">
           <GameButton
             size="sm"
+            className="compact:min-h-11 compact:px-5"
             onClick={() => {
               if (selectedColonyId) {
                 onConfirm(selectedColonyId);

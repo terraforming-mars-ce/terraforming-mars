@@ -12,6 +12,8 @@
 
 export const Z_INDEX = {
   CONTROL_DECORATION: -1,
+  // Orders siblings inside one component's own stacking context: getZIndex("LOCAL", n)
+  LOCAL: 0,
   // Base Layer (0-9)
   GAME_BOARD_BACKGROUND: 0,
   GAME_BOARD_BASE: 1,
@@ -24,8 +26,14 @@ export const Z_INDEX = {
   // Player list in the left sidebar; thought bubbles and emotes sit one above it, so any modal backdrop covers them
   PLAYER_LIST: 10,
   PLAYER_PRESENCE: 11,
+  // In-game global parameters sidebar, level with the player list on the left
+  RIGHT_SIDEBAR: 10,
   COST_DISPLAY: 20,
+  // Compact landing-page "play as an app" bar: above the menu footer, below the menu buttons
+  INSTALL_APP_BAR: 30,
   TILE_PLACEMENT_PROMPT: 50,
+  // Compact board overlays above the dock: tapped tile info and the placement confirm bar
+  PLACEMENT_CONFIRM_BAR: 61,
   PLAYER_OVERLAY: 90,
 
   // Navigation Layer (100-199)
@@ -34,7 +42,10 @@ export const Z_INDEX = {
   TOP_MENU_BAR: 100,
   BOTTOM_RESOURCE_BAR: 100,
   LEFT_SIDEBAR: 110,
-  RIGHT_SIDEBAR: 110,
+  // Compact layout HUD bands: top bar, side rails and bottom dock
+  MOBILE_HUD: 100,
+  // Compact toasts over the board (triggered effects, played cards, player reactions): above the HUD, below screens
+  MOBILE_FEEDBACK: 120,
 
   // Overlay Layer (200-999)
   CARDS_HAND_OVERLAY: 200,
@@ -55,6 +66,9 @@ export const Z_INDEX = {
   CARD_DETAIL_MODAL: 3000,
   CORPORATION_SELECTION: 5000,
   PENDING_ACTION_BACKDROP: 4500,
+  // Compact layout: full-screen views above the HUD bands, card detail above them, prompts (POPOVER+) above both
+  MOBILE_SCREEN: 8000,
+  MOBILE_CARD_DETAIL: 8500,
 
   // Popover Layer (10000+)
   POPOVER: 10001,
@@ -63,18 +77,29 @@ export const Z_INDEX = {
   LOBBY_SETTINGS_MODAL: 10500,
   IMMEDIATE_BACKDROP: 30000,
   IMMEDIATE_POPOVER: 30001,
+  // Touch card preview opened from a selection popover row; above every gameplay popover
+  CARD_PREVIEW_OVERLAY: 30010,
 
   // Loading overlay - above everything
   LOADING_OVERLAY: 99999,
+  FLOATING_TOOLTIP: 99999,
+  DRAG_SHIELD: 99999,
+  // Asks phone players in portrait to rotate; covers the game, including the loading overlay
+  ROTATE_DEVICE_OVERLAY: 100000,
 
   // Debug Windows Layer (20000-20099)
   DEBUG_WINDOWS: 20000,
 
   // Always-on-top UI (above debug windows)
   TOP_MENU_ALWAYS_ON_TOP: 20100,
+  CORPORATION_OVERLAY: 20200,
   EXPANDED_CARD_FAN: 20201,
 
   DEBUG_OVERLAY: 9999,
+  PLAYER_EFFECT_TOAST: 9999,
+
+  // Compact menu drawer: above every gameplay popover, below app overlays and confirmations
+  MOBILE_MENU_DRAWER: 34000,
 
   // App-wide layers stay above all gameplay selections, including immediate flows.
   APP_OVERLAY: 35000,

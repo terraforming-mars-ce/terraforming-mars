@@ -14,6 +14,12 @@
       "publicName": "android-chrome-512x512.png"
     },
     {
+      "id": "app/maskable-512x512",
+      "source": "app/maskable-512x512.png",
+      "profile": "copy",
+      "publicName": "maskable-512x512.png"
+    },
+    {
       "id": "app/apple-touch-icon",
       "source": "app/apple-touch-icon.png",
       "profile": "copy",
@@ -2936,52 +2942,52 @@
     {
       "id": "models/asteroid",
       "source": "models/asteroid.glb",
-      "profile": "copy"
+      "profile": "model"
     },
     {
       "id": "models/bird",
       "source": "models/bird.glb",
-      "profile": "copy"
+      "profile": "model"
     },
     {
       "id": "models/fence",
       "source": "models/fence.glb",
-      "profile": "copy"
+      "profile": "model"
     },
     {
       "id": "models/flowers",
       "source": "models/flowers.glb",
-      "profile": "copy"
+      "profile": "model"
     },
     {
       "id": "models/phobos",
       "source": "models/phobos.glb",
-      "profile": "copy"
+      "profile": "model-detail"
     },
     {
       "id": "models/rock",
       "source": "models/rock.glb",
-      "profile": "copy"
+      "profile": "model"
     },
     {
       "id": "models/satellite",
       "source": "models/satellite.glb",
-      "profile": "copy"
+      "profile": "model"
     },
     {
       "id": "models/spaceship",
       "source": "models/spaceship.glb",
-      "profile": "copy"
+      "profile": "model"
     },
     {
       "id": "models/trees",
       "source": "models/trees.glb",
-      "profile": "copy"
+      "profile": "model"
     },
     {
       "id": "models/pines",
       "source": "models/pines.glb",
-      "profile": "copy",
+      "profile": "model",
       "provenance": {
         "url": "https://www.cgtrader.com/free-3d-models/plant/conifer/free-pine-trees-sample-model-6ce9f61e2ff2bc4b922aeda874e96d5b",
         "license": "CGTrader Royalty Free License",
@@ -3181,7 +3187,7 @@
     {
       "id": "textures/planets/venus/surface",
       "source": "textures/planets/venus/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/venus/overview",
@@ -3191,7 +3197,7 @@
     {
       "id": "textures/planets/ceres/surface",
       "source": "textures/planets/ceres/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/ceres/overview",
@@ -3206,7 +3212,7 @@
     {
       "id": "textures/planets/earth/surface",
       "source": "textures/planets/earth/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/earth/overview",
@@ -3216,7 +3222,7 @@
     {
       "id": "textures/planets/earth-clouds/surface",
       "source": "textures/planets/earth-clouds/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/earth-clouds/overview",
@@ -3226,7 +3232,7 @@
     {
       "id": "textures/planets/ganymede/surface",
       "source": "textures/planets/ganymede/surface.png",
-      "profile": "ganymede"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/ganymede/overview",
@@ -3241,7 +3247,7 @@
     {
       "id": "textures/planets/jupiter/surface",
       "source": "textures/planets/jupiter/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/jupiter/overview",
@@ -3251,7 +3257,7 @@
     {
       "id": "textures/planets/mars/surface",
       "source": "textures/planets/mars/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/mars/overview",
@@ -3261,7 +3267,7 @@
     {
       "id": "textures/planets/mercury/surface",
       "source": "textures/planets/mercury/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/mercury/overview",
@@ -3271,7 +3277,7 @@
     {
       "id": "textures/planets/moon/surface",
       "source": "textures/planets/moon/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/moon/overview",
@@ -3281,7 +3287,7 @@
     {
       "id": "textures/planets/neptune/surface",
       "source": "textures/planets/neptune/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/neptune/overview",
@@ -3311,7 +3317,7 @@
     {
       "id": "textures/planets/saturn/surface",
       "source": "textures/planets/saturn/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/saturn/overview",
@@ -3321,7 +3327,7 @@
     {
       "id": "textures/planets/sun/surface",
       "source": "textures/planets/sun/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/sun/overview",
@@ -3331,7 +3337,7 @@
     {
       "id": "textures/planets/uranus/surface",
       "source": "textures/planets/uranus/surface.jpg",
-      "profile": "copy"
+      "profile": "planet"
     },
     {
       "id": "textures/planets/uranus/overview",
@@ -3488,6 +3494,11 @@
     {
       "id": "audio/effects/nuclear-blast",
       "source": "audio/effects/nuclear-blast.mp3",
+      "profile": "copy"
+    },
+    {
+      "id": "audio/effects/player-joined",
+      "source": "audio/effects/player-joined.mp3",
       "profile": "copy"
     },
     {

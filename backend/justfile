@@ -1,0 +1,107 @@
+# Backend tasks. Run `just` here for backend recipes, or `just backend <recipe>` from the repo root.
+
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+generated_types := source_directory() / ".." / "frontend" / "src" / "types" / "generated" / "api-types.ts"
+
+golangci_lint := "go tool -modfile=golangci-lint.mod golangci-lint"
+
+[private]
+default:
+    @just --list --unsorted
+
+[group('setup')]
+[doc('Download Go modules')]
+deps:
+    go mod download
+
+[group('dev')]
+[doc('Run the API on :3001 with Air hot reload')]
+dev:
+    TM_REPO_PATH=.. go tool air
+
+[group('dev')]
+[doc('Build and run the API on :3001 without hot reload')]
+run: build
+    TM_REPO_PATH=.. ./bin/server
+
+[group('check')]
+[doc('Run tests; args replace the default package pattern, e.g. `just backend test -v -run TestKick ./test/action/...`')]
+test *args="./test/...":
+    go test {{ args }}
+
+[group('check')]
+[doc('Run tests with the race detector')]
+test-race:
+    go test -race ./test/...
+
+[group('check')]
+[doc('Run tests with coverage and write coverage.out and coverage.html')]
+coverage:
+    go test -coverprofile=coverage.out -coverpkg=./internal/... ./test/...
+    go tool cover -html=coverage.out -o coverage.html
+    go tool cover -func=coverage.out | tail -n 1
+
+[group('check')]
+[doc('Run go vet, errcheck and golangci-lint')]
+lint:
+    go vet ./...
+    go tool errcheck ./...
+    {{ golangci_lint }} run ./...
+
+[group('check')]
+[doc('Fail if any Go file is not gofmt-formatted')]
+format-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    unformatted=$(gofmt -s -l .)
+    if [ -n "$unformatted" ]; then
+        echo "These files need formatting (run 'just format'):"
+        echo "$unformatted"
+        exit 1
+    fi
+
+[group('check')]
+[doc('Run format-check, lint, tests and generate-check')]
+check: format-check lint test generate-check
+
+[group('fix')]
+[doc('Format Go source')]
+format:
+    gofmt -s -w .
+
+[group('codegen')]
+[doc('Generate frontend TypeScript types from the DTOs and format them')]
+generate:
+    go tool tygo generate
+    cd ../frontend && bunx oxfmt --write src/types/generated/api-types.ts
+
+[group('check')]
+[doc('Fail if the committed generated TypeScript types are out of date')]
+generate-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target="{{ generated_types }}"
+    backup=$(mktemp)
+    cp "$target" "$backup"
+    trap 'cp "$backup" "$target"; rm -f "$backup"' EXIT
+    if ! output=$({{ just_executable() }} --justfile "{{ source_file() }}" generate 2>&1); then
+        echo "$output"
+        exit 1
+    fi
+    if ! diff -q "$backup" "$target" >/dev/null; then
+        echo "Generated types are out of date. Run 'just generate' and commit the result."
+        diff -u "$backup" "$target" || true
+        exit 1
+    fi
+
+[group('build')]
+[doc('Build the server binary to bin/server')]
+build:
+    go build -o bin/server ./cmd/server
+
+[group('build')]
+[doc('Remove build output, coverage reports and the Air tmp dir')]
+clean:
+    rm -rf bin tmp coverage.out coverage.html
+    go clean

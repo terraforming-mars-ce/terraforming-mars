@@ -22,12 +22,16 @@ import CorporationCard from "../cards/CorporationCard.tsx";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 import {
   OVERLAY_CONTAINER_CLASS,
+  OVERLAY_CONTAINER_STYLE,
   OVERLAY_HEADER_CLASS,
   OVERLAY_TITLE_CLASS,
-  OVERLAY_DESCRIPTION_CLASS,
   OVERLAY_FOOTER_CLASS,
+  OVERLAY_ACTION_BUTTON_CLASS,
+  OVERLAY_ROOT_SAFE_AREA_CLASS,
 } from "./overlayStyles.ts";
+import OverlayDescription from "./OverlayDescription.tsx";
 import GameButton from "../buttons/GameButton.tsx";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
 interface DemoSetupOverlayProps {
   game: GameDto;
@@ -237,10 +241,14 @@ const ResourceStepper: React.FC<ResourceStepperProps> = ({
 
 type SidebarTab = "cards" | "resources" | "global";
 
+type CardsColumn = "corporation" | "preludes" | "cards";
+
 const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isOpen, onClose }) => {
   const isHost = game.hostPlayerId === playerId;
   const hasPrelude = game.settings.cardPacks?.includes("prelude") || false;
   const [activeTab, setActiveTab] = useState<SidebarTab>("cards");
+  const { isCompact } = useLayoutMode();
+  const [cardsColumn, setCardsColumn] = useState<CardsColumn>("corporation");
 
   // Global parameters (host only)
   const [globalParams, setGlobalParams] = useState<GlobalParametersDto>({
@@ -455,29 +463,46 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
     { key: "heat" as const, icon: ResourceTypeHeat },
   ];
 
+  const cardsColumns: { id: CardsColumn; label: string }[] = [
+    { id: "corporation", label: "Corporation" },
+    ...(hasPrelude ? [{ id: "preludes" as const, label: "Preludes" }] : []),
+    { id: "cards", label: "Cards" },
+  ];
+  const desktopGridColumns = hasPrelude ? "1.1fr 0.7fr 1.15fr" : "1.1fr 1.15fr";
+  const cardsGridColumns = isCompact ? "minmax(0, 1fr)" : desktopGridColumns;
+  const columnVisibility = (column: CardsColumn) => {
+    if (isCompact && cardsColumn !== column) {
+      return "hidden";
+    }
+    return "flex";
+  };
+
   if (!isOpen) {
     return null;
   }
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-[fadeIn_0.3s_ease]"
+      className={`fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-[fadeIn_0.3s_ease] ${OVERLAY_ROOT_SAFE_AREA_CLASS}`}
       style={{ zIndex: Z_INDEX.STANDARD_MODAL }}
     >
-      <div className={`${OVERLAY_CONTAINER_CLASS} max-w-[1400px] h-[90vh]`}>
+      <div
+        className={`${OVERLAY_CONTAINER_CLASS} max-w-[1400px] h-[90dvh]`}
+        style={OVERLAY_CONTAINER_STYLE}
+      >
         {/* Header */}
         <div className={OVERLAY_HEADER_CLASS}>
           <h2 className={OVERLAY_TITLE_CLASS}>Demo Game Setup</h2>
-          <p className={OVERLAY_DESCRIPTION_CLASS}>
+          <OverlayDescription>
             Configure your starting setup.{" "}
             {isHost ? "As host, you can also set global parameters." : ""}
-          </p>
+          </OverlayDescription>
         </div>
 
         {/* Content: Sidebar + Main */}
         <div className="flex-1 flex min-h-0">
           {/* Sidebar */}
-          <div className="w-40 shrink-0 bg-black/30 border-r border-space-blue-600/50 flex flex-col py-2">
+          <div className="w-40 compact:w-28 shrink-0 bg-black/30 border-r border-space-blue-600/50 flex flex-col py-2">
             <GameButton
               emphasis="quiet"
               onClick={() => setActiveTab("cards")}
@@ -523,109 +548,132 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
             {/* Cards tab */}
             {activeTab === "cards" && (
-              <div
-                className="grid grid-cols-1 gap-4 h-full"
-                style={{
-                  gridTemplateColumns: hasPrelude ? "1.1fr 0.7fr 1.15fr" : "1.1fr 1.15fr",
-                }}
-              >
-                {/* Corporation Selection */}
-                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex flex-col min-h-0">
-                  <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
-                    Corporation{" "}
-                    <span className="text-white/50 font-normal normal-case">
-                      ({selectedCorporationId ? "1 selected" : "None"})
-                    </span>
-                  </h3>
-                  <input
-                    type="text"
-                    placeholder="Search corporations..."
-                    value={corpSearchTerm}
-                    onChange={(e) => setCorpSearchTerm(e.target.value)}
-                    className="w-full bg-black/60 border border-space-blue-400/30 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
-                  />
-                  <div className="flex flex-col gap-2 items-center flex-1 min-h-0 overflow-y-auto">
-                    {filteredCorporations.map((corp) => (
-                      <div key={corp.id} className="scale-90">
-                        <CorporationCard
-                          card={corp}
-                          isSelected={selectedCorporationId === corp.id}
-                          onSelect={() =>
-                            setSelectedCorporationId(
-                              selectedCorporationId === corp.id ? "" : corp.id,
-                            )
-                          }
-                          showCheckbox
-                          borderColor={getCorporationBorderColor(corp.name)}
-                        />
-                      </div>
+              <div className="flex flex-col gap-3 h-full">
+                {isCompact && (
+                  <div className="flex gap-2 shrink-0" role="tablist">
+                    {cardsColumns.map(({ id, label }) => (
+                      <GameButton
+                        key={id}
+                        size="sm"
+                        emphasis="secondary"
+                        role="tab"
+                        aria-selected={cardsColumn === id}
+                        selected={cardsColumn === id}
+                        onClick={() => setCardsColumn(id)}
+                      >
+                        {label}
+                      </GameButton>
                     ))}
                   </div>
-                </div>
-
-                {/* Prelude Selection (if enabled) */}
-                {hasPrelude && (
-                  <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex flex-col min-h-0">
+                )}
+                <div
+                  className="grid grid-cols-1 gap-4 h-full min-h-0"
+                  style={{ gridTemplateColumns: cardsGridColumns }}
+                >
+                  {/* Corporation Selection */}
+                  <div
+                    className={`bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex-col min-h-0 ${columnVisibility("corporation")}`}
+                  >
                     <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
-                      Prelude Cards{" "}
+                      Corporation{" "}
                       <span className="text-white/50 font-normal normal-case">
-                        ({selectedPreludeIds.length}/2 selected)
+                        ({selectedCorporationId ? "1 selected" : "None"})
                       </span>
                     </h3>
                     <input
                       type="text"
-                      placeholder="Search preludes..."
-                      value={preludeSearchTerm}
-                      onChange={(e) => setPreludeSearchTerm(e.target.value)}
+                      placeholder="Search corporations..."
+                      value={corpSearchTerm}
+                      onChange={(e) => setCorpSearchTerm(e.target.value)}
+                      className="w-full bg-black/60 border border-space-blue-400/30 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
+                    />
+                    <div className="flex flex-col gap-2 items-center flex-1 min-h-0 overflow-y-auto">
+                      {filteredCorporations.map((corp) => (
+                        <div key={corp.id} className="scale-90">
+                          <CorporationCard
+                            card={corp}
+                            isSelected={selectedCorporationId === corp.id}
+                            onSelect={() =>
+                              setSelectedCorporationId(
+                                selectedCorporationId === corp.id ? "" : corp.id,
+                              )
+                            }
+                            showCheckbox
+                            borderColor={getCorporationBorderColor(corp.name)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Prelude Selection (if enabled) */}
+                  {hasPrelude && (
+                    <div
+                      className={`bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex-col min-h-0 ${columnVisibility("preludes")}`}
+                    >
+                      <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
+                        Prelude Cards{" "}
+                        <span className="text-white/50 font-normal normal-case">
+                          ({selectedPreludeIds.length}/2 selected)
+                        </span>
+                      </h3>
+                      <input
+                        type="text"
+                        placeholder="Search preludes..."
+                        value={preludeSearchTerm}
+                        onChange={(e) => setPreludeSearchTerm(e.target.value)}
+                        className="w-full bg-black/60 border border-space-blue-400/30 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
+                      />
+                      <div className="flex flex-wrap gap-x-1 gap-y-2 justify-center content-start flex-1 min-h-0 overflow-y-auto">
+                        {filteredPreludes.map((prelude) => (
+                          <div key={prelude.id} className="scale-80">
+                            <CardChoice
+                              card={prelude}
+                              isSelected={selectedPreludeIds.includes(prelude.id)}
+                              disabled={
+                                selectedPreludeIds.length >= 2 &&
+                                !selectedPreludeIds.includes(prelude.id)
+                              }
+                              onSelect={() => togglePreludeSelection(prelude.id)}
+                              animationDelay={0}
+                              showCheckbox
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Starting Cards */}
+                  <div
+                    className={`bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex-col min-h-0 ${columnVisibility("cards")}`}
+                  >
+                    <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
+                      Starting Cards{" "}
+                      <span className="text-white/50 font-normal normal-case">
+                        ({selectedCardIds.length} selected)
+                      </span>
+                    </h3>
+                    <input
+                      type="text"
+                      placeholder="Search cards..."
+                      value={cardSearchTerm}
+                      onChange={(e) => setCardSearchTerm(e.target.value)}
                       className="w-full bg-black/60 border border-space-blue-400/30 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
                     />
                     <div className="flex flex-wrap gap-x-1 gap-y-2 justify-center content-start flex-1 min-h-0 overflow-y-auto">
-                      {filteredPreludes.map((prelude) => (
-                        <div key={prelude.id} className="scale-80">
+                      {filteredCards.slice(0, 50).map((card) => (
+                        <div key={card.id} className="scale-80">
                           <CardChoice
-                            card={prelude}
-                            isSelected={selectedPreludeIds.includes(prelude.id)}
-                            disabled={
-                              selectedPreludeIds.length >= 2 &&
-                              !selectedPreludeIds.includes(prelude.id)
-                            }
-                            onSelect={() => togglePreludeSelection(prelude.id)}
+                            card={card}
+                            isSelected={selectedCardIds.includes(card.id)}
+                            onSelect={() => toggleCardSelection(card.id)}
                             animationDelay={0}
                             showCheckbox
                           />
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {/* Starting Cards */}
-                <div className="bg-black/40 border border-space-blue-600/50 rounded-xl p-3 flex flex-col min-h-0">
-                  <h3 className="text-white font-semibold mb-2 uppercase tracking-wide text-xs shrink-0">
-                    Starting Cards{" "}
-                    <span className="text-white/50 font-normal normal-case">
-                      ({selectedCardIds.length} selected)
-                    </span>
-                  </h3>
-                  <input
-                    type="text"
-                    placeholder="Search cards..."
-                    value={cardSearchTerm}
-                    onChange={(e) => setCardSearchTerm(e.target.value)}
-                    className="w-full bg-black/60 border border-space-blue-400/30 rounded-none py-2 px-3 text-white text-sm outline-none focus:border-space-blue-400 mb-3 shrink-0 cursor-text"
-                  />
-                  <div className="flex flex-wrap gap-x-1 gap-y-2 justify-center content-start flex-1 min-h-0 overflow-y-auto">
-                    {filteredCards.slice(0, 50).map((card) => (
-                      <div key={card.id} className="scale-80">
-                        <CardChoice
-                          card={card}
-                          isSelected={selectedCardIds.includes(card.id)}
-                          onSelect={() => toggleCardSelection(card.id)}
-                          animationDelay={0}
-                          showCheckbox
-                        />
-                      </div>
-                    ))}
                   </div>
                 </div>
               </div>
@@ -829,7 +877,7 @@ const DemoSetupOverlay: React.FC<DemoSetupOverlayProps> = ({ game, playerId, isO
               size="lg"
               onClick={() => void handleConfirm()}
               disabled={isSubmitting || !canConfirm}
-              className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
+              className={OVERLAY_ACTION_BUTTON_CLASS}
             >
               {isSubmitting ? "Confirming..." : "Confirm Setup"}
             </GameButton>

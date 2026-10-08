@@ -23,7 +23,7 @@ export const MenuPopoverItem: React.FC<MenuPopoverItemProps> = ({
       emphasis="quiet"
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      className={`w-full flex items-center justify-start gap-3 px-4 py-3 ${textColor} text-sm hover:bg-white/10 transition-colors text-left`}
+      className={`w-full flex items-center justify-start gap-3 px-4 py-3 compact:min-h-12 ${textColor} text-sm hover:bg-white/10 transition-colors text-left`}
     >
       <span className="inline-flex w-5 shrink-0 items-center justify-center">{icon}</span>
       <span>{label}</span>

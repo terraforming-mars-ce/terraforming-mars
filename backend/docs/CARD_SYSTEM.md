@@ -371,7 +371,7 @@ If valid: PlayCardAction applies effects
 
 1. Open `/backend/assets/terraforming_mars_cards.json`
 2. Add card definition with behaviors
-3. Run `make generate` to sync TypeScript types
+3. Run `just generate` to sync TypeScript types
 4. Test by playing the card
 
 **Example - Automated Card**:

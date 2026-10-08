@@ -2,6 +2,7 @@ import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import { FC, useState, useMemo, useEffect, useRef } from "react";
 import type { GameDto, GameHistoryEntryDto } from "../../../types/generated/api-types";
 import { Z_INDEX } from "@/constants/zIndex.ts";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 import { getPhaseDisplayName } from "../../../constants/gameConstants";
 import { useVPCounting } from "../../../contexts/VPCountingContext";
 import GameGraphs from "./GameGraphs.tsx";
@@ -11,12 +12,26 @@ import VPPhaseTabsOverlay from "./VPPhaseTabsOverlay.tsx";
 const ANGLE_INDENT = 14;
 const BUTTON_HEIGHT = 32;
 const BUTTON_SPACING = 4;
+const COMPACT_BUTTON_HEIGHT = 36;
+const COMPACT_HIT_AREA_CLASS = "after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']";
+const COMPACT_TOP_OFFSET_CLASS = "top-[calc(var(--hud-top-h)+var(--safe-top))]";
+const DESKTOP_TOP_OFFSET_CLASS = "top-[60px] max-lg:top-[50px]";
+
+type EndgamePanel = "score" | "graphs" | "replay";
+
+const COMPACT_PANEL_BUTTONS: { id: EndgamePanel; label: string; width: number }[] = [
+  { id: "score", label: "SCORE", width: 84 },
+  { id: "graphs", label: "GRAPHS", width: 92 },
+  { id: "replay", label: "REPLAY", width: 92 },
+];
 
 interface ParaButtonConfig {
   id: string;
   label: string;
   accentColor: string;
   width: number;
+  height?: number;
+  className?: string;
   isActive?: boolean;
   visible?: boolean;
   onClick: () => void;
@@ -69,7 +84,8 @@ function ParaButton({
       emphasis="secondary"
       size="xs"
       width={config.width}
-      height={BUTTON_HEIGHT}
+      height={config.height ?? BUTTON_HEIGHT}
+      className={config.className}
       accent={config.accentColor}
       selected={config.isActive}
       onClick={config.onClick}
@@ -92,8 +108,8 @@ interface EndGameBottomBarProps {
   game: GameDto;
   playerId: string;
   historyEntries?: GameHistoryEntryDto[];
-  activePanel: "score" | "graphs" | "replay";
-  onPanelChange?: (panel: "score" | "graphs" | "replay") => void;
+  activePanel: EndgamePanel;
+  onPanelChange?: (panel: EndgamePanel) => void;
   isReplayActive?: boolean;
   replayIndex?: number;
   replayTotal?: number;
@@ -130,6 +146,8 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
   onReplaySpectatePlayerChange,
 }) => {
   const { state: vpState, controls: vpControls } = useVPCounting();
+  const { isCompact } = useLayoutMode();
+  const topOffsetClass = isCompact ? COMPACT_TOP_OFFSET_CLASS : DESKTOP_TOP_OFFSET_CLASS;
 
   useEffect(() => {
     if (activePanel !== "graphs" || !onPanelChange) {
@@ -144,6 +162,7 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activePanel, onPanelChange]);
 
+  const hasHistory = (historyEntries?.length ?? 0) > 0;
   const allScores = game.finalScores ?? [];
   const sortedScores = [...allScores].sort((a, b) => b.vpBreakdown.totalVP - a.vpBreakdown.totalVP);
 
@@ -207,12 +226,14 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
     return markers;
   }, [historyEntries]);
 
+  const actionButtonHeight = isCompact ? 44 : undefined;
   const actionButtons: ParaButtonConfig[] = [
     {
       id: "replay-vp",
       label: "\u27F3",
       accentColor: "#ffffff",
       width: 50,
+      height: actionButtonHeight,
       visible: activePanel === "score" && vpState.isComplete && !isCounting,
       onClick: vpControls.start,
     },
@@ -221,6 +242,7 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
       label: "Skip",
       accentColor: "#ffffff",
       width: 80,
+      height: actionButtonHeight,
       visible: isCounting,
       onClick: vpControls.skip,
     },
@@ -243,13 +265,24 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
     <>
       {/* Graphs overlay — sits below the top menu bar so SCORE/GRAPHS/REPLAY stay visible */}
       <div
-        className={`fixed top-[60px] max-lg:top-[50px] left-0 right-0 bottom-0 bg-black/70 backdrop-blur-lg flex items-center justify-center transition-opacity duration-500 ${
+        className={`fixed ${topOffsetClass} left-0 right-0 bottom-0 bg-black/70 backdrop-blur-lg flex items-center justify-center transition-opacity duration-500 ${
           activePanel === "graphs" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         style={{ zIndex: Z_INDEX.MENU_DROPDOWN }}
       >
         {historyEntries && (
-          <div className="w-[90%] h-full py-4">
+          <div
+            className={isCompact ? "w-full h-full pt-1" : "w-[90%] h-full py-4"}
+            style={
+              isCompact
+                ? {
+                    paddingLeft: "calc(var(--safe-left) + 8px)",
+                    paddingRight: "calc(var(--safe-right) + 8px)",
+                    paddingBottom: "calc(var(--safe-bottom) + 6px)",
+                  }
+                : undefined
+            }
+          >
             <GameGraphs
               entries={historyEntries}
               playerColors={playerColors}
@@ -261,12 +294,18 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
 
       {/* Replay controls overlay — blurred strip below the top menu bar */}
       <div
-        className={`fixed top-[60px] max-lg:top-[50px] left-0 right-0 bg-black/50 flex justify-center transition-opacity duration-500 ${
+        className={`fixed ${topOffsetClass} left-0 right-0 bg-black/50 flex justify-center transition-opacity duration-500 ${
           activePanel === "replay" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
-        style={{ paddingTop: 10, paddingBottom: 10, zIndex: Z_INDEX.MENU_DROPDOWN }}
+        style={{
+          paddingTop: 10,
+          paddingBottom: 10,
+          paddingLeft: isCompact ? "calc(var(--safe-left) + 12px)" : undefined,
+          paddingRight: isCompact ? "calc(var(--safe-right) + 12px)" : undefined,
+          zIndex: Z_INDEX.MENU_DROPDOWN,
+        }}
       >
-        <div className="w-[60%]">
+        <div className={isCompact ? "w-full" : "w-[60%]"}>
           <ReplayControls
             currentIndex={replayIndex ?? 0}
             totalStates={replayTotal ?? 0}
@@ -281,30 +320,47 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
             onSpeedChange={onReplaySpeedChange ?? (() => {})}
             generationMarkers={generationMarkers}
             rightSlot={
-              <div className="flex items-center gap-2">
-                <span className="text-white/50 text-xs font-orbitron">VIEW AS</span>
-                {allPlayers.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() =>
-                      onReplaySpectatePlayerChange?.(replaySpectatePlayerId === p.id ? null : p.id)
-                    }
-                    className="cursor-pointer transition-all duration-200"
-                    style={{
-                      width: replaySpectatePlayerId === p.id ? 18 : 14,
-                      height: replaySpectatePlayerId === p.id ? 18 : 14,
-                      borderRadius: "50%",
-                      backgroundColor: playerColors[p.id] || "#ffffff",
-                      opacity: replaySpectatePlayerId === p.id ? 1 : 0.5,
-                      border: "none",
-                      boxShadow:
-                        replaySpectatePlayerId === p.id
-                          ? `0 0 8px ${playerColors[p.id] || "#ffffff"}`
-                          : "none",
-                    }}
-                    aria-label={p.name}
-                  />
-                ))}
+              <div className={`flex items-center ${isCompact ? "gap-0" : "gap-2"}`}>
+                <span
+                  className={`text-white/50 font-orbitron ${isCompact ? "text-[11px] mr-1" : "text-xs"}`}
+                >
+                  VIEW AS
+                </span>
+                {allPlayers.map((p) => {
+                  const isViewed = replaySpectatePlayerId === p.id;
+                  const color = playerColors[p.id] || "#ffffff";
+                  const dotStyle: React.CSSProperties = {
+                    width: isViewed ? 18 : 14,
+                    height: isViewed ? 18 : 14,
+                    borderRadius: "50%",
+                    backgroundColor: color,
+                    opacity: isViewed ? 1 : 0.5,
+                    border: "none",
+                    boxShadow: isViewed ? `0 0 8px ${color}` : "none",
+                  };
+                  const toggle = () => onReplaySpectatePlayerChange?.(isViewed ? null : p.id);
+                  if (isCompact) {
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={toggle}
+                        className="flex h-11 w-11 cursor-pointer items-center justify-center"
+                        aria-label={p.name}
+                      >
+                        <span className="transition-all duration-200" style={dotStyle} />
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={toggle}
+                      className="cursor-pointer transition-all duration-200"
+                      style={dotStyle}
+                      aria-label={p.name}
+                    />
+                  );
+                })}
               </div>
             }
           />
@@ -318,7 +374,13 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
         }`}
         style={{ zIndex: Z_INDEX.STANDARD_MODAL }}
       >
-        <div className="bg-black/50 backdrop-blur-sm" style={{ paddingTop: 16, paddingBottom: 12 }}>
+        <div
+          className="bg-black/50 backdrop-blur-sm"
+          style={{
+            paddingTop: isCompact ? 8 : 16,
+            paddingBottom: isCompact ? "calc(var(--safe-bottom) + 8px)" : 12,
+          }}
+        >
           {/* Phase tabs */}
           <VPPhaseTabsOverlay
             phases={vpControls.phases}
@@ -327,7 +389,17 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
           />
 
           {/* Score bars */}
-          <div className="space-y-1.5" style={{ marginLeft: "20%", marginRight: "20%" }}>
+          <div
+            className="space-y-1.5"
+            style={
+              isCompact
+                ? {
+                    marginLeft: "calc(var(--safe-left) + 12px)",
+                    marginRight: "calc(var(--safe-right) + 12px)",
+                  }
+                : { marginLeft: "20%", marginRight: "20%" }
+            }
+          >
             {sortedScores.map((score) => (
               <PlayerBar
                 key={score.playerId}
@@ -344,13 +416,17 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
                 isYou={score.playerId === playerId}
                 isActivePlayer={isCounting && vpState.activePlayerId === score.playerId}
                 isDimmed={isCounting && vpState.activePlayerId !== score.playerId}
+                isCompact={isCompact}
               />
             ))}
           </div>
 
           {/* Controls row — only VP replay/skip buttons */}
           {actionButtons.some((b) => b.visible !== false) && (
-            <div className="relative flex items-center px-4 pb-1 pt-1">
+            <div
+              className="relative flex items-center px-4 pb-1 pt-1"
+              style={isCompact ? { paddingRight: "calc(var(--safe-right) + 12px)" } : undefined}
+            >
               <div className="ml-auto">
                 <GameButtonGroup buttons={actionButtons} direction="left" />
               </div>
@@ -358,6 +434,33 @@ const EndGameBottomBar: FC<EndGameBottomBarProps> = ({
           )}
         </div>
       </div>
+
+      {isCompact && onPanelChange && (
+        <div
+          className="fixed flex items-center"
+          style={{
+            top: "var(--safe-top)",
+            right: "calc(var(--safe-right) + 6px)",
+            height: "var(--hud-top-h)",
+            zIndex: Z_INDEX.MENU_DROPDOWN,
+          }}
+        >
+          <GameButtonGroup
+            direction="left"
+            buttons={COMPACT_PANEL_BUTTONS.map((btn) => ({
+              id: btn.id,
+              label: btn.label,
+              accentColor: "#ffffff",
+              width: btn.width,
+              height: COMPACT_BUTTON_HEIGHT,
+              className: COMPACT_HIT_AREA_CLASS,
+              isActive: activePanel === btn.id,
+              visible: btn.id === "score" || hasHistory,
+              onClick: () => onPanelChange(btn.id),
+            }))}
+          />
+        </div>
+      )}
     </>
   );
 };
@@ -373,6 +476,7 @@ function PlayerBar({
   isYou,
   isActivePlayer,
   isDimmed,
+  isCompact,
 }: {
   playerId: string;
   playerName: string;
@@ -383,6 +487,7 @@ function PlayerBar({
   isYou: boolean;
   isActivePlayer: boolean;
   isDimmed: boolean;
+  isCompact: boolean;
 }) {
   const barWidth = maxVP > 0 ? (displayVP / maxVP) * 100 : 0;
   const prevWidthRef = useRef(barWidth);
@@ -417,15 +522,15 @@ function PlayerBar({
   }, [maxVP]);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className={`flex items-center ${isCompact ? "gap-2" : "gap-3"}`}>
       <div
-        className="text-base font-orbitron truncate shrink-0 transition-opacity duration-300"
-        style={{ width: 120, color: "#ffffff", opacity: isDimmed ? 0.4 : 1 }}
+        className={`font-orbitron truncate shrink-0 transition-opacity duration-300 ${isCompact ? "text-[13px]" : "text-base"}`}
+        style={{ width: isCompact ? 80 : 120, color: "#ffffff", opacity: isDimmed ? 0.4 : 1 }}
       >
         {playerName}
         {isYou && <span className="text-white/30 text-xs ml-1">(you)</span>}
       </div>
-      <div className="flex-1 h-2 relative" ref={containerRef}>
+      <div className={`flex-1 h-2 relative ${isCompact ? "mr-14" : ""}`} ref={containerRef}>
         <div
           ref={barRef}
           className="h-full ease-out"

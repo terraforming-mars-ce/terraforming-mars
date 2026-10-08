@@ -1,11 +1,22 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import type { CardDto, GameDto, InitPhaseDto } from "@/types/generated/api-types.ts";
-import { GamePhaseInitApplyPrelude } from "@/types/generated/api-types.ts";
+import { CardTypeCorporation, GamePhaseInitApplyPrelude } from "@/types/generated/api-types.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useReducedMotion } from "@/hooks/useReducedMotion.ts";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
+import { useElementSize } from "@/hooks/useElementSize.ts";
 import { audioService } from "@/services/audioService.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
+import { getCorporationLogo } from "@/utils/corporationLogos.tsx";
 import { CARD_RELEASE_DURATION_MS, playCardRelease } from "@/utils/cardReleaseAnimation.ts";
 import { SHOWCASE_FADE_MS } from "@/constants/gameConstants.ts";
 import { useShowcaseTileHold } from "@/hooks/useShowcaseTileHold.ts";
@@ -20,6 +31,9 @@ import {
 import CorporationCard from "../cards/CorporationCard.tsx";
 import GameCard from "../cards/GameCard.tsx";
 import GameButton from "../buttons/GameButton.tsx";
+import FittedCard from "../cards/FittedCard.tsx";
+import MobileCardDetail from "../../mobile/MobileCardDetail.tsx";
+import { CurrentGameMenuButton } from "../buttons/MainMenuHamburger.tsx";
 
 type Viewport = { width: number; height: number };
 
@@ -46,6 +60,7 @@ interface Props {
 }
 
 export default function CorporationShowcaseOverlay({ game, initPhase }: Props) {
+  const { isCompact } = useLayoutMode();
   const reducedMotion = useReducedMotion();
   const [viewport, setViewport] = useState<Viewport>({
     width: window.innerWidth,
@@ -81,6 +96,27 @@ export default function CorporationShowcaseOverlay({ game, initPhase }: Props) {
     setSentVersion(initPhase.confirmVersion);
     void globalWebSocketManager.confirmInitAdvance();
   };
+
+  if (isCompact) {
+    return (
+      <CompactShowcase
+        game={game}
+        initPhase={initPhase}
+        players={players}
+        livePlayer={livePlayer}
+        viewingPlayer={viewingPlayer}
+        onViewPlayer={setViewingPlayerId}
+        isPreludePhase={isPreludePhase}
+        isRoster={isRoster}
+        faded={faded}
+        animate={animate}
+        isController={isController}
+        stepEnd={stepEnd}
+        nextSent={nextSent}
+        onNext={handleNext}
+      />
+    );
+  }
 
   let content: ReactNode = null;
   if (viewingPlayer) {
@@ -200,48 +236,6 @@ function summaryScale(viewport: Viewport): number {
   );
 }
 
-/**
- * Lays out a card at a scale: the box takes the card's real rendered height times the
- * scale, so scaled cards sit snugly without guessing heights.
- */
-function ScaledBox({
-  width,
-  scale,
-  estimatedHeight,
-  children,
-}: {
-  width: number;
-  scale: number;
-  estimatedHeight: number;
-  children: ReactNode;
-}) {
-  const innerRef = useRef<HTMLDivElement | null>(null);
-  const [height, setHeight] = useState(estimatedHeight);
-
-  useLayoutEffect(() => {
-    const element = innerRef.current;
-    if (!element) {
-      return;
-    }
-    const measure = () => setHeight(element.offsetHeight);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div style={{ width: width * scale, height: height * scale }}>
-      <div
-        ref={innerRef}
-        style={{ width, transform: `scale(${scale})`, transformOrigin: "top left" }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 type CardPlayState = "waiting" | "releasing" | "gone";
 
 /**
@@ -272,31 +266,8 @@ function useCardPlay(played: boolean, animate: boolean) {
   return { ref, state };
 }
 
-/** The flip-in starts after this delay and lasts FLIP_MS; the card activates when it lands. */
 const FLIP_DELAY_MS = 150;
 const FLIP_STAGGER_MS = 200;
-const FLIP_MS = 700;
-
-/**
- * Activates a revealed showcase card once its flip-in has finished: the card's armed
- * look plus the card activation sound. Cards already played on mount never activate.
- */
-function useCardActivation(delayMs: number, skip: boolean) {
-  const [active, setActive] = useState(false);
-
-  useEffect(() => {
-    if (skip) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      setActive(true);
-      void audioService.playSound("card-hover");
-    }, delayMs);
-    return () => window.clearTimeout(timer);
-  }, [delayMs, skip]);
-
-  return active;
-}
 
 const FLIP_CLASS = "animate-[showcaseFlipIn_700ms_cubic-bezier(0.2,0.8,0.2,1)_both]";
 
@@ -314,7 +285,6 @@ function CorpSlide({
   animate: boolean;
 }) {
   const { ref, state } = useCardPlay(played, animate);
-  const active = useCardActivation(animate ? FLIP_DELAY_MS + FLIP_MS : 0, state === "gone");
   const scale = Math.min(
     CORP_MAX_SCALE,
     (viewport.width - 64) / CORP_CARD_WIDTH,
@@ -329,9 +299,9 @@ function CorpSlide({
         style={{ animationDelay: animate ? `${FLIP_DELAY_MS}ms` : undefined }}
       >
         <div ref={ref} style={{ visibility: state === "gone" ? "hidden" : "visible" }}>
-          <ScaledBox width={CORP_CARD_WIDTH} scale={scale} estimatedHeight={CORP_CARD_HEIGHT}>
-            <CorpCard card={corporation} active={active} />
-          </ScaledBox>
+          <FittedCard naturalWidth={CORP_CARD_WIDTH} maxScale={scale}>
+            <CorpCard card={corporation} />
+          </FittedCard>
         </div>
       </div>
     </div>
@@ -393,27 +363,19 @@ function PreludeCard({
 }) {
   const { ref, state } = useCardPlay(played, animate);
   const flipDelay = FLIP_DELAY_MS + index * FLIP_STAGGER_MS;
-  const active = useCardActivation(animate ? flipDelay + FLIP_MS : 0, state === "gone");
-  let moduleState: "idle" | "armed" | "releasing" = "idle";
-  if (state === "releasing") {
-    moduleState = "releasing";
-  } else if (active) {
-    moduleState = "armed";
-  }
   return (
     <div
       className={animate ? FLIP_CLASS : ""}
       style={{ animationDelay: animate ? `${flipDelay}ms` : undefined }}
     >
       <div ref={ref} style={{ visibility: state === "gone" ? "hidden" : "visible" }}>
-        <ScaledBox width={PRELUDE_CARD_WIDTH} scale={scale} estimatedHeight={PRELUDE_CARD_HEIGHT}>
+        <FittedCard naturalWidth={PRELUDE_CARD_WIDTH} maxScale={scale}>
           <GameCard
             card={card}
             presentation="inspection"
-            isSelected={active}
-            moduleState={moduleState}
+            moduleState={state === "releasing" ? "releasing" : "idle"}
           />
-        </ScaledBox>
+        </FittedCard>
       </div>
     </div>
   );
@@ -438,21 +400,16 @@ function PlayerSummary({
       <PlayerName player={player} />
       <div className="flex flex-col items-center" style={{ gap: SUMMARY_GAP }}>
         {corporation && (
-          <ScaledBox width={CORP_CARD_WIDTH} scale={scale} estimatedHeight={CORP_CARD_HEIGHT}>
+          <FittedCard naturalWidth={CORP_CARD_WIDTH} maxScale={scale}>
             <CorpCard card={corporation} />
-          </ScaledBox>
+          </FittedCard>
         )}
         {preludes.length > 0 && (
           <div className="flex items-start justify-center" style={{ gap: Math.max(8, preludeGap) }}>
             {preludes.map((card) => (
-              <ScaledBox
-                key={card.id}
-                width={PRELUDE_CARD_WIDTH}
-                scale={preludeScale}
-                estimatedHeight={PRELUDE_CARD_HEIGHT}
-              >
+              <FittedCard key={card.id} naturalWidth={PRELUDE_CARD_WIDTH} maxScale={preludeScale}>
                 <GameCard card={card} presentation="inspection" />
-              </ScaledBox>
+              </FittedCard>
             ))}
           </div>
         )}
@@ -461,11 +418,11 @@ function PlayerSummary({
   );
 }
 
-function CorpCard({ card, active = false }: { card: CardDto; active?: boolean }) {
+function CorpCard({ card }: { card: CardDto }) {
   return (
     <CorporationCard
       card={card}
-      isSelected={active}
+      isSelected={false}
       onSelect={noop}
       disableInteraction={true}
       borderColor={getCorporationBorderColor(card.name)}
@@ -511,11 +468,448 @@ function RosterSlide({ players, viewport }: { players: ShowcasePlayer[]; viewpor
           style={{ animationDelay: `${i * 120}ms` }}
         >
           <PlayerName player={p} size="small" />
-          <ScaledBox width={CORP_CARD_WIDTH} scale={scale} estimatedHeight={CORP_CARD_HEIGHT}>
+          <FittedCard naturalWidth={CORP_CARD_WIDTH} maxScale={scale}>
             <CorpCard card={p.corporation} />
-          </ScaledBox>
+          </FittedCard>
         </div>
       ))}
+    </div>
+  );
+}
+
+const ROSTER_SLOT = "roster";
+const SWIPE_THRESHOLD_PX = 48;
+const COMPACT_MAX_SCALE = 1;
+const COMPACT_CARD_WIDTH = 200;
+const COMPACT_CORP_GAP = 32;
+const COMPACT_PRELUDE_GAP = 20;
+
+interface CompactShowcaseProps {
+  game: GameDto;
+  initPhase: InitPhaseDto;
+  players: ShowcasePlayer[];
+  livePlayer: ShowcasePlayer | null;
+  viewingPlayer: ShowcasePlayer | null;
+  onViewPlayer: (playerId: string | null) => void;
+  isPreludePhase: boolean;
+  isRoster: boolean;
+  faded: boolean;
+  animate: boolean;
+  isController: boolean;
+  stepEnd: boolean;
+  nextSent: boolean;
+  onNext: () => void;
+}
+
+/**
+ * Phone presentation: one player at a time between the top bar, the player rail and a footer
+ * in the dock's place. Chevrons and swipes look back at players the server has already shown;
+ * stepping onto the live slot follows the host again.
+ */
+function CompactShowcase({
+  game,
+  initPhase,
+  players,
+  livePlayer,
+  viewingPlayer,
+  onViewPlayer,
+  isPreludePhase,
+  isRoster,
+  faded,
+  animate,
+  isController,
+  stepEnd,
+  nextSent,
+  onNext,
+}: CompactShowcaseProps) {
+  const [detailCard, setDetailCard] = useState<CardDto | null>(null);
+  const swipeRef = useRef<{ x: number; y: number } | null>(null);
+  const swipedRef = useRef(false);
+
+  const liveSlot = isRoster ? ROSTER_SLOT : (livePlayer?.id ?? null);
+  const slots = players.filter((_, i) => corpShown(game, i)).map((p) => p.id);
+  if (isRoster) {
+    slots.push(ROSTER_SLOT);
+  }
+  const currentSlot = viewingPlayer?.id ?? liveSlot;
+  const position = currentSlot ? slots.indexOf(currentSlot) : -1;
+  const prevSlot = position > 0 ? slots[position - 1] : null;
+  const nextSlot = position >= 0 && position < slots.length - 1 ? slots[position + 1] : null;
+
+  const goTo = (slot: string | null) => {
+    if (!slot) {
+      return;
+    }
+    onViewPlayer(slot === liveSlot ? null : slot);
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    swipeRef.current = { x: event.clientX, y: event.clientY };
+    swipedRef.current = false;
+  };
+  const handlePointerUp = (event: ReactPointerEvent<HTMLElement>) => {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start) {
+      return;
+    }
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) < Math.abs(dy)) {
+      return;
+    }
+    swipedRef.current = true;
+    goTo(dx > 0 ? prevSlot : nextSlot);
+  };
+  const inspect = (card: CardDto) => {
+    if (swipedRef.current) {
+      swipedRef.current = false;
+      return;
+    }
+    setDetailCard(card);
+  };
+
+  let content: ReactNode = null;
+  if (viewingPlayer) {
+    const index = players.indexOf(viewingPlayer);
+    content = (
+      <CompactPlayerStage
+        key={`history:${viewingPlayer.id}`}
+        player={viewingPlayer}
+        corporationName={corpShown(game, index) ? viewingPlayer.corporation?.name : undefined}
+        corporation={corpShown(game, index) ? viewingPlayer.corporation : undefined}
+        corporationPlayed={false}
+        preludes={shownPreludes(viewingPlayer)}
+        preludesPlayed={0}
+        animate={false}
+        onInspect={inspect}
+      />
+    );
+  } else if (isRoster) {
+    content = <CompactRoster players={players} onSelect={(id) => onViewPlayer(id)} />;
+  } else if (livePlayer && isPreludePhase) {
+    content = (
+      <CompactPlayerStage
+        key={`prelude:${livePlayer.id}`}
+        player={livePlayer}
+        corporationName={livePlayer.corporation?.name}
+        corporation={undefined}
+        corporationPlayed={false}
+        preludes={initPhase.preludes}
+        preludesPlayed={initPhase.preludesPlayed}
+        animate={animate}
+        onInspect={inspect}
+      />
+    );
+  } else if (livePlayer?.corporation) {
+    content = (
+      <CompactPlayerStage
+        key={`corp:${livePlayer.id}`}
+        player={livePlayer}
+        corporationName={livePlayer.corporation.name}
+        corporation={livePlayer.corporation}
+        corporationPlayed={initPhase.stage === "applied"}
+        preludes={[]}
+        preludesPlayed={0}
+        animate={animate}
+        onInspect={inspect}
+      />
+    );
+  }
+
+  const interactive = faded ? "pointer-events-none" : "pointer-events-auto";
+
+  return (
+    <div
+      className={`fixed inset-0 pointer-events-none transition-opacity ease-out ${faded ? "opacity-0" : "opacity-100"}`}
+      style={{
+        zIndex: Z_INDEX.SHOWCASE,
+        transitionDuration: `${SHOWCASE_FADE_MS}ms`,
+        transitionDelay: faded ? `${CARD_RELEASE_DURATION_MS}ms` : "0ms",
+      }}
+      role="dialog"
+      aria-label="Corporation showcase"
+      aria-hidden={faded}
+    >
+      <style>{SHOWCASE_KEYFRAMES}</style>
+      <div className={`absolute inset-0 bg-black/65 backdrop-blur-sm ${interactive}`} />
+      <div
+        className={`absolute h-11 flex items-center ${interactive}`}
+        style={{ top: "var(--safe-top)", left: "var(--safe-left)" }}
+      >
+        <CurrentGameMenuButton />
+      </div>
+      <main
+        className={`absolute left-0 flex touch-pan-y ${interactive}`}
+        style={{
+          top: "calc(var(--hud-top-h) + var(--safe-top))",
+          right: "var(--safe-right)",
+          bottom: "calc(var(--hud-dock-h) + var(--safe-bottom))",
+          paddingLeft: "var(--safe-left)",
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={() => {
+          swipeRef.current = null;
+        }}
+      >
+        <ChevronButton direction="previous" disabled={!prevSlot} onClick={() => goTo(prevSlot)} />
+        <div className="flex min-w-0 flex-1 flex-col py-2">{content}</div>
+        <ChevronButton direction="next" disabled={!nextSlot} onClick={() => goTo(nextSlot)} />
+      </main>
+      <footer
+        className={`absolute inset-x-0 bottom-0 flex items-center gap-3 border-t border-white/10 bg-[rgba(3,3,4,0.88)] ${interactive}`}
+        style={{
+          height: "calc(var(--hud-dock-h) + var(--safe-bottom))",
+          paddingBottom: "var(--safe-bottom)",
+          paddingLeft: "calc(var(--safe-left) + 12px)",
+          paddingRight: "calc(var(--safe-right) + 12px)",
+        }}
+      >
+        <div className="flex shrink-0 items-center gap-1.5" aria-hidden="true">
+          {slots.map((slot) => (
+            <span
+              key={slot}
+              className={`h-2 w-2 transition-opacity duration-300 ${slot === currentSlot ? "opacity-100" : "opacity-35"}`}
+              style={{ background: players.find((p) => p.id === slot)?.color ?? "#ffffff" }}
+            />
+          ))}
+        </div>
+        <div className="flex min-w-0 flex-1 items-center">
+          {viewingPlayer && (
+            <GameButton size="sm" emphasis="quiet" height={44} onClick={() => onViewPlayer(null)}>
+              Follow host
+            </GameButton>
+          )}
+        </div>
+        {isController ? (
+          <GameButton size="sm" height={44} disabled={!stepEnd || nextSent} onClick={onNext}>
+            {isRoster ? "Start game" : "Next"}
+          </GameButton>
+        ) : (
+          <span
+            className={`font-orbitron text-[11px] uppercase tracking-[0.15em] text-white/60 transition-opacity duration-300 ${stepEnd ? "opacity-100" : "opacity-0"}`}
+          >
+            Waiting for host…
+          </span>
+        )}
+      </footer>
+      {detailCard &&
+        !faded &&
+        createPortal(
+          <MobileCardDetail card={detailCard} onClose={() => setDetailCard(null)} />,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+function ChevronButton({
+  direction,
+  disabled,
+  onClick,
+}: {
+  direction: "previous" | "next";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div className="flex w-11 shrink-0 items-center justify-center">
+      <GameButton
+        emphasis="quiet"
+        width={44}
+        height={44}
+        disabled={disabled}
+        aria-label={direction === "previous" ? "Previous player" : "Next player"}
+        className={`!px-0 ${disabled ? "opacity-0" : ""}`}
+        onClick={onClick}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path
+            d={
+              direction === "previous"
+                ? "M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"
+                : "M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z"
+            }
+          />
+        </svg>
+      </GameButton>
+    </div>
+  );
+}
+
+function CompactPlayerStage({
+  player,
+  corporationName,
+  corporation,
+  corporationPlayed,
+  preludes,
+  preludesPlayed,
+  animate,
+  onInspect,
+}: {
+  player: ShowcasePlayer;
+  corporationName: string | undefined;
+  corporation: CardDto | undefined;
+  corporationPlayed: boolean;
+  preludes: CardDto[];
+  preludesPlayed: number;
+  animate: boolean;
+  onInspect: (card: CardDto) => void;
+}) {
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const cardsRef = useRef<HTMLDivElement | null>(null);
+  const stage = useElementSize(stageRef);
+  const isRow = stage.width > stage.height;
+
+  const preludesWidth =
+    preludes.length * COMPACT_CARD_WIDTH + Math.max(0, preludes.length - 1) * COMPACT_PRELUDE_GAP;
+  let cardsWidth = preludesWidth;
+  if (corporation) {
+    cardsWidth = CORP_CARD_WIDTH + (preludes.length > 0 ? COMPACT_CORP_GAP + preludesWidth : 0);
+  }
+
+  const identityClass = isRow
+    ? "w-[30%] max-w-[220px] flex-col items-start justify-center gap-1 pl-2"
+    : "max-w-full items-baseline justify-center gap-2";
+
+  return (
+    <div
+      ref={stageRef}
+      className={`flex min-h-0 flex-1 items-center gap-2 ${isRow ? "flex-row" : "flex-col"}`}
+    >
+      <div className={`flex min-w-0 shrink-0 font-orbitron ${identityClass}`}>
+        <PlayerName player={player} size="small" />
+        {corporationName && (
+          <span className="max-w-full truncate text-[12px] uppercase tracking-[0.1em] text-white/60">
+            {corporationName}
+          </span>
+        )}
+      </div>
+      <div
+        ref={cardsRef}
+        className="flex min-h-0 min-w-0 flex-1 items-center justify-center self-stretch"
+      >
+        {cardsWidth > 0 && (
+          <FittedCard naturalWidth={cardsWidth} boundsRef={cardsRef} maxScale={COMPACT_MAX_SCALE}>
+            <div className="flex items-center" style={{ gap: COMPACT_CORP_GAP }}>
+              {corporation && (
+                <CompactShowcaseCard
+                  card={corporation}
+                  played={corporationPlayed}
+                  index={0}
+                  animate={animate}
+                  onInspect={onInspect}
+                />
+              )}
+              {preludes.length > 0 && (
+                <div className="flex items-center" style={{ gap: COMPACT_PRELUDE_GAP }}>
+                  {preludes.map((card, i) => (
+                    <CompactShowcaseCard
+                      key={card.id}
+                      card={card}
+                      played={i < preludesPlayed}
+                      index={i + 1}
+                      animate={animate}
+                      onInspect={onInspect}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </FittedCard>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CompactShowcaseCard({
+  card,
+  played,
+  index,
+  animate,
+  onInspect,
+}: {
+  card: CardDto;
+  played: boolean;
+  index: number;
+  animate: boolean;
+  onInspect: (card: CardDto) => void;
+}) {
+  const { ref, state } = useCardPlay(played, animate);
+  const isCorporation = card.type === CardTypeCorporation;
+  const flipDelay = FLIP_DELAY_MS + index * FLIP_STAGGER_MS;
+
+  return (
+    <div
+      className={animate ? FLIP_CLASS : ""}
+      style={{ animationDelay: animate ? `${flipDelay}ms` : undefined }}
+    >
+      <div ref={ref} style={{ visibility: state === "gone" ? "hidden" : "visible" }}>
+        <button
+          type="button"
+          className="block cursor-pointer text-left"
+          aria-label={`Show ${card.name}`}
+          onClick={() => onInspect(card)}
+        >
+          {isCorporation ? (
+            <CorpCard card={card} />
+          ) : (
+            <div style={{ width: COMPACT_CARD_WIDTH }}>
+              <GameCard
+                card={card}
+                moduleState={state === "releasing" ? "releasing" : "idle"}
+                dimUnavailable={false}
+              />
+            </div>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CompactRoster({
+  players,
+  onSelect,
+}: {
+  players: ShowcasePlayer[];
+  onSelect: (playerId: string) => void;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
+      <ul className="m-0 flex max-h-full w-full max-w-[560px] list-none flex-col gap-1.5 overflow-y-auto overscroll-contain p-0">
+        {players.map((p, i) => (
+          <li
+            key={p.id}
+            className="animate-[showcaseFadeIn_500ms_ease-out_both]"
+            style={{ animationDelay: `${i * 120}ms` }}
+          >
+            <button
+              type="button"
+              className="flex min-h-[52px] w-full cursor-pointer items-center gap-3 border border-white/15 bg-black/40 px-3 py-1.5 text-left"
+              onClick={() => onSelect(p.id)}
+            >
+              <span className="h-3 w-3 shrink-0" style={{ background: p.color }} />
+              <span
+                className="w-[30%] min-w-0 shrink-0 truncate font-orbitron text-[13px] font-bold uppercase tracking-[0.1em]"
+                style={{ color: p.color }}
+              >
+                {p.name}
+              </span>
+              {p.corporation && (
+                <span className="flex min-w-0 flex-1 items-center gap-3">
+                  {getCorporationLogo(p.corporation.name, "h-[36px] w-[72px] shrink-0", "72px")}
+                  <span className="truncate font-orbitron text-[12px] uppercase tracking-[0.08em] text-white/80">
+                    {p.corporation.name}
+                  </span>
+                </span>
+              )}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

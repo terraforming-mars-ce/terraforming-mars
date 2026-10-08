@@ -1,5 +1,4 @@
 import CardPlayPresentation from "../../ui/overlay/CardPlayPresentation";
-import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useState, useCallback, forwardRef } from "react";
 import { useStore } from "zustand";
 import LeftSidebar from "../panels/LeftSidebar.tsx";
@@ -12,7 +11,6 @@ import MainContentDisplay from "../../ui/display/MainContentDisplay.tsx";
 import BottomResourceBar, {
   BottomResourceBarCallbacks,
 } from "../../ui/overlay/BottomResourceBar.tsx";
-import PlayerOverlay from "../../ui/overlay/PlayerOverlay.tsx";
 import PlayedCardNotificationOverlay from "../../ui/overlay/PlayedCardNotification.tsx";
 import type { PlayedCardNotification } from "@/hooks/usePlayedCardNotification.ts";
 import { StandardProject } from "../../../types/cards.tsx";
@@ -27,10 +25,9 @@ import {
   CardDto,
   TriggeredEffectDto,
 } from "../../../types/generated/api-types.ts";
-import { globalWebSocketManager } from "../../../services/globalWebSocketManager.ts";
+import { useConfirmDialogStore } from "@/stores/confirmDialogStore.ts";
 import { useAppPhaseStore } from "@/stores/appPhaseStore.ts";
-import GameMenuModal from "../../ui/overlay/GameMenuModal.tsx";
-import GameButton from "../../ui/buttons/GameButton.tsx";
+import GameConfirmDialogs from "./GameConfirmDialogs.tsx";
 import type { CardInspectionStore, CardInspectionDrag } from "@/hooks/useCardInspection.ts";
 import CardInspection from "../../ui/overlay/CardInspection.tsx";
 import type { PlayerCardDto } from "@/types/generated/api-types.ts";
@@ -44,7 +41,7 @@ export function SolarSystemFade({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-interface GameLayoutProps {
+export interface GameLayoutProps {
   gameState: GameDto;
   inspectionStore: CardInspectionStore;
   inspectionHand: PlayerCardDto[];
@@ -86,7 +83,7 @@ interface GameLayoutProps {
   onPlayedCardAdvance?: () => void;
 }
 
-function CardInspections({
+export function CardInspections({
   store,
   hand,
   blocked,
@@ -196,16 +193,12 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
   const currentTurnPlayer =
     allPlayers.find((player) => player.id === gameState?.currentTurn) || null;
 
-  const [pendingAction, setPendingAction] = useState<{
-    type: "kick" | "convertToBot";
-    playerId: string;
-    playerName: string;
-  } | null>(null);
-
   const handleKickPlayer = useCallback(
     (playerId: string) => {
       const player = allPlayers.find((p) => p.id === playerId);
-      setPendingAction({ type: "kick", playerId, playerName: player?.name || "Unknown" });
+      useConfirmDialogStore
+        .getState()
+        .request({ kind: "kick", playerId, playerName: player?.name || "Unknown" });
     },
     [allPlayers],
   );
@@ -213,24 +206,12 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
   const handleConvertToBot = useCallback(
     (playerId: string) => {
       const player = allPlayers.find((p) => p.id === playerId);
-      setPendingAction({ type: "convertToBot", playerId, playerName: player?.name || "Unknown" });
+      useConfirmDialogStore
+        .getState()
+        .request({ kind: "convertToBot", playerId, playerName: player?.name || "Unknown" });
     },
     [allPlayers],
   );
-
-  const handleConfirmAction = async () => {
-    if (!pendingAction) return;
-    setPendingAction(null);
-    try {
-      if (pendingAction.type === "kick") {
-        await globalWebSocketManager.kickPlayer(pendingAction.playerId);
-      } else {
-        await globalWebSocketManager.convertToBot(pendingAction.playerId);
-      }
-    } catch (error) {
-      console.error("Failed to execute action:", error);
-    }
-  };
 
   const phase = useAppPhaseStore((s) => s.phase);
   const isShowcase = phase.kind === "showcase";
@@ -248,7 +229,7 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
   const endgameFadeClass = endgameFadeUI ? "opacity-0 pointer-events-none" : "opacity-100";
 
   return (
-    <div className="relative w-screen h-screen text-white overflow-hidden">
+    <div className="relative w-full h-dvh text-white overflow-hidden">
       {/* CSS animations for transition */}
       <style>{`
         @keyframes uiFadeIn {
@@ -364,8 +345,6 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
               showVenus={gameState?.settings?.venusNextEnabled}
             />
 
-            <PlayerOverlay players={allPlayers} currentPlayer={currentPlayer} />
-
             {playedCardNotification && onPlayedCardTogglePin && onPlayedCardAdvance && (
               <WithoutInspection store={inspectionStore}>
                 <PlayedCardNotificationOverlay
@@ -404,49 +383,7 @@ const GameLayout = forwardRef<PlayerListHandle, GameLayoutProps>(function GameLa
           </SolarSystemFade>
         )}
 
-      {pendingAction?.type === "kick" && (
-        <GameMenuModal
-          title="Kick player?"
-          showBackdrop={true}
-          onClose={() => setPendingAction(null)}
-          zIndex={Z_INDEX.CONFIRMATION_MODAL}
-        >
-          <p className="text-white/80 text-center mb-6">
-            <span className="font-bold text-white">{pendingAction.playerName}</span> will be removed
-            from the game and cannot rejoin.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <GameButton emphasis="secondary" onClick={() => setPendingAction(null)}>
-              Cancel
-            </GameButton>
-            <GameButton tone="error" onClick={() => void handleConfirmAction()}>
-              Kick
-            </GameButton>
-          </div>
-        </GameMenuModal>
-      )}
-
-      {pendingAction?.type === "convertToBot" && (
-        <GameMenuModal
-          title="Convert to bot?"
-          showBackdrop={true}
-          onClose={() => setPendingAction(null)}
-          zIndex={Z_INDEX.CONFIRMATION_MODAL}
-        >
-          <p className="text-white/80 text-center mb-6">
-            <span className="font-bold text-white">{pendingAction.playerName}</span> will be
-            replaced by a bot. This cannot be undone.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <GameButton emphasis="secondary" onClick={() => setPendingAction(null)}>
-              Cancel
-            </GameButton>
-            <GameButton tone="error" onClick={() => void handleConfirmAction()}>
-              Convert
-            </GameButton>
-          </div>
-        </GameMenuModal>
-      )}
+      <GameConfirmDialogs />
     </div>
   );
 });

@@ -8,6 +8,7 @@ import { useMemo, useRef, useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import TileGrid from "./TileGrid.tsx";
+import { isDragClick } from "../controls/PanControls.tsx";
 import PlanetAtmosphere from "./PlanetAtmosphere.tsx";
 import { ClimateProvider, useClimate } from "../../../contexts/ClimateContext.tsx";
 import { BARREN_PARAMETERS } from "./climate.ts";
@@ -166,6 +167,9 @@ function MarsSurface({ relief }: { relief: MarsRelief }) {
       onClick={(e) => {
         if (activePlanet !== "mars") {
           e.stopPropagation();
+          if (isDragClick()) {
+            return;
+          }
           gl.domElement.style.cursor = "default";
           setActivePlanet("mars");
         }

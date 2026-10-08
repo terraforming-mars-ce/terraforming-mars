@@ -71,7 +71,7 @@ All types share: `type`, `amount`, `target`.
 
 1. Add card JSON to `terraforming_mars_cards.json`
 2. Use existing output types and fields from the table above
-3. Run `make test` — the validation test checks all field combinations are valid
+3. Run `just test` — the validation test checks all field combinations are valid
 4. For new resource types, see `internal/game/shared/CLAUDE.md` for how to add a category
 
 Most cards (90%+) can be added via JSON only without Go code changes.

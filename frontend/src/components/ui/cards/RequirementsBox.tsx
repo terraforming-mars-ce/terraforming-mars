@@ -4,6 +4,7 @@ import GameIcon from "../display/GameIcon.tsx";
 import { FormattedDescription } from "../display/FormattedDescription.tsx";
 import { CardRequirementsDto, CardTag, ResourceType } from "@/types/generated/api-types.ts";
 import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
+import { useTapReveal } from "@/hooks/useTapReveal.ts";
 
 interface RequirementsBoxProps {
   requirements?: CardRequirementsDto;
@@ -14,26 +15,16 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements, inFlow 
   const [isHovered, setIsHovered] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
+  const { open: isRevealed, triggerProps } = useTapReveal<HTMLDivElement>({
+    enabled: !!requirements?.description,
+  });
 
   useEffect(() => {
-    if (isHovered && badgeRef.current) {
+    if (isRevealed && badgeRef.current) {
       const rect = badgeRef.current.getBoundingClientRect();
       setTooltipPos({ x: rect.left, y: rect.bottom });
     }
-  }, [isHovered]);
-
-  useEffect(() => {
-    if (!isHovered) {
-      return;
-    }
-    const dismiss = () => setIsHovered(false);
-    window.addEventListener("scroll", dismiss, true);
-    window.addEventListener("resize", dismiss);
-    return () => {
-      window.removeEventListener("scroll", dismiss, true);
-      window.removeEventListener("resize", dismiss);
-    };
-  }, [isHovered]);
+  }, [isRevealed]);
 
   if (!requirements || !requirements.items || requirements.items.length === 0) {
     return null;
@@ -194,7 +185,7 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements, inFlow 
             )}
           </div>
         ) : (
-          <span className="text-[10px] font-orbitron font-semibold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] capitalize max-md:text-[9px]">
+          <span className="text-[10px] font-orbitron font-semibold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] capitalize">
             {key}
           </span>
         )}
@@ -204,7 +195,7 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements, inFlow 
           !isProductionRequirement &&
           !isNamedResourceRequirement &&
           displayText && (
-            <span className="text-[11px] font-orbitron font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none max-md:text-[10px]">
+            <span className="text-[11px] font-orbitron font-bold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] leading-none">
               {displayText}
             </span>
           )}
@@ -216,7 +207,7 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements, inFlow 
   if (inFlow) {
     layer = Z_INDEX.GAME_BOARD_BASE;
   }
-  if (isHovered) {
+  if (isHovered || isRevealed) {
     layer = Z_INDEX.CARD_HOVER;
   }
   const groupedRequirements = groupRequirements(items);
@@ -224,6 +215,7 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements, inFlow 
   return (
     <>
       <div
+        {...triggerProps}
         className={`${inFlow ? "relative ml-[10%]" : "absolute bottom-full left-[10%]"} w-fit min-w-[60px] max-w-[80%]`}
         style={{ zIndex: layer }}
         onMouseEnter={() => setIsHovered(true)}
@@ -231,7 +223,7 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements, inFlow 
       >
         <div
           ref={badgeRef}
-          className="relative shadow-[0_3px_8px_rgba(0,0,0,0.4)] backdrop-blur-[2px] pl-2 pr-6 py-0.5 border border-b-0 border-[rgba(60,60,70,0.7)] motion-safe:animate-[stripeMove_4s_linear_infinite] max-md:min-w-[50px] max-md:px-2 max-md:py-1"
+          className="relative shadow-[0_3px_8px_rgba(0,0,0,0.4)] backdrop-blur-[2px] pl-2 pr-6 py-0.5 border border-b-0 border-[rgba(60,60,70,0.7)] motion-safe:animate-[stripeMove_4s_linear_infinite]"
           style={{
             clipPath: "polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)",
             background:
@@ -249,18 +241,18 @@ const RequirementsBox: React.FC<RequirementsBoxProps> = ({ requirements, inFlow 
           >
             <line x1="0" y1="0" x2="16" y2="16" stroke="rgba(60,60,70,0.7)" strokeWidth="1.5" />
           </svg>
-          <div className="relative flex items-center justify-start gap-[3px] flex-wrap max-md:gap-1">
+          <div className="relative flex items-center justify-start gap-[3px] flex-wrap">
             {groupedRequirements.map((group, index) => renderRequirementGroup(group, index))}
           </div>
         </div>
       </div>
-      {isHovered &&
+      {isRevealed &&
         requirements.description &&
         tooltipPos &&
         createPortal(
           <div
             className="fixed w-max max-w-44 pt-1 animate-[fadeIn_150ms_ease-in] pointer-events-none"
-            style={{ left: tooltipPos.x, top: tooltipPos.y, zIndex: Z_INDEX.LOADING_OVERLAY }}
+            style={{ left: tooltipPos.x, top: tooltipPos.y, zIndex: Z_INDEX.FLOATING_TOOLTIP }}
           >
             <div
               className="relative bg-[rgba(10,10,15,0.98)] border border-[rgba(60,60,70,0.7)] text-white/90 text-[11px] leading-tight px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"

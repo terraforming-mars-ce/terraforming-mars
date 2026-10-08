@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState, type ReactNode } from "react";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -28,6 +28,8 @@ interface SidebarProps {
   shareUrl: string;
   shared: boolean;
   open: boolean;
+  persistent: boolean;
+  headerStart?: ReactNode;
   backLabel: string;
   onBack: () => void;
   onClose: () => void;
@@ -47,7 +49,7 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
   const { playButtonClickSound } = useSoundEffects();
   const panel = useRef<HTMLElement>(null);
   const [copyError, setCopyError] = useState(false);
-  const { open, onClose } = props;
+  const { open, onClose, persistent } = props;
   const searchInput = useRef<HTMLInputElement>(null);
   const clearSound = useHoverSound();
   useEffect(() => {
@@ -99,11 +101,25 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
         aria-label="Card browser controls"
         role={open ? "dialog" : undefined}
         aria-modal={open ? true : undefined}
-        className={`${open ? "flex" : "hidden lg:flex"} fixed inset-y-0 left-0 w-[304px] max-w-[calc(100vw-32px)] shrink-0 flex-col border-r border-space-blue-400 bg-space-black-darker text-left shadow-[12px_0_32px_rgba(10,25,65,0.45)] lg:static lg:max-w-none`}
+        className={
+          persistent
+            ? "static flex w-[calc(232px+var(--safe-left))] shrink-0 flex-col overflow-y-auto overscroll-contain pb-[var(--safe-bottom)] pl-[var(--safe-left)] border-r border-space-blue-400 bg-space-black-darker text-left"
+            : `${open ? "flex" : "hidden lg:flex"} fixed inset-y-0 left-0 w-[calc(304px+var(--safe-left))] max-w-[calc(100vw-32px)] shrink-0 flex-col pt-[var(--safe-top)] pb-[var(--safe-bottom)] pl-[var(--safe-left)] border-r border-space-blue-400 bg-space-black-darker text-left shadow-[12px_0_32px_rgba(10,25,65,0.45)] lg:static lg:max-w-none`
+        }
         style={{ zIndex: Z_INDEX.LEFT_SIDEBAR }}
       >
-        <div className="shrink-0 space-y-5 p-5 pb-4">
-          <div className="flex items-center justify-between gap-2">
+        {persistent && (
+          <div className="sticky top-0 shrink-0 flex h-[calc(2.75rem+var(--safe-top))] items-center gap-1 border-b border-white/10 bg-space-black-darker pt-[var(--safe-top)] pr-3">
+            {props.headerStart ?? <BackButton onClick={props.onBack}>{props.backLabel}</BackButton>}
+            <h1 className="m-0 font-orbitron text-sm font-semibold uppercase tracking-wider text-white">
+              Cards
+            </h1>
+          </div>
+        )}
+        <div
+          className={persistent ? "shrink-0 space-y-4 px-3 py-3" : "shrink-0 space-y-5 p-5 pb-4"}
+        >
+          <div className={persistent ? "hidden" : "flex items-center justify-between gap-2"}>
             <BackButton onClick={props.onBack}>{props.backLabel}</BackButton>
             <GameButton
               emphasis="quiet"
@@ -116,9 +132,11 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
               ✕
             </GameButton>
           </div>
-          <h1 className="m-0 pb-3 font-orbitron text-xl font-semibold leading-relaxed text-white">
-            Card browser
-          </h1>
+          {!persistent && (
+            <h1 className="m-0 pb-3 font-orbitron text-xl font-semibold leading-relaxed text-white">
+              Card browser
+            </h1>
+          )}
           <fieldset className="m-0 space-y-1 border-0 p-0">
             <legend className="sr-only">Card family</legend>
             {CARD_FAMILIES.map((family) => (
@@ -176,7 +194,13 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
             </span>
           </label>
         </div>
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain border-y border-white/10 px-5 py-4">
+        <div
+          className={
+            persistent
+              ? "space-y-5 border-y border-white/10 px-3 py-4"
+              : "min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain border-y border-white/10 px-5 py-4"
+          }
+        >
           {props.shared && (
             <div className="space-y-2 text-sm text-blue-100">
               <p className="m-0">Viewing a shared selection</p>
@@ -197,7 +221,7 @@ export default memo(function CardBrowserSidebar(props: SidebarProps) {
                     emphasis="secondary"
                     selected={props.cardSize === size}
                     aria-pressed={props.cardSize === size}
-                    className="flex-1"
+                    className="flex-1 compact:min-h-11"
                     onClick={() => props.onCardSize(size)}
                   >
                     {size === "small" ? "Small" : "Large"}

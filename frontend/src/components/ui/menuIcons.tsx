@@ -36,6 +36,15 @@ export const ExitFullscreenIcon: React.FC = () => (
   </svg>
 );
 
+export const InstallIcon: React.FC = () => (
+  <svg {...svgProps}>
+    <rect x="6" y="2" width="12" height="20" rx="2" ry="2" />
+    <polyline points="9 10 12 13 15 10" />
+    <line x1="12" y1="6" x2="12" y2="13" />
+    <line x1="10" y1="18" x2="14" y2="18" />
+  </svg>
+);
+
 export const PerformanceIcon: React.FC = () => (
   <svg {...svgProps}>
     <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" />
@@ -61,6 +70,13 @@ export const BugIcon: React.FC = () => (
 export const FeedbackIcon: React.FC = () => (
   <svg {...svgProps}>
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+export const HomeIcon: React.FC = () => (
+  <svg {...svgProps}>
+    <path d="M3 11 12 4l9 7" />
+    <path d="M5 10v10h14V10" />
   </svg>
 );
 

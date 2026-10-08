@@ -7,10 +7,13 @@ import { useNotifications } from "../../contexts/NotificationContext.tsx";
 import { GameDto } from "../../types/generated/api-types.ts";
 import { getCorporationLogo } from "../../utils/corporationLogos.tsx";
 import { clearGameSession } from "../../utils/sessionStorage.ts";
+import { Z_INDEX } from "@/constants/zIndex.ts";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
 const FADE_DURATION_MS = 300;
 
 const GameLandingPage: React.FC = () => {
+  const { isCompact } = useLayoutMode();
   const navigate = useNavigate();
   const location = useLocation();
   const { showNotification } = useNotifications();
@@ -156,11 +159,12 @@ const GameLandingPage: React.FC = () => {
 
   return (
     <div
-      className={`min-h-screen text-white font-sans transition-opacity duration-300 ease-out relative z-10 ${isFadingOut || !isFadedIn ? "opacity-0" : "opacity-100"}`}
+      className={`min-h-dvh text-white font-sans transition-opacity duration-300 ease-out relative ${isFadingOut || !isFadedIn ? "opacity-0" : "opacity-100"}`}
+      style={{ zIndex: Z_INDEX.UI_BASE }}
     >
-      <div className="menu-shell relative items-start">
-        <div className="text-left py-5 max-w-[520px]">
-          <h1 className="font-orbitron text-[clamp(2rem,4vw,4.5rem)] text-white mb-10 text-shadow-glow-strong font-bold tracking-wider-2xl text-left leading-tight">
+      <div className="menu-shell relative items-start [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:items-center [@media(max-height:500px)]:justify-between [@media(max-height:500px)]:gap-8">
+        <div className="text-left py-5 max-w-[520px] [@media(max-height:500px)]:py-0 [@media(max-height:500px)]:shrink-0">
+          <h1 className="font-orbitron text-[clamp(2rem,4vw,4.5rem)] text-white mb-10 text-shadow-glow-strong font-bold tracking-wider-2xl text-left leading-tight max-[640px]:text-[min(2rem,8vw)] max-[640px]:tracking-[0.1em] [@media(max-height:500px)]:text-[1.75rem] [@media(max-height:500px)]:tracking-[0.1em] [@media(max-height:500px)]:mb-5">
             TERRAFORMING
             <br />
             MARS
@@ -190,17 +194,18 @@ const GameLandingPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-start gap-5 max-w-full">
+        <div className="mt-10 flex flex-col items-start gap-5 max-w-full min-w-0 compact:mt-6 compact:w-full compact:landscape:w-auto [@media(max-height:500px)]:mt-0">
           {savedGameData && (
             <div
               ref={reconnectCardRef}
               onTransitionEnd={handleDismissTransitionEnd}
               className={`transition-all duration-300 ${isDismissing ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}
             >
-              <div className="relative w-[500px] max-w-full game-panel p-6">
+              <div className="relative w-[500px] max-w-full game-panel p-6 [@media(max-height:500px)]:w-[360px] [@media(max-height:500px)]:p-4 compact:!w-[300px] compact:!p-3">
                 <button
                   onClick={handleDismiss}
-                  className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/10"
+                  aria-label="Dismiss"
+                  className="absolute top-3 right-3 compact:top-1 compact:right-1 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/10 before:absolute before:-inset-1.5 before:content-['']"
                 >
                   <svg
                     width="16"
@@ -232,10 +237,11 @@ const GameLandingPage: React.FC = () => {
                   return (
                     <>
                       {!isLobby && !isSpectator && (
-                        <div className="mb-6 flex justify-center">
+                        <div className="mb-6 flex justify-center [@media(max-height:500px)]:mb-3 compact:!mb-2">
                           {savedGameData.game.currentPlayer?.corporation ? (
                             getCorporationLogo(
                               savedGameData.game.currentPlayer.corporation.name.toLowerCase(),
+                              "w-[220px] h-[110px] [@media(max-height:500px)]:w-[128px] [@media(max-height:500px)]:h-[64px] compact:!w-[112px] compact:!h-[48px]",
                             )
                           ) : (
                             <div className="text-white/60 text-sm italic">No Corporation</div>
@@ -243,7 +249,7 @@ const GameLandingPage: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="flex justify-center gap-6 mb-4 text-white/90 text-base">
+                      <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 mb-4 text-white/90 text-base [@media(max-height:500px)]:mb-3 compact:!mb-2 compact:text-sm compact:gap-x-4">
                         <div className="flex items-center gap-2">
                           {isLobby ? (
                             <>
@@ -273,7 +279,7 @@ const GameLandingPage: React.FC = () => {
                       </div>
 
                       <GameButton
-                        size="lg"
+                        size={isCompact ? "md" : "lg"}
                         onClick={() => void handleReconnect()}
                         className="w-full"
                       >

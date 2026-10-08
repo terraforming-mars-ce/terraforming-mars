@@ -92,7 +92,7 @@ const ReconnectingPage: React.FC = () => {
   };
 
   return (
-    <div className="bg-space-black text-white min-h-screen flex items-center justify-center font-sans">
+    <div className="bg-space-black text-white min-h-dvh flex items-center justify-center font-sans">
       <div className="max-w-[600px] w-full py-10 px-5 max-[768px]:py-5 max-[768px]:px-[15px]">
         <div className="text-center">
           <h1 className="text-5xl text-white mb-[60px] text-shadow-glow-strong font-bold font-orbitron max-[768px]:text-4xl max-[768px]:mb-10 max-[480px]:text-[28px] max-[480px]:mb-[30px]">

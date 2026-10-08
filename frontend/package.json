@@ -5,18 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "bun run assets && vite",
-    "start": "bun run assets && vite",
     "build": "bun run assets && vite build",
     "preview": "vite preview",
-    "lint": "oxlint src scripts/assets --ignore-pattern src/assets/generated",
-    "typecheck": "bun run assets && tsc --noEmit && tsc -p scripts/assets/tsconfig.json",
-    "format": "oxfmt --check src scripts/assets --ignore-path .prettierignore",
-    "format:write": "oxfmt --write src scripts/assets --ignore-path .prettierignore",
+    "lint": "oxlint src scripts/assets tests --ignore-pattern src/assets/generated",
+    "typecheck": "bun run assets && tsc --noEmit && tsc -p scripts/assets/tsconfig.json && tsc -p tests/tsconfig.json",
+    "format": "oxfmt --check src scripts/assets tests playwright.config.ts --ignore-path .prettierignore",
+    "format:write": "oxfmt --write src scripts/assets tests playwright.config.ts --ignore-path .prettierignore",
     "assets": "node scripts/assets/build.ts",
     "assets:check": "node scripts/assets/check.ts",
     "assets:preview": "node scripts/assets/preview.ts",
-    "assets:test": "bun test scripts/assets",
-    "verify:landscape": "bun scripts/landscape/verify.ts"
+    "assets:test": "bun test scripts/assets"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
@@ -34,6 +32,10 @@
   },
   "devDependencies": {
     "@gltf-transform/cli": "^4.5.1",
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/bun": "1.4.2",
     "@types/node": "^26.6.3",

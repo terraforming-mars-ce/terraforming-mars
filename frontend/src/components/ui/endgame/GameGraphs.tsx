@@ -11,6 +11,8 @@ import {
   Tooltip,
 } from "recharts";
 import type { GameHistoryEntryDto } from "../../../types/generated/api-types";
+import { getZIndex } from "@/constants/zIndex.ts";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
 type GraphMode =
   | "score"
@@ -167,6 +169,7 @@ type XAxisMode = "action" | "time";
 const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames }) => {
   const [mode, setMode] = useState<GraphMode>("score");
   const [xAxisMode, setXAxisMode] = useState<XAxisMode>("action");
+  const { isCompact } = useLayoutMode();
   const graphModeId = useId();
 
   const playerIds = useMemo(() => Object.keys(playerNames), [playerNames]);
@@ -387,9 +390,24 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
   const fixedData =
     mode === "terraforming" ? terraformingData : mode === "global-params" ? globalParamsData : [];
 
+  const legendItems = isFixedLines
+    ? fixedLinesConfig.map(({ key, color, label }) => ({ key, color, label }))
+    : playerIds.map((pid) => ({
+        key: pid,
+        color: playerColors[pid] ?? "#ffffff",
+        label: playerNames[pid],
+      }));
+
   return (
-    <div className="h-full relative">
-      <div className="absolute top-6 right-8 z-10 flex items-center gap-3">
+    <div className={isCompact ? "h-full flex flex-col" : "h-full relative"}>
+      <div
+        className={
+          isCompact
+            ? "relative shrink-0 flex flex-wrap items-center justify-end gap-2 pb-1"
+            : "absolute top-6 right-8 flex items-center gap-3"
+        }
+        style={{ zIndex: getZIndex("LOCAL", 10) }}
+      >
         <div className="flex rounded overflow-hidden border border-white/20">
           <GameButton
             emphasis="quiet"
@@ -428,7 +446,7 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
       </div>
 
       <style>{`.recharts-wrapper svg { outline: none; }`}</style>
-      <div className="h-full">
+      <div className={isCompact ? "flex-1 min-h-0" : "h-full"}>
         <ResponsiveContainer width="100%" height="100%">
           {isFixedLines ? (
             <LineChart data={fixedData}>
@@ -526,6 +544,22 @@ const GameGraphs: FC<GameGraphsProps> = ({ entries, playerColors, playerNames })
           )}
         </ResponsiveContainer>
       </div>
+      {isCompact && (
+        <ul className="m-0 p-0 list-none shrink-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-1">
+          {legendItems.map((item) => (
+            <li key={item.key} className="flex items-center gap-1.5 min-w-0">
+              <span
+                className="w-3.5 h-[3px] shrink-0"
+                style={{ backgroundColor: item.color }}
+                aria-hidden="true"
+              />
+              <span className="font-orbitron text-[12px] text-white/80 truncate max-w-[140px]">
+                {item.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };

@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback, useLayoutEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { ChatMessageDto } from "@/types/generated/api-types.ts";
 import { Z_INDEX } from "@/constants/zIndex";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useBotPresenceStore } from "@/stores/botPresenceStore.ts";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import EmoteIcon, { EMOTES } from "@/components/ui/display/EmoteIcon.tsx";
+import GameButton from "@/components/ui/buttons/GameButton.tsx";
 
 const BAR_HEIGHT = 90;
 const SNAP_THRESHOLD = 40;
@@ -13,6 +14,7 @@ interface ChatOverlayProps {
   messages: ChatMessageDto[];
   onSendMessage: (message: string) => void;
   embedded?: boolean;
+  fill?: boolean;
   isEndgame?: boolean;
   playerColorMap?: Map<string, string>;
   onBoundsChange?: (bounds: DOMRectReadOnly | null) => void;
@@ -21,10 +23,19 @@ interface ChatOverlayProps {
 const CHAT_WIDTH = 416;
 const MIN_VISIBLE = 80;
 
+function clampToViewport(element: HTMLElement | null, x: number, y: number) {
+  const w = element?.offsetWidth ?? CHAT_WIDTH;
+  const h = element?.offsetHeight ?? 0;
+  const clampedX = Math.max(MIN_VISIBLE - w, Math.min(window.innerWidth - MIN_VISIBLE, x));
+  const clampedY = Math.max(0, Math.min(window.innerHeight - h, y));
+  return { x: clampedX, y: clampedY };
+}
+
 const ChatOverlay: React.FC<ChatOverlayProps> = ({
   messages,
   onSendMessage,
   embedded,
+  fill,
   isEndgame,
   playerColorMap,
   onBoundsChange,
@@ -36,6 +47,8 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
   const [snapX, setSnapX] = useState(0);
   const dragOffset = useRef({ x: 0, y: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const stuckToBottomRef = useRef(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showEmotePicker, setShowEmotePicker] = useState(false);
   const emotePickerRef = useRef<HTMLDivElement>(null);
@@ -61,13 +74,13 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
     if (!showEmotePicker) {
       return undefined;
     }
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = (e: PointerEvent) => {
       if (emotePickerRef.current && !emotePickerRef.current.contains(e.target as Node)) {
         setShowEmotePicker(false);
       }
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("pointerdown", handleClick);
+    return () => document.removeEventListener("pointerdown", handleClick);
   }, [showEmotePicker]);
 
   const snapBottom = BAR_HEIGHT;
@@ -96,79 +109,104 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
     });
   }, [messages]);
 
-  // Reset to default snapped position on window resize
   useEffect(() => {
+    const list = messagesRef.current;
+    if (!fill || !list) {
+      return undefined;
+    }
+    const observer = new ResizeObserver(() => {
+      if (stuckToBottomRef.current) {
+        list.scrollTop = list.scrollHeight;
+      }
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [fill]);
+
+  const handleMessagesScroll = () => {
+    const list = messagesRef.current;
+    if (!list) {
+      return;
+    }
+    stuckToBottomRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 24;
+  };
+
+  useEffect(() => {
+    if (embedded) {
+      return undefined;
+    }
     const handleResize = () => {
-      setIsSnapped(true);
-      setSnapX(0);
+      const element = containerRef.current;
+      setSnapX((x) => (x > 0 ? clampToViewport(element, x, 0).x : x));
+      setPosition((p) => clampToViewport(element, p.x, p.y));
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [embedded]);
 
-  const clampPosition = (x: number, y: number) => {
-    const w = containerRef.current?.offsetWidth ?? CHAT_WIDTH;
-    const h = containerRef.current?.offsetHeight ?? 0;
-    const clampedX = Math.max(MIN_VISIBLE - w, Math.min(window.innerWidth - MIN_VISIBLE, x));
-    const clampedY = Math.max(0, Math.min(window.innerHeight - h, y));
-    return { x: clampedX, y: clampedY };
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (embedded || target.tagName === "INPUT") {
+      return;
+    }
+    if (e.pointerType !== "mouse" && messagesRef.current?.contains(target)) {
+      return;
+    }
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
+    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsDragging(true);
   };
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (embedded || (e.target as HTMLElement).tagName === "INPUT") return;
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      setIsDragging(true);
-    },
-    [embedded],
-  );
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) {
+      return;
+    }
+    const element = containerRef.current;
+    const rawX = e.clientX - dragOffset.current.x;
+    const rawY = e.clientY - dragOffset.current.y;
+    const bottomEdge = rawY + (element?.offsetHeight ?? 0);
+    const snapY = window.innerHeight - snapBottom;
 
-  useEffect(() => {
-    if (!isDragging) return;
+    if (Math.abs(bottomEdge - snapY) < SNAP_THRESHOLD) {
+      setIsSnapped(true);
+      setSnapX(clampToViewport(element, rawX, 0).x);
+    } else {
+      setIsSnapped(false);
+      setPosition(clampToViewport(element, rawX, rawY));
+    }
+  };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const rawX = e.clientX - dragOffset.current.x;
-      const rawY = e.clientY - dragOffset.current.y;
-      const containerHeight = containerRef.current?.offsetHeight ?? 0;
-      const bottomEdge = rawY + containerHeight;
-      const snapY = window.innerHeight - snapBottom;
+  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) {
+      return;
+    }
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setIsDragging(false);
+  };
 
-      if (Math.abs(bottomEdge - snapY) < SNAP_THRESHOLD) {
-        const clamped = clampPosition(rawX, 0);
-        setIsSnapped(true);
-        setSnapX(clamped.x);
-      } else {
-        const clamped = clampPosition(rawX, rawY);
-        setIsSnapped(false);
-        setPosition(clamped);
-      }
-    };
-
-    const handleMouseUp = () => setIsDragging(false);
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging, snapBottom]);
-
-  const handleSend = () => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     const trimmed = inputValue.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
     onSendMessage(trimmed);
     setInputValue("");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  let containerClass = "w-[min(416px,calc(100vw-16px))] select-none touch-none bg-white/5";
+  if (embedded && fill) {
+    containerClass = "w-full h-full min-w-0 min-h-0 flex flex-col";
+  } else if (embedded) {
+    containerClass =
+      "w-full min-w-0 min-h-[240px] max-h-[320px] flex-1 flex flex-col border-t border-white/10 pt-3";
+  }
 
   const style: React.CSSProperties = isSnapped
     ? isEndgame
@@ -196,23 +234,21 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
   return (
     <>
       {isDragging && (
-        <div
-          className="fixed inset-0"
-          style={{ zIndex: Z_INDEX.LOADING_OVERLAY, cursor: "default" }}
-        />
+        <div className="fixed inset-0" style={{ zIndex: Z_INDEX.DRAG_SHIELD, cursor: "default" }} />
       )}
       <div
         ref={containerRef}
-        onMouseDown={handleMouseDown}
-        className={
-          embedded
-            ? "w-full min-w-0 min-h-[240px] max-h-[320px] flex-1 flex flex-col border-t border-white/10 pt-3"
-            : "w-[416px] select-none bg-white/5"
-        }
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        className={containerClass}
         style={embedded ? undefined : { ...style, cursor: "default" }}
       >
         <div
-          className={`${embedded ? "h-0 min-h-0 flex-1" : "h-[200px]"} overflow-y-auto overflow-x-hidden px-2 py-1 flex flex-col gap-1.5`}
+          ref={messagesRef}
+          onScroll={handleMessagesScroll}
+          className={`${embedded ? "h-0 min-h-0 flex-1" : "h-[200px]"} overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y px-2 py-1 flex flex-col gap-1.5`}
         >
           {messages.map((msg, i) => {
             const time = msg.timestamp ? new Date(msg.timestamp) : null;
@@ -275,25 +311,28 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
           </div>
         )}
 
-        <div className="border-t border-white/15 shrink-0 flex items-center gap-1">
+        <form
+          onSubmit={handleSubmit}
+          className="border-t border-white/15 shrink-0 flex items-center gap-1"
+        >
           {!isSpectator && (
             <div
               ref={emotePickerRef}
               className="relative shrink-0"
-              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 aria-label="Send an emote"
                 aria-expanded={showEmotePicker}
                 onClick={() => setShowEmotePicker((v) => !v)}
-                className={`flex items-center justify-center w-7 h-7 cursor-pointer transition-opacity ${showEmotePicker ? "opacity-100" : "opacity-50 hover:opacity-100"}`}
+                className={`flex items-center justify-center w-7 h-7 compact:w-11 compact:h-11 cursor-pointer transition-opacity ${showEmotePicker ? "opacity-100" : "opacity-50 hover:opacity-100"}`}
               >
                 <EmoteIcon emote="laugh" size={18} />
               </button>
               {showEmotePicker && (
                 <div
-                  className="absolute bottom-full left-0 mb-1 w-max grid grid-cols-[repeat(4,2.25rem)] gap-1 p-1.5 bg-[rgba(10,10,15,0.97)] border border-white/20 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+                  className="absolute bottom-full left-0 mb-1 w-max max-h-[40dvh] overflow-y-auto overscroll-contain grid grid-cols-[repeat(4,2.25rem)] compact:grid-cols-[repeat(4,2.75rem)] gap-1 p-1.5 bg-[rgba(10,10,15,0.97)] border border-white/20 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
                   style={{ zIndex: Z_INDEX.DROPDOWNS }}
                 >
                   {EMOTES.map(({ kind, label }) => (
@@ -305,7 +344,7 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
                         setShowEmotePicker(false);
                         void globalWebSocketManager.sendEmote(kind);
                       }}
-                      className="flex items-center justify-center w-9 h-9 rounded cursor-pointer hover:bg-white/10 hover:scale-110 transition-transform"
+                      className="flex items-center justify-center w-9 h-9 compact:w-11 compact:h-11 rounded cursor-pointer hover:bg-white/10 hover:scale-110 transition-transform"
                     >
                       <EmoteIcon emote={kind} size={24} />
                     </button>
@@ -318,14 +357,19 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
             placeholder="Message…"
             aria-label="Chat message"
             spellCheck={false}
             autoComplete="off"
-            className="flex-1 min-w-0 bg-transparent text-white text-sm px-1 py-2 outline-none placeholder:text-white/25 border-b border-white/15"
+            enterKeyHint="send"
+            className="flex-1 min-w-0 bg-transparent text-white text-sm compact:text-base px-1 py-2 compact:min-h-11 outline-none placeholder:text-white/25 border-b border-white/15"
           />
-        </div>
+          {fill && (
+            <GameButton type="submit" size="sm" className="shrink-0 !min-h-11">
+              Send
+            </GameButton>
+          )}
+        </form>
       </div>
     </>
   );

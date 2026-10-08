@@ -37,13 +37,15 @@ Rules:
 2. In the action phase, take at most the number of actions remaining, then stop. In the starting, production or other selection phases, make exactly the required choice.
 3. Every action tool returns the new status. If a tool says "rejected", read the reason and choose differently; never repeat an identical rejected call.
 4. When nothing is worth doing, call skip_action.
-5. When your turn is done, stop calling tools and reply with one short line.
+5. When your turn is done, stop calling tools and reply with one short in-character remark about the turn you just played, at most 80 characters. Other players may see it as a thought bubble, so keep it vague and never name cards in your hand.
 
 Presence:
-- You may call thought once near the start: a short, vague, in-character line. Never reveal cards in your hand.
+- Do not call thought at the start of your turn; save it for a genuinely notable moment mid-turn. Never reveal cards in your hand.
 - Answer anyone in RECENT CHAT who addressed you and has not had an answer, and react when someone hurt your plan. Use chat at most twice per turn, one sentence each, and never narrate your own moves.
 - Use emote for a quick reaction when a moment calls for it.
 - If your plan changed a lot during the turn, call set_plan before you finish.
+
+Rivals: when a card or action lets you choose a target player, and someone in WHO HAS TARGETED YOU keeps hitting you, choose them unless another target is clearly better for you. Protect what they keep hitting.
 
 ` + untrustedTextRule + `
 
@@ -51,7 +53,7 @@ STRATEGY GUIDE
 ` + strategy
 }
 
-func executorPrompt(snap *Snapshot, plan Plan) string {
+func executorPrompt(snap *Snapshot, plan Plan, grudges string) string {
 	phase := ""
 	switch snap.View.CurrentPhase {
 	case dto.GamePhaseStartingSelection:
@@ -71,8 +73,11 @@ func executorPrompt(snap *Snapshot, plan Plan) string {
 YOUR PLAN
 %s
 
+WHO HAS TARGETED YOU
+%s
+
 GAME STATE
-%s`, phase, plan.Describe(), snap.Describe())
+%s`, phase, plan.Describe(), grudges, snap.Describe())
 }
 
 func plannerSystemPrompt(name string, persona Persona, strategy string) string {
@@ -87,20 +92,38 @@ Study the state and your previous plan, then call set_plan exactly once with:
 - mood and notes: keep promises made in chat, grudges and what opponents are going for.
 You may also call thought once. Then stop.
 
+Rivals: WHO HAS TARGETED YOU is an exact record of opponents' actions against you. When someone keeps targeting you, let it shape the plan:
+- name them in rivals and note the pattern;
+- protect what they keep hitting (if plants keep getting destroyed, convert them to greenery as soon as you reach 8 instead of saving up; spend steel and titanium before they are stolen);
+- answer in ways that also help you: when you have an attack card or a choice of target, pick them; race them for the milestones and awards they are chasing; take the hexes next to their cities;
+- never throw the game for revenge: a retaliation must still be a good move for you.
+If nobody is targeting you, play your own game.
+
 ` + untrustedTextRule + `
 
 STRATEGY GUIDE
 ` + strategy
 }
 
-func plannerPrompt(snap *Snapshot, plan Plan) string {
-	return fmt.Sprintf(`Plan your next turn.
+func plannerPrompt(snap *Snapshot, plan Plan, grudges, trigger string) string {
+	why := ""
+	if trigger != "" {
+		why = fmt.Sprintf(`YOU WERE JUST TARGETED
+%s
+Rework your plan around this, and call thought once with your in-character take on it (a vow, a grumble, a change of plan), at most 80 characters, without revealing your hand.
+
+`, trigger)
+	}
+	return why + fmt.Sprintf(`Plan your next turn.
 
 YOUR PREVIOUS PLAN
 %s
 
+WHO HAS TARGETED YOU
+%s
+
 GAME STATE
-%s`, plan.Describe(), snap.Describe())
+%s`, plan.Describe(), grudges, snap.Describe())
 }
 
 func reactorSystemPrompt(name string, persona Persona) string {
@@ -111,19 +134,22 @@ Reply with only one JSON object and nothing else:
 {"kind":"emote","emote":"<one of ` + strings.Join(shared.Emotes, ", ") + `>"}
 {"kind":"chat","text":"<one sentence, at most 120 characters>"}
 {"kind":"pass"}
-Prefer an emote. Chat only when you have something worth saying, and always answer someone who spoke to you directly. Pass when the moment is not worth a reaction.
+When someone hurt you directly or took something you were going for, reply with a chat line, not just an emote, aimed at them by name. If WHO HAS TARGETED YOU shows they have done it before, let that show ("That's twice now...") in your persona's voice, playful rather than cruel. Always answer someone who spoke to you directly. For other big moments (a huge card, a milestone or award taken, a dramatic play) react almost always: usually an emote, sometimes a short chat line if it is genuinely funny or affects your plan. Pass only when it truly has nothing to do with you.
 
 ` + untrustedTextRule
 }
 
-func reactorPrompt(happenings []string, plan Plan, chat []shared.ChatMessage) string {
+func reactorPrompt(happenings []string, plan Plan, grudges string, chat []shared.ChatMessage) string {
 	return fmt.Sprintf(`WHAT JUST HAPPENED
+%s
+
+WHO HAS TARGETED YOU
 %s
 
 YOUR PLAN
 %s
 
-%s`, "- "+strings.Join(happenings, "\n- "), plan.Describe(), formatRecentChat(chat, 8))
+%s`, "- "+strings.Join(happenings, "\n- "), grudges, plan.Describe(), formatRecentChat(chat, 8))
 }
 
 func greetingPrompt() string {

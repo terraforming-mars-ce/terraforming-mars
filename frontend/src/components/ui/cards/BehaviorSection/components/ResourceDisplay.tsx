@@ -147,7 +147,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
           key={`badge-${tag}`}
           src={tagIcon}
           alt={tag}
-          className="w-[14px] h-[14px] shrink-0 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] max-md:w-[12px] max-md:h-[12px]"
+          className="w-[14px] h-[14px] shrink-0 object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))]"
         />
       );
     });
@@ -289,7 +289,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
               <div className="flex flex-wrap gap-[3px] items-center justify-center bg-[linear-gradient(135deg,rgba(160,110,60,0.4)_0%,rgba(139,89,42,0.35)_100%)] border border-[rgba(160,110,60,0.5)] px-1.5 py-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
                 <div className="flex items-center gap-[3px] relative shrink-0">
                   {amount > 1 && (
-                    <span className="text-[20px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center ml-0.5 max-md:text-xs leading-none translate-y-[2px]">
+                    <span className="text-[20px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center ml-0.5 leading-none translate-y-[2px]">
                       {amount}
                     </span>
                   )}
@@ -398,7 +398,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
             <div className="flex items-center gap-[3px]">
               <div className="flex items-center gap-[3px] relative shrink-0">
                 {amount > 1 && (
-                  <span className="text-[20px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center ml-0.5 max-md:text-xs leading-none translate-y-[2px]">
+                  <span className="text-[20px] font-black font-orbitron text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] flex items-center ml-0.5 leading-none translate-y-[2px]">
                     {amount}
                   </span>
                 )}
@@ -616,7 +616,7 @@ const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
 
   if (!baseIconElement) {
     return (
-      <span className="text-xs font-semibold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-[11px]">
+      <span className="text-xs font-semibold text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
         {isInput && "-"}
         {amount} {resourceType}
       </span>

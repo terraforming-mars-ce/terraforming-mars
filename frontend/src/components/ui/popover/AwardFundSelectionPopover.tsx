@@ -34,7 +34,7 @@ const AwardFundSelectionPopover: React.FC<AwardFundSelectionPopoverProps> = ({
         <h3 className="m-0 font-orbitron text-white text-base font-bold text-shadow-glow">
           Fund an Award
         </h3>
-        <div className="text-white/60 text-xs text-shadow-glow mt-1">
+        <div className="text-white/60 text-xs compact:text-[13px] text-shadow-glow mt-1">
           Choose an award to fund for free
         </div>
       </GameFlowTitle>
@@ -52,7 +52,7 @@ const AwardFundSelectionPopover: React.FC<AwardFundSelectionPopoverProps> = ({
               className="
                 game-panel game-panel-clipped game-choice
                 px-3.5 py-3
-                mb-2
+                mb-2 compact:min-h-11
                 transition-all duration-[250ms] ease-out
                 animate-choiceSlideIn
                 cursor-pointer
@@ -63,7 +63,7 @@ const AwardFundSelectionPopover: React.FC<AwardFundSelectionPopoverProps> = ({
               onClick={() => handleSelect(awardType)}
             >
               <h3 className="text-white text-sm font-bold font-orbitron m-0">{name}</h3>
-              <p className="text-white/60 text-xs mt-1 m-0">{description}</p>
+              <p className="text-white/60 text-xs compact:text-[13px] mt-1 m-0">{description}</p>
             </div>
           );
         })}

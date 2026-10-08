@@ -16,7 +16,7 @@
 1. **Create/Update DTO struct** in `game_dto.go` with `json:` tags
 2. **Add `tstype:` tags only where needed** — tygo infers types from Go types automatically. Only use `tstype:` to override (e.g., string literal unions for discriminated unions)
 3. **Add/Update mapper function** in `mapper_*.go` to convert model to DTO
-4. **Run `make generate`** to create TypeScript types
+4. **Run `just generate`** to create TypeScript types
 5. **Verify TypeScript types** in `frontend/src/types/generated/api-types.ts`
 
 ### DTO Structure Template
@@ -72,7 +72,7 @@ The `//tygo:emit` directive generates the `ResourceCondition` union type. The ma
 2. Model field removed → Remove from DTO
 3. Model field renamed → Update DTO field name
 4. **ALWAYS** update mapper function in `mapper_*.go`
-5. **ALWAYS** run `make generate` after DTO changes
+5. **ALWAYS** run `just generate` after DTO changes
 
 ## Common Mistakes to Avoid
 
@@ -80,7 +80,7 @@ The `//tygo:emit` directive generates the `ResourceCondition` union type. The ma
 - Adding models to `tygo.yaml` (only DTOs allowed)
 - Using DTOs internally in backend (use domain models instead)
 - Updating DTO without updating mapper function
-- Not running `make generate` after DTO changes
+- Not running `just generate` after DTO changes
 - Adding `// DEPRECATED` comments — delete deprecated fields entirely
 
 ## File Organization

@@ -32,7 +32,7 @@ import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
 
 interface AngledPanelProps {
   side: "left" | "right";
@@ -426,9 +426,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
             }
           `}</style>
           <div
-            className="absolute left-0 right-0 bottom-0 z-[1] flex items-center justify-center pointer-events-auto cursor-pointer"
+            className="absolute left-0 right-0 bottom-0 flex items-center justify-center pointer-events-auto cursor-pointer"
             style={{
               height: 64,
+              zIndex: getZIndex("LOCAL", 1),
               background: `linear-gradient(to top, ${spectatePlayerColor ?? "#6496ff"}2b, transparent 60%), rgba(10,10,15,0.95)`,
               borderLeft: `1px solid ${BORDER_COLOR}`,
               borderRight: `1px solid ${BORDER_COLOR}`,
@@ -513,7 +514,8 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
                           e.stopPropagation();
                           handleCorpClose();
                         }}
-                        className="absolute top-4 right-4 text-white/70 hover:text-white text-xl leading-none transition-colors z-10 cursor-pointer"
+                        className="absolute top-4 right-4 text-white/70 hover:text-white text-xl leading-none transition-colors cursor-pointer"
+                        style={{ zIndex: getZIndex("LOCAL", 10) }}
                       >
                         ×
                       </GameButton>

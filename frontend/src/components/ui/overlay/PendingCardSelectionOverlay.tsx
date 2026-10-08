@@ -3,20 +3,26 @@ import CardChoice from "../cards/CardChoice.tsx";
 import GameIcon from "../display/GameIcon.tsx";
 import { PendingCardSelectionDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import { useCardSelection } from "../../../hooks/useCardSelection.ts";
-import { Z_INDEX } from "@/constants/zIndex.ts";
+import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
 import {
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_CONTAINER_CLASS,
+  OVERLAY_CONTAINER_STYLE,
   OVERLAY_HEADER_CLASS,
   OVERLAY_TITLE_CLASS,
-  OVERLAY_DESCRIPTION_CLASS,
-  OVERLAY_CARDS_CONTAINER_CLASS,
-  OVERLAY_CARDS_INNER_CLASS,
   OVERLAY_FOOTER_CLASS,
   RESOURCE_LABEL_CLASS,
+  OVERLAY_ACTION_BUTTON_CLASS,
+  OVERLAY_FOOTER_LEFT_CLASS,
+  OVERLAY_FOOTER_RIGHT_CLASS,
+  OVERLAY_ROOT_SAFE_AREA_CLASS,
 } from "./overlayStyles.ts";
+import CardSelectionRow from "./CardSelectionRow.tsx";
+import OverlayDescription from "./OverlayDescription.tsx";
 import GameButton from "../buttons/GameButton.tsx";
+import PlayabilityBadge, { PlayabilityErrorList } from "./PlayabilityBadge.tsx";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
 interface PendingCardSelectionOverlayProps {
   isOpen: boolean;
@@ -58,6 +64,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
   });
 
   const [showPlayability, setShowPlayability] = useState(false);
+  const { isCompact } = useLayoutMode();
 
   if (!isOpen || selection.availableCards.length === 0) return null;
 
@@ -115,25 +122,26 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
   };
 
   const titleInfo = getTitleAndDescription(selection.source);
+  const iconSize = isCompact ? "medium" : "large";
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className={`fixed inset-0 flex items-center justify-center ${OVERLAY_ROOT_SAFE_AREA_CLASS}`}
       style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
     >
       <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
       <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 
       {/* Content container */}
-      <div className={OVERLAY_CONTAINER_CLASS}>
+      <div className={OVERLAY_CONTAINER_CLASS} style={OVERLAY_CONTAINER_STYLE}>
         {/* Header */}
         <div className={OVERLAY_HEADER_CLASS}>
           <div className="flex items-center justify-between w-full">
             <div>
               <h2 className={OVERLAY_TITLE_CLASS}>{titleInfo.title}</h2>
-              <p className={OVERLAY_DESCRIPTION_CLASS}>{titleInfo.description}</p>
+              <OverlayDescription>{titleInfo.description}</OverlayDescription>
             </div>
-            {!isSellPatents && (
+            {!isSellPatents && !isCompact && (
               <GameButton
                 emphasis="secondary"
                 size="sm"
@@ -146,86 +154,92 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
         </div>
 
         {/* Cards display */}
-        <div className={OVERLAY_CARDS_CONTAINER_CLASS}>
-          <div className={OVERLAY_CARDS_INNER_CLASS}>
-            {selection.availableCards.map((card, index) => {
-              const isSelected = selectedCardIds.includes(card.id);
-              const badge = getCardBadge(card.id);
-              const canAfford = canAffordCard(card.id);
+        <CardSelectionRow>
+          {selection.availableCards.map((card, index) => {
+            const isSelected = selectedCardIds.includes(card.id);
+            const badge = getCardBadge(card.id);
+            const canAfford = canAffordCard(card.id);
+            const hasErrors = !isSellPatents && !card.available && card.errors.length > 0;
 
-              return (
-                <div key={card.id} className="relative">
-                  <CardChoice
-                    card={card}
-                    isSelected={isSelected}
-                    onSelect={handleCardSelect}
-                    animationDelay={index * 100}
-                    showCheckbox={true}
-                  />
-                  {/* Cost/Reward Badge (hidden for sell-patents since reward is obvious) */}
-                  {badge && selection.source !== "sell-patents" && (
-                    <div
-                      className={`absolute top-2 right-2 px-2 py-1 rounded-md font-bold text-sm shadow-lg ${
-                        badge.type === "cost"
-                          ? "bg-[#f44336] text-white"
-                          : "bg-[#4caf50] text-white"
-                      }`}
-                    >
-                      {badge.type === "cost"
-                        ? `${badge.value} MC`
-                        : badge.type === "reward"
-                          ? `+${badge.value} MC`
-                          : "FREE"}
-                    </div>
-                  )}
-                  {/* Unaffordable overlay (buy cost) */}
-                  {!canAfford && !isSelected && (
-                    <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center">
-                      <span className="text-white/80 font-bold">Can't Afford</span>
-                    </div>
-                  )}
-                  {/* Playability errors */}
-                  {showPlayability && !card.available && card.errors.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 flex flex-col gap-0.5 z-10 max-h-24 overflow-y-auto">
-                      {card.errors.map((err, i) => (
-                        <div
-                          key={i}
-                          className="bg-[rgba(10,10,15,0.95)] border border-[rgba(231,76,60,0.6)] border-l-[3px] border-l-[#e74c3c] text-white/90 text-[10px] leading-tight px-1.5 py-1 rounded-sm"
-                        >
-                          {err.message}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+            return (
+              <div key={card.id} className="relative">
+                <CardChoice
+                  card={card}
+                  isSelected={isSelected}
+                  onSelect={handleCardSelect}
+                  animationDelay={index * 100}
+                  showCheckbox={true}
+                  detailNotice={
+                    hasErrors ? <PlayabilityErrorList errors={card.errors} /> : undefined
+                  }
+                />
+                {/* Cost/Reward Badge (hidden for sell-patents since reward is obvious) */}
+                {badge && selection.source !== "sell-patents" && (
+                  <div
+                    className={`absolute top-2 right-2 px-2 py-1 rounded-md font-bold text-sm shadow-lg compact:top-auto compact:right-auto compact:bottom-2 compact:left-2 compact:px-1.5 compact:py-0.5 compact:text-xs ${
+                      badge.type === "cost" ? "bg-[#f44336] text-white" : "bg-[#4caf50] text-white"
+                    }`}
+                  >
+                    {badge.type === "cost"
+                      ? `${badge.value} MC`
+                      : badge.type === "reward"
+                        ? `+${badge.value} MC`
+                        : "FREE"}
+                  </div>
+                )}
+                {/* Unaffordable overlay (buy cost) */}
+                {!canAfford && !isSelected && (
+                  <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center compact:pointer-events-none">
+                    <span className="text-white/80 font-bold compact:text-sm">Can't Afford</span>
+                  </div>
+                )}
+                {/* Playability errors */}
+                {isCompact && hasErrors && <PlayabilityBadge errors={card.errors} />}
+                {showPlayability && hasErrors && !isCompact && (
+                  <div
+                    className="absolute top-full left-0 right-0 mt-1 flex flex-col gap-0.5 max-h-24 overflow-y-auto"
+                    style={{ zIndex: getZIndex("LOCAL", 10) }}
+                  >
+                    {card.errors.map((err, i) => (
+                      <div
+                        key={i}
+                        className="bg-[rgba(10,10,15,0.95)] border border-[rgba(231,76,60,0.6)] border-l-[3px] border-l-[#e74c3c] text-white/90 text-[10px] leading-tight px-1.5 py-1 rounded-sm"
+                      >
+                        {err.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </CardSelectionRow>
 
         {/* Footer with cost and confirm button */}
         <div className={OVERLAY_FOOTER_CLASS}>
-          <div className="flex gap-8 items-center max-[768px]:w-full max-[768px]:justify-between max-[768px]:flex-wrap">
+          <div className={OVERLAY_FOOTER_LEFT_CLASS}>
             <div className="flex items-center gap-3">
-              <span className={RESOURCE_LABEL_CLASS}>Your Credits:</span>
-              <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size="large" />
+              <span className={RESOURCE_LABEL_CLASS}>
+                {isCompact ? "Credits" : "Your Credits:"}
+              </span>
+              <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size={iconSize} />
             </div>
             {totalCost > 0 && (
               <div className="flex items-center gap-3">
-                <span className={RESOURCE_LABEL_CLASS}>Total Cost:</span>
-                <GameIcon iconType={ResourceTypeCredit} amount={totalCost} size="large" />
+                <span className={RESOURCE_LABEL_CLASS}>{isCompact ? "Cost" : "Total Cost:"}</span>
+                <GameIcon iconType={ResourceTypeCredit} amount={totalCost} size={iconSize} />
               </div>
             )}
             {totalReward > 0 && (
               <div className="flex items-center gap-3">
                 <span className={RESOURCE_LABEL_CLASS}>Gain:</span>
-                <GameIcon iconType={ResourceTypeCredit} amount={totalReward} size="large" />
+                <GameIcon iconType={ResourceTypeCredit} amount={totalReward} size={iconSize} />
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-6 max-[768px]:w-full max-[768px]:flex-col max-[768px]:gap-3">
-            <div className="text-sm">
+          <div className={OVERLAY_FOOTER_RIGHT_CLASS}>
+            <div className="text-sm compact:text-xs compact:leading-tight compact:max-w-36">
               {selectedCardIds.length === 0 ? (
                 showConfirmation ? (
                   <span className="text-[#ff9800]">
@@ -243,7 +257,12 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
             </div>
             <div className="flex gap-3 items-center">
               {(onCancel || selection.minCards === 0) && (
-                <GameButton emphasis="quiet" size="md" onClick={handleCancel}>
+                <GameButton
+                  emphasis="quiet"
+                  size="md"
+                  className={OVERLAY_ACTION_BUTTON_CLASS}
+                  onClick={handleCancel}
+                >
                   Cancel
                 </GameButton>
               )}
@@ -252,7 +271,7 @@ const PendingCardSelectionOverlay: React.FC<PendingCardSelectionOverlayProps> = 
                 clickSound={!isSellPatents}
                 onClick={handleConfirm}
                 disabled={!isValidSelection || totalCost > playerCredits}
-                className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
+                className={OVERLAY_ACTION_BUTTON_CLASS}
               >
                 {showConfirmation
                   ? "Confirm Skip"

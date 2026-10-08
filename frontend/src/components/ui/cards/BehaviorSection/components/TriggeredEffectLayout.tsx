@@ -15,6 +15,7 @@ import {
   MinMaxValueDto,
 } from "@/types/generated/api-types.ts";
 import { type ResourceCondition, getTileRestrictions } from "@/types/resourceConditions.ts";
+import { getZIndex } from "@/constants/zIndex.ts";
 
 interface IconDisplayInfo {
   resourceType: string;
@@ -117,7 +118,7 @@ const renderSelector = (
         elements.push(
           <span
             key={`type-${triggerIndex}-${selectorIndex}-${typeIndex}`}
-            className="text-xs font-semibold text-[#e0e0e0] capitalize [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-[11px]"
+            className="text-xs font-semibold text-[#e0e0e0] capitalize [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]"
           >
             {cardType}
           </span>,
@@ -414,7 +415,7 @@ const renderTriggerIcon = (trigger: TriggerDto, triggerIndex: number): React.Rea
   return (
     <span
       key={triggerIndex}
-      className="text-xs font-semibold text-[#e0e0e0] capitalize [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)] max-md:text-[11px]"
+      className="text-xs font-semibold text-[#e0e0e0] capitalize [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]"
     >
       {trigger.type || "trigger"}
     </span>
@@ -491,7 +492,10 @@ const renderBehaviorRow = (
                   );
                 })()}
               </div>
-              <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0 z-[1]">
+              <span
+                className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0"
+                style={{ zIndex: getZIndex("LOCAL", 1) }}
+              >
                 :
               </span>
             </>
@@ -608,7 +612,10 @@ const renderBehaviorRow = (
                       renderTriggerIcon(trigger, triggerIndex),
                     )}
                   </div>
-                  <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0 z-[1]">
+                  <span
+                    className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0"
+                    style={{ zIndex: getZIndex("LOCAL", 1) }}
+                  >
                     :
                   </span>
                 </div>
@@ -649,7 +656,10 @@ const renderBehaviorRow = (
                   renderTriggerIcon(trigger, triggerIndex),
                 )}
               </div>
-              <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0 z-[1]">
+              <span
+                className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0"
+                style={{ zIndex: getZIndex("LOCAL", 1) }}
+              >
                 :
               </span>
               {choice.inputs?.map((input, inputIndex: number) => {
@@ -839,7 +849,10 @@ const TriggeredEffectLayout: React.FC<TriggeredEffectLayoutProps> = ({
             SR
           </span>
         </div>
-        <span className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0 z-[1]">
+        <span
+          className="flex items-center justify-center text-white text-base font-bold [text-shadow:1px_1px_2px_rgba(0,0,0,0.8)] min-w-[8px] shrink-0"
+          style={{ zIndex: getZIndex("LOCAL", 1) }}
+        >
           :
         </span>
         <span className="bg-[rgba(255,255,255,0.9)] text-black text-[10px] font-bold px-1 py-[1px] leading-tight">

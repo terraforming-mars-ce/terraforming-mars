@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiService } from "@/services/apiService";
 import type { GameDto, GameOptionsDto, GameSetupDto } from "@/types/generated/api-types";
 import { useJoinGame } from "@/hooks/useJoinGame";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { MAX_PLAYER_NAME_LENGTH } from "@/constants/gameConstants";
 import { Z_INDEX } from "@/constants/zIndex";
 import BackButton from "../ui/buttons/BackButton";
@@ -20,6 +21,7 @@ export default function CreateGamePage() {
   const submitting = useRef(false);
   const mounted = useRef(true);
   const { playerName, setPlayerName, isLoading, handleJoin } = useJoinGame({ game: created });
+  const { isCompact } = useLayoutMode();
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -73,14 +75,17 @@ export default function CreateGamePage() {
   const busy = creating || isLoading;
   return (
     <>
-      <div className="fixed top-[30px] left-[30px]" style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}>
+      <div
+        className="menu-chrome-top-left menu-chrome-back"
+        style={{ zIndex: Z_INDEX.TOP_MENU_BAR }}
+      >
         <BackButton onClick={() => navigate("/")} />
       </div>
       <main
         className="menu-shell menu-enter text-white text-left relative"
         style={{ zIndex: Z_INDEX.UI_BASE }}
       >
-        <h1 className="menu-title">Create game</h1>
+        <h1 className="menu-title compact:mb-4">Create game</h1>
         {error && (
           <p role="alert" className="text-red-300 mb-5">
             {error}
@@ -99,13 +104,14 @@ export default function CreateGamePage() {
         ) : (
           <form
             onSubmit={(event) => void submit(event)}
-            className="game-panel p-6 sm:p-10 menu-grid"
+            className={isCompact ? "game-panel p-4" : "game-panel p-6 sm:p-10 menu-grid"}
           >
-            <div className="flex flex-col gap-8 min-w-0">
-              <label className="flex flex-col gap-3 text-sm text-white/70">
-                Your name
+            <div className="flex flex-col gap-8 compact:gap-4 min-w-0">
+              <div className="flex items-stretch gap-3">
                 <input
-                  className="game-input text-lg"
+                  className="game-input text-lg flex-1"
+                  placeholder="Your name"
+                  aria-label="Your name"
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
                   disabled={busy || !!created}
@@ -115,60 +121,64 @@ export default function CreateGamePage() {
                   maxLength={MAX_PLAYER_NAME_LENGTH}
                   autoComplete="nickname"
                 />
-              </label>
-              <details className="text-sm">
-                <summary className="cursor-pointer font-orbitron text-white/70">
-                  Game options
-                </summary>
-                <fieldset disabled={busy || !!created} className="flex flex-col gap-5 mt-6">
-                  <label className="flex items-center justify-between gap-4">
-                    Players
-                    <input
-                      className="game-input w-20"
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={setup.maxPlayers}
-                      onChange={(e) => setSetup({ ...setup, maxPlayers: Number(e.target.value) })}
-                    />
-                  </label>
-                  {(
-                    [
-                      ["developmentMode", "Development mode"],
-                      ["demoGame", "Demo game"],
-                      ["allowRandomBuy", "Random buy"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label key={key} className="flex items-center justify-between gap-4">
-                      {label}
+                <GameButton
+                  type="submit"
+                  size={isCompact ? "md" : "lg"}
+                  loading={busy}
+                  disabled={playerName.trim().length < 2}
+                  className="shrink-0"
+                >
+                  {created && !busy ? "Join lobby" : "Create lobby"}
+                </GameButton>
+              </div>
+              {!isCompact && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-orbitron text-white/70">
+                    Game options
+                  </summary>
+                  <fieldset disabled={busy || !!created} className="flex flex-col gap-5 mt-6">
+                    <label className="flex items-center justify-between gap-4">
+                      Players
                       <input
-                        type="checkbox"
-                        checked={setup[key]}
-                        onChange={(e) => setSetup({ ...setup, [key]: e.target.checked })}
-                        className="game-checkbox"
+                        className="game-input w-20"
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={setup.maxPlayers}
+                        onChange={(e) => setSetup({ ...setup, maxPlayers: Number(e.target.value) })}
                       />
                     </label>
-                  ))}
-                </fieldset>
-              </details>
-              <GameButton
-                type="submit"
-                size="lg"
-                loading={busy}
-                disabled={playerName.trim().length < 2}
-                className="mt-auto self-start"
-              >
-                {created ? "Join lobby" : "Create lobby"}
-              </GameButton>
+                    {(
+                      [
+                        ["developmentMode", "Development mode"],
+                        ["demoGame", "Demo game"],
+                        ["allowRandomBuy", "Random buy"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label key={key} className="flex items-center justify-between gap-4">
+                        {label}
+                        <input
+                          type="checkbox"
+                          checked={setup[key]}
+                          onChange={(e) => setSetup({ ...setup, [key]: e.target.checked })}
+                          className="game-checkbox"
+                        />
+                      </label>
+                    ))}
+                  </fieldset>
+                </details>
+              )}
             </div>
-            <GameSetupControls
-              maps={options.availableMaps}
-              mapId={setup.mapId}
-              cardPacks={setup.cardPacks}
-              venusNextEnabled={setup.venusNextEnabled}
-              disabled={busy || !!created}
-              onChange={(patch) => setSetup({ ...setup, ...patch })}
-            />
+            {!isCompact && (
+              <GameSetupControls
+                maps={options.availableMaps}
+                mapId={setup.mapId}
+                cardPacks={setup.cardPacks}
+                venusNextEnabled={setup.venusNextEnabled}
+                disabled={busy || !!created}
+                onChange={(patch) => setSetup({ ...setup, ...patch })}
+              />
+            )}
           </form>
         )}
       </main>
