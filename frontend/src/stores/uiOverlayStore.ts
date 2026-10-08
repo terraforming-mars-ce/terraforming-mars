@@ -33,6 +33,8 @@ interface UIOverlayState {
   setShowLeaveGameConfirm: (show: boolean) => void;
   setShowCloseGameConfirm: (show: boolean) => void;
   setShowEndGameConfirm: (show: boolean) => void;
+  requestLeaveGame: () => void;
+  requestEndGame: () => void;
   setShowProductionPhaseModal: (show: boolean) => void;
   setIsProductionModalHidden: (hidden: boolean) => void;
   setOpenProductionToCardSelection: (open: boolean) => void;
@@ -86,6 +88,8 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   setShowLeaveGameConfirm: (show) => set({ showLeaveGameConfirm: show }),
   setShowCloseGameConfirm: (show) => set({ showCloseGameConfirm: show }),
   setShowEndGameConfirm: (show) => set({ showEndGameConfirm: show }),
+  requestLeaveGame: () => set({ showEndGameConfirm: false, showLeaveGameConfirm: true }),
+  requestEndGame: () => set({ showLeaveGameConfirm: false, showEndGameConfirm: true }),
   setShowProductionPhaseModal: (show) => set({ showProductionPhaseModal: show }),
   setIsProductionModalHidden: (hidden) => set({ isProductionModalHidden: hidden }),
   setOpenProductionToCardSelection: (open) => set({ openProductionToCardSelection: open }),
