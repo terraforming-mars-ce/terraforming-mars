@@ -37,11 +37,23 @@ export function textureArray(
   array.magFilter = THREE.LinearFilter;
   array.generateMipmaps = true;
   array.anisotropy = 4;
-  array.needsUpdate = true;
-  gl.initTexture(array);
-  textures.forEach((texture, layer) => {
-    gl.copyTextureToTexture(texture, array, null, new THREE.Vector3(0, 0, layer));
-  });
+  array.userData.layers = textures;
+  uploadLayers(gl, array);
   arrays.set(key, array);
   return array;
+}
+
+function uploadLayers(gl: THREE.WebGLRenderer, array: THREE.DataArrayTexture) {
+  array.needsUpdate = true;
+  gl.initTexture(array);
+  (array.userData.layers as THREE.Texture[]).forEach((texture, layer) => {
+    gl.copyTextureToTexture(texture, array, null, new THREE.Vector3(0, 0, layer));
+  });
+}
+
+// The layers only ever lived on the GPU, so a restored context needs them copied in again.
+export function restoreTextureArraysAfterContextRestore(gl: THREE.WebGLRenderer) {
+  for (const array of cache.get(gl)?.values() ?? []) {
+    uploadLayers(gl, array);
+  }
 }

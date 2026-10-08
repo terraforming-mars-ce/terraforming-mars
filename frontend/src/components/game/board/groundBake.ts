@@ -12,6 +12,15 @@ const DENSITY_SLACK = 1.5;
 const STABLE_FRAMES = 3;
 const RADIUS = 2.02;
 
+const liveBakes = new Set<GroundBake>();
+
+// A restored context has empty render targets while `uGroundBaked` still says baked.
+export function invalidateGroundBakesAfterContextRestore() {
+  for (const bake of liveBakes) {
+    bake.invalidateAfterContextRestore();
+  }
+}
+
 export interface GroundBakeUniforms {
   uGroundBakeAlbedo: { value: THREE.Texture };
   uGroundBakeSurface: { value: THREE.Texture };
@@ -74,6 +83,7 @@ export class GroundBake {
     uniforms.uGroundBakeAlbedo.value = albedo;
     uniforms.uGroundBakeSurface.value = surface;
     uniforms.uGroundBaked.value = 0;
+    liveBakes.add(this);
   }
 
   // `inputs` lists every value the baked material depends on; `patches` is the board-space
@@ -143,8 +153,14 @@ export class GroundBake {
   }
 
   dispose() {
+    liveBakes.delete(this);
     this.uniforms.uGroundBaked.value = 0;
     this.target.dispose();
+  }
+
+  invalidateAfterContextRestore() {
+    this.initialized = false;
+    this.invalidate();
   }
 
   private invalidate() {
