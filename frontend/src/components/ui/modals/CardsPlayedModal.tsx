@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { CardDto, ResourceTypeCredit } from "../../../types/generated/api-types.ts";
 import GameIcon from "../display/GameIcon.tsx";
-import { cardDescriptionToPlainText } from "../../../utils/cardDescription.ts";
-import GameCard from "../cards/GameCard.tsx";
+import PlayedCardsGrid from "../cards/PlayedCardsGrid.tsx";
 import { GameModal, GameModalHeader, GameModalContent } from "../GameModal";
 
 interface CardsPlayedModalProps {
@@ -15,63 +14,6 @@ const CardsPlayedModal: React.FC<CardsPlayedModalProps> = ({ isVisible, onClose,
   const [searchQuery, setSearchQuery] = useState("");
 
   const totalCost = useMemo(() => cards.reduce((sum, card) => sum + card.cost, 0), [cards]);
-
-  const filteredCards = useMemo(() => {
-    if (!searchQuery.trim()) return cards;
-    const query = searchQuery.toLowerCase();
-
-    const matchesCard = (card: CardDto): boolean => {
-      // Name, description, type, pack
-      if (card.name.toLowerCase().includes(query)) return true;
-      if (cardDescriptionToPlainText(card.description).toLowerCase().includes(query)) return true;
-      if (card.type?.toLowerCase().includes(query)) return true;
-      if (String(card.cost).includes(query)) return true;
-
-      // Tags
-      if (card.tags?.some((tag) => tag.toLowerCase().includes(query))) return true;
-
-      // Requirements
-      if (card.requirements?.description?.toLowerCase().includes(query)) return true;
-      if (
-        card.requirements?.items?.some((req) => {
-          if (req.type?.toLowerCase().includes(query)) return true;
-          if (req.tag?.toLowerCase().includes(query)) return true;
-          if (req.resource?.toLowerCase().includes(query)) return true;
-          return false;
-        })
-      )
-        return true;
-
-      // Behaviors (descriptions, resource types in inputs/outputs)
-      if (
-        card.behaviors?.some((b) => {
-          if (b.description?.toLowerCase().includes(query)) return true;
-          if (b.inputs?.some((io) => io.type?.toLowerCase().includes(query))) return true;
-          if (b.outputs?.some((io) => io.type?.toLowerCase().includes(query))) return true;
-          return false;
-        })
-      )
-        return true;
-
-      // Resource storage
-      if (card.resourceStorage?.type?.toLowerCase().includes(query)) return true;
-      if (card.resourceStorage?.description?.toLowerCase().includes(query)) return true;
-
-      // VP conditions
-      if (
-        card.vpConditions?.some((vp) => {
-          if (vp.condition?.toLowerCase().includes(query)) return true;
-          if (vp.description?.toLowerCase().includes(query)) return true;
-          return false;
-        })
-      )
-        return true;
-
-      return false;
-    };
-
-    return cards.filter(matchesCard);
-  }, [cards, searchQuery]);
 
   const statsContent = (
     <div className="flex items-center gap-3">
@@ -100,7 +42,7 @@ const CardsPlayedModal: React.FC<CardsPlayedModalProps> = ({ isVisible, onClose,
       onClose={onClose}
       theme="cardsPlayed"
       size="full"
-      className="h-[90vh]"
+      className="h-[90dvh]"
     >
       <GameModalHeader
         title="Played Cards"
@@ -110,19 +52,7 @@ const CardsPlayedModal: React.FC<CardsPlayedModalProps> = ({ isVisible, onClose,
       />
 
       <GameModalContent>
-        {filteredCards.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <h3 className="text-white/70 text-lg font-orbitron m-0">No Cards Found</h3>
-          </div>
-        ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(215px,1fr))] gap-x-0 gap-y-[50px] justify-items-center pt-[30px]">
-            {filteredCards.map((card) => (
-              <div key={card.id} className="card-size">
-                <GameCard card={card} isSelected={false} />
-              </div>
-            ))}
-          </div>
-        )}
+        <PlayedCardsGrid cards={cards} searchQuery={searchQuery} />
       </GameModalContent>
     </GameModal>
   );

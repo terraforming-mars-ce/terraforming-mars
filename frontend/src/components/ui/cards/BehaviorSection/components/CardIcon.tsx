@@ -18,7 +18,7 @@ export function TaggedCardIcon({
       aria-label={`${tags.join(" and ")} card`}
     >
       <GameIcon iconType={iconType} size="behavior" />
-      <span className="absolute right-0 bottom-0 flex items-center gap-px [--behavior-icon-size:14px] [--behavior-icon-small-size:12px]">
+      <span className="absolute right-0 bottom-0 flex items-center gap-px [--behavior-icon-size:14px]">
         {tags.map((tag) => (
           <GameIcon key={tag} iconType={`${tag}-tag`} size="behavior" />
         ))}
@@ -94,8 +94,8 @@ const CardIcon: React.FC<CardIconProps> = ({
   const attackAnimation = isAttack ? " animate-[attackPulse_2s_ease-in-out_infinite]" : "";
 
   const iconClass = isAffordable
-    ? `w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:${glowFilter}]${attackAnimation} max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]`
-    : `w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))] max-md:w-[var(--behavior-icon-small-size,22px)] max-md:h-[var(--behavior-icon-small-size,22px)]`;
+    ? `w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain [filter:${glowFilter}]${attackAnimation}`
+    : `w-[var(--behavior-icon-size,26px)] h-[var(--behavior-icon-size,26px)] object-contain opacity-40 [filter:grayscale(0.7)_drop-shadow(0_1px_2px_rgba(0,0,0,0.5))]`;
 
   const renderSingleIcon = (picked = false, hideBadge = false) => (
     <div
@@ -106,7 +106,7 @@ const CardIcon: React.FC<CardIconProps> = ({
       <img src={cardIcon} alt="" className={iconClass} />
       {((badge && !hideBadge) || picked) && (
         <svg
-          className={`absolute -bottom-[2px] -right-[3px] w-4 h-4 text-[#fff8e7] pointer-events-none max-md:w-3.5 max-md:h-3.5 ${badgeOpacity}`}
+          className={`absolute -bottom-[2px] -right-[3px] w-4 h-4 text-[#fff8e7] pointer-events-none ${badgeOpacity}`}
           viewBox="0 0 16 16"
           fill="none"
           strokeLinecap="round"
