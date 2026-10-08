@@ -5,15 +5,6 @@
 export const MAX_PLAYER_NAME_LENGTH = 45;
 
 /**
- * Game VP values - centralized constants for victory point calculations.
- */
-export const VP_VALUES = {
-  MILESTONE: 5,
-  AWARD_FIRST: 5,
-  AWARD_SECOND: 2,
-} as const;
-
-/**
  * Human-readable display names for game phases.
  */
 export const PHASE_DISPLAY_NAMES: Record<string, string> = {
