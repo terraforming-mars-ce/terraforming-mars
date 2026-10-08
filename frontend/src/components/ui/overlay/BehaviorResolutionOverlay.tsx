@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   CardDto,
   PendingBehaviorResolutionDto,
@@ -6,8 +6,11 @@ import type {
 } from "@/types/generated/api-types";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager";
 import { webSocketService } from "@/services/webSocketService";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
+import { useElementSize } from "@/hooks/useElementSize";
 import BehaviorSection from "../cards/BehaviorSection";
 import CardChoice from "../cards/CardChoice";
+import { CardFitHeightContext } from "../cards/CardFitHeightContext";
 import GameButton from "../buttons/GameButton";
 import {
   GameFlowPopover,
@@ -15,6 +18,35 @@ import {
   GameFlowBody,
   GameFlowFooter,
 } from "../popover/GameFlowPopover";
+
+const DISCARD_ROW_BOTTOM_PADDING = 16;
+
+function DiscardRow({ children }: { children: ReactNode }) {
+  const { isCompact } = useLayoutMode();
+  if (!isCompact) {
+    return <div className="flex flex-wrap gap-3 justify-center">{children}</div>;
+  }
+  return <CompactDiscardRow>{children}</CompactDiscardRow>;
+}
+
+function CompactDiscardRow({ children }: { children: ReactNode }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const { height } = useElementSize(scrollerRef);
+  let fitHeight: number | null = null;
+  if (height > 0) {
+    fitHeight = Math.max(0, height - DISCARD_ROW_BOTTOM_PADDING);
+  }
+  return (
+    <div className="relative flex-1 min-h-[192px]">
+      <div
+        ref={scrollerRef}
+        className="absolute inset-0 flex items-start justify-center-safe gap-3 pb-4 overflow-x-auto overflow-y-hidden overscroll-contain snap-x snap-proximity"
+      >
+        <CardFitHeightContext.Provider value={fitHeight}>{children}</CardFitHeightContext.Provider>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   resolutions: PendingBehaviorResolutionDto[];
@@ -37,6 +69,7 @@ export default function BehaviorResolutionOverlay({
   const [submitting, setSubmitting] = useState(false);
   const submission = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { isCompact } = useLayoutMode();
 
   useEffect(() => {
     setActiveId(active?.id);
@@ -121,10 +154,13 @@ export default function BehaviorResolutionOverlay({
     <GameFlowPopover
       isVisible
       type="interactive-mandatory"
-      className="w-[min(920px,95vw)]! max-h-[90vh]! text-white"
+      className={isCompact ? "text-white" : "w-[min(920px,95vw)]! max-h-[90dvh]! text-white"}
+      compactFill
     >
-      <GameFlowTitle>Resolve effects · {resolutions.length} remaining</GameFlowTitle>
-      <div className="flex flex-wrap gap-2 px-4 pb-3">
+      <GameFlowTitle className="compact:py-2.5">
+        Resolve effects · {resolutions.length} remaining
+      </GameFlowTitle>
+      <div className="shrink-0 flex flex-wrap gap-2 px-4 pb-3 compact:flex-nowrap compact:overflow-x-auto compact:overscroll-contain compact:pt-2 compact:pb-2">
         {[...groups.entries()].map(([key, entries]) => (
           <GameButton
             key={key}
@@ -133,6 +169,7 @@ export default function BehaviorResolutionOverlay({
             aria-pressed={entries.some((item) => item.id === active.id)}
             selected={entries.some((item) => item.id === active.id)}
             disabled={submitting}
+            className="shrink-0 compact:min-h-11"
             onClick={() => setActiveId(entries[0].id)}
           >
             {entries[0].source} · {entries.length}
@@ -140,7 +177,7 @@ export default function BehaviorResolutionOverlay({
         ))}
       </div>
       <GameFlowBody>
-        <div className="flex flex-col gap-4 p-1">
+        <div className="flex flex-col gap-4 compact:gap-2 p-1 compact:min-h-full">
           <div>
             <p className="font-orbitron text-sm">{active.source}</p>
             {active.triggeringCardName && (
@@ -164,9 +201,9 @@ export default function BehaviorResolutionOverlay({
                   No cards in hand. You can skip or resolve another effect first.
                 </p>
               )}
-              <div className="flex flex-wrap gap-3 justify-center">
+              <DiscardRow>
                 {handCards.map((card) => (
-                  <div key={card.id} className="w-[var(--card-width)]">
+                  <div key={card.id} className="shrink-0 snap-start">
                     <CardChoice
                       card={card}
                       isSelected={validCards.includes(card.id)}
@@ -189,7 +226,7 @@ export default function BehaviorResolutionOverlay({
                     />
                   </div>
                 ))}
-              </div>
+              </DiscardRow>
             </>
           ) : (
             <div className="flex flex-col gap-2">
@@ -241,7 +278,7 @@ export default function BehaviorResolutionOverlay({
                 <label key={index} className="flex flex-col gap-1 text-sm">
                   Resource destination {index + 1}
                   <select
-                    className="bg-black border border-white/30 rounded p-2"
+                    className="bg-black border border-white/30 rounded p-2 compact:min-h-11"
                     value={targets[index] ?? ""}
                     disabled={submitting}
                     onChange={(event) =>

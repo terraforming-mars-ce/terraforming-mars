@@ -6,20 +6,23 @@ import { useCardSelection } from "../../../hooks/useCardSelection.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import {
   OVERLAY_CONTAINER_CLASS,
+  OVERLAY_CONTAINER_STYLE,
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_HEADER_CLASS,
   OVERLAY_TITLE_CLASS,
-  OVERLAY_DESCRIPTION_CLASS,
-  OVERLAY_CARDS_CONTAINER_CLASS,
-  OVERLAY_CARDS_INNER_CLASS,
   OVERLAY_FOOTER_CLASS,
   OVERLAY_FOOTER_LEFT_CLASS,
   OVERLAY_FOOTER_RIGHT_CLASS,
   RESOURCE_LABEL_CLASS,
   RESOURCE_DISPLAY_CLASS,
+  OVERLAY_ACTION_BUTTON_CLASS,
+  OVERLAY_ROOT_SAFE_AREA_CLASS,
 } from "./overlayStyles.ts";
+import CardSelectionRow from "./CardSelectionRow.tsx";
+import OverlayDescription from "./OverlayDescription.tsx";
 import GameButton from "../buttons/GameButton.tsx";
+import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
 interface ProductionCardSelectionOverlayProps {
   isOpen: boolean;
@@ -44,6 +47,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
   initialSelectedCardIds,
   onSelectionChange,
 }) => {
+  const { isCompact } = useLayoutMode();
   const {
     selectedCardIds,
     totalCost,
@@ -61,58 +65,62 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
     onSelectionChange,
   });
 
-  if (!isOpen || cards.length === 0) return null;
+  if (!isOpen || cards.length === 0) {
+    return null;
+  }
+
+  const iconSize = isCompact ? "medium" : "large";
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className={`fixed inset-0 flex items-center justify-center ${OVERLAY_ROOT_SAFE_AREA_CLASS}`}
       style={{ zIndex: Z_INDEX.CORPORATION_SELECTION }}
     >
       <div className={OVERLAY_BACKDROP_BLUR_CLASS} />
       <div className={OVERLAY_BACKDROP_TINT_CLASS} />
 
       {/* Content container */}
-      <div className={OVERLAY_CONTAINER_CLASS}>
+      <div className={OVERLAY_CONTAINER_CLASS} style={OVERLAY_CONTAINER_STYLE}>
         {/* Header */}
         <div className={OVERLAY_HEADER_CLASS}>
           <h2 className={OVERLAY_TITLE_CLASS}>Select Cards to Buy</h2>
-          <p className={OVERLAY_DESCRIPTION_CLASS}>
+          <OverlayDescription>
             Choose cards to buy for your next turn. Each card costs {costPerCard} MC.
-          </p>
+          </OverlayDescription>
         </div>
 
         {/* Cards display */}
-        <div className={OVERLAY_CARDS_CONTAINER_CLASS}>
-          <div className={OVERLAY_CARDS_INNER_CLASS}>
-            {cards.map((card, index) => {
-              const cardIndex = selectedCardIds.indexOf(card.id);
-              const isSelected = cardIndex !== -1;
+        <CardSelectionRow>
+          {cards.map((card, index) => {
+            const cardIndex = selectedCardIds.indexOf(card.id);
+            const isSelected = cardIndex !== -1;
 
-              return (
-                <CardChoice
-                  key={card.id}
-                  card={card}
-                  isSelected={isSelected}
-                  onSelect={handleCardSelect}
-                  animationDelay={index * 100}
-                  showCheckbox={true}
-                />
-              );
-            })}
-          </div>
-        </div>
+            return (
+              <CardChoice
+                key={card.id}
+                card={card}
+                isSelected={isSelected}
+                onSelect={handleCardSelect}
+                animationDelay={index * 100}
+                showCheckbox={true}
+              />
+            );
+          })}
+        </CardSelectionRow>
 
         {/* Footer with cost and confirm button */}
         <div className={OVERLAY_FOOTER_CLASS}>
           <div className={OVERLAY_FOOTER_LEFT_CLASS}>
             <div className={RESOURCE_DISPLAY_CLASS}>
-              <span className={RESOURCE_LABEL_CLASS}>Available payment:</span>
-              <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size="large" />
+              <span className={RESOURCE_LABEL_CLASS}>
+                {isCompact ? "Credits" : "Available payment:"}
+              </span>
+              <GameIcon iconType={ResourceTypeCredit} amount={playerCredits} size={iconSize} />
             </div>
             <div className={RESOURCE_DISPLAY_CLASS}>
-              <span className={RESOURCE_LABEL_CLASS}>Total Cost:</span>
+              <span className={RESOURCE_LABEL_CLASS}>{isCompact ? "Cost" : "Total Cost:"}</span>
               {totalCost > 0 ? (
-                <GameIcon iconType={ResourceTypeCredit} amount={totalCost} size="large" />
+                <GameIcon iconType={ResourceTypeCredit} amount={totalCost} size={iconSize} />
               ) : (
                 <span className="!text-[#4caf50] font-bold tracking-[1px]">FREE</span>
               )}
@@ -120,24 +128,31 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
           </div>
 
           <div className={OVERLAY_FOOTER_RIGHT_CLASS}>
-            <div className="text-sm">
-              {selectedCardIds.length === 0 ? (
-                showConfirmation ? (
-                  <span className="text-[#ff9800]">
-                    Are you sure you don't want to buy any cards?
-                  </span>
+            {!isCompact && (
+              <div className="text-sm">
+                {selectedCardIds.length === 0 ? (
+                  showConfirmation ? (
+                    <span className="text-[#ff9800]">
+                      Are you sure you don't want to buy any cards?
+                    </span>
+                  ) : (
+                    <span className="text-white/70">No cards selected</span>
+                  )
                 ) : (
-                  <span className="text-white/70">No cards selected</span>
-                )
-              ) : (
-                <span className="text-white/70">
-                  {selectedCardIds.length} card
-                  {selectedCardIds.length !== 1 ? "s" : ""} selected
-                </span>
-              )}
-            </div>
+                  <span className="text-white/70">
+                    {selectedCardIds.length} card
+                    {selectedCardIds.length !== 1 ? "s" : ""} selected
+                  </span>
+                )}
+              </div>
+            )}
             <div className="flex gap-3 items-center">
-              <GameButton emphasis="quiet" size="md" onClick={onReturn}>
+              <GameButton
+                emphasis="quiet"
+                size="md"
+                className={OVERLAY_ACTION_BUTTON_CLASS}
+                onClick={onReturn}
+              >
                 Hide
               </GameButton>
               {allowRandomBuy && selectedCardIds.length === 0 && (
@@ -146,7 +161,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
                   size="lg"
                   onClick={() => onSelectCards([], { randomBuy: true })}
                   disabled={playerCredits < costPerCard}
-                  className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
+                  className={OVERLAY_ACTION_BUTTON_CLASS}
                 >
                   <span className="inline-flex items-center gap-2">
                     <svg
@@ -174,7 +189,7 @@ const ProductionCardSelectionOverlay: React.FC<ProductionCardSelectionOverlayPro
                 size="lg"
                 onClick={() => handleConfirm(onSelectCards)}
                 disabled={!isValidSelection}
-                className="whitespace-nowrap max-[768px]:w-full max-[768px]:py-3 max-[768px]:px-6 max-[768px]:text-lg"
+                className={OVERLAY_ACTION_BUTTON_CLASS}
               >
                 {showConfirmation
                   ? "Confirm Skip"

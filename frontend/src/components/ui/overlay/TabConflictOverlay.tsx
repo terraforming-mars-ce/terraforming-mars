@@ -26,19 +26,19 @@ const TabConflictOverlay: React.FC<TabConflictOverlayProps> = ({
 
       {/* Warning modal */}
       <div
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 min-w-[400px] max-w-[600px] w-[90%] max-[768px]:min-w-[320px] max-[768px]:mx-5"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 min-w-[400px] max-w-[600px] w-[90%] max-[768px]:min-w-[320px] max-[768px]:mx-5 compact:max-h-[calc(100dvh-16px)] compact:overflow-y-auto compact:overscroll-contain"
         style={{ zIndex: getZIndex("ERROR_OVERLAYS", 1) }}
       >
-        <div className="bg-[linear-gradient(135deg,rgba(30,60,90,0.95)_0%,rgba(20,40,70,0.9)_50%,rgba(10,30,60,0.95)_100%)] border-2 border-[rgba(255,193,7,0.6)] rounded-[20px] p-10 [backdrop-filter:blur(10px)] shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(255,193,7,0.2)] text-center max-[768px]:p-6 max-[480px]:p-5">
-          <div className="text-[64px] mb-5 max-[768px]:text-5xl max-[480px]:text-[40px] max-[480px]:mb-4">
+        <div className="bg-[linear-gradient(135deg,rgba(30,60,90,0.95)_0%,rgba(20,40,70,0.9)_50%,rgba(10,30,60,0.95)_100%)] border-2 border-[rgba(255,193,7,0.6)] rounded-[20px] p-10 [backdrop-filter:blur(10px)] shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(255,193,7,0.2)] text-center max-[768px]:p-6 max-[480px]:p-5 compact:p-5!">
+          <div className="text-[64px] mb-5 max-[768px]:text-5xl max-[480px]:text-[40px] max-[480px]:mb-4 compact:hidden">
             ⚠️
           </div>
 
-          <h2 className="text-[#ffc107] text-[28px] m-0 mb-6 [text-shadow:0_2px_4px_rgba(0,0,0,0.8)] font-bold max-[768px]:text-[22px] max-[480px]:text-lg">
+          <h2 className="text-[#ffc107] text-[28px] m-0 mb-6 [text-shadow:0_2px_4px_rgba(0,0,0,0.8)] font-bold max-[768px]:text-[22px] max-[480px]:text-lg compact:mb-3!">
             Game Already Active
           </h2>
 
-          <div className="text-white/90 text-base leading-[1.6] mb-8 text-left max-[768px]:text-sm [&_p]:m-0 [&_p]:mb-4">
+          <div className="text-white/90 text-base leading-[1.6] mb-8 text-left max-[768px]:text-sm [&_p]:m-0 [&_p]:mb-4 compact:mb-4! compact:[&_p]:mb-2!">
             <p>A game is already running in another tab or window:</p>
             <div className="bg-black/30 rounded-lg p-4 my-4 border border-white/20">
               <div className="flex justify-between mb-2 last:mb-0">
