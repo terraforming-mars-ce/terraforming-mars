@@ -1,16 +1,40 @@
-name: Build Images
+name: Release
 
+# Pushing an annotated vMAJOR.MINOR.PATCH tag builds every image and opens a
+# draft GitHub release whose notes are the tag message. Deploys stay manual.
 on:
-  release:
-    types: [published]
   push:
-    tags: ['v*']
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
+  draft-release:
+    name: Create draft release
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Extract annotated tag message
+        run: |
+          git tag -l --format='%(contents:body)' "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release-notes.md"
+          cat "$RUNNER_TEMP/release-notes.md"
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: ${{ github.ref_name }}
+          body_path: ${{ runner.temp }}/release-notes.md
+
   build-and-push:
     name: Build & Push ${{ matrix.name }} image
     runs-on: ubuntu-latest
