@@ -25,6 +25,11 @@ dev:
 run: build
     TM_REPO_PATH=.. ./bin/server
 
+[group('dev')]
+[doc('Build and run the API on :3001, also serving the built frontend (`just frontend build` first), like the production image')]
+serve: build
+    TM_REPO_PATH=.. TM_WEB_DIR=../frontend/build ./bin/server
+
 [group('check')]
 [doc('Run tests; args replace the default package pattern, e.g. `just backend test -v -run TestKick ./test/action/...`')]
 test *args="./test/...":

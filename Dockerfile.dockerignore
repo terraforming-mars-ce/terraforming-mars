@@ -8,3 +8,7 @@ frontend/src/assets/generated
 frontend/public/assets
 **/.env
 **/.env.*
+backend/bin
+backend/tmp
+**/coverage.out
+**/coverage.html

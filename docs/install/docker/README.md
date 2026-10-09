@@ -1,13 +1,12 @@
 # Docker
 
-## Building the images
+## Building the image
 
-Both Dockerfiles expect to be built from the repo root.
+The Dockerfile expects to be built from the repo root. The game's art and audio are in Git LFS, so pull them first.
 
 ```bash
-docker build -f backend/Dockerfile -t tm-backend .
 git lfs pull
-docker build -f frontend/Dockerfile -t tm-frontend .
+docker build -t terraforming-mars .
 ```
 
 ## Running the game
@@ -15,8 +14,7 @@ docker build -f frontend/Dockerfile -t tm-frontend .
 Minimal setup -- just the game, no bug reporting:
 
 ```bash
-docker run -d --name tm-backend -p 3001:3001 tm-backend
-docker run -d --name tm-frontend -p 3000:3000 tm-frontend
+docker run -d --name terraforming-mars -p 3001:3001 terraforming-mars
 ```
 
 Or use the example compose file in this directory:
@@ -25,14 +23,14 @@ Or use the example compose file in this directory:
 docker compose up -d
 ```
 
-Game is at `http://localhost:3000`. The frontend talks to the backend through the browser at `localhost:3001`, so `API_URL` is set to point there.
+Game is at `http://localhost:3001`. The same server answers the page, the API and the WebSocket.
 
 ## Running with bug reporting
 
 The GitHub App private key should be bind-mounted into the container as a file, not passed as an env var. The `:ro` flag makes it read-only inside the container.
 
 ```bash
-docker run -d --name tm-backend \
+docker run -d --name terraforming-mars \
   -p 3001:3001 \
   -v /path/to/private-key.pem:/etc/secrets/github/private-key.pem:ro \
   -e GITHUB_APP_ID=<app-id> \
@@ -41,16 +39,14 @@ docker run -d --name tm-backend \
   -e GITHUB_REPO_OWNER=<owner> \
   -e GITHUB_REPO_NAME=<repo> \
   -e CLAUDE_CODE_OAUTH_TOKEN=<token> \
-  tm-backend
+  terraforming-mars
 ```
 
 If you're on Fedora or another SELinux system, you may need `:z` instead of `:ro` on the volume mount so the container process can actually read the file.
 
 ## Running behind a reverse proxy
 
-When both containers sit behind a proxy on the same hostname, don't set `API_URL` at all. The default (`/api/v1`) uses the browser's current origin for both HTTP and WebSocket connections.
-
-See the [overview](../README.md) for the required proxy routing rules.
+Point the proxy at port 3001 for every path. See the [overview](../README.md) for the WebSocket timeouts it needs.
 
 ## Note on the private key
 

@@ -4,7 +4,7 @@ import { build, outDir } from "./build.ts";
 
 const root = join(import.meta.dir, "..");
 const port = Number(process.env.PORT ?? 4000);
-const servers = process.env.TM_SERVERS ?? "local=http://localhost:4173";
+const servers = process.env.TM_SERVERS ?? "local=http://localhost:3001";
 
 // servers.js comes from the same entrypoint script the container runs
 async function writeServers(): Promise<void> {

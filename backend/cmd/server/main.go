@@ -28,6 +28,7 @@ import (
 	turnAction "terraforming-mars-backend/internal/action/turn_management"
 	"terraforming-mars-backend/internal/delivery/dto"
 	httpHandler "terraforming-mars-backend/internal/delivery/http"
+	"terraforming-mars-backend/internal/delivery/web"
 	wsHandler "terraforming-mars-backend/internal/delivery/websocket"
 	"terraforming-mars-backend/internal/delivery/websocket/core"
 	"terraforming-mars-backend/internal/game"
@@ -92,6 +93,15 @@ func main() {
 	log.Info("Starting Terraforming Mars backend server")
 	log.Info("Version: " + Version)
 	log.Debug("Log level set to " + logLevel)
+
+	addr := os.Getenv("TM_ADDR")
+	if addr == "" {
+		addr = ":3001"
+	}
+	webDir := os.Getenv("TM_WEB_DIR")
+	if webDir == "" {
+		webDir = "web"
+	}
 
 	serverMeta, err := loadServerMeta()
 	if err != nil {
@@ -468,7 +478,6 @@ func main() {
 
 	// ========== Setup HTTP Router ==========
 	mainRouter := mux.NewRouter()
-	mainRouter.Use(httpmiddleware.CORS) // Apply CORS to all routes
 
 	apiRouter := httpHandler.SetupRouter(
 		createGameAction,
@@ -494,11 +503,23 @@ func main() {
 	// Add WebSocket endpoint
 	mainRouter.HandleFunc("/ws", wsHttpHandler.ServeWS)
 
+	// Registered last: mux matches in order, and the frontend owns every other path
+	if info, err := os.Stat(webDir); err == nil && info.IsDir() {
+		staticHandler, err := web.NewStaticHandler(webDir)
+		if err != nil {
+			log.Error("Failed to index frontend", slog.Any("error", err))
+			os.Exit(1)
+		}
+		mainRouter.PathPrefix("/").Handler(httpmiddleware.Recovery(staticHandler))
+	} else {
+		log.Info("Frontend not served: no web directory", slog.String("dir", webDir))
+	}
+
 	log.Debug("HTTP routes configured")
 
 	// ========== Setup HTTP Server ==========
 	server := &http.Server{
-		Addr:         ":3001",
+		Addr:         addr,
 		Handler:      mainRouter,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -507,7 +528,7 @@ func main() {
 
 	// Start HTTP server in background
 	go func() {
-		log.Info("HTTP server listening on :3001")
+		log.Info("HTTP server listening", slog.String("addr", addr))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error("Failed to start HTTP server", slog.Any("error", err))
 			os.Exit(1)

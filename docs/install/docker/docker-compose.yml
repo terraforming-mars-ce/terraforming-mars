@@ -1,7 +1,7 @@
 services:
-  backend:
-    image: ghcr.io/terraforming-mars-ce/terraforming-mars-backend:latest
-    container_name: tm-backend
+  app:
+    image: ghcr.io/terraforming-mars-ce/terraforming-mars:latest
+    container_name: terraforming-mars
     restart: unless-stopped
     ports:
       - "3001:3001"
@@ -21,16 +21,3 @@ services:
       # Mount your GitHub App private key here if using bug reporting.
       # Comment out if not needed.
       - ${GITHUB_PRIVATE_KEY_FILE:-/dev/null}:/etc/secrets/github/private-key.pem:ro
-
-  frontend:
-    image: ghcr.io/terraforming-mars-ce/terraforming-mars-frontend:latest
-    container_name: tm-frontend
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    environment:
-      # Point at the backend since they're on separate ports here.
-      # Behind a reverse proxy, remove this -- the default /api/v1 works.
-      - API_URL=http://localhost:3001/api/v1

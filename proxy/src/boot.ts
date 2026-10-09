@@ -5,9 +5,9 @@ import type { MetaResponse, ServerEntry } from "./servers.ts";
  * its current bundle; its script and style tags are recreated here with
  * absolute URLs, so every file loads straight from the server.
  *
- * In the original document module scripts are deferred: classic scripts such
- * as runtime-config.js run first wherever they sit. Injected modules run as
- * soon as they load, so classic scripts are injected and awaited first.
+ * In the original document module scripts are deferred: classic scripts run
+ * first wherever they sit. Injected modules run as soon as they load, so any
+ * classic scripts are injected and awaited first.
  */
 export async function bootServer(
   server: ServerEntry,
