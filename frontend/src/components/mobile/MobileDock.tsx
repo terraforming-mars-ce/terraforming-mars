@@ -13,8 +13,6 @@ import {
 import { useMobileGame } from "./MobileGameContext.tsx";
 import { getConversionAvailability } from "./conversionAvailability.ts";
 
-const CONVERSION_PROJECTS = new Set(["convert-plants-to-greenery", "convert-heat-to-temperature"]);
-
 interface DockEntry {
   id: MobileScreenId;
   label: string;
@@ -60,9 +58,7 @@ export default function MobileDock({ className = "" }: MobileDockProps) {
   const viewer = gameState.currentPlayer;
   const projectsAvailable =
     canAct &&
-    (!!viewer?.standardProjects?.some(
-      (p) => p.available && !CONVERSION_PROJECTS.has(p.projectType),
-    ) ||
+    (!!viewer?.standardProjects?.some((p) => p.available) ||
       !!viewer?.milestones?.some((m) => m.available) ||
       !!viewer?.awards?.some((a) => a.available) ||
       !!gameState.colonies?.some((c) => c.tradeAvailable || c.buildAvailable) ||

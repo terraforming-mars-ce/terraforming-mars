@@ -14,17 +14,11 @@ import MobileScreen, { type MobileScreenTab } from "../MobileScreen.tsx";
 import { ProjectsIcon } from "../screenIcons.tsx";
 import { useMobileGame } from "../MobileGameContext.tsx";
 
-const CONVERSION_PROJECTS = new Set(["convert-plants-to-greenery", "convert-heat-to-temperature"]);
-
 function availabilityByTab(gameState: GameDto): Record<MobileProjectsTab, boolean> {
   const canAct = canPerformActions(gameState);
   const viewer = gameState.currentPlayer;
   return {
-    standard:
-      canAct &&
-      !!viewer?.standardProjects?.some(
-        (p) => p.available && !CONVERSION_PROJECTS.has(p.projectType),
-      ),
+    standard: canAct && !!viewer?.standardProjects?.some((p) => p.available),
     milestones: canAct && !!viewer?.milestones?.some((m) => m.available),
     awards: canAct && !!viewer?.awards?.some((a) => a.available),
     colonies: canAct && !!gameState.colonies?.some((c) => c.tradeAvailable || c.buildAvailable),
