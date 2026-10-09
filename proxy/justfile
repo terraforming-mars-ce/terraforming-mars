@@ -12,14 +12,15 @@ deps:
     bun install
 
 [group('dev')]
-[doc('Run the gateway on :4000; TM_SERVERS picks its servers (default: `just proxy member` on :4173)')]
+[doc('Run the gateway on :4000; TM_SERVERS picks its servers (default: `just proxy member` on :3001)')]
 dev:
     bun run dev
 
 [group('dev')]
-[doc('Serve a production frontend build on :4173 for the dev gateway; needs the backend on :3001')]
+[doc('Build the frontend and run the server as the production image does, on :3001, for the dev gateway; not alongside `just dev`, which also uses :3001')]
 member:
-    cd {{ source_directory() }}/../frontend && bun run build && bunx vite preview --port 4173 --strictPort
+    {{ just_executable() }} --justfile {{ source_directory() }}/../justfile frontend build
+    {{ just_executable() }} --justfile {{ source_directory() }}/../justfile backend serve
 
 [group('check')]
 [doc('Fail if any source file is not oxfmt-formatted')]
