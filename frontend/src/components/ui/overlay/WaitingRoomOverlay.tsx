@@ -14,6 +14,7 @@ import { BotPersonaChip, PlayerChip } from "../display/BotChips.tsx";
 import InlineEmote from "../display/InlineEmote.tsx";
 import MainMenuHamburger, { MainMenuDrawerButton } from "../buttons/MainMenuHamburger.tsx";
 import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
+import { serverLink } from "@/utils/gateway.ts";
 
 interface WaitingRoomOverlayProps {
   game: GameDto;
@@ -100,7 +101,7 @@ const WaitingRoomOverlay: React.FC<WaitingRoomOverlayProps> = ({
 }) => {
   const navigate = useNavigate();
   const isHost = game.hostPlayerId === playerId;
-  const joinUrl = `${window.location.origin}/game/${game.id}?type=join`;
+  const joinUrl = serverLink(`/game/${game.id}?type=join`);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaveConfirmVisible, setLeaveConfirmVisible] = useState(true);
   const [pendingLeave, setPendingLeave] = useState(false);

@@ -25,6 +25,7 @@ import {
   toggleFullscreen,
 } from "@/utils/fullscreen.ts";
 import { useInstallOffer } from "@/utils/installApp.ts";
+import { serverLink } from "@/utils/gateway.ts";
 
 interface GameMenuItemsProps {
   onClose: () => void;
@@ -70,7 +71,7 @@ export const GameMenuItems: React.FC<GameMenuItemsProps> = ({
     if (!gameId) {
       return;
     }
-    const url = `${window.location.origin}/game/${gameId}`;
+    const url = serverLink(`/game/${gameId}`);
     await navigator.clipboard.writeText(url);
     onClose();
   }, [gameId, onClose]);

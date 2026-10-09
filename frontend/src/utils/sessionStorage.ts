@@ -2,7 +2,9 @@
  * Utility functions for managing game session data in localStorage
  */
 
-const STORAGE_KEY = "terraforming-mars-game";
+import { serverScopedKey } from "./gateway.ts";
+
+const STORAGE_KEY = serverScopedKey("terraforming-mars-game");
 
 export interface StoredGameData {
   gameId: string;

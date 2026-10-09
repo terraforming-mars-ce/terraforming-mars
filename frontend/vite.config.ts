@@ -55,6 +55,9 @@ export default defineConfig({
       },
     },
   },
+  worker: {
+    format: "es",
+  },
   optimizeDeps: {
     include: ["three", "@react-three/fiber", "@react-three/drei"],
   },

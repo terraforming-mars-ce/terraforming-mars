@@ -17,16 +17,25 @@ declare global {
 const DEFAULT_API_URL = "/api/v1";
 
 /**
+ * Resolves a server path against the origin this bundle was loaded from. A
+ * gateway boots the bundle from another origin than the page, so server URLs
+ * must never resolve against `window.location`.
+ */
+export function serverUrl(path: string): string {
+  return new URL(path, import.meta.url).href;
+}
+
+/**
  * Get the runtime configuration.
  * Priority:
  * 1. window.__RUNTIME_CONFIG__ (set by runtime-config.js at container startup)
- * 2. Same-origin `/api/v1`, which the Vite dev server proxies to the backend
+ * 2. `/api/v1` on the server that served this bundle (the Vite dev server proxies it to the backend)
  */
 function getConfig(): RuntimeConfig {
   const runtimeConfig = window.__RUNTIME_CONFIG__;
 
   return {
-    apiUrl: runtimeConfig?.apiUrl || DEFAULT_API_URL,
+    apiUrl: serverUrl(runtimeConfig?.apiUrl || DEFAULT_API_URL),
   };
 }
 
@@ -35,29 +44,10 @@ export const config = getConfig();
 export const APP_VERSION: string = import.meta.env.VITE_APP_VERSION || "localbuild";
 
 /**
- * Derives the WebSocket URL from the API URL.
- * - If apiUrl is a relative path (e.g., "/api/v1"), uses current host with appropriate protocol
- * - If apiUrl is absolute, derives the WS URL from it
+ * Derives the WebSocket URL from the API URL's host.
  */
 export function getWebSocketUrl(): string {
-  const { apiUrl } = config;
-
-  // Handle relative URL (e.g., "/api/v1")
-  if (apiUrl.startsWith("/")) {
-    if (typeof window !== "undefined") {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      return `${protocol}//${window.location.host}/ws`;
-    }
-    return "ws://localhost:3001/ws";
-  }
-
-  // Handle absolute URL - derive WS URL from it
-  try {
-    const url = new URL(apiUrl);
-    const wsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
-    return `${wsProtocol}//${url.host}/ws`;
-  } catch {
-    // Fallback for invalid URLs
-    return "ws://localhost:3001/ws";
-  }
+  const url = new URL(config.apiUrl);
+  const wsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return `${wsProtocol}//${url.host}/ws`;
 }

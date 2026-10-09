@@ -1,0 +1,61 @@
+# Gateway tasks. Run `just` here for proxy recipes, or `just proxy <recipe>` from the repo root.
+
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+[private]
+default:
+    @just --list --unsorted
+
+[group('setup')]
+[doc('Install proxy dependencies')]
+deps:
+    bun install
+
+[group('dev')]
+[doc('Run the gateway on :4000; TM_SERVERS picks its servers (default: `just proxy member` on :4173)')]
+dev:
+    bun run dev
+
+[group('dev')]
+[doc('Serve a production frontend build on :4173 for the dev gateway; needs the backend on :3001')]
+member:
+    cd {{ source_directory() }}/../frontend && bun run build && bunx vite preview --port 4173 --strictPort
+
+[group('check')]
+[doc('Fail if any source file is not oxfmt-formatted')]
+format-check:
+    bun run format
+
+[group('check')]
+[doc('Run oxlint')]
+lint:
+    bun run lint
+
+[group('check')]
+[doc('Type-check the loader and scripts')]
+typecheck:
+    bun run typecheck
+
+[group('check')]
+[doc('Run the loader tests')]
+test:
+    bun run test
+
+[group('check')]
+[doc('Run format-check, lint, typecheck and tests')]
+check: format-check lint typecheck test
+
+[group('fix')]
+[doc('Format source with oxfmt')]
+format:
+    bun run format:write
+
+[group('build')]
+[doc('Build the gateway to dist/')]
+build:
+    bun run build
+
+[group('build')]
+[doc('Remove build output')]
+clean:
+    rm -rf dist

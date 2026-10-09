@@ -38,6 +38,11 @@ spec:
               mountPath: /etc/secrets/github
               readOnly: true
           env:
+            # Identity shown by a gateway that fronts several servers (lowercase a-z, 0-9, -)
+            - name: TM_SERVER_ALIAS
+              value: <alias>
+            - name: TM_SERVER_NAME
+              value: <display name>
             - name: GITHUB_APP_ID
               value: "<app-id>"
             - name: GITHUB_INSTALLATION_ID

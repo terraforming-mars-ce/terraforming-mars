@@ -20,6 +20,7 @@ import type {
   CardFamily,
   CardSort,
 } from "./cardBrowser/cardCatalog.ts";
+import { serverLink } from "@/utils/gateway.ts";
 
 interface CardBrowserProps {
   onBack: () => void;
@@ -186,7 +187,7 @@ export default function CardBrowser({
         : (CARD_FAMILIES.find((item) => selectedCounts[item] > 0) ?? "project");
     params.set("family", sharedFamily);
     [...selected].sort().forEach((id) => params.append("cId", id));
-    return `${window.location.origin}/cards?${params}`;
+    return serverLink(`/cards?${params}`);
   }, [selected, selectedCounts, family]);
   const toggleSelection = useCallback((id: string) => {
     setSelected((previous) => {

@@ -124,3 +124,10 @@ type FeedbackStatusResponse struct {
 	Available bool   `json:"available"`
 	Reason    string `json:"reason,omitempty"`
 }
+
+// MetaResponse identifies this server to a gateway that fronts several servers.
+type MetaResponse struct {
+	Alias   string `json:"alias"`
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}

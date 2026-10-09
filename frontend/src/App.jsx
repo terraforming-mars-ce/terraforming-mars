@@ -25,6 +25,7 @@ import { useUIOverlayStore } from "./stores/uiOverlayStore.ts";
 import { isRenderPaused, useRenderPause, useRenderPauseStore } from "./stores/renderPauseStore.ts";
 import { Z_INDEX } from "./constants/zIndex.ts";
 import { APP_VERSION } from "./config.ts";
+import { changeServer, gatewayServer } from "./utils/gateway.ts";
 import { useKeepTestingParams } from "./utils/quickMode.ts";
 import LayoutModeAttribute from "./components/LayoutModeAttribute.tsx";
 import LayoutDebugReadout from "./components/LayoutDebugReadout.tsx";
@@ -210,8 +211,27 @@ function MenuFooter({ visible = true }) {
           style={{ zIndex: Z_INDEX.COST_DISPLAY }}
         >
           <span className="pointer-events-auto">
+            {gatewayServer && (
+              <>
+                {gatewayServer.name}
+                <span className="mx-1">·</span>
+              </>
+            )}
             {APP_VERSION}
             <span className="mx-1">|</span>
+            {gatewayServer && (
+              <>
+                <GameButton
+                  emphasis="quiet"
+                  size="xs"
+                  className="!p-0 !min-h-0 compact:!min-h-11 hover:text-white/70 transition-colors cursor-pointer"
+                  onClick={changeServer}
+                >
+                  Change server
+                </GameButton>
+                <span className="mx-1">|</span>
+              </>
+            )}
             <GameButton
               emphasis="quiet"
               size="xs"

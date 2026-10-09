@@ -5,6 +5,7 @@ import (
 
 	gameaction "terraforming-mars-backend/internal/action/game"
 	"terraforming-mars-backend/internal/action/query"
+	"terraforming-mars-backend/internal/delivery/dto"
 	"terraforming-mars-backend/internal/game/award"
 	"terraforming-mars-backend/internal/game/cards"
 	"terraforming-mars-backend/internal/game/milestone"
@@ -28,10 +29,12 @@ func SetupRouter(
 	milestoneRegistry milestone.MilestoneRegistry,
 	awardRegistry award.AwardRegistry,
 	bugReportService *bugreport.Service,
+	meta dto.MetaResponse,
 ) *mux.Router {
 	gameHandler := NewGameHandler(createGameAction, getGameAction, getGameLogsAction, getGameHistoryAction, listGamesAction, listCardsAction, cardRegistry, milestoneRegistry, awardRegistry)
 	playerHandler := NewPlayerHandler(getPlayerAction, getGameAction, cardRegistry)
 	healthHandler := NewHealthHandler()
+	metaHandler := NewMetaHandler(meta)
 	bugReportHandler := NewBugReportHandler(bugReportService)
 
 	router := mux.NewRouter()
@@ -45,6 +48,7 @@ func SetupRouter(
 	api := router.PathPrefix("/api/v1").Subrouter()
 	api.HandleFunc("/game-options", gameHandler.GameOptions).Methods(http.MethodGet)
 	api.HandleFunc("/health", healthHandler.HealthCheck).Methods(http.MethodGet)
+	api.HandleFunc("/meta", metaHandler.Meta).Methods(http.MethodGet)
 
 	gameRoutes := api.PathPrefix("/games").Subrouter()
 	gameRoutes.HandleFunc("", gameHandler.CreateGame).Methods(http.MethodPost)

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"syscall"
 	"time"
 
@@ -50,6 +51,24 @@ import (
 
 var Version = "localbuild"
 
+var serverAliasPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
+
+// loadServerMeta reads the identity a gateway uses to list and verify this server.
+func loadServerMeta() (dto.MetaResponse, error) {
+	alias := os.Getenv("TM_SERVER_ALIAS")
+	if alias == "" {
+		alias = "local"
+	}
+	if !serverAliasPattern.MatchString(alias) {
+		return dto.MetaResponse{}, fmt.Errorf("TM_SERVER_ALIAS %q must match %s", alias, serverAliasPattern)
+	}
+	name := os.Getenv("TM_SERVER_NAME")
+	if name == "" {
+		name = alias
+	}
+	return dto.MetaResponse{Alias: alias, Name: name, Version: Version}, nil
+}
+
 func main() {
 	// Load env from dev.env if present (does not override existing env vars)
 	_ = godotenv.Load("dev.env")
@@ -73,6 +92,13 @@ func main() {
 	log.Info("Starting Terraforming Mars backend server")
 	log.Info("Version: " + Version)
 	log.Debug("Log level set to " + logLevel)
+
+	serverMeta, err := loadServerMeta()
+	if err != nil {
+		log.Error("Invalid server identity", slog.Any("error", err))
+		os.Exit(1)
+	}
+	log.Info("Server alias: " + serverMeta.Alias)
 
 	// Setup graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -456,6 +482,7 @@ func main() {
 		milestoneRegistry,
 		awardRegistry,
 		bugReportService,
+		serverMeta,
 	)
 
 	// Mount API router

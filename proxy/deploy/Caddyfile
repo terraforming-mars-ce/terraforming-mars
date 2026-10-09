@@ -1,0 +1,4 @@
+openmars.app {
+	encode zstd gzip
+	reverse_proxy localhost:4000
+}

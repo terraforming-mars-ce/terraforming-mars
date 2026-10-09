@@ -45,6 +45,10 @@ jobs:
         working-directory: ./frontend
         run: bun install --frozen-lockfile
 
+      - name: Install gateway dependencies
+        working-directory: ./proxy
+        run: bun install --frozen-lockfile
+
       - name: Set up just
         uses: extractions/setup-just@v4.0.0
         with:
@@ -213,6 +217,35 @@ jobs:
           name: frontend-build
           path: frontend/build/
           retention-days: 7
+
+  proxy:
+    runs-on: ubuntu-latest
+    name: Gateway
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+        with:
+          lfs: true
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: 1.4.2
+
+      - name: Install gateway dependencies
+        working-directory: ./proxy
+        run: bun install --frozen-lockfile
+
+      - name: Set up just
+        uses: extractions/setup-just@v4.0.0
+        with:
+          just-version: '1.57.0'
+
+      - name: Lint, type-check and test the gateway
+        run: just proxy::lint proxy::typecheck proxy::test
+
+      - name: Build the gateway
+        run: just proxy build
 
   coverage:
     runs-on: ubuntu-latest

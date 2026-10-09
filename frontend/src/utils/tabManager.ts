@@ -3,7 +3,9 @@
  * Ensures only one tab can have an active game session at a time.
  */
 
-const TAB_STORAGE_KEY_PREFIX = "terraforming-mars-active-tab";
+import { serverScopedKey } from "./gateway.ts";
+
+const TAB_STORAGE_KEY_PREFIX = serverScopedKey("terraforming-mars-active-tab");
 const HEARTBEAT_INTERVAL = 5000; // 5 seconds
 const TAB_TIMEOUT = 10000; // 10 seconds
 

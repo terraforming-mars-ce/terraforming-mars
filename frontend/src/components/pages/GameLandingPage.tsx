@@ -6,7 +6,7 @@ import { globalWebSocketManager } from "../../services/globalWebSocketManager.ts
 import { useNotifications } from "../../contexts/NotificationContext.tsx";
 import { GameDto } from "../../types/generated/api-types.ts";
 import { getCorporationLogo } from "../../utils/corporationLogos.tsx";
-import { clearGameSession } from "../../utils/sessionStorage.ts";
+import { clearGameSession, getGameSession } from "../../utils/sessionStorage.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
@@ -33,9 +33,9 @@ const GameLandingPage: React.FC = () => {
     const checkExistingGame = async () => {
       try {
         // Check localStorage for existing game
-        const savedGameDataString = localStorage.getItem("terraforming-mars-game");
-        if (savedGameDataString) {
-          const { gameId, playerId, playerName, isSpectator } = JSON.parse(savedGameDataString);
+        const savedGame = getGameSession();
+        if (savedGame) {
+          const { gameId, playerId, playerName, isSpectator } = savedGame;
 
           if (gameId && (playerId || isSpectator)) {
             const game = await apiService.getGame(gameId, isSpectator ? undefined : playerId);
