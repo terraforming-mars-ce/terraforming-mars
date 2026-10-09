@@ -10,9 +10,10 @@ Tasks run through [just](https://just.systems). The root `justfile` loads three 
 ```bash
 just deps          # Install Go modules and frontend dependencies
 just dev           # Run backend (3001, Air hot reload) and frontend (3000) together
+just dev --proxy   # Same, plus the gateway (4000) in front of the frontend
 just backend dev   # Backend only
 just frontend dev  # Frontend only
-just kill          # Stop stray dev servers on 3000/3001
+just kill          # Stop stray dev servers on 3000/3001/4000
 ```
 
 ### Testing
