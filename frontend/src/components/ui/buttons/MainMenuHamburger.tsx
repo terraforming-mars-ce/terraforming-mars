@@ -26,6 +26,7 @@ import {
 } from "@/utils/fullscreen.ts";
 import { useInstallOffer } from "@/utils/installApp.ts";
 import { useLocation, useNavigate } from "react-router-dom";
+import { serverLink } from "@/utils/gateway.ts";
 
 interface MainMenuProps {
   gameId?: string;
@@ -66,7 +67,7 @@ export const MainMenuItems: React.FC<MainMenuProps & { onClose: () => void }> = 
 
   const handleCopyGameLink = useCallback(async () => {
     if (gameId) {
-      const url = `${window.location.origin}/game/${gameId}`;
+      const url = serverLink(`/game/${gameId}`);
       await navigator.clipboard.writeText(url);
       onClose();
     }

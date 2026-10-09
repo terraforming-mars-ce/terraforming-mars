@@ -11,6 +11,7 @@ import CardIcon from "@/components/ui/cards/BehaviorSection/components/CardIcon.
 import BehaviorSection from "@/components/ui/cards/BehaviorSection";
 import { getZIndex } from "@/constants/zIndex.ts";
 import type { ContentDensity } from "./density.ts";
+import { serverLink } from "@/utils/gateway.ts";
 
 interface DensityStyle {
   dividerLabel: string;
@@ -411,7 +412,7 @@ const LogEntry: React.FC<{
           Revealed and discarded:{" "}
           <a
             className="text-[#64c8ff] underline cursor-pointer"
-            href={`/cards?cId=${encodeURIComponent(card.cardId)}`}
+            href={serverLink(`/cards?cId=${encodeURIComponent(card.cardId)}`)}
             target="_blank"
             rel="noreferrer"
           >
