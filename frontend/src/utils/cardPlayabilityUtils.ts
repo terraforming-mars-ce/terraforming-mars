@@ -1,4 +1,5 @@
 import { CardDto } from "../types/generated/api-types.ts";
+import { config } from "../config.ts";
 
 let cardCache: Map<string, CardDto> | null = null;
 let corporationCache: CardDto[] | null = null;
@@ -12,7 +13,7 @@ export async function fetchAllCards(): Promise<Map<string, CardDto>> {
   }
 
   try {
-    const response = await fetch("/api/v1/cards?limit=500");
+    const response = await fetch(`${config.apiUrl}/cards?limit=500`);
     if (!response.ok) {
       throw new Error(`Failed to fetch cards: ${response.statusText}`);
     }
@@ -49,7 +50,7 @@ export async function fetchCorporations(): Promise<CardDto[]> {
   }
 
   try {
-    const response = await fetch("/api/v1/corporations");
+    const response = await fetch(`${config.apiUrl}/corporations`);
     if (!response.ok) {
       throw new Error(`Failed to fetch corporations: ${response.statusText}`);
     }

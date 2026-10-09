@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import landscapeWorkerUrl from "./landscape.worker.ts?worker&url";
+import { serverUrl } from "@/config.ts";
 import {
   EMPTY_LANDSCAPE,
   type LandscapeInput,
@@ -12,9 +14,7 @@ export function useLandscape(input: LandscapeInput, signature: string) {
   const accepted = useRef(EMPTY_LANDSCAPE);
   const [result, setResult] = useState<LandscapeState>(EMPTY_LANDSCAPE);
   useEffect(() => {
-    const instance = new Worker(new URL("./landscape.worker.ts", import.meta.url), {
-      type: "module",
-    });
+    const instance = createLandscapeWorker();
     worker.current = instance;
     accepted.current = EMPTY_LANDSCAPE;
     instance.onmessage = ({ data }: MessageEvent<LandscapeDelta>) => {
@@ -57,4 +57,22 @@ export function useLandscape(input: LandscapeInput, signature: string) {
     } satisfies LandscapeRequest);
   }, [signature]);
   return result;
+}
+
+/**
+ * Browsers refuse to start a worker from another origin, which happens when a
+ * gateway boots this bundle. A same-origin blob that imports the real script
+ * is allowed, because module imports only need CORS.
+ */
+function createLandscapeWorker(): Worker {
+  const url = serverUrl(landscapeWorkerUrl);
+  if (new URL(url).origin === window.location.origin) {
+    return new Worker(url, { type: "module" });
+  }
+  const bootstrap = URL.createObjectURL(
+    new Blob([`import ${JSON.stringify(url)};`], { type: "text/javascript" }),
+  );
+  const worker = new Worker(bootstrap, { type: "module" });
+  URL.revokeObjectURL(bootstrap);
+  return worker;
 }

@@ -44,6 +44,8 @@ function loadNoiseTexture(): Promise<void> {
   }
   noiseLoadPromise = new Promise((resolve) => {
     const img = new Image();
+    // The bundle may be served from another origin than the page; without CORS the canvas is tainted
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = img.width;
