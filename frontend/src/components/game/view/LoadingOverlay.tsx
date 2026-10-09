@@ -2,6 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import { useProgress } from "@react-three/drei";
 import { Z_INDEX } from "@/constants/zIndex";
 
+/** What the file three.js is loading is, by its path under /assets/; most specific first. */
+const ASSET_LABELS: [RegExp, string][] = [
+  [/\/assets\/textures\/skyboxes\//, "Loading starfield"],
+  [/\/assets\/textures\/planets\/mars\//, "Loading Mars"],
+  [/\/assets\/textures\/planets\//, "Loading planets"],
+  [/\/assets\/textures\/terrain\//, "Loading terrain"],
+  [/\/assets\/textures\//, "Loading textures"],
+  [/\/assets\/models\//, "Loading models"],
+];
+
+function assetLabel(item: string): string | undefined {
+  return ASSET_LABELS.find(([pattern]) => pattern.test(item))?.[1];
+}
+
 /** Real asset progress fills this much of the bar; the rest covers scene build and GPU work. */
 const ASSET_SHARE = 90;
 /** The time-based estimate approaches ESTIMATE_CEILING with this time constant. */
@@ -83,7 +97,7 @@ interface LoadingOverlayProps {
   fadeDurationMs?: number;
   /**
    * Show an estimated percentage and bar instead of the spinner, with a single detail line
-   * below it: the subtitle, or the message when there is no subtitle.
+   * below it: the subtitle, else the message, else what three.js is loading right now.
    */
   showProgress?: boolean;
 }
@@ -91,7 +105,7 @@ interface LoadingOverlayProps {
 type Phase = "waiting" | "showing" | "fading" | "done";
 
 export default function LoadingOverlay({
-  message = "Loading",
+  message,
   subtitle,
   isLoaded,
   onTransitionEnd,
@@ -103,6 +117,9 @@ export default function LoadingOverlay({
   const [phase, setPhase] = useState<Phase>(() => (showDelayMs === 0 ? "showing" : "waiting"));
   const shownAtRef = useRef<number | null>(showDelayMs === 0 ? Date.now() : null);
   const ref = useRef<HTMLDivElement>(null);
+  const loadingItem = useProgress((state) => state.item);
+  // Without a caller-given line, name what is loading right now
+  const detail = subtitle || message || assetLabel(loadingItem) || "Loading";
 
   useEffect(() => {
     if (phase !== "waiting") {
@@ -215,8 +232,8 @@ export default function LoadingOverlay({
           </style>
         </>
       )}
-      {!showProgress && message}
-      {(subtitle || (showProgress && message)) && (
+      {!showProgress && (message || "Loading")}
+      {(subtitle || showProgress) && (
         <div
           style={{
             marginTop: "8px",
@@ -225,7 +242,7 @@ export default function LoadingOverlay({
             fontFamily: "Orbitron, sans-serif",
           }}
         >
-          {subtitle || message}
+          {showProgress ? detail : subtitle}
         </div>
       )}
     </div>
