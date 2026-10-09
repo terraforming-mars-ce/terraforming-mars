@@ -7,7 +7,7 @@ export const outDir = join(root, "dist");
 
 /**
  * Builds the gateway into dist/: the hashed loader, the shell page that loads
- * it, and the app icons and manifest shared with the game frontend.
+ * it, and the app icons, Orbitron fonts and manifest shared with the game frontend.
  * servers.js is written at startup from TM_SERVERS, not here.
  */
 export async function build(): Promise<void> {
@@ -32,6 +32,12 @@ export async function build(): Promise<void> {
     shell.replace("%LOADER%", `assets/${basename(loader.path)}`),
   );
   await cp(join(repo, "assets/original/app"), outDir, { recursive: true });
+  for (const weight of ["medium", "semibold", "bold"]) {
+    await cp(
+      join(repo, `assets/original/fonts/orbitron/${weight}.ttf`),
+      join(outDir, `fonts/orbitron-${weight}.ttf`),
+    );
+  }
   await cp(join(repo, "frontend/public/manifest.json"), join(outDir, "manifest.json"));
 }
 
