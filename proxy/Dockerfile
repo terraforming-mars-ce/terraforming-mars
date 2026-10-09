@@ -1,4 +1,5 @@
-FROM oven/bun:1.4.2 AS builder
+# Static output: build natively, only the nginx stage is per-arch
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.2 AS builder
 WORKDIR /build/proxy
 
 COPY proxy/package.json proxy/bun.lock ./
