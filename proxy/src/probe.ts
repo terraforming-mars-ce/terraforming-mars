@@ -1,15 +1,20 @@
 import type { MetaResponse, ServerEntry } from "./servers.ts";
 
+/**
+ * - online: answers as itself and can be booted
+ * - down: no usable answer (network error, timeout, 5xx); shown as offline
+ * - invalid: answers, but not as this server (no /meta, bad JSON, wrong alias); hidden
+ */
 export type ProbeResult =
-  | { ok: true; meta: MetaResponse; latencyMs: number }
-  | { ok: false; reason: string };
+  | { status: "online"; meta: MetaResponse; latencyMs: number }
+  | { status: "down"; reason: string }
+  | { status: "invalid"; reason: string };
 
 const PROBE_TIMEOUT_MS = 4000;
 
 /**
- * Asks a server who it is. A server that answers with another alias than the
- * gateway lists is treated as down, so a misconfigured list never boots the
- * wrong game.
+ * Asks a server who it is. A server that is down has no CORS headers on its
+ * error page either, so the browser reports a network error: also down.
  */
 export async function probeServer(
   server: ServerEntry,
@@ -17,20 +22,29 @@ export async function probeServer(
   timeoutMs = PROBE_TIMEOUT_MS,
 ): Promise<ProbeResult> {
   const started = performance.now();
+  let response: Response;
   try {
-    const response = await fetchMeta(new URL("/api/v1/meta", server.url), {
+    response = await fetchMeta(new URL("/api/v1/meta", server.url), {
       cache: "no-store",
       signal: AbortSignal.timeout(timeoutMs),
     });
-    if (!response.ok) {
-      return { ok: false, reason: `responded ${response.status}` };
-    }
-    const meta = (await response.json()) as MetaResponse;
-    if (meta.alias !== server.alias) {
-      return { ok: false, reason: `identifies as "${meta.alias}"` };
-    }
-    return { ok: true, meta, latencyMs: Math.round(performance.now() - started) };
   } catch {
-    return { ok: false, reason: "unreachable" };
+    return { status: "down", reason: "unreachable" };
   }
+  if (response.status >= 500) {
+    return { status: "down", reason: `responded ${response.status}` };
+  }
+  if (!response.ok) {
+    return { status: "invalid", reason: `responded ${response.status}` };
+  }
+  let meta: MetaResponse;
+  try {
+    meta = (await response.json()) as MetaResponse;
+  } catch {
+    return { status: "invalid", reason: "not a meta response" };
+  }
+  if (meta.alias !== server.alias) {
+    return { status: "invalid", reason: `identifies as "${meta.alias}"` };
+  }
+  return { status: "online", meta, latencyMs: Math.round(performance.now() - started) };
 }

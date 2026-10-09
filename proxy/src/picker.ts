@@ -1,6 +1,8 @@
 import { probeServer, type ProbeResult } from "./probe.ts";
 import type { MetaResponse, ServerEntry } from "./servers.ts";
 
+const RECHECK_MS = 5000;
+
 export interface PickerOptions {
   servers: ServerEntry[];
   notice?: string;
@@ -8,72 +10,114 @@ export interface PickerOptions {
   onPick: (server: ServerEntry, meta: MetaResponse) => void;
 }
 
+let recheck: ReturnType<typeof setInterval> | undefined;
+
 /**
- * Lists every server with its live status. Servers that do not answer, or
- * answer as someone else, stay listed but cannot be picked.
+ * Lists every server in order with its live status, re-checked every few
+ * seconds: online servers can be picked, down ones show as offline, and ones
+ * that answer but not as a gateway server are hidden.
  */
 export function showPicker({ servers, notice, currentAlias, onPick }: PickerOptions): void {
   const root = document.getElementById("gateway");
   if (!root) {
     return;
   }
+  hidePicker();
   root.hidden = false;
-  root.replaceChildren();
 
-  const heading = element("h1", "Terraforming Mars");
-  const subtitle = element("p", "Choose a server", "subtitle");
-  root.append(heading, subtitle);
-  if (notice) {
-    root.append(element("p", notice, "notice"));
-  }
-  if (servers.length === 0) {
-    root.append(element("p", "No servers are configured.", "notice"));
-    return;
-  }
+  const shell = element("div", "", "shell");
+  const intro = element("header", "", "intro");
+  const title = element("h1", "", "title");
+  title.append("TERRAFORMING ", document.createElement("br"), "MARS");
+  intro.append(title, element("p", "Server selector", "subtitle"));
 
+  const choices = element("section", "", "choices");
+  const message = element("p", notice ?? "", "notice");
+  message.hidden = !notice;
   const list = element("ul", "", "servers");
-  root.append(list);
-  for (const server of servers) {
-    const row = document.createElement("li");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.disabled = true;
-    const name = element("span", server.alias, "name");
-    const detail = element("span", "Checking…", "detail");
-    button.append(name, detail);
-    if (server.alias === currentAlias) {
-      button.append(element("span", "Last used", "badge"));
-    }
-    row.append(button);
-    list.append(row);
+  choices.append(message, list);
+  shell.append(intro, choices);
+  root.append(shell);
 
-    void probeServer(server).then((result) => renderStatus(result, server, button, name, detail));
-  }
+  const rows = servers.map((server) => {
+    const row = new ServerRow(server, server.alias === currentAlias, onPick);
+    list.append(row.item);
+    return row;
+  });
 
-  function renderStatus(
-    result: ProbeResult,
-    server: ServerEntry,
-    button: HTMLButtonElement,
-    name: HTMLElement,
-    detail: HTMLElement,
-  ) {
-    if (!result.ok) {
-      detail.textContent = `Offline (${result.reason})`;
-      button.classList.add("offline");
-      return;
+  const probeAll = async () => {
+    const results = await Promise.all(servers.map((server) => probeServer(server)));
+    results.forEach((result, index) => rows[index].update(result));
+    const anyOnline = results.some((result) => result.status === "online");
+    if (!anyOnline) {
+      message.textContent = "No server is reachable right now.";
+      message.hidden = false;
+    } else if (!notice) {
+      message.hidden = true;
     }
-    name.textContent = result.meta.name;
-    detail.textContent = `${result.meta.version} · ${result.latencyMs} ms`;
-    button.disabled = false;
-    button.addEventListener("click", () => onPick(server, result.meta));
-  }
+  };
+  void probeAll();
+  recheck = setInterval(() => void probeAll(), RECHECK_MS);
 }
 
 export function hidePicker(): void {
+  clearInterval(recheck);
+  recheck = undefined;
   const root = document.getElementById("gateway");
   if (root) {
     root.hidden = true;
     root.replaceChildren();
+  }
+}
+
+/** One server's button, updated in place by each probe. */
+class ServerRow {
+  readonly item = document.createElement("li");
+  private readonly button = document.createElement("button");
+  private readonly name: HTMLElement;
+  private readonly version = element("span", "", "version");
+  private readonly status = element("span", "Checking…", "status");
+  private meta: MetaResponse | null = null;
+
+  constructor(
+    private readonly server: ServerEntry,
+    current: boolean,
+    onPick: (server: ServerEntry, meta: MetaResponse) => void,
+  ) {
+    this.name = element("span", server.alias.toUpperCase(), "name");
+    this.button.type = "button";
+    this.button.className = "server";
+    this.button.dataset.status = "checking";
+    this.button.disabled = true;
+    this.button.append(element("span", "", "dot"), this.name, this.version);
+    if (current) {
+      this.button.append(element("span", "Current", "current"));
+    }
+    this.button.append(this.status);
+    this.button.addEventListener("click", () => {
+      if (this.meta) {
+        onPick(this.server, this.meta);
+      }
+    });
+    this.item.append(this.button);
+  }
+
+  update(result: ProbeResult) {
+    this.item.hidden = result.status === "invalid";
+    this.button.dataset.status = result.status;
+    this.button.disabled = result.status !== "online";
+    if (result.status !== "online") {
+      this.meta = null;
+      this.version.textContent = "";
+      this.status.textContent = "Offline";
+      this.button.title = "";
+      return;
+    }
+    this.meta = result.meta;
+    this.name.textContent = result.meta.name;
+    this.version.textContent = result.meta.version;
+    this.status.textContent = `${result.latencyMs} ms`;
+    this.button.title = `${result.meta.name} · ${result.meta.version}`;
   }
 }
 

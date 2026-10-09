@@ -9,7 +9,11 @@ import type { MetaResponse, ServerEntry } from "./servers.ts";
  * as runtime-config.js run first wherever they sit. Injected modules run as
  * soon as they load, so classic scripts are injected and awaited first.
  */
-export async function bootServer(server: ServerEntry, meta: MetaResponse): Promise<void> {
+export async function bootServer(
+  server: ServerEntry,
+  meta: MetaResponse,
+  servers: ServerEntry[],
+): Promise<void> {
   const response = await fetch(new URL("/index.html", server.url), { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`index.html responded ${response.status}`);
@@ -17,7 +21,7 @@ export async function bootServer(server: ServerEntry, meta: MetaResponse): Promi
   const source = new DOMParser().parseFromString(await response.text(), "text/html");
   const resolve = (path: string | null) => new URL(path ?? "", server.url).href;
 
-  window.__TM_GATEWAY__ = { alias: meta.alias, name: meta.name };
+  window.__TM_GATEWAY__ = { alias: meta.alias, name: meta.name, servers };
 
   const scripts = [...source.querySelectorAll("script")];
   for (const original of scripts.filter((script) => script.type !== "module")) {
@@ -43,7 +47,7 @@ export async function bootServer(server: ServerEntry, meta: MetaResponse): Promi
     script.type = "module";
     const src = original.getAttribute("src");
     if (src === null) {
-      script.textContent = original.textContent;
+      script.textContent = rebaseImports(original.textContent ?? "", server.url);
     } else {
       script.src = resolve(src);
       script.crossOrigin = "anonymous";
@@ -69,4 +73,17 @@ function runClassicScript(
     script.addEventListener("error", () => fail(new Error(`failed to load ${script.src}`)));
     document.body.append(script);
   });
+}
+
+/**
+ * An inline module resolves "/x" imports against this page, not the server.
+ * Vite's dev server inlines one (the React refresh preamble importing
+ * "/@react-refresh"); built bundles have none.
+ */
+export function rebaseImports(code: string, base: string): string {
+  const origin = new URL(base).origin;
+  return code.replace(
+    /(\bfrom\s*|\bimport\s*\(?\s*)(["'])\/(?!\/)/g,
+    (_match, keyword: string, quote: string) => `${keyword}${quote}${origin}/`,
+  );
 }

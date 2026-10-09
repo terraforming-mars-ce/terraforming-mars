@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { probeServer } from "./probe.ts";
 
-const server = { alias: "saffronbun", url: "https://bun.example" };
-const meta = { alias: "saffronbun", name: "Saffronbun", version: "v1.2.3" };
+const server = { alias: "eu-2", url: "https://bun.example" };
+const meta = { alias: "eu-2", name: "EU 2", version: "v7" };
 
 function respond(response: Response | Error): typeof fetch {
   return (async (input: RequestInfo | URL) => {
@@ -15,33 +15,43 @@ function respond(response: Response | Error): typeof fetch {
 }
 
 describe("probeServer", () => {
-  test("returns the server's meta", async () => {
+  test("is online when the server answers as itself", async () => {
     const result = await probeServer(server, respond(Response.json(meta)));
-    expect(result.ok).toBe(true);
-    expect(result.ok && result.meta).toEqual(meta);
+    expect(result.status).toBe("online");
+    expect(result.status === "online" && result.meta).toEqual(meta);
   });
 
-  test("rejects a server that answers with another alias", async () => {
-    const result = await probeServer(server, respond(Response.json({ ...meta, alias: "local" })));
-    expect(result).toEqual({ ok: false, reason: 'identifies as "local"' });
-  });
-
-  test("reports an error status", async () => {
-    const result = await probeServer(server, respond(new Response("", { status: 502 })));
-    expect(result).toEqual({ ok: false, reason: "responded 502" });
-  });
-
-  test("reports a network failure as unreachable", async () => {
+  test("is down on a network error", async () => {
     const result = await probeServer(server, respond(new TypeError("Failed to fetch")));
-    expect(result).toEqual({ ok: false, reason: "unreachable" });
+    expect(result).toEqual({ status: "down", reason: "unreachable" });
   });
 
-  test("gives up after the timeout", async () => {
+  test("is down on a server error", async () => {
+    const result = await probeServer(server, respond(new Response("", { status: 502 })));
+    expect(result).toEqual({ status: "down", reason: "responded 502" });
+  });
+
+  test("is down after the timeout", async () => {
     const hang = ((_input: RequestInfo | URL, init?: RequestInit) =>
       new Promise((_resolve, reject) => {
         init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
       })) as typeof fetch;
     const result = await probeServer(server, hang, 20);
-    expect(result).toEqual({ ok: false, reason: "unreachable" });
+    expect(result).toEqual({ status: "down", reason: "unreachable" });
+  });
+
+  test("is invalid when there is no meta route", async () => {
+    const result = await probeServer(server, respond(new Response("", { status: 404 })));
+    expect(result).toEqual({ status: "invalid", reason: "responded 404" });
+  });
+
+  test("is invalid when the answer is not JSON", async () => {
+    const result = await probeServer(server, respond(new Response("<html>")));
+    expect(result).toEqual({ status: "invalid", reason: "not a meta response" });
+  });
+
+  test("is invalid when the server answers as another alias", async () => {
+    const result = await probeServer(server, respond(Response.json({ ...meta, alias: "local" })));
+    expect(result).toEqual({ status: "invalid", reason: 'identifies as "local"' });
   });
 });
