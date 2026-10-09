@@ -1,6 +1,6 @@
 name: Deploy
 
-# Deploys only when started by hand. Images come from the Build Images workflow;
+# Deploys only when started by hand. Images come from the Release workflow;
 # pick a release tag (vMAJOR.MINOR.PATCH) to run, or "latest" for the newest release.
 on:
   workflow_dispatch:
