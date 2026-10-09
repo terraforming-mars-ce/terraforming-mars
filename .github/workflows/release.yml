@@ -84,12 +84,17 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4.4.0
+        with:
+          image: mirror.gcr.io/tonistiigi/binfmt:latest
 
+      # Shared runners pull from Docker Hub anonymously and get rate limited or time
+      # out, so every pull goes through Google's public Docker Hub mirror: the QEMU
+      # and BuildKit images here, and base images via the BuildKit mirror config
+      # (Docker Hub stays the fallback for images the mirror lacks)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.4.1
         with:
-          # Shared runners pull from Docker Hub anonymously and hit its 429 rate limit;
-          # Google's public mirror serves the same images, with Docker Hub as fallback
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
           buildkitd-config-inline: |
             [registry."docker.io"]
               mirrors = ["mirror.gcr.io"]
