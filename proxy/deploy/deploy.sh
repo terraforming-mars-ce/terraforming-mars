@@ -2,7 +2,7 @@
 # Installed as /usr/local/bin/tm-gateway-deploy and run as root through sudo.
 # It is the only thing the deploy key can run (see setup-vm.sh). Over SSH:
 #   tar -c Caddyfile gateway.env tm-gateway.service | ssh deploy@openmars.app "deploy <version>"
-# where <version> is "latest" or a released version such as 1.4.0.
+# where <version> is "latest" or a release tag such as v7.
 set -euf
 
 IMAGE=ghcr.io/terraforming-mars-ce/terraforming-mars-proxy
@@ -16,9 +16,9 @@ if [ "$#" -ne 2 ] || [ "$1" != "deploy" ]; then
 fi
 version="$2"
 case "$version" in
-  latest | [0-9]*.[0-9]*.[0-9]*) ;;
+  latest | v[0-9]*) ;;
   *)
-    echo "invalid version '$version': use latest or x.y.z" >&2
+    echo "invalid version '$version': use latest or a release tag such as v7" >&2
     exit 2
     ;;
 esac
