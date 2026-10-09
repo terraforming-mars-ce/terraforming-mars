@@ -2,9 +2,11 @@ import { useState } from "react";
 import {
   ResourceTypeGreeneryTile,
   ResourceTypeTemperature,
+  StandardProjectConvertHeatToTemperature,
+  StandardProjectConvertPlantsToGreenery,
   type GameDto,
   type PlayerActionDto,
-  type PlayerStandardProjectDto,
+  type PlayerResourceConversionDto,
 } from "@/types/generated/api-types.ts";
 import { useMobileUiStore } from "@/stores/mobileUiStore.ts";
 import GameButton from "../../ui/buttons/GameButton.tsx";
@@ -14,6 +16,7 @@ import ActionsList from "../../ui/popover/content/ActionsList.tsx";
 import MobileScreen, { type MobileScreenTab } from "../MobileScreen.tsx";
 import { ActionsIcon } from "../screenIcons.tsx";
 import { useMobileGame } from "../MobileGameContext.tsx";
+import { findResourceConversion } from "@/utils/resourceConversionUtils.ts";
 import { getConversionAvailability } from "../conversionAvailability.ts";
 
 const MAX_TEMPERATURE = 8;
@@ -22,7 +25,7 @@ type ActionsTab = "card-actions" | "conversions";
 
 interface ConversionRowProps {
   label: string;
-  project: PlayerStandardProjectDto | undefined;
+  project: PlayerResourceConversionDto | undefined;
   resultIcon: string;
   available: boolean;
   unavailableReason: string;
@@ -46,7 +49,7 @@ function ConversionRow({
   return (
     <GamePopoverItem
       state={available ? "available" : "disabled"}
-      borderColor={project?.style?.color ?? "#6b7280"}
+      borderColor="#6b7280"
       error={error}
       warning={warning}
       className="popover-list-item min-h-14"
@@ -82,7 +85,7 @@ function ConversionRow({
 }
 
 function conversionReason(
-  project: PlayerStandardProjectDto | undefined,
+  project: PlayerResourceConversionDto | undefined,
   gameState: GameDto,
   isHeat: boolean,
 ): string {
@@ -108,9 +111,8 @@ export default function MobileActionsScreen() {
   const [tab, setTab] = useState<ActionsTab>("card-actions");
 
   const conversions = getConversionAvailability(gameState, currentPlayer);
-  const projects = gameState.currentPlayer?.standardProjects ?? [];
-  const plantsProject = projects.find((p) => p.projectType === "convert-plants-to-greenery");
-  const heatProject = projects.find((p) => p.projectType === "convert-heat-to-temperature");
+  const plantsProject = findResourceConversion(gameState, StandardProjectConvertPlantsToGreenery);
+  const heatProject = findResourceConversion(gameState, StandardProjectConvertHeatToTemperature);
   const actions = currentPlayer?.actions ?? [];
 
   const tabs: (MobileScreenTab & { id: ActionsTab })[] = [

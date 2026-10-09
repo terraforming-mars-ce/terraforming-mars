@@ -115,8 +115,9 @@ func ToPlayerDto(p *player.Player, g *game.Game, cardRegistry gamecards.CardRegi
 		Effects:                convertPlayerEffects(p.Effects().List(), p, g, cardRegistry),
 		Actions:                convertPlayerActions(p.Actions().List(), p, g, cardRegistry),
 		StandardProjects:       standardProjects, // PlayerStandardProjectDto[] with state
-		Milestones:             milestones,       // PlayerMilestoneDto[] with eligibility
-		Awards:                 awards,           // PlayerAwardDto[] with eligibility
+		ResourceConversions:    mapPlayerResourceConversions(p, g, cardRegistry),
+		Milestones:             milestones, // PlayerMilestoneDto[] with eligibility
+		Awards:                 awards,     // PlayerAwardDto[] with eligibility
 
 		DemoReady:          p.HasPendingDemoChoices(),
 		PendingDemoChoices: convertPendingDemoChoices(p.PendingDemoChoices()),
@@ -847,8 +848,7 @@ func mapPlayerCards(p *player.Player, g *game.Game, cardRegistry gamecards.CardR
 
 // mapPlayerStandardProjects calculates state for all standard projects and converts to DTOs.
 // Uses the state calculator to compute availability and effective costs for each project.
-// NOTE: Conversion projects (plants→greenery, heat→temperature) are NOT included here - they
-// are handled separately via resource buttons in the bottom bar.
+// Conversion projects (plants→greenery, heat→temperature) are mapped by mapPlayerResourceConversions.
 func mapPlayerStandardProjects(p *player.Player, g *game.Game, cardRegistry gamecards.CardRegistry, stdProjRegistry standardproject.StandardProjectRegistry) []PlayerStandardProjectDto {
 	if stdProjRegistry == nil {
 		return nil
@@ -905,6 +905,21 @@ func mapPlayerStandardProjects(p *player.Player, g *game.Game, cardRegistry game
 		result = append(result, dto)
 	}
 
+	return result
+}
+
+func mapPlayerResourceConversions(p *player.Player, g *game.Game, cardRegistry gamecards.CardRegistry) []PlayerResourceConversionDto {
+	result := make([]PlayerResourceConversionDto, 0, len(action.ConversionStandardProjects))
+	for _, projectType := range action.ConversionStandardProjects {
+		state := action.CalculatePlayerStandardProjectState(projectType, p, g, cardRegistry)
+		result = append(result, PlayerResourceConversionDto{
+			ProjectType:   StandardProject(projectType),
+			Available:     state.Available(),
+			Errors:        convertStateErrors(state.Errors),
+			Warnings:      convertStateWarnings(state.Warnings),
+			EffectiveCost: state.Cost,
+		})
+	}
 	return result
 }
 

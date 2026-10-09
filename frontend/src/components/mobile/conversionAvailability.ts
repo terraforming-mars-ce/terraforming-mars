@@ -1,9 +1,13 @@
 import {
   PlayerStatusSelection,
   PlayerStatusTile,
+  StandardProjectConvertHeatToTemperature,
+  StandardProjectConvertPlantsToGreenery,
   type GameDto,
   type PlayerDto,
+  type StandardProject,
 } from "@/types/generated/api-types.ts";
+import { findResourceConversion } from "@/utils/resourceConversionUtils.ts";
 
 export interface ConversionAvailability {
   plants: boolean;
@@ -19,13 +23,12 @@ export function getConversionAvailability(
   if (blocked) {
     return { plants: false, heat: false };
   }
-  const projects = gameState.currentPlayer?.standardProjects ?? [];
-  const isAvailable = (projectType: string) =>
-    !!projects.find((project) => project.projectType === projectType)?.available;
+  const isAvailable = (projectType: StandardProject) =>
+    !!findResourceConversion(gameState, projectType)?.available;
   return {
-    plants: isAvailable("convert-plants-to-greenery"),
+    plants: isAvailable(StandardProjectConvertPlantsToGreenery),
     heat:
-      isAvailable("convert-heat-to-temperature") &&
+      isAvailable(StandardProjectConvertHeatToTemperature) &&
       (gameState.globalParameters?.temperature ?? -30) < 8,
   };
 }
