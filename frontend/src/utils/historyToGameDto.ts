@@ -169,6 +169,7 @@ export function historyPlayerToPlayerDto(
     effects: [],
     actions: [],
     standardProjects: [],
+    resourceConversions: [],
     milestones: [],
     awards: [],
     startingCards: [],

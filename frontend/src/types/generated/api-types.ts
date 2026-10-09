@@ -1311,6 +1311,16 @@ export interface PlayerStandardProjectDto {
   metadata?: { [key: string]: any };
 }
 /**
+ * PlayerResourceConversionDto is the availability state of a plants or heat conversion.
+ */
+export interface PlayerResourceConversionDto {
+  projectType: StandardProject;
+  available: boolean;
+  errors: StateErrorDto[];
+  warnings?: StateWarningDto[];
+  effectiveCost: { [key: string]: number /* int */ };
+}
+/**
  * StyleDto provides visual hints for the frontend
  */
 export interface StyleDto {
@@ -1482,6 +1492,7 @@ export interface PlayerDto {
   effects: PlayerEffectDto[]; // Active ongoing effects (discounts, special abilities, etc.)
   actions: PlayerActionDto[]; // Available actions from played cards with manual triggers
   standardProjects: PlayerStandardProjectDto[]; // Standard projects with availability state (Player-Scoped Architecture)
+  resourceConversions: PlayerResourceConversionDto[];
   milestones: PlayerMilestoneDto[]; // Milestones with player eligibility state
   awards: PlayerAwardDto[]; // Awards with player eligibility state
   demoReady: boolean;

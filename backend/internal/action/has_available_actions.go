@@ -10,10 +10,10 @@ import (
 	"terraforming-mars-backend/internal/game/standardproject"
 )
 
-// conversionStandardProjects are the two resource-conversion "standard projects"
+// ConversionStandardProjects are the two resource-conversion "standard projects"
 // that are not part of the standard-project registry (they are surfaced as
 // resource buttons), but still constitute legal action-phase moves.
-var conversionStandardProjects = []shared.StandardProject{
+var ConversionStandardProjects = []shared.StandardProject{
 	shared.StandardProjectConvertHeatToTemperature,
 	shared.StandardProjectConvertPlantsToGreenery,
 }
@@ -111,7 +111,7 @@ func hasAvailableStandardProject(
 		}
 	}
 
-	for _, projectType := range conversionStandardProjects {
+	for _, projectType := range ConversionStandardProjects {
 		if CalculatePlayerStandardProjectState(projectType, p, g, cardRegistry).Available() {
 			return true
 		}

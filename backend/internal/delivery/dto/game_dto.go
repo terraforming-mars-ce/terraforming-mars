@@ -849,6 +849,15 @@ type PlayerStandardProjectDto struct {
 	Metadata      map[string]interface{} `json:"metadata,omitempty"`
 }
 
+// PlayerResourceConversionDto is the availability state of a plants or heat conversion.
+type PlayerResourceConversionDto struct {
+	ProjectType   StandardProject   `json:"projectType"`
+	Available     bool              `json:"available"`
+	Errors        []StateErrorDto   `json:"errors"`
+	Warnings      []StateWarningDto `json:"warnings,omitempty"`
+	EffectiveCost map[string]int    `json:"effectiveCost"`
+}
+
 // StyleDto provides visual hints for the frontend
 type StyleDto struct {
 	Color string `json:"color"`
@@ -988,34 +997,35 @@ type CardReceiptDto struct {
 }
 
 type PlayerDto struct {
-	CardReceipts           []CardReceiptDto           `json:"cardReceipts"`
-	ResourceRemovalTargets []ResourceRemovalTargetDto `json:"resourceRemovalTargets"`
-	PendingCardReveal      *PendingCardRevealDto      `json:"pendingCardReveal,omitempty"`
-	PendingEffectSelection *PendingEffectSelectionDto `json:"pendingEffectSelection,omitempty"`
-	ID                     string                     `json:"id"`
-	Name                   string                     `json:"name"`
-	PlayerType             string                     `json:"playerType"`
-	BotStatus              string                     `json:"botStatus,omitempty" tstype:"'loading' | 'ready' | 'failed' | 'thinking'"`
-	BotPersona             string                     `json:"botPersona,omitempty"`
-	BotError               string                     `json:"botError,omitempty"`
-	Color                  string                     `json:"color"`
-	Status                 PlayerStatus               `json:"status"`
-	Corporation            *CardDto                   `json:"corporation"`
-	Cards                  []PlayerCardDto            `json:"cards"` // Hand cards with playability state (Player-Scoped Architecture)
-	Resources              ResourcesDto               `json:"resources"`
-	Production             ProductionDto              `json:"production"`
-	TerraformRating        int                        `json:"terraformRating"`
-	PlayedCards            []CardDto                  `json:"playedCards"` // Full card details for all played cards
-	Passed                 bool                       `json:"passed"`
-	AvailableActions       int                        `json:"availableActions"`
-	TotalActions           int                        `json:"totalActions"`
-	IsConnected            bool                       `json:"isConnected"`
-	IsExited               bool                       `json:"isExited"`
-	Effects                []PlayerEffectDto          `json:"effects"`          // Active ongoing effects (discounts, special abilities, etc.)
-	Actions                []PlayerActionDto          `json:"actions"`          // Available actions from played cards with manual triggers
-	StandardProjects       []PlayerStandardProjectDto `json:"standardProjects"` // Standard projects with availability state (Player-Scoped Architecture)
-	Milestones             []PlayerMilestoneDto       `json:"milestones"`       // Milestones with player eligibility state
-	Awards                 []PlayerAwardDto           `json:"awards"`           // Awards with player eligibility state
+	CardReceipts           []CardReceiptDto              `json:"cardReceipts"`
+	ResourceRemovalTargets []ResourceRemovalTargetDto    `json:"resourceRemovalTargets"`
+	PendingCardReveal      *PendingCardRevealDto         `json:"pendingCardReveal,omitempty"`
+	PendingEffectSelection *PendingEffectSelectionDto    `json:"pendingEffectSelection,omitempty"`
+	ID                     string                        `json:"id"`
+	Name                   string                        `json:"name"`
+	PlayerType             string                        `json:"playerType"`
+	BotStatus              string                        `json:"botStatus,omitempty" tstype:"'loading' | 'ready' | 'failed' | 'thinking'"`
+	BotPersona             string                        `json:"botPersona,omitempty"`
+	BotError               string                        `json:"botError,omitempty"`
+	Color                  string                        `json:"color"`
+	Status                 PlayerStatus                  `json:"status"`
+	Corporation            *CardDto                      `json:"corporation"`
+	Cards                  []PlayerCardDto               `json:"cards"` // Hand cards with playability state (Player-Scoped Architecture)
+	Resources              ResourcesDto                  `json:"resources"`
+	Production             ProductionDto                 `json:"production"`
+	TerraformRating        int                           `json:"terraformRating"`
+	PlayedCards            []CardDto                     `json:"playedCards"` // Full card details for all played cards
+	Passed                 bool                          `json:"passed"`
+	AvailableActions       int                           `json:"availableActions"`
+	TotalActions           int                           `json:"totalActions"`
+	IsConnected            bool                          `json:"isConnected"`
+	IsExited               bool                          `json:"isExited"`
+	Effects                []PlayerEffectDto             `json:"effects"`          // Active ongoing effects (discounts, special abilities, etc.)
+	Actions                []PlayerActionDto             `json:"actions"`          // Available actions from played cards with manual triggers
+	StandardProjects       []PlayerStandardProjectDto    `json:"standardProjects"` // Standard projects with availability state (Player-Scoped Architecture)
+	ResourceConversions    []PlayerResourceConversionDto `json:"resourceConversions"`
+	Milestones             []PlayerMilestoneDto          `json:"milestones"` // Milestones with player eligibility state
+	Awards                 []PlayerAwardDto              `json:"awards"`     // Awards with player eligibility state
 
 	DemoReady          bool                   `json:"demoReady"`
 	PendingDemoChoices *PendingDemoChoicesDto `json:"pendingDemoChoices,omitempty"`
