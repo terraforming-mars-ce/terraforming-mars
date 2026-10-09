@@ -1,5 +1,7 @@
-FROM oven/bun:1.4.2 AS bun
-FROM node:26.10.0-bookworm-slim AS builder
+# The build output is static files, the same for every architecture, so the
+# build runs natively on the build machine; only the nginx stage is per-arch
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.2 AS bun
+FROM --platform=$BUILDPLATFORM node:26.10.0-bookworm-slim AS builder
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /build/frontend
 

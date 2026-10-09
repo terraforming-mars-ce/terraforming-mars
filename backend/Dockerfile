@@ -1,4 +1,6 @@
-FROM golang:1.27.1-alpine AS builder
+# Compiles natively on the build machine and cross-compiles for the target,
+# so multi-arch builds don't run the Go toolchain under emulation
+FROM --platform=$BUILDPLATFORM golang:1.27.1-alpine AS builder
 WORKDIR /build
 
 RUN apk add --no-cache git ca-certificates tzdata
@@ -7,10 +9,11 @@ RUN go mod download
 COPY backend/ .
 
 ARG BUILD_VERSION="localbuild"
+ARG TARGETOS
+ARG TARGETARCH
 
-RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-w -s -extldflags \"-static\" -X main.Version=${BUILD_VERSION}" \
-    -a -installsuffix cgo \
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
+    -ldflags="-w -s -X main.Version=${BUILD_VERSION}" \
     -o server \
     cmd/server/main.go
 
