@@ -73,6 +73,18 @@ export default function CreateGamePage() {
     }
   };
   const busy = creating || isLoading;
+  // Phones keep it beside the name field; desktop puts it at the bottom of the left column
+  const submitButton = (
+    <GameButton
+      type="submit"
+      size={isCompact ? "md" : "lg"}
+      loading={busy}
+      disabled={playerName.trim().length < 2}
+      className={isCompact ? "shrink-0" : "mt-auto self-end"}
+    >
+      {created && !busy ? "Join lobby" : "Create lobby"}
+    </GameButton>
+  );
   return (
     <>
       <div
@@ -121,15 +133,7 @@ export default function CreateGamePage() {
                   maxLength={MAX_PLAYER_NAME_LENGTH}
                   autoComplete="nickname"
                 />
-                <GameButton
-                  type="submit"
-                  size={isCompact ? "md" : "lg"}
-                  loading={busy}
-                  disabled={playerName.trim().length < 2}
-                  className="shrink-0"
-                >
-                  {created && !busy ? "Join lobby" : "Create lobby"}
-                </GameButton>
+                {isCompact && submitButton}
               </div>
               {!isCompact && (
                 <details className="text-sm">
@@ -168,6 +172,7 @@ export default function CreateGamePage() {
                   </fieldset>
                 </details>
               )}
+              {!isCompact && submitButton}
             </div>
             {!isCompact && (
               <GameSetupControls
