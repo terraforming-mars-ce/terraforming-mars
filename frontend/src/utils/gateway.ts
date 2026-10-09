@@ -3,9 +3,16 @@
  * this bundle from the chosen server and describes that server here. On a
  * direct visit there is no gateway and the page origin is the server.
  */
+export interface GatewayServerEntry {
+  alias: string;
+  url: string;
+}
+
 interface GatewayServer {
   alias: string;
   name: string;
+  /** Every server the gateway offers, in its order; absent on older gateways */
+  servers?: GatewayServerEntry[];
 }
 
 declare global {
@@ -39,4 +46,9 @@ export function serverLink(path: string): string {
 /** Leaves the bundle for the gateway's server picker. */
 export function changeServer(): void {
   window.location.assign("/?pick");
+}
+
+/** Reloads into another server; the gateway remembers it as this browser's choice. */
+export function switchServer(alias: string): void {
+  window.location.assign(`/?s=${encodeURIComponent(alias)}`);
 }

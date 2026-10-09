@@ -1328,16 +1328,10 @@ code {
       padding: calc(68px + var(--safe-top)) 0 calc(64px + var(--safe-bottom));
     }
   }
-  :root[data-layout="compact"] {
-    --menu-footer-edge: 4px;
-  }
-  :root[data-layout="compact"] .menu-footer {
-    left: calc(var(--menu-edge) + var(--safe-left));
-    right: calc(var(--menu-edge) + var(--safe-right));
-  }
+  /* Phones have no menu footer: its links live in the menu drawer */
   :root[data-layout="compact"] .menu-shell {
     padding: calc(var(--menu-edge) + 44px + var(--safe-top)) 0
-      calc(var(--menu-footer-edge) + var(--menu-footer-h) + 4px + var(--safe-bottom));
+      calc(var(--menu-edge) + var(--safe-bottom));
   }
   .menu-modal-frame {
     position: fixed;
@@ -1395,6 +1389,7 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .game-button,
   .game-button *,
+  .server-dot::after,
   .menu-enter {
     animation: none !important;
     transition: none !important;
@@ -1456,6 +1451,39 @@ code {
 @layer components {
   .game-button[data-emphasis="quiet"] {
     color: #aeb6c8;
+  }
+  .server-dot {
+    position: relative;
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    background: #555965;
+  }
+  .server-dot[data-status="down"] {
+    background: #b94f56;
+  }
+  .server-dot[data-status="online"] {
+    background: #4caa72;
+    box-shadow: 0 0 6px rgb(76 170 114 / 70%);
+  }
+  .server-dot[data-status="online"]::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border: 1px solid #4caa72;
+    opacity: 0;
+    animation: server-dot-pulse 2.4s ease-out infinite;
+  }
+  @keyframes server-dot-pulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.35;
+    }
+    70%,
+    100% {
+      transform: scale(2.6);
+      opacity: 0;
+    }
   }
   .game-button[data-emphasis="quiet"]:hover {
     color: white;

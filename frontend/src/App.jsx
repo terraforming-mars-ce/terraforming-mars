@@ -1,6 +1,6 @@
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import { BrowserRouter as Router, Navigate, Routes, Route, useLocation } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import GameInterface from "./components/layout/main/GameInterface.tsx";
 import CreateGamePage from "./components/pages/CreateGamePage.tsx";
 import JoinGamePage from "./components/pages/JoinGamePage.tsx";
@@ -26,12 +26,15 @@ import { isRenderPaused, useRenderPause, useRenderPauseStore } from "./stores/re
 import { Z_INDEX } from "./constants/zIndex.ts";
 import { APP_VERSION } from "./config.ts";
 import { changeServer, gatewayServer } from "./utils/gateway.ts";
+import ServerSwitchPopover from "./components/ui/popover/ServerSwitchPopover.tsx";
 import { useKeepTestingParams } from "./utils/quickMode.ts";
 import LayoutModeAttribute from "./components/LayoutModeAttribute.tsx";
 import LayoutDebugReadout from "./components/LayoutDebugReadout.tsx";
 import RotateDeviceOverlay from "./components/ui/overlay/RotateDeviceOverlay.tsx";
 import InstallAppBar from "./components/ui/InstallAppBar.tsx";
 import InstallHowToSheet from "./components/ui/InstallHowToSheet.tsx";
+import ServerDownDialog from "./components/ui/overlay/ServerDownDialog.tsx";
+import ServerSelectorScreen from "./components/ui/servers/ServerSelectorScreen.tsx";
 import "./App.css";
 
 function App() {
@@ -135,8 +138,11 @@ function AppWithBackground({ connectionReady }) {
 
   const skyboxReady = isLoaded || !!error;
 
+  const backgroundPending = inMenuRoute && showSpaceBackgroundLayer && !skyboxReady;
   const showBackgroundLoading =
-    inMenuRoute && showSpaceBackgroundLayer && (!skyboxReady || overlayVisible);
+    backgroundPending || (inMenuRoute && showSpaceBackgroundLayer && overlayVisible);
+  // The chrome mounts under the fading overlay, so it is revealed together with the page
+  const showMenuChromeNow = showMenuChrome && !backgroundPending && !ownsMenuChrome;
 
   useEffect(() => {
     if (!inMenuRoute || !showSpaceBackgroundLayer) {
@@ -172,12 +178,12 @@ function AppWithBackground({ connectionReady }) {
           showProgress
         />
       )}
-      {showMenuChrome && !showBackgroundLoading && !ownsMenuChrome && <MainMenuHamburger />}
-      {showMenuChrome && !showBackgroundLoading && !ownsMenuChrome && (
-        <MenuFooter visible={!isCardsPage} />
-      )}
-      <InstallAppBar active={showMenuChrome && !showBackgroundLoading && !ownsMenuChrome} />
+      {showMenuChromeNow && <MainMenuHamburger />}
+      {showMenuChromeNow && <MenuFooter visible={!isCardsPage} />}
+      <InstallAppBar active={showMenuChromeNow} />
       <InstallHowToSheet />
+      <ServerDownDialog />
+      <ServerSelectorScreen />
       <ConnectionGate ready={connectionReady}>
         <Routes>
           <Route path="/" element={<GameLandingPage />} />
@@ -196,6 +202,11 @@ function AppWithBackground({ connectionReady }) {
 
 function MenuFooter({ visible = true }) {
   const [showFeedbackWindow, setShowFeedbackWindow] = useState(false);
+  const [showServers, setShowServers] = useState(false);
+  const changeServerRef = useRef(null);
+  const closeServers = useCallback(() => setShowServers(false), []);
+  // Older gateways hand over no server list; their picker page does the job
+  const openServers = gatewayServer?.servers ? () => setShowServers((open) => !open) : changeServer;
 
   useEffect(() => {
     const handleToggleFeedback = () => setShowFeedbackWindow((prev) => !prev);
@@ -207,7 +218,7 @@ function MenuFooter({ visible = true }) {
     <>
       {visible && (
         <div
-          className="menu-footer flex items-center justify-between text-white/30 text-xs select-none pointer-events-none"
+          className="menu-footer flex items-center justify-between text-white/30 text-xs select-none pointer-events-none compact:hidden"
           style={{ zIndex: Z_INDEX.COST_DISPLAY }}
         >
           <span className="pointer-events-auto">
@@ -222,10 +233,11 @@ function MenuFooter({ visible = true }) {
             {gatewayServer && (
               <>
                 <GameButton
+                  ref={changeServerRef}
                   emphasis="quiet"
                   size="xs"
                   className="!p-0 !min-h-0 compact:!min-h-11 hover:text-white/70 transition-colors cursor-pointer"
-                  onClick={changeServer}
+                  onClick={openServers}
                 >
                   Change server
                 </GameButton>
@@ -251,6 +263,13 @@ function MenuFooter({ visible = true }) {
             View cards
           </GameButton>
         </div>
+      )}
+      {gatewayServer?.servers && (
+        <ServerSwitchPopover
+          isVisible={visible && showServers}
+          onClose={closeServers}
+          anchorRef={changeServerRef}
+        />
       )}
       <WindowManagerProvider>
         <FeedbackWindow

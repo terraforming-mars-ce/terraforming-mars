@@ -13,6 +13,8 @@ import {
   HamburgerIcon,
   InstallIcon,
   HomeIcon,
+  ServerIcon,
+  CardsIcon,
 } from "../menuIcons.tsx";
 import MobileMenuDrawer, { MobileMenuButton } from "../../mobile/MobileMenuDrawer.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
@@ -26,7 +28,7 @@ import {
 } from "@/utils/fullscreen.ts";
 import { useInstallOffer } from "@/utils/installApp.ts";
 import { useLocation, useNavigate } from "react-router-dom";
-import { serverLink } from "@/utils/gateway.ts";
+import { changeServer, gatewayServer, serverLink } from "@/utils/gateway.ts";
 
 interface MainMenuProps {
   gameId?: string;
@@ -46,6 +48,10 @@ export const MainMenuItems: React.FC<MainMenuProps & { onClose: () => void }> = 
   const showMainMenuLink = !gameId && pathname !== "/";
   const fullscreenSupported = isFullscreenSupported();
   const { platform: installPlatform, install } = useInstallOffer();
+  const { isCompact } = useLayoutMode();
+  // Desktop has these in the menu footer; phones have no footer
+  const showChangeServer = isCompact && !gameId && !!gatewayServer;
+  const showViewCards = isCompact && !gameId && pathname !== "/cards";
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -58,6 +64,15 @@ export const MainMenuItems: React.FC<MainMenuProps & { onClose: () => void }> = 
   const handleToggleFullscreen = useCallback(() => {
     void toggleFullscreen();
     onClose();
+  }, [onClose]);
+
+  const handleChangeServer = useCallback(() => {
+    onClose();
+    if (gatewayServer?.servers) {
+      useUIOverlayStore.getState().setShowServerSelector(true);
+    } else {
+      changeServer();
+    }
   }, [onClose]);
 
   const handleFeedback = useCallback(() => {
@@ -98,6 +113,19 @@ export const MainMenuItems: React.FC<MainMenuProps & { onClose: () => void }> = 
           <MenuPopoverDivider />
         </>
       )}
+      {showViewCards && (
+        <>
+          <MenuPopoverItem
+            icon={<CardsIcon />}
+            label="View cards"
+            onClick={() => {
+              onClose();
+              navigate("/cards");
+            }}
+          />
+          <MenuPopoverDivider />
+        </>
+      )}
       <SoundToggleButton />
       {fullscreenSupported && (
         <>
@@ -119,6 +147,16 @@ export const MainMenuItems: React.FC<MainMenuProps & { onClose: () => void }> = 
               onClose();
               void install();
             }}
+          />
+        </>
+      )}
+      {showChangeServer && (
+        <>
+          <MenuPopoverDivider />
+          <MenuPopoverItem
+            icon={<ServerIcon />}
+            label="Change server"
+            onClick={handleChangeServer}
           />
         </>
       )}
