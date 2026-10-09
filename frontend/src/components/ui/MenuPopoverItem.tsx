@@ -1,6 +1,7 @@
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { APP_VERSION } from "@/config.ts";
+import { gatewayServer } from "@/utils/gateway.ts";
 
 interface MenuPopoverItemProps {
   icon: React.ReactNode;
@@ -34,5 +35,7 @@ export const MenuPopoverItem: React.FC<MenuPopoverItemProps> = ({
 export const MenuPopoverDivider: React.FC = () => <div className="border-t border-[#333]" />;
 
 export const MenuPopoverVersion: React.FC = () => (
-  <div className="px-4 py-2 text-white/25 text-xs text-center select-none">{APP_VERSION}</div>
+  <div className="px-4 py-2 text-white/25 text-xs text-center select-none">
+    {gatewayServer ? `${gatewayServer.name} · ${APP_VERSION}` : APP_VERSION}
+  </div>
 );

@@ -16,8 +16,9 @@ default:
 deps: backend::deps frontend::deps proxy::deps
 
 [group('dev')]
-[doc('Run the backend (:3001, hot reload) and frontend (:3000) together; Ctrl-C or either one exiting stops both')]
-dev:
+[doc('Run the backend (:3001, hot reload) and frontend (:3000) together; --proxy also runs the gateway (:4000) in front of them. Ctrl-C or any one exiting stops all')]
+[arg("proxy", long="proxy", value="true")]
+dev proxy="false":
     #!/usr/bin/env bash
     set -uo pipefail
     # Each server runs in its own process group so shutdown reaches its children
@@ -39,16 +40,23 @@ dev:
     trap 'exit 130' INT TERM
     setsid {{ just_executable() }} backend dev &
     groups+=($!)
+    if [ "{{ proxy }}" = "true" ]; then
+        export TM_DEV_ORIGIN=http://localhost:3000
+    fi
     setsid {{ just_executable() }} frontend dev &
     groups+=($!)
+    if [ "{{ proxy }}" = "true" ]; then
+        TM_SERVERS="${TM_SERVERS:-local=http://localhost:3000}" setsid {{ just_executable() }} proxy dev &
+        groups+=($!)
+    fi
     wait -n
 
 [group('dev')]
-[doc('Stop stray dev servers: anything on :3000/:3001 plus air and vite processes from this repo')]
+[doc('Stop stray dev servers: anything on :3000/:3001/:4000 plus air and vite processes from this repo')]
 kill:
     #!/usr/bin/env bash
     set -uo pipefail
-    pids=$( (lsof -t -i:3000 -i:3001 -sTCP:LISTEN 2>/dev/null; pgrep -f "{{ justfile_directory() }}.*(air|vite)" 2>/dev/null) | sort -u)
+    pids=$( (lsof -t -i:3000 -i:3001 -i:4000 -sTCP:LISTEN 2>/dev/null; pgrep -f "{{ justfile_directory() }}.*(air|vite)" 2>/dev/null) | sort -u)
     if [ -z "$pids" ]; then
         echo "No dev servers running."
         exit 0

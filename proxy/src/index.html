@@ -17,87 +17,287 @@
       content="Digital implementation of the Terraforming Mars board game with real-time multiplayer"
     />
     <link rel="manifest" href="/manifest.json" />
+    <link rel="preload" href="/fonts/orbitron-bold.ttf" as="font" type="font/ttf" crossorigin />
     <title>Terraforming Mars CE</title>
     <style>
+      /* Mirrors the game's main menu: frontend/src/index.css (.menu-shell,
+         .game-button) and the title in GameLandingPage.tsx */
+      @font-face {
+        font-family: "Gateway Orbitron";
+        src: url("/fonts/orbitron-medium.ttf") format("truetype");
+        font-weight: 500;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "Gateway Orbitron";
+        src: url("/fonts/orbitron-semibold.ttf") format("truetype");
+        font-weight: 600;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "Gateway Orbitron";
+        src: url("/fonts/orbitron-bold.ttf") format("truetype");
+        font-weight: 700;
+        font-display: swap;
+      }
+
       #gateway {
-        box-sizing: border-box;
-        min-height: 100dvh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 24px 16px;
+        --orbitron: "Gateway Orbitron", sans-serif;
+        --online: #4caa72;
+        position: fixed;
+        inset: 0;
+        overflow-y: auto;
+        background: #000;
         color: #fff;
-        font-family: system-ui, sans-serif;
+        font-family: var(--orbitron);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        animation: gateway-in 300ms ease-out;
       }
       #gateway[hidden] {
         display: none;
       }
-      #gateway h1 {
+      @keyframes gateway-in {
+        from {
+          opacity: 0;
+        }
+      }
+
+      #gateway .shell {
+        box-sizing: border-box;
+        width: min(1100px, calc(100% - 48px));
+        min-height: 100dvh;
+        margin: auto;
+        padding: 100px 0 70px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      #gateway .intro {
+        max-width: 520px;
+        padding: 20px 0;
+      }
+      #gateway .title {
         margin: 0;
-        font-size: clamp(28px, 6vw, 48px);
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        font-size: clamp(2rem, 4vw, 4.5rem);
+        font-weight: 700;
+        line-height: 1.25;
+        text-shadow: 0 0 30px rgb(30 60 150 / 80%);
       }
       #gateway .subtitle {
-        margin: 8px 0 24px;
-        color: rgb(255 255 255 / 60%);
+        margin: 12px 0 40px;
+        color: rgb(255 255 255 / 45%);
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
       }
       #gateway .notice {
-        max-width: 420px;
         margin: 0 0 16px;
-        padding: 10px 14px;
-        border: 1px solid rgb(255 160 80 / 50%);
-        background: rgb(255 160 80 / 10%);
-        color: #ffcf9e;
-        text-align: center;
+        color: rgb(255 255 255 / 60%);
+        font-size: 0.8rem;
+        font-weight: 500;
       }
+
+      #gateway .notice[hidden],
+      #gateway .servers li[hidden] {
+        display: none;
+      }
+
       #gateway .servers {
-        width: 100%;
-        max-width: 420px;
         margin: 0;
         padding: 0;
         list-style: none;
-        display: grid;
-        gap: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
       }
-      #gateway button {
-        width: 100%;
+
+      /* Secondary .game-button: cut corners, grey frame, dark fill */
+      #gateway .server {
+        --cut: 8px;
+        --shape: polygon(
+          0 0,
+          calc(100% - var(--cut)) 0,
+          100% var(--cut),
+          100% 100%,
+          var(--cut) 100%,
+          0 calc(100% - var(--cut))
+        );
+        position: relative;
+        isolation: isolate;
+        width: 300px;
+        min-height: 44px;
         display: grid;
-        grid-template-columns: 1fr auto;
+        grid-template-columns: auto auto minmax(0, 1fr) auto auto;
         align-items: center;
-        gap: 4px 12px;
-        padding: 14px 16px;
-        border: 1px solid rgb(255 255 255 / 20%);
-        background: rgb(20 30 50 / 80%);
-        color: inherit;
-        font: inherit;
+        column-gap: 10px;
+        padding: 0.65rem 1.1rem;
+        border: 0;
+        background: transparent;
+        color: #f2f4fa;
+        font-family: var(--orbitron);
+        font-size: 0.8rem;
+        font-weight: 600;
         text-align: left;
         cursor: pointer;
       }
-      #gateway button:hover:not(:disabled) {
-        border-color: rgb(100 200 255 / 70%);
-        background: rgb(30 50 80 / 90%);
+      #gateway .server::before,
+      #gateway .server::after {
+        content: "";
+        position: absolute;
+        clip-path: var(--shape);
+        transition: background 120ms;
       }
-      #gateway button:disabled {
+      #gateway .server::before {
+        inset: 0;
+        z-index: -2;
+        background: #3c3c46;
+      }
+      #gateway .server::after {
+        inset: 1px;
+        z-index: -1;
+        background: rgb(10 10 15 / 97%);
+      }
+      #gateway .server:not(:disabled):hover::before {
+        background: #5a5f70;
+      }
+      #gateway .server:not(:disabled):hover::after {
+        background: #14151c;
+      }
+      #gateway .server:focus-visible {
+        outline: 2px solid #b6caff;
+        outline-offset: 3px;
+      }
+      #gateway .server:disabled {
         cursor: default;
       }
-      #gateway button.offline {
-        opacity: 0.5;
+      #gateway .server[data-status="down"] {
+        opacity: 0.55;
       }
+
       #gateway .name {
-        font-weight: 600;
+        white-space: nowrap;
       }
-      #gateway .detail {
-        grid-column: 1;
-        color: rgb(255 255 255 / 55%);
-        font-size: 13px;
+      #gateway .version {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: rgb(255 255 255 / 40%);
+        font-size: 0.7rem;
+        font-weight: 500;
       }
-      #gateway .badge {
-        grid-column: 2;
-        grid-row: 1 / span 2;
-        color: #64c8ff;
-        font-size: 12px;
+      #gateway .current,
+      #gateway .status {
+        color: rgb(255 255 255 / 40%);
+        font-size: 0.7rem;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      #gateway .version + .status {
+        grid-column: 5;
+      }
+
+      /* Status marker: grey while checking, red when down, green and pulsing when online */
+      #gateway .dot {
+        position: relative;
+        width: 7px;
+        height: 7px;
+        flex-shrink: 0;
+        background: #555965;
+      }
+      #gateway .server[data-status="down"] .dot {
+        background: #b94f56;
+      }
+      #gateway .server[data-status="online"] .dot {
+        background: var(--online);
+        box-shadow: 0 0 6px rgb(76 170 114 / 70%);
+      }
+      #gateway .server[data-status="online"] .dot::after {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        border: 1px solid var(--online);
+        opacity: 0;
+        animation: gateway-pulse 2.4s ease-out infinite;
+      }
+      @keyframes gateway-pulse {
+        0% {
+          transform: scale(1);
+          opacity: 0.35;
+        }
+        70%,
+        100% {
+          transform: scale(2.6);
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #gateway,
+        #gateway .dot::after {
+          animation: none;
+        }
+      }
+
+      /* Phones: a top bar, then a plain list with dividers */
+      @media (max-width: 640px), (max-height: 500px) {
+        #gateway .shell {
+          width: 100%;
+          min-height: 100dvh;
+          padding: 0;
+          justify-content: flex-start;
+        }
+        #gateway .intro {
+          position: sticky;
+          top: 0;
+          z-index: 1;
+          max-width: none;
+          display: flex;
+          align-items: baseline;
+          flex-wrap: wrap;
+          gap: 4px 12px;
+          padding: calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+            14px calc(16px + env(safe-area-inset-left));
+          background: #000;
+          border-bottom: 1px solid rgb(255 255 255 / 10%);
+        }
+        #gateway .title {
+          font-size: 1rem;
+          letter-spacing: 0.05em;
+        }
+        #gateway .title br {
+          display: none;
+        }
+        #gateway .subtitle {
+          margin: 0;
+          font-size: 0.7rem;
+        }
+        #gateway .choices {
+          padding: 0 calc(16px + env(safe-area-inset-right)) env(safe-area-inset-bottom)
+            calc(16px + env(safe-area-inset-left));
+        }
+        #gateway .notice {
+          margin: 14px 0 0;
+        }
+        #gateway .servers {
+          display: block;
+        }
+        #gateway .servers li {
+          border-bottom: 1px solid rgb(255 255 255 / 10%);
+        }
+        #gateway .server {
+          width: 100%;
+          min-height: 48px;
+          padding: 0 4px;
+        }
+        #gateway .server::before,
+        #gateway .server::after {
+          content: none;
+        }
+        #gateway .server:not(:disabled):active {
+          background: rgb(255 255 255 / 5%);
+        }
       }
     </style>
   </head>

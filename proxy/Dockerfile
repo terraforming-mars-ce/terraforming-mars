@@ -5,6 +5,7 @@ COPY proxy/package.json proxy/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY proxy/ ./
 COPY assets/original/app/ /build/assets/original/app/
+COPY assets/original/fonts/orbitron/ /build/assets/original/fonts/orbitron/
 COPY frontend/public/manifest.json /build/frontend/public/manifest.json
 
 RUN bun run build

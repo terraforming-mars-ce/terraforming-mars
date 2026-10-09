@@ -73,6 +73,15 @@ export const FeedbackIcon: React.FC = () => (
   </svg>
 );
 
+export const ServerIcon: React.FC = () => (
+  <svg {...svgProps}>
+    <rect x="2" y="3" width="20" height="8" rx="1" />
+    <rect x="2" y="13" width="20" height="8" rx="1" />
+    <path d="M6 7h.01" />
+    <path d="M6 17h.01" />
+  </svg>
+);
+
 export const HomeIcon: React.FC = () => (
   <svg {...svgProps}>
     <path d="M3 11 12 4l9 7" />

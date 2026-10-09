@@ -11,7 +11,8 @@ export interface ServerEntry {
 declare global {
   interface Window {
     __TM_SERVERS__?: ServerEntry[];
-    __TM_GATEWAY__?: { alias: string; name: string };
+    /** Read by the game: the booted server and every server the gateway offers */
+    __TM_GATEWAY__?: { alias: string; name: string; servers: ServerEntry[] };
   }
 }
 

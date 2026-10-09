@@ -24,6 +24,8 @@ interface UIOverlayState {
   conflictingTabInfo: { gameId: string; playerName: string } | null;
   showCorporationModal: boolean;
   showCardBrowser: boolean;
+  showServerDown: boolean;
+  showServerSelector: boolean;
 
   setShowCardsPlayedModal: (show: boolean) => void;
   setShowDebugDropdown: (show: boolean) => void;
@@ -50,6 +52,8 @@ interface UIOverlayState {
   setConflictingTabInfo: (info: { gameId: string; playerName: string } | null) => void;
   setShowCorporationModal: (show: boolean) => void;
   setShowCardBrowser: (show: boolean) => void;
+  setShowServerDown: (show: boolean) => void;
+  setShowServerSelector: (show: boolean) => void;
   toggleShowDebugDropdown: () => void;
   toggleShowPerformanceWindow: () => void;
   toggleShowFeedbackWindow: () => void;
@@ -79,6 +83,8 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   conflictingTabInfo: null,
   showCorporationModal: false,
   showCardBrowser: false,
+  showServerDown: false,
+  showServerSelector: false,
 
   setShowCardsPlayedModal: (show) => set({ showCardsPlayedModal: show }),
   setShowDebugDropdown: (show) => set({ showDebugDropdown: show }),
@@ -105,6 +111,8 @@ export const useUIOverlayStore = create<UIOverlayState>((set) => ({
   setConflictingTabInfo: (info) => set({ conflictingTabInfo: info }),
   setShowCorporationModal: (show) => set({ showCorporationModal: show }),
   setShowCardBrowser: (show) => set({ showCardBrowser: show }),
+  setShowServerDown: (show) => set({ showServerDown: show }),
+  setShowServerSelector: (show) => set({ showServerSelector: show }),
   toggleShowDebugDropdown: () => set((s) => ({ showDebugDropdown: !s.showDebugDropdown })),
   toggleShowPerformanceWindow: () =>
     set((s) => ({ showPerformanceWindow: !s.showPerformanceWindow })),

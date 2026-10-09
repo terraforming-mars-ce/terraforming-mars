@@ -97,7 +97,7 @@ Two call sites override the defaults for guaranteed-visible feedback:
 - App-level menu overlay: `showDelayMs={0}` + `minDurationMs={500}` — cold app boot always shows the spinner.
 - In-game overlay: `showDelayMs={0}` + `minDurationMs={200}` — every `loading` phase entry shows the spinner. The one exception is arriving at `/game` from create/join with the game in route state: before the lobby, the delay is 600ms, so the quick re-check finishes behind the still-visible space background and no loading screen appears.
 
-Both of those also pass `showProgress`, which replaces the spinner with a percentage and bar, and drops the `message` title in favour of one small detail line (the `subtitle`, or `message` when there is no subtitle). The value is the larger of three.js loader progress (drei `useProgress`, scaled to 90%) and a time-based estimate that keeps creeping toward 95%. It never goes backwards and holds at 99% until `isLoaded`.
+Both of those also pass `showProgress`, which replaces the spinner with a percentage and bar, and drops the `message` title in favour of one small detail line: the `subtitle`, else `message`, else what three.js is loading right now ("Loading starfield", "Loading Mars" …). The value is the larger of three.js loader progress (drei `useProgress`, scaled to 90%) and a time-based estimate that keeps creeping toward 95%. It never goes backwards and holds at 99% until `isLoaded`.
 
 ## Key Development Patterns
 

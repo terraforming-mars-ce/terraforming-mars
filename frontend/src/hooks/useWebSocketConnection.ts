@@ -11,6 +11,7 @@ import { useBotPresenceStore } from "@/stores/botPresenceStore.ts";
 import { useSoundEffects } from "@/hooks/useSoundEffects.ts";
 import { deepClone, findChangedPaths } from "@/utils/deepCompare.ts";
 import { clearGameSession, getGameSession, saveGameSession } from "@/utils/sessionStorage.ts";
+import { gatewayServer } from "@/utils/gateway.ts";
 import type {
   BotThoughtPayload,
   ChatMessageDto,
@@ -429,6 +430,11 @@ export function useWebSocketConnection(
 
     const handleMaxReconnectsReached = () => {
       clearGameSession();
+      // Behind a gateway the menu would belong to the dead server; offer the other servers instead
+      if (gatewayServer) {
+        useUIOverlayStore.getState().setShowServerDown(true);
+        return;
+      }
       navigate("/", { state: { error: "Server is down", persistent: true } });
     };
 
