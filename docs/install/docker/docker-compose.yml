@@ -7,6 +7,9 @@ services:
       - "3001:3001"
     environment:
       - TM_LOG_LEVEL=${TM_LOG_LEVEL:-info}
+      # Identity shown by a gateway that fronts several servers (lowercase a-z, 0-9, -)
+      - TM_SERVER_ALIAS=${TM_SERVER_ALIAS:-local}
+      - TM_SERVER_NAME=${TM_SERVER_NAME:-}
       # Bug reporting (optional -- game works without these)
       - GITHUB_APP_ID=${GITHUB_APP_ID:-}
       - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}

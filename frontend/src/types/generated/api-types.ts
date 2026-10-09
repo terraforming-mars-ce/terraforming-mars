@@ -2340,6 +2340,14 @@ export interface FeedbackStatusResponse {
   available: boolean;
   reason?: string;
 }
+/**
+ * MetaResponse identifies this server to a gateway that fronts several servers.
+ */
+export interface MetaResponse {
+  alias: string;
+  name: string;
+  version: string;
+}
 
 //////////
 // source: mapper_game.go
