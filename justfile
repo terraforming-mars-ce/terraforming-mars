@@ -1,18 +1,19 @@
 # Terraforming Mars task runner. Run `just` to list every recipe.
-# Backend and frontend recipes live in modules: `just backend <recipe>`, `just frontend <recipe>`.
+# Backend, frontend and gateway recipes live in modules: `just backend <recipe>`, `just frontend <recipe>`, `just proxy <recipe>`.
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 mod backend
 mod frontend
+mod proxy
 
 [private]
 default:
     @just --list --unsorted --list-submodules
 
 [group('setup')]
-[doc('Install Go modules and frontend dependencies')]
-deps: backend::deps frontend::deps
+[doc('Install Go modules and frontend and gateway dependencies')]
+deps: backend::deps frontend::deps proxy::deps
 
 [group('dev')]
 [doc('Run the backend (:3001, hot reload) and frontend (:3000) together; Ctrl-C or either one exiting stops both')]
@@ -61,20 +62,20 @@ kill:
     fi
 
 [group('check')]
-[doc('Fail if any backend or frontend source is not formatted')]
-format-check: backend::format-check frontend::format-check
+[doc('Fail if any backend, frontend or gateway source is not formatted')]
+format-check: backend::format-check frontend::format-check proxy::format-check
 
 [group('check')]
-[doc('Lint backend and frontend')]
-lint: backend::lint frontend::lint
+[doc('Lint backend, frontend and gateway')]
+lint: backend::lint frontend::lint proxy::lint
 
 [group('check')]
-[doc('Type-check the frontend')]
-typecheck: frontend::typecheck
+[doc('Type-check the frontend and gateway')]
+typecheck: frontend::typecheck proxy::typecheck
 
 [group('check')]
-[doc('Run backend tests')]
-test: backend::test
+[doc('Run backend and gateway tests')]
+test: backend::test proxy::test
 
 [group('check')]
 [doc('Fail if the committed generated TypeScript types are out of date')]
@@ -82,11 +83,11 @@ generate-check: backend::generate-check
 
 [group('check')]
 [doc('Run every check CI runs, without modifying files')]
-check: backend::check frontend::check
+check: backend::check frontend::check proxy::check
 
 [group('fix')]
-[doc('Format backend and frontend source')]
-format: backend::format frontend::format
+[doc('Format backend, frontend and gateway source')]
+format: backend::format frontend::format proxy::format
 
 [group('fix')]
 [doc('Format, regenerate types, then run every check CI runs')]
@@ -100,12 +101,12 @@ prepare-for-commit:
 generate: backend::generate
 
 [group('build')]
-[doc('Build the backend binary and the frontend bundle')]
-build: backend::build frontend::build
+[doc('Build the backend binary, the frontend bundle and the gateway')]
+build: backend::build frontend::build proxy::build
 
 [group('build')]
-[doc('Remove backend and frontend build output')]
-clean: backend::clean frontend::clean
+[doc('Remove backend, frontend and gateway build output')]
+clean: backend::clean frontend::clean proxy::clean
 
 [group('deploy')]
 [doc('Build and deploy to the Raspberry Pi (see scripts/deploy-pi.sh)')]

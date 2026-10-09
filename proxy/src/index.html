@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" spellcheck="false">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Terraforming Mars" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Digital implementation of the Terraforming Mars board game with real-time multiplayer"
+    />
+    <link rel="manifest" href="/manifest.json" />
+    <title>Terraforming Mars CE</title>
+    <style>
+      #gateway {
+        box-sizing: border-box;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+        color: #fff;
+        font-family: system-ui, sans-serif;
+      }
+      #gateway[hidden] {
+        display: none;
+      }
+      #gateway h1 {
+        margin: 0;
+        font-size: clamp(28px, 6vw, 48px);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      #gateway .subtitle {
+        margin: 8px 0 24px;
+        color: rgb(255 255 255 / 60%);
+      }
+      #gateway .notice {
+        max-width: 420px;
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        border: 1px solid rgb(255 160 80 / 50%);
+        background: rgb(255 160 80 / 10%);
+        color: #ffcf9e;
+        text-align: center;
+      }
+      #gateway .servers {
+        width: 100%;
+        max-width: 420px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 10px;
+      }
+      #gateway button {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 4px 12px;
+        padding: 14px 16px;
+        border: 1px solid rgb(255 255 255 / 20%);
+        background: rgb(20 30 50 / 80%);
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      #gateway button:hover:not(:disabled) {
+        border-color: rgb(100 200 255 / 70%);
+        background: rgb(30 50 80 / 90%);
+      }
+      #gateway button:disabled {
+        cursor: default;
+      }
+      #gateway button.offline {
+        opacity: 0.5;
+      }
+      #gateway .name {
+        font-weight: 600;
+      }
+      #gateway .detail {
+        grid-column: 1;
+        color: rgb(255 255 255 / 55%);
+        font-size: 13px;
+      }
+      #gateway .badge {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        color: #64c8ff;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body style="background-color: #000000; margin: 0">
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <main id="gateway" hidden></main>
+    <div id="root"></div>
+    <script src="/servers.js"></script>
+    <script type="module" src="/%LOADER%"></script>
+  </body>
+</html>

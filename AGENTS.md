@@ -4,7 +4,7 @@ Digital implementation of Terraforming Mars board game with real-time multiplaye
 
 ## Commands
 
-Tasks run through [just](https://just.systems). The root `justfile` loads two modules: `backend/justfile` and `frontend/justfile`. Run `just` to list every recipe. Call a module recipe as `just backend test` or `just frontend lint`; inside `backend/` or `frontend/`, plain `just <recipe>` runs that module's recipe.
+Tasks run through [just](https://just.systems). The root `justfile` loads three modules: `backend/justfile`, `frontend/justfile` and `proxy/justfile` (the gateway). Run `just` to list every recipe. Call a module recipe as `just backend test` or `just frontend lint`; inside `backend/` or `frontend/`, plain `just <recipe>` runs that module's recipe.
 
 ### Development
 ```bash
