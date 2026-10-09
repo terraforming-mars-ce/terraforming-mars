@@ -1,11 +1,23 @@
 import {
+  GameDto,
   PlayerEffectDto,
+  PlayerResourceConversionDto,
+  StandardProject,
   StandardProjectConvertPlantsToGreenery,
   StandardProjectConvertHeatToTemperature,
 } from "../types/generated/api-types.ts";
 
 const BASE_PLANTS_FOR_GREENERY = 8;
 const BASE_HEAT_FOR_TEMPERATURE = 8;
+
+export function findResourceConversion(
+  gameState: GameDto | undefined,
+  projectType: StandardProject,
+): PlayerResourceConversionDto | undefined {
+  return gameState?.currentPlayer?.resourceConversions?.find(
+    (conversion) => conversion.projectType === projectType,
+  );
+}
 
 /**
  * Calculates the required plants for greenery conversion considering player discounts

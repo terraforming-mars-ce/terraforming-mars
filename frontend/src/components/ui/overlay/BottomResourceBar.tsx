@@ -18,6 +18,8 @@ import {
   PlayerStatusSelection,
   GameStatusActive,
   ResourceType,
+  StandardProjectConvertPlantsToGreenery,
+  StandardProjectConvertHeatToTemperature,
 } from "@/types/generated/api-types.ts";
 import ActionsPopover from "../popover/ActionsPopover.tsx";
 import EffectsPopover from "../popover/EffectsPopover.tsx";
@@ -30,6 +32,7 @@ import CorporationCard from "../cards/CorporationCard.tsx";
 import { getCorporationLogo } from "@/utils/corporationLogos.tsx";
 import { getCorporationBorderColor } from "@/utils/corporationColors.ts";
 
+import { findResourceConversion } from "@/utils/resourceConversionUtils.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
 import { canPerformActions } from "@/utils/actionUtils.ts";
 import { Z_INDEX, getZIndex } from "@/constants/zIndex.ts";
@@ -365,14 +368,10 @@ const BottomResourceBar: React.FC<BottomResourceBarProps> = ({
 
   const canConvertPlants =
     !isSpectating &&
-    !!gameState?.currentPlayer?.standardProjects.find(
-      (p) => p.projectType === "convert-plants-to-greenery",
-    )?.available;
+    !!findResourceConversion(gameState, StandardProjectConvertPlantsToGreenery)?.available;
   const canConvertHeat =
     !isSpectating &&
-    !!gameState?.currentPlayer?.standardProjects.find(
-      (p) => p.projectType === "convert-heat-to-temperature",
-    )?.available &&
+    !!findResourceConversion(gameState, StandardProjectConvertHeatToTemperature)?.available &&
     (gameState?.globalParameters?.temperature ?? -30) < 8;
 
   const handleOpenCardsModal = () => {
