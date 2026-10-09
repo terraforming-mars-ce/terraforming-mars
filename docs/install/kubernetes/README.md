@@ -29,10 +29,8 @@ kubectl create secret generic terraforming-mars-github-app \
 Apply the manifests:
 
 ```bash
-kubectl apply -f backend-deployment.yaml
-kubectl apply -f backend-service.yaml
-kubectl apply -f frontend-deployment.yaml
-kubectl apply -f frontend-service.yaml
+kubectl apply -f app-deployment.yaml
+kubectl apply -f app-service.yaml
 kubectl apply -f ingress.yaml
 ```
 
@@ -50,6 +48,6 @@ The Claude OAuth token is passed as a regular env var sourced from a secret. Thi
 
 ## Ingress
 
-The example ingress uses nginx-ingress. The 3600s timeouts matter -- without them, the default 60s timeout will kill WebSocket connections during idle moments in a game.
+The example ingress uses nginx-ingress and sends every path to the one service. The 3600s timeouts matter -- without them, the default 60s timeout will kill WebSocket connections during idle moments in a game.
 
 If you're using a different ingress controller, make sure it supports WebSocket upgrades and has configurable read/send timeouts.

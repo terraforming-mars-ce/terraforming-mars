@@ -1,15 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: terraforming-mars-backend
+  name: terraforming-mars
   labels:
-    app.kubernetes.io/name: terraforming-mars-backend
-    app.kubernetes.io/component: backend
+    app.kubernetes.io/name: terraforming-mars
+    app.kubernetes.io/component: app
     app.kubernetes.io/part-of: terraforming-mars
 spec:
   type: ClusterIP
   selector:
-    app.kubernetes.io/name: terraforming-mars-backend
+    app.kubernetes.io/name: terraforming-mars
   ports:
     - port: 3001
       targetPort: http

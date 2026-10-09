@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: terraforming-mars-backend
+  name: terraforming-mars
   labels:
-    app.kubernetes.io/name: terraforming-mars-backend
-    app.kubernetes.io/component: backend
+    app.kubernetes.io/name: terraforming-mars
+    app.kubernetes.io/component: app
     app.kubernetes.io/part-of: terraforming-mars
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: terraforming-mars-backend
+      app.kubernetes.io/name: terraforming-mars
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: terraforming-mars-backend
-        app.kubernetes.io/component: backend
+        app.kubernetes.io/name: terraforming-mars
+        app.kubernetes.io/component: app
         app.kubernetes.io/part-of: terraforming-mars
     spec:
       imagePullSecrets:
@@ -28,8 +28,8 @@ spec:
               - key: private-key
                 path: private-key.pem
       containers:
-        - name: terraforming-mars-backend
-          image: ghcr.io/terraforming-mars-ce/terraforming-mars-backend:latest
+        - name: terraforming-mars
+          image: ghcr.io/terraforming-mars-ce/terraforming-mars:latest
           ports:
             - containerPort: 3001
               name: http

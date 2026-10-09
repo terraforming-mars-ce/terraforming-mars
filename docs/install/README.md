@@ -1,40 +1,32 @@
 # Deploying Terraforming Mars
 
-Two containers, a reverse proxy in front. That's it.
+One container, a reverse proxy in front. That's it.
 
-## Containers
+## The container
 
-**Backend** (`ghcr.io/terraforming-mars-ce/terraforming-mars-backend`) -- Go server on port 3001. Handles game logic, WebSocket connections, and the bug report API.
+`ghcr.io/terraforming-mars-ce/terraforming-mars` is one Go server on port 3001. It runs the game logic and the bug report API, holds the WebSocket connections, and serves the React app. Everything is on one origin, so there's nothing to point the frontend at.
 
-**Frontend** (`ghcr.io/terraforming-mars-ce/terraforming-mars-frontend`) -- Nginx serving the React app on port 3000. Static files with a runtime config injected at startup.
-
-Both images are built from the repo root. See `backend/Dockerfile` and `frontend/Dockerfile`.
+The image is built from the repo root with the root `Dockerfile`.
 
 ## Reverse proxy
 
-You need something in front that routes traffic to the right container. The frontend uses relative URLs (`/api/v1`), so both services must be behind the same hostname.
+Send every path for your hostname to the container on port 3001. TLS usually ends at the proxy.
 
-Required routing:
-
-| Path | Destination | Notes |
-|------|-------------|-------|
-| `/api/*` | backend:3001 | REST API |
-| `/ws` | backend:3001 | WebSocket -- needs long timeouts |
-| `/` | frontend:3000 | Everything else |
-
-WebSocket connections stay open for the duration of a game, so set proxy read/send timeouts to something high (3600s works). If your proxy drops idle connections after 60 seconds, players will get disconnected constantly.
+WebSocket connections (`/ws`) stay open for the duration of a game, so set proxy read/send timeouts to something high (3600s works). If your proxy drops idle connections after 60 seconds, players will get disconnected constantly.
 
 ## Environment variables
-
-### Backend
 
 | Variable | Required | Default | What it does |
 |----------|----------|---------|--------------|
 | `TM_LOG_LEVEL` | No | `info` | Log verbosity. Options: `debug`, `info`, `warn`, `error` |
+| `TM_ADDR` | No | `:3001` | Address the server listens on, e.g. `:3000` |
+| `TM_WEB_DIR` | No | `web` | Directory with the built frontend, relative to the working directory. The image has it at `/app/web`. When the directory is missing, only the API is served |
+| `TM_SERVER_ALIAS` | No | `local` | This server's permanent id on a gateway that fronts several servers (lowercase a-z, 0-9, -). It appears in shared links |
+| `TM_SERVER_NAME` | No | the alias | Display name on that gateway, e.g. `EU 1` |
 
 The game works fine without any environment variables. The bug report feature has its own set of optional env vars below.
 
-#### Bug reporting
+### Bug reporting
 
 All optional. Without these, the game runs normally but the in-game bug report button shows "not available".
 
@@ -55,14 +47,6 @@ Bug report service initialized  {"github_app": true, "claude": true}
 ```
 
 If something is misconfigured you'll see `false` and a warning explaining why.
-
-### Frontend
-
-| Variable | Required | Default | What it does |
-|----------|----------|---------|--------------|
-| `API_URL` | No | `/api/v1` | Full API URL. Leave unset when running behind a reverse proxy -- the default relative path works. Set to a complete URL (e.g. `http://localhost:3001/api/v1`) when the backend is on a different host or port |
-
-The default (`/api/v1`) uses `window.location.origin` for both HTTP and WebSocket connections, so TLS, hostname, and port all come from wherever the browser loaded the page. Only set this when you need to point at a different server.
 
 ## Bug report capabilities
 
