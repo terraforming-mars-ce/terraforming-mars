@@ -1,0 +1,20 @@
+[Unit]
+Description=Terraforming Mars gateway (server picker)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+# TM_SERVERS from gateway.env in the repo, TM_VERSION from the deploy
+EnvironmentFile=/etc/tm-gateway/gateway.env
+ExecStartPre=-/usr/bin/docker rm -f tm-gateway
+ExecStart=/usr/bin/docker run --rm --name tm-gateway \
+    -p 127.0.0.1:4000:4000 \
+    -e TM_SERVERS \
+    ghcr.io/terraforming-mars-ce/terraforming-mars-proxy:${TM_VERSION}
+ExecStop=/usr/bin/docker stop tm-gateway
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
