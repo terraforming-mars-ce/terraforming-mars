@@ -36,22 +36,22 @@ func (h *ConfirmResourceRemovalHandler) HandleMessage(ctx context.Context, conne
 
 	log.Debug("Processing confirm resource removal request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	selectionID, _ := payloadMap["selectionId"].(string)
 	fail := func(message string) {
-		connection.Send <- dto.WebSocketMessage{Type: dto.MessageTypeError, Payload: map[string]interface{}{"error": message, "selectionId": selectionID}}
+		connection.SendErrorPayload(dto.ErrorPayload{Message: message, RequestType: dto.MessageTypeActionConfirmResourceRemoval, SelectionID: selectionID})
 	}
 	var payload struct {
 		SelectionID    string `json:"selectionId"`
@@ -67,32 +67,13 @@ func (h *ConfirmResourceRemovalHandler) HandleMessage(ctx context.Context, conne
 		fail("Invalid selectionId or integer amount")
 		return
 	}
-	if err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.SelectionID, payload.TargetPlayerID, *payload.Amount); err != nil {
+	if err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), payload.SelectionID, payload.TargetPlayerID, *payload.Amount); err != nil {
 		fail(err.Error())
 		return
 	}
 
 	log.Debug("Resource removal confirmed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "confirm-resource-removal",
-			"success": true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *ConfirmResourceRemovalHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

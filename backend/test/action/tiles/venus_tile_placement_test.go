@@ -10,8 +10,7 @@ import (
 )
 
 func TestMaxwellBase_PlacesOnVenusTile_WhenVenusEnabled(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithVenus(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithVenus(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Maxwell Base")
@@ -54,8 +53,7 @@ func TestMaxwellBase_PlacesOnVenusTile_WhenVenusEnabled(t *testing.T) {
 }
 
 func TestStratopolis_PlacesOnVenusTile_WhenVenusEnabled(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithVenus(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithVenus(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Stratopolis")

@@ -17,8 +17,6 @@ import type {
   ChatMessageDto,
   EmotePayload,
   GameDto,
-  FullStatePayload,
-  PlayerDisconnectedPayload,
   LogUpdatePayload,
   OtherPlayerDto,
 } from "@/types/generated/api-types.ts";
@@ -300,12 +298,6 @@ export function useWebSocketConnection(
       }
     };
 
-    const handleFullState = (statePayload: FullStatePayload) => {
-      if (statePayload.game) {
-        handleGameUpdated(statePayload.game);
-      }
-    };
-
     const handleLogUpdate = ({ logs, isHistory }: LogUpdatePayload) => {
       if (isHistory) {
         return;
@@ -426,8 +418,6 @@ export function useWebSocketConnection(
       }
     };
 
-    const handlePlayerDisconnected = (_payload: PlayerDisconnectedPayload) => {};
-
     const handleMaxReconnectsReached = () => {
       clearGameSession();
       // Behind a gateway the menu would belong to the dead server; offer the other servers instead
@@ -476,9 +466,7 @@ export function useWebSocketConnection(
     };
 
     globalWebSocketManager.on("game-updated", handleGameUpdated);
-    globalWebSocketManager.on("full-state", handleFullState);
     globalWebSocketManager.on("log-update", handleLogUpdate);
-    globalWebSocketManager.on("player-disconnected", handlePlayerDisconnected);
     globalWebSocketManager.on("player-kicked", handlePlayerKicked);
     globalWebSocketManager.on("game-ended", handleGameEnded);
     globalWebSocketManager.on("error", handleError);
@@ -494,9 +482,7 @@ export function useWebSocketConnection(
 
     return () => {
       globalWebSocketManager.off("game-updated", handleGameUpdated);
-      globalWebSocketManager.off("full-state", handleFullState);
       globalWebSocketManager.off("log-update", handleLogUpdate);
-      globalWebSocketManager.off("player-disconnected", handlePlayerDisconnected);
       globalWebSocketManager.off("player-kicked", handlePlayerKicked);
       globalWebSocketManager.off("game-ended", handleGameEnded);
       globalWebSocketManager.off("error", handleError);

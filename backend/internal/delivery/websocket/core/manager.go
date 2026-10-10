@@ -1,261 +1,127 @@
 package core
 
 import (
-	"log/slog"
-	"openmars/internal/logger"
 	"sync"
-	"unsafe"
 )
 
-// Manager handles WebSocket connection lifecycle and organization
+// Manager indexes open connections by game. It is safe for concurrent use: broadcasts
+// can come from bot goroutines while the hub binds and removes connections.
 type Manager struct {
-	connections     map[*Connection]bool
-	gameConnections map[string]map[*Connection]bool
 	mu              sync.RWMutex
-	logger          *slog.Logger
+	connections     map[*Connection]struct{}
+	gameConnections map[string]map[*Connection]struct{}
 }
 
-// NewManager creates a new connection manager
+// NewManager creates an empty connection index.
 func NewManager() *Manager {
 	return &Manager{
-		connections:     make(map[*Connection]bool),
-		gameConnections: make(map[string]map[*Connection]bool),
-		logger:          logger.Get(),
+		connections:     make(map[*Connection]struct{}),
+		gameConnections: make(map[string]map[*Connection]struct{}),
 	}
 }
 
-// RegisterConnection registers a new connection
-func (m *Manager) RegisterConnection(connection *Connection) {
+func (m *Manager) add(c *Connection) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	m.connections[connection] = true
-	m.logger.Debug("Client connected to server", slog.String("connection_id", connection.ID))
+	m.connections[c] = struct{}{}
 }
 
-// UnregisterConnection unregisters a connection and handles cleanup.
-// Returns connection metadata including whether it was a spectator.
-func (m *Manager) UnregisterConnection(connection *Connection) (playerID, spectatorID, gameID string, connType ConnectionType, shouldBroadcast bool) {
+// remove drops a connection and returns the identity it had, or false when it was
+// already removed.
+func (m *Manager) remove(c *Connection) (Identity, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	if _, exists := m.connections[connection]; !exists {
-		return "", "", "", ConnectionTypePlayer, false
+	if _, ok := m.connections[c]; !ok {
+		return Identity{}, false
 	}
+	delete(m.connections, c)
+	previous := c.setIdentity(Identity{})
+	m.leaveGameLocked(c, previous.GameID)
+	return previous, true
+}
 
-	delete(m.connections, connection)
-	connection.CloseSend()
-
-	playerID, gameID = connection.GetPlayer()
-	spectatorID = connection.SpectatorID
-	connType = connection.ConnType
-
-	if connType == ConnectionTypeSpectator {
-		shouldBroadcast = gameID != "" && spectatorID != ""
-	} else {
-		shouldBroadcast = gameID != "" && playerID != ""
+// bind gives a registered connection a new identity and returns the one it had.
+func (m *Manager) bind(c *Connection, id Identity) (Identity, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.connections[c]; !ok {
+		return Identity{}, false
 	}
-
-	// Remove from game connections
-	if gameConns, exists := m.gameConnections[gameID]; exists {
-		delete(gameConns, connection)
-
-		if len(gameConns) == 0 {
-			delete(m.gameConnections, gameID)
-			m.logger.Debug("Removed empty game connections map", slog.String("game_id", gameID))
+	previous := c.setIdentity(id)
+	m.leaveGameLocked(c, previous.GameID)
+	if id.GameID != "" {
+		if m.gameConnections[id.GameID] == nil {
+			m.gameConnections[id.GameID] = make(map[*Connection]struct{})
 		}
+		m.gameConnections[id.GameID][c] = struct{}{}
 	}
-
-	connection.Close()
-
-	m.logger.Debug("Client disconnected from server",
-		slog.String("connection_id", connection.ID),
-		slog.String("player_id", playerID),
-		slog.String("spectator_id", spectatorID),
-		slog.String("game_id", gameID),
-		slog.String("conn_type", string(connType)))
-
-	return playerID, spectatorID, gameID, connType, shouldBroadcast
+	return previous, true
 }
 
-// AddToGame adds a connection to a game group
-func (m *Manager) AddToGame(connection *Connection, gameID string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if m.gameConnections[gameID] == nil {
-		m.gameConnections[gameID] = make(map[*Connection]bool)
+func (m *Manager) leaveGameLocked(c *Connection, gameID string) {
+	conns, ok := m.gameConnections[gameID]
+	if !ok {
+		return
 	}
-	m.gameConnections[gameID][connection] = true
+	delete(conns, c)
+	if len(conns) == 0 {
+		delete(m.gameConnections, gameID)
+	}
 }
 
-// GetGameConnections returns all connections for a specific game (read-only copy)
-func (m *Manager) GetGameConnections(gameID string) map[*Connection]bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+// GameConnections returns every connection in a game.
+func (m *Manager) GameConnections(gameID string) []*Connection {
+	return m.matching(gameID, func(Identity) bool { return true })
+}
 
-	gameConns := m.gameConnections[gameID]
-	if gameConns == nil {
+// PlayerConnections returns every connection acting as the player, one per device.
+func (m *Manager) PlayerConnections(gameID, playerID string) []*Connection {
+	return m.matching(gameID, func(id Identity) bool { return id.PlayerID == playerID })
+}
+
+// SpectatorConnections returns every spectator connection in a game.
+func (m *Manager) SpectatorConnections(gameID string) []*Connection {
+	return m.matching(gameID, func(id Identity) bool { return id.SpectatorID != "" })
+}
+
+// SpectatorConnection returns the connection of one spectator, or nil.
+func (m *Manager) SpectatorConnection(gameID, spectatorID string) *Connection {
+	conns := m.matching(gameID, func(id Identity) bool { return id.SpectatorID == spectatorID })
+	if len(conns) == 0 {
 		return nil
 	}
-
-	connections := make(map[*Connection]bool, len(gameConns))
-	for conn := range gameConns {
-		connections[conn] = true
-	}
-	return connections
+	return conns[0]
 }
 
-// GetConnectionCount returns the total number of registered connections
-func (m *Manager) GetConnectionCount() int {
+func (m *Manager) matching(gameID string, match func(Identity) bool) []*Connection {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var result []*Connection
+	for c := range m.gameConnections[gameID] {
+		if match(c.Identity()) {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
+// ConnectionCount returns the number of open connections.
+func (m *Manager) ConnectionCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return len(m.connections)
 }
 
-// RemoveExistingPlayerConnection removes any existing connection for the given player
-// This is used during reconnection to clean up old connections before adding new ones
-// CRITICAL: excludeConnection should be the current connection making the request to avoid cleaning it up
-func (m *Manager) RemoveExistingPlayerConnection(playerID, gameID string, excludeConnection *Connection) *Connection {
+func (m *Manager) closeAll() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	var existingConnection *Connection
-	var matchingConnections []*Connection
-
-	m.logger.Debug("Starting connection cleanup search",
-		slog.String("player_id", playerID),
-		slog.String("game_id", gameID),
-		slog.String("exclude_connection_id", excludeConnection.ID),
-		slog.Any("exclude_connection_ptr", uintptr(unsafe.Pointer(excludeConnection))))
-
-	for connection := range m.connections {
-		existingPlayerID, existingGameID := connection.GetPlayer()
-		if existingPlayerID == playerID && existingGameID == gameID {
-			matchingConnections = append(matchingConnections, connection)
-
-			m.logger.Debug("Found matching connection",
-				slog.String("connection_id", connection.ID),
-				slog.Any("connection_ptr", uintptr(unsafe.Pointer(connection))),
-				slog.Bool("is_excluded", connection == excludeConnection),
-				slog.String("player_id", existingPlayerID),
-				slog.String("game_id", existingGameID))
-
-			if connection != excludeConnection {
-				existingConnection = connection
-				break
-			}
-		}
+	conns := make([]*Connection, 0, len(m.connections))
+	for c := range m.connections {
+		conns = append(conns, c)
 	}
-
-	m.logger.Debug("Connection search complete",
-		slog.Int("total_matching", len(matchingConnections)),
-		slog.Bool("found_to_cleanup", existingConnection != nil))
-
-	if existingConnection == nil {
-		m.logger.Debug("No existing connection to clean up for reconnecting player",
-			slog.String("player_id", playerID),
-			slog.String("game_id", gameID),
-			slog.String("current_connection_id", excludeConnection.ID))
-		return nil
+	m.connections = make(map[*Connection]struct{})
+	m.gameConnections = make(map[string]map[*Connection]struct{})
+	m.mu.Unlock()
+	for _, c := range conns {
+		c.Close()
 	}
-
-	m.logger.Debug("Cleaning up existing connection for reconnecting player",
-		slog.String("existing_connection_id", existingConnection.ID),
-		slog.String("current_connection_id", excludeConnection.ID),
-		slog.String("player_id", playerID),
-		slog.String("game_id", gameID),
-		slog.Any("existing_connection_ptr", uintptr(unsafe.Pointer(existingConnection))),
-		slog.Any("current_connection_ptr", uintptr(unsafe.Pointer(excludeConnection))))
-
-	delete(m.connections, existingConnection)
-	existingConnection.CloseSend()
-
-	// Remove from game connections
-	if gameConns, exists := m.gameConnections[gameID]; exists {
-		delete(gameConns, existingConnection)
-
-		if len(gameConns) == 0 {
-			delete(m.gameConnections, gameID)
-			m.logger.Debug("Removed empty game connections map after cleanup", slog.String("game_id", gameID))
-		}
-	}
-
-	existingConnection.Close()
-
-	m.logger.Debug("Existing connection cleaned up for reconnecting player",
-		slog.String("old_connection_id", existingConnection.ID),
-		slog.String("current_connection_id", excludeConnection.ID),
-		slog.String("player_id", playerID))
-
-	return existingConnection
-}
-
-// CloseAllConnections closes all active connections
-func (m *Manager) CloseAllConnections() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.logger.Debug("Closing all active connections", slog.Int("connection_count", len(m.connections)))
-
-	for connection := range m.connections {
-		connection.Close()
-	}
-
-	m.connections = make(map[*Connection]bool)
-	m.gameConnections = make(map[string]map[*Connection]bool)
-
-	m.logger.Debug("All client connections closed by server")
-}
-
-// GetConnectionBySpectatorID finds a connection for a specific spectator in a game.
-func (m *Manager) GetConnectionBySpectatorID(gameID, spectatorID string) *Connection {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	gameConnections, exists := m.gameConnections[gameID]
-	if !exists {
-		return nil
-	}
-
-	for connection := range gameConnections {
-		if connection.SpectatorID == spectatorID && connection.IsSpectator() {
-			return connection
-		}
-	}
-
-	return nil
-}
-
-// GetSpectatorConnections returns all spectator connections for a game.
-func (m *Manager) GetSpectatorConnections(gameID string) []*Connection {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	var spectators []*Connection
-	for conn := range m.gameConnections[gameID] {
-		if conn.IsSpectator() {
-			spectators = append(spectators, conn)
-		}
-	}
-	return spectators
-}
-
-// GetConnectionByPlayerID finds a connection for a specific player in a game
-func (m *Manager) GetConnectionByPlayerID(gameID, playerID string) *Connection {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	gameConnections, exists := m.gameConnections[gameID]
-	if !exists {
-		return nil
-	}
-
-	for connection := range gameConnections {
-		if connection.PlayerID == playerID {
-			return connection
-		}
-	}
-
-	return nil
 }

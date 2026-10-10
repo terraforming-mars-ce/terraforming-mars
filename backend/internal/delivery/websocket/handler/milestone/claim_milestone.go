@@ -47,29 +47,29 @@ func (h *ClaimMilestoneHandler) HandleMessage(ctx context.Context, connection *c
 
 	log.Debug("Processing claim milestone request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadBytes, err := json.Marshal(message.Payload)
 	if err != nil {
 		log.Error("Failed to marshal payload", slog.Any("error", err))
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	var payload ClaimMilestonePayload
 	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
 		log.Error("Failed to unmarshal payload", slog.Any("error", err))
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	if payload.MilestoneType == "" {
 		log.Error("Missing milestone type in payload")
-		h.sendError(connection, "Milestone type is required")
+		connection.SendError(message.Type, "Milestone type is required")
 		return
 	}
 
@@ -78,46 +78,25 @@ func (h *ClaimMilestoneHandler) HandleMessage(ctx context.Context, connection *c
 	}
 	paymentBytes, paymentErr := json.Marshal(message.Payload)
 	if paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 
-	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.MilestoneType, paymentEnvelope.Payment)
+	err = h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), payload.MilestoneType, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute claim milestone action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Milestone claimed",
 		slog.String("milestone_type", payload.MilestoneType))
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 	log.Debug("Broadcasted game state to all players")
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":        "claim-milestone",
-			"milestoneType": payload.MilestoneType,
-			"success":       true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-// sendError sends an error message to the client
-func (h *ClaimMilestoneHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

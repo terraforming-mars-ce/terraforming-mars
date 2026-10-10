@@ -216,7 +216,7 @@ func TestSession_RetryClearsTheFailure(t *testing.T) {
 
 	var err error
 	fx.read(func() { err = bc.RetryBot(context.Background(), fx.game.ID(), "someone-else", fx.botID) })
-	testutil.AssertError(t, err, "only the host can retry")
+	testutil.AssertErrorContains(t, err, "only the host can retry a bot", "only the host can retry")
 
 	fx.read(func() { err = bc.RetryBot(context.Background(), fx.game.ID(), fx.game.HostPlayerID(), fx.botID) })
 	testutil.AssertNoError(t, err, "host can retry")
@@ -273,6 +273,7 @@ func TestSession_ReactsToChatBetweenTurns(t *testing.T) {
 
 func TestSession_StaysQuietDuringTheShowcase(t *testing.T) {
 	fx := newBotFixture(t)
+	enableDevMode(fx)
 	ctx := context.Background()
 	testutil.AssertNoError(t, fx.game.SetCurrentTurn(ctx, fx.humanID, 2), "human should have the turn")
 	testutil.AssertNoError(t, fx.game.UpdatePhase(ctx, shared.GamePhaseInitApplyCorp), "showcase phase")
@@ -281,9 +282,18 @@ func TestSession_StaysQuietDuringTheShowcase(t *testing.T) {
 	}}
 	bc, broadcaster := newController(t, fx, runner)
 	startBot(t, fx, bc)
+	conn := &inspectorConn{}
+	testutil.AssertNoError(t, inspect(fx, bc, fx.game.HostPlayerID(), conn), "inspect should start")
 
 	bc.OnChatMessage(fx.game.ID(), shared.ChatMessage{SenderID: fx.humanID, SenderName: "Alice", Message: "hello bot", Timestamp: time.Now()})
-	time.Sleep(200 * time.Millisecond)
+	eventually(t, "the bot to decide to stay quiet", func() bool {
+		for _, e := range conn.events() {
+			if e.Kind == "reaction" && e.Reaction.Decision == "quiet" {
+				return true
+			}
+		}
+		return false
+	})
 
 	_, emotes := broadcaster.snapshot()
 	testutil.AssertEqual(t, 0, len(emotes), "no reactions during the showcase")

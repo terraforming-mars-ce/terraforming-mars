@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { PendingResourceRemovalSelectionDto } from "@/types/generated/api-types";
+import type { ErrorPayload, PendingResourceRemovalSelectionDto } from "@/types/generated/api-types";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager";
 import { webSocketService } from "@/services/webSocketService";
 import GameButton from "../buttons/GameButton";
@@ -27,11 +27,11 @@ export default function ResourceRemovalOverlay({ selection, players, currentPlay
 
   useEffect(() => {
     const failed = (payload: unknown) => {
-      const result = payload as { selectionId?: string; error?: string };
+      const result = payload as Partial<ErrorPayload>;
       if (pending.current && result.selectionId === selection.id) {
         pending.current = false;
         setSubmitting(false);
-        setError(result.error ?? "Could not remove resources");
+        setError(result.message ?? "Could not remove resources");
       }
     };
     const disconnected = () => {

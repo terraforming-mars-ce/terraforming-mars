@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   CardDto,
+  ErrorPayload,
   PendingBehaviorResolutionDto,
   PlayerCardDto,
 } from "@/types/generated/api-types";
@@ -83,9 +84,9 @@ export default function BehaviorResolutionOverlay({
 
   useEffect(() => {
     const failed = (payload: unknown) => {
-      const result = payload as { resolutionId?: string; error?: string };
+      const result = payload as Partial<ErrorPayload>;
       if (submission.current && result.resolutionId === submission.current) {
-        setError(result.error ?? "Could not resolve effect");
+        setError(result.message ?? "Could not resolve effect");
         submission.current = null;
         setSubmitting(false);
       }

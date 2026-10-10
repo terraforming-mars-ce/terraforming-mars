@@ -14,8 +14,7 @@ import (
 // "Increase your M€ production 1 step for each Earth tag you have."
 
 func TestMirandaResort_CreditProductionPerEarthTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -55,7 +54,7 @@ func TestMirandaResort_CreditProductionPerEarthTag(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -86,8 +85,7 @@ func TestMirandaResort_CreditProductionPerEarthTag(t *testing.T) {
 }
 
 func TestMirandaResort_ZeroEarthTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -122,7 +120,7 @@ func TestMirandaResort_ZeroEarthTags(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -150,8 +148,7 @@ func TestMirandaResort_ZeroEarthTags(t *testing.T) {
 // "Raise your TR 1 step for each Jovian tag you have, including this."
 
 func TestTerraformingGanymede_TRPerJovianTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -189,7 +186,7 @@ func TestTerraformingGanymede_TRPerJovianTag(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -219,8 +216,7 @@ func TestTerraformingGanymede_TRPerJovianTag(t *testing.T) {
 }
 
 func TestTerraformingGanymede_OnlyCountsSelfPlayerTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -258,8 +254,8 @@ func TestTerraformingGanymede_OnlyCountsSelfPlayerTags(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	attacker := players[0]
 	other := players[1]
-	attacker.SetCorporationID("corp-tharsis-republic")
-	other.SetCorporationID("corp-tharsis-republic")
+	attacker.SetCorporationID(testutil.PlaceholderCorporationID)
+	other.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -291,8 +287,7 @@ func TestTerraformingGanymede_OnlyCountsSelfPlayerTags(t *testing.T) {
 // "Raise your TR 1 step and gain 4 plants. Add 3 microbes to another card and 2 animals to another card."
 
 func TestImportedNitrogen_MultipleAnyCardTargets(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -330,7 +325,7 @@ func TestImportedNitrogen_MultipleAnyCardTargets(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -399,8 +394,7 @@ func makeWormsCard() gamecards.Card {
 
 // 1 microbe tag before Worms → total 2 → floor(2/2)=1 → +1 plant production
 func TestWorms_OneMicrobeTagBefore_GainsOnePlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -414,7 +408,7 @@ func TestWorms_OneMicrobeTagBefore_GainsOnePlantProduction(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -442,8 +436,7 @@ func TestWorms_OneMicrobeTagBefore_GainsOnePlantProduction(t *testing.T) {
 
 // 0 microbe tags before Worms → total 1 (just Worms) → floor(1/2)=0 → +0 plant production
 func TestWorms_ZeroMicrobeTagsBefore_GainsZeroPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -452,7 +445,7 @@ func TestWorms_ZeroMicrobeTagsBefore_GainsZeroPlantProduction(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -478,8 +471,7 @@ func TestWorms_ZeroMicrobeTagsBefore_GainsZeroPlantProduction(t *testing.T) {
 
 // 3 microbe tags before Worms → total 4 → floor(4/2)=2 → +2 plant production
 func TestWorms_ThreeMicrobeTagsBefore_GainsTwoPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -492,7 +484,7 @@ func TestWorms_ThreeMicrobeTagsBefore_GainsTwoPlantProduction(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -521,8 +513,7 @@ func TestWorms_ThreeMicrobeTagsBefore_GainsTwoPlantProduction(t *testing.T) {
 
 // 2 microbe tags before Worms → total 3 → floor(3/2)=1 → +1 plant production (rounds down)
 func TestWorms_TwoMicrobeTagsBefore_RoundsDown(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -534,7 +525,7 @@ func TestWorms_TwoMicrobeTagsBefore_RoundsDown(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	baseaction "openmars/internal/action"
 	"openmars/internal/action/admin"
@@ -50,7 +49,6 @@ func TestAphrodite_Gain2MCWhenVenusRaised(t *testing.T) {
 
 	_, err = testGame.GlobalParameters().IncreaseVenus(ctx, 1, "")
 	testutil.AssertNoError(t, err, "IncreaseVenus failed")
-	time.Sleep(50 * time.Millisecond)
 
 	resources = p.Resources().Get()
 	testutil.AssertEqual(t, 49, resources.Credits, "Aphrodite should have 49 credits after Venus increase (gained 2 M€)")
@@ -225,8 +223,6 @@ func TestManutech_GainResourceWhenProductionIncreased(t *testing.T) {
 	err = playCard.Execute(ctx, testGame.ID(), playerID, deepWellHeatingID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Deep Well Heating should play successfully")
 
-	time.Sleep(50 * time.Millisecond)
-
 	energyAfter := p.Resources().Get().Energy
 	testutil.AssertTrue(t, energyAfter >= energyBefore+1, "Manutech should gain energy when energy production is increased")
 }
@@ -351,7 +347,7 @@ func TestViron_ReuseBlueCardAction(t *testing.T) {
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 
 	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card", 0, nil, []string{"test-blue-card"}, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Blue card action should fail because already used this generation")
+	testutil.AssertErrorContains(t, err, "action already played this generation", "Blue card action should fail because already used this generation")
 
 	reuseSource := vironCardID
 	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card", 0, nil, []string{"test-blue-card"}, nil, nil, nil, nil, &reuseSource, nil)
@@ -407,7 +403,7 @@ func TestViron_CannotReuseUnusedAction(t *testing.T) {
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	reuseSource := vironCardID
 	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card", 0, nil, []string{"test-blue-card"}, nil, nil, nil, nil, &reuseSource, nil)
-	testutil.AssertError(t, err, "Should not be able to reuse an action that has not been used this generation")
+	testutil.AssertErrorContains(t, err, "target must be a manual action already used this generation", "Should not be able to reuse an action that has not been used this generation")
 }
 
 func TestViron_CannotReuseSelf(t *testing.T) {
@@ -424,7 +420,7 @@ func TestViron_CannotReuseSelf(t *testing.T) {
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	reuseSource := vironCardID
 	err = useAction.Execute(ctx, testGame.ID(), playerID, vironCardID, 1, nil, nil, nil, nil, nil, nil, &reuseSource, nil)
-	testutil.AssertError(t, err, "Should not be able to reuse own action-reuse ability")
+	testutil.AssertErrorContains(t, err, "cannot reuse an action-reuse ability", "Should not be able to reuse own action-reuse ability")
 }
 
 func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
@@ -484,7 +480,7 @@ func TestViron_CannotReuseAfterAlreadyUsedThisGen(t *testing.T) {
 	p.Actions().SetActions(currentActions)
 
 	err = useAction.Execute(ctx, testGame.ID(), playerID, "test-blue-card-2", 0, nil, nil, nil, nil, nil, nil, &reuseSource, nil)
-	testutil.AssertError(t, err, "Viron should not be able to reuse again this generation")
+	testutil.AssertErrorContains(t, err, "reuse action already played this generation", "Viron should not be able to reuse again this generation")
 }
 
 func TestViron_ReuseStratopolis_AddFloatersToSelf(t *testing.T) {
@@ -724,8 +720,8 @@ func TestViron_DeferredPurchaseCompletesReuse(t *testing.T) {
 						testutil.AssertEqual(t, 1, action.TimesUsedThisGeneration, "target usage unchanged")
 					}
 				}
-				testutil.AssertError(t, confirm.Execute(ctx, g.ID(), id, nil, bought, payment), "cannot confirm twice")
-				testutil.AssertError(t, use.Execute(ctx, g.ID(), id, target.ID, behaviorIndex, nil, nil, nil, nil, nil, nil, &source, nil), "Viron cannot repeat")
+				testutil.AssertErrorContains(t, confirm.Execute(ctx, g.ID(), id, nil, bought, payment), "no pending card draw selection", "cannot confirm twice")
+				testutil.AssertErrorContains(t, use.Execute(ctx, g.ID(), id, target.ID, behaviorIndex, nil, nil, nil, nil, nil, nil, &source, nil), "reuse action already played this generation", "Viron cannot repeat")
 			})
 		}
 	}
@@ -777,7 +773,8 @@ func TestViron_VariableAmount(t *testing.T) {
 			source := "V05"
 			err := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(context.Background(), g.ID(), id, target.CardID, target.BehaviorIndex, nil, nil, nil, nil, selected, nil, &source, nil)
 			if amount < 0 || amount > 5 {
-				testutil.AssertError(t, err, "invalid amount rejected")
+				wantErr := map[int]string{-2: "must select an amount", -1: "selected amount must be nonnegative", 6: "payment exceeds available source pool"}[amount]
+				testutil.AssertErrorContains(t, err, wantErr, "invalid amount rejected")
 				testutil.AssertEqual(t, before, p.Resources().Get(), "invalid request preserves resources")
 				testutil.AssertEqual(t, 2, g.CurrentTurn().ActionsRemaining(), "invalid request preserves turn")
 				testutil.AssertEqual(t, 0, p.Actions().List()[0].TimesUsedThisGeneration, "Viron remains unused")
@@ -787,7 +784,7 @@ func TestViron_VariableAmount(t *testing.T) {
 				testutil.AssertEqual(t, before.Credits+amount, p.Resources().Get().Credits, "credits gained")
 				testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "one action consumed")
 				p.Actions().ResetGenerationCounts()
-				testutil.AssertError(t, cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(context.Background(), g.ID(), id, target.CardID, target.BehaviorIndex, nil, nil, nil, nil, selected, nil, &source, nil), "new generation needs target used again")
+				testutil.AssertErrorContains(t, cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(context.Background(), g.ID(), id, target.CardID, target.BehaviorIndex, nil, nil, nil, nil, selected, nil, &source, nil), "target must be a manual action already used this generation", "new generation needs target used again")
 			}
 		})
 	}
@@ -827,14 +824,16 @@ func TestViron_ChoiceValidationAndSubstituteAvailability(t *testing.T) {
 	use := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger())
 	for _, index := range []int{-2, -1, 2} {
 		choice := &index
+		wantErr := "invalid action choice"
 		if index == -2 {
 			choice = nil
+			wantErr = "must select an action choice"
 		}
-		testutil.AssertError(t, use.Execute(context.Background(), g.ID(), id, target.CardID, target.BehaviorIndex, choice, nil, nil, nil, nil, nil, &source, nil), "missing or invalid choice rejected")
+		testutil.AssertErrorContains(t, use.Execute(context.Background(), g.ID(), id, target.CardID, target.BehaviorIndex, choice, nil, nil, nil, nil, nil, &source, nil), wantErr, "missing or invalid choice rejected")
 		testutil.AssertEqual(t, 2, p.Resources().Get().Titanium, "invalid choice spends nothing")
 	}
 	index := 0
-	testutil.AssertError(t, use.Execute(context.Background(), g.ID(), id, target.CardID, target.BehaviorIndex, &index, nil, nil, nil, nil, nil, &source, nil), "missing affordable payment rejected")
+	testutil.AssertErrorContains(t, use.Execute(context.Background(), g.ID(), id, target.CardID, target.BehaviorIndex, &index, nil, nil, nil, nil, nil, &source, nil), "payment exceeds available source pool", "missing affordable payment rejected")
 	payment := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-player", Resource: shared.ResourceTitanium}, TargetResource: shared.ResourceCredit, Amount: 2}}}
 	testutil.AssertNoError(t, use.Execute(context.Background(), g.ID(), id, target.CardID, target.BehaviorIndex, &index, nil, nil, nil, nil, &payment, &source, nil), "valid choice with titanium")
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(target.CardID), "asteroid goes on target")

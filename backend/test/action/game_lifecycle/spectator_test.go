@@ -26,8 +26,7 @@ func newKickSpectatorAction(repo game.GameRepository) *connection.KickSpectatorA
 // ============================================================================
 
 func TestSpectateGame_LobbyGame(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	action := newSpectateAction(repo)
@@ -51,8 +50,7 @@ func TestSpectateGame_ActiveGame(t *testing.T) {
 }
 
 func TestSpectateGame_MultipleSpectators(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	action := newSpectateAction(repo)
@@ -65,8 +63,7 @@ func TestSpectateGame_MultipleSpectators(t *testing.T) {
 }
 
 func TestSpectateGame_ColorAssignment(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	action := newSpectateAction(repo)
@@ -89,8 +86,7 @@ func TestSpectateGame_ColorAssignment(t *testing.T) {
 // ============================================================================
 
 func TestSpectateGame_MaxSpectators(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	action := newSpectateAction(repo)
@@ -100,7 +96,7 @@ func TestSpectateGame_MaxSpectators(t *testing.T) {
 	}
 
 	_, err := action.Execute(ctx, g.ID(), "TooMany", "spec-extra")
-	testutil.AssertError(t, err, "Should reject 5th spectator")
+	testutil.AssertErrorContains(t, err, "maximum number of spectators", "Should reject 5th spectator")
 }
 
 func TestSpectateGame_GameNotFound(t *testing.T) {
@@ -108,7 +104,7 @@ func TestSpectateGame_GameNotFound(t *testing.T) {
 	action := newSpectateAction(repo)
 
 	_, err := action.Execute(testutil.TestContext(), "nonexistent", "Spec", "spec-1")
-	testutil.AssertError(t, err, "Should fail for nonexistent game")
+	testutil.AssertErrorContains(t, err, "game not found", "Should fail for nonexistent game")
 }
 
 // ============================================================================
@@ -116,8 +112,7 @@ func TestSpectateGame_GameNotFound(t *testing.T) {
 // ============================================================================
 
 func TestSpectatorDisconnected_RemovedFromGame(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	spectateAction := newSpectateAction(repo)
@@ -153,8 +148,7 @@ func TestSpectatorDisconnected_DoesNotAffectPlayers(t *testing.T) {
 // ============================================================================
 
 func TestKickSpectator_HostCanKick(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	spectateAction := newSpectateAction(repo)
@@ -171,8 +165,7 @@ func TestKickSpectator_HostCanKick(t *testing.T) {
 // ============================================================================
 
 func TestKickSpectator_NonHostCannotKick(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	spectateAction := newSpectateAction(repo)
@@ -189,18 +182,17 @@ func TestKickSpectator_NonHostCannotKick(t *testing.T) {
 
 	kickAction := newKickSpectatorAction(repo)
 	err := kickAction.Execute(ctx, g.ID(), nonHostID, "spec-1")
-	testutil.AssertError(t, err, "Non-host should not be able to kick spectator")
+	testutil.AssertErrorContains(t, err, "only the host can kick spectators", "Non-host should not be able to kick spectator")
 	testutil.AssertEqual(t, 1, g.SpectatorCount(), "Spectator should remain")
 }
 
 func TestKickSpectator_SpectatorNotFound(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	kickAction := newKickSpectatorAction(repo)
 	err := kickAction.Execute(ctx, g.ID(), g.HostPlayerID(), "nonexistent")
-	testutil.AssertError(t, err, "Should fail for nonexistent spectator")
+	testutil.AssertErrorContains(t, err, "spectator not found", "Should fail for nonexistent spectator")
 }
 
 // ============================================================================
@@ -208,8 +200,7 @@ func TestKickSpectator_SpectatorNotFound(t *testing.T) {
 // ============================================================================
 
 func TestSpectator_NotInGetAllPlayers(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	spectateAction := newSpectateAction(repo)

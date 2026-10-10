@@ -17,7 +17,7 @@ func TestLoadProjectsFromJSON_Success(t *testing.T) {
 
 func TestLoadProjectsFromJSON_InvalidPath(t *testing.T) {
 	_, err := pfLoader.LoadProjectsFromJSON("/nonexistent/path.json")
-	testutil.AssertError(t, err, "Should fail with invalid path")
+	testutil.AssertErrorContains(t, err, "failed to read project funding file", "Should fail with invalid path")
 }
 
 func TestLoadProjectsFromJSON_ValidatesStructure(t *testing.T) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"openmars/test/testutil"
 	"testing"
-	"time"
 
 	"openmars/internal/action"
 	"openmars/internal/game"
@@ -13,16 +12,10 @@ import (
 	"openmars/internal/game/datastore"
 	"openmars/internal/game/player"
 	"openmars/internal/game/shared"
-	"openmars/internal/logger"
 )
 
 // TestPlayerCard_EventDrivenStateUpdate verifies state updates on domain events
 func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
-	// Initialize logger
-	logLevel := "error"
-	if err := logger.Init(&logLevel); err != nil {
-		t.Fatalf("Failed to initialize logger: %v", err)
-	}
 
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
@@ -95,9 +88,6 @@ func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
 		t.Fatalf("Failed to increase temperature: %v", err)
 	}
 
-	// Give event handlers time to execute (synchronous but need to yield)
-	time.Sleep(10 * time.Millisecond)
-
 	// State should now be updated automatically (temperature requirement met)
 	updatedState, ok := p.CardStateStore().GetState(card.ID)
 	if !ok {
@@ -117,11 +107,6 @@ func TestPlayerCard_EventDrivenStateUpdate(t *testing.T) {
 
 // TestPlayerCard_ResourceChangeEventUpdate verifies state updates on resource changes
 func TestPlayerCard_ResourceChangeEventUpdate(t *testing.T) {
-	// Initialize logger
-	logLevel := "error"
-	if err := logger.Init(&logLevel); err != nil {
-		t.Fatalf("Failed to initialize logger: %v", err)
-	}
 
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
@@ -185,9 +170,6 @@ func TestPlayerCard_ResourceChangeEventUpdate(t *testing.T) {
 		shared.ResourceCredit: 25,
 	})
 
-	// Give event handlers time to execute
-	time.Sleep(10 * time.Millisecond)
-
 	// State should now be updated automatically (affordable)
 	updatedState, ok := p.CardStateStore().GetState(card.ID)
 	if !ok {
@@ -207,11 +189,6 @@ func TestPlayerCard_ResourceChangeEventUpdate(t *testing.T) {
 
 // TestPlayerCard_PhaseChangeEventUpdate verifies state updates on phase changes
 func TestPlayerCard_PhaseChangeEventUpdate(t *testing.T) {
-	// Initialize logger
-	logLevel := "error"
-	if err := logger.Init(&logLevel); err != nil {
-		t.Fatalf("Failed to initialize logger: %v", err)
-	}
 
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
@@ -275,9 +252,6 @@ func TestPlayerCard_PhaseChangeEventUpdate(t *testing.T) {
 		t.Fatalf("Failed to update phase: %v", err)
 	}
 
-	// Give event handlers time to execute
-	time.Sleep(10 * time.Millisecond)
-
 	// State should now be updated automatically (correct phase)
 	updatedState, ok := p.CardStateStore().GetState(card.ID)
 	if !ok {
@@ -297,11 +271,6 @@ func TestPlayerCard_PhaseChangeEventUpdate(t *testing.T) {
 
 // TestPlayerCard_CleanupPreventsMemoryLeak verifies event listener cleanup
 func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
-	// Initialize logger
-	logLevel := "error"
-	if err := logger.Init(&logLevel); err != nil {
-		t.Fatalf("Failed to initialize logger: %v", err)
-	}
 
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
@@ -352,9 +321,6 @@ func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
 		t.Fatal("Failed to remove card from hand")
 	}
 
-	// Give time for cleanup to complete
-	time.Sleep(5 * time.Millisecond)
-
 	// Verify state has been removed from the store
 	_, ok = p.CardStateStore().GetState(card.ID)
 	if ok {
@@ -366,9 +332,6 @@ func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
 		t.Fatalf("Failed to set temperature: %v", err)
 	}
 
-	// Give time for any handlers to execute
-	time.Sleep(10 * time.Millisecond)
-
 	// State should still not exist in the store
 	_, ok = p.CardStateStore().GetState(card.ID)
 	if ok {
@@ -379,7 +342,6 @@ func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
 	p.Resources().Add(map[shared.ResourceType]int{
 		shared.ResourceCredit: 100,
 	})
-	time.Sleep(10 * time.Millisecond)
 
 	// Still should not exist in the store
 	_, ok = p.CardStateStore().GetState(card.ID)
@@ -393,11 +355,6 @@ func TestPlayerCard_CleanupPreventsMemoryLeak(t *testing.T) {
 
 // TestPlayerCard_MultipleCardsIndependentState verifies each card has independent state
 func TestPlayerCard_MultipleCardsIndependentState(t *testing.T) {
-	// Initialize logger
-	logLevel := "error"
-	if err := logger.Init(&logLevel); err != nil {
-		t.Fatalf("Failed to initialize logger: %v", err)
-	}
 
 	// Create test game
 	settings := shared.GameSettings{MaxPlayers: 5, DevelopmentMode: true}
@@ -488,7 +445,6 @@ func TestPlayerCard_MultipleCardsIndependentState(t *testing.T) {
 	if err := g.GlobalParameters().SetTemperature(ctx, 10); err != nil {
 		t.Fatalf("Failed to set temperature: %v", err)
 	}
-	time.Sleep(10 * time.Millisecond)
 
 	// Both cards should now be available
 	updatedState1, ok := p.CardStateStore().GetState(card1.ID)

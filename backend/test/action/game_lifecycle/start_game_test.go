@@ -11,14 +11,13 @@ import (
 
 func TestStartGameAction_Success(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	// Set corporations for all players
 	players := testGame.GetAllPlayers()
 	for _, p := range players {
-		p.SetCorporationID("corp-tharsis-republic")
+		p.SetCorporationID(testutil.PlaceholderCorporationID)
 	}
 
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, nil, nil, logger)
@@ -45,20 +44,19 @@ func TestStartGameAction_GameNotFound(t *testing.T) {
 	err := startAction.Execute(context.Background(), "non-existent-game", "some-player")
 
 	// Assert
-	testutil.AssertError(t, err, "Should fail when game doesn't exist")
+	testutil.AssertErrorContains(t, err, "game not found", "Should fail when game doesn't exist")
 }
 
 func TestStartGameAction_NotInLobby(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	// Set corporations and start game
 	ctx := context.Background()
 	players := testGame.GetAllPlayers()
 	for _, p := range players {
-		p.SetCorporationID("corp-tharsis-republic")
+		p.SetCorporationID(testutil.PlaceholderCorporationID)
 	}
 
 	// Start game once using action
@@ -69,19 +67,18 @@ func TestStartGameAction_NotInLobby(t *testing.T) {
 	err := startAction.Execute(context.Background(), testGame.ID(), testGame.HostPlayerID())
 
 	// Assert
-	testutil.AssertError(t, err, "Should not allow starting non-lobby game")
+	testutil.AssertErrorContains(t, err, "game is not in lobby", "Should not allow starting non-lobby game")
 }
 
 func TestStartGameAction_NotHost(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	// Set corporations
 	players := testGame.GetAllPlayers()
 	for _, p := range players {
-		p.SetCorporationID("corp-tharsis-republic")
+		p.SetCorporationID(testutil.PlaceholderCorporationID)
 	}
 
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, nil, nil, logger)
@@ -99,18 +96,17 @@ func TestStartGameAction_NotHost(t *testing.T) {
 	err := startAction.Execute(context.Background(), testGame.ID(), nonHostPlayer)
 
 	// Assert
-	testutil.AssertError(t, err, "Should not allow non-host to start game")
+	testutil.AssertErrorContains(t, err, "only host can start the game", "Should not allow non-host to start game")
 }
 
 func TestStartGameAction_MinimumPlayers(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 
 	// Set corporation for single player
 	players := testGame.GetAllPlayers()
-	players[0].SetCorporationID("corp-tharsis-republic")
+	players[0].SetCorporationID(testutil.PlaceholderCorporationID)
 
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, nil, nil, logger)
 
@@ -126,13 +122,12 @@ func TestStartGameAction_MinimumPlayers(t *testing.T) {
 }
 
 func TestStartGameAction_AssignsPlayerColors(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3)
 	logger := testutil.TestLogger()
 
 	players := testGame.GetAllPlayers()
 	for _, p := range players {
-		p.SetCorporationID("corp-tharsis-republic")
+		p.SetCorporationID(testutil.PlaceholderCorporationID)
 	}
 
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, nil, nil, logger)
@@ -153,14 +148,13 @@ func TestStartGameAction_AssignsPlayerColors(t *testing.T) {
 
 func TestStartGameAction_InitialResourcesSet(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	// Set corporations
 	players := testGame.GetAllPlayers()
 	for _, p := range players {
-		p.SetCorporationID("corp-tharsis-republic")
+		p.SetCorporationID(testutil.PlaceholderCorporationID)
 	}
 
 	startAction := turnAction.NewStartGameAction(repo, nil, nil, nil, nil, nil, logger)

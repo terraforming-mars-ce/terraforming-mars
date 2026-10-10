@@ -425,3 +425,24 @@ func TestFrontOfTheLine_CardIsEvent(t *testing.T) {
 	}
 	testutil.AssertTrue(t, found, "Front of the Line should have extra-actions output of 2")
 }
+
+func TestHomeSchooled_GrantsOneScienceTagPerEarthTag(t *testing.T) {
+	ctx := context.Background()
+	testGame, repo, _, playerIDs := testutil.SetupMultiPlayerGame(t, 2)
+	cardRegistry := testutil.CreateTestCardRegistry()
+	p, _ := testGame.GetPlayer(playerIDs[0])
+	testutil.SetPlayerCredits(ctx, p, 100)
+	for _, name := range []string{"Sponsors", "Earth Catapult", "Earth Office"} {
+		card := testutil.GetCardByName(name)
+		p.PlayedCards().AddCard(card.ID, card.Name, string(card.Type), []string{"earth"})
+	}
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, p.ID(), 2), "set turn")
+
+	homeSchooled := testutil.GetCardByName("Home Schooled")
+	p.Hand().AddCard(homeSchooled.ID)
+	playCard := cardAction.NewPlayCardAction(repo, cardRegistry, game.NewInMemoryGameStateRepository(), testutil.TestLogger())
+	err := playCard.Execute(ctx, testGame.ID(), p.ID(), homeSchooled.ID, shared.NativePayment(shared.ResourceCredit, homeSchooled.Cost), nil, nil, nil, nil, nil)
+	testutil.AssertNoError(t, err, "Home Schooled should play")
+
+	testutil.AssertEqual(t, 3, p.BonusTags()[shared.TagScience], "three earth tags give three science tags")
+}

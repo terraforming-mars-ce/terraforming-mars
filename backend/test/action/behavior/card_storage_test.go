@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	baseaction "openmars/internal/action"
-	"strings"
 	"testing"
 
 	cardAction "openmars/internal/action/card"
@@ -22,8 +21,7 @@ import (
 // "Add 1 resource to a card with at least 1 resource on it"
 
 func TestCardResource_CEOsFavoriteProject_AddsToAnimalCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -83,8 +81,7 @@ func TestCardResource_CEOsFavoriteProject_AddsToAnimalCard(t *testing.T) {
 }
 
 func TestCardResource_CEOsFavoriteProject_AddsToMicrobeCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -147,8 +144,7 @@ func TestCardResource_CEOsFavoriteProject_AddsToMicrobeCard(t *testing.T) {
 // "Increase your M$ production 2 steps. Add 1 resource to **any venus card**."
 
 func TestCardResource_CorroderSuits_AddsToVenusCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -222,8 +218,7 @@ func TestCardResource_CorroderSuits_AddsToVenusCard(t *testing.T) {
 // "Action: Add 1 resource to **another venus card**."
 
 func TestCardResource_MaxwellBase_ActionAddsToVenusCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -302,8 +297,7 @@ func TestCardResource_MaxwellBase_ActionAddsToVenusCard(t *testing.T) {
 // --- card-resource fails without target ---
 
 func TestCardResource_FailsWithoutTargetCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -353,14 +347,14 @@ func TestCardResource_FailsWithoutTargetCard(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 1)
 	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Should fail without target card for card-resource output")
+	testutil.AssertErrorContains(t, err, "select a card for resource storage", "Should fail without target card for card-resource output")
+	testutil.AssertTrue(t, p.Hand().HasCard("card-ceos-favorite"), "card stays in hand")
 }
 
 // --- card-resource fails when target card has no storage ---
 
 func TestCardResource_FailsWhenTargetHasNoStorage(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -408,14 +402,14 @@ func TestCardResource_FailsWhenTargetHasNoStorage(t *testing.T) {
 	payment := shared.NativePayment(shared.ResourceCredit, 1)
 	targetCardID := "card-no-storage"
 	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-ceos-favorite", payment, nil, []string{targetCardID}, nil, nil, nil)
-	testutil.AssertError(t, err, "Should fail when target card has no resource storage")
+	testutil.AssertErrorContains(t, err, "card cannot store that resource", "Should fail when target card has no resource storage")
+	testutil.AssertTrue(t, p.Hand().HasCard("card-ceos-favorite"), "card stays in hand")
 }
 
 // Other outputs still apply when no eligible storage card exists.
 
 func TestCardResource_AnyCardTarget_SkipsWhenNoTargetCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -598,7 +592,7 @@ func TestPredatorsRejectsWithNoSourceCard(t *testing.T) {
 	ctx := context.Background()
 
 	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Predators without source card should be rejected")
+	testutil.AssertErrorContains(t, err, "steal action requires a target card", "Predators without source card should be rejected")
 	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(predatorsID), "Predators card should have 0 animals when no source card specified")
 }
 
@@ -636,7 +630,7 @@ func TestPredatorsStealFromCardWithZeroAnimals(t *testing.T) {
 	ctx := context.Background()
 
 	err := useAction.Execute(ctx, testGame.ID(), playerID, predatorsID, 0, nil, []string{predatorsID}, nil, &targetCardID, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Predators must reject an empty source")
+	testutil.AssertErrorContains(t, err, "insufficient resources on card", "Predators must reject an empty source")
 
 	testutil.AssertEqual(t, 0, other.Resources().GetCardStorage(targetCardID), "Target card should still have 0 animals")
 	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(predatorsID), "Predators card should have 0 animals when source had none")
@@ -711,7 +705,7 @@ func TestAntsRejectsWithNoSourceCard(t *testing.T) {
 	ctx := context.Background()
 
 	err := useAction.Execute(ctx, testGame.ID(), playerID, antsID, 0, nil, []string{antsID}, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Ants without source card should be rejected")
+	testutil.AssertErrorContains(t, err, "steal action requires a target card", "Ants without source card should be rejected")
 	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(antsID), "Ants card should have 0 microbes when no source card specified")
 }
 
@@ -757,7 +751,7 @@ func TestCardStorage_StealFromCardWithZeroResources(t *testing.T) {
 	output := shared.NewCardStorageCondition(shared.ResourceAnimal, 2, "steal-from-any-card")
 
 	applier := gamecards.NewBehaviorApplier(p, testGame, "test", testutil.TestLogger()).WithCardRegistry(registry).WithSourceCardID(selfCardID).WithStealSourceCardID(otherCardID)
-	testutil.AssertError(t, applier.ApplyOutputs(context.Background(), []shared.BehaviorCondition{output}), "empty source must be rejected")
+	testutil.AssertErrorContains(t, applier.ApplyOutputs(context.Background(), []shared.BehaviorCondition{output}), "insufficient resources on card", "empty source must be rejected")
 
 	// Nothing to steal from empty card
 	testutil.AssertEqual(t, 0, other.Resources().GetCardStorage(otherCardID),
@@ -811,11 +805,8 @@ func TestStorageRemoval_InvalidSourcesPreserveActionsAndCosts(t *testing.T) {
 				actor.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 10})
 				before := actor.Resources().Get()
 				err := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, predator.ID, 0, nil, nil, nil, &sourceID, nil, nil, reuseID, nil)
-				testutil.AssertError(t, err, "invalid source rejected")
 				expected := map[string]string{"wrong-type": "does not store", "unowned": "not owned", "unknown": "invalid storage", "empty": "insufficient", "protected": "protected"}
-				if !strings.Contains(err.Error(), expected[kind]) {
-					t.Fatalf("unexpected failure: %v", err)
-				}
+				testutil.AssertErrorContains(t, err, expected[kind], "invalid source rejected")
 				testutil.AssertEqual(t, before, actor.Resources().Get(), "inputs and other outputs unchanged")
 				for i, action := range actor.Actions().List() {
 					testutil.AssertEqual(t, actions[i].TimesUsedThisGeneration, action.TimesUsedThisGeneration, "generation use unchanged")
@@ -854,15 +845,15 @@ func TestCardStorage_SelectedInputValidationAndAtomicCosts(t *testing.T) {
 		amount    int
 		twice     bool
 		reserved  int
-		wantError bool
+		wantErr   string
 	}{
 		{name: "owned source", sources: []string{"C45"}, amount: 1},
 		{name: "selector match", sources: []string{"C45"}, selectors: []shared.Selector{{Tags: []shared.CardTag{shared.TagJovian}}}, amount: 1},
-		{name: "selector mismatch", sources: []string{"C45"}, selectors: []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}}, amount: 1, wantError: true},
-		{name: "missing source", amount: 1, wantError: true},
-		{name: "unexpected source", sources: []string{"C45", "C45"}, amount: 1, wantError: true},
-		{name: "combined costs", sources: []string{"C45", "C45"}, amount: 2, twice: true, wantError: true},
-		{name: "payment reservation", sources: []string{"C45"}, amount: 2, reserved: 2, wantError: true},
+		{name: "selector mismatch", sources: []string{"C45"}, selectors: []shared.Selector{{Tags: []shared.CardTag{shared.TagVenus}}}, amount: 1, wantErr: "select an eligible owned card"},
+		{name: "missing source", amount: 1, wantErr: "select an eligible owned card"},
+		{name: "unexpected source", sources: []string{"C45", "C45"}, amount: 1, wantErr: "unexpected storage input sources"},
+		{name: "combined costs", sources: []string{"C45", "C45"}, amount: 2, twice: true, wantErr: "insufficient resources on card"},
+		{name: "payment reservation", sources: []string{"C45"}, amount: 2, reserved: 2, wantErr: "insufficient resources on card"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			g, _, registry, id, _ := testutil.SetupTwoPlayerGame(t)
@@ -879,8 +870,8 @@ func TestCardStorage_SelectedInputValidationAndAtomicCosts(t *testing.T) {
 			applier.WithReservedInputs(nil, map[string]int{"C45": tc.reserved})
 			before := p.Resources().Get().Credits
 			err := applier.ApplyInputs(context.Background(), inputs)
-			if tc.wantError {
-				testutil.AssertError(t, err, "Invalid inputs rejected")
+			if tc.wantErr != "" {
+				testutil.AssertErrorContains(t, err, tc.wantErr, "Invalid inputs rejected")
 				testutil.AssertEqual(t, 3, p.Resources().GetCardStorage("C45"), "No partial storage payment")
 				testutil.AssertEqual(t, before, p.Resources().Get().Credits, "No partial credit payment")
 			} else {
@@ -935,7 +926,7 @@ func TestCardStorage_CardPaymentAndInputCannotSpendSameFloaters(t *testing.T) {
 
 		Amount: 1}},
 	}, nil, nil, nil, nil, []string{host.ID})
-	testutil.AssertError(t, err, "Cannot spend the same floater twice")
+	testutil.AssertErrorContains(t, err, "insufficient resources on card", "Cannot spend the same floater twice")
 	testutil.AssertTrue(t, p.Hand().HasCard(project.ID), "Card remains in hand")
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(host.ID), "Floater not deducted")
 	testutil.AssertEqual(t, before, p.Resources().Get().Titanium, "No reward on failure")
@@ -962,7 +953,7 @@ func TestCardStorage_PreflightIncludesEnteringCard(t *testing.T) {
 				testutil.AssertNoError(t, err, "entering card is eligible")
 				testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(c.ID), "includes source Jovian tag")
 			} else {
-				testutil.AssertError(t, err, "must choose entering card before paying")
+				testutil.AssertErrorContains(t, err, "select a card for resource storage", "must choose entering card before paying")
 				testutil.AssertEqual(t, 10, p.Resources().Get().Credits, "no partial payment")
 				testutil.AssertTrue(t, p.Hand().HasCard(c.ID), "card stays in hand")
 			}
@@ -996,7 +987,7 @@ func TestCardStorage_InvalidManualTargetDoesNotPay(t *testing.T) {
 	p.Actions().SetActions([]shared.CardAction{{CardID: "manual-storage", CardName: "Manual storage", BehaviorIndex: 0, Behavior: behavior}})
 	beforeActions := g.CurrentTurn().ActionsRemaining()
 	err := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, "manual-storage", 0, nil, []string{host.ID}, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "opponent destination rejected before input")
+	testutil.AssertErrorContains(t, err, "target card is not yours or is not in play", "opponent destination rejected before input")
 	testutil.AssertEqual(t, 6, p.Resources().Get().Energy, "input retained")
 	testutil.AssertEqual(t, beforeActions, g.CurrentTurn().ActionsRemaining(), "turn action retained")
 	testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(host.ID), "no ghost own storage")

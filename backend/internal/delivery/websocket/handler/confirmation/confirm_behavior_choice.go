@@ -35,29 +35,29 @@ func (h *ConfirmBehaviorChoiceHandler) HandleMessage(ctx context.Context, connec
 
 	log.Debug("Processing confirm behavior choice request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	resolutionID, ok := payloadMap["resolutionId"].(string)
 	if !ok || resolutionID == "" {
-		h.sendError(connection, "Missing resolutionId")
+		connection.SendError(message.Type, "Missing resolutionId")
 		return
 	}
 
 	choiceIndexFloat, ok := payloadMap["choiceIndex"].(float64)
 	if !ok {
 		log.Error("Missing or invalid choiceIndex")
-		h.sendError(connection, "Missing or invalid choiceIndex")
+		connection.SendError(message.Type, "Missing or invalid choiceIndex")
 		return
 	}
 	choiceIndex := int(choiceIndexFloat)
@@ -74,35 +74,16 @@ func (h *ConfirmBehaviorChoiceHandler) HandleMessage(ctx context.Context, connec
 	log.Debug("Parsed confirm behavior choice request",
 		slog.Int("choice_index", choiceIndex))
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, resolutionID, choiceIndex, cardStorageTargets)
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), resolutionID, choiceIndex, cardStorageTargets)
 	if err != nil {
 		log.Error("Failed to execute confirm behavior choice action", slog.Any("error", err))
-		connection.Send <- dto.WebSocketMessage{Type: dto.MessageTypeError, Payload: map[string]interface{}{"error": err.Error(), "resolutionId": resolutionID}}
+		connection.SendErrorPayload(dto.ErrorPayload{Message: err.Error(), RequestType: message.Type, ResolutionID: resolutionID})
 		return
 	}
 
 	log.Debug("Behavior choice confirmed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 	log.Debug("Broadcasted game state to all players")
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "confirm-behavior-choice",
-			"success": true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *ConfirmBehaviorChoiceHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

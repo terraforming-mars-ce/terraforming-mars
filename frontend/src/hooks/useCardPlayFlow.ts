@@ -12,12 +12,13 @@ import {
   needsCardResourceInput,
   getVariableAmountInfo,
 } from "@/utils/cardPlayUtils.ts";
-import type {
-  CardDto,
-  PaymentDto,
-  PlayCardErrorPayload,
-  PlayerActionDto,
-  ResourceType,
+import {
+  MessageTypeActionPlayCard,
+  type CardDto,
+  type ErrorPayload,
+  type PaymentDto,
+  type PlayerActionDto,
+  type ResourceType,
 } from "@/types/generated/api-types.ts";
 
 export function useCardPlayFlow() {
@@ -54,16 +55,16 @@ export function useCardPlayFlow() {
       if (!payload || typeof payload !== "object") {
         return;
       }
-      const error = payload as Partial<PlayCardErrorPayload>;
+      const error = payload as Partial<ErrorPayload>;
       const flow = useCardPlayFlowStore.getState();
       const session = flow.playSession;
       if (
         session &&
-        error.action === "play-card" &&
+        error.requestType === MessageTypeActionPlayCard &&
         error.cardId === session?.card.id &&
         (session.phase === "submitting" || session.phase === "reconnecting")
       ) {
-        flow.returnPlay(session.id, error.error ?? "Could not play card.");
+        flow.returnPlay(session.id, error.message ?? "Could not play card.");
       }
     };
     const disconnected = () => useCardPlayFlowStore.getState().suspendPlay();

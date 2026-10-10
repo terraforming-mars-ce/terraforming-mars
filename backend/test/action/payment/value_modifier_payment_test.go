@@ -13,8 +13,7 @@ import (
 // TestValueModifier_StoredOnPlayerResources tests that value modifiers are stored correctly
 func TestValueModifier_StoredOnPlayerResources(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	// Get player
@@ -45,8 +44,7 @@ func TestValueModifier_StoredOnPlayerResources(t *testing.T) {
 // TestValueModifier_PlayCardWithModifiedTitanium tests full play card flow with value modifier
 func TestValueModifier_PlayCardWithModifiedTitanium(t *testing.T) {
 	// Setup: Create game with player who has value modifier
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -94,8 +92,7 @@ func TestValueModifier_PlayCardWithModifiedTitanium(t *testing.T) {
 // TestValueModifier_MixedPaymentWithModifier tests mixed payment (credits + modified titanium)
 func TestValueModifier_MixedPaymentWithModifier(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -143,8 +140,7 @@ func TestValueModifier_MixedPaymentWithModifier(t *testing.T) {
 // TestValueModifier_InsufficientPaymentRejected tests that insufficient payment with modifier is rejected
 func TestValueModifier_InsufficientPaymentRejected(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -179,7 +175,7 @@ func TestValueModifier_InsufficientPaymentRejected(t *testing.T) {
 	}
 
 	err := playCardAction.Execute(ctx, testGame.ID(), player.ID(), asteroidID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Should reject payment of 12 MC for 14 cost card")
+	testutil.AssertErrorContains(t, err, "insufficient credit payment", "Should reject payment of 12 MC for 14 cost card")
 
 	// Verify titanium was NOT deducted (action failed)
 	resources := player.Resources().Get()
@@ -224,7 +220,7 @@ func TestPaymentQuote_MetalRatesAndRestrictions(t *testing.T) {
 				units := (12 + o.ConversionRate - 1) / o.ConversionRate
 				plan, err := gamecards.ValidatePayment(quote, shared.Payment{Allocations: []shared.PaymentAllocation{{Source: o.Source, TargetResource: shared.ResourceCredit, Amount: units}}})
 				if units > o.Available {
-					testutil.AssertError(t, err, "cannot overdraw")
+					testutil.AssertErrorContains(t, err, "insufficient payment resources", "cannot overdraw")
 				} else {
 					testutil.AssertNoError(t, err, "covers with indivisible resources")
 					testutil.AssertEqual(t, units, plan.Resources[o.Source.Resource], "spend exact units")
@@ -245,21 +241,21 @@ func TestPaymentValidation_SharedPoolsAndAtomicity(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		allocations []shared.PaymentAllocation
-		ok          bool
+		wantErr     string
 	}{
-		{"shared pool overdraw", []shared.PaymentAllocation{{Source: heat, TargetResource: shared.ResourceCredit, Amount: 4}, {Source: heat, TargetResource: shared.ResourceHeat, Amount: 4}}, false},
-		{"direct sources", []shared.PaymentAllocation{{Source: heat, TargetResource: shared.ResourceCredit, Amount: 4}, {Source: floater, TargetResource: shared.ResourceHeat, Amount: 2}}, true},
-		{"no chained conversion", []shared.PaymentAllocation{{Source: floater, TargetResource: shared.ResourceCredit, Amount: 2}, {Source: heat, TargetResource: shared.ResourceHeat, Amount: 4}}, false},
-		{"negative count", []shared.PaymentAllocation{{Source: heat, TargetResource: shared.ResourceCredit, Amount: -1}}, false},
-		{"duplicate overdraw", []shared.PaymentAllocation{{Source: floater, TargetResource: shared.ResourceHeat, Amount: 2}, {Source: floater, TargetResource: shared.ResourceHeat, Amount: 2}}, false},
-		{"forged card", []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-card", Resource: shared.ResourceFloater, CardID: "other"}, TargetResource: shared.ResourceHeat, Amount: 2}}, false},
+		{"shared pool overdraw", []shared.PaymentAllocation{{Source: heat, TargetResource: shared.ResourceCredit, Amount: 4}, {Source: heat, TargetResource: shared.ResourceHeat, Amount: 4}}, "payment exceeds available source pool"},
+		{"direct sources", []shared.PaymentAllocation{{Source: heat, TargetResource: shared.ResourceCredit, Amount: 4}, {Source: floater, TargetResource: shared.ResourceHeat, Amount: 2}}, ""},
+		{"no chained conversion", []shared.PaymentAllocation{{Source: floater, TargetResource: shared.ResourceCredit, Amount: 2}, {Source: heat, TargetResource: shared.ResourceHeat, Amount: 4}}, "ineligible payment source for credit"},
+		{"negative count", []shared.PaymentAllocation{{Source: heat, TargetResource: shared.ResourceCredit, Amount: -1}}, "payment amounts must be nonnegative"},
+		{"duplicate overdraw", []shared.PaymentAllocation{{Source: floater, TargetResource: shared.ResourceHeat, Amount: 2}, {Source: floater, TargetResource: shared.ResourceHeat, Amount: 2}}, "insufficient payment resources"},
+		{"forged card", []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-card", Resource: shared.ResourceFloater, CardID: "other"}, TargetResource: shared.ResourceHeat, Amount: 2}}, "ineligible payment source for heat"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := gamecards.ValidatePayment(quote, shared.Payment{Allocations: tc.allocations})
-			if tc.ok {
+			if tc.wantErr == "" {
 				testutil.AssertNoError(t, err, "valid plan")
 			} else {
-				testutil.AssertError(t, err, "invalid plan")
+				testutil.AssertErrorContains(t, err, tc.wantErr, "invalid plan")
 			}
 		})
 	}

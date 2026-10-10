@@ -91,8 +91,7 @@ func StartTestGame(t *testing.T, g *game.Game) {
 func SetupTwoPlayerGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string, string) {
 	t.Helper()
 
-	broadcaster := NewMockBroadcaster()
-	testGame, repo := CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := CreateTestGameWithPlayers(t, 2)
 	cardRegistry := CreateTestCardRegistry()
 	StartTestGame(t, testGame)
 
@@ -106,8 +105,7 @@ func SetupTwoPlayerGame(t *testing.T) (*game.Game, game.GameRepository, cards.Ca
 func SetupMultiPlayerGame(t *testing.T, numPlayers int) (*game.Game, game.GameRepository, cards.CardRegistry, []string) {
 	t.Helper()
 
-	broadcaster := NewMockBroadcaster()
-	testGame, repo := CreateTestGameWithPlayers(t, numPlayers, broadcaster)
+	testGame, repo := CreateTestGameWithPlayers(t, numPlayers)
 	cardRegistry := CreateTestCardRegistry()
 	StartTestGame(t, testGame)
 
@@ -121,8 +119,7 @@ func SetupMultiPlayerGame(t *testing.T, numPlayers int) (*game.Game, game.GameRe
 func SetupSoloGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string) {
 	t.Helper()
 
-	broadcaster := NewMockBroadcaster()
-	testGame, repo := CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := CreateTestGameWithPlayers(t, 1)
 	cardRegistry := CreateTestCardRegistry()
 	StartTestGame(t, testGame)
 

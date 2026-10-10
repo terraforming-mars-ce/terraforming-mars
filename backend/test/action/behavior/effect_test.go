@@ -207,7 +207,7 @@ func TestVariableAmount_StorageInput_InsufficientMicrobes(t *testing.T) {
 
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, nil, nil, nil, &selectedAmount, nil, nil, nil)
-	testutil.AssertError(t, err, "Should fail when trying to spend more microbes than available")
+	testutil.AssertErrorContains(t, err, "insufficient resources on card", "Should fail when trying to spend more microbes than available")
 
 	testutil.AssertEqual(t, 2, p.Resources().GetCardStorage(cardID), "Microbes should not be deducted on failure")
 }

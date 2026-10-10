@@ -70,8 +70,7 @@ func TestPerCondition_CityTileLocationAndOwner(t *testing.T) {
 }
 
 func TestPerCondition_TagSelfPlayer(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	p := g.GetAllPlayers()[0]
 	ctx := context.Background()
 	cardRegistry := testutil.CreateTestCardRegistry()
@@ -105,8 +104,7 @@ func TestPerCondition_TagSelfPlayer(t *testing.T) {
 }
 
 func TestPerCondition_TagAnyPlayer(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	players := g.GetAllPlayers()
 	p1 := players[0]
 	p2 := players[1]
@@ -146,8 +144,7 @@ func TestPerCondition_TagAnyPlayer(t *testing.T) {
 }
 
 func TestPerCondition_CardResourceSelfCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	p := g.GetAllPlayers()[0]
 	ctx := context.Background()
 
@@ -179,8 +176,7 @@ func TestPerCondition_CardResourceSelfCard(t *testing.T) {
 }
 
 func TestPerCondition_IntegerDivision(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	p := g.GetAllPlayers()[0]
 	ctx := context.Background()
 
@@ -218,8 +214,7 @@ func TestPerCondition_IntegerDivision(t *testing.T) {
 }
 
 func TestPerCondition_ZeroMultiplierSkipsOutput(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	p := g.GetAllPlayers()[0]
 	ctx := context.Background()
 
@@ -245,8 +240,7 @@ func TestPerCondition_ZeroMultiplierSkipsOutput(t *testing.T) {
 }
 
 func TestCountPerConditionResourceCounting(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	p := g.GetAllPlayers()[0]
 	ctx := context.Background()
 
@@ -290,8 +284,7 @@ func TestCountPerConditionResourceCounting(t *testing.T) {
 }
 
 func TestCountPerConditionProductionCounting(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	p := g.GetAllPlayers()[0]
 
 	// Set credit production=3
@@ -311,8 +304,7 @@ func TestCountPerConditionProductionCounting(t *testing.T) {
 }
 
 func TestPerCondition_NilPerProceedsNormally(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	p := g.GetAllPlayers()[0]
 	ctx := context.Background()
 
@@ -334,19 +326,18 @@ func TestPerCondition_NilPerProceedsNormally(t *testing.T) {
 }
 
 func TestPerCondition_FloaterLeasing(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	p := g.GetAllPlayers()[0]
 	ctx := context.Background()
 	cardRegistry := testutil.CreateTestCardRegistry()
 
-	// Add two cards with floater storage and put floaters on them
-	p.PlayedCards().AddCard("card-a", "Card A", "active", []string{})
-	p.PlayedCards().AddCard("card-b", "Card B", "active", []string{})
-	p.Resources().AddToStorage("card-a", 6)
-	p.Resources().AddToStorage("card-b", 3)
+	dirigibles := testutil.CardID("Dirigibles")
+	habs := testutil.CardID("Floating Habs")
+	p.PlayedCards().AddCard(dirigibles, "Dirigibles", "active", []string{})
+	p.PlayedCards().AddCard(habs, "Floating Habs", "active", []string{})
+	p.Resources().AddToStorage(dirigibles, 6)
+	p.Resources().AddToStorage(habs, 3)
 
-	// Set starting production to 0
 	prod := p.Resources().Production()
 	prod.Credits = 0
 	p.Resources().SetProduction(prod)
@@ -368,18 +359,11 @@ func TestPerCondition_FloaterLeasing(t *testing.T) {
 	_, err := applier.ApplyOutputsAndGetCalculated(ctx, outputs)
 	testutil.AssertNoError(t, err, "applying floater leasing outputs")
 
-	// 9 floaters / 3 = 3 production steps, but CountPlayerCardStorageByType
-	// requires cards to be in registry with floater storage type.
-	// Since card-a and card-b are not real cards in registry, floater count will be 0.
-	// This test verifies the mechanic works without error.
-	// Integration test with real card IDs would verify the full flow.
-	newProd := p.Resources().Production()
-	t.Logf("Credit production after Floater Leasing: %d", newProd.Credits)
+	testutil.AssertEqual(t, 3, p.Resources().Production().Credits, "9 floaters at 1 production per 3 floaters")
 }
 
 func TestPerCondition_ColonyCount(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	players := g.GetAllPlayers()
 	p := players[0]
 	ctx := context.Background()
@@ -430,8 +414,7 @@ func TestPerCondition_ColonyCount(t *testing.T) {
 }
 
 func TestPerCondition_ColonyCountEmpty(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	p := g.GetAllPlayers()[0]
 	ctx := context.Background()
 

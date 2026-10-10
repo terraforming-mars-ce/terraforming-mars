@@ -19,7 +19,7 @@ import (
 
 func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
 	ctx := context.Background()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, testutil.NewMockBroadcaster())
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	testutil.StartTestGame(t, g)
 	playerID := g.TurnOrder()[0]
 	data, err := os.ReadFile("../../../assets/cards.json")
@@ -132,7 +132,7 @@ func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
 
 func TestPhobosCityUsesDomeAppearance(t *testing.T) {
 	ctx := context.Background()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+	g, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	testutil.StartTestGame(t, g)
 	playerID := g.TurnOrder()[0]
 	registry := testutil.CreateTestCardRegistry()
@@ -182,7 +182,7 @@ func TestCityPlacementNamesWithoutCustomModels(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			g, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+			g, repo := testutil.CreateTestGameWithPlayers(t, 1)
 			testutil.StartTestGame(t, g)
 			playerID := g.TurnOrder()[0]
 			registry := cards.NewInMemoryCardRegistry([]cards.Card{{ID: "named-city", Name: "Named City", Type: tt.cardType}})

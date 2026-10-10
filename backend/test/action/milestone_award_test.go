@@ -88,7 +88,7 @@ func TestClaimMilestone_InvalidType(t *testing.T) {
 	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
 	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
 	err := action.Execute(ctx, "some-game", playerID, "nonexistent", shared.NativePayment(shared.ResourceCredit, 8))
-	testutil.AssertError(t, err, "Invalid milestone type should fail")
+	testutil.AssertErrorContains(t, err, "invalid milestone type", "Invalid milestone type should fail")
 }
 
 func TestClaimMilestone_InsufficientCredits(t *testing.T) {
@@ -104,7 +104,7 @@ func TestClaimMilestone_InsufficientCredits(t *testing.T) {
 	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
 	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, stateRepo, milestoneRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "terraformer", shared.NativePayment(shared.ResourceCredit, 8))
-	testutil.AssertError(t, err, "Claiming milestone with 0 credits should fail")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Claiming milestone with 0 credits should fail")
 }
 
 // --- Fund Award ---
@@ -165,7 +165,7 @@ func TestFundAward_InvalidType(t *testing.T) {
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
 	err := action.Execute(ctx, "some-game", playerID, "nonexistent", shared.NativePayment(shared.ResourceCredit, 8))
-	testutil.AssertError(t, err, "Invalid award type should fail")
+	testutil.AssertErrorContains(t, err, "invalid award type", "Invalid award type should fail")
 }
 
 func TestFundAward_InsufficientCredits(t *testing.T) {
@@ -180,7 +180,7 @@ func TestFundAward_InsufficientCredits(t *testing.T) {
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	action := awardAction.NewFundAwardAction(repo, cardRegistry, stateRepo, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "landlord", shared.NativePayment(shared.ResourceCredit, 8))
-	testutil.AssertError(t, err, "Funding award with 0 credits should fail")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Funding award with 0 credits should fail")
 }
 
 // --- Confirm Award Fund (Free) ---
@@ -228,7 +228,7 @@ func TestConfirmAwardFund_InvalidAwardType(t *testing.T) {
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "nonexistent")
-	testutil.AssertError(t, err, "Invalid award type should fail")
+	testutil.AssertErrorContains(t, err, "award nonexistent is not available for selection", "Invalid award type should fail")
 }
 
 func TestConfirmAwardFund_AwardNotInAvailableList(t *testing.T) {
@@ -245,7 +245,7 @@ func TestConfirmAwardFund_AwardNotInAvailableList(t *testing.T) {
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "banker")
-	testutil.AssertError(t, err, "Award not in available list should fail")
+	testutil.AssertErrorContains(t, err, "award banker is not available for selection", "Award not in available list should fail")
 }
 
 func TestConfirmAwardFund_NoPendingSelection(t *testing.T) {
@@ -256,5 +256,5 @@ func TestConfirmAwardFund_NoPendingSelection(t *testing.T) {
 	awardRegistry := testutil.CreateTestAwardRegistry()
 	action := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "landlord")
-	testutil.AssertError(t, err, "Should fail without pending selection")
+	testutil.AssertErrorContains(t, err, "no pending award fund selection", "Should fail without pending selection")
 }

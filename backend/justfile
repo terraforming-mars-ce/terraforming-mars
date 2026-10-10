@@ -31,14 +31,9 @@ serve: build
     OPENMARS_REPO_PATH=.. OPENMARS_CHANGELOG_DIR=../changelog OPENMARS_WEB_DIR=../frontend/build ./bin/server
 
 [group('check')]
-[doc('Run tests; args replace the default package pattern, e.g. `just backend test -v -run TestKick ./test/action/...`')]
+[doc('Run tests with the race detector, in random order; args replace the default package pattern, e.g. `just backend test -v -run TestKick ./test/action/...`')]
 test *args="./test/...":
-    go test {{ args }}
-
-[group('check')]
-[doc('Run tests with the race detector')]
-test-race:
-    go test -race ./test/...
+    go test -race -shuffle=on {{ args }}
 
 [group('check')]
 [doc('Run tests with coverage and write coverage.out and coverage.html')]

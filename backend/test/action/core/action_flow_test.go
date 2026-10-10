@@ -55,7 +55,9 @@ func TestZeroActionsBlocksCardPlay(t *testing.T) {
 	payment := shared.NativePayment(shared.ResourceCredit, 4)
 
 	err = playAction.Execute(context.Background(), testGame.ID(), playerID, testutil.CardID("Power Plant"), payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
+	testutil.AssertErrorContains(t, err, "no actions remaining", "Should fail with 0 actions remaining")
+	testutil.AssertEqual(t, 100, p.Resources().Get().Credits, "credits unchanged")
+	testutil.AssertTrue(t, p.Hand().HasCard(testutil.CardID("Power Plant")), "card stays in hand")
 }
 
 func TestZeroActionsBlocksStandardProject(t *testing.T) {
@@ -76,7 +78,8 @@ func TestZeroActionsBlocksStandardProject(t *testing.T) {
 	buildAction := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 
 	err = buildAction.Execute(context.Background(), testGame.ID(), playerID, "power-plant", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("power-plant")]))
-	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
+	testutil.AssertErrorContains(t, err, "no actions remaining", "Should fail with 0 actions remaining")
+	testutil.AssertEqual(t, 100, p.Resources().Get().Credits, "credits unchanged")
 }
 
 func TestZeroActionsBlocksConvertHeat(t *testing.T) {
@@ -92,7 +95,8 @@ func TestZeroActionsBlocksConvertHeat(t *testing.T) {
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	err = convertAction.Execute(context.Background(), testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
-	testutil.AssertError(t, err, "Should fail with 0 actions remaining")
+	testutil.AssertErrorContains(t, err, "no actions remaining", "Should fail with 0 actions remaining")
+	testutil.AssertEqual(t, 20, p.Resources().Get().Heat, "heat unchanged")
 }
 
 func TestAutoAdvanceAfterSecondAction(t *testing.T) {
@@ -333,7 +337,7 @@ func TestCardAction_RequirementsCheckedBeforePayment(t *testing.T) {
 			p.Actions().SetActions([]shared.CardAction{target, {CardID: "reuse", Behavior: shared.CardBehavior{Triggers: []shared.Trigger{{Type: shared.TriggerTypeManual}}, Outputs: []shared.BehaviorCondition{shared.NewEffectCondition(shared.ResourceActionReuse, 1, "self-player")}}}})
 			choice := 0
 			err := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(context.Background(), g.ID(), id, target.CardID, 0, &choice, nil, nil, nil, nil, nil, source, nil)
-			testutil.AssertError(t, err, "unmet requirement")
+			testutil.AssertErrorContains(t, err, "Tag requirements not met", "unmet requirement")
 			testutil.AssertEqual(t, 10, p.Resources().Get().Credits, "no payment")
 			testutil.AssertEqual(t, 0, p.Resources().Get().Heat, "no output")
 			testutil.AssertEqual(t, 2, g.CurrentTurn().ActionsRemaining(), "no action consumed")

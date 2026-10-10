@@ -1,23 +1,23 @@
 package integration_test
 
-import "openmars/internal/game/shared"
-
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	resconvAction "openmars/internal/action/resource_conversion"
+	"openmars/internal/events"
 	"openmars/internal/game"
 	"openmars/internal/game/cards"
 	"openmars/internal/game/global_parameters"
+	"openmars/internal/game/shared"
 	"openmars/test/testutil"
 )
 
 func setupActiveGameForGlobalParams(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string) {
 	t.Helper()
 
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	testutil.StartTestGame(t, testGame)
 
@@ -25,207 +25,101 @@ func setupActiveGameForGlobalParams(t *testing.T) (*game.Game, game.GameReposito
 	return testGame, repo, cardRegistry, playerID
 }
 
-// TestGlobalParameters_TemperatureProgression tests temperature increases
+func convertHeat(t *testing.T, repo game.GameRepository, cardRegistry cards.CardRegistry, g *game.Game, playerID string) error {
+	t.Helper()
+	action := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, testutil.TestLogger())
+	return action.Execute(context.Background(), g.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
+}
+
 func TestGlobalParameters_TemperatureProgression(t *testing.T) {
-	// Setup
 	testGame, repo, cardRegistry, playerID := setupActiveGameForGlobalParams(t)
 	ctx := context.Background()
-
-	// Get player and give heat
 	player, _ := testGame.GetPlayer(playerID)
-	testutil.SetPlayerHeat(ctx, player, 32) // Enough for 4 conversions
-
-	logger := testutil.TestLogger()
-	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
-
-	// Set as current turn
+	testutil.SetPlayerHeat(ctx, player, 24)
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
-
 	initialTemp := testGame.GlobalParameters().Temperature()
 	initialTR := player.Resources().TerraformRating()
 
-	// Convert heat 4 times
-	for i := 0; i < 4; i++ {
-		err := convertAction.Execute(ctx, testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
-		if err != nil {
-			t.Logf("Conversion %d failed: %v", i+1, err)
-			break
-		}
-
-		// Refresh game state
-		testGame, _ = repo.Get(ctx, testGame.ID())
-		player, _ = testGame.GetPlayer(playerID)
+	for i := range 2 {
+		testutil.AssertNoError(t, convertHeat(t, repo, cardRegistry, testGame, playerID), fmt.Sprintf("conversion %d", i+1))
 	}
 
-	// Verify temperature increased
-	finalTemp := testGame.GlobalParameters().Temperature()
-	testutil.AssertTrue(t, finalTemp > initialTemp, "Temperature should increase")
-
-	// Verify TR increased (should increase by number of successful temperature raises)
-	finalTR := player.Resources().TerraformRating()
-	testutil.AssertTrue(t, finalTR > initialTR, "TR should increase with temperature")
+	testutil.AssertEqual(t, initialTemp+4, testGame.GlobalParameters().Temperature(), "two conversions raise the temperature two steps of 2°C")
+	testutil.AssertEqual(t, initialTR+2, player.Resources().TerraformRating(), "each step raises TR by 1")
+	testutil.AssertEqual(t, 8, player.Resources().Get().Heat, "each conversion costs 8 heat")
+	testutil.AssertErrorContains(t, convertHeat(t, repo, cardRegistry, testGame, playerID), "not your turn", "a third conversion in a two-action turn")
+	testutil.AssertEqual(t, 8, player.Resources().Get().Heat, "a rejected conversion costs nothing")
+	testutil.AssertEqual(t, initialTemp+4, testGame.GlobalParameters().Temperature(), "a rejected conversion leaves the temperature")
 }
 
-// TestGlobalParameters_TemperatureMax tests temperature cannot exceed maximum
-func TestGlobalParameters_TemperatureMax(t *testing.T) {
-	// Setup
+func TestGlobalParameters_TemperatureStopsAtMaximum(t *testing.T) {
 	testGame, repo, cardRegistry, playerID := setupActiveGameForGlobalParams(t)
 	ctx := context.Background()
-
-	// Set temperature near max
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, global_parameters.MaxTemperature-2), "set temperature")
-
-	// Give player heat
 	player, _ := testGame.GetPlayer(playerID)
-	testutil.SetPlayerHeat(ctx, player, 100)
-
-	// Set as current turn
-	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 10), "set current turn")
-
-	logger := testutil.TestLogger()
-	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
-
-	// Try to raise temperature multiple times
-	for i := 0; i < 5; i++ {
-		err := convertAction.Execute(ctx, testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
-		if err != nil {
-			break
-		}
-		testGame, _ = repo.Get(ctx, testGame.ID())
-		player, _ = testGame.GetPlayer(playerID)
-	}
-
-	// Verify temperature doesn't exceed max
-	finalTemp := testGame.GlobalParameters().Temperature()
-	testutil.AssertTrue(t, finalTemp <= global_parameters.MaxTemperature, "Temperature should not exceed max")
-}
-
-// TestGlobalParameters_AllParametersInitialized tests all global parameters are set on game start
-func TestGlobalParameters_AllParametersInitialized(t *testing.T) {
-	// Setup
-	testGame, _, _, _ := setupActiveGameForGlobalParams(t)
-
-	globalParams := testGame.GlobalParameters()
-	testutil.AssertTrue(t, globalParams != nil, "Global parameters should exist")
-
-	// Verify all parameters have valid initial values
-	temp := globalParams.Temperature()
-	testutil.AssertTrue(t, temp >= global_parameters.MinTemperature, "Temperature should be at least minimum")
-	testutil.AssertTrue(t, temp <= global_parameters.MaxTemperature, "Temperature should not exceed maximum")
-
-	oxygen := globalParams.Oxygen()
-	testutil.AssertTrue(t, oxygen >= 0, "Oxygen should be non-negative")
-	testutil.AssertTrue(t, oxygen <= global_parameters.MaxOxygen, "Oxygen should not exceed maximum")
-
-	oceans := globalParams.Oceans()
-	testutil.AssertTrue(t, oceans >= 0, "Oceans should be non-negative")
-	testutil.AssertTrue(t, oceans <= global_parameters.MaxOceans, "Oceans should not exceed maximum")
-}
-
-// TestGlobalParameters_EventsPublished tests that events are published on parameter changes
-func TestGlobalParameters_EventsPublished(t *testing.T) {
-	// Setup
-	testGame, repo, cardRegistry, playerID := setupActiveGameForGlobalParams(t)
-	ctx := context.Background()
-
-	// Give player heat
-	player, _ := testGame.GetPlayer(playerID)
-	testutil.SetPlayerHeat(ctx, player, 8)
-
-	// Set as current turn
+	testutil.SetPlayerHeat(ctx, player, 16)
 	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
-
-	logger := testutil.TestLogger()
-	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
-
-	initialTemp := testGame.GlobalParameters().Temperature()
-
-	// Convert heat (should increase temperature)
-	err := convertAction.Execute(ctx, testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
-
-	testutil.AssertNoError(t, err, "Failed to convert heat")
-
-	// Verify temperature increased
-	finalTemp := testGame.GlobalParameters().Temperature()
-	testutil.AssertTrue(t, finalTemp > initialTemp, "Temperature should increase after converting heat")
-}
-
-// TestGlobalParameters_TRIncreasesWithTerraforming tests TR increases when terraforming
-func TestGlobalParameters_TRIncreasesWithTerraforming(t *testing.T) {
-	// Setup
-	testGame, repo, cardRegistry, playerID := setupActiveGameForGlobalParams(t)
-	ctx := context.Background()
-
-	// Get initial TR
-	player, _ := testGame.GetPlayer(playerID)
 	initialTR := player.Resources().TerraformRating()
 
-	// Give heat and convert
-	testutil.SetPlayerHeat(ctx, player, 8)
-	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
+	testutil.AssertNoError(t, convertHeat(t, repo, cardRegistry, testGame, playerID), "the last step")
+	testutil.AssertEqual(t, global_parameters.MaxTemperature, testGame.GlobalParameters().Temperature(), "the last step reaches the maximum")
+	testutil.AssertEqual(t, initialTR+1, player.Resources().TerraformRating(), "the last step raises TR")
 
-	logger := testutil.TestLogger()
-	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
-
-	err := convertAction.Execute(ctx, testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
-	testutil.AssertNoError(t, err, "Heat conversion failed")
-
-	// Get final TR
-	testGame, _ = repo.Get(ctx, testGame.ID())
-	player, _ = testGame.GetPlayer(playerID)
-	finalTR := player.Resources().TerraformRating()
-
-	// TR should increase
-	testutil.AssertTrue(t, finalTR > initialTR, "TR should increase when terraforming")
+	testutil.AssertNoError(t, convertHeat(t, repo, cardRegistry, testGame, playerID), "converting at the maximum")
+	testutil.AssertEqual(t, global_parameters.MaxTemperature, testGame.GlobalParameters().Temperature(), "the temperature never exceeds the maximum")
+	testutil.AssertEqual(t, initialTR+1, player.Resources().TerraformRating(), "converting at the maximum raises no TR")
 }
 
-// TestGlobalParameters_MultiplePlayers tests multiple players can terraform
-func TestGlobalParameters_MultiplePlayers(t *testing.T) {
-	// Setup
+func TestGlobalParameters_StartAtTheirMinimums(t *testing.T) {
+	testGame, _, _, _ := setupActiveGameForGlobalParams(t)
+	params := testGame.GlobalParameters()
+	testutil.AssertEqual(t, global_parameters.MinTemperature, params.Temperature(), "temperature starts at its minimum")
+	testutil.AssertEqual(t, 0, params.Oxygen(), "oxygen starts at 0")
+	testutil.AssertEqual(t, 0, params.Oceans(), "no oceans at the start")
+}
+
+func TestGlobalParameters_RaisingTemperaturePublishesAnEvent(t *testing.T) {
+	testGame, repo, cardRegistry, playerID := setupActiveGameForGlobalParams(t)
+	ctx := context.Background()
+	player, _ := testGame.GetPlayer(playerID)
+	testutil.SetPlayerHeat(ctx, player, 8)
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, playerID, 2), "set current turn")
+	initialTemp := testGame.GlobalParameters().Temperature()
+
+	var published []events.TemperatureChangedEvent
+	events.Subscribe(testGame.EventBus(), func(e events.TemperatureChangedEvent) {
+		published = append(published, e)
+	})
+	testutil.AssertNoError(t, convertHeat(t, repo, cardRegistry, testGame, playerID), "convert heat")
+
+	testutil.AssertEqual(t, 1, len(published), "one temperature event")
+	testutil.AssertEqual(t, initialTemp, published[0].OldValue, "the event carries the old temperature")
+	testutil.AssertEqual(t, initialTemp+2, published[0].NewValue, "the event carries the new temperature")
+	testutil.AssertEqual(t, testGame.ID(), published[0].GameID, "the event names the game")
+}
+
+func TestGlobalParameters_EachPlayerGetsTRForTheirOwnSteps(t *testing.T) {
 	testGame, repo, cardRegistry, player1ID := setupActiveGameForGlobalParams(t)
 	ctx := context.Background()
-
-	// Get second player
-	players := testGame.GetAllPlayers()
 	var player2ID string
-	for _, p := range players {
+	for _, p := range testGame.GetAllPlayers() {
 		if p.ID() != player1ID {
 			player2ID = p.ID()
-			break
 		}
 	}
-
-	logger := testutil.TestLogger()
-	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
-
+	player1, _ := testGame.GetPlayer(player1ID)
+	player2, _ := testGame.GetPlayer(player2ID)
+	tr1, tr2 := player1.Resources().TerraformRating(), player2.Resources().TerraformRating()
 	initialTemp := testGame.GlobalParameters().Temperature()
 
-	// Player 1 raises temperature
-	player1, _ := testGame.GetPlayer(player1ID)
-	testutil.SetPlayerHeat(ctx, player1, 8)
-	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player1ID, 2), "set current turn for player 1")
-	err1 := convertAction.Execute(ctx, testGame.ID(), player1ID, shared.NativePayment(shared.ResourceHeat, 8))
-
-	// Player 2 raises temperature
-	testGame, _ = repo.Get(ctx, testGame.ID())
-	player2, _ := testGame.GetPlayer(player2ID)
-	testutil.SetPlayerHeat(ctx, player2, 8)
-	testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, player2ID, 2), "set current turn for player 2")
-	err2 := convertAction.Execute(ctx, testGame.ID(), player2ID, shared.NativePayment(shared.ResourceHeat, 8))
-
-	// Both should succeed (if temperature not maxed)
-	if err1 == nil && err2 == nil {
-		testGame, _ = repo.Get(ctx, testGame.ID())
-		finalTemp := testGame.GlobalParameters().Temperature()
-
-		// Temperature should have increased
-		testutil.AssertTrue(t, finalTemp > initialTemp, "Temperature should increase from both players")
-
-		// Both players should have increased TR
-		player1, _ = testGame.GetPlayer(player1ID)
-		player2, _ = testGame.GetPlayer(player2ID)
-
-		testutil.AssertTrue(t, player1.Resources().TerraformRating() > 20, "Player 1 TR should increase")
-		testutil.AssertTrue(t, player2.Resources().TerraformRating() > 20, "Player 2 TR should increase")
+	for _, id := range []string{player1ID, player2ID} {
+		p, _ := testGame.GetPlayer(id)
+		testutil.SetPlayerHeat(ctx, p, 8)
+		testutil.AssertNoError(t, testGame.SetCurrentTurn(ctx, id, 2), "set current turn")
+		testutil.AssertNoError(t, convertHeat(t, repo, cardRegistry, testGame, id), "convert heat")
 	}
+
+	testutil.AssertEqual(t, initialTemp+4, testGame.GlobalParameters().Temperature(), "both players raised the temperature")
+	testutil.AssertEqual(t, tr1+1, player1.Resources().TerraformRating(), "player 1 gains TR for their step")
+	testutil.AssertEqual(t, tr2+1, player2.Resources().TerraformRating(), "player 2 gains TR for their step")
 }

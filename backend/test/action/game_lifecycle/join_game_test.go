@@ -17,8 +17,7 @@ import (
 
 func TestJoinGameAction_Success(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
@@ -41,8 +40,7 @@ func TestJoinGameAction_Success(t *testing.T) {
 
 func TestJoinGameAction_IdempotentJoin(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
@@ -80,13 +78,12 @@ func TestJoinGameAction_GameNotFound(t *testing.T) {
 	_, err := joinAction.Execute(context.Background(), "non-existent-game", "Charlie", playerID)
 
 	// Assert
-	testutil.AssertError(t, err, "Should fail when game doesn't exist")
+	testutil.AssertErrorContains(t, err, "game not found", "Should fail when game doesn't exist")
 }
 
 func TestJoinGameAction_GameNotInLobby(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
@@ -95,7 +92,7 @@ func TestJoinGameAction_GameNotInLobby(t *testing.T) {
 	if len(players) >= 2 {
 		// Set corporations for players
 		for _, p := range players {
-			p.SetCorporationID("corp-tharsis-republic")
+			p.SetCorporationID(testutil.PlaceholderCorporationID)
 		}
 	}
 
@@ -108,7 +105,7 @@ func TestJoinGameAction_GameNotInLobby(t *testing.T) {
 	_, err := joinAction.Execute(context.Background(), testGame.ID(), "Late Joiner", playerID)
 
 	// Assert
-	testutil.AssertError(t, err, "Should not allow joining non-lobby game")
+	testutil.AssertErrorContains(t, err, "game is not in lobby", "Should not allow joining non-lobby game")
 }
 
 func TestJoinGameAction_MaxPlayersReached(t *testing.T) {
@@ -120,7 +117,7 @@ func TestJoinGameAction_MaxPlayersReached(t *testing.T) {
 	// Create game with max 2 players
 	settings := shared.GameSettings{
 		MaxPlayers: 2,
-		CardPacks:  []string{"base"},
+		CardPacks:  []string{shared.PackBaseGame},
 	}
 
 	ds, _ := datastore.NewDataStore()
@@ -141,7 +138,7 @@ func TestJoinGameAction_MaxPlayersReached(t *testing.T) {
 	_, err = joinAction.Execute(context.Background(), testGame.ID(), "Player3", playerID)
 
 	// Assert
-	testutil.AssertError(t, err, "Should not allow joining when max players reached")
+	testutil.AssertErrorContains(t, err, "game is full", "Should not allow joining when max players reached")
 }
 
 func TestJoinGameAction_MaxPlayerNameLengthConst(t *testing.T) {
@@ -150,8 +147,7 @@ func TestJoinGameAction_MaxPlayerNameLengthConst(t *testing.T) {
 
 func TestJoinGameAction_RejectsOverLengthName(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
@@ -163,7 +159,7 @@ func TestJoinGameAction_RejectsOverLengthName(t *testing.T) {
 	_, err := joinAction.Execute(context.Background(), testGame.ID(), name, playerID)
 
 	// Assert - rejected loudly, no player added
-	testutil.AssertError(t, err, "Should reject name longer than the cap")
+	testutil.AssertErrorContains(t, err, "player name exceeds maximum length", "Should reject name longer than the cap")
 
 	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
 	players := fetchedGame.GetAllPlayers()
@@ -172,8 +168,7 @@ func TestJoinGameAction_RejectsOverLengthName(t *testing.T) {
 
 func TestJoinGameAction_AcceptsMaxLengthName(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 
@@ -195,8 +190,7 @@ func TestJoinGameAction_AcceptsMaxLengthName(t *testing.T) {
 
 func TestJoinGameAction_SetHostForFirstPlayer(t *testing.T) {
 	// Setup
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 0)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 

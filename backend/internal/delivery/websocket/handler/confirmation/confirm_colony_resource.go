@@ -35,16 +35,16 @@ func (h *ConfirmColonyResourceHandler) HandleMessage(ctx context.Context, connec
 
 	log.Debug("Processing confirm colony resource request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
@@ -53,34 +53,15 @@ func (h *ConfirmColonyResourceHandler) HandleMessage(ctx context.Context, connec
 	log.Debug("Parsed confirm colony resource request",
 		slog.String("target_card_id", targetCardID))
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, targetCardID)
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), targetCardID)
 	if err != nil {
 		log.Error("Failed to execute confirm colony resource action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Colony resource placement confirmed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "confirm-colony-resource",
-			"success": true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *ConfirmColonyResourceHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

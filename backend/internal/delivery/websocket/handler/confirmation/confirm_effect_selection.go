@@ -35,51 +35,32 @@ func (h *ConfirmEffectSelectionHandler) HandleMessage(ctx context.Context, conne
 
 	log.Debug("Processing confirm effect selection request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
-		h.sendError(connection, "Not connected to a game")
+	if connection.GameID() == "" || connection.PlayerID() == "" {
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	option, ok := payloadMap["optionIndex"].(float64)
 	if !ok || option != float64(int(option)) {
-		h.sendError(connection, "Missing or invalid optionIndex in payload")
+		connection.SendError(message.Type, "Missing or invalid optionIndex in payload")
 		return
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, int(option))
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), int(option))
 	if err != nil {
 		log.Error("Failed to execute confirm effect selection action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Effect selection confirmed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "confirm-effect-selection",
-			"success": true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *ConfirmEffectSelectionHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

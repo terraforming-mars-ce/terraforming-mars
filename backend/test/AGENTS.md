@@ -12,8 +12,29 @@ Tests mirror the `internal/` structure. Place tests in the matching subdirectory
 - `action/payment/` - Payment modifier tests (discounts, value modifiers)
 - `game/` - Game state and domain logic tests
 - `events/` - Event system tests
+- `e2e/` - Functional tests that run the real server (`internal/app`) and talk to it over HTTP and real WebSocket connections
+- `delivery/websocket/core/` - Hub tests with a hand-registered handler (panics, shutdown)
 
-Use `testutil/` helpers for game setup and assertions.
+Use `testutil/` helpers for game setup and assertions. Tests log errors only; set
+`OPENMARS_TEST_LOG_LEVEL=debug` to see everything while investigating a failure.
+
+## Functional Tests (`e2e/`)
+
+The `e2e/harness` package starts the production wiring on `httptest` and gives each test
+browser-like clients. Every test gets its own server and runs in parallel.
+
+- `srv.Play(t, edit, names...)` creates a game and plays it to the first action phase;
+  `srv.Lobby` stops in the lobby. `harness.DevMode` enables admin commands.
+- Clients `Send`, then `Await`/`AwaitState`/`AwaitError` with a timeout. Never sleep.
+- `c.Sync(t)` is a barrier: it returns everything the server queued for that client
+  so far. Messages from different connections are not ordered, so after one client acts,
+  sync that client (or await its reply) before syncing the others. `ExpectQuiet` asserts
+  a client received nothing.
+- `srv.CloseAndWait(t, c)` closes a client and waits until the server has handled it.
+- `contract_test.go` lists every client message type with payloads that must be rejected;
+  `TestContract_EveryMessageTypeIsCovered` fails when a registered type is missing.
+- Under `-race` or coverage the harness timeout is longer (`harness.Timeout()`), since the
+  server is an order of magnitude slower.
 
 ## Behavior Tests (`action/behavior/`)
 

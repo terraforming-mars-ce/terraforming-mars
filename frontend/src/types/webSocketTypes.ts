@@ -3,7 +3,6 @@ import type { PaymentDto } from "./generated/api-types.ts";
 // Common interface for WebSocket connections used throughout the app
 export interface WebSocketConnection {
   connected: boolean;
-  playerId: string | null;
   gameId: string | null;
 
   // Connection

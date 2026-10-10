@@ -40,7 +40,7 @@ func (h *SpectateGameHandler) HandleMessage(ctx context.Context, connection *cor
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "invalid payload format")
+		connection.SendError(message.Type, "invalid payload format")
 		return
 	}
 
@@ -49,48 +49,40 @@ func (h *SpectateGameHandler) HandleMessage(ctx context.Context, connection *cor
 
 	if gameID == "" {
 		log.Error("Missing gameId")
-		h.sendError(connection, "missing gameId")
+		connection.SendError(message.Type, "missing gameId")
 		return
 	}
 
 	if spectatorName == "" {
 		log.Error("Missing spectatorName")
-		h.sendError(connection, "missing spectatorName")
+		connection.SendError(message.Type, "missing spectatorName")
 		return
 	}
 
-	spectatorID := uuid.New().String()
-	connection.SetSpectator(spectatorID, gameID)
+	if current := connection.Identity(); current.GameID == gameID && current.IsSpectator() {
+		h.broadcaster.SendInitialLogsToSpectator(gameID, current.SpectatorID)
+		h.broadcaster.BroadcastGameState(gameID, nil)
+		connection.Send(spectatorConnected(gameID, current.SpectatorID))
+		return
+	}
 
-	result, err := h.action.Execute(ctx, gameID, spectatorName, spectatorID)
+	result, err := h.action.Execute(ctx, gameID, spectatorName, uuid.New().String())
 	if err != nil {
-		log.Error("Failed to execute spectate game action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		log.Warn("Failed to spectate game", slog.Any("error", err))
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
-	log.Debug("Spectator joined", slog.String("spectator_id", result.SpectatorID))
-
+	connection.BindSpectator(gameID, result.SpectatorID)
 	h.broadcaster.BroadcastGameState(gameID, nil)
-
-	h.broadcaster.SendInitialLogsToSpectator(gameID, spectatorID)
-
-	response := dto.WebSocketMessage{
-		Type:   dto.MessageTypeSpectatorConnected,
-		GameID: gameID,
-		Payload: map[string]interface{}{
-			"spectatorId": result.SpectatorID,
-			"success":     true,
-		},
-	}
-	connection.SendMessage(response)
+	h.broadcaster.SendInitialLogsToSpectator(gameID, result.SpectatorID)
+	connection.Send(spectatorConnected(gameID, result.SpectatorID))
 }
 
-func (h *SpectateGameHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.SendMessage(dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	})
+func spectatorConnected(gameID, spectatorID string) dto.WebSocketMessage {
+	return dto.WebSocketMessage{
+		Type:    dto.MessageTypeSpectatorConnected,
+		GameID:  gameID,
+		Payload: dto.SpectatorConnectedPayload{SpectatorID: spectatorID},
+	}
 }

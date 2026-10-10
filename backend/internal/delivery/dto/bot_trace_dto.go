@@ -59,7 +59,7 @@ type BotReactionDto struct {
 	Personal bool     `json:"personal"`
 	Directed bool     `json:"directed"`
 	Big      bool     `json:"big"`
-	Decision string   `json:"decision" tstype:"'reacted' | 'throttled' | 'busy' | 'own-turn'"`
+	Decision string   `json:"decision" tstype:"'reacted' | 'throttled' | 'busy' | 'own-turn' | 'quiet'"`
 	Output   string   `json:"output,omitempty"`
 }
 

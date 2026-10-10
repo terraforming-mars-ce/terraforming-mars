@@ -18,8 +18,7 @@ func newSetPlayerColorAction(repo game.GameRepository) *connection.SetPlayerColo
 // ============================================================================
 
 func TestPlayerColor_AutoAssignedOnJoin(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 3)
 
 	players := g.GetAllPlayers()
 	colors := make(map[string]bool)
@@ -31,8 +30,7 @@ func TestPlayerColor_AutoAssignedOnJoin(t *testing.T) {
 }
 
 func TestPlayerColor_AssignedFromPalette(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, _ := testutil.CreateTestGameWithPlayers(t, 2)
 
 	paletteSet := make(map[string]bool)
 	for _, c := range shared.PlayerColors {
@@ -49,8 +47,7 @@ func TestPlayerColor_AssignedFromPalette(t *testing.T) {
 // ============================================================================
 
 func TestSetPlayerColor_Success(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	players := g.GetAllPlayers()
@@ -73,8 +70,7 @@ func TestSetPlayerColor_Success(t *testing.T) {
 }
 
 func TestSetPlayerColor_OwnColorIsNoop(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	player := g.GetAllPlayers()[0]
@@ -88,8 +84,7 @@ func TestSetPlayerColor_OwnColorIsNoop(t *testing.T) {
 }
 
 func TestSetPlayerColor_HostCanChangeBotColor(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := testutil.TestContext()
 
 	hostPlayer := g.GetAllPlayers()[0]
@@ -121,12 +116,11 @@ func TestSetPlayerColor_NotInLobby(t *testing.T) {
 	action := newSetPlayerColorAction(repo)
 	err := action.Execute(ctx, g.ID(), player1ID, player1ID, shared.PlayerColors[0])
 
-	testutil.AssertError(t, err, "Should reject color change when not in lobby")
+	testutil.AssertErrorContains(t, err, "can only change color during lobby phase", "Should reject color change when not in lobby")
 }
 
 func TestSetPlayerColor_ColorTaken(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	players := g.GetAllPlayers()
@@ -136,12 +130,12 @@ func TestSetPlayerColor_ColorTaken(t *testing.T) {
 	action := newSetPlayerColorAction(repo)
 	err := action.Execute(ctx, g.ID(), player1.ID(), player1.ID(), player2.Color())
 
-	testutil.AssertError(t, err, "Should reject color that is taken by another player")
+	testutil.AssertErrorContains(t, err, "is not available", "Should reject color that is taken by another player")
+	testutil.AssertNotEqual(t, player2.Color(), player1.Color(), "color unchanged")
 }
 
 func TestSetPlayerColor_InvalidColor(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	player := g.GetAllPlayers()[0]
@@ -149,12 +143,12 @@ func TestSetPlayerColor_InvalidColor(t *testing.T) {
 	action := newSetPlayerColorAction(repo)
 	err := action.Execute(ctx, g.ID(), player.ID(), player.ID(), "#123456")
 
-	testutil.AssertError(t, err, "Should reject color not in the palette")
+	testutil.AssertErrorContains(t, err, "is not available", "Should reject color not in the palette")
+	testutil.AssertNotEqual(t, "#123456", player.Color(), "color unchanged")
 }
 
 func TestSetPlayerColor_NonHostCannotChangeBotColor(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	nonHost, _ := g.GetPlayer("player-2")
@@ -163,12 +157,12 @@ func TestSetPlayerColor_NonHostCannotChangeBotColor(t *testing.T) {
 	action := newSetPlayerColorAction(repo)
 	err := action.Execute(ctx, g.ID(), nonHost.ID(), bot.ID(), shared.PlayerColors[5])
 
-	testutil.AssertError(t, err, "Non-host should not change bot color")
+	testutil.AssertErrorContains(t, err, "only the host can change another player's color", "Non-host should not change bot color")
+	testutil.AssertNotEqual(t, shared.PlayerColors[5], bot.Color(), "bot color unchanged")
 }
 
 func TestSetPlayerColor_CannotChangeOtherHumanColor(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	host, _ := g.GetPlayer("player-1")
@@ -177,7 +171,8 @@ func TestSetPlayerColor_CannotChangeOtherHumanColor(t *testing.T) {
 	action := newSetPlayerColorAction(repo)
 	err := action.Execute(ctx, g.ID(), host.ID(), otherHuman.ID(), shared.PlayerColors[5])
 
-	testutil.AssertError(t, err, "Host should not change other human player's color")
+	testutil.AssertErrorContains(t, err, "can only change bot colors", "Host should not change other human player's color")
+	testutil.AssertNotEqual(t, shared.PlayerColors[5], otherHuman.Color(), "other player color unchanged")
 }
 
 func TestSetPlayerColor_GameNotFound(t *testing.T) {
@@ -185,12 +180,11 @@ func TestSetPlayerColor_GameNotFound(t *testing.T) {
 	action := newSetPlayerColorAction(repo)
 
 	err := action.Execute(testutil.TestContext(), "nonexistent", "player-1", "player-1", shared.PlayerColors[0])
-	testutil.AssertError(t, err, "Should fail for nonexistent game")
+	testutil.AssertErrorContains(t, err, "game not found", "Should fail for nonexistent game")
 }
 
 func TestSetPlayerColor_PlayerNotFound(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	player := g.GetAllPlayers()[0]
@@ -198,7 +192,7 @@ func TestSetPlayerColor_PlayerNotFound(t *testing.T) {
 	action := newSetPlayerColorAction(repo)
 	err := action.Execute(ctx, g.ID(), player.ID(), "nonexistent", shared.PlayerColors[0])
 
-	testutil.AssertError(t, err, "Should fail for nonexistent player")
+	testutil.AssertErrorContains(t, err, "player not found", "Should fail for nonexistent player")
 }
 
 // ============================================================================

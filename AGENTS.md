@@ -18,10 +18,9 @@ just kill          # Stop stray dev servers on 3000/3001/4000
 
 ### Testing
 ```bash
-just test                                          # Run all backend tests
+just test                                          # Run all backend tests (race detector, random order)
 just backend test -v -run TestKick ./test/action/... # Args replace the default ./test/... pattern
 just backend coverage                              # Coverage report (backend/coverage.html)
-just backend test-race                             # Race detector
 ```
 
 ### Code Quality

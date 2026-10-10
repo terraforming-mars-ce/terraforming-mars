@@ -3,7 +3,7 @@ package card_packs_test
 import (
 	"context"
 	"fmt"
-	"time"
+	"slices"
 
 	baseaction "openmars/internal/action"
 	cardAction "openmars/internal/action/card"
@@ -24,8 +24,7 @@ import (
 // Behavior: manual trigger, outputs: card-buy 1 + card-peek 1 to self-player
 // =============================================================================
 func TestInventorsGuild_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Inventors' Guild")
@@ -47,8 +46,7 @@ func TestInventorsGuild_PlaysSuccessfully(t *testing.T) {
 		"Inventors' Guild should be in played cards")
 }
 func TestInventorsGuild_ActionCanBeUsed(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Inventors' Guild")
@@ -79,8 +77,7 @@ func TestInventorsGuild_ActionCanBeUsed(t *testing.T) {
 // Behavior: manual trigger, inputs: energy 1, outputs: card-draw 1
 // =============================================================================
 func TestDevelopmentCenter_PlaysAndActionSpendEnergyDrawCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Development Center")
@@ -114,8 +111,7 @@ func TestDevelopmentCenter_PlaysAndActionSpendEnergyDrawCard(t *testing.T) {
 		"Should have 1 less energy after using Development Center action")
 }
 func TestDevelopmentCenter_ActionFailsWithoutEnergy(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Development Center")
@@ -138,9 +134,11 @@ func TestDevelopmentCenter_ActionFailsWithoutEnergy(t *testing.T) {
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Development Center should play successfully")
 	// Try to use the action with 0 energy - should fail
+	handBefore := p.Hand().CardCount()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err = useAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, 0, nil, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Development Center action should fail without energy")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Development Center action should fail without energy")
+	testutil.AssertEqual(t, handBefore, p.Hand().CardCount(), "no card drawn")
 }
 
 // --- Space Station (025) ---
@@ -148,8 +146,7 @@ func TestDevelopmentCenter_ActionFailsWithoutEnergy(t *testing.T) {
 // "Effect: When you play a space card, you pay 2 M€ less for it."
 // Auto trigger, outputs: discount 2 to self-player with selector tags:[space].
 func TestSpaceStation_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Space Station")
@@ -185,8 +182,7 @@ func TestSpaceStation_PlaysSuccessfully(t *testing.T) {
 //	choice 0 = animal removal (2) from any-card
 //	choice 1 = plant removal (5) from any-player
 func TestVirus_Choice1_RemovePlantsFromOpponent(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Virus")
@@ -217,8 +213,7 @@ func TestVirus_Choice1_RemovePlantsFromOpponent(t *testing.T) {
 	testutil.AssertEqual(t, 3, targetResources.Plants, "Target should have 3 plants (8 - 5)")
 }
 func TestVirus_Choice1_PartialPlantRemoval(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Virus")
@@ -249,8 +244,7 @@ func TestVirus_Choice1_PartialPlantRemoval(t *testing.T) {
 	testutil.AssertEqual(t, 0, targetResources.Plants, "Target should have 0 plants (had 2, Virus removes up to 5)")
 }
 func TestVirus_Choice0_RemoveAnimalsFromCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Virus")
@@ -292,8 +286,7 @@ func TestVirus_Choice0_RemoveAnimalsFromCard(t *testing.T) {
 // Behavior 0 (auto): outputs energy-production -1 to self-player
 // Behavior 1 (manual): choices: [spend 1 plant, spend 1 steel] -> outputs credit 7 to self-player
 func TestElectroCatapult_PlayDecreasesEnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Electro Catapult")
@@ -419,8 +412,7 @@ func TestElectroCatapult_ActionSpendSteelGainCredits(t *testing.T) {
 // "When you play a card, you pay 2 M€ less."
 // Auto trigger, outputs: discount 2 to self-player (no selectors = applies to all cards).
 func TestEarthCatapult_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Earth Catapult")
@@ -451,8 +443,7 @@ func TestEarthCatapult_PlaysSuccessfully(t *testing.T) {
 // self-player with selectors.
 // =============================================================================
 func TestAdvancedAlloys_PlaysSuccessfully_ValueModifiersApplied(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Advanced Alloys")
@@ -496,8 +487,7 @@ func TestAdvancedAlloys_PlaysSuccessfully_ValueModifiersApplied(t *testing.T) {
 // These tests verify the card plays without a choice index and queues a tile placement.
 // =============================================================================
 func TestMiningArea_PlaceOnSteelBonus_IncreaseSteelProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Mining Area")
@@ -538,8 +528,6 @@ func TestMiningArea_PlaceOnSteelBonus_IncreaseSteelProduction(t *testing.T) {
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), p.ID(), steelBonusHex)
 	testutil.AssertNoError(t, err, "Should be able to select steel bonus hex")
 
-	time.Sleep(50 * time.Millisecond)
-
 	prodAfter := p.Resources().Production()
 	testutil.AssertEqual(t, prodBefore.Steel+1, prodAfter.Steel,
 		"Steel production should increase by 1 when mining tile placed on steel bonus")
@@ -548,8 +536,7 @@ func TestMiningArea_PlaceOnSteelBonus_IncreaseSteelProduction(t *testing.T) {
 }
 
 func TestMiningArea_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Mining Area")
@@ -590,8 +577,6 @@ func TestMiningArea_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing.T
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), p.ID(), titaniumBonusHex)
 	testutil.AssertNoError(t, err, "Should be able to select titanium bonus hex")
 
-	time.Sleep(50 * time.Millisecond)
-
 	prodAfter := p.Resources().Production()
 	testutil.AssertEqual(t, prodBefore.Titanium+1, prodAfter.Titanium,
 		"Titanium production should increase by 1 when mining tile placed on titanium bonus")
@@ -604,8 +589,7 @@ func TestMiningArea_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing.T
 // Passive triggered effect: auto trigger with condition type:"tag-played" for science tags.
 // Optional card-discard input, card-draw output. Just test that the card plays successfully.
 func TestMarsUniversity_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Mars University")
@@ -633,8 +617,7 @@ func TestMarsUniversity_PlaysSuccessfully(t *testing.T) {
 // "When you play a plant, microbe, or an animal tag, including this, gain 1 plant or add 1 resource to that card."
 // Passive triggered effect with choices. Just test that the card plays successfully.
 func TestViralEnhancers_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Viral Enhancers")
@@ -688,8 +671,7 @@ func TestRoboticWorkforce_RequiresProductionSourceChoice(t *testing.T) {
 // "When you play an Earth tag, you pay 3 M€ less."
 // Auto trigger, outputs: discount 3 to self-player with selector tags:[earth].
 func TestEarthOffice_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Earth Office")
@@ -718,8 +700,7 @@ func TestEarthOffice_PlaysSuccessfully(t *testing.T) {
 // "Look at top 4 cards, take 2, discard 2."
 // Auto trigger, outputs: card-take 2 + card-peek 4 to self-player.
 func TestBusinessContacts_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Business Contacts")
@@ -748,8 +729,7 @@ func TestBusinessContacts_PlaysSuccessfully(t *testing.T) {
 // "Remove up to 3 titanium from any player, or 4 steel, or 7 M€."
 // Auto trigger with 3 choices targeting any-player.
 func TestSabotage_RemoveTitaniumFromOpponent(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Sabotage")
@@ -780,8 +760,7 @@ func TestSabotage_RemoveTitaniumFromOpponent(t *testing.T) {
 	testutil.AssertEqual(t, 2, targetResources.Titanium, "Target should have 2 titanium after 3 removed (5 - 3)")
 }
 func TestSabotage_RemoveSteelFromOpponent(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Sabotage")
@@ -816,8 +795,7 @@ func TestSabotage_RemoveSteelFromOpponent(t *testing.T) {
 // "Add 1 resource to a card with at least 1 resource on it."
 // Event, cost 1, no tags. Auto trigger, outputs: card-resource 1 to any-card.
 func TestCEOsFavoriteProject_AddsMicrobeToTargetCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	ceosFavorite := testutil.GetCardByName("CEO's Favorite Project")
@@ -859,8 +837,7 @@ func TestCEOsFavoriteProject_AddsMicrobeToTargetCard(t *testing.T) {
 		"CEO's Favorite Project should be removed from hand")
 }
 func TestCEOsFavoriteProject_FailsWithoutTargetCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	ceosFavorite := testutil.GetCardByName("CEO's Favorite Project")
@@ -890,15 +867,15 @@ func TestCEOsFavoriteProject_FailsWithoutTargetCard(t *testing.T) {
 	payment := shared.NativePayment(shared.
 		ResourceCredit, 1)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), ceosFavorite.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Should fail without target card for card-resource output")
+	testutil.AssertErrorContains(t, err, "select a card for resource storage", "Should fail without target card for card-resource output")
+	testutil.AssertTrue(t, p.Hand().HasCard(ceosFavorite.ID), "rejected card stays in hand")
 }
 
 // --- Protected Habitats (173) ---
 // "Opponents may not remove your plants/animals/microbes."
 // Protects the player's plants, microbes and animals against opponents.
 func TestProtectedHabitats_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	protectedHabitats := testutil.GetCardByName("Protected Habitats")
@@ -931,8 +908,7 @@ func TestProtectedHabitats_PlaysSuccessfully(t *testing.T) {
 // --- Corporate Stronghold (182) ---
 // "Decrease your energy production 1 step and increase your M€ production 3 steps. Place a city tile."
 func TestCorporateStronghold_ProductionAndCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Corporate Stronghold")
@@ -965,8 +941,7 @@ func TestCorporateStronghold_ProductionAndCityPlacement(t *testing.T) {
 	testutil.AssertTrue(t, selection != nil, "Should have pending city tile selection")
 }
 func TestCorporateStronghold_FailsWithoutEnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Corporate Stronghold")
@@ -985,7 +960,8 @@ func TestCorporateStronghold_FailsWithoutEnergyProduction(t *testing.T) {
 	payment := shared.NativePayment(shared.
 		ResourceCredit, 11)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Corporate Stronghold should fail without energy production")
+	testutil.AssertErrorContains(t, err, "insufficient energy-production", "Corporate Stronghold should fail without energy production")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // --- Olympus Conference (185) ---
@@ -993,8 +969,7 @@ func TestCorporateStronghold_FailsWithoutEnergyProduction(t *testing.T) {
 // or remove a science resource from this card to draw a card."
 // Passive triggered effect with choices and resource storage. Just test that the card plays successfully.
 func TestOlympusConference_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Olympus Conference")
@@ -1022,8 +997,7 @@ func TestOlympusConference_PlaysSuccessfully(t *testing.T) {
 // "Look at top 3 cards, take 1, discard 2."
 // Auto trigger, outputs: card-take 1 + card-peek 3.
 func TestInventionContest_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Invention Contest")
@@ -1051,8 +1025,7 @@ func TestInventionContest_PlaysSuccessfully(t *testing.T) {
 // "Action: Spend any number of energy to gain that amount of M€."
 // Manual trigger, variableAmount inputs (energy) and outputs (credit).
 func TestPowerInfrastructure_PlayAndUseAction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Power Infrastructure")
@@ -1131,8 +1104,7 @@ func TestPowerInfrastructure_UseActionSpendAllEnergy(t *testing.T) {
 // "The next card you play this generation costs 8 M€ less."
 // Auto trigger, outputs: discount 8 with temporary:"next-card".
 func TestIndenturedWorkers_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Indentured Workers")
@@ -1218,7 +1190,7 @@ func TestRoboticWorkforce_CopiesCompleteProductionBox(t *testing.T) {
 			testutil.AssertEqual(t, expected, p.Resources().Production(), "Copy every production increase/decrease")
 			testutil.AssertEqual(t, resources, p.Resources().Get(), "Do not copy resource gains or source cost")
 			testutil.AssertFalse(t, g.HasAnyPendingSelection(id), "No copied tile placement")
-			testutil.AssertError(t, confirm.Execute(context.Background(), g.ID(), id, option), "Cannot confirm twice")
+			testutil.AssertErrorContains(t, confirm.Execute(context.Background(), g.ID(), id, option), "no pending effect selection", "Cannot confirm twice")
 		})
 	}
 }
@@ -1238,7 +1210,7 @@ func TestRoboticWorkforce_RejectsMissingOrUnaffordableSources(t *testing.T) {
 			before := p.Resources().Get()
 			err := cardAction.NewPlayCardAction(repo, registry, nil, testutil.TestLogger()).Execute(context.Background(), g.ID(), id, card.ID, shared.NativePayment(shared.
 				ResourceCredit, 9), nil, nil, nil, nil, nil)
-			testutil.AssertError(t, err, "Must have a legal production box before payment")
+			testutil.AssertErrorContains(t, err, "no legal effect selection", "Must have a legal production box before payment")
 			testutil.AssertEqual(t, before, p.Resources().Get(), "Rejected copy cannot spend")
 			testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "Rejected copy stays in hand")
 		})
@@ -1307,12 +1279,22 @@ func TestPeekAndTake_RequiresExactSelection(t *testing.T) {
 			testutil.AssertEqual(t, id, g.CurrentTurn().PlayerID(), "pending selection holds turn")
 			credits, hand, discard := p.Resources().Get().Credits, p.Hand().CardCount(), len(g.Deck().DiscardPile())
 			confirm := confirmAction.NewConfirmCardDrawAction(repo, registry, testutil.TestLogger())
-			invalid := [][]string{nil, selection.AvailableCards[:tc.take-1], selection.AvailableCards[:tc.take+1], {"not-in-selection"}}
-			if tc.take == 2 {
-				invalid = append(invalid, []string{selection.AvailableCards[0], selection.AvailableCards[0]})
+			unknown := append(slices.Clone(selection.AvailableCards[:tc.take-1]), "not-in-selection")
+			type invalidSelection struct {
+				ids     []string
+				wantErr string
 			}
-			for _, ids := range invalid {
-				testutil.AssertError(t, confirm.Execute(ctx, g.ID(), id, ids, nil, shared.NativePayment(shared.ResourceCredit, 0*3)), "reject invalid selection")
+			invalid := []invalidSelection{
+				{nil, "must take at least"},
+				{selection.AvailableCards[:tc.take-1], "must take at least"},
+				{selection.AvailableCards[:tc.take+1], "too many cards selected"},
+				{unknown, "not in available cards"},
+			}
+			if tc.take == 2 {
+				invalid = append(invalid, invalidSelection{[]string{selection.AvailableCards[0], selection.AvailableCards[0]}, "duplicate selected card"})
+			}
+			for _, tt := range invalid {
+				testutil.AssertErrorContains(t, confirm.Execute(ctx, g.ID(), id, tt.ids, nil, shared.NativePayment(shared.ResourceCredit, 0*3)), tt.wantErr, "reject invalid selection")
 				testutil.AssertEqual(t, credits, p.Resources().Get().Credits, "no charge on rejection")
 				testutil.AssertEqual(t, hand, p.Hand().CardCount(), "no hand mutation")
 				testutil.AssertEqual(t, discard, len(g.Deck().DiscardPile()), "no discard on rejection")
@@ -1320,13 +1302,13 @@ func TestPeekAndTake_RequiresExactSelection(t *testing.T) {
 					t.Fatal("rejected selection was cleared")
 				}
 			}
-			testutil.AssertError(t, confirm.Execute(ctx, g.ID(), opponentID, selection.AvailableCards[:tc.take], nil, shared.NativePayment(shared.ResourceCredit, 0*3)), "opponent cannot confirm")
+			testutil.AssertErrorContains(t, confirm.Execute(ctx, g.ID(), opponentID, selection.AvailableCards[:tc.take], nil, shared.NativePayment(shared.ResourceCredit, 0*3)), "no pending card draw selection", "opponent cannot confirm")
 			testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), id, selection.AvailableCards[:tc.take], nil, shared.NativePayment(shared.ResourceCredit, 0*3)), "take exact count")
 			testutil.AssertEqual(t, hand+tc.take, p.Hand().CardCount(), "selected cards enter hand")
 			testutil.AssertEqual(t, discard+tc.peek-tc.take, len(g.Deck().DiscardPile()), "discard leftovers")
 			testutil.AssertEqual(t, opponentID, g.CurrentTurn().PlayerID(), "advance after confirmation")
 			testutil.AssertEqual(t, 2, g.CurrentTurn().ActionsRemaining(), "do not consume opponent action")
-			testutil.AssertError(t, confirm.Execute(ctx, g.ID(), id, selection.AvailableCards[:tc.take], nil, shared.NativePayment(shared.ResourceCredit, 0*3)), "cannot confirm twice")
+			testutil.AssertErrorContains(t, confirm.Execute(ctx, g.ID(), id, selection.AvailableCards[:tc.take], nil, shared.NativePayment(shared.ResourceCredit, 0*3)), "no pending card draw selection", "cannot confirm twice")
 		})
 	}
 }
@@ -1410,11 +1392,11 @@ func TestInteractiveEffects_ResearchResolutionsCanBeOrdered(t *testing.T) {
 					testutil.AssertTrue(t, !r.Choices[1].Available, "cannot spend science yet")
 				}
 			}
-			testutil.AssertError(t, choose.Execute(ctx, g.ID(), id, olympus[0], 1, nil), "reject insufficient science")
-			testutil.AssertError(t, choose.Execute(ctx, g.ID(), opponentID, olympus[0], 0, nil), "reject wrong owner")
-			testutil.AssertError(t, choose.Execute(ctx, g.ID(), id, mars[0], 0, nil), "reject wrong kind")
-			testutil.AssertError(t, discard.Execute(ctx, g.ID(), id, olympus[0], nil), "reject wrong discard kind")
-			testutil.AssertError(t, discard.Execute(ctx, g.ID(), id, mars[0], []string{"absent"}), "reject missing card")
+			testutil.AssertErrorContains(t, choose.Execute(ctx, g.ID(), id, olympus[0], 1, nil), "Not enough resources on Olympus Conference", "reject insufficient science")
+			testutil.AssertErrorContains(t, choose.Execute(ctx, g.ID(), opponentID, olympus[0], 0, nil), "no pending behavior choice selection", "reject wrong owner")
+			testutil.AssertErrorContains(t, choose.Execute(ctx, g.ID(), id, mars[0], 0, nil), "no pending behavior choice selection", "reject wrong kind")
+			testutil.AssertErrorContains(t, discard.Execute(ctx, g.ID(), id, olympus[0], nil), "no pending card discard selection", "reject wrong discard kind")
+			testutil.AssertErrorContains(t, discard.Execute(ctx, g.ID(), id, mars[0], []string{"absent"}), "card absent not in player's hand", "reject missing card")
 			testutil.AssertEqual(t, 4, len(p.Selection().GetPendingBehaviorResolutions()), "rejections retain all decisions")
 			testutil.AssertEqual(t, id, g.CurrentTurn().PlayerID(), "pending decisions hold turn")
 			testutil.AssertEqual(t, 0, g.CurrentTurn().ActionsRemaining(), "only card play consumes action")
@@ -1442,8 +1424,8 @@ func TestInteractiveEffects_ResearchResolutionsCanBeOrdered(t *testing.T) {
 			testutil.AssertEqual(t, opponentID, g.CurrentTurn().PlayerID(), "advance exactly after final decision")
 			testutil.AssertEqual(t, 2, g.CurrentTurn().ActionsRemaining(), "opponent keeps two actions")
 			hand, deck := p.Hand().CardCount(), len(g.Deck().ProjectCards())
-			testutil.AssertError(t, choose.Execute(ctx, g.ID(), id, olympus[0], 1, nil), "reject replayed choice")
-			testutil.AssertError(t, discard.Execute(ctx, g.ID(), id, mars[0], p.Hand().Cards()), "reject replayed discard")
+			testutil.AssertErrorContains(t, choose.Execute(ctx, g.ID(), id, olympus[0], 1, nil), "no pending behavior choice selection", "reject replayed choice")
+			testutil.AssertErrorContains(t, discard.Execute(ctx, g.ID(), id, mars[0], p.Hand().Cards()), "no pending card discard selection", "reject replayed discard")
 			testutil.AssertEqual(t, hand, p.Hand().CardCount(), "replay leaves hand intact")
 			testutil.AssertEqual(t, deck, len(g.Deck().ProjectCards()), "replay leaves deck intact")
 			testutil.AssertEqual(t, opponentID, g.CurrentTurn().PlayerID(), "replay does not advance again")
@@ -1489,7 +1471,7 @@ func TestViralEnhancers_OnlyRewardsTheTriggeringCard(t *testing.T) {
 			testutil.AssertTrue(t, snap.Choices[0].Available, "self trigger allows plant")
 			testutil.AssertTrue(t, !snap.Choices[1].Available && !snap.Choices[2].Available, "source cannot store microbe or animal")
 			plants := p.Resources().Get().Plants
-			testutil.AssertError(t, choose.Execute(ctx, g.ID(), id, own.ID, 1, nil), "no storage on source")
+			testutil.AssertErrorContains(t, choose.Execute(ctx, g.ID(), id, own.ID, 1, nil), "Viral Enhancers cannot store resources", "no storage on source")
 			testutil.AssertNoError(t, choose.Execute(ctx, g.ID(), id, own.ID, 0, nil), "self trigger plant")
 			testutil.AssertEqual(t, plants+1, p.Resources().Get().Plants, "one plant on self play")
 			if tc.name == "Fish" {
@@ -1513,8 +1495,8 @@ func TestViralEnhancers_OnlyRewardsTheTriggeringCard(t *testing.T) {
 			initialStorage, initialPlants := p.Resources().GetCardStorage(c.ID), p.Resources().Get().Plants
 			for _, r := range pending {
 				testutil.AssertEqual(t, c.ID, r.TriggeringCardID, "retain exact destination")
-				testutil.AssertError(t, choose.Execute(ctx, g.ID(), id, r.ID, tc.choice, []string{other.ID}), "cannot override fixed target")
-				testutil.AssertError(t, choose.Execute(ctx, g.ID(), opponentID, r.ID, tc.choice, nil), "cannot resolve another player's decision")
+				testutil.AssertErrorContains(t, choose.Execute(ctx, g.ID(), id, r.ID, tc.choice, []string{other.ID}), "unexpected card storage targets", "cannot override fixed target")
+				testutil.AssertErrorContains(t, choose.Execute(ctx, g.ID(), opponentID, r.ID, tc.choice, nil), "no pending behavior choice selection", "cannot resolve another player's decision")
 			}
 			testutil.AssertEqual(t, initialStorage, p.Resources().GetCardStorage(c.ID), "rejections don't award")
 			for i, r := range pending {
@@ -1523,7 +1505,7 @@ func TestViralEnhancers_OnlyRewardsTheTriggeringCard(t *testing.T) {
 					selected = 0
 				} // Ecological Zone permits different rewards for its two tags.
 				testutil.AssertNoError(t, choose.Execute(ctx, g.ID(), id, r.ID, selected, nil), "resolve bonus")
-				testutil.AssertError(t, choose.Execute(ctx, g.ID(), id, r.ID, selected, nil), "no double award")
+				testutil.AssertErrorContains(t, choose.Execute(ctx, g.ID(), id, r.ID, selected, nil), "no pending behavior choice selection", "no double award")
 			}
 			testutil.AssertEqual(t, initialStorage+1, p.Resources().GetCardStorage(c.ID), "exactly one resource on triggering card")
 			testutil.AssertEqual(t, initialPlants+tc.count-1, p.Resources().Get().Plants, "independent plant choice")
@@ -1624,7 +1606,7 @@ func TestProtectedHabitats_StorageTransfers(t *testing.T) {
 						testutil.AssertEqual(t, 2, owner.Resources().GetCardStorage(source.ID), "source deducted")
 						testutil.AssertEqual(t, 1, actor.Resources().GetCardStorage(actionCard.ID), "destination gained")
 					} else {
-						testutil.AssertError(t, err, "opponent blocked")
+						testutil.AssertErrorContains(t, err, "are protected", "opponent blocked")
 						testutil.AssertEqual(t, 3, owner.Resources().GetCardStorage(source.ID), "source unchanged")
 						testutil.AssertEqual(t, 0, actor.Actions().List()[0].TimesUsedThisGeneration, "action not consumed")
 					}
@@ -1647,7 +1629,7 @@ func TestProtectedHabitats_DeferredRemovalRechecksProtection(t *testing.T) {
 	habitats := testutil.GetCardByName("Protected Habitats")
 	owner.Effects().AddEffect(shared.CardEffect{CardID: habitats.ID, Behavior: habitats.Behaviors[0]})
 	confirm := confirmAction.NewConfirmResourceRemovalAction(repo, registry, nil, testutil.TestLogger())
-	testutil.AssertError(t, confirm.Execute(ctx, g.ID(), actorID, selection.ID, ownerID, 3), "stale protected selection")
+	testutil.AssertErrorContains(t, confirm.Execute(ctx, g.ID(), actorID, selection.ID, ownerID, 3), "target or amount is not eligible for resource removal", "stale protected selection")
 	testutil.AssertEqual(t, 5, owner.Resources().Get().Plants, "resources retained")
 	testutil.AssertTrue(t, actor.Selection().GetPendingResourceRemovalSelection() != nil, "selection retained")
 	testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), actorID, selection.ID, "", 0), "skip remains allowed")
@@ -1682,7 +1664,7 @@ func TestIndustrialCenter_RequiresPlacementBeforePayment(t *testing.T) {
 	before := p.Resources().Get()
 	err := cardAction.NewPlayCardAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, card.ID, shared.NativePayment(shared.
 		ResourceCredit, card.Cost), nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "cannot place Industrial Center without a city")
+	testutil.AssertErrorContains(t, err, "No valid tile placements", "cannot place Industrial Center without a city")
 	testutil.AssertEqual(t, before, p.Resources().Get(), "no payment on invalid play")
 	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "card stays in hand")
 }
@@ -1690,8 +1672,7 @@ func TestIndustrialCenter_RequiresPlacementBeforePayment(t *testing.T) {
 // --- Commercial District (085) ---
 // "Decrease your energy production 1 step and increase your M€ production 4 steps."
 func TestCommercialDistrict_ProductionChange(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	commercialDistrict := testutil.GetCardByName("Commercial District")
@@ -1861,7 +1842,7 @@ func TestIndustrialCenter_StalePlacementRejected(t *testing.T) {
 	resources := p.Resources().Get()
 	actions := g.CurrentTurn().ActionsRemaining()
 	_, err := tileAction.NewSelectTileAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, pending.AvailableHexes[0])
-	testutil.AssertError(t, err, "recheck adjacency")
+	testutil.AssertErrorContains(t, err, "is no longer valid for placement", "recheck adjacency")
 	testutil.AssertEqual(t, resources, p.Resources().Get(), "no bonuses on invalid placement")
 	testutil.AssertEqual(t, actions, g.CurrentTurn().ActionsRemaining(), "no turn advancement")
 	testutil.AssertTrue(t, g.GetPendingTileSelection(id) != nil, "pending preserved")
@@ -1891,7 +1872,7 @@ func TestStorageScoringCards_RealActionsAndVP(t *testing.T) {
 			use := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger())
 			p.Resources().Add(map[shared.ResourceType]int{tc.resource: tc.cost - 1})
 			before, actions := p.Resources().Get(), g.CurrentTurn().ActionsRemaining()
-			testutil.AssertError(t, use.Execute(ctx, g.ID(), id, c.ID, 0, nil, nil, nil, nil, nil, nil, nil, nil), "insufficient input")
+			testutil.AssertErrorContains(t, use.Execute(ctx, g.ID(), id, c.ID, 0, nil, nil, nil, nil, nil, nil, nil, nil), "payment exceeds available source pool", "insufficient input")
 			testutil.AssertEqual(t, before, p.Resources().Get(), "rejected action changes no resources")
 			testutil.AssertEqual(t, actions, g.CurrentTurn().ActionsRemaining(), "rejected action is not consumed")
 			p.Resources().Add(map[shared.ResourceType]int{tc.resource: 1})
@@ -1899,7 +1880,7 @@ func TestStorageScoringCards_RealActionsAndVP(t *testing.T) {
 			testutil.AssertEqual(t, 0, p.Resources().Get().GetAmount(tc.resource), "exact input spent")
 			testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(c.ID), "one resource added")
 			p.Resources().Add(map[shared.ResourceType]int{tc.resource: tc.cost})
-			testutil.AssertError(t, use.Execute(ctx, g.ID(), id, c.ID, 0, nil, nil, nil, nil, nil, nil, nil, nil), "cannot repeat this generation")
+			testutil.AssertErrorContains(t, use.Execute(ctx, g.ID(), id, c.ID, 0, nil, nil, nil, nil, nil, nil, nil, nil), "action already played this generation", "cannot repeat this generation")
 			testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(c.ID), "no repeat award")
 			unrelated := addRegistryPlayedCard(p, "Search For Life")
 			p.Resources().AddToStorage(unrelated.ID, 10)
@@ -1960,7 +1941,7 @@ func TestLandClaim_ReservationLifecycle(t *testing.T) {
 	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, otherID, 2), "other turn")
 	testutil.AssertNoError(t, g.SetPendingTileSelection(ctx, otherID, &shared.PendingTileSelection{TileType: "city", AvailableHexes: []string{chosen.String()}}), "stale selection")
 	_, err = selectTile.Execute(ctx, g.ID(), otherID, chosen.String())
-	testutil.AssertError(t, err, "cannot build on another player's claim")
+	testutil.AssertErrorContains(t, err, "selected hex is occupied or reserved", "cannot build on another player's claim")
 	testutil.AssertNoError(t, g.SetPendingTileSelection(ctx, otherID, nil), "clear test selection")
 	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, id, 10), "owner turn")
 	city := testutil.GetCardByName("Research Outpost")
@@ -1974,5 +1955,5 @@ func TestLandClaim_ReservationLifecycle(t *testing.T) {
 	testutil.AssertTrue(t, tile.ReservedBy == nil && tile.OccupiedBy != nil, "building clears claim")
 	testutil.AssertEqual(t, beforePlants+plantBonus, p.Resources().Get().Plants, "normal bonus once")
 	_, err = selectTile.Execute(ctx, g.ID(), id, chosen.String())
-	testutil.AssertError(t, err, "cannot repeat selection")
+	testutil.AssertErrorContains(t, err, "no pending tile selection", "cannot repeat selection")
 }

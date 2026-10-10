@@ -49,29 +49,29 @@ func (h *FundSeatHandler) HandleMessage(ctx context.Context, connection *core.Co
 
 	log.Debug("Processing project funding seat purchase")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadBytes, err := json.Marshal(message.Payload)
 	if err != nil {
 		log.Error("Failed to marshal payload", slog.Any("error", err))
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	var payload FundSeatPayload
 	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
 		log.Error("Failed to unmarshal payload", slog.Any("error", err))
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	if payload.ProjectID == "" {
 		log.Error("Missing project ID in payload")
-		h.sendError(connection, "Project ID is required")
+		connection.SendError(message.Type, "Project ID is required")
 		return
 	}
 
@@ -81,33 +81,15 @@ func (h *FundSeatHandler) HandleMessage(ctx context.Context, connection *core.Co
 		Titanium: payload.Titanium,
 	}
 
-	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, payload.ProjectID, payment)
+	err = h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), payload.ProjectID, payment)
 	if err != nil {
 		log.Error("Failed to execute fund seat action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Project seat purchased", slog.String("project_id", payload.ProjectID))
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 
-	connection.Send <- dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":    "buy-project-seat",
-			"projectId": payload.ProjectID,
-			"success":   true,
-		},
-	}
-}
-
-func (h *FundSeatHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

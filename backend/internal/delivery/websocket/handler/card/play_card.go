@@ -44,32 +44,32 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 	payload, payloadOK := message.Payload.(map[string]interface{})
 	cardID, _ := payload["cardId"].(string)
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, cardID, "Not connected to a game")
+		connection.SendErrorPayload(dto.ErrorPayload{Message: "Not connected to a game", RequestType: message.Type, CardID: cardID})
 		return
 	}
 
 	if !payloadOK {
 		log.Error("Invalid payload format")
-		h.sendError(connection, cardID, "Invalid payload format")
+		connection.SendErrorPayload(dto.ErrorPayload{Message: "Invalid payload format", RequestType: message.Type, CardID: cardID})
 		return
 	}
 
 	if cardID == "" {
 		log.Error("Missing or invalid cardId")
-		h.sendError(connection, cardID, "Missing cardId")
+		connection.SendErrorPayload(dto.ErrorPayload{Message: "Missing cardId", RequestType: message.Type, CardID: cardID})
 		return
 	}
 
 	var payment dto.PaymentDto
 	raw, err := json.Marshal(payload["payment"])
 	if err != nil {
-		h.sendError(connection, cardID, "Invalid payment")
+		connection.SendErrorPayload(dto.ErrorPayload{Message: "Invalid payment", RequestType: message.Type, CardID: cardID})
 		return
 	}
 	if err = json.Unmarshal(raw, &payment); err != nil {
-		h.sendError(connection, cardID, "Invalid payment")
+		connection.SendErrorPayload(dto.ErrorPayload{Message: "Invalid payment", RequestType: message.Type, CardID: cardID})
 		return
 	}
 
@@ -84,7 +84,7 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 		for _, v := range raw {
 			id, ok := v.(string)
 			if !ok {
-				h.sendError(connection, cardID, "Invalid storage input source")
+				connection.SendErrorPayload(dto.ErrorPayload{Message: "Invalid storage input source", RequestType: message.Type, CardID: cardID})
 				return
 			}
 			cardStorageSources = append(cardStorageSources, id)
@@ -107,7 +107,7 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 	var selectedAmount *int
 	if saFloat, ok := payload["selectedAmount"].(float64); ok {
 		if saFloat < 0 || saFloat > 2147483647 || saFloat != float64(int(saFloat)) {
-			h.sendError(connection, cardID, "Invalid selected amount")
+			connection.SendErrorPayload(dto.ErrorPayload{Message: "Invalid selected amount", RequestType: message.Type, CardID: cardID})
 			return
 		}
 		sa := int(saFloat)
@@ -124,38 +124,16 @@ func (h *PlayCardHandler) HandleMessage(ctx context.Context, connection *core.Co
 		log.Debug("Target player extracted", slog.String("target_player_id", *targetPlayerID))
 	}
 
-	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, dto.ToPayment(payment), choiceIndex, cardStorageTargets, targetPlayerID, selectedAmount, cardStorageSources)
+	err = h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), cardID, dto.ToPayment(payment), choiceIndex, cardStorageTargets, targetPlayerID, selectedAmount, cardStorageSources)
 	if err != nil {
 		log.Error("Failed to execute play card action", slog.Any("error", err))
-		h.sendError(connection, cardID, err.Error())
+		connection.SendErrorPayload(dto.ErrorPayload{Message: err.Error(), RequestType: message.Type, CardID: cardID})
 		return
 	}
 
 	log.Debug("Play card completed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 	log.Debug("Broadcasted game state to all players")
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "play-card",
-			"success": true,
-			"cardId":  cardID,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *PlayCardHandler) sendError(connection *core.Connection, cardID, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: dto.PlayCardErrorPayload{
-			Action: "play-card",
-			CardID: cardID,
-			Error:  errorMessage,
-		},
-	}
 }

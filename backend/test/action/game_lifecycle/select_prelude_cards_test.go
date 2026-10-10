@@ -14,8 +14,7 @@ import (
 func setupStartingSelectionGame(t *testing.T, hasPrelude bool) (*game.Game, *turnAction.SelectStartingChoicesAction, string, string) {
 	t.Helper()
 
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 
@@ -218,11 +217,11 @@ func TestSelectStartingChoices_Validation_WrongPreludeCount(t *testing.T) {
 
 	// Selecting only 1 prelude should fail
 	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01"}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
-	testutil.AssertError(t, err, "Should fail with wrong number of preludes")
+	testutil.AssertErrorContains(t, err, "must select exactly 2 preludes", "Should fail with wrong number of preludes")
 
 	// Selecting 3 preludes should fail
 	err = action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01", "P03", "P04"}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
-	testutil.AssertError(t, err, "Should fail with too many preludes")
+	testutil.AssertErrorContains(t, err, "must select exactly 2 preludes", "Should fail with too many preludes")
 }
 
 func TestSelectStartingChoices_Validation_InvalidPreludeID(t *testing.T) {
@@ -239,7 +238,7 @@ func TestSelectStartingChoices_Validation_InvalidPreludeID(t *testing.T) {
 	corpID := corpPhase.AvailableCorporations[0]
 
 	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{"P01", "invalid-prelude"}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
-	testutil.AssertError(t, err, "Should fail with invalid prelude ID")
+	testutil.AssertErrorContains(t, err, "prelude invalid-prelude is not available for selection", "Should fail with invalid prelude ID")
 }
 
 func TestSelectStartingChoices_Validation_WrongPhase(t *testing.T) {
@@ -253,7 +252,7 @@ func TestSelectStartingChoices_Validation_WrongPhase(t *testing.T) {
 	corpID := corpPhase.AvailableCorporations[0]
 
 	err := action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
-	testutil.AssertError(t, err, "Should fail when not in starting selection phase")
+	testutil.AssertErrorContains(t, err, "game not in starting selection phase", "Should fail when not in starting selection phase")
 }
 
 func TestSelectStartingChoices_Validation_InvalidCorporation(t *testing.T) {
@@ -262,7 +261,7 @@ func TestSelectStartingChoices_Validation_InvalidCorporation(t *testing.T) {
 
 	// Use a corporation ID not in the available list
 	err := action.Execute(ctx, testGame.ID(), playerID1, "invalid-corp", []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
-	testutil.AssertError(t, err, "Should fail with invalid corporation ID")
+	testutil.AssertErrorContains(t, err, "corporation invalid-corp not available", "Should fail with invalid corporation ID")
 
 	// Corporation phase should still be present
 	testutil.AssertTrue(t, testGame.GetSelectCorporationPhase(playerID1) != nil, "Corporation phase should still be present")
@@ -273,7 +272,7 @@ func TestSelectStartingChoices_Validation_NoPlayer(t *testing.T) {
 	ctx := context.Background()
 
 	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", "B08", []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
-	testutil.AssertError(t, err, "Should fail with nonexistent player")
+	testutil.AssertErrorContains(t, err, "player not found", "Should fail with nonexistent player")
 }
 
 func TestSelectStartingChoices_Validation_AlreadyCompleted(t *testing.T) {
@@ -289,5 +288,5 @@ func TestSelectStartingChoices_Validation_AlreadyCompleted(t *testing.T) {
 
 	// Try again — should fail (phase already cleared)
 	err = action.Execute(ctx, testGame.ID(), playerID1, corpID, []string{}, []string{}, shared.NativePayment(shared.ResourceCredit, len([]string{})*3))
-	testutil.AssertError(t, err, "Should fail when selection already completed")
+	testutil.AssertErrorContains(t, err, "not in corporation selection phase", "Should fail when selection already completed")
 }

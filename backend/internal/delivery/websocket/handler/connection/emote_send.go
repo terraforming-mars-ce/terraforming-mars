@@ -26,16 +26,19 @@ func NewEmoteSendHandler(broadcaster EmoteBroadcaster) *EmoteSendHandler {
 
 // HandleMessage processes an emote-send from a player.
 func (h *EmoteSendHandler) HandleMessage(_ context.Context, connection *core.Connection, message dto.WebSocketMessage) {
-	if connection.GameID == "" || connection.PlayerID == "" || connection.IsSpectator() {
+	if !connection.Identity().IsPlayer() {
+		connection.SendError(message.Type, "Only players in a game can send emotes")
 		return
 	}
 	raw, err := json.Marshal(message.Payload)
 	if err != nil {
+		connection.SendError(message.Type, "Invalid payload")
 		return
 	}
 	var payload dto.EmoteSendPayload
 	if err := json.Unmarshal(raw, &payload); err != nil || !shared.IsEmote(string(payload.Emote)) {
+		connection.SendError(message.Type, "Unknown emote")
 		return
 	}
-	h.broadcaster.BroadcastEmote(connection.GameID, connection.PlayerID, string(payload.Emote))
+	h.broadcaster.BroadcastEmote(connection.GameID(), connection.PlayerID(), string(payload.Emote))
 }

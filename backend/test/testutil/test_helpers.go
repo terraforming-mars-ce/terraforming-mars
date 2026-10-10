@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
+	"sync/atomic"
 	"testing"
-	"time"
 
 	"path/filepath"
 	"runtime"
@@ -23,38 +24,12 @@ import (
 
 // TestContext provides a reusable test context
 func TestContext() context.Context {
-	ctx := context.Background()
-	return context.WithValue(ctx, "test", true)
+	return context.Background()
 }
 
-// TestLogger creates a test logger (no-op or minimal output)
+// TestLogger returns the process logger, the one the server's own code logs to.
 func TestLogger() *slog.Logger {
 	return logger.Get()
-}
-
-// MockBroadcaster records broadcast calls for test assertions.
-type MockBroadcaster struct {
-	BroadcastCalls []BroadcastCall
-}
-
-type BroadcastCall struct {
-	GameID    string
-	PlayerIDs []string
-	Timestamp time.Time
-}
-
-func NewMockBroadcaster() *MockBroadcaster {
-	return &MockBroadcaster{
-		BroadcastCalls: make([]BroadcastCall, 0),
-	}
-}
-
-func (m *MockBroadcaster) CallCount() int {
-	return len(m.BroadcastCalls)
-}
-
-func (m *MockBroadcaster) Reset() {
-	m.BroadcastCalls = make([]BroadcastCall, 0)
 }
 
 // CreateTestCardRegistry returns the real card registry loaded from the JSON database.
@@ -117,8 +92,16 @@ func NewTestGameRepository(t *testing.T) game.GameRepository {
 	return game.NewMemDBGameRepository(ds, rm)
 }
 
+// uniqueGameID names a test game after its test, so two games in one repository never
+// share an ID.
+func uniqueGameID(t *testing.T) string {
+	return fmt.Sprintf("%s-%d", t.Name(), gameIDSeq.Add(1))
+}
+
+var gameIDSeq atomic.Int64
+
 // CreateTestGameWithPlayers creates a game with specified number of players
-func CreateTestGameWithPlayers(t *testing.T, numPlayers int, broadcaster *MockBroadcaster) (*game.Game, game.GameRepository) {
+func CreateTestGameWithPlayers(t *testing.T, numPlayers int) (*game.Game, game.GameRepository) {
 	t.Helper()
 
 	repo := NewTestGameRepository(t)
@@ -130,7 +113,7 @@ func CreateTestGameWithPlayers(t *testing.T, numPlayers int, broadcaster *MockBr
 		CardPacks:  []string{"base-game"},
 	}
 
-	testGame := game.NewGame(repo.DataStore(), "test-game-id", "", settings, board.GenerateMarsBoard(false))
+	testGame := game.NewGame(repo.DataStore(), uniqueGameID(t), "", settings, board.GenerateMarsBoard(false))
 	allCards := cardRegistry.GetAll()
 
 	// Separate cards by type
@@ -183,7 +166,7 @@ func CreateTestGameWithPlayers(t *testing.T, numPlayers int, broadcaster *MockBr
 }
 
 // CreateTestGameWithVenus creates a test game with Venus Next enabled and the specified number of players
-func CreateTestGameWithVenus(t *testing.T, numPlayers int, broadcaster *MockBroadcaster) (*game.Game, game.GameRepository) {
+func CreateTestGameWithVenus(t *testing.T, numPlayers int) (*game.Game, game.GameRepository) {
 	t.Helper()
 
 	repo := NewTestGameRepository(t)
@@ -195,7 +178,7 @@ func CreateTestGameWithVenus(t *testing.T, numPlayers int, broadcaster *MockBroa
 		VenusNextEnabled: true,
 	}
 
-	testGame := game.NewGame(repo.DataStore(), "test-game-id", "", settings, board.GenerateMarsBoard(settings.VenusNextEnabled))
+	testGame := game.NewGame(repo.DataStore(), uniqueGameID(t), "", settings, board.GenerateMarsBoard(settings.VenusNextEnabled))
 	allCards := cardRegistry.GetAll()
 
 	projectCards := make([]string, 0)
@@ -249,11 +232,14 @@ func AssertNoError(t *testing.T, err error, message string) {
 	}
 }
 
-// AssertError fails the test if err is nil
-func AssertError(t *testing.T, err error, message string) {
+// AssertErrorContains fails the test unless err is an error whose message contains want.
+func AssertErrorContains(t *testing.T, err error, want string, msg string) {
 	t.Helper()
 	if err == nil {
-		t.Fatalf("%s: expected error, got nil", message)
+		t.Fatalf("%s: expected an error containing %q, got nil", msg, want)
+	}
+	if !strings.Contains(err.Error(), want) {
+		t.Fatalf("%s: expected an error containing %q, got %q", msg, want, err.Error())
 	}
 }
 
@@ -311,3 +297,7 @@ func CreateTestMapRegistry() *board.MapRegistry {
 	}
 	return registry
 }
+
+// PlaceholderCorporationID is a corporation with no card behind it, for tests that need
+// a player to have chosen a corporation without any corporation effects.
+const PlaceholderCorporationID = "test-placeholder-corporation"

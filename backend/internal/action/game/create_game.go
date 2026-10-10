@@ -127,7 +127,7 @@ func (a *CreateGameAction) Options() GameOptions {
 	}
 	return GameOptions{Defaults: shared.GameSettings{
 		MaxPlayers: game.DefaultMaxPlayers, MapID: board.DefaultMapID(),
-		CardPacks: shared.DefaultCardPacks(), DevelopmentMode: true,
+		CardPacks: shared.DefaultCardPacks(),
 	}, AvailableMaps: availableMaps}
 }
 

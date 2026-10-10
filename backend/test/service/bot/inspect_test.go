@@ -56,9 +56,9 @@ func TestInspectBot_RequiresHostAndDevelopmentMode(t *testing.T) {
 	startBot(t, fx, bc)
 	conn := &inspectorConn{}
 
-	testutil.AssertError(t, inspect(fx, bc, fx.game.HostPlayerID(), conn), "development mode is required")
+	testutil.AssertErrorContains(t, inspect(fx, bc, fx.game.HostPlayerID(), conn), "only available in development mode", "development mode is required")
 	enableDevMode(fx)
-	testutil.AssertError(t, inspect(fx, bc, "someone-else", conn), "only the host may inspect")
+	testutil.AssertErrorContains(t, inspect(fx, bc, "someone-else", conn), "only the host can inspect bots", "only the host may inspect")
 	testutil.AssertNoError(t, inspect(fx, bc, fx.game.HostPlayerID(), conn), "host in development mode may inspect")
 	testutil.AssertEqual(t, 1, len(conn.messages), "a snapshot is sent")
 	testutil.AssertEqual(t, dto.MessageTypeBotTraceSnapshot, conn.messages[0].Type, "first message is the snapshot")

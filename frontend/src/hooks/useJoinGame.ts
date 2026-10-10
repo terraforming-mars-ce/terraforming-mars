@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GameDto } from "@/types/generated/api-types";
+import {
+  MessageTypePlayerConnect,
+  type ErrorPayload,
+  type GameDto,
+} from "@/types/generated/api-types";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager";
 import { saveGameSession, getRememberedPlayerName } from "@/utils/sessionStorage";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -53,11 +57,16 @@ export function useJoinGame({ game }: { game: GameDto | null }) {
             resolve(state);
           }
         };
-        const failed = (error: { message?: string; error?: string }) => {
+        const fail = (message: string) => {
           cleanup();
-          reject(new Error(error.message ?? error.error ?? "Could not join game"));
+          reject(new Error(message));
         };
-        const disconnected = () => failed({ error: "Connection lost. Try again." });
+        const failed = (error: ErrorPayload) => {
+          if (error.requestType === MessageTypePlayerConnect) {
+            fail(error.message || "Could not join game");
+          }
+        };
+        const disconnected = () => fail("Connection lost. Try again.");
         cancel.current = () => {
           cleanup();
           reject(new Error("Join cancelled"));

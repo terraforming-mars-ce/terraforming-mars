@@ -72,7 +72,7 @@ func TestUpdateGameSettings_HostOnly(t *testing.T) {
 	err := rig.action.Execute(context.Background(), rig.gameID, nonHost, &gameAction.SettingsPatch{
 		DevelopmentMode: boolPtr(true),
 	})
-	testutil.AssertError(t, err, "non-host should be rejected")
+	testutil.AssertErrorContains(t, err, "only the host can change settings", "non-host should be rejected")
 }
 
 func TestUpdateGameSettings_LobbyOnly(t *testing.T) {
@@ -84,7 +84,7 @@ func TestUpdateGameSettings_LobbyOnly(t *testing.T) {
 	err = rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{
 		DevelopmentMode: boolPtr(true),
 	})
-	testutil.AssertError(t, err, "active game should reject settings change")
+	testutil.AssertErrorContains(t, err, "settings can only be changed during lobby phase", "active game should reject settings change")
 }
 
 func TestUpdateGameSettings_MaxPlayersBelowJoinedRejected(t *testing.T) {
@@ -93,7 +93,7 @@ func TestUpdateGameSettings_MaxPlayersBelowJoinedRejected(t *testing.T) {
 	err := rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{
 		MaxPlayers: intPtr(2),
 	})
-	testutil.AssertError(t, err, "lowering max below joined count should reject")
+	testutil.AssertErrorContains(t, err, "cannot reduce max players below current player count", "lowering max below joined count should reject")
 }
 
 func TestUpdateGameSettings_MaxPlayersValidRange(t *testing.T) {
@@ -102,12 +102,12 @@ func TestUpdateGameSettings_MaxPlayersValidRange(t *testing.T) {
 	err := rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{
 		MaxPlayers: intPtr(0),
 	})
-	testutil.AssertError(t, err, "max=0 should reject")
+	testutil.AssertErrorContains(t, err, "max players must be between 1 and 10", "max=0 should reject")
 
 	err = rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{
 		MaxPlayers: intPtr(11),
 	})
-	testutil.AssertError(t, err, "max=11 should reject")
+	testutil.AssertErrorContains(t, err, "max players must be between 1 and 10", "max=11 should reject")
 
 	err = rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{
 		MaxPlayers: intPtr(6),
@@ -122,12 +122,12 @@ func TestUpdateGameSettings_CardPacksRequiresBaseGame(t *testing.T) {
 	err := rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{
 		CardPacks: packsPtr([]string{}),
 	})
-	testutil.AssertError(t, err, "empty card packs should reject")
+	testutil.AssertErrorContains(t, err, "at least one card pack must be enabled", "empty card packs should reject")
 
 	err = rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{
 		CardPacks: packsPtr([]string{"prelude"}),
 	})
-	testutil.AssertError(t, err, "missing base-game should reject")
+	testutil.AssertErrorContains(t, err, "base game pack cannot be disabled", "missing base-game should reject")
 }
 
 func TestUpdateGameSettings_DemoOffClearsChoices(t *testing.T) {
@@ -178,7 +178,7 @@ func TestUpdateGameSettings_UnknownMapRejected(t *testing.T) {
 	err := rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{
 		MapID: strPtr("not-a-real-map"),
 	})
-	testutil.AssertError(t, err, "unknown map should reject")
+	testutil.AssertErrorContains(t, err, "unknown map", "unknown map should reject")
 }
 
 func TestUpdateGameSettings_DevelopmentModeAndClaudeTokenSet(t *testing.T) {
@@ -206,5 +206,5 @@ func TestUpdateGameSettings_BotSpendCap(t *testing.T) {
 
 	zero := 0.0
 	err = rig.action.Execute(context.Background(), rig.gameID, rig.host(), &gameAction.SettingsPatch{BotSpendCapUSD: &zero})
-	testutil.AssertError(t, err, "cap must be positive")
+	testutil.AssertErrorContains(t, err, "bot spend cap must be positive", "cap must be positive")
 }

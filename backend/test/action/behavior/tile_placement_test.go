@@ -21,8 +21,7 @@ import (
 // "Place a city tile adjacent to at least 2 other city tiles."
 
 func TestUrbanizedArea_CityAdjacentTo2Cities(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -55,7 +54,7 @@ func TestUrbanizedArea_CityAdjacentTo2Cities(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -108,13 +107,12 @@ func TestUrbanizedArea_CityAdjacentTo2Cities(t *testing.T) {
 }
 
 func TestUrbanizedArea_NoCitiesYield0AvailableHexes(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -130,13 +128,12 @@ func TestUrbanizedArea_NoCitiesYield0AvailableHexes(t *testing.T) {
 }
 
 func TestUrbanizedArea_OnlyOneCityYield0AvailableHexes(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -160,8 +157,7 @@ func TestUrbanizedArea_OnlyOneCityYield0AvailableHexes(t *testing.T) {
 // "Place this tile adjacent to any greenery tile."
 
 func TestEcologicalZone_GreeneryAdjacentToGreenery(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -195,7 +191,7 @@ func TestEcologicalZone_GreeneryAdjacentToGreenery(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -237,13 +233,12 @@ func TestEcologicalZone_GreeneryAdjacentToGreenery(t *testing.T) {
 }
 
 func TestEcologicalZone_NoGreeneryYields0AvailableHexes(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -259,14 +254,13 @@ func TestEcologicalZone_NoGreeneryYields0AvailableHexes(t *testing.T) {
 // --- AdjacentToOwned restriction ---
 
 func TestAdjacentToOwned_OnlyCountsPlayerOwnedTiles(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	other := players[1]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 	other.SetCorporationID("corp-mining-guild")
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
@@ -331,13 +325,12 @@ func makeUrbanizedAreaCard() gamecards.Card {
 }
 
 func TestUrbanizedArea_StateCalculatorReturnsErrorWhenNoPlacements(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -371,14 +364,13 @@ func TestUrbanizedArea_StateCalculatorReturnsErrorWhenNoPlacements(t *testing.T)
 }
 
 func TestUrbanizedArea_PlayCardRejectedWhenNoPlacements(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -429,8 +421,7 @@ func makePlantationCard() gamecards.Card {
 }
 
 func TestPlantation_GreeneryAdjacentToOwnedTiles(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -439,7 +430,7 @@ func TestPlantation_GreeneryAdjacentToOwnedTiles(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -481,8 +472,7 @@ func TestPlantation_GreeneryAdjacentToOwnedTiles(t *testing.T) {
 }
 
 func TestPlantation_FallbackWhenNoOwnedTiles(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -491,7 +481,7 @@ func TestPlantation_FallbackWhenNoOwnedTiles(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -545,8 +535,7 @@ func makeMangroveCard() gamecards.Card {
 }
 
 func TestMangrove_NotAffectedByAdjacentToOwned(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -555,7 +544,7 @@ func TestMangrove_NotAffectedByAdjacentToOwned(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -611,8 +600,7 @@ func TestMangrove_NotAffectedByAdjacentToOwned(t *testing.T) {
 // "Place this tile next to no other tile."
 
 func TestNaturalPreserve_TilePlacementWithNoAdjacency(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -685,8 +673,7 @@ func TestNaturalPreserve_TilePlacementWithNoAdjacency(t *testing.T) {
 }
 
 func TestNaturalPreserve_NoAvailableHexesWhenBoardIsFull(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
@@ -732,8 +719,7 @@ func TestNaturalPreserve_NoAvailableHexesWhenBoardIsFull(t *testing.T) {
 // "Place this tile and raise temperature 2 steps."
 
 func TestNuclearZone_TilePlacementOnNormalLand(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -787,8 +773,7 @@ func TestNuclearZone_TilePlacementOnNormalLand(t *testing.T) {
 // "Place this tile on an area reserved for ocean."
 
 func TestMoholeArea_TilePlacementOnOceanSpace(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -861,8 +846,7 @@ func TestMoholeArea_TilePlacementOnOceanSpace(t *testing.T) {
 // "Place this tile on an area with a steel or titanium placement bonus."
 
 func TestMiningRights_TilePlacementOnBonusTile(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
@@ -906,8 +890,7 @@ func TestMiningRights_TilePlacementOnBonusTile(t *testing.T) {
 // "Place this tile on an area with a steel or titanium placement bonus, adjacent to another of your tiles."
 
 func TestMiningArea_RequiresAdjacentOwnedTile(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
@@ -946,8 +929,7 @@ func TestMiningArea_RequiresAdjacentOwnedTile(t *testing.T) {
 // "Place this tile." (normal land placement, no restrictions)
 
 func TestRestrictedArea_NormalLandPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	players := testGame.GetAllPlayers()
@@ -966,8 +948,7 @@ func TestRestrictedArea_NormalLandPlacement(t *testing.T) {
 // --- Tile type mapping ---
 
 func TestSpecialTileOccupantTypeHasTileSuffix(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	// Place a special tile directly and verify the occupant type
@@ -991,8 +972,7 @@ func TestSpecialTileOccupantTypeHasTileSuffix(t *testing.T) {
 // "Place a Greenery tile on an area reserved for ocean and raise oxygen 1 step."
 
 func TestMangrove_GreeneryOnOceanTileRestriction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -1021,7 +1001,7 @@ func TestMangrove_GreeneryOnOceanTileRestriction(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -1047,8 +1027,7 @@ func TestMangrove_GreeneryOnOceanTileRestriction(t *testing.T) {
 // "Place your marker on a non-reserved area. Only you may place a tile here."
 
 func TestLandClaim_CreatesLandClaimTileSelection(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -1072,8 +1051,8 @@ func TestLandClaim_CreatesLandClaimTileSelection(t *testing.T) {
 	players := testGame.GetAllPlayers()
 	p := players[0]
 	other := players[1]
-	p.SetCorporationID("corp-tharsis-republic")
-	other.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
+	other.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -1099,8 +1078,7 @@ func TestLandClaim_CreatesLandClaimTileSelection(t *testing.T) {
 // "Place 1 ocean tile on an area not reserved for ocean."
 
 func TestArtificialLake_OceanPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -1127,7 +1105,7 @@ func TestArtificialLake_OceanPlacement(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -1153,8 +1131,7 @@ func TestArtificialLake_OceanPlacement(t *testing.T) {
 }
 
 func TestArtificialLake_FailsWithoutTemperatureRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -1181,7 +1158,7 @@ func TestArtificialLake_FailsWithoutTemperatureRequirement(t *testing.T) {
 
 	players := testGame.GetAllPlayers()
 	p := players[0]
-	p.SetCorporationID("corp-tharsis-republic")
+	p.SetCorporationID(testutil.PlaceholderCorporationID)
 
 	testutil.AssertNoError(t, testGame.UpdateStatus(ctx, shared.GameStatusActive), "update status")
 	testutil.AssertNoError(t, testGame.UpdatePhase(ctx, shared.GamePhaseAction), "update phase")
@@ -1196,7 +1173,7 @@ func TestArtificialLake_FailsWithoutTemperatureRequirement(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 15)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), "card-artificial-lake", payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Artificial Lake should fail without meeting temperature requirement")
+	testutil.AssertErrorContains(t, err, "temperature requirement not met", "Artificial Lake should fail without meeting temperature requirement")
 	testutil.AssertTrue(t, p.Hand().HasCard("card-artificial-lake"), "Card should still be in hand")
 }
 
@@ -1253,7 +1230,7 @@ func TestTileArea_ManualActionChecksRestrictedAvailability(t *testing.T) {
 	testutil.AssertTrue(t, !state.Available(), "UI availability respects area")
 	before := p.Resources().Get()
 	err := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, "test-land-ocean", 0, nil, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "action cannot pay for impossible placement")
+	testutil.AssertErrorContains(t, err, "No ocean tiles remaining", "action cannot pay for impossible placement")
 	testutil.AssertEqual(t, before, p.Resources().Get(), "cost preserved")
 	testutil.AssertEqual(t, 0, p.Actions().List()[0].TimesUsedThisGeneration, "action count preserved")
 }
