@@ -512,12 +512,10 @@ func (a *PlayCardAction) applyCardBehaviors(
 
 			if deferred := applier.DeferredRemoval(); deferred != nil {
 				callback := &shared.TileCompletionCallback{
-					Type: "adjacent-removal",
-					Data: map[string]interface{}{
-						"output":       deferred,
-						"sourceCardID": card.ID,
-						"source":       card.Name,
-					},
+					Type:         "adjacent-removal",
+					Output:       deferred,
+					SourceCardID: card.ID,
+					Source:       card.Name,
 				}
 				g.SetTileQueueOnComplete(ctx, p.ID(), callback)
 			}

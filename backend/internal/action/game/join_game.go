@@ -67,6 +67,9 @@ func (a *JoinGameAction) Execute(
 		return nil, fmt.Errorf("game not found: %w", err)
 	}
 
+	if lobby := g.ResumeLobby(); lobby != nil && !lobby.Claimed[playerID] {
+		return nil, fmt.Errorf("choose an available seat in the resume lobby")
+	}
 	// 2. Check for reconnection (playerID provided and player exists in game)
 	existingPlayer, err := g.GetPlayer(playerID)
 	if err == nil && existingPlayer != nil {

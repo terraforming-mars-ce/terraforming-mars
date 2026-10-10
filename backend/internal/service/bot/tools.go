@@ -226,6 +226,10 @@ func (ts *ToolServer) gameAction(ctx context.Context, g *grant, fn func(snap *Sn
 		if snap, err = g.hooks.Snapshot(ctx); err != nil {
 			return
 		}
+		if snap.Game != nil && snap.Game.ResumeLobby() != nil {
+			err = fmt.Errorf("game is paused while players join")
+			return
+		}
 		if err = fn(snap); err != nil {
 			err = fmt.Errorf("rejected: %w", err)
 			return

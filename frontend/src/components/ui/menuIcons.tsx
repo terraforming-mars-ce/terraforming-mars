@@ -177,3 +177,9 @@ export const UpdateIcon: React.FC = () => (
     <path d="M8 16H3v5" />
   </svg>
 );
+
+export const DownloadIcon: React.FC = () => (
+  <svg {...svgProps}>
+    <path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5" />
+  </svg>
+);

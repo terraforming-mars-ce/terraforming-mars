@@ -94,6 +94,17 @@ func (b *Broadcaster) BroadcastGameState(gameID string, playerIDs []string) {
 		return
 	}
 
+	if g.ResumeLobby() != nil {
+		for connection := range b.hub.GetManager().GetGameConnections(gameID) {
+			playerID, _ := connection.GetPlayer()
+			message := dto.WebSocketMessage{Type: dto.MessageTypeGameUpdated, GameID: gameID, Payload: dto.GameUpdatedPayload{Game: dto.ToResumeGameDto(g, playerID, b.cardRegistry)}}
+			select {
+			case connection.Send <- message:
+			default:
+			}
+		}
+		return
+	}
 	if playerIDs == nil {
 		// Broadcast to all players in the game (skip exited - no active connection)
 		players := g.GetAllPlayers()

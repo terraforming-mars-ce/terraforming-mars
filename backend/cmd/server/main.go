@@ -40,6 +40,7 @@ import (
 	"openmars/internal/game/datastore"
 	msLoader "openmars/internal/game/milestone"
 	pfLoader "openmars/internal/game/projectfunding"
+	"openmars/internal/game/save"
 	"openmars/internal/game/shared"
 	stdprojLoader "openmars/internal/game/standardproject"
 	"openmars/internal/logger"
@@ -236,7 +237,11 @@ func main() {
 	// FinalScoringAction so the projected score on each history entry matches the
 	// scoreboard formula exactly.
 	ds.SetSnapshotEnricher(func(state *datastore.GameState) map[string]shared.VPBreakdown {
-		g, err := gameRepo.Get(context.Background(), state.ID)
+		snapshotStore, err := datastore.NewDataStore()
+		if err != nil {
+			return nil
+		}
+		g, err := game.RestoreGame(snapshotStore, state)
 		if err != nil || g == nil {
 			return nil
 		}
@@ -491,6 +496,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	saveAction, err := gameAction.NewSaveGameAction(gameRepo, stateRepo, save.Catalog{StandardProjects: stdProjRegistry, Cards: cardRegistry, Maps: mapRegistry, Colonies: colonyRegistry, Awards: awardRegistry, Milestones: milestoneRegistry, Projects: pfRegistry}, Version, botController, log)
+	if err != nil {
+		log.Error("Failed to initialize game saves", slog.Any("error", err))
+		os.Exit(1)
+	}
+	wsHandler.RegisterSaveHandlers(hub, broadcaster, gameRepo, saveAction)
 	go hub.Run(ctx)
 	log.Debug("WebSocket hub running")
 
@@ -513,6 +524,11 @@ func main() {
 		changelogDir,
 		changelogResponse,
 	)
+
+	saveHandler := httpHandler.NewSaveHandler(saveAction, hub)
+	apiRouter.HandleFunc("/api/v1/game-saves/validate", saveHandler.Validate).Methods(http.MethodPost)
+	apiRouter.HandleFunc("/api/v1/game-saves/import", saveHandler.Import).Methods(http.MethodPost)
+	apiRouter.HandleFunc("/api/v1/games/{gameId}/save", saveHandler.Export).Methods(http.MethodGet)
 
 	// Mount API router
 	mainRouter.PathPrefix("/api/v1").Handler(apiRouter)

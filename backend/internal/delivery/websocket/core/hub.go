@@ -40,6 +40,7 @@ type Hub struct {
 	manager  *Manager
 	logger   *slog.Logger
 	handlers map[dto.MessageType]MessageHandler
+	guard    func(context.Context, *Connection, dto.WebSocketMessage) error
 }
 
 // NewHub creates a new WebSocket hub with clean architecture
@@ -205,6 +206,12 @@ func (h *Hub) routeMessage(ctx context.Context, hubMessage HubMessage) {
 		slog.String("connection_id", connection.ID),
 		slog.String("message_type", string(message.Type)))
 
+	if h.guard != nil {
+		if err := h.guard(ctx, connection, message); err != nil {
+			h.sendError(connection, err.Error())
+			return
+		}
+	}
 	if handler, exists := h.handlers[message.Type]; exists {
 		h.logger.Debug("Routing to registered message handler",
 			slog.String("message_type", string(message.Type)))
@@ -243,3 +250,8 @@ const (
 	ErrHandlerNotAvailable = "Handler not available"
 	ErrUnknownMessageType  = "Unknown message type"
 )
+
+// SetMessageGuard checks session restrictions before routing a client command.
+func (h *Hub) SetMessageGuard(guard func(context.Context, *Connection, dto.WebSocketMessage) error) {
+	h.guard = guard
+}

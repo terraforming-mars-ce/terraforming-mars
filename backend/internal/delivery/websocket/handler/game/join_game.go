@@ -74,8 +74,6 @@ func (h *JoinGameHandler) HandleMessage(ctx context.Context, connection *core.Co
 		slog.String("player_name", playerName),
 		slog.String("player_id", playerID))
 
-	connection.SetPlayer(playerID, gameID)
-
 	result, err := h.joinGameAction.Execute(ctx, gameID, playerName, playerID)
 	if err != nil {
 		log.Error("Failed to execute join game action", slog.Any("error", err))
@@ -83,6 +81,7 @@ func (h *JoinGameHandler) HandleMessage(ctx context.Context, connection *core.Co
 		return
 	}
 
+	connection.SetPlayer(result.PlayerID, gameID)
 	log.Debug("Game joined",
 		slog.String("player_id", result.PlayerID))
 

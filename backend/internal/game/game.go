@@ -24,6 +24,7 @@ import (
 )
 
 type Game struct {
+	resumeLobby          *ResumeLobby
 	mu                   sync.RWMutex
 	ds                   *datastore.DataStore
 	id                   string

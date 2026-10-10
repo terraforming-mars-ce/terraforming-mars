@@ -1,3 +1,4 @@
+import { SaveGameMenuItem } from "../GameHamburgerMenu.tsx";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import SoundToggleButton from "./SoundToggleButton.tsx";
 import GameButton from "./GameButton.tsx";
@@ -104,6 +105,7 @@ export const MainMenuItems: React.FC<MainMenuProps & { onClose: () => void }> = 
             label="Copy game link"
             onClick={() => void handleCopyGameLink()}
           />
+          <SaveGameMenuItem gameId={gameId} />
           <MenuPopoverDivider />
         </>
       )}

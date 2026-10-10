@@ -1582,6 +1582,7 @@ export interface OtherPlayerDto {
  * GameDto represents a game for client consumption (clean architecture)
  */
 export interface GameDto {
+  resumeLobby?: ResumeLobbyDto;
   id: string;
   status: GameStatus;
   settings: GameSettingsDto;
@@ -2141,6 +2142,53 @@ export interface PaymentIntentDto {
   milestoneType?: string;
   awardType?: string;
 }
+/**
+ * ResumeSeatDto describes a saved seat without exposing private game state.
+ */
+export interface ResumeSeatDto {
+  corporationName: string;
+  id: string;
+  name: string;
+  savedName: string;
+  corporationId: string;
+  color: string;
+  playerType: string;
+  claimed: boolean;
+  connected: boolean;
+  exited: boolean;
+  botStatus: string;
+  botError: string;
+}
+export interface ResumeLobbyDto {
+  seats: ResumeSeatDto[];
+}
+export interface GameSaveSummaryDto {
+  generation: number /* int */;
+  phase: GamePhase;
+  mapId: string;
+  savedAt: string;
+  seats: ResumeSeatDto[];
+  historyEntries: number /* int */;
+  logEntries: number /* int */;
+}
+export interface ImportGameSaveResponse {
+  gameId: string;
+  playerId: string;
+  playerName: string;
+}
+export interface ResumeGameRequest {
+  gameId: string;
+  seatId?: string;
+  playerName?: string;
+  botToken?: string;
+}
+/**
+ * GameSaveErrorResponse contains a stable save failure code and a safe player message.
+ */
+export interface GameSaveErrorResponse {
+  code: string;
+  message: string;
+}
 
 //////////
 // source: game_history_dto.go
@@ -2416,6 +2464,11 @@ export interface Registries {
  * MessageType represents different types of WebSocket messages
  */
 export type MessageType = string;
+export const MessageTypeWatchResumeGame: MessageType = "watch-resume-game";
+export const MessageTypeClaimResumeSeat: MessageType = "claim-resume-seat";
+export const MessageTypeReleaseResumeSeat: MessageType = "release-resume-seat";
+export const MessageTypeResumeGame: MessageType = "resume-game";
+export const MessageTypeResumeBotToken: MessageType = "resume-bot-token";
 export const MessageTypeQuotePayment: MessageType = "quote-payment";
 export const MessageTypePaymentQuote: MessageType = "payment-quote";
 export const MessageTypePlayerConnect: MessageType = "player-connect";

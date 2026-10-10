@@ -99,6 +99,7 @@ const GameLandingPage: React.FC = () => {
   );
 
   const handleCreateGame = createFadeNavigate("/create");
+  const handleLoadGame = createFadeNavigate("/load");
   const handleJoinGame = createFadeNavigate("/join");
 
   const handleReconnect = async () => {
@@ -163,19 +164,19 @@ const GameLandingPage: React.FC = () => {
       className={`min-h-dvh text-white font-sans transition-opacity duration-300 ease-out relative ${isFadingOut || !isFadedIn ? "opacity-0" : "opacity-100"}`}
       style={{ zIndex: Z_INDEX.UI_BASE }}
     >
-      <div className="menu-shell relative items-start [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:items-center [@media(max-height:500px)]:justify-between [@media(max-height:500px)]:gap-8">
-        <div className="text-left py-5 w-[520px] max-w-full compact:w-[340px] [@media(max-height:500px)]:py-0 [@media(max-height:500px)]:shrink-0">
-          <h1 className="mb-10 leading-none compact:mb-5 [@media(max-height:500px)]:mb-5">
+      <div className="menu-shell relative items-start [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:items-center [@media(max-height:500px)]:justify-between [@media(max-height:500px)]:gap-8 compact:!grid compact:grid-cols-[minmax(0,280px)_minmax(0,1fr)] compact:content-center compact:!items-center compact:!gap-6 compact:!min-h-0 compact:h-dvh compact:!pt-[calc(56px+var(--safe-top))] compact:!pb-[calc(56px+var(--safe-bottom))]">
+        <div className="text-left py-5 w-[520px] max-w-full compact:w-full compact:!py-0 [@media(max-height:500px)]:py-0 [@media(max-height:500px)]:shrink-0">
+          <h1 className="mb-10 leading-none [@media(max-height:500px)]:mb-5 compact:!mb-4 compact:mx-auto compact:w-full compact:max-w-[min(280px,70dvh)]">
             <OpenMarsLogo surface="menu" />
           </h1>
 
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-col items-stretch gap-3 w-60 max-w-full mx-auto mt-10 compact:mt-0 compact:w-full compact:grid compact:grid-cols-2 compact:gap-2">
             <GameButton
               as="link"
               to="/create"
               size="lg"
               onClick={handleCreateGame}
-              className="!px-8 compact:!px-5"
+              className="w-full !px-5 compact:!px-2 compact:!h-11 compact:col-span-2"
             >
               New game
             </GameButton>
@@ -186,19 +187,29 @@ const GameLandingPage: React.FC = () => {
               emphasis="secondary"
               size="lg"
               onClick={handleJoinGame}
-              className="!px-8 compact:!px-5"
+              className="w-full !px-5 compact:!px-2 compact:!h-11"
             >
-              Browse games
+              Browse
+            </GameButton>
+            <GameButton
+              as="link"
+              to="/load"
+              emphasis="secondary"
+              size="lg"
+              onClick={handleLoadGame}
+              className="w-full !px-5 compact:!px-2 compact:!h-11"
+            >
+              Load game
             </GameButton>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-start gap-5 max-w-full min-w-0 compact:mt-6 compact:w-full compact:landscape:w-auto [@media(max-height:500px)]:mt-0">
-          {savedGameData && (
+        {savedGameData && (
+          <div className="mt-10 flex flex-col items-start gap-5 max-w-full min-w-0 compact:!mt-0 compact:w-full compact:col-start-2 compact:row-start-1 compact:items-center [@media(max-height:500px)]:mt-0">
             <div
               ref={reconnectCardRef}
               onTransitionEnd={handleDismissTransitionEnd}
-              className={`transition-all duration-300 ${isDismissing ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}
+              className={`transition-all duration-300 compact:w-full compact:max-w-[300px] ${isDismissing ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}
             >
               <div className="relative w-[500px] max-w-full game-panel p-6 [@media(max-height:500px)]:w-[360px] [@media(max-height:500px)]:p-4 compact:!w-[300px] compact:!p-3">
                 <button
@@ -236,7 +247,7 @@ const GameLandingPage: React.FC = () => {
                   return (
                     <>
                       {!isLobby && !isSpectator && (
-                        <div className="mb-6 flex justify-center [@media(max-height:500px)]:mb-3 compact:!mb-2">
+                        <div className="mb-6 flex justify-center [@media(max-height:500px)]:mb-3 compact:hidden">
                           {savedGameData.game.currentPlayer?.corporation ? (
                             getCorporationLogo(
                               savedGameData.game.currentPlayer.corporation.name.toLowerCase(),
@@ -280,7 +291,7 @@ const GameLandingPage: React.FC = () => {
                       <GameButton
                         size={isCompact ? "md" : "lg"}
                         onClick={() => void handleReconnect()}
-                        className="w-full"
+                        className="w-full compact:min-h-11"
                       >
                         {buttonLabel}
                       </GameButton>
@@ -289,8 +300,8 @@ const GameLandingPage: React.FC = () => {
                 })()}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import type { ResumeGameRequest } from "../types/generated/api-types.ts";
 import { useCardPlayFlowStore } from "@/stores/cardPlayFlowStore";
 import { selectPayment, usePaymentStore } from "@/stores/paymentStore";
 import type { PaymentIntentDto, PaymentQuoteDto } from "@/types/generated/api-types";
@@ -525,6 +526,11 @@ export class WebSocketService {
       steel,
       titanium,
     });
+  }
+
+  resumeCommand(type: MessageType, request: ResumeGameRequest): void {
+    this.currentGameId = request.gameId;
+    this.send(type, request, request.gameId);
   }
 
   playerTakeover(targetPlayerId: string, gameId: string): void {

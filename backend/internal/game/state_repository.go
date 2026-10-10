@@ -448,3 +448,34 @@ func computeSnapshotBoardChanges(old, new *GameSnapshot) *BoardChanges {
 	}
 	return &BoardChanges{TilesPlaced: placements}
 }
+
+// CaptureLog returns immutable log entries and the last logged position.
+func (r *InMemoryGameStateRepository) CaptureLog(gameID string) ([]StateDiff, *GameSnapshot) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if log := r.diffLogs[gameID]; log != nil {
+		return log.GetAll(), r.snapshots[gameID]
+	}
+	return []StateDiff{}, nil
+}
+
+// RestoreLog restores the log and its baseline without recording an artificial action.
+func (r *InMemoryGameStateRepository) RestoreLog(gameID string, entries []StateDiff, baseline *GameSnapshot) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	log := NewDiffLog(gameID)
+	log.Diffs = entries
+	if len(entries) > 0 {
+		log.CurrentSequence = entries[len(entries)-1].SequenceNumber
+	}
+	r.diffLogs[gameID] = log
+	r.snapshots[gameID] = baseline
+}
+
+// DeleteLog discards log state when an import is rolled back.
+func (r *InMemoryGameStateRepository) DeleteLog(gameID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.diffLogs, gameID)
+	delete(r.snapshots, gameID)
+}

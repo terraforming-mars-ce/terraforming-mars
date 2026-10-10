@@ -85,10 +85,9 @@ const InstallAppBar: React.FC<InstallAppBarProps> = ({ active }) => {
     <div
       role="region"
       aria-label="Install app"
-      className={`game-panel fixed inset-x-0 bottom-0 text-white ${reducedMotion ? "" : "animate-[sheetSlideUp_250ms_ease-out]"}`}
+      className={`fixed inset-x-0 bottom-0 border-t border-white/20 bg-[#08090d] text-white ${reducedMotion ? "" : "animate-[sheetSlideUp_250ms_ease-out]"}`}
       style={
         {
-          "--panel-cut": "10px",
           zIndex: Z_INDEX.INSTALL_APP_BAR,
           paddingBottom: "var(--safe-bottom)",
           paddingLeft: "calc(12px + var(--safe-left))",
@@ -96,14 +95,14 @@ const InstallAppBar: React.FC<InstallAppBarProps> = ({ active }) => {
         } as React.CSSProperties
       }
     >
-      <div className="flex items-center gap-2 h-11">
+      <div className="flex items-center gap-2 h-12">
         <span className="flex-1 min-w-0 truncate text-left text-sm text-white/90">
           Play full screen as an app
         </span>
-        <GameButton emphasis="quiet" size="sm" height={40} onClick={handleNotNow}>
+        <GameButton emphasis="quiet" size="sm" height={44} onClick={handleNotNow}>
           Not now
         </GameButton>
-        <GameButton size="sm" height={36} onClick={() => void handleInstall()}>
+        <GameButton size="sm" shape="toolbar" height={44} onClick={() => void handleInstall()}>
           {platform === "prompt" ? "Install" : "How?"}
         </GameButton>
       </div>

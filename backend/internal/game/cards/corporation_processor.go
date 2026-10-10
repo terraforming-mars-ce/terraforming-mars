@@ -221,3 +221,8 @@ func (p *CorporationProcessor) GetManualActions(card *Card) []shared.CardAction 
 
 	return actions
 }
+
+// RestoreFirstActionExecutor binds an existing continuation without scheduling or executing it.
+func (p *CorporationProcessor) RestoreFirstActionExecutor(g *game.Game, playerID string) {
+	g.SetFirstActionExecutor(playerID, p.executeFirstAction)
+}
