@@ -165,6 +165,39 @@ is remembered.
 	testutil.AssertFalse(t, entry.Sections[1].Major, "fixed is not major")
 }
 
+func TestParse_PlayerMajorUpdateImage(t *testing.T) {
+	data := `## Major update: Colonies
+
+Colonies is now playable.
+
+![Trading with a colony](colonies.png)
+
+- Build colonies and trade with them.
+`
+	entry, err := changelog.Parse(changelog.Player, "v3", []byte(data))
+	testutil.AssertNoError(t, err, "parse")
+
+	image := entry.Sections[0].Image
+	testutil.AssertTrue(t, image != nil, "image parsed")
+	testutil.AssertEqual(t, "colonies.png", image.File, "image file")
+	testutil.AssertEqual(t, "Trading with a colony", image.Alt, "image alt")
+	testutil.AssertEqual(t, "Colonies is now playable.", entry.Sections[0].Intro, "intro unchanged")
+	testutil.AssertEqual(t, 1, len(entry.Sections[0].Items), "bullets")
+}
+
+func TestLoad_PlayerImageMustExist(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "v3", changelog.Player.FileName, "## Major update: Colonies\nIntro.\n![Colonies](colonies.png)\n")
+
+	_, err := changelog.Load(changelog.Player, dir, "v3")
+	testutil.AssertError(t, err, "missing image")
+
+	writeFile(t, dir, "v3", "colonies.png", "png")
+	entry, err := changelog.Load(changelog.Player, dir, "v3")
+	testutil.AssertNoError(t, err, "image present")
+	testutil.AssertEqual(t, "colonies.png", entry.Sections[0].Image.File, "image file")
+}
+
 func TestParse_PlayerIntroOnly(t *testing.T) {
 	entry, err := changelog.Parse(changelog.Player, "v7.1.0", []byte("Behind-the-scenes improvements.\n"))
 	testutil.AssertNoError(t, err, "parse")
@@ -184,6 +217,14 @@ func TestParse_PlayerRejects(t *testing.T) {
 		{"major intro with two paragraphs", "## Major update: Colonies\nOne.\n\nTwo.\n", "single paragraph"},
 		{"text after major bullets", "## Major update: Colonies\nIntro.\n- A.\nMore.\n", "expected a \"- \" bullet"},
 		{"intro text in regular section", "## New\nIntro.\n- A.\n", "expected a \"- \" bullet"},
+		{"image in regular section", "## New\n![A](a.png)\n- A.\n", "only allowed in major update sections"},
+		{"image before intro", "## Major update: Colonies\n![A](a.png)\nIntro.\n", "between its intro and its bullets"},
+		{"image after bullets", "## Major update: Colonies\nIntro.\n- A.\n![A](a.png)\n", "between its intro and its bullets"},
+		{"two images", "## Major update: Colonies\nIntro.\n![A](a.png)\n![B](b.png)\n", "between its intro and its bullets"},
+		{"image without alt", "## Major update: Colonies\nIntro.\n![](a.png)\n", "needs alt text"},
+		{"image outside the folder", "## Major update: Colonies\nIntro.\n![A](../a.png)\n", "must be a file in the version folder"},
+		{"image with other extension", "## Major update: Colonies\nIntro.\n![A](a.gif)\n", "must be a file in the version folder"},
+		{"text after image", "## Major update: Colonies\nIntro.\n![A](a.png)\nMore.\n", "expected a \"- \" bullet"},
 	}
 
 	for _, tt := range tests {

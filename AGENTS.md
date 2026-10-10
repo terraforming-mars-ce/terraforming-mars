@@ -55,7 +55,7 @@ just clean         # Remove build output
 Release notes live only in `changelog/<tag>/`, written once per release; tag messages carry no notes. Use the `release-creator` skill (`.claude/skills/release-creator/`) to write them.
 
 - `CHANGELOG.md` is for developers and becomes the GitHub release body.
-- `CHANGELOG-USER.md` is for players and is the only changelog the game shows (`GET /api/v1/changelog`). Versions that never shipped have none.
+- `CHANGELOG-USER.md` is for players and is the only changelog the game shows (`GET /api/v1/changelog`). Versions that never shipped have none. Its major updates may reference one image each from the same folder (stored in Git LFS, served at `GET /api/v1/changelog/<tag>/<file>`).
 
 1. Add both files for `vX.Y.Z` in a PR and merge it.
 2. On an up-to-date `main`, run `just release vX.Y.Z`. It checks both files, creates the tag and pushes it.

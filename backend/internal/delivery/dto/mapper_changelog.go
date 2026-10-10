@@ -8,12 +8,16 @@ func ToChangelogResponse(entries []changelog.Entry) ChangelogResponse {
 	for _, entry := range entries {
 		sections := make([]ChangelogSection, 0, len(entry.Sections))
 		for _, section := range entry.Sections {
-			sections = append(sections, ChangelogSection{
+			mapped := ChangelogSection{
 				Title: section.Title,
 				Major: section.Major,
 				Intro: section.Intro,
 				Items: section.Items,
-			})
+			}
+			if section.Image != nil {
+				mapped.Image = &ChangelogImage{File: section.Image.File, Alt: section.Image.Alt}
+			}
+			sections = append(sections, mapped)
 		}
 		response.Entries = append(response.Entries, ChangelogEntry{
 			Version:  entry.Version,

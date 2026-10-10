@@ -510,6 +510,7 @@ func main() {
 		awardRegistry,
 		bugReportService,
 		serverMeta,
+		changelogDir,
 		changelogResponse,
 	)
 

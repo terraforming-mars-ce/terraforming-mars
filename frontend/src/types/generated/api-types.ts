@@ -2375,13 +2375,21 @@ export interface ChangelogEntry {
 }
 /**
  * ChangelogSection is one heading of a version's release notes and its bullets.
- * Major update sections also carry an intro paragraph.
+ * Major update sections also carry an intro paragraph and may have an image.
  */
 export interface ChangelogSection {
   title: string;
   major: boolean;
   intro: string;
+  image?: ChangelogImage;
   items: string[];
+}
+/**
+ * ChangelogImage is served from GET /api/v1/changelog/{version}/{file}
+ */
+export interface ChangelogImage {
+  file: string;
+  alt: string;
 }
 
 //////////

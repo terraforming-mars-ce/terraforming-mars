@@ -13,7 +13,7 @@ import (
 
 func TestMeta_ReturnsServerIdentity(t *testing.T) {
 	meta := dto.MetaResponse{Alias: "saffronbun", Name: "Saffronbun", Version: "v1.2.3"}
-	router := httpHandler.SetupRouter(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, meta, dto.ChangelogResponse{})
+	router := httpHandler.SetupRouter(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, meta, "", dto.ChangelogResponse{})
 
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/meta", nil)
 	request.Header.Set("Origin", "https://gateway.example")

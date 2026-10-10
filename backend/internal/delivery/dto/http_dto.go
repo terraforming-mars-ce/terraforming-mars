@@ -145,10 +145,17 @@ type ChangelogEntry struct {
 }
 
 // ChangelogSection is one heading of a version's release notes and its bullets.
-// Major update sections also carry an intro paragraph.
+// Major update sections also carry an intro paragraph and may have an image.
 type ChangelogSection struct {
-	Title string   `json:"title"`
-	Major bool     `json:"major"`
-	Intro string   `json:"intro"`
-	Items []string `json:"items"`
+	Title string          `json:"title"`
+	Major bool            `json:"major"`
+	Intro string          `json:"intro"`
+	Image *ChangelogImage `json:"image,omitempty"`
+	Items []string        `json:"items"`
+}
+
+// ChangelogImage is served from GET /api/v1/changelog/{version}/{file}
+type ChangelogImage struct {
+	File string `json:"file"`
+	Alt  string `json:"alt"`
 }

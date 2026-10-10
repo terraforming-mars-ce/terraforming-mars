@@ -98,6 +98,7 @@ Pick between servers like EU 1 and EU 2. Your choice is remembered.
 
 - No subject line; the folder name is the version.
 - `## Major update: <Name>` sections come first, only for big features (a new expansion, a new way to play, a new platform). Each has a one- or two-sentence intro paragraph, then three or four bullets at most on what it means at the table.
+- A major update may show one image, on its own line between the intro and the bullets: `![Trading with a colony](colonies.png)`. The file (`.png`, `.jpg`, `.jpeg` or `.webp`) sits in the same `changelog/<tag>/` folder and is stored in Git LFS. Alt text is required. Prefer a real in-game screenshot, cropped to the feature and around 1600px wide at most. Only major updates get images; the developer notes have none.
 - Then `## New`, `## Improved`, `## Fixed`, in that order, never empty.
 - `- ` bullets, one line where possible and two at most. Wrapped lines are indented two spaces. No markup.
 - A release with nothing a player would notice is a single line and no sections: `Behind-the-scenes improvements. Nothing changes in your games.`

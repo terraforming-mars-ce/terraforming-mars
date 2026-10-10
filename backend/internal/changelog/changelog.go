@@ -6,7 +6,9 @@
 // "## <Section>" headings from the format's fixed list, in that order. Each
 // section lists "- " bullets whose wrapped lines are indented two spaces. The
 // player format also allows "## Major update: <Name>" sections before the
-// others, each with its own intro paragraph above its bullets.
+// others, each with its own intro paragraph, then optionally one
+// "![Alt text](image.png)" line naming an image in the version folder, then
+// its bullets.
 package changelog
 
 import (
@@ -44,7 +46,12 @@ var Player = Format{
 	Optional:    true,
 }
 
-var versionPattern = regexp.MustCompile(`^v\d+(\.\d+){0,2}$`)
+var (
+	versionPattern   = regexp.MustCompile(`^v\d+(\.\d+){0,2}$`)
+	imageLinePattern = regexp.MustCompile(`^!\[(.*)\]\((.*)\)$`)
+	imageFilePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+	imageExtensions  = []string{".png", ".jpg", ".jpeg", ".webp"}
+)
 
 // Entry is the release notes for one version
 type Entry struct {
@@ -53,12 +60,32 @@ type Entry struct {
 	Sections []Section
 }
 
-// Section is one heading and its bullets. Major update sections also have an intro.
+// Section is one heading and its bullets. Major update sections also have an
+// intro and may have an image.
 type Section struct {
 	Title string
 	Major bool
 	Intro string
+	Image *Image
 	Items []string
+}
+
+// Image is a picture stored next to the notes in the version folder
+type Image struct {
+	File string
+	Alt  string
+}
+
+func parseImage(line string) (*Image, error) {
+	match := imageLinePattern.FindStringSubmatch(line)
+	alt, file := strings.TrimSpace(match[1]), strings.TrimSpace(match[2])
+	if alt == "" {
+		return nil, errors.New("an image needs alt text: ![What it shows](file.png)")
+	}
+	if !imageFilePattern.MatchString(file) || !slices.Contains(imageExtensions, strings.ToLower(filepath.Ext(file))) {
+		return nil, fmt.Errorf("image %q must be a file in the version folder ending in %s", file, strings.Join(imageExtensions, ", "))
+	}
+	return &Image{File: file, Alt: alt}, nil
 }
 
 // IsVersion reports whether name is a release tag such as v7, v7.1 or v7.1.2
@@ -152,6 +179,19 @@ func Parse(format Format, version string, data []byte) (Entry, error) {
 		case strings.HasPrefix(line, "#"):
 			return Entry{}, fmt.Errorf("line %d: only \"## <Section>\" headings are allowed", lineNo)
 
+		case imageLinePattern.MatchString(line):
+			if section == nil || !section.Major {
+				return Entry{}, fmt.Errorf("line %d: images are only allowed in major update sections", lineNo)
+			}
+			if section.Intro == "" || len(section.Items) > 0 || section.Image != nil {
+				return Entry{}, fmt.Errorf("line %d: a major update has at most one image, between its intro and its bullets", lineNo)
+			}
+			image, err := parseImage(line)
+			if err != nil {
+				return Entry{}, fmt.Errorf("line %d: %w", lineNo, err)
+			}
+			section.Image = image
+
 		case section == nil:
 			if err := appendParagraph(&entry.Intro, line, lineNo); err != nil {
 				return Entry{}, err
@@ -167,7 +207,7 @@ func Parse(format Format, version string, data []byte) (Entry, error) {
 		case strings.HasPrefix(line, "  ") && item != nil:
 			*item += " " + strings.TrimSpace(line)
 
-		case section.Major && len(section.Items) == 0:
+		case section.Major && len(section.Items) == 0 && section.Image == nil:
 			if err := appendParagraph(&section.Intro, line, lineNo); err != nil {
 				return Entry{}, err
 			}
@@ -223,6 +263,14 @@ func Load(format Format, dir, version string) (Entry, error) {
 	entry, err := Parse(format, version, data)
 	if err != nil {
 		return Entry{}, fmt.Errorf("%s: %w", path, err)
+	}
+	for _, section := range entry.Sections {
+		if section.Image == nil {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(dir, version, section.Image.File)); err != nil {
+			return Entry{}, fmt.Errorf("%s: image %s: %w", path, section.Image.File, err)
+		}
 	}
 	return entry, nil
 }
