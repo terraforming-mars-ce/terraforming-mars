@@ -1,6 +1,6 @@
 <div align="center">
 
-# Open Mars
+<h1><img src="assets/original/branding/red-frontier.png" alt="Open Mars" width="720" /></h1>
 
 **Play the beloved board game online with a fully interactive 3D Mars.**
 
