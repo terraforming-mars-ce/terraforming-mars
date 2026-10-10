@@ -12,8 +12,7 @@ import (
 // TestThorGate_CardDiscount tests that ThorGate's discount applies to cards with power tag
 func TestThorGate_CardDiscount(t *testing.T) {
 	// Setup: Create game with player
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
@@ -73,8 +72,7 @@ func TestThorGate_CardDiscount(t *testing.T) {
 // TestThorGate_StandardProjectDiscount tests that ThorGate's discount applies to power-plant standard project
 func TestThorGate_StandardProjectDiscount(t *testing.T) {
 	// Setup: Create game with player
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
@@ -124,8 +122,7 @@ func TestThorGate_StandardProjectDiscount(t *testing.T) {
 // TestThorGate_CombinedDiscount tests that ThorGate's single output works for both cards and standard projects
 func TestThorGate_CombinedDiscount(t *testing.T) {
 	// Setup: Create game with player
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
@@ -185,8 +182,7 @@ func TestThorGate_CombinedDiscount(t *testing.T) {
 // TestDiscountORLogic tests that discounts with multiple targeting criteria use OR logic
 func TestDiscountORLogic(t *testing.T) {
 	// Setup: Create a custom discount effect that targets both tags AND card types
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 

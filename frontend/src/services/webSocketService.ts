@@ -8,17 +8,14 @@ import {
   PaymentDto,
   SelectDemoChoicesRequest,
   ErrorPayload,
-  FullStatePayload,
   GameUpdatedPayload,
   LogUpdatePayload,
   MessageType,
   MessageTypeError,
-  MessageTypeFullState,
   MessageTypeGameUpdated,
   MessageTypeLogUpdate,
   MessageTypePlayerConnect,
   MessageTypePlayerConnected,
-  MessageTypePlayerDisconnected,
   MessageTypePlayerKicked,
   MessageTypeActionStandardProject,
   MessageTypeActionStartGame,
@@ -78,7 +75,6 @@ import {
   EmotePayload,
   EmoteSendPayload,
   PlayerConnectedPayload,
-  PlayerDisconnectedPayload,
   WebSocketMessage,
 } from "../types/generated/api-types.ts";
 
@@ -97,7 +93,6 @@ export class WebSocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private currentGameId: string | null = null;
-  private currentPlayerId: string | null = null;
   private pendingConnection: Promise<void> | null = null;
   private shouldReconnect = true;
 
@@ -208,20 +203,9 @@ export class WebSocketService {
         this.emit("player-connected", connectedPayload);
         break;
       }
-      case MessageTypePlayerDisconnected: {
-        const disconnectedPayload = message.payload as PlayerDisconnectedPayload;
-        this.emit("player-disconnected", disconnectedPayload);
-        break;
-      }
       case MessageTypeError: {
         const errorPayload = message.payload as ErrorPayload;
         this.emit("error", errorPayload);
-        break;
-      }
-      case MessageTypeFullState: {
-        const statePayload = message.payload as FullStatePayload;
-        this.currentPlayerId = statePayload.playerId;
-        this.emit("full-state", statePayload);
         break;
       }
       case MessageTypeLogUpdate: {
@@ -687,15 +671,10 @@ export class WebSocketService {
     }
     this.isConnected = false;
     this.currentGameId = null;
-    this.currentPlayerId = null;
   }
 
   get connected() {
     return this.isConnected;
-  }
-
-  get playerId() {
-    return this.currentPlayerId;
   }
 
   get gameId() {

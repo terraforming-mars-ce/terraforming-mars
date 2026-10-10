@@ -15,8 +15,7 @@ import (
 func setupActiveGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string) {
 	t.Helper()
 
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	// Start game
@@ -79,7 +78,8 @@ func TestConvertHeatAction_InsufficientHeat(t *testing.T) {
 	err := convertAction.Execute(context.Background(), testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 
 	// Assert
-	testutil.AssertError(t, err, "Should fail with insufficient heat")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Should fail with insufficient heat")
+	testutil.AssertEqual(t, 5, player.Resources().Get().Heat, "heat unchanged")
 }
 
 func TestConvertHeatAction_GameNotFound(t *testing.T) {
@@ -94,13 +94,14 @@ func TestConvertHeatAction_GameNotFound(t *testing.T) {
 	err := convertAction.Execute(context.Background(), "non-existent", "player-id", shared.NativePayment(shared.ResourceHeat, 8))
 
 	// Assert
-	testutil.AssertError(t, err, "Should fail when game not found")
+	testutil.AssertErrorContains(t, err, "game not found", "Should fail when game not found")
 }
 
 func TestConvertHeatAction_PlayerNotFound(t *testing.T) {
 	// Setup
 	testGame, repo, cardRegistry, _ := setupActiveGame(t)
 	logger := testutil.TestLogger()
+	testutil.AssertNoError(t, testGame.SetCurrentTurn(context.Background(), "non-existent-player", 2), "set current turn")
 
 	convertAction := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
@@ -108,7 +109,7 @@ func TestConvertHeatAction_PlayerNotFound(t *testing.T) {
 	err := convertAction.Execute(context.Background(), testGame.ID(), "non-existent-player", shared.NativePayment(shared.ResourceHeat, 8))
 
 	// Assert
-	testutil.AssertError(t, err, "Should fail when player not found")
+	testutil.AssertErrorContains(t, err, "player not found", "Should fail when player not found")
 }
 
 func TestConvertHeatAction_TemperatureMaxed(t *testing.T) {

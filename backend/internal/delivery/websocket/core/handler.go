@@ -3,7 +3,6 @@ package core
 import (
 	"log/slog"
 	"net/http"
-	"time"
 
 	"openmars/internal/logger"
 
@@ -15,64 +14,39 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		// Allow all origins in development - should be restricted in production
+		// The gateway in front of the server decides which origins may connect.
 		return true
 	},
 }
 
-// Handler handles WebSocket HTTP upgrade requests
+// Handler upgrades HTTP requests to WebSocket connections owned by a hub.
 type Handler struct {
 	hub    *Hub
 	logger *slog.Logger
 }
 
-// NewHandler creates a new WebSocket handler
+// NewHandler creates a WebSocket endpoint for the hub.
 func NewHandler(hub *Hub) *Handler {
-	return &Handler{
-		hub:    hub,
-		logger: logger.Get(),
-	}
+	return &Handler{hub: hub, logger: logger.Get()}
 }
 
-// ServeWS handles WebSocket upgrade requests from clients
+// ServeWS upgrades the request and starts the connection's read and write loops.
 func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
-	h.logger.Debug("WebSocket connection request received", slog.String("remote_addr", r.RemoteAddr))
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		h.logger.Error("Failed to upgrade connection to WebSocket", slog.Any("error", err))
+		h.logger.Warn("Failed to upgrade connection to WebSocket", slog.Any("error", err))
 		return
 	}
 
-	// Create connection ID and connection object
-	connectionID := uuid.New().String()
-	connection := NewConnection(connectionID, conn,
-		h.hub.GetManager(), // Direct manager reference
-		func(msg HubMessage) { h.hub.Messages <- msg },      // onMessage callback
-		func(conn *Connection) { h.hub.Unregister <- conn }) // onDisconnect callback
-
-	h.logger.Debug("New WebSocket connection established",
-		slog.String("connection_id", connectionID),
+	c := newConnection(uuid.New().String(), conn, h.hub)
+	if !h.hub.add(c) {
+		c.Close()
+		return
+	}
+	h.logger.Debug("WebSocket connection opened",
+		slog.String("connection_id", c.ID),
 		slog.String("remote_addr", r.RemoteAddr))
 
-	h.hub.Register <- connection
-
-	if err := conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
-		h.logger.Warn("Failed to set initial read deadline", slog.Any("error", err), slog.String("connection_id", connectionID))
-	}
-	if err := conn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
-		h.logger.Warn("Failed to set initial write deadline", slog.Any("error", err), slog.String("connection_id", connectionID))
-	}
-
-	conn.SetPongHandler(func(string) error {
-		if err := conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
-			h.logger.Warn("Failed to set read deadline in pong handler", slog.Any("error", err), slog.String("connection_id", connectionID))
-		}
-		return nil
-	})
-
-	go connection.WritePump()
-	go connection.ReadPump()
-
-	h.logger.Debug("WebSocket connection fully initialized", slog.String("connection_id", connectionID))
+	go c.writePump()
+	go c.readPump()
 }

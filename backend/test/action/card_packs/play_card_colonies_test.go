@@ -268,7 +268,7 @@ func TestMartianZoo_RequiresTwoCities(t *testing.T) {
 			before := p.Resources().Get()
 			play := cardAction.NewPlayCardAction(repo, testutil.CreateTestCardRegistry(), nil, testutil.TestLogger())
 			err := play.Execute(context.Background(), g.ID(), playerID, card.ID, shared.NativePayment(shared.ResourceCredit, card.Cost), nil, nil, nil, nil, nil)
-			testutil.AssertError(t, err, "Martian Zoo requires at least two cities")
+			testutil.AssertErrorContains(t, err, "need at least 2 city tiles", "Martian Zoo requires at least two cities")
 			testutil.AssertEqual(t, before, p.Resources().Get(), "Rejected play must not spend resources")
 			testutil.AssertFalse(t, p.PlayedCards().Contains(card.ID), "Rejected card must not enter play")
 		})
@@ -328,7 +328,7 @@ func TestMartianZoo_ActionPaysPerAnimalWithoutSpendingAnimals(t *testing.T) {
 		testutil.AssertEqual(t, before+animals, p.Resources().Get().Credits, "Gain one credit per animal")
 		testutil.AssertEqual(t, animals, p.Resources().GetCardStorage(cardID), "Income action does not spend animals")
 		err = use.Execute(context.Background(), g.ID(), playerID, cardID, action.BehaviorIndex, nil, nil, nil, nil, nil, nil, nil, nil)
-		testutil.AssertError(t, err, "Income action can only be used once per generation")
+		testutil.AssertErrorContains(t, err, "action already played this generation", "Income action can only be used once per generation")
 		return
 	}
 	t.Fatal("Playing Martian Zoo must register its income action")
@@ -677,7 +677,7 @@ func TestMarketManipulation_ConfirmsBothTracksAtomically(t *testing.T) {
 		t.Fatal("Expected track selection")
 	}
 	confirm := confirmAction.NewConfirmEffectSelectionAction(repo, testutil.CreateTestCardRegistry(), colonies, nil)
-	testutil.AssertError(t, confirm.Execute(context.Background(), g.ID(), id, -1), "Reject invalid option")
+	testutil.AssertErrorContains(t, confirm.Execute(context.Background(), g.ID(), id, -1), "invalid effect option", "Reject invalid option")
 	testutil.AssertEqual(t, 3, g.Colonies().GetState("luna").MarkerPosition, "Invalid selection cannot move tracks")
 	before := p.Resources().Get()
 	for i, o := range pending.Options {
@@ -705,7 +705,7 @@ func TestMarketManipulation_NoLegalPairDoesNotSpend(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	before := p.Resources().Get()
 	err := cardAction.NewPlayCardAction(repo, testutil.CreateTestCardRegistry(), nil, testutil.TestLogger(), colonies).Execute(context.Background(), g.ID(), id, card.ID, shared.NativePayment(shared.ResourceCredit, 1), nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Cannot move same track twice or below occupied slot")
+	testutil.AssertErrorContains(t, err, "no legal effect selection", "Cannot move same track twice or below occupied slot")
 	testutil.AssertEqual(t, before, p.Resources().Get(), "No payment for impossible pair")
 }
 
@@ -725,7 +725,7 @@ func TestMarketManipulation_StalePairDoesNotPartiallyMove(t *testing.T) {
 	g.Colonies().MoveTradeMarkers(map[string]int{"ceres": len(def.Steps) - 2})
 	before := g.Colonies().GetState("luna").MarkerPosition
 	err := confirmAction.NewConfirmEffectSelectionAction(repo, testutil.CreateTestCardRegistry(), colonies, nil).Execute(context.Background(), g.ID(), id, 0)
-	testutil.AssertError(t, err, "Revalidate both tracks at confirmation")
+	testutil.AssertErrorContains(t, err, "effect selection is no longer legal", "Revalidate both tracks at confirmation")
 	testutil.AssertEqual(t, before, g.Colonies().GetState("luna").MarkerPosition, "No partial decrease when increase is invalid")
 	testutil.AssertTrue(t, g.HasAnyPendingSelection(id), "Invalid confirmation keeps selection")
 }
@@ -843,7 +843,7 @@ func TestCryoSleepAndRimFreighters_DiscountedTradeAcrossAllPayments(t *testing.T
 				mapped := dto.ToGameDto(g, registry, id, colonies)
 				testutil.AssertTrue(t, mapped.Colonies[0].TradeAvailable, "Colony DTO agrees with discounted affordability")
 				trade := colonyAction.NewTradeAction(repo, colonies, registry, game.NewInMemoryGameStateRepository(), testutil.TestLogger())
-				testutil.AssertNoError(t, trade.Execute(context.Background(), g.ID(), id, "luna", payment, 0, shared.NativePayment(map[string]shared.ResourceType{"credits": shared.ResourceCredit, "energy": shared.ResourceEnergy, "titanium": shared.ResourceTitanium}[string(payment)], map[string]int{"credits": 9, "energy": 3, "titanium": 3}[string(payment)])), "Pay discounted amount")
+				testutil.AssertNoError(t, trade.Execute(context.Background(), g.ID(), id, "luna", payment, 0, testutil.TradePayment(payment)), "Pay discounted amount")
 				expected := 0
 				if resource == shared.ResourceCredit {
 					expected = 7
@@ -884,13 +884,14 @@ func TestAirRaid_RequiresOwnedFloaterPayment(t *testing.T) {
 		stored      int
 		valid       bool
 		corporation bool
+		wantErr     string
 	}{
-		{"owned card", "Titan Shuttles", true, 2, true, false},
-		{"owned corporation", "Stormcraft Incorporated", true, 1, true, true},
-		{"missing selection", "", true, 0, false, false},
-		{"empty source", "Titan Shuttles", true, 0, false, false},
-		{"opponent source", "Titan Shuttles", false, 2, false, false},
-		{"wrong storage type", "Pets", true, 2, false, false},
+		{"owned card", "Titan Shuttles", true, 2, true, false, ""},
+		{"owned corporation", "Stormcraft Incorporated", true, 1, true, true, ""},
+		{"missing selection", "", true, 0, false, false, "select an eligible owned card"},
+		{"empty source", "Titan Shuttles", true, 0, false, false, "insufficient resources on card"},
+		{"opponent source", "Titan Shuttles", false, 2, false, false, "select an eligible owned card"},
+		{"wrong storage type", "Pets", true, 2, false, false, "select an eligible owned card"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			g, repo, registry, id, opponentID := testutil.SetupTwoPlayerGame(t)
@@ -939,7 +940,7 @@ func TestAirRaid_RequiresOwnedFloaterPayment(t *testing.T) {
 			play := cardAction.NewPlayCardAction(repo, registry, nil, testutil.TestLogger())
 			err := play.Execute(context.Background(), g.ID(), id, raid.ID, shared.Payment{Allocations: []shared.PaymentAllocation{}}, nil, nil, &opponentID, nil, sources)
 			if !tc.valid {
-				testutil.AssertError(t, err, "Invalid source must reject card")
+				testutil.AssertErrorContains(t, err, tc.wantErr, "Invalid source must reject card")
 				testutil.AssertTrue(t, p.Hand().HasCard(raid.ID), "Failed play keeps card in hand")
 				testutil.AssertEqual(t, before, p.Resources().Get().Credits, "No theft on invalid payment")
 				testutil.AssertEqual(t, victimBefore, opponent.Resources().Get().Credits, "Victim unchanged")
@@ -998,14 +999,15 @@ func TestTitanShuttles_ConvertsSelectedFloaters(t *testing.T) {
 			}
 			err := use.Execute(context.Background(), g.ID(), id, card.ID, 0, &choice, nil, nil, nil, selected, nil, nil, nil)
 			if amount < 0 || amount > 5 {
-				testutil.AssertError(t, err, "Reject invalid conversion amount")
+				wantErr := map[int]string{-2: "must select an amount", -1: "selected amount must be nonnegative", 6: "insufficient resources on card"}[amount]
+				testutil.AssertErrorContains(t, err, wantErr, "Reject invalid conversion amount")
 				testutil.AssertEqual(t, stored, p.Resources().GetCardStorage(card.ID), "Invalid conversion keeps floaters")
 				testutil.AssertEqual(t, before, p.Resources().Get().Titanium, "Invalid conversion keeps titanium")
 			} else {
 				testutil.AssertNoError(t, err, "Convert selected floaters")
 				testutil.AssertEqual(t, stored-amount, p.Resources().GetCardStorage(card.ID), "Spend chosen floaters")
 				testutil.AssertEqual(t, before+amount, p.Resources().Get().Titanium, "Gain equal titanium")
-				testutil.AssertError(t, use.Execute(context.Background(), g.ID(), id, card.ID, 0, &choice, nil, nil, nil, &amount, nil, nil, nil), "Action cannot repeat this generation")
+				testutil.AssertErrorContains(t, use.Execute(context.Background(), g.ID(), id, card.ID, 0, &choice, nil, nil, nil, &amount, nil, nil, nil), "action already played this generation", "Action cannot repeat this generation")
 			}
 			vp := gamecards.CalculatePlayerVP(p, g, nil, nil, g.GetAllPlayers(), registry, nil, nil)
 			testutil.AssertEqual(t, 1, vp.CardVP, "One fixed VP regardless of stored floaters")
@@ -1031,7 +1033,8 @@ func TestTitanShuttles_AddsOnlyToJovianStorage(t *testing.T) {
 				testutil.AssertNoError(t, err, "Jovian source accepts floaters")
 				testutil.AssertEqual(t, 2, p.Resources().GetCardStorage(target), "Adds two floaters")
 			} else {
-				testutil.AssertError(t, err, "Non-Jovian target rejected")
+				testutil.AssertErrorContains(t, err, "target card does not match selectors", "Non-Jovian target rejected")
+				testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(target), "Rejected action leaves storage unchanged")
 			}
 		})
 	}
@@ -1058,7 +1061,7 @@ func TestRefugeeCamps_StoresCampsAndScoresWithProductionFloor(t *testing.T) {
 				want++
 				testutil.AssertEqual(t, production-1, p.Resources().Production().Credits, "Production reduced")
 			} else {
-				testutil.AssertError(t, err, "Cannot reduce below floor")
+				testutil.AssertErrorContains(t, err, "insufficient credit-production", "Cannot reduce below floor")
 				testutil.AssertEqual(t, -5, p.Resources().Production().Credits, "Production unchanged")
 			}
 			testutil.AssertEqual(t, before, p.Resources().Get().Credits, "Camp does not grant spendable credits")
@@ -1137,7 +1140,7 @@ func TestJupiterFloatingStation_CappedPayout(t *testing.T) {
 			testutil.AssertNoError(t, err, "Gain capped credits")
 			testutil.AssertEqual(t, before+want, p.Resources().Get().Credits, "Payout is capped at four")
 			testutil.AssertEqual(t, stored, p.Resources().GetCardStorage(card.ID), "Floaters are not spent")
-			testutil.AssertError(t, use.Execute(context.Background(), g.ID(), id, card.ID, 0, &choice, nil, nil, nil, nil, nil, nil, nil), "Cannot repeat action this generation")
+			testutil.AssertErrorContains(t, use.Execute(context.Background(), g.ID(), id, card.ID, 0, &choice, nil, nil, nil, nil, nil, nil, nil), "action already played this generation", "Cannot repeat action this generation")
 			vp := gamecards.CalculatePlayerVP(p, g, nil, nil, g.GetAllPlayers(), registry, nil, nil)
 			testutil.AssertEqual(t, beforeVP+1, vp.CardVP, "Fixed VP is independent of floaters")
 		})
@@ -1160,7 +1163,7 @@ func TestJupiterFloatingStation_AddsOnlyToJovianStorage(t *testing.T) {
 			choice := 0
 			err := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger()).Execute(context.Background(), g.ID(), id, testutil.CardID("Jupiter Floating Station"), 0, &choice, []string{target}, nil, nil, nil, nil, nil, nil)
 			if name == "Dirigibles" {
-				testutil.AssertError(t, err, "Reject non-Jovian storage")
+				testutil.AssertErrorContains(t, err, "target card does not match selectors", "Reject non-Jovian storage")
 				testutil.AssertEqual(t, 0, p.Resources().GetCardStorage(target), "Rejected action leaves storage unchanged")
 			} else {
 				testutil.AssertNoError(t, err, "Add floater to Jovian storage")

@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -299,7 +300,14 @@ func (h *GameHandler) GetGameHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entries, err := h.getGameHistoryAction.Execute(ctx, gameID, filter)
-	if err != nil {
+	switch {
+	case errors.Is(err, query.ErrGameNotFound):
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	case errors.Is(err, query.ErrInvalidFilter):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	case err != nil:
 		log.Error("Failed to get game history", slog.Any("error", err))
 		http.Error(w, "Failed to get game history", http.StatusInternalServerError)
 		return

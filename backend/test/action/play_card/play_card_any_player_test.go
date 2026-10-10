@@ -10,8 +10,7 @@ import (
 )
 
 func TestPlayCardAction_AsteroidRemovesPlantsFromTargetPlayer(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -56,8 +55,7 @@ func TestPlayCardAction_AsteroidRemovesPlantsFromTargetPlayer(t *testing.T) {
 }
 
 func TestPlayCardAction_AsteroidSoloMode_SkipsTargetPlayer(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -96,8 +94,7 @@ func TestPlayCardAction_AsteroidSoloMode_SkipsTargetPlayer(t *testing.T) {
 }
 
 func TestPlayCardAction_AsteroidEmptyTargetID_SkipsAnyPlayer(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -141,8 +138,7 @@ func TestPlayCardAction_AsteroidEmptyTargetID_SkipsAnyPlayer(t *testing.T) {
 }
 
 func TestPlayCardAction_HiredRaidersEmptyTargetID_SkipsSteal(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -184,8 +180,7 @@ func TestPlayCardAction_HiredRaidersEmptyTargetID_SkipsSteal(t *testing.T) {
 }
 
 func TestPlayCardAction_AsteroidPartialRemoval(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -226,8 +221,7 @@ func TestPlayCardAction_AsteroidPartialRemoval(t *testing.T) {
 }
 
 func TestPlayCardAction_InvalidTargetPlayerID(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -253,12 +247,11 @@ func TestPlayCardAction_InvalidTargetPlayerID(t *testing.T) {
 		ResourceCredit, 14)
 	invalidID := "non-existent-player"
 	err := playCardAction.Execute(ctx, testGame.ID(), attacker.ID(), asteroidID, payment, nil, nil, &invalidID, nil, nil)
-	testutil.AssertError(t, err, "Should fail with invalid target player ID")
+	testutil.AssertErrorContains(t, err, "invalid target player", "Should fail with invalid target player ID")
 }
 
 func TestPlayCardAction_AsteroidMiningConsortiumDecreasesTargetProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -307,8 +300,7 @@ func TestPlayCardAction_AsteroidMiningConsortiumDecreasesTargetProduction(t *tes
 }
 
 func TestPlayCardAction_HiredRaidersStealsSteelFromTarget(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -351,8 +343,7 @@ func TestPlayCardAction_HiredRaidersStealsSteelFromTarget(t *testing.T) {
 }
 
 func TestPlayCardAction_HiredRaidersSoloMode(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -386,8 +377,7 @@ func TestPlayCardAction_HiredRaidersSoloMode(t *testing.T) {
 }
 
 func TestPlayCardAction_StealPartialAmount(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -434,8 +424,7 @@ func TestPlayCardAction_StealPartialAmount(t *testing.T) {
 // "Decrease any steel production 1 step and increase your own 1 step."
 
 func TestGreatEscarpmentConsortium_StealSteelProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -487,8 +476,7 @@ func TestGreatEscarpmentConsortium_StealSteelProduction(t *testing.T) {
 }
 
 func TestGreatEscarpmentConsortium_SoloModeSkipsAnyPlayer(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()

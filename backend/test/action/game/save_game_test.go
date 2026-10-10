@@ -12,6 +12,7 @@ import (
 
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"net/http/httptest"
 	baseaction "openmars/internal/action"
@@ -25,6 +26,7 @@ import (
 	httpdelivery "openmars/internal/delivery/http"
 	wsdelivery "openmars/internal/delivery/websocket"
 	"openmars/internal/delivery/websocket/core"
+	gamehandler "openmars/internal/delivery/websocket/handler/game"
 	"openmars/internal/events"
 	"openmars/internal/game"
 	gamecards "openmars/internal/game/cards"
@@ -503,6 +505,7 @@ func TestSaveHTTPAndPausedMessageGate(t *testing.T) {
 	hub := core.NewHub()
 	broadcaster := wsdelivery.NewBroadcaster(repo, logs, hub, testutil.GetCardDB(), nil, nil, nil, testutil.CreateTestAwardRegistry(), testutil.CreateTestMilestoneRegistry(), nil)
 	wsdelivery.RegisterSaveHandlers(hub, broadcaster, repo, a)
+	hub.RegisterHandler(dto.MessageTypePlayerConnect, gamehandler.NewJoinGameHandler(gameaction.NewJoinGameAction(repo, testutil.GetCardDB(), testutil.TestLogger()), broadcaster))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go hub.Run(ctx)
@@ -529,23 +532,55 @@ func TestSaveHTTPAndPausedMessageGate(t *testing.T) {
 	testutil.AssertEqual(t, http.StatusCreated, imported.Code, "import HTTP: "+imported.Body.String())
 	var response dto.ImportGameSaveResponse
 	testutil.AssertNoError(t, json.Unmarshal(imported.Body.Bytes(), &response), "import response")
-	host := core.NewConnection("host", nil, hub.GetManager(), nil, nil)
-	host.SetPlayer("alice", response.GameID)
-	watcher := core.NewConnection("watcher", nil, hub.GetManager(), nil, nil)
-	send := func(connection *core.Connection, kind dto.MessageType, payload map[string]any) dto.WebSocketMessage {
+	server := httptest.NewServer(http.HandlerFunc(core.NewHandler(hub).ServeWS))
+	defer server.Close()
+	dial := func() *websocket.Conn {
 		t.Helper()
-		for len(connection.Send) > 0 {
-			<-connection.Send
+		c, response, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http"), nil)
+		testutil.AssertNoError(t, err, "connect")
+		testutil.AssertNoError(t, response.Body.Close(), "close handshake body")
+		t.Cleanup(func() { _ = c.Close() })
+		return c
+	}
+	read := func(c *websocket.Conn) dto.WebSocketMessage {
+		t.Helper()
+		testutil.AssertNoError(t, c.SetReadDeadline(time.Now().Add(20*time.Second)), "read deadline")
+		var m dto.WebSocketMessage
+		testutil.AssertNoError(t, c.ReadJSON(&m), "read response")
+		data, err := json.Marshal(m.Payload)
+		testutil.AssertNoError(t, err, "encode payload")
+		switch m.Type {
+		case dto.MessageTypeGameUpdated:
+			var payload dto.GameUpdatedPayload
+			testutil.AssertNoError(t, json.Unmarshal(data, &payload), "game payload")
+			m.Payload = payload
+		case dto.MessageTypeError:
+			var payload dto.ErrorPayload
+			testutil.AssertNoError(t, json.Unmarshal(data, &payload), "error payload")
+			m.Payload = payload
 		}
-		hub.Messages <- core.HubMessage{Connection: connection, Message: dto.WebSocketMessage{Type: kind, Payload: payload}}
-		select {
-		case m := <-connection.Send:
-			return m
-		case <-time.After(3 * time.Second):
-			t.Fatal("no message response")
-			return dto.WebSocketMessage{}
+		return m
+	}
+	flush := func(c *websocket.Conn) {
+		t.Helper()
+		const barrier dto.MessageType = "save-test-barrier"
+		testutil.AssertNoError(t, c.WriteJSON(dto.WebSocketMessage{Type: barrier}), "send barrier")
+		for {
+			m := read(c)
+			if m.Type == dto.MessageTypeError && m.Payload.(dto.ErrorPayload).RequestType == barrier {
+				return
+			}
 		}
 	}
+	send := func(c *websocket.Conn, kind dto.MessageType, payload map[string]any) dto.WebSocketMessage {
+		t.Helper()
+		flush(c)
+		testutil.AssertNoError(t, c.WriteJSON(dto.WebSocketMessage{Type: kind, Payload: payload}), "send request")
+		return read(c)
+	}
+	host, watcher := dial(), dial()
+	send(host, dto.MessageTypePlayerConnect, map[string]any{"gameId": response.GameID, "playerId": "alice", "playerName": "Alice"})
+
 	for _, kind := range []dto.MessageType{dto.MessageTypeActionStartGame, dto.MessageTypeKickPlayer, dto.MessageTypeUpdateGameSettings, dto.MessageTypePlayerTakeover, dto.MessageTypeEndGame, dto.MessageTypeAdminCommand} {
 		m := send(host, kind, map[string]any{})
 		if m.Type != dto.MessageTypeError || !strings.Contains(fmt.Sprint(m.Payload), "paused") {
@@ -568,7 +603,7 @@ func TestSaveHTTPAndPausedMessageGate(t *testing.T) {
 	if m.Type != dto.MessageTypeGameUpdated {
 		t.Fatalf("claim failed: %#v", m)
 	}
-	competitor := core.NewConnection("competitor", nil, hub.GetManager(), nil, nil)
+	competitor := dial()
 	m = send(competitor, dto.MessageTypeClaimResumeSeat, map[string]any{"gameId": response.GameID, "seatId": "bob", "playerName": "Late joiner"})
 	if m.Type != dto.MessageTypeError || m.Payload.(dto.ErrorPayload).Code != "seat_taken" {
 		t.Fatalf("missing seat conflict response: %#v", m)
@@ -577,16 +612,18 @@ func TestSaveHTTPAndPausedMessageGate(t *testing.T) {
 	if m.Type != dto.MessageTypeError || m.Payload.(dto.ErrorPayload).Code != "invalid_request" {
 		t.Fatalf("rename command accepted: %#v", m)
 	}
-	secondTab := core.NewConnection("second-tab", nil, hub.GetManager(), nil, nil)
-	secondTab.SetPlayer("bob", response.GameID)
+	secondTab := dial()
+	send(secondTab, dto.MessageTypePlayerConnect, map[string]any{"gameId": response.GameID, "playerId": "bob", "playerName": "Replacement"})
+	flush(watcher)
+	flush(secondTab)
 	m = send(host, dto.MessageTypeReleaseResumeSeat, map[string]any{"gameId": response.GameID, "seatId": "bob"})
 	if m.Type != dto.MessageTypeGameUpdated {
 		t.Fatalf("release failed: %#v", m)
 	}
-	id, _ := watcher.GetPlayer()
-	testutil.AssertEqual(t, "", id, "released socket loses its seat")
-	id, _ = secondTab.GetPlayer()
-	testutil.AssertEqual(t, "", id, "all released sockets lose their seat")
+	released := read(watcher).Payload.(dto.GameUpdatedPayload).Game
+	testutil.AssertEqual(t, "", released.ViewingPlayerID, "released socket loses its seat")
+	released = read(secondTab).Payload.(dto.GameUpdatedPayload).Game
+	testutil.AssertEqual(t, "", released.ViewingPlayerID, "all released sockets lose their seat")
 	m = send(competitor, dto.MessageTypeClaimResumeSeat, map[string]any{"gameId": response.GameID, "seatId": "bob", "playerName": "Recovered"})
 	if m.Type != dto.MessageTypeGameUpdated {
 		t.Fatalf("recovery failed: %#v", m)

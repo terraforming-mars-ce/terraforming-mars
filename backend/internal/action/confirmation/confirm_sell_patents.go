@@ -83,16 +83,9 @@ func (a *ConfirmSellPatentsAction) Execute(ctx context.Context, gameID string, p
 		return fmt.Errorf("cannot select more than %d cards", pendingCardSelection.MaxCards)
 	}
 
-	availableCardsMap := make(map[string]bool)
-	for _, cardID := range pendingCardSelection.AvailableCards {
-		availableCardsMap[cardID] = true
-	}
-
-	for _, cardID := range selectedCardIDs {
-		if !availableCardsMap[cardID] {
-			log.Warn("Selected card not available", slog.String("card_id", cardID))
-			return fmt.Errorf("card %s is not available for selection", cardID)
-		}
+	if err := baseaction.ValidateSelection(pendingCardSelection.AvailableCards, selectedCardIDs, "card"); err != nil {
+		log.Warn("Invalid patent selection", slog.Any("error", err))
+		return err
 	}
 
 	totalReward := 0

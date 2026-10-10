@@ -9,8 +9,7 @@ import (
 
 func TestAddProduction_CreditProductionAllowsNegative(t *testing.T) {
 	// Setup: Create game with a player
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	player := players[0]
 
@@ -29,8 +28,7 @@ func TestAddProduction_CreditProductionAllowsNegative(t *testing.T) {
 
 func TestAddProduction_CreditProductionClampsToMinusFive(t *testing.T) {
 	// Setup: Create game with a player
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	player := players[0]
 
@@ -47,8 +45,7 @@ func TestAddProduction_CreditProductionClampsToMinusFive(t *testing.T) {
 
 func TestAddProduction_OtherProductionClampsToZero(t *testing.T) {
 	// Setup: Create game with a player
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	player := players[0]
 
@@ -67,8 +64,7 @@ func TestAddProduction_OtherProductionClampsToZero(t *testing.T) {
 
 func TestAddProduction_AllNonCreditProductionClampsToZero(t *testing.T) {
 	// Setup: Create game with a player
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	player := players[0]
 
@@ -100,8 +96,7 @@ func TestAddProduction_AllNonCreditProductionClampsToZero(t *testing.T) {
 
 func TestAddProduction_ExactlyMinusFive(t *testing.T) {
 	// Setup: Create game with a player
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	player := players[0]
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"openmars/internal/game/board"
 	"openmars/internal/game/global_parameters"
@@ -34,15 +33,13 @@ func getLandCoords() shared.HexPosition {
 }
 
 func TestMaxOceans_DefaultIs9(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 
 	testutil.AssertEqual(t, global_parameters.MaxOceans, testGame.GlobalParameters().GetMaxOceans(), "default maxOceans should be 9")
 }
 
 func TestMaxOceans_ReducesWhenNonOceanTileOnOceanSpace(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 	p := testGame.GetAllPlayers()[0]
 	oceanSpaces := getOceanSpaceCoords()
@@ -57,14 +54,12 @@ func TestMaxOceans_ReducesWhenNonOceanTileOnOceanSpace(t *testing.T) {
 		err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], occupant, p.ID())
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing mohole %d on ocean space", i))
 	}
-	time.Sleep(20 * time.Millisecond)
 
 	testutil.AssertEqual(t, 8, testGame.GlobalParameters().GetMaxOceans(), "maxOceans should reduce to 8")
 }
 
 func TestMaxOceans_ReducesAfterOceansPlaced(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 	p := testGame.GetAllPlayers()[0]
 	oceanSpaces := getOceanSpaceCoords()
@@ -77,7 +72,6 @@ func TestMaxOceans_ReducesAfterOceansPlaced(t *testing.T) {
 		_, err = testGame.GlobalParameters().PlaceOcean(ctx, "")
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean %d", i))
 	}
-	time.Sleep(20 * time.Millisecond)
 
 	testutil.AssertEqual(t, 5, testGame.GlobalParameters().Oceans(), "should have 5 oceans")
 	testutil.AssertEqual(t, 9, testGame.GlobalParameters().GetMaxOceans(), "maxOceans should still be 9")
@@ -89,15 +83,13 @@ func TestMaxOceans_ReducesAfterOceansPlaced(t *testing.T) {
 		err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], moholeOccupant, p.ID())
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing mohole on ocean space %d", i))
 	}
-	time.Sleep(20 * time.Millisecond)
 
 	testutil.AssertEqual(t, 8, testGame.GlobalParameters().GetMaxOceans(), "maxOceans should reduce to 8")
 	testutil.AssertEqual(t, 3, testGame.Board().FreeOceanSpaces(), "should have 3 free ocean spaces")
 }
 
 func TestMaxOceans_OceanTileOnOceanSpace_NoReduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 	p := testGame.GetAllPlayers()[0]
 	oceanSpaces := getOceanSpaceCoords()
@@ -107,29 +99,25 @@ func TestMaxOceans_OceanTileOnOceanSpace_NoReduction(t *testing.T) {
 	testutil.AssertNoError(t, err, "placing ocean tile")
 	_, err = testGame.GlobalParameters().PlaceOcean(ctx, "")
 	testutil.AssertNoError(t, err, "placing ocean")
-	time.Sleep(20 * time.Millisecond)
 
 	testutil.AssertEqual(t, 9, testGame.GlobalParameters().GetMaxOceans(), "maxOceans should remain 9")
 	testutil.AssertEqual(t, 1, testGame.GlobalParameters().Oceans(), "should have 1 ocean")
 }
 
 func TestMaxOceans_NonOceanOnLandSpace_NoReduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 	p := testGame.GetAllPlayers()[0]
 
 	cityOccupant := board.TileOccupant{Type: shared.ResourceCityTile, Tags: []string{}}
 	err := testGame.Board().UpdateTileOccupancy(ctx, getLandCoords(), cityOccupant, p.ID())
 	testutil.AssertNoError(t, err, "placing city on land")
-	time.Sleep(20 * time.Millisecond)
 
 	testutil.AssertEqual(t, 9, testGame.GlobalParameters().GetMaxOceans(), "maxOceans should remain 9")
 }
 
 func TestMaxOceans_IsMaxedRespectsReducedMax(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 	p := testGame.GetAllPlayers()[0]
 	oceanSpaces := getOceanSpaceCoords()
@@ -141,7 +129,6 @@ func TestMaxOceans_IsMaxedRespectsReducedMax(t *testing.T) {
 		err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], moholeOccupant, p.ID())
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing mohole %d", i))
 	}
-	time.Sleep(20 * time.Millisecond)
 	testutil.AssertEqual(t, 8, gp.GetMaxOceans(), "maxOceans should be 8")
 
 	// Max temperature and oxygen
@@ -164,8 +151,7 @@ func TestMaxOceans_IsMaxedRespectsReducedMax(t *testing.T) {
 }
 
 func TestMaxOceans_FreeOceanSpaces_AlwaysGTE_Remaining(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 	p := testGame.GetAllPlayers()[0]
 	oceanSpaces := getOceanSpaceCoords()
@@ -189,7 +175,6 @@ func TestMaxOceans_FreeOceanSpaces_AlwaysGTE_Remaining(t *testing.T) {
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean tile %d", i))
 		_, err = gp.PlaceOcean(ctx, "")
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean %d", i))
-		time.Sleep(20 * time.Millisecond)
 		checkInvariant(fmt.Sprintf("after ocean %d", i+1))
 	}
 
@@ -198,7 +183,6 @@ func TestMaxOceans_FreeOceanSpaces_AlwaysGTE_Remaining(t *testing.T) {
 	for i := 3; i < 7; i++ {
 		err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[i], moholeOccupant, p.ID())
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing mohole on space %d", i))
-		time.Sleep(20 * time.Millisecond)
 		checkInvariant(fmt.Sprintf("after mohole on space %d", i))
 	}
 
@@ -209,14 +193,12 @@ func TestMaxOceans_FreeOceanSpaces_AlwaysGTE_Remaining(t *testing.T) {
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean tile on space %d", i))
 		_, err = gp.PlaceOcean(ctx, "")
 		testutil.AssertNoError(t, err, fmt.Sprintf("placing ocean on space %d", i))
-		time.Sleep(20 * time.Millisecond)
 		checkInvariant(fmt.Sprintf("after ocean on space %d", i))
 	}
 
 	// Place mohole on ocean space 9
 	err := testGame.Board().UpdateTileOccupancy(ctx, oceanSpaces[9], moholeOccupant, p.ID())
 	testutil.AssertNoError(t, err, "placing mohole on space 9")
-	time.Sleep(20 * time.Millisecond)
 	checkInvariant("after mohole on space 9")
 
 	// Final: 5 oceans, 5 moholes, 2 free ocean spaces
@@ -226,8 +208,7 @@ func TestMaxOceans_FreeOceanSpaces_AlwaysGTE_Remaining(t *testing.T) {
 }
 
 func TestFreeOceanSpaces_InitialCount(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 
 	testutil.AssertEqual(t, 12, testGame.Board().FreeOceanSpaces(), "should start with 12 free ocean spaces")
 }

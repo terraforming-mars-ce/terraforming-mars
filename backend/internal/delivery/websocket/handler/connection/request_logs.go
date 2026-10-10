@@ -32,38 +32,28 @@ func (h *RequestLogsHandler) HandleMessage(_ context.Context, connection *core.C
 
 	log.Debug("Processing request-logs")
 
-	if connection.GameID == "" {
+	if connection.GameID() == "" {
 		log.Error("Missing connection context")
-		connection.Send <- dto.WebSocketMessage{
-			Type: dto.MessageTypeError,
-			Payload: map[string]any{
-				"error": "Not connected to a game",
-			},
-		}
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
-	if connection.SpectatorID != "" {
-		h.broadcaster.SendInitialLogsToSpectator(connection.GameID, connection.SpectatorID)
+	if connection.SpectatorID() != "" {
+		h.broadcaster.SendInitialLogsToSpectator(connection.GameID(), connection.SpectatorID())
 		log.Debug("Sent initial logs to spectator",
-			slog.String("game_id", connection.GameID),
-			slog.String("spectator_id", connection.SpectatorID))
+			slog.String("game_id", connection.GameID()),
+			slog.String("spectator_id", connection.SpectatorID()))
 		return
 	}
 
-	if connection.PlayerID == "" {
+	if connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		connection.Send <- dto.WebSocketMessage{
-			Type: dto.MessageTypeError,
-			Payload: map[string]any{
-				"error": "Not connected to a game",
-			},
-		}
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
-	h.broadcaster.SendInitialLogs(connection.GameID, connection.PlayerID)
+	h.broadcaster.SendInitialLogs(connection.GameID(), connection.PlayerID())
 	log.Debug("Sent initial logs to player",
-		slog.String("game_id", connection.GameID),
-		slog.String("player_id", connection.PlayerID))
+		slog.String("game_id", connection.GameID()),
+		slog.String("player_id", connection.PlayerID()))
 }

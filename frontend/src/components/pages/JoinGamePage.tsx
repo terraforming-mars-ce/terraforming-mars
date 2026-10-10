@@ -191,7 +191,7 @@ const JoinGamePage: React.FC = () => {
     <div className="flex flex-col gap-3">
       {filteredGames.length === 0 && <p className="text-white/60 py-8">No matching games.</p>}
       {filteredGames.map((game) => {
-        const playerCount = (game.currentPlayer ? 1 : 0) + (game.otherPlayers?.length || 0);
+        const playerCount = (game.currentPlayer?.id ? 1 : 0) + (game.otherPlayers?.length || 0);
         const maxPlayers = game.settings?.maxPlayers || 10;
         const resumeSeats = game.resumeLobby?.seats;
         const players = [game.currentPlayer, ...(game.otherPlayers ?? [])];

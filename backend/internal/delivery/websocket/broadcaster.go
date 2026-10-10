@@ -95,13 +95,10 @@ func (b *Broadcaster) BroadcastGameState(gameID string, playerIDs []string) {
 	}
 
 	if g.ResumeLobby() != nil {
-		for connection := range b.hub.GetManager().GetGameConnections(gameID) {
-			playerID, _ := connection.GetPlayer()
+		for _, connection := range b.hub.Manager().GameConnections(gameID) {
+			playerID := connection.PlayerID()
 			message := dto.WebSocketMessage{Type: dto.MessageTypeGameUpdated, GameID: gameID, Payload: dto.GameUpdatedPayload{Game: dto.ToResumeGameDto(g, playerID, b.cardRegistry)}}
-			select {
-			case connection.Send <- message:
-			default:
-			}
+			connection.Send(message)
 		}
 		return
 	}
@@ -121,12 +118,7 @@ func (b *Broadcaster) BroadcastGameState(gameID string, playerIDs []string) {
 	}
 
 	for _, playerID := range playerIDs {
-		if err := b.sendToPlayer(ctx, g, playerID); err != nil {
-			log.Error("Failed to send game state to player",
-				slog.String("player_id", playerID),
-				slog.Any("error", err))
-			// Continue with other players even if one fails
-		}
+		b.sendToPlayer(g, playerID)
 	}
 
 	// Broadcast to all spectators (before clearing triggered effects so spectators see them)
@@ -194,23 +186,19 @@ func (b *Broadcaster) broadcastNewLogs(gameID string, playerIDs []string) {
 	}
 
 	for _, playerID := range playerIDs {
-		if err := b.hub.SendToPlayer(gameID, playerID, message); err != nil {
-			log.Error("Failed to send log update to player",
-				slog.String("player_id", playerID),
-				slog.Any("error", err))
-		}
+		b.hub.SendToPlayer(gameID, playerID, message)
 	}
 
-	spectatorConns := b.hub.GetManager().GetSpectatorConnections(gameID)
+	spectatorConns := b.hub.Manager().SpectatorConnections(gameID)
 	for _, conn := range spectatorConns {
-		conn.SendMessage(message)
+		conn.Send(message)
 	}
 
 	log.Debug("Broadcasted new logs", slog.Int("log_count", len(newLogs)))
 }
 
 // sendToPlayer creates a personalized DTO for a player and sends it via WebSocket
-func (b *Broadcaster) sendToPlayer(ctx context.Context, game *game.Game, playerID string) error {
+func (b *Broadcaster) sendToPlayer(game *game.Game, playerID string) {
 	log := b.logger.With(
 		slog.String("game_id", game.ID()),
 		slog.String("player_id", playerID),
@@ -233,12 +221,8 @@ func (b *Broadcaster) sendToPlayer(ctx context.Context, game *game.Game, playerI
 		},
 	}
 
-	if err := b.hub.SendToPlayer(game.ID(), playerID, message); err != nil {
-		return err
-	}
-
+	b.hub.SendToPlayer(game.ID(), playerID, message)
 	log.Debug("Sent personalized game state to player")
-	return nil
 }
 
 // SendInitialLogs sends all game logs to a specific player (used on connect/reconnect)
@@ -271,10 +255,7 @@ func (b *Broadcaster) SendInitialLogs(gameID string, playerID string) {
 		},
 	}
 
-	if err := b.hub.SendToPlayer(gameID, playerID, message); err != nil {
-		log.Error("Failed to send initial logs", slog.Any("error", err))
-		return
-	}
+	b.hub.SendToPlayer(gameID, playerID, message)
 
 	log.Debug("Sent initial logs to player", slog.Int("log_count", len(logDtos)))
 }
@@ -296,12 +277,7 @@ func (b *Broadcaster) broadcastToSpectators(g *game.Game) {
 	}
 
 	for _, s := range spectators {
-		if err := b.hub.SendToSpectator(g.ID(), s.ID(), message); err != nil {
-			b.logger.Error("Failed to send game state to spectator",
-				slog.String("game_id", g.ID()),
-				slog.String("spectator_id", s.ID()),
-				slog.Any("error", err))
-		}
+		b.hub.SendToSpectator(g.ID(), s.ID(), message)
 	}
 
 	b.logger.Debug("Broadcasted to spectators",
@@ -365,16 +341,10 @@ func (b *Broadcaster) sendToEveryone(g *game.Game, message dto.WebSocketMessage)
 		if p.HasExited() {
 			continue
 		}
-		if err := b.hub.SendToPlayer(g.ID(), p.ID(), message); err != nil {
-			b.logger.Error("Failed to send message to player",
-				slog.String("game_id", g.ID()),
-				slog.String("player_id", p.ID()),
-				slog.String("type", string(message.Type)),
-				slog.Any("error", err))
-		}
+		b.hub.SendToPlayer(g.ID(), p.ID(), message)
 	}
-	for _, conn := range b.hub.GetManager().GetSpectatorConnections(g.ID()) {
-		conn.SendMessage(message)
+	for _, conn := range b.hub.Manager().SpectatorConnections(g.ID()) {
+		conn.Send(message)
 	}
 }
 
@@ -406,47 +376,7 @@ func (b *Broadcaster) SendInitialLogsToSpectator(gameID string, spectatorID stri
 		},
 	}
 
-	if err := b.hub.SendToSpectator(gameID, spectatorID, message); err != nil {
-		log.Error("Failed to send initial logs to spectator", slog.Any("error", err))
-		return
-	}
+	b.hub.SendToSpectator(gameID, spectatorID, message)
 
 	log.Debug("Sent initial logs to spectator", slog.Int("log_count", len(logDtos)))
-}
-
-// BroadcastLogUpdate broadcasts a single log entry to all players in a game
-func (b *Broadcaster) BroadcastLogUpdate(gameID string, logEntry *game.StateDiff) {
-	ctx := context.Background()
-	log := b.logger.With(slog.String("game_id", gameID))
-
-	g, err := b.gameRepo.Get(ctx, gameID)
-	if err != nil {
-		log.Error("Failed to get game for log broadcast", slog.Any("error", err))
-		return
-	}
-
-	logDto := dto.ToStateDiffDto(logEntry)
-	message := dto.WebSocketMessage{
-		Type:   dto.MessageTypeLogUpdate,
-		GameID: gameID,
-		Payload: dto.LogUpdatePayload{
-			Logs: []dto.StateDiffDto{logDto},
-		},
-	}
-
-	players := g.GetAllPlayers()
-	for _, player := range players {
-		if err := b.hub.SendToPlayer(gameID, player.ID(), message); err != nil {
-			log.Error("Failed to send log update to player",
-				slog.String("player_id", player.ID()),
-				slog.Any("error", err))
-		}
-	}
-
-	spectatorConns := b.hub.GetManager().GetSpectatorConnections(gameID)
-	for _, conn := range spectatorConns {
-		conn.SendMessage(message)
-	}
-
-	log.Debug("Broadcasted log update", slog.Int64("sequence", logEntry.SequenceNumber))
 }

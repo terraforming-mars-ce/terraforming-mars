@@ -101,6 +101,6 @@ func TestRestartGame_RejectedOutsideDevelopmentMode(t *testing.T) {
 	g, _, restart, stopper := setupRestartableGame(t, false)
 
 	err := restart.Execute(context.Background(), g.ID())
-	testutil.AssertError(t, err, "restart outside development mode")
+	testutil.AssertErrorContains(t, err, "only available in development mode", "restart outside development mode")
 	testutil.AssertEqual(t, 0, len(stopper.stopped), "bots untouched")
 }

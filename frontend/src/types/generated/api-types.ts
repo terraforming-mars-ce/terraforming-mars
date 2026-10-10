@@ -407,7 +407,7 @@ export interface BotReactionDto {
   personal: boolean;
   directed: boolean;
   big: boolean;
-  decision: "reacted" | "throttled" | "busy" | "own-turn";
+  decision: "reacted" | "throttled" | "busy" | "own-turn" | "quiet";
   output?: string;
 }
 /**
@@ -2472,34 +2472,17 @@ export const MessageTypeResumeBotToken: MessageType = "resume-bot-token";
 export const MessageTypeQuotePayment: MessageType = "quote-payment";
 export const MessageTypePaymentQuote: MessageType = "payment-quote";
 export const MessageTypePlayerConnect: MessageType = "player-connect";
-export const MessageTypeJoinGame: MessageType = "join-game";
 export const MessageTypeGameUpdated: MessageType = "game-updated";
 export const MessageTypePlayerConnected: MessageType = "player-connected";
-export const MessageTypePlayerReconnected: MessageType = "player-reconnected";
-export const MessageTypePlayerDisconnected: MessageType = "player-disconnected";
 export const MessageTypeError: MessageType = "error";
-export const MessageTypeFullState: MessageType = "full-state";
-export const MessageTypeProductionPhaseStarted: MessageType = "production-phase-started";
 export const MessageTypeLogUpdate: MessageType = "log-update";
 export const MessageTypeActionStandardProject: MessageType = "action.standard-project";
 export const MessageTypeActionConfirmSellPatents: MessageType =
   "action.standard-project.confirm-sell-patents";
-/**
- * Legacy message types for backwards compatibility (all route to unified handler)
- */
-export const MessageTypeActionSellPatents: MessageType = "action.standard-project.sell-patents";
-export const MessageTypeActionLaunchAsteroid: MessageType =
-  "action.standard-project.launch-asteroid";
-export const MessageTypeActionBuildPowerPlant: MessageType =
-  "action.standard-project.build-power-plant";
-export const MessageTypeActionBuildAquifer: MessageType = "action.standard-project.build-aquifer";
-export const MessageTypeActionPlantGreenery: MessageType = "action.standard-project.plant-greenery";
-export const MessageTypeActionBuildCity: MessageType = "action.standard-project.build-city";
 export const MessageTypeActionConvertPlantsToGreenery: MessageType =
   "action.resource-conversion.convert-plants-to-greenery";
 export const MessageTypeActionConvertHeatToTemperature: MessageType =
   "action.resource-conversion.convert-heat-to-temperature";
-export const MessageTypeCreateGame: MessageType = "create-game";
 export const MessageTypeAddBot: MessageType = "add-bot";
 export const MessageTypeActionStartGame: MessageType = "action.game-management.start-game";
 export const MessageTypeActionSkipAction: MessageType = "action.game-management.skip-action";
@@ -2514,7 +2497,6 @@ export const MessageTypeActionPlayCard: MessageType = "action.card.play-card";
 export const MessageTypeActionCardAction: MessageType = "action.card.card-action";
 export const MessageTypeActionSelectStartingChoices: MessageType =
   "action.card.select-starting-choices";
-export const MessageTypeActionSelectCards: MessageType = "action.card.select-cards";
 export const MessageTypeActionConfirmProductionCards: MessageType =
   "action.card.confirm-production-cards";
 export const MessageTypeActionCardDrawConfirmed: MessageType = "action.card.card-draw-confirmed";
@@ -2549,7 +2531,6 @@ export const MessageTypeUpdateGameSettings: MessageType = "update-game-settings"
 export const MessageTypeSetPlayerColor: MessageType = "set-player-color";
 export const MessageTypeSpectatorConnect: MessageType = "spectator-connect";
 export const MessageTypeSpectatorConnected: MessageType = "spectator-connected";
-export const MessageTypeSpectatorDisconnected: MessageType = "spectator-disconnected";
 export const MessageTypeChatMessage: MessageType = "chat-message";
 export const MessageTypeChatUpdate: MessageType = "chat-update";
 export const MessageTypeEmoteSend: MessageType = "emote-send";
@@ -2713,65 +2694,30 @@ export interface GameUpdatedPayload {
   game: GameDto;
 }
 /**
- * PlayerConnectedPayload contains data about a newly connected player
+ * PlayerConnectedPayload confirms which player a connection now acts as.
  */
 export interface PlayerConnectedPayload {
   playerId: string;
   playerName: string;
-  game: GameDto;
 }
 /**
- * ErrorPayload contains error information
+ * ErrorPayload tells a client that one of its requests failed. It is only ever sent to
+ * the client that made the request.
  */
 export interface ErrorPayload {
   message: string;
   code?: string;
-}
-/**
- * PlayCardErrorPayload identifies the rejected card play for client presentation recovery.
- */
-export interface PlayCardErrorPayload {
-  action: "play-card";
-  cardId: string;
-  error: string;
-}
-/**
- * FullStatePayload contains the complete game state
- */
-export interface FullStatePayload {
-  game: GameDto;
-  playerId: string;
-}
-/**
- * PlayerReconnectedPayload contains data about a reconnected player
- */
-export interface PlayerReconnectedPayload {
-  playerId: string;
-  playerName: string;
-  game: GameDto;
-}
-/**
- * PlayerDisconnectedPayload contains data about a disconnected player (for internal handler use)
- */
-export interface PlayerDisconnectedPayload {
-  playerId: string;
-  gameId: string;
-}
-/**
- * PlayerProductionData contains production data for a single player
- */
-export interface PlayerProductionData {
-  playerId: string;
-  playerName: string;
-  production: ProductionDto;
-}
-/**
- * ProductionPhaseStartedPayload contains data when production phase begins
- */
-export interface ProductionPhaseStartedPayload {
-  generation: number /* int */;
-  playersData: PlayerProductionData[];
-  game: GameDto;
+  /**
+   * RequestType is the client message type that failed.
+   */
+  requestType?: MessageType;
+  /**
+   * CardID, ResolutionID and SelectionID identify what the failed request was about,
+   * so the client can restore that part of its UI.
+   */
+  cardId?: string;
+  resolutionId?: string;
+  selectionId?: string;
 }
 /**
  * LogUpdatePayload contains game log entries sent via WebSocket
@@ -2779,13 +2725,6 @@ export interface ProductionPhaseStartedPayload {
 export interface LogUpdatePayload {
   logs: StateDiffDto[];
   isHistory: boolean;
-}
-/**
- * ConfirmStartingCardSelectionMessage represents confirm starting card selection message
- */
-export interface ConfirmStartingCardSelectionMessage {
-  gameId: string;
-  playerId: string;
 }
 /**
  * PlayerTakeoverPayload contains data for player takeover requests
@@ -2802,18 +2741,10 @@ export interface SpectatorConnectPayload {
   gameId: string;
 }
 /**
- * SpectatorConnectedPayload contains data about a newly connected spectator.
+ * SpectatorConnectedPayload confirms which spectator a connection now acts as.
  */
 export interface SpectatorConnectedPayload {
   spectatorId: string;
-  game: GameDto;
-}
-/**
- * SpectatorDisconnectedPayload contains data about a disconnected spectator.
- */
-export interface SpectatorDisconnectedPayload {
-  spectatorId: string;
-  gameId: string;
 }
 /**
  * ChatMessagePayload contains a chat message from a client.

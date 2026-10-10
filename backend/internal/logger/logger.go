@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"io"
 	"log/slog"
 	"os"
 )
@@ -9,16 +10,12 @@ import (
 // logger without rebuilding the handler.
 var globalLevel = new(slog.LevelVar)
 
-// Init initializes the process-wide slog default logger. In production it emits
+// Init sets the process-wide slog default logger, writing to w at the given level
+// ("debug", "info", "warn" or "error"; anything else means info). In production it emits
 // JSON; otherwise it uses the pretty colored console handler. The whole backend
 // — domain, action, delivery, service — logs through slog.Default().
-func Init(logLevel *string) error {
-	appliedLogLevel := "info"
-	if logLevel != nil {
-		appliedLogLevel = *logLevel
-	}
-
-	switch appliedLogLevel {
+func Init(w io.Writer, level string) {
+	switch level {
 	case "debug":
 		globalLevel.Set(slog.LevelDebug)
 	case "warn":
@@ -31,30 +28,18 @@ func Init(logLevel *string) error {
 
 	var handler slog.Handler
 	if os.Getenv("GO_ENV") == "production" {
-		handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: globalLevel, AddSource: true})
+		handler = slog.NewJSONHandler(w, &slog.HandlerOptions{Level: globalLevel, AddSource: true})
 	} else {
-		handler = newPrettyHandler(os.Stderr, globalLevel)
+		handler = newPrettyHandler(w, globalLevel)
 	}
 
 	slog.SetDefault(slog.New(handler))
-	return nil
 }
 
 // Get returns the process-wide logger. Before Init runs it falls back to the
 // slog default (a plain text handler), so callers never get a nil logger.
 func Get() *slog.Logger {
 	return slog.Default()
-}
-
-// Sync is a no-op: slog handlers write synchronously to stderr. Retained so the
-// server shutdown path and tests compile unchanged.
-func Sync() error {
-	return nil
-}
-
-// Shutdown is a no-op; see Sync.
-func Shutdown() error {
-	return nil
 }
 
 // WithContext returns a logger with additional context attributes.

@@ -41,7 +41,7 @@ func TestRegistryGetByID(t *testing.T) {
 	testutil.AssertEqual(t, "Landlord", def.Name, "Name should match")
 
 	_, err = registry.GetByID("nonexistent")
-	testutil.AssertError(t, err, "Should fail for unknown ID")
+	testutil.AssertErrorContains(t, err, "award not found", "Should fail for unknown ID")
 }
 
 func TestRegistryGetAllOrder(t *testing.T) {

@@ -148,7 +148,8 @@ func TestRobinsonIndustries_OnlyAllowsIncreasingLowestProduction(t *testing.T) {
 	steelChoice := 1
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &steelChoice, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Robinson Industries should reject increasing steel production (3) when other productions are at 0")
+	testutil.AssertErrorContains(t, err, "choice not valid for policy", "Robinson Industries should reject increasing steel production (3) when other productions are at 0")
+	testutil.AssertEqual(t, 3, p.Resources().Production().Steel, "steel production unchanged")
 }
 
 func TestRobinsonIndustries_ActionFailsWithInsufficientCredits(t *testing.T) {
@@ -189,7 +190,7 @@ func TestRobinsonIndustries_ActionFailsWithInsufficientCredits(t *testing.T) {
 	choiceIndex := 0
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Robinson Industries action should fail with only 3 credits")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Robinson Industries action should fail with only 3 credits")
 
 	resources := p.Resources().Get()
 	testutil.AssertEqual(t, 3, resources.Credits, "Credits should remain unchanged at 3")
@@ -252,8 +253,7 @@ func TestRobinsonIndustries_StateCalculatorBlocksWhenUnaffordable(t *testing.T) 
 //
 // =============================================================================
 func TestSaturnSystems_CorporationPlays(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Saturn Systems")
@@ -310,8 +310,7 @@ func TestSaturnSystems_CorporationPlays(t *testing.T) {
 //
 // =============================================================================
 func TestTeractor_CorporationPlays(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Teractor")

@@ -34,10 +34,10 @@ func (h *UpdateGameSettingsHandler) HandleMessage(ctx context.Context, connectio
 		slog.String("message_type", string(message.Type)),
 	)
 
-	gameID := connection.GameID
-	playerID := connection.PlayerID
+	gameID := connection.GameID()
+	playerID := connection.PlayerID()
 	if gameID == "" || playerID == "" {
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
@@ -45,12 +45,12 @@ func (h *UpdateGameSettingsHandler) HandleMessage(ctx context.Context, connectio
 	// that the client actually sent.
 	raw, err := json.Marshal(message.Payload)
 	if err != nil {
-		h.sendError(connection, "Invalid payload")
+		connection.SendError(message.Type, "Invalid payload")
 		return
 	}
 	var patch dto.UpdateGameSettingsRequest
 	if err := json.Unmarshal(raw, &patch); err != nil {
-		h.sendError(connection, "Invalid payload")
+		connection.SendError(message.Type, "Invalid payload")
 		return
 	}
 
@@ -67,19 +67,10 @@ func (h *UpdateGameSettingsHandler) HandleMessage(ctx context.Context, connectio
 	}
 	if err := h.action.Execute(ctx, gameID, playerID, &domainPatch); err != nil {
 		log.Debug("Failed to update game settings", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	h.broadcaster.BroadcastGameState(gameID, nil)
 	log.Debug("Game settings updated and broadcast")
-}
-
-func (h *UpdateGameSettingsHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]any{
-			"error": errorMessage,
-		},
-	}
 }

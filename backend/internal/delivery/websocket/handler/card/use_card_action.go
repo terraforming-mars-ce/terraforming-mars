@@ -37,30 +37,30 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 
 	log.Debug("Processing use card action request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payload, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	cardID, ok := payload["cardId"].(string)
 	if !ok || cardID == "" {
 		log.Error("Missing or invalid cardId")
-		h.sendError(connection, "Missing cardId")
+		connection.SendError(message.Type, "Missing cardId")
 		return
 	}
 
 	behaviorIndexFloat, ok := payload["behaviorIndex"].(float64)
 	if !ok {
 		log.Error("Missing or invalid behaviorIndex")
-		h.sendError(connection, "Missing behaviorIndex")
+		connection.SendError(message.Type, "Missing behaviorIndex")
 		return
 	}
 	behaviorIndex := int(behaviorIndexFloat)
@@ -76,7 +76,7 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 		for _, v := range raw {
 			id, ok := v.(string)
 			if !ok {
-				h.sendError(connection, "Invalid storage input source")
+				connection.SendError(message.Type, "Invalid storage input source")
 				return
 			}
 			cardStorageSources = append(cardStorageSources, id)
@@ -104,7 +104,7 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 	var selectedAmount *int
 	if saFloat, ok := payload["selectedAmount"].(float64); ok {
 		if saFloat < 0 || saFloat > 2147483647 || saFloat != float64(int(saFloat)) {
-			h.sendError(connection, "Invalid selected amount")
+			connection.SendError(message.Type, "Invalid selected amount")
 			return
 		}
 		sa := int(saFloat)
@@ -115,12 +115,12 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 	if value, ok := payload["payment"]; ok {
 		raw, err := json.Marshal(value)
 		if err != nil {
-			h.sendError(connection, "Invalid payment")
+			connection.SendError(message.Type, "Invalid payment")
 			return
 		}
 		var payment shared.Payment
 		if err = json.Unmarshal(raw, &payment); err != nil {
-			h.sendError(connection, "Invalid payment")
+			connection.SendError(message.Type, "Invalid payment")
 			return
 		}
 		actionPayment = &payment
@@ -151,37 +151,16 @@ func (h *UseCardActionHandler) HandleMessage(ctx context.Context, connection *co
 		log = log.With(slog.String("reuse_source_card_id", *reuseSourceCardID))
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardID, behaviorIndex, choiceIndex, cardStorageTargets, targetPlayerID, stealSourceCardID, selectedAmount, actionPayment, reuseSourceCardID, cardStorageSources)
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), cardID, behaviorIndex, choiceIndex, cardStorageTargets, targetPlayerID, stealSourceCardID, selectedAmount, actionPayment, reuseSourceCardID, cardStorageSources)
 	if err != nil {
 		log.Error("Failed to execute use card action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Card action completed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 	log.Debug("Broadcasted game state to all players")
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":        "card-action",
-			"success":       true,
-			"cardId":        cardID,
-			"behaviorIndex": behaviorIndex,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *UseCardActionHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

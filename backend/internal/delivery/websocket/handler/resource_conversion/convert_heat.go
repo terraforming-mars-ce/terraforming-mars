@@ -41,9 +41,9 @@ func (h *ConvertHeatHandler) HandleMessage(ctx context.Context, connection *core
 
 	log.Debug("Processing convert heat request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
@@ -51,40 +51,21 @@ func (h *ConvertHeatHandler) HandleMessage(ctx context.Context, connection *core
 	if message.Payload != nil {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		if err := json.Unmarshal(payloadBytes, &req); err != nil {
-			h.sendError(connection, "Invalid payment")
+			connection.SendError(message.Type, "Invalid payment")
 			return
 		}
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, dto.ToPayment(req.Payment))
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), dto.ToPayment(req.Payment))
 	if err != nil {
 		log.Error("Failed to execute convert heat action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Heat conversion completed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 	log.Debug("Broadcasted game state to all players")
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "convert-heat",
-			"success": true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *ConvertHeatHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

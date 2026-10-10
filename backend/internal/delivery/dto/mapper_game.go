@@ -44,7 +44,8 @@ func firstOrNil(regs []colony.ColonyRegistry) colony.ColonyRegistry {
 	return nil
 }
 
-// ToGameDtoFull converts Game to GameDto with all expansion registries
+// ToGameDtoFull converts Game to GameDto as playerID sees it. A viewer who is not a player
+// in the game sees every player's public data only.
 func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID string, registries Registries) GameDto {
 	if g.ResumeLobby() != nil {
 		return ToResumeGameDto(g, playerID, cardRegistry)
@@ -62,15 +63,6 @@ func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID s
 		} else {
 			otherPlayers = append(otherPlayers, ToOtherPlayerDto(p, g, cardRegistry))
 		}
-	}
-
-	if viewingPlayer == nil && len(players) > 0 {
-		otherPlayers = make([]OtherPlayerDto, 0)
-		currentPlayer = ToPlayerDto(players[0], g, cardRegistry, registries.StandardProjectRegistry, registries.AwardRegistry, registries.MilestoneRegistry)
-		for i := 1; i < len(players); i++ {
-			otherPlayers = append(otherPlayers, ToOtherPlayerDto(players[i], g, cardRegistry))
-		}
-		playerID = players[0].ID()
 	}
 
 	settings := g.Settings()

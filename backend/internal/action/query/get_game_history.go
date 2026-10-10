@@ -2,8 +2,10 @@ package query
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"openmars/internal/game/datastore"
 	"openmars/internal/game/shared"
@@ -26,6 +28,14 @@ type HistoryFilter struct {
 	Phases []shared.GamePhase
 	Policy HistoryPolicy
 }
+
+// ErrGameNotFound means the game has no history because it does not exist.
+var ErrGameNotFound = errors.New("game not found")
+
+// ErrInvalidFilter means a history filter names an unknown phase or policy.
+var ErrInvalidFilter = errors.New("invalid history filter")
+
+var policies = []HistoryPolicy{HistoryPolicyLatestInAction, HistoryPolicyEveryTurn, HistoryPolicyEveryAction}
 
 // GetGameHistoryAction handles querying game state history
 type GetGameHistoryAction struct {
@@ -53,9 +63,24 @@ func (a *GetGameHistoryAction) Execute(ctx context.Context, gameID string, filte
 	log := a.logger.With(slog.String("game_id", gameID))
 	log.Debug("Querying game history")
 
+	if filter != nil {
+		if filter.Policy != "" && !slices.Contains(policies, filter.Policy) {
+			return nil, fmt.Errorf("%w: unknown policy %q", ErrInvalidFilter, filter.Policy)
+		}
+		for _, phase := range filter.Phases {
+			if !shared.IsGamePhase(phase) {
+				return nil, fmt.Errorf("%w: unknown phase %q", ErrInvalidFilter, phase)
+			}
+		}
+	}
 	entries, err := a.ds.GetGameHistory(gameID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get game history: %w", err)
+	}
+	if len(entries) == 0 {
+		if state, err := a.ds.GetGame(gameID); err != nil || state == nil {
+			return nil, ErrGameNotFound
+		}
 	}
 
 	if filter != nil {

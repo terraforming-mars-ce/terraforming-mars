@@ -25,15 +25,16 @@ func (h *paymentQuoteHandler) HandleMessage(ctx context.Context, c *core.Connect
 		if err = json.Unmarshal(raw, &request); err != nil {
 			return err
 		}
-		if c.GameID == "" || c.PlayerID == "" {
+		id := c.Identity()
+		if !id.IsPlayer() {
 			return fmt.Errorf("not connected to a game")
 		}
 		b := h.broadcaster
-		g, err := b.gameRepo.Get(ctx, c.GameID)
+		g, err := b.gameRepo.Get(ctx, id.GameID)
 		if err != nil {
 			return err
 		}
-		p, err := g.GetPlayer(c.PlayerID)
+		p, err := g.GetPlayer(id.PlayerID)
 		if err != nil {
 			return err
 		}
@@ -48,5 +49,5 @@ func (h *paymentQuoteHandler) HandleMessage(ctx context.Context, c *core.Connect
 	if err != nil {
 		response["error"] = err.Error()
 	}
-	c.Send <- dto.WebSocketMessage{Type: "payment-quote", GameID: c.GameID, Payload: response}
+	c.Send(dto.WebSocketMessage{Type: dto.MessageTypePaymentQuote, GameID: c.GameID(), Payload: response})
 }

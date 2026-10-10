@@ -7,8 +7,6 @@ import type {
   ChatMessageDto,
   SelectDemoChoicesRequest,
   GameDto,
-  PlayerDisconnectedPayload,
-  FullStatePayload,
   LogUpdatePayload,
   UpdateGameSettingsRequest,
   EmotePayload,
@@ -88,14 +86,6 @@ class GlobalWebSocketManager implements WebSocketConnection {
 
     webSocketService.on("game-updated", (updatedGame: GameDto) => {
       this.emit("game-updated", updatedGame);
-    });
-
-    webSocketService.on("full-state", (statePayload: FullStatePayload) => {
-      this.emit("full-state", statePayload);
-    });
-
-    webSocketService.on("player-disconnected", (payload: PlayerDisconnectedPayload) => {
-      this.emit("player-disconnected", payload);
     });
 
     webSocketService.on("player-kicked", (payload: any) => {
@@ -469,10 +459,6 @@ class GlobalWebSocketManager implements WebSocketConnection {
 
   get connected() {
     return webSocketService.connected;
-  }
-
-  get playerId() {
-    return webSocketService.playerId;
   }
 
   get gameId() {

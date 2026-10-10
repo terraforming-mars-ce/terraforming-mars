@@ -1,9 +1,11 @@
 package behavior_test
 
 import (
+	"context"
 	"testing"
 
 	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/colony"
 	"openmars/internal/game/shared"
 	"openmars/test/testutil"
 )
@@ -38,10 +40,7 @@ func TestMisc_BonusTagsWithPer(t *testing.T) {
 	p.PlayedCards().AddCard("jov-b", "JovianB", "automated", []string{"jovian"})
 	p.PlayedCards().AddCard("jov-c", "JovianC", "automated", []string{"jovian"})
 
-	// The MiscCondition Per field tells the handler which tag type to count and grant.
-	// The behavior applier's general Per scaling also applies, so the final bonus count is
-	// (tag_count * amount) computed by the general scaler, then multiplied again by tag_count
-	// inside applyMiscOutput. With 3 jovian tags and amount=1: scaled_amount=3, bonusCount=3*3=9.
+	// One bonus jovian tag per jovian tag the player has, as on Home Schooled.
 	output := &shared.MiscCondition{
 		ConditionBase: shared.ConditionBase{ResourceType: shared.ResourceBonusTags, Amount: 1, Target: "none"},
 		Per: &shared.PerCondition{
@@ -55,14 +54,28 @@ func TestMisc_BonusTagsWithPer(t *testing.T) {
 	}
 	applyOutputs(t, p, testGame, cardRegistry, output)
 
-	bonusTags := p.BonusTags()
-	// General Per scaling (3) * misc handler's internal counting (3) = 9
-	testutil.AssertEqual(t, 9, bonusTags[shared.TagJovian], "player should have bonus jovian tags from Per scaling")
+	testutil.AssertEqual(t, 3, p.BonusTags()[shared.TagJovian], "one bonus tag per jovian tag")
 }
 
 func TestMisc_FreeTrade(t *testing.T) {
-	// TODO: Free trade requires colonies expansion (CreateTestGameWithColonies helper does not exist).
-	// Setting up colonies manually is complex (colony tile states, trade fleets, etc.).
-	// This test should be implemented when a colony test helper becomes available.
-	t.Skip("requires colonies expansion setup")
+	testGame, _, cardRegistry, playerID, _ := testutil.SetupTwoPlayerGame(t)
+	p, _ := testGame.GetPlayer(playerID)
+	settings := testGame.Settings()
+	settings.CardPacks = append(settings.CardPacks, shared.PackColonies)
+	testGame.UpdateSettings(context.Background(), settings)
+	testGame.Colonies().SetStates([]*colony.ColonyState{
+		{DefinitionID: "luna", MarkerPosition: 1},
+		{DefinitionID: "ganymede", MarkerPosition: 1, TradedThisGen: true},
+	})
+	freeTrade := shared.NewMiscCondition(shared.ResourceFreeTrade, 1, "self-player")
+
+	applyOutputs(t, p, testGame, cardRegistry, freeTrade)
+	testutil.AssertTrue(t, p.Selection().GetPendingFreeTradeSelection() == nil, "without a trade fleet there is no free trade")
+
+	testGame.Colonies().AddTradeFleets(playerID, 1)
+	applyOutputs(t, p, testGame, cardRegistry, freeTrade)
+	pending := p.Selection().GetPendingFreeTradeSelection()
+	testutil.AssertTrue(t, pending != nil, "a player with a trade fleet should be offered a free trade")
+	testutil.AssertEqual(t, 1, len(pending.AvailableColonyIDs), "only colonies not traded with this generation are offered")
+	testutil.AssertEqual(t, "luna", pending.AvailableColonyIDs[0], "luna is the colony still open for trade")
 }

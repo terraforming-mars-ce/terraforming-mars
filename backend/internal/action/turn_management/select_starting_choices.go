@@ -209,17 +209,7 @@ func (a *SelectStartingChoicesAction) validatePreludes(g *game.Game, p *player.P
 		return fmt.Errorf("must select exactly %d preludes, got %d", preludePhase.MaxSelectable, len(preludeIDs))
 	}
 
-	availableSet := make(map[string]bool, len(preludePhase.AvailablePreludes))
-	for _, id := range preludePhase.AvailablePreludes {
-		availableSet[id] = true
-	}
-	for _, id := range preludeIDs {
-		if !availableSet[id] {
-			return fmt.Errorf("prelude %s not available for selection", id)
-		}
-	}
-
-	return nil
+	return baseaction.ValidateSelection(preludePhase.AvailablePreludes, preludeIDs, "prelude")
 }
 
 func (a *SelectStartingChoicesAction) validateStartingCards(g *game.Game, p *player.Player, corporationID string, cardIDs []string, log *slog.Logger) error {
@@ -228,17 +218,7 @@ func (a *SelectStartingChoicesAction) validateStartingCards(g *game.Game, p *pla
 		return fmt.Errorf("not in starting card selection phase")
 	}
 
-	availableSet := make(map[string]bool)
-	for _, id := range selectionPhase.AvailableCards {
-		availableSet[id] = true
-	}
-	for _, cardID := range cardIDs {
-		if !availableSet[cardID] {
-			return fmt.Errorf("card %s not available for selection", cardID)
-		}
-	}
-
-	return nil
+	return baseaction.ValidateSelection(selectionPhase.AvailableCards, cardIDs, "card")
 }
 
 // getCardBuyCost returns the per-card buy cost accounting for corporation effects (e.g., Polyphemos pays 5 instead of 3)

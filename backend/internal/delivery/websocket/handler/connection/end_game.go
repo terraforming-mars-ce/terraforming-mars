@@ -3,7 +3,6 @@ package connection
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	connaction "openmars/internal/action/connection"
 	"openmars/internal/delivery/dto"
@@ -36,20 +35,18 @@ func (h *EndGameHandler) HandleMessage(ctx context.Context, connection *core.Con
 
 	log.Debug("Processing end game request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "not connected to game")
+		connection.SendError(message.Type, "not connected to game")
 		return
 	}
 
-	gameID := connection.GameID
+	gameID := connection.GameID()
 
-	gameConnections := h.hub.GetManager().GetGameConnections(gameID)
-
-	err := h.action.Execute(ctx, gameID, connection.PlayerID)
+	err := h.action.Execute(ctx, gameID, connection.PlayerID())
 	if err != nil {
 		log.Error("Failed to execute end game action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
@@ -61,24 +58,5 @@ func (h *EndGameHandler) HandleMessage(ctx context.Context, connection *core.Con
 		Payload: map[string]any{"reason": "The host ended the game"},
 	}
 
-	for conn := range gameConnections {
-		conn.SendMessage(gameEndedMessage)
-	}
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		for conn := range gameConnections {
-			conn.Close()
-		}
-		log.Debug("Closed all connections for ended game", slog.String("game_id", gameID))
-	}()
-}
-
-func (h *EndGameHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]any{
-			"error": errorMessage,
-		},
-	}
+	h.hub.DisconnectGame(gameID, gameEndedMessage)
 }

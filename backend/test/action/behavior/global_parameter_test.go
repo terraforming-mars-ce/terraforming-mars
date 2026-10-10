@@ -35,8 +35,7 @@ func TestGlobalParameter_OxygenIncrease(t *testing.T) {
 }
 
 func TestGlobalParameter_VenusIncrease(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithVenus(t, 2, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithVenus(t, 2)
 	testutil.StartTestGame(t, testGame)
 	cardRegistry := testutil.CreateTestCardRegistry()
 

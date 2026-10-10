@@ -41,16 +41,16 @@ func (h *ExecuteHandler) HandleMessage(ctx context.Context, connection *core.Con
 		slog.String("message_type", string(message.Type)),
 	)
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	projectID := extractProjectID(message)
 	if projectID == "" {
 		log.Error("Missing projectId")
-		h.sendError(connection, "Missing projectId")
+		connection.SendError(message.Type, "Missing projectId")
 		return
 	}
 
@@ -62,34 +62,25 @@ func (h *ExecuteHandler) HandleMessage(ctx context.Context, connection *core.Con
 	}
 	paymentBytes, paymentErr := json.Marshal(message.Payload)
 	if paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, projectID, paymentEnvelope.Payment)
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), projectID, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute standard project", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Standard project executed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 
-	connection.Send <- dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":    "standard-project",
-			"projectId": projectID,
-			"success":   true,
-		},
-	}
 }
 
 // extractProjectID gets the project ID from either the payload or the legacy message type
@@ -127,13 +118,4 @@ func extractProjectIDFromMessageType(msgType string) string {
 		return projectID
 	}
 	return ""
-}
-
-func (h *ExecuteHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

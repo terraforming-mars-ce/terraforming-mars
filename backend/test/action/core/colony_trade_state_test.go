@@ -18,8 +18,7 @@ import (
 func setupTradeStateGame(t *testing.T) (*game.Game, gamecards.CardRegistry, string) {
 	t.Helper()
 
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	settings := testGame.Settings()

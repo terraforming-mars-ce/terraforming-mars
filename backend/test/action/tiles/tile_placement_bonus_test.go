@@ -15,8 +15,7 @@ import (
 
 func TestSelectTileAction_BonusesRemovedAfterClaim(t *testing.T) {
 	ctx := context.Background()
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -78,8 +77,7 @@ func TestSelectTileAction_BonusesRemovedAfterClaim(t *testing.T) {
 
 func TestSelectTileAction_CardDrawBonusRemovedAfterClaim(t *testing.T) {
 	ctx := context.Background()
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -140,8 +138,7 @@ func TestSelectTileAction_CardDrawBonusRemovedAfterClaim(t *testing.T) {
 
 func TestSelectTileAction_OceanAdjacencyBonus(t *testing.T) {
 	ctx := context.Background()
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -183,8 +180,7 @@ func TestSelectTileAction_OceanAdjacencyBonus(t *testing.T) {
 
 func TestSelectTileAction_OceanAdjacencyBonus_MultipleOceans(t *testing.T) {
 	ctx := context.Background()
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -232,8 +228,7 @@ func TestSelectTileAction_OceanAdjacencyBonus_MultipleOceans(t *testing.T) {
 
 func TestSelectTileAction_OceanAdjacencyBonus_OceanTileGetsBonus(t *testing.T) {
 	ctx := context.Background()
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -279,8 +274,7 @@ func TestSelectTileAction_OceanAdjacencyBonus_OceanTileGetsBonus(t *testing.T) {
 // to the player's resources.
 func TestSelectTileAction_MultipleBonusesOnTile(t *testing.T) {
 	ctx := context.Background()
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -345,8 +339,7 @@ func TestSelectTileAction_MultipleBonusesOnTile(t *testing.T) {
 // "ocean" so they can pick where to place it.
 func TestSelectTileAction_OceanPlacementBonus(t *testing.T) {
 	ctx := context.Background()
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -405,8 +398,7 @@ func TestSelectTileAction_OceanPlacementBonus(t *testing.T) {
 // for card play.
 func TestSelectTileAction_NegativeBonusBlocksUnaffordablePlacement(t *testing.T) {
 	ctx := context.Background()
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -463,8 +455,7 @@ func TestSelectTileAction_NegativeBonusBlocksUnaffordablePlacement(t *testing.T)
 // affordability gate lets the placement proceed when the player has enough.
 func TestSelectTileAction_NegativeBonusAppliedWhenAffordable(t *testing.T) {
 	ctx := context.Background()
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()

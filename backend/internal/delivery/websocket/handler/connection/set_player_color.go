@@ -33,23 +33,23 @@ func (h *SetPlayerColorHandler) HandleMessage(ctx context.Context, connection *c
 		slog.String("message_type", string(message.Type)),
 	)
 
-	gameID := connection.GameID
-	playerID := connection.PlayerID
+	gameID := connection.GameID()
+	playerID := connection.PlayerID()
 	if gameID == "" || playerID == "" {
-		h.sendError(connection, "not connected to game as a player")
+		connection.SendError(message.Type, "not connected to game as a player")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "invalid payload format")
+		connection.SendError(message.Type, "invalid payload format")
 		return
 	}
 
 	color, _ := payloadMap["color"].(string)
 	if color == "" {
-		h.sendError(connection, "missing color")
+		connection.SendError(message.Type, "missing color")
 		return
 	}
 
@@ -60,18 +60,9 @@ func (h *SetPlayerColorHandler) HandleMessage(ctx context.Context, connection *c
 
 	if err := h.action.Execute(ctx, gameID, playerID, targetPlayerID, color); err != nil {
 		log.Error("Failed to set player color", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	h.broadcaster.BroadcastGameState(gameID, nil)
-}
-
-func (h *SetPlayerColorHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.SendMessage(dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	})
 }

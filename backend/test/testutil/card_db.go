@@ -42,7 +42,8 @@ func GetCardDB() gamecards.CardRegistry {
 	return realCardDB
 }
 
-// GetCardByName returns a card from the real DB by its name.
+// GetCardByName returns a copy of a card from the real DB by its name, so a test can
+// change it without affecting other tests.
 // Panics if the card is not found.
 func GetCardByName(name string) gamecards.Card {
 	loadOnce.Do(loadCards)
@@ -50,10 +51,11 @@ func GetCardByName(name string) gamecards.Card {
 	if !ok {
 		panic(fmt.Sprintf("card not found by name: %s", name))
 	}
-	return card
+	return card.DeepCopy()
 }
 
-// GetCardByID returns a card from the real DB by its ID.
+// GetCardByID returns a copy of a card from the real DB by its ID, so a test can change
+// it without affecting other tests.
 // Panics if the card is not found.
 func GetCardByID(id string) gamecards.Card {
 	loadOnce.Do(loadCards)
@@ -61,7 +63,7 @@ func GetCardByID(id string) gamecards.Card {
 	if !ok {
 		panic(fmt.Sprintf("card not found by ID: %s", id))
 	}
-	return card
+	return card.DeepCopy()
 }
 
 // CardID returns the real card ID for a given card name.

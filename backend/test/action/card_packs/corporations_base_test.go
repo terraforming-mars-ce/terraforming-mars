@@ -14,7 +14,6 @@ import (
 	"openmars/internal/game/colony"
 	"openmars/internal/game/standardproject"
 	"testing"
-	"time"
 
 	"openmars/internal/action/admin"
 	cardAction "openmars/internal/action/card"
@@ -71,8 +70,6 @@ func TestCrediCor_Gain4MCWhenPlayingExpensiveCard(t *testing.T) {
 		ResourceCredit, 21)
 	err = playCard.Execute(ctx, testGame.ID(), playerID, cardID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "PlayCard should succeed for Comet")
-
-	time.Sleep(50 * time.Millisecond)
 
 	expected := creditsBefore - 21 + 4
 	actual := p.Resources().Get().Credits
@@ -217,8 +214,6 @@ func TestInterplanetaryCinematics_Gain2MCWhenPlayingEvent(t *testing.T) {
 	err = playCardAction.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Virus"), payment, testutil.IntPtr(1), nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Virus should succeed")
 
-	time.Sleep(50 * time.Millisecond)
-
 	creditsAfter := p.Resources().Get().Credits
 	testutil.AssertEqual(t, creditsBefore-1+2, creditsAfter, "Should gain 2 MC from IC effect after paying 1 for Virus")
 }
@@ -321,8 +316,6 @@ func TestMiningGuild_SteelProductionOnPlacementBonus(t *testing.T) {
 			"steel": 1,
 		},
 	})
-
-	time.Sleep(50 * time.Millisecond)
 
 	productionAfter := p.Resources().Production().Steel
 	testutil.AssertEqual(t, 2, productionAfter, "Steel production should be 2 after placement bonus trigger")
@@ -444,8 +437,6 @@ func TestTharsisRepublic_GainCreditsAndProductionOnCityPlacement(t *testing.T) {
 		PlayerID: playerID,
 		TileType: string(shared.ResourceCityTile),
 	})
-
-	time.Sleep(50 * time.Millisecond)
 
 	testutil.AssertEqual(t, creditsBefore+3, p.Resources().Get().Credits, "Self city placement should gain 3 M€")
 	testutil.AssertEqual(t, creditProductionBefore+1, p.Resources().Production().Credits, "City on mars should increase M€ production by 1")

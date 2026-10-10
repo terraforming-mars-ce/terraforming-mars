@@ -82,9 +82,11 @@ func TestDevelopmentCenter_FailsWithoutEnergy(t *testing.T) {
 		},
 	})
 
+	handBefore := p.Hand().CardCount()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Development Center should fail without energy")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Development Center should fail without energy")
+	testutil.AssertEqual(t, handBefore, p.Hand().CardCount(), "no card drawn")
 }
 
 // --- Regolith Eaters (033) ---

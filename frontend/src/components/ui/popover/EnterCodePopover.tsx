@@ -74,7 +74,7 @@ const EnterCodePopover: React.FC<EnterCodePopoverProps> = ({
       }
 
       if (
-        (game.currentPlayer ? 1 : 0) + (game.otherPlayers?.length || 0) >=
+        (game.currentPlayer?.id ? 1 : 0) + (game.otherPlayers?.length || 0) >=
         (game.settings?.maxPlayers || 10)
       ) {
         throw new Error("Game is full");

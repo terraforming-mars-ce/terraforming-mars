@@ -77,8 +77,7 @@ func TestParse_Rejects(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := changelog.Parse(changelog.Developer, tt.version, []byte(tt.data))
-			testutil.AssertError(t, err, "parse")
-			testutil.AssertTrue(t, strings.Contains(err.Error(), tt.wantErr), "error "+err.Error()+" mentions "+tt.wantErr)
+			testutil.AssertErrorContains(t, err, tt.wantErr, "parse")
 		})
 	}
 }
@@ -122,7 +121,7 @@ func TestLoadAll_RejectsInvalidFolderName(t *testing.T) {
 	writeEntry(t, dir, "next", "Unreleased.\n")
 
 	_, err := changelog.LoadAll(changelog.Developer, dir)
-	testutil.AssertError(t, err, "load all")
+	testutil.AssertErrorContains(t, err, `invalid changelog folder "next"`, "load all")
 }
 
 func TestLoadAll_ReportsFileAndLine(t *testing.T) {
@@ -130,14 +129,13 @@ func TestLoadAll_ReportsFileAndLine(t *testing.T) {
 	writeEntry(t, dir, "v1", "## Added\nNot a bullet.\n")
 
 	_, err := changelog.LoadAll(changelog.Developer, dir)
-	testutil.AssertError(t, err, "load all")
-	testutil.AssertTrue(t, strings.Contains(err.Error(), filepath.Join("v1", changelog.Developer.FileName)), "error names the file")
-	testutil.AssertTrue(t, strings.Contains(err.Error(), "line 2"), "error names the line")
+	testutil.AssertErrorContains(t, err, filepath.Join("v1", changelog.Developer.FileName), "error names the file")
+	testutil.AssertErrorContains(t, err, "line 2", "error names the line")
 }
 
 func TestLoad_MissingEntry(t *testing.T) {
 	_, err := changelog.Load(changelog.Developer, t.TempDir(), "v9.9.9")
-	testutil.AssertError(t, err, "load missing")
+	testutil.AssertErrorContains(t, err, "failed to read CHANGELOG.md for v9.9.9", "load missing")
 }
 
 func TestParse_PlayerMajorUpdate(t *testing.T) {
@@ -190,7 +188,7 @@ func TestLoad_PlayerImageMustExist(t *testing.T) {
 	writeFile(t, dir, "v3", changelog.Player.FileName, "## Major update: Colonies\nIntro.\n![Colonies](colonies.png)\n")
 
 	_, err := changelog.Load(changelog.Player, dir, "v3")
-	testutil.AssertError(t, err, "missing image")
+	testutil.AssertErrorContains(t, err, "image colonies.png", "missing image")
 
 	writeFile(t, dir, "v3", "colonies.png", "png")
 	entry, err := changelog.Load(changelog.Player, dir, "v3")
@@ -230,8 +228,7 @@ func TestParse_PlayerRejects(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := changelog.Parse(changelog.Player, "v1.0.0", []byte(tt.data))
-			testutil.AssertError(t, err, "parse")
-			testutil.AssertTrue(t, strings.Contains(err.Error(), tt.wantErr), "error "+err.Error()+" mentions "+tt.wantErr)
+			testutil.AssertErrorContains(t, err, tt.wantErr, "parse")
 		})
 	}
 }
@@ -252,7 +249,7 @@ func TestLoad_PlayerNotesRequiredForATag(t *testing.T) {
 	writeEntry(t, dir, "v7.0.1", "Developer notes only.\n")
 
 	_, err := changelog.Load(changelog.Player, dir, "v7.0.1")
-	testutil.AssertError(t, err, "load player notes")
+	testutil.AssertErrorContains(t, err, "failed to read CHANGELOG-USER.md for v7.0.1", "load player notes")
 }
 
 // Every committed changelog must parse, so a malformed file fails CI before it can block a release

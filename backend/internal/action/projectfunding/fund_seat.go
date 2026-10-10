@@ -137,10 +137,13 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 		return fmt.Errorf("insufficient payment: need %d, provided %d", cost, totalPayment)
 	}
 
-	// Validate player has the resources
+	// Steel and titanium are spent as chosen; credits only cover what they leave, as in
+	// every other payment, so an overpayment never costs extra credits.
+	credits := min(payment.Credits, max(0, cost-payment.Steel*steelValue-payment.Titanium*titaniumValue))
+
 	resources := player.Resources().Get()
-	if resources.Credits < payment.Credits {
-		return fmt.Errorf("insufficient credits: need %d, have %d", payment.Credits, resources.Credits)
+	if resources.Credits < credits {
+		return fmt.Errorf("insufficient credits: need %d, have %d", credits, resources.Credits)
 	}
 	if resources.Steel < payment.Steel {
 		return fmt.Errorf("insufficient steel: need %d, have %d", payment.Steel, resources.Steel)
@@ -149,10 +152,9 @@ func (a *FundSeatAction) Execute(ctx context.Context, gameID string, playerID st
 		return fmt.Errorf("insufficient titanium: need %d, have %d", payment.Titanium, resources.Titanium)
 	}
 
-	// Deduct resources
 	deductions := map[shared.ResourceType]int{}
-	if payment.Credits > 0 {
-		deductions[shared.ResourceCredit] = -payment.Credits
+	if credits > 0 {
+		deductions[shared.ResourceCredit] = -credits
 	}
 	if payment.Steel > 0 {
 		deductions[shared.ResourceSteel] = -payment.Steel

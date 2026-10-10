@@ -60,7 +60,7 @@ func TestStandardProjectRegistry_UnknownIDReturnsError(t *testing.T) {
 	registry := loadStandardProjectRegistry(t)
 
 	_, err := registry.GetByID("nonexistent-project")
-	testutil.AssertError(t, err, "Should return error for unknown project ID")
+	testutil.AssertErrorContains(t, err, "standard project not found", "Should return error for unknown project ID")
 }
 
 func TestStandardProjectRegistry_ProjectCosts(t *testing.T) {
@@ -234,7 +234,7 @@ func TestStandardProject_SellPatentsNoCards(t *testing.T) {
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "sell-patents", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("sell-patents")]))
-	testutil.AssertError(t, err, "Sell Patents with no cards should fail")
+	testutil.AssertErrorContains(t, err, "no cards available to sell", "Sell Patents with no cards should fail")
 }
 
 // --- Affordability Tests ---
@@ -263,7 +263,8 @@ func TestStandardProject_InsufficientCredits(t *testing.T) {
 
 			action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 			err := action.Execute(ctx, testGame.ID(), playerID, tt.projectID, shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject(tt.projectID)]))
-			testutil.AssertError(t, err, "Should reject with insufficient credits")
+			testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Should reject with insufficient credits")
+			testutil.AssertEqual(t, tt.credits, p.Resources().Get().Credits, "credits unchanged")
 		})
 	}
 }
@@ -312,7 +313,7 @@ func TestStandardProject_UnknownProjectID(t *testing.T) {
 
 	action := spAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "nonexistent-project", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("nonexistent-project")]))
-	testutil.AssertError(t, err, "Should reject unknown project ID")
+	testutil.AssertErrorContains(t, err, "unknown standard project", "Should reject unknown project ID")
 }
 
 // --- Action Consumption Tests ---

@@ -42,23 +42,23 @@ func (h *SelectStartingChoicesHandler) HandleMessage(ctx context.Context, connec
 
 	log.Debug("Processing select starting choices request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	corporationID, _ := payloadMap["corporationId"].(string)
 	if corporationID == "" {
 		log.Error("Missing corporationId")
-		h.sendError(connection, "Missing corporationId")
+		connection.SendError(message.Type, "Missing corporationId")
 		return
 	}
 
@@ -92,40 +92,23 @@ func (h *SelectStartingChoicesHandler) HandleMessage(ctx context.Context, connec
 	}
 	paymentBytes, paymentErr := json.Marshal(message.Payload)
 	if paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, corporationID, preludeIDs, cardIDs, paymentEnvelope.Payment)
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), corporationID, preludeIDs, cardIDs, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute select starting choices action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Starting choices selected")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 
-	connection.Send <- dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "select-starting-choices",
-			"success": true,
-		},
-	}
-}
-
-func (h *SelectStartingChoicesHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

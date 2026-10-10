@@ -94,7 +94,8 @@ func TestBuildColony_FullColony_Fails(t *testing.T) {
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
-	testutil.AssertError(t, err, "Should fail when colony is full")
+	testutil.AssertErrorContains(t, err, "colony tile is full", "Should fail when colony is full")
+	testutil.AssertEqual(t, 50, p.Resources().Get().Credits, "credits unchanged")
 }
 
 func TestBuildColony_DuplicateColony_Fails(t *testing.T) {
@@ -111,7 +112,8 @@ func TestBuildColony_DuplicateColony_Fails(t *testing.T) {
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
-	testutil.AssertError(t, err, "Should fail when player already has colony on this tile")
+	testutil.AssertErrorContains(t, err, "player already has a colony on this tile", "Should fail when player already has colony on this tile")
+	testutil.AssertEqual(t, 50, p.Resources().Get().Credits, "credits unchanged")
 }
 
 func TestBuildColony_InsufficientCredits_Fails(t *testing.T) {
@@ -127,7 +129,8 @@ func TestBuildColony_InsufficientCredits_Fails(t *testing.T) {
 
 	action := colonyAction.NewBuildColonyAction(repo, colonyRegistry, testutil.CreateTestCardRegistry(), stateRepo, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "luna", shared.NativePayment(shared.ResourceCredit, 17))
-	testutil.AssertError(t, err, "Should fail with insufficient credits")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Should fail with insufficient credits")
+	testutil.AssertEqual(t, 10, p.Resources().Get().Credits, "credits unchanged")
 }
 
 func TestBuildColony_OceanPlacementReward_CreatesTileSelection(t *testing.T) {

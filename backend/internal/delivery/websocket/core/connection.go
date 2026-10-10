@@ -1,6 +1,9 @@
 package core
 
 import (
+	"encoding/json"
+	"errors"
+	"io"
 	"log/slog"
 	"sync"
 	"time"
@@ -21,229 +24,242 @@ const (
 	// Send pings to peer with this period (must be less than pongWait)
 	pingPeriod = (pongWait * 9) / 10
 
-	// Maximum message size allowed from peer (64KB for game state updates)
+	// Maximum message size allowed from peer
 	maxMessageSize = 64 * 1024
+
+	// Messages queued for a client that is not reading. A client this far behind is
+	// disconnected, so it reconnects and gets the full state instead of silently
+	// missing updates.
+	sendBufferSize = 256
 )
 
-// ConnectionType distinguishes player connections from spectator connections.
-type ConnectionType string
-
-const (
-	ConnectionTypePlayer    ConnectionType = "player"
-	ConnectionTypeSpectator ConnectionType = "spectator"
-)
-
-// Connection represents a WebSocket connection
-type Connection struct {
-	ID          string
+// Identity is who a connection acts as: a player or a spectator of one game, or nobody yet.
+type Identity struct {
+	GameID      string
 	PlayerID    string
 	SpectatorID string
-	GameID      string
-	ConnType    ConnectionType
-	Conn        *websocket.Conn
-	Send        chan dto.WebSocketMessage
-
-	// Callbacks for hub communication
-	onMessage    func(HubMessage)
-	onDisconnect func(*Connection)
-
-	// Direct reference to manager for game association
-	manager *Manager
-
-	// Synchronization
-	mu         sync.RWMutex
-	logger     *slog.Logger
-	Done       chan struct{}
-	closeOnce  sync.Once
-	sendClosed bool
 }
 
-// NewConnection creates a new WebSocket connection
-func NewConnection(id string, conn *websocket.Conn, manager *Manager, onMessage func(HubMessage), onDisconnect func(*Connection)) *Connection {
+// IsPlayer reports whether the connection acts as a player in a game.
+func (id Identity) IsPlayer() bool {
+	return id.GameID != "" && id.PlayerID != ""
+}
+
+// IsSpectator reports whether the connection watches a game.
+func (id Identity) IsSpectator() bool {
+	return id.GameID != "" && id.SpectatorID != ""
+}
+
+// Connection is one client WebSocket connection.
+type Connection struct {
+	ID string
+
+	conn *websocket.Conn
+	hub  *Hub
+	send chan dto.WebSocketMessage
+
+	// flush asks the write pump to send what is queued, then close the connection.
+	flush     chan struct{}
+	flushOnce sync.Once
+	done      chan struct{}
+	closeOnce sync.Once
+
+	mu       sync.RWMutex
+	identity Identity
+
+	logger *slog.Logger
+}
+
+func newConnection(id string, conn *websocket.Conn, hub *Hub) *Connection {
 	return &Connection{
-		ID:           id,
-		ConnType:     ConnectionTypePlayer,
-		Conn:         conn,
-		Send:         make(chan dto.WebSocketMessage, 256),
-		onMessage:    onMessage,
-		onDisconnect: onDisconnect,
-		manager:      manager,
-		logger:       logger.Get(),
-		Done:         make(chan struct{}),
+		ID:     id,
+		conn:   conn,
+		hub:    hub,
+		send:   make(chan dto.WebSocketMessage, sendBufferSize),
+		flush:  make(chan struct{}),
+		done:   make(chan struct{}),
+		logger: logger.Get(),
 	}
 }
 
-// SetPlayer associates this connection with a player
-func (c *Connection) SetPlayer(playerID, gameID string) {
-	c.mu.Lock()
-	c.PlayerID = playerID
-	c.GameID = gameID
-	c.ConnType = ConnectionTypePlayer
-	c.mu.Unlock()
-
-	if c.manager != nil && gameID != "" {
-		c.manager.AddToGame(c, gameID)
-	}
+// Identity returns who the connection currently acts as.
+func (c *Connection) Identity() Identity {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.identity
 }
 
-// SetSpectator associates this connection with a spectator.
-func (c *Connection) SetSpectator(spectatorID, gameID string) {
-	c.mu.Lock()
-	c.SpectatorID = spectatorID
-	c.GameID = gameID
-	c.ConnType = ConnectionTypeSpectator
-	c.mu.Unlock()
-
-	if c.manager != nil && gameID != "" {
-		c.manager.AddToGame(c, gameID)
-	}
+// GameID returns the game the connection belongs to, or "" when it has not joined one.
+func (c *Connection) GameID() string {
+	return c.Identity().GameID
 }
 
-// IsSpectator returns true if this connection is a spectator.
+// PlayerID returns the player the connection acts as, or "" when it is not a player.
+func (c *Connection) PlayerID() string {
+	return c.Identity().PlayerID
+}
+
+// SpectatorID returns the spectator the connection acts as, or "" when it is not one.
+func (c *Connection) SpectatorID() string {
+	return c.Identity().SpectatorID
+}
+
+// IsSpectator reports whether the connection watches a game.
 func (c *Connection) IsSpectator() bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.ConnType == ConnectionTypeSpectator
+	return c.Identity().IsSpectator()
 }
 
-// GetPlayer returns the player and game IDs for this connection
-func (c *Connection) GetPlayer() (playerID, gameID string) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.PlayerID, c.GameID
+// BindPlayer makes the connection act as a player. If it acted as someone else before,
+// that identity is released. Must run on the hub goroutine.
+func (c *Connection) BindPlayer(gameID, playerID string) {
+	c.hub.bind(c, Identity{GameID: gameID, PlayerID: playerID})
 }
 
-// CloseSend closes the send channel
-func (c *Connection) CloseSend() {
+// BindSpectator makes the connection watch a game. If it acted as someone else before,
+// that identity is released. Must run on the hub goroutine.
+func (c *Connection) BindSpectator(gameID, spectatorID string) {
+	c.hub.bind(c, Identity{GameID: gameID, SpectatorID: spectatorID})
+}
+
+func (c *Connection) setIdentity(id Identity) Identity {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	previous := c.identity
+	c.identity = id
+	return previous
+}
 
-	if !c.sendClosed {
-		close(c.Send)
-		c.sendClosed = true
+// Send queues a message for the client without blocking. A client whose queue is full is
+// not keeping up and is disconnected.
+func (c *Connection) Send(message dto.WebSocketMessage) {
+	select {
+	case <-c.done:
+		return
+	default:
+	}
+	select {
+	case c.send <- message:
+	default:
+		c.logger.Warn("Client is not reading, disconnecting it",
+			slog.String("connection_id", c.ID),
+			slog.String("message_type", string(message.Type)))
+		c.Close()
 	}
 }
 
-// Close closes the connection and signals all associated goroutines
+// SendError tells the client its request failed.
+func (c *Connection) SendError(requestType dto.MessageType, message string) {
+	c.SendErrorPayload(dto.ErrorPayload{Message: message, RequestType: requestType})
+}
+
+// SendErrorPayload tells the client its request failed, with request-specific context.
+func (c *Connection) SendErrorPayload(payload dto.ErrorPayload) {
+	c.Send(dto.WebSocketMessage{Type: dto.MessageTypeError, GameID: c.GameID(), Payload: payload})
+}
+
+// CloseAfterFlush delivers everything already queued, then closes the connection.
+func (c *Connection) CloseAfterFlush() {
+	c.flushOnce.Do(func() { close(c.flush) })
+}
+
+// Close closes the connection immediately.
 func (c *Connection) Close() {
 	c.closeOnce.Do(func() {
-		close(c.Done)
-		if err := c.Conn.Close(); err != nil {
+		close(c.done)
+		if err := c.conn.Close(); err != nil {
 			c.logger.Debug("Best-effort connection close", slog.Any("error", err), slog.String("connection_id", c.ID))
 		}
 	})
 }
 
-// ReadPump pumps messages from the websocket connection to the hub
-func (c *Connection) ReadPump() {
+// readPump hands every incoming message to the hub until the connection ends, then tells
+// the hub the connection is gone.
+func (c *Connection) readPump() {
 	defer func() {
-		if c.onDisconnect != nil {
-			c.onDisconnect(c)
-		}
+		c.hub.unregister(c)
 		c.Close()
 	}()
 
-	c.Conn.SetReadLimit(maxMessageSize)
-	if err := c.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		c.logger.Warn("Failed to set initial read deadline", slog.Any("error", err), slog.String("connection_id", c.ID))
+	c.conn.SetReadLimit(maxMessageSize)
+	if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		c.logger.Debug("Failed to set read deadline", slog.Any("error", err), slog.String("connection_id", c.ID))
 	}
-	c.Conn.SetPongHandler(func(string) error {
-		if err := c.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-			c.logger.Warn("Failed to set read deadline in pong handler", slog.Any("error", err), slog.String("connection_id", c.ID))
-		}
-		return nil
+	c.conn.SetPongHandler(func(string) error {
+		return c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
-	c.logger.Debug("Starting ReadPump for connection", slog.String("connection_id", c.ID))
-
 	for {
-		select {
-		case <-c.Done:
+		var message dto.WebSocketMessage
+		if err := c.conn.ReadJSON(&message); err != nil {
+			if isMalformedJSON(err) {
+				c.SendError("", "Malformed message: "+err.Error())
+				continue
+			}
+			c.logger.Debug("WebSocket read ended", slog.Any("error", err), slog.String("connection_id", c.ID))
 			return
-		default:
-			var message dto.WebSocketMessage
-			if err := c.Conn.ReadJSON(&message); err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNoStatusReceived) {
-					c.logger.Error("WebSocket read error", slog.Any("error", err), slog.String("connection_id", c.ID))
-				}
-				return
-			}
-
-			c.logger.Debug("Received WebSocket message",
-				slog.String("connection_id", c.ID),
-				slog.String("message_type", string(message.Type)))
-
-			// Send message to hub for processing via callback
-			if c.onMessage != nil {
-				c.onMessage(HubMessage{Connection: c, Message: message})
-			}
+		}
+		if !c.hub.submit(HubMessage{Connection: c, Message: message}) {
+			return
 		}
 	}
 }
 
-// WritePump pumps messages from the hub to the websocket connection
-func (c *Connection) WritePump() {
+// writePump writes queued messages and keep-alive pings to the client.
+func (c *Connection) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		if err := c.Conn.Close(); err != nil {
-			c.logger.Debug("Best-effort connection close in WritePump", slog.Any("error", err), slog.String("connection_id", c.ID))
-		}
+		c.Close()
 	}()
 
 	for {
 		select {
-		case message, ok := <-c.Send:
-			if err := c.Conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				c.logger.Warn("Failed to set write deadline", slog.Any("error", err), slog.String("connection_id", c.ID))
+		case message := <-c.send:
+			if !c.write(message) {
+				return
 			}
-			if !ok {
-				if err := c.Conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					c.logger.Debug("Best-effort close message write", slog.Any("error", err), slog.String("connection_id", c.ID))
+		case <-c.flush:
+			for {
+				select {
+				case message := <-c.send:
+					if !c.write(message) {
+						return
+					}
+				default:
+					_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+					_ = c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+					return
 				}
-				return
 			}
-
-			if err := c.Conn.WriteJSON(message); err != nil {
-				c.logger.Error("WebSocket write error", slog.Any("error", err), slog.String("connection_id", c.ID))
-				return
-			}
-
 		case <-ticker.C:
-			if err := c.Conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				c.logger.Warn("Failed to set write deadline for ping", slog.Any("error", err), slog.String("connection_id", c.ID))
-			}
-			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
-
-		case <-c.Done:
+		case <-c.done:
 			return
 		}
 	}
 }
 
-// SendMessage sends a message to this connection
-func (c *Connection) SendMessage(message dto.WebSocketMessage) {
-	c.mu.RLock()
-	sendClosed := c.sendClosed
-	c.mu.RUnlock()
+// isMalformedJSON reports whether a read failed only because the frame was not a valid
+// message. The frame is consumed, so the connection can keep reading.
+func isMalformedJSON(err error) bool {
+	var syntaxErr *json.SyntaxError
+	var typeErr *json.UnmarshalTypeError
+	return errors.As(err, &syntaxErr) || errors.As(err, &typeErr) || errors.Is(err, io.ErrUnexpectedEOF)
+}
 
-	if sendClosed {
-		c.logger.Debug("Attempted to send message to closed connection", slog.String("connection_id", c.ID))
-		return
+func (c *Connection) write(message dto.WebSocketMessage) bool {
+	_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+	if err := c.conn.WriteJSON(message); err != nil {
+		c.logger.Debug("WebSocket write failed", slog.Any("error", err), slog.String("connection_id", c.ID))
+		return false
 	}
+	return true
+}
 
-	select {
-	case c.Send <- message:
-		c.logger.Debug("Message queued for client",
-			slog.String("connection_id", c.ID),
-			slog.String("message_type", string(message.Type)))
-	case <-c.Done:
-		c.logger.Debug("Connection closing, message not sent", slog.String("connection_id", c.ID))
-	default:
-		c.logger.Warn("Message channel full, dropping message",
-			slog.String("connection_id", c.ID),
-			slog.String("message_type", string(message.Type)))
-	}
+// Done is closed when the connection closes.
+func (c *Connection) Done() <-chan struct{} {
+	return c.done
 }

@@ -35,22 +35,22 @@ func (h *ConfirmCardDiscardHandler) HandleMessage(ctx context.Context, connectio
 
 	log.Debug("Processing confirm card discard request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	resolutionID, ok := payloadMap["resolutionId"].(string)
 	if !ok || resolutionID == "" {
-		h.sendError(connection, "Missing resolutionId")
+		connection.SendError(message.Type, "Missing resolutionId")
 		return
 	}
 
@@ -67,35 +67,16 @@ func (h *ConfirmCardDiscardHandler) HandleMessage(ctx context.Context, connectio
 	log.Debug("Parsed confirm card discard request",
 		slog.Any("cards_to_discard", cardsToDiscard))
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, resolutionID, cardsToDiscard)
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), resolutionID, cardsToDiscard)
 	if err != nil {
 		log.Error("Failed to execute confirm card discard action", slog.Any("error", err))
-		connection.Send <- dto.WebSocketMessage{Type: dto.MessageTypeError, Payload: map[string]interface{}{"error": err.Error(), "resolutionId": resolutionID}}
+		connection.SendErrorPayload(dto.ErrorPayload{Message: err.Error(), RequestType: message.Type, ResolutionID: resolutionID})
 		return
 	}
 
 	log.Debug("Card discard confirmed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 	log.Debug("Broadcasted game state to all players")
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "confirm-card-discard",
-			"success": true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *ConfirmCardDiscardHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

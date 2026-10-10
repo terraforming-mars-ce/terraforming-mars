@@ -12,14 +12,9 @@ import (
 	"openmars/internal/game/datastore"
 	"openmars/internal/game/player"
 	"openmars/internal/game/shared"
-	"openmars/internal/logger"
 )
 
 func setupGenerationalEventsTestEnvironment(t *testing.T) (*game.Game, *player.Player) {
-	logLevel := "error"
-	if err := logger.Init(&logLevel); err != nil {
-		t.Fatalf("Failed to initialize logger: %v", err)
-	}
 
 	settings := shared.GameSettings{
 		MaxPlayers:      5,

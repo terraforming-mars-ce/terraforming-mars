@@ -38,7 +38,6 @@ func RegisterHandlers(
 	hub *core.Hub,
 	broadcaster *Broadcaster,
 	gameRepo gameModel.GameRepository,
-	createGameAction *gameAction.CreateGameAction,
 	joinGameAction *gameAction.JoinGameAction,
 	addBotAction *gameAction.AddBotAction,
 	selectDemoChoicesAction *gameAction.SelectDemoChoicesAction,
@@ -96,16 +95,12 @@ func RegisterHandlers(
 	adminRestartGameAction *adminAction.RestartGameAction,
 	adminSetActionsRemainingAction *adminAction.SetActionsRemainingAction,
 ) {
-	hub.RegisterHandler("quote-payment", &paymentQuoteHandler{broadcaster: broadcaster})
+	hub.RegisterHandler(dto.MessageTypeQuotePayment, &paymentQuoteHandler{broadcaster: broadcaster})
 	log := logger.Get()
 	log.Debug("Registering WebSocket handlers")
 
-	createGameHandler := game.NewCreateGameHandler(createGameAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeCreateGame, createGameHandler)
-
 	joinGameHandler := game.NewJoinGameHandler(joinGameAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypePlayerConnect, joinGameHandler)
-	hub.RegisterHandler(dto.MessageTypeJoinGame, joinGameHandler)
 
 	addBotHandler := game.NewAddBotHandler(addBotAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeAddBot, addBotHandler)
@@ -124,13 +119,6 @@ func RegisterHandlers(
 
 	stdProjHandler := standard_project.NewExecuteHandler(executeStandardProjectAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionStandardProject, stdProjHandler)
-	// Legacy message types for backwards compatibility
-	hub.RegisterHandler(dto.MessageTypeActionSellPatents, stdProjHandler)
-	hub.RegisterHandler(dto.MessageTypeActionLaunchAsteroid, stdProjHandler)
-	hub.RegisterHandler(dto.MessageTypeActionBuildPowerPlant, stdProjHandler)
-	hub.RegisterHandler(dto.MessageTypeActionBuildAquifer, stdProjHandler)
-	hub.RegisterHandler(dto.MessageTypeActionPlantGreenery, stdProjHandler)
-	hub.RegisterHandler(dto.MessageTypeActionBuildCity, stdProjHandler)
 
 	convertHeatHandler := resource_conversion.NewConvertHeatHandler(convertHeatAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeActionConvertHeatToTemperature, convertHeatHandler)
@@ -190,9 +178,6 @@ func RegisterHandlers(
 	requestLogsHandler := connection.NewRequestLogsHandler(broadcaster)
 	hub.RegisterHandler(dto.MessageTypeRequestLogs, requestLogsHandler)
 
-	playerDisconnectedHandler := connection.NewPlayerDisconnectedHandler(playerDisconnectedAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypePlayerDisconnected, playerDisconnectedHandler)
-
 	playerTakeoverHandler := connection.NewPlayerTakeoverHandler(playerTakeoverAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypePlayerTakeover, playerTakeoverHandler)
 
@@ -207,9 +192,6 @@ func RegisterHandlers(
 
 	spectateGameHandler := connection.NewSpectateGameHandler(spectateGameAction, broadcaster)
 	hub.RegisterHandler(dto.MessageTypeSpectatorConnect, spectateGameHandler)
-
-	spectatorDisconnectedHandler := connection.NewSpectatorDisconnectedHandler(spectatorDisconnectedAction, broadcaster)
-	hub.RegisterHandler(dto.MessageTypeSpectatorDisconnected, spectatorDisconnectedHandler)
 
 	kickSpectatorHandler := connection.NewKickSpectatorHandler(kickSpectatorAction, broadcaster, hub)
 	hub.RegisterHandler(dto.MessageTypeKickSpectator, kickSpectatorHandler)
@@ -251,9 +233,12 @@ func RegisterHandlers(
 		adminSetTRAction,
 		adminRestartGameAction,
 		adminSetActionsRemainingAction,
+		gameRepo,
 		broadcaster,
 	)
 	hub.RegisterHandler(dto.MessageTypeAdminCommand, adminCommandHandler)
+
+	hub.OnLeave(connection.LeaveHandlers(playerDisconnectedAction, spectatorDisconnectedAction, broadcaster))
 
 	log.Debug("WebSocket handlers registered")
 }

@@ -151,5 +151,5 @@ func TestStatic_StaysInsideTheDirectory(t *testing.T) {
 
 func TestStatic_RequiresIndexHTML(t *testing.T) {
 	_, err := web.NewStaticHandler(t.TempDir())
-	testutil.AssertError(t, err, "missing index.html")
+	testutil.AssertErrorContains(t, err, "has no index.html", "missing index.html")
 }

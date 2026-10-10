@@ -30,7 +30,7 @@ func RegisterSaveHandlers(hub *core.Hub, broadcaster *Broadcaster, repo game.Gam
 }
 
 func (h *saveHandler) guard(ctx context.Context, c *core.Connection, m dto.WebSocketMessage) error {
-	_, currentID := c.GetPlayer()
+	currentID := c.GameID()
 	ids := []string{currentID, m.GameID}
 	if payload, ok := m.Payload.(map[string]any); ok {
 		if id, ok := payload["gameId"].(string); ok {
@@ -50,7 +50,7 @@ func (h *saveHandler) guard(ctx context.Context, c *core.Connection, m dto.WebSo
 		return nil
 	}
 	switch m.Type {
-	case dto.MessageTypeWatchResumeGame, dto.MessageTypeClaimResumeSeat, dto.MessageTypeReleaseResumeSeat, dto.MessageTypeResumeGame, dto.MessageTypeResumeBotToken, dto.MessageTypePlayerConnect, dto.MessageTypeJoinGame, dto.MessageTypePlayerDisconnected, dto.MessageTypeSpectatorDisconnected, dto.MessageTypeChatMessage:
+	case dto.MessageTypeWatchResumeGame, dto.MessageTypeClaimResumeSeat, dto.MessageTypeReleaseResumeSeat, dto.MessageTypeResumeGame, dto.MessageTypeResumeBotToken, dto.MessageTypePlayerConnect, dto.MessageTypeChatMessage:
 		return nil
 	default:
 		return fmt.Errorf("the game is paused while players join the resume lobby")
@@ -64,10 +64,11 @@ func (h *saveHandler) HandleMessage(ctx context.Context, c *core.Connection, m d
 		err = json.Unmarshal(data, &request)
 	}
 	if err != nil {
-		h.fail(c, save.Failure("invalid_request", "This request couldn’t be read. Try again.", err))
+		h.fail(c, m.Type, save.Failure("invalid_request", "This request couldn’t be read. Try again.", err))
 		return
 	}
-	currentID, currentGame := c.GetPlayer()
+	identity := c.Identity()
+	currentID, currentGame := identity.PlayerID, identity.GameID
 	if request.GameID == "" {
 		request.GameID = currentGame
 	}
@@ -76,30 +77,30 @@ func (h *saveHandler) HandleMessage(ctx context.Context, c *core.Connection, m d
 	}
 	g, err := h.repo.Get(ctx, request.GameID)
 	if err != nil {
-		h.fail(c, err)
+		h.fail(c, m.Type, err)
 		return
 	}
 	switch m.Type {
 	case dto.MessageTypeWatchResumeGame:
 		if g.ResumeLobby() == nil {
-			h.fail(c, save.Failure("not_ready", "This game has already resumed.", nil))
+			h.fail(c, m.Type, save.Failure("not_ready", "This game has already resumed.", nil))
 			return
 		}
 		if currentGame != request.GameID {
-			c.SetPlayer("", request.GameID)
+			c.BindPlayer(request.GameID, "")
 		}
 	case dto.MessageTypeClaimResumeSeat:
 		err = h.action.ClaimSeat(ctx, request.GameID, currentID, request.SeatID, request.PlayerName)
 		if err == nil {
-			c.SetPlayer(request.SeatID, request.GameID)
+			c.BindPlayer(request.GameID, request.SeatID)
 		}
 	case dto.MessageTypeReleaseResumeSeat:
 		err = h.action.ReleaseSeat(ctx, request.GameID, currentID, request.SeatID)
 		if err == nil {
-			for connection := range h.hub.GetManager().GetGameConnections(request.GameID) {
-				id, _ := connection.GetPlayer()
+			for _, connection := range h.hub.Manager().GameConnections(request.GameID) {
+				id := connection.PlayerID()
 				if id == request.SeatID {
-					connection.SetPlayer("", request.GameID)
+					connection.BindPlayer(request.GameID, "")
 				}
 			}
 		}
@@ -109,16 +110,16 @@ func (h *saveHandler) HandleMessage(ctx context.Context, c *core.Connection, m d
 		err = h.action.SetBotToken(ctx, request.GameID, currentID, request.BotToken)
 	}
 	if err != nil {
-		h.fail(c, err)
+		h.fail(c, m.Type, err)
 		return
 	}
 	h.broadcaster.BroadcastGameState(request.GameID, nil)
 }
 
-func (h *saveHandler) fail(c *core.Connection, err error) {
+func (h *saveHandler) fail(c *core.Connection, requestType dto.MessageType, err error) {
 	public := save.PublicError(err, "The resume request couldn’t be completed. Try again.")
 	if public.Code == "internal_error" {
 		slog.Error("Resume request failed", "error", err)
 	}
-	c.Send <- dto.WebSocketMessage{Type: dto.MessageTypeError, Payload: dto.ErrorPayload{Message: public.Message, Code: public.Code}}
+	c.SendErrorPayload(dto.ErrorPayload{Message: public.Message, Code: public.Code, RequestType: requestType})
 }

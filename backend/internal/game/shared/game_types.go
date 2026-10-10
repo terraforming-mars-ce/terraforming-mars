@@ -29,6 +29,23 @@ const (
 	GamePhaseComplete              GamePhase = "complete"
 )
 
+var gamePhases = []GamePhase{
+	GamePhaseWaitingForGameStart,
+	GamePhaseStartingSelection,
+	GamePhaseStartGameSelection,
+	GamePhaseInitApplyCorp,
+	GamePhaseInitApplyPrelude,
+	GamePhaseAction,
+	GamePhaseProductionAndCardDraw,
+	GamePhaseFinalPhase,
+	GamePhaseComplete,
+}
+
+// IsGamePhase reports whether p is a phase a game can be in.
+func IsGamePhase(p GamePhase) bool {
+	return slices.Contains(gamePhases, p)
+}
+
 // GameSettings contains configurable game parameters
 type GameSettings struct {
 	MaxPlayers         int

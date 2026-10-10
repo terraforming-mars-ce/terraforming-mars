@@ -37,16 +37,16 @@ func (h *ConfirmProductionCardsHandler) HandleMessage(ctx context.Context, conne
 
 	log.Debug("Processing confirm production cards request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
@@ -71,43 +71,24 @@ func (h *ConfirmProductionCardsHandler) HandleMessage(ctx context.Context, conne
 	}
 	paymentBytes, paymentErr := json.Marshal(message.Payload)
 	if paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, selectedCardIDs, randomBuy, paymentEnvelope.Payment)
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), selectedCardIDs, randomBuy, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute confirm production cards action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Production cards confirmed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 	log.Debug("Broadcasted game state to all players")
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "confirm-production-cards",
-			"success": true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *ConfirmProductionCardsHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

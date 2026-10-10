@@ -73,7 +73,7 @@ func TestToolServer_RejectsUnknownAndRevokedTokens(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, err := connectMCP(ctx, endpoint)
-	testutil.AssertError(t, err, "revoked token should be rejected")
+	testutil.AssertErrorContains(t, err, "Unauthorized", "revoked token should be rejected")
 }
 
 func TestToolServer_SkipActionRunsTheGameAction(t *testing.T) {

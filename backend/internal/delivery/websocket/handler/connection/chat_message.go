@@ -46,22 +46,22 @@ func (h *ChatMessageHandler) HandleMessage(ctx context.Context, connection *core
 		slog.String("message_type", string(message.Type)),
 	)
 
-	gameID := connection.GameID
+	gameID := connection.GameID()
 	if gameID == "" {
-		h.sendError(connection, "not connected to game")
+		connection.SendError(message.Type, "not connected to game")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "invalid payload format")
+		connection.SendError(message.Type, "invalid payload format")
 		return
 	}
 
 	msgText, _ := payloadMap["message"].(string)
 	if msgText == "" {
-		h.sendError(connection, "message cannot be empty")
+		connection.SendError(message.Type, "message cannot be empty")
 		return
 	}
 
@@ -71,25 +71,25 @@ func (h *ChatMessageHandler) HandleMessage(ctx context.Context, connection *core
 	g, err := h.gameRepo.Get(ctx, gameID)
 	if err != nil {
 		log.Error("Failed to get game", slog.Any("error", err))
-		h.sendError(connection, "game not found")
+		connection.SendError(message.Type, "game not found")
 		return
 	}
 
 	if isSpectator {
-		s, err := g.GetSpectator(connection.SpectatorID)
+		s, err := g.GetSpectator(connection.SpectatorID())
 		if err != nil {
 			log.Error("Spectator not found", slog.Any("error", err))
-			h.sendError(connection, "spectator not found")
+			connection.SendError(message.Type, "spectator not found")
 			return
 		}
 		senderID = s.ID()
 		senderName = s.Name()
 		senderColor = s.Color()
 	} else {
-		p, err := g.GetPlayer(connection.PlayerID)
+		p, err := g.GetPlayer(connection.PlayerID())
 		if err != nil {
 			log.Error("Player not found", slog.Any("error", err))
-			h.sendError(connection, "player not found")
+			connection.SendError(message.Type, "player not found")
 			return
 		}
 		senderID = p.ID()
@@ -100,19 +100,10 @@ func (h *ChatMessageHandler) HandleMessage(ctx context.Context, connection *core
 	chatMsg, err := h.action.Execute(ctx, gameID, senderID, senderName, senderColor, msgText, isSpectator)
 	if err != nil {
 		log.Error("Failed to send chat message", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	h.broadcaster.BroadcastChatMessage(gameID, *chatMsg)
 	log.Debug("Chat message broadcast")
-}
-
-func (h *ChatMessageHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.SendMessage(dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	})
 }

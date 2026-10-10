@@ -57,7 +57,7 @@ func TestFundSeat_ExpansionNotEnabled_Fails(t *testing.T) {
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 6})
-	testutil.AssertError(t, err, "Should fail when project funding expansion is not enabled")
+	testutil.AssertErrorContains(t, err, "project funding expansion is not enabled", "Should fail when project funding expansion is not enabled")
 }
 
 func TestFundSeat_WrongPhase_Fails(t *testing.T) {
@@ -74,7 +74,8 @@ func TestFundSeat_WrongPhase_Fails(t *testing.T) {
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 6})
-	testutil.AssertError(t, err, "Should fail when not in action phase")
+	testutil.AssertErrorContains(t, err, "game not in action phase", "Should fail when not in action phase")
+	testutil.AssertEqual(t, 100, p1.Resources().Get().Credits, "credits unchanged")
 }
 
 func TestFundSeat_NotCurrentTurn_Fails(t *testing.T) {
@@ -88,7 +89,8 @@ func TestFundSeat_NotCurrentTurn_Fails(t *testing.T) {
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player2, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 6})
-	testutil.AssertError(t, err, "Should fail when not player's turn")
+	testutil.AssertErrorContains(t, err, "not your turn", "Should fail when not player's turn")
+	testutil.AssertEqual(t, 100, p2.Resources().Get().Credits, "credits unchanged")
 }
 
 func TestFundSeat_InvalidProjectID_Fails(t *testing.T) {
@@ -100,7 +102,7 @@ func TestFundSeat_InvalidProjectID_Fails(t *testing.T) {
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "nonexistent_project", pfAction.FundSeatPayment{Credits: 6})
-	testutil.AssertError(t, err, "Should fail with invalid project ID")
+	testutil.AssertErrorContains(t, err, "project not found", "Should fail with invalid project ID")
 }
 
 func TestFundSeat_ProjectAlreadyCompleted_Fails(t *testing.T) {
@@ -120,7 +122,8 @@ func TestFundSeat_ProjectAlreadyCompleted_Fails(t *testing.T) {
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 6})
-	testutil.AssertError(t, err, "Should fail when project is completed")
+	testutil.AssertErrorContains(t, err, "project is already completed", "Should fail when project is completed")
+	testutil.AssertEqual(t, 100, p1.Resources().Get().Credits, "credits unchanged")
 }
 
 // --- Basic Purchase Tests ---
@@ -134,14 +137,31 @@ func TestFundSeat_BasicPurchase_Success(t *testing.T) {
 	p1, _ := testGame.GetPlayer(player1)
 	testutil.SetPlayerCredits(ctx, p1, 100)
 
+	cost := pf.ScaledSeatCost(6, 2)
 	action := newAction(repo, pfRegistry)
-	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 6})
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: cost})
 	testutil.AssertNoError(t, err, "Buy first seat should succeed")
 
 	state := testGame.GetProjectFundingState("pf_orbital_station")
 	testutil.AssertEqual(t, 1, len(state.SeatOwners), "Should have 1 seat owner")
 	testutil.AssertEqual(t, player1, state.SeatOwners[0], "Owner should be player1")
-	testutil.AssertEqual(t, 94, testutil.GetPlayerCredits(p1), "Should deduct 6 credits (100 - 6 = 94)")
+	testutil.AssertEqual(t, 100-cost, testutil.GetPlayerCredits(p1), "Should deduct the two-player seat cost")
+}
+
+func TestFundSeat_Overpayment_ChargesOnlyTheCost(t *testing.T) {
+	testGame, repo, pfRegistry, player1, _ := setupProjectFundingGame(t)
+	ctx := context.Background()
+
+	setupProjectState(testGame, "pf_orbital_station", nil)
+
+	p1, _ := testGame.GetPlayer(player1)
+	testutil.SetPlayerCredits(ctx, p1, 100)
+
+	cost := pf.ScaledSeatCost(6, 2)
+	action := newAction(repo, pfRegistry)
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: cost + 40})
+	testutil.AssertNoError(t, err, "Overpaying for a seat should succeed")
+	testutil.AssertEqual(t, 100-cost, testutil.GetPlayerCredits(p1), "Only the seat cost should be charged")
 }
 
 func TestFundSeat_InsufficientCredits_Fails(t *testing.T) {
@@ -150,12 +170,14 @@ func TestFundSeat_InsufficientCredits_Fails(t *testing.T) {
 
 	setupProjectState(testGame, "pf_orbital_station", nil)
 
+	cost := pf.ScaledSeatCost(6, 2)
 	p1, _ := testGame.GetPlayer(player1)
-	testutil.SetPlayerCredits(ctx, p1, 3)
+	testutil.SetPlayerCredits(ctx, p1, cost-1)
 
 	action := newAction(repo, pfRegistry)
-	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 6})
-	testutil.AssertError(t, err, "Should fail with insufficient credits")
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: cost})
+	testutil.AssertErrorContains(t, err, "insufficient credits", "Should fail with insufficient credits")
+	testutil.AssertEqual(t, cost-1, testutil.GetPlayerCredits(p1), "A rejected purchase should charge nothing")
 }
 
 func TestFundSeat_SecondSeat_HigherCost(t *testing.T) {
@@ -167,13 +189,14 @@ func TestFundSeat_SecondSeat_HigherCost(t *testing.T) {
 	p1, _ := testGame.GetPlayer(player1)
 	testutil.SetPlayerCredits(ctx, p1, 100)
 
+	cost := pf.ScaledSeatCost(8, 2)
 	action := newAction(repo, pfRegistry)
-	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 8})
+	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: cost})
 	testutil.AssertNoError(t, err, "Buy second seat should succeed")
 
 	state := testGame.GetProjectFundingState("pf_orbital_station")
 	testutil.AssertEqual(t, 2, len(state.SeatOwners), "Should have 2 seat owners")
-	testutil.AssertEqual(t, 92, testutil.GetPlayerCredits(p1), "Second seat costs 8 (100 - 8 = 92)")
+	testutil.AssertEqual(t, 100-cost, testutil.GetPlayerCredits(p1), "The second seat costs more than the first")
 }
 
 // --- Payment Substitute Tests ---
@@ -191,7 +214,8 @@ func TestFundSeat_PayWithSteel_InvalidSeat_Fails(t *testing.T) {
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 0, Steel: 3})
-	testutil.AssertError(t, err, "Should fail when steel not allowed for this seat")
+	testutil.AssertErrorContains(t, err, "steel cannot be used to pay for this seat", "Should fail when steel not allowed for this seat")
+	testutil.AssertEqual(t, 100, p1.Resources().Get().Credits, "credits unchanged")
 }
 
 // --- Multi-player Seat Ownership Tests ---
@@ -377,7 +401,7 @@ func TestFundSeat_Completion_ProductionChoice_SetForAllPlayers(t *testing.T) {
 	testutil.AssertEqual(t, 1, len(p1.Selection().GetPendingBehaviorResolutions()), "other player's decision retained")
 	testutil.AssertEqual(t, current, testGame.CurrentTurn().PlayerID(), "off-turn reward does not change turn")
 	testutil.AssertEqual(t, actions, testGame.CurrentTurn().ActionsRemaining(), "off-turn reward does not consume action")
-	testutil.AssertError(t, confirm.Execute(ctx, testGame.ID(), player2, p2Choice.ID, 0, nil), "cannot replay completion reward")
+	testutil.AssertErrorContains(t, confirm.Execute(ctx, testGame.ID(), player2, p2Choice.ID, 0, nil), "no pending behavior choice selection", "cannot replay completion reward")
 
 }
 
@@ -469,7 +493,7 @@ func TestFundSeat_ScaledCost_FivePlayers_RequiresMore(t *testing.T) {
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: scaledCost})
-	testutil.AssertError(t, err, "Player with only base-cost credits should fail in a 5-player game")
+	testutil.AssertErrorContains(t, err, "insufficient credits", "Player with only base-cost credits should fail in a 5-player game")
 
 	testutil.SetPlayerCredits(ctx, p1, scaledCost)
 	err = action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: scaledCost})
@@ -496,7 +520,7 @@ func TestFundSeat_ScaledSeatCount_TwoPlayers_TruncatesProject(t *testing.T) {
 
 	action := newAction(repo, pfRegistry)
 	err := action.Execute(ctx, testGame.ID(), player1, "pf_orbital_station", pfAction.FundSeatPayment{Credits: 50})
-	testutil.AssertError(t, err, "Funding past the scaled seat count should fail with all-seats-filled")
+	testutil.AssertErrorContains(t, err, "all seats are filled", "Funding past the scaled seat count should fail with all-seats-filled")
 }
 
 func TestFundSeat_ScaledSeatCount_FivePlayers_ExtendsProject(t *testing.T) {
