@@ -50,6 +50,19 @@ just build         # Build the backend binary and the frontend bundle
 just clean         # Remove build output
 ```
 
+### Releases
+
+Release notes live in `changelog/<tag>/CHANGELOG.md`, the only place they are written. The GitHub release body and the in-game changelog (`GET /api/v1/changelog`) both read that file; tag messages carry no notes.
+
+1. Add `changelog/vX.Y.Z/CHANGELOG.md` in a PR and merge it.
+2. On an up-to-date `main`, run `just release vX.Y.Z`. It checks the changelog, creates the tag and pushes it.
+3. The Release workflow fails before building anything if the changelog is missing or malformed, then drafts the GitHub release from it and pushes the images.
+
+Format (enforced by `backend/internal/changelog`, `just changelog-check vX.Y.Z` and a backend test over every file):
+- An optional one-paragraph intro.
+- `## Security`, `## Added`, `## Changed`, `## Fixed`, `## Build`, in that order, each optional and never empty.
+- `- ` bullets; wrapped lines are indented two spaces. Inline `code` is the only markup.
+
 ## Adding New Game Features
 
 1. **Define domain types** in `backend/internal/game/` with `json:` and `ts:` tags
