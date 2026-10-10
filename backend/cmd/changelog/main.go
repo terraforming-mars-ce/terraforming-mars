@@ -1,5 +1,6 @@
-// Command changelog validates release notes in changelog/<tag>/CHANGELOG.md.
-// The release recipe and the release workflow run it before a tag ships.
+// Command changelog validates the release notes in changelog/<tag>/: the
+// developer CHANGELOG.md and the player CHANGELOG-USER.md. The release recipe
+// and the release workflow run it before a tag ships.
 package main
 
 import (
@@ -16,10 +17,17 @@ func main() {
 	}
 
 	dir, tag := os.Args[2], os.Args[3]
-	entry, err := changelog.Load(dir, tag)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	failed := false
+	for _, format := range []changelog.Format{changelog.Developer, changelog.Player} {
+		entry, err := changelog.Load(format, dir, tag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			failed = true
+			continue
+		}
+		fmt.Printf("%s %s: %d sections\n", entry.Version, format.FileName, len(entry.Sections))
+	}
+	if failed {
 		os.Exit(1)
 	}
-	fmt.Printf("%s: %d sections\n", entry.Version, len(entry.Sections))
 }

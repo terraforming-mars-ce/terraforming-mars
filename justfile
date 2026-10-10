@@ -117,12 +117,12 @@ build: backend::build frontend::build proxy::build
 clean: backend::clean frontend::clean proxy::clean
 
 [group('release')]
-[doc('Check that changelog/<tag>/CHANGELOG.md exists and follows the changelog format')]
+[doc('Check that changelog/<tag>/ has a valid CHANGELOG.md and CHANGELOG-USER.md')]
 changelog-check tag:
     cd backend && go run ./cmd/changelog check ../changelog {{ tag }}
 
 [group('release')]
-[doc('Tag the current main as <tag> and push it, which starts the release workflow. Needs changelog/<tag>/CHANGELOG.md on main')]
+[doc('Tag the current main as <tag> and push it, which starts the release workflow. Needs both changelog files for <tag> on main')]
 release tag:
     #!/usr/bin/env bash
     set -euo pipefail

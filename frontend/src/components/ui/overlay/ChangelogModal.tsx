@@ -65,16 +65,27 @@ const EntrySection = React.forwardRef<HTMLElement, { entry: ChangelogEntry }>(fu
       )}
       {entry.sections.map((section) => (
         <div key={section.title} className="mt-3">
-          <h4 className="m-0 mb-1 font-orbitron text-xs uppercase tracking-wider text-white/50">
-            {section.title}
-          </h4>
-          <ul className="m-0 list-disc space-y-1 pl-4 text-sm text-white/85">
-            {section.items.map((item, index) => (
-              <li key={index}>
-                <InlineText text={item} />
-              </li>
-            ))}
-          </ul>
+          {section.major ? (
+            <h4 className="m-0 mb-1 font-orbitron text-sm font-bold text-white">{section.title}</h4>
+          ) : (
+            <h4 className="m-0 mb-1 font-orbitron text-xs uppercase tracking-wider text-white/50">
+              {section.title}
+            </h4>
+          )}
+          {section.intro && (
+            <p className="m-0 mb-1 text-sm text-white/85">
+              <InlineText text={section.intro} />
+            </p>
+          )}
+          {section.items.length > 0 && (
+            <ul className="m-0 list-disc space-y-1 pl-4 text-sm text-white/85">
+              {section.items.map((item, index) => (
+                <li key={index}>
+                  <InlineText text={item} />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       ))}
     </section>

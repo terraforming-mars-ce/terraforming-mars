@@ -119,7 +119,7 @@ func main() {
 	if _, err := os.Stat(changelogDir); err != nil {
 		log.Warn("Changelog directory not found, serving an empty changelog", slog.String("path", changelogDir))
 	} else {
-		entries, err := changelog.LoadAll(changelogDir)
+		entries, err := changelog.LoadAll(changelog.Player, changelogDir)
 		if err != nil {
 			log.Error("Failed to load changelog", slog.Any("error", err))
 			os.Exit(1)

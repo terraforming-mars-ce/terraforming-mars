@@ -2360,7 +2360,7 @@ export interface MetaResponse {
   version: string;
 }
 /**
- * ChangelogResponse lists the release notes of every version, newest first
+ * ChangelogResponse lists the player release notes of every published version, newest first
  */
 export interface ChangelogResponse {
   entries: ChangelogEntry[];
@@ -2374,10 +2374,13 @@ export interface ChangelogEntry {
   sections: ChangelogSection[];
 }
 /**
- * ChangelogSection is one heading of a version's release notes and its bullets
+ * ChangelogSection is one heading of a version's release notes and its bullets.
+ * Major update sections also carry an intro paragraph.
  */
 export interface ChangelogSection {
-  title: "Security" | "Added" | "Changed" | "Fixed" | "Build";
+  title: string;
+  major: boolean;
+  intro: string;
   items: string[];
 }
 

@@ -6,7 +6,7 @@ import (
 	"openmars/internal/delivery/dto"
 )
 
-// ChangelogHandler serves the release notes this server was built with
+// ChangelogHandler serves the player release notes this server was built with
 type ChangelogHandler struct {
 	*BaseHandler
 	changelog dto.ChangelogResponse
@@ -20,7 +20,7 @@ func NewChangelogHandler(changelog dto.ChangelogResponse) *ChangelogHandler {
 	}
 }
 
-// Changelog returns the release notes of every version, newest first
+// Changelog returns the player release notes of every published version, newest first
 func (h *ChangelogHandler) Changelog(w http.ResponseWriter, r *http.Request) {
 	h.WriteJSONResponse(w, http.StatusOK, h.changelog)
 }

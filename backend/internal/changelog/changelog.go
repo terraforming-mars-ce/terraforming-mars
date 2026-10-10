@@ -1,9 +1,12 @@
-// Package changelog reads the release notes in changelog/<tag>/CHANGELOG.md.
+// Package changelog reads the release notes in changelog/<tag>/.
 //
-// A file holds an optional intro paragraph followed by "## <Section>" headings
-// from SectionOrder, in that order. Each section lists "- " bullets whose
-// wrapped lines are indented two spaces. Nothing else is accepted, so the
-// GitHub release, the release gate and the game all read the same notes.
+// Each version folder holds two files. CHANGELOG.md is for developers and is
+// the GitHub release body; CHANGELOG-USER.md is for players and is what the
+// game shows. Both start with an optional one-paragraph intro followed by
+// "## <Section>" headings from the format's fixed list, in that order. Each
+// section lists "- " bullets whose wrapped lines are indented two spaces. The
+// player format also allows "## Major update: <Name>" sections before the
+// others, each with its own intro paragraph above its bullets.
 package changelog
 
 import (
@@ -17,11 +20,29 @@ import (
 	"strings"
 )
 
-// FileName is the notes file inside each version folder
-const FileName = "CHANGELOG.md"
+// Format describes one kind of changelog file
+type Format struct {
+	FileName    string
+	Sections    []string
+	MajorPrefix string
+	// Optional formats may be absent for a version; LoadAll skips those versions
+	Optional bool
+}
 
-// SectionOrder lists the allowed section headings in the order they must appear
-var SectionOrder = []string{"Security", "Added", "Changed", "Fixed", "Build"}
+// Developer is the technical changelog used as the GitHub release body
+var Developer = Format{
+	FileName: "CHANGELOG.md",
+	Sections: []string{"Security", "Added", "Changed", "Fixed", "Build"},
+}
+
+// Player is the changelog shown in the game. Versions that never reached
+// players have none.
+var Player = Format{
+	FileName:    "CHANGELOG-USER.md",
+	Sections:    []string{"New", "Improved", "Fixed"},
+	MajorPrefix: "Major update: ",
+	Optional:    true,
+}
 
 var versionPattern = regexp.MustCompile(`^v\d+(\.\d+){0,2}$`)
 
@@ -32,9 +53,11 @@ type Entry struct {
 	Sections []Section
 }
 
-// Section is one heading and its bullets
+// Section is one heading and its bullets. Major update sections also have an intro.
 type Section struct {
 	Title string
+	Major bool
+	Intro string
 	Items []string
 }
 
@@ -68,22 +91,36 @@ func versionParts(version string) [3]int {
 	return parts
 }
 
-// Parse reads the notes for version from the contents of its CHANGELOG.md
-func Parse(version string, data []byte) (Entry, error) {
+// Parse reads the notes for version from the contents of a file in the given format
+func Parse(format Format, version string, data []byte) (Entry, error) {
 	if !IsVersion(version) {
 		return Entry{}, fmt.Errorf("invalid version %q: expected vMAJOR[.MINOR[.PATCH]]", version)
 	}
 
 	entry := Entry{Version: version}
-	var intro []string
 	var section *Section
 	var item *string
+	previousBlank := false
 	nextSection := 0
 
 	closeSection := func(line int) error {
-		if section != nil && len(section.Items) == 0 {
+		if section == nil {
+			return nil
+		}
+		if section.Major && section.Intro == "" {
+			return fmt.Errorf("line %d: %q needs an intro paragraph before its bullets", line, section.Title)
+		}
+		if !section.Major && len(section.Items) == 0 {
 			return fmt.Errorf("line %d: section %q has no bullets", line, section.Title)
 		}
+		return nil
+	}
+
+	appendParagraph := func(paragraph *string, text string, lineNo int) error {
+		if *paragraph != "" && previousBlank {
+			return fmt.Errorf("line %d: an intro must be a single paragraph", lineNo)
+		}
+		*paragraph = strings.TrimSpace(*paragraph + " " + text)
 		return nil
 	}
 
@@ -91,25 +128,24 @@ func Parse(version string, data []byte) (Entry, error) {
 	for i, raw := range lines {
 		lineNo := i + 1
 		line := strings.TrimRight(raw, " \t")
+		blank := line == ""
 
 		switch {
-		case line == "":
+		case blank:
 			item = nil
 
 		case strings.HasPrefix(line, "## "):
 			if err := closeSection(lineNo); err != nil {
 				return Entry{}, err
 			}
-			title := strings.TrimSpace(strings.TrimPrefix(line, "## "))
-			position := slices.Index(SectionOrder, title)
-			if position < 0 {
-				return Entry{}, fmt.Errorf("line %d: unknown section %q, expected one of %s", lineNo, title, strings.Join(SectionOrder, ", "))
+			next, err := format.heading(strings.TrimSpace(strings.TrimPrefix(line, "## ")), nextSection)
+			if err != nil {
+				return Entry{}, fmt.Errorf("line %d: %w", lineNo, err)
 			}
-			if position < nextSection {
-				return Entry{}, fmt.Errorf("line %d: section %q is repeated or out of order, expected order %s", lineNo, title, strings.Join(SectionOrder, ", "))
+			if !next.Major {
+				nextSection = slices.Index(format.Sections, next.Title) + 1
 			}
-			nextSection = position + 1
-			entry.Sections = append(entry.Sections, Section{Title: title})
+			entry.Sections = append(entry.Sections, next)
 			section = &entry.Sections[len(entry.Sections)-1]
 			item = nil
 
@@ -117,10 +153,9 @@ func Parse(version string, data []byte) (Entry, error) {
 			return Entry{}, fmt.Errorf("line %d: only \"## <Section>\" headings are allowed", lineNo)
 
 		case section == nil:
-			if len(intro) > 0 && i > 0 && strings.TrimSpace(lines[i-1]) == "" {
-				return Entry{}, fmt.Errorf("line %d: the intro must be a single paragraph", lineNo)
+			if err := appendParagraph(&entry.Intro, line, lineNo); err != nil {
+				return Entry{}, err
 			}
-			intro = append(intro, strings.TrimSpace(line))
 
 		case line == "-":
 			return Entry{}, fmt.Errorf("line %d: empty bullet", lineNo)
@@ -132,37 +167,68 @@ func Parse(version string, data []byte) (Entry, error) {
 		case strings.HasPrefix(line, "  ") && item != nil:
 			*item += " " + strings.TrimSpace(line)
 
+		case section.Major && len(section.Items) == 0:
+			if err := appendParagraph(&section.Intro, line, lineNo); err != nil {
+				return Entry{}, err
+			}
+
 		default:
 			return Entry{}, fmt.Errorf("line %d: expected a \"- \" bullet or a line indented two spaces under one", lineNo)
 		}
+		previousBlank = blank
 	}
 	if err := closeSection(len(lines)); err != nil {
 		return Entry{}, err
 	}
 
-	entry.Intro = strings.Join(intro, " ")
 	if entry.Intro == "" && len(entry.Sections) == 0 {
 		return Entry{}, errors.New("no intro and no sections")
 	}
 	return entry, nil
 }
 
-// Load reads and parses dir/<version>/CHANGELOG.md
-func Load(dir, version string) (Entry, error) {
-	path := filepath.Join(dir, version, FileName)
+func (f Format) heading(title string, nextSection int) (Section, error) {
+	majorPrefix := strings.TrimSpace(f.MajorPrefix)
+	if majorPrefix != "" && strings.HasPrefix(title, majorPrefix) {
+		if strings.TrimSpace(strings.TrimPrefix(title, majorPrefix)) == "" {
+			return Section{}, fmt.Errorf("%q needs a name", title)
+		}
+		if nextSection > 0 {
+			return Section{}, fmt.Errorf("%q must come before %s", title, strings.Join(f.Sections, ", "))
+		}
+		return Section{Title: title, Major: true}, nil
+	}
+
+	position := slices.Index(f.Sections, title)
+	if position < 0 {
+		allowed := strings.Join(f.Sections, ", ")
+		if f.MajorPrefix != "" {
+			allowed = f.MajorPrefix + "<Name>, " + allowed
+		}
+		return Section{}, fmt.Errorf("unknown section %q, expected one of %s", title, allowed)
+	}
+	if position < nextSection {
+		return Section{}, fmt.Errorf("section %q is repeated or out of order, expected order %s", title, strings.Join(f.Sections, ", "))
+	}
+	return Section{Title: title}, nil
+}
+
+// Load reads and parses dir/<version>/<format file>
+func Load(format Format, dir, version string) (Entry, error) {
+	path := filepath.Join(dir, version, format.FileName)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return Entry{}, fmt.Errorf("failed to read changelog for %s: %w", version, err)
+		return Entry{}, fmt.Errorf("failed to read %s for %s: %w", format.FileName, version, err)
 	}
-	entry, err := Parse(version, data)
+	entry, err := Parse(format, version, data)
 	if err != nil {
 		return Entry{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return entry, nil
 }
 
-// LoadAll reads every version folder in dir, newest version first
-func LoadAll(dir string) ([]Entry, error) {
+// LoadAll reads the format's file in every version folder in dir, newest version first
+func LoadAll(format Format, dir string) ([]Entry, error) {
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read changelog directory: %w", err)
@@ -173,10 +239,16 @@ func LoadAll(dir string) ([]Entry, error) {
 		if !dirEntry.IsDir() {
 			continue
 		}
-		if !IsVersion(dirEntry.Name()) {
-			return nil, fmt.Errorf("invalid changelog folder %q: expected vMAJOR[.MINOR[.PATCH]]", dirEntry.Name())
+		version := dirEntry.Name()
+		if !IsVersion(version) {
+			return nil, fmt.Errorf("invalid changelog folder %q: expected vMAJOR[.MINOR[.PATCH]]", version)
 		}
-		entry, err := Load(dir, dirEntry.Name())
+		if format.Optional {
+			if _, err := os.Stat(filepath.Join(dir, version, format.FileName)); errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+		}
+		entry, err := Load(format, dir, version)
 		if err != nil {
 			return nil, err
 		}

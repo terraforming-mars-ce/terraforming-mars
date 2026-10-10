@@ -14,8 +14,11 @@ import (
 
 func TestChangelog_ReturnsEntries(t *testing.T) {
 	response := dto.ToChangelogResponse([]changelog.Entry{
-		{Version: "v7.1.2", Intro: "Fixes.", Sections: []changelog.Section{{Title: "Fixed", Items: []string{"A bug."}}}},
-		{Version: "v7.1.1", Intro: "Not published."},
+		{Version: "v7.1.2", Sections: []changelog.Section{
+			{Title: "Major update: Colonies", Major: true, Intro: "Colonies is playable.", Items: []string{"Trade."}},
+			{Title: "Fixed", Items: []string{"A bug."}},
+		}},
+		{Version: "v7.1.0", Intro: "Behind-the-scenes improvements."},
 	})
 	router := httpHandler.SetupRouter(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, dto.MetaResponse{}, response)
 
@@ -29,8 +32,11 @@ func TestChangelog_ReturnsEntries(t *testing.T) {
 	testutil.AssertNoError(t, json.Unmarshal(recorder.Body.Bytes(), &got), "decode changelog")
 	testutil.AssertEqual(t, 2, len(got.Entries), "entry count")
 	testutil.AssertEqual(t, "v7.1.2", got.Entries[0].Version, "first version")
-	testutil.AssertEqual(t, "Fixed", got.Entries[0].Sections[0].Title, "section title")
-	testutil.AssertEqual(t, "A bug.", got.Entries[0].Sections[0].Items[0], "section item")
+	major := got.Entries[0].Sections[0]
+	testutil.AssertTrue(t, major.Major, "major flag")
+	testutil.AssertEqual(t, "Colonies is playable.", major.Intro, "major intro")
+	testutil.AssertEqual(t, "Fixed", got.Entries[0].Sections[1].Title, "section title")
+	testutil.AssertEqual(t, "A bug.", got.Entries[0].Sections[1].Items[0], "section item")
 	testutil.AssertEqual(t, 0, len(got.Entries[1].Sections), "intro-only entry has no sections")
 }
 

@@ -24,7 +24,7 @@ never built.
 ## Fixed
 - A bug.
 `
-	entry, err := changelog.Parse("v1.1.2", []byte(data))
+	entry, err := changelog.Parse(changelog.Developer, "v1.1.2", []byte(data))
 	testutil.AssertNoError(t, err, "parse")
 
 	testutil.AssertEqual(t, "v1.1.2", entry.Version, "version")
@@ -38,14 +38,14 @@ never built.
 }
 
 func TestParse_IntroOnly(t *testing.T) {
-	entry, err := changelog.Parse("v7.0.1", []byte("Not published.\n"))
+	entry, err := changelog.Parse(changelog.Developer, "v7.0.1", []byte("Not published.\n"))
 	testutil.AssertNoError(t, err, "parse")
 	testutil.AssertEqual(t, "Not published.", entry.Intro, "intro")
 	testutil.AssertEqual(t, 0, len(entry.Sections), "sections")
 }
 
 func TestParse_SectionsOnly(t *testing.T) {
-	entry, err := changelog.Parse("v2", []byte("## Build\n- Faster builds.\n"))
+	entry, err := changelog.Parse(changelog.Developer, "v2", []byte("## Build\n- Faster builds.\n"))
 	testutil.AssertNoError(t, err, "parse")
 	testutil.AssertEqual(t, "", entry.Intro, "intro")
 	testutil.AssertEqual(t, "Build", entry.Sections[0].Title, "section")
@@ -71,11 +71,12 @@ func TestParse_Rejects(t *testing.T) {
 		{"continuation after blank line", "v1.0.0", "## Added\n- A.\n\n  more\n", "expected a \"- \" bullet"},
 		{"empty bullet", "v1.0.0", "## Added\n- \n", "empty bullet"},
 		{"two intro paragraphs", "v1.0.0", "One.\n\nTwo.\n", "single paragraph"},
+		{"major update in developer notes", "v1.0.0", "## Major update: Colonies\nIntro.\n", `unknown section "Major update: Colonies"`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := changelog.Parse(tt.version, []byte(tt.data))
+			_, err := changelog.Parse(changelog.Developer, tt.version, []byte(tt.data))
 			testutil.AssertError(t, err, "parse")
 			testutil.AssertTrue(t, strings.Contains(err.Error(), tt.wantErr), "error "+err.Error()+" mentions "+tt.wantErr)
 		})
@@ -106,7 +107,7 @@ func TestLoadAll_SortsNewestFirst(t *testing.T) {
 		writeEntry(t, dir, version, "Release "+version+".\n")
 	}
 
-	entries, err := changelog.LoadAll(dir)
+	entries, err := changelog.LoadAll(changelog.Developer, dir)
 	testutil.AssertNoError(t, err, "load all")
 
 	var versions []string
@@ -120,7 +121,7 @@ func TestLoadAll_RejectsInvalidFolderName(t *testing.T) {
 	dir := t.TempDir()
 	writeEntry(t, dir, "next", "Unreleased.\n")
 
-	_, err := changelog.LoadAll(dir)
+	_, err := changelog.LoadAll(changelog.Developer, dir)
 	testutil.AssertError(t, err, "load all")
 }
 
@@ -128,27 +129,110 @@ func TestLoadAll_ReportsFileAndLine(t *testing.T) {
 	dir := t.TempDir()
 	writeEntry(t, dir, "v1", "## Added\nNot a bullet.\n")
 
-	_, err := changelog.LoadAll(dir)
+	_, err := changelog.LoadAll(changelog.Developer, dir)
 	testutil.AssertError(t, err, "load all")
-	testutil.AssertTrue(t, strings.Contains(err.Error(), filepath.Join("v1", changelog.FileName)), "error names the file")
+	testutil.AssertTrue(t, strings.Contains(err.Error(), filepath.Join("v1", changelog.Developer.FileName)), "error names the file")
 	testutil.AssertTrue(t, strings.Contains(err.Error(), "line 2"), "error names the line")
 }
 
 func TestLoad_MissingEntry(t *testing.T) {
-	_, err := changelog.Load(t.TempDir(), "v9.9.9")
+	_, err := changelog.Load(changelog.Developer, t.TempDir(), "v9.9.9")
 	testutil.AssertError(t, err, "load missing")
+}
+
+func TestParse_PlayerMajorUpdate(t *testing.T) {
+	data := `## Major update: Multiple servers
+
+Pick between servers like EU 1 and EU 2. Your choice
+is remembered.
+
+- Game links take friends to the right server.
+- Switch anytime with Change server in the
+  menu.
+
+## Fixed
+- A bug.
+`
+	entry, err := changelog.Parse(changelog.Player, "v7", []byte(data))
+	testutil.AssertNoError(t, err, "parse")
+
+	testutil.AssertEqual(t, 2, len(entry.Sections), "section count")
+	major := entry.Sections[0]
+	testutil.AssertEqual(t, "Major update: Multiple servers", major.Title, "major title")
+	testutil.AssertTrue(t, major.Major, "major flag")
+	testutil.AssertEqual(t, "Pick between servers like EU 1 and EU 2. Your choice is remembered.", major.Intro, "major intro")
+	testutil.AssertEqual(t, "Switch anytime with Change server in the menu.", major.Items[1], "wrapped bullet")
+	testutil.AssertFalse(t, entry.Sections[1].Major, "fixed is not major")
+}
+
+func TestParse_PlayerIntroOnly(t *testing.T) {
+	entry, err := changelog.Parse(changelog.Player, "v7.1.0", []byte("Behind-the-scenes improvements.\n"))
+	testutil.AssertNoError(t, err, "parse")
+	testutil.AssertEqual(t, "Behind-the-scenes improvements.", entry.Intro, "intro")
+}
+
+func TestParse_PlayerRejects(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    string
+		wantErr string
+	}{
+		{"developer section", "## Added\n- A.\n", `unknown section "Added"`},
+		{"major after regular section", "## New\n- A.\n\n## Major update: Colonies\nIntro.\n", "must come before"},
+		{"major without intro", "## Major update: Colonies\n- A.\n", "needs an intro paragraph"},
+		{"major without name", "## Major update: \nIntro.\n", "needs a name"},
+		{"major intro with two paragraphs", "## Major update: Colonies\nOne.\n\nTwo.\n", "single paragraph"},
+		{"text after major bullets", "## Major update: Colonies\nIntro.\n- A.\nMore.\n", "expected a \"- \" bullet"},
+		{"intro text in regular section", "## New\nIntro.\n- A.\n", "expected a \"- \" bullet"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := changelog.Parse(changelog.Player, "v1.0.0", []byte(tt.data))
+			testutil.AssertError(t, err, "parse")
+			testutil.AssertTrue(t, strings.Contains(err.Error(), tt.wantErr), "error "+err.Error()+" mentions "+tt.wantErr)
+		})
+	}
+}
+
+func TestLoadAll_PlayerSkipsVersionsWithoutPlayerNotes(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "v7", changelog.Player.FileName, "Shipped.\n")
+	writeEntry(t, dir, "v7.0.1", "Never shipped.\n")
+
+	entries, err := changelog.LoadAll(changelog.Player, dir)
+	testutil.AssertNoError(t, err, "load all")
+	testutil.AssertEqual(t, 1, len(entries), "entry count")
+	testutil.AssertEqual(t, "v7", entries[0].Version, "version")
+}
+
+func TestLoad_PlayerNotesRequiredForATag(t *testing.T) {
+	dir := t.TempDir()
+	writeEntry(t, dir, "v7.0.1", "Developer notes only.\n")
+
+	_, err := changelog.Load(changelog.Player, dir, "v7.0.1")
+	testutil.AssertError(t, err, "load player notes")
 }
 
 // Every committed changelog must parse, so a malformed file fails CI before it can block a release
 func TestRepoChangelog_AllEntriesParse(t *testing.T) {
-	entries, err := changelog.LoadAll(repoChangelogDir)
-	testutil.AssertNoError(t, err, "load repo changelog")
-	testutil.AssertTrue(t, len(entries) > 0, "repo changelog has entries")
+	developer, err := changelog.LoadAll(changelog.Developer, repoChangelogDir)
+	testutil.AssertNoError(t, err, "load developer changelog")
+	testutil.AssertTrue(t, len(developer) > 0, "developer changelog has entries")
+
+	player, err := changelog.LoadAll(changelog.Player, repoChangelogDir)
+	testutil.AssertNoError(t, err, "load player changelog")
+	testutil.AssertTrue(t, len(player) > 0, "player changelog has entries")
 }
 
 func writeEntry(t *testing.T, dir, version, content string) {
 	t.Helper()
+	writeFile(t, dir, version, changelog.Developer.FileName, content)
+}
+
+func writeFile(t *testing.T, dir, version, fileName, content string) {
+	t.Helper()
 	folder := filepath.Join(dir, version)
 	testutil.AssertNoError(t, os.MkdirAll(folder, 0o755), "mkdir")
-	testutil.AssertNoError(t, os.WriteFile(filepath.Join(folder, changelog.FileName), []byte(content), 0o644), "write")
+	testutil.AssertNoError(t, os.WriteFile(filepath.Join(folder, fileName), []byte(content), 0o644), "write")
 }

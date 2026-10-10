@@ -52,16 +52,16 @@ just clean         # Remove build output
 
 ### Releases
 
-Release notes live in `changelog/<tag>/CHANGELOG.md`, the only place they are written. The GitHub release body and the in-game changelog (`GET /api/v1/changelog`) both read that file; tag messages carry no notes.
+Release notes live only in `changelog/<tag>/`, written once per release; tag messages carry no notes. Use the `release-creator` skill (`.claude/skills/release-creator/`) to write them.
 
-1. Add `changelog/vX.Y.Z/CHANGELOG.md` in a PR and merge it.
-2. On an up-to-date `main`, run `just release vX.Y.Z`. It checks the changelog, creates the tag and pushes it.
-3. The Release workflow fails before building anything if the changelog is missing or malformed, then drafts the GitHub release from it and pushes the images.
+- `CHANGELOG.md` is for developers and becomes the GitHub release body.
+- `CHANGELOG-USER.md` is for players and is the only changelog the game shows (`GET /api/v1/changelog`). Versions that never shipped have none.
 
-Format (enforced by `backend/internal/changelog`, `just changelog-check vX.Y.Z` and a backend test over every file):
-- An optional one-paragraph intro.
-- `## Security`, `## Added`, `## Changed`, `## Fixed`, `## Build`, in that order, each optional and never empty.
-- `- ` bullets; wrapped lines are indented two spaces. Inline `code` is the only markup.
+1. Add both files for `vX.Y.Z` in a PR and merge it.
+2. On an up-to-date `main`, run `just release vX.Y.Z`. It checks both files, creates the tag and pushes it.
+3. The Release workflow fails before building anything if either file is missing or malformed, then drafts the GitHub release and pushes the images.
+
+`backend/internal/changelog` enforces both formats, run by `just changelog-check vX.Y.Z` and by a backend test over every committed file.
 
 ## Adding New Game Features
 
