@@ -27,7 +27,7 @@ RUN node_modules/.bin/vite build && \
     find build -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.json' \
         -o -name '*.svg' -o -name '*.map' \) -exec gzip -k -9 {} +
 
-FROM --platform=$BUILDPLATFORM golang:1.27.1-alpine AS server
+FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine AS server
 WORKDIR /build
 RUN apk add --no-cache git ca-certificates tzdata
 COPY backend/go.mod backend/go.sum ./
