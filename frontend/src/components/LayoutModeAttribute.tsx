@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 
 function isEditable(target: EventTarget | null): boolean {
@@ -19,7 +19,7 @@ function blockTouchContextMenu(event: MouseEvent) {
 export default function LayoutModeAttribute() {
   const { mode, isCompact } = useLayoutMode();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.layout = mode;
   }, [mode]);
 
