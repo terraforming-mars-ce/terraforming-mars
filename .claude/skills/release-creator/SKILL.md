@@ -14,8 +14,10 @@ allowed-tools:
 
 Release notes live only in `changelog/<tag>/`, two files per version:
 
-- `CHANGELOG.md` is for developers. It is the GitHub release body.
+- `CHANGELOG.md` is for developers.
 - `CHANGELOG-USER.md` is for players. It is the only changelog the game shows (main menu and in-game menu, "What's new" after an update, the update pill).
+
+The GitHub release body is built from both (`go run ./cmd/changelog release-notes`): the version as the title, the player notes, then the developer notes under "Developer details".
 
 Tag messages carry no notes, only the subject `Open Mars vX.Y.Z`. `just release` and the Release workflow refuse a tag unless both files exist and parse (`backend/internal/changelog`). Never write notes anywhere else, so nothing can drift.
 
@@ -29,7 +31,7 @@ Tag messages carry no notes, only the subject `Open Mars vX.Y.Z`. `just release`
 6. **Validate.** `just changelog-check vX.Y.Z`.
 7. **Open a PR.** On a new branch (never commit to `main`), commit `changelog/vX.Y.Z/`, run `just prepare-for-commit`, push the branch and open a PR. Follow the repo's PR rules.
 8. **Tag after the PR is merged.** `just release vX.Y.Z` on an up-to-date `main` checks both files, creates the annotated tag and pushes it. That push starts the Release workflow (images and a draft GitHub release), which is visible state, so ask the user before running it, or let them run it.
-9. **GitHub release.** The workflow creates it as a draft with `CHANGELOG.md` as the body. Publishing is a separate, explicit step for the user.
+9. **GitHub release.** The workflow creates it as a draft with the body built from both files. Publishing is a separate, explicit step for the user.
 
 ## Developer notes: CHANGELOG.md
 

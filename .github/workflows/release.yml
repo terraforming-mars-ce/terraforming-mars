@@ -1,8 +1,9 @@
 name: Release
 
 # Pushing a vMAJOR.MINOR.PATCH tag (`just release`) builds every image and opens
-# a draft GitHub release whose notes are changelog/<tag>/CHANGELOG.md. Nothing is
-# built or released for a tag without valid CHANGELOG.md and CHANGELOG-USER.md
+# a draft GitHub release whose notes are built from changelog/<tag>/: the player
+# notes (CHANGELOG-USER.md), then the developer notes (CHANGELOG.md) under
+# "Developer details". Nothing is built or released for a tag without both
 # files. Deploys stay manual.
 on:
   push:
@@ -42,12 +43,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
+      - name: Set up Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+
+      - name: Build release notes
+        working-directory: ./backend
+        run: go run ./cmd/changelog release-notes ../changelog "$GITHUB_REF_NAME" "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/release-notes.md"
+
       - name: Create draft release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
           name: ${{ github.ref_name }}
-          body_path: changelog/${{ github.ref_name }}/CHANGELOG.md
+          body_path: ${{ runner.temp }}/release-notes.md
 
   build-and-push:
     name: Build & Push ${{ matrix.name }} image
