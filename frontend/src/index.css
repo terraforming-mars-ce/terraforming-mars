@@ -20,6 +20,7 @@
 
   /* Custom Font Families */
   --font-orbitron: Orbitron, sans-serif;
+  --font-frontier: "Open Mars Frontier", Orbitron, sans-serif;
 
   /* Custom Box Shadows */
   --shadow-glow: 0 0 30px rgba(30, 60, 150, 0.6);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useProgress } from "@react-three/drei";
 import { Z_INDEX } from "@/constants/zIndex";
+import OpenMarsLogo from "@/components/ui/OpenMarsLogo.tsx";
 
 /** What the file three.js is loading is, by its path under /assets/; most specific first. */
 const ASSET_LABELS: [RegExp, string][] = [
@@ -207,6 +208,9 @@ export default function LoadingOverlay({
         fontFamily: "Orbitron, sans-serif",
       }}
     >
+      <div className="mb-12 w-[min(520px,calc(100%-48px))] text-center compact:mb-6 compact:w-[340px] compact:max-w-[calc(100%-48px)]">
+        <OpenMarsLogo surface="loading" />
+      </div>
       {showProgress ? (
         <ProgressReadout done={isLoaded} />
       ) : (
