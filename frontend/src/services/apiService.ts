@@ -39,6 +39,10 @@ export class ApiService {
     return response.json();
   }
 
+  changelogImageUrl(version: string, file: string): string {
+    return `${this.baseUrl}/changelog/${encodeURIComponent(version)}/${encodeURIComponent(file)}`;
+  }
+
   async getGameOptions(signal?: AbortSignal): Promise<GameOptionsDto> {
     const response = await fetch(`${this.baseUrl}/game-options`, { signal });
     if (!response.ok) {
