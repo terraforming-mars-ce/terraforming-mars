@@ -43,13 +43,24 @@ const UpdatePill: React.FC<UpdatePillProps> = ({ inMenuRoute }) => {
         } as React.CSSProperties
       }
     >
-      <span className="min-w-0 truncate font-orbitron text-sm">
+      <span className="min-w-0 truncate whitespace-nowrap font-orbitron text-sm">
         {displayVersion(update)} available
       </span>
-      <GameButton emphasis="quiet" size="sm" height={44} onClick={() => openChangelog(update)}>
+      <GameButton
+        emphasis="quiet"
+        size="sm"
+        height={44}
+        className="shrink-0 whitespace-nowrap"
+        onClick={() => openChangelog(update)}
+      >
         What's new
       </GameButton>
-      <GameButton size="sm" height={36} onClick={() => window.location.reload()}>
+      <GameButton
+        size="sm"
+        height={36}
+        className="shrink-0 whitespace-nowrap"
+        onClick={() => window.location.reload()}
+      >
         Update
       </GameButton>
       <CloseButton label="Hide update notice" onClick={() => dismissUpdate(update)} />
