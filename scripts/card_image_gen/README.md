@@ -1,6 +1,6 @@
 # Card Image Generation
 
-Generates card artwork for Terraforming Mars using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) with [Flux Schnell](https://huggingface.co/black-forest-labs/FLUX.1-schnell) (FP8 quantized).
+Generates card artwork for Open Mars using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) with [Flux Schnell](https://huggingface.co/black-forest-labs/FLUX.1-schnell) (FP8 quantized).
 
 ## Prerequisites
 

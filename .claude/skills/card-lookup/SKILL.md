@@ -1,11 +1,11 @@
 ---
 name: card-lookup
-description: Look up Terraforming Mars card data and corporation card data. Use this skill when the user asks about specific cards, card effects, card costs, corporation abilities, or needs to find cards by type, tag, or pack. Provides jq commands for efficient card data retrieval without loading the entire JSON file.
+description: Look up Open Mars card data and corporation card data. Use this skill when the user asks about specific cards, card effects, card costs, corporation abilities, or needs to find cards by type, tag, or pack. Provides jq commands for efficient card data retrieval without loading the entire JSON file.
 ---
 
 # Card Lookup
 
-This skill provides efficient access to the Terraforming Mars card database.
+This skill provides efficient access to the Open Mars card database.
 
 ## Card Data Location
 

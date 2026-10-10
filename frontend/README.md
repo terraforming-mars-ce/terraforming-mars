@@ -1,6 +1,6 @@
 # Open Mars Frontend
 
-React frontend for Open Mars, a digital implementation of the Terraforming Mars board game, with 3D game view and real-time multiplayer functionality.
+React frontend for Open Mars, a digital board game based on Terraforming Mars, with 3D game view and real-time multiplayer functionality.
 
 ## Features
 

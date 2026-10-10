@@ -175,7 +175,7 @@ func ExecuteProductionPhase(ctx context.Context, g *game.Game, players []*player
 }
 
 // ExecuteFinalProductionPhase runs the production phase for the final generation.
-// Per TM rules, there is no research phase (no card drawing) after the final production.
+// Per the game rules, there is no research phase (no card drawing) after the final production.
 // Sets up ProductionPhase data for the modal and transitions to production_and_card_draw.
 func ExecuteFinalProductionPhase(ctx context.Context, g *game.Game, players []*playerPkg.Player, log *slog.Logger) error {
 	log = log.With(slog.String("game_id", g.ID()))

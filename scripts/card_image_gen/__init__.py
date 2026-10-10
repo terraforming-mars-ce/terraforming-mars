@@ -1,1 +1,1 @@
-"""Card Image Generation Pipeline for Terraforming Mars."""
+"""Card Image Generation Pipeline for Open Mars."""

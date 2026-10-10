@@ -29,7 +29,7 @@ Real-time multiplayer. 450+ cards. Six expansions. One red planet.
 
 ## What is this?
 
-Open Mars is a full digital adaptation of the Terraforming Mars board game, playable in your browser. The Mars surface is rendered as an interactive 3D hex grid -- you rotate, zoom, and place tiles directly on the planet. Games run in real time over WebSockets with no account required.
+Open Mars is a digital board game based on Terraforming Mars, playable in your browser. The Mars surface is rendered as an interactive 3D hex grid -- you rotate, zoom, and place tiles directly on the planet. Games run in real time over WebSockets with no account required.
 
 This is not a simplified clone. It implements the complete rule set across six expansions with hundreds of cards, corporations, milestones, awards, and colonies.
 
