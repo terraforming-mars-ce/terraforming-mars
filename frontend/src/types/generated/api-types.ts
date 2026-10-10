@@ -2359,6 +2359,27 @@ export interface MetaResponse {
   name: string;
   version: string;
 }
+/**
+ * ChangelogResponse lists the release notes of every version, newest first
+ */
+export interface ChangelogResponse {
+  entries: ChangelogEntry[];
+}
+/**
+ * ChangelogEntry is the release notes for one version
+ */
+export interface ChangelogEntry {
+  version: string;
+  intro: string;
+  sections: ChangelogSection[];
+}
+/**
+ * ChangelogSection is one heading of a version's release notes and its bullets
+ */
+export interface ChangelogSection {
+  title: "Security" | "Added" | "Changed" | "Fixed" | "Build";
+  items: string[];
+}
 
 //////////
 // source: mapper_game.go

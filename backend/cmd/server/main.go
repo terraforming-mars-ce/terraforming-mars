@@ -26,6 +26,7 @@ import (
 	stdprojAction "openmars/internal/action/standard_project"
 	tileAction "openmars/internal/action/tile"
 	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/changelog"
 	"openmars/internal/delivery/dto"
 	httpHandler "openmars/internal/delivery/http"
 	"openmars/internal/delivery/web"
@@ -109,6 +110,23 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("Server alias: " + serverMeta.Alias)
+
+	changelogDir := os.Getenv("OPENMARS_CHANGELOG_DIR")
+	if changelogDir == "" {
+		changelogDir = "changelog"
+	}
+	changelogResponse := dto.ToChangelogResponse(nil)
+	if _, err := os.Stat(changelogDir); err != nil {
+		log.Warn("Changelog directory not found, serving an empty changelog", slog.String("path", changelogDir))
+	} else {
+		entries, err := changelog.LoadAll(changelogDir)
+		if err != nil {
+			log.Error("Failed to load changelog", slog.Any("error", err))
+			os.Exit(1)
+		}
+		changelogResponse = dto.ToChangelogResponse(entries)
+		log.Debug("Changelog loaded", slog.Int("entry_count", len(entries)))
+	}
 
 	// Setup graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -492,6 +510,7 @@ func main() {
 		awardRegistry,
 		bugReportService,
 		serverMeta,
+		changelogResponse,
 	)
 
 	// Mount API router

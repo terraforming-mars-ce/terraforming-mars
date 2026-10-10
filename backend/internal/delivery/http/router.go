@@ -30,11 +30,13 @@ func SetupRouter(
 	awardRegistry award.AwardRegistry,
 	bugReportService *bugreport.Service,
 	meta dto.MetaResponse,
+	changelog dto.ChangelogResponse,
 ) *mux.Router {
 	gameHandler := NewGameHandler(createGameAction, getGameAction, getGameLogsAction, getGameHistoryAction, listGamesAction, listCardsAction, cardRegistry, milestoneRegistry, awardRegistry)
 	playerHandler := NewPlayerHandler(getPlayerAction, getGameAction, cardRegistry)
 	healthHandler := NewHealthHandler()
 	metaHandler := NewMetaHandler(meta)
+	changelogHandler := NewChangelogHandler(changelog)
 	bugReportHandler := NewBugReportHandler(bugReportService)
 
 	router := mux.NewRouter()
@@ -49,6 +51,7 @@ func SetupRouter(
 	api.HandleFunc("/game-options", gameHandler.GameOptions).Methods(http.MethodGet)
 	api.HandleFunc("/health", healthHandler.HealthCheck).Methods(http.MethodGet)
 	api.HandleFunc("/meta", metaHandler.Meta).Methods(http.MethodGet)
+	api.HandleFunc("/changelog", changelogHandler.Changelog).Methods(http.MethodGet)
 
 	gameRoutes := api.PathPrefix("/games").Subrouter()
 	gameRoutes.HandleFunc("", gameHandler.CreateGame).Methods(http.MethodPost)

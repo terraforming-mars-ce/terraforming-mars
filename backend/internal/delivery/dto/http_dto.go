@@ -131,3 +131,21 @@ type MetaResponse struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
+
+// ChangelogResponse lists the release notes of every version, newest first
+type ChangelogResponse struct {
+	Entries []ChangelogEntry `json:"entries"`
+}
+
+// ChangelogEntry is the release notes for one version
+type ChangelogEntry struct {
+	Version  string             `json:"version"`
+	Intro    string             `json:"intro"`
+	Sections []ChangelogSection `json:"sections"`
+}
+
+// ChangelogSection is one heading of a version's release notes and its bullets
+type ChangelogSection struct {
+	Title string   `json:"title" tstype:"'Security' | 'Added' | 'Changed' | 'Fixed' | 'Build'"`
+	Items []string `json:"items"`
+}
