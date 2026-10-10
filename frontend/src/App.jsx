@@ -1,3 +1,5 @@
+import LoadGamePage from "./components/pages/LoadGamePage.tsx";
+import ResumeGamePage from "./components/pages/ResumeGamePage.tsx";
 import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import { BrowserRouter as Router, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -87,6 +89,12 @@ function ConnectionGate({ ready, children }) {
 }
 
 function routeForPathname(pathname) {
+  if (pathname === "/load") {
+    return "load";
+  }
+  if (pathname.startsWith("/resume/")) {
+    return "resume";
+  }
   if (pathname === "/create") {
     return "create";
   }
@@ -117,13 +125,18 @@ function AppWithBackground({ connectionReady }) {
   const phase = useAppPhaseStore((s) => s.phase);
   const setPhase = useAppPhaseStore((s) => s.setPhase);
 
-  const inMenuRoute = ["/", "/create", "/join", "/cards", "/reconnecting"].includes(
-    location.pathname,
-  );
+  const inMenuRoute =
+    ["/", "/create", "/join", "/cards", "/reconnecting", "/load"].includes(location.pathname) ||
+    location.pathname.startsWith("/resume/");
   const isCardsPage = location.pathname === "/cards";
   useVersionCheck(inMenuRoute);
   const { isCompact } = useLayoutMode();
-  const ownsMenuChrome = isCompact && (location.pathname === "/join" || isCardsPage);
+  const ownsMenuChrome =
+    isCompact &&
+    (location.pathname === "/join" ||
+      location.pathname === "/load" ||
+      location.pathname.startsWith("/resume/") ||
+      isCardsPage);
   const browserOpen = useUIOverlayStore((s) => s.showCardBrowser);
   useRenderPause("card-browser", browserOpen);
   const renderPaused = useRenderPauseStore(isRenderPaused);
@@ -193,6 +206,8 @@ function AppWithBackground({ connectionReady }) {
       <ConnectionGate ready={connectionReady}>
         <Routes>
           <Route path="/" element={<GameLandingPage />} />
+          <Route path="/load" element={<LoadGamePage />} />
+          <Route path="/resume/:gameId" element={<ResumeGamePage />} />
           <Route path="/create" element={<CreateGamePage />} />
           <Route path="/join" element={<JoinGamePage />} />
           <Route path="/cards" element={<CardsPage />} />

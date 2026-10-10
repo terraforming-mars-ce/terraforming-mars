@@ -6,7 +6,7 @@ import (
 
 // IsMyTurn checks if it's currently the given player's turn to act.
 func IsMyTurn(game *dto.GameDto, myPlayerID string) bool {
-	if game == nil || myPlayerID == "" {
+	if game == nil || game.ResumeLobby != nil || myPlayerID == "" {
 		return false
 	}
 

@@ -11,8 +11,8 @@ import (
 	"openmars/internal/game/shared"
 )
 
-// SnapshotEnricher computes per-player VP breakdowns for a snapshot, using the live
-// game state at the moment the snapshot is recorded. The map is stored on the history
+// SnapshotEnricher computes per-player VP breakdowns from an immutable snapshot.
+// The map is stored on the history
 // entry so the history mapper doesn't need to reimplement scoring logic.
 type SnapshotEnricher func(state *GameState) map[string]shared.VPBreakdown
 
@@ -146,16 +146,18 @@ func (ds *DataStore) appendHistory(state *GameState) {
 func (ds *DataStore) enrichEntry(gameID string, seq int64) {
 	defer ds.enricherWG.Done()
 
-	snapshot, err := ds.GetGame(gameID)
-	if err != nil || snapshot == nil {
+	entryID := fmt.Sprintf("%s:%012d", gameID, seq)
+	rtxn := ds.db.Txn(false)
+	rawEntry, err := rtxn.First("game_history", "id", entryID)
+	rtxn.Abort()
+	if err != nil || rawEntry == nil {
 		return
 	}
-	breakdowns := ds.enricher(snapshot)
+	entry := rawEntry.(*GameStateHistoryEntry)
+	breakdowns := ds.enricher(entry.State)
 	if breakdowns == nil {
 		return
 	}
-
-	entryID := fmt.Sprintf("%s:%012d", gameID, seq)
 
 	htxn := ds.db.Txn(true)
 	defer htxn.Abort()
@@ -360,4 +362,25 @@ func (t *Txn) Commit() {
 // Abort discards the transaction. Safe to call after Commit (no-op).
 func (t *Txn) Abort() {
 	t.txn.Abort()
+}
+
+// RestoreHistory installs immutable imported history without generating new entries.
+func (ds *DataStore) RestoreHistory(gameID string, entries []*GameStateHistoryEntry) error {
+	txn := ds.db.Txn(true)
+	defer txn.Abort()
+	var sequence int64
+	for _, entry := range entries {
+		if entry.GameID != gameID || entry.Sequence <= sequence {
+			return fmt.Errorf("invalid history sequence")
+		}
+		if err := txn.Insert("game_history", entry); err != nil {
+			return err
+		}
+		sequence = entry.Sequence
+	}
+	txn.Commit()
+	ds.historySeqMu.Lock()
+	ds.historySequence[gameID] = sequence
+	ds.historySeqMu.Unlock()
+	return nil
 }

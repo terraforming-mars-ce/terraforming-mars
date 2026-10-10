@@ -17,6 +17,11 @@ var garbage = []any{nil, []any{}, "x", 42, map[string]any{"unexpected": true}}
 // type that must be rejected. A type the server handles but this table does not list
 // fails TestContract_EveryMessageTypeIsCovered.
 var contracts = map[dto.MessageType][]any{
+	dto.MessageTypeWatchResumeGame:                {map[string]any{"gameId": 5}, map[string]any{"gameId": "no-such-game"}},
+	dto.MessageTypeClaimResumeSeat:                {map[string]any{"seatId": 5}, map[string]any{"gameId": "no-such-game", "seatId": "x"}},
+	dto.MessageTypeReleaseResumeSeat:              {map[string]any{"seatId": 5}, map[string]any{"seatId": "x"}},
+	dto.MessageTypeResumeGame:                     {map[string]any{"gameId": 5}},
+	dto.MessageTypeResumeBotToken:                 {map[string]any{"botToken": 5}},
 	dto.MessageTypeQuotePayment:                   {map[string]any{"requestId": 5}, map[string]any{"requestId": "r", "intent": "x"}},
 	dto.MessageTypePlayerConnect:                  {map[string]any{"gameId": 5, "playerName": "x"}, map[string]any{"gameId": "no-such-game", "playerName": "x"}},
 	dto.MessageTypePlayerTakeover:                 {map[string]any{"gameId": "no-such-game", "targetPlayerId": 5}},

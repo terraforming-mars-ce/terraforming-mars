@@ -1112,6 +1112,7 @@ type OtherPlayerDto struct {
 
 // GameDto represents a game for client consumption (clean architecture)
 type GameDto struct {
+	ResumeLobby        *ResumeLobbyDto          `json:"resumeLobby,omitempty"`
 	ID                 string                   `json:"id"`
 	Status             GameStatus               `json:"status"`
 	Settings           GameSettingsDto          `json:"settings"`
@@ -1640,4 +1641,53 @@ type PaymentIntentDto struct {
 	PaymentType        string   `json:"paymentType,omitempty"`
 	MilestoneType      string   `json:"milestoneType,omitempty"`
 	AwardType          string   `json:"awardType,omitempty"`
+}
+
+// ResumeSeatDto describes a saved seat without exposing private game state.
+type ResumeSeatDto struct {
+	CorporationName string `json:"corporationName"`
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	SavedName       string `json:"savedName"`
+	CorporationID   string `json:"corporationId"`
+	Color           string `json:"color"`
+	PlayerType      string `json:"playerType"`
+	Claimed         bool   `json:"claimed"`
+	Connected       bool   `json:"connected"`
+	Exited          bool   `json:"exited"`
+	BotStatus       string `json:"botStatus"`
+	BotError        string `json:"botError"`
+}
+
+type ResumeLobbyDto struct {
+	Seats []ResumeSeatDto `json:"seats"`
+}
+
+type GameSaveSummaryDto struct {
+	Generation     int             `json:"generation"`
+	Phase          GamePhase       `json:"phase"`
+	MapID          string          `json:"mapId"`
+	SavedAt        string          `json:"savedAt"`
+	Seats          []ResumeSeatDto `json:"seats"`
+	HistoryEntries int             `json:"historyEntries"`
+	LogEntries     int             `json:"logEntries"`
+}
+
+type ImportGameSaveResponse struct {
+	GameID     string `json:"gameId"`
+	PlayerID   string `json:"playerId"`
+	PlayerName string `json:"playerName"`
+}
+
+type ResumeGameRequest struct {
+	GameID     string `json:"gameId"`
+	SeatID     string `json:"seatId,omitempty"`
+	PlayerName string `json:"playerName,omitempty"`
+	BotToken   string `json:"botToken,omitempty"`
+}
+
+// GameSaveErrorResponse contains a stable save failure code and a safe player message.
+type GameSaveErrorResponse struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }

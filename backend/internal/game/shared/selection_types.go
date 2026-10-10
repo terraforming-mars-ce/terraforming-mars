@@ -39,8 +39,10 @@ type PendingTileSelection struct {
 
 // TileCompletionCallback stores info about what to call when tile placement completes
 type TileCompletionCallback struct {
-	Type string
-	Data map[string]any
+	Type         string
+	Output       *BasicResourceCondition
+	Source       string
+	SourceCardID string
 }
 
 // PendingTileSelectionQueue represents a queue of tile placements

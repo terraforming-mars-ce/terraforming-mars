@@ -12,6 +12,9 @@ import (
 // ToSpectatorGameDto creates a GameDto for spectators where all players are shown
 // as OtherPlayerDto (no hidden information like hand cards or pending selections).
 func ToSpectatorGameDto(g *game.Game, cardRegistry cards.CardRegistry, awardRegistry award.AwardRegistry, milestoneRegistry milestone.MilestoneRegistry) GameDto {
+	if g.ResumeLobby() != nil {
+		return ToResumeGameDto(g, "", cardRegistry)
+	}
 	players := g.GetAllPlayers()
 
 	otherPlayers := make([]OtherPlayerDto, 0, len(players))

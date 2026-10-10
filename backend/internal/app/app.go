@@ -39,6 +39,7 @@ import (
 	"openmars/internal/game/datastore"
 	msLoader "openmars/internal/game/milestone"
 	pfLoader "openmars/internal/game/projectfunding"
+	"openmars/internal/game/save"
 	"openmars/internal/game/shared"
 	stdprojLoader "openmars/internal/game/standardproject"
 	httpmiddleware "openmars/internal/middleware/http"
@@ -152,20 +153,17 @@ func New(cfg Config) (*App, error) {
 	hub := core.NewHub()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Per-snapshot VP enrichment uses the same helper as final scoring, so the projected
-	// score on each history entry matches the scoreboard exactly. It runs on its own
-	// goroutine, so it reads the game on the hub goroutine instead of racing the action
-	// that is still changing it.
+	// Enrich the detached snapshot so historical scores describe that exact position.
 	ds.SetSnapshotEnricher(func(state *datastore.GameState) map[string]shared.VPBreakdown {
-		var breakdowns map[string]shared.VPBreakdown
-		_ = hub.Do(ctx, func() {
-			g, err := gameRepo.Get(ctx, state.ID)
-			if err != nil || g == nil {
-				return
-			}
-			breakdowns = gameAction.ComputePlayerVPBreakdowns(g, cardRegistry, awardRegistry, milestoneRegistry)
-		})
-		return breakdowns
+		snapshotStore, err := datastore.NewDataStore()
+		if err != nil {
+			return nil
+		}
+		g, err := game.RestoreGame(snapshotStore, state)
+		if err != nil {
+			return nil
+		}
+		return gameAction.ComputePlayerVPBreakdowns(g, cardRegistry, awardRegistry, milestoneRegistry)
 	})
 
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -345,8 +343,14 @@ func New(cfg Config) (*App, error) {
 		adminSetActionsRemainingAction,
 	)
 
+	saveAction, err := gameAction.NewSaveGameAction(gameRepo, stateRepo, save.Catalog{StandardProjects: stdProjRegistry, Cards: cardRegistry, Maps: mapRegistry, Colonies: colonyRegistry, Awards: awardRegistry, Milestones: milestoneRegistry, Projects: pfRegistry}, cfg.Meta.Version, botController, log)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("initialize game saves: %w", err)
+	}
+	wsHandler.RegisterSaveHandlers(hub, broadcaster, gameRepo, saveAction)
 	router := mux.NewRouter()
-	router.PathPrefix("/api/v1").Handler(httpHandler.SetupRouter(
+	apiRouter := httpHandler.SetupRouter(
 		createGameAction,
 		query.NewGetGameAction(gameRepo, log),
 		query.NewGetGameLogsAction(stateRepo, log),
@@ -361,7 +365,12 @@ func New(cfg Config) (*App, error) {
 		cfg.Meta,
 		cfg.ChangelogDir,
 		changelogResponse,
-	))
+	)
+	saveHandler := httpHandler.NewSaveHandler(saveAction, hub)
+	apiRouter.HandleFunc("/api/v1/game-saves/validate", saveHandler.Validate).Methods(http.MethodPost)
+	apiRouter.HandleFunc("/api/v1/game-saves/import", saveHandler.Import).Methods(http.MethodPost)
+	apiRouter.HandleFunc("/api/v1/games/{gameId}/save", saveHandler.Export).Methods(http.MethodGet)
+	router.PathPrefix("/api/v1").Handler(apiRouter)
 	router.HandleFunc("/ws", core.NewHandler(hub).ServeWS)
 
 	// Registered last: mux matches in order, and the frontend owns every other path.

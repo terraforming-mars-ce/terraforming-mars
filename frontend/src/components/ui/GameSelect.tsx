@@ -174,7 +174,7 @@ export default function GameSelect({
               id={`${listId}-${index}`}
               role="option"
               aria-selected={option.id === value}
-              className={`px-4 py-3 text-left font-orbitron text-xs cursor-pointer transition-colors ${index === active ? "bg-white/10" : ""} ${option.id === value ? "text-[#a9c0ff]" : "text-white/80"}`}
+              className={`px-4 py-3 text-left font-orbitron text-xs cursor-pointer transition-colors compact:min-h-11 compact:flex compact:items-center ${index === active ? "bg-white/10" : ""} ${option.id === value ? "text-[#a9c0ff]" : "text-white/80"}`}
               onPointerMove={() => setActive(index)}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(index)}

@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { apiService } from "../../services/apiService";
 import { GameDto } from "../../types/generated/api-types.ts";
 import GameButton from "../ui/buttons/GameButton.tsx";
+import { PlayerChip } from "../ui/display/BotChips.tsx";
 import BackButton from "../ui/buttons/BackButton.tsx";
 import { MainMenuDrawerButton } from "../ui/buttons/MainMenuHamburger.tsx";
 import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
@@ -51,8 +52,8 @@ const JoinGamePage: React.FC = () => {
     setLoadError("");
     try {
       const games = await apiService.listGames();
-      const lobbyGames = games.filter((g) => g.status === "lobby");
-      const activeGames = games.filter((g) => g.status === "active");
+      const lobbyGames = games.filter((g) => g.resumeLobby || g.status === "lobby");
+      const activeGames = games.filter((g) => !g.resumeLobby && g.status === "active");
       setAvailableGames([...lobbyGames, ...activeGames]);
 
       setIsInitialLoad(false);
@@ -97,6 +98,10 @@ const JoinGamePage: React.FC = () => {
 
   const handleGameValidated = (game: GameDto) => {
     setShowEnterCodePopover(false);
+    if (game.resumeLobby) {
+      navigate(`/resume/${game.id}`);
+      return;
+    }
     setJoinGame(game);
   };
 
@@ -107,14 +112,26 @@ const JoinGamePage: React.FC = () => {
       void fetchGames();
       return;
     }
-    setJoinGame(game);
+    if (existingGame.resumeLobby) {
+      navigate(`/resume/${existingGame.id}`);
+      return;
+    }
+    if (existingGame.status === "active") {
+      navigate(`/game/${existingGame.id}`);
+      return;
+    }
+    setJoinGame(existingGame);
   };
 
   const filteredGames = availableGames.filter((game) => {
     const names = [
       game.currentPlayer?.name,
       ...(game.otherPlayers ?? []).map((player) => player.name),
+      ...(game.resumeLobby?.seats ?? []).map((seat) => seat.name),
     ];
+    if (!searchQuery.trim()) {
+      return true;
+    }
     return names.some((name) => name?.toLowerCase().includes(searchQuery.trim().toLowerCase()));
   });
 
@@ -176,7 +193,22 @@ const JoinGamePage: React.FC = () => {
       {filteredGames.map((game) => {
         const playerCount = (game.currentPlayer?.id ? 1 : 0) + (game.otherPlayers?.length || 0);
         const maxPlayers = game.settings?.maxPlayers || 10;
-        const hostName = game.currentPlayer?.name || game.otherPlayers?.[0]?.name || "Unknown";
+        const resumeSeats = game.resumeLobby?.seats;
+        const players = [game.currentPlayer, ...(game.otherPlayers ?? [])];
+        const hostName =
+          resumeSeats?.find((seat) => seat.id === game.hostPlayerId)?.name ??
+          players.find((player) => player?.id === game.hostPlayerId)?.name ??
+          "Unknown";
+        const required = resumeSeats?.filter((seat) => !seat.exited) ?? [];
+        const ready = required.filter((seat) =>
+          seat.playerType === "bot" ? seat.botStatus === "ready" : seat.claimed && seat.connected,
+        );
+        const playerSummary = resumeSeats
+          ? `${ready.length}/${required.length} ready`
+          : `${playerCount}/${maxPlayers} Players`;
+        const packs = (game.settings.cardPacks ?? [])
+          .map((id) => packLabels.get(id) ?? displayName(id))
+          .join(", ");
         const isActive = game.status === "active";
         return (
           <div
@@ -184,38 +216,45 @@ const JoinGamePage: React.FC = () => {
             className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 py-5 compact:flex-nowrap compact:gap-3 compact:py-3"
           >
             <div className="flex flex-col gap-1 min-w-0 text-left compact:flex-1">
-              <span className="text-white text-sm font-medium truncate">{hostName}</span>
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                <span className="text-white text-sm font-medium truncate">{hostName}</span>
+                {resumeSeats && (
+                  <PlayerChip className="!text-[11px] bg-[rgba(60,100,150,0.8)] text-white border border-[rgba(80,130,180,0.7)]">
+                    Resume game
+                  </PlayerChip>
+                )}
+              </div>
               <span className="text-white/50 text-xs">
-                {playerCount}/{maxPlayers} Players
+                {playerSummary}
                 {isActive && game.generation != null && (
                   <span className="ml-2 text-white/35">Gen {game.generation}</span>
                 )}
               </span>
               <span className="text-white/50 text-xs">
-                {mapNames[game.settings.mapId] ?? displayName(game.settings.mapId)} ·{" "}
-                {(game.settings.cardPacks ?? [])
-                  .map((id) => packLabels.get(id) ?? displayName(id))
-                  .join(", ")}
+                {mapNames[game.settings.mapId] ?? displayName(game.settings.mapId)}
+                {packs && ` · ${packs}`}
               </span>
             </div>
             <div className="flex gap-2 shrink-0">
-              <GameButton
-                ref={(el) => {
-                  spectateButtonRefs.current.set(game.id, el);
-                }}
-                emphasis="secondary"
-                size="sm"
-                onClick={() => setSpectateGameId(game.id)}
-              >
-                Spectate
-              </GameButton>
-              {!isActive && (
+              {!resumeSeats && (
+                <GameButton
+                  ref={(el) => {
+                    spectateButtonRefs.current.set(game.id, el);
+                  }}
+                  emphasis="secondary"
+                  size="sm"
+                  onClick={() => setSpectateGameId(game.id)}
+                >
+                  Spectate
+                </GameButton>
+              )}
+              {(resumeSeats || !isActive) && (
                 <GameButton
                   ref={(el) => {
                     joinButtonRefs.current.set(game.id, el);
                   }}
                   size="sm"
-                  disabled={playerCount >= maxPlayers}
+                  disabled={!resumeSeats && playerCount >= maxPlayers}
                   onClick={() => void handleJoinGame(game)}
                 >
                   Join

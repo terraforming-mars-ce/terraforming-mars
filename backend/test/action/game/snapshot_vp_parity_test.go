@@ -6,6 +6,7 @@ import (
 	"time"
 
 	gameaction "openmars/internal/action/game"
+	"openmars/internal/game"
 	"openmars/internal/game/datastore"
 	"openmars/internal/game/shared"
 	"openmars/test/testutil"
@@ -22,11 +23,15 @@ func TestSnapshotEnricher_ParityWithFinalScoring(t *testing.T) {
 	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
 
 	repo.DataStore().SetSnapshotEnricher(func(state *datastore.GameState) map[string]shared.VPBreakdown {
-		live, err := repo.Get(ctx, state.ID)
-		if err != nil || live == nil {
+		snapshotStore, err := datastore.NewDataStore()
+		if err != nil {
 			return nil
 		}
-		return gameaction.ComputePlayerVPBreakdowns(live, cardRegistry, awardRegistry, milestoneRegistry)
+		snapshot, err := game.RestoreGame(snapshotStore, state)
+		if err != nil {
+			return nil
+		}
+		return gameaction.ComputePlayerVPBreakdowns(snapshot, cardRegistry, awardRegistry, milestoneRegistry)
 	})
 
 	p1, _ := g.GetPlayer(playerIDs[0])
@@ -82,11 +87,15 @@ func TestSnapshotEnricher_NoDeadlockUnderGameLock(t *testing.T) {
 	milestoneRegistry := testutil.CreateTestMilestoneRegistry()
 
 	repo.DataStore().SetSnapshotEnricher(func(state *datastore.GameState) map[string]shared.VPBreakdown {
-		live, err := repo.Get(ctx, state.ID)
-		if err != nil || live == nil {
+		snapshotStore, err := datastore.NewDataStore()
+		if err != nil {
 			return nil
 		}
-		return gameaction.ComputePlayerVPBreakdowns(live, cardRegistry, awardRegistry, milestoneRegistry)
+		snapshot, err := game.RestoreGame(snapshotStore, state)
+		if err != nil {
+			return nil
+		}
+		return gameaction.ComputePlayerVPBreakdowns(snapshot, cardRegistry, awardRegistry, milestoneRegistry)
 	})
 
 	// AddNewPlayer holds g.mu.Lock() during its internal g.update() — the case

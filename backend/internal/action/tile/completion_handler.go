@@ -107,8 +107,8 @@ func (r *TileCompletionRegistry) handleStandardProjectAquifer(ctx context.Contex
 }
 
 func (r *TileCompletionRegistry) handleAdjacentRemoval(_ context.Context, g *game.Game, playerID string, result *TilePlacementResult, callback *shared.TileCompletionCallback) error {
-	output, ok := callback.Data["output"].(*shared.BasicResourceCondition)
-	if !ok {
+	output := callback.Output
+	if output == nil {
 		return fmt.Errorf("missing resource removal output")
 	}
 	coords, err := parseHexPosition(result.Hex)
@@ -119,7 +119,7 @@ func (r *TileCompletionRegistry) handleAdjacentRemoval(_ context.Context, g *gam
 	if err != nil {
 		return err
 	}
-	source, _ := callback.Data["source"].(string)
-	sourceCardID, _ := callback.Data["sourceCardID"].(string)
+	source := callback.Source
+	sourceCardID := callback.SourceCardID
 	return gamecards.QueueResourceRemoval(g, p, output, coords, sourceCardID, source, r.registry)
 }

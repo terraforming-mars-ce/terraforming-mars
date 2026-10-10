@@ -1,4 +1,6 @@
 import {
+  GameSaveSummaryDto,
+  ImportGameSaveResponse,
   GameOptionsDto,
   GameSetupDto,
   FeedbackDto,
@@ -16,11 +18,107 @@ import {
 } from "../types/generated/api-types.ts";
 import { config } from "../config";
 
+const SAVE_MESSAGES: Record<string, string> = {
+  invalid_json: "Invalid JSON",
+  invalid_save: "Invalid file",
+  save_too_large: "File too large (max 128 MiB)",
+  incompatible_save: "Incompatible game version",
+  forbidden: "Host only",
+  game_not_found: "Game not found",
+  seat_unavailable: "Seat unavailable",
+  seat_taken: "Seat already taken",
+  not_ready: "Players or bots not ready",
+  invalid_name: "Invalid player name",
+  invalid_token: "Invalid bot token",
+  invalid_request: "Invalid request",
+};
+
+export function gameSaveErrorMessage(value: unknown, fallback: string): string {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "code" in value &&
+    typeof value.code === "string"
+  ) {
+    return SAVE_MESSAGES[value.code] ?? fallback;
+  }
+  return fallback;
+}
+
+async function saveRequest(url: string, init: RequestInit, fallback: string): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch {
+    throw new Error("Connection failed. Try again.");
+  }
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    throw new Error(gameSaveErrorMessage(body, fallback));
+  }
+  return response;
+}
+
 export class ApiService {
   private baseUrl: string;
 
   constructor(baseUrl: string = config.apiUrl) {
     this.baseUrl = baseUrl;
+  }
+
+  async validateGameSave(raw: string, signal?: AbortSignal): Promise<GameSaveSummaryDto> {
+    const response = await saveRequest(
+      `${this.baseUrl}/game-saves/validate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: raw,
+        signal,
+      },
+      "Couldn’t check save. Try again.",
+    );
+    return response.json().catch(() => {
+      throw new Error("Invalid server response");
+    });
+  }
+
+  async importGameSave(
+    raw: string,
+    seatId: string,
+    playerName: string,
+    botToken: string,
+  ): Promise<ImportGameSaveResponse> {
+    const query = new URLSearchParams({ seatId, playerName });
+    const response = await saveRequest(
+      `${this.baseUrl}/game-saves/import?${query}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Bot-Token": botToken },
+        body: raw,
+      },
+      "Couldn’t load game. Try again.",
+    );
+    return response.json().catch(() => {
+      throw new Error("Invalid server response");
+    });
+  }
+
+  async downloadGameSave(gameId: string, playerId: string): Promise<void> {
+    const query = new URLSearchParams({ playerId });
+    const response = await saveRequest(
+      `${this.baseUrl}/games/${encodeURIComponent(gameId)}/save?${query}`,
+      { cache: "no-store" },
+      "Couldn’t save game. Try again.",
+    );
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download =
+      response.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ??
+      "openmars-game.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   async getMeta(): Promise<MetaResponse> {

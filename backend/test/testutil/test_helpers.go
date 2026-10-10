@@ -82,7 +82,7 @@ func NewTestDataStoreWithGame(t *testing.T, gameID string) *datastore.DataStore 
 }
 
 // NewTestGameRepository creates a MemDB-backed game repository for tests.
-func NewTestGameRepository(t *testing.T) game.GameRepository {
+func NewTestGameRepository(t testing.TB) game.GameRepository {
 	t.Helper()
 	ds, err := datastore.NewDataStore()
 	if err != nil {
@@ -225,7 +225,7 @@ func CreateTestGameWithVenus(t *testing.T, numPlayers int) (*game.Game, game.Gam
 }
 
 // AssertNoError fails the test if err is not nil
-func AssertNoError(t *testing.T, err error, message string) {
+func AssertNoError(t testing.TB, err error, message string) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("%s: %v", message, err)

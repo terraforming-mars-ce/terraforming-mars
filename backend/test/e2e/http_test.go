@@ -1,6 +1,7 @@
 package e2e_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -164,4 +165,83 @@ func TestHTTP_BugReportsWithoutGitHubAreUnavailable(t *testing.T) {
 	if code := srv.Request(t, http.MethodGet, "/api/v1/bugs/no-such-report", nil, nil); code != http.StatusNotFound {
 		t.Fatalf("an unknown report should be 404, got %d", code)
 	}
+}
+
+func TestHTTP_SaveLoadAndResumeThroughProductionWiring(t *testing.T) {
+	t.Parallel()
+	srv := harness.Start(t)
+	original := srv.Play(t, nil, "alice", "bob")
+	aliceID, bobID := original.Players[0].PlayerID(), original.Players[1].PlayerID()
+	path := "/api/v1/games/" + original.ID + "/save?playerId="
+	if status := srv.Request(t, http.MethodGet, path+bobID, nil, nil); status != http.StatusForbidden {
+		t.Fatalf("non-host export: %d", status)
+	}
+	var raw json.RawMessage
+	if status := srv.Request(t, http.MethodGet, path+aliceID, nil, &raw); status != http.StatusOK {
+		t.Fatalf("export: %d", status)
+	}
+	var summary dto.GameSaveSummaryDto
+	if status := srv.Request(t, http.MethodPost, "/api/v1/game-saves/validate", raw, &summary); status != http.StatusOK {
+		t.Fatalf("validate: %d", status)
+	}
+	var imported dto.ImportGameSaveResponse
+	if status := srv.Request(t, http.MethodPost, "/api/v1/game-saves/import?seatId="+aliceID+"&playerName=Alice", raw, &imported); status != http.StatusCreated {
+		t.Fatalf("import: %d", status)
+	}
+	if imported.GameID == original.ID {
+		t.Fatal("import reused original identity")
+	}
+	host, guest, rival := srv.Dial(t, "restored-host"), srv.Dial(t, "restored-guest"), srv.Dial(t, "rival")
+	host.Rejoin(t, imported.GameID, aliceID, "Alice")
+	guest.Send(t, dto.MessageTypeWatchResumeGame, map[string]any{"gameId": imported.GameID})
+	view := guest.AwaitState(t, "public resume lobby", func(g dto.GameDto) bool { return g.ResumeLobby != nil })
+	if view.CurrentPlayer.ID != "" || len(view.Board.Tiles) != 0 {
+		t.Fatal("watcher received private state")
+	}
+	guest.Send(t, dto.MessageTypeClaimResumeSeat, map[string]any{"gameId": imported.GameID, "seatId": bobID, "playerName": "Bob"})
+	guest.AwaitState(t, "claimed identity", func(g dto.GameDto) bool { return g.ViewingPlayerID == bobID })
+	rival.Send(t, dto.MessageTypeClaimResumeSeat, map[string]any{"gameId": imported.GameID, "seatId": bobID, "playerName": "Bob"})
+	if err := rival.AwaitError(t); err.Code != "seat_taken" || err.RequestType != dto.MessageTypeClaimResumeSeat {
+		t.Fatalf("seat collision: %+v", err)
+	}
+
+	secondTab := srv.Dial(t, "guest-second-tab")
+	secondTab.Rejoin(t, imported.GameID, bobID, "Bob")
+	host.Send(t, dto.MessageTypeReleaseResumeSeat, map[string]any{"gameId": imported.GameID, "seatId": bobID})
+	for _, c := range []*harness.Client{guest, secondTab} {
+		c.AwaitState(t, "released identity", func(g dto.GameDto) bool {
+			if g.ViewingPlayerID != "" || g.ResumeLobby == nil {
+				return false
+			}
+			for _, seat := range g.ResumeLobby.Seats {
+				if seat.ID == bobID {
+					return !seat.Claimed
+				}
+			}
+			return false
+		})
+	}
+	guest.Send(t, dto.MessageTypeClaimResumeSeat, map[string]any{"gameId": imported.GameID, "seatId": bobID, "playerName": "Bob"})
+	guest.AwaitState(t, "reclaimed identity", func(g dto.GameDto) bool { return g.ViewingPlayerID == bobID })
+	srv.CloseAndWait(t, host)
+	guest.AwaitState(t, "disconnected host keeps ownership", func(g dto.GameDto) bool {
+		if g.HostPlayerID != aliceID || g.ResumeLobby == nil {
+			return false
+		}
+		for _, seat := range g.ResumeLobby.Seats {
+			if seat.ID == aliceID {
+				return seat.Claimed && !seat.Connected
+			}
+		}
+		return false
+	})
+	host = srv.Dial(t, "reconnected-host")
+	host.Rejoin(t, imported.GameID, aliceID, "Alice")
+	host.Send(t, dto.MessageTypeActionSkipAction, map[string]any{})
+	if err := host.AwaitError(t); !strings.Contains(err.Message, "paused") {
+		t.Fatalf("pause gate: %+v", err)
+	}
+	host.Send(t, dto.MessageTypeResumeGame, map[string]any{"gameId": imported.GameID})
+	host.AwaitState(t, "resumed game", func(g dto.GameDto) bool { return g.ResumeLobby == nil && g.CurrentPlayer.ID == aliceID })
+	guest.AwaitState(t, "resumed guest", func(g dto.GameDto) bool { return g.ResumeLobby == nil && g.CurrentPlayer.ID == bobID })
 }

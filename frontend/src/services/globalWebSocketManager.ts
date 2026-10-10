@@ -1,6 +1,8 @@
 import { webSocketService } from "./webSocketService.ts";
 import { WebSocketConnection } from "../types/webSocketTypes.ts";
 import type {
+  ResumeGameRequest,
+  MessageType,
   PaymentDto,
   ChatMessageDto,
   SelectDemoChoicesRequest,
@@ -313,6 +315,11 @@ class GlobalWebSocketManager implements WebSocketConnection {
     await this.ensureConnected();
     const { MessageTypeAdminCommand } = await import("../types/generated/api-types.ts");
     return webSocketService.send(MessageTypeAdminCommand, adminRequest);
+  }
+
+  async resumeCommand(type: MessageType, request: ResumeGameRequest): Promise<void> {
+    await this.ensureConnected();
+    webSocketService.resumeCommand(type, request);
   }
 
   async playerTakeover(targetPlayerId: string, gameId: string): Promise<void> {

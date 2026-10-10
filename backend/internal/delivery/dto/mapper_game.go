@@ -47,6 +47,9 @@ func firstOrNil(regs []colony.ColonyRegistry) colony.ColonyRegistry {
 // ToGameDtoFull converts Game to GameDto as playerID sees it. A viewer who is not a player
 // in the game sees every player's public data only.
 func ToGameDtoFull(g *game.Game, cardRegistry gamecards.CardRegistry, playerID string, registries Registries) GameDto {
+	if g.ResumeLobby() != nil {
+		return ToResumeGameDto(g, playerID, cardRegistry)
+	}
 	players := g.GetAllPlayers()
 
 	var currentPlayer PlayerDto
@@ -993,4 +996,26 @@ func toProjectFundingDtos(g *game.Game, registry pfDomain.ProjectFundingRegistry
 	}
 
 	return dtos
+}
+
+// ToResumeGameDto exposes only the information needed to gather players.
+func ToResumeGameDto(g *game.Game, playerID string, cardRegistry gamecards.CardRegistry) GameDto {
+	lobby := g.ResumeLobby()
+	seats := make([]ResumeSeatDto, 0, len(g.GetAllPlayers()))
+	for _, id := range g.PlayerOrder() {
+		p, err := g.GetPlayer(id)
+		if err != nil {
+			continue
+		}
+		corpName := ""
+		if card, err := cardRegistry.GetByID(p.CorporationID()); err == nil {
+			corpName = card.Name
+		}
+		botError := ""
+		if p.BotError() != "" {
+			botError = "The bot could not start. Check its credentials and try again."
+		}
+		seats = append(seats, ResumeSeatDto{CorporationName: corpName, ID: id, Name: p.Name(), SavedName: lobby.SavedNames[id], CorporationID: p.CorporationID(), Color: p.Color(), PlayerType: string(p.PlayerType()), Claimed: lobby.Claimed[id], Connected: p.IsConnected(), Exited: p.HasExited(), BotStatus: string(p.BotStatus()), BotError: botError})
+	}
+	return GameDto{ID: g.ID(), Status: GameStatus(g.Status()), CurrentPhase: GamePhase(g.CurrentPhase()), Generation: g.Generation(), HostPlayerID: g.HostPlayerID(), ViewingPlayerID: playerID, Settings: GameSettingsDto{MapID: g.Settings().MapID, CardPacks: g.Settings().CardPacks, MaxPlayers: g.Settings().MaxPlayers, HasClaudeOAuthToken: g.Settings().ClaudeOAuthToken != ""}, ResumeLobby: &ResumeLobbyDto{Seats: seats}, OtherPlayers: []OtherPlayerDto{}, ChatMessages: toChatMessageDtos(g)}
 }

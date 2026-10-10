@@ -49,6 +49,7 @@ type Hub struct {
 	handlers        map[dto.MessageType]MessageHandler
 	onPlayerLeft    LeaveFunc
 	onSpectatorLeft LeaveFunc
+	guard           func(context.Context, *Connection, dto.WebSocketMessage) error
 }
 
 // NewHub creates a hub. Register handlers before calling Run.
@@ -170,6 +171,12 @@ func (h *Hub) released(id Identity) {
 }
 
 func (h *Hub) route(msg HubMessage) {
+	if h.guard != nil {
+		if err := h.guard(h.ctx, msg.Connection, msg.Message); err != nil {
+			msg.Connection.SendError(msg.Message.Type, err.Error())
+			return
+		}
+	}
 	handler, ok := h.handlers[msg.Message.Type]
 	if !ok {
 		h.logger.Warn("Unknown message type", slog.String("message_type", string(msg.Message.Type)))
@@ -258,4 +265,9 @@ func (h *Hub) runJob(job hubJob) {
 	if job.ctx.Err() == nil {
 		job.fn()
 	}
+}
+
+// SetMessageGuard checks session restrictions before routing a client command.
+func (h *Hub) SetMessageGuard(guard func(context.Context, *Connection, dto.WebSocketMessage) error) {
+	h.guard = guard
 }

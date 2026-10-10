@@ -50,6 +50,9 @@ func (a *PlayerTakeoverAction) Execute(ctx context.Context, gameID string, targe
 		return nil, fmt.Errorf("game not found: %s", gameID)
 	}
 
+	if g.ResumeLobby() != nil {
+		return nil, fmt.Errorf("use the resume lobby to join this game")
+	}
 	player, err := g.GetPlayer(targetPlayerID)
 	if err != nil {
 		log.Error("Target player not found in game", slog.Any("error", err))

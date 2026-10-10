@@ -155,7 +155,10 @@ export function useGameInitialization({
 
       let fetchedGame: GameDto | null = null;
       try {
-        const playerIdForApi = savedSession?.isSpectator ? undefined : savedSession?.playerId;
+        const playerIdForApi =
+          savedSession?.gameId === gameId && !savedSession.isSpectator
+            ? savedSession.playerId
+            : undefined;
         fetchedGame = await apiService.getGame(gameId, playerIdForApi);
       } catch {
         navigate("/", {
@@ -175,6 +178,11 @@ export function useGameInitialization({
           replace: true,
           state: { error: "Could not find game" },
         });
+        return;
+      }
+
+      if (fetchedGame.resumeLobby) {
+        navigate(`/resume/${gameId}`, { replace: true });
         return;
       }
 

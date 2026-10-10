@@ -60,7 +60,7 @@ type GameSettings struct {
 	AllowRandomBuy     bool
 	CardPacks          []string
 	Generation         *int
-	ClaudeOAuthToken   string
+	ClaudeOAuthToken   string `json:"-"`
 	BotSpendCapUSD     float64
 	SelectedMilestones []string
 	SelectedAwards     []string

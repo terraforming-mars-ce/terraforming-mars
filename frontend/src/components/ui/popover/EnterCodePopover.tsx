@@ -38,12 +38,12 @@ const EnterCodePopover: React.FC<EnterCodePopoverProps> = ({
 
   useEffect(() => {
     if (isVisible && initialCode) {
-      void handleConnect();
+      void handleConnect(initialCode);
     }
-  }, [isVisible]);
+  }, [isVisible, initialCode]);
 
-  const handleConnect = async () => {
-    const trimmed = gameId.trim();
+  const handleConnect = async (code = gameId) => {
+    const trimmed = code.trim();
 
     if (!trimmed) {
       showNotification({ message: "Please enter a game ID", type: "error" });
@@ -61,6 +61,11 @@ const EnterCodePopover: React.FC<EnterCodePopoverProps> = ({
       const game = await apiService.getGame(trimmed);
       if (!game) {
         throw new Error("Game not found");
+      }
+
+      if (game.resumeLobby) {
+        onGameValidated(game);
+        return;
       }
 
       if (game.status !== "lobby" && game.status !== "waiting") {

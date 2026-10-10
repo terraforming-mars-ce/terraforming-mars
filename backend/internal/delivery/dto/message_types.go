@@ -4,8 +4,13 @@ package dto
 type MessageType string
 
 const (
-	MessageTypeQuotePayment MessageType = "quote-payment"
-	MessageTypePaymentQuote MessageType = "payment-quote"
+	MessageTypeWatchResumeGame   MessageType = "watch-resume-game"
+	MessageTypeClaimResumeSeat   MessageType = "claim-resume-seat"
+	MessageTypeReleaseResumeSeat MessageType = "release-resume-seat"
+	MessageTypeResumeGame        MessageType = "resume-game"
+	MessageTypeResumeBotToken    MessageType = "resume-bot-token"
+	MessageTypeQuotePayment      MessageType = "quote-payment"
+	MessageTypePaymentQuote      MessageType = "payment-quote"
 )
 
 const (

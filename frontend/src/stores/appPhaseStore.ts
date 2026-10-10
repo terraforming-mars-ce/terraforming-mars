@@ -1,6 +1,13 @@
 import { create } from "zustand";
 
-export type MenuRoute = "landing" | "create" | "join" | "cards" | "reconnecting";
+export type MenuRoute =
+  | "landing"
+  | "load"
+  | "resume"
+  | "create"
+  | "join"
+  | "cards"
+  | "reconnecting";
 
 export type AppPhase =
   | { kind: "menu"; route: MenuRoute }
