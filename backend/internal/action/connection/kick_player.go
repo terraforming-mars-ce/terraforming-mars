@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/service/bot"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/action/turn_management"
+	"openmars/internal/game"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/service/bot"
 )
 
 // KickPlayerAction handles kicking a player from a game.

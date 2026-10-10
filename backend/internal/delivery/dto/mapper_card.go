@@ -2,10 +2,10 @@ package dto
 
 import (
 	"log/slog"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
 )
 
 // ToCardDto converts a Card to CardDto

@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	baseaction "terraforming-mars-backend/internal/action"
-	gameaction "terraforming-mars-backend/internal/action/game"
+	baseaction "openmars/internal/action"
+	gameaction "openmars/internal/action/game"
 
-	"terraforming-mars-backend/internal/game"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // SkipActionAction handles the business logic for skipping/passing player turns

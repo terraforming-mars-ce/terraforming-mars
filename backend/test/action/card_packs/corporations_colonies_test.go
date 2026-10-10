@@ -1,25 +1,25 @@
 package card_packs_test
 
 import (
-	"terraforming-mars-backend/internal/delivery/dto"
+	"openmars/internal/delivery/dto"
 
 	"context"
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/action/admin"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/action/confirmation"
-	resconvaction "terraforming-mars-backend/internal/action/resource_conversion"
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action"
+	"openmars/internal/action/admin"
+	cardAction "openmars/internal/action/card"
+	"openmars/internal/action/confirmation"
+	resconvaction "openmars/internal/action/resource_conversion"
+	tileAction "openmars/internal/action/tile"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // =============================================================================
@@ -870,7 +870,7 @@ func TestPoseidon_ForcedColonyDoesNotBlockInitAdvance_Repro568(t *testing.T) {
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
-	colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/colonies.json")
 	testutil.AssertNoError(t, err, "Failed to load colonies")
 	colonyRegistry := colony.NewInMemoryColonyRegistry(colonyDefs)
 
@@ -964,7 +964,7 @@ func TestPoseidon_ForcedColonyInitAdvance_FourPlayerPrelude_Repro568(t *testing.
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
-	colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/colonies.json")
 	testutil.AssertNoError(t, err, "Failed to load colonies")
 	colonyRegistry := colony.NewInMemoryColonyRegistry(colonyDefs)
 
@@ -1091,7 +1091,7 @@ func setupCorporationColoniesGame(t *testing.T) (*game.Game, game.GameRepository
 	settings := g.Settings()
 	settings.CardPacks = append(settings.CardPacks, shared.PackColonies)
 	g.UpdateSettings(context.Background(), settings)
-	defs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	defs, err := colony.LoadColoniesFromJSON("../../../assets/colonies.json")
 	testutil.AssertNoError(t, err, "load colony catalog")
 	g.Colonies().SetDefinitions(defs)
 	return g, repo, registry, id, other
@@ -1104,7 +1104,7 @@ func TestAridor_AddsUnownedTileAndActivatesOnResourceHolder(t *testing.T) {
 	p, _ := g.GetPlayer(id)
 	eventsSeen := 0
 	events.Subscribe(g.EventBus(), func(events.ColonyBuiltEvent) { eventsSeen++ })
-	defs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	defs, err := colony.LoadColoniesFromJSON("../../../assets/colonies.json")
 	testutil.AssertNoError(t, err, "load colonies")
 	colonies := colony.NewInMemoryColonyRegistry(defs)
 	testutil.AssertNoError(t, admin.NewSetCorporationAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, testutil.CardID("Aridor")), "start Aridor action")
@@ -1140,7 +1140,7 @@ func TestPoseidon_FirstActionWaitsForOceanReward(t *testing.T) {
 	g, repo, registry, id, _ := setupCorporationColoniesGame(t)
 	ctx := context.Background()
 	addColony(g, "europa", 1, nil)
-	definitions, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	definitions, err := colony.LoadColoniesFromJSON("../../../assets/colonies.json")
 	testutil.AssertNoError(t, err, "load colonies")
 	testutil.AssertNoError(t, admin.NewSetCorporationAction(repo, registry, nil, testutil.TestLogger()).Execute(ctx, g.ID(), id, testutil.CardID("Poseidon")), "start Poseidon action")
 	confirm := confirmation.NewConfirmColonyPlacementAction(repo, registry, colony.NewInMemoryColonyRegistry(definitions), testutil.TestLogger())

@@ -1,6 +1,6 @@
 package standardproject
 
-import "terraforming-mars-backend/internal/game/shared"
+import "openmars/internal/game/shared"
 
 // StandardProjectDefinition is the static template loaded from JSON
 type StandardProjectDefinition struct {

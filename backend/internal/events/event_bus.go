@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/logger"
 )
 
 // SubscriptionID represents a unique subscription identifier

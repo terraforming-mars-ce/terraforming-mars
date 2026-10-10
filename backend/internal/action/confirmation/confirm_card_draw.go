@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"slices"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	"openmars/internal/action/turn_management"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // ConfirmCardDrawAction handles the business logic for confirming card draw selection

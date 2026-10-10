@@ -3,7 +3,7 @@ package datastore
 import (
 	"time"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // GameSnapshot is a point-in-time capture of game state.

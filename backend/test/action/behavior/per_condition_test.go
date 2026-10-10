@@ -3,14 +3,14 @@ package behavior_test
 import (
 	"context"
 	"log/slog"
-	baseaction "terraforming-mars-backend/internal/action"
+	baseaction "openmars/internal/action"
 	"testing"
 
-	"terraforming-mars-backend/internal/game/board"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game/board"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestPerCondition_CityTileLocationAndOwner(t *testing.T) {

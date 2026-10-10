@@ -3,8 +3,8 @@ package dto_test
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/shared"
 )
 
 func findResourceConversion(t *testing.T, conversions []dto.PlayerResourceConversionDto, projectType dto.StandardProject) dto.PlayerResourceConversionDto {

@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	httpHandler "terraforming-mars-backend/internal/delivery/http"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/dto"
+	httpHandler "openmars/internal/delivery/http"
+	"openmars/test/testutil"
 )
 
 func TestMeta_ReturnsServerIdentity(t *testing.T) {

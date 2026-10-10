@@ -1,6 +1,6 @@
 package colony
 
-import "terraforming-mars-backend/internal/game/shared"
+import "openmars/internal/game/shared"
 
 // ColonyDefinition is the static template loaded from JSON.
 type ColonyDefinition struct {

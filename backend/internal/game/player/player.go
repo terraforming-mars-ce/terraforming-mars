@@ -2,9 +2,9 @@ package player
 
 import (
 	"log/slog"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
 )
 
 // PlayerType represents the type of player (human or bot)

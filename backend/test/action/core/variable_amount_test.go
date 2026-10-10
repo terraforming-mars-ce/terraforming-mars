@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	cardAction "openmars/internal/action/card"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // --- Insulation (152) ---

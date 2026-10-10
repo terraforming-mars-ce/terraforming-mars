@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 const maxChatsPerTurn = 2

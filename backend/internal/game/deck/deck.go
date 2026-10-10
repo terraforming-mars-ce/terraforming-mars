@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	rand "math/rand/v2"
 
-	"terraforming-mars-backend/internal/game/datastore"
+	"openmars/internal/game/datastore"
 )
 
 // deckRNGStream separates deck randomness from other per-game RNG streams. The

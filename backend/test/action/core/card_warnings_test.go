@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/action"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/global_parameters"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/action"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/global_parameters"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 func TestCardWarnings_TemperatureOutputWarnsWhenMaxed(t *testing.T) {

@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
 )
 
 // ErrorHandler provides standardized error handling for WebSocket messages

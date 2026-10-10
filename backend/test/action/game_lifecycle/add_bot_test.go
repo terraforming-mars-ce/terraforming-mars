@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	gameAction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	gameAction "openmars/internal/action/game"
+	"openmars/internal/game/shared"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 type fakeBotLifecycle struct {

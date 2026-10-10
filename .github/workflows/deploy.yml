@@ -43,12 +43,12 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
 
-      # The key can only run tm-gateway-deploy, which reads the gateway config from stdin
+      # The key can only run openmars-gateway-deploy, which reads the gateway config from stdin
       - name: Deploy
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          tar -C proxy/deploy -c Caddyfile gateway.env tm-gateway.service \
+          tar -C proxy/deploy -c Caddyfile gateway.env openmars-gateway.service \
             | ssh -o StrictHostKeyChecking=yes deploy@openmars.app "deploy $VERSION"
 
   deploy-pi:
@@ -73,11 +73,11 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
 
-      # TM_VERSION takes effect once the Pi's compose file uses
-      # ${TM_VERSION:-latest} as its image tag
+      # OPENMARS_VERSION takes effect once the Pi's compose file uses
+      # ${OPENMARS_VERSION:-latest} as its image tag
       - name: Deploy
         env:
           VERSION: ${{ inputs.version }}
         run: |
           ssh -o StrictHostKeyChecking=yes mhm@ssh.mh-hemma.rackaracka.net \
-            "cd /home/mhm/terraforming-mars && export TM_VERSION=$VERSION && docker compose pull && docker compose up -d && docker image prune -f"
+            "cd /home/mhm/openmars && export OPENMARS_VERSION=$VERSION && docker compose pull && docker compose up -d && docker image prune -f"

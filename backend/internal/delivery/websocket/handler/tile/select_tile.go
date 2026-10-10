@@ -4,10 +4,10 @@ import (
 	"context"
 	"log/slog"
 
-	tileaction "terraforming-mars-backend/internal/action/tile"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	tileaction "openmars/internal/action/tile"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // SelectTileHandler handles tile selection requests

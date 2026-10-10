@@ -1,9 +1,9 @@
 package dto
 
 import (
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/shared"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/shared"
 )
 
 // MapPreviews projects the registered boards for setup and lobby selection.

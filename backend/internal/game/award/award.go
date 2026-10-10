@@ -3,7 +3,7 @@ package award
 import (
 	"sort"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // AwardDefinition is the static template loaded from JSON

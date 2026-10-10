@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/service/bot"
+	"openmars/internal/game"
+	"openmars/internal/service/bot"
 )
 
 // EndGameAction handles ending a game and cleaning up all resources.

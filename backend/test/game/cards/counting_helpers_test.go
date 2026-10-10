@@ -3,9 +3,9 @@ package cards_test
 import (
 	"testing"
 
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // TestCountPlayerTagsByType_ExcludesEventCards verifies that event cards'

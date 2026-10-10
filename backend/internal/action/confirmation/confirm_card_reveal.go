@@ -3,8 +3,8 @@ package confirmation
 import (
 	"context"
 	"fmt"
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
+	baseaction "openmars/internal/action"
+	"openmars/internal/game"
 )
 
 // ConfirmCardRevealAction acknowledges an already resolved public reveal.

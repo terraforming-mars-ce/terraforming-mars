@@ -1,7 +1,7 @@
 package game
 
 import (
-	"terraforming-mars-backend/internal/game/global_parameters"
+	"openmars/internal/game/global_parameters"
 )
 
 // Default values for game settings

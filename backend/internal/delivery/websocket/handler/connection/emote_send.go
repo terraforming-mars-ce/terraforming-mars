@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/game/shared"
 )
 
 // EmoteBroadcaster shows an emote to everyone in a game.

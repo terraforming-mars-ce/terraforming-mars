@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // MockHub implements a simple hub for testing

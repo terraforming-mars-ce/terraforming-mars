@@ -3,8 +3,8 @@ package player_test
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestAddProduction_CreditProductionAllowsNegative(t *testing.T) {

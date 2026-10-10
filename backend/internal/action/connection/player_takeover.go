@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
 )
 
 // PlayerTakeoverAction handles the business logic for taking over a disconnected player

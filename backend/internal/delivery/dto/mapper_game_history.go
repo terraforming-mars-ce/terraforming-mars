@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"terraforming-mars-backend/internal/game/datastore"
+	"openmars/internal/game/datastore"
 )
 
 // ToGameHistoryEntryDtos converts a slice of history entries to DTOs.

@@ -1,14 +1,14 @@
 package colony_test
 
-import "terraforming-mars-backend/internal/game/shared"
+import "openmars/internal/game/shared"
 
 import (
 	"context"
 	"testing"
 
-	colonyAction "terraforming-mars-backend/internal/action/colony"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/test/testutil"
+	colonyAction "openmars/internal/action/colony"
+	"openmars/internal/game"
+	"openmars/test/testutil"
 )
 
 func TestBuildColony_DeductsCredits(t *testing.T) {

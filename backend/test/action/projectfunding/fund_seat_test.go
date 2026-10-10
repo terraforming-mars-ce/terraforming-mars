@@ -4,19 +4,19 @@ import (
 	"context"
 	"testing"
 
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	pfAction "terraforming-mars-backend/internal/action/projectfunding"
-	"terraforming-mars-backend/internal/game"
-	pf "terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	confirmAction "openmars/internal/action/confirmation"
+	pfAction "openmars/internal/action/projectfunding"
+	"openmars/internal/game"
+	pf "openmars/internal/game/projectfunding"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func setupProjectFundingGame(t *testing.T) (*game.Game, game.GameRepository, pf.ProjectFundingRegistry, string, string) {
 	t.Helper()
 	testGame, repo, _, player1, player2 := testutil.SetupTwoPlayerGame(t)
 
-	pfDefs, err := pf.LoadProjectsFromJSON("../../../assets/terraforming_mars_project_funding.json")
+	pfDefs, err := pf.LoadProjectsFromJSON("../../../assets/project_funding.json")
 	if err != nil {
 		t.Fatalf("Failed to load project funding: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestFundSeat_ExpansionNotEnabled_Fails(t *testing.T) {
 	testGame, repo, _, player1, _ := testutil.SetupTwoPlayerGame(t)
 	ctx := context.Background()
 
-	pfDefs, _ := pf.LoadProjectsFromJSON("../../../assets/terraforming_mars_project_funding.json")
+	pfDefs, _ := pf.LoadProjectsFromJSON("../../../assets/project_funding.json")
 	pfRegistry := pf.NewInMemoryProjectFundingRegistry(pfDefs)
 
 	setupProjectState(testGame, "pf_orbital_station", nil)
@@ -420,7 +420,7 @@ func setupProjectFundingGameN(t *testing.T, numPlayers int) (*game.Game, game.Ga
 	t.Helper()
 	testGame, repo, _, players := testutil.SetupMultiPlayerGame(t, numPlayers)
 
-	pfDefs, err := pf.LoadProjectsFromJSON("../../../assets/terraforming_mars_project_funding.json")
+	pfDefs, err := pf.LoadProjectsFromJSON("../../../assets/project_funding.json")
 	if err != nil {
 		t.Fatalf("Failed to load project funding: %v", err)
 	}

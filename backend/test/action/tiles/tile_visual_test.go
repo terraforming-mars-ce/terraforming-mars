@@ -7,14 +7,14 @@ import (
 	"reflect"
 	"testing"
 
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	tileAction "openmars/internal/action/tile"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
@@ -22,7 +22,7 @@ func TestTileVisualPlacementAndViewerConsistency(t *testing.T) {
 	g, repo := testutil.CreateTestGameWithPlayers(t, 2, testutil.NewMockBroadcaster())
 	testutil.StartTestGame(t, g)
 	playerID := g.TurnOrder()[0]
-	data, err := os.ReadFile("../../../assets/terraforming_mars_cards.json")
+	data, err := os.ReadFile("../../../assets/cards.json")
 	if err != nil {
 		t.Fatal(err)
 	}

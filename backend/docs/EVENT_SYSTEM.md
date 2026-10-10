@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Terraforming Mars backend uses an event-driven architecture to decouple game state changes from WebSocket broadcasting and passive card effects. This document explains how the event system works and how to use it correctly.
+The Open Mars backend uses an event-driven architecture to decouple game state changes from WebSocket broadcasting and passive card effects. This document explains how the event system works and how to use it correctly.
 
 ## Core Concepts
 

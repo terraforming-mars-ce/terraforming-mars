@@ -1,11 +1,11 @@
 package game
 
 import (
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/shared"
 )
 
 // ComputePlayerVPBreakdowns is the single source of truth for per-player VP

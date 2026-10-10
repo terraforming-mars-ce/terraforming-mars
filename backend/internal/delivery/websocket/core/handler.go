@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/logger"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"

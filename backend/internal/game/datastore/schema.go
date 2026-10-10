@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/go-memdb"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 func createSchema() *memdb.DBSchema {

@@ -18,17 +18,17 @@ deps:
 [group('dev')]
 [doc('Run the API on :3001 with Air hot reload')]
 dev:
-    TM_REPO_PATH=.. go tool air
+    OPENMARS_REPO_PATH=.. go tool air
 
 [group('dev')]
 [doc('Build and run the API on :3001 without hot reload')]
 run: build
-    TM_REPO_PATH=.. ./bin/server
+    OPENMARS_REPO_PATH=.. ./bin/server
 
 [group('dev')]
 [doc('Build and run the API on :3001, also serving the built frontend (`just frontend build` first), like the production image')]
 serve: build
-    TM_REPO_PATH=.. TM_WEB_DIR=../frontend/build ./bin/server
+    OPENMARS_REPO_PATH=.. OPENMARS_WEB_DIR=../frontend/build ./bin/server
 
 [group('check')]
 [doc('Run tests; args replace the default package pattern, e.g. `just backend test -v -run TestKick ./test/action/...`')]

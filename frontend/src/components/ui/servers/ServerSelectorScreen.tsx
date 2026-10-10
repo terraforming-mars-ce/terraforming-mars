@@ -21,7 +21,7 @@ export default function ServerSelectorScreen() {
       style={{ zIndex: Z_INDEX.MOBILE_MENU_DRAWER }}
     >
       <header className="sticky top-0 flex items-center gap-3 border-b border-white/10 bg-black pt-[calc(14px+var(--safe-top))] pb-[14px] pr-[calc(8px+var(--safe-right))] pl-[calc(16px+var(--safe-left))]">
-        <h1 className="m-0 text-base font-bold text-shadow-glow-strong">TERRAFORMING MARS</h1>
+        <h1 className="m-0 text-base font-bold text-shadow-glow-strong">OPEN MARS</h1>
         <span className="flex-1 text-[0.7rem] font-medium uppercase tracking-[0.15em] text-white/45">
           Server selector
         </span>

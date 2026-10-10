@@ -7,14 +7,14 @@ import (
 	"net/http"
 	"strings"
 
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/action/query"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/action/query"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/award"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
 
 	"github.com/gorilla/mux"
 )

@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/go-memdb"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // SnapshotEnricher computes per-player VP breakdowns for a snapshot, using the live

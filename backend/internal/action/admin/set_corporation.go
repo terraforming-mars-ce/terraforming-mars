@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"time"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	gamecards "terraforming-mars-backend/internal/game/cards"
+	baseaction "openmars/internal/action"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	gamecards "openmars/internal/game/cards"
 )
 
 // SetCorporationAction handles the admin action to set a player's corporation

@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	confirmationAction "terraforming-mars-backend/internal/action/confirmation"
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	confirmationAction "openmars/internal/action/confirmation"
+	tileAction "openmars/internal/action/tile"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // completeAllSelections makes both players select their starting choices and returns the confirm action.

@@ -4,11 +4,11 @@ import (
 	"slices"
 	"testing"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // buildSeededGame reproduces a game from a seed via the replay primitive (which uses

@@ -1,10 +1,10 @@
-# Backend - Terraforming Mars API Server
+# Backend - Open Mars API Server
 
 This document provides guidance for working with the backend API server.
 
 ## Overview
 
-Go-based REST and WebSocket API server implementing the Terraforming Mars board game logic. Provides real-time multiplayer game state synchronization and enforces game rules.
+Go-based REST and WebSocket API server implementing the Open Mars game logic. Provides real-time multiplayer game state synchronization and enforces game rules.
 
 ## Go Coding Standards
 
@@ -615,11 +615,10 @@ func TestPlayerService_DoAction(t *testing.T) {
 
 ### Adding a New Game Rule
 
-1. Check `TERRAFORMING_MARS_RULES.md` in project root
-2. Define types in `internal/game/` or subpackages
-3. Create action in `internal/action/` with validation logic
-4. Update Game methods if new state access needed
-5. Create tests in `test/action/`
+1. Define types in `internal/game/` or subpackages
+2. Create action in `internal/action/` with validation logic
+3. Update Game methods if new state access needed
+4. Create tests in `test/action/`
 6. Update relevant HTTP or WebSocket handlers to call action
 
 ### Debugging
@@ -648,4 +647,3 @@ func TestPlayerService_DoAction(t *testing.T) {
 - **frontend/CLAUDE.md**: Frontend architecture, components, and patterns
 - **assets/CLAUDE.md**: Card database documentation (behavior types, output formats)
 - **docs/EVENT_SYSTEM.md**: Event-driven architecture and broadcasting
-- **TERRAFORMING_MARS_RULES.md**: Complete game rules reference

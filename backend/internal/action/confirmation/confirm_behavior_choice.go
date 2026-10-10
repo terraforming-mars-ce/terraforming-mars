@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	baseaction "terraforming-mars-backend/internal/action"
+	baseaction "openmars/internal/action"
 
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // ConfirmBehaviorChoiceAction handles the business logic for confirming a behavior choice selection

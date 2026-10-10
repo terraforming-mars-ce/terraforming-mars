@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/action/admin"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action/admin"
+	"openmars/internal/game/board"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // --- GiveCard ---

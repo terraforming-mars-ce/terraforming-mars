@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 
-	colonyaction "terraforming-mars-backend/internal/action/colony"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	colonyaction "openmars/internal/action/colony"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // Broadcaster defines the interface for broadcasting game state

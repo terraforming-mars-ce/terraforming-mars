@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Digital implementation of Terraforming Mars board game with real-time multiplayer and 3D game view. WebSocket multiplayer with Go backend and React frontend.
+Open Mars is a digital board game based on Terraforming Mars, with real-time multiplayer and 3D game view. WebSocket multiplayer with Go backend and React frontend.
 
 ## Commands
 
@@ -51,8 +51,6 @@ just clean         # Remove build output
 ```
 
 ## Adding New Game Features
-
-**CRITICAL**: Always check `docs/TERRAFORMING_MARS_RULES.md` first for any task involving game mechanics, rules, or card effects.
 
 1. **Define domain types** in `backend/internal/game/` with `json:` and `ts:` tags
 2. **Create action** in `backend/internal/action/` extending BaseAction

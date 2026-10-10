@@ -3,9 +3,9 @@ package bot_test
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game/shared"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 func TestPreferredPayment_SpendsSubstitutesFirstWithoutOverpaying(t *testing.T) {

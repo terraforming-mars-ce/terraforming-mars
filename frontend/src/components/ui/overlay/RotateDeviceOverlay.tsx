@@ -41,7 +41,7 @@ export default function RotateDeviceOverlay() {
       <div className="font-orbitron text-lg font-semibold tracking-widest uppercase">
         Rotate your device
       </div>
-      <div className="text-sm text-white/60">Terraforming Mars is played in landscape.</div>
+      <div className="text-sm text-white/60">Open Mars is played in landscape.</div>
     </div>
   );
 }

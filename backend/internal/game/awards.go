@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
 )
 
 // MaxFundedAwards is the maximum number of awards that can be funded in a game

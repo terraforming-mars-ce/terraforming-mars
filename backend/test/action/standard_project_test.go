@@ -1,6 +1,6 @@
 package action_test
 
-import "terraforming-mars-backend/internal/game/shared"
+import "openmars/internal/game/shared"
 
 import (
 	"context"
@@ -8,17 +8,17 @@ import (
 	"runtime"
 	"testing"
 
-	spAction "terraforming-mars-backend/internal/action/standard_project"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/standardproject"
-	"terraforming-mars-backend/test/testutil"
+	spAction "openmars/internal/action/standard_project"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/standardproject"
+	"openmars/test/testutil"
 )
 
 func loadStandardProjectRegistry(t *testing.T) standardproject.StandardProjectRegistry {
 	t.Helper()
 	_, currentFile, _, _ := runtime.Caller(0)
-	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "terraforming_mars_standard_projects.json")
+	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "standard_projects.json")
 	stdProjData, err := standardproject.LoadStandardProjectsFromJSON(stdProjPath)
 	if err != nil {
 		t.Fatalf("Failed to load standard projects JSON: %v", err)

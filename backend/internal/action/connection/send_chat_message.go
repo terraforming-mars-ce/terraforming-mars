@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
 )
 
 // SendChatMessageAction handles sending a chat message in a game.

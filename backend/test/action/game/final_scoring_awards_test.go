@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // maxAllGlobalParams sets all global parameters to their maximum values.

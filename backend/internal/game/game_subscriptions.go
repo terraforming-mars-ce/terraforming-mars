@@ -3,9 +3,9 @@ package game
 import (
 	"context"
 	"log/slog"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 func (g *Game) SetVPCardLookup(lookup VPCardLookup) {

@@ -66,7 +66,7 @@ async def _run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate Terraforming Mars card images via ComfyUI + Flux Schnell"
+        description="Generate Open Mars card images via ComfyUI + Flux Schnell"
     )
     parser.add_argument("--card", help="Generate a specific card by ID (e.g. 042)")
     parser.add_argument("--missing", action="store_true", help="Generate all missing card images")

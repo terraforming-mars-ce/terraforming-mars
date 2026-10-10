@@ -2,8 +2,8 @@ package core
 
 import (
 	"log/slog"
+	"openmars/internal/logger"
 	"sync"
-	"terraforming-mars-backend/internal/logger"
 	"unsafe"
 )
 

@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	cardaction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
+	cardaction "openmars/internal/action/card"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
 )
 
 // UseCardActionHandler handles card action execution requests

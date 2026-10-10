@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	awardAction "terraforming-mars-backend/internal/action/award"
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	milestoneAction "terraforming-mars-backend/internal/action/milestone"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	awardAction "openmars/internal/action/award"
+	confirmAction "openmars/internal/action/confirmation"
+	milestoneAction "openmars/internal/action/milestone"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // --- Claim Milestone ---

@@ -5,17 +5,17 @@ import (
 	"log/slog"
 	"sync"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/milestone"
-	pfRegistry "terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/game/standardproject"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/milestone"
+	pfRegistry "openmars/internal/game/projectfunding"
+	"openmars/internal/game/shared"
+	"openmars/internal/game/standardproject"
+	"openmars/internal/logger"
 )
 
 // BotNotifier lets the bot controller observe broadcasts it reacts to.

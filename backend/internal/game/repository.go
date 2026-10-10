@@ -3,8 +3,8 @@ package game
 import (
 	"context"
 
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
 )
 
 // GameRepository manages the collection of active games

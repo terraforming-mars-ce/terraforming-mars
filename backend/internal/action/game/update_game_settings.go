@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"slices"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // SettingsPatch is the domain-level, transport-agnostic patch of editable lobby

@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/action/connection"
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action/connection"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/game"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func newConvertAction(repo game.GameRepository) *gameaction.ConvertToBotAction {

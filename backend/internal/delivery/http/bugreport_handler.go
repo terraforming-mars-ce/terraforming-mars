@@ -3,8 +3,8 @@ package http
 import (
 	"net/http"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/service/bugreport"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/service/bugreport"
 
 	"github.com/gorilla/mux"
 )

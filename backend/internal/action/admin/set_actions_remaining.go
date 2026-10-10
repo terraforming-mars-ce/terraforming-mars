@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
+	"openmars/internal/game"
 )
 
 // SetActionsRemainingAction handles the admin action to set the current player's remaining actions

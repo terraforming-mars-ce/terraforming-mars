@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestStartGameAction_Success(t *testing.T) {

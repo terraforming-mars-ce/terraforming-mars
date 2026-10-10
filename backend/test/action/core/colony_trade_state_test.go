@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // setupTradeStateGame builds a started 1-player game in the action phase with the

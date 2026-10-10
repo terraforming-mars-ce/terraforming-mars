@@ -3,9 +3,9 @@ package bot_test
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 func TestIsMyTurn_ActionPhase_MyTurn(t *testing.T) {

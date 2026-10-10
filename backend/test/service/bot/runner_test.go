@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 func flagValue(args []string, flag string) (string, bool) {
@@ -34,7 +34,7 @@ func TestBuildCLIArgs_NoBuiltInToolsAndOnlyTheGameServer(t *testing.T) {
 	testutil.AssertTrue(t, slices.Contains(args, "--strict-mcp-config"), "only the given MCP server may load")
 	testutil.AssertFalse(t, slices.Contains(args, "--dangerously-skip-permissions"), "permissions must not be bypassed")
 	allowed, _ := flagValue(args, "--allowedTools")
-	testutil.AssertEqual(t, "mcp__tm__*", allowed, "only game tools are allowed")
+	testutil.AssertEqual(t, "mcp__openmars__*", allowed, "only game tools are allowed")
 	for _, a := range args {
 		testutil.AssertFalse(t, strings.Contains(a, "rm -rf"), "the prompt is sent on stdin, not as an argument")
 	}
@@ -48,7 +48,7 @@ func TestBuildCLIArgs_NoBuiltInToolsAndOnlyTheGameServer(t *testing.T) {
 		} `json:"mcpServers"`
 	}
 	testutil.AssertNoError(t, json.Unmarshal([]byte(config), &parsed), "mcp config should be JSON")
-	server := parsed.MCPServers["tm"]
+	server := parsed.MCPServers["openmars"]
 	testutil.AssertEqual(t, "http", server.Type, "game server uses HTTP")
 	testutil.AssertEqual(t, "Bearer secret", server.Headers["Authorization"], "bearer token is sent")
 }

@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/events"
+	"openmars/internal/game/board"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 type mockVPRecalculationContext struct {

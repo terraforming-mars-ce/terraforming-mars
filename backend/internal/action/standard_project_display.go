@@ -1,9 +1,9 @@
 package action
 
 import (
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // standardProjectDisplayData contains pre-built display data for resource conversion projects

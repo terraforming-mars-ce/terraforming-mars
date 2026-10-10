@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	"openmars/internal/game/board"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // ColonyBonusLookup provides colony definition lookup for colony-bonus output handling.

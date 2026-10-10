@@ -6,13 +6,13 @@ import (
 	"log/slog"
 	rand "math/rand/v2"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/milestone"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/milestone"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/projectfunding"
+	"openmars/internal/game/shared"
 )
 
 // BotStarter starts bot sessions when a game begins.

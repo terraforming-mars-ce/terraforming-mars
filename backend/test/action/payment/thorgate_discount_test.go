@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // TestThorGate_CardDiscount tests that ThorGate's discount applies to cards with power tag

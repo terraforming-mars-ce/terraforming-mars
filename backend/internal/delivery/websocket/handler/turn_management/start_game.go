@@ -4,10 +4,10 @@ import (
 	"context"
 	"log/slog"
 
-	turnaction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	turnaction "openmars/internal/action/turn_management"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // StartGameHandler handles start game requests

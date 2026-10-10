@@ -1,10 +1,10 @@
 package cards
 
 import (
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
-// CardType represents different types of cards in Terraforming Mars
+// CardType represents different types of cards in Open Mars
 type CardType string
 
 const (

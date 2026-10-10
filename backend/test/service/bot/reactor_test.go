@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 func nameOf(id string) string { return map[string]string{"h1": "Alice", "h2": "Bob"}[id] }

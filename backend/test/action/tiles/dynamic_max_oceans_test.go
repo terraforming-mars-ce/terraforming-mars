@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/global_parameters"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game/board"
+	"openmars/internal/game/global_parameters"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func getOceanSpaceCoords() []shared.HexPosition {

@@ -1,8 +1,8 @@
 package cards
 
 import (
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/colony"
+	"openmars/internal/game"
+	"openmars/internal/game/colony"
 )
 
 // InitializeColonyTile creates a tile with its normal activation and track state.

@@ -3,7 +3,7 @@ package game
 import (
 	"time"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // DiffValueString represents old/new values for string fields

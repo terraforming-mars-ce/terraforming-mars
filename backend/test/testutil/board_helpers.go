@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/shared"
+	tileAction "openmars/internal/action/tile"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/shared"
 )
 
 // FormatHex formats a HexPosition as "q,r,s".

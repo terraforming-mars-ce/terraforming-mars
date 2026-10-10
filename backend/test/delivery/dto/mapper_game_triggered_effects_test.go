@@ -3,9 +3,9 @@ package dto_test
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // TestToGameDto_TriggeredEffectsNotCleared verifies that calling ToGameDto

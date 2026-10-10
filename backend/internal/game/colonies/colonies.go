@@ -6,9 +6,9 @@ import (
 	"slices"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/datastore"
+	"openmars/internal/events"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/datastore"
 )
 
 const maxColoniesPerTile = 3

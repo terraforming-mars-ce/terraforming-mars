@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/logger"
 )
 
 func TestInit(t *testing.T) {

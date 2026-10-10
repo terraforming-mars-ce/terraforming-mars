@@ -3,9 +3,9 @@ package helpers
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/game/global_parameters"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/global_parameters"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 
 	"github.com/stretchr/testify/assert"
 )

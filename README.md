@@ -1,15 +1,15 @@
 <div align="center">
 
-# Terraforming Mars: Community Edition
+# Open Mars
 
 **Play the beloved board game online with a fully interactive 3D Mars.**
 
 Real-time multiplayer. 450+ cards. Six expansions. One red planet.
 
-[![License](https://img.shields.io/github/license/terraforming-mars-ce/terraforming-mars)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/terraforming-mars-ce/terraforming-mars)](https://github.com/terraforming-mars-ce/terraforming-mars/stargazers)
-[![Issues](https://img.shields.io/github/issues/terraforming-mars-ce/terraforming-mars)](https://github.com/terraforming-mars-ce/terraforming-mars/issues)
-[![Coverage](https://img.shields.io/endpoint?url=https://terraforming-mars-ce.github.io/terraforming-mars/coverage.json)](https://terraforming-mars-ce.github.io/terraforming-mars/)
+[![License](https://img.shields.io/github/license/openmars-app/openmars)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/openmars-app/openmars)](https://github.com/openmars-app/openmars/stargazers)
+[![Issues](https://img.shields.io/github/issues/openmars-app/openmars)](https://github.com/openmars-app/openmars/issues)
+[![Coverage](https://img.shields.io/endpoint?url=https://openmars-app.github.io/openmars/coverage.json)](https://openmars-app.github.io/openmars/)
 
 **Original soundtrack by [Lucas](mailto:lucas.gussua@gmail.com)** -- thank you for scoring the red planet.
 
@@ -29,7 +29,7 @@ Real-time multiplayer. 450+ cards. Six expansions. One red planet.
 
 ## What is this?
 
-Terraforming Mars: Community Edition is a full digital adaptation of the Terraforming Mars board game, playable in your browser. The Mars surface is rendered as an interactive 3D hex grid -- you rotate, zoom, and place tiles directly on the planet. Games run in real time over WebSockets with no account required.
+Open Mars is a digital board game based on Terraforming Mars, playable in your browser. The Mars surface is rendered as an interactive 3D hex grid -- you rotate, zoom, and place tiles directly on the planet. Games run in real time over WebSockets with no account required.
 
 This is not a simplified clone. It implements the complete rule set across six expansions with hundreds of cards, corporations, milestones, awards, and colonies.
 
@@ -56,8 +56,8 @@ This is not a simplified clone. It implements the complete rule set across six e
 ## Quick Start
 
 ```bash
-git clone https://github.com/terraforming-mars-ce/terraforming-mars.git
-cd terraforming-mars
+git clone https://github.com/openmars-app/openmars.git
+cd openmars
 just deps        # Install dependencies
 just dev         # Launch frontend (3000) + backend (3001)
 ```

@@ -1,6 +1,6 @@
 packages:
   # Client-facing DTOs - the primary interface for frontend communication
-  - path: "terraforming-mars-backend/internal/delivery/dto"
+  - path: "openmars/internal/delivery/dto"
     type_mappings:
       time.Time: "string"
     output_path: "../frontend/src/types/generated/api-types.ts"

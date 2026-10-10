@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
 )
 
 // ValidateGameExists validates that a game exists (any status)

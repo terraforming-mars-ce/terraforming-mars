@@ -69,7 +69,7 @@ export const useBotPresenceStore = create<BotPresenceState>((set) => ({
   reset: () => set({ thoughts: {}, emotes: {}, typing: {} }),
 }));
 
-const SHOW_BOT_THOUGHTS_KEY = "terraforming-mars-show-bot-thoughts";
+const SHOW_BOT_THOUGHTS_KEY = "openmars.showBotThoughts";
 
 function readShowBotThoughts(): boolean {
   try {

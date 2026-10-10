@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/game/board"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game/board"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // TestFixedVPCard verifies that a card with a fixed VP condition

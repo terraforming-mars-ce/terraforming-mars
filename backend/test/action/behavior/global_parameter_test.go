@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/global_parameters"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/global_parameters"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestGlobalParameter_TemperatureIncrease(t *testing.T) {

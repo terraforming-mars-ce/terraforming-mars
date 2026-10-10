@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"slices"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // SubscribePassiveEffectToEvents subscribes passive effects to relevant domain events

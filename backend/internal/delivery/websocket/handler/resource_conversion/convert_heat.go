@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	resconvaction "terraforming-mars-backend/internal/action/resource_conversion"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	resconvaction "openmars/internal/action/resource_conversion"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // ConvertHeatHandler handles convert heat to temperature requests

@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // setupStartingSelectionGame creates a game in starting_selection phase with all phase data populated.

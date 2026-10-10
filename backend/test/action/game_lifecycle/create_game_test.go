@@ -2,14 +2,14 @@ package game_lifecycle_test
 
 import (
 	"context"
+	"openmars/internal/delivery/dto"
 	"slices"
-	"terraforming-mars-backend/internal/delivery/dto"
 	"testing"
 
-	gameAction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gameAction "openmars/internal/action/game"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestCreateGameAction_Success(t *testing.T) {

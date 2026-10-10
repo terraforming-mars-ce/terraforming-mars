@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	confirmAction "openmars/internal/action/confirmation"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestConfirmProductionCards_RandomBuy_DisabledRejects(t *testing.T) {

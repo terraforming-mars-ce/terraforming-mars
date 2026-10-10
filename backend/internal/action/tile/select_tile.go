@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	baseaction "openmars/internal/action"
+	"openmars/internal/action/turn_management"
 	"strconv"
 	"strings"
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/action/turn_management"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // TilePlacementResult contains information about a completed tile placement

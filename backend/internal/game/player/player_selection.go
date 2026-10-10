@@ -3,9 +3,9 @@ package player
 import (
 	"github.com/google/uuid"
 	"log/slog"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
 )
 
 // Selection manages player-specific card selection state.

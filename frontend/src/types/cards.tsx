@@ -1,4 +1,4 @@
-// Frontend card type definitions for Terraforming Mars
+// Frontend card type definitions for Open Mars
 import {
   StandardProjectSellPatents,
   StandardProjectPowerPlant,

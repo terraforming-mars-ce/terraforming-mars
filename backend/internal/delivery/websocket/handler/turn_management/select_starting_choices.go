@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 
-	turnaction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	turnaction "openmars/internal/action/turn_management"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // Broadcaster interface for explicit broadcasting

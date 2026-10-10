@@ -3,8 +3,8 @@ package cards_test
 import (
 	"testing"
 
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 func TestMatchesSelector_SingleTag(t *testing.T) {

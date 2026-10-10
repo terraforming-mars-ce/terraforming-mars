@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	pf "terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/test/testutil"
+	pf "openmars/internal/game/projectfunding"
+	"openmars/test/testutil"
 )
 
 func TestScaledSeatCost_Baseline(t *testing.T) {

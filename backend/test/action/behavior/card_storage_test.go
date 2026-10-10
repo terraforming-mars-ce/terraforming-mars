@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	baseaction "openmars/internal/action"
 	"strings"
-	baseaction "terraforming-mars-backend/internal/action"
 	"testing"
 
-	cardAction "terraforming-mars-backend/internal/action/card"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	cardAction "openmars/internal/action/card"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // ============================================================================

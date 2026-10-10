@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestAutopilot_ResolvesPendingTileThenPasses(t *testing.T) {

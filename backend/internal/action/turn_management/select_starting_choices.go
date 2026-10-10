@@ -6,14 +6,14 @@ import (
 	"log/slog"
 	"time"
 
-	baseaction "terraforming-mars-backend/internal/action"
+	baseaction "openmars/internal/action"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // SelectStartingChoicesAction handles the combined selection of corporation, preludes, and starting cards.

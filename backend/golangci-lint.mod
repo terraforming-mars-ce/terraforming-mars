@@ -1,4 +1,4 @@
-module terraforming-mars-backend/golangci-lint
+module openmars/golangci-lint
 
 go 1.27.1
 

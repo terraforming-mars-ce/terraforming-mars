@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"slices"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // IsResourceProtected evaluates the owner's persistent defenses from the actor's perspective.

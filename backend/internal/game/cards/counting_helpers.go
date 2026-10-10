@@ -1,10 +1,10 @@
 package cards
 
 import (
+	"openmars/internal/game/board"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 	"slices"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
 )
 
 // CardRegistryInterface defines the interface for looking up cards

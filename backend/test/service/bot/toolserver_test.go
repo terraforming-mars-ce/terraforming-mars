@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 func toolNames(t *testing.T, ctx context.Context, endpoint *bot.MCPEndpoint) map[string]bool {

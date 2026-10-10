@@ -15,21 +15,21 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	awardAction "terraforming-mars-backend/internal/action/award"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	colonyAction "terraforming-mars-backend/internal/action/colony"
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	milestoneAction "terraforming-mars-backend/internal/action/milestone"
-	pfAction "terraforming-mars-backend/internal/action/projectfunding"
-	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
-	stdprojAction "terraforming-mars-backend/internal/action/standard_project"
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/standardproject"
+	awardAction "openmars/internal/action/award"
+	cardAction "openmars/internal/action/card"
+	colonyAction "openmars/internal/action/colony"
+	confirmAction "openmars/internal/action/confirmation"
+	milestoneAction "openmars/internal/action/milestone"
+	pfAction "openmars/internal/action/projectfunding"
+	resconvAction "openmars/internal/action/resource_conversion"
+	stdprojAction "openmars/internal/action/standard_project"
+	tileAction "openmars/internal/action/tile"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/standardproject"
 )
 
 // Actions are the game actions a bot can take. They are the same actions human handlers call.
@@ -191,7 +191,7 @@ func (ts *ToolServer) URL() string {
 // Issue creates a grant for one invocation and returns its endpoint and a revoke function.
 func (ts *ToolServer) Issue(gameID, playerID string, role Role, hooks SessionHooks) (*MCPEndpoint, func()) {
 	g := &grant{gameID: gameID, playerID: playerID, role: role, hooks: hooks}
-	g.server = mcp.NewServer(&mcp.Implementation{Name: "terraforming-mars", Version: "1"}, nil)
+	g.server = mcp.NewServer(&mcp.Implementation{Name: "openmars", Version: "1"}, nil)
 	g.server.AddReceivingMiddleware(recordToolCalls(hooks))
 	ts.registerTools(g)
 

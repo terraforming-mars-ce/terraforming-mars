@@ -1,4 +1,4 @@
-module terraforming-mars-backend
+module openmars
 
 go 1.27.1
 

@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"time"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
-	pf "terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	"openmars/internal/game/player"
+	pf "openmars/internal/game/projectfunding"
+	"openmars/internal/game/shared"
 )
 
 // FundSeatPayment describes how the player pays for a seat

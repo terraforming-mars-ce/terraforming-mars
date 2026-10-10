@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/logger"
 
 	"github.com/gorilla/websocket"
 )

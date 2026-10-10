@@ -1,6 +1,6 @@
 package core_test
 
-import "terraforming-mars-backend/internal/game/shared"
+import "openmars/internal/game/shared"
 
 import (
 	"context"
@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"runtime"
 
-	cardAction "terraforming-mars-backend/internal/action/card"
-	gameaction "terraforming-mars-backend/internal/action/game"
-	spAction "terraforming-mars-backend/internal/action/standard_project"
-	turnmgmt "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game/standardproject"
-	"terraforming-mars-backend/test/testutil"
+	cardAction "openmars/internal/action/card"
+	gameaction "openmars/internal/action/game"
+	spAction "openmars/internal/action/standard_project"
+	turnmgmt "openmars/internal/action/turn_management"
+	"openmars/internal/game/standardproject"
+	"openmars/test/testutil"
 )
 
 func TestGlobalActionCounterStartsAtZero(t *testing.T) {
@@ -44,7 +44,7 @@ func TestPlayCardIncrementsGlobalActionCounter(t *testing.T) {
 func createStdProjRegistry(t *testing.T) standardproject.StandardProjectRegistry {
 	t.Helper()
 	_, currentFile, _, _ := runtime.Caller(0)
-	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "terraforming_mars_standard_projects.json")
+	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "standard_projects.json")
 	stdProjData, err := standardproject.LoadStandardProjectsFromJSON(stdProjPath)
 	if err != nil {
 		t.Fatalf("Failed to load standard projects: %v", err)

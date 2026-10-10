@@ -9,7 +9,7 @@ Two secrets to create. Neither should be checked into git.
 **Claude OAuth token:**
 
 ```bash
-kubectl create secret generic terraforming-mars-claude \
+kubectl create secret generic openmars-claude \
   --namespace <namespace> \
   --from-literal=oauth-token=<your-token>
 ```
@@ -19,7 +19,7 @@ Get the token by running `claude setup-token` on any machine with Claude Code in
 **GitHub App private key:**
 
 ```bash
-kubectl create secret generic terraforming-mars-github-app \
+kubectl create secret generic openmars-github-app \
   --namespace <namespace> \
   --from-file=private-key=/path/to/your/private-key.pem
 ```

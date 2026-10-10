@@ -1,21 +1,21 @@
 #!/bin/sh
 set -e
 
-# Write the server list the loader reads from TM_SERVERS, e.g.
-#   TM_SERVERS="rackaracka=https://terraforming-mars.rackaracka.net,saffronbun=https://tm.saffronbun.com"
+# Write the server list the loader reads from OPENMARS_SERVERS, e.g.
+#   OPENMARS_SERVERS="rackaracka=https://terraforming-mars.rackaracka.net,saffronbun=https://tm.saffronbun.com"
 # The order is the order players see in the picker.
 
 SERVERS_JS="${SERVERS_JS:-/usr/share/nginx/html/servers.js}"
 
-if [ -z "${TM_SERVERS:-}" ]; then
-  echo "TM_SERVERS is required (alias=https://server,...)" >&2
+if [ -z "${OPENMARS_SERVERS:-}" ]; then
+  echo "OPENMARS_SERVERS is required (alias=https://server,...)" >&2
   exit 1
 fi
 
 entries=""
 old_ifs="$IFS"
 IFS=','
-for pair in $TM_SERVERS; do
+for pair in $OPENMARS_SERVERS; do
   alias="${pair%%=*}"
   url="${pair#*=}"
   case "$alias" in
@@ -41,7 +41,7 @@ for pair in $TM_SERVERS; do
 done
 IFS="$old_ifs"
 
-echo "window.__TM_SERVERS__ = [${entries%,}];" > "$SERVERS_JS"
-echo "Servers written to $SERVERS_JS: $TM_SERVERS"
+echo "window.__OPENMARS_SERVERS__ = [${entries%,}];" > "$SERVERS_JS"
+echo "Servers written to $SERVERS_JS: $OPENMARS_SERVERS"
 
 exec "$@"

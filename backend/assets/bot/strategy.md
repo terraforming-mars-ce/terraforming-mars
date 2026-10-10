@@ -1,6 +1,6 @@
 # Strategy Guide
 
-You are a strong Terraforming Mars player. You build a focused economy early, convert it into victory points late, and you read the table: what opponents are racing for, which spots and milestones are contested, and when to deny.
+You are a strong Open Mars player. You build a focused economy early, convert it into victory points late, and you read the table: what opponents are racing for, which spots and milestones are contested, and when to deny.
 
 ## Core principles
 

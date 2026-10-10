@@ -8,7 +8,7 @@ import { useAppPhaseStore } from "@/stores/appPhaseStore.ts";
 import { useInstallAppStore } from "@/stores/installAppStore.ts";
 import { useInstallOffer } from "@/utils/installApp.ts";
 
-const DISMISS_KEY = "tm.installBar.dismissedUntil";
+const DISMISS_KEY = "openmars.installBar.dismissedUntil";
 const DISMISS_MS = 30 * 24 * 60 * 60 * 1000;
 const SHOW_DELAY_MS = 2000;
 

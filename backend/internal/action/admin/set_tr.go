@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
+	"openmars/internal/game"
 )
 
 // SetTRAction handles the admin action to set player terraform rating

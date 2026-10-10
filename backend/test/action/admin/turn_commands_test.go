@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	adminAction "terraforming-mars-backend/internal/action/admin"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/test/testutil"
+	baseaction "openmars/internal/action"
+	adminAction "openmars/internal/action/admin"
+	"openmars/internal/game"
+	"openmars/test/testutil"
 )
 
 func setupTurnGame(t *testing.T) (*game.Game, *adminAction.SetCurrentTurnAction, *adminAction.SetActionsRemainingAction) {

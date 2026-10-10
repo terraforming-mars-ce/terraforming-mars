@@ -22,7 +22,7 @@ export default defineConfig({
     host: true,
     port: 3000,
     // Behind the dev gateway the page is on another origin, so CSS url()s need this one
-    origin: process.env.TM_DEV_ORIGIN,
+    origin: process.env.OPENMARS_DEV_ORIGIN,
     proxy: backendProxy,
   },
   preview: {

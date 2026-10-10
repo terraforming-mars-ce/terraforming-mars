@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"terraforming-mars-backend/internal/events"
+	"openmars/internal/events"
 )
 
 // Runtime holds per-game non-serializable state outside memdb.

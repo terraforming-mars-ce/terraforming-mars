@@ -7,15 +7,15 @@ import (
 	"path/filepath"
 	"runtime"
 
-	awardAction "terraforming-mars-backend/internal/action/award"
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	milestoneAction "terraforming-mars-backend/internal/action/milestone"
-	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
-	stdAction "terraforming-mars-backend/internal/action/standard_project"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/game/standardproject"
-	"terraforming-mars-backend/test/testutil"
+	awardAction "openmars/internal/action/award"
+	confirmAction "openmars/internal/action/confirmation"
+	milestoneAction "openmars/internal/action/milestone"
+	resconvAction "openmars/internal/action/resource_conversion"
+	stdAction "openmars/internal/action/standard_project"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/internal/game/standardproject"
+	"openmars/test/testutil"
 )
 
 func setupProductionPhaseGame(t *testing.T) (*game.Game, game.GameRepository, string) {
@@ -66,7 +66,7 @@ func TestConvertPlantsToGreenery_RejectsDuringProductionPhase(t *testing.T) {
 func createPhaseTestStdProjRegistry(t *testing.T) standardproject.StandardProjectRegistry {
 	t.Helper()
 	_, currentFile, _, _ := runtime.Caller(0)
-	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "terraforming_mars_standard_projects.json")
+	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "standard_projects.json")
 	stdProjData, err := standardproject.LoadStandardProjectsFromJSON(stdProjPath)
 	if err != nil {
 		t.Fatalf("Failed to load standard projects: %v", err)

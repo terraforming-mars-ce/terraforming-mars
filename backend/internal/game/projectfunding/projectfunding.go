@@ -1,6 +1,6 @@
 package projectfunding
 
-import "terraforming-mars-backend/internal/game/shared"
+import "openmars/internal/game/shared"
 
 // ProjectDefinition is the static template loaded from JSON
 type ProjectDefinition struct {

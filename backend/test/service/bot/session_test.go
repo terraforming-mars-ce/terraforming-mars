@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/events"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 type fakeRunner struct {

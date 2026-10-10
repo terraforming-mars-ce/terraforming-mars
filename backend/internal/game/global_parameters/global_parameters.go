@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/datastore"
+	"openmars/internal/events"
+	"openmars/internal/game/datastore"
 )
 
 const (

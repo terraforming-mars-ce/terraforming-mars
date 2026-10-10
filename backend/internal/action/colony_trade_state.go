@@ -2,14 +2,14 @@ package action
 
 import (
 	"fmt"
+	"openmars/internal/game/colony"
 	"slices"
-	"terraforming-mars-backend/internal/game/colony"
 	"time"
 
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // Canonical base costs for a single colony trade, before any action discounts.

@@ -6,7 +6,7 @@ import (
 	"os"
 	"slices"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // MapDefinition represents a map loaded from JSON

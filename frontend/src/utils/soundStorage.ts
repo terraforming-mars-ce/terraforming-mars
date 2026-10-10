@@ -2,7 +2,7 @@
  * Sound settings persistence using localStorage
  */
 
-const STORAGE_KEY = "terraforming-mars-sound";
+const STORAGE_KEY = "openmars.sound";
 
 export interface SoundSettings {
   enabled: boolean;

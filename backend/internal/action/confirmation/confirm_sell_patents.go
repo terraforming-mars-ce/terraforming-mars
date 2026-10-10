@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	baseaction "terraforming-mars-backend/internal/action"
+	baseaction "openmars/internal/action"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
 )
 
 // ConfirmSellPatentsAction handles the business logic for confirming sell patents card selection

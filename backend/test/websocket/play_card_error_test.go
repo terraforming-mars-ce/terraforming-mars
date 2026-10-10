@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	cardaction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/delivery/websocket/handler/card"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	cardaction "openmars/internal/action/card"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/delivery/websocket/handler/card"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestPlayCardError_IdentifiesRejectedRequest(t *testing.T) {

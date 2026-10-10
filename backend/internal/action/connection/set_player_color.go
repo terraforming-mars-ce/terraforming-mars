@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
 )
 
 // SetPlayerColorAction handles changing a player's color during the lobby phase.

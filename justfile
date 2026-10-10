@@ -1,4 +1,4 @@
-# Terraforming Mars task runner. Run `just` to list every recipe.
+# Open Mars task runner. Run `just` to list every recipe.
 # Backend, frontend and gateway recipes live in modules: `just backend <recipe>`, `just frontend <recipe>`, `just proxy <recipe>`.
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
@@ -41,12 +41,12 @@ dev proxy="false":
     setsid {{ just_executable() }} backend dev &
     groups+=($!)
     if [ "{{ proxy }}" = "true" ]; then
-        export TM_DEV_ORIGIN=http://localhost:3000
+        export OPENMARS_DEV_ORIGIN=http://localhost:3000
     fi
     setsid {{ just_executable() }} frontend dev &
     groups+=($!)
     if [ "{{ proxy }}" = "true" ]; then
-        TM_SERVERS="${TM_SERVERS:-local=http://localhost:3000}" setsid {{ just_executable() }} proxy dev &
+        OPENMARS_SERVERS="${OPENMARS_SERVERS:-local=http://localhost:3000}" setsid {{ just_executable() }} proxy dev &
         groups+=($!)
     fi
     wait -n

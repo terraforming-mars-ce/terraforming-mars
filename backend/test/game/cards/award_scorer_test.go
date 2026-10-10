@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/board"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game/award"
+	"openmars/internal/game/board"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func strPtr(s string) *string {

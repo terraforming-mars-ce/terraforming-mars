@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // TestSnapshotEnricher_ParityWithFinalScoring verifies that the VP breakdown stored

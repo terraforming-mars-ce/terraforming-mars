@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sort"
 
-	gamecards "terraforming-mars-backend/internal/game/cards"
+	gamecards "openmars/internal/game/cards"
 )
 
 // ListCardsResult represents the result of listing cards

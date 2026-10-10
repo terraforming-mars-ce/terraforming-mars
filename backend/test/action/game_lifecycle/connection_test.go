@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/action/connection"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action/connection"
+	"openmars/test/testutil"
 )
 
 // ============================================================================

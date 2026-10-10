@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	baseaction "openmars/internal/action"
+	cardAction "openmars/internal/action/card"
+	turnAction "openmars/internal/action/turn_management"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // --- Storage Payment Substitute (Dirigibles pattern) ---

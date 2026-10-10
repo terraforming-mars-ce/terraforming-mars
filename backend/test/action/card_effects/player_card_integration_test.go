@@ -2,18 +2,18 @@ package card_effects_test
 
 import (
 	"context"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/test/testutil"
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/action"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
 )
 
 // TestPlayerCard_EventDrivenStateUpdate verifies state updates on domain events

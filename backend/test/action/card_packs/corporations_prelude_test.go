@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/action/admin"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action/admin"
+	cardAction "openmars/internal/action/card"
+	confirmAction "openmars/internal/action/confirmation"
+	tileAction "openmars/internal/action/tile"
+	turnAction "openmars/internal/action/turn_management"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestCheungShingMars_StartingResources(t *testing.T) {

@@ -1,16 +1,16 @@
 package integration_test
 
-import "terraforming-mars-backend/internal/game/shared"
+import "openmars/internal/game/shared"
 
 import (
 	"context"
 	"testing"
 
-	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/global_parameters"
-	"terraforming-mars-backend/test/testutil"
+	resconvAction "openmars/internal/action/resource_conversion"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/global_parameters"
+	"openmars/test/testutil"
 )
 
 func setupActiveGameForGlobalParams(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string) {

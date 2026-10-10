@@ -7,10 +7,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/action"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // BotLifecycle assigns bot identities and checks a new bot's credential in the background.

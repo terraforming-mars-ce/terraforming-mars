@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	gameaction "terraforming-mars-backend/internal/action/game"
-	turnmgmt "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	confirmAction "openmars/internal/action/confirmation"
+	gameaction "openmars/internal/action/game"
+	turnmgmt "openmars/internal/action/turn_management"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestLastRound_FinalProductionRunsBeforeScoring(t *testing.T) {

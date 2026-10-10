@@ -4,10 +4,10 @@ import (
 	"context"
 	"log/slog"
 
-	confirmaction "terraforming-mars-backend/internal/action/confirmation"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	confirmaction "openmars/internal/action/confirmation"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // ConfirmColonyResourceHandler handles confirm colony resource placement requests

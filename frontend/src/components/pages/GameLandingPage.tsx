@@ -165,7 +165,7 @@ const GameLandingPage: React.FC = () => {
       <div className="menu-shell relative items-start [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:items-center [@media(max-height:500px)]:justify-between [@media(max-height:500px)]:gap-8">
         <div className="text-left py-5 max-w-[520px] [@media(max-height:500px)]:py-0 [@media(max-height:500px)]:shrink-0">
           <h1 className="font-orbitron text-[clamp(2rem,4vw,4.5rem)] text-white mb-10 text-shadow-glow-strong font-bold tracking-wider-2xl text-left leading-tight max-[640px]:text-[min(2rem,8vw)] max-[640px]:tracking-[0.1em] [@media(max-height:500px)]:text-[1.75rem] [@media(max-height:500px)]:tracking-[0.1em] [@media(max-height:500px)]:mb-5">
-            TERRAFORMING
+            OPEN
             <br />
             MARS
           </h1>

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
 )
 
 // MemDBGameRepository implements GameRepository using go-memdb for storage

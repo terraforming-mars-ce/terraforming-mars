@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"slices"
 
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // TagCountContext permits wild tags only for the player performing an action.

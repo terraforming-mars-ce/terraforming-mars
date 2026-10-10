@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestToSpectatorGameDto_AllPlayersAsOtherPlayers(t *testing.T) {

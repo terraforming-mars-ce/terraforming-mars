@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	internalgame "terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	internalgame "openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // DemoGlobalParameters is the host-only global-parameter override for a demo game.

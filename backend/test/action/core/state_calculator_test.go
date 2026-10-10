@@ -4,15 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
+	"openmars/test/testutil"
 )
 
 func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, gamecards.CardRegistry) {

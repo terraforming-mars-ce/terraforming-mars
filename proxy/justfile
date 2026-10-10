@@ -12,7 +12,7 @@ deps:
     bun install
 
 [group('dev')]
-[doc('Run the gateway on :4000; TM_SERVERS picks its servers (default: `just proxy member` on :3001)')]
+[doc('Run the gateway on :4000; OPENMARS_SERVERS picks its servers (default: `just proxy member` on :3001)')]
 dev:
     bun run dev
 

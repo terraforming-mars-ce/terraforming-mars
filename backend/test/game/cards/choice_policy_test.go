@@ -3,7 +3,7 @@ package cards_test
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 func intPtr(v int) *int { return &v }

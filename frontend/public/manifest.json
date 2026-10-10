@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "short_name": "Terraforming Mars",
-  "name": "Terraforming Mars",
-  "description": "Play Terraforming Mars online with friends or bots.",
+  "short_name": "Open Mars",
+  "name": "Open Mars",
+  "description": "Play Open Mars online with friends or bots.",
   "icons": [
     {
       "src": "favicon.ico",

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/action"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/shared"
 )
 
 // AcknowledgeReceipts dismisses informational card receipts; the cards are already in hand.

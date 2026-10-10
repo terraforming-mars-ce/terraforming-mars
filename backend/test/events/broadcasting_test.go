@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // TestBroadcasting_AutomaticOnStateChange tests that AddPlayer executes successfully

@@ -20,7 +20,7 @@ func NewHealthHandler() *HealthHandler {
 func (h *HealthHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{
 		"status":  "healthy",
-		"service": "terraforming-mars-backend",
+		"service": "openmars",
 	}
 
 	h.WriteJSONResponse(w, http.StatusOK, response)

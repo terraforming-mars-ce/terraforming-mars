@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"slices"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // ConfirmAwardFundAction handles confirming a free award fund selection (e.g., Vitor)

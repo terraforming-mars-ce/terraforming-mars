@@ -206,8 +206,8 @@ func buildLabels(tags []string) []string {
 func loadConfig() Config {
 	cfg := Config{
 		GitHubPrivateKeyPath: "./private-key.pem",
-		GitHubRepoOwner:      "terraforming-mars-ce",
-		GitHubRepoName:       "terraforming-mars",
+		GitHubRepoOwner:      "openmars-app",
+		GitHubRepoName:       "openmars",
 	}
 
 	if v := os.Getenv("GITHUB_APP_ID"); v != "" {

@@ -2,13 +2,13 @@ package behavior_test
 
 import (
 	"context"
-	"terraforming-mars-backend/internal/action/confirmation"
-	gamecards "terraforming-mars-backend/internal/game/cards"
+	"openmars/internal/action/confirmation"
+	gamecards "openmars/internal/game/cards"
 	"testing"
 
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestColony_PlacementCreatesPendingSelection(t *testing.T) {

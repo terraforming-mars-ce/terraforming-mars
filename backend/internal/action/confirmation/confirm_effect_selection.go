@@ -3,10 +3,10 @@ package confirmation
 import (
 	"context"
 	"fmt"
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // ConfirmEffectSelectionAction resolves an effect's complete source/target assignment.

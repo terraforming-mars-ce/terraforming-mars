@@ -6,12 +6,12 @@ import (
 	"sort"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/shared"
 )
 
 // FinalScoringAction handles the business logic for calculating final scores and ending the game

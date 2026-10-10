@@ -139,7 +139,7 @@ function scrollTo(page: Page, edge: "top" | "bottom") {
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("tm.installBar.dismissedUntil", String(Date.now() + 86_400_000));
+    localStorage.setItem("openmars.installBar.dismissedUntil", String(Date.now() + 86_400_000));
   });
 });
 

@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/action/admin"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/action/confirmation"
-	tileaction "terraforming-mars-backend/internal/action/tile"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	baseaction "openmars/internal/action"
+	"openmars/internal/action/admin"
+	cardAction "openmars/internal/action/card"
+	"openmars/internal/action/confirmation"
+	tileaction "openmars/internal/action/tile"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestAphrodite_StartingResources(t *testing.T) {

@@ -11,16 +11,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/colonies"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/deck"
-	"terraforming-mars-backend/internal/game/global_parameters"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game/board"
+	"openmars/internal/game/colonies"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/deck"
+	"openmars/internal/game/global_parameters"
+	"openmars/internal/game/player"
+	"openmars/internal/game/projectfunding"
+	"openmars/internal/game/shared"
 )
 
 type Game struct {
